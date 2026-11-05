@@ -6,6 +6,7 @@ mod collab;
 mod contenttypes;
 mod disposition;
 mod handlers;
+mod host;
 mod localfile;
 mod log;
 mod options;
@@ -30,6 +31,8 @@ mod delete_endpoint_test;
 mod documents_test;
 #[cfg(test)]
 mod history_endpoint_test;
+#[cfg(test)]
+mod host_test;
 #[cfg(test)]
 mod local_file_serving_test;
 #[cfg(test)]

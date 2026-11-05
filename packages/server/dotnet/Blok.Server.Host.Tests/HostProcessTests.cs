@@ -68,7 +68,7 @@ public sealed class HostProcessTests
     await connection.ConnectAsync(IPAddress.Loopback, authority.Port);
     await using var stream = connection.GetStream();
     await stream.WriteAsync(Encoding.ASCII.GetBytes(
-        "POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\n" +
+        "POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n" +
         "Transfer-Encoding: chunked\r\n\r\n" + trailer +
         "GET /health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n"));
     using var reader = new StreamReader(stream, Encoding.ASCII);

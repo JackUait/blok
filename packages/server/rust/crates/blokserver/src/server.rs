@@ -88,6 +88,8 @@ pub struct Server {
 pub(crate) struct Inner {
     pub options: Options,
     pub public_path: String,
+    /// What `host_allowed` takes besides loopback.
+    pub(crate) host_names: Vec<String>,
     pub limiter: RateLimiter,
     pub clock: Clock,
     pub(crate) store: OnceLock<Result<Arc<dyn Store>, String>>,
@@ -163,9 +165,11 @@ impl Server {
         ));
         let collab = options.collab_enabled.then(CollabRooms::default);
         let warm_up = options.documents.warm_up;
+        let host_names = crate::host::host_names(&options.allowed_origins, &options.public_url);
         let mut inner = Inner {
             options,
             public_path,
+            host_names,
             limiter,
             clock,
             store: OnceLock::new(),
@@ -636,7 +640,7 @@ pub(crate) async fn header_value_refused(response: &mut ResponseWriter) {
     let _ = response.start(500).await;
 }
 
-/// BlokServerRequestGuard: origin, then ticket, then rate limit. CORS
+/// BlokServerRequestGuard: host, then origin, then ticket, then rate limit. CORS
 /// headers go on before the ticket and limiter checks so their refusals stay
 /// readable to the page. On a pass the request carries the [`RateKey`] and,
 /// in ticket mode, the [`User`].
@@ -646,6 +650,15 @@ pub(crate) async fn guard(
     response: &mut ResponseWriter,
     require_write: bool,
 ) -> bool {
+    // Ticket mode needs an allowed Origin and a pass already, and a proxy in
+    // front of it may forward the public Host.
+    if inner.options.loopback_host_check
+        && inner.options.auth != "ticket"
+        && !crate::host::host_allowed(first_value(request, "Host"), &inner.host_names)
+    {
+        write_text(response, 421, "host not allowed\n").await;
+        return false;
+    }
     let origin = first_value(request, "Origin").to_owned();
     let allowed = inner.origin_allowed(&origin);
     let has_origin = request.headers().contains("Origin");

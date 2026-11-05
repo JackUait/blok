@@ -80,7 +80,7 @@ HostRequestTimeouts.Configure(
     HostRequestTimeouts.DefaultRequestTimeout,
     HostRequestTimeouts.DefaultKeepAliveTimeout);
 HostCollab.Configure(builder, options);
-var blokServer = builder.Services.AddBlokServer(options);
+var blokServer = builder.Services.AddBlokServer(options).UseLoopbackHostCheck();
 #if BLOK_SERVER_CONFORMANCE
 if (conformance.Origin is not null)
 {

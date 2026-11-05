@@ -1069,7 +1069,7 @@ it('matches request origins the way OrdinalIgnoreCase does', async () => {
       actual.push({
         name: `Sec-Fetch-Site ${site}`,
         response: await rawExchange(server.baseUrl, Buffer.concat([
-          Buffer.from('POST /delete HTTP/1.1\r\nHost: x\r\nSec-Fetch-Site: '),
+          Buffer.from('POST /delete HTTP/1.1\r\nHost: 127.0.0.1\r\nSec-Fetch-Site: '),
           Buffer.from(site, 'utf8'),
           Buffer.from('\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'),
         ])),
@@ -1078,6 +1078,35 @@ it('matches request origins the way OrdinalIgnoreCase does', async () => {
   }).finally(() => rm(directory, { recursive: true, force: true }));
 
   compareGolden('origin-case-fold.json', actual);
+}, 60_000);
+
+// A DNS-rebinding page sends a same-origin GET under its own name. The
+// standalone host answers only loopback names and its configured ones.
+it('refuses a guarded GET under a foreign Host on a loopback host', async () => {
+  const frameCheck = (host: string): Buffer => Buffer.from(
+    `GET /frame-check HTTP/1.1\r\nHost: ${host}\r\nSec-Fetch-Site: same-origin\r\nConnection: close\r\n\r\n`,
+  );
+  const statusAndBody = (answer: string): string => {
+    const lines = answer.split('\n');
+
+    return `${lines[0]} ${answer.includes('host not allowed') ? 'host not allowed' : ''}`.trim();
+  };
+  const actual: Record<string, string> = {};
+
+  await withServer(['--auth', 'none', '--storage-dir', '', '--allow-origin', 'https://app.example.com'], async (server) => {
+    for (const host of ['attacker.example:4000', 'localhost.attacker.example', 'localhost', '127.0.0.1:4000', '[::1]', 'app.example.com']) {
+      actual[host] = statusAndBody(await rawExchange(server.baseUrl, frameCheck(host)));
+    }
+  });
+
+  expect(actual).toEqual({
+    'attacker.example:4000': 'HTTP/1.1 421 Misdirected Request host not allowed',
+    'localhost.attacker.example': 'HTTP/1.1 421 Misdirected Request host not allowed',
+    'localhost': 'HTTP/1.1 400 Bad Request',
+    '127.0.0.1:4000': 'HTTP/1.1 400 Bad Request',
+    '[::1]': 'HTTP/1.1 400 Bad Request',
+    'app.example.com': 'HTTP/1.1 400 Bad Request',
+  });
 }, 60_000);
 
 const PROXY_VARIABLES = [
@@ -1235,7 +1264,7 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'HTTP/3 version': bytes(`GET /health HTTP/3\r\nHost: x\r\n${CLOSE}\r\n`),
   'bad method byte': bytes(`G@T /health HTTP/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
   'two spaces after the method': bytes(`GET  /health HTTP/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
-  'two Content-Length values': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\nContent-Length: 2\r\n${CLOSE}\r\nxx`),
+  'two Content-Length values': bytes(`POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Length: 1\r\nContent-Length: 2\r\n${CLOSE}\r\nxx`),
   'HTTP/2 prior-knowledge preface': bytes('PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'),
   // The version is the rest of the line: 8 bytes, or 9 ending in CR, or 400.
   // Kestrel answers it from the request line alone.
@@ -1250,8 +1279,8 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'HTTP/1.2 with a bad method': bytes(`G@T /health HTTP/1.2\r\nHost: x\r\n${CLOSE}\r\n`),
   'HTTP/1.2 after a kept-alive request': bytes(`GET /health HTTP/1.1\r\nHost: x\r\n\r\nGET /health HTTP/1.2\r\n`),
   // Kestrel refuses a second Content-Length line, even an equal one.
-  'two equal Content-Length values': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 2\r\nContent-Length: 2\r\n${CLOSE}\r\n{}`),
-  'two Content-Length values beside chunked': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 1\r\nContent-Length: 1\r\n${CLOSE}\r\n0\r\n\r\n`),
+  'two equal Content-Length values': bytes(`POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 2\r\nContent-Length: 2\r\n${CLOSE}\r\n{}`),
+  'two Content-Length values beside chunked': bytes(`POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 1\r\nContent-Length: 1\r\n${CLOSE}\r\n0\r\n\r\n`),
   // Kestrel takes any codings whose last is chunked, and refuses the rest
   // with 400. A 415 here is /delete's answer to the type.
   ...Object.fromEntries(Object.entries({
@@ -1287,13 +1316,13 @@ const REQUEST_HEADS: Record<string, Buffer> = {
     'folded onto a second line': 'Transfer-Encoding: gzip,\r\n chunked\r\n',
     'with a space before the colon': 'Transfer-Encoding : chunked\r\n',
   }).map(([name, te]) => [`Transfer-Encoding ${name}`,
-    bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\n${te}${CLOSE}\r\n0\r\n\r\n`)])),
+    bytes(`POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\n${te}${CLOSE}\r\n0\r\n\r\n`)])),
   'Transfer-Encoding gzip on HTTP/1.0': bytes('POST /delete HTTP/1.0\r\nTransfer-Encoding: gzip\r\n\r\n'),
   // Kestrel reads one sign before a Content-Length: "+" before digits, "-"
   // only before zeros.
   ...Object.fromEntries(['+47', '+047', '-0', '+0', '-00', '-47', '+', '++47', '+ 47', '9223372036854775808'].map(
     (length) => [`Content-Length ${length}`, bytes(
-      `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: ${length}\r\n${CLOSE}\r\n` +
+      `POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: ${length}\r\n${CLOSE}\r\n` +
       '{"url":"/0123456789abcdef0123456789abcdef.txt"}',
     )],
   )),
@@ -1358,13 +1387,13 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   )])),
   // Kestrel answers before it reads a body the route left, so the answer
   // never says Connection: close for it. Past the cap it then just closes.
-  'unread body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\n0123456789GET /health HTTP/1.2\r\n'),
-  'unread body over the cap, kept alive': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 30000001\r\n\r\n'),
-  'POST /upload with an unread body, then a refused head': bytes('POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nxxGET /health HTTP/1.2\r\n'),
+  'unread body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\n0123456789GET /health HTTP/1.2\r\n'),
+  'unread body over the cap, kept alive': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nContent-Length: 30000001\r\n\r\n'),
+  'POST /upload with an unread body, then a refused head': bytes('POST /upload HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nxxGET /health HTTP/1.2\r\n'),
   // Kestrel sends 100 Continue only for a first Expect line of
   // 100-continue, ignores any other expectation, and treats a body the
   // route left as any unread body.
-  'Expect: 100-continue, unread body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nExpect: 100-continue\r\nContent-Length: 2\r\n\r\nxxGET /health HTTP/1.2\r\n'),
+  'Expect: 100-continue, unread body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nExpect: 100-continue\r\nContent-Length: 2\r\n\r\nxxGET /health HTTP/1.2\r\n'),
   ...Object.fromEntries(Object.entries({
     'another expectation': 'Expect: foo\r\n',
     '100-continue in a list': 'Expect: 100-continue, foo\r\n',
@@ -1372,24 +1401,24 @@ const REQUEST_HEADS: Record<string, Buffer> = {
     // The body came with the head, so no read waits and no 100 goes out.
     '100-continue with the body': 'Expect: 100-continue\r\n',
   }).map(([name, expect]) => [`Expect: ${name}`, bytes(
-    `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\n${expect}Content-Length: 47\r\n${CLOSE}\r\n` +
+    `POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n${expect}Content-Length: 47\r\n${CLOSE}\r\n` +
     '{"url":"/0123456789abcdef0123456789abcdef.txt"}',
   )])),
-  'POST /upload over its cap, kept alive': bytes('POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 33554433\r\n\r\n'),
+  'POST /upload over its cap, kept alive': bytes('POST /upload HTTP/1.1\r\nHost: localhost\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 33554433\r\n\r\n'),
   // Heads after a chunked body keep Kestrel's limits and grammar.
-  'chunked body, then 101 headers': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n${headWith(numbered(99))}`),
-  'chunked body with data and an extension, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2;e=1\r\n{}\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
-  'gzip, chunked body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'chunked body, then 101 headers': bytes(`POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n${headWith(numbered(99))}`),
+  'chunked body with data and an extension, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2;e=1\r\n{}\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'gzip, chunked body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
   // Trailer lines follow the head's grammar, and count with the head's
-  // lines and bytes (71 bytes and 3 lines here).
+  // lines and bytes (79 bytes and 3 lines here).
   ...Object.fromEntries(Object.entries({
     'then a refused head': 'X-T: 1\r\n\r\n',
     'ended by a bare LF': 'X-T: 1\r\n\n',
     'with a control byte and a quote': 'X"T: a\x01b\r\n\r\n',
     'of 97 lines': `${numbered(97)}\r\n`,
     'of 98 lines': `${numbered(98)}\r\n`,
-    'at the byte limit': `X: ${'a'.repeat(32_692)}\r\n\r\n`,
-    'one byte over': `X: ${'a'.repeat(32_693)}\r\n\r\n`,
+    'at the byte limit': `X: ${'a'.repeat(32_684)}\r\n\r\n`,
+    'one byte over': `X: ${'a'.repeat(32_685)}\r\n\r\n`,
     'with no colon': 'XT\r\n\r\n',
     'folded': 'X: a\r\n b\r\n\r\n',
     'with a space before the colon': 'X : 1\r\n\r\n',
@@ -1401,27 +1430,27 @@ const REQUEST_HEADS: Record<string, Buffer> = {
     'with a bare-LF line': 'X-T: 1\n\r\n',
     'of only a bare LF': '\n',
   }).map(([name, trailer]) => [`chunked trailer ${name}`, bytes(
-    `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n${trailer}GET /health HTTP/1.2\r\n`,
+    `POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n${trailer}GET /health HTTP/1.2\r\n`,
   )])),
   // Chunk lines need CRLF.
-  'bare LF after chunk data': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
-  'bare LF after a chunk size': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2\n{}\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
-  'bare LF after the last chunk size': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\n\r\nGET /health HTTP/1.2\r\n'),
-  'chunked trailer with no colon on a body the route left': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nXT\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'bare LF after chunk data': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'bare LF after a chunk size': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2\n{}\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'bare LF after the last chunk size': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\n\r\nGET /health HTTP/1.2\r\n'),
+  'chunked trailer with no colon on a body the route left': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nXT\r\n\r\nGET /health HTTP/1.2\r\n'),
   // After an upgrade the route did not take, the next head keeps
   // Kestrel's limits and grammar.
   'upgrade not taken, then a refused head': bytes('GET /health HTTP/1.1\r\nHost: x\r\nUpgrade: foo\r\nConnection: upgrade\r\n\r\nGET /health HTTP/1.2\r\n'),
   'upgrade not taken, then 101 headers': bytes(`GET /health HTTP/1.1\r\nHost: x\r\nUpgrade: foo\r\n\r\n${headWith(numbered(99))}`),
-  'upgrade with a body not taken, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nUpgrade: foo\r\nConnection: upgrade\r\nContent-Length: 2\r\n\r\n{}GET /health HTTP/1.2\r\n'),
+  'upgrade with a body not taken, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nUpgrade: foo\r\nConnection: upgrade\r\nContent-Length: 2\r\n\r\n{}GET /health HTTP/1.2\r\n'),
   // A head with both framings is read as chunked and the connection then
   // closes, so bytes a Content-Length reader would take as a body are never
   // read as a request.
-  'chunked with a Content-Length, then a pipelined head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 5\r\n\r\n0\r\n\r\nGET /health HTTP/1.1\r\nHost: x\r\n\r\n'),
-  'HTTP/1.0 keep-alive, chunked with a Content-Length, then a pipelined head': bytes('POST /delete HTTP/1.0\r\nHost: x\r\nConnection: keep-alive\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 5\r\n\r\n0\r\n\r\nGET /health HTTP/1.1\r\nHost: x\r\n\r\n'),
-  'chunk extension that ends in a bare LF': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2;a\n{}\r\n0\r\n\r\n'),
-  'chunk extension with control bytes': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2;e=\x01\x7f\r\n{}\r\n0\r\n\r\n'),
-  'chunk data holding a semicolon': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\nd\r\n{"url":"a;b"}\r\n0\r\n\r\n'),
-  'chunk data starting with a semicolon': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n4\r\n;abc\r\n0\r\n\r\n'),
+  'chunked with a Content-Length, then a pipelined head': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 5\r\n\r\n0\r\n\r\nGET /health HTTP/1.1\r\nHost: localhost\r\n\r\n'),
+  'HTTP/1.0 keep-alive, chunked with a Content-Length, then a pipelined head': bytes('POST /delete HTTP/1.0\r\nHost: localhost\r\nConnection: keep-alive\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 5\r\n\r\n0\r\n\r\nGET /health HTTP/1.1\r\nHost: localhost\r\n\r\n'),
+  'chunk extension that ends in a bare LF': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2;a\n{}\r\n0\r\n\r\n'),
+  'chunk extension with control bytes': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2;e=\x01\x7f\r\n{}\r\n0\r\n\r\n'),
+  'chunk data holding a semicolon': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\nd\r\n{"url":"a;b"}\r\n0\r\n\r\n'),
+  'chunk data starting with a semicolon': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n4\r\n;abc\r\n0\r\n\r\n'),
   'Host with an empty port': bytes(`GET /health HTTP/1.1\r\nHost: a:\r\n${CLOSE}\r\n`),
   'Host with only a port': bytes(`GET /health HTTP/1.1\r\nHost: :80\r\n${CLOSE}\r\n`),
   'Host with an unclosed bracket': bytes(`GET /health HTTP/1.1\r\nHost: [::1\r\n${CLOSE}\r\n`),
@@ -1430,14 +1459,14 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'Host with text after the bracket': bytes(`GET /health HTTP/1.1\r\nHost: [::1]x\r\n${CLOSE}\r\n`),
   'Host with two ports': bytes(`GET /health HTTP/1.1\r\nHost: a:80:80\r\n${CLOSE}\r\n`),
   'Host with a port past 65535': bytes(`GET /health HTTP/1.1\r\nHost: a:65536\r\n${CLOSE}\r\n`),
-  'Expect with an unknown token': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nExpect: foo\r\nContent-Length: 2\r\n${CLOSE}\r\n{}`),
-  'chunk size not hex': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\nzz\r\n'),
-  'chunk shorter than its size': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n5\r\nab\r\n0\r\n\r\n'),
-  'chunk size past 64 bits': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\nfffffffffffffffffff\r\n'),
-  'chunk data with no line end': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2\r\n{}0\r\n\r\n'),
-  'chunk lines with bare LF': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2\n{}\n0\n\n'),
-  'chunk size with a space': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2 \r\n{}\r\n0\r\n\r\n'),
-  'negative chunk size': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n-2\r\n{}\r\n0\r\n\r\n'),
+  'Expect with an unknown token': bytes(`POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nExpect: foo\r\nContent-Length: 2\r\n${CLOSE}\r\n{}`),
+  'chunk size not hex': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\nzz\r\n'),
+  'chunk shorter than its size': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n5\r\nab\r\n0\r\n\r\n'),
+  'chunk size past 64 bits': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\nfffffffffffffffffff\r\n'),
+  'chunk data with no line end': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2\r\n{}0\r\n\r\n'),
+  'chunk lines with bare LF': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2\n{}\n0\n\n'),
+  'chunk size with a space': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2 \r\n{}\r\n0\r\n\r\n'),
+  'negative chunk size': bytes('POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n-2\r\n{}\r\n0\r\n\r\n'),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {
@@ -1492,7 +1521,7 @@ function chunkedUpload(size: number, chunks: number, extension = '', trailer = '
   }
 
   return bytes(
-    'POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\n' +
+    'POST /upload HTTP/1.1\r\nHost: localhost\r\nContent-Type: multipart/form-data; boundary=b\r\n' +
     `Transfer-Encoding: chunked\r\n${CLOSE}\r\n${framed}0\r\n${trailer}\r\n`,
   );
 }
@@ -1541,17 +1570,17 @@ it('caps a request body at 30,000,000 bytes off /upload', async () => {
   }
 
   const cases: Record<string, string> = {
-    'POST /delete': `POST /delete HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
-    'POST /delete with Expect: 100-continue': `POST /delete HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}Expect: 100-continue\r\n${OVER_CAP}${CLOSE}\r\n`,
-    'POST /delete with some of the body': `POST /delete HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n{"url":"x"}${' '.repeat(9_000)}`,
-    'POST /delete with the wrong type': `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\n${OVER_CAP}${CLOSE}\r\n`,
-    'POST /upload-by-url': `POST /upload-by-url HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
+    'POST /delete': `POST /delete HTTP/1.1\r\nHost: localhost\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
+    'POST /delete with Expect: 100-continue': `POST /delete HTTP/1.1\r\nHost: localhost\r\n${JSON_TYPE}Expect: 100-continue\r\n${OVER_CAP}${CLOSE}\r\n`,
+    'POST /delete with some of the body': `POST /delete HTTP/1.1\r\nHost: localhost\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n{"url":"x"}${' '.repeat(9_000)}`,
+    'POST /delete with the wrong type': `POST /delete HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\n${OVER_CAP}${CLOSE}\r\n`,
+    'POST /upload-by-url': `POST /upload-by-url HTTP/1.1\r\nHost: localhost\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
     'GET /health never reads the body': `GET /health HTTP/1.1\r\nHost: x\r\n${OVER_CAP}${CLOSE}\r\n`,
-    'POST to no route': `POST /nope HTTP/1.1\r\nHost: x\r\n${OVER_CAP}${CLOSE}\r\n`,
-    'POST /sync/{doc}/edit': `POST /sync/d/edit HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}Blok-Idempotency-Key: k\r\n${OVER_CAP}${CLOSE}\r\n`,
-    'POST /sync/{doc}/reset': `POST /sync/d/reset HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
+    'POST to no route': `POST /nope HTTP/1.1\r\nHost: localhost\r\n${OVER_CAP}${CLOSE}\r\n`,
+    'POST /sync/{doc}/edit': `POST /sync/d/edit HTTP/1.1\r\nHost: localhost\r\n${JSON_TYPE}Blok-Idempotency-Key: k\r\n${OVER_CAP}${CLOSE}\r\n`,
+    'POST /sync/{doc}/reset': `POST /sync/d/reset HTTP/1.1\r\nHost: localhost\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
     // /upload answers its own cap (32 MiB here) with Kestrel's reason phrase.
-    'POST /upload over its cap': `POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 33554433\r\n${CLOSE}\r\n`,
+    'POST /upload over its cap': `POST /upload HTTP/1.1\r\nHost: localhost\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 33554433\r\n${CLOSE}\r\n`,
   };
 
   try {

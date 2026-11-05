@@ -65,6 +65,31 @@ public static class BlokServerBuilderExtensions
   }
 
   /// <summary>
+  /// Refuses, with 421 "host not allowed", a guarded request whose
+  /// <c>Host</c> is not <c>localhost</c>, a 127.x.x.x address, <c>[::1]</c>,
+  /// or the host of an <see cref="BlokServerOptions.AllowedOrigins"/> entry
+  /// or of <see cref="BlokServerOptions.PublicUrl"/>, when
+  /// <see cref="BlokServerOptions.Auth"/> is "none" or "proxy". The port is
+  /// not checked, and a request with no <c>Host</c> passes.
+  /// </summary>
+  /// <remarks>
+  /// This stops DNS rebinding: a page whose name now points at 127.0.0.1
+  /// sends its own name as <c>Host</c>. The standalone host turns it on. Turn
+  /// it on in your app when it listens on loopback only; leave it off when
+  /// the app serves the routes under its own public name.
+  /// </remarks>
+  /// <param name="builder">The server being built.</param>
+  /// <returns>The same builder, so hooks chain.</returns>
+  public static BlokServerBuilder UseLoopbackHostCheck(this BlokServerBuilder builder)
+  {
+    ArgumentNullException.ThrowIfNull(builder);
+
+    builder.Services.TryAddSingleton<LoopbackHostCheck>();
+
+    return builder;
+  }
+
+  /// <summary>
   /// Registers <typeparamref name="T"/> as this server's collaboration
   /// activity observer, replacing one registered earlier. It is resolved as a
   /// singleton.

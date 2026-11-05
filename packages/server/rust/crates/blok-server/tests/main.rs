@@ -170,7 +170,7 @@ async fn request(
 ) -> (u16, Vec<(String, String)>, String) {
     let answer = exchange(
         address,
-        &format!("{method} {path} {proto}\r\nHost: x\r\nConnection: close\r\n\r\n"),
+        &format!("{method} {path} {proto}\r\nHost: localhost\r\nConnection: close\r\n\r\n"),
     )
     .await;
     parse_answer(&answer)
@@ -914,7 +914,7 @@ async fn the_shutdown_drain_outlasts_a_slow_doc_endpoint() {
     let answer = exchange(
         &running.address,
         &format!(
-            "POST /sync/doc/edit HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/json\r\nBlok-Idempotency-Key: k1\r\nContent-Length: {}\r\n\r\n{body}",
+            "POST /sync/doc/edit HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nContent-Type: application/json\r\nBlok-Idempotency-Key: k1\r\nContent-Length: {}\r\n\r\n{body}",
             body.len()
         ),
     )
@@ -958,7 +958,7 @@ const VALID_DOC_ENDPOINT: &str = "https://app.example.test/api/blok-docs";
 async fn post(address: &str, path: &str, content_type: &str, body: &[u8]) -> (u16, String) {
     let mut conn = TcpStream::connect(address).await.unwrap();
     let head = format!(
-        "POST {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\n\r\n",
+        "POST {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\n\r\n",
         body.len()
     );
     conn.write_all(head.as_bytes()).await.unwrap();
@@ -1890,7 +1890,7 @@ async fn the_rich_text_fields_flag_makes_a_custom_field_segments() {
         let edit = exchange(
             &running.address,
             &format!(
-                "POST /sync/{DOC_ID}/edit HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/json; charset=utf-8\r\nBlok-Idempotency-Key: widget-edit\r\nContent-Length: {}\r\n\r\n{body}",
+                "POST /sync/{DOC_ID}/edit HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nContent-Type: application/json; charset=utf-8\r\nBlok-Idempotency-Key: widget-edit\r\nContent-Length: {}\r\n\r\n{body}",
                 body.len()
             ),
         )

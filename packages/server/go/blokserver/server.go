@@ -28,9 +28,11 @@ import (
 type Server struct {
 	options    Options
 	publicPath string
-	limiter    *rateLimiter
-	clock      func() time.Time
-	fetcher    *outbound.Fetcher
+	// hostNames is what hostAllowed takes besides loopback.
+	hostNames []string
+	limiter   *rateLimiter
+	clock     func() time.Time
+	fetcher   *outbound.Fetcher
 
 	storeOnce sync.Once
 	store     blob.Store
@@ -75,6 +77,7 @@ func New(o Options) (*Server, error) {
 	s := &Server{
 		options:    o,
 		publicPath: publicPath,
+		hostNames:  hostNames(o.AllowedOrigins, o.PublicURL),
 		clock:      clock,
 		fetcher:    outbound.NewFetcher(outbound.DefaultPolicy{}),
 		runtime: &lazyRuntime{options: jsruntime.Options{
@@ -340,10 +343,14 @@ func firstValue(h http.Header, name string) string {
 	return ""
 }
 
-// guard is BlokServerRequestGuard: origin, then ticket, then rate limit.
-// CORS headers go on before the ticket and limiter checks so their refusals
-// stay readable to the page.
+// guard is BlokServerRequestGuard: host, then origin, then ticket, then
+// rate limit. CORS headers go on before the ticket and limiter checks so
+// their refusals stay readable to the page.
 func (s *Server) guard(w http.ResponseWriter, r *http.Request, requireWrite bool) (*http.Request, bool) {
+	if s.options.LoopbackHostCheck && s.options.Auth != "ticket" && !hostAllowed(r.Host, s.hostNames) {
+		writeText(w, http.StatusMisdirectedRequest, "host not allowed\n")
+		return r, false
+	}
 	origin := requestOrigin(r)
 	allowed := s.originAllowed(origin)
 	_, hasOrigin := r.Header["Origin"]

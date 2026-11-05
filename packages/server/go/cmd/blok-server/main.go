@@ -180,6 +180,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	}
 	options := parsed.options
 	options.Version = version
+	options.LoopbackHostCheck = true
 	configureCollab(&options, stderr)
 	server, err := blokserver.New(options)
 	if err != nil {

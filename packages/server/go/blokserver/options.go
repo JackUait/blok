@@ -38,6 +38,12 @@ type Options struct {
 	Auth           string
 	Secret         string
 	AllowedOrigins []string
+	// LoopbackHostCheck refuses, with 421, a guarded request whose Host is
+	// not loopback or the host of an allowed origin or the public URL, when
+	// Auth is "none" or "proxy". It stops DNS rebinding. The standalone host
+	// turns it on; an app that mounts Handler on its own name leaves it off.
+	// C#: UseLoopbackHostCheck.
+	LoopbackHostCheck bool
 
 	StorageDirectory string
 	PublicURL        string

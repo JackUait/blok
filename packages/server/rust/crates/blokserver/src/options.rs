@@ -33,6 +33,11 @@ pub struct Options {
     pub auth: String,
     pub secret: String,
     pub allowed_origins: Vec<String>,
+    /// Refuses, with 421, a guarded request whose Host is not loopback or
+    /// the host of an allowed origin or the public URL, when `auth` is
+    /// "none" or "proxy". It stops DNS rebinding. The standalone host turns
+    /// it on; an app that mounts the handler on its own name leaves it off.
+    pub loopback_host_check: bool,
 
     pub storage_directory: String,
     pub public_url: String,
@@ -107,6 +112,7 @@ impl Default for Options {
             auth: "none".into(),
             secret: String::new(),
             allowed_origins: Vec::new(),
+            loopback_host_check: false,
             storage_directory: String::new(),
             public_url: String::new(),
             max_upload_bytes: 32 << 20,
@@ -154,6 +160,7 @@ impl fmt::Debug for Options {
             .field("auth", &self.auth)
             .field("secret_set", &!self.secret.is_empty())
             .field("allowed_origins", &self.allowed_origins)
+            .field("loopback_host_check", &self.loopback_host_check)
             .field("storage_directory", &self.storage_directory)
             .field("public_url", &self.public_url)
             .field("max_upload_bytes", &self.max_upload_bytes)

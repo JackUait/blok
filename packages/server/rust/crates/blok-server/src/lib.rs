@@ -109,6 +109,7 @@ pub async fn run<F: Future<Output = ()>>(
     }
     let mut options = parsed.options;
     options.version = version.to_owned();
+    options.loopback_host_check = true;
     configure_collab(&mut options, &stderr);
     let server = match Server::new(options) {
         Ok(server) => server,

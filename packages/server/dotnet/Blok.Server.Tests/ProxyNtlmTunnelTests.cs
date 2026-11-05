@@ -26,7 +26,7 @@ public sealed partial class ProxyConnectTunnelTests
 {
   [Theory]
   [InlineData("ntlm", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
-  [InlineData("negotiate", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init oid=2b0601050502 mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp tags=a2,a3 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("negotiate", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
   [InlineData("domain", "u", "DOM", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=358 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=DOM@336 ws=W@342 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
   // A blank user or password: no token, so the 407 is the answer.
   [InlineData("empty", "u", "", "", "error 407|1 auth=no")]
@@ -36,6 +36,8 @@ public sealed partial class ProxyConnectTunnelTests
   [InlineData("flags", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}")]
   [InlineData("no-nb", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}")]
   // No Type 2, a short one, or bad base64: .NET throws, not an HttpRequestException.
+  // A bare Negotiate is a token SPNEGO cannot read: no answer, so the 407.
+  [InlineData("negotiate-bare", "u", "", "p", "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}")]
   [InlineData("bare", "u", "", "p", "throw ArgumentOutOfRangeException|1 auth=no|1 auth=NTLM T1 {T1}")]
   // A target info pair 9 or 10 from the server: ProcessTargetInfo then returns the
   // tail of its buffer (AsSpan(offset)), so the blob carries no pairs at all.
@@ -51,7 +53,7 @@ public sealed partial class ProxyConnectTunnelTests
   [InlineData("localhost", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/localhost,10:zero,6:02000000,0: proof=ok mic=ok")]
   // An IPv6 proxy is named without brackets.
   [InlineData("ipv6", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=340 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=210@112 user=u@322 dom=@324 ws=W@324 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/::1,10:zero,6:02000000,0: proof=ok mic=ok")]
-  [InlineData("negotiate-https", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init oid=2b0601050502 mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp tags=a2,a3 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("negotiate-https", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
   public async Task AnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(string mode, string user, string domain, string password, string want)
   {
     var got = await RunNtlm(mode, user, domain, password);
@@ -62,11 +64,15 @@ public sealed partial class ProxyConnectTunnelTests
       return;
     }
 
-    Assert.Equal(want.Replace("{T1}", NtlmType1, StringComparison.Ordinal).Replace("{AVS}", ServerAvs, StringComparison.Ordinal), got);
+    Assert.Equal(want.Replace("{T1}", NtlmType1, StringComparison.Ordinal).Replace("{AVS}", ServerAvs, StringComparison.Ordinal).Replace("{INIT}", SpnegoInit, StringComparison.Ordinal), got);
   }
 
   // The Type 1: flags 0x62888215, version 6.1.7600 revision 15.
   private const string NtlmType1 = "4e544c4d535350000100000015828862000000000000000000000000000000000601b01d0000000f";
+
+  // SPNEGO's NegTokenInit: [APPLICATION 0] { SPNEGO OID, [0] { SEQ { [0] { NTLM },
+  // [2] OCTET STRING Type 1 } } }.
+  private const string SpnegoInit = "604806062b0601050502a03e303ca00e300c060a2b06010401823702020aa22a04284e544c4d535350000100000015828862000000000000000000000000000000000601b01d0000000f";
 
   // The proxy's target info pairs, which the Type 3 repeats before its own.
   private const string ServerAvs = "2:44004f004d00410049004e00,1:530045005200560045005200,4:64006f006d00610069006e002e007400650073007400,3:7300650072007600650072002e0064006f006d00610069006e002e007400650073007400,7:00803ed5deb19d01,";
@@ -270,23 +276,27 @@ public sealed partial class ProxyConnectTunnelTests
         var mechTypes = Der(init, 0);
         state.MechList = Der(mechTypes.Content, 0) is var list ? DerWrap(list.Tag, list.Content) : null;
         inner = Der(Der(init, mechTypes.End).Content, 0).Content;
-        spnego = $"init oid={Hex(oid.Content)} mechs={Hex(state.MechList!)} ";
+        // The whole init token is fixed, as the Type 1 is.
+        spnego = $"init {Hex(token)} mechs={Hex(state.MechList!)} ";
       }
       else
       {
         // NegTokenResp: [1] { SEQ { [2] responseToken, [3] mechListMIC } }
-        var resp = Der(Der(token, 0).Content, 0).Content;
+        var outer = Der(token, 0);
+        var sequence = Der(outer.Content, 0);
+        var resp = sequence.Content;
         var first = Der(resp, 0);
-        inner = Der(first.Content, 0).Content;
-        var tags = $"{first.Tag:x2}";
+        var firstInner = Der(first.Content, 0);
+        inner = firstInner.Content;
+        var tags = $"{token[0]:x2}/{outer.Content[0]:x2}/{first.Tag:x2}:{first.Content[0]:x2}";
         if (first.End < resp.Length)
         {
           var second = Der(resp, first.End);
           mechListMic = Der(second.Content, 0).Content;
-          tags += $",{second.Tag:x2}";
+          tags += $",{second.Tag:x2}:{second.Content[0]:x2}";
         }
 
-        spnego = $"resp tags={tags} ";
+        spnego = $"resp {tags} ";
       }
     }
 
@@ -441,7 +451,7 @@ public sealed partial class ProxyConnectTunnelTests
                 close = mode == "close2";
                 var data = mode switch
                 {
-                  "bare" => "",
+                  "bare" or "negotiate-bare" => "",
                   "short" => " " + Convert.ToBase64String(state.Type2[..10]),
                   "base64" => " !!!",
                   _ => " " + Convert.ToBase64String(scheme == "Negotiate" ? SpnegoChallenge(state.Type2) : state.Type2),

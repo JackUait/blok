@@ -254,6 +254,7 @@ impl S3 {
             Transport::Fake(fake) => {
                 let mut sent = Vec::new();
                 match request.body {
+                    RequestBody::None => {}
                     RequestBody::Bytes(bytes) => sent.extend_from_slice(bytes),
                     RequestBody::Reader(reader, length) => {
                         reader.take(length).read_to_end(&mut sent).await?;

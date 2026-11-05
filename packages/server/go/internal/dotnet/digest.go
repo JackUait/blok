@@ -126,26 +126,26 @@ func digestValue(data string, i int, expectQuotes bool) (string, bool, int) {
 
 // digestToken is GetDigestTokenForCredential; "" when .NET gives no token
 // (an algorithm it lacks, no nonce, no realm). uri is the request URI's
-// path and query, content the body auth-int hashes. .NET hashes the body
-// read as a string (ReadAsStringAsync); this hashes its bytes.
-func digestToken(user, password, method, uri string, content []byte, parameters map[string]string) string {
+// path and query. content is the body as ReadAsStringAsync reads it
+// (bodyText), asked for only by auth-int; its error fails the request.
+func digestToken(user, password, method, uri string, content func() (string, error), parameters map[string]string) (string, error) {
 	algorithm, specified := parameters["algorithm"]
 	if specified {
 		switch strings.ToLower(algorithm) {
 		case "sha-256", "md5", "sha-256-sess", "md5-sess":
 		default:
-			return ""
+			return "", nil
 		}
 	} else {
 		algorithm = "MD5"
 	}
 	nonce, ok := parameters["nonce"]
 	if !ok {
-		return ""
+		return "", nil
 	}
 	realm, ok := parameters["realm"]
 	if !ok {
-		return ""
+		return "", nil
 	}
 	opaque, hasOpaque := parameters["opaque"]
 	hash := func(data string) string {
@@ -194,7 +194,14 @@ func digestToken(user, password, method, uri string, content []byte, parameters 
 	}
 	a2 := method + ":" + uri
 	if qop == "auth-int" {
-		a2 += ":" + hash(string(content))
+		text := ""
+		if content != nil {
+			var err error
+			if text, err = content(); err != nil {
+				return "", err
+			}
+		}
+		a2 += ":" + hash(text)
 	}
 	response := hash(hash(a1) + ":" + nonce + ":" + hash(a2))
 	if hasQop {
@@ -212,7 +219,7 @@ func digestToken(user, password, method, uri string, content []byte, parameters 
 		pair("nc", "00000001", false, true)
 		pair("cnonce", cnonce, true, false)
 	}
-	return b.String()
+	return b.String(), nil
 }
 
 // encode5987 is HeaderUtilities.Encode5987: utf-8” and the attr-chars,

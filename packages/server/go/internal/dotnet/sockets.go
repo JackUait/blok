@@ -321,10 +321,10 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 //     Type 3 go on one conn.
 type proxyAuth struct {
 	proxy *url.URL
-	// method and uri are what Digest signs; content is the body for
+	// method and uri are what Digest signs; content is the body text for
 	// auth-int, nil for none.
 	method, uri string
-	content     func() []byte
+	content     func() (string, error)
 	// authorization is the Proxy-Authorization the next request carries.
 	authorization string
 	// sent is the scheme answered, lower case.
@@ -354,15 +354,12 @@ func (a *proxyAuth) nextAuthorization(ctx context.Context, header http.Header) (
 	challenges := authChallenges(header.Values("Proxy-Authenticate"))
 	user, domain := proxyCredential(a.proxy.User.Username())
 	password, _ := a.proxy.User.Password()
-	digest := func(parameters map[string]string) string {
-		var content []byte
-		if a.content != nil {
-			content = a.content()
+	digest := func(parameters map[string]string) (string, error) {
+		token, err := digestToken(user, password, a.method, a.uri, a.content, parameters)
+		if token == "" || err != nil {
+			return "", err
 		}
-		if token := digestToken(user, password, a.method, a.uri, content, parameters); token != "" {
-			return "Digest " + token
-		}
-		return ""
+		return "Digest " + token, nil
 	}
 	switch {
 	case a.sent == "":
@@ -375,7 +372,7 @@ func (a *proxyAuth) nextAuthorization(ctx context.Context, header http.Header) (
 			return next, err
 		case "digest":
 			if parameters, ok := parseDigest(challenges["digest"]); ok {
-				return digest(parameters), nil
+				return digest(parameters)
 			}
 		case "basic":
 			// SetBasicAuthToken puts a domain back in front.
@@ -407,7 +404,7 @@ func (a *proxyAuth) nextAuthorization(ctx context.Context, header http.Header) (
 		if data, ok := challenges["digest"]; ok {
 			if parameters, ok := parseDigest(data); ok && parameters["stale"] == "true" {
 				a.stale = true
-				return digest(parameters), nil
+				return digest(parameters)
 			}
 		}
 	}
@@ -806,17 +803,19 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 // when the conn changes anyway.
 func (t *SocketsTransport) forward(request *http.Request, r *route) (*http.Response, error) {
 	auth := &proxyAuth{proxy: r.proxy, method: request.Method, uri: request.URL.RequestURI()}
-	auth.content = func() []byte {
-		if request.GetBody == nil {
-			return nil
+	auth.content = func() (string, error) {
+		var content []byte
+		if request.GetBody != nil {
+			if body, err := request.GetBody(); err == nil {
+				content, _ = io.ReadAll(body)
+				body.Close()
+			}
 		}
-		body, err := request.GetBody()
-		if err != nil {
-			return nil
+		types := request.Header.Values("Content-Type")
+		if len(types) == 0 {
+			return bodyText(content, "", false)
 		}
-		defer body.Close()
-		content, _ := io.ReadAll(body)
-		return content
+		return bodyText(content, types[0], true)
 	}
 	replayable := request.Body == nil || request.Body == http.NoBody || request.GetBody != nil
 	var conn, ntConn *wireConn

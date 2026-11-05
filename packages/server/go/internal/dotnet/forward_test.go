@@ -2,6 +2,7 @@ package dotnet
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
@@ -89,6 +90,13 @@ func forwardProxy(t *testing.T, mode string) (*url.URL, func() []string) {
 							}
 							answer = "Proxy-Authenticate: " + scheme + " " + base64.StdEncoding.EncodeToString(message) + "\r\n"
 						}
+					} else if strings.HasPrefix(mode, "digest-int") {
+						answer = "Proxy-Authenticate: Digest realm=\"r\", nonce=\"n\", qop=\"auth-int\"\r\n"
+						if auth != "" {
+							used := authIntHash(auth, request.Method, mode)
+							logged = "Digest int=" + used
+							ok = used == "text"
+						}
 					} else {
 						ok = auth != ""
 						if mode == "digest" && ok {
@@ -107,7 +115,7 @@ func forwardProxy(t *testing.T, mode string) (*url.URL, func() []string) {
 					}
 					line := request.Method + " " + request.RequestURI + " " + request.Proto
 					mu.Lock()
-					seen = append(seen, strconv.Itoa(id)+" "+line+" auth="+logged+" body="+string(body))
+					seen = append(seen, strconv.Itoa(id)+" "+line+" auth="+logged+" body="+asciiLog(body))
 					mu.Unlock()
 					if ok {
 						_, _ = io.WriteString(client, "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
@@ -133,6 +141,53 @@ func forwardProxy(t *testing.T, mode string) (*url.URL, func() []string) {
 
 // The twin of C#'s AuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes:
 // an http target through a proxy gets no credentials before a 407.
+// forwardBody is C#'s ForwardBody: a POST's body, its Content-Type, and
+// the text auth-int is expected to hash.
+func forwardBody(mode string) ([]byte, string, string) {
+	switch mode {
+	case "digest-int-invalid":
+		return []byte{0x61, 0xFF, 0x62}, "", "a\uFFFDb"
+	case "digest-int-latin1":
+		return []byte{0xE9}, "text/plain; charset=iso-8859-1", "\u00e9"
+	case "digest-int-bogus":
+		return []byte("abc"), "text/plain; charset=bogus", "abc"
+	}
+	return []byte("abc"), "", "abc"
+}
+
+// asciiLog is Encoding.ASCII.GetString: '?' for a byte past 0x7F.
+func asciiLog(b []byte) string {
+	out := []byte(string(b))
+	for i, c := range out {
+		if c >= 0x80 {
+			out[i] = '?'
+		}
+	}
+	return string(out)
+}
+
+var digestPair = regexp.MustCompile(`([a-z]+)=("[^"]*"|[^, ]*)`)
+
+// authIntHash is C#'s AuthIntHash: which body hash an auth-int answer
+// used, "text", "bytes" or "none". User u, password p.
+func authIntHash(header, method, mode string) string {
+	fields := map[string]string{}
+	for _, m := range digestPair.FindAllStringSubmatch(header, -1) {
+		fields[m[1]] = strings.Trim(m[2], `"`)
+	}
+	want := func(bodyHash string) string {
+		return md5Hex(md5Hex("u:r:p") + ":n:" + fields["nc"] + ":" + fields["cnonce"] + ":auth-int:" + md5Hex(method+":/x?q:"+bodyHash))
+	}
+	content, _, text := forwardBody(mode)
+	switch fields["response"] {
+	case want(md5Hex(text)):
+		return "text"
+	case want(md5Hex(string(content))):
+		return "bytes"
+	}
+	return "none"
+}
+
 func TestAuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes(t *testing.T) {
 	for _, c := range []struct{ mode, method, want string }{
 		{"basic", "GET", "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Basic dTpw body="},
@@ -142,16 +197,23 @@ func TestAuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"digest", "GET", `200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest username="u", realm="r", nonce="n", uri="/x?q", response="R" body=`},
 		{"ntlm", "GET", "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T1 body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T3 ok body="},
 		{"negotiate", "GET", "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Negotiate T1 body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Negotiate T3 ok body="},
+		{"digest-int-invalid", "POST", "200 ok|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=a?b|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest int=text body=a?b"},
+		{"digest-int-latin1", "POST", "200 ok|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=?|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest int=text body=?"},
+		{"digest-int-bogus", "POST", "error|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=abc"},
 	} {
 		t.Run(c.mode+" "+c.method, func(t *testing.T) {
 			proxy, seen := forwardProxy(t, c.mode)
 			transport := NewSocketsTransport(SocketsOptions{ConnectTimeout: 2 * time.Second})
 			transport.Transport.Proxy = http.ProxyURL(proxy)
 			var body io.Reader
+			content, contentType, _ := forwardBody(c.mode)
 			if c.method == "POST" {
-				body = strings.NewReader("abc")
+				body = bytes.NewReader(content)
 			}
 			request, _ := http.NewRequest(c.method, "http://127.0.0.1:1/x?q", body)
+			if contentType != "" {
+				request.Header.Set("Content-Type", contentType)
+			}
 			outcome := "error"
 			if response, err := (&http.Client{Transport: transport}).Do(request); err == nil {
 				got, _ := io.ReadAll(response.Body)

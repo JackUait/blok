@@ -72,7 +72,79 @@ func newVM() *goja.Runtime {
 	vm := goja.New()
 	vm.SetMaxCallStackSize(MaxCallStackSize)
 	installLocaleCompare(vm)
+	installJSONParseDepth(vm)
 	return vm
+}
+
+// maxJSONDepth is Jint's Options.Json.MaxParseDepth default, which C# keeps:
+// its JSON.parse refuses a 65th nested array or object, wherever the text
+// came from.
+const maxJSONDepth = 64
+
+// jsonParseWrapper takes the engine's JSON.parse and a scan that answers the
+// UTF-16 index of the first bracket nested past the cap, or -1. A method, so
+// it is named "parse", has length 2, and is no constructor.
+const jsonParseWrapper = `(function (parse, tooDeepAt, SyntaxErrorType) {
+  const wrapped = {
+    parse(text, reviver) {
+      const source = ` + "`${text}`" + `;
+      const at = tooDeepAt(source);
+      if (at >= 0) {
+        throw new SyntaxErrorType('Max. depth level of JSON reached at position ' + at);
+      }
+      return parse(source, reviver);
+    },
+  }.parse;
+  Object.defineProperty(JSON, 'parse', { value: wrapped, writable: true, enumerable: false, configurable: true });
+})`
+
+func installJSONParseDepth(vm *goja.Runtime) {
+	install, err := vm.RunString(jsonParseWrapper)
+	if err != nil {
+		panic(err)
+	}
+	call, _ := goja.AssertFunction(install)
+	tooDeep := func(call goja.FunctionCall) goja.Value {
+		return vm.ToValue(jsonTooDeepAt(call.Argument(0).String()))
+	}
+	parse := vm.Get("JSON").ToObject(vm).Get("parse")
+	if _, err := call(goja.Undefined(), parse, vm.ToValue(tooDeep), vm.Get("SyntaxError")); err != nil {
+		panic(err)
+	}
+}
+
+// jsonTooDeepAt scans brackets outside strings. It does not check the rest
+// of the syntax: JSON.parse still does, and both fail as SyntaxError.
+func jsonTooDeepAt(text string) int {
+	depth, index := 0, 0
+	inString, escaped := false, false
+	for _, r := range text {
+		switch {
+		case inString:
+			if escaped {
+				escaped = false
+			} else if r == '\\' {
+				escaped = true
+			} else if r == '"' {
+				inString = false
+			}
+		case r == '"':
+			inString = true
+		case r == '[' || r == '{':
+			depth++
+			if depth > maxJSONDepth {
+				return index
+			}
+		case (r == ']' || r == '}') && depth > 0:
+			depth--
+		}
+		if r >= 0x10000 {
+			index += 2
+		} else {
+			index++
+		}
+	}
+	return -1
 }
 
 // installLocaleCompare is goja's localeCompare (NFD, then x/text's root

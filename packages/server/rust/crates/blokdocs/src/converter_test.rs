@@ -173,6 +173,32 @@ pub(crate) fn is_reason(result: &Result<impl std::fmt::Debug, Error>, reason: Re
     matches!(result, Err(Error::Conversion(err)) if err.reason == reason)
 }
 
+// C# BlokDocumentConverterTests.RefusesADocumentNestedPastTheParseDepth:
+// Jint's JSON.parse refuses a 65th nested array or object, and the bare
+// readers hand it the document as is; plain text wraps it one level deeper.
+#[tokio::test]
+async fn refuses_a_document_nested_past_the_parse_depth() {
+    let c = real_converter();
+    let nested = |depth: usize| {
+        format!(
+            r#"{{"blocks":[],"deep":{}{}}}"#,
+            "[".repeat(depth - 1),
+            "]".repeat(depth - 1)
+        )
+    };
+    c.to_html(&nested(64)).await.expect("ToHTML at 64");
+    c.to_markdown(&nested(64)).await.expect("ToMarkdown at 64");
+    let wrapped = c.to_plain_text(&nested(64), false).await;
+    assert!(is_reason(&wrapped, Reason::InvalidDocument), "{wrapped:?}");
+    let html = c.to_html(&nested(65)).await;
+    assert!(is_reason(&html, Reason::InvalidDocument), "{html:?}");
+    let markdown = c.to_markdown(&nested(65)).await;
+    assert!(
+        is_reason(&markdown, Reason::InvalidDocument),
+        "{markdown:?}"
+    );
+}
+
 #[tokio::test]
 async fn converts_through_the_embedded_bundle() {
     let converter = real_converter();

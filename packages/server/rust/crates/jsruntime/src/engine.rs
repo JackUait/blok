@@ -99,6 +99,7 @@ impl Engine {
                 .get::<_, Object>("prototype")?
                 .get("toWellFormed")?;
             install_locale_compare(&ctx)?;
+            install_json_parse_depth(&ctx, &well_formed)?;
             // A base object in QuickJS, absent from Jint and goja.
             ctx.globals().remove("queueMicrotask")?;
             let well_formed = Persistent::save(&ctx, well_formed);
@@ -308,6 +309,81 @@ static COLLATOR: LazyLock<CollatorBorrowed<'static>> = LazyLock::new(|| {
 /// and node collate. A lone surrogate compares as U+FFFD; Jint throws on it.
 // The closure must not hold a JS value: QuickJS's GC cannot see into it,
 // and the engine would abort on free with a leaked object.
+/// Jint's Options.Json.MaxParseDepth default, which C# keeps: its
+/// JSON.parse refuses a 65th nested array or object, wherever the text came
+/// from.
+const MAX_JSON_DEPTH: usize = 64;
+
+/// Takes the engine's JSON.parse and a scan that answers the UTF-16 index of
+/// the first bracket nested past the cap, -1 for none, or -2 for text that
+/// must be made well formed first. A method, so it is named "parse", has
+/// length 2, and is no constructor. Go installs the same wrapper.
+const JSON_PARSE_WRAPPER: &str = r#"(parse, tooDeepAt, SyntaxErrorType, wellFormed) => {
+  const wrapped = {
+    parse(text, reviver) {
+      const source = `${text}`;
+      let at = tooDeepAt(source);
+      if (at === -2) {
+        at = tooDeepAt(wellFormed.call(source));
+      }
+      if (at >= 0) {
+        throw new SyntaxErrorType('Max. depth level of JSON reached at position ' + at);
+      }
+      return parse(source, reviver);
+    },
+  }.parse;
+  Object.defineProperty(JSON, 'parse', { value: wrapped, writable: true, enumerable: false, configurable: true });
+}"#;
+
+fn install_json_parse_depth<'js>(
+    ctx: &Ctx<'js>,
+    well_formed: &Function<'js>,
+) -> rquickjs::Result<()> {
+    let install: Function = ctx.eval(JSON_PARSE_WRAPPER)?;
+    let too_deep = Function::new(
+        ctx.clone(),
+        |text: rquickjs::String<'js>| -> rquickjs::Result<i64> {
+            match text.to_string() {
+                Ok(text) => Ok(json_too_deep_at(&text)),
+                Err(rquickjs::Error::Utf8(_)) => Ok(-2),
+                Err(err) => Err(err),
+            }
+        },
+    )?;
+    let parse: Function = ctx.globals().get::<_, Object>("JSON")?.get("parse")?;
+    let syntax_error: Value = ctx.globals().get("SyntaxError")?;
+    install.call((parse, too_deep, syntax_error, well_formed.clone()))
+}
+
+/// Scans brackets outside strings. It does not check the rest of the
+/// syntax: JSON.parse still does, and both fail as SyntaxError.
+pub(crate) fn json_too_deep_at(text: &str) -> i64 {
+    let (mut depth, mut index) = (0usize, 0i64);
+    let (mut in_string, mut escaped) = (false, false);
+    for c in text.chars() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == '"' {
+                in_string = false;
+            }
+        } else if c == '"' {
+            in_string = true;
+        } else if c == '[' || c == '{' {
+            depth += 1;
+            if depth > MAX_JSON_DEPTH {
+                return index;
+            }
+        } else if c == ']' || c == '}' {
+            depth = depth.saturating_sub(1);
+        }
+        index += c.len_utf16() as i64;
+    }
+    -1
+}
+
 fn install_locale_compare<'js>(ctx: &Ctx<'js>) -> rquickjs::Result<()> {
     let compare = Function::new(
         ctx.clone(),

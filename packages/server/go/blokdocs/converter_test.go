@@ -135,6 +135,32 @@ func TestConvertsThroughTheEmbeddedBundle(t *testing.T) {
 	}
 }
 
+// C# BlokDocumentConverterTests.RefusesADocumentNestedPastTheParseDepth:
+// Jint's JSON.parse refuses a 65th nested array or object, and the bare
+// readers hand it the document as is; plain text wraps it one level deeper.
+func TestRefusesADocumentNestedPastTheParseDepth(t *testing.T) {
+	c := newRealConverter(t)
+	ctx := context.Background()
+	nested := func(depth int) string {
+		return `{"blocks":[],"deep":` + strings.Repeat("[", depth-1) + strings.Repeat("]", depth-1) + `}`
+	}
+	if _, err := c.ToHTML(ctx, nested(64)); err != nil {
+		t.Fatalf("ToHTML at 64: %v", err)
+	}
+	if _, err := c.ToMarkdown(ctx, nested(64)); err != nil {
+		t.Fatalf("ToMarkdown at 64: %v", err)
+	}
+	if _, err := c.ToPlainText(ctx, nested(64), false); !isReason(err, InvalidDocument) {
+		t.Fatalf("ToPlainText at 64: err = %v", err)
+	}
+	if _, err := c.ToHTML(ctx, nested(65)); !isReason(err, InvalidDocument) {
+		t.Fatalf("ToHTML at 65: err = %v", err)
+	}
+	if _, err := c.ToMarkdown(ctx, nested(65)); !isReason(err, InvalidDocument) {
+		t.Fatalf("ToMarkdown at 65: err = %v", err)
+	}
+}
+
 func TestRefusesLimitsBelowTheFloorsBeforeLoading(t *testing.T) {
 	var constraint *ConstraintError
 	if _, err := New(Options{Timeout: time.Millisecond}); !errors.As(err, &constraint) {

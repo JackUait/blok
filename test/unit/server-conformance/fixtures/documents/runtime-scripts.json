@@ -558,5 +558,50 @@
         }
       }
     ]
+  },
+  {
+    "name": "JSON.parse stops past 64 levels",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  const arrays = (n) => '['.repeat(n) + ']'.repeat(n);\n  const objects = (n) => '{\"a\":'.repeat(n) + '1' + '}'.repeat(n);\n  const read = (text) => { try { JSON.parse(text); return 'ok'; } catch (error) { return error.name + ': ' + error.message; } };\n  if (operation === 'deepest') return [read(arrays(64)), read(objects(64)), read('[' + objects(63) + ']')].join(' | ');\n  if (operation === 'too deep') return [read(arrays(65)), read(objects(65)), read(' [\"[{\", ' + arrays(64) + ']')].join(' | ');\n  if (operation === 'clone') { let value = 1; for (let i = 0; i < 70; i++) value = { a: value }; return read(JSON.stringify(value)); }\n  if (operation === 'surrogates') return [read('[\"\\ud800\", ' + arrays(64) + ']'), read('[\"\\ud83d\\ude00\", ' + arrays(64) + ']')].join(' | ');\n  if (operation === 'throws') JSON.parse(arrays(65));\n  return 'unknown';\n};\n",
+    "steps": [
+      {
+        "op": "deepest",
+        "expect": {
+          "result": "ok | ok | ok"
+        }
+      },
+      {
+        "op": "too deep",
+        "expect": {
+          "result": "SyntaxError: Max. depth level of JSON reached at position 64 | SyntaxError: Max. depth level of JSON reached at position 320 | SyntaxError: Max. depth level of JSON reached at position 71"
+        },
+        "why": "Jint's JSON.parse refuses a 65th nested array or object (Options.Json.MaxParseDepth, default 64, which C# keeps). Go and Rust wrap JSON.parse to match, message and position (UTF-16 index of the bracket) included. A bracket inside a string does not count."
+      },
+      {
+        "op": "clone",
+        "expect": {
+          "result": "SyntaxError: Max. depth level of JSON reached at position 320"
+        },
+        "why": "A value the bundle built itself is refused too: the cap is in JSON.parse, not on the input."
+      },
+      {
+        "op": "surrogates",
+        "expect": {
+          "result": "SyntaxError: Max. depth level of JSON reached at position 69 | SyntaxError: Max. depth level of JSON reached at position 70"
+        },
+        "why": "Positions count UTF-16 units: a lone surrogate is one, a pair two."
+      },
+      {
+        "op": "throws",
+        "expect": {
+          "error": "InvalidDocument"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "6"
+        }
+      }
+    ]
   }
 ]

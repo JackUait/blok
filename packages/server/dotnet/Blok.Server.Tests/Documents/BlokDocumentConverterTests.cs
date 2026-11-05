@@ -495,6 +495,36 @@ public sealed class BlokDocumentConverterTests
   }
 
   /// <summary>
+  /// Jint's JSON.parse refuses a 65th nested array or object, and the bare
+  /// readers hand the document to it as is. The plain-text reader wraps the
+  /// document in a request, one level deeper. Go and Rust wrap JSON.parse to
+  /// match (documents/runtime-scripts.json).
+  /// </summary>
+  [Fact]
+  public async Task RefusesADocumentNestedPastTheParseDepth()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    static string Nested(int depth) =>
+        "{\"blocks\":[],\"deep\":" + new string('[', depth - 1) + new string(']', depth - 1) + "}";
+
+    await converter.ToHtmlAsync(Nested(64));
+    await converter.ToMarkdownAsync(Nested(64));
+    var wrapped = await Assert.ThrowsAsync<BlokDocumentConversionException>(
+        async () => await converter.ToPlainTextAsync(Nested(64)));
+    Assert.Equal(BlokConversionFailure.InvalidDocument, wrapped.Reason);
+
+    foreach (var convert in new Func<Task>[]
+    {
+      () => converter.ToHtmlAsync(Nested(65)).AsTask(),
+      () => converter.ToMarkdownAsync(Nested(65)).AsTask(),
+    })
+    {
+      var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(convert);
+      Assert.Equal(BlokConversionFailure.InvalidDocument, failure.Reason);
+    }
+  }
+
+  /// <summary>
   /// The parity the readers and the translation path did not have: the same
   /// unreadable input arrived as two unrelated types — a JavaScript exception
   /// from the bundle's own parse for one, a <c>JsonException</c> from this

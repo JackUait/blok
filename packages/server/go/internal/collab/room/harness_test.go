@@ -64,6 +64,18 @@ type fakeJournalDoc struct {
 	records    []operation.Record
 	fence      int64
 	open       bool
+	purged     bool
+	createdAt  *time.Time
+	// superseded holds the lineages a reset replaced, oldest first.
+	superseded []fakeLineage
+}
+
+type fakeLineage struct {
+	head      operation.Head
+	baseline  [][]byte
+	records   []operation.Record
+	createdAt *time.Time
+	current   bool
 }
 
 type fakeJournal struct {
@@ -73,6 +85,12 @@ type fakeJournal struct {
 	failAppends     func(doc string) error
 	failCheckpoints func(doc string) error
 	failResets      func(doc string) error
+
+	// commitBeforeFailing journals the record before a failAppends error: the
+	// unknown outcome, durable to the store and failed to the caller.
+	commitBeforeFailing bool
+	// beforeAppend, when set, holds every append until it is closed.
+	beforeAppend chan struct{}
 }
 
 func newFakeJournal() *fakeJournal { return &fakeJournal{docs: map[string]*fakeJournalDoc{}} }
@@ -147,6 +165,9 @@ func (j *fakeJournal) Open(_ context.Context, id string) (journal.OpenOutcome, O
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	d := j.doc(id)
+	if d.purged {
+		return journal.DocumentPurged, nil, nil
+	}
 	if d.open {
 		return journal.DocumentOpenElsewhere, nil, nil
 	}
@@ -216,7 +237,18 @@ func (s *fakeSession) FindCommitted(_ context.Context, operationID string, diges
 	return operation.Lookup{Outcome: operation.LookupConflict, Sequence: existing.Sequence}, nil
 }
 
-func (s *fakeSession) Append(_ context.Context, candidate operation.Candidate) (operation.AppendResult, error) {
+func (s *fakeSession) Append(ctx context.Context, candidate operation.Candidate) (operation.AppendResult, error) {
+	s.store.mu.Lock()
+	pause := s.store.beforeAppend
+	s.store.mu.Unlock()
+	// The wait runs outside the lock, so a test can read the store while it holds.
+	if pause != nil {
+		select {
+		case <-pause:
+		case <-ctx.Done():
+			return operation.AppendResult{}, ctx.Err()
+		}
+	}
 	s.store.mu.Lock()
 	defer s.store.mu.Unlock()
 	d, err := s.fenced()
@@ -229,10 +261,12 @@ func (s *fakeSession) Append(_ context.Context, candidate operation.Candidate) (
 		}
 		return operation.AppendResult{Outcome: operation.AppendConflict, Sequence: existing.Sequence}, nil
 	}
+	var failure error
 	if s.store.failAppends != nil {
-		if failure := s.store.failAppends(s.id); failure != nil {
-			return operation.AppendResult{}, failure
-		}
+		failure = s.store.failAppends(s.id)
+	}
+	if failure != nil && !s.store.commitBeforeFailing {
+		return operation.AppendResult{}, failure
 	}
 	if d.head == nil {
 		return operation.AppendResult{}, errors.New(`collab: "` + s.id + `" was never seeded; reset it first`)
@@ -244,6 +278,9 @@ func (s *fakeSession) Append(_ context.Context, candidate operation.Candidate) (
 		Source: candidate.Source, Update: candidate.Update, Digest: candidate.Digest,
 	})
 	d.head.DurableThrough = sequence
+	if failure != nil {
+		return operation.AppendResult{}, failure
+	}
 	return operation.AppendResult{Outcome: operation.Committed, Sequence: sequence}, nil
 }
 
@@ -287,6 +324,13 @@ func (s *fakeSession) Reset(_ context.Context, reset operation.Reset) (operation
 	if err != nil {
 		return operation.Head{}, err
 	}
+	if d.head != nil {
+		d.superseded = append(d.superseded, fakeLineage{head: *d.head, baseline: d.baseline, records: d.records, createdAt: d.createdAt})
+	}
+	// Record times count seconds from the epoch, so a lineage start there
+	// never sorts after its own records.
+	epoch := time.Unix(0, 0).UTC()
+	d.createdAt = &epoch
 	d.baseline = slices.Clone(reset.Baseline)
 	d.checkpoint = nil
 	d.records = nil

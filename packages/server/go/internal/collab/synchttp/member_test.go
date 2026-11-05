@@ -353,3 +353,42 @@ func TestAFrameWaitingOnTheRoomIsCancelledWhenTheCloseGraceEnds(t *testing.T) {
 	}
 	<-done
 }
+
+// C# links its receive token to RequestAborted: a peer whose connection
+// drops while its frame waits for the room lane has that frame dropped.
+func TestAFrameWaitingOnTheRoomIsCancelledWhenThePeerConnectionDrops(t *testing.T) {
+	for _, drop := range []string{"fin", "rst", ""} {
+		t.Run("drop="+drop, func(t *testing.T) {
+			server, client := wsPair(t)
+			membership := &waitingMembership{entered: make(chan struct{}), cancelled: make(chan struct{})}
+			member := NewSocketMember(MemberOptions{MaxQueuedBytes: 1 << 20})
+			done := runMember(t, member, server, membership, nil)
+			if _, err := client.Write(clientFrame(0x82, []byte{1})); err != nil {
+				t.Fatal(err)
+			}
+			<-membership.entered
+			tcp := client.(*net.TCPConn)
+			switch drop {
+			case "fin":
+				_ = tcp.CloseWrite()
+			case "rst":
+				_ = tcp.SetLinger(0)
+				_ = tcp.Close()
+			default:
+				select {
+				case <-membership.cancelled:
+					t.Fatal("cancelled with the peer still there")
+				case <-time.After(300 * time.Millisecond):
+				}
+				server.Abort()
+				return
+			}
+			select {
+			case <-membership.cancelled:
+			case <-time.After(3 * time.Second):
+				t.Fatal("the waiting frame was not cancelled after the peer dropped")
+			}
+			<-done
+		})
+	}
+}

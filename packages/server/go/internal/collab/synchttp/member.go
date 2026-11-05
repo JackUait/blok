@@ -28,6 +28,12 @@ type Socket interface {
 	Abort()
 }
 
+// peerWatcher is a socket that sees the peer's FIN or RST while nobody
+// receives (ws.Conn).
+type peerWatcher interface {
+	PeerGone() <-chan struct{}
+}
+
 // MemberOptions are SyncSocketMember's constructor arguments.
 type MemberOptions struct {
 	CanWrite             bool
@@ -171,6 +177,18 @@ func (m *SocketMember) Run(ctx context.Context, socket Socket, membership collab
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	receiving := newCanceller(socket, cancel)
+	// C# links the receive token to RequestAborted for the whole run.
+	if watched, ok := socket.(peerWatcher); ok {
+		runDone := make(chan struct{})
+		defer close(runDone)
+		go func() {
+			select {
+			case <-watched.PeerGone():
+				receiving.after(0)
+			case <-runDone:
+			}
+		}()
+	}
 	pumpDone := make(chan struct{})
 	go func() {
 		defer close(pumpDone)

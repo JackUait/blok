@@ -76,6 +76,7 @@ type Options struct {
 type Conn struct {
 	raw    net.Conn
 	reader *bufio.Reader
+	ahead  *readAhead
 
 	sendMu sync.Mutex
 	// stateMu guards the close flags and the keep-alive state.
@@ -229,7 +230,10 @@ func newConn(raw net.Conn, reader *bufio.Reader, options Options) *Conn {
 		done: make(chan struct{}),
 		last: frameHeader{fin: true, opcode: opText, processed: true},
 	}
-	c.reader = bufio.NewReader(dataReader{c, reader})
+	c.ahead = newReadAhead(reader, c.done)
+	// Below dataReader: keep-alive counts bytes when framing reads them,
+	// not when they arrive.
+	c.reader = bufio.NewReader(dataReader{c, c.ahead})
 	if options.KeepAliveInterval > 0 {
 		c.startKeepAlive(options.KeepAliveInterval, options.KeepAliveTimeout)
 	}
@@ -269,6 +273,11 @@ func (c *Conn) Abort() {
 
 // Done is closed once the socket is disposed.
 func (c *Conn) Done() <-chan struct{} { return c.done }
+
+// PeerGone is closed once the peer ended the connection (FIN or RST), even
+// while nobody calls Receive. Kestrel's RequestAborted. Our own Abort does
+// not close it.
+func (c *Conn) PeerGone() <-chan struct{} { return c.ahead.gone }
 
 func (c *Conn) writeFrame(opcode byte, payload []byte) error {
 	header := make([]byte, 0, 10+len(payload))

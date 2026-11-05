@@ -172,7 +172,7 @@ func TestBoundsAndRedactsDnsAndTransportErrors(t *testing.T) {
 
 type chainPKI struct {
 	root, middle *x509.Certificate
-	pool         *x509.CertPool
+	roots        []*x509.Certificate
 	leaf         *x509.Certificate
 	leafKey      *ecdsa.PrivateKey
 }
@@ -196,9 +196,7 @@ func newChainPKI(t *testing.T, name, issuerURL string) chainPKI {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		IssuingCertificateURL: []string{issuerURL}},
 		middle, &leafKey.PublicKey, middleKey)
-	pool := x509.NewCertPool()
-	pool.AddCert(root)
-	return chainPKI{root: root, middle: middle, pool: pool, leaf: leaf, leafKey: leafKey}
+	return chainPKI{root: root, middle: middle, roots: []*x509.Certificate{root}, leaf: leaf, leafKey: leafKey}
 }
 
 func issuerOrigin(t *testing.T, issuer *[]byte) *rawOrigin {
@@ -232,7 +230,7 @@ func TestAcceptsACompleteServerChainWithACustomRoot(t *testing.T) {
 	issuerBytes = pki.middle.Raw
 	origin := startRawOrigin(t, &tls.Certificate{Certificate: [][]byte{pki.leaf.Raw, pki.middle.Raw}, PrivateKey: pki.leafKey}, okHandler)
 	f, _ := fixtureFetcher(origin, "chain.example")
-	f.RootCAs = pki.pool
+	f.Roots = pki.roots
 
 	response, err := f.Get(context.Background(), originURL("https", "chain.example", origin, "/"), testLimits)
 	if err != nil {
@@ -509,7 +507,7 @@ func tlsFixtureFetcher(t *testing.T, host string, handle func(rawRequest, net.Co
 	pki := newPKI(t, host, nil)
 	origin := startRawOrigin(t, &pki.leaf, handle)
 	f, _ := fixtureFetcher(origin, host)
-	f.RootCAs = pki.pool
+	f.Roots = pki.roots
 	return f, origin
 }
 

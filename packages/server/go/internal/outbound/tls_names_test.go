@@ -31,7 +31,7 @@ func TestRefusesAtTLSTheHostNamesDotNetRefuses(t *testing.T) {
 		t.Run(c.host, func(t *testing.T) {
 			pki := newPKI(t, c.host, nil)
 			o := startTLSOrigin(t, pki.leaf, nil)
-			f := loopbackFetcher(c.host, o.port, pki.pool)
+			f := loopbackFetcher(c.host, o.port, pki.roots)
 			response, err := f.Get(context.Background(), "https://"+c.host+":"+strconv.Itoa(o.port)+"/", testLimits)
 			if c.ok {
 				if err != nil {

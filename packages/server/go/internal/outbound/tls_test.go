@@ -38,9 +38,9 @@ func makeCert(t *testing.T, template, parent *x509.Certificate, public, private 
 }
 
 type testPKI struct {
-	root *x509.Certificate
-	pool *x509.CertPool
-	leaf tls.Certificate
+	root  *x509.Certificate
+	roots []*x509.Certificate
+	leaf  tls.Certificate
 }
 
 // newPKI is TestCertificates.Create: a root and a leaf for name, with extra
@@ -65,9 +65,7 @@ func newPKI(t *testing.T, name string, leafFields func(*x509.Certificate)) testP
 		leafFields(leafTemplate)
 	}
 	leaf := makeCert(t, leafTemplate, root, &leafKey.PublicKey, rootKey)
-	pool := x509.NewCertPool()
-	pool.AddCert(root)
-	return testPKI{root: root, pool: pool, leaf: tls.Certificate{Certificate: [][]byte{leaf.Raw}, PrivateKey: leafKey}}
+	return testPKI{root: root, roots: []*x509.Certificate{root}, leaf: tls.Certificate{Certificate: [][]byte{leaf.Raw}, PrivateKey: leafKey}}
 }
 
 // tlsOrigin is LoopbackOrigin with a server certificate: it records the SNI
@@ -109,10 +107,10 @@ func startTLSOrigin(t *testing.T, certificate tls.Certificate, protocols []strin
 	return o
 }
 
-func loopbackFetcher(host string, port int, roots *x509.CertPool) *Fetcher {
+func loopbackFetcher(host string, port int, roots []*x509.Certificate) *Fetcher {
 	resolver := &countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}}
 	f := newTestFetcher(&fixturePolicy{host: host, port: port, allowed: addrs("127.0.0.1")}, resolver)
-	f.RootCAs = roots
+	f.Roots = roots
 	return f
 }
 
@@ -127,7 +125,7 @@ func wantBlocked(t *testing.T, err error) {
 func TestPreservesTheHostnameForTLSSNIAndCertificateValidation(t *testing.T) {
 	pki := newPKI(t, "secure.example", nil)
 	o := startTLSOrigin(t, pki.leaf, nil)
-	f := loopbackFetcher("secure.example", o.port, pki.pool)
+	f := loopbackFetcher("secure.example", o.port, pki.roots)
 	response, err := f.Get(context.Background(), "https://secure.example:"+strconv.Itoa(o.port)+"/tls", testLimits)
 	if err != nil {
 		t.Fatal(err)
@@ -141,7 +139,7 @@ func TestPreservesTheHostnameForTLSSNIAndCertificateValidation(t *testing.T) {
 func TestRejectsATrustedCertificateForTheWrongHostname(t *testing.T) {
 	pki := newPKI(t, "other.example", nil)
 	o := startTLSOrigin(t, pki.leaf, nil)
-	f := loopbackFetcher("secure.example", o.port, pki.pool)
+	f := loopbackFetcher("secure.example", o.port, pki.roots)
 	_, err := f.Get(context.Background(), "https://secure.example:"+strconv.Itoa(o.port)+"/", testLimits)
 	wantBlocked(t, err)
 }
@@ -158,7 +156,7 @@ func TestRetainsNormalTLSCertificateValidation(t *testing.T) {
 func TestOffersOnlyHTTP11DuringTLSNegotiation(t *testing.T) {
 	pki := newPKI(t, "alpn.example", nil)
 	o := startTLSOrigin(t, pki.leaf, []string{"h2", "http/1.1"})
-	f := loopbackFetcher("alpn.example", o.port, pki.pool)
+	f := loopbackFetcher("alpn.example", o.port, pki.roots)
 	response, err := f.Get(context.Background(), "https://alpn.example:"+strconv.Itoa(o.port)+"/", testLimits)
 	if err != nil {
 		t.Fatal(err)
@@ -183,7 +181,7 @@ func TestNeverChecksRevocation(t *testing.T) {
 		leaf.OCSPServer = []string{responder.URL + "/ocsp"}
 	})
 	o := startTLSOrigin(t, pki.leaf, nil)
-	f := loopbackFetcher("revoked.example", o.port, pki.pool)
+	f := loopbackFetcher("revoked.example", o.port, pki.roots)
 	response, err := f.Get(context.Background(), "https://revoked.example:"+strconv.Itoa(o.port)+"/", testLimits)
 	if err != nil {
 		t.Fatal(err)
@@ -200,7 +198,7 @@ func TestAnIPLiteralSendsNoServerName(t *testing.T) {
 	pki := newPKI(t, "127.0.0.1", nil)
 	o := startTLSOrigin(t, pki.leaf, nil)
 	f := NewFetcher(anyAddress{})
-	f.RootCAs = pki.pool
+	f.Roots = pki.roots
 	response, err := f.Get(context.Background(), "https://127.0.0.1:"+strconv.Itoa(o.port)+"/", testLimits)
 	if err != nil {
 		t.Fatal(err)
@@ -270,7 +268,7 @@ func TestRefusesARedirectFromHTTPSDownToHTTP(t *testing.T) {
 	securePort := secure.Listener.Addr().(*net.TCPAddr).Port
 	f := newTestFetcher(portsPolicy{host: "secure.example", ports: []int{securePort, plainPort}},
 		&countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}})
-	f.RootCAs = pki.pool
+	f.Roots = pki.roots
 
 	_, err := f.Get(context.Background(), "https://secure.example:"+strconv.Itoa(securePort)+"/", testLimits)
 	wantBlocked(t, err)
@@ -290,7 +288,7 @@ func TestFollowsARedirectFromHTTPUpToHTTPS(t *testing.T) {
 	plainPort := plain.Listener.Addr().(*net.TCPAddr).Port
 	f := newTestFetcher(portsPolicy{host: "secure.example", ports: []int{o.port, plainPort}},
 		&countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}})
-	f.RootCAs = pki.pool
+	f.Roots = pki.roots
 
 	response, err := f.Get(context.Background(), "http://secure.example:"+strconv.Itoa(plainPort)+"/", testLimits)
 	if err != nil {
@@ -299,50 +297,5 @@ func TestFollowsARedirectFromHTTPUpToHTTPS(t *testing.T) {
 	defer response.Release()
 	if string(response.Body) != "ok" {
 		t.Fatalf("body %q", response.Body)
-	}
-}
-
-// trustd checks every cert of a path against the trust settings, the leaf
-// and each parent alike (SecTrustServer.c:855-875, 910-925): a Deny makes
-// it a denied anchor, and SecPVCCheckUsageConstraints fails the path
-// (SecPolicyServer.c:3425-3440). So a chain through a "Never Trust" cert
-// is refused, unless another chain avoids it.
-func TestRefusesAChainThroughADeniedCert(t *testing.T) {
-	now := time.Now()
-	newKey := func() *ecdsa.PrivateKey { key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader); return key }
-	rootKey, middleKey, leafKey := newKey(), newKey(), newKey()
-	ca := func(serial int64, name string) *x509.Certificate {
-		return &x509.Certificate{SerialNumber: big.NewInt(serial), Subject: pkix.Name{CommonName: name},
-			NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour), IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign}
-	}
-	root := makeCert(t, ca(1, "root"), ca(1, "root"), &rootKey.PublicKey, rootKey)
-	middle := makeCert(t, ca(2, "middle"), root, &middleKey.PublicKey, rootKey)
-	leaf := makeCert(t, &x509.Certificate{SerialNumber: big.NewInt(3), Subject: pkix.Name{CommonName: "denied.example"},
-		NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour), DNSNames: []string{"denied.example"},
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}, middle, &leafKey.PublicKey, middleKey)
-	pool := x509.NewCertPool()
-	pool.AddCert(root)
-	o := startTLSOrigin(t, tls.Certificate{Certificate: [][]byte{leaf.Raw, middle.Raw}, PrivateKey: leafKey}, nil)
-	url := "https://denied.example:" + strconv.Itoa(o.port) + "/"
-
-	get := func(denied ...*x509.Certificate) error {
-		f := loopbackFetcher("denied.example", o.port, pool)
-		f.denied = map[string]bool{}
-		for _, certificate := range denied {
-			f.denied[certHash(certificate.Raw)] = true
-		}
-		response, err := f.Get(context.Background(), url, testLimits)
-		if err == nil {
-			response.Release()
-		}
-		return err
-	}
-	if err := get(); err != nil {
-		t.Fatalf("no deny: %v", err)
-	}
-	wantBlocked(t, get(middle))
-	wantBlocked(t, get(leaf))
-	if err := get(newPKI(t, "other.example", nil).root); err != nil {
-		t.Fatalf("a deny off the chain: %v", err)
 	}
 }

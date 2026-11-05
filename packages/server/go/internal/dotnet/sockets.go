@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"golang.org/x/net/proxy"
+
+	"github.com/JackUait/blok/packages/server/go/internal/sectrust"
 )
 
 // SocketsOptions are the SocketsHttpHandler settings the C# server sets.
@@ -174,12 +176,34 @@ func (t *SocketsTransport) handshake(ctx context.Context, conn net.Conn, host st
 	if config.ServerName == "" {
 		config.ServerName = host
 	}
+	// With no roots of its own, trustd checks the chain as SslStream does
+	// for HttpClient's defaults; Go's own check is off then. Go's platform
+	// verifier would use an SSL policy, which refuses chains .NET accepts.
+	if sectrust.Available && config.RootCAs == nil && !config.InsecureSkipVerify && config.VerifyConnection == nil {
+		name := config.ServerName
+		config.InsecureSkipVerify = true
+		config.VerifyConnection = func(state tls.ConnectionState) error {
+			chain := make([][]byte, len(state.PeerCertificates))
+			for i, c := range state.PeerCertificates {
+				chain[i] = c.Raw
+			}
+			if !operatorTrusts(chain, name, nil) {
+				return errUntrustedChain
+			}
+			return nil
+		}
+	}
 	secure := tls.Client(conn, config)
 	if err := secure.HandshakeContext(ctx); err != nil {
 		return nil, err
 	}
 	return secure, nil
 }
+
+// operatorTrusts is swapped by tests.
+var operatorTrusts = sectrust.Operator
+
+var errUntrustedChain = errors.New("dotnet: trustd does not trust the certificate chain")
 
 // proxyAddress is the proxy's host:port; with no port, GetUriFromString's
 // default (proxy.go): 443 for https, else 80.

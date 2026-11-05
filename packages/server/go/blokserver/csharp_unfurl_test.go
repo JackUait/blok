@@ -75,13 +75,11 @@ func httpsUnfurlServer(t *testing.T, handler http.HandlerFunc) (*Server, string)
 	if err != nil {
 		t.Fatal(err)
 	}
-	roots := x509.NewCertPool()
-	roots.AddCert(origin.Certificate())
 	s.fetcher = outbound.NewFetcher(examplePolicy{port})
 	s.fetcher.Resolve = func(context.Context, string) ([]netip.Addr, error) {
 		return []netip.Addr{netip.AddrFrom4([4]byte{127, 0, 0, 1})}, nil
 	}
-	s.fetcher.RootCAs = roots
+	s.fetcher.Roots = []*x509.Certificate{origin.Certificate()}
 	return s, "https://example.com:" + strconv.Itoa(port)
 }
 

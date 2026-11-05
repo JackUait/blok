@@ -4,16 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net"
 	"net/http"
 	"net/netip"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +19,7 @@ import (
 
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/mediatype"
+	"github.com/JackUait/blok/packages/server/go/internal/sectrust"
 )
 
 // UserAgent is sent with every fetch, and no other header but Host.
@@ -84,15 +82,11 @@ type Resolver func(ctx context.Context, host string) ([]netip.Addr, error)
 type Fetcher struct {
 	Policy  Policy
 	Resolve Resolver
-	// RootCAs replaces the system roots; tests set it.
-	RootCAs *x509.CertPool
-	// denied holds the certs the trust settings deny, by certHash. With
-	// RootCAs nil the system's set is used.
-	denied map[string]bool
-	// platform has trustd verify, as after a failed macOS trust read.
-	platform bool
-	permits  chan struct{}
-	uploads  chan struct{}
+	// Roots replace the system roots, as C#'s customTrustRoots; tests set
+	// them.
+	Roots   []*x509.Certificate
+	permits chan struct{}
+	uploads chan struct{}
 	// checkCallers and uploadCallers are each pool's per-caller lanes.
 	checkCallers  callerLanes
 	uploadCallers callerLanes
@@ -380,57 +374,50 @@ func (f *Fetcher) dial(ctx context.Context, target Target, addresses []netip.Add
 
 func (f *Fetcher) tlsConfig(target Target) *tls.Config {
 	config := &tls.Config{NextProtos: []string{"http/1.1"}}
-	config.RootCAs = f.RootCAs
-	denied, platform := f.denied, f.platform
-	if config.RootCAs == nil && !platform {
-		trust := defaultTrust()
-		config.RootCAs, denied, platform = trust.pool, trust.denied, trust.platform
-	}
 	literal := target.Literal.IsValid()
 	if !literal {
 		config.ServerName = target.Host
 	}
-	// trustd checks the chain in VerifyConnection; Go's check is off then.
-	config.InsecureSkipVerify = platform
+	if !sectrust.Available {
+		if f.Roots != nil {
+			config.RootCAs = x509.NewCertPool()
+			for _, root := range f.Roots {
+				config.RootCAs.AddCert(root)
+			}
+		}
+	}
+	// On macOS trustd checks the chain in VerifyConnection, as C#'s
+	// MacOsCertificateTrust does; Go's own check is off then.
+	config.InsecureSkipVerify = sectrust.Available
 	config.VerifyConnection = func(state tls.ConnectionState) error {
 		// Go matches any exact name; .NET refuses these at the certificate
 		// check, after the handshake, as this does.
 		if !literal && !tlsHostName(target.Host) {
 			return errTLSHostName
 		}
-		if platform {
-			chain := make([][]byte, len(state.PeerCertificates))
-			for i, c := range state.PeerCertificates {
-				chain[i] = c.Raw
-			}
-			if !platformTrusts(chain, target.Host) {
-				return errUntrusted
-			}
+		if !sectrust.Available {
 			return nil
 		}
-		if !slices.ContainsFunc(state.VerifiedChains, func(chain []*x509.Certificate) bool {
-			return !slices.ContainsFunc(chain, func(c *x509.Certificate) bool { return denied[certHash(c.Raw)] })
-		}) {
-			return errDeniedCert
+		chain := make([][]byte, len(state.PeerCertificates))
+		for i, c := range state.PeerCertificates {
+			chain[i] = c.Raw
+		}
+		var anchors [][]byte
+		if f.Roots != nil {
+			anchors = make([][]byte, len(f.Roots))
+			for i, root := range f.Roots {
+				anchors[i] = root.Raw
+			}
+		}
+		if !sectrust.Guarded(chain, target.Host, anchors) {
+			return errUntrusted
 		}
 		return nil
 	}
 	return config
 }
 
-// errDeniedCert: every chain runs through a cert the trust settings deny.
-// trustd checks the leaf and each parent against them
-// (SecTrustServer.c:855-875, 910-925) and fails a path with a denied cert
-// (SecPolicyServer.c:3425-3440).
-var errDeniedCert = errors.New("outbound: the certificate chain holds a denied certificate")
-
 var errUntrusted = errors.New("outbound: trustd does not trust the certificate chain")
-
-// certHash is a cert's SHA-1 in upper hex, as the trust settings key it.
-func certHash(der []byte) string {
-	sum := sha1.Sum(der)
-	return strings.ToUpper(hex.EncodeToString(sum[:]))
-}
 
 var errTLSHostName = errors.New("outbound: the host is not a name TLS can check")
 

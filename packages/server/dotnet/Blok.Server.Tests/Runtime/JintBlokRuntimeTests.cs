@@ -139,6 +139,33 @@ public sealed class JintBlokRuntimeTests
     Assert.Equal("ok", output);
   }
 
+  /*
+   * Go and Rust pin the same: the call timeout does not end the wait on a
+   * promise that never settles, only the caller's cancellation does, and the
+   * engine is replaced.
+   */
+  [Fact]
+  public async Task WaitsOnAPendingPromiseUntilTheCallerCancels()
+  {
+    const string script = """
+            let calls = 0;
+            globalThis.blokServerInvoke = async (operation) => {
+              calls++;
+              if (operation === 'wait') return await new Promise(() => {});
+              return String(calls);
+            };
+            """;
+    var runtime = new JintBlokRuntime(script, poolSize: 1, timeout: TimeSpan.FromMilliseconds(200));
+    using var cancelled = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+    var clock = System.Diagnostics.Stopwatch.StartNew();
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(
+        () => runtime.InvokeAsync("wait", "{}", cancellationToken: cancelled.Token).AsTask());
+
+    Assert.True(clock.Elapsed >= TimeSpan.FromMilliseconds(900), $"returned after {clock.Elapsed}");
+    Assert.Equal("1", await runtime.InvokeAsync("count", "{}"));
+  }
+
   [Fact]
   public async Task TimesOutInsteadOfHanging()
   {

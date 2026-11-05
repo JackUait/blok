@@ -286,10 +286,11 @@ func (r *Runtime) guardedInvoke(ctx context.Context, op, input string, timeout t
 		return "", false, &Failure{Kind: KindUnknown, Err: err}
 	case errors.As(err, &jsErr):
 		return "", true, &Failure{Kind: classify(jsErr.Name), Err: err}
-	// No event loop: a promise pending now can never settle. The engine itself
-	// finished, so it is kept.
+	// No event loop: a promise pending now can never settle. C# waits on it
+	// until the caller cancels, past the call timeout, and replaces the engine.
 	case errors.Is(err, ErrPending):
-		return "", true, &Failure{Kind: KindUnknown, Err: err}
+		<-ctx.Done()
+		return "", false, ctx.Err()
 	// C# AsString throws and its catch-all replaces the engine.
 	case errors.Is(err, ErrNotAString):
 		return "", false, &Failure{Kind: KindUnknown, Err: err}

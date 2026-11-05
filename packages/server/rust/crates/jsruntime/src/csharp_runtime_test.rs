@@ -4,7 +4,7 @@ use std::time::Duration;
 use crate::pool_test::{nested_outline, want_kind};
 use crate::test_json::{self, Json};
 use crate::{
-    ConstraintError, Error, Kind, MINIMUM_MEMORY_BUDGET, MINIMUM_TIMEOUT, Options, Pool, PoolError,
+    ConstraintError, Kind, MINIMUM_MEMORY_BUDGET, MINIMUM_TIMEOUT, Options, Pool, PoolError,
     StartupCause,
 };
 
@@ -224,8 +224,8 @@ async fn handles_concurrent_calls_without_sharing_an_engine_csharp() {
         .expect("within 30 s");
 }
 
-// C# waits on the pending promise until the caller cancels; Rust, like Go,
-// fails it at once and keeps the engine.
+// The call waits on the pending promise until the caller cancels, as in C#,
+// and the next call is served.
 #[tokio::test]
 async fn replaces_an_engine_after_cancellation() {
     let script = "globalThis.blokServerInvoke = async (operation) => {
@@ -238,8 +238,10 @@ async fn replaces_an_engine_after_cancellation() {
         pool.invoke("wait", "{}", Duration::ZERO),
     )
     .await;
-    let failure = want_kind(waited.expect("fails at once"), Kind::Unknown);
-    assert_eq!(failure.err, Error::Pending);
+    assert!(
+        waited.is_err(),
+        "returned before the caller cancelled: {waited:?}"
+    );
     let output = tokio::time::timeout(
         Duration::from_secs(5),
         pool.invoke("ready", "{}", Duration::ZERO),

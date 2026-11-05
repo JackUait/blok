@@ -23,6 +23,9 @@ pub const DEFAULT_MEMORY_BUDGET: i64 = 512 << 20;
 /// C#'s floor.
 pub const MINIMUM_MEMORY_BUDGET: i64 = 8 << 20;
 
+/// How often an engine waiting on a pending promise checks for the cancel.
+const PENDING_POLL: Duration = Duration::from_millis(5);
+
 /// Why a call failed. The values match C# BlokConversionFailure.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -328,9 +331,18 @@ impl Pool {
             let limits = Limits {
                 deadline: Instant::now() + timeout,
                 budget,
-                cancel: Some(cancel),
+                cancel: Some(cancel.clone()),
             };
-            let (result, reusable) = classify(worker::run(engine, &op, &input, Some(&limits)));
+            let run = worker::run(engine, &op, &input, Some(&limits));
+            // No event loop: a pending promise can never settle. C# waits on
+            // it until the caller cancels, past the call timeout, holding the
+            // engine, and then replaces it.
+            if matches!(run, Err(Error::Pending)) {
+                while !cancel.load(Ordering::SeqCst) {
+                    std::thread::sleep(PENDING_POLL);
+                }
+            }
+            let (result, reusable) = classify(run);
             let _ = reply.send(result);
             if !reusable {
                 // A slot that is not refilled is lost for good, so a rebuild
@@ -433,9 +445,8 @@ fn classify(result: Result<String, Error>) -> (Result<String, InvokeError>, bool
         Error::InputStopped(Stop::Timeout) => (Kind::TimedOut, true),
         Error::InputStopped(Stop::Budget) => (Kind::DocumentTooLarge, true),
         Error::InputStopped(Stop::Cancel) => (Kind::Unknown, true),
-        // No event loop: a promise pending now can never settle. The engine
-        // itself finished, so it is kept.
-        Error::Pending => (Kind::Unknown, true),
+        // Reached only once the caller has cancelled (see invoke).
+        Error::Pending => (Kind::Unknown, false),
         // C# AsString throws and its catch-all replaces the engine.
         Error::NotAString => (Kind::Unknown, false),
         Error::Stopped(Stop::Cancel) | Error::NoEntryPoint | Error::Engine(_) => {

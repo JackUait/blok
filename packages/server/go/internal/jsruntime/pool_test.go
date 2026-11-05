@@ -207,19 +207,22 @@ func TestAnOverflowLeavesNoStateForTheNextCall(t *testing.T) {
 	}
 }
 
-// goja has no event loop, so a promise pending after the call never settles.
-func TestFailsAPendingPromiseAtOnceAndKeepsTheEngine(t *testing.T) {
-	p := newCountingPool(t, 1, 0, 0)
+// C# JintBlokRuntimeTests.WaitsOnAPendingPromiseUntilTheCallerCancels: the
+// call timeout does not end the wait on a promise that never settles; the
+// caller's cancellation does, and the engine is replaced.
+func TestWaitsOnAPendingPromiseUntilTheCallerCancels(t *testing.T) {
+	p := newCountingPool(t, 1, 200*time.Millisecond, 0)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	start := time.Now()
-	_, err := invoke(t, p, "pending", "")
-	wantKind(t, err, KindUnknown)
-	if !errors.Is(err, ErrPending) {
-		t.Fatalf("err = %v, want ErrPending inside", err)
+	_, err := p.Invoke(ctx, "pending", "", 0)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want the caller's context.DeadlineExceeded", err)
 	}
-	if elapsed := time.Since(start); elapsed > time.Second {
-		t.Fatalf("took %v", elapsed)
+	if elapsed := time.Since(start); elapsed < 900*time.Millisecond {
+		t.Fatalf("returned after %v, want the caller's 1s", elapsed)
 	}
-	wantCount(t, p, "2")
+	wantCount(t, p, "1")
 }
 
 func TestStopsACallThatOutgrowsItsMemoryBudget(t *testing.T) {
@@ -509,9 +512,9 @@ func TestTakesTheDefaultsForZeroOptions(t *testing.T) {
 	}
 }
 
-// C# JintBlokRuntimeTests.ReplacesAnEngineAfterCancellation. C# waits on the
-// pending promise until the caller cancels; goja has no event loop, so the
-// call fails at once (as in Rust). Either way the next call is served.
+// C# JintBlokRuntimeTests.ReplacesAnEngineAfterCancellation: the call waits
+// on the pending promise until the caller cancels, and the next call is
+// served.
 func TestReplacesAnEngineAfterCancellation(t *testing.T) {
 	p, err := newPoolFromSource(`globalThis.blokServerInvoke = async (operation) => {
   if (operation === 'wait') return await new Promise(() => {});
@@ -522,10 +525,8 @@ func TestReplacesAnEngineAfterCancellation(t *testing.T) {
 	}
 	cancelled, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	_, err = p.Invoke(cancelled, "wait", "{}", 0)
-	wantKind(t, err, KindUnknown)
-	if !errors.Is(err, ErrPending) {
-		t.Fatalf("err = %v, want ErrPending inside", err)
+	if _, err = p.Invoke(cancelled, "wait", "{}", 0); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want the caller's context.DeadlineExceeded", err)
 	}
 	ready, stop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stop()

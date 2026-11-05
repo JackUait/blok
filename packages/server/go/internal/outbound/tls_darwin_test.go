@@ -117,26 +117,25 @@ func failingTool(t *testing.T, fail string, instead ...string) string {
 	return path
 }
 
-// A root set read in part would trust too little or too much: any failed
-// read falls back to the macOS bundle. The tool exits 0 for a keychain it
-// cannot read, so an empty system root keychain counts as failed too.
-func TestAnyFailedTrustReadFallsBackToTheBundle(t *testing.T) {
-	want := bundlePool()
-	if want.Equal(x509.NewCertPool()) {
-		t.Fatal("no bundle")
-	}
+// A root set read in part would trust too little or too much, and without
+// the trust settings a cert the user marked "Never Trust" would pass, where
+// C#'s SecTrust refuses it. Go cannot ask trustd without letting it fetch
+// a caIssuers URL past the guard, so any failed read leaves no roots: the
+// guarded fetcher fails closed. The tool exits 0 for a keychain it cannot
+// read, so an empty system root keychain counts as failed too.
+func TestAnyFailedTrustReadFailsClosed(t *testing.T) {
+	empty := x509.NewCertPool()
 	for _, fail := range []string{"SystemRootCertificates.keychain", "System.keychain", "login.keychain", "domain0", "export -d ", ""} {
-		if got := loadRoots(failingTool(t, fail)); !got.Equal(want) {
-			t.Errorf("%q failed: the roots are not the bundle", fail)
+		trust := loadTrust(failingTool(t, fail))
+		if !trust.pool.Equal(empty) || len(trust.denied) != 0 {
+			t.Errorf("%q failed: the guarded fetcher still trusts some roots", fail)
 		}
 	}
-	silent := map[string]string{
-		"an empty system keychain": failingTool(t, "SystemRootCertificates.keychain", "exit 0"),
+	if trust := loadTrust(failingTool(t, "SystemRootCertificates.keychain", "exit 0")); !trust.pool.Equal(empty) {
+		t.Error("an empty system keychain: the guarded fetcher still trusts some roots")
 	}
-	for name, tool := range silent {
-		if got := loadRoots(tool); !got.Equal(want) {
-			t.Errorf("%s: the roots are not the bundle", name)
-		}
+	if loadRoots(securityTool).Equal(empty) {
+		t.Fatal("a good read gave no roots")
 	}
 }
 

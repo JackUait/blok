@@ -27,11 +27,13 @@ import (
 // verifier would let trustd fetch a certificate's caIssuers URL past the
 // guard (see tls_darwin_test.go). Intermediates kept only in the Keychain
 // are not used, as in Rust.
-const (
-	securityTool = "/usr/bin/security"
-	// macOSBundle is the fallback when any trust read fails.
-	macOSBundle = "/etc/ssl/cert.pem"
-)
+//
+// When any trust read fails there are no roots, and every https fetch
+// fails. A bundle would accept a cert the user marked "Never Trust", which
+// C# refuses, and Go cannot ask trustd with its issuer fetching off: the
+// standard library never calls SecTrustSetNetworkFetchAllowed, and the
+// published builds have no cgo (scripts/publish-server-go.mjs).
+const securityTool = "/usr/bin/security"
 
 // trustDomains are the export flags for the user and admin domains. trustd
 // reads no system-domain trust settings: its system anchors are its own
@@ -109,19 +111,10 @@ func loadTrust(tool string) systemTrust {
 	if pool, denied, err := loadTrustSettingsRoots(tool); err == nil {
 		return systemTrust{pool, denied}
 	}
-	return systemTrust{pool: bundlePool()}
+	return systemTrust{pool: x509.NewCertPool()}
 }
 
 func loadRoots(tool string) *x509.CertPool { return loadTrust(tool).pool }
-
-// bundlePool is empty when nothing loads: every https fetch then fails closed.
-func bundlePool() *x509.CertPool {
-	pool := x509.NewCertPool()
-	if data, err := os.ReadFile(macOSBundle); err == nil {
-		pool.AppendCertsFromPEM(data)
-	}
-	return pool
-}
 
 func defaultRoots() *x509.CertPool { return bundle().pool }
 

@@ -25,7 +25,7 @@ import (
 // are not used, as in Rust.
 const (
 	securityTool = "/usr/bin/security"
-	// macOSBundle is the fallback when the trust settings cannot be read.
+	// macOSBundle is the fallback when any trust read fails.
 	macOSBundle = "/etc/ssl/cert.pem"
 )
 
@@ -39,24 +39,31 @@ var keychains = []string{
 	"/System/Library/Keychains/SystemRootCertificates.keychain",
 }
 
-var bundle = sync.OnceValue(func() *x509.CertPool {
-	if pool, err := loadTrustSettingsRoots(); err == nil {
+var bundle = sync.OnceValue(func() *x509.CertPool { return loadRoots(securityTool) })
+
+func loadRoots(tool string) *x509.CertPool {
+	if pool, err := loadTrustSettingsRoots(tool); err == nil {
 		return pool
 	}
+	return bundlePool()
+}
+
+// bundlePool is empty when nothing loads: every https fetch then fails closed.
+func bundlePool() *x509.CertPool {
 	pool := x509.NewCertPool()
 	if data, err := os.ReadFile(macOSBundle); err == nil {
 		pool.AppendCertsFromPEM(data)
 	}
-	// Empty when nothing loads: every https fetch then fails closed.
 	return pool
-})
+}
 
 func defaultRoots() *x509.CertPool { return bundle() }
 
-// loadTrustSettingsRoots fails only when the system domain cannot be read;
-// a user or admin domain that cannot be read is skipped, as in Rust.
-func loadTrustSettingsRoots() (*x509.CertPool, error) {
-	anchors, err := loadTrustSettingsAnchors()
+// loadTrustSettingsRoots fails when any keychain or domain cannot be read:
+// without a keychain's certificates its trusted hashes would be dropped, and
+// without a domain its denials would be. An empty domain exports fine.
+func loadTrustSettingsRoots(tool string) (*x509.CertPool, error) {
+	anchors, err := loadTrustSettingsAnchors(tool)
 	if err != nil {
 		return nil, err
 	}
@@ -69,16 +76,16 @@ func loadTrustSettingsRoots() (*x509.CertPool, error) {
 	return pool, nil
 }
 
-func loadTrustSettingsAnchors() ([][]byte, error) {
+func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	certs := map[string][]byte{}
 	home, _ := os.UserHomeDir()
 	for _, keychain := range keychains {
 		keychain = strings.Replace(keychain, "~", home, 1)
-		out, err := exec.CommandContext(ctx, securityTool, "find-certificate", "-a", "-p", keychain).Output()
+		out, err := exec.CommandContext(ctx, tool, "find-certificate", "-a", "-p", keychain).Output()
 		if err != nil {
-			continue
+			return nil, err
 		}
 		for rest := out; ; {
 			var block *pem.Block
@@ -101,20 +108,17 @@ func loadTrustSettingsAnchors() ([][]byte, error) {
 		if flag != "" {
 			args = append(args, flag)
 		}
-		list, err := exportTrustList(ctx, append(args, path), path)
+		list, err := exportTrustList(ctx, tool, append(args, path), path)
 		if err != nil {
-			if flag == "-s" {
-				return nil, err
-			}
-			continue
+			return nil, err
 		}
 		domains = append(domains, list)
 	}
 	return trustedAnchors(domains, certs), nil
 }
 
-func exportTrustList(ctx context.Context, args []string, path string) (map[string][]trustSetting, error) {
-	if err := exec.CommandContext(ctx, securityTool, args...).Run(); err != nil {
+func exportTrustList(ctx context.Context, tool string, args []string, path string) (map[string][]trustSetting, error) {
+	if err := exec.CommandContext(ctx, tool, args...).Run(); err != nil {
 		return nil, err
 	}
 	data, err := os.ReadFile(path)

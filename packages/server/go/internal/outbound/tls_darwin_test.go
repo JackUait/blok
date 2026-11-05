@@ -14,6 +14,8 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync/atomic"
 	"testing"
@@ -90,11 +92,40 @@ func TestTheFetcherNeverLetsTheVerifierFetchAnIssuer(t *testing.T) {
 // The roots are read from the trust settings, so a root added only to the
 // Keychain is trusted as in C# and Rust.
 func TestTheMacOSRootsComeFromTheTrustSettings(t *testing.T) {
-	pool, err := loadTrustSettingsRoots()
+	pool, err := loadTrustSettingsRoots(securityTool)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if pool.Equal(x509.NewCertPool()) {
 		t.Fatal("no roots")
+	}
+}
+
+// failingTool is /usr/bin/security, except that a call naming one of fail
+// exits 1.
+func failingTool(t *testing.T, fail string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "security")
+	script := "#!/bin/sh\ncase \"$*\" in *'" + fail + "'*) exit 1;; esac\nexec " + securityTool + " \"$@\"\n"
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// A root set read in part would trust too little or too much: any failed
+// read falls back to the macOS bundle.
+func TestAnyFailedTrustReadFallsBackToTheBundle(t *testing.T) {
+	want := bundlePool()
+	if want.Equal(x509.NewCertPool()) {
+		t.Fatal("no bundle")
+	}
+	for _, fail := range []string{"SystemRootCertificates.keychain", "System.keychain", "login.keychain", "domain0", "export -d ", "export -s "} {
+		if got := loadRoots(failingTool(t, fail)); !got.Equal(want) {
+			t.Errorf("%s failed: the roots are not the bundle", fail)
+		}
+	}
+	if got := loadRoots(failingTool(t, "")); !got.Equal(want) {
+		t.Error("every call failed: the roots are not the bundle")
 	}
 }

@@ -375,3 +375,49 @@ async fn a_checkpoint_is_refused_while_the_engine_holds_pending_state() {
     );
     assert!(r.operations.checkpoint(TEST_DOC).is_none());
 }
+
+// C# TheCheckpointLinesPrintTheStoresOwnTextForAWrappedCancel: a cancel the
+// store returns as is reads as .NET's cancel text; one the store wraps in
+// its own error keeps the store's own text.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_checkpoint_lines_print_the_stores_own_text_for_a_wrapped_cancel() {
+    type MakeError = fn() -> Error;
+    let cases: [(MakeError, &str); 2] = [
+        (|| Error::DeadlineExceeded, "The operation was canceled."),
+        (
+            || Error::Wrapped {
+                message: "s3 put: context canceled".to_owned(),
+                err: Box::new(Error::Canceled),
+            },
+            "s3 put: context canceled",
+        ),
+    ];
+    for (err, text) in cases {
+        let (r, manager, writer, membership, client) = checkpoint_room(Options {
+            checkpoint_operation_threshold: 1,
+            ..Options::default()
+        })
+        .await;
+        *lock(&r.operations.0.checkpoint_error) = Some(Box::new(err));
+
+        for op in [OP_ONE, OP_TWO, OP_THREE] {
+            send_operation(&membership, &writer, op, update_appending(&client, "!")).await;
+        }
+        manager.settle().await;
+
+        assert_eq!(
+            r.logs.matching("checkpoint"),
+            [
+                format!(
+                    "collab: room \"{TEST_DOC}\" could not publish a checkpoint (1 of 3), retrying later: {text}"
+                ),
+                format!(
+                    "collab: room \"{TEST_DOC}\" could not publish a checkpoint (2 of 3), retrying later: {text}"
+                ),
+                format!(
+                    "collab: room \"{TEST_DOC}\" could not publish a checkpoint, closing: {text}"
+                ),
+            ]
+        );
+    }
+}

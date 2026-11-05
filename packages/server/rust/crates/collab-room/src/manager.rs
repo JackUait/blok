@@ -556,18 +556,30 @@ impl Manager {
                 let (r, t) = (room.clone(), caller.clone());
                 drains.push((room, tokio::spawn(async move { r.drain(&t).await })));
             }
+            let mut failed = None;
             for (room, drain) in drains {
                 // One room that fails must not strand the others.
                 if let Err(err) = drain.await {
-                    self.0.logf(&format!(
+                    let line = format!(
                         "collab: room \"{}\" could not be drained: {}",
                         room.doc_id,
                         panic_message(err)
-                    ));
+                    );
+                    if let Err(payload) =
+                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            self.0.logf(&line)
+                        }))
+                    {
+                        failed.get_or_insert(Error::Message(payload_message(payload)));
+                    }
                 }
                 // The drain always closes the room; forget it in case its
                 // close callback raced a newer room.
                 self.forget(&room);
+            }
+            // C#'s log throws out of DrainAsync; the host then reports it.
+            if let Some(err) = failed {
+                return Err(err);
             }
         }
     }
@@ -627,13 +639,17 @@ impl blok_collab::Rooms for Manager {
 /// A panicked task's message, as C# logs an exception's Message.
 fn panic_message(err: tokio::task::JoinError) -> String {
     match err.try_into_panic() {
-        Ok(payload) => match payload.downcast::<String>() {
-            Ok(text) => *text,
-            Err(payload) => payload.downcast::<&'static str>().map_or_else(
-                |_| "a room call failed".to_owned(),
-                |text| (*text).to_owned(),
-            ),
-        },
+        Ok(payload) => payload_message(payload),
         Err(err) => err.to_string(),
+    }
+}
+
+fn payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
+    match payload.downcast::<String>() {
+        Ok(text) => *text,
+        Err(payload) => payload.downcast::<&'static str>().map_or_else(
+            |_| "a room call failed".to_owned(),
+            |text| (*text).to_owned(),
+        ),
     }
 }

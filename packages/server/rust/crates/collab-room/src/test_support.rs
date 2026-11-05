@@ -515,6 +515,8 @@ pub(crate) struct FakeJournalInner {
     pub fail_appends: Fail,
     pub fail_checkpoints: Fail,
     pub fail_resets: Fail,
+    /// Like fail_checkpoints, for a failure that is not a plain message.
+    pub checkpoint_error: Mutex<Option<Box<dyn Fn() -> Error + Send + Sync>>>,
     pub checkpoint_attempts: AtomicI32,
     /// Journals the record before a fail_appends error: the unknown outcome.
     pub commit_before_failing: AtomicBool,
@@ -785,7 +787,9 @@ impl OperationSession for FakeSession {
     ) -> BoxFuture<'a, Result<(), Error>> {
         let fail = &self.store.0.fail_checkpoints;
         let result = self.fenced(|d| {
-            if let Some(err) = failure(fail, &self.id) {
+            let err = failure(fail, &self.id)
+                .or_else(|| lock(&self.store.0.checkpoint_error).as_ref().map(|f| f()));
+            if let Some(err) = err {
                 self.store
                     .0
                     .checkpoint_attempts

@@ -1250,6 +1250,86 @@ async fn a_throwing_observer_and_logger_do_not_stop_the_activity_pump() {
     assert!(peer.closed().is_empty());
 }
 
+/// The first call fails once released; the second waits on its own gate.
+#[derive(Default)]
+struct RestartingObserver {
+    calls: AtomicUsize,
+    first: tokio::sync::Notify,
+    first_in: tokio::sync::Notify,
+    second: tokio::sync::Notify,
+    second_in: tokio::sync::Notify,
+}
+
+impl ActivityObserver for RestartingObserver {
+    fn record<'a>(
+        &'a self,
+        _doc_id: &'a str,
+        _actor_id: &'a str,
+        _at: SystemTime,
+        _kind: ActivityKind,
+    ) -> BoxFuture<'a, Result<(), Error>> {
+        let call = self.calls.fetch_add(1, Ordering::SeqCst) + 1;
+        Box::pin(async move {
+            match call {
+                1 => {
+                    self.first_in.notify_one();
+                    self.first.notified().await;
+                    Err(Error::message("the activity table is down"))
+                }
+                2 => {
+                    self.second_in.notify_one();
+                    self.second.notified().await;
+                    Ok(())
+                }
+                _ => Ok(()),
+            }
+        })
+    }
+}
+
+// C# ASettleWaitsForRecordsARestartedPumpDelivers.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_settle_waits_for_records_a_restarted_pump_delivers() {
+    let b = Bench::new();
+    b.endpoint.holds(DOC, "hello", None);
+    let observer = Arc::new(RestartingObserver::default());
+    let manager = b.manager_with(
+        fast(),
+        b.store.clone(),
+        None,
+        Some(observer.clone() as Arc<dyn ActivityObserver>),
+    );
+    b.panic_when_logging("activity observer failed");
+    let peer = Peer::with("user-1", true);
+    let membership = enter(&manager, DOC, &peer).await;
+    let bound = Duration::from_secs(10);
+    tokio::time::timeout(bound, observer.first_in.notified())
+        .await
+        .expect("the first record");
+
+    let _ = membership.receive(sync_frame(Message::Activity)).await;
+    let settling = manager.clone();
+    let settled = tokio::spawn(async move { settling.settle().await });
+    // Long enough for the settle to pass the lane and hold the first pump.
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    observer.first.notify_one();
+    tokio::time::timeout(bound, observer.second_in.notified())
+        .await
+        .expect("the second record");
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    let early = settled.is_finished();
+    observer.second.notify_one();
+    tokio::time::timeout(bound, settled)
+        .await
+        .expect("the settle")
+        .unwrap();
+    assert!(
+        !early,
+        "the settle returned before the restarted pump delivered"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn recheck_keeps_queued_writes_out_of_the_journal_and_rejects_a_queued_join() {
     let b = Bench::new();
@@ -1825,6 +1905,37 @@ async fn a_drain_whose_token_is_already_cancelled_prints_the_task_cancel_text() 
             "collab: room \"doc-a\" could not export during flush: A task was canceled.",
         ]
     );
+}
+
+/// C# ALoggerThatThrowsDuringTheDrainFailsTheDrain: the host then says the
+/// drain did not complete, and the process lives on.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_logger_that_throws_during_the_drain_fails_the_drain() {
+    let b = Bench::new();
+    b.endpoint.holds("doc-a", "a", None);
+    let manager = b.manager(slow_export());
+    let member = Peer::new();
+    let membership = enter(&manager, "doc-a", &member).await;
+    let client = synced(&membership, &member).await;
+    send_update(&membership, &client, "!").await;
+    wait_until("the working set write", || {
+        b.store.holds("doc-a") && b.store.frames("doc-a").len() >= 2
+    })
+    .await;
+    manager.settle().await;
+    b.panic_when_logging("collab: room");
+    let shutdown = Token::new();
+    shutdown.cancel();
+
+    let drained = tokio::spawn(async move { manager.drain_with(&shutdown).await });
+    let result = tokio::time::timeout(Duration::from_secs(10), drained)
+        .await
+        .expect("the drain to finish");
+
+    match result {
+        Ok(Err(err)) => assert_eq!(err.to_string(), "logger failed"),
+        other => panic!("drain = {other:?}"),
+    }
 }
 
 /// C# DrainRoomAsync: a room whose drain throws is logged and forgotten,

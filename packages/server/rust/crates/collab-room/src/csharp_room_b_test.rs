@@ -2683,6 +2683,48 @@ async fn a_drain_already_cancelled_does_not_wait_out_the_activity_observer() {
     gate.open();
 }
 
+// C# ACancelledDrainWithLaneWorkQueuedBehindItSaysItWasCancelled. Its settle
+// takes a lane place at the call, so lane work queued behind the drain keeps
+// it from completing at once, even with no activity at all.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cancelled_drain_with_lane_work_queued_behind_it_says_it_was_cancelled() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(Options::default(), false);
+    let member = v1("user-1", true);
+    let _joined = enter(&manager, &member).await;
+    let room = manager.live_rooms().pop().expect("the room");
+
+    let holding = room.enter(&Token::new()).await.expect("the lane");
+    let shutdown = Token::new();
+    shutdown.cancel();
+    let draining = manager.clone();
+    let drain = tokio::spawn(async move { draining.drain_with(&shutdown).await });
+    // Long enough for the drain to queue on the lane.
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let behind = room.lane.reserve();
+    let (release, released) = tokio::sync::oneshot::channel::<()>();
+    let behind = tokio::spawn(async move {
+        let _held = behind.hold().await;
+        let _ = released.await;
+    });
+
+    drop(holding);
+    tokio::time::timeout(Duration::from_secs(10), drain)
+        .await
+        .expect("the cancelled drain waited out the lane")
+        .unwrap()
+        .unwrap();
+    let _ = release.send(());
+    behind.await.unwrap();
+    assert!(
+        k.logs
+            .logged("abandoned its activity dispatch while draining: the drain was cancelled"),
+        "{:?}",
+        k.logs.lines()
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_heartbeat_flood_is_dropped_before_a_session_boundary() {
     let k = Kit::new();

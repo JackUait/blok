@@ -197,17 +197,26 @@ pub fn is_cancellation(err: &Error) -> bool {
 /// "The operation was canceled." when it was cancelled during the call
 /// (DocEndpointClientTests.ACancelledSaveReadsAsDotNetsCancelText). A timeout
 /// is a cancel during the call. With ctx given, only a cancel of ctx itself
-/// counts; a store's own timeout keeps its own text.
+/// counts; a store's own timeout keeps its own text. With no ctx, only a
+/// bare cancel counts: a store that wraps one in its own error keeps its
+/// own text, as C#'s error.Message does.
 pub(crate) fn error_text(
     err: &Error,
     ctx: Option<&crate::Token>,
     cancelled_before: bool,
 ) -> String {
-    let cancelled = is_cancellation(err)
-        || matches!(
-            err,
-            Error::WorkingSet(blok_collab_workingset::Error::Canceled)
-        );
+    let bare = matches!(
+        err,
+        Error::Canceled
+            | Error::DeadlineExceeded
+            | Error::Journal(blok_collab_journal::Error::Canceled)
+            | Error::WorkingSet(blok_collab_workingset::Error::Canceled)
+    );
+    let cancelled = if ctx.is_some() {
+        bare || is_cancellation(err)
+    } else {
+        bare
+    };
     if !cancelled || ctx.is_some_and(|ctx| !ctx.is_cancelled()) {
         return err.to_string();
     }

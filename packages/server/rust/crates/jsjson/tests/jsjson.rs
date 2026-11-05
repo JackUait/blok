@@ -435,3 +435,24 @@ fn format_number_rounds_ties_to_even() {
         assert_eq!(format_number(f64::from_bits(bits)), want, "{bits:x}");
     }
 }
+
+// JS ===: a clone of an object is the same instance, as a copied
+// reference is. A change, or a renewed copy, is a new one.
+#[test]
+fn an_object_clone_is_the_same_instance_until_it_changes() {
+    let mut object = Object::<Value>::new();
+    object.set(Str::from("x"), Value::Number(1.0));
+    let clone = object.clone();
+    assert!(clone.same_instance(&object));
+    assert!(!Object::<Value>::new().same_instance(&Object::new()));
+
+    let mut changed = object.clone();
+    changed.set(Str::from("y"), Value::Null);
+    assert!(!changed.same_instance(&object));
+
+    let Value::Object(renewed) = Value::Object(object.clone()).renewed() else {
+        panic!("an object");
+    };
+    assert!(!renewed.same_instance(&object));
+    assert_eq!(renewed, object);
+}

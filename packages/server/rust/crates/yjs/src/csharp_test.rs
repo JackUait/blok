@@ -975,6 +975,40 @@ fn a_negative_format_length_still_deletes_the_conflicting_mark_at_the_start() {
 // YTextFormattingTests.FormattingTheSameNestedMarkObjectTwiceWritesItOnce:
 // the mark keeps the caller's value, so the second call finds it === and
 // writes nothing.
+// C# TwoMarkObjectsSharingOneNestedInstanceWriteOnce: two different link
+// objects that share ONE nested meta instance compare === member by member,
+// so the second call writes nothing. A clone of a value is the same
+// instance, as a JS reference is; a deep-equal copy built anew is not.
+#[test]
+fn two_mark_objects_sharing_one_nested_instance_write_once() {
+    for shared in [true, false] {
+        let doc = doc_with_id(4242);
+        let text = doc.get_text("content").unwrap();
+        let meta = vobj(vec![("x", Value::Number(1.0))]);
+        let other = if shared {
+            meta.clone()
+        } else {
+            vobj(vec![("x", Value::Number(1.0))])
+        };
+        let link = |meta: Value| {
+            let mut marks = crate::Marks::default();
+            marks.set(
+                Str::from("link"),
+                Arc::new(vobj(vec![("href", sv("h")), ("meta", meta)])),
+            );
+            marks
+        };
+        doc.transact(|txn| text.insert(Some(txn), 0, "ab", Some(&crate::marks(&obj(Vec::new())))))
+            .unwrap();
+        doc.transact(|txn| text.format(Some(txn), 0, 2, &link(meta)))
+            .unwrap();
+        let wrote = doc
+            .transact(|txn| text.format(Some(txn), 0, 2, &link(other)))
+            .unwrap();
+        assert_eq!(wrote.is_none(), shared, "shared {shared}: {wrote:?}");
+    }
+}
+
 #[test]
 fn formatting_the_same_nested_mark_object_twice_writes_it_once() {
     let doc = doc_with_id(4242);

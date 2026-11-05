@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::error::{Error, ErrorKind};
 use crate::number::format_number;
@@ -33,10 +35,21 @@ pub struct Member<V = Value> {
 
 /// A JS object's own string keys in insertion order. Generic so callers
 /// can hold their own value kinds in the same shape.
-#[derive(Debug, Clone)]
+///
+/// A clone is the same JS instance, as a copied reference is: it keeps the
+/// identity [`Object::same_instance`] compares. Any change gives the object
+/// a fresh identity, since a Rust clone does not see the other's writes.
+#[derive(Clone)]
 pub struct Object<V = Value> {
     members: Vec<Member<V>>,
     index: HashMap<Str, usize>,
+    identity: u64,
+}
+
+static NEXT_IDENTITY: AtomicU64 = AtomicU64::new(1);
+
+fn fresh_identity() -> u64 {
+    NEXT_IDENTITY.fetch_add(1, Ordering::Relaxed)
 }
 
 impl<V> Default for Object<V> {
@@ -44,7 +57,18 @@ impl<V> Default for Object<V> {
         Object {
             members: Vec::new(),
             index: HashMap::new(),
+            identity: fresh_identity(),
         }
+    }
+}
+
+// By hand: the identity stays out of Debug, as it stays out of ==.
+impl<V: fmt::Debug> fmt::Debug for Object<V> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Object")
+            .field("members", &self.members)
+            .field("index", &self.index)
+            .finish()
     }
 }
 
@@ -59,8 +83,14 @@ impl<V> Object<V> {
         Self::default()
     }
 
+    /// JS ===: the same instance, a clone of it included.
+    pub fn same_instance(&self, other: &Self) -> bool {
+        self.identity == other.identity
+    }
+
     /// Adds key at the end, or replaces its value in place when it exists.
     pub fn set(&mut self, key: Str, value: V) {
+        self.identity = fresh_identity();
         if let Some(&at) = self.index.get(&key) {
             self.members[at].value = value;
             return;
@@ -74,6 +104,7 @@ impl<V> Object<V> {
     }
 
     pub fn get_mut(&mut self, key: &Str) -> Option<&mut V> {
+        self.identity = fresh_identity();
         self.index.get(key).map(|&at| &mut self.members[at].value)
     }
 
@@ -92,6 +123,7 @@ impl<V> Object<V> {
 
     /// Values only: keys stay fixed so the index stays right.
     pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
+        self.identity = fresh_identity();
         self.members.iter_mut().map(|member| &mut member.value)
     }
 
@@ -262,4 +294,22 @@ fn append_js_quoted(dst: &mut String, s: &[u16]) {
         i += 1;
     }
     dst.push('"');
+}
+
+impl Value {
+    /// A deep copy whose objects are new instances, as a JS value built
+    /// afresh: none is `same_instance` as any object in self.
+    pub fn renewed(&self) -> Value {
+        match self {
+            Value::Object(object) => Value::Object(
+                object
+                    .members()
+                    .iter()
+                    .map(|member| (member.key.clone(), member.value.renewed()))
+                    .collect(),
+            ),
+            Value::Array(items) => Value::Array(items.iter().map(Value::renewed).collect()),
+            other => other.clone(),
+        }
+    }
 }

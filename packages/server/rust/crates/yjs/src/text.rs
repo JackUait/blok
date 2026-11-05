@@ -111,7 +111,7 @@ pub type Marks = Object<Arc<Value>>;
 pub fn marks(attributes: &Object) -> Marks {
     let mut out = Marks::default();
     for member in attributes.members() {
-        out.set(member.key.clone(), Arc::new(member.value.clone()));
+        out.set(member.key.clone(), Arc::new(member.value.renewed()));
     }
     out
 }
@@ -855,10 +855,14 @@ pub(crate) fn strict_equals(left: &Arc<Value>, right: &Arc<Value>) -> bool {
     scalar_equals(left, right).unwrap_or_else(|| Arc::ptr_eq(left, right))
 }
 
-/// === between values nested in two mark values: their identity is their
-/// address, which two distinct mark values never share.
+/// === between values nested in two mark values: an object by its
+/// instance (a clone is the same one). An array has no identity of its own,
+/// so two distinct mark values never share one.
 fn nested_strict_equals(left: &Value, right: &Value) -> bool {
-    scalar_equals(left, right).unwrap_or_else(|| std::ptr::eq(left, right))
+    scalar_equals(left, right).unwrap_or_else(|| match (left, right) {
+        (Value::Object(left), Value::Object(right)) => left.same_instance(right),
+        _ => std::ptr::eq(left, right),
+    })
 }
 
 fn scalar_equals(left: &Value, right: &Value) -> Option<bool> {

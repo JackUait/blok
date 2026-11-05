@@ -1367,7 +1367,7 @@ impl ActivityObserver for BacklogObserver {
 // Go TestPumpRestartsUnderABacklogDoNotPileUpGoroutines: N logger throws
 // under a backlog do not hold N tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn pump_restarts_under_a_backlog_do_not_pile_up_tasks() {
+async fn pump_restarts_under_a_backlog_do_not_pile_up_goroutines() {
     const THROWS: usize = 40;
     let b = Bench::new();
     b.endpoint.holds(DOC, "hello", None);

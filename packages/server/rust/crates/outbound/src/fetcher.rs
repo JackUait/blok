@@ -135,9 +135,17 @@ fn system_roots() -> &'static Arc<RootCertStore> {
 
 pub(crate) fn tls_connector(roots: &Option<Roots>, check: Check) -> TlsConnector {
     let provider = Arc::new(rustls::crypto::ring::default_provider());
+    // SslStream on macOS runs on SecureTransport, which speaks TLS 1.2 at
+    // most; elsewhere .NET's OpenSSL speaks 1.3 too.
+    let versions: &[&rustls::SupportedProtocolVersion] =
+        if cfg!(target_os = "macos") && matches!(check, Check::Operator) {
+            &[&rustls::version::TLS12]
+        } else {
+            rustls::DEFAULT_VERSIONS
+        };
     let builder = rustls::ClientConfig::builder_with_provider(provider.clone())
-        .with_safe_default_protocol_versions()
-        .expect("the ring provider supports the default versions");
+        .with_protocol_versions(versions)
+        .expect("the ring provider supports TLS 1.2 and 1.3");
     #[cfg(target_os = "macos")]
     let mut config = builder
         .dangerous()

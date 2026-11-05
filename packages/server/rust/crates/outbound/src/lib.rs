@@ -40,6 +40,8 @@ mod encodings_test;
 mod fetcher_test;
 #[cfg(test)]
 mod fixtures_test;
+#[cfg(all(test, target_os = "macos"))]
+mod handshake_darwin_test;
 #[cfg(test)]
 mod law_test;
 #[cfg(test)]

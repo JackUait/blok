@@ -262,3 +262,26 @@ fn a_held_off_wait_prints_as_a_time_span() {
         assert_eq!(crate::manager::time_span(wait), printed, "{wait:?}");
     }
 }
+
+// C# AClockOnlyTimeProviderStillEvictsOnWallTime: Options.now is the
+// clock-only override, and C# then runs room timers on wall time too.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_clock_only_time_provider_still_evicts_on_wall_time() {
+    let frozen = std::time::UNIX_EPOCH + Duration::from_secs(1_767_225_600);
+    let (manager, _store, _endpoint) = test_manager(
+        Options {
+            eviction_linger: ms(100),
+            now: Some(Arc::new(move || frozen)),
+            ..Options::default()
+        },
+        None,
+    );
+    let membership = join(&manager, "doc", &FakeMember::v1(false)).await;
+
+    membership.leave();
+
+    wait_until("the room to be evicted on wall time", || {
+        manager.live_room_count() == 0
+    })
+    .await;
+}

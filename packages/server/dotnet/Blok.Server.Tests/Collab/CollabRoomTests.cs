@@ -6042,6 +6042,34 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A host TimeProvider that overrides only the clock, as Go's and Rust's
+  /// host Clock does, still runs the room's timers on wall time: the
+  /// eviction fires though the clock never moves.
+  /// </summary>
+  [Fact]
+  public async Task AClockOnlyTimeProviderStillEvictsOnWallTime()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions { EvictionLinger = TimeSpan.FromMilliseconds(100) },
+        new FrozenClock(),
+        log.Add);
+    var membership = await Join(manager, new FakeMember()).WaitAsync(TimeSpan.FromSeconds(10));
+
+    await membership.LeaveAsync();
+
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted on wall time");
+  }
+
+  private sealed class FrozenClock : TimeProvider
+  {
+    public override DateTimeOffset GetUtcNow() => new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+  }
+
+  /// <summary>
   /// A logger that throws restarts the pump on a new task. A settle that
   /// began before the restart still waits for the records the new pump
   /// delivers.

@@ -286,3 +286,18 @@ func storedDocument(t *testing.T, store *memoryStore, doc string) string {
 	}
 	return notes
 }
+
+// C# AClockOnlyTimeProviderStillEvictsOnWallTime: Options.Now is the
+// clock-only override, and C# then runs room timers on wall time too.
+func TestAClockOnlyTimeProviderStillEvictsOnWallTime(t *testing.T) {
+	frozen := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	manager, _, _ := newTestManager(t, OptionsWith(func(ro *Options) {
+		ro.EvictionLinger = 100 * time.Millisecond
+		ro.Now = func() time.Time { return frozen }
+	}), nil)
+	membership := join(t, manager, "doc", &fakeMember{source: collab.SourceClientV1})
+
+	membership.Leave()
+
+	waitFor(t, "the room to be evicted on wall time", func() bool { return manager.LiveRoomCount() == 0 })
+}

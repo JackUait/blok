@@ -568,7 +568,8 @@ jobs:
   validate-spec-coverage:
     name: Validate Spec File Coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # About twice its longest green run since it gained Go conformance (159s).
+    timeout-minutes: 6
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

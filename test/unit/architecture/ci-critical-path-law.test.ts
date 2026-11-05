@@ -679,6 +679,8 @@ describe('CI critical-path law', () => {
 
     expect(coverage.name).toBe('Validate Spec File Coverage');
     expect(coverage['runs-on']).toBe('ubuntu-latest');
+    // About twice its longest green run since it gained Go conformance (159s).
+    expect(coverage['timeout-minutes']).toBe(6);
     expectOrderedSteps('ci.validate-spec-coverage', coverage, [
       checkout,
       setupNodeDependencies,

@@ -31,17 +31,8 @@ func TestRedirectLocationsMatchTheFixture(t *testing.T) {
 	if len(fixture.Cases) != len(fixture.Answers) || len(fixture.Cases) == 0 {
 		t.Fatalf("%d cases, %d answers", len(fixture.Cases), len(fixture.Answers))
 	}
-	// Known gaps, not passes: mailto has its own grammar in .NET.
-	known := map[string]bool{"mailto:a b": true}
 	for i, c := range fixture.Cases {
-		got := fetchRedirect(t, c.Locations)
-		if known[c.Locations[0]] {
-			if got == fixture.Answers[i] {
-				t.Errorf("%q now matches C#: drop it from the known gaps", c.Locations)
-			}
-			continue
-		}
-		if got != fixture.Answers[i] {
+		if got := fetchRedirect(t, c.Locations); got != fixture.Answers[i] {
 			t.Errorf("%q: got %q, C# %q", c.Locations, got, fixture.Answers[i])
 		}
 	}

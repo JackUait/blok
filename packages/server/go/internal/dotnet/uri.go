@@ -150,13 +150,21 @@ var authoritySchemes = map[string]bool{
 // Location header must pass before HttpClient exposes it. Nearly anything
 // is a relative reference; a scheme .NET knows with a bad authority, and a
 // drive letter not followed by a slash, are not. file may have no host.
-// mailto, which has a grammar of its own, is taken as it comes.
+// mailto reads its authority right after the colon, with http's host and
+// port rules, and may have no host (MailToLikeUri, AllowEmptyHost).
 func ParsesAsURI(s string) bool {
 	s = trimURIWhitespace(s)
 	if isDriveLetter(s) {
 		return len(s) == 2 || s[2] == '/' || s[2] == '\\'
 	}
 	scheme, rest, ok := splitScheme(s)
+	if ok && scheme == "mailto" {
+		if rest == "" || strings.IndexByte("/?#", rest[0]) >= 0 {
+			return true
+		}
+		_, ok = parseHierarchical("http", rest)
+		return ok
+	}
 	if !ok || !twoSlashes(rest) {
 		return true
 	}

@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -110,11 +111,53 @@ func NewSocketsTransport(options SocketsOptions) *SocketsTransport {
 // never under a request. Closing a conn from outside net/http is never safe:
 // an idle conn can be handed to a request before any trace runs, and
 // CloseIdleConnections can close a conn whose bodiless answer is still on
-// its way to the caller. So an expired conn carries one last request with
-// "Connection: close", and net/http drops it when that answer says close.
+// its way to the caller.
+//
+// So an expired conn refuses the next request's first write. Nothing
+// reaches the wire, net/http closes it, and it retries a request on a
+// reused conn that wrote nothing when the body can be replayed
+// (transport.go shouldRetryRequest, nothingWrittenError). net/http pools a
+// conn before a bodiless answer reaches its caller, and closing it then
+// fails that caller, so the refusal first waits for the last request on
+// the conn to return.
 type pooledConn struct {
 	net.Conn
 	born time.Time
+	mu   sync.Mutex
+	// holder is closed when the RoundTrip that last took the conn returns.
+	holder chan struct{}
+	// refusing is the holder before the request that refuses; nil means
+	// write normally.
+	refusing chan struct{}
+}
+
+var errExpired = errors.New("dotnet: the pooled connection is past its lifetime")
+
+// take records the RoundTrip that now holds the conn and, when refuse is
+// set, makes its writes fail.
+func (c *pooledConn) take(done chan struct{}, refuse bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if refuse {
+		c.refusing = c.holder
+		if c.refusing == nil {
+			c.refusing = closedChannel
+		}
+	}
+	c.holder = done
+}
+
+var closedChannel = func() chan struct{} { c := make(chan struct{}); close(c); return c }()
+
+func (c *pooledConn) Write(b []byte) (int, error) {
+	c.mu.Lock()
+	previous := c.refusing
+	c.mu.Unlock()
+	if previous != nil {
+		<-previous
+		return 0, errExpired
+	}
+	return c.Conn.Write(b)
 }
 
 func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, error) {
@@ -125,6 +168,9 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 	request = request.Clone(ctx)
 	header := request.Header
 	lifetime := t.options.PooledConnectionLifetime
+	replayable := request.Body == nil || request.Body == http.NoBody || request.GetBody != nil
+	done := make(chan struct{})
+	defer close(done)
 	trace := &httptrace.ClientTrace{
 		// Runs before the request is written. net/http's copy of a request
 		// with a body shares this header map.
@@ -134,9 +180,15 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 				return
 			}
 			_ = pooled.SetDeadline(time.Time{})
-			if lifetime > 0 && time.Since(pooled.born) > lifetime {
-				header.Set("Connection", "close")
+			expired := lifetime > 0 && time.Since(pooled.born) > lifetime
+			refuse := expired && info.Reused && replayable
+			pooled.take(done, refuse)
+			if !expired || refuse {
+				return
 			}
+			// net/http would not retry this one: it goes out on the old
+			// conn and asks the server to close it.
+			header.Set("Connection", "close")
 		},
 	}
 	request = request.WithContext(httptrace.WithClientTrace(request.Context(), trace))

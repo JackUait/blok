@@ -377,8 +377,12 @@ func socks4Tunneler(t *testing.T) string {
 // System.Net.Http 10.0.11, decompiled): never one a request is using. A
 // PUT cannot be replayed, so a conn cut under it fails the request.
 func TestTheLifetimeNeverCutsARequestInFlight(t *testing.T) {
-	var opened atomic.Int32
+	var opened, closing atomic.Int32
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// C# never asks the server to close: it just stops using the conn.
+		if r.Close {
+			closing.Add(1)
+		}
 		_, _ = io.Copy(io.Discard, r.Body)
 		time.Sleep(20 * time.Millisecond)
 	}))
@@ -418,6 +422,9 @@ func TestTheLifetimeNeverCutsARequestInFlight(t *testing.T) {
 		t.Fatalf("ok=%d failed=%d, first: %v", ok.Load(), failed.Load(), first.Load())
 	}
 	t.Logf("ok=%d opened=%d", ok.Load(), opened.Load())
+	if closing.Load() != 0 {
+		t.Fatalf("%d requests said Connection: close", closing.Load())
+	}
 	// 32 conns live 40 ms each: over 3 s they must have been replaced.
 	if opened.Load() <= 64 {
 		t.Fatalf("only %d connections opened: the lifetime retired nothing", opened.Load())
@@ -455,5 +462,45 @@ func TestTheLifetimeRetiresAConnThroughAnHTTPSProxy(t *testing.T) {
 	put()
 	if opened.Load() != 2 {
 		t.Fatalf("opened %d proxy connections", opened.Load())
+	}
+}
+
+// A body net/http cannot replay is never refused: it would fail. It goes
+// out on the expired conn and asks the server to close it instead.
+func TestAnExpiredConnCarriesABodyItCannotReplay(t *testing.T) {
+	var opened, closing atomic.Int32
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Close {
+			closing.Add(1)
+		}
+		_, _ = io.Copy(io.Discard, r.Body)
+	}))
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			opened.Add(1)
+		}
+	}
+	server.Start()
+	defer server.Close()
+	transport := NewSocketsTransport(SocketsOptions{ConnectTimeout: time.Second, PooledConnectionLifetime: 200 * time.Millisecond})
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Transport: transport}
+	put := func() {
+		t.Helper()
+		body := struct{ io.Reader }{strings.NewReader("{}")}
+		request, _ := http.NewRequest(http.MethodPut, server.URL, body)
+		response, err := client.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.Copy(io.Discard, response.Body)
+		response.Body.Close()
+	}
+	put()
+	time.Sleep(300 * time.Millisecond)
+	put()
+	put()
+	if closing.Load() != 1 || opened.Load() != 2 {
+		t.Fatalf("closing=%d opened=%d", closing.Load(), opened.Load())
 	}
 }

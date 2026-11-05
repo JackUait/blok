@@ -1,0 +1,882 @@
+{
+  "about": "HttpContent.ReadAsStringAsync over a request body and its raw Content-Type, as Digest auth-int reads it (System.Net.Http 10.0.11). body is hex; text is the UTF-8 of the string, in hex; error is the exception type. C# BodyTextFixtureTests writes answers with BLOK_WRITE_FIXTURES=1; Go and Rust read it.",
+  "cases": [
+    {
+      "body": "",
+      "contentType": null
+    },
+    {
+      "body": "61",
+      "contentType": null
+    },
+    {
+      "body": "c3a9",
+      "contentType": null
+    },
+    {
+      "body": "61ff62",
+      "contentType": null
+    },
+    {
+      "body": "c0af",
+      "contentType": null
+    },
+    {
+      "body": "c1bf",
+      "contentType": null
+    },
+    {
+      "body": "e080af",
+      "contentType": null
+    },
+    {
+      "body": "eda080",
+      "contentType": null
+    },
+    {
+      "body": "edbfbf",
+      "contentType": null
+    },
+    {
+      "body": "f4908080",
+      "contentType": null
+    },
+    {
+      "body": "f5808080",
+      "contentType": null
+    },
+    {
+      "body": "f8888080",
+      "contentType": null
+    },
+    {
+      "body": "e282",
+      "contentType": null
+    },
+    {
+      "body": "e28261",
+      "contentType": null
+    },
+    {
+      "body": "f09f98",
+      "contentType": null
+    },
+    {
+      "body": "f09f9861",
+      "contentType": null
+    },
+    {
+      "body": "f09f9880",
+      "contentType": null
+    },
+    {
+      "body": "80",
+      "contentType": null
+    },
+    {
+      "body": "8080",
+      "contentType": null
+    },
+    {
+      "body": "c3",
+      "contentType": null
+    },
+    {
+      "body": "c361",
+      "contentType": null
+    },
+    {
+      "body": "fe",
+      "contentType": null
+    },
+    {
+      "body": "ff",
+      "contentType": null
+    },
+    {
+      "body": "efbbbf61",
+      "contentType": null
+    },
+    {
+      "body": "efbbbf",
+      "contentType": null
+    },
+    {
+      "body": "efbb61",
+      "contentType": null
+    },
+    {
+      "body": "fffe6100",
+      "contentType": null
+    },
+    {
+      "body": "fffe",
+      "contentType": null
+    },
+    {
+      "body": "fffe61",
+      "contentType": null
+    },
+    {
+      "body": "feff0061",
+      "contentType": null
+    },
+    {
+      "body": "feff61",
+      "contentType": null
+    },
+    {
+      "body": "fffe000061000000",
+      "contentType": null
+    },
+    {
+      "body": "fffe0000",
+      "contentType": null
+    },
+    {
+      "body": "0000feff00000061",
+      "contentType": null
+    },
+    {
+      "body": "fffe00d8",
+      "contentType": null
+    },
+    {
+      "body": "fffe00d86100",
+      "contentType": null
+    },
+    {
+      "body": "fffe00dc6100",
+      "contentType": null
+    },
+    {
+      "body": "fffe3dd800de",
+      "contentType": null
+    },
+    {
+      "body": "fffe000000110000",
+      "contentType": null
+    },
+    {
+      "body": "fffe000000d80000",
+      "contentType": null
+    },
+    {
+      "body": "fffe0000610000",
+      "contentType": null
+    },
+    {
+      "body": "efbfbd",
+      "contentType": null
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-8"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=UTF-8"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=\"utf-8\""
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=\"\""
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=\""
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=bogus"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-7"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=UTF-16"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-16le"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-16BE"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=unicodeFFFE"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=unicode"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=ucs-2"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-32"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-32le"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-32BE"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=us-ascii"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=ascii"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=ANSI_X3.4-1968"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=iso-8859-1"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=latin1"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=l1"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=cp819"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=windows-1252"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=x-unicode-2-0-utf-8"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=unicode-1-1-utf-8"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=\"utf-16\""
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-16 "
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset='utf-16'"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-16, x"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain;"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; a=1; charset=utf-16"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-16; charset=utf-8"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; CHARSET=utf-16"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": " text/plain ; charset = utf-16 "
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text / plain; charset=utf-16"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=\"utf-\\16\""
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "application/json; charset=utf-8"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": ""
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": ",text/plain; charset=utf-16"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-16;"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=utf-16 ; a=b"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain charset=utf-16"
+    },
+    {
+      "body": "efbbbf61",
+      "contentType": "text/plain; charset=iso-8859-1"
+    },
+    {
+      "body": "fffe6100",
+      "contentType": "text/plain; charset=utf-8"
+    },
+    {
+      "body": "efbbbf61",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "fffe6100",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "feff0061",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "feff0061",
+      "contentType": "text/plain; charset=utf-16BE"
+    },
+    {
+      "body": "fffe6100",
+      "contentType": "text/plain; charset=utf-16BE"
+    },
+    {
+      "body": "610062",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "6100620063",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "00d8",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "00dc",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "3dd800de",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "d83dde00",
+      "contentType": "text/plain; charset=utf-16BE"
+    },
+    {
+      "body": "61000000",
+      "contentType": "text/plain; charset=utf-32"
+    },
+    {
+      "body": "610000",
+      "contentType": "text/plain; charset=utf-32"
+    },
+    {
+      "body": "00001100",
+      "contentType": "text/plain; charset=utf-32"
+    },
+    {
+      "body": "00d80000",
+      "contentType": "text/plain; charset=utf-32"
+    },
+    {
+      "body": "fffe000061000000",
+      "contentType": "text/plain; charset=utf-32"
+    },
+    {
+      "body": "00000061",
+      "contentType": "text/plain; charset=utf-32BE"
+    },
+    {
+      "body": "0000feff00000061",
+      "contentType": "text/plain; charset=utf-32BE"
+    },
+    {
+      "body": "ff80",
+      "contentType": "text/plain; charset=us-ascii"
+    },
+    {
+      "body": "e9ff",
+      "contentType": "text/plain; charset=iso-8859-1"
+    },
+    {
+      "body": "efbbbf61",
+      "contentType": "text/plain; charset=utf-32"
+    },
+    {
+      "body": "fffe6100",
+      "contentType": "text/plain; charset=us-ascii"
+    },
+    {
+      "body": "efbbbf61",
+      "contentType": "text/plain; charset=us-ascii"
+    },
+    {
+      "body": "",
+      "contentType": "text/plain; charset=bogus"
+    },
+    {
+      "body": "",
+      "contentType": "text/plain; charset=utf-7"
+    },
+    {
+      "body": "00d861",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "00d800d8",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "00d800d800dc",
+      "contentType": "text/plain; charset=utf-16"
+    },
+    {
+      "body": "6100000062",
+      "contentType": "text/plain; charset=utf-32"
+    },
+    {
+      "body": "efbbbf61",
+      "contentType": "text/plain; charset=utf-8"
+    },
+    {
+      "body": "feff0061",
+      "contentType": "text/plain; charset=utf-32BE"
+    },
+    {
+      "body": "61c3a9ff",
+      "contentType": "text/plain; charset=\"utf-8\"; charset=utf-16"
+    },
+    {
+      "body": "61",
+      "contentType": "text/plain; charset=\"\\\"\""
+    },
+    {
+      "body": "61",
+      "contentType": "text/plain; charset=utf-16\u0000"
+    },
+    {
+      "body": "61",
+      "contentType": "Text/Plain; Charset=\"UTF-16\""
+    }
+  ],
+  "answers": [
+    {
+      "text": ""
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "c3a9"
+    },
+    {
+      "text": "61efbfbd62"
+    },
+    {
+      "text": "efbfbdefbfbd"
+    },
+    {
+      "text": "efbfbdefbfbd"
+    },
+    {
+      "text": "efbfbdefbfbdefbfbd"
+    },
+    {
+      "text": "efbfbdefbfbdefbfbd"
+    },
+    {
+      "text": "efbfbdefbfbdefbfbd"
+    },
+    {
+      "text": "efbfbdefbfbdefbfbdefbfbd"
+    },
+    {
+      "text": "efbfbdefbfbdefbfbdefbfbd"
+    },
+    {
+      "text": "efbfbdefbfbdefbfbdefbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd61"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd61"
+    },
+    {
+      "text": "f09f9880"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbdefbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd61"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": ""
+    },
+    {
+      "text": "efbfbd61"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": ""
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": ""
+    },
+    {
+      "text": "0000efbfbdefbfbd00000061"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd61"
+    },
+    {
+      "text": "efbfbd61"
+    },
+    {
+      "text": "f09f9880"
+    },
+    {
+      "text": "e18480"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "error": "InvalidOperationException"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "error": "InvalidOperationException"
+    },
+    {
+      "error": "NotSupportedException"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "e68783eaa7bf"
+    },
+    {
+      "text": "e68783eaa7bf"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "613f3f3f"
+    },
+    {
+      "text": "613f3f3f"
+    },
+    {
+      "text": "613f3f3f"
+    },
+    {
+      "text": "61c383c2a9c3bf"
+    },
+    {
+      "text": "61c383c2a9c3bf"
+    },
+    {
+      "text": "61c383c2a9c3bf"
+    },
+    {
+      "text": "61c383c2a9c3bf"
+    },
+    {
+      "error": "InvalidOperationException"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "error": "InvalidOperationException"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "error": "InvalidOperationException"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "ec8da1efbea9"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "text": "c3afc2bbc2bf61"
+    },
+    {
+      "text": "efbfbdefbfbd6100"
+    },
+    {
+      "text": "ebafafe686bf"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "efbfbee68480"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "efbfbee68480"
+    },
+    {
+      "text": "61efbfbd"
+    },
+    {
+      "text": "6162efbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "f09f9880"
+    },
+    {
+      "text": "f09f9880"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "3f3f"
+    },
+    {
+      "text": "c3a9c3bf"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "3f3f6100"
+    },
+    {
+      "text": "3f3f3f61"
+    },
+    {
+      "text": ""
+    },
+    {
+      "text": ""
+    },
+    {
+      "text": "efbfbdefbfbd"
+    },
+    {
+      "text": "efbfbdefbfbd"
+    },
+    {
+      "text": "efbfbdf0908080"
+    },
+    {
+      "text": "61efbfbd"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "efbfbd"
+    },
+    {
+      "text": "61c3a9efbfbd"
+    },
+    {
+      "error": "InvalidOperationException"
+    },
+    {
+      "text": "61"
+    },
+    {
+      "text": "efbfbd"
+    }
+  ]
+}

@@ -35,6 +35,8 @@ public sealed partial class ProxyConnectTunnelTests
   // A Type 2 without a required flag, or without both NetBIOS names: no Type 3.
   [InlineData("flags", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}")]
   [InlineData("no-nb", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}")]
+  // ProcessChallenge reads TargetName before it checks the flags.
+  [InlineData("flags-badname", "u", "", "p", "throw ArgumentOutOfRangeException|1 auth=no|1 auth=NTLM T1 {T1}")]
   // No Type 2, a short one, or bad base64: .NET throws, not an HttpRequestException.
   // A bare Negotiate is a token SPNEGO cannot read: no answer, so the 407.
   [InlineData("negotiate-bare", "u", "", "p", "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}")]
@@ -212,7 +214,13 @@ public sealed partial class ProxyConnectTunnelTests
     BinaryPrimitives.WriteUInt16LittleEndian(message.AsSpan(12), (ushort)name.Length);
     BinaryPrimitives.WriteUInt16LittleEndian(message.AsSpan(14), (ushort)name.Length);
     BinaryPrimitives.WriteUInt32LittleEndian(message.AsSpan(16), 56);
-    var flags = mode == "flags" ? ChallengeFlags & ~0x40000000u : ChallengeFlags;
+    if (mode == "flags-badname")
+    {
+      // A negative TargetName offset: GetField's Slice throws.
+      BinaryPrimitives.WriteUInt32LittleEndian(message.AsSpan(16), 0xffff);
+    }
+
+    var flags = mode is "flags" or "flags-badname" ? ChallengeFlags & ~0x40000000u : ChallengeFlags;
     BinaryPrimitives.WriteUInt32LittleEndian(message.AsSpan(20), flags);
     ServerChallenge.CopyTo(message, 24);
     BinaryPrimitives.WriteUInt16LittleEndian(message.AsSpan(40), (ushort)info.Length);

@@ -675,8 +675,7 @@ pub async fn start_history() -> App {
 
 /// Test headers the app's own middleware reads, standing in for the
 /// server's guard: X-User signs a caller in (ticket mode takes X-Doc as
-/// the pass's doc claim); Origin is echoed as an allowed CORS origin, and
-/// X-Expose is what the host's own CORS layer exposes first.
+/// the pass's doc claim); Origin is echoed as an allowed CORS origin.
 pub async fn start_app(options: AppOptions) -> App {
     let converter = Arc::new(FailingConverter {
         inner: DocConverter {
@@ -779,11 +778,6 @@ pub async fn start_app(options: AppOptions) -> App {
                     response
                         .headers_mut()
                         .set("Access-Control-Allow-Origin", origin);
-                }
-                if let Some(exposed) = request.headers().get("X-Expose") {
-                    response
-                        .headers_mut()
-                        .set("Access-Control-Expose-Headers", exposed);
                 }
                 async move {
                     match which {

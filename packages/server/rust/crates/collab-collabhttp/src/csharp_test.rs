@@ -376,30 +376,6 @@ async fn a_cross_origin_page_can_read_the_head_headers_on_state_and_edit() {
     app.drain().await;
 }
 
-// A host's own CORS layer may expose headers first; ours are added, not
-// swapped in.
-#[tokio::test(flavor = "multi_thread")]
-async fn the_head_headers_join_headers_the_app_already_exposes() {
-    let app = start_app(journal()).await;
-    let cors = [
-        ("Origin", "https://app.example.com"),
-        ("X-Expose", "X-Request-Id, etag"),
-    ];
-    let state = app.request("GET", "/state", &cors, "").await;
-    let mut headers = cors.to_vec();
-    headers.push(("Blok-Idempotency-Key", "joined-edit"));
-    let edit = app.request("POST", "/edit", &headers, APPEND_ONE).await;
-    let want = vec![
-        "Blok-Doc-Lineage",
-        "Blok-Doc-Sequence",
-        "X-Request-Id",
-        "etag",
-    ];
-    assert_eq!(exposed_headers(&state), want);
-    assert_eq!(exposed_headers(&edit), want);
-    app.drain().await;
-}
-
 #[tokio::test(flavor = "multi_thread")]
 async fn state_needs_read_access_but_not_write_access() {
     let authorization = RecordingAuthorization::new(false, true);

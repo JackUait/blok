@@ -1,3 +1,32 @@
+/**
+ * `[::ffff:a.b.c.d]` as `a.b.c.d`: browsers reach the IPv4 server through the
+ * mapped form, so both must match one entry. Takes a hostname as `new URL`
+ * spells it; any other host comes back unchanged.
+ */
+const unmapIPv4 = (host: string): string => {
+  if (!host.startsWith('[')) {
+    return host;
+  }
+
+  const canonical = ((): string => {
+    try {
+      return new URL(`https://${host}`).hostname;
+    } catch {
+      return host;
+    }
+  })();
+  const mapped = /^\[::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})\]$/.exec(canonical);
+
+  if (mapped === null) {
+    return host;
+  }
+
+  const high = parseInt(mapped[1], 16);
+  const low = parseInt(mapped[2], 16);
+
+  return [high >> 8, high & 0xff, low >> 8, low & 0xff].join('.');
+};
+
 /** A config entry reduced to the host `new URL` would give. */
 interface HostEntry {
   /** Written as `*.host`: subdomains only. */
@@ -53,7 +82,7 @@ function parseHostEntry(raw: string): HostEntry | null {
 
   const host = ((): string => {
     try {
-      return new URL(`https://${split.host}`).hostname.replace(/\.$/, '');
+      return unmapIPv4(new URL(`https://${split.host}`).hostname.replace(/\.$/, ''));
     } catch {
       return '';
     }
@@ -116,7 +145,7 @@ const hostMatches = (host: string, entry: Pick<HostEntry, 'wildcard' | 'host'>):
  * @param port - the URL's port ('' for the default)
  */
 export function matchesHostPattern(hostname: string, patterns: readonly string[], port = ''): boolean {
-  const host = hostname.toLowerCase();
+  const host = unmapIPv4(hostname.toLowerCase());
 
   return patterns.some((pattern) => {
     const entry = parseHostEntry(pattern);
@@ -137,7 +166,7 @@ function denyEntries(pattern: string): Array<Pick<HostEntry, 'wildcard' | 'host'
   const bare = wildcard ? raw.slice(2) : raw;
   const legacy = ((): string => {
     try {
-      return new URL(`https://${bare.replace(/\.$/, '')}`).hostname.replace(/\.$/, '');
+      return unmapIPv4(new URL(`https://${bare.replace(/\.$/, '')}`).hostname.replace(/\.$/, ''));
     } catch {
       return '';
     }
@@ -160,7 +189,7 @@ function denyEntries(pattern: string): Array<Pick<HostEntry, 'wildcard' | 'host'
  */
 export function matchesDenyHostPattern(hostname: string, patterns: readonly string[]): boolean {
   const host = hostname.toLowerCase();
-  const hosts = [host, host.replace(/\.$/, '')];
+  const hosts = [host, host.replace(/\.$/, ''), unmapIPv4(host)];
 
   return patterns.some((pattern) => denyEntries(pattern).some((entry) => hosts.some((h) => h !== '' && hostMatches(h, entry))));
 }
@@ -175,7 +204,7 @@ const bareHost = (name: string): string => name.toLowerCase().replace(/\.$/, '')
  * and scheme are ignored.
  */
 export function isSameSiteHost(hostname: string, ownHosts: readonly string[]): boolean {
-  const host = bareHost(hostname);
+  const host = unmapIPv4(bareHost(hostname));
 
   if (host === '') {
     return false;

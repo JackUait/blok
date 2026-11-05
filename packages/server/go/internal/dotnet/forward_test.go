@@ -211,6 +211,8 @@ func TestAuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"digest", "GET", `200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest username="u", realm="r", nonce="n", uri="/x?q", response="R" body=`},
 		{"ntlm", "GET", "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T1 body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T3 ok body="},
 		{"negotiate", "GET", "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Negotiate T1 body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Negotiate T3 ok body="},
+		{"ntlm-chunkcap", "GET", "error|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T1 body="},
+		{"ntlm-chunkunder", "GET", "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T1 body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T3 ok body="},
 		{"digest-int-invalid", "POST", "200 ok|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=a?b|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest int=text body=a?b"},
 		{"digest-int-latin1", "POST", "200 ok|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=?|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest int=text body=?"},
 		{"digest-int-bogus", "POST", "error|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=abc"},
@@ -238,5 +240,126 @@ func TestAuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes(t *testing.T) {
 				t.Errorf("got %q\nC#  %q", got, c.want)
 			}
 		})
+	}
+}
+
+// The twin of C#'s ConcurrentNtlmHandshakesEachKeepTheirConn: each
+// handshake keeps its conn, and a later request reuses a signed conn with
+// no credentials.
+func TestConcurrentNtlmHandshakesEachKeepTheirConn(t *testing.T) {
+	const requests = 6
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	var mu sync.Mutex
+	logs := map[int][]string{}
+	go func() {
+		for id := 1; ; id++ {
+			client, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer client.Close()
+				reader := bufio.NewReader(client)
+				state := &ntlmProxyState{}
+				authed := false
+				note := func(event string) {
+					mu.Lock()
+					logs[id] = append(logs[id], event)
+					mu.Unlock()
+				}
+				for {
+					request, err := http.ReadRequest(reader)
+					if err != nil {
+						return
+					}
+					_, _ = io.Copy(io.Discard, request.Body)
+					auth := request.Header.Get("Proxy-Authorization")
+					var answer string
+					if auth == "" {
+						if authed {
+							note("no authed")
+							answer = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok"
+						} else {
+							note("no")
+							answer = "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: NTLM\r\nContent-Length: 0\r\n\r\n"
+						}
+					} else {
+						name, data, _ := strings.Cut(auth, " ")
+						token, _ := base64.StdEncoding.DecodeString(data)
+						read, valid := readNtlmToken(name, token, state, "p", map[string]string{})
+						switch {
+						case strings.Contains(read, " T1 "):
+							note("T1")
+							time.Sleep(150 * time.Millisecond)
+							state.type2 = testType2("ntlm")
+							answer = "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: NTLM " + base64.StdEncoding.EncodeToString(state.type2) + "\r\nContent-Length: 0\r\n\r\n"
+						case valid:
+							note("T3 ok")
+							authed = true
+							answer = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok"
+						default:
+							note("T3 bad")
+							answer = "HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n"
+						}
+					}
+					if _, err := io.WriteString(client, answer); err != nil {
+						return
+					}
+				}
+			}()
+		}
+	}()
+	transport := NewSocketsTransport(SocketsOptions{ConnectTimeout: 2 * time.Second})
+	transport.Transport.Proxy = http.ProxyURL(&url.URL{Scheme: "http", Host: listener.Addr().String(), User: url.UserPassword("u", "p")})
+	client := &http.Client{Transport: transport, Timeout: 20 * time.Second}
+	get := func() (int, error) {
+		response, err := client.Get("http://127.0.0.1:1/x")
+		if err != nil {
+			return 0, err
+		}
+		defer response.Body.Close()
+		_, _ = io.Copy(io.Discard, response.Body)
+		return response.StatusCode, nil
+	}
+	var wait sync.WaitGroup
+	statuses := make([]int, requests)
+	errs := make([]error, requests)
+	for i := range requests {
+		wait.Go(func() { statuses[i], errs[i] = get() })
+	}
+	wait.Wait()
+	later, laterErr := get()
+	for i := range requests {
+		if errs[i] != nil || statuses[i] != 200 {
+			t.Errorf("request %d: %d, %v", i, statuses[i], errs[i])
+		}
+	}
+	if laterErr != nil || later != 200 {
+		t.Errorf("later request: %d, %v", later, laterErr)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(logs) != requests {
+		t.Errorf("%d conns, want %d: %v", len(logs), requests, logs)
+	}
+	reused := 0
+	for id, events := range logs {
+		if len(events) < 3 || events[0] != "no" || events[1] != "T1" || events[2] != "T3 ok" {
+			t.Errorf("conn %d: %v", id, events)
+			continue
+		}
+		for _, event := range events[3:] {
+			if event != "no authed" {
+				t.Errorf("conn %d: %v", id, events)
+			}
+		}
+		reused += len(events) - 3
+	}
+	if reused != 1 {
+		t.Errorf("%d reuses of a signed conn, want 1: %v", reused, logs)
 	}
 }

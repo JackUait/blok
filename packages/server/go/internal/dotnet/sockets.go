@@ -43,6 +43,17 @@ type SocketsTransport struct {
 	options   SocketsOptions
 	once      sync.Once
 	inner     *http.Transport
+
+	// parked are proxy conns a finished NTLM handshake signed, keyed by
+	// proxy and address. The dial hands them out first, as .NET's pool
+	// would reuse them.
+	parkedMu sync.Mutex
+	parked   map[string][]parkedConn
+}
+
+type parkedConn struct {
+	conn net.Conn
+	at   time.Time
 }
 
 // routeKey carries a request's route to the dials.
@@ -119,6 +130,11 @@ func (t *SocketsTransport) dial(ctx context.Context, address string, secure bool
 	if proxy != nil && (r.scheme == "https" || proxy.Scheme != "http" && proxy.Scheme != "https") {
 		hop, tunnel = proxyAddress(proxy), address
 	}
+	if forwarded(r) {
+		if conn := t.unpark(parkKey(r)); conn != nil {
+			return t.forwardConn(conn, r), nil
+		}
+	}
 	// open makes the first hop: TCP, then TLS to an https proxy.
 	open := func() (net.Conn, error) {
 		var dialer net.Dialer
@@ -168,7 +184,158 @@ func (t *SocketsTransport) dial(ctx context.Context, address string, secure bool
 			return fail(err)
 		}
 	}
+	if forwarded(r) {
+		return t.forwardConn(conn, r), nil
+	}
 	return newWireConn(conn), nil
+}
+
+// forwarded is a route whose requests go to an http or https proxy in
+// absolute form, with credentials to answer a 407.
+func forwarded(r *route) bool {
+	return r.proxy != nil && r.proxy.User != nil && r.scheme == "http" &&
+		(r.proxy.Scheme == "http" || r.proxy.Scheme == "https")
+}
+
+// forwardConn is the wireConn of a forwarded route: an NTLM or Negotiate
+// 407 makes net/http give it up, so the handshake keeps it (forward).
+func (t *SocketsTransport) forwardConn(conn net.Conn, r *route) *wireConn {
+	wire := newWireConn(conn)
+	wire.claim = func(status int, header http.Header) bool {
+		if status != http.StatusProxyAuthRequired {
+			return false
+		}
+		scheme := chooseChallenge(authChallenges(header.Values("Proxy-Authenticate")))
+		return scheme == "negotiate" || scheme == "ntlm"
+	}
+	return wire
+}
+
+func parkKey(r *route) string { return r.proxy.Scheme + "://" + proxyAddress(r.proxy) }
+
+// park keeps a signed conn for the pool's next dial to key.
+func (t *SocketsTransport) park(key string, conn net.Conn) {
+	t.parkedMu.Lock()
+	defer t.parkedMu.Unlock()
+	if t.parked == nil {
+		t.parked = map[string][]parkedConn{}
+	}
+	t.parked[key] = append(t.parked[key], parkedConn{conn: conn, at: time.Now()})
+}
+
+// unpark is the newest parked conn for key that is still open and within
+// the idle timeout, as the pool takes its newest idle conn; nil for none.
+func (t *SocketsTransport) unpark(key string) net.Conn {
+	for {
+		t.parkedMu.Lock()
+		list := t.parked[key]
+		if len(list) == 0 {
+			t.parkedMu.Unlock()
+			return nil
+		}
+		last := list[len(list)-1]
+		t.parked[key] = list[:len(list)-1]
+		t.parkedMu.Unlock()
+		if time.Since(last.at) < t.Transport.IdleConnTimeout && idleAlive(last.conn) {
+			return last.conn
+		}
+		last.conn.Close()
+	}
+}
+
+// idleAlive is the pool's check of an idle conn: nothing to read, and not
+// closed by the peer.
+func idleAlive(conn net.Conn) bool {
+	_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond))
+	defer func() { _ = conn.SetReadDeadline(time.Time{}) }()
+	var one [1]byte
+	_, err := conn.Read(one[:])
+	var timeout net.Error
+	return errors.As(err, &timeout) && timeout.Timeout()
+}
+
+// pinned runs the rest of one NTLM handshake on its own conn: a private
+// transport whose every dial is that conn, and every response gives the
+// conn up again (detached), so no other request ever gets it. A first 407
+// that closed allows one real dial instead.
+type pinned struct {
+	t         *SocketsTransport
+	transport *http.Transport
+	mu        sync.Mutex
+	conn      net.Conn
+	fresh     bool
+}
+
+func (t *SocketsTransport) pin() *pinned {
+	p := &pinned{t: t, transport: t.transport().Clone()}
+	take := func(ctx context.Context, address string, secure bool) (net.Conn, error) {
+		p.mu.Lock()
+		conn, fresh := p.conn, p.fresh
+		p.conn, p.fresh = nil, false
+		p.mu.Unlock()
+		if conn == nil && fresh {
+			dialed, err := t.dial(ctx, address, secure)
+			if err != nil {
+				return nil, err
+			}
+			conn = dialed.(*wireConn).Conn
+		}
+		if conn == nil {
+			return nil, errNtlmDrain
+		}
+		wire := newWireConn(conn)
+		wire.claim = func(int, http.Header) bool { return true }
+		return wire, nil
+	}
+	p.transport.DialContext = func(ctx context.Context, _, address string) (net.Conn, error) {
+		return take(ctx, address, false)
+	}
+	p.transport.DialTLSContext = func(ctx context.Context, _, address string) (net.Conn, error) {
+		return take(ctx, address, true)
+	}
+	return p
+}
+
+// hold makes conn the one the next request gets; nil allows one dial.
+func (p *pinned) hold(conn net.Conn) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.conn, p.fresh = conn, conn == nil
+}
+
+// release parks a detached conn once its response body was read to the
+// end and nothing says close; any other end closes it.
+func (t *SocketsTransport) release(response *http.Response, conn *wireConn, key string) {
+	body := response.Body
+	keep := !headClosesConn(response.Header)
+	response.Body = &releasingBody{ReadCloser: body, eof: response.ContentLength == 0, done: func(clean bool) {
+		if clean && keep && !conn.ended.Load() {
+			t.park(key, conn.Conn)
+			return
+		}
+		conn.Conn.Close()
+	}}
+}
+
+type releasingBody struct {
+	io.ReadCloser
+	once sync.Once
+	eof  bool
+	done func(clean bool)
+}
+
+func (b *releasingBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if errors.Is(err, io.EOF) {
+		b.eof = true
+	}
+	return n, err
+}
+
+func (b *releasingBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.once.Do(func() { b.done(b.eof) })
+	return err
 }
 
 // handshake is net/http's addTLS: the configured TLS, named host when the
@@ -812,10 +979,10 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 		}
 		r.proxy = proxy
 	}
-	if r.proxy != nil && r.proxy.User != nil && r.scheme == "http" && (r.proxy.Scheme == "http" || r.proxy.Scheme == "https") {
+	if forwarded(r) {
 		return t.forward(request, r)
 	}
-	return t.attempt(request, r, nil)
+	return t.attempt(t.transport(), request, r, nil)
 }
 
 // forward sends an http target's request through an http or https proxy
@@ -824,10 +991,11 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 // that .NET does not answer is the response. Measured by C#'s
 // AuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes.
 //
-// net/http picks the conn: a drained answer's conn is back in the pool
-// before the drain returns, and the next request takes the newest idle
-// conn, so a request sent alone stays on its conn. NTLM fails the request
-// when the conn changes anyway.
+// SendWithNtProxyAuthAsync holds its conn for the whole handshake, which
+// net/http's pool cannot: so an NTLM or Negotiate 407 detaches its conn
+// from the pool (forwardConn), the rest of the handshake runs on it alone
+// (pin), and once the answer is read the signed conn is parked for the
+// pool's next dial (C#'s ConcurrentNtlmHandshakesEachKeepTheirConn).
 func (t *SocketsTransport) forward(request *http.Request, r *route) (*http.Response, error) {
 	auth := &proxyAuth{proxy: r.proxy, method: request.Method, uri: request.URL.RequestURI()}
 	auth.content = func() (string, error) {
@@ -845,61 +1013,88 @@ func (t *SocketsTransport) forward(request *http.Request, r *route) (*http.Respo
 		return bodyText(content, types[0], true)
 	}
 	replayable := request.Body == nil || request.Body == http.NoBody || request.GetBody != nil
-	var conn, ntConn *wireConn
-	next := request
+	var conn *wireConn
+	onConn := func(c *wireConn) { conn = c }
+	var pin *pinned
+	key := parkKey(r)
+	// lost ends a detached conn the handshake will not use.
+	lost := func() {
+		if conn != nil && conn.detached.Load() {
+			conn.Conn.Close()
+		}
+	}
+	response, err := t.attempt(t.transport(), request, r, onConn)
 	for {
-		response, err := t.attempt(next, r, func(c *wireConn) { conn = c })
 		if err != nil {
 			return nil, err
-		}
-		if ntConn != nil && conn != ntConn {
-			response.Body.Close()
-			return nil, errNtlmDrain
 		}
 		if response.StatusCode != http.StatusProxyAuthRequired {
 			if err := auth.checkFinal(response.Header); err != nil {
 				response.Body.Close()
+				lost()
 				return nil, err
+			}
+			if conn != nil && conn.detached.Load() {
+				t.release(response, conn, key)
 			}
 			return response, nil
 		}
 		answer, err := auth.answer(request.Context(), response.Header)
 		if err != nil {
 			response.Body.Close()
+			lost()
 			return nil, err
 		}
 		if answer == "" || !replayable {
+			if conn != nil && conn.detached.Load() {
+				t.release(response, conn, key)
+			}
 			return response, nil
 		}
 		first := auth.authorization == ""
 		auth.authorization = answer
-		if auth.nt != nil {
-			if first && connectionHeaderCloses(response.Header) {
-				// The Type 1 goes on a new conn; net/http drops this one.
+		next := request.Clone(request.Context())
+		next.Header.Set("Proxy-Authorization", answer)
+		if request.GetBody != nil {
+			if next.Body, err = request.GetBody(); err != nil {
 				response.Body.Close()
-			} else {
-				framing := responseFraming(response.Header)
-				drained := framing != FramedClose && !headClosesConn(response.Header) &&
-					drainNtBody(conn, response, framing) && !conn.ended.Load()
-				response.Body.Close()
-				if !drained {
-					return nil, errNtlmDrain
-				}
-				ntConn = conn
+				lost()
+				return nil, err
 			}
-		} else {
+		}
+		if auth.nt == nil {
 			// SendWithAuthAsync disposes the answer, which drains it; an
 			// answer left unread makes net/http drop the conn.
 			drainBody(response.Body)
 			response.Body.Close()
+			response, err = t.attempt(t.transport(), next, r, onConn)
+			continue
 		}
-		next = request.Clone(request.Context())
-		next.Header.Set("Proxy-Authorization", answer)
-		if request.GetBody != nil {
-			if next.Body, err = request.GetBody(); err != nil {
-				return nil, err
+		if conn == nil || !conn.detached.Load() {
+			response.Body.Close()
+			return nil, errNtlmDrain
+		}
+		if pin == nil {
+			pin = t.pin()
+		}
+		if first && connectionHeaderCloses(response.Header) {
+			// The Type 1 goes on a new conn.
+			response.Body.Close()
+			conn.Conn.Close()
+			pin.hold(nil)
+		} else {
+			framing := responseFraming(response.Header)
+			drained := framing != FramedClose && !headClosesConn(response.Header) &&
+				drainNtBody(conn, response, framing) && !conn.ended.Load()
+			response.Body.Close()
+			if !drained {
+				conn.Conn.Close()
+				return nil, errNtlmDrain
 			}
+			pin.hold(conn.Conn)
 		}
+		conn = nil
+		response, err = t.attempt(pin.transport, next, r, onConn)
 	}
 }
 
@@ -945,8 +1140,7 @@ func drainNtBody(conn *wireConn, response *http.Response, framing Framing) bool 
 }
 
 // attempt is one request on the pool. onConn, when set, learns the conn.
-func (t *SocketsTransport) attempt(request *http.Request, r *route, onConn func(*wireConn)) (*http.Response, error) {
-	inner := t.transport()
+func (t *SocketsTransport) attempt(inner *http.Transport, request *http.Request, r *route, onConn func(*wireConn)) (*http.Response, error) {
 	request = request.Clone(context.WithValue(request.Context(), routeKey{}, r))
 	header := request.Header
 	method := request.Method
@@ -1003,8 +1197,20 @@ func findPooled(conn net.Conn) *pooledConn {
 	}
 }
 
-// CloseIdleConnections closes the pool's idle connections.
-func (t *SocketsTransport) CloseIdleConnections() { t.transport().CloseIdleConnections() }
+// CloseIdleConnections closes the pool's idle connections, the parked
+// ones too.
+func (t *SocketsTransport) CloseIdleConnections() {
+	t.transport().CloseIdleConnections()
+	t.parkedMu.Lock()
+	parked := t.parked
+	t.parked = nil
+	t.parkedMu.Unlock()
+	for _, list := range parked {
+		for _, p := range list {
+			p.conn.Close()
+		}
+	}
+}
 
 // socks4Tunnel is SocksHelper.EstablishSocks4TunnelAsync (System.Net.Http
 // 10.0.11, decompiled): an IPv4 address (an IPv4-mapped one unmapped),

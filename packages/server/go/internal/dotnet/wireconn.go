@@ -37,6 +37,12 @@ type wireConn struct {
 	started bool
 	// ended is set when bytes after a response end the conn.
 	ended atomic.Bool
+	// claim, when set, picks the heads after which net/http gives the conn
+	// up: an NTLM or Negotiate 407 of a forwarded request, whose handshake
+	// must keep its conn. detached is set then: the conn reads nothing past
+	// that response, and Close leaves the socket open for the handshake.
+	claim    func(status int, header http.Header) bool
+	detached atomic.Bool
 
 	mu     sync.Mutex
 	method string
@@ -92,6 +98,9 @@ func (c *wireConn) Close() error {
 	}
 	c.pending = nil
 	c.mu.Unlock()
+	if c.detached.Load() {
+		return nil
+	}
 	return c.Conn.Close()
 }
 
@@ -177,6 +186,9 @@ func (c *wireConn) endsConn() bool {
 		c.err = io.EOF
 		c.ended.Store(true)
 	}
+	if c.err == nil && c.detached.Load() {
+		c.err = io.EOF
+	}
 	return c.err != nil
 }
 
@@ -194,6 +206,9 @@ func (c *wireConn) nextHead() error {
 	}
 	c.count.reset()
 	body, framing := reader.Body(status, head, header)
+	if c.claim != nil && c.claim(status, header) {
+		c.detached.Store(true)
+	}
 	id := strconv.FormatUint(headSeq.Add(1), 10)
 	heads.Store(id, pendingHead{header: header, conn: c})
 	c.mu.Lock()
@@ -218,7 +233,7 @@ func (c *wireConn) nextHead() error {
 			out = append(out, "Content-Length: "+strconv.FormatInt(n, 10)+"\r\n"...)
 		}
 	}
-	if framing == FramedClose || headClosesConn(header) {
+	if framing == FramedClose || headClosesConn(header) || c.detached.Load() {
 		out = append(out, "Connection: close\r\n"...)
 	}
 	c.out = append(out, "\r\n"...)

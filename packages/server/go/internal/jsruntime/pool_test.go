@@ -225,9 +225,9 @@ func TestWaitsOnAPendingPromiseUntilTheCallerCancels(t *testing.T) {
 	wantCount(t, p, "1")
 }
 
-// C# waits on such a promise with no bound when the caller never cancels,
-// holding the engine. Go stops at the call timeout instead, so one request
-// cannot hold an engine for good, and replaces the engine.
+// C# JintBlokRuntimeTests.EndsAPendingPromiseAtTheCallTimeout: with no
+// cancel the wait ends at the call timeout, and the engine is replaced, so
+// one request cannot hold an engine for good.
 func TestEndsAPendingPromiseAtTheCallTimeout(t *testing.T) {
 	p := newCountingPool(t, 1, 200*time.Millisecond, 0)
 	start := time.Now()

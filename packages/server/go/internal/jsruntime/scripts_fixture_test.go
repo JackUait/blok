@@ -29,9 +29,10 @@ func TestMatchesTheSharedRuntimeScriptFixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	var cases []struct {
-		Name   string       `json:"name"`
-		Script string       `json:"script"`
-		Steps  []scriptStep `json:"steps"`
+		Name      string       `json:"name"`
+		TimeoutMs int          `json:"timeoutMs"`
+		Script    string       `json:"script"`
+		Steps     []scriptStep `json:"steps"`
 	}
 	if err := json.Unmarshal(raw, &cases); err != nil {
 		t.Fatal(err)
@@ -39,7 +40,11 @@ func TestMatchesTheSharedRuntimeScriptFixture(t *testing.T) {
 	names := map[Kind]string{KindUnknown: "Unknown", KindInvalidDocument: "InvalidDocument", KindTimedOut: "TimedOut", KindDocumentTooLarge: "DocumentTooLarge"}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			p, err := newPoolFromSource(c.Script, 1, 10*time.Second, 0)
+			timeout := 10 * time.Second
+			if c.TimeoutMs > 0 {
+				timeout = time.Duration(c.TimeoutMs) * time.Millisecond
+			}
+			p, err := newPoolFromSource(c.Script, 1, timeout, 0)
 			if err != nil {
 				t.Fatal(err)
 			}

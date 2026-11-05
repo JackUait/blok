@@ -233,6 +233,14 @@ internal sealed class JintBlokRuntime : IBlokRuntime
 
     var engine = await engines.Reader.ReadAsync(cancellationToken);
     var deadline = Deadline(engine);
+    var callTimeout = timeout ?? this.timeout;
+
+    /*
+     * Jint's deadline stops running code, not the wait on a promise that
+     * never settles. This token ends that wait at the same deadline, so one
+     * call cannot hold an engine for good.
+     */
+    using var waitLimit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
     var reusable = true;
     var returned = false;
     var running = false;
@@ -240,7 +248,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
 
     try
     {
-      deadline.Begin(timeout ?? this.timeout, CancellationToken.None);
+      deadline.Begin(callTimeout, CancellationToken.None);
 
       // Every op's input passes here, so Go and C# read it alike. It runs
       // under the call's deadline, budget and cancellation, before the engine.
@@ -253,12 +261,21 @@ internal sealed class JintBlokRuntime : IBlokRuntime
       running = true;
       var entry = engine.GetValue("blokServerInvoke") is Function ? "__blokServerInvokeSettled" : "blokServerInvoke";
       result = (await OnEngineStack(
-          () => engine.InvokeAsync(entry, cancellationToken, operation, inputJson).GetAwaiter().GetResult())).AsString();
+          () =>
+          {
+            waitLimit.CancelAfter(callTimeout);
+            return engine.InvokeAsync(entry, waitLimit.Token, operation, inputJson).GetAwaiter().GetResult();
+          })).AsString();
     }
     /*
      * NEVER wrapped: a caller's own cancellation has to stay cancellation, or
      * every `catch (OperationCanceledException)` upstream stops working.
      */
+    catch (OperationCanceledException exception) when (running && !cancellationToken.IsCancellationRequested)
+    {
+      reusable = false;
+      throw new BlokDocumentConversionException(BlokConversionFailure.TimedOut, exception);
+    }
     catch (OperationCanceledException)
     {
       reusable = !running;

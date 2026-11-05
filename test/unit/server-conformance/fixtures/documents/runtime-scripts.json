@@ -619,5 +619,25 @@
         }
       }
     ]
+  },
+  {
+    "name": "a promise that never settles ends at the call timeout",
+    "timeoutMs": 200,
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async (operation) => {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return await new Promise(() => {});\n};\n",
+    "steps": [
+      {
+        "op": "wait",
+        "expect": {
+          "error": "TimedOut"
+        },
+        "why": "No caller cancels, so the 200 ms call timeout ends the wait, and the engine is replaced: one call cannot hold a pool of 1 for good."
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
   }
 ]

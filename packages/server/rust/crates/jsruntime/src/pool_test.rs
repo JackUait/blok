@@ -221,9 +221,9 @@ async fn waits_on_a_pending_promise_until_the_caller_cancels() {
     );
 }
 
-// C# waits on such a promise with no bound when the caller never cancels,
-// holding the engine. Rust stops at the call timeout instead, so one request
-// cannot hold an engine for good, and replaces the engine.
+// C# JintBlokRuntimeTests.EndsAPendingPromiseAtTheCallTimeout: with no
+// cancel the wait ends at the call timeout, and the engine is replaced, so
+// one request cannot hold an engine for good.
 #[tokio::test]
 async fn ends_a_pending_promise_at_the_call_timeout() {
     let pool = counting_pool(1, Duration::from_millis(200), 0);

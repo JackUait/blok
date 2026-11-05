@@ -349,10 +349,10 @@ impl Pool {
                 cancel: Some(cancel),
             };
             let mut run = worker::run(engine, &op, &input, Some(&limits));
-            // No event loop: a pending promise can never settle. C# waits on
-            // it until the caller cancels, with no bound, holding the engine.
-            // Rust waits for the cancel too, but never past the call timeout,
-            // so one request cannot hold an engine for good.
+            // No event loop: a pending promise can never settle. As in C#,
+            // the wait ends at the caller's cancel or the call timeout,
+            // whichever comes first, so one request cannot hold an engine
+            // for good.
             if matches!(run, Err(Error::Pending)) && !wait_for_cancel(&woken, deadline) {
                 run = Err(Error::Stopped(Stop::Timeout));
             }

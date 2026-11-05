@@ -288,10 +288,10 @@ func (r *Runtime) guardedInvoke(ctx context.Context, op, input string, timeout t
 		return "", false, &Failure{Kind: KindUnknown, Err: err}
 	case errors.As(err, &jsErr):
 		return "", true, &Failure{Kind: classify(jsErr.Name), Err: err}
-	// No event loop: a promise pending now can never settle. C# waits on it
-	// until the caller cancels, with no bound, holding the engine. Go waits
-	// for the cancel too, but never past the call timeout, so one request
-	// cannot hold an engine for good. Either way the engine is replaced.
+	// No event loop: a promise pending now can never settle. As in C#, the
+	// wait ends at the caller's cancel or the call timeout, whichever comes
+	// first, so one request cannot hold an engine for good. Either way the
+	// engine is replaced.
 	case errors.Is(err, ErrPending):
 		select {
 		case <-ctx.Done():

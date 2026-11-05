@@ -41,7 +41,11 @@ public sealed class RuntimeScriptFixtureTests
   public async Task MatchesTheSharedFixture(string name)
   {
     var entry = ReadCases().Single(entry => entry!["name"]!.GetValue<string>() == name)!;
-    var runtime = new JintBlokRuntime(entry["script"]!.GetValue<string>(), poolSize: 1);
+    var timeoutMs = entry["timeoutMs"]?.GetValue<int>();
+    var runtime = new JintBlokRuntime(
+        entry["script"]!.GetValue<string>(),
+        poolSize: 1,
+        timeout: timeoutMs is int ms ? TimeSpan.FromMilliseconds(ms) : null);
 
     foreach (var step in entry["steps"]!.AsArray())
     {

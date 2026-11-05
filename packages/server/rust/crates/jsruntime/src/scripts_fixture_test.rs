@@ -22,7 +22,13 @@ async fn matches_the_shared_runtime_script_fixture() {
     let cases = fixture("test/unit/server-conformance/fixtures/documents/runtime-scripts.json");
     for case in cases.array() {
         let name = case.get("name").str();
-        let pool = Pool::from_source(case.get("script").str(), 1, Duration::from_secs(10), 0)
+        let timeout = match case {
+            Json::Object(map) if map.contains_key("timeoutMs") => {
+                Duration::from_millis(case.get("timeoutMs").number() as u64)
+            }
+            _ => Duration::from_secs(10),
+        };
+        let pool = Pool::from_source(case.get("script").str(), 1, timeout, 0)
             .unwrap_or_else(|err| panic!("{name}: {err}"));
         for step in case.get("steps").array() {
             let op = step.get("op").str();

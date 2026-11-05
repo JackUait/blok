@@ -139,16 +139,7 @@ public sealed class JintBlokRuntimeTests
     Assert.Equal("ok", output);
   }
 
-  /*
-   * The call timeout does not end the wait on a promise that never settles,
-   * only the caller's cancellation does, and the engine is replaced. With no
-   * cancel C# waits with no bound and holds the engine. Go and Rust stop at
-   * the call timeout instead (TestEndsAPendingPromiseAtTheCallTimeout).
-   */
-  [Fact]
-  public async Task WaitsOnAPendingPromiseUntilTheCallerCancels()
-  {
-    const string script = """
+  private const string PendingScript = """
             let calls = 0;
             globalThis.blokServerInvoke = async (operation) => {
               calls++;
@@ -156,15 +147,42 @@ public sealed class JintBlokRuntimeTests
               return String(calls);
             };
             """;
-    var runtime = new JintBlokRuntime(script, poolSize: 1, timeout: TimeSpan.FromMilliseconds(200));
-    using var cancelled = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+
+  /*
+   * A promise that never settles: the caller's cancel before the call
+   * timeout ends the wait with the cancel, and the engine is replaced. Go
+   * and Rust pin the same.
+   */
+  [Fact]
+  public async Task WaitsOnAPendingPromiseUntilTheCallerCancels()
+  {
+    var runtime = new JintBlokRuntime(PendingScript, poolSize: 1, timeout: TimeSpan.FromSeconds(5));
+    using var cancelled = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
     var clock = System.Diagnostics.Stopwatch.StartNew();
 
     await Assert.ThrowsAnyAsync<OperationCanceledException>(
         () => runtime.InvokeAsync("wait", "{}", cancellationToken: cancelled.Token).AsTask());
 
-    Assert.True(clock.Elapsed >= TimeSpan.FromMilliseconds(900), $"returned after {clock.Elapsed}");
+    Assert.InRange(clock.Elapsed, TimeSpan.FromMilliseconds(250), TimeSpan.FromSeconds(4));
     Assert.Equal("1", await runtime.InvokeAsync("count", "{}"));
+  }
+
+  /*
+   * With no cancel the wait ends at the call timeout, as a timeout, and the
+   * engine is replaced, so one call cannot hold a pool of 1 for good.
+   */
+  [Fact]
+  public async Task EndsAPendingPromiseAtTheCallTimeout()
+  {
+    var runtime = new JintBlokRuntime(PendingScript, poolSize: 1, timeout: TimeSpan.FromMilliseconds(200));
+    var clock = System.Diagnostics.Stopwatch.StartNew();
+
+    var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(
+        () => runtime.InvokeAsync("wait", "{}").AsTask().WaitAsync(TimeSpan.FromSeconds(5)));
+
+    Assert.Equal(BlokConversionFailure.TimedOut, failure.Reason);
+    Assert.InRange(clock.Elapsed, TimeSpan.FromMilliseconds(150), TimeSpan.FromSeconds(3));
+    Assert.Equal("1", await runtime.InvokeAsync("count", "{}").AsTask().WaitAsync(TimeSpan.FromSeconds(5)));
   }
 
   [Fact]

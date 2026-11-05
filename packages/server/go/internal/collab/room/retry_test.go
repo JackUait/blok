@@ -3,13 +3,19 @@ package room
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/operation"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/wire"
+	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/internal/yjs"
 )
 
 // G1: twins of AnEditQueuedBehindAClosingRoomIsRetriedOnAFreshOne and
@@ -83,10 +89,17 @@ func TestACallQueuedBehindAClosingRoomIsRetriedOnAFreshOne(t *testing.T) {
 			membership.Leave()
 			waitFor(t, "the eviction's export to start", func() bool { return endpoint.saved() == 1 })
 
+			manager.mu.Lock()
+			closing := manager.rooms["doc"]
+			manager.mu.Unlock()
 			done := make(chan string, 1)
 			go func() { done <- c.call(t, manager) }()
 			// The call must be queued behind the flush, not run after it.
-			time.Sleep(20 * time.Millisecond)
+			waitFor(t, "the call to queue behind the flush", func() bool {
+				closing.lane.mu.Lock()
+				defer closing.lane.mu.Unlock()
+				return len(closing.lane.waiters) == 1
+			})
 			endpoint.mu.Lock()
 			endpoint.gate = nil
 			endpoint.mu.Unlock()
@@ -109,6 +122,13 @@ func TestACallQueuedBehindAClosingRoomIsRetriedOnAFreshOne(t *testing.T) {
 			}
 			if manager.LiveRoomCount() != c.rooms {
 				t.Fatalf("%d live rooms, want %d", manager.LiveRoomCount(), c.rooms)
+			}
+			// C# Assert.Equal("abc", Replay(store)): the client's write and
+			// the edit both reached the store, so no update was lost.
+			if c.name == "edit" {
+				if got := storedDocument(t, store, "doc"); !strings.Contains(got, `"k":1`) || !strings.Contains(got, `"id":"c"`) {
+					t.Fatalf("stored document = %s, want the client's key and the edit's block", got)
+				}
 			}
 		})
 	}
@@ -225,4 +245,44 @@ func TestAHeldOffWaitPrintsAsATimeSpan(t *testing.T) {
 			t.Errorf("timeSpan(%v) = %q, want %q", c.wait, got, c.printed)
 		}
 	}
+}
+
+// storedDocument replays the working set into a fresh doc and prints its
+// notes key "k" and the ids of its exported blocks.
+func storedDocument(t *testing.T, store *memoryStore, doc string) string {
+	t.Helper()
+	set, err := store.Read(context.Background(), doc)
+	if err != nil || set == nil {
+		t.Fatalf("stored set = %v, %v", set, err)
+	}
+	frames, ok := workingset.DecodeFrames(set.Updates)
+	if !ok {
+		t.Fatal("the stored frames do not decode")
+	}
+	replica := yjs.NewDoc(yjs.Options{})
+	for _, frame := range frames {
+		if _, err := replica.ApplyUpdate(frame); err != nil {
+			t.Fatal(err)
+		}
+	}
+	notes := ""
+	if value, ok := replica.GetMap(jsjson.FromString("notes")).Get(jsjson.FromString("k")); ok {
+		text, err := jsjson.Stringify(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		notes = `"k":` + text
+	}
+	blocks, _, err := (&convert.DocConverter{Now: time.Now}).ExportBlocks(replica, map[string]bool{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, block := range blocks {
+		if object, ok := block.(*jsjson.Object); ok {
+			if id, ok := object.Get(jsjson.FromString("id")); ok {
+				notes += fmt.Sprintf(` "id":%q`, fmt.Sprint(id))
+			}
+		}
+	}
+	return notes
 }

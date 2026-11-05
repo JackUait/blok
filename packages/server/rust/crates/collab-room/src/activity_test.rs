@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
@@ -11,6 +12,7 @@ struct GatedObserver {
     gate: Gate,
     entered: Gate,
     actors: Mutex<Vec<String>>,
+    released: AtomicBool,
 }
 
 impl GatedObserver {
@@ -19,6 +21,7 @@ impl GatedObserver {
             gate: Gate::new(),
             entered: Gate::new(),
             actors: Mutex::new(Vec::new()),
+            released: AtomicBool::new(false),
         })
     }
 }
@@ -40,6 +43,7 @@ impl ActivityObserver for GatedObserver {
             if first {
                 self.entered.open();
                 self.gate.wait().await;
+                self.released.store(true, Ordering::SeqCst);
             }
             Ok(())
         })
@@ -127,17 +131,22 @@ async fn the_drain_stops_waiting_for_a_stuck_observer_at_the_commit_timeout() {
         &FakeMember::new("user-0", OperationSource::ClientV1, false),
     )
     .await;
-    observer.entered.wait().await;
+    tokio::time::timeout(Duration::from_secs(10), observer.entered.wait())
+        .await
+        .expect("the observer was never called");
 
-    let started = tokio::time::Instant::now();
-    manager.drain().await.expect("drain");
+    tokio::time::timeout(Duration::from_secs(2), manager.drain())
+        .await
+        .expect("the drain waited out the stuck observer")
+        .expect("drain");
+    // C# Assert.False(gate.Task.IsCompleted): the drain gave up while the
+    // observer was still inside its call.
+    assert!(!observer.released.load(Ordering::SeqCst));
     assert!(
-        started.elapsed() <= Duration::from_secs(2),
-        "the drain took {:?}",
-        started.elapsed()
-    );
-    assert!(
-        logs.logged("the observer is past its bound"),
+        logs.lines().contains(
+            &"collab: room \"doc\" abandoned its activity dispatch while draining: the observer is past its bound"
+                .to_owned()
+        ),
         "nothing logged: {:?}",
         logs.lines()
     );

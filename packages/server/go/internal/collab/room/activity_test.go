@@ -2,9 +2,11 @@ package room
 
 import (
 	"context"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,10 +16,11 @@ import (
 
 // gatedObserver holds its first call until the gate opens.
 type gatedObserver struct {
-	mu      sync.Mutex
-	gate    chan struct{}
-	entered chan struct{}
-	actors  []string
+	mu       sync.Mutex
+	gate     chan struct{}
+	entered  chan struct{}
+	actors   []string
+	released atomic.Bool
 }
 
 func (o *gatedObserver) Record(_ context.Context, _, actorID string, _ time.Time, kind ActivityKind) error {
@@ -28,6 +31,7 @@ func (o *gatedObserver) Record(_ context.Context, _, actorID string, _ time.Time
 	if first {
 		close(o.entered)
 		<-o.gate
+		o.released.Store(true)
 	}
 	return nil
 }
@@ -103,22 +107,31 @@ func TestTheDrainStopsWaitingForAStuckObserverAtTheCommitTimeout(t *testing.T) {
 		},
 	})
 	join(t, manager, "doc", &fakeMember{actor: "user-0", source: collab.SourceClientV1})
-	<-observer.entered
-
-	started := time.Now()
-	if err := manager.Drain(context.Background()); err != nil {
-		t.Fatal(err)
+	select {
+	case <-observer.entered:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the observer was never called")
 	}
-	if took := time.Since(started); took > 2*time.Second {
-		t.Fatalf("the drain took %v", took)
+
+	drained := make(chan error, 1)
+	go func() { drained <- manager.Drain(context.Background()) }()
+	select {
+	case err := <-drained:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the drain waited out the stuck observer")
+	}
+
+	// C# Assert.False(gate.Task.IsCompleted): the drain gave up while the
+	// observer was still inside its call.
+	if observer.released.Load() {
+		t.Fatal("the observer returned before the drain did")
 	}
 	logMu.Lock()
 	defer logMu.Unlock()
-	abandoned := false
-	for _, line := range log {
-		abandoned = abandoned || strings.Contains(line, "the observer is past its bound")
-	}
-	if !abandoned {
+	if !slices.Contains(log, `collab: room "doc" abandoned its activity dispatch while draining: the observer is past its bound`) {
 		t.Fatalf("nothing logged: %q", log)
 	}
 }

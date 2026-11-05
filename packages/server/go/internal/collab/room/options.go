@@ -29,6 +29,21 @@ type Options struct {
 	CommitTimeout time.Duration
 	// Now is the room's clock; time.Now when nil.
 	Now func() time.Time
+	// Timers is TimeProvider.CreateTimer: the export, eviction and persist
+	// timers and every CommitTimeout bound run on it. Wall time when nil.
+	Timers Timers
+}
+
+// Timers runs f once d has passed on its clock. stop cancels f and reports
+// whether it had not run yet.
+type Timers interface {
+	AfterFunc(d time.Duration, f func()) (stop func() bool)
+}
+
+type wallTimers struct{}
+
+func (wallTimers) AfterFunc(d time.Duration, f func()) func() bool {
+	return time.AfterFunc(d, f).Stop
 }
 
 const (
@@ -67,18 +82,21 @@ func OptionsWith(set func(*Options)) Options {
 	return o
 }
 
-// withDefaults fills the clock. A wholly zero Options (ManagerOptions with
+// withDefaults fills the clock and the timers. A wholly zero Options (ManagerOptions with
 // no Room) is C#'s `roomOptions ?? new CollabRoomOptions()`.
 func (o Options) withDefaults() Options {
 	bare := o
-	bare.Now = nil
+	bare.Now, bare.Timers = nil, nil
 	if reflect.ValueOf(bare).IsZero() {
 		bare = DefaultOptions()
-		bare.Now = o.Now
+		bare.Now, bare.Timers = o.Now, o.Timers
 		o = bare
 	}
 	if o.Now == nil {
 		o.Now = time.Now
+	}
+	if o.Timers == nil {
+		o.Timers = wallTimers{}
 	}
 	return o
 }

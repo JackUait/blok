@@ -271,3 +271,33 @@ func TestAHostStoresCheckpointErrorDecidesBetweenFailAndRetry(t *testing.T) {
 		})
 	}
 }
+
+// countingTimers records every timer the rooms arm and never fires one.
+type countingTimers struct {
+	mu    sync.Mutex
+	armed []time.Duration
+}
+
+func (c *countingTimers) AfterFunc(d time.Duration, _ func()) func() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.armed = append(c.armed, d)
+	return func() bool { return true }
+}
+
+// The host's Timers reach the rooms, as a C# TimeProvider in DI does.
+func TestTheRoomsArmTheirTimersOnTheHostsTimers(t *testing.T) {
+	timers := &countingTimers{}
+	host := hostServer(t, func(o *blokserver.Options) {
+		o.CollabJournal = true
+		o.Timers = timers
+	})
+	if response := edit(t, host.URL, "doc", "k1"); response.StatusCode != http.StatusNoContent {
+		t.Fatalf("edit: %d", response.StatusCode)
+	}
+	timers.mu.Lock()
+	defer timers.mu.Unlock()
+	if len(timers.armed) == 0 {
+		t.Fatal("no room timer was armed on the host's timers")
+	}
+}

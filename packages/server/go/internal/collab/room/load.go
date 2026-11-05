@@ -220,7 +220,7 @@ func (r *Room) settleVersionLocked() {
 	select {
 	case <-reading.done:
 		r.applyVersionLocked(reading, reading.result)
-	case <-afterDuration(r.options.CommitTimeout):
+	case <-r.after(r.options.CommitTimeout):
 		r.logf(`collab: room "` + r.docID + `" is projecting before its version read finished: it did not answer within the commit timeout`)
 	}
 }

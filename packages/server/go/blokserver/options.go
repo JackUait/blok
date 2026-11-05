@@ -103,9 +103,13 @@ type Options struct {
 
 	// Clock is the TimeProvider override: tickets, the rate limit window, S3
 	// signing and the rooms' timestamps (activity, cooldowns, export
-	// deadlines) read it. Room timers still run on wall time. Nil is the
-	// system clock.
+	// deadlines) read it. Nil is the system clock.
 	Clock func() time.Time
+
+	// Timers is the TimeProvider's CreateTimer override: the rooms' export,
+	// eviction and persist timers and every commit-timeout bound run on it.
+	// Nil is wall time, as a C# provider that overrides only the clock.
+	Timers Timers
 
 	// Logger receives the server's warnings, each with a "category"
 	// attribute (CollabLogCategory for the rooms). Nil discards them.
@@ -491,4 +495,10 @@ func formatTimeSpan(d time.Duration) string {
 		text += fmt.Sprintf(".%07d", fraction)
 	}
 	return text
+}
+
+// Timers runs f once d has passed on its clock; stop cancels f and reports
+// whether it had not run yet.
+type Timers interface {
+	AfterFunc(d time.Duration, f func()) (stop func() bool)
 }

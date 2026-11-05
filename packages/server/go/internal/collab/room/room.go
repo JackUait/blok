@@ -167,6 +167,9 @@ func newRoom(docID string, m *Manager) *Room {
 		tag:            workingset.Tag{Format: workingset.CurrentFormat, Lineage: workingset.NoLineage},
 	}
 	r.lifetime, r.cancel = context.WithCancel(context.Background())
+	for _, timer := range []*roomTimer{&r.exportTimer, &r.evictTimer, &r.persistTimer} {
+		timer.timers = r.options.Timers
+	}
 	r.exportTimer.fire = func() { r.post(r.tryExportLocked) }
 	r.evictTimer.fire = func() { r.post(r.evictLocked) }
 	r.persistTimer.fire = func() {
@@ -443,7 +446,7 @@ func (r *Room) closeRoomLocked(reason *collab.CloseReason) {
 			if err != nil {
 				r.logf(`collab: room "` + r.docID + `" could not release its operation session: ` + err.Error())
 			}
-		case <-time.After(r.options.CommitTimeout):
+		case <-r.after(r.options.CommitTimeout):
 			r.logf(`collab: room "` + r.docID + `" could not release its operation session: it did not answer within the commit timeout`)
 		}
 	}
@@ -486,8 +489,10 @@ func reasonPtr(reason collab.CloseReason) *collab.CloseReason { return &reason }
 
 // roomTimer is an ITimer: change(d) re-arms it once, d < 0 disarms it.
 type roomTimer struct {
-	mu    sync.Mutex
-	timer *time.Timer
+	mu     sync.Mutex
+	timers Timers
+	// timer stops the armed callback; nil when disarmed.
+	timer func() bool
 	fire  func()
 	dead  bool
 }
@@ -499,13 +504,13 @@ func (t *roomTimer) change(d time.Duration) {
 		return
 	}
 	if t.timer != nil {
-		t.timer.Stop()
+		t.timer()
 		t.timer = nil
 	}
 	if d < 0 {
 		return
 	}
-	t.timer = time.AfterFunc(d, t.fire)
+	t.timer = t.timers.AfterFunc(d, t.fire)
 }
 
 func (t *roomTimer) stop() {
@@ -513,7 +518,7 @@ func (t *roomTimer) stop() {
 	defer t.mu.Unlock()
 	t.dead = true
 	if t.timer != nil {
-		t.timer.Stop()
+		t.timer()
 		t.timer = nil
 	}
 }

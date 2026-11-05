@@ -88,7 +88,17 @@ func (r *Room) answerSyncStep1Locked(membership *Membership, peerStateVector []b
 // boundedLocked is one store call made with the lane held, bounded by
 // CommitTimeout.
 func (r *Room) boundedLocked() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(r.lifetime, r.options.CommitTimeout)
+	if _, wall := r.options.Timers.(wallTimers); wall {
+		return context.WithTimeout(r.lifetime, r.options.CommitTimeout)
+	}
+	// A host's timers: the bound ends as a cancel, as C#'s CTS on its
+	// TimeProvider does.
+	ctx, cancel := context.WithCancelCause(r.lifetime)
+	stop := r.options.Timers.AfterFunc(r.options.CommitTimeout, func() { cancel(context.DeadlineExceeded) })
+	return ctx, func() {
+		stop()
+		cancel(context.Canceled)
+	}
 }
 
 // commitFromMemberLocked is a v2 operation: settle the id, apply, journal

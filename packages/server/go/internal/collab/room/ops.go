@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
@@ -604,7 +603,7 @@ func (r *Room) drain(ctx context.Context) {
 	}()
 	select {
 	case <-settled:
-	case <-time.After(r.options.CommitTimeout):
+	case <-r.after(r.options.CommitTimeout):
 		r.logf(`collab: room "` + r.docID + `" abandoned its activity dispatch while draining: the observer is past its bound`)
 	case <-ctx.Done():
 		r.logf(`collab: room "` + r.docID + `" abandoned its activity dispatch while draining: the drain was cancelled`)

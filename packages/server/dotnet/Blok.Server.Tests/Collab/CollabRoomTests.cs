@@ -6064,6 +6064,50 @@ public sealed class CollabRoomTests
     await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted on wall time");
   }
 
+  /// <summary>
+  /// A provider that overrides CreateTimer drives the room's timers: the
+  /// eviction fires when its clock moves, with no wall time passing.
+  /// </summary>
+  [Fact]
+  public async Task ARoomTimerFiresOnTheTimeProviderWithNoWallTimePassing()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var membership = await Join(manager, new FakeMember()).WaitAsync(TimeSpan.FromSeconds(10));
+
+    await membership.LeaveAsync();
+    await Task.Delay(100);
+    Assert.Equal(1, manager.LiveRoomCount);
+    time.Advance(TimeSpan.FromSeconds(30));
+
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+  }
+
+  /// <summary>The drain's CommitTimeout bound runs on the provider too.</summary>
+  [Fact]
+  public async Task ACommitTimeoutBoundRunsOnTheTimeProvider()
+  {
+    endpoint.Holds(DocId, "hello");
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    activity.Gate = gate;
+    var manager = CreateActivityManager();
+    await Join(manager, new FakeMember(actorId: "user-1")).WaitAsync(TimeSpan.FromSeconds(10));
+    await activity.WaitForAsync(1).WaitAsync(TimeSpan.FromSeconds(10));
+
+    var drain = manager.DrainAsync(CancellationToken.None).AsTask();
+    await Task.Delay(200);
+    Assert.False(drain.IsCompleted);
+    time.Advance(new CollabRoomOptions().CommitTimeout);
+    await drain.WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Contains(
+        log,
+        entry => entry.Contains(
+            "abandoned its activity dispatch while draining: the observer is past its bound",
+            StringComparison.Ordinal));
+    gate.SetResult();
+  }
+
   private sealed class FrozenClock : TimeProvider
   {
     public override DateTimeOffset GetUtcNow() => new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);

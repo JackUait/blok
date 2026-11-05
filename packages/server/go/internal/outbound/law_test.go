@@ -31,16 +31,23 @@ var restricted = map[string]map[string]bool{
 	// C# bans ClientWebSocket everywhere, pinned owners too. NewConfig is
 	// listed because Config.DialContext is a method the scan cannot see.
 	"golang.org/x/net/websocket": {"Dial": true, "DialConfig": true, "NewConfig": true, "NewClient": true},
+	// An unguarded transport that honours the proxy environment.
+	socketsPackage: {"NewSocketsTransport": true, "SocketsTransport": true},
 }
+
+const (
+	socketsPackage = "github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	socketsOwner   = "internal/dotnet/sockets.go"
+)
 
 const guardOwner = "internal/outbound/fetcher.go"
 
 // pinned owners may make one of each, and nothing else restricted.
 var pinned = map[string]map[string]int{
-	"internal/blob/s3.go":                   {"http.Client": 1},
-	"internal/collab/docendpoint/client.go": {"http.Client": 1},
+	"internal/blob/s3.go":                   {"http.Client": 1, "dotnet.NewSocketsTransport": 1},
+	"internal/collab/docendpoint/client.go": {"http.Client": 1, "dotnet.NewSocketsTransport": 1},
 	// SocketsHttpHandler's rules, shared by those two operator clients only.
-	"internal/dotnet/sockets.go": {"http.Transport": 1, "net.Dialer": 1},
+	socketsOwner: {"http.Transport": 1, "net.Dialer": 1},
 }
 
 type use struct {
@@ -72,12 +79,17 @@ func findUses(path string, source []byte) ([]use, error) {
 	}
 	var uses []use
 	var parents []ast.Node
+	// Inside package dotnet the transport needs no selector.
+	local := strings.HasPrefix(path, "internal/dotnet/") && path != socketsOwner
 	ast.Inspect(file, func(node ast.Node) bool {
 		if node == nil {
 			parents = parents[:len(parents)-1]
 			return true
 		}
 		parents = append(parents, node)
+		if ident, ok := node.(*ast.Ident); ok && local && restricted[socketsPackage][ident.Name] {
+			uses = append(uses, use{path, "dotnet." + ident.Name, fileSet.Position(ident.Pos()).Line})
+		}
 		selector, ok := node.(*ast.SelectorExpr)
 		if !ok {
 			return true
@@ -191,9 +203,16 @@ func TestTheLawCatchesPlantedViolations(t *testing.T) {
 		"a websocket dial":                       "package p\nimport \"golang.org/x/net/websocket\"\nfunc f() { websocket.Dial(\"ws://x\", \"\", \"http://x\") }",
 		"a websocket config in S3":               "package blob\nimport \"golang.org/x/net/websocket\"\nfunc f() { websocket.NewConfig(\"ws://x\", \"http://x\") }",
 		"a websocket client in the doc endpoint": "package docendpoint\nimport ws \"golang.org/x/net/websocket\"\nfunc f() { ws.NewClient(nil, nil) }",
+		"a sockets transport in a new place":     "package p\nimport \"github.com/JackUait/blok/packages/server/go/internal/dotnet\"\nvar t = dotnet.NewSocketsTransport(dotnet.SocketsOptions{})",
+		"a sockets transport literal":            "package p\nimport d \"github.com/JackUait/blok/packages/server/go/internal/dotnet\"\nvar t = d.SocketsTransport{}",
+		"a second sockets transport in S3":       "package blob\nimport \"github.com/JackUait/blok/packages/server/go/internal/dotnet\"\nvar a, b = dotnet.NewSocketsTransport(dotnet.SocketsOptions{}), dotnet.NewSocketsTransport(dotnet.SocketsOptions{})",
+		"a sockets transport inside dotnet":      "package dotnet\nvar t = NewSocketsTransport(SocketsOptions{})",
 	}
 	for name, source := range cases {
 		path := "internal/somewhere/x.go"
+		if strings.Contains(name, "inside dotnet") {
+			path = "internal/dotnet/x.go"
+		}
 		if strings.Contains(name, "S3") {
 			path = "internal/blob/s3.go"
 		}

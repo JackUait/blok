@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -239,4 +240,77 @@ async fn withdraws_the_presence_of_a_connection_that_just_disappears() {
         .expect("the member never ended")
         .unwrap();
     assert!(membership.has_left());
+}
+
+/// Holds each frame as a busy room lane would. Dropping the receive is how
+/// a Rust caller cancels it.
+#[derive(Default)]
+struct WaitingMembership {
+    entered: tokio::sync::Notify,
+    cancelled: AtomicBool,
+    applied: AtomicBool,
+}
+
+struct OnDrop<'a>(&'a WaitingMembership);
+
+impl Drop for OnDrop<'_> {
+    fn drop(&mut self) {
+        if !self.0.applied.load(Ordering::SeqCst) {
+            self.0.cancelled.store(true, Ordering::SeqCst);
+        }
+    }
+}
+
+impl blok_collab::Membership for WaitingMembership {
+    fn receive(
+        &self,
+        _frame: Vec<u8>,
+    ) -> blok_collab::BoxFuture<'_, Result<(), blok_collab::Error>> {
+        Box::pin(async move {
+            let _gone = OnDrop(self);
+            self.entered.notify_one();
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            self.applied.store(true, Ordering::SeqCst);
+            Ok(())
+        })
+    }
+
+    fn leave(&self) {}
+}
+
+// C# SyncSocketMember hands its receive token to the room: when the close
+// grace runs out, a frame still waiting for the room lane is dropped.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_frame_waiting_on_the_room_is_cancelled_when_the_close_grace_ends() {
+    let (server, mut client) = ws_pair().await;
+    let membership = Arc::new(WaitingMembership::default());
+    let member = Arc::new(SocketMember::new(MemberOptions {
+        max_queued_bytes: 1 << 20,
+        close_grace: Duration::from_millis(50),
+        ..MemberOptions::default()
+    }));
+    let running = Arc::clone(&member);
+    let held = Arc::clone(&membership);
+    let done = tokio::spawn(async move {
+        running
+            .run(
+                &server,
+                Some(held.as_ref() as &dyn blok_collab::Membership),
+                1 << 20,
+                None,
+            )
+            .await;
+    });
+    let entered = membership.entered.notified();
+    client.write_all(&client_frame(0x82, &[1])).await.unwrap();
+    entered.await;
+
+    member.close(CloseReason::Reset);
+
+    tokio::time::timeout(Duration::from_secs(3), done)
+        .await
+        .expect("the member to end after the close grace")
+        .unwrap();
+    assert!(membership.cancelled.load(Ordering::SeqCst));
+    assert!(!membership.applied.load(Ordering::SeqCst));
 }

@@ -220,7 +220,7 @@ impl SocketMember {
             socket.abort();
         };
         tokio::pin!(watchdog);
-        let receive = self.receive_loop(socket, membership, max_message_bytes);
+        let receive = self.receive_loop(socket, membership, max_message_bytes, &receiving);
         tokio::pin!(receive);
 
         let (mut pump_done, mut aborted) = (false, false);
@@ -291,6 +291,7 @@ impl SocketMember {
         socket: &dyn Socket,
         membership: Option<&dyn Membership>,
         max_message_bytes: usize,
+        receiving: &Canceller,
     ) {
         let mut buffer = vec![0u8; RECEIVE_BUFFER_SIZE];
         let mut message = Vec::new();
@@ -343,8 +344,15 @@ impl SocketMember {
                 discarding = true;
                 continue;
             }
-            if membership.receive(frame).await.is_err() {
-                return;
+            // C#'s receive token: when it fires, a frame still waiting for
+            // the room lane is dropped, not applied.
+            tokio::select! {
+                result = membership.receive(frame) => {
+                    if result.is_err() {
+                        return;
+                    }
+                }
+                () = receiving.fired() => return,
             }
         }
     }

@@ -21,7 +21,7 @@ pub use httpdate::parse_http_date;
 pub use ip::{is_any, is_loopback, parse_ip, parse_ipv4, scope_id};
 pub use native::native_text;
 pub use number::parse_uint64_none;
-pub use ordinal::equals_ordinal_ignore_case;
+pub use ordinal::{equals_ordinal_ignore_case, to_upper_invariant};
 pub use query::{query_all, query_first};
 pub use ticks::{MAX_TICKS, ticks, time_from_ticks};
 pub use uri::{

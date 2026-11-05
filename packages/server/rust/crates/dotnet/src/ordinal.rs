@@ -32,13 +32,21 @@ pub(crate) fn decode_rune(b: &[u8]) -> (Option<char>, usize) {
     }
 }
 
-/// Go's unicode.ToUpper, the simple mapping (Unicode 17, checked against Go
-/// over every char). Rust's to_uppercase is the full mapping: where that
-/// gives several chars, the simple one is the char itself except for the
-/// Greek iota-subscript letters below.
 fn ordinal_upper(c: char) -> char {
-    // Measured on .NET 10: these two keep their case.
-    if c == 'ı' || c == 'ſ' {
+    // Measured on .NET 10: ſ keeps its case here (ı does in both).
+    if c == 'ſ' {
+        return c;
+    }
+    to_upper_invariant(c)
+}
+
+/// char.ToUpperInvariant: Go's unicode.ToUpper, the simple mapping
+/// (Unicode 17, checked against Go over every char), except that ı keeps
+/// its case (measured on .NET 10). Rust's to_uppercase is the full mapping:
+/// where that gives several chars, the simple one is the char itself except
+/// for the Greek iota-subscript letters below.
+pub fn to_upper_invariant(c: char) -> char {
+    if c == 'ı' {
         return c;
     }
     let simple = match u32::from(c) {

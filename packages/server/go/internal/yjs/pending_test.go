@@ -3,7 +3,9 @@ package yjs
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -422,4 +424,52 @@ func runProbe(t *testing.T, doc *Doc, probe any) (threw bool) {
 		doc.Transact(func(tx *Transaction) { m.Delete(tx, key) })
 	}
 	return false
+}
+
+// C# AParkAfterTheStackedClientIntegratedKeepsTheIntegratedStructInItsTail:
+// 2:0 is stacked on 1:0, 1:0 on 2:10; 2:3 integrates, then the park steps
+// client 2 back one struct, so the parked tail is the integrated 2:3.
+func TestAParkAfterTheStackedClientIntegratedKeepsTheIntegratedStructInItsTail(t *testing.T) {
+	doc := docWithID(1000)
+	first, _ := hex.DecodeString("01010200040101740361626300")
+	applyBytes(t, doc, first)
+	second, _ := hex.DecodeString("020202008401000378797A840202016401010084020A017900")
+	result := applyBytes(t, doc, second)
+	if !result.PendingRemains || !result.Changed {
+		t.Fatalf("result %+v", result)
+	}
+	if got := doc.GetText(s("t")).String(); got != "abcd" {
+		t.Fatalf("text %q", got)
+	}
+	var parked []string
+	for _, waiting := range doc.store.pendingStructs {
+		id := StructID(waiting)
+		parked = append(parked, fmt.Sprintf("%d:%d+%d", id.Client, id.Clock, StructLen(waiting)))
+	}
+	if !slices.Equal(parked, []string{"1:0+1", "2:3+1"}) {
+		t.Fatalf("parked %v", parked)
+	}
+	if got := strings.ToUpper(hex.EncodeToString(doc.EncodeStateVector())); got != "010204" {
+		t.Fatalf("sv %s", got)
+	}
+	state, err := doc.EncodeStateAsUpdate(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.ToUpper(hex.EncodeToString(state)); got != "020202000401017403616263840202016401010084020A017900" {
+		t.Fatalf("state %s", got)
+	}
+
+	// The clocks 1:0 waits for arrive. yjs parks an encoded copy of 2:3, so
+	// the retry must not rewire the live item (yjs reads "abcdefghijky").
+	third, _ := hex.DecodeString("010102048402030765666768696A6B00")
+	if healed := applyBytes(t, doc, third); healed.PendingRemains {
+		t.Fatalf("healed %+v", healed)
+	}
+	if got := doc.GetText(s("t")).String(); got != "abcdefghijky" {
+		t.Fatalf("healed text %q", got)
+	}
+	if got := strings.ToUpper(hex.EncodeToString(doc.EncodeStateVector())); got != "02020B0101" {
+		t.Fatalf("healed sv %s", got)
+	}
 }

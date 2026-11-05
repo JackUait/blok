@@ -98,6 +98,8 @@ func integrateStructs(t *Transaction, store *Store, structs *clientStructMap) *i
 	state := map[uint64]uint64{}
 	head := current.refs[current.index]
 	current.index++
+	// A parked tail can start on a struct this pass already integrated.
+	integrated := map[Struct]bool{}
 	for {
 		if _, skip := head.(*Skip); !skip {
 			h := head.head()
@@ -131,6 +133,7 @@ func integrateStructs(t *Transaction, store *Store, structs *clientStructMap) *i
 					stack = park(stack, pending, rest)
 				case offset == 0 || offset < uint64(h.length):
 					integrateStruct(head, t, int(offset))
+					integrated[head] = true
 					state[client] = h.id.Clock + uint64(h.length)
 				}
 				// Anything else is a run the store already holds: dropped.
@@ -147,12 +150,44 @@ func integrateStructs(t *Transaction, store *Store, structs *clientStructMap) *i
 			current = nextTarget(&ids, pending)
 			if current == nil {
 				if rest.len() > 0 {
+					detachIntegrated(rest, integrated)
 					return &integrationRest{missing: missing, structs: rest}
 				}
 				return nil
 			}
 			head = current.refs[current.index]
 			current.index++
+		}
+	}
+}
+
+// detachIntegrated swaps each integrated struct in the parked tails for a
+// copy as it stands now. yjs parks the rest as encoded bytes, so a retry
+// decodes fresh structs; parking the live item would let the retry's
+// getMissing rewire its left and right and cut the document's list.
+func detachIntegrated(rest *clientStructMap, integrated map[Struct]bool) {
+	if len(integrated) == 0 {
+		return
+	}
+	for _, run := range rest.runs {
+		for i, s := range run {
+			if !integrated[s] {
+				continue
+			}
+			switch live := s.(type) {
+			case *Item:
+				run[i] = &Item{
+					header:           live.header,
+					origin:           live.origin,
+					rightOrigin:      live.rightOrigin,
+					parent:           live.parent,
+					parentSub:        live.parentSub,
+					wireParentSubBit: live.wireParentSubBit,
+					content:          live.content.copy(),
+				}
+			case *GC:
+				run[i] = &GC{header: live.header}
+			}
 		}
 	}
 }

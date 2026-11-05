@@ -257,17 +257,34 @@ const CHARACTER_REFERENCE_TAIL = /^(?:#\d{1,7}|#[xX][\da-fA-F]{1,6}|[A-Za-z][A-Z
  * destination. Every backslash before them is escaped, so all of them count.
  * @param url - the raw URL
  */
-const parensBalanced = (url: string): boolean => Array.from(
-  /** Only the parens are split apart: a pasted image's data URL runs to MiB. */
-  url.replace(/[^()]/g, '')
-).reduce((depth, char) => {
-  /** Once below zero a `)` has closed the destination; later parens cannot fix it. */
-  if (depth < 0) {
-    return depth;
+const parensBalanced = (url: string): boolean => {
+  /**
+   * indexOf, not a regex or a split: a pasted image's data URL runs to MiB,
+   * and the Go server's regex engine holds every match of a global replace
+   * (an 8 MiB URL held 1 GiB). Each next paren is searched for once.
+   */
+  /* eslint-disable no-restricted-syntax -- two cursors and a count, moved as the scan goes */
+  let depth = 0;
+  let open = url.indexOf('(');
+  let close = url.indexOf(')');
+  /* eslint-enable no-restricted-syntax */
+
+  while (open >= 0 || close >= 0) {
+    if (close < 0 || (open >= 0 && open < close)) {
+      depth += 1;
+      open = url.indexOf('(', open + 1);
+      continue;
+    }
+    /** Once below zero a `)` has closed the destination; later parens cannot fix it. */
+    depth -= 1;
+    if (depth < 0) {
+      return false;
+    }
+    close = url.indexOf(')', close + 1);
   }
 
-  return char === '(' ? depth + 1 : depth - 1;
-}, 0) === 0;
+  return depth === 0;
+};
 
 /**
  * The URL to write as a Markdown destination, or null when it must not be

@@ -31,6 +31,22 @@ public sealed partial class ProxyConnectTunnelTests
   [InlineData("unsupported", "u", "error 407|1 auth=no")]
   [InlineData("digest+basic", "u", "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"")]
   [InlineData("negotiate+basic", "u", "error 407|1 auth=no|1 auth=Negotiate T")]
+  // A key seen twice throws (Dictionary.Add), case aside.
+  [InlineData("dup-ascii", "u", "throw ArgumentException|1 auth=no")]
+  // Only the first key may be a non-token (AuthenticationHeaderValue's
+  // first blob); a later one makes the whole line invalid, so .NET sees no
+  // challenge. Two non-ASCII keys never reach the duplicate check.
+  [InlineData("dup-latin1", "u", "error 407|1 auth=no")]
+  [InlineData("dup-utf8", "u", "error 407|1 auth=no")]
+  // The bad pair spoils the whole line, a Basic in front of it too.
+  [InlineData("sameline-basic", "u", "error 407|1 auth=no")]
+  // A later value may hold non-ASCII only inside quotes.
+  [InlineData("domain-quoted-latin1", "u", "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"")]
+  [InlineData("domain-token-latin1", "u", "error 407|1 auth=no")]
+  [InlineData("firstkey-latin1", "u", "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"")]
+  // A non-ASCII realm goes into Proxy-Authorization, which .NET will not
+  // write: the request fails before a second message goes out.
+  [InlineData("realm-latin1", "u", "error |1 auth=no")]
   public async Task AnswersADigestChallengeAsSocketsHttpHandlerDoes(string mode, string user, string want)
   {
     using var certificate = SelfSigned();
@@ -65,6 +81,10 @@ public sealed partial class ProxyConnectTunnelTests
     {
       outcome = $"error {(int?)error.StatusCode}";
     }
+    catch (Exception error)
+    {
+      outcome = $"throw {error.GetType().Name}";
+    }
 
     proxy.Stop();
     target.Stop();
@@ -82,6 +102,30 @@ public sealed partial class ProxyConnectTunnelTests
     Assert.Equal(want, got);
   }
 
+  // DigestResponse keys match by OrdinalIgnoreCase, and header bytes are
+  // Latin-1 chars. These are the Latin-1 pairs it folds: ASCII letters and
+  // C0-DE with E0-FE, less D7 and F7. Go and Rust fold the same bytes.
+  [Fact]
+  public void DigestKeysFoldTheseLatin1Pairs()
+  {
+    var pairs = new List<string>();
+    for (var a = 0; a < 256; a++)
+    {
+      for (var b = a + 1; b < 256; b++)
+      {
+        if (string.Equals(((char)a).ToString(), ((char)b).ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+          pairs.Add(string.Create(CultureInfo.InvariantCulture, $"{a:X2}{b:X2}"));
+        }
+      }
+    }
+
+    var want = Enumerable.Range(0x41, 26)
+      .Concat(Enumerable.Range(0xC0, 0x1F).Where(c => c != 0xD7))
+      .Select(c => string.Create(CultureInfo.InvariantCulture, $"{c:X2}{c + 0x20:X2}"));
+    Assert.Equal(want, pairs);
+  }
+
   private static string DigestChallenge(string mode, bool second) => mode switch
   {
     "plain" or "utf8" or "domain" => "Digest realm=\"r\", nonce=\"n\"",
@@ -91,6 +135,13 @@ public sealed partial class ProxyConnectTunnelTests
     "userhash" => "Digest realm=\"r\", nonce=\"n\", userhash=true, algorithm=MD5",
     "stale" => second ? "Digest realm=\"r\", nonce=\"n2\", stale=true" : "Digest realm=\"r\", nonce=\"n\"",
     "unsupported" => "Digest realm=\"r\", nonce=\"n\", algorithm=SHA-512",
+    "dup-ascii" => "Digest realm=\"r\", nonce=\"n\", NONCE=\"m\"",
+    "dup-latin1" => "Digest realm=\"r\", nonce=\"n\", \u00e9=1, \u00c9=2",
+    "dup-utf8" => "Digest realm=\"r\", nonce=\"n\", \u00c3\u00a9=1, \u00c3\u0089=2",
+    "realm-latin1" => "Digest realm=\"\u00e9\", nonce=\"n\"",
+    "domain-quoted-latin1" => "Digest realm=\"r\", nonce=\"n\", domain=\"\u00e9\"",
+    "domain-token-latin1" => "Digest realm=\"r\", nonce=\"n\", domain=\u00e9",
+    "firstkey-latin1" => "Digest \u00e9=1, realm=\"r\", nonce=\"n\"",
     _ => "",
   };
 
@@ -98,13 +149,14 @@ public sealed partial class ProxyConnectTunnelTests
   {
     "digest+basic" => "Proxy-Authenticate: Basic realm=\"r\"\r\nProxy-Authenticate: Digest realm=\"r\", nonce=\"n\"\r\n",
     "negotiate+basic" => "Proxy-Authenticate: Negotiate\r\nProxy-Authenticate: Basic realm=\"r\"\r\n",
+    "sameline-basic" => "Proxy-Authenticate: Basic realm=\"r\", Digest realm=\"r\", nonce=\"n\", \u00e9=1\r\n",
     _ => $"Proxy-Authenticate: {DigestChallenge(mode, second)}\r\n",
   };
 
   // The RFC 7616 check, with the password p. MD5 is the protocol's, not a
   // choice made here.
 #pragma warning disable CA5351
-  private static bool DigestValid(string header, string user)
+  private static bool DigestValid(string header, string user, string mode)
   {
     var fields = new Dictionary<string, string>(StringComparer.Ordinal);
     foreach (Match match in Regex.Matches(header, "([a-z*]+)=(\"[^\"]*\"|[^, ]*)"))
@@ -117,7 +169,7 @@ public sealed partial class ProxyConnectTunnelTests
       ? SHA256.HashData(Encoding.UTF8.GetBytes(data))
       : MD5.HashData(Encoding.UTF8.GetBytes(data)));
     var nonce = fields["nonce"];
-    var a1 = Hash($"{user}:r:p");
+    var a1 = Hash($"{user}:{(mode == "realm-latin1" ? "\u00e9" : "r")}:p");
     if (algorithm.EndsWith("-sess", StringComparison.Ordinal))
     {
       a1 = Hash($"{a1}:{nonce}:{fields["cnonce"]}");
@@ -176,7 +228,7 @@ public sealed partial class ProxyConnectTunnelTests
           }
 
           var stale = mode == "stale" && digests == 1;
-          if (digest && !stale && DigestValid(auth!, user))
+          if (digest && !stale && DigestValid(auth!, user, mode))
           {
             await stream.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n"));
             using var upstream = new TcpClient();
@@ -186,7 +238,8 @@ public sealed partial class ProxyConnectTunnelTests
             return;
           }
 
-          await stream.WriteAsync(Encoding.ASCII.GetBytes(
+          // Latin-1: each char of a challenge is one byte on the wire.
+          await stream.WriteAsync(Encoding.Latin1.GetBytes(
               "HTTP/1.1 407 Proxy Authentication Required\r\n" + ChallengeLines(mode, stale) + "Content-Length: 0\r\n\r\n"));
         }
       });

@@ -33,6 +33,10 @@ pub enum Error {
     ChangesExport(Box<Error>),
     /// ArgumentException.ThrowIfNullOrEmpty(documentId).
     EmptyDocId,
+    /// The same refusal at the doors whose C# parameter is docId.
+    EmptyDocIdArgument,
+    /// ArgumentException.ThrowIfNullOrEmpty(operationId).
+    EmptyOperationId,
     /// A purged id that is not one path segment.
     NotSingleSegment,
     PurgeNotAuthorized,
@@ -71,6 +75,12 @@ impl fmt::Display for Error {
             }
             Error::EmptyDocId => {
                 f.write_str("The value cannot be an empty string. (Parameter 'documentId')")
+            }
+            Error::EmptyDocIdArgument => {
+                f.write_str("The value cannot be an empty string. (Parameter 'docId')")
+            }
+            Error::EmptyOperationId => {
+                f.write_str("The value cannot be an empty string. (Parameter 'operationId')")
             }
             Error::NotSingleSegment => {
                 f.write_str("collab: document ids must be a single path segment.")

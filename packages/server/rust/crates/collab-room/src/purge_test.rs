@@ -148,3 +148,56 @@ async fn an_empty_doc_id_is_refused_before_authorize_on_every_store() {
         "a store saw the empty id"
     );
 }
+
+// C# refuses an empty doc id (ArgumentException) at every manager door,
+// and an empty operation id at the edit doors, before any room exists.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn every_door_refuses_an_empty_doc_id_before_any_room_exists() {
+    let (manager, _, endpoint) = test_manager(Options::default(), None);
+    let no_plan: PlanOps = Arc::new(|_| Box::pin(async { Ok(Vec::new()) }));
+    let doc_id = "The value cannot be an empty string. (Parameter 'docId')";
+    let doors: Vec<(&str, Result<(), Error>)> = vec![
+        (
+            "join",
+            manager
+                .join(
+                    "",
+                    FakeMember::new("", blok_collab::OperationSource::ClientV1, true),
+                )
+                .await
+                .map(drop),
+        ),
+        ("reset", manager.reset("").await.map(drop)),
+        (
+            "edit",
+            manager
+                .edit("", Vec::new(), "op", &[], "", None)
+                .await
+                .map(drop),
+        ),
+        (
+            "agent edit",
+            manager
+                .agent_edit("", no_plan.clone(), "op", &[], "", None, None)
+                .await
+                .map(drop),
+        ),
+        ("state", manager.state("").await.map(drop)),
+        ("checkpoint", manager.checkpoint("").await.map(drop)),
+    ];
+    for (name, result) in doors {
+        let err = result.expect_err(name);
+        assert!(matches!(err, Error::EmptyDocIdArgument), "{name}: {err}");
+        assert_eq!(err.to_string(), doc_id, "{name}");
+    }
+    let operation_id = "The value cannot be an empty string. (Parameter 'operationId')";
+    let edit = manager.edit("doc", Vec::new(), "", &[], "", None).await;
+    assert!(matches!(&edit, Err(Error::EmptyOperationId)), "edit");
+    assert_eq!(edit.err().unwrap().to_string(), operation_id);
+    let agent = manager
+        .agent_edit("doc", no_plan, "", &[], "", None, None)
+        .await;
+    assert!(matches!(agent, Err(Error::EmptyOperationId)), "agent edit");
+    assert_eq!(manager.live_room_count(), 0);
+    assert_eq!(endpoint.loaded(), 0);
+}

@@ -263,6 +263,9 @@ impl Manager {
 
     /// JoinAsync.
     pub async fn join(&self, doc_id: &str, member: Arc<dyn Member>) -> Result<JoinResult, Error> {
+        if doc_id.is_empty() {
+            return Err(Error::EmptyDocIdArgument);
+        }
         let (token, _gone) = caller();
         let status = |status| JoinResult {
             status,
@@ -295,6 +298,9 @@ impl Manager {
 
     /// ResetForHttpAsync.
     pub async fn reset(&self, doc_id: &str) -> Result<ResetResult, Error> {
+        if doc_id.is_empty() {
+            return Err(Error::EmptyDocIdArgument);
+        }
         let (token, _gone) = caller();
         for _ in 0..MAX_JOIN_ATTEMPTS {
             let Some(room) = self.room_for(doc_id) else {
@@ -322,6 +328,7 @@ impl Manager {
         actor_id: &str,
         expect: Option<Precondition>,
     ) -> Result<EditResult, Error> {
+        check_edit_ids(doc_id, operation_id)?;
         // Checked before a room is made, so no seed GET is spent on it.
         if expect.is_some() && self.0.operations.is_none() {
             return Ok(EditResult::status(EditStatus::PreconditionRequired));
@@ -352,6 +359,7 @@ impl Manager {
         expect: Option<Precondition>,
         applied: Option<Applied>,
     ) -> Result<EditResult, Error> {
+        check_edit_ids(doc_id, operation_id)?;
         if expect.is_some() && self.0.operations.is_none() {
             return Ok(EditResult::status(EditStatus::PreconditionRequired));
         }
@@ -397,6 +405,9 @@ impl Manager {
     /// GET /sync/{doc}/state: the live document, loading the room the way
     /// an edit does.
     pub async fn state(&self, doc_id: &str) -> Result<StateResult, Error> {
+        if doc_id.is_empty() {
+            return Err(Error::EmptyDocIdArgument);
+        }
         let (token, _gone) = caller();
         for _ in 0..MAX_JOIN_ATTEMPTS {
             if self.is_purging(doc_id) {
@@ -443,6 +454,9 @@ impl Manager {
 
     /// Publishes a checkpoint on a loaded document.
     pub async fn checkpoint(&self, doc_id: &str) -> Result<bool, Error> {
+        if doc_id.is_empty() {
+            return Err(Error::EmptyDocIdArgument);
+        }
         let room = {
             let rooms = self.0.lock();
             if rooms.purge_lanes.contains_key(doc_id) {
@@ -564,6 +578,16 @@ impl Manager {
             room.settle().await;
         }
     }
+}
+
+fn check_edit_ids(doc_id: &str, operation_id: &str) -> Result<(), Error> {
+    if doc_id.is_empty() {
+        return Err(Error::EmptyDocIdArgument);
+    }
+    if operation_id.is_empty() {
+        return Err(Error::EmptyOperationId);
+    }
+    Ok(())
 }
 
 fn request(

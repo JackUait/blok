@@ -261,6 +261,30 @@ public sealed class YTextFormattingTests
         transaction => content.Insert(transaction, 0, "a", Attrs(("bold", YUndefined.Instance)))));
   }
 
+  /// <summary>
+  /// Only the index is range-checked. A negative length is not the
+  /// length-0 early return, and it skips FormatText's length-0 break, so the
+  /// conflicting mark at the start is deleted and its value restored after.
+  /// </summary>
+  [Fact]
+  public void ANegativeFormatLengthStillDeletesTheConflictingMarkAtTheStart()
+  {
+    var doc = new YDoc(4242);
+    var text = doc.GetText("content");
+    var updates = new List<byte[]>();
+
+    doc.Transact(transaction => text.Insert(transaction, 0, "ab", Attrs(("bold", true))));
+    doc.UpdateEmitted += update => updates.Add(update.Update);
+    doc.Transact(transaction => text.Format(transaction, 0, -1, Attrs(("bold", false))));
+
+    // Writes bold:false, deletes the bold:true mark at clock 0 (the delete
+    // set's 4242:0+1), then restores bold:true after it.
+    Assert.Equal(
+        "01029221044692210004626F6C640566616C7365C692210092210104626F6C640474727565019221010001",
+        Convert.ToHexString(Assert.Single(updates)));
+    Assert.Equal("""[{"insert":"ab","attributes":{"bold":true}}]""", DeltaJson(text.ToDelta()).ToJsonString());
+  }
+
   private static AnyObject Attrs(params (string Key, object? Value)[] entries)
   {
     var attributes = new AnyObject();

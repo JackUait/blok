@@ -1,7 +1,9 @@
 package yjs
 
 import (
+	"encoding/hex"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -276,5 +278,26 @@ func TestAnEmptyArrayStrictEqualsOnlyItself(t *testing.T) {
 func TestUndefinedStrictEqualsUndefined(t *testing.T) {
 	if !strictEquals(jsjson.Undefined{}, jsjson.Undefined{}) || strictEquals(jsjson.Undefined{}, nil) {
 		t.Fatal("undefined")
+	}
+}
+
+// C# ANegativeFormatLengthStillDeletesTheConflictingMarkAtTheStart: only the
+// index is range-checked, and a negative length skips formatText's length-0
+// break, so the bold:true mark at clock 0 is deleted and restored after.
+func TestANegativeFormatLengthStillDeletesTheConflictingMarkAtTheStart(t *testing.T) {
+	doc := docWithID(4242)
+	text := doc.GetText(s("content"))
+	doc.Transact(func(txn *Transaction) { text.Insert(txn, 0, s("ab"), obj("bold", true)) })
+	update := doc.Transact(func(txn *Transaction) { text.Format(txn, 0, -1, obj("bold", false)) })
+	const want = "01029221044692210004626F6C640566616C7365C692210092210104626F6C640474727565019221010001"
+	if got := strings.ToUpper(hex.EncodeToString(update)); got != want {
+		t.Fatalf("update %s", got)
+	}
+	delta := text.ToDelta()
+	if len(delta) != 1 || delta[0].Insert.(jsjson.Str).String() != "ab" {
+		t.Fatalf("%+v", delta)
+	}
+	if bold, _ := delta[0].Attributes.Get(s("bold")); bold != true {
+		t.Fatalf("bold %v", bold)
 	}
 }

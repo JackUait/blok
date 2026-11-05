@@ -51,7 +51,7 @@ func (r *Room) recordActivityLocked(actorID string, kind ActivityKind) {
 	r.activityMu.Unlock()
 
 	if dropped != nil {
-		r.logf(`collab: room "` + r.docID + `" dropped an activity record (` + dropped.kind.String() +
+		r.logfSurviving(`collab: room "` + r.docID + `" dropped an activity record (` + dropped.kind.String() +
 			`) for "` + dropped.actor + `"; the activity observer is behind`)
 	}
 }

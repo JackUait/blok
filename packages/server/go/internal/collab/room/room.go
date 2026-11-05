@@ -186,6 +186,12 @@ func (r *Room) logf(message string) {
 	}
 }
 
+// logfSurviving logs where a failing logger must not stop access cleanup.
+func (r *Room) logfSurviving(message string) {
+	defer func() { _ = recover() }()
+	r.logf(message)
+}
+
 func (r *Room) requestPurge() { r.purgeRequested.Store(true) }
 
 // run is RunAsync: the operation holds the lane.
@@ -316,7 +322,7 @@ func (r *Room) isMemberAllowedLocked(ctx context.Context, member collab.Member) 
 	if ctx.Err() != nil {
 		return false, ctx.Err()
 	}
-	r.logf(`collab: room "` + r.docID + `" could not recheck member access: ` + err.Error())
+	r.logfSurviving(`collab: room "` + r.docID + `" could not recheck member access: ` + err.Error())
 	return false, nil
 }
 

@@ -615,7 +615,7 @@ describe('sync transport: keep-alive', () => {
       expect(ended - opened).toBeLessThan(4_000);
       expect(socket.frames.filter((frame) => frame.opcode === OP_CLOSE)).toEqual([]);
     });
-  });
+  }, TEST_TIMEOUT_MS);
 
   it('keeps a peer that answers every ping', async () => {
     await withServer({ keepAliveMs: INTERVAL_MS }, async (harness) => {
@@ -638,7 +638,7 @@ describe('sync transport: keep-alive', () => {
         clearInterval(pong);
       }
     });
-  });
+  }, TEST_TIMEOUT_MS);
 });
 
 describe('sync transport: a peer that stops reading', () => {

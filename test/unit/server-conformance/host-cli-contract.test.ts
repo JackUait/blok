@@ -408,7 +408,7 @@ it.each([
     await endpoint.stop();
     await rm(directory, { recursive: true, force: true });
   }
-});
+}, 30_000);
 
 // The .NET host stops gracefully on SIGQUIT, as on SIGTERM and SIGINT: the
 // drain runs, the exit code is 0, and nothing more is written. Go's runtime

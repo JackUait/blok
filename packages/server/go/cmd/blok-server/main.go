@@ -78,12 +78,20 @@ const (
 )
 
 func main() {
-	// SIGQUIT too: .NET stops gracefully on it, where Go's default dumps
-	// every goroutine and exits 2 without the drain.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt, syscall.SIGQUIT)
+	// SIGQUIT from the start: Go's default dumps every goroutine and exits
+	// 2, where .NET dies by the signal before its handlers and stops
+	// gracefully after them. Go cannot reach the OS default.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGQUIT)
 	code := run(ctx, os.Args[1:], os.Getenv, os.Stderr)
 	stop()
 	os.Exit(code)
+}
+
+// notifyShutdown runs just before the bind, where C#'s StartAsync registers
+// its signal handlers: a SIGTERM or SIGINT before it takes the default
+// action, as in C#.
+var notifyShutdown = func(ctx context.Context) (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(ctx, syscall.SIGTERM, os.Interrupt)
 }
 
 // newHTTPServer is Kestrel's limits: 2 min idle, and every request cut off
@@ -160,6 +168,8 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	}
 	applyConformance(server, conformance)
 
+	ctx, stopSignals := notifyShutdown(ctx)
+	defer stopSignals()
 	listeners, err := listen(options.ListenAddress)
 	if err != nil {
 		fmt.Fprintf(stderr, "blok-server refused to start: %v\n", err)

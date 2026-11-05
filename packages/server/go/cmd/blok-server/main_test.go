@@ -548,3 +548,29 @@ func TestTheHostCapsSyncConnectionsOnlyWhenCollaborating(t *testing.T) {
 		t.Fatalf("with --collab: %d", options.CollabMaxConnections)
 	}
 }
+
+// C#'s generic host registers its signal handlers in StartAsync, before the
+// bind: a signal earlier kills the process, one from the bind on stops it
+// gracefully, even before the ready line.
+func TestSignalHandlersAreInstalledBeforeTheBindAndAfterValidation(t *testing.T) {
+	defer func(saved func(context.Context) (context.Context, context.CancelFunc)) { notifyShutdown = saved }(notifyShutdown)
+	var marks *syncBuffer
+	notifyShutdown = func(ctx context.Context) (context.Context, context.CancelFunc) {
+		_, _ = marks.Write([]byte("<signals>\n"))
+		stopped, stop := context.WithCancel(ctx)
+		stop()
+		return stopped, stop
+	}
+
+	marks = &syncBuffer{}
+	code := run(context.Background(), []string{"--listen", freePort(t)}, noEnv, marks)
+	if code != 0 || !strings.HasPrefix(marks.String(), "<signals>\nblok-server dev listening on ") {
+		t.Fatalf("exit %d, stderr %q", code, marks.String())
+	}
+
+	marks = &syncBuffer{}
+	code = run(context.Background(), []string{"--auth", "ticket"}, noEnv, marks)
+	if code != 1 || strings.Contains(marks.String(), "<signals>") {
+		t.Fatalf("exit %d, stderr %q", code, marks.String())
+	}
+}

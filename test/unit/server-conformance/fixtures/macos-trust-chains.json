@@ -1,0 +1,324 @@
+{
+  "about": "macOS TLS trust. Each row builds a chain under one P-256 test root: the leaf (default: CN x, serverAuth, 365 days from a day ago, P-256 key, not a CA, digitalSignature) and, when listed, an intermediate. 'guarded' is MacOsCertificateTrust.IsTrusted with the root as the only anchor; 'operator' is SslStream with the HttpClient defaults and the root as CustomRootTrust. C# writes the answers on macOS (BLOK_WRITE_FIXTURES=1).",
+  "cases": [
+    {
+      "name": "ok",
+      "host": "t.example",
+      "leaf": {
+        "cn": "t.example",
+        "dns": [
+          "t.example"
+        ]
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "ok-intermediate",
+      "host": "t.example",
+      "leaf": {
+        "cn": "t.example",
+        "dns": [
+          "t.example"
+        ]
+      },
+      "intermediate": {
+        "sent": true
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "intermediate-not-sent",
+      "host": "t.example",
+      "leaf": {
+        "cn": "t.example",
+        "dns": [
+          "t.example"
+        ]
+      },
+      "intermediate": {
+        "sent": false
+      },
+      "guarded": "refuse",
+      "operator": "refuse"
+    },
+    {
+      "name": "validity-400d",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ],
+        "days": 400
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "validity-900d",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ],
+        "days": 900
+      },
+      "guarded": "refuse",
+      "operator": "accept"
+    },
+    {
+      "name": "rsa1024-leaf",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ],
+        "key": "rsa1024"
+      },
+      "guarded": "refuse",
+      "operator": "accept"
+    },
+    {
+      "name": "eku-client-only",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ],
+        "eku": [
+          "clientAuth"
+        ]
+      },
+      "guarded": "refuse",
+      "operator": "refuse"
+    },
+    {
+      "name": "eku-none",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ],
+        "eku": null
+      },
+      "guarded": "refuse",
+      "operator": "accept"
+    },
+    {
+      "name": "eku-any",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ],
+        "eku": [
+          "any"
+        ]
+      },
+      "guarded": "refuse",
+      "operator": "refuse"
+    },
+    {
+      "name": "cn-only",
+      "host": "t.example",
+      "leaf": {
+        "cn": "t.example",
+        "dns": []
+      },
+      "guarded": "refuse",
+      "operator": "accept"
+    },
+    {
+      "name": "wrong-host",
+      "host": "t.example",
+      "leaf": {
+        "cn": "t.example",
+        "dns": [
+          "other.example"
+        ]
+      },
+      "guarded": "refuse",
+      "operator": "refuse"
+    },
+    {
+      "name": "expired",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ],
+        "start": -30,
+        "days": 10
+      },
+      "guarded": "refuse",
+      "operator": "refuse"
+    },
+    {
+      "name": "wildcard",
+      "host": "a.t.example",
+      "leaf": {
+        "dns": [
+          "*.t.example"
+        ]
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "wildcard-two-labels",
+      "host": "b.a.t.example",
+      "leaf": {
+        "dns": [
+          "*.t.example"
+        ]
+      },
+      "guarded": "refuse",
+      "operator": "refuse"
+    },
+    {
+      "name": "upper-san",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "T.EXAMPLE"
+        ]
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "upper-host",
+      "host": "T.Example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ]
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "trailing-dot-host",
+      "host": "t.example.",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ]
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "trailing-dot-san",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example."
+        ]
+      },
+      "guarded": "refuse",
+      "operator": "accept"
+    },
+    {
+      "name": "idn",
+      "host": "xn--bcher-kva.example",
+      "leaf": {
+        "dns": [
+          "xn--bcher-kva.example"
+        ]
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "ipv4",
+      "host": "127.0.0.1",
+      "leaf": {
+        "ips": [
+          "127.0.0.1"
+        ]
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "ipv4-as-dns-san",
+      "host": "127.0.0.1",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ]
+      },
+      "guarded": "refuse",
+      "operator": "refuse"
+    },
+    {
+      "name": "ipv6-bracket",
+      "host": "[::1]",
+      "leaf": {
+        "ips": [
+          "::1"
+        ]
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "ipv6-bare",
+      "host": "::1",
+      "leaf": {
+        "ips": [
+          "::1"
+        ]
+      },
+      "guarded": "accept",
+      "operator": "accept"
+    },
+    {
+      "name": "leaf-is-ca",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ],
+        "ca": true,
+        "eku": null
+      },
+      "guarded": "refuse",
+      "operator": "accept"
+    },
+    {
+      "name": "intermediate-not-ca",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ]
+      },
+      "intermediate": {
+        "sent": true,
+        "ca": false
+      },
+      "guarded": "refuse",
+      "operator": "refuse"
+    },
+    {
+      "name": "intermediate-eku-client",
+      "host": "t.example",
+      "leaf": {
+        "dns": [
+          "t.example"
+        ]
+      },
+      "intermediate": {
+        "sent": true,
+        "eku": [
+          "clientAuth"
+        ]
+      },
+      "guarded": "refuse",
+      "operator": "refuse"
+    }
+  ]
+}

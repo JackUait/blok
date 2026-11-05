@@ -97,7 +97,13 @@ const pick = async (option: string): Promise<void> => {
 };
 
 const pickDay = async (day: string): Promise<void> => {
-  await click(document.querySelector(`[data-blok-database-date-day="${day}"]`));
+  const cell = document.querySelector(`[data-blok-database-date-day="${day}"]`);
+
+  // A day off the shown month would be a silent no-op click.
+  if (cell === null) {
+    throw new Error(`Day ${day} is not on the picker grid.`);
+  }
+  await click(cell);
 };
 
 /** Any day on the grid the picker opens on (this month). */
@@ -402,6 +408,16 @@ describe('bulk edit of a date: Remind and the property default', () => {
     const toggleEnd = async (): Promise<void> => {
       await click(document.querySelector('[data-blok-database-date-end-toggle]'));
     };
+
+    // An empty first row opens the picker on today, so the October days must be on its grid.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 15, 12));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
     // research/35 §3: Notion gave every row today → today here, replacing their own dates. Not copied (data loss).
     it('bulk: an empty first row keeps every selected row\'s date', async () => {

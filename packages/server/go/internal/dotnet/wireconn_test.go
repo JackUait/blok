@@ -284,3 +284,72 @@ func TestARetryOnANewConnTakesTheNewConnsHead(t *testing.T) {
 		t.Fatalf("%d conns", n)
 	}
 }
+
+// badSecondHeadServer answers a conn's first request well and its second
+// with bad. It counts every request it reads, on any conn.
+func badSecondHeadServer(t *testing.T, bad string) (string, *atomic.Int32) {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { listener.Close() })
+	var requests atomic.Int32
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				reader := bufio.NewReader(conn)
+				for n := 1; ; n++ {
+					if _, err := http.ReadRequest(reader); err != nil {
+						return
+					}
+					requests.Add(1)
+					if n == 1 {
+						_, _ = io.WriteString(conn, "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
+						continue
+					}
+					_, _ = io.WriteString(conn, bad)
+					return
+				}
+			}()
+		}
+	}()
+	return "http://" + listener.Addr().String() + "/", &requests
+}
+
+// .NET retries a request only when no byte of its answer arrived
+// (HttpConnection.SendAsync sets _canRetry only on an empty read buffer).
+// A bad head on a reused conn fails the request; it never goes out twice.
+func TestABadHeadOnAReusedConnIsNotSentAgain(t *testing.T) {
+	for _, c := range []struct{ name, bad string }{
+		{"malformed", "HTTP/1.1 200 OK\r\nbad line\r\n\r\n"},
+		{"truncated", "HTTP/1.1 200 OK\r\nContent-Le"},
+		{"over 64 KiB", "HTTP/1.1 200 OK\r\nX-Big: " + strings.Repeat("a", 70<<10) + "\r\n\r\n"},
+	} {
+		for _, method := range []string{http.MethodGet, http.MethodHead} {
+			t.Run(c.name+" "+method, func(t *testing.T) {
+				target, requests := badSecondHeadServer(t, c.bad)
+				client := &http.Client{Transport: NewSocketsTransport(SocketsOptions{ConnectTimeout: 2 * time.Second})}
+				for n := 1; n <= 2; n++ {
+					request, _ := http.NewRequest(method, target, nil)
+					response, err := client.Do(request)
+					if err == nil {
+						_, _ = io.Copy(io.Discard, response.Body)
+						response.Body.Close()
+					}
+					if (err == nil) != (n == 1) {
+						t.Fatalf("request %d: error %v", n, err)
+					}
+				}
+				if n := requests.Load(); n != 2 {
+					t.Fatalf("the server read %d requests, .NET sends 2", n)
+				}
+			})
+		}
+	}
+}

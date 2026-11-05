@@ -31,6 +31,8 @@ type wireConn struct {
 	body    io.Reader
 	framing Framing
 	err     error
+	// started is set once the next head's first byte is handed out.
+	started bool
 
 	mu     sync.Mutex
 	method string
@@ -100,6 +102,9 @@ func (c *wireConn) expect(method string) {
 }
 
 func (c *wireConn) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
 	for {
 		if len(c.out) > 0 {
 			n := copy(p, c.out)
@@ -109,8 +114,25 @@ func (c *wireConn) Read(p []byte) (int, error) {
 		if c.err != nil {
 			return 0, c.err
 		}
+		if c.body == nil && !c.started {
+			// net/http retries a request whose first answer byte failed to
+			// read (readLoop's Peek). .NET retries only when no byte came,
+			// so the head is parsed after its first byte is handed out.
+			if _, err := c.in.Peek(1); err != nil {
+				c.err = err
+				continue
+			}
+			c.started = true
+			p[0] = 'H'
+			return 1, nil
+		}
 		if c.body == nil {
 			c.err = c.nextHead()
+			// Every status line starts "HTTP/1.", whose H is out already.
+			if c.err == nil {
+				c.out = c.out[1:]
+			}
+			c.started = false
 			continue
 		}
 		if c.framing == FramedChunked {
@@ -130,13 +152,10 @@ func (c *wireConn) Read(p []byte) (int, error) {
 	}
 }
 
-// nextHead reads a response head and queues net/http's view of it. A conn
-// that ends before any byte of it ends with io.EOF, which net/http reads
-// as a closed idle conn.
+// nextHead reads a response head and queues net/http's view of it. Read
+// has seen its first byte; a conn that ends before it ends with io.EOF,
+// which net/http reads as a closed idle conn.
 func (c *wireConn) nextHead() error {
-	if _, err := c.in.Peek(1); err != nil {
-		return err
-	}
 	c.mu.Lock()
 	head := c.method == http.MethodHead
 	c.mu.Unlock()

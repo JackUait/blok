@@ -28,10 +28,27 @@ public sealed class SyncDroppedPeerTests
     Assert.NotEqual("seeded", await TextAfterAQueuedFrameAsync(null));
   }
 
+  /// <summary>
+  /// The raw peer never reads, so it never answers a ping: the keep-alive
+  /// aborts the socket while its frame waits on the lane.
+  /// </summary>
+  [Fact]
+  public async Task AFrameWaitingOnABusyRoomAfterAKeepAliveTimeout()
+  {
+    Assert.Equal("seeded", await TextAfterAQueuedFrameAsync("keepalive"));
+  }
+
   private static async Task<string> TextAfterAQueuedFrameAsync(string? drop)
   {
     var authorization = new GatedAuthorization();
     await using var app = await SyncApp.StartAsync(
+        configure: options =>
+        {
+          if (drop == "keepalive")
+          {
+            options.CollabKeepAliveInterval = TimeSpan.FromMilliseconds(100);
+          }
+        },
         services: services => services.AddSingleton<IBlokAuthorization>(authorization),
         kestrel: true);
     using var peer = await RawPeer.ConnectAsync(new Uri(app.App.Urls.Single()));
@@ -46,7 +63,12 @@ public sealed class SyncDroppedPeerTests
     // Long enough for the frame to reach the lane wait.
     await Task.Delay(300);
 
-    if (drop is not null)
+    if (drop == "keepalive")
+    {
+      // Long enough for the unanswered ping to time out.
+      await Task.Delay(1000);
+    }
+    else if (drop is not null)
     {
       peer.Drop(drop == "rst");
       // Long enough for Kestrel to see the drop.

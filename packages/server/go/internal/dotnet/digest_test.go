@@ -20,7 +20,7 @@ import (
 
 func digestChallenge(mode string, second bool) string {
 	switch mode {
-	case "plain", "utf8":
+	case "plain", "utf8", "domain":
 		return `Digest realm="r", nonce="n"`
 	case "qop":
 		return `Digest realm="r", nonce="n", qop="auth", algorithm=MD5, opaque="o"`
@@ -151,7 +151,11 @@ func digestProxy(t *testing.T, mode, user string) (*url.URL, func() []string) {
 			}()
 		}
 	}()
-	proxy := &url.URL{Scheme: "http", Host: listener.Addr().String(), User: url.UserPassword(user, "p")}
+	name := user
+	if mode == "domain" {
+		name = `DOM\` + user
+	}
+	proxy := &url.URL{Scheme: "http", Host: listener.Addr().String(), User: url.UserPassword(name, "p")}
 	return proxy, func() []string {
 		mu.Lock()
 		defer mu.Unlock()
@@ -173,6 +177,7 @@ func TestAnswersADigestChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"auth-int", "u", `200 ok|1 auth=no|1 auth=Digest username="u", realm="r", nonce="n", uri="/", response="R", algorithm=SHA-256, qop=auth-int, nc=00000001, cnonce="C"`},
 		{"userhash", "u", `200 ok|1 auth=no|1 auth=Digest username="ba84be203fdfc7d34e054a76d285d0c9", userhash=true, realm="r", nonce="n", uri="/", response="R", algorithm=MD5`},
 		{"utf8", "é", `200 ok|1 auth=no|1 auth=Digest username*=utf-8''%C3%A9, realm="r", nonce="n", uri="/", response="R"`},
+		{"domain", "u", `200 ok|1 auth=no|1 auth=Digest username="u", realm="r", nonce="n", uri="/", response="R"`},
 		{"stale", "u", `200 ok|1 auth=no|1 auth=Digest username="u", realm="r", nonce="n", uri="/", response="R"|1 auth=Digest username="u", realm="r", nonce="n2", uri="/", response="R"`},
 		{"unsupported", "u", "error|1 auth=no"},
 		{"digest+basic", "u", `200 ok|1 auth=no|1 auth=Digest username="u", realm="r", nonce="n", uri="/", response="R"`},

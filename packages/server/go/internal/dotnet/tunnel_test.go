@@ -51,7 +51,7 @@ func recordingProxy(t *testing.T, mode string) (*url.URL, func() []string) {
 					mu.Unlock()
 					answer := ""
 					switch {
-					case mode == "challenge" && auth == "no":
+					case (mode == "challenge" || mode == "challenge-domain" || mode == "challenge-empty-domain") && auth == "no":
 						answer = "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\n\r\n"
 					case mode == "challenge-close" && auth == "no":
 						answer = "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
@@ -83,7 +83,13 @@ func recordingProxy(t *testing.T, mode string) (*url.URL, func() []string) {
 			}()
 		}
 	}()
-	proxy := &url.URL{Scheme: "http", Host: listener.Addr().String(), User: url.UserPassword("u", "p")}
+	// GetCredentialsFromString splits "domain\user": "\u" has an empty
+	// domain, the same credential as C#'s plain "challenge" row.
+	name := map[string]string{"challenge-domain": `DOM\u`, "challenge-empty-domain": `\u`}[mode]
+	if name == "" {
+		name = "u"
+	}
+	proxy := &url.URL{Scheme: "http", Host: listener.Addr().String(), User: url.UserPassword(name, "p")}
 	return proxy, func() []string {
 		mu.Lock()
 		defer mu.Unlock()
@@ -104,6 +110,8 @@ func TestOpensATunnelAsSocketsHttpHandlerDoes(t *testing.T) {
 	trust := target.Client().Transport.(*http.Transport).TLSClientConfig
 	for _, c := range []struct{ mode, want string }{
 		{"challenge", "200 ok|1 CONNECT auth=no|1 CONNECT auth=Basic dTpw"},
+		{"challenge-domain", "200 ok|1 CONNECT auth=no|1 CONNECT auth=Basic RE9NXHU6cA=="},
+		{"challenge-empty-domain", "200 ok|1 CONNECT auth=no|1 CONNECT auth=Basic dTpw"},
 		{"challenge-close", "200 ok|1 CONNECT auth=no|2 CONNECT auth=Basic dTpw"},
 		{"no-challenge", "error|1 CONNECT auth=no"},
 		{"201", "error|1 CONNECT auth=no"},

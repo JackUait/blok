@@ -238,7 +238,7 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 		next := ""
 		if status == http.StatusProxyAuthRequired && proxy.User != nil {
 			challenges := authChallenges(header.Values("Proxy-Authenticate"))
-			user := proxy.User.Username()
+			user, domain := proxyCredential(proxy.User.Username())
 			password, _ := proxy.User.Password()
 			switch {
 			case sent == "":
@@ -246,7 +246,7 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 				sent = chooseChallenge(challenges)
 				switch sent {
 				case "negotiate", "ntlm":
-					if next, nt, err = ntlmFirst(ctx, sent, challenges[sent], proxy, user, password); err != nil {
+					if next, nt, err = ntlmFirst(ctx, sent, challenges[sent], proxy, user, domain, password); err != nil {
 						return conn, err
 					}
 				case "digest":
@@ -254,6 +254,10 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 						next = "Digest " + digestToken(user, password, parameters)
 					}
 				case "basic":
+					// SetBasicAuthToken puts a domain back in front.
+					if domain != "" {
+						user = domain + `\` + user
+					}
 					next = "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+password))
 				}
 			case nt != nil && !nt.authenticated:
@@ -306,6 +310,16 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 	}
 }
 
+// proxyCredential is GetCredentialsFromString's NetworkCredential: the
+// user name split at its first backslash into domain and user. Digest and
+// NTLM send the user alone; Basic puts a domain back in front.
+func proxyCredential(name string) (user, domain string) {
+	if at := strings.IndexByte(name, '\\'); at >= 0 {
+		return name[at+1:], name[:at]
+	}
+	return name, ""
+}
+
 // ntlmScheme is the scheme name .NET writes, whatever the server's case.
 func ntlmScheme(sent string) string {
 	if sent == "negotiate" {
@@ -314,19 +328,14 @@ func ntlmScheme(sent string) string {
 	return "NTLM"
 }
 
-// ntlmFirst starts SendWithNtAuthAsync: the credentials are
-// GetCredentialsFromString's, "domain\\user" split at the first backslash,
-// and the SPN is "HTTP/" and the proxy host. The first challenge's data
-// is decoded, which can throw, and then not read.
-func ntlmFirst(ctx context.Context, sent, data string, proxy *url.URL, user, password string) (string, *ntlmAuth, error) {
+// ntlmFirst starts SendWithNtAuthAsync; the SPN is "HTTP/" and the proxy
+// host. The first challenge's data is decoded, which can throw, and then
+// not read.
+func ntlmFirst(ctx context.Context, sent, data string, proxy *url.URL, user, domain, password string) (string, *ntlmAuth, error) {
 	if data != "" {
 		if _, err := base64.StdEncoding.DecodeString(data); err != nil {
 			return "", nil, errNtlmThrow
 		}
-	}
-	domain := ""
-	if at := strings.IndexByte(user, '\\'); at >= 0 {
-		domain, user = user[:at], user[at+1:]
 	}
 	nt := newNtlmAuth(sent == "negotiate", user, domain, password, "HTTP/"+ntlmSpnHost(ctx, proxy.Hostname()))
 	if nt == nil {

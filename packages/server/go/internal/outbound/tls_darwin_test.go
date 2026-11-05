@@ -35,14 +35,11 @@ func (p anyLoopback) Validate(raw string, base *dotnet.URI) (Target, error) {
 
 func (anyLoopback) AddressAllowed(netip.Addr) bool { return true }
 
-// The Go analogue of SslStreamStillLeaksAnIssuerFetchOnMacOs. On macOS the
-// platform verifier lets trustd fetch a certificate's caIssuers URL, which
-// would reach an address the guard never vetted. Measured on Go 1.27.1: with
-// RootCAs nil or x509.SystemCertPool() the issuer is fetched once; with a
-// pool built from PEM it never is. So the fetcher verifies with the macOS
-// PEM bundle.
-func TestTheFetcherNeverLetsTheVerifierFetchAnIssuer(t *testing.T) {
-	var hits atomic.Int32
+// aiaOrigin serves a leaf signed by an intermediate it does not send, whose
+// caIssuers URL points at a local listener that counts its hits.
+func aiaOrigin(t *testing.T) (int, *atomic.Int32) {
+	t.Helper()
+	hits := &atomic.Int32{}
 	issuer, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -78,14 +75,40 @@ func TestTheFetcherNeverLetsTheVerifierFetchAnIssuer(t *testing.T) {
 	t.Cleanup(func() { _ = originServer.Close() })
 
 	port := origin.Addr().(*net.TCPAddr).Port
+	return port, hits
+}
+
+// The Go analogue of SslStreamStillLeaksAnIssuerFetchOnMacOs. On macOS the
+// platform verifier lets trustd fetch a certificate's caIssuers URL, which
+// would reach an address the guard never vetted. Measured on Go 1.27.1: with
+// RootCAs nil or x509.SystemCertPool() the issuer is fetched once; with a
+// pool built from PEM it never is. So the fetcher verifies with a pool.
+func TestTheFetcherNeverLetsTheVerifierFetchAnIssuer(t *testing.T) {
+	port, hits := aiaOrigin(t)
 	fetcher := NewFetcher(anyLoopback{port})
-	_, err = fetcher.Get(context.Background(), "https://aia.example:"+strconv.Itoa(port)+"/", Limits{Timeout: 5 * time.Second, MaxBytes: 1 << 10})
+	_, err := fetcher.Get(context.Background(), "https://aia.example:"+strconv.Itoa(port)+"/", Limits{Timeout: 5 * time.Second, MaxBytes: 1 << 10})
 	if err == nil {
 		t.Fatal("an untrusted chain verified")
 	}
 	time.Sleep(time.Second)
 	if got := hits.Load(); got != 0 {
 		t.Fatalf("the verifier fetched the issuer %d time(s)", got)
+	}
+}
+
+// After a failed trust read, trustd verifies, with network fetch off as in
+// C#'s MacOsCertificateTrust: it never asks the caIssuers URL.
+func TestThePlatformVerifierNeverFetchesAnIssuer(t *testing.T) {
+	port, hits := aiaOrigin(t)
+	fetcher := NewFetcher(anyLoopback{port})
+	fetcher.platform = true
+	_, err := fetcher.Get(context.Background(), "https://aia.example:"+strconv.Itoa(port)+"/", Limits{Timeout: 5 * time.Second, MaxBytes: 1 << 10})
+	if err == nil {
+		t.Fatal("an untrusted chain verified")
+	}
+	time.Sleep(time.Second)
+	if got := hits.Load(); got != 0 {
+		t.Fatalf("trustd fetched the issuer %d time(s)", got)
 	}
 }
 
@@ -117,25 +140,23 @@ func failingTool(t *testing.T, fail string, instead ...string) string {
 	return path
 }
 
-// A root set read in part would trust too little or too much, and without
-// the trust settings a cert the user marked "Never Trust" would pass, where
-// C#'s SecTrust refuses it. Go cannot ask trustd without letting it fetch
-// a caIssuers URL past the guard, so any failed read leaves no roots: the
-// guarded fetcher fails closed. The tool exits 0 for a keychain it cannot
-// read, so an empty system root keychain counts as failed too.
-func TestAnyFailedTrustReadFailsClosed(t *testing.T) {
-	empty := x509.NewCertPool()
+// A root set read in part would trust too little or too much, and a bundle
+// would pass a cert the user marked "Never Trust", which C#'s SecTrust
+// refuses. So any failed read leaves no roots: trustd verifies instead,
+// with issuer fetching off (sectrust_darwin.go). The tool exits 0 for a
+// keychain it cannot read, so an empty system root keychain counts as
+// failed too.
+func TestAnyFailedTrustReadLeavesThePlatformVerifier(t *testing.T) {
 	for _, fail := range []string{"SystemRootCertificates.keychain", "System.keychain", "login.keychain", "domain0", "export -d ", ""} {
-		trust := loadTrust(failingTool(t, fail))
-		if !trust.pool.Equal(empty) || len(trust.denied) != 0 {
-			t.Errorf("%q failed: the guarded fetcher still trusts some roots", fail)
+		if trust := loadTrust(failingTool(t, fail)); !trust.platform || trust.pool != nil {
+			t.Errorf("%q failed: the platform verifier is not in use", fail)
 		}
 	}
-	if trust := loadTrust(failingTool(t, "SystemRootCertificates.keychain", "exit 0")); !trust.pool.Equal(empty) {
-		t.Error("an empty system keychain: the guarded fetcher still trusts some roots")
+	if trust := loadTrust(failingTool(t, "SystemRootCertificates.keychain", "exit 0")); !trust.platform {
+		t.Error("an empty system keychain: the platform verifier is not in use")
 	}
-	if loadRoots(securityTool).Equal(empty) {
-		t.Fatal("a good read gave no roots")
+	if trust := loadTrust(securityTool); trust.platform || trust.pool == nil {
+		t.Fatal("a good read did not give its roots")
 	}
 }
 

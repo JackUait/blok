@@ -28,11 +28,9 @@ import (
 // guard (see tls_darwin_test.go). Intermediates kept only in the Keychain
 // are not used, as in Rust.
 //
-// When any trust read fails there are no roots, and every https fetch
-// fails. A bundle would accept a cert the user marked "Never Trust", which
-// C# refuses, and Go cannot ask trustd with its issuer fetching off: the
-// standard library never calls SecTrustSetNetworkFetchAllowed, and the
-// published builds have no cgo (scripts/publish-server-go.mjs).
+// When any trust read fails, trustd verifies instead (sectrust_darwin.go),
+// with network fetch off as in C#'s MacOsCertificateTrust: a bundle would
+// accept a cert the user marked "Never Trust", which C# refuses.
 const securityTool = "/usr/bin/security"
 
 // trustDomains are the export flags for the user and admin domains. trustd
@@ -99,26 +97,26 @@ func plistVersion(ctx context.Context, path string) int64 {
 	return version
 }
 
-// systemTrust is the anchor pool and the certs the trust settings deny.
+// systemTrust is the anchor pool and the certs the trust settings deny, or
+// platform when trustd must decide.
 type systemTrust struct {
-	pool   *x509.CertPool
-	denied map[string]bool
+	pool     *x509.CertPool
+	denied   map[string]bool
+	platform bool
 }
 
 var bundle = sync.OnceValue(func() systemTrust { return loadTrust(securityTool) })
 
 func loadTrust(tool string) systemTrust {
 	if pool, denied, err := loadTrustSettingsRoots(tool); err == nil {
-		return systemTrust{pool, denied}
+		return systemTrust{pool: pool, denied: denied}
 	}
-	return systemTrust{pool: x509.NewCertPool()}
+	return systemTrust{platform: true}
 }
 
 func loadRoots(tool string) *x509.CertPool { return loadTrust(tool).pool }
 
-func defaultRoots() *x509.CertPool { return bundle().pool }
-
-func defaultDenied() map[string]bool { return bundle().denied }
+func defaultTrust() systemTrust { return bundle() }
 
 // loadTrustSettingsRoots fails when any keychain or domain cannot be read:
 // without a keychain's certificates its trusted hashes would be dropped, and

@@ -62,3 +62,30 @@ func TestPeerGoneStaysOpenWhileThePeerStaysOrWeAbort(t *testing.T) {
 	case <-time.After(200 * time.Millisecond):
 	}
 }
+
+// Kestrel's socket transport buffers at most MaxReadBufferSize (1 MiB by
+// default) unconsumed bytes per connection. A peer flooding tiny frames
+// while the member waits on a busy room (nothing receives) must not grow
+// the read-ahead past that, and its writes must then stall.
+func TestAFloodOfTinyFramesWhileNothingReceivesStaysWithinTheReadAheadCap(t *testing.T) {
+	server, client := pair(t, Options{})
+	tiny := frame(0x82, []byte{7})
+	sent := 0
+	for sent < 64<<20 {
+		_ = client.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
+		n, err := client.Write(tiny)
+		sent += n
+		if err != nil {
+			break
+		}
+	}
+	if sent >= 64<<20 {
+		t.Fatal("the flood never stalled")
+	}
+	server.ahead.mu.Lock()
+	buffered, capacity := len(server.ahead.buf), cap(server.ahead.buf)
+	server.ahead.mu.Unlock()
+	if buffered > readAheadLimit || capacity > readAheadLimit || buffered <= readAheadLimit/2 {
+		t.Fatalf("%d bytes read ahead in a %d-byte buffer", buffered, capacity)
+	}
+}

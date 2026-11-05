@@ -239,6 +239,8 @@ pub(crate) struct Inner {
     pub(crate) keep_alive_sending: AtomicBool,
     done: watch::Sender<bool>,
     gone: watch::Sender<bool>,
+    #[cfg_attr(not(test), allow(dead_code))]
+    ahead: Option<Arc<read_ahead::Shared>>,
     disposed: AtomicBool,
 }
 
@@ -272,13 +274,13 @@ impl Conn {
         let (gone, _) = watch::channel(false);
         // Without a runtime nothing can read ahead; the peer's end is then
         // seen only by a receive.
-        let reader: Reader = match tokio::runtime::Handle::try_current() {
-            Ok(_) => Box::new(read_ahead::ReadAhead::spawn(
-                reader,
-                done.subscribe(),
-                gone.clone(),
-            )),
-            Err(_) => Box::new(reader),
+        let (reader, ahead): (Reader, _) = match tokio::runtime::Handle::try_current() {
+            Ok(_) => {
+                let (reader, shared) =
+                    read_ahead::ReadAhead::spawn(reader, done.subscribe(), gone.clone());
+                (Box::new(reader), Some(shared))
+            }
+            Err(_) => (Box::new(reader), None),
         };
         let conn = Self {
             inner: Arc::new(Inner {
@@ -302,6 +304,7 @@ impl Conn {
                 keep_alive_sending: AtomicBool::new(false),
                 done,
                 gone,
+                ahead,
                 disposed: AtomicBool::new(false),
             }),
         };
@@ -355,6 +358,23 @@ impl Conn {
     pub async fn peer_gone(&self) {
         let mut gone = self.inner.gone.subscribe();
         let _ = gone.wait_for(|gone| *gone).await;
+    }
+
+    /// Bytes read ahead and not yet received.
+    #[cfg(test)]
+    pub(crate) fn buffered_ahead(&self) -> usize {
+        self.inner
+            .ahead
+            .as_ref()
+            .map_or(0, |ahead| ahead.buffered())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn capacity_ahead(&self) -> usize {
+        self.inner
+            .ahead
+            .as_ref()
+            .map_or(0, |ahead| ahead.capacity())
     }
 
     /// WebSocket.Abort: the stream closes with no close frame.

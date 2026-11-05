@@ -73,3 +73,34 @@ async fn peer_gone_stays_pending_while_the_peer_stays_or_we_abort() {
         "fired on our own abort"
     );
 }
+
+// Kestrel's socket transport buffers at most MaxReadBufferSize (1 MiB by
+// default) unconsumed bytes per connection. A peer flooding tiny frames
+// while the member waits on a busy room (nothing receives) must not grow
+// the read-ahead past that, and its writes must then stall.
+#[tokio::test]
+async fn a_flood_of_tiny_frames_while_nothing_receives_stays_within_the_read_ahead_cap() {
+    let (server, client) = pair().await;
+    let (_read, mut write) = client.into_split();
+    let tiny = [0x82u8, 0x81, 0, 0, 0, 0, 7];
+    let mut sent = 0usize;
+    // Far past the cap plus any kernel buffers, unless the writes stall.
+    while sent < 64 << 20 {
+        match timeout(Duration::from_millis(500), write.write_all(&tiny)).await {
+            Ok(result) => {
+                result.unwrap();
+                sent += tiny.len();
+            }
+            Err(_) => break,
+        }
+    }
+    assert!(sent < 64 << 20, "the flood never stalled");
+    let buffered = server.buffered_ahead();
+    assert!(buffered <= read_ahead::LIMIT, "{buffered} bytes read ahead");
+    assert!(
+        buffered > read_ahead::LIMIT / 2,
+        "{buffered} bytes read ahead"
+    );
+    let capacity = server.capacity_ahead();
+    assert!(capacity <= read_ahead::LIMIT, "{capacity}-byte buffer");
+}

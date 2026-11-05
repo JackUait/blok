@@ -6,8 +6,8 @@ import (
 	"sync"
 )
 
-// Kestrel's default MaxRequestBufferSize. Unverified that Kestrel still
-// applies it after the upgrade.
+// Kestrel's SocketTransportOptions.MaxReadBufferSize default: the most
+// unconsumed bytes its transport buffers, upgraded or not (measured).
 const (
 	readAheadLimit = 1 << 20
 	readAheadChunk = 16 * 1024
@@ -57,9 +57,12 @@ func (r *readAhead) run(src io.Reader, done <-chan struct{}) {
 				return
 			}
 		}
-		n, err := src.Read(chunk)
 		r.mu.Lock()
-		r.buf = append(r.buf, chunk[:n]...)
+		room := readAheadLimit - len(r.buf)
+		r.mu.Unlock()
+		n, err := src.Read(chunk[:min(len(chunk), room)])
+		r.mu.Lock()
+		r.push(chunk[:n])
 		r.mu.Unlock()
 		if err != nil {
 			select {
@@ -72,6 +75,16 @@ func (r *readAhead) run(src io.Reader, done <-chan struct{}) {
 		}
 		wake(r.ready)
 	}
+}
+
+// push keeps the buffer's capacity within the limit too.
+func (r *readAhead) push(b []byte) {
+	if len(r.buf)+len(b) > cap(r.buf) {
+		grown := make([]byte, len(r.buf), max(len(r.buf)+len(b), min(readAheadLimit, 2*cap(r.buf))))
+		copy(grown, r.buf)
+		r.buf = grown
+	}
+	r.buf = append(r.buf, b...)
 }
 
 func (r *readAhead) fail(err error) {

@@ -35,6 +35,38 @@ impl Buffer {
     }
 }
 
+/// Bounds a whole test, so a hang fails here and not at the CI job's
+/// timeout. The waits inside go up to 30 s each.
+async fn within(test: impl std::future::Future<Output = ()>) {
+    tokio::time::timeout(Duration::from_secs(60), test)
+        .await
+        .expect("the test did not finish within 60 s");
+}
+
+/// A host binary killed when dropped: a test that times out leaves no
+/// process behind.
+struct Reaped(std::process::Child);
+
+impl std::ops::Deref for Reaped {
+    type Target = std::process::Child;
+    fn deref(&self) -> &std::process::Child {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Reaped {
+    fn deref_mut(&mut self) -> &mut std::process::Child {
+        &mut self.0
+    }
+}
+
+impl Drop for Reaped {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
 fn no_env(_: &str) -> String {
     String::new()
 }
@@ -219,11 +251,14 @@ fn header<'a>(headers: &'a [(String, String)], name: &str) -> String {
 
 #[tokio::test]
 async fn help_prints_usage_and_exits_zero() {
-    for flag in ["--help", "-h", "-help"] {
-        let (code, stderr) = run_to_exit(&[flag]).await;
-        assert_eq!(code, 0, "{flag}");
-        assert_eq!(stderr, USAGE, "{flag}");
-    }
+    within(async {
+        for flag in ["--help", "-h", "-help"] {
+            let (code, stderr) = run_to_exit(&[flag]).await;
+            assert_eq!(code, 0, "{flag}");
+            assert_eq!(stderr, USAGE, "{flag}");
+        }
+    })
+    .await;
 }
 
 // The C# host owns the usage text; this keeps the Rust copy in lockstep.
@@ -250,39 +285,48 @@ fn usage_matches_the_csharp_host() {
 
 #[tokio::test]
 async fn unknown_flag_prints_error_then_usage_and_exits_two() {
-    let (code, stderr) = run_to_exit(&["--not-a-real-flag"]).await;
-    assert_eq!(code, 2);
-    assert_eq!(
-        stderr,
-        format!("flag provided but not defined: -not-a-real-flag\n{USAGE}")
-    );
+    within(async {
+        let (code, stderr) = run_to_exit(&["--not-a-real-flag"]).await;
+        assert_eq!(code, 2);
+        assert_eq!(
+            stderr,
+            format!("flag provided but not defined: -not-a-real-flag\n{USAGE}")
+        );
+    })
+    .await;
 }
 
 // The ordinary build has no conformance flags; the host parser refuses them.
 #[cfg(not(feature = "conformance"))]
 #[tokio::test]
 async fn the_ordinary_build_refuses_the_conformance_flags() {
-    for flag in [
-        "--conformance-origin=http://127.0.0.1:1",
-        "--conformance-journal",
-    ] {
-        let (code, stderr) = run_to_exit(&[flag]).await;
-        let name = flag.trim_start_matches('-').split('=').next().unwrap();
-        assert_eq!(code, 2, "{flag}");
-        assert_eq!(
-            stderr,
-            format!("flag provided but not defined: -{name}\n{USAGE}")
-        );
-    }
+    within(async {
+        for flag in [
+            "--conformance-origin=http://127.0.0.1:1",
+            "--conformance-journal",
+        ] {
+            let (code, stderr) = run_to_exit(&[flag]).await;
+            let name = flag.trim_start_matches('-').split('=').next().unwrap();
+            assert_eq!(code, 2, "{flag}");
+            assert_eq!(
+                stderr,
+                format!("flag provided but not defined: -{name}\n{USAGE}")
+            );
+        }
+    })
+    .await;
 }
 
 #[tokio::test]
 async fn missing_flag_value_exits_two() {
-    let (code, stderr) = run_to_exit(&["--listen"]).await;
-    assert!(
-        code == 2 && stderr.starts_with("flag needs an argument: -listen\n"),
-        "{code} {stderr:?}"
-    );
+    within(async {
+        let (code, stderr) = run_to_exit(&["--listen"]).await;
+        assert!(
+            code == 2 && stderr.starts_with("flag needs an argument: -listen\n"),
+            "{code} {stderr:?}"
+        );
+    })
+    .await;
 }
 
 #[test]
@@ -325,6 +369,7 @@ fn bare_boolean_flags_parse() {
 
 #[tokio::test]
 async fn malformed_listen_refuses_to_start() {
+    within(async {
     for (listen, want) in [
         (
             "localhost",
@@ -338,149 +383,169 @@ async fn malformed_listen_refuses_to_start() {
         let (code, stderr) = run_to_exit(&["--listen", listen]).await;
         assert_eq!((code, stderr.as_str()), (1, want), "{listen}");
     }
+    })
+    .await;
 }
 
 #[tokio::test]
 async fn lost_bind_refuses_to_start() {
-    let owner = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    let address = owner.local_addr().unwrap().to_string();
-    let (code, stderr) = run_to_exit(&["--listen", &address]).await;
-    assert_eq!(code, 1);
-    assert!(
-        stderr.starts_with("blok-server refused to start: ")
-            && stderr.contains("address already in use")
-            && !stderr.contains(" listening on "),
-        "{stderr:?}"
-    );
+    within(async {
+        let owner = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = owner.local_addr().unwrap().to_string();
+        let (code, stderr) = run_to_exit(&["--listen", &address]).await;
+        assert_eq!(code, 1);
+        assert!(
+            stderr.starts_with("blok-server refused to start: ")
+                && stderr.contains("address already in use")
+                && !stderr.contains(" listening on "),
+            "{stderr:?}"
+        );
+    })
+    .await;
 }
 
 #[tokio::test]
 async fn listening_line_comes_after_bind_and_health_answers() {
-    let running = Running::start(&[], no_env, "dev").await;
-    // The line is written only after bind, so the port answers at once.
-    let (status, _, body) = request(&running.address, "GET", "/health", "HTTP/1.1").await;
-    let want = format!(
-        "blok-server dev listening on {} (--auth none)\n",
-        running.address
-    );
-    assert_eq!(running.out.text(), want);
-    assert_eq!(
-        (status, body.as_str()),
-        (200, "{\"status\":\"ok\",\"version\":\"dev\"}\n")
-    );
-    let (code, _) = running.stop().await;
-    assert_eq!(code, 0);
+    within(async {
+        let running = Running::start(&[], no_env, "dev").await;
+        // The line is written only after bind, so the port answers at once.
+        let (status, _, body) = request(&running.address, "GET", "/health", "HTTP/1.1").await;
+        let want = format!(
+            "blok-server dev listening on {} (--auth none)\n",
+            running.address
+        );
+        assert_eq!(running.out.text(), want);
+        assert_eq!(
+            (status, body.as_str()),
+            (200, "{\"status\":\"ok\",\"version\":\"dev\"}\n")
+        );
+        let (code, _) = running.stop().await;
+        assert_eq!(code, 0);
+    })
+    .await;
 }
 
 #[tokio::test]
 async fn health_wire() {
-    let running = Running::start(&[], no_env, "dev").await;
-    let address = running.address.clone();
-    let (status, headers, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
-    assert_eq!(
-        (
-            status,
-            header(&headers, "content-type").as_str(),
-            body.as_str()
-        ),
-        (
-            200,
-            "application/json",
-            "{\"status\":\"ok\",\"version\":\"dev\"}\n"
-        )
-    );
-    let (status, headers, body) = request(&address, "HEAD", "/health", "HTTP/1.1").await;
-    assert_eq!(
-        (
-            status,
-            header(&headers, "content-type").as_str(),
-            body.as_str()
-        ),
-        (200, "application/json", "")
-    );
-    let (status, headers, body) = request(&address, "POST", "/health", "HTTP/1.1").await;
-    assert_eq!(
-        (
-            status,
-            header(&headers, "allow").as_str(),
-            header(&headers, "content-type").as_str(),
-            body.as_str()
-        ),
-        (
-            405,
-            "GET, HEAD",
-            "text/plain; charset=utf-8",
-            "Method Not Allowed\n"
-        )
-    );
-    let (status, headers, body) = request(&address, "GET", "/missing", "HTTP/1.1").await;
-    assert_eq!(
-        (
-            status,
-            header(&headers, "content-type").as_str(),
-            body.as_str()
-        ),
-        (404, "text/plain; charset=utf-8", "404 page not found\n")
-    );
-    running.stop().await;
+    within(async {
+        let running = Running::start(&[], no_env, "dev").await;
+        let address = running.address.clone();
+        let (status, headers, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
+        assert_eq!(
+            (
+                status,
+                header(&headers, "content-type").as_str(),
+                body.as_str()
+            ),
+            (
+                200,
+                "application/json",
+                "{\"status\":\"ok\",\"version\":\"dev\"}\n"
+            )
+        );
+        let (status, headers, body) = request(&address, "HEAD", "/health", "HTTP/1.1").await;
+        assert_eq!(
+            (
+                status,
+                header(&headers, "content-type").as_str(),
+                body.as_str()
+            ),
+            (200, "application/json", "")
+        );
+        let (status, headers, body) = request(&address, "POST", "/health", "HTTP/1.1").await;
+        assert_eq!(
+            (
+                status,
+                header(&headers, "allow").as_str(),
+                header(&headers, "content-type").as_str(),
+                body.as_str()
+            ),
+            (
+                405,
+                "GET, HEAD",
+                "text/plain; charset=utf-8",
+                "Method Not Allowed\n"
+            )
+        );
+        let (status, headers, body) = request(&address, "GET", "/missing", "HTTP/1.1").await;
+        assert_eq!(
+            (
+                status,
+                header(&headers, "content-type").as_str(),
+                body.as_str()
+            ),
+            (404, "text/plain; charset=utf-8", "404 page not found\n")
+        );
+        running.stop().await;
+    })
+    .await;
 }
 
 // The rest of the routing rules are pinned in blok-route and black-box in
 // routing-contract.test.ts.
 #[tokio::test]
 async fn health_goes_through_the_kestrel_router() {
-    let running = Running::start(&[], no_env, "dev").await;
-    let address = running.address.clone();
-    for path in ["/HEALTH", "/health/", "/./health"] {
-        assert_eq!(
-            request(&address, "GET", path, "HTTP/1.1").await.0,
-            200,
-            "GET {path}"
-        );
-    }
-    for path in ["//health", "/health//"] {
-        assert_eq!(
-            request(&address, "GET", path, "HTTP/1.1").await.0,
-            404,
-            "GET {path}"
-        );
-    }
-    let (status, headers, _) = request(&address, "POST", "/health", "HTTP/1.1").await;
-    assert!(status == 405 && header(&headers, "x-content-type-options").is_empty());
-    let (status, _, body) = request(&address, "head", "/health", "HTTP/1.1").await;
-    assert_eq!((status, body.as_str()), (200, ""));
-    running.stop().await;
+    within(async {
+        let running = Running::start(&[], no_env, "dev").await;
+        let address = running.address.clone();
+        for path in ["/HEALTH", "/health/", "/./health"] {
+            assert_eq!(
+                request(&address, "GET", path, "HTTP/1.1").await.0,
+                200,
+                "GET {path}"
+            );
+        }
+        for path in ["//health", "/health//"] {
+            assert_eq!(
+                request(&address, "GET", path, "HTTP/1.1").await.0,
+                404,
+                "GET {path}"
+            );
+        }
+        let (status, headers, _) = request(&address, "POST", "/health", "HTTP/1.1").await;
+        assert!(status == 405 && header(&headers, "x-content-type-options").is_empty());
+        let (status, _, body) = request(&address, "head", "/health", "HTTP/1.1").await;
+        assert_eq!((status, body.as_str()), (200, ""));
+        running.stop().await;
+    })
+    .await;
 }
 
 // Kestrel sends "OPTIONS *" to the 404 catch-all.
 #[tokio::test]
 async fn options_star_gets_the_catch_all() {
-    let running = Running::start(&[], no_env, "dev").await;
-    let reply = exchange(
-        &running.address,
-        "OPTIONS * HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n",
-    )
+    within(async {
+        let running = Running::start(&[], no_env, "dev").await;
+        let reply = exchange(
+            &running.address,
+            "OPTIONS * HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n",
+        )
+        .await;
+        assert!(
+            reply.starts_with("HTTP/1.1 404 ") && reply.contains("\r\n404 page not found\n\r\n"),
+            "{reply:?}"
+        );
+        running.stop().await;
+    })
     .await;
-    assert!(
-        reply.starts_with("HTTP/1.1 404 ") && reply.contains("\r\n404 page not found\n\r\n"),
-        "{reply:?}"
-    );
-    running.stop().await;
 }
 
 #[tokio::test]
 async fn health_reports_the_stamped_version() {
-    let running = Running::start(&[], no_env, "1.2.3").await;
-    let (_, _, body) = request(&running.address, "GET", "/health", "HTTP/1.1").await;
-    assert_eq!(body, "{\"status\":\"ok\",\"version\":\"1.2.3\"}\n");
-    running.stop().await;
+    within(async {
+        let running = Running::start(&[], no_env, "1.2.3").await;
+        let (_, _, body) = request(&running.address, "GET", "/health", "HTTP/1.1").await;
+        assert_eq!(body, "{\"status\":\"ok\",\"version\":\"1.2.3\"}\n");
+        running.stop().await;
+    })
+    .await;
 }
 
 /// The binary listening on a free port, and that port.
 async fn listening_binary(
     args: &[&str],
     envs: &[(&str, &str)],
-) -> (std::process::Child, Arc<Mutex<String>>, String) {
+) -> (Reaped, Arc<Mutex<String>>, String) {
     for attempt in 1.. {
         let address = free_port();
         let mut all = vec!["--listen", address.as_str()];
@@ -494,7 +559,7 @@ async fn listening_binary(
     unreachable!()
 }
 
-fn spawn_binary(args: &[&str], envs: &[(&str, &str)]) -> (std::process::Child, Arc<Mutex<String>>) {
+fn spawn_binary(args: &[&str], envs: &[(&str, &str)]) -> (Reaped, Arc<Mutex<String>>) {
     use std::io::Read;
     let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_blok-server"))
         .args(args)
@@ -517,7 +582,7 @@ fn spawn_binary(args: &[&str], envs: &[(&str, &str)]) -> (std::process::Child, A
                 .push_str(&String::from_utf8_lossy(&chunk[..n]));
         }
     });
-    (child, text)
+    (Reaped(child), text)
 }
 
 // C#'s generic host registers its signal handlers in StartAsync, before
@@ -525,75 +590,81 @@ fn spawn_binary(args: &[&str], envs: &[(&str, &str)]) -> (std::process::Child, A
 // stops it gracefully, even before the ready line.
 #[tokio::test]
 async fn signal_handlers_are_installed_before_the_bind_and_after_validation() {
-    let address = free_port();
-    let out = Buffer::default();
-    let stderr = out.stderr();
-    let marked = out.stderr();
-    let code = tokio::time::timeout(
-        Duration::from_secs(10),
-        run(
-            &strings(&["--listen", &address]),
+    within(async {
+        let address = free_port();
+        let out = Buffer::default();
+        let stderr = out.stderr();
+        let marked = out.stderr();
+        let code = tokio::time::timeout(
+            Duration::from_secs(10),
+            run(
+                &strings(&["--listen", &address]),
+                &no_env,
+                stderr,
+                move || {
+                    let _ = marked.lock().unwrap().write_all(b"<signals>\n");
+                    std::future::ready(())
+                },
+                "dev",
+            ),
+        )
+        .await
+        .expect("run did not exit");
+        assert_eq!(code, 0);
+        let text = out.text();
+        assert!(
+            text.starts_with("<signals>\nblok-server dev listening on "),
+            "{text:?}"
+        );
+
+        let refused = Buffer::default();
+        let marked = refused.stderr();
+        let code = run(
+            &strings(&["--auth", "ticket"]),
             &no_env,
-            stderr,
+            refused.stderr(),
             move || {
                 let _ = marked.lock().unwrap().write_all(b"<signals>\n");
                 std::future::ready(())
             },
             "dev",
-        ),
-    )
-    .await
-    .expect("run did not exit");
-    assert_eq!(code, 0);
-    let text = out.text();
-    assert!(
-        text.starts_with("<signals>\nblok-server dev listening on "),
-        "{text:?}"
-    );
-
-    let refused = Buffer::default();
-    let marked = refused.stderr();
-    let code = run(
-        &strings(&["--auth", "ticket"]),
-        &no_env,
-        refused.stderr(),
-        move || {
-            let _ = marked.lock().unwrap().write_all(b"<signals>\n");
-            std::future::ready(())
-        },
-        "dev",
-    )
+        )
+        .await;
+        assert_eq!(code, 1);
+        assert!(
+            !refused.text().contains("<signals>"),
+            "{:?}",
+            refused.text()
+        );
+    })
     .await;
-    assert_eq!(code, 1);
-    assert!(
-        !refused.text().contains("<signals>"),
-        "{:?}",
-        refused.text()
-    );
 }
 
 #[tokio::test]
 async fn binary_exits_within_two_seconds_of_sigterm() {
-    for signal in ["TERM", "INT", "QUIT"] {
-        let (mut child, _, _) = listening_binary(&[], &[]).await;
-        let killed = std::process::Command::new("kill")
-            .args([&format!("-{signal}"), &child.id().to_string()])
-            .status()
-            .unwrap();
-        assert!(killed.success());
-        let deadline = std::time::Instant::now() + Duration::from_secs(2);
-        loop {
-            if let Some(status) = child.try_wait().unwrap() {
-                assert_eq!(status.code(), Some(0), "SIG{signal}");
-                break;
+    within(async {
+        for signal in ["TERM", "INT", "QUIT"] {
+            let (mut child, _, _) = listening_binary(&[], &[]).await;
+            let killed = std::process::Command::new("kill")
+                .args([&format!("-{signal}"), &child.id().to_string()])
+                .status()
+                .unwrap();
+            assert!(killed.success());
+            let deadline = std::time::Instant::now() + Duration::from_secs(2);
+            loop {
+                if let Some(status) = child.try_wait().unwrap() {
+                    assert_eq!(status.code(), Some(0), "SIG{signal}");
+                    break;
+                }
+                if std::time::Instant::now() > deadline {
+                    let _ = child.kill();
+                    panic!("did not exit within 2s of SIG{signal}");
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
             }
-            if std::time::Instant::now() > deadline {
-                let _ = child.kill();
-                panic!("did not exit within 2s of SIG{signal}");
-            }
-            tokio::time::sleep(Duration::from_millis(20)).await;
         }
-    }
+    })
+    .await;
 }
 
 #[test]
@@ -605,38 +676,41 @@ fn binary_version_comes_from_ldflags() {}
 // answer with no body written gets Content-Length: 0.
 #[tokio::test]
 async fn answers_are_framed_like_kestrel() {
-    let running = Running::start(&[], no_env, "dev").await;
-    let cases = [
-        ("GET", "/health", "HTTP/1.1", 200, "chunked", ""),
-        ("HEAD", "/health", "HTTP/1.1", 200, "", ""),
-        ("head", "/health", "HTTP/1.1", 200, "", "0"),
-        ("GET", "/health", "HTTP/1.0", 200, "", ""),
-        ("HEAD", "/health", "HTTP/1.0", 200, "", ""),
-        ("GET", "/nope", "HTTP/1.1", 404, "chunked", ""),
-        ("HEAD", "/nope", "HTTP/1.1", 404, "", ""),
-        ("head", "/nope", "HTTP/1.1", 404, "chunked", ""),
-        ("GET", "/nope", "HTTP/1.0", 404, "", ""),
-        ("HEAD", "/nope", "HTTP/1.0", 404, "", ""),
-        ("POST", "/health", "HTTP/1.1", 405, "chunked", ""),
-        ("DELETE", "/health", "HTTP/1.0", 405, "", ""),
-    ];
-    for (method, path, proto, status, transfer_encoding, content_length) in cases {
-        let (got, headers, _) = request(&running.address, method, path, proto).await;
-        assert_eq!(
-            (
-                got,
-                header(&headers, "transfer-encoding"),
-                header(&headers, "content-length")
-            ),
-            (
-                status,
-                transfer_encoding.to_owned(),
-                content_length.to_owned()
-            ),
-            "{method} {path} {proto}"
-        );
-    }
-    running.stop().await;
+    within(async {
+        let running = Running::start(&[], no_env, "dev").await;
+        let cases = [
+            ("GET", "/health", "HTTP/1.1", 200, "chunked", ""),
+            ("HEAD", "/health", "HTTP/1.1", 200, "", ""),
+            ("head", "/health", "HTTP/1.1", 200, "", "0"),
+            ("GET", "/health", "HTTP/1.0", 200, "", ""),
+            ("HEAD", "/health", "HTTP/1.0", 200, "", ""),
+            ("GET", "/nope", "HTTP/1.1", 404, "chunked", ""),
+            ("HEAD", "/nope", "HTTP/1.1", 404, "", ""),
+            ("head", "/nope", "HTTP/1.1", 404, "chunked", ""),
+            ("GET", "/nope", "HTTP/1.0", 404, "", ""),
+            ("HEAD", "/nope", "HTTP/1.0", 404, "", ""),
+            ("POST", "/health", "HTTP/1.1", 405, "chunked", ""),
+            ("DELETE", "/health", "HTTP/1.0", 405, "", ""),
+        ];
+        for (method, path, proto, status, transfer_encoding, content_length) in cases {
+            let (got, headers, _) = request(&running.address, method, path, proto).await;
+            assert_eq!(
+                (
+                    got,
+                    header(&headers, "transfer-encoding"),
+                    header(&headers, "content-length")
+                ),
+                (
+                    status,
+                    transfer_encoding.to_owned(),
+                    content_length.to_owned()
+                ),
+                "{method} {path} {proto}"
+            );
+        }
+        running.stop().await;
+    })
+    .await;
 }
 
 // HostCollab.Configure: the host caps upgraded sockets at 1024 so the
@@ -699,20 +773,23 @@ fn a_rate_limit_takes_signed64_bits() {
 
 #[tokio::test]
 async fn invalid_or_overflowing_flag_numbers_are_parse_errors() {
-    for (flag, value) in [
-        ("--max-upload", "08"),
-        ("--max-upload", "1__0"),
-        ("--max-upload", "0x8000000000000000"),
-        ("--rate-limit", "0x8000000000000000"),
-    ] {
-        let (code, stderr) =
-            run_to_exit(&["--listen", "0.0.0.0:0", "--storage-dir", "", flag, value]).await;
-        let want = format!("invalid value \"{value}\" for flag -{}", &flag[2..]);
-        assert!(
-            code == 2 && stderr.contains(&want),
-            "{flag} {value}: {code} {stderr:?}"
-        );
-    }
+    within(async {
+        for (flag, value) in [
+            ("--max-upload", "08"),
+            ("--max-upload", "1__0"),
+            ("--max-upload", "0x8000000000000000"),
+            ("--rate-limit", "0x8000000000000000"),
+        ] {
+            let (code, stderr) =
+                run_to_exit(&["--listen", "0.0.0.0:0", "--storage-dir", "", flag, value]).await;
+            let want = format!("invalid value \"{value}\" for flag -{}", &flag[2..]);
+            assert!(
+                code == 2 && stderr.contains(&want),
+                "{flag} {value}: {code} {stderr:?}"
+            );
+        }
+    })
+    .await;
 }
 
 #[test]
@@ -725,19 +802,23 @@ fn the_most_negative_number_parses() {
 // A signed value parses; the refusal is validation's, with exit 1.
 #[tokio::test]
 async fn a_signed_maximum_is_a_validation_refusal() {
-    let (code, stderr) = run_to_exit(&[
-        "--listen",
-        "127.0.0.1:0",
-        "--storage-dir",
-        "",
-        "--max-upload",
-        "-0x1",
-    ])
+    within(async {
+        let (code, stderr) = run_to_exit(&[
+            "--listen",
+            "127.0.0.1:0",
+            "--storage-dir",
+            "",
+            "--max-upload",
+            "-0x1",
+        ])
+        .await;
+        assert!(
+            code == 1
+                && stderr.contains("--max-upload must be a positive number of bytes (got -1)"),
+            "{code} {stderr:?}"
+        );
+    })
     .await;
-    assert!(
-        code == 1 && stderr.contains("--max-upload must be a positive number of bytes (got -1)"),
-        "{code} {stderr:?}"
-    );
 }
 
 #[test]
@@ -814,52 +895,57 @@ fn the_host_keeps_invalid_utf8_bytes_in_room_lines() {}
 // and ReadsTheDocEndpointAuthFromTheEnvironmentWithoutWarning (H20).
 #[tokio::test]
 async fn the_doc_endpoint_auth_warns_only_when_it_comes_from_the_flag() {
-    let collab_dir = std::env::temp_dir().join(format!("blok-host-collab-{}", std::process::id()));
-    let collab_dir = collab_dir.display().to_string();
-    let collab = [
-        "--collab",
-        "--doc-endpoint",
-        "https://app.example.com/api/blok-docs",
-        "--storage-dir",
-        "",
-        "--collab-dir",
-        &collab_dir,
-    ];
+    within(async {
+        let collab_dir =
+            std::env::temp_dir().join(format!("blok-host-collab-{}", std::process::id()));
+        let collab_dir = collab_dir.display().to_string();
+        let collab = [
+            "--collab",
+            "--doc-endpoint",
+            "https://app.example.com/api/blok-docs",
+            "--storage-dir",
+            "",
+            "--collab-dir",
+            &collab_dir,
+        ];
 
-    let mut with_flag = collab.to_vec();
-    with_flag.extend(["--doc-endpoint-auth", "Bearer app-token"]);
-    let (code, from_flag) = Running::start(&with_flag, no_env, "dev").await.stop().await;
-    assert_eq!(code, 0);
-    assert!(
-        from_flag.contains(
-            "warning: --doc-endpoint-auth puts the credential in this machine's process list"
-        ),
-        "no warning from the flag: {from_flag:?}"
-    );
+        let mut with_flag = collab.to_vec();
+        with_flag.extend(["--doc-endpoint-auth", "Bearer app-token"]);
+        let (code, from_flag) = Running::start(&with_flag, no_env, "dev").await.stop().await;
+        assert_eq!(code, 0);
+        assert!(
+            from_flag.contains(
+                "warning: --doc-endpoint-auth puts the credential in this machine's process list"
+            ),
+            "no warning from the flag: {from_flag:?}"
+        );
 
-    fn from_environment(name: &str) -> String {
-        if name == "BLOK_DOC_ENDPOINT_AUTH" {
-            "Bearer environment-token".into()
-        } else {
-            String::new()
+        fn from_environment(name: &str) -> String {
+            if name == "BLOK_DOC_ENDPOINT_AUTH" {
+                "Bearer environment-token".into()
+            } else {
+                String::new()
+            }
         }
-    }
-    let (code, text) = Running::start(&collab, from_environment, "dev")
-        .await
-        .stop()
-        .await;
-    assert_eq!(code, 0);
-    let listening = text.find(" listening on ").unwrap();
-    assert!(
-        !text[..listening].contains("--doc-endpoint-auth"),
-        "the environment warned: {text:?}"
-    );
+        let (code, text) = Running::start(&collab, from_environment, "dev")
+            .await
+            .stop()
+            .await;
+        assert_eq!(code, 0);
+        let listening = text.find(" listening on ").unwrap();
+        assert!(
+            !text[..listening].contains("--doc-endpoint-auth"),
+            "the environment warned: {text:?}"
+        );
+    })
+    .await;
 }
 
 // H34: the host gives the drain C#'s 30 s (HostCollab.ShutdownTimeout), so a
 // doc endpoint that takes 2 s to save still gets the room's last state.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_shutdown_drain_outlasts_a_slow_doc_endpoint() {
+    within(async {
     let endpoint = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let endpoint_address = endpoint.local_addr().unwrap();
     let (saved_tx, mut saved) = tokio::sync::mpsc::unbounded_channel::<String>();
@@ -937,6 +1023,8 @@ async fn the_shutdown_drain_outlasts_a_slow_doc_endpoint() {
         .expect("the endpoint never finished a save");
     assert!(body.contains(r#""kept""#), "saved {body}");
     serving.abort();
+    })
+    .await;
 }
 
 // HostCollab.Configure sets Kestrel's MaxConcurrentUpgradedConnections to
@@ -989,64 +1077,71 @@ fn spool_files(dir: &std::path::Path) -> Vec<String> {
 
 #[tokio::test]
 async fn starts_with_defaults_and_reports_the_development_version() {
-    let running = Running::start(&[], no_env, "dev").await;
-    let address = running.address.clone();
-    let (status, headers, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
-    assert_eq!(
-        (
-            status,
-            header(&headers, "content-type").as_str(),
-            body.as_str()
-        ),
-        (
-            200,
-            "application/json",
-            "{\"status\":\"ok\",\"version\":\"dev\"}\n"
+    within(async {
+        let running = Running::start(&[], no_env, "dev").await;
+        let address = running.address.clone();
+        let (status, headers, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
+        assert_eq!(
+            (
+                status,
+                header(&headers, "content-type").as_str(),
+                body.as_str()
+            ),
+            (
+                200,
+                "application/json",
+                "{\"status\":\"ok\",\"version\":\"dev\"}\n"
+            )
+        );
+        let (status, _, body) = request(&address, "GET", "/unfurl", "HTTP/1.1").await;
+        assert_eq!((status, body.as_str()), (400, "{\"success\":0}\n"));
+        let (status, body) = post(&address, "/upload", "text/plain; charset=utf-8", b"").await;
+        assert_eq!((status, body.as_str()), (400, "malformed upload\n"));
+        let (status, body) = post(
+            &address,
+            "/upload-by-url",
+            "application/json; charset=utf-8",
+            b"",
         )
-    );
-    let (status, _, body) = request(&address, "GET", "/unfurl", "HTTP/1.1").await;
-    assert_eq!((status, body.as_str()), (400, "{\"success\":0}\n"));
-    let (status, body) = post(&address, "/upload", "text/plain; charset=utf-8", b"").await;
-    assert_eq!((status, body.as_str()), (400, "malformed upload\n"));
-    let (status, body) = post(
-        &address,
-        "/upload-by-url",
-        "application/json; charset=utf-8",
-        b"",
-    )
+        .await;
+        assert_eq!(
+            (status, body.as_str()),
+            (400, "expected {\"url\": \"...\"}\n")
+        );
+        running.stop().await;
+    })
     .await;
-    assert_eq!(
-        (status, body.as_str()),
-        (400, "expected {\"url\": \"...\"}\n")
-    );
-    running.stop().await;
 }
 
 // The stamp is read at compile time, and cargo builds this test and the
 // binary with the same environment, so both see the same value.
 #[tokio::test]
 async fn published_host_reports_the_supplied_build_version() {
-    let want = option_env!("BLOK_SERVER_VERSION").unwrap_or("dev");
-    let (mut child, text, address) = listening_binary(&[], &[]).await;
-    let (status, _, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
-    let _ = child.kill();
-    let _ = child.wait();
-    let stderr = text.lock().unwrap().clone();
-    assert!(
-        stderr.starts_with(&format!("blok-server {want} listening on ")),
-        "{stderr:?}"
-    );
-    assert_eq!(
-        (status, body),
-        (
-            200,
-            format!("{{\"status\":\"ok\",\"version\":\"{want}\"}}\n")
-        )
-    );
+    within(async {
+        let want = option_env!("BLOK_SERVER_VERSION").unwrap_or("dev");
+        let (mut child, text, address) = listening_binary(&[], &[]).await;
+        let (status, _, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
+        let _ = child.kill();
+        let _ = child.wait();
+        let stderr = text.lock().unwrap().clone();
+        assert!(
+            stderr.starts_with(&format!("blok-server {want} listening on ")),
+            "{stderr:?}"
+        );
+        assert_eq!(
+            (status, body),
+            (
+                200,
+                format!("{{\"status\":\"ok\",\"version\":\"{want}\"}}\n")
+            )
+        );
+    })
+    .await;
 }
 
 #[tokio::test]
 async fn removes_the_endpoint_spool_after_malformed_trailing_data() {
+    within(async {
     let root = scratch_dir("malformed-cleanup");
     let temp = root.join("temp");
     std::fs::create_dir_all(&temp).unwrap();
@@ -1072,10 +1167,13 @@ async fn removes_the_endpoint_spool_after_malformed_trailing_data() {
     assert_eq!(answer, (400, "malformed upload\n".to_owned()));
     assert_eq!(spool_files(&temp), Vec::<String>::new());
     let _ = std::fs::remove_dir_all(&root);
+    })
+    .await;
 }
 
 #[tokio::test]
 async fn removes_the_endpoint_spool_after_storage_failure() {
+    within(async {
     let root = scratch_dir("storage-failure-cleanup");
     let temp = root.join("temp");
     std::fs::create_dir_all(&temp).unwrap();
@@ -1102,24 +1200,29 @@ async fn removes_the_endpoint_spool_after_storage_failure() {
     assert_eq!(answer, (502, "upload failed\n".to_owned()));
     assert_eq!(spool_files(&temp), Vec::<String>::new());
     let _ = std::fs::remove_dir_all(&root);
+    })
+    .await;
 }
 
 #[tokio::test]
 async fn refuses_a_malformed_local_public_url_before_binding() {
-    let (code, stderr) = run_to_exit(&[
-        "--listen",
-        &free_port(),
-        "--public-url",
-        "https://uploads.example/%zz",
-    ])
+    within(async {
+        let (code, stderr) = run_to_exit(&[
+            "--listen",
+            &free_port(),
+            "--public-url",
+            "https://uploads.example/%zz",
+        ])
+        .await;
+        assert_eq!(code, 1, "{stderr:?}");
+        assert!(
+            stderr.starts_with("blok-server refused to start: ")
+                && stderr.contains("PublicUrl")
+                && !stderr.contains(" listening on "),
+            "{stderr:?}"
+        );
+    })
     .await;
-    assert_eq!(code, 1, "{stderr:?}");
-    assert!(
-        stderr.starts_with("blok-server refused to start: ")
-            && stderr.contains("PublicUrl")
-            && !stderr.contains(" listening on "),
-        "{stderr:?}"
-    );
 }
 
 #[test]
@@ -1145,98 +1248,104 @@ fn uses_the_auth_default_rate_limit_when_the_flag_is_omitted() {
 
 #[tokio::test]
 async fn accepts_every_flag_and_lets_an_explicit_secret_override_the_environment() {
-    fn environment(name: &str) -> String {
-        match name {
-            "BLOK_SECRET" => "short",
-            "BLOK_S3_ACCESS_KEY" => "access-key",
-            "BLOK_S3_SECRET_KEY" => "secret-key",
-            _ => "",
+    within(async {
+        fn environment(name: &str) -> String {
+            match name {
+                "BLOK_SECRET" => "short",
+                "BLOK_S3_ACCESS_KEY" => "access-key",
+                "BLOK_S3_SECRET_KEY" => "secret-key",
+                _ => "",
+            }
+            .to_owned()
         }
-        .to_owned()
-    }
-    let collab_dir = scratch_dir("every-flag").display().to_string();
-    let running = Running::start(
-        &[
-            "--auth",
-            "ticket",
-            "--secret",
-            VALID_SECRET,
-            "--allow-origin",
-            "https://app.example.com, https://admin.example.com",
-            "--storage-dir",
-            "",
-            "--public-url",
-            "https://uploads.example.com/files",
-            "--max-upload",
-            "1024",
-            "--rate-limit",
-            "7",
-            "--no-unfurl",
-            "--s3-endpoint",
-            "https://s3.example.com",
-            "--s3-region",
-            "eu-central-1",
-            "--s3-bucket",
-            "blok",
-            "--s3-bucket-url",
-            "https://uploads.example.com",
-            "--s3-addressing",
-            "path",
-            "--collab",
-            "--doc-endpoint",
-            VALID_DOC_ENDPOINT,
-            "--doc-endpoint-auth",
-            "Bearer app-token",
-            "--collab-dir",
-            &collab_dir,
-            "--collab-s3-prefix",
-            "collab/",
-        ],
-        environment,
-        "dev",
-    )
+        let collab_dir = scratch_dir("every-flag").display().to_string();
+        let running = Running::start(
+            &[
+                "--auth",
+                "ticket",
+                "--secret",
+                VALID_SECRET,
+                "--allow-origin",
+                "https://app.example.com, https://admin.example.com",
+                "--storage-dir",
+                "",
+                "--public-url",
+                "https://uploads.example.com/files",
+                "--max-upload",
+                "1024",
+                "--rate-limit",
+                "7",
+                "--no-unfurl",
+                "--s3-endpoint",
+                "https://s3.example.com",
+                "--s3-region",
+                "eu-central-1",
+                "--s3-bucket",
+                "blok",
+                "--s3-bucket-url",
+                "https://uploads.example.com",
+                "--s3-addressing",
+                "path",
+                "--collab",
+                "--doc-endpoint",
+                VALID_DOC_ENDPOINT,
+                "--doc-endpoint-auth",
+                "Bearer app-token",
+                "--collab-dir",
+                &collab_dir,
+                "--collab-s3-prefix",
+                "collab/",
+            ],
+            environment,
+            "dev",
+        )
+        .await;
+        let address = running.address.clone();
+        assert_eq!(request(&address, "GET", "/health", "HTTP/1.1").await.0, 200);
+        assert_eq!(request(&address, "GET", "/unfurl", "HTTP/1.1").await.0, 404);
+        let answer = post(&address, "/upload", "text/plain; charset=utf-8", b"").await;
+        assert_eq!(answer, (403, "origin not allowed\n".to_owned()));
+        let (status, _) = post(&address, "/upload-by-url", "text/plain; charset=utf-8", b"").await;
+        assert_eq!(status, 404);
+        let (code, _) = running.stop().await;
+        assert_eq!(code, 0);
+        let _ = std::fs::remove_dir_all(&collab_dir);
+    })
     .await;
-    let address = running.address.clone();
-    assert_eq!(request(&address, "GET", "/health", "HTTP/1.1").await.0, 200);
-    assert_eq!(request(&address, "GET", "/unfurl", "HTTP/1.1").await.0, 404);
-    let answer = post(&address, "/upload", "text/plain; charset=utf-8", b"").await;
-    assert_eq!(answer, (403, "origin not allowed\n".to_owned()));
-    let (status, _) = post(&address, "/upload-by-url", "text/plain; charset=utf-8", b"").await;
-    assert_eq!(status, 404);
-    let (code, _) = running.stop().await;
-    assert_eq!(code, 0);
-    let _ = std::fs::remove_dir_all(&collab_dir);
 }
 
 #[tokio::test]
 async fn keeps_port_zero_when_binding_a_blank_host_listener() {
-    // The later --listen wins over the one Running::start puts first.
-    let running = Running::start(
-        &[
-            "--listen",
-            ":0",
-            "--auth",
-            "ticket",
-            "--secret",
-            VALID_SECRET,
-            "--allow-origin",
-            "https://app.example.com",
-            "--storage-dir",
-            "",
-        ],
-        no_env,
-        "dev",
-    )
+    within(async {
+        // The later --listen wins over the one Running::start puts first.
+        let running = Running::start(
+            &[
+                "--listen",
+                ":0",
+                "--auth",
+                "ticket",
+                "--secret",
+                VALID_SECRET,
+                "--allow-origin",
+                "https://app.example.com",
+                "--storage-dir",
+                "",
+            ],
+            no_env,
+            "dev",
+        )
+        .await;
+        assert!(
+            running.out.text().contains("listening on :0"),
+            "{:?}",
+            running.out.text()
+        );
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        assert!(!running.done.is_finished(), "{:?}", running.out.text());
+        let (code, _) = running.stop().await;
+        assert_eq!(code, 0);
+    })
     .await;
-    assert!(
-        running.out.text().contains("listening on :0"),
-        "{:?}",
-        running.out.text()
-    );
-    tokio::time::sleep(Duration::from_millis(500)).await;
-    assert!(!running.done.is_finished(), "{:?}", running.out.text());
-    let (code, _) = running.stop().await;
-    assert_eq!(code, 0);
 }
 
 fn doc_endpoint_auth_environment(name: &str) -> String {
@@ -1431,52 +1540,55 @@ fn reads_the_rich_text_fields_from_the_environment_unless_the_flag_is_given() {
 // Only the rows no other Rust test or conformance case covers.
 #[tokio::test]
 async fn exits_with_the_contract_code() {
-    fn journal_one(name: &str) -> String {
-        if name == "BLOK_COLLAB_JOURNAL" {
-            "1".into()
-        } else {
-            String::new()
+    within(async {
+        fn journal_one(name: &str) -> String {
+            if name == "BLOK_COLLAB_JOURNAL" {
+                "1".into()
+            } else {
+                String::new()
+            }
         }
-    }
-    let listen = free_port();
-    type Case<'a> = (&'a [&'a str], i32, &'a str, fn(&str) -> String);
-    let cases: [Case; 4] = [
-        (
-            &["--collab=maybe"],
-            2,
-            "invalid value \"maybe\" for flag -collab: parse error",
-            no_env,
-        ),
-        (
-            &["--collab=false", "--doc-endpoint", VALID_DOC_ENDPOINT],
-            1,
-            "--doc-endpoint needs --collab",
-            no_env,
-        ),
-        (&[], 1, "--collab-journal needs --collab", journal_one),
-        (
-            // The default --collab-dir ./blok-collab resolves against the cwd.
-            &[
-                "--collab",
-                "--doc-endpoint",
-                VALID_DOC_ENDPOINT,
-                "--storage-dir",
-                ".",
-            ],
-            1,
-            "--collab-dir must not resolve inside --storage-dir",
-            no_env,
-        ),
-    ];
-    for (args, want_code, want, getenv) in cases {
-        let mut all = vec!["--listen", listen.as_str()];
-        all.extend(args);
-        let (code, stderr) = run_to_exit_with(&all, getenv).await;
-        assert!(
-            code == want_code && stderr.contains(want),
-            "{args:?}: {code} {stderr:?}"
-        );
-    }
+        let listen = free_port();
+        type Case<'a> = (&'a [&'a str], i32, &'a str, fn(&str) -> String);
+        let cases: [Case; 4] = [
+            (
+                &["--collab=maybe"],
+                2,
+                "invalid value \"maybe\" for flag -collab: parse error",
+                no_env,
+            ),
+            (
+                &["--collab=false", "--doc-endpoint", VALID_DOC_ENDPOINT],
+                1,
+                "--doc-endpoint needs --collab",
+                no_env,
+            ),
+            (&[], 1, "--collab-journal needs --collab", journal_one),
+            (
+                // The default --collab-dir ./blok-collab resolves against the cwd.
+                &[
+                    "--collab",
+                    "--doc-endpoint",
+                    VALID_DOC_ENDPOINT,
+                    "--storage-dir",
+                    ".",
+                ],
+                1,
+                "--collab-dir must not resolve inside --storage-dir",
+                no_env,
+            ),
+        ];
+        for (args, want_code, want, getenv) in cases {
+            let mut all = vec!["--listen", listen.as_str()];
+            all.extend(args);
+            let (code, stderr) = run_to_exit_with(&all, getenv).await;
+            assert!(
+                code == want_code && stderr.contains(want),
+                "{args:?}: {code} {stderr:?}"
+            );
+        }
+    })
+    .await;
 }
 
 // HostCollabTests.cs
@@ -1750,86 +1862,89 @@ async fn fixture_doc_endpoint(
 
 #[tokio::test(flavor = "multi_thread")]
 async fn drains_sync_rooms_on_sigterm() {
-    let (endpoint, puts, serving) = fixture_doc_endpoint("null").await;
-    let collab_dir = scratch_dir("sigterm");
-    let dir = collab_dir.display().to_string();
-    let running = Running::start(
-        &[
-            "--auth",
-            "none",
-            "--storage-dir",
-            "",
-            "--rate-limit",
-            "0",
-            "--collab",
-            "--collab-dir",
-            &dir,
-            "--doc-endpoint",
-            &endpoint,
-        ],
-        no_env,
-        "dev",
-    )
+    within(async {
+        let (endpoint, puts, serving) = fixture_doc_endpoint("null").await;
+        let collab_dir = scratch_dir("sigterm");
+        let dir = collab_dir.display().to_string();
+        let running = Running::start(
+            &[
+                "--auth",
+                "none",
+                "--storage-dir",
+                "",
+                "--rate-limit",
+                "0",
+                "--collab",
+                "--collab-dir",
+                &dir,
+                "--doc-endpoint",
+                &endpoint,
+            ],
+            no_env,
+            "dev",
+        )
+        .await;
+
+        let mut editor = Socket::connect(&running.address).await;
+        editor.handshake().await;
+        let mut observer = Socket::connect(&running.address).await;
+        observer.handshake().await;
+
+        // The observer's relayed copy proves the room applied the edit.
+        let update = base64_decode(&fixture("collab/hierarchy-3-deep/update.b64"));
+        editor.send(&update_frame(&update)).await;
+        assert_eq!(observer.receive_sync(2).await, update);
+
+        let Running {
+            address,
+            out,
+            mut stop,
+            done,
+        } = running;
+        let _ = stop.take().unwrap().send(());
+        let closes = (editor.receive_close().await, observer.receive_close().await);
+        let want = (1001, "server shutting down".to_owned());
+        assert_eq!(closes, (want.clone(), want));
+        // HostOptions.ShutdownTimeout is 30 s; a drain that misses it fails.
+        let code = tokio::time::timeout(Duration::from_secs(35), done)
+            .await
+            .expect("the host did not exit after the stop")
+            .unwrap();
+        let stderr = out.text();
+        assert_eq!(code, 0, "{stderr}");
+
+        let canonical = json_node(&fixture("collab/hierarchy-3-deep/canonical.json"));
+        let doc_puts: Vec<Vec<u8>> = puts
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(path, _)| path.ends_with(&format!("/{DOC_ID}")))
+            .map(|(_, body)| body.clone())
+            .collect();
+        assert_eq!(doc_puts.len(), 1, "PUTs for {DOC_ID} via {address}");
+        let put = json_node(&doc_puts[0]);
+        assert_eq!(
+            block_ids(put.lookup("blocks").unwrap().expect("no blocks")),
+            block_ids(&canonical)
+        );
+
+        let blob = collab_dir.join(blok_collab_workingset::doc_key(DOC_ID));
+        let length = std::fs::metadata(&blob)
+            .unwrap_or_else(|e| panic!("no working-set blob at {}: {e}", blob.display()))
+            .len();
+        // 16 bytes is a header-only (empty-log) working set.
+        assert!(
+            length > 16,
+            "the working-set blob holds no frames ({length} bytes)"
+        );
+        assert!(
+            !stderr.contains("Unhandled exception") && !stderr.contains("error:"),
+            "{stderr}"
+        );
+        serving.abort();
+        let _ = std::fs::remove_dir_all(&collab_dir);
+    })
     .await;
-
-    let mut editor = Socket::connect(&running.address).await;
-    editor.handshake().await;
-    let mut observer = Socket::connect(&running.address).await;
-    observer.handshake().await;
-
-    // The observer's relayed copy proves the room applied the edit.
-    let update = base64_decode(&fixture("collab/hierarchy-3-deep/update.b64"));
-    editor.send(&update_frame(&update)).await;
-    assert_eq!(observer.receive_sync(2).await, update);
-
-    let Running {
-        address,
-        out,
-        mut stop,
-        done,
-    } = running;
-    let _ = stop.take().unwrap().send(());
-    let closes = (editor.receive_close().await, observer.receive_close().await);
-    let want = (1001, "server shutting down".to_owned());
-    assert_eq!(closes, (want.clone(), want));
-    // HostOptions.ShutdownTimeout is 30 s; a drain that misses it fails.
-    let code = tokio::time::timeout(Duration::from_secs(35), done)
-        .await
-        .expect("the host did not exit after the stop")
-        .unwrap();
-    let stderr = out.text();
-    assert_eq!(code, 0, "{stderr}");
-
-    let canonical = json_node(&fixture("collab/hierarchy-3-deep/canonical.json"));
-    let doc_puts: Vec<Vec<u8>> = puts
-        .lock()
-        .unwrap()
-        .iter()
-        .filter(|(path, _)| path.ends_with(&format!("/{DOC_ID}")))
-        .map(|(_, body)| body.clone())
-        .collect();
-    assert_eq!(doc_puts.len(), 1, "PUTs for {DOC_ID} via {address}");
-    let put = json_node(&doc_puts[0]);
-    assert_eq!(
-        block_ids(put.lookup("blocks").unwrap().expect("no blocks")),
-        block_ids(&canonical)
-    );
-
-    let blob = collab_dir.join(blok_collab_workingset::doc_key(DOC_ID));
-    let length = std::fs::metadata(&blob)
-        .unwrap_or_else(|e| panic!("no working-set blob at {}: {e}", blob.display()))
-        .len();
-    // 16 bytes is a header-only (empty-log) working set.
-    assert!(
-        length > 16,
-        "the working-set blob holds no frames ({length} bytes)"
-    );
-    assert!(
-        !stderr.contains("Unhandled exception") && !stderr.contains("error:"),
-        "{stderr}"
-    );
-    serving.abort();
-    let _ = std::fs::remove_dir_all(&collab_dir);
 }
 
 // The keep-alive half of the C# test lives in http's sync_deadline.rs, since
@@ -1838,37 +1953,41 @@ async fn drains_sync_rooms_on_sigterm() {
 // stalled body once Kestrel's 5 s body-rate grace has passed.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_sync_socket_outlives_kestrels_keep_alive_timeout() {
-    let (endpoint, _puts, serving) = fixture_doc_endpoint("null").await;
-    let collab_dir = scratch_dir("keep-alive");
-    let dir = collab_dir.display().to_string();
-    let running = Running::start(
-        &[
-            "--storage-dir",
-            "",
-            "--collab",
-            "--collab-dir",
-            &dir,
-            "--doc-endpoint",
-            &endpoint,
-        ],
-        no_env,
-        "dev",
-    )
+    within(async {
+        let (endpoint, _puts, serving) = fixture_doc_endpoint("null").await;
+        let collab_dir = scratch_dir("keep-alive");
+        let dir = collab_dir.display().to_string();
+        let running = Running::start(
+            &[
+                "--storage-dir",
+                "",
+                "--collab",
+                "--collab-dir",
+                &dir,
+                "--doc-endpoint",
+                &endpoint,
+            ],
+            no_env,
+            "dev",
+        )
+        .await;
+        let mut socket = Socket::connect(&running.address).await;
+        socket.handshake().await;
+        tokio::time::sleep(Duration::from_secs(6)).await;
+        socket.handshake().await;
+        drop(socket);
+        running.stop().await;
+        serving.abort();
+        let _ = std::fs::remove_dir_all(&collab_dir);
+    })
     .await;
-    let mut socket = Socket::connect(&running.address).await;
-    socket.handshake().await;
-    tokio::time::sleep(Duration::from_secs(6)).await;
-    socket.handshake().await;
-    drop(socket);
-    running.stop().await;
-    serving.abort();
-    let _ = std::fs::remove_dir_all(&collab_dir);
 }
 
 // --rich-text-fields reaches the room: a listed custom field is stored as
 // formatted text and answered as segments; an unlisted one stays a string.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_rich_text_fields_flag_makes_a_custom_field_segments() {
+    within(async {
     for listed in [true, false] {
         let (endpoint, _puts, serving) = fixture_doc_endpoint("null").await;
         let collab_dir = scratch_dir("rich-fields");
@@ -1914,6 +2033,8 @@ async fn the_rich_text_fields_flag_makes_a_custom_field_segments() {
         serving.abort();
         let _ = std::fs::remove_dir_all(&collab_dir);
     }
+    })
+    .await;
 }
 
 /// The head of the first answer, Date and Server kept.
@@ -1938,6 +2059,7 @@ async fn raw_head(address: &str, request: &str) -> String {
 // bare refusals and the 101 too. Order is not part of the contract.
 #[tokio::test(flavor = "multi_thread")]
 async fn every_answer_names_kestrel() {
+    within(async {
     let blok = Server::new(Options::default()).unwrap().handler("");
     let blok = Arc::new(blok);
     let config = blok_http::Config {
@@ -2007,6 +2129,8 @@ async fn every_answer_names_kestrel() {
         );
     }
     serving.abort();
+    })
+    .await;
 }
 
 // Measured on the C# host: argv and environment bytes that are not UTF-8
@@ -2055,17 +2179,20 @@ fn the_binary_decodes_non_utf8_arguments_and_environment_as_c_sharp_does() {
 // literal, so it keeps "\n".
 #[tokio::test]
 async fn stderr_records_end_with_dot_nets_new_line() {
-    let want = if cfg!(windows) { "\r\n" } else { "\n" };
-    assert_eq!(blok_server::NEWLINE, want);
-    let (_, text) = run_to_exit(&["--not-a-real-flag"]).await;
-    assert!(
-        text.starts_with(&format!(
-            "flag provided but not defined: -not-a-real-flag{want}{}",
-            &USAGE[..10]
-        )),
-        "{text:?}"
-    );
-    let out = Buffer::default();
-    blok_server::collablog::write_log_line(&out.stderr(), "warning", "x").unwrap();
-    assert_eq!(out.text(), format!("warning: x{want}"));
+    within(async {
+        let want = if cfg!(windows) { "\r\n" } else { "\n" };
+        assert_eq!(blok_server::NEWLINE, want);
+        let (_, text) = run_to_exit(&["--not-a-real-flag"]).await;
+        assert!(
+            text.starts_with(&format!(
+                "flag provided but not defined: -not-a-real-flag{want}{}",
+                &USAGE[..10]
+            )),
+            "{text:?}"
+        );
+        let out = Buffer::default();
+        blok_server::collablog::write_log_line(&out.stderr(), "warning", "x").unwrap();
+        assert_eq!(out.text(), format!("warning: x{want}"));
+    })
+    .await;
 }

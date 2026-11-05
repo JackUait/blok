@@ -395,6 +395,38 @@ public sealed class GuardedOutboundFetcherTests
     Assert.Equal($"secure.example:{origin.Port}", origin.LastRequest?.Host);
   }
 
+  // Go and Rust copy this: .NET refuses at TLS a label with '-' at an
+  // end and a label past 63 bytes, with a trusted certificate naming it
+  // (macOS: SecPolicyCreateSSL; Linux: IdnMapping in the name check).
+  [Theory]
+  [InlineData("ok.example", true)]
+  [InlineData("a_b.example", true)]
+  [InlineData("a.-b.example", false)]
+  [InlineData("foo-.example", false)]
+  [InlineData("-a.example", false)]
+  [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example", false)]
+  public async Task RefusesAtTlsTheHostNamesDotNetRefuses(string host, bool fetched)
+  {
+    using var certificates = TestCertificates.Create(host);
+    await using var origin = new LoopbackOrigin(certificates.Server);
+    var fetcher = new GuardedOutboundFetcher(
+        new FixtureOutboundPolicy(host, origin.Port, IPAddress.Loopback),
+        new SequenceDnsResolver([IPAddress.Loopback]),
+        new X509Certificate2Collection(certificates.Root));
+    var url = $"https://{host}:{origin.Port}/";
+
+    if (fetched)
+    {
+      var response = await fetcher.GetAsync(url, Limits, CancellationToken.None);
+      Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
+      return;
+    }
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(url, Limits, CancellationToken.None));
+    Assert.Equal(GuardedFetchFailure.BlockedDestination, error.Failure);
+  }
+
   [Fact]
   public async Task RejectsATrustedCertificateForTheWrongHostname()
   {
@@ -2385,9 +2417,7 @@ public sealed class GuardedOutboundFetcherTests
           new X509EnhancedKeyUsageExtension(
               [new Oid("1.3.6.1.5.5.7.3.1")],
               critical: true));
-      var names = new SubjectAlternativeNameBuilder();
-      names.AddDnsName(host);
-      serverRequest.CertificateExtensions.Add(names.Build());
+      serverRequest.CertificateExtensions.Add(DnsNameExtension(host));
       using var issuedServer = serverRequest.Create(
           root,
           DateTimeOffset.UtcNow.AddMinutes(-5),
@@ -2400,6 +2430,25 @@ public sealed class GuardedOutboundFetcherTests
           password: null);
 
       return new TestCertificates(root, server);
+    }
+
+    // SubjectAlternativeNameBuilder refuses names IdnMapping refuses
+    // ("a.-b.example"); the client's answer to them is what some tests pin.
+    private static X509Extension DnsNameExtension(string host)
+    {
+      var writer = new System.Formats.Asn1.AsnWriter(
+          System.Formats.Asn1.AsnEncodingRules.DER);
+      using (writer.PushSequence())
+      {
+        writer.WriteCharacterString(
+            System.Formats.Asn1.UniversalTagNumber.IA5String,
+            host,
+            new System.Formats.Asn1.Asn1Tag(
+                System.Formats.Asn1.TagClass.ContextSpecific,
+                2));
+      }
+
+      return new X509Extension("2.5.29.17", writer.Encode(), critical: false);
     }
 
     internal static TestCertificates CreateWithIntermediateAia(

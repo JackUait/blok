@@ -275,3 +275,34 @@ async fn the_fetcher_never_lets_the_verifier_fetch_an_issuer() {
     tokio::time::sleep(Duration::from_secs(1)).await;
     assert_eq!(issuer.count(), 0, "the verifier fetched the issuer");
 }
+
+// Twin of Go's TestRefusesAtTLSTheHostNamesDotNetRefuses: measured on the
+// C# fetcher with a trusted certificate naming each host.
+#[tokio::test]
+async fn refuses_at_tls_the_host_names_dot_net_refuses() {
+    let long = format!("{}.example", "a".repeat(64));
+    let cases: [(&str, bool); 11] = [
+        ("ok.example", true),
+        ("a_b.example", true),
+        ("ab--cd.example", true),
+        ("xn--zz.example", true),
+        ("a.1b.example", true),
+        ("1.2.3.example", true),
+        ("a.-b.example", false),
+        ("foo-.example", false),
+        ("-a.example", false),
+        ("x.123", false),
+        (&long, false),
+    ];
+    for (host, ok) in cases {
+        let pki = pki(host, |_| {});
+        let o = tls_origin(&pki, &[], ok_handler()).await;
+        let f = loopback_fetcher(host, o.port, Some(pki.roots.clone()));
+        let got = f.get(&format!("https://{host}:{}/", o.port), &limits()).await;
+        if ok {
+            assert_eq!(got.unwrap().body, b"ok", "{host}");
+        } else {
+            assert_eq!(failure(got), Some(Failure::Blocked), "{host}");
+        }
+    }
+}

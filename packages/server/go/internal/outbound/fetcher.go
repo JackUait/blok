@@ -258,8 +258,43 @@ func (f *Fetcher) tlsConfig(target Target) *tls.Config {
 	}
 	if !target.Literal.IsValid() {
 		config.ServerName = target.Host
+		// Go matches any exact name; .NET refuses these at the certificate
+		// check, after the handshake, as this does.
+		config.VerifyConnection = func(tls.ConnectionState) error {
+			if !tlsHostName(target.Host) {
+				return errTLSHostName
+			}
+			return nil
+		}
 	}
 	return config
+}
+
+var errTLSHostName = errors.New("outbound: the host is not a name TLS can check")
+
+// tlsHostName is the name rule .NET's TLS check applies (measured on
+// SecPolicyCreateSSL; rustls holds the same): labels of 1 to 63 letters,
+// digits, '_' or '-', no '-' at a label's ends, at most 253 bytes, and a
+// last label that is not all digits. A trailing dot is allowed.
+func tlsHostName(host string) bool {
+	host = strings.TrimSuffix(host, ".")
+	if host == "" || len(host) > 253 {
+		return false
+	}
+	labels := strings.Split(host, ".")
+	for _, label := range labels {
+		if label == "" || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for i := 0; i < len(label); i++ {
+			c := label[i]
+			if !(c == '-' || c == '_' || '0' <= c && c <= '9' || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z') {
+				return false
+			}
+		}
+	}
+	last := labels[len(labels)-1]
+	return strings.Trim(last, "0123456789") != ""
 }
 
 // plainHostName reports whether host holds only letters, digits, '-', '.'

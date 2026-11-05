@@ -35,7 +35,8 @@ pub(crate) enum TextOp {
     },
     Format {
         index: usize,
-        length: usize,
+        // Signed: C# passes a negative length through to format_text.
+        length: i64,
         attributes: Object,
     },
     Delete {
@@ -205,7 +206,7 @@ impl TypeRef {
             txn,
             TextOp::Format {
                 index,
-                length: length.max(0) as usize,
+                length,
                 attributes: attributes.clone(),
             },
         )
@@ -537,7 +538,7 @@ impl DocState {
         &mut self,
         id: TypeId,
         mut position: TextPosition,
-        mut length: usize,
+        mut length: i64,
         attributes: Attrs,
     ) -> EngineResult<()> {
         self.minimize_attribute_changes(&mut position, &attributes)?;
@@ -565,18 +566,20 @@ impl DocState {
                         position.current.set(format.key.clone(), format.value());
                     }
                 } else {
-                    if length < item.length {
+                    // Only reached with length > 0: otherwise the loop runs on
+                    // deleted items and marks alone.
+                    if length < item.length as i64 {
                         let split = Id::new(item.id.client, item.id.clock + length as u64);
                         self.store.get_item_clean_start(split)?;
                     }
-                    length -= self.store.items[right].length;
+                    length -= self.store.items[right].length as i64;
                 }
             }
             self.forward(&mut position)?;
         }
         // yjs pads with newlines when the range runs past the end (a Quill rule).
         if length > 0 {
-            let newlines = Str(vec![u16::from(b'\n'); length]);
+            let newlines = Str(vec![u16::from(b'\n'); length as usize]);
             self.place(id, &mut position, Content::String(newlines))?;
         }
         self.insert_negated_attributes(id, &mut position, negated)

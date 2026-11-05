@@ -932,3 +932,30 @@ fn a_write_over_a_length_zero_head_fails_like_yjs() {
     let failure = doc.transact(|txn| m.set(txn, "k", num(1.0))).unwrap_err();
     assert_eq!(failure.to_string(), "Unexpected case");
 }
+
+// YTextFormattingTests.ANegativeFormatLengthStillDeletesTheConflictingMarkAtTheStart:
+// only the index is range-checked, and a negative length skips
+// format_text's length-0 break, so the bold:true mark at clock 0 is
+// deleted and restored after.
+#[test]
+fn a_negative_format_length_still_deletes_the_conflicting_mark_at_the_start() {
+    let doc = doc_with_id(4242);
+    let text = doc.get_text("content").unwrap();
+    let bold = obj(vec![("bold", Value::Bool(true))]);
+    let unbold = obj(vec![("bold", Value::Bool(false))]);
+    doc.transact(|txn| text.insert(Some(txn), 0, "ab", Some(&bold)))
+        .unwrap();
+    let update = doc
+        .transact(|txn| text.format(Some(txn), 0, -1, &unbold))
+        .unwrap()
+        .expect("an update");
+    let hex: String = update.iter().map(|byte| format!("{byte:02X}")).collect();
+    assert_eq!(
+        hex,
+        "01029221044692210004626F6C640566616C7365C692210092210104626F6C640474727565019221010001"
+    );
+    assert_eq!(
+        blok_jsjson::stringify(&delta_json(text.to_delta())).unwrap(),
+        r#"[{"insert":"ab","attributes":{"bold":true}}]"#
+    );
+}

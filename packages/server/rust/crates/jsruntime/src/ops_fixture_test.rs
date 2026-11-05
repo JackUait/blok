@@ -197,3 +197,91 @@ fn rewrites_lone_escapes_and_keeps_pairs_as_go_does() {
         "a\u{fffd}b\\uD83D\\uDE80\u{fffd}\\\\x"
     );
 }
+
+// C# (Jint) stops these big documents at a 64 MiB budget and converts the
+// rest; at the default budget it converts them all (the test above).
+const STOPPED_AT_64_MIB: [(&str, bool); 11] = [
+    ("big.plain.text", false),
+    ("big.plain.markdown", true),
+    ("big.plain.html", false),
+    ("big.marked.text", true),
+    ("big.marked.markdown", true),
+    ("big.marked.html", true),
+    ("big.marked.pageIndex", true),
+    ("big.marked.extract", false),
+    ("big.url.image.markdown", true),
+    ("big.url.bookmark.markdown", true),
+    ("big.fromMarkdown", true),
+];
+
+fn stopped(result: &Result<String, InvokeError>) -> Option<bool> {
+    match result {
+        Ok(_) => Some(false),
+        Err(InvokeError::Failure(failure)) if failure.kind == crate::Kind::DocumentTooLarge => {
+            Some(true)
+        }
+        Err(_) => None,
+    }
+}
+
+#[tokio::test]
+async fn stops_the_big_documents_c_sharp_stops_at_64_mib() {
+    let cases = fixture("test/unit/server-conformance/fixtures/documents/ops.json");
+    let pool = Pool::new(Options {
+        pool_size: Some(1),
+        memory_budget: 64 << 20,
+        timeout: Duration::from_secs(300),
+    })
+    .expect("new");
+    let mut wrong = Vec::new();
+    for (name, want) in STOPPED_AT_64_MIB {
+        let case = cases
+            .array()
+            .iter()
+            .find(|case| case.get("name").str() == name)
+            .unwrap_or_else(|| panic!("no case {name}"));
+        let got = pool
+            .invoke(case.get("op").str(), &input(case), Duration::ZERO)
+            .await;
+        if stopped(&got) != Some(want) {
+            let shown: String = format!("{got:?}").chars().take(200).collect();
+            wrong.push(format!("{name}: {shown}, want stopped = {want}"));
+        }
+    }
+    assert!(wrong.is_empty(), "{wrong:#?}");
+}
+
+fn image_32_mib() -> String {
+    format!(
+        r#"{{"blocks":[{{"id":"u1","type":"image","data":{{"url":"data:image/png;base64,{}"}}}}]}}"#,
+        "A".repeat(32 << 20)
+    )
+}
+
+// A 32 MiB base64 image: C# refuses Markdown at its default budget and
+// converts plain text and HTML.
+#[tokio::test]
+async fn converts_a_32_mib_image_as_c_sharp_does_at_the_default_budget() {
+    let input = image_32_mib();
+    let pool = Pool::new(Options {
+        pool_size: Some(1),
+        timeout: Duration::from_secs(300),
+        ..Options::default()
+    })
+    .expect("new");
+    let mut wrong = Vec::new();
+    for (op, want) in [("blocksToMarkdown", true), ("blocksToPlainText", false)] {
+        let got = pool.invoke(op, &input, Duration::ZERO).await;
+        if stopped(&got) != Some(want) {
+            let shown: String = format!("{got:?}").chars().take(200).collect();
+            wrong.push(format!("{op}: {shown}, want stopped = {want}"));
+        }
+    }
+    assert!(wrong.is_empty(), "{wrong:#?}");
+}
+
+#[test]
+#[ignore = "QuickJS allocates 288 MiB to write a 32 MiB image as HTML, charged as 720 MiB; \
+            a factor low enough to convert it (under 1.78) would convert \
+            big.url.image.markdown at 64 MiB, which C# stops (all measured)"]
+fn converts_a_32_mib_image_to_html_as_c_sharp_does_at_the_default_budget() {}

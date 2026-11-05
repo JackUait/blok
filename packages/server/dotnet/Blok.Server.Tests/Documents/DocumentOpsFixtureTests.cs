@@ -131,6 +131,70 @@ public sealed partial class DocumentOpsFixtureTests
     return text.Append(expected, last, expected.Length - last).ToString();
   }
 
+  private static readonly Lazy<JintBlokRuntime> SixtyFourMiBRuntime = new(
+      () => JintBlokRuntime.FromEmbeddedResource(
+          poolSize: 1,
+          timeout: TimeSpan.FromMinutes(5),
+          allocationBudgetBytes: 64L * 1024 * 1024));
+
+  /*
+   * The Go and Rust runtimes stop the same big documents at 64 MiB (their
+   * jsruntime tests hold this table). At the default budget all of them
+   * convert: MatchesNodeOnTheSharedFixture.
+   */
+  [Theory]
+  [InlineData("big.plain.text", false)]
+  [InlineData("big.plain.markdown", true)]
+  [InlineData("big.plain.html", false)]
+  [InlineData("big.marked.text", true)]
+  [InlineData("big.marked.markdown", true)]
+  [InlineData("big.marked.html", true)]
+  [InlineData("big.marked.pageIndex", true)]
+  [InlineData("big.marked.extract", false)]
+  [InlineData("big.url.image.markdown", true)]
+  [InlineData("big.url.bookmark.markdown", true)]
+  [InlineData("big.fromMarkdown", true)]
+  public async Task StopsTheBigDocumentsOfTheSharedFixtureAt64MiB(string name, bool stopped)
+  {
+    var entry = Cases.Value.Single(entry => entry!["name"]!.GetValue<string>() == name)!;
+    var op = entry["op"]!.GetValue<string>();
+    var input = Expand(entry["inputRecipe"]!);
+
+    if (!stopped)
+    {
+      await SixtyFourMiBRuntime.Value.InvokeAsync(op, input);
+      return;
+    }
+
+    var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(
+        async () => await SixtyFourMiBRuntime.Value.InvokeAsync(op, input));
+    Assert.Equal(BlokConversionFailure.DocumentTooLarge, failure.Reason);
+  }
+
+  /*
+   * One 32 MiB base64 image at the default budget: Markdown is refused,
+   * plain text and HTML convert. The Go and Rust runtimes pin the same.
+   */
+  [Theory]
+  [InlineData("blocksToMarkdown", true)]
+  [InlineData("blocksToPlainText", false)]
+  [InlineData("blocksToHtml", false)]
+  public async Task ConvertsA32MiBImageAtTheDefaultBudget(string op, bool stopped)
+  {
+    var input = "{\"blocks\":[{\"id\":\"u1\",\"type\":\"image\",\"data\":{\"url\":\"data:image/png;base64,"
+        + new string('A', 32 * 1024 * 1024) + "\"}}]}";
+
+    if (!stopped)
+    {
+      await Runtime.Value.InvokeAsync(op, input);
+      return;
+    }
+
+    var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(
+        async () => await Runtime.Value.InvokeAsync(op, input));
+    Assert.Equal(BlokConversionFailure.DocumentTooLarge, failure.Reason);
+  }
+
   /// <summary>Parts are strings or { repeat, join, items }, with {i} the index.</summary>
   private static string Expand(JsonNode recipe)
   {

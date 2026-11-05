@@ -15,11 +15,9 @@ const (
 	DefaultTimeout = 10 * time.Second
 	// MinimumTimeout catches a host that passed milliseconds meaning seconds.
 	MinimumTimeout = 100 * time.Millisecond
-	// DefaultMemoryBudget bounds live heap growth during a call (guard.go).
-	// Twice C#'s 512 MiB allocation budget, which counts something else: a
-	// 3 MiB data URL to Markdown, which C# converts under 512 MiB, grew
-	// goja's live heap by up to 562 MiB (measured).
-	DefaultMemoryBudget int64 = 1 << 30
+	// DefaultMemoryBudget bounds what one call allocates (guard.go), as
+	// C#'s 512 MiB allocation budget does.
+	DefaultMemoryBudget int64 = 512 << 20
 	// MinimumMemoryBudget is C#'s floor. Loading the bundle from a compiled
 	// program allocated 6 MiB (measured), so 8 MiB still loads.
 	MinimumMemoryBudget int64 = 8 << 20
@@ -97,7 +95,7 @@ type Options struct {
 	PoolSize *int
 	// Timeout is the default wall-clock budget of one call and of each load.
 	Timeout time.Duration
-	// MemoryBudget is the heap growth one call may cause. Approximate: see guard.go.
+	// MemoryBudget is what one call may allocate. Approximate: see guard.go.
 	MemoryBudget int64
 }
 
@@ -195,9 +193,9 @@ func loadGuarded(program *goja.Program, timeout time.Duration, budget int64) (*R
 		case interruptBudget:
 			return nil, &StartupError{
 				Cause: StartupOverBudget,
-				Message: fmt.Sprintf("Loading Blok's runtime bundle into an engine grew the heap past the %d-byte "+
+				Message: fmt.Sprintf("Loading Blok's runtime bundle into an engine allocated more than the %d-byte "+
 					"allocation budget this runtime was created with. Loading runs under the same allocation budget as a "+
-					"conversion, so raise MemoryBudget: the default is %d bytes (1 GiB), and %d bytes is "+
+					"conversion, so raise MemoryBudget: the default is %d bytes (512 MiB), and %d bytes is "+
 					"the floor this package accepts at all.", budget, DefaultMemoryBudget, MinimumMemoryBudget),
 				Err: err,
 			}

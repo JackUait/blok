@@ -28,6 +28,7 @@ globalThis.blokServerInvoke = async function (operation, input) {
     case 'guardedRecurse': { const r = (d) => { open += 1; try { return d === 0 ? 0 : r(d - 1) + 1; } finally { open -= 1; } }; return String(r(1000000)); }
     case 'open': return String(open);
     case 'grow': { const kept = []; for (;;) { kept.push({ a: [1, 2, 3, 4, 5, 6, 7, 8] }); } }
+    case 'churn': { let n = 0; for (let i = 0; i < Number(input); i++) { n += ('x' + i).repeat(1 << 16).length; } return String(n); }
     default: return 'ok';
   }
 };";
@@ -219,6 +220,33 @@ async fn stops_a_call_that_outgrows_its_memory_budget() {
     let pool = counting_pool(1, Duration::from_secs(30), 64 << 20);
     want_kind(invoke(&pool, "grow", "").await, Kind::DocumentTooLarge);
     want_count(&pool, "1").await;
+}
+
+// Jint charges every allocation of a call, so garbage counts: strings
+// dropped at once outgrow an 8 MiB budget.
+#[tokio::test]
+async fn charges_every_allocation_not_the_heap_it_holds() {
+    let pool = counting_pool(1, Duration::from_secs(30), MINIMUM_MEMORY_BUDGET);
+    want_kind(invoke(&pool, "churn", "1024").await, Kind::DocumentTooLarge);
+}
+
+// Each engine counts its own allocations, so calls that run together are
+// charged only their own.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn charges_calls_that_run_together_only_their_share() {
+    let pool = Arc::new(counting_pool(2, Duration::from_secs(30), 64 << 20));
+    // 76 rounds are charged about 60% of the budget: 127 is the most that
+    // converts (measured).
+    invoke(&pool, "churn", "76").await.expect("one call alone");
+    let calls: Vec<_> = (0..2)
+        .map(|_| {
+            let pool = pool.clone();
+            tokio::spawn(async move { pool.invoke("churn", "76", Duration::ZERO).await })
+        })
+        .collect();
+    for call in calls {
+        call.await.expect("join").expect("two calls together");
+    }
 }
 
 #[tokio::test]

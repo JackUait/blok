@@ -3,6 +3,7 @@ package jsruntime
 import (
 	"runtime/metrics"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dop251/goja"
@@ -17,27 +18,41 @@ const (
 	interruptCancel
 )
 
-// heapMetric is the live heap the last GC marked, process-wide.
+// allocMetric is every heap byte the process has allocated so far.
 //
-// The memory budget is approximate, unlike Jint's per-engine allocation
-// count:
-//   - It is process-wide, so concurrent calls add up and the call that
-//     crosses the line is the one stopped.
-//   - It measures live heap, not churn. goja allocates far more than Jint
-//     counts (blocksToHtml of a 700 KB article allocated 554 MiB), so churn
-//     would refuse documents C# converts. Heap objects including unswept
-//     garbage peaked 738 MiB above the start on a 3 MiB data URL to
-//     Markdown; live heap peaked 429 MiB (measured).
-//   - It moves only when a GC ends, and an interrupt lands only between JS
-//     instructions, never inside a long native builtin.
-const heapMetric = "/gc/heap/live:bytes"
+// A run is charged the heap bytes allocated while it runs, as Jint charges
+// every allocation of an engine entry: churn, not what is still held.
+//   - Go counts allocations for the whole process. Each sample's growth is
+//     split evenly among the runs going at that moment, so runs that overlap
+//     are each charged about their own part. Allocations by the rest of the
+//     process land on whatever runs.
+//   - goja allocates more than Jint for the same work, so a run is charged
+//     chargeNum/chargeDen of what it allocates (see the constants).
+//   - The count moves when a span is refilled, and an interrupt lands only
+//     between JS instructions, never inside a long native builtin.
+const allocMetric = "/gc/heap/allocs:bytes"
+
+// goja allocated 1.9x to 3.1x what Jint charges on most shared big
+// documents, 0.9x on the smallest, and 10x to 13x on a 3 MiB URL, where
+// goja's regexp copies the string into runes on every match (all measured).
+// 3/8 is the one factor that makes all eleven big documents in ops.json,
+// and a 32 MiB image, convert or stop as in C# at 64 MiB and at 512 MiB:
+// it must lie between 0.35 (big.marked.text stops at 64 MiB) and 0.40
+// (big.url.bookmark.markdown converts at 512 MiB).
+const (
+	chargeNum = 3
+	chargeDen = 8
+)
 
 const pollEvery = time.Millisecond
 
-func heapInUse() int64 {
-	sample := []metrics.Sample{{Name: heapMetric}}
+// running counts the guarded runs, to split each sample among them.
+var running atomic.Int64
+
+func heapAllocated() uint64 {
+	sample := []metrics.Sample{{Name: allocMetric}}
 	metrics.Read(sample)
-	return int64(sample[0].Value.Uint64())
+	return sample[0].Value.Uint64()
 }
 
 // guard stops one engine run at its deadline, its memory budget, or done.
@@ -53,10 +68,13 @@ type guard struct {
 func arm(vm *goja.Runtime, timeout time.Duration, budget int64, done <-chan struct{}) *guard {
 	g := &guard{vm: vm, stop: make(chan struct{})}
 	g.timer = time.AfterFunc(timeout, func() { g.interrupt(interruptTimeout) })
-	start := heapInUse()
+	running.Add(1)
+	last := heapAllocated()
+	var spent uint64
 	g.watching.Add(1)
 	go func() {
 		defer g.watching.Done()
+		defer running.Add(-1)
 		ticker := time.NewTicker(pollEvery)
 		defer ticker.Stop()
 		for {
@@ -67,7 +85,10 @@ func arm(vm *goja.Runtime, timeout time.Duration, budget int64, done <-chan stru
 				g.interrupt(interruptCancel)
 				return
 			case <-ticker.C:
-				if heapInUse()-start > budget {
+				now := heapAllocated()
+				spent += (now - last) / uint64(max(running.Load(), 1))
+				last = now
+				if spent/chargeDen*chargeNum > uint64(budget) {
 					g.interrupt(interruptBudget)
 					return
 				}

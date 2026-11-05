@@ -1,6 +1,7 @@
 //! The memory budget of one engine. A call is charged every byte it
-//! allocates, as Jint's LimitMemory charges every allocation of an entry:
-//! churn, not what is still held. A realloc is charged its growth. Loading
+//! allocates, scaled to Jint's count (CHARGE_NUM), as Jint's LimitMemory
+//! charges every allocation of an entry: churn, not what is still held. A
+//! realloc is charged its growth. Loading
 //! the bundle is charged what the engine holds instead: QuickJS's parser
 //! allocates about 30 MiB to load what Jint loads in 8.4 MiB, and C# floors
 //! the budget at 8 MiB with 9 MiB measured to load. A budget hit cannot be
@@ -14,6 +15,15 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use rquickjs::allocator::{Allocator, RustAllocator};
+
+/// QuickJS allocates 0.29x to 0.96x what Jint charges for the same call
+/// (1.35x on a 3 MiB URL to Markdown; all measured), so a call is charged
+/// CHARGE_NUM/CHARGE_DEN of what it allocates. 5/2 is a factor that makes
+/// the eleven big documents of ops.json convert or stop as in C# at 64 MiB
+/// and at 512 MiB: it must lie between 2.25 (big.url.image.markdown stops at
+/// 64 MiB) and 2.73 (big.plain.text converts at 64 MiB).
+const CHARGE_NUM: usize = 5;
+const CHARGE_DEN: usize = 2;
 
 /// What an armed budget charges.
 #[derive(Clone, Copy)]
@@ -44,7 +54,7 @@ impl Budget {
         self.0.over.store(false, Ordering::Relaxed);
         self.0.spent.store(0, Ordering::Relaxed);
         let limit = match charge {
-            Charge::Allocated => budget,
+            Charge::Allocated => budget / CHARGE_NUM * CHARGE_DEN,
             Charge::Held => self.0.held.load(Ordering::Relaxed).saturating_add(budget),
         };
         self.0

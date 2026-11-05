@@ -327,11 +327,7 @@ func ntlmFirst(ctx context.Context, sent, data string, proxy *url.URL, user, pas
 	if at := strings.IndexByte(user, '\\'); at >= 0 {
 		domain, user = user[:at], user[at+1:]
 	}
-	host, err := ntlmSpnHost(ctx, proxy.Hostname())
-	if err != nil {
-		return "", nil, err
-	}
-	nt := newNtlmAuth(sent == "negotiate", user, domain, password, "HTTP/"+host)
+	nt := newNtlmAuth(sent == "negotiate", user, domain, password, "HTTP/"+ntlmSpnHost(ctx, proxy.Hostname()))
 	if nt == nil {
 		return "", nil, nil
 	}
@@ -340,16 +336,17 @@ func ntlmFirst(ctx context.Context, sent, data string, proxy *url.URL, user, pas
 
 // ntlmSpnHost is the SPN host of a proxy: an IP literal as it is (IPv6
 // without brackets), else Dns.GetHostEntryAsync's HostName, the canonical
-// name.
-func ntlmSpnHost(ctx context.Context, host string) (string, error) {
+// name. Go's lookup misses names getaddrinfo finds (/etc/hosts, mDNS), and
+// the dial has found this one, so such a name stands as given.
+func ntlmSpnHost(ctx context.Context, host string) string {
 	if _, err := netip.ParseAddr(host); err == nil {
-		return host, nil
+		return host
 	}
 	name, err := net.DefaultResolver.LookupCNAME(ctx, host)
-	if err != nil {
-		return "", err
+	if err != nil || name == "" {
+		return host
 	}
-	return strings.TrimSuffix(name, "."), nil
+	return strings.TrimSuffix(name, ".")
 }
 
 // authChallenges reads Proxy-Authenticate lines into each scheme's

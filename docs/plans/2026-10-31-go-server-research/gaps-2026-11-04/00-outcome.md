@@ -69,9 +69,12 @@ All on main. Each lane was retested on the merged tip before push.
 - More than one head's worth (40 KiB) sent during an upgrade request's handler: Go stops checking heads on that connection.
 - Trailer lines are dropped, not handed to the handler. Blok reads no trailers.
 - An absolute target with `%2F` in its path: C# routes the decoded path (`http://x/health%2F` is 200), Go 404. Found in this pass, not fixed.
-- An app that embeds blokserver in its own http.Server gets no body cap or rate unless it wires the new hook, much as a C# host's own Kestrel sets those limits.
 - Log wording for a room seam error on receive (collab-transport.md). Wire is the same.
 - The accepted engine gaps U2–U5 (goja memory, timeout, stack, pending promise) are unchanged.
+
+## Settled after the sweep (user decision 2026-11-05)
+
+- An app that mounts `blokserver.Handler` in its own http.Server now gets Kestrel's body limits by default: 30,000,000 bytes and 240 B/s after 5 s, a bare 413 or 408 with Connection: close. A host that puts its own setter in the context with `WithRequestBodyLimit` (blok-server does) keeps its own limits. C# gets these from Kestrel and Rust from `blok_http::Config::default`. One difference left: on a chunked body the embedded default counts data bytes only, while Kestrel and blok-server count the framing too.
 
 ## Older known differences, settled (second lane)
 Each C# answer was measured first.

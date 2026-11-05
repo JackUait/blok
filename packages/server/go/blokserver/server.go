@@ -183,7 +183,7 @@ func (s *Server) Handler(prefix string) http.Handler {
 			s.warnOpenSyncRoutes(prefix)
 		}
 	}
-	return router
+	return withDefaultBodyLimits(router)
 }
 
 func (s *Server) syncEndpoint() *synchttp.Endpoint {

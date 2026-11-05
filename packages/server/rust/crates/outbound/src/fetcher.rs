@@ -109,18 +109,42 @@ fn system_resolve(host: String) -> Lookup {
     })
 }
 
+/// What a client verifies a server's chain with.
+#[derive(Clone)]
+pub(crate) struct Trust {
+    pub(crate) roots: Arc<RootCertStore>,
+    pub(crate) denied: Denied,
+    /// macOS after a failed trust read: trustd decides, with issuer
+    /// fetching off, as C#'s MacOsCertificateTrust does.
+    pub(crate) platform: bool,
+}
+
+impl Trust {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn platform() -> Trust {
+        Trust {
+            roots: Arc::new(RootCertStore::empty()),
+            denied: Arc::default(),
+            platform: true,
+        }
+    }
+}
+
 /// The system roots and the certs the trust settings deny, read once.
 /// Verification is rustls's own, which never fetches a missing issuer and
 /// never checks revocation (tls_test pins both). On macOS both come from
-/// the trust settings (tls_darwin), with /etc/ssl/cert.pem and no denials
-/// only when a read fails.
-fn system_trust() -> &'static (Arc<RootCertStore>, Denied) {
-    static TRUST: OnceLock<(Arc<RootCertStore>, Denied)> = OnceLock::new();
+/// the trust settings (tls_darwin); when a read fails, trustd verifies
+/// instead, with issuer fetching off.
+fn system_trust() -> &'static Trust {
+    static TRUST: OnceLock<Trust> = OnceLock::new();
     TRUST.get_or_init(|| {
         let mut store = RootCertStore::empty();
         #[cfg(target_os = "macos")]
-        let (certificates, denied) =
-            crate::tls_darwin::load_roots(std::path::Path::new(crate::tls_darwin::SECURITY_TOOL));
+        let Some((certificates, denied)) =
+            crate::tls_darwin::load_roots(std::path::Path::new(crate::tls_darwin::SECURITY_TOOL))
+        else {
+            return Trust::platform();
+        };
         #[cfg(not(target_os = "macos"))]
         let (certificates, denied) = (
             rustls_native_certs::load_native_certs().certs,
@@ -130,18 +154,23 @@ fn system_trust() -> &'static (Arc<RootCertStore>, Denied) {
         for certificate in certificates {
             let _ = store.add(certificate);
         }
-        (Arc::new(store), Arc::new(denied))
+        Trust {
+            roots: Arc::new(store),
+            denied: Arc::new(denied),
+            platform: false,
+        }
     })
 }
 
-/// The roots and denials for a client: the given roots with their own
-/// denials, else the system's.
-pub(crate) fn trust_for(
-    roots: &Option<Arc<RootCertStore>>,
-    denied: &Option<Denied>,
-) -> (Arc<RootCertStore>, Denied) {
+/// The trust for a client: the given roots with their own denials, else
+/// the system's.
+pub(crate) fn trust_for(roots: &Option<Arc<RootCertStore>>, denied: &Option<Denied>) -> Trust {
     match roots {
-        Some(roots) => (roots.clone(), denied.clone().unwrap_or_default()),
+        Some(roots) => Trust {
+            roots: roots.clone(),
+            denied: denied.clone().unwrap_or_default(),
+            platform: false,
+        },
         None => system_trust().clone(),
     }
 }
@@ -157,11 +186,29 @@ pub(crate) fn cert_hash(der: &[u8]) -> String {
         .collect()
 }
 
-pub(crate) fn tls_connector(roots: Arc<RootCertStore>, denied: Denied) -> TlsConnector {
+pub(crate) fn tls_connector(trust: Trust) -> TlsConnector {
+    let Trust {
+        roots,
+        denied,
+        platform,
+    } = trust;
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let builder = rustls::ClientConfig::builder_with_provider(provider.clone())
         .with_safe_default_protocol_versions()
         .expect("the ring provider supports the default versions");
+    #[cfg(target_os = "macos")]
+    if platform {
+        let mut config = builder
+            .dangerous()
+            .with_custom_certificate_verifier(Arc::new(crate::tls_darwin::PlatformVerifier {
+                provider,
+            }))
+            .with_no_client_auth();
+        config.alpn_protocols = vec![b"http/1.1".to_vec()];
+        return TlsConnector::from(Arc::new(config));
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = platform;
     let verifier = (!denied.is_empty())
         .then(|| {
             WebPkiServerVerifier::builder_with_provider(roots.clone(), provider)
@@ -410,8 +457,7 @@ impl Fetcher {
                 Some(ip) => ServerName::IpAddress(ip.into()),
                 None => ServerName::try_from(target.host.clone()).map_err(|_| blocked)?,
             };
-            let (roots, denied) = trust_for(&self.roots, &self.denied);
-            let tls = tls_connector(roots, denied)
+            let tls = tls_connector(trust_for(&self.roots, &self.denied))
                 .connect(name, tcp)
                 .await
                 .map_err(|_| blocked)?;

@@ -4,16 +4,7 @@ use rustls::pki_types::CertificateDer;
 use rustls::pki_types::pem::PemObject;
 
 use super::selfsigned::self_signed;
-use super::tls_darwin::{
-    SECURITY_TOOL, TrustStore, bundle, load_roots, load_trust_settings_anchors,
-};
-
-fn sorted(mut certs: Vec<CertificateDer<'static>>) -> Vec<Vec<u8>> {
-    let mut out: Vec<Vec<u8>> = certs.drain(..).map(|c| c.to_vec()).collect();
-    out.sort();
-    out.dedup();
-    out
-}
+use super::tls_darwin::{SECURITY_TOOL, TrustStore, load_roots, load_trust_settings_anchors};
 
 // The roots are read from the trust settings, so a root added only to the
 // Keychain is trusted as in C# and Go.
@@ -37,13 +28,14 @@ fn failing_tool(directory: &Path, fail: &str, action: &str) -> PathBuf {
     path
 }
 
-// A root set read in part would trust too little or too much: any failed
-// read falls back to the macOS bundle. The tool exits 0 for a keychain it
-// cannot read, so an empty system root keychain counts as failed too.
+// A root set read in part would trust too little or too much, and a bundle
+// would pass a cert the user marked "Never Trust", which C#'s SecTrust
+// refuses. So any failed read leaves no roots: the verifier is then trustd
+// itself, with issuer fetching off (tls_darwin::PlatformVerifier). The tool
+// exits 0 for a keychain it cannot read, so an empty system root keychain
+// counts as failed too.
 #[test]
-fn any_failed_trust_read_falls_back_to_the_bundle() {
-    let want = sorted(bundle());
-    assert!(!want.is_empty(), "no bundle");
+fn any_failed_trust_read_leaves_the_platform_verifier() {
     let cases = [
         ("SystemRootCertificates.keychain", "exit 1"),
         ("System.keychain", "exit 1"),
@@ -56,13 +48,29 @@ fn any_failed_trust_read_falls_back_to_the_bundle() {
     for (index, (fail, action)) in cases.into_iter().enumerate() {
         let directory =
             std::env::temp_dir().join(format!("blok-failing-tool-{}-{index}", std::process::id()));
-        let got = sorted(load_roots(&failing_tool(&directory, fail, action)).0);
+        let got = load_roots(&failing_tool(&directory, fail, action));
         let _ = std::fs::remove_dir_all(&directory);
-        assert!(
-            got == want,
-            "{fail:?} ({action}): the roots are not the bundle"
-        );
+        assert!(got.is_none(), "{fail:?} ({action}): some roots were kept");
     }
+    assert!(load_roots(Path::new(SECURITY_TOOL)).is_some());
+}
+
+// The analogue of SslStreamStillLeaksAnIssuerFetchOnMacOs for the fallback:
+// trustd with network fetch off never asks the caIssuers URL, which the
+// guard never vetted. C#'s MacOsCertificateTrust sets the same flag.
+#[tokio::test]
+async fn the_platform_verifier_never_fetches_an_issuer() {
+    let (origin, issuer, _) = crate::tls_test::aia_setup(false).await;
+    let tcp = tokio::net::TcpStream::connect(("127.0.0.1", origin.port))
+        .await
+        .unwrap();
+    let name = rustls::pki_types::ServerName::try_from("aia.example").unwrap();
+    let got = crate::fetcher::tls_connector(crate::fetcher::Trust::platform())
+        .connect(name, tcp)
+        .await;
+    assert!(got.is_err(), "an untrusted chain verified");
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    assert_eq!(issuer.count(), 0, "trustd fetched the issuer");
 }
 
 // _SecCertificateIsSelfSigned (SecCertificate.c:6192-6222): issuer equals

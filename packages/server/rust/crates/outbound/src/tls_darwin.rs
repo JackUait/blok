@@ -1,7 +1,8 @@
 //! The macOS roots: the anchors trustd would use for C#'s SecTrust
 //! (trustsettings.rs): Apple's roots, the user and admin trust settings, and
 //! the self-signed certs of the system root keychain of trustd's trust
-//! store. Go reads the same. Verification stays rustls's own over this set.
+//! store. Go reads the same. Verification stays rustls's own over this set;
+//! when a read fails, `PlatformVerifier` asks trustd instead.
 
 use std::collections::{HashMap, HashSet};
 use std::io::Read;
@@ -10,8 +11,17 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
-use rustls::pki_types::CertificateDer;
+use std::sync::Arc;
+
+use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
+use rustls::crypto::{CryptoProvider, verify_tls12_signature, verify_tls13_signature};
 use rustls::pki_types::pem::PemObject;
+use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
+use rustls::{CertificateError, DigitallySignedStruct, SignatureScheme};
+use security_framework::certificate::SecCertificate;
+use security_framework::policy::SecPolicy;
+use security_framework::secure_transport::SslProtocolSide;
+use security_framework::trust::SecTrust;
 use sha1::{Digest, Sha1};
 use sha2::Sha256;
 
@@ -21,8 +31,6 @@ use crate::trustsettings::{
 };
 
 pub(crate) const SECURITY_TOOL: &str = "/usr/bin/security";
-/// The fallback when any trust read fails.
-pub(crate) const MACOS_BUNDLE: &str = "/etc/ssl/cert.pem";
 
 /// The export flags for the user and admin domains. trustd reads no
 /// system-domain trust settings: its system anchors are its own store.
@@ -106,22 +114,99 @@ fn apple_root(der: &[u8]) -> bool {
 
 /// The anchors, or the bundle when any read fails: a set read in part would
 /// drop a keychain's roots or a domain's denials.
-pub(crate) fn load_roots(tool: &Path) -> (Vec<CertificateDer<'static>>, HashSet<String>) {
-    match load_trust_settings_anchors(tool, &TrustStore::system()) {
-        Ok((anchors, denied)) => (
-            anchors.into_iter().map(CertificateDer::from).collect(),
-            denied,
-        ),
-        Err(_) => (bundle(), HashSet::new()),
+/// The anchors and denials, or None when any read fails. A bundle then
+/// would pass a cert the user marked "Never Trust", which C# refuses, so
+/// the caller verifies with `PlatformVerifier` instead.
+pub(crate) fn load_roots(tool: &Path) -> Option<(Vec<CertificateDer<'static>>, HashSet<String>)> {
+    let (anchors, denied) = load_trust_settings_anchors(tool, &TrustStore::system()).ok()?;
+    Some((
+        anchors.into_iter().map(CertificateDer::from).collect(),
+        denied,
+    ))
+}
+
+/// C#'s MacOsCertificateTrust: SecTrust with an SSL policy for the host
+/// and network fetch off, so trustd never asks a caIssuers URL the guard
+/// never vetted. trustd applies the trust settings itself. The handshake
+/// signatures stay rustls's.
+#[derive(Debug)]
+pub(crate) struct PlatformVerifier {
+    pub(crate) provider: Arc<CryptoProvider>,
+}
+
+impl ServerCertVerifier for PlatformVerifier {
+    fn verify_server_cert(
+        &self,
+        end_entity: &CertificateDer<'_>,
+        intermediates: &[CertificateDer<'_>],
+        server_name: &ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
+        let host = match server_name {
+            ServerName::DnsName(name) => name.as_ref().to_owned(),
+            ServerName::IpAddress(ip) => std::net::IpAddr::from(*ip).to_string(),
+            _ => return Err(CertificateError::NotValidForName.into()),
+        };
+        let chain: Vec<&[u8]> = std::iter::once(end_entity)
+            .chain(intermediates)
+            .map(|c| c.as_ref())
+            .collect();
+        if sec_trust_accepts(&chain, &host) {
+            Ok(ServerCertVerified::assertion())
+        } else {
+            Err(CertificateError::UnknownIssuer.into())
+        }
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &self.provider.signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &self.provider.signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        self.provider
+            .signature_verification_algorithms
+            .supported_schemes()
     }
 }
 
-/// Empty when nothing loads: every https fetch then fails closed.
-pub(crate) fn bundle() -> Vec<CertificateDer<'static>> {
-    match CertificateDer::pem_file_iter(MACOS_BUNDLE) {
-        Ok(certs) => certs.filter_map(Result::ok).collect(),
-        Err(_) => Vec::new(),
-    }
+fn sec_trust_accepts(chain: &[&[u8]], host: &str) -> bool {
+    let Some(certificates) = chain
+        .iter()
+        .map(|der| SecCertificate::from_der(der).ok())
+        .collect::<Option<Vec<_>>>()
+    else {
+        return false;
+    };
+    let policy = SecPolicy::create_ssl(SslProtocolSide::SERVER, Some(host));
+    let Ok(mut trust) = SecTrust::create_with_certificates(&certificates, &[policy]) else {
+        return false;
+    };
+    trust.set_network_fetch_allowed(false).is_ok() && trust.evaluate_with_error().is_ok()
 }
 
 pub(crate) fn load_trust_settings_anchors(

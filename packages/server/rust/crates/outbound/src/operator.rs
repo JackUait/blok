@@ -221,17 +221,14 @@ impl OperatorClient {
             .await
             .map_err(|_| OperatorError::ConnectTimeout)??;
         }
-        let (roots, denied) = trust_for(&self.roots, &None);
+        let trust = trust_for(&self.roots, &None);
         let mut stream: Box<dyn Stream> = Box::new(tcp);
         // An https proxy gets TLS of its own first, named by its host.
         if let Some(proxy) = proxy.filter(|p| p.scheme == "https") {
             let name = proxy_server_name(&proxy.authority)?;
-            let tls = timeout_at(
-                deadline,
-                tls_connector(roots.clone(), denied.clone()).connect(name, stream),
-            )
-            .await
-            .map_err(|_| OperatorError::ConnectTimeout)??;
+            let tls = timeout_at(deadline, tls_connector(trust.clone()).connect(name, stream))
+                .await
+                .map_err(|_| OperatorError::ConnectTimeout)??;
             stream = Box::new(tls);
         }
         if url.scheme != "https" {
@@ -251,7 +248,7 @@ impl OperatorClient {
             _ => ServerName::try_from(url.idn_host.clone())
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
         };
-        let tls = timeout_at(deadline, tls_connector(roots, denied).connect(name, stream))
+        let tls = timeout_at(deadline, tls_connector(trust).connect(name, stream))
             .await
             .map_err(|_| OperatorError::ConnectTimeout)??;
         Ok(Box::new(tls))

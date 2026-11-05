@@ -211,6 +211,26 @@ public sealed class CollabRoomTests
     Assert.Contains(log, line => line.Contains("100000", StringComparison.Ordinal));
   }
 
+  /// <summary>An explicit zero is kept, not read as "use the default": no presence is relayed.</summary>
+  [Fact]
+  public async Task AZeroAwarenessClientCapRelaysNoPresence()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager(new CollabRoomOptions { MaxAwarenessClients = 0 });
+    var sender = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, sender);
+    await Join(manager, other);
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(1))),
+        CancellationToken.None);
+
+    Assert.Empty(other.Received);
+    Assert.Empty(sender.Closes);
+  }
+
   [Fact]
   public async Task RelaysAwarenessAtTheClientCapAndDropsTheFrameAboveIt()
   {

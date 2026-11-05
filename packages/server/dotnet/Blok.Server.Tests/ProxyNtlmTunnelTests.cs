@@ -57,6 +57,23 @@ public sealed partial class ProxyConnectTunnelTests
   // An IPv6 proxy is named without brackets.
   [InlineData("ipv6", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=340 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=210@112 user=u@322 dom=@324 ws=W@324 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/::1,10:zero,6:02000000,0: proof=ok mic=ok")]
   [InlineData("negotiate-https", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  // How each 407 of the handshake is drained (DrainResponseAsync): one that
+  // closes the conn, leaves bytes after it, runs past 1 MiB or stalls past
+  // 2 s fails the request. The version plays no part.
+  [InlineData("drain1-ka0", "u", "", "p", "error |1 auth=no")]
+  [InlineData("drain1-extra", "u", "", "p", "error |1 auth=no")]
+  [InlineData("drain1-big", "u", "", "p", "error |1 auth=no")]
+  [InlineData("drain1-http10", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
+  [InlineData("drain1-body", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
+  [InlineData("drain1-closeframed", "u", "", "p", "error |1 auth=no")]
+  [InlineData("drain2-ka0", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}")]
+  [InlineData("drain2-extra", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}")]
+  [InlineData("drain2-big", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}")]
+  [InlineData("drain2-bigchunked", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}")]
+  [InlineData("drain2-http10", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
+  [InlineData("drain2-chunked", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
+  [InlineData("drain2-closeframed", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}")]
+  [InlineData("drain2-stall", "u", "", "p", "throw IOException|1 auth=no|1 auth=NTLM T1 {T1}")]
   public async Task AnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(string mode, string user, string domain, string password, string want)
   {
     var got = await RunNtlm(mode, user, domain, password);
@@ -380,6 +397,31 @@ public sealed partial class ProxyConnectTunnelTests
     return (logged, proofOk && micOk && cbtOk && mlmicOk);
   }
 
+  // The version and what follows the challenge in a drain row's 407: the
+  // first (drain1-) or the Type 2 (drain2-). Every other 407 is empty.
+  private static (string Version, string Tail) DrainShape(string mode, bool first)
+  {
+    var prefix = first ? "drain1-" : "drain2-";
+    if (!mode.StartsWith(prefix, StringComparison.Ordinal))
+    {
+      return ("1.1", "Content-Length: 0\r\n\r\n");
+    }
+
+    return mode[prefix.Length..] switch
+    {
+      "ka0" => ("1.1", "Keep-Alive: max=0\r\nContent-Length: 0\r\n\r\n"),
+      "extra" => ("1.1", "Content-Length: 0\r\n\r\nxyz"),
+      "big" => ("1.1", "Content-Length: 2097152\r\n\r\n" + new string('a', 2097152)),
+      "bigchunked" => ("1.1", "Transfer-Encoding: chunked\r\n\r\n200000\r\n" + new string('a', 2097152) + "\r\n0\r\n\r\n"),
+      "http10" => ("1.0", "Content-Length: 0\r\n\r\n"),
+      "body" => ("1.1", "Content-Length: 3\r\n\r\nabc"),
+      "chunked" => ("1.1", "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n"),
+      "closeframed" => ("1.1", "\r\nabc"),
+      "stall" => ("1.1", "Content-Length: 10\r\n\r\nabc"),
+      _ => throw new ArgumentException(mode),
+    };
+  }
+
   private static async Task ServeNtlmProxy(TcpListener listener, string mode, string password, int targetPort, X509Certificate2? certificate, ConcurrentQueue<string> seen)
   {
     var scheme = mode.StartsWith("negotiate", StringComparison.Ordinal) ? "Negotiate" : "NTLM";
@@ -463,8 +505,9 @@ public sealed partial class ProxyConnectTunnelTests
               }
             }
 
+            var (status, tail) = DrainShape(mode, auth is null);
             await stream.WriteAsync(Encoding.ASCII.GetBytes(
-                "HTTP/1.1 407 Proxy Authentication Required\r\n" + answer + (close ? "Connection: close\r\n" : "") + "Content-Length: 0\r\n\r\n"));
+                $"HTTP/{status} 407 Proxy Authentication Required\r\n" + answer + (close ? "Connection: close\r\n" : "") + tail));
             if (close)
             {
               return;

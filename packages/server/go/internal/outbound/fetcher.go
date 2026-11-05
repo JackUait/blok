@@ -309,12 +309,14 @@ func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []neti
 	if !target.Literal.IsValid() && !plainHostName(target.Host) {
 		return nil, fail(Blocked)
 	}
-	conn, err := f.dial(ctx, target, addresses)
+	raw, err := f.dial(ctx, target, addresses)
 	if err != nil {
 		return nil, err
 	}
-	// A cancel or the deadline ends any read or write in flight.
-	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	// A cancel or the deadline ends any read or write in flight. It closes
+	// the socket, not conn, which this goroutine replaces after TLS.
+	stop := context.AfterFunc(ctx, func() { _ = raw.Close() })
+	conn := raw
 	closeConn := func() error {
 		stop()
 		return conn.Close()

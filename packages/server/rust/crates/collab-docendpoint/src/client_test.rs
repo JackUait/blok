@@ -659,4 +659,43 @@ async fn the_default_transport_sends_only_what_c_sharp_sends() {
     assert!(!head.contains("user-agent"), "{head}");
     assert!(!head.contains("accept-encoding"), "{head}");
     assert!(head.contains("\r\naccept: application/json\r\n"), "{head}");
+    // Probed on the C# host: a GET carries no content, so no Content-Length.
+    assert!(!head.contains("content-length"), "{head}");
+}
+
+// DocEndpointClient.cs reads the error prefix under the request timeout and
+// swallows its cancellation: the status still makes the message.
+#[tokio::test]
+async fn an_error_body_that_stalls_past_the_timeout_still_reports_the_status() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let (mut tcp, _) = listener.accept().await.unwrap();
+        let mut head = [0u8; 1024];
+        let _ = tcp.read(&mut head).await;
+        tcp.write_all(
+            b"HTTP/1.1 500 Internal Server Error\r\nContent-Length: 100\r\n\r\npartial body",
+        )
+        .await
+        .unwrap();
+        tokio::time::sleep(Duration::from_secs(10)).await;
+    });
+    let c = Client::with_connect_timeout(
+        Options {
+            endpoint: parse_absolute_uri(&format!("http://{address}/docs")).unwrap(),
+            request_timeout: Some(Duration::from_millis(300)),
+            ..Options::default()
+        },
+        Duration::from_secs(10),
+        None,
+    );
+    let (message, status) = endpoint_error(c.load("a").await.unwrap_err());
+    assert_eq!(
+        (message.as_str(), status),
+        (
+            "collab: the doc endpoint GET returned 500: partial body",
+            500
+        )
+    );
 }

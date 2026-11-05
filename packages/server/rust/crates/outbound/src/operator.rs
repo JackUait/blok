@@ -66,6 +66,8 @@ impl From<crate::wire::WireError> for OperatorError {
 
 /// A request body with a known length.
 pub enum RequestBody<'a> {
+    /// No content: no Content-Length, as .NET sends a GET without one.
+    None,
     Bytes(&'a [u8]),
     Reader(&'a mut (dyn AsyncRead + Send + Unpin), u64),
 }
@@ -73,6 +75,7 @@ pub enum RequestBody<'a> {
 impl RequestBody<'_> {
     fn len(&self) -> u64 {
         match self {
+            RequestBody::None => 0,
             RequestBody::Bytes(bytes) => bytes.len() as u64,
             RequestBody::Reader(_, length) => *length,
         }
@@ -162,11 +165,14 @@ impl OperatorClient {
                 .iter()
                 .map(|(n, v)| (n.as_str(), v.as_str())),
         );
-        headers.push(("Content-Length", &length));
+        if !matches!(request.body, RequestBody::None) {
+            headers.push(("Content-Length", &length));
+        }
         stream
             .write_all(&request_head(request.method, &target, &headers))
             .await?;
         match request.body {
+            RequestBody::None => {}
             RequestBody::Bytes(bytes) => stream.write_all(bytes).await?,
             RequestBody::Reader(reader, length) => {
                 let copied = tokio::io::copy(&mut reader.take(length), &mut stream).await?;

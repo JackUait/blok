@@ -2,7 +2,10 @@
 //! DocEndpointClient): GET seeds a room, PUT exports it.
 
 use std::fmt;
+use std::future::Future;
 use std::time::Duration;
+
+use tokio::time::{Instant, timeout_at};
 
 use blok_dotnet::{Uri, format_double, parse_absolute_uri};
 use blok_jsjson::{Kind, Node, Options as JsonOptions, Str, Value, append_quoted, parse_node};
@@ -187,7 +190,7 @@ impl Client {
     pub async fn load(&self, doc_id: &str) -> Result<Loaded, Error> {
         let url = self.url_for(doc_id)?;
         let headers = vec![("Accept".to_owned(), "application/json".to_owned())];
-        let body = self.send("GET", &url, headers, &[]).await?;
+        let body = self.send("GET", &url, headers, None).await?;
         parse_loaded(&body)
     }
 
@@ -216,7 +219,7 @@ impl Client {
                 projection.server_sequence.to_string(),
             ));
         }
-        let answer = self.send("PUT", &url, headers, &body).await?;
+        let answer = self.send("PUT", &url, headers, Some(&body)).await?;
         Ok(parse_saved_version(&answer))
     }
 
@@ -253,7 +256,7 @@ impl Client {
         method: &str,
         url: &Uri,
         mut headers: Vec<(String, String)>,
-        body: &[u8],
+        body: Option<&[u8]>,
     ) -> Result<Vec<u8>, Error> {
         // Refused, not dropped: a stray newline from a shell-quoted secret
         // would otherwise send every request unauthenticated.
@@ -266,30 +269,61 @@ impl Client {
             }
             headers.push(("Authorization".to_owned(), authorization.clone()));
         }
-        let exchange = self.exchange(method, url, headers, body);
-        match self.options.request_timeout {
-            Some(limit) if !limit.is_zero() => tokio::time::timeout(limit, exchange)
+        let deadline = match self.options.request_timeout {
+            Some(limit) if !limit.is_zero() => Some(Instant::now() + limit),
+            _ => None,
+        };
+        let (status, length, mut answer) = self
+            .within(deadline, method, self.open(method, url, headers, body))
+            .await?;
+        // The status decides before any body is read: an error body is
+        // never buffered, only its head goes into the message. Its read
+        // shares the timeout, and running out ends only the prefix.
+        if !(200..=299).contains(&status) {
+            let prefix = read_error_prefix(&mut answer, deadline).await;
+            return Err(Error::Endpoint {
+                message: format!("collab: the doc endpoint {method} returned {status}{prefix}"),
+                status_code: status,
+            });
+        }
+        self.within(
+            deadline,
+            method,
+            self.read_capped(&mut answer, length, method),
+        )
+        .await
+    }
+
+    async fn within<T>(
+        &self,
+        deadline: Option<Instant>,
+        method: &str,
+        work: impl Future<Output = Result<T, Error>>,
+    ) -> Result<T, Error> {
+        match deadline {
+            Some(deadline) => timeout_at(deadline, work)
                 .await
                 .map_err(|_| self.timed_out(method))?,
-            _ => exchange.await,
+            None => work.await,
         }
     }
 
-    async fn exchange(
+    /// Sends the request and reads the head.
+    async fn open(
         &self,
         method: &str,
         url: &Uri,
         headers: Vec<(String, String)>,
-        body: &[u8],
-    ) -> Result<Vec<u8>, Error> {
-        let (status, length, mut answer) = match &self.transport {
+        body: Option<&[u8]>,
+    ) -> Result<(u16, Option<u64>, Answer), Error> {
+        match &self.transport {
             Transport::Operator(client) => {
                 let request = Request {
                     method,
                     url,
                     host: &host_header(url),
                     headers,
-                    body: RequestBody::Bytes(body),
+                    body: body.map_or(RequestBody::None, RequestBody::Bytes),
                 };
                 match client.send(request).await {
                     Ok(response) => {
@@ -297,13 +331,13 @@ impl Client {
                             .headers
                             .get("Content-Length")
                             .and_then(|v| std::str::from_utf8(v).ok()?.trim().parse::<u64>().ok());
-                        (response.status, length, Answer::Wire(response.body))
+                        Ok((response.status, length, Answer::Wire(response.body)))
                     }
                     // A connect or handshake timeout is an
                     // OperationCanceledException in C#, so it reads as
                     // timed out too.
-                    Err(OperatorError::ConnectTimeout) => return Err(self.timed_out(method)),
-                    Err(err) => return Err(Error::Transport(err.to_string())),
+                    Err(OperatorError::ConnectTimeout) => Err(self.timed_out(method)),
+                    Err(err) => Err(Error::Transport(err.to_string())),
                 }
             }
             #[cfg(test)]
@@ -312,7 +346,7 @@ impl Client {
                     method: method.to_owned(),
                     url: url.absolute_uri.clone(),
                     headers,
-                    body: body.to_vec(),
+                    body: body.unwrap_or_default().to_vec(),
                 };
                 match fake(&recorded) {
                     Fake::Answer {
@@ -321,23 +355,13 @@ impl Client {
                         declared,
                     } => {
                         let length = declared.then_some(body.len() as u64);
-                        (status, length, Answer::Canned(std::io::Cursor::new(body)))
+                        Ok((status, length, Answer::Canned(std::io::Cursor::new(body))))
                     }
                     Fake::Hang => std::future::pending().await,
-                    Fake::ConnectTimeout => return Err(self.timed_out(method)),
+                    Fake::ConnectTimeout => Err(self.timed_out(method)),
                 }
             }
-        };
-        // The status decides before any body is read: an error body is
-        // never buffered, only its head goes into the message.
-        if !(200..=299).contains(&status) {
-            let prefix = read_error_prefix(&mut answer).await;
-            return Err(Error::Endpoint {
-                message: format!("collab: the doc endpoint {method} returned {status}{prefix}"),
-                status_code: status,
-            });
         }
-        self.read_capped(&mut answer, length, method).await
     }
 
     async fn read_capped(
@@ -406,11 +430,19 @@ pub(crate) fn seconds(d: Duration) -> String {
 
 /// The first 512 bytes, decoded, with whitespace runs folded to one space;
 /// a read failure leaves what was read.
-async fn read_error_prefix(answer: &mut Answer) -> String {
+async fn read_error_prefix(answer: &mut Answer, deadline: Option<Instant>) -> String {
     let mut buffer = vec![0u8; ERROR_BODY_PREFIX_BYTES];
     let mut read = 0;
     while read < buffer.len() {
-        match answer.read(&mut buffer[read..]).await {
+        let next = answer.read(&mut buffer[read..]);
+        let next = match deadline {
+            Some(deadline) => match timeout_at(deadline, next).await {
+                Ok(next) => next,
+                Err(_) => break,
+            },
+            None => next.await,
+        };
+        match next {
             Ok(0) | Err(_) => break,
             Ok(n) => read += n,
         }

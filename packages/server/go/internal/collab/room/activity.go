@@ -68,6 +68,22 @@ func (r *Room) sweepActivityStampsLocked(at time.Time) {
 // pumpActivity drains the queue one call at a time. It never takes the lane.
 func (r *Room) pumpActivity(done chan struct{}) {
 	defer close(done)
+	// Only the host logger can panic here. Left set, the pumping flag would
+	// make this room's activity dead for good, so a fresh pump takes over.
+	defer func() {
+		if recover() == nil {
+			return
+		}
+		r.activityMu.Lock()
+		defer r.activityMu.Unlock()
+		if len(r.activityQueue) == 0 {
+			r.activityPumping = false
+			return
+		}
+		next := make(chan struct{})
+		r.activityDispatch = next
+		go r.pumpActivity(next)
+	}()
 	for {
 		r.activityMu.Lock()
 		if len(r.activityQueue) == 0 {

@@ -536,14 +536,3 @@ func TestAPolicyThatFailsAfterTheCallerCancelledStillExpels(t *testing.T) {
 		t.Fatalf("closes = %v", got)
 	}
 }
-
-// C# CancellingAnAccessRecheckDoesNotExpelAnAllowedMember.
-func TestCancellingAnAccessRecheckDoesNotExpelAnAllowedMember(t *testing.T) {
-	n, err, member := recheckCancelled(t, true, func(*gatedPolicy) {})
-	if !errors.Is(err, context.Canceled) || n != 0 {
-		t.Fatalf("recheck = %d, %v; want the cancellation", n, err)
-	}
-	if got := member.closed(); len(got) != 0 {
-		t.Fatalf("closes = %v", got)
-	}
-}

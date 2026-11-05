@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -81,12 +82,13 @@ func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
 	defer cancel()
 	certs := map[string][]byte{}
 	home, _ := os.UserHomeDir()
-	for _, keychain := range keychains {
+	for index, keychain := range keychains {
 		keychain = strings.Replace(keychain, "~", home, 1)
 		out, err := exec.CommandContext(ctx, tool, "find-certificate", "-a", "-p", keychain).Output()
 		if err != nil {
 			return nil, err
 		}
+		found := 0
 		for rest := out; ; {
 			var block *pem.Block
 			if block, rest = pem.Decode(rest); block == nil {
@@ -94,6 +96,11 @@ func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
 			}
 			sum := sha1.Sum(block.Bytes)
 			certs[strings.ToUpper(hex.EncodeToString(sum[:]))] = block.Bytes
+			found++
+		}
+		// The tool exits 0 even for a keychain it cannot open.
+		if index == len(keychains)-1 && found == 0 {
+			return nil, errors.New("no system root certificates")
 		}
 	}
 	directory, err := os.MkdirTemp("", "blok-trust-")
@@ -113,6 +120,17 @@ func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
 			return nil, err
 		}
 		domains = append(domains, list)
+	}
+	// Every system root is in the system keychain: an empty system domain or
+	// a hash with no certificate means a read went wrong.
+	system := domains[len(domains)-1]
+	if len(system) == 0 {
+		return nil, errors.New("no system trust settings")
+	}
+	for hash := range system {
+		if _, ok := certs[hash]; !ok {
+			return nil, errors.New("a system trust setting has no certificate")
+		}
 	}
 	return trustedAnchors(domains, certs), nil
 }

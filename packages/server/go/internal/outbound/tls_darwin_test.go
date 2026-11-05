@@ -101,12 +101,16 @@ func TestTheMacOSRootsComeFromTheTrustSettings(t *testing.T) {
 	}
 }
 
-// failingTool is /usr/bin/security, except that a call naming one of fail
-// exits 1.
-func failingTool(t *testing.T, fail string) string {
+// failingTool is /usr/bin/security, except that a call naming fail runs
+// instead (exit 1 by default).
+func failingTool(t *testing.T, fail string, instead ...string) string {
 	t.Helper()
+	action := "exit 1"
+	if len(instead) > 0 {
+		action = instead[0]
+	}
 	path := filepath.Join(t.TempDir(), "security")
-	script := "#!/bin/sh\ncase \"$*\" in *'" + fail + "'*) exit 1;; esac\nexec " + securityTool + " \"$@\"\n"
+	script := "#!/bin/sh\ncase \"$*\" in *'" + fail + "'*) " + action + ";; esac\nexec " + securityTool + " \"$@\"\n"
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -114,18 +118,29 @@ func failingTool(t *testing.T, fail string) string {
 }
 
 // A root set read in part would trust too little or too much: any failed
-// read falls back to the macOS bundle.
+// read falls back to the macOS bundle. The tool exits 0 for a keychain it
+// cannot read, so an empty system keychain, an empty system domain, or a
+// system hash with no certificate counts as failed too.
 func TestAnyFailedTrustReadFallsBackToTheBundle(t *testing.T) {
 	want := bundlePool()
 	if want.Equal(x509.NewCertPool()) {
 		t.Fatal("no bundle")
 	}
-	for _, fail := range []string{"SystemRootCertificates.keychain", "System.keychain", "login.keychain", "domain0", "export -d ", "export -s "} {
+	for _, fail := range []string{"SystemRootCertificates.keychain", "System.keychain", "login.keychain", "domain0", "export -d ", "export -s ", ""} {
 		if got := loadRoots(failingTool(t, fail)); !got.Equal(want) {
-			t.Errorf("%s failed: the roots are not the bundle", fail)
+			t.Errorf("%q failed: the roots are not the bundle", fail)
 		}
 	}
-	if got := loadRoots(failingTool(t, "")); !got.Equal(want) {
-		t.Error("every call failed: the roots are not the bundle")
+	emptyList := `printf '<plist><dict><key>trustList</key><dict/></dict></plist>' > "$3"; exit 0`
+	oneUnknown := `printf '<plist><dict><key>trustList</key><dict><key>0000000000000000000000000000000000000000</key><dict/></dict></dict></plist>' > "$3"; exit 0`
+	silent := map[string]string{
+		"an empty system keychain":          failingTool(t, "SystemRootCertificates.keychain", "exit 0"),
+		"an empty system domain":            failingTool(t, "export -s ", emptyList),
+		"a system hash with no certificate": failingTool(t, "export -s ", oneUnknown),
+	}
+	for name, tool := range silent {
+		if got := loadRoots(tool); !got.Equal(want) {
+			t.Errorf("%s: the roots are not the bundle", name)
+		}
 	}
 }

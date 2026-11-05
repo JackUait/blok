@@ -133,19 +133,38 @@ func parseTrustList(export []byte) (map[string][]trustSetting, error) {
 				var settings []trustSetting
 				raw, _ := fields["trustSettings"].([]any)
 				for _, item := range raw {
-					dict, _ := item.(map[string]any)
-					var s trustSetting
-					s.policyName, s.hasPolicyName = dict["kSecTrustSettingsPolicyName"].(string)
-					s.result, s.hasResult = dict["kSecTrustSettingsResult"].(int64)
-					s.policyOID, _ = dict["kSecTrustSettingsPolicy"].([]byte)
-					s.constrained = constrained(dict)
-					settings = append(settings, s)
+					settings = append(settings, readSetting(item))
 				}
 				out[hash] = settings
 			}
 			return out, nil
 		}
 	}
+}
+
+// readSetting reads one entry. An entry or a field it cannot read is kept
+// as constrained, so it may deny but never trusts; dropping it could leave
+// an empty list, which trusts.
+func readSetting(item any) trustSetting {
+	dict, ok := item.(map[string]any)
+	if !ok {
+		return trustSetting{constrained: true}
+	}
+	var s trustSetting
+	s.policyName, s.hasPolicyName = dict["kSecTrustSettingsPolicyName"].(string)
+	s.result, s.hasResult = dict["kSecTrustSettingsResult"].(int64)
+	s.policyOID, _ = dict["kSecTrustSettingsPolicy"].([]byte)
+	s.constrained = constrained(dict)
+	for key, read := range map[string]bool{
+		"kSecTrustSettingsPolicyName": s.hasPolicyName,
+		"kSecTrustSettingsResult":     s.hasResult,
+		"kSecTrustSettingsPolicy":     s.policyOID != nil,
+	} {
+		if _, present := dict[key]; present && !read {
+			s.constrained = true
+		}
+	}
+	return s
 }
 
 // constrained reports a rule trustd checks per evaluation: a hostname, the

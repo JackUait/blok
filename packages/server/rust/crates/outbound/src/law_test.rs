@@ -476,3 +476,153 @@ fn the_guarded_fetcher_does_not_copy_the_finished_body() {
         assert!(!body.contains(copy), "read_bounded calls {copy}");
     }
 }
+
+/// WebSocket client crates. C# bans ClientWebSocket everywhere, and Go bans
+/// the x/net client: none may open a connection past the guarded fetcher.
+/// crates/ws (blok-ws) is the server side, and allowed.
+const WEBSOCKET_CLIENTS: &[&str] = &[
+    "tungstenite",
+    "tokio-tungstenite",
+    "async-tungstenite",
+    "async-tungstenite-wasm",
+    "websocket",
+    "websocket-lite",
+    "tokio-websockets",
+    "fastwebsockets",
+    "soketto",
+    "ws",
+    "ezsockets",
+    "reqwest-websocket",
+    "awc",
+];
+
+/// Every WebSocket client named by `lock` (Cargo.lock) or by a dependency
+/// table of a manifest (relative path to Cargo.toml text).
+fn websocket_clients(lock: &str, manifests: &BTreeMap<String, String>) -> Vec<String> {
+    let banned = |name: &str| WEBSOCKET_CLIENTS.contains(&name);
+    let quoted = |value: &str| value.trim().trim_matches('"').to_owned();
+    let mut found = Vec::new();
+    let mut in_package = false;
+    for (line, text) in lock.lines().enumerate() {
+        let text = text.trim();
+        if text.starts_with('[') {
+            in_package = text == "[[package]]";
+        } else if in_package
+            && let Some(name) = text.strip_prefix("name =").map(quoted)
+            && banned(&name)
+        {
+            found.push(format!("Cargo.lock:{} locks {name}", line + 1));
+        }
+    }
+    for (path, manifest) in manifests {
+        // The table a line sits in; [dependencies.x] names x itself.
+        let mut table = String::new();
+        for (line, text) in manifest.lines().enumerate() {
+            let text = text.split('#').next().unwrap_or_default().trim();
+            if let Some(header) = text.strip_prefix('[') {
+                table = header.trim_matches(|c| c == '[' || c == ']').to_owned();
+                if let Some((_, name)) = table.rsplit_once("dependencies.")
+                    && banned(name)
+                {
+                    found.push(format!("{path}:{} depends on {name}", line + 1));
+                }
+                continue;
+            }
+            if !table.ends_with("dependencies") {
+                continue;
+            }
+            let Some((key, value)) = text.split_once('=') else {
+                continue;
+            };
+            let key = quoted(key);
+            let renamed = value
+                .split_once("package")
+                .and_then(|(_, rest)| rest.trim_start().strip_prefix('='))
+                .map(|rest| quoted(rest.split([',', '}']).next().unwrap_or_default()));
+            for name in std::iter::once(key).chain(renamed) {
+                if banned(&name) {
+                    found.push(format!("{path}:{} depends on {name}", line + 1));
+                }
+            }
+        }
+    }
+    found
+}
+
+fn workspace_manifests() -> (String, BTreeMap<String, String>) {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let lock = std::fs::read_to_string(root.join("Cargo.lock")).unwrap();
+    let mut manifests = BTreeMap::from([(
+        "Cargo.toml".to_owned(),
+        std::fs::read_to_string(root.join("Cargo.toml")).unwrap(),
+    )]);
+    for entry in std::fs::read_dir(root.join("crates")).unwrap() {
+        let path = entry.unwrap().path().join("Cargo.toml");
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            let relative = path
+                .strip_prefix(&root)
+                .unwrap()
+                .to_string_lossy()
+                .replace('\\', "/");
+            manifests.insert(relative, text);
+        }
+    }
+    (lock, manifests)
+}
+
+#[test]
+fn no_crate_depends_on_a_websocket_client() {
+    let (lock, manifests) = workspace_manifests();
+    assert!(manifests.len() > 10, "{} manifests read", manifests.len());
+    let found = websocket_clients(&lock, &manifests);
+    assert!(
+        found.is_empty(),
+        "a WebSocket client is a way out past the guarded fetcher:\n{}",
+        found.join("\n")
+    );
+}
+
+#[test]
+fn the_websocket_law_catches_planted_clients() {
+    let lockfile = "[[package]]\nname = \"tungstenite\"\nversion = \"0.24.0\"\n";
+    assert!(
+        !websocket_clients(lockfile, &BTreeMap::new()).is_empty(),
+        "a locked client: not caught"
+    );
+    for (name, manifest) in [
+        (
+            "a dependency",
+            "[dependencies]\ntokio-tungstenite = \"0.24\"\n",
+        ),
+        (
+            "a dev dependency",
+            "[dev-dependencies]\nfastwebsockets = { version = \"0.8\" }\n",
+        ),
+        (
+            "a renamed one",
+            "[dependencies]\nsocket = { package = \"tungstenite\", version = \"0.24\" }\n",
+        ),
+        ("a table", "[dependencies.soketto]\nversion = \"0.8\"\n"),
+        (
+            "a target one",
+            "[target.'cfg(unix)'.dependencies]\nwebsocket = \"0.27\"\n",
+        ),
+        (
+            "a workspace one",
+            "[workspace.dependencies]\nws = \"0.9\"\n",
+        ),
+    ] {
+        let manifests = BTreeMap::from([("crates/x/Cargo.toml".to_owned(), manifest.to_owned())]);
+        assert!(
+            !websocket_clients("", &manifests).is_empty(),
+            "{name}: not caught"
+        );
+    }
+    // Our own server side, a package's own name and other tables are not clients.
+    let clean = "[package]\nname = \"ws\"\n\n[dependencies]\nblok-ws = { path = \"../ws\" }\n\n[features]\nws = []\n";
+    let manifests = BTreeMap::from([("crates/x/Cargo.toml".to_owned(), clean.to_owned())]);
+    assert_eq!(
+        websocket_clients("[[package]]\nname = \"blok-ws\"\n", &manifests),
+        Vec::<String>::new()
+    );
+}

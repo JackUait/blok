@@ -51,6 +51,7 @@ mod sync_test;
 mod disposition_test;
 
 pub use blok_auth::{Authorization, Extensions, User};
+pub use blok_collab_room::Timers;
 pub use collab::{CollabError, PurgeOutcome};
 pub use log::{COLLAB_LOG_CATEGORY, HOST_LOG_CATEGORY, Level, Logger};
 pub use options::{Clock, MINIMUM_SECRET_LENGTH, Options, OptionsError, format_time_span};

@@ -221,6 +221,35 @@ async fn activity_is_stamped_with_the_host_clock() {
     host.close().await;
 }
 
+/// Records every timer the rooms arm and never fires one.
+#[derive(Default)]
+struct CountingTimers(std::sync::Mutex<Vec<Duration>>);
+
+impl blok_collab_room::Timers for CountingTimers {
+    fn sleep(&self, d: Duration) -> BoxFuture<'static, ()> {
+        self.0.lock().unwrap().push(d);
+        Box::pin(std::future::pending())
+    }
+}
+
+// The host's timers reach the rooms, as a C# TimeProvider in DI does.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_rooms_arm_their_timers_on_the_hosts_timers() {
+    let timers = Arc::new(CountingTimers::default());
+    let counted = timers.clone();
+    let host = host_server(move |o| {
+        o.collab_journal = true;
+        o.timers = Some(counted.clone());
+    })
+    .await;
+    assert_eq!(host.edit("doc", "k1").await.status, 204);
+    assert!(
+        !timers.0.lock().unwrap().is_empty(),
+        "no room timer was armed on the host's timers"
+    );
+    host.close().await;
+}
+
 type Failure = fn() -> Error;
 
 /// Wraps each session so its checkpoint fails with the error.

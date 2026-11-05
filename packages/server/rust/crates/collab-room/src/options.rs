@@ -1,8 +1,16 @@
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
+use blok_collab::BoxFuture;
+
 /// The room's clock.
 pub type Clock = Arc<dyn Fn() -> SystemTime + Send + Sync>;
+
+/// TimeProvider.CreateTimer: a wait on the host's clock.
+pub trait Timers: Send + Sync {
+    /// Resolves once d has passed on this clock.
+    fn sleep(&self, d: Duration) -> BoxFuture<'static, ()>;
+}
 
 /// CollabRoomOptions. Default is C#'s defaults; an explicit zero stays zero,
 /// as a C# init property does.
@@ -27,6 +35,9 @@ pub struct Options {
     pub commit_timeout: Duration,
     /// SystemTime::now when None.
     pub now: Option<Clock>,
+    /// The export, eviction and persist timers and every commit_timeout
+    /// bound wait on it. Wall time when None.
+    pub timers: Option<Arc<dyn Timers>>,
 }
 
 pub(crate) const MALFORMED_AWARENESS_LIMIT: i64 = 3;
@@ -56,6 +67,7 @@ impl Default for Options {
             retry_backoff_cap: Duration::from_secs(60),
             commit_timeout: Duration::from_secs(10),
             now: None,
+            timers: None,
         }
     }
 }
@@ -66,6 +78,14 @@ impl Options {
             self.now = Some(Arc::new(SystemTime::now));
         }
         self
+    }
+
+    /// A wait of d on the room's timers.
+    pub(crate) fn sleep(&self, d: Duration) -> BoxFuture<'static, ()> {
+        match &self.timers {
+            Some(timers) => timers.sleep(d),
+            None => Box::pin(tokio::time::sleep(d)),
+        }
     }
 
     pub(crate) fn now(&self) -> SystemTime {

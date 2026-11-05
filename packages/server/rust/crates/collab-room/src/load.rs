@@ -225,7 +225,11 @@ impl Room {
         let Some(reading) = st.pending_version.clone() else {
             return;
         };
-        match tokio::time::timeout(self.options.commit_timeout, reading.wait()).await {
+        let read = tokio::select! {
+            answered = reading.wait() => Ok(answered),
+            () = self.options.sleep(self.options.commit_timeout) => Err(()),
+        };
+        match read {
             Ok(answered) => self.apply_version_locked(st, reading.id, answered.ok().flatten()),
             Err(_) => self.logf(&format!(
                 "collab: room \"{}\" is projecting before its version read finished: it did not answer within the commit timeout",

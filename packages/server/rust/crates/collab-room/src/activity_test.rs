@@ -8,15 +8,15 @@ use crate::test_support::*;
 use crate::*;
 
 /// Holds its first call until the gate opens.
-struct GatedObserver {
-    gate: Gate,
-    entered: Gate,
-    actors: Mutex<Vec<String>>,
-    released: AtomicBool,
+pub(crate) struct GatedObserver {
+    pub(crate) gate: Gate,
+    pub(crate) entered: Gate,
+    pub(crate) actors: Mutex<Vec<String>>,
+    pub(crate) released: AtomicBool,
 }
 
 impl GatedObserver {
-    fn new() -> Arc<GatedObserver> {
+    pub(crate) fn new() -> Arc<GatedObserver> {
         Arc::new(GatedObserver {
             gate: Gate::new(),
             entered: Gate::new(),
@@ -50,7 +50,7 @@ impl ActivityObserver for GatedObserver {
     }
 }
 
-fn activity_manager(o: Options, observer: Arc<GatedObserver>, logs: &Logs) -> Manager {
+pub(crate) fn activity_manager(o: Options, observer: Arc<GatedObserver>, logs: &Logs) -> Manager {
     Manager::new(ManagerOptions {
         store: MemoryStore::new(),
         endpoint: FakeEndpoint::null(),

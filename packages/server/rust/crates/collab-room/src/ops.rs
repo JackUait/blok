@@ -255,7 +255,7 @@ impl Room {
             let committed = self
                 .lifetime
                 .run_for(
-                    self.options.commit_timeout,
+                    self.options.sleep(self.options.commit_timeout),
                     session.find_committed(&ctx, &request.operation_id, &request.digest),
                 )
                 .await;
@@ -572,7 +572,7 @@ impl Room {
                 };
                 self.lifetime
                     .run_for(
-                        self.options.commit_timeout,
+                        self.options.sleep(self.options.commit_timeout),
                         session.write_checkpoint(&ctx, checkpoint),
                     )
                     .await
@@ -832,7 +832,7 @@ impl Room {
         tokio::select! {
             biased;
             () = self.settle() => {}
-            () = tokio::time::sleep(self.options.commit_timeout) => self.logf(&format!(
+            () = self.options.sleep(self.options.commit_timeout) => self.logf(&format!(
                 "collab: room \"{}\" abandoned its activity dispatch while draining: the observer is past its bound",
                 self.doc_id
             )),

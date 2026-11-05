@@ -292,6 +292,7 @@ impl Inner {
         let mut room = RoomOptions {
             announced_max_message_bytes: o.collab_max_message_bytes,
             now: Some(Arc::new(move || clock())),
+            timers: o.timers.clone(),
             ..RoomOptions::default()
         };
         let operations: Option<Arc<dyn OperationStore>> =

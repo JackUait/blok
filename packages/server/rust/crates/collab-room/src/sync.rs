@@ -199,7 +199,7 @@ impl Room {
         let committed = self
             .lifetime
             .run_for(
-                self.options.commit_timeout,
+                self.options.sleep(self.options.commit_timeout),
                 session.find_committed(&ctx, operation_id, &digest),
             )
             .await;
@@ -274,7 +274,10 @@ impl Room {
         };
         let appended = self
             .lifetime
-            .run_for(self.options.commit_timeout, session.append(&ctx, candidate))
+            .run_for(
+                self.options.sleep(self.options.commit_timeout),
+                session.append(&ctx, candidate),
+            )
             .await;
         let appended = match appended {
             Ok(appended) => appended,

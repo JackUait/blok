@@ -34,7 +34,7 @@ pub use ops::{
     Applied, EditResult, EditStatus, PlanOps, Precondition, Receipt, ResetResult, ResetStatus,
     StateResult, StateStatus, planned_frame_bytes,
 };
-pub use options::{Clock, Options};
+pub use options::{Clock, Options, Timers};
 pub use restore::{normalize_target, plan_restore};
 pub use room::{Log, Membership};
 pub use seams::*;
@@ -104,5 +104,7 @@ mod room_test;
 #[cfg(test)]
 #[allow(dead_code, reason = "a harness: not every test uses every fake")]
 mod test_support;
+#[cfg(test)]
+mod timers_test;
 #[cfg(test)]
 mod version_test;

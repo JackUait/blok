@@ -96,8 +96,13 @@ pub struct Options {
 
     /// The TimeProvider override: tickets, the rate limit window, S3 signing
     /// and the rooms' timestamps (activity, cooldowns, export deadlines) read
-    /// it. Room timers still run on wall time. None is the system clock.
+    /// it. None is the system clock.
     pub clock: Option<Clock>,
+
+    /// The TimeProvider's CreateTimer override: the rooms' export, eviction
+    /// and persist timers and every commit-timeout bound wait on it. None is
+    /// wall time, as a C# provider that overrides only the clock.
+    pub timers: Option<Arc<dyn blok_collab_room::Timers>>,
 
     /// Receives the server's warnings, each with a category
     /// ([`crate::COLLAB_LOG_CATEGORY`] for the rooms). None discards them.
@@ -145,6 +150,7 @@ impl Default for Options {
             collab_operation_store: None,
             collab_activity_observer: None,
             clock: None,
+            timers: None,
             logger: None,
         }
     }

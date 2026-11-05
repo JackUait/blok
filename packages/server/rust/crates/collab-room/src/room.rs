@@ -195,9 +195,10 @@ impl RoomTimer {
         let Some(due) = due else {
             return;
         };
+        let wait = room.options.sleep(due);
         let room = Arc::downgrade(room);
         timer.handle = Some(tokio::spawn(async move {
-            tokio::time::sleep(due).await;
+            wait.await;
             if let Some(room) = room.upgrade() {
                 room.post(job());
             }
@@ -732,7 +733,11 @@ impl Room {
     pub(crate) async fn close_room_locked(&self, st: &mut State, reason: Option<CloseReason>) {
         if let Some(closing) = st.session.take() {
             let closed = tokio::spawn(async move { closing.close().await });
-            match tokio::time::timeout(self.options.commit_timeout, closed).await {
+            let closed = tokio::select! {
+                closed = closed => Ok(closed),
+                () = self.options.sleep(self.options.commit_timeout) => Err(()),
+            };
+            match closed {
                 Ok(Ok(Ok(()))) => {}
                 Ok(Ok(Err(err))) => self.logf(&format!(
                     "collab: room \"{}\" could not release its operation session: {err}",

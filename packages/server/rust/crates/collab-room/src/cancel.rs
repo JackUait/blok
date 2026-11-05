@@ -1,7 +1,6 @@
 use std::future::Future;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 
 use tokio::sync::Notify;
 
@@ -69,15 +68,16 @@ impl Token {
         }
     }
 
-    /// run, bounded: past timeout the work is dropped with DeadlineExceeded.
+    /// run, bounded: once bound resolves the work is dropped with
+    /// DeadlineExceeded.
     pub(crate) async fn run_for<T>(
         &self,
-        timeout: Duration,
+        bound: impl Future<Output = ()>,
         work: impl Future<Output = Result<T, Error>>,
     ) -> Result<T, Error> {
-        match tokio::time::timeout(timeout, self.run(work)).await {
-            Ok(result) => result,
-            Err(_) => Err(Error::DeadlineExceeded),
+        tokio::select! {
+            result = self.run(work) => result,
+            () = bound => Err(Error::DeadlineExceeded),
         }
     }
 }

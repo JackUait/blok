@@ -164,6 +164,25 @@ fn reads_the_trust_list_of_an_export() {
 				</dict>
 			</array>
 		</dict>
+		<key>B8A0E8A6285B3B86B476C5796054EBFC6DA6EB80</key>
+		<dict>
+			<key>trustSettings</key>
+			<array>
+				<string>not a dict</string>
+				<dict>
+					<key>kSecTrustSettingsPolicy</key>
+					<string>KoZIhvdjZAED</string>
+				</dict>
+				<dict>
+					<key>kSecTrustSettingsResult</key>
+					<string>1</string>
+				</dict>
+				<dict>
+					<key>kSecTrustSettingsPolicyName</key>
+					<integer>1</integer>
+				</dict>
+			</array>
+		</dict>
 		<key>925A8F8D2C6D04E0665F596AFF22D863E8256F3F</key>
 		<dict>
 			<key>serialNumber</key>
@@ -196,6 +215,17 @@ fn reads_the_trust_list_of_an_export() {
                     constrained: true,
                     ..TrustSetting::default()
                 },
+            ],
+        ),
+        // Entries it cannot read never trust: an empty list would.
+        (
+            "B8A0E8A6285B3B86B476C5796054EBFC6DA6EB80",
+            vec![
+                TrustSetting {
+                    constrained: true,
+                    ..TrustSetting::default()
+                };
+                4
             ],
         ),
         ("925A8F8D2C6D04E0665F596AFF22D863E8256F3F", vec![]),

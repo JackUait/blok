@@ -50,12 +50,18 @@ pub(crate) fn load_trust_settings_anchors(tool: &Path) -> Result<Vec<Vec<u8>>, S
     let deadline = Instant::now() + Duration::from_secs(10);
     let home = std::env::var("HOME").unwrap_or_default();
     let mut certs = HashMap::new();
-    for keychain in KEYCHAINS {
+    for (index, keychain) in KEYCHAINS.iter().enumerate() {
         let keychain = keychain.replacen('~', &home, 1);
         let out = run(tool, &["find-certificate", "-a", "-p", &keychain], deadline)?;
+        let mut found = 0;
         for cert in CertificateDer::pem_slice_iter(&out) {
             let der = cert.map_err(|e| e.to_string())?.to_vec();
             certs.insert(upper_hex(&Sha1::digest(&der)), der);
+            found += 1;
+        }
+        // The tool exits 0 even for a keychain it cannot open.
+        if index == KEYCHAINS.len() - 1 && found == 0 {
+            return Err("no system root certificates".into());
         }
     }
     let directory = TempDir::new()?;
@@ -71,6 +77,15 @@ pub(crate) fn load_trust_settings_anchors(tool: &Path) -> Result<Vec<Vec<u8>>, S
         run(tool, &args, deadline)?;
         let data = std::fs::read(&path).map_err(|e| e.to_string())?;
         domains.push(parse_trust_list(&data)?);
+    }
+    // Every system root is in the system keychain: an empty system domain or
+    // a hash with no certificate means a read went wrong.
+    let system = domains.last().ok_or("no domains")?;
+    if system.is_empty() {
+        return Err("no system trust settings".into());
+    }
+    if system.keys().any(|hash| !certs.contains_key(hash)) {
+        return Err("a system trust setting has no certificate".into());
     }
     Ok(trusted_anchors(&domains, &certs))
 }

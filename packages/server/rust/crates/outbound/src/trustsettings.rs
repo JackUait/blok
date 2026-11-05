@@ -138,31 +138,54 @@ pub(crate) fn parse_trust_list(
         if let Value::Dict(mut fields) = entry
             && let Some(Value::Array(items)) = fields.remove("trustSettings")
         {
-            for item in items {
-                let Value::Dict(dict) = item else {
-                    settings.push(TrustSetting::default());
-                    continue;
-                };
-                settings.push(TrustSetting {
-                    policy_name: match dict.get("kSecTrustSettingsPolicyName") {
-                        Some(Value::Text(name)) => Some(name.clone()),
-                        _ => None,
-                    },
-                    result: match dict.get("kSecTrustSettingsResult") {
-                        Some(Value::Integer(result)) => Some(*result),
-                        _ => None,
-                    },
-                    policy_oid: match dict.get("kSecTrustSettingsPolicy") {
-                        Some(Value::Data(oid)) => Some(oid.clone()),
-                        _ => None,
-                    },
-                    constrained: constrained(&dict),
-                });
-            }
+            settings.extend(items.into_iter().map(read_setting));
         }
         out.insert(hash, settings);
     }
     Ok(out)
+}
+
+/// One entry. An entry or a field it cannot read is kept as constrained,
+/// so it may deny but never trusts; dropping it could leave an empty list,
+/// which trusts.
+fn read_setting(item: Value) -> TrustSetting {
+    let Value::Dict(dict) = item else {
+        return TrustSetting {
+            constrained: true,
+            ..TrustSetting::default()
+        };
+    };
+    let mut unreadable = false;
+    let policy_name = match dict.get("kSecTrustSettingsPolicyName") {
+        None => None,
+        Some(Value::Text(name)) => Some(name.clone()),
+        Some(_) => {
+            unreadable = true;
+            None
+        }
+    };
+    let result = match dict.get("kSecTrustSettingsResult") {
+        None => None,
+        Some(Value::Integer(result)) => Some(*result),
+        Some(_) => {
+            unreadable = true;
+            None
+        }
+    };
+    let policy_oid = match dict.get("kSecTrustSettingsPolicy") {
+        None => None,
+        Some(Value::Data(oid)) => Some(oid.clone()),
+        Some(_) => {
+            unreadable = true;
+            None
+        }
+    };
+    TrustSetting {
+        policy_name,
+        result,
+        policy_oid,
+        constrained: unreadable || constrained(&dict),
+    }
 }
 
 /// A rule trustd checks per evaluation: a hostname, the calling app, policy

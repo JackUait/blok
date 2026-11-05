@@ -404,8 +404,9 @@ func TestReportsALoadThatOutgrowsTheBudget(t *testing.T) {
 	if !errors.As(err, &startup) || startup.Cause != StartupOverBudget {
 		t.Fatalf("err = %v, want an over-budget StartupError", err)
 	}
-	// C# BlokRuntimeStartupTests asserts the words "allocation budget".
-	if !strings.Contains(startup.Error(), "1048576-byte") || !strings.Contains(strings.ToLower(startup.Error()), "allocation budget") {
+	// C# says "allocation budget"; Go's budget is live heap, so it says so.
+	if !strings.Contains(startup.Error(), "grew the live heap past the 1048576-byte memory budget") ||
+		!strings.Contains(startup.Error(), "(1 GiB)") || strings.Contains(startup.Error(), "allocation") {
 		t.Fatalf("message %q does not name the budget", startup.Error())
 	}
 }

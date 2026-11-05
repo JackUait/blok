@@ -417,6 +417,251 @@
       "locations": [
         "https://[::1"
       ]
+    },
+    {
+      "locations": [
+        "mailto:"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a%20b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b%20c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:@b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b:25"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b:x"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b:99999"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@[::1]"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@[::1"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@1.2.3.4"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b?subject=x y"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b#f g"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b/c d"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:?to=a b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:/x y"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b\\c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b@c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a b@c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:é@b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@é.com"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b_c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@-b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b..c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b."
+      ]
+    },
+    {
+      "locations": [
+        "MAILTO:a b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto: a@b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b "
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a\u0001@b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b\u0001"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a,b@c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b,c@d"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a;b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:%"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b%"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:\\\\x"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a:b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a:25"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b:"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:#f"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b?"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a\tb"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@1.2.3"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b c?x"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a<b>@c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a\"b@c"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b|c"
+      ]
     }
   ],
   "answers": [
@@ -502,6 +747,55 @@
     "200 /a%01",
     "BlockedDestination",
     "200 /x",
+    "302",
+    "BlockedDestination",
+    "BlockedDestination",
+    "302",
+    "302",
+    "302",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "302",
+    "302",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "302",
+    "302",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "302",
+    "302",
+    "302",
+    "302",
+    "302",
+    "302",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "BlockedDestination",
     "302"
   ]
 }

@@ -1,0 +1,602 @@
+{
+  "cases": [
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\u0001b\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\u007Fb\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\u0000b\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\rb\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\u000Bb\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\u001Fb\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\bb\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: \u0001\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\u0000\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: \u0000a\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\u0000\u0001\rb\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: é\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: \u0085\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: ÿ\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\u0000é\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain\u0001\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/\u0000plain\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain; charset=a\u007F\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain\r\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Encoding: gzip\u0001\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Encoding: \u0000\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Encoding: identity\u007F\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\u0001\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: \u00002\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\u0000\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\u0001\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: \u0000chunked\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Pro\u0001be: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe : v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe  : v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe\t: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe\u0000: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Pr obe: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Pr\u007Fobe: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Préobe: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe:v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe:\tv\t\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\n X-Probe: v\r\nContent-Length: 2\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\n\tX-Probe: v\r\nContent-Length: 2\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\r\n b\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\n b\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\r\n\tb\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\r\n   b  \r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe:\r\n b\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\r\n b\r\n c\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\u0000\r\n b\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\nContent-Length: 2\nX-Probe: v\n\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\nX-Probe: v\r\n\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: v\r\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: v\r \r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a\r\nX-Probe: b\r\nx-probe: c\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: a, b\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe:\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 100 Continue\r\nBad\u0001Name: v\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 100 Continue\r\nNoColon\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 103 Early Hints\r\nX-Probe: early\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: v\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Pad: {PAD:65489}\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Pad: {PAD:65490}\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Pad: {PAD:65464}\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Pad: {PAD:65465}\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nX-Probe: v\r\n\r\n2\r\nok\r\n0\r\nX-Probe: a\u0001b\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\nX\u0001: v\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\nNoColon\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\nX-T: a\u0000b\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Length: 2\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Length: 3\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2, 2\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: +2\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length:  2 \r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 02\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: -1\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 99999999999999999999\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 1\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip, chunked\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: Chunked\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked;a=b\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: identity\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked, gzip\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 5\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked x\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: ,chunked,\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding:\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.0 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.0 200 OK\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2;ext=1\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2 ;x\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2 x\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0002\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n 2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nA\r\n0123456789\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\nok\n0\n\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nokX\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\no"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nx\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\nX-T: a\r\n b\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\n X-T: a\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0;e\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n00\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n10000000000000000\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\nX-T: {PAD:65400}\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\nX-T: {PAD:16400}\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2;{PAD:16400}\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 204 No Content\r\nContent-Length: 2\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 304 Not Modified\r\nContent-Length: 2\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 101 Switching Protocols\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 199 Odd\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2, 2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2,2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: +2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length:  2 \r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 02\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Length: 2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Length: 3\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nContent-Length: 2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\u0001\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: \u00002\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\u0000\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2 2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\t\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 0x2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2.0\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Probe: v\r\nContent-Length: 2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nContent-Length: 3\r\n\r\nokkk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\nX-T: {PAD:65480}\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\nX-T: {PAD:65481}\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\nX-T: {PAD:65470}\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: x\r\nContent-Length: 2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Length: x\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: \r\nContent-Length: 2\r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Length: \r\n\r\nokk"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip;a=\"x,y\", chunked\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked, x y\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: x y\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nTransfer-Encoding: x y\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip;a\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked;a\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 1\r\n\r\n2\r\nok\r\n0\r\n\r\n"
+    },
+    {
+      "response": "HTTP/1.1 200 OK\r\nTransfer-Encoding: x\r\nContent-Length: 1\r\n\r\nok"
+    }
+  ],
+  "answers": [
+    "200 ct= x=a\u0001b b=ok",
+    "200 ct= x=a\u007Fb b=ok",
+    "200 ct= x=a b b=ok",
+    "200 ct= x=a b b=ok",
+    "200 ct= x=a\u000Bb b=ok",
+    "200 ct= x=a\u001Fb b=ok",
+    "200 ct= x=a\bb b=ok",
+    "200 ct= x=\u0001 b=ok",
+    "200 ct= x=a  b=ok",
+    "200 ct= x= a b=ok",
+    "200 ct= x=a \u0001 b b=ok",
+    "200 ct= x=é b=ok",
+    "200 ct= x=\u0085 b=ok",
+    "200 ct= x=ÿ b=ok",
+    "200 ct= x=a é b=ok",
+    "200 ct= x= b=ok",
+    "200 ct=text/plain x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct=text/plain x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=2\r\nok\r\n0\r\n\r\n",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "200 ct= x=v b=ok",
+    "200 ct= x=v b=ok",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "200 ct= x=v b=ok",
+    "200 ct= x=v b=ok",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "200 ct= x=a   b b=ok",
+    "200 ct= x=a  b b=ok",
+    "200 ct= x=a  \tb b=ok",
+    "200 ct= x=a     b b=ok",
+    "200 ct= x=b b=ok",
+    "200 ct= x=a   b   c b=ok",
+    "200 ct= x=a    b b=ok",
+    "200 ct= x=v b=ok",
+    "200 ct= x=v b=ok",
+    "200 ct= x=v  b=ok",
+    "200 ct= x=v  b=ok",
+    "200 ct= x=a|b|c b=ok",
+    "200 ct= x=a, b b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x=v b=ok",
+    "BlockedDestination",
+    "200 ct= x=v b=ok",
+    "200 ct= x=v b=ok",
+    "200 ct= x=v b=ok",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "200 ct= x=v b=ok",
+    "BlockedDestination",
+    "BlockedDestination",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=o",
+    "BlockedDestination",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=2\r\nok\r\n0\r\n\r\n",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=2\r\nok\r\n0\r\n\r\n",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "200 ct= x= b=0123456789",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "204 ct= x= b=",
+    "304 ct= x= b=",
+    "101 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=okk",
+    "200 ct= x=v b=ok",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=ok",
+    "BlockedDestination",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=okk",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=2\r\nok\r\n0\r\n\r\n",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=2\r\nok\r\n0\r\n\r\n",
+    "200 ct= x= b=ok",
+    "200 ct= x= b=o"
+  ]
+}

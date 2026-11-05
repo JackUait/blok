@@ -149,7 +149,7 @@ func (t *SocketsTransport) dial(ctx context.Context, address string, secure bool
 		case "socks5", "socks5h":
 			err = socks5Tunnel(ctx, conn, proxy, tunnel)
 		default:
-			conn, err = connectTunnel(conn, proxy, tunnel, open)
+			conn, err = connectTunnel(ctx, conn, proxy, tunnel, open)
 		}
 		if err != nil {
 			return fail(err)
@@ -199,16 +199,20 @@ func proxyAddress(proxy *url.URL) string {
 //   - Host, and a User-Agent only when the request has one
 //     (HttpConnectionPool.cs:308-312, :660-664); the operator requests
 //     have none.
-//   - Credentials only after a 407 Basic challenge: SendWithProxyAuthAsync
-//     passes preAuthenticate false (AuthenticationHelper.cs:481), and the
-//     Basic case resends with the token (:409-428), UTF-8 "user:password"
-//     (:328-329). The retry reuses the conn unless the 407 closed it; then
-//     open makes a new one.
-//   - Only 200 opens the tunnel (HttpConnectionPool.cs:666).
+//   - Credentials only after a 407 challenge: SendWithProxyAuthAsync
+//     passes preAuthenticate false (AuthenticationHelper.cs:481). Basic
+//     resends with UTF-8 "user:password" (:328-329); Digest gets one more
+//     try on a stale nonce.
+//   - NTLM and Negotiate are SendWithNtAuthAsync (:630-745): Type 1 and
+//     Type 3 go on one conn. Only the first 407 may close it and make a new
+//     one; after the Type 3 the answer is final.
+//   - The retry reuses the conn unless the 407 closed it; then open makes
+//     a new one. Only 200 opens the tunnel (HttpConnectionPool.cs:666).
 //
 // It returns the conn the tunnel runs on.
-func connectTunnel(conn net.Conn, proxy *url.URL, target string, open func() (net.Conn, error)) (net.Conn, error) {
+func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target string, open func() (net.Conn, error)) (net.Conn, error) {
 	authorization, sent, stale := "", "", false
+	var nt *ntlmAuth
 	for {
 		head := "CONNECT " + target + " HTTP/1.1\r\nHost: " + target + "\r\n"
 		if authorization != "" {
@@ -241,12 +245,33 @@ func connectTunnel(conn net.Conn, proxy *url.URL, target string, open func() (ne
 				// SendWithAuthAsync's first answer.
 				sent = chooseChallenge(challenges)
 				switch sent {
+				case "negotiate", "ntlm":
+					if next, nt, err = ntlmFirst(ctx, sent, challenges[sent], proxy, user, password); err != nil {
+						return conn, err
+					}
 				case "digest":
 					if parameters, ok := parseDigest(challenges["digest"]); ok {
 						next = "Digest " + digestToken(user, password, parameters)
 					}
 				case "basic":
 					next = "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+password))
+				}
+			case nt != nil && !nt.authenticated:
+				data, ok := challenges[sent]
+				if !ok {
+					break
+				}
+				// A bare challenge is an empty blob, which .NET cannot read.
+				challenge, err := base64.StdEncoding.DecodeString(data)
+				if err != nil || data == "" {
+					return conn, errNtlmThrow
+				}
+				token, err := nt.respond(challenge)
+				if err != nil {
+					return conn, err
+				}
+				if token != nil {
+					next = ntlmScheme(sent) + " " + base64.StdEncoding.EncodeToString(token)
 				}
 			case sent == "digest" && !stale:
 				// One more try when the server calls the nonce stale.
@@ -261,21 +286,70 @@ func connectTunnel(conn net.Conn, proxy *url.URL, target string, open func() (ne
 		if next == "" || next == "Digest " {
 			return conn, fmt.Errorf("proxy: CONNECT answered %d", status)
 		}
+		// After the Type 1 the conn is kept whatever the answer says.
+		handshake := nt != nil && authorization != ""
 		authorization = next
 		body, framing := reader.Body(status, false, header)
 		keep := framing != FramedClose && strings.HasPrefix(string(line), "HTTP/1.1 ") &&
 			!strings.Contains(strings.ToLower(connectionTokens(header)), "close")
-		if keep {
+		if keep || handshake {
 			_, err := io.Copy(io.Discard, body)
-			keep = err == nil && in.Buffered() == 0
+			keep = keep && err == nil && in.Buffered() == 0
 		}
-		if !keep {
+		if !keep && !handshake {
 			conn.Close()
 			if conn, err = open(); err != nil {
 				return nil, err
 			}
 		}
 	}
+}
+
+// ntlmScheme is the scheme name .NET writes, whatever the server's case.
+func ntlmScheme(sent string) string {
+	if sent == "negotiate" {
+		return "Negotiate"
+	}
+	return "NTLM"
+}
+
+// ntlmFirst starts SendWithNtAuthAsync: the credentials are
+// GetCredentialsFromString's, "domain\\user" split at the first backslash,
+// and the SPN is "HTTP/" and the proxy host. The first challenge's data
+// is decoded, which can throw, and then not read.
+func ntlmFirst(ctx context.Context, sent, data string, proxy *url.URL, user, password string) (string, *ntlmAuth, error) {
+	if data != "" {
+		if _, err := base64.StdEncoding.DecodeString(data); err != nil {
+			return "", nil, errNtlmThrow
+		}
+	}
+	domain := ""
+	if at := strings.IndexByte(user, '\\'); at >= 0 {
+		domain, user = user[:at], user[at+1:]
+	}
+	host, err := ntlmSpnHost(ctx, proxy.Hostname())
+	if err != nil {
+		return "", nil, err
+	}
+	nt := newNtlmAuth(sent == "negotiate", user, domain, password, "HTTP/"+host)
+	if nt == nil {
+		return "", nil, nil
+	}
+	return ntlmScheme(sent) + " " + base64.StdEncoding.EncodeToString(nt.initial()), nt, nil
+}
+
+// ntlmSpnHost is the SPN host of a proxy: an IP literal as it is (IPv6
+// without brackets), else Dns.GetHostEntryAsync's HostName, the canonical
+// name.
+func ntlmSpnHost(ctx context.Context, host string) (string, error) {
+	if _, err := netip.ParseAddr(host); err == nil {
+		return host, nil
+	}
+	name, err := net.DefaultResolver.LookupCNAME(ctx, host)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSuffix(name, "."), nil
 }
 
 // authChallenges reads Proxy-Authenticate lines into each scheme's
@@ -328,14 +402,10 @@ func splitOutsideQuotes(s string) []string {
 }
 
 // chooseChallenge is TryGetAuthenticationChallenge's order: Negotiate,
-// NTLM, Digest, Basic. Negotiate and NTLM are not spoken here, so they
-// give "": .NET would answer them with its own token, never Basic.
+// NTLM, Digest, Basic.
 func chooseChallenge(challenges map[string]string) string {
 	for _, scheme := range []string{"negotiate", "ntlm", "digest", "basic"} {
 		if _, ok := challenges[scheme]; ok {
-			if scheme == "negotiate" || scheme == "ntlm" {
-				return ""
-			}
 			return scheme
 		}
 	}

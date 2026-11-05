@@ -159,9 +159,7 @@ func digestProxy(t *testing.T, mode, user string) (*url.URL, func() []string) {
 	}
 }
 
-// The twin of C#'s AnswersADigestChallengeAsSocketsHttpHandlerDoes. Only
-// negotiate+basic differs: .NET sends a Negotiate token, which is not
-// spoken here, and neither sends Basic.
+// The twin of C#'s AnswersADigestChallengeAsSocketsHttpHandlerDoes.
 func TestAnswersADigestChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 	target := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, "ok")
@@ -178,7 +176,7 @@ func TestAnswersADigestChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"stale", "u", `200 ok|1 auth=no|1 auth=Digest username="u", realm="r", nonce="n", uri="/", response="R"|1 auth=Digest username="u", realm="r", nonce="n2", uri="/", response="R"`},
 		{"unsupported", "u", "error|1 auth=no"},
 		{"digest+basic", "u", `200 ok|1 auth=no|1 auth=Digest username="u", realm="r", nonce="n", uri="/", response="R"`},
-		{"negotiate+basic", "u", "error|1 auth=no"},
+		{"negotiate+basic", "u", "error|1 auth=no|1 auth=Negotiate T"},
 	} {
 		t.Run(c.mode, func(t *testing.T) {
 			proxy, seen := digestProxy(t, c.mode, c.user)

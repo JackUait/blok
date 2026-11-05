@@ -35,6 +35,7 @@ func TestALateInterruptAfterDisarmIsIgnored(t *testing.T) {
 // goroutines, as rooms and HTTP bodies do, until stop is closed.
 func allocateElsewhere(stop <-chan struct{}) *atomic.Int64 {
 	var total atomic.Int64
+	start := time.Now()
 	go func() {
 		ticker := time.NewTicker(10 * time.Millisecond)
 		defer ticker.Stop()
@@ -43,11 +44,14 @@ func allocateElsewhere(stop <-chan struct{}) *atomic.Int64 {
 			case <-stop:
 				return
 			case <-ticker.C:
-				chunk := make([]byte, 1<<20)
-				for i := 0; i < len(chunk); i += 4096 {
-					chunk[i] = 1
+				// Paced by the clock, so ticks a busy machine drops are made up.
+				for total.Load() < int64(time.Since(start).Seconds()*100e6) {
+					chunk := make([]byte, 1<<20)
+					for i := 0; i < len(chunk); i += 4096 {
+						chunk[i] = 1
+					}
+					total.Add(int64(len(chunk)))
 				}
-				total.Add(int64(len(chunk)))
 			}
 		}
 	}()

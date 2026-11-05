@@ -390,7 +390,7 @@ func TestConvertsTheSameDepthWhateverTheCallerHasSpentOfItsStack(t *testing.T) {
 	}
 }
 
-// C# converts 2411 outline levels to HTML and stops at 2416 on its
+// C# converts 2380 outline levels to HTML and stops at 2400 on its
 // allocation budget (measured); Go's frame cap should reach as far.
 func TestConvertsAsManyOutlineLevelsToHTMLAsCSharp(t *testing.T) {
 	if testing.Short() || raceEnabled {
@@ -400,14 +400,14 @@ func TestConvertsAsManyOutlineLevelsToHTMLAsCSharp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := p.Invoke(context.Background(), "blocksToHtml", nestedOutline(2411), 0)
-	if err != nil || !strings.Contains(got, "level 2410") {
-		t.Fatalf("err = %v, has level 2410 = %v", err, strings.Contains(got, "level 2410"))
+	got, err := p.Invoke(context.Background(), "blocksToHtml", nestedOutline(2380), 0)
+	if err != nil || !strings.Contains(got, "level 2379") {
+		t.Fatalf("err = %v, has level 2379 = %v", err, strings.Contains(got, "level 2379"))
 	}
 }
 
-// C# converts 1454 levels to Markdown and 11049 to plain text at its
-// default budget (measured). The readers spend different frames a level, so
+// C# converts 1454 levels to Markdown and, once its process is warm, 11049
+// to plain text at its default budget (6750 on a cold first call; measured). The readers spend different frames a level, so
 // Go sets its frame cap per reader.
 func TestConvertsAsManyOutlineLevelsAsCSharpForEachReader(t *testing.T) {
 	if testing.Short() || raceEnabled {
@@ -420,7 +420,7 @@ func TestConvertsAsManyOutlineLevelsAsCSharpForEachReader(t *testing.T) {
 	for _, c := range []struct {
 		op     string
 		levels int
-	}{{"blocksToMarkdown", 1454}, {"blocksToPlainText", 11049}, {"blocksToPlainTextWithReport", 11049}, {"blocksToHtml", 2411}} {
+	}{{"blocksToMarkdown", 1454}, {"blocksToPlainText", 11049}, {"blocksToPlainTextWithReport", 11049}, {"blocksToHtml", 2380}} {
 		want := fmt.Sprintf("level %d", c.levels-1)
 		got, err := p.Invoke(context.Background(), c.op, nestedOutline(c.levels), 0)
 		if err != nil || !strings.Contains(got, want) {

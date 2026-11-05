@@ -2754,13 +2754,13 @@
     "outputSha256": "4412957974a7dc7ad64f8a5e6b710d55228867f961ffb5cf6b284b32532152ed"
   },
   {
-    "name": "big.default.outline.10000.text",
+    "name": "big.default.outline.6000.text",
     "op": "blocksToPlainText",
     "inputRecipe": {
       "parts": [
         "{\"blocks\":[{\"id\":\"n0\",\"parent\":null,\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"level 0\"}}",
         {
-          "repeat": 9999,
+          "repeat": 5999,
           "join": "",
           "items": [
             ",{\"id\":\"n{i1}\",\"parent\":\"n{i}\",\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"level {i1}\"}}"
@@ -2769,6 +2769,6 @@
         "]}"
       ]
     },
-    "outputSha256": "7601b7638af729e6a6aba915a3f053a6cd0ea4064e25ee3424e1e6e21bc1970f"
+    "outputSha256": "db6bcb3f674cb2f02d85f404369c46b177b4100f580429fdc7e201b43751cd54"
   }
 ]

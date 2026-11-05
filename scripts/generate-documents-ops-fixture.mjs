@@ -320,15 +320,16 @@ const buildCases = async (invoke) => {
   add('big.url.bookmark.markdown', 'blocksToMarkdown', bigUrl('bookmark', 'https://example.com/?q='));
   add('big.fromMarkdown', 'markdownToBlocks', bigMarkdown);
   // C# converts these at its default budget, so every server must (C# stops
-  // a 28 MiB bookmark, a 64 MiB image to Markdown and 48 MiB to HTML, 2400
-  // HTML and 1500 Markdown levels).
+  // a 28 MiB bookmark, a 64 MiB image to Markdown and 48 MiB to HTML, and
+  // 2400 HTML levels; on a cold first call it stops plain text at 7000
+  // levels, deeper once warm).
   add('big.default.bookmark.24mib.markdown', 'blocksToMarkdown', bigUrlOf('bookmark', 'https://example.com/?q=', 24));
   add('big.default.image.56mib.markdown', 'blocksToMarkdown', bigUrlOf('image', 'data:image/png;base64,', 56));
   add('big.default.image.40mib.html', 'blocksToHtml', bigUrlOf('image', 'data:image/png;base64,', 40));
   add('big.default.image.32mib.text', 'blocksToPlainText', bigUrlOf('image', 'data:image/png;base64,', 32));
   add('big.default.outline.2300.html', 'blocksToHtml', outline(2300));
   add('big.default.outline.1400.markdown', 'blocksToMarkdown', outline(1400));
-  add('big.default.outline.10000.text', 'blocksToPlainText', outline(10000));
+  add('big.default.outline.6000.text', 'blocksToPlainText', outline(6000));
 
   return cases;
 };

@@ -376,7 +376,7 @@ async fn converts_a_long_article_whose_fields_carry_inline_markup() {
 
 // Rust runs every engine on its own thread, so the caller's stack plays no
 // part; the case is that 1000 levels convert to HTML. QuickJS's 16 MiB stack
-// cap stops HTML at 1687 levels (measured), short of C#'s 2411.
+// cap stops HTML at 1687 levels (measured), short of C#'s 2380.
 #[tokio::test]
 async fn converts_the_same_depth_whatever_the_caller_has_spent_of_its_stack() {
     let pool = embedded(Duration::from_secs(120), 0);

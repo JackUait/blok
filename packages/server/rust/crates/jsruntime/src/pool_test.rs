@@ -395,7 +395,7 @@ async fn converts_a_deeply_nested_outline() {
     }
 }
 
-// C# converts 2411 outline levels to HTML and stops at 2416 on its
+// C# converts 2380 outline levels to HTML and stops at 2400 on its
 // allocation budget (measured); QuickJS's stack must reach as far.
 #[tokio::test]
 async fn converts_as_many_outline_levels_to_html_as_csharp() {
@@ -406,10 +406,10 @@ async fn converts_as_many_outline_levels_to_html_as_csharp() {
     })
     .expect("new");
     let got = pool
-        .invoke("blocksToHtml", &nested_outline(2411), Duration::ZERO)
+        .invoke("blocksToHtml", &nested_outline(2380), Duration::ZERO)
         .await
-        .expect("2411 levels to HTML");
-    assert!(got.contains("level 2410"));
+        .expect("2380 levels to HTML");
+    assert!(got.contains("level 2379"));
 }
 
 #[test]

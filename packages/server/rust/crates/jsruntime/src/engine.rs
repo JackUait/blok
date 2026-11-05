@@ -21,7 +21,8 @@ use crate::runtime::{Error, JsError, Stop};
 /// 16 MiB as no limit at all.
 ///
 /// Sized so plain text converts 11049 outline levels and fails at 11050, as
-/// Jint's stack guard does in C# (both measured). HTML and Markdown stop
+/// Jint's stack guard does in a warm C# process (both measured; a cold first
+/// C# call stops near 7000). HTML and Markdown stop
 /// earlier, on the memory budget, as in C#.
 pub(crate) const MAX_STACK: usize = (40 << 20) + (317 << 10);
 

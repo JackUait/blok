@@ -25,13 +25,13 @@ const (
 	MinimumMemoryBudget int64 = 8 << 20
 	// MaxCallStackSize stops runaway recursion before it eats the heap. It is
 	// set for HTML, about 8 frames an outline level: 19500 converts 2436
-	// levels, where C# stops at 2416 on its allocation budget (both
+	// levels, where C# stops at 2400 on its allocation budget (both
 	// measured). Markdown, about 3 frames a level, reaches 6498 levels, past
 	// C#'s 1454.
 	MaxCallStackSize = 19500
 	// PlainTextCallStackSize is the cap of the plain-text readers, about 3
 	// frames a level: it converts 11164 levels, where C# converts 11049
-	// (both measured).
+	// once warm and 6750 on a cold first call (all measured).
 	PlainTextCallStackSize = 33500
 )
 

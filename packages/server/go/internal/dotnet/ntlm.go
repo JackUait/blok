@@ -191,11 +191,12 @@ func (a *ntlmAuth) type3(blob []byte) ([]byte, error) {
 		return nil, nil
 	}
 	flags := binary.LittleEndian.Uint32(blob[20:])
-	if flags&ntlmFlags != ntlmFlags {
-		return nil, nil
-	}
+	// TargetName is read, and can throw, before the flags are checked.
 	if _, err := ntlmField(blob, 12); err != nil {
 		return nil, err
+	}
+	if flags&ntlmFlags != ntlmFlags {
+		return nil, nil
 	}
 	targetInfo, err := ntlmField(blob, 40)
 	if err != nil {

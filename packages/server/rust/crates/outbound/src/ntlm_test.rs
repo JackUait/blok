@@ -155,8 +155,11 @@ fn type2(mode: &str) -> Vec<u8> {
     message[12..14].copy_from_slice(&(name.len() as u16).to_le_bytes());
     message[14..16].copy_from_slice(&(name.len() as u16).to_le_bytes());
     message[16..20].copy_from_slice(&56u32.to_le_bytes());
+    if mode == "flags-badname" {
+        message[16..20].copy_from_slice(&0xffffu32.to_le_bytes());
+    }
     let mut flags = 0x6289_8215u32;
-    if mode == "flags" {
+    if mode == "flags" || mode == "flags-badname" {
         flags &= !0x4000_0000;
     }
     message[20..24].copy_from_slice(&flags.to_le_bytes());
@@ -567,6 +570,13 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
             "",
             "p",
             "error 407|1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        (
+            "flags-badname",
+            "u",
+            "",
+            "p",
+            "throw ArgumentOutOfRangeException|1 auth=no|1 auth=NTLM T1 {T1}",
         ),
         (
             "negotiate-bare",

@@ -150,8 +150,11 @@ func testType2(mode string) []byte {
 	binary.LittleEndian.PutUint16(message[12:], uint16(len(name)))
 	binary.LittleEndian.PutUint16(message[14:], uint16(len(name)))
 	binary.LittleEndian.PutUint32(message[16:], 56)
+	if mode == "flags-badname" {
+		binary.LittleEndian.PutUint32(message[16:], 0xffff)
+	}
 	flags := uint32(0x62898215)
-	if mode == "flags" {
+	if mode == "flags" || mode == "flags-badname" {
 		flags &^= 0x40000000
 	}
 	binary.LittleEndian.PutUint32(message[20:], flags)
@@ -509,6 +512,7 @@ func TestAnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"dotless", "ıſ", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=354 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=ıſ@334 dom=@338 ws=W@338 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
 		{"flags", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"no-nb", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"flags-badname", "u", "", "p", "throw ArgumentOutOfRangeException|1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"negotiate-bare", "u", "", "p", "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}"},
 		{"bare", "u", "", "p", "throw ArgumentOutOfRangeException|1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"av9", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=194 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=64@112 user=u@176 dom=@178 ws=W@178 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs=0: proof=ok mic=ok"},

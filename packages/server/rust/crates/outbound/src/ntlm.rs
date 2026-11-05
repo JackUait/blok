@@ -167,10 +167,11 @@ impl NtlmAuth {
             return Ok(None);
         }
         let flags = u32::from_le_bytes([blob[20], blob[21], blob[22], blob[23]]);
+        // TargetName is read, and can throw, before the flags are checked.
+        field(blob, 12)?;
         if flags & FLAGS != FLAGS {
             return Ok(None);
         }
-        field(blob, 12)?;
         let target_info = field(blob, 40)?;
         let (info, stamp, has_nb_names) = self.target_info(target_info)?;
         if !has_nb_names && flags & (SIGN | SEAL) != 0 {

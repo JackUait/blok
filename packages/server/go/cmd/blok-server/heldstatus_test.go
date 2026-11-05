@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -38,6 +39,20 @@ func TestAStatusSetWithoutAWriteIsHeldUntilTheHeadGoesOut(t *testing.T) {
 			w.WriteHeader(http.StatusAccepted)
 			_ = http.NewResponseController(w).Flush()
 			<-r.Context().Done()
+		case "/hdr-timeout":
+			w.Header().Set("X-Probe", "kept")
+			w.Header().Set("Content-Type", "application/json")
+			<-r.Context().Done()
+		case "/hdr-status-timeout":
+			w.Header().Set("X-Probe", "kept")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusAccepted)
+			<-r.Context().Done()
+		case "/hdr-status-throw":
+			w.Header().Set("X-Probe", "kept")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			panic("boom")
 		}
 	})
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -53,6 +68,9 @@ func TestAStatusSetWithoutAWriteIsHeldUntilTheHeadGoesOut(t *testing.T) {
 		{"/status-timeout", "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n"},
 		{"/status-returns", "HTTP/1.1 202 Accepted\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n"},
 		{"/flushed-timeout", "HTTP/1.1 202 Accepted\r\nDate: D\r\nServer: Kestrel\r\nTransfer-Encoding: chunked\r\n\r\n"},
+		{"/hdr-timeout", "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n"},
+		{"/hdr-status-timeout", "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n"},
+		{"/hdr-status-throw", "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n"},
 	} {
 		conn, err := net.Dial("tcp", listener.Addr().String())
 		if err != nil {
@@ -66,5 +84,28 @@ func TestAStatusSetWithoutAWriteIsHeldUntilTheHeadGoesOut(t *testing.T) {
 			t.Errorf("%s: %q, want %q", c.path, got, c.head)
 		}
 		conn.Close()
+	}
+}
+
+// The deadline fires while the handler still sets headers. The 504 must not
+// touch the handler's map: run with -race.
+func TestTheDeadlineNeverWritesTheHandlersHeaders(t *testing.T) {
+	address := serveWithDeadline(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		until := time.Now().Add(300 * time.Millisecond)
+		for i := 0; time.Now().Before(until); i++ {
+			w.Header().Set("X-Probe", strconv.Itoa(i))
+		}
+	}), 100*time.Millisecond)
+
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
+	_, _ = io.WriteString(conn, "GET / HTTP/1.1\r\nHost: x\r\n\r\n")
+	want := "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n"
+	if got := sortedHead(readHead(t, bufio.NewReader(conn))); got != sortedHead(want) {
+		t.Errorf("%q, want %q", got, want)
 	}
 }

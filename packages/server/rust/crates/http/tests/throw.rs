@@ -99,6 +99,29 @@ async fn a_status_set_without_a_write_is_held_until_the_head_goes_out() {
                     request.cancel_token().cancelled().await;
                 }
                 "/status-returns" => response.set_status(202),
+                "/hdr-timeout" => {
+                    response.headers_mut().set("X-Probe", "kept");
+                    response
+                        .headers_mut()
+                        .set("Content-Type", "application/json");
+                    request.cancel_token().cancelled().await;
+                }
+                "/hdr-status-timeout" => {
+                    response.headers_mut().set("X-Probe", "kept");
+                    response
+                        .headers_mut()
+                        .set("Content-Type", "application/json");
+                    response.set_status(202);
+                    request.cancel_token().cancelled().await;
+                }
+                "/hdr-status-throw" => {
+                    response.headers_mut().set("X-Probe", "kept");
+                    response
+                        .headers_mut()
+                        .set("Content-Type", "application/json");
+                    response.set_status(404);
+                    panic!("boom");
+                }
                 _ => {
                     response.set_status(202);
                     let _ = response.flush().await;
@@ -128,6 +151,18 @@ async fn a_status_set_without_a_write_is_held_until_the_head_goes_out() {
         (
             "/flushed-timeout",
             "HTTP/1.1 202 Accepted\r\nDate: D\r\nServer: Kestrel\r\nTransfer-Encoding: chunked\r\n\r\n",
+        ),
+        (
+            "/hdr-timeout",
+            "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n",
+        ),
+        (
+            "/hdr-status-timeout",
+            "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n",
+        ),
+        (
+            "/hdr-status-throw",
+            "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n",
         ),
     ] {
         let mut conn = common::connect(running.address).await;

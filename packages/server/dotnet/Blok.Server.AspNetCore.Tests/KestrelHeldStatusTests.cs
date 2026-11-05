@@ -25,6 +25,9 @@ public sealed class KestrelHeldStatusTests
   [InlineData("/status-returns", "HTTP/1.1 202 Accepted\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n")]
   [InlineData("/status-timeout-returns", "HTTP/1.1 202 Accepted\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n")]
   [InlineData("/flushed-timeout", "HTTP/1.1 202 Accepted\r\nDate: D\r\nServer: Kestrel\r\nTransfer-Encoding: chunked\r\n\r\n")]
+  [InlineData("/hdr-timeout", "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n")]
+  [InlineData("/hdr-status-timeout", "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n")]
+  [InlineData("/hdr-status-throw", "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n")]
   public async Task AStatusSetWithoutAWriteIsHeldUntilTheHeadGoesOut(string path, string head)
   {
     await using var app = await StartKestrel();
@@ -75,6 +78,27 @@ public sealed class KestrelHeldStatusTests
       context.Response.StatusCode = 202;
       await context.Response.Body.FlushAsync();
       await Task.Delay(Timeout.Infinite, context.RequestAborted);
+    });
+    // The deadline's 504 and the throw's 500 drop the handler's headers.
+    app.MapGet("/hdr-timeout", async (HttpContext context) =>
+    {
+      context.Response.Headers["X-Probe"] = "kept";
+      context.Response.ContentType = "application/json";
+      await Task.Delay(Timeout.Infinite, context.RequestAborted);
+    });
+    app.MapGet("/hdr-status-timeout", async (HttpContext context) =>
+    {
+      context.Response.Headers["X-Probe"] = "kept";
+      context.Response.ContentType = "application/json";
+      context.Response.StatusCode = 202;
+      await Task.Delay(Timeout.Infinite, context.RequestAborted);
+    });
+    app.MapGet("/hdr-status-throw", (HttpContext context) =>
+    {
+      context.Response.Headers["X-Probe"] = "kept";
+      context.Response.ContentType = "application/json";
+      context.Response.StatusCode = 404;
+      throw new InvalidOperationException("boom");
     });
     await app.StartAsync();
     return app;

@@ -5,6 +5,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -25,7 +26,8 @@ func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 		// ends it at the same moment.
 		controller := http.NewResponseController(w)
 		_ = controller.SetReadDeadline(deadline)
-		tracked := &trackingWriter{ResponseWriter: w}
+		// Cloned before the timer starts: the outer layers' headers (Server).
+		tracked := &trackingWriter{ResponseWriter: w, base: w.Header().Clone(), header: w.Header().Clone(), deadline: deadline}
 		timer := time.AfterFunc(timeout, func() {
 			if tracked.timeOut() {
 				cancel()
@@ -102,8 +104,14 @@ func withBodyLimit(r *http.Request, ctx context.Context, tracked *trackingWriter
 	return limited, body
 }
 
+// The handler writes header, never the live map: the deadline writes its
+// 504 from the timer goroutine, and Kestrel's 504 drops the handler's
+// headers. header reaches the live map when the answer starts.
 type trackingWriter struct {
 	http.ResponseWriter
+	base     http.Header
+	header   http.Header
+	deadline time.Time
 	mu       sync.Mutex
 	wrote    bool
 	body     bool
@@ -142,6 +150,10 @@ func (t *trackingWriter) exempt() bool {
 func (t *trackingWriter) timeOut() bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	return t.timeOutLocked()
+}
+
+func (t *trackingWriter) timeOutLocked() bool {
 	if t.lifted {
 		return false
 	}
@@ -150,8 +162,44 @@ func (t *trackingWriter) timeOut() bool {
 		return true
 	}
 	t.timedOut = true
+	t.replaceLiveHeader(t.base)
 	t.ResponseWriter.Header().Set("Content-Length", "0")
 	t.ResponseWriter.WriteHeader(http.StatusGatewayTimeout)
+	return true
+}
+
+// Header is the handler's map until its answer starts, then the live one.
+// After a timeout it stays the handler's: net/http reads the live map on
+// the timer goroutine.
+func (t *trackingWriter) Header() http.Header {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.wrote && !t.timedOut {
+		return t.ResponseWriter.Header()
+	}
+	return t.header
+}
+
+func (t *trackingWriter) replaceLiveHeader(from http.Header) {
+	live := t.ResponseWriter.Header()
+	clear(live)
+	for name, values := range from {
+		live[name] = slices.Clone(values)
+	}
+}
+
+// startLocked hands the handler's headers to net/http before its head goes.
+// Past the deadline the 504 goes instead, even if the timer has not run yet:
+// the read deadline can end the handler first. False if the 504 went.
+func (t *trackingWriter) startLocked() bool {
+	if t.wrote {
+		return true
+	}
+	if !t.lifted && !time.Now().Before(t.deadline) {
+		t.timeOutLocked()
+		return false
+	}
+	t.replaceLiveHeader(t.header)
 	return true
 }
 
@@ -171,10 +219,13 @@ func (t *trackingWriter) refuse(status int) {
 func (t *trackingWriter) WriteHeader(status int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.timedOut {
+	if t.timedOut || !t.startLocked() {
 		return
 	}
-	t.wrote = true
+	// An informational head is not the answer.
+	if status >= 200 {
+		t.wrote = true
+	}
 	t.ResponseWriter.WriteHeader(status)
 }
 
@@ -182,13 +233,24 @@ func (t *trackingWriter) WriteHeader(status int) {
 // block the deadline behind it.
 func (t *trackingWriter) Write(b []byte) (int, error) {
 	t.mu.Lock()
-	if t.timedOut {
+	if t.timedOut || !t.startLocked() {
 		t.mu.Unlock()
 		return 0, http.ErrHandlerTimeout
 	}
 	t.wrote, t.body = true, true
 	t.mu.Unlock()
 	return t.ResponseWriter.Write(b)
+}
+
+// FlushError sends the head with the handler's headers; without it the
+// flush would unwrap past this writer.
+func (t *trackingWriter) FlushError() error {
+	t.mu.Lock()
+	if !t.timedOut && t.startLocked() {
+		t.wrote = true
+	}
+	t.mu.Unlock()
+	return http.NewResponseController(t.ResponseWriter).Flush()
 }
 
 // writingBody reports whether body bytes went to net/http.

@@ -52,6 +52,12 @@ const EXEMPTIONS: Record<string, string> = {
 };
 
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'build', 'Generated']);
+/**
+ * The Go module's committed runtime bundle is a minified build of src/, which
+ * is scanned already. The minifier renames functions on every build, so one
+ * can land on a TW_HELPERS name (`tv`) and its plain object reads as classes.
+ */
+const SKIP_FILES = new Set([resolve(REPO_ROOT, 'packages/server/go/internal/jsruntime/blok-server-runtime.js')]);
 
 /**
  * A token that is SYNTHETIC: it can never be a Tailwind utility and can never be
@@ -86,6 +92,7 @@ function visit(entry: { name: string; isDirectory: () => boolean }, dir: string,
 
   const full = join(dir, entry.name);
 
+  if (SKIP_FILES.has(full)) return;
   if (entry.isDirectory()) collect(full, pattern, acc);
   else if (pattern.exec(entry.name) !== null) acc.push(full);
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -463,5 +464,86 @@ func TestRecheckExpelsOnlyRevokedMembersWithoutResettingTheRoom(t *testing.T) {
 		if _, relayed := message.(wire.SyncUpdate); relayed {
 			t.Fatal("the expelled member's write was relayed")
 		}
+	}
+}
+
+// gatedPolicy holds RecheckAccess, once armed, until gate closes; it
+// honours ctx only when told to, like C#'s FakeMember with
+// RecheckIgnoresCancellation.
+type gatedPolicy struct {
+	*fakeMember
+	armed         atomic.Bool
+	entered       chan struct{}
+	gate          chan struct{}
+	honoursCancel bool
+}
+
+func (m *gatedPolicy) RecheckAccess(ctx context.Context) (bool, error) {
+	if !m.armed.Load() {
+		return m.fakeMember.RecheckAccess(ctx)
+	}
+	close(m.entered)
+	if m.honoursCancel {
+		select {
+		case <-m.gate:
+		case <-ctx.Done():
+			return false, ctx.Err()
+		}
+	} else {
+		<-m.gate
+	}
+	return m.fakeMember.RecheckAccess(ctx)
+}
+
+// recheckCancelled starts a recheck, waits for the policy, cancels the
+// caller, then runs then before the policy answers.
+func recheckCancelled(t *testing.T, honoursCancel bool, then func(*gatedPolicy)) (int, error, *gatedPolicy) {
+	t.Helper()
+	manager, _, _ := newTestManager(t, Options{}, nil)
+	member := &gatedPolicy{
+		fakeMember: &fakeMember{source: collab.SourceClientV1, write: true},
+		entered:    make(chan struct{}), gate: make(chan struct{}), honoursCancel: honoursCancel,
+	}
+	join(t, manager, "doc", member)
+	member.armed.Store(true)
+	ctx, cancel := context.WithCancel(context.Background())
+	type answer struct {
+		n   int
+		err error
+	}
+	done := make(chan answer, 1)
+	go func() {
+		n, err := manager.RecheckAccess(ctx, "doc")
+		done <- answer{n, err}
+	}()
+	<-member.entered
+	cancel()
+	then(member)
+	got := <-done
+	return got.n, got.err, member
+}
+
+// C# APolicyThatFailsAfterTheCallerCancelledStillExpels.
+func TestAPolicyThatFailsAfterTheCallerCancelledStillExpels(t *testing.T) {
+	n, err, member := recheckCancelled(t, false, func(m *gatedPolicy) {
+		m.revoke(errors.New("policy failed"))
+		close(m.gate)
+	})
+	if err != nil || n != 1 {
+		t.Fatalf("recheck = %d, %v; want 1 expelled", n, err)
+	}
+	if got := member.closed(); len(got) != 1 || got[0] != collab.CloseForbidden {
+		t.Fatalf("closes = %v", got)
+	}
+}
+
+// C# CancellingAnAccessRecheckDoesNotExpelAnAllowedMember.
+func TestCancellingAnAccessRecheckDoesNotExpelAnAllowedMember(t *testing.T) {
+	n, err, member := recheckCancelled(t, true, func(*gatedPolicy) {})
+	if !errors.Is(err, context.Canceled) || n != 0 {
+		t.Fatalf("recheck = %d, %v; want the cancellation", n, err)
+	}
+	if got := member.closed(); len(got) != 0 {
+		t.Fatalf("closes = %v", got)
 	}
 }

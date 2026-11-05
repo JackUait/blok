@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -312,14 +313,14 @@ func (r *Room) recheckAccess(ctx context.Context) (int, error) {
 	return expelled, err
 }
 
-// isMemberAllowedLocked: a failed check is a denial, except the caller's own
-// cancellation.
+// isMemberAllowedLocked: a failed check is a denial, except a cancellation
+// once the caller cancelled. Any other failure still denies, as in C#.
 func (r *Room) isMemberAllowedLocked(ctx context.Context, member collab.Member) (bool, error) {
 	allowed, err := member.RecheckAccess(ctx)
 	if err == nil {
 		return allowed, nil
 	}
-	if ctx.Err() != nil {
+	if ctx.Err() != nil && (errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) {
 		return false, ctx.Err()
 	}
 	r.logfSurviving(`collab: room "` + r.docID + `" could not recheck member access: ` + err.Error())

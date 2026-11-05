@@ -317,10 +317,14 @@ describe('a view the agent writes saves and renders as the editor\'s own write',
   beforeEach(() => {
     vi.clearAllMocks();
     Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
+    // The calendar opens on today's month, and the rows are dated in October.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 15, 12));
   });
 
   afterEach(async () => {
     await teardown();
+    vi.useRealTimers();
     Reflect.deleteProperty(document, 'elementFromPoint');
     vi.restoreAllMocks();
   });

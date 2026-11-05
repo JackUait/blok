@@ -541,6 +541,43 @@ public sealed class DocEndpointClientTests
         new string('}', depth);
   }
 
+  /// <summary>
+  /// The caller's cancel passes through as .NET's own text, and the text
+  /// depends on when it came: a token already cancelled as the call starts
+  /// reads "A task was canceled.", one cancelled while the request waits
+  /// "The operation was canceled.". Real sockets, so it is HttpClient's text.
+  /// Go and Rust print these at the room's log lines.
+  /// </summary>
+  [Theory]
+  [InlineData(true, "A task was canceled.")]
+  [InlineData(false, "The operation was canceled.")]
+  public async Task ACancelledSaveReadsAsDotNetsCancelText(bool before, string text)
+  {
+    using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+    listener.Start();
+    // Accepted and never answered.
+    var accepted = listener.AcceptSocketAsync();
+    var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+    using var client = new DocEndpointClient(new DocEndpointOptions(
+        new Uri($"http://127.0.0.1:{port}/docs"), "", TimeSpan.FromSeconds(30)));
+    using var source = new CancellationTokenSource();
+
+    if (before)
+    {
+      source.Cancel();
+    }
+    else
+    {
+      source.CancelAfter(TimeSpan.FromMilliseconds(200));
+    }
+
+    var error = await Assert.ThrowsAsync<TaskCanceledException>(
+        () => client.SaveAsync("doc", new JsonObject(), null, null, source.Token));
+
+    Assert.Equal(text, error.Message);
+    GC.KeepAlive(accepted);
+  }
+
   private static DocEndpointClient CreateClient(
       RequestRecorder recorder,
       string endpoint = "https://app.example.com/api/docs",

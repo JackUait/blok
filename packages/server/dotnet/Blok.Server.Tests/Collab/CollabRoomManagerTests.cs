@@ -1364,8 +1364,8 @@ public sealed class CollabRoomManagerTests
     Assert.Equal([CollabCloseReason.Draining], memberB.Closes);
     Assert.Equal(
         [
-          "collab: room \"doc-a\" could not export during flush: A task was canceled.",
-          "collab: room \"doc-b\" could not export during flush: A task was canceled.",
+          "collab: room \"doc-a\" could not export during flush: The operation was canceled.",
+          "collab: room \"doc-b\" could not export during flush: The operation was canceled.",
         ],
         log.Order(StringComparer.Ordinal));
   }

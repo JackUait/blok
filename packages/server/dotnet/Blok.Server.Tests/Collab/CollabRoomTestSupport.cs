@@ -546,7 +546,21 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
 
     if (SaveGate is not null)
     {
-      await SaveGate.Task.WaitAsync(cancellationToken);
+      // Cancels with HttpClient's texts (DocEndpointClientTests pins them):
+      // a token cancelled before the call, then one cancelled during it.
+      if (cancellationToken.IsCancellationRequested)
+      {
+        throw new TaskCanceledException();
+      }
+
+      try
+      {
+        await SaveGate.Task.WaitAsync(cancellationToken);
+      }
+      catch (TaskCanceledException error) when (cancellationToken.IsCancellationRequested)
+      {
+        throw new TaskCanceledException("The operation was canceled.", error, cancellationToken);
+      }
     }
 
     if (NextSaveFailure is not null)

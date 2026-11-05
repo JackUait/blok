@@ -790,6 +790,8 @@ async fn a_cancelled_first_join_leaves_a_room_that_still_evicts() {
 async fn a_join_dropped_after_the_room_admitted_the_member_still_evicts() {
     let b = Bench::new();
     b.endpoint.holds(DOC, "hello", None);
+    let gate = Gate::new();
+    b.endpoint.set_load_gate(Some(gate.clone()));
     let manager = b.manager(fast());
     let peer = Peer::new();
     let mut join = Box::pin(manager.join(DOC, peer.clone() as Arc<dyn Member>));
@@ -797,6 +799,8 @@ async fn a_join_dropped_after_the_room_admitted_the_member_still_evicts() {
         .as_mut()
         .poll(&mut std::task::Context::from_waker(std::task::Waker::noop()));
     assert!(polled.is_pending(), "the join finished in its first poll");
+    wait_until("the seed load to start", || b.endpoint.loaded() == 1).await;
+    gate.open();
 
     let mut admitted = false;
     let deadline = tokio::time::Instant::now() + Duration::from_secs(10);

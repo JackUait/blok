@@ -215,8 +215,9 @@ func TestTunnelsThroughSocks4AndSocks4aAsDotNetDoes(t *testing.T) {
 	}
 }
 
-// tlsConnectProxy is an https:// proxy: CONNECT arrives inside TLS.
-func tlsConnectProxy(t *testing.T) *url.URL {
+// tlsConnectProxy is an https:// proxy: CONNECT arrives inside TLS. It
+// counts the connections it accepts in opened, when given.
+func tlsConnectProxy(t *testing.T, opened ...*atomic.Int32) *url.URL {
 	t.Helper()
 	proxy := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodConnect {
@@ -238,6 +239,13 @@ func tlsConnectProxy(t *testing.T) *url.URL {
 		go func() { _, _ = io.Copy(target, buffered) }()
 		_, _ = io.Copy(client, target)
 	}))
+	if len(opened) > 0 {
+		proxy.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+			if state == http.StateNew {
+				opened[0].Add(1)
+			}
+		}
+	}
 	proxy.StartTLS()
 	t.Cleanup(proxy.Close)
 	parsed, _ := url.Parse(proxy.URL)
@@ -413,5 +421,39 @@ func TestTheLifetimeNeverCutsARequestInFlight(t *testing.T) {
 	// 32 conns live 40 ms each: over 3 s they must have been replaced.
 	if opened.Load() <= 64 {
 		t.Fatalf("only %d connections opened: the lifetime retired nothing", opened.Load())
+	}
+}
+
+// Through an https proxy the dialed conn sits under two TLS layers; its
+// lifetime still retires it.
+func TestTheLifetimeRetiresAConnThroughAnHTTPSProxy(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer server.Close()
+	var opened atomic.Int32
+	transport := NewSocketsTransport(SocketsOptions{ConnectTimeout: time.Second, PooledConnectionLifetime: 300 * time.Millisecond})
+	transport.Transport.Proxy = http.ProxyURL(tlsConnectProxy(t, &opened))
+	transport.Transport.TLSClientConfig = server.Client().Transport.(*http.Transport).TLSClientConfig.Clone()
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Transport: transport}
+	put := func() {
+		t.Helper()
+		request, _ := http.NewRequest(http.MethodPut, server.URL, strings.NewReader("{}"))
+		response, err := client.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.Copy(io.Discard, response.Body)
+		response.Body.Close()
+	}
+	put()
+	put()
+	if opened.Load() != 1 {
+		t.Fatalf("a young connection was not reused: %d", opened.Load())
+	}
+	time.Sleep(400 * time.Millisecond)
+	put()
+	put()
+	if opened.Load() != 2 {
+		t.Fatalf("opened %d proxy connections", opened.Load())
 	}
 }

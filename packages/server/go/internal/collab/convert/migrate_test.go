@@ -203,7 +203,7 @@ func withSegments(t *testing.T, blocks []any) []any {
 	if len(found) == 0 {
 		return blocks
 	}
-	read, err := runtimeReader(t).Read(context.Background(), found, 0)
+	read, err := runtimeReader(t).Read(context.Background(), found, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

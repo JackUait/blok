@@ -26,7 +26,7 @@ type exCalls struct {
 	calls  []paCall
 }
 
-func (r *exCalls) Invoke(_ context.Context, op, input string, _ time.Duration) (string, error) {
+func (r *exCalls) Invoke(_ context.Context, op, input string, _ *time.Duration) (string, error) {
 	r.calls = append(r.calls, paCall{op, input})
 	return r.answer, nil
 }

@@ -55,7 +55,7 @@ type fakeRuntime struct {
 	calls   int
 }
 
-func (f *fakeRuntime) Invoke(_ context.Context, op, input string, _ time.Duration) (string, error) {
+func (f *fakeRuntime) Invoke(_ context.Context, op, input string, _ *time.Duration) (string, error) {
 	f.calls++
 	f.request = &hostRequest{Op: op, Input: input}
 	if f.failure != nil {

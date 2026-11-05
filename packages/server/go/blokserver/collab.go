@@ -167,7 +167,7 @@ type lazyRuntime struct {
 // newCollabRuntime is a variable so a test can count the builds.
 var newCollabRuntime = jsruntime.NewPool
 
-func (l *lazyRuntime) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+func (l *lazyRuntime) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
 	l.once.Do(func() { l.pool, l.err = newCollabRuntime(l.options) })
 	if l.err != nil {
 		return "", l.err

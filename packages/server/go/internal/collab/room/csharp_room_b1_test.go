@@ -358,7 +358,7 @@ func rb1RichConverter(t *testing.T, k *rb1Kit) Converter {
 // rb1FailingHTML is C# FailingHtmlReader.
 type rb1FailingHTML struct{ err error }
 
-func (r rb1FailingHTML) Read(context.Context, []convert.RichTextHTML, time.Duration) ([][]any, error) {
+func (r rb1FailingHTML) Read(context.Context, []convert.RichTextHTML, *time.Duration) ([][]any, error) {
 	return nil, r.err
 }
 
@@ -366,8 +366,8 @@ func (r rb1FailingHTML) Read(context.Context, []convert.RichTextHTML, time.Durat
 // under the runtime's default timeout (0) runs out of time.
 type rb1DefaultTimeoutTooShort struct{}
 
-func (rb1DefaultTimeoutTooShort) Read(_ context.Context, fields []convert.RichTextHTML, timeout time.Duration) ([][]any, error) {
-	if timeout == 0 {
+func (rb1DefaultTimeoutTooShort) Read(_ context.Context, fields []convert.RichTextHTML, timeout *time.Duration) ([][]any, error) {
+	if timeout == nil {
 		return nil, rb1RuntimeFailure(jsruntime.KindTimedOut)
 	}
 	read := make([][]any, len(fields))

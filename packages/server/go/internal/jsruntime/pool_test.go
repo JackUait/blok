@@ -50,7 +50,7 @@ func newCountingPool(t *testing.T, size int, timeout time.Duration, budget int64
 
 func invoke(t *testing.T, p *Pool, op, input string) (string, error) {
 	t.Helper()
-	return p.Invoke(context.Background(), op, input, 0)
+	return p.Invoke(context.Background(), op, input, nil)
 }
 
 func wantKind(t *testing.T, err error, kind Kind) {
@@ -104,7 +104,7 @@ func TestKeepsServingAfterATimeoutAndReplacesTheEngine(t *testing.T) {
 
 func TestAPerCallTimeoutReplacesTheDefaultForThatCallOnly(t *testing.T) {
 	p := newCountingPool(t, 1, 200*time.Millisecond, 0)
-	got, err := p.Invoke(context.Background(), "spinFor", "600", 30*time.Second)
+	got, err := p.Invoke(context.Background(), "spinFor", "600", new(30*time.Second))
 	if err != nil || got != "ok" {
 		t.Fatalf("long call = %q, %v", got, err)
 	}
@@ -114,14 +114,14 @@ func TestAPerCallTimeoutReplacesTheDefaultForThatCallOnly(t *testing.T) {
 
 func TestAPerCallTimeoutCanBeShorterThanTheDefault(t *testing.T) {
 	p := newCountingPool(t, 1, 0, 0)
-	_, err := p.Invoke(context.Background(), "spinFor", "600", 200*time.Millisecond)
+	_, err := p.Invoke(context.Background(), "spinFor", "600", new(200*time.Millisecond))
 	wantKind(t, err, KindTimedOut)
 }
 
 func TestRefusesAPerCallTimeoutBelowTheFloor(t *testing.T) {
 	p := newCountingPool(t, 1, 0, 0)
-	for _, timeout := range []time.Duration{time.Millisecond, -time.Second} {
-		_, err := p.Invoke(context.Background(), "count", "", timeout)
+	for _, timeout := range []time.Duration{time.Millisecond, -time.Second, 0} {
+		_, err := p.Invoke(context.Background(), "count", "", &timeout)
 		var constraint *ConstraintError
 		if !errors.As(err, &constraint) || constraint.Param != "timeout" {
 			t.Fatalf("timeout %v: err = %v, want a timeout ConstraintError", timeout, err)
@@ -215,7 +215,7 @@ func TestWaitsOnAPendingPromiseUntilTheCallerCancels(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	_, err := p.Invoke(ctx, "pending", "", 0)
+	_, err := p.Invoke(ctx, "pending", "", nil)
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v, want the caller's context.DeadlineExceeded", err)
 	}
@@ -250,7 +250,7 @@ func TestReturnsTheCallersCancellationUnwrapped(t *testing.T) {
 	p := newCountingPool(t, 1, 30*time.Second, 0)
 	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
 	defer cancel()
-	_, err := p.Invoke(ctx, "spin", "", 0)
+	_, err := p.Invoke(ctx, "spin", "", nil)
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v, want context.DeadlineExceeded", err)
 	}
@@ -266,7 +266,7 @@ func TestCancellationEndsTheWaitForAnEngine(t *testing.T) {
 	p := newCountingPool(t, 1, 30*time.Second, 0)
 	busy := make(chan error, 1)
 	go func() {
-		_, err := p.Invoke(context.Background(), "spinFor", "500", 0)
+		_, err := p.Invoke(context.Background(), "spinFor", "500", nil)
 		busy <- err
 	}()
 	time.Sleep(50 * time.Millisecond)
@@ -274,7 +274,7 @@ func TestCancellationEndsTheWaitForAnEngine(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { time.Sleep(50 * time.Millisecond); cancel() }()
 	start := time.Now()
-	_, err := p.Invoke(ctx, "count", "", 0)
+	_, err := p.Invoke(ctx, "count", "", nil)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v, want context.Canceled", err)
 	}
@@ -290,7 +290,7 @@ func TestRefusesAnAlreadyCancelledContext(t *testing.T) {
 	p := newCountingPool(t, 1, 0, 0)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := p.Invoke(ctx, "count", "", 0); !errors.Is(err, context.Canceled) {
+	if _, err := p.Invoke(ctx, "count", "", nil); !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v, want context.Canceled", err)
 	}
 	wantCount(t, p, "1")
@@ -320,7 +320,7 @@ func TestHandlesConcurrentCallsWithoutSharingAnEngine(t *testing.T) {
 		wg.Go(func() {
 			text := fmt.Sprintf("paragraph number %d", i)
 			input := fmt.Sprintf(`{"blocks":[{"id":"p","type":"paragraph","data":{"text":%q}}]}`, text)
-			got, err := p.Invoke(context.Background(), "blocksToPlainText", input, 0)
+			got, err := p.Invoke(context.Background(), "blocksToPlainText", input, nil)
 			if err != nil || got != text {
 				errs <- fmt.Errorf("call %d = %q, %v", i, got, err)
 			}
@@ -339,7 +339,7 @@ func TestCallersWaitWhenEveryEngineIsBusy(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 4 {
 		wg.Go(func() {
-			if _, err := p.Invoke(context.Background(), "spinFor", "200", 0); err != nil {
+			if _, err := p.Invoke(context.Background(), "spinFor", "200", nil); err != nil {
 				t.Error(err)
 			}
 		})
@@ -370,7 +370,7 @@ func TestConvertsADeeplyNestedOutline(t *testing.T) {
 	}
 	input := nestedOutline(120)
 	for _, op := range []string{"blocksToPlainText", "blocksToMarkdown", "blocksToHtml"} {
-		got, err := p.Invoke(context.Background(), op, input, time.Minute)
+		got, err := p.Invoke(context.Background(), op, input, new(time.Minute))
 		if err != nil || !strings.Contains(got, "level 119") {
 			t.Fatalf("%s: err = %v, has level 119 = %v", op, err, strings.Contains(got, "level 119"))
 		}
@@ -384,7 +384,7 @@ func TestConvertsTheSameDepthWhateverTheCallerHasSpentOfItsStack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := p.Invoke(context.Background(), "blocksToHtml", nestedOutline(1000), 0)
+	got, err := p.Invoke(context.Background(), "blocksToHtml", nestedOutline(1000), nil)
 	if err != nil || !strings.Contains(got, "level 999") {
 		t.Fatalf("err = %v, has level 999 = %v", err, strings.Contains(got, "level 999"))
 	}
@@ -400,7 +400,7 @@ func TestConvertsAsManyOutlineLevelsToHTMLAsCSharp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := p.Invoke(context.Background(), "blocksToHtml", nestedOutline(2380), 0)
+	got, err := p.Invoke(context.Background(), "blocksToHtml", nestedOutline(2380), nil)
 	if err != nil || !strings.Contains(got, "level 2379") {
 		t.Fatalf("err = %v, has level 2379 = %v", err, strings.Contains(got, "level 2379"))
 	}
@@ -422,7 +422,7 @@ func TestConvertsAsManyOutlineLevelsAsCSharpForEachReader(t *testing.T) {
 		levels int
 	}{{"blocksToMarkdown", 1454}, {"blocksToPlainText", 11049}, {"blocksToPlainTextWithReport", 11049}, {"blocksToHtml", 2380}} {
 		want := fmt.Sprintf("level %d", c.levels-1)
-		got, err := p.Invoke(context.Background(), c.op, nestedOutline(c.levels), 0)
+		got, err := p.Invoke(context.Background(), c.op, nestedOutline(c.levels), nil)
 		if err != nil || !strings.Contains(got, want) {
 			t.Errorf("%s %d levels: err = %v, has %q = %v", c.op, c.levels, err, want, strings.Contains(got, want))
 		}
@@ -439,10 +439,10 @@ func TestResetsTheFrameCapForEachCall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := p.Invoke(context.Background(), "blocksToPlainText", nestedOutline(100), 0); err != nil {
+	if _, err := p.Invoke(context.Background(), "blocksToPlainText", nestedOutline(100), nil); err != nil {
 		t.Fatal(err)
 	}
-	_, err = p.Invoke(context.Background(), "blocksToHtml", nestedOutline(4000), 0)
+	_, err = p.Invoke(context.Background(), "blocksToHtml", nestedOutline(4000), nil)
 	var overflow *goja.StackOverflowError
 	if !errors.As(err, &overflow) {
 		t.Fatalf("err = %v, want the HTML frame cap", err)
@@ -541,12 +541,53 @@ func TestReplacesAnEngineAfterCancellation(t *testing.T) {
 	}
 	cancelled, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	if _, err = p.Invoke(cancelled, "wait", "{}", 0); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err = p.Invoke(cancelled, "wait", "{}", nil); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v, want the caller's context.DeadlineExceeded", err)
 	}
 	ready, stop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stop()
-	if output, err := p.Invoke(ready, "ready", "{}", 0); err != nil || output != "ok" {
+	if output, err := p.Invoke(ready, "ready", "{}", nil); err != nil || output != "ok" {
 		t.Fatalf("ready = %q, %v", output, err)
+	}
+}
+
+// C#'s ArgumentOutOfRangeException text, word for word, as
+// BlokRuntimeStartupTests.RefusesALimitUnderItsFloorWithThisText pins it.
+func TestRefusalsCarryDotnetsText(t *testing.T) {
+	ms := func(f float64) *time.Duration { d := time.Duration(f * float64(time.Millisecond)); return &d }
+	cases := []struct {
+		entry   string
+		options Options
+		call    *time.Duration
+		want    string
+	}{
+		{"create", Options{PoolSize: new(0)}, nil, "poolSize ('0') must be greater than or equal to '1'. (Parameter 'poolSize')\nActual value was 0."},
+		{"create", Options{PoolSize: new(-1)}, nil, "poolSize ('-1') must be greater than or equal to '1'. (Parameter 'poolSize')\nActual value was -1."},
+		{"create", Options{Timeout: ms(0)}, nil, "timeout ('00:00:00') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was 00:00:00."},
+		{"create", Options{Timeout: ms(50)}, nil, "timeout ('00:00:00.0500000') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was 00:00:00.0500000."},
+		{"create", Options{Timeout: ms(-1000)}, nil, "timeout ('-00:00:01') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was -00:00:01."},
+		{"create", Options{Timeout: ms(-90061001.5)}, nil, "timeout ('-1.01:01:01.0015000') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was -1.01:01:01.0015000."},
+		{"create", Options{MemoryBudget: new(int64(0))}, nil, "allocationBudgetBytes ('0') must be greater than or equal to '8388608'. (Parameter 'allocationBudgetBytes')\nActual value was 0."},
+		{"create", Options{MemoryBudget: new(int64(-1))}, nil, "allocationBudgetBytes ('-1') must be greater than or equal to '8388608'. (Parameter 'allocationBudgetBytes')\nActual value was -1."},
+		{"invoke", Options{}, ms(0), "timeout ('00:00:00') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was 00:00:00."},
+		{"invoke", Options{}, ms(99.9999), "timeout ('00:00:00.0999999') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was 00:00:00.0999999."},
+	}
+	var pool *Pool
+	for _, c := range cases {
+		var err error
+		if c.entry == "invoke" {
+			if pool == nil {
+				if pool, err = NewPool(Options{PoolSize: new(1)}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			_, err = pool.Invoke(context.Background(), "version", "{}", c.call)
+		} else {
+			_, err = NewPool(c.options)
+		}
+		var constraint *ConstraintError
+		if !errors.As(err, &constraint) || err.Error() != c.want {
+			t.Errorf("%s %+v %v:\n got %v\nwant %s", c.entry, c.options, c.call, err, c.want)
+		}
 	}
 }

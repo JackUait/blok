@@ -63,7 +63,7 @@ type paObserving struct {
 	output string
 }
 
-func (o *paObserving) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+func (o *paObserving) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
 	output, err := o.inner.Invoke(ctx, op, input, timeout)
 	o.mu.Lock()
 	defer o.mu.Unlock()

@@ -117,7 +117,7 @@ func TestMatchesNodeOnTheDocumentOpsFixture(t *testing.T) {
 				t.Skip("large document: run without -short and -race")
 			}
 			start := time.Now()
-			got, err := pool.Invoke(context.Background(), c.Op, c.input(), 5*time.Minute)
+			got, err := pool.Invoke(context.Background(), c.Op, c.input(), new(5*time.Minute))
 			if big {
 				t.Logf("%s: %v", c.Op, time.Since(start).Round(time.Millisecond))
 			}

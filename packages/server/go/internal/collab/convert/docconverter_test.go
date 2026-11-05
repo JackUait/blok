@@ -166,7 +166,7 @@ func TestCustomRichFieldsComeFromTheConstructor(t *testing.T) {
 
 type failingReader struct{ err error }
 
-func (f failingReader) Read(context.Context, []RichTextHTML, time.Duration) ([][]any, error) {
+func (f failingReader) Read(context.Context, []RichTextHTML, *time.Duration) ([][]any, error) {
 	return nil, f.err
 }
 
@@ -220,8 +220,8 @@ func TestAnExportCancelledByItsTokenStaysACancel(t *testing.T) {
 
 type recordingReader struct{ timeouts []time.Duration }
 
-func (r *recordingReader) Read(_ context.Context, fields []RichTextHTML, timeout time.Duration) ([][]any, error) {
-	r.timeouts = append(r.timeouts, timeout)
+func (r *recordingReader) Read(_ context.Context, fields []RichTextHTML, timeout *time.Duration) ([][]any, error) {
+	r.timeouts = append(r.timeouts, orDefault(timeout))
 	read := make([][]any, len(fields))
 	for i := range read {
 		read[i] = []any{}
@@ -390,7 +390,7 @@ type countingReader struct {
 	fields int
 }
 
-func (c *countingReader) Read(ctx context.Context, fields []RichTextHTML, timeout time.Duration) ([][]any, error) {
+func (c *countingReader) Read(ctx context.Context, fields []RichTextHTML, timeout *time.Duration) ([][]any, error) {
 	c.fields += len(fields)
 	return c.inner.Read(ctx, fields, timeout)
 }

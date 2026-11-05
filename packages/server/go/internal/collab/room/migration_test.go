@@ -137,7 +137,7 @@ func expectedExport(t *testing.T, withTail bool) string {
 	if withTail {
 		html := "<i>tail</i> a <mark>plain highlight</mark> b"
 		read, err := runtimeReader(t).Read(context.Background(),
-			[]convert.RichTextHTML{{Type: "paragraph", Field: "text", HTML: jsjson.FromString(html)}}, 0)
+			[]convert.RichTextHTML{{Type: "paragraph", Field: "text", HTML: jsjson.FromString(html)}}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -334,7 +334,7 @@ type countingReader struct {
 	err   error
 }
 
-func (c *countingReader) Read(context.Context, []convert.RichTextHTML, time.Duration) ([][]any, error) {
+func (c *countingReader) Read(context.Context, []convert.RichTextHTML, *time.Duration) ([][]any, error) {
 	c.calls.Add(1)
 	return nil, c.err
 }

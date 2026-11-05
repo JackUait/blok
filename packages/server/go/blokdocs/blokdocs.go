@@ -61,7 +61,7 @@ const (
 
 // invoker is the runtime seam; tests put a fake behind it.
 type invoker interface {
-	Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error)
+	Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error)
 }
 
 // New builds a converter over a fresh engine pool. Building one is
@@ -84,7 +84,7 @@ func New(options Options) (*Converter, error) {
 
 // Runtime runs one bundle operation; blokserver's shared engine pool is one.
 type Runtime interface {
-	Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error)
+	Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error)
 }
 
 // NewOnRuntime builds a converter over an engine pool the caller holds, as

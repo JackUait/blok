@@ -60,7 +60,7 @@ type recordingRuntime struct {
 	input  string
 }
 
-func (r *recordingRuntime) Invoke(_ context.Context, _, input string, _ time.Duration) (string, error) {
+func (r *recordingRuntime) Invoke(_ context.Context, _, input string, _ *time.Duration) (string, error) {
 	r.input = input
 	return r.answer, nil
 }

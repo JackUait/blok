@@ -15,22 +15,22 @@ const MaxEditHTMLChars = 32768
 // so two capped fields never share a call; a larger field goes alone.
 const MaxCallChars = MaxEditHTMLChars
 
-// Invoker runs one runtime op; jsruntime.Pool is one. timeout 0 is the
+// Invoker runs one runtime op; jsruntime.Pool is one. nil timeout is the
 // runtime's default.
 type Invoker interface {
-	Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error)
+	Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error)
 }
 
 // HTMLReader reads HTML rich text fields as segments, in the same order.
 type HTMLReader interface {
-	Read(ctx context.Context, fields []RichTextHTML, timeout time.Duration) ([][]any, error)
+	Read(ctx context.Context, fields []RichTextHTML, timeout *time.Duration) ([][]any, error)
 }
 
 // RuntimeHTMLReader is the client's own reader, run in the embedded runtime
 // through its htmlFieldsToSegments op, one call per batch.
 type RuntimeHTMLReader struct{ Runtime Invoker }
 
-func (r RuntimeHTMLReader) Read(ctx context.Context, fields []RichTextHTML, timeout time.Duration) ([][]any, error) {
+func (r RuntimeHTMLReader) Read(ctx context.Context, fields []RichTextHTML, timeout *time.Duration) ([][]any, error) {
 	read := make([][]any, 0, len(fields))
 	for start := 0; start < len(fields); {
 		end := start + 1
@@ -49,7 +49,7 @@ func (r RuntimeHTMLReader) Read(ctx context.Context, fields []RichTextHTML, time
 	return read, nil
 }
 
-func (r RuntimeHTMLReader) call(ctx context.Context, fields []RichTextHTML, timeout time.Duration) ([][]any, error) {
+func (r RuntimeHTMLReader) call(ctx context.Context, fields []RichTextHTML, timeout *time.Duration) ([][]any, error) {
 	request := make([]any, len(fields))
 	for i, field := range fields {
 		entry := &jsjson.Object{}

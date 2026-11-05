@@ -33,7 +33,7 @@ type Converter struct {
 }
 
 func (c *Converter) invoke(ctx context.Context, op, input string) (string, error) {
-	output, err := c.runtime.Invoke(ctx, op, input, 0)
+	output, err := c.runtime.Invoke(ctx, op, input, nil)
 	if err != nil {
 		return "", fromRuntime(err)
 	}

@@ -11,7 +11,7 @@ import (
 
 // invoker is the runtime seam; tests put a scripted runtime behind it.
 type invoker interface {
-	Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error)
+	Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error)
 }
 
 // Executor runs agent batches. It is safe for concurrent use; a Session is
@@ -62,7 +62,7 @@ func (e *Executor) invoke(ctx context.Context, op string, input *jsjson.Node) (s
 	if err != nil {
 		return "", err
 	}
-	output, err := e.runtime.Invoke(ctx, op, written, 0)
+	output, err := e.runtime.Invoke(ctx, op, written, nil)
 	if err != nil {
 		return "", fromRuntime(err)
 	}

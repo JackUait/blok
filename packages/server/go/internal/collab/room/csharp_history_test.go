@@ -663,7 +663,7 @@ type histLargestReader struct {
 	largest int
 }
 
-func (r *histLargestReader) Read(ctx context.Context, fields []convert.RichTextHTML, timeout time.Duration) ([][]any, error) {
+func (r *histLargestReader) Read(ctx context.Context, fields []convert.RichTextHTML, timeout *time.Duration) ([][]any, error) {
 	r.mu.Lock()
 	for _, field := range fields {
 		r.largest = max(r.largest, len(field.HTML))
@@ -1056,7 +1056,7 @@ type histCountingReader struct {
 	read  []string
 }
 
-func (r *histCountingReader) Read(ctx context.Context, fields []convert.RichTextHTML, timeout time.Duration) ([][]any, error) {
+func (r *histCountingReader) Read(ctx context.Context, fields []convert.RichTextHTML, timeout *time.Duration) ([][]any, error) {
 	r.mu.Lock()
 	for _, field := range fields {
 		r.read = append(r.read, field.HTML.String())

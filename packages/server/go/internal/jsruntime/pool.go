@@ -84,14 +84,52 @@ func (e *StartupError) Error() string { return e.Message }
 func (e *StartupError) Unwrap() error { return e.Err }
 
 // ConstraintError is a limit below its floor, named by its Options field.
+// Error is C#'s ArgumentOutOfRangeException message, word for word: C#'s
+// parameter name and values in .NET's format.
 type ConstraintError struct {
 	Param string
 	Value string
 	Floor string
+	text  string
 }
 
-func (e *ConstraintError) Error() string {
-	return fmt.Sprintf("jsruntime: %s is %s, below the floor of %s", e.Param, e.Value, e.Floor)
+func (e *ConstraintError) Error() string { return e.text }
+
+// refusal is ThrowIfLessThan's message for name, value and floor as .NET
+// prints them.
+func refusal(param, name, value, floor string) *ConstraintError {
+	return &ConstraintError{Param: param, Value: value, Floor: floor,
+		text: fmt.Sprintf("%s ('%s') must be greater than or equal to '%s'. (Parameter '%s')\nActual value was %s.", name, value, floor, name, value)}
+}
+
+func durationRefusal(param string, value time.Duration) *ConstraintError {
+	return refusal(param, "timeout", timeSpan(value), timeSpan(MinimumTimeout))
+}
+
+// timeSpan is TimeSpan.ToString(), the "c" format: [-][d.]hh:mm:ss[.fffffff].
+// A TimeSpan counts 100 ns ticks, so the nanoseconds under a tick are cut.
+func timeSpan(d time.Duration) string {
+	ticks := int64(d / 100)
+	sign := ""
+	if ticks < 0 {
+		sign = "-"
+	}
+	// Negate as unsigned: the smallest int64 has no positive twin.
+	t := uint64(ticks)
+	if ticks < 0 {
+		t = -t
+	}
+	const second, day = 10_000_000, 864_000_000_000
+	days, rest := t/day, t%day
+	out := sign
+	if days > 0 {
+		out += fmt.Sprintf("%d.", days)
+	}
+	out += fmt.Sprintf("%02d:%02d:%02d", rest/(3600*second), rest/(60*second)%60, rest/second%60)
+	if fraction := rest % second; fraction != 0 {
+		out += fmt.Sprintf(".%07d", fraction)
+	}
+	return out
 }
 
 // Options configure a Pool. Zero values take the defaults.
@@ -112,10 +150,10 @@ type Options struct {
 // the default and passes.
 func ValidateConstraints(timeout *time.Duration, budget *int64) error {
 	if budget != nil && *budget < MinimumMemoryBudget {
-		return &ConstraintError{Param: "MemoryBudget", Value: fmt.Sprint(*budget), Floor: fmt.Sprint(MinimumMemoryBudget)}
+		return refusal("MemoryBudget", "allocationBudgetBytes", fmt.Sprint(*budget), fmt.Sprint(MinimumMemoryBudget))
 	}
 	if timeout != nil && *timeout < MinimumTimeout {
-		return &ConstraintError{Param: "Timeout", Value: timeout.String(), Floor: MinimumTimeout.String()}
+		return durationRefusal("Timeout", *timeout)
 	}
 	return nil
 }
@@ -123,7 +161,7 @@ func ValidateConstraints(timeout *time.Duration, budget *int64) error {
 // ValidatePoolSize refuses a pool size under 1. nil means the default.
 func ValidatePoolSize(size *int) error {
 	if size != nil && *size < 1 {
-		return &ConstraintError{Param: "PoolSize", Value: fmt.Sprint(*size), Floor: "1"}
+		return refusal("PoolSize", "poolSize", fmt.Sprint(*size), "1")
 	}
 	return nil
 }
@@ -174,10 +212,11 @@ func newPoolFromSource(source string, size int, timeout time.Duration, budget in
 
 func newPool(program *goja.Program, size int, timeout time.Duration, budget int64) (*Pool, error) {
 	if size < 1 {
-		return nil, &ConstraintError{Param: "PoolSize", Value: fmt.Sprint(size), Floor: "1"}
+		return nil, refusal("PoolSize", "poolSize", fmt.Sprint(size), "1")
 	}
 	if budget < 0 {
-		return nil, &ConstraintError{Param: "MemoryBudget", Value: fmt.Sprint(budget), Floor: "1"}
+		// The constructor's own check, under C#'s name for it.
+		return nil, refusal("MemoryBudget", "budget", fmt.Sprint(budget), "1")
 	}
 	if timeout == 0 {
 		timeout = DefaultTimeout
@@ -232,14 +271,16 @@ func loadGuarded(program *goja.Program, timeout time.Duration, budget int64) (*R
 }
 
 // Invoke runs one operation on a free engine, waiting for one if all are
-// busy. timeout 0 uses the pool's; any other value must be at least
-// MinimumTimeout. Errors are a *Failure, a *ConstraintError, or ctx.Err().
-func (p *Pool) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
-	if timeout < 0 || (timeout > 0 && timeout < MinimumTimeout) {
-		return "", &ConstraintError{Param: "timeout", Value: timeout.String(), Floor: MinimumTimeout.String()}
-	}
-	if timeout == 0 {
-		timeout = p.timeout
+// busy. A nil timeout uses the pool's; any other value, 0 too, must be at
+// least MinimumTimeout. Errors are a *Failure, a *ConstraintError, or
+// ctx.Err().
+func (p *Pool) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
+	limit := p.timeout
+	if timeout != nil {
+		if *timeout < MinimumTimeout {
+			return "", durationRefusal("timeout", *timeout)
+		}
+		limit = *timeout
 	}
 	if err := ctx.Err(); err != nil {
 		return "", err
@@ -251,7 +292,7 @@ func (p *Pool) Invoke(ctx context.Context, op, input string, timeout time.Durati
 		return "", ctx.Err()
 	}
 
-	result, reusable, err := engine.guardedInvoke(ctx, op, input, timeout, p.budget)
+	result, reusable, err := engine.guardedInvoke(ctx, op, input, limit, p.budget)
 	if !reusable {
 		// A slot that is not refilled is lost for good, so a failed rebuild
 		// puts the spent engine back.

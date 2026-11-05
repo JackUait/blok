@@ -45,7 +45,7 @@ func converting(t *testing.T, blocks []*jsjson.Node) *RichTextInput {
 	if err != nil {
 		t.Fatal(err)
 	}
-	read, err := runtimeReader(t).Read(context.Background(), found, 0)
+	read, err := runtimeReader(t).Read(context.Background(), found, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

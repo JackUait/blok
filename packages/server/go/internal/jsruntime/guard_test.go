@@ -74,7 +74,7 @@ func TestAConversionPassesWhileTheRestOfTheProcessAllocates(t *testing.T) {
 	stop := make(chan struct{})
 	total := allocateElsewhere(stop)
 	start := time.Now()
-	got, err := p.Invoke(context.Background(), "blocksToMarkdown", nestedOutline(3000), 0)
+	got, err := p.Invoke(context.Background(), "blocksToMarkdown", nestedOutline(3000), nil)
 	close(stop)
 	elapsed := time.Since(start)
 	if err != nil || !strings.Contains(got, "level 2999") {

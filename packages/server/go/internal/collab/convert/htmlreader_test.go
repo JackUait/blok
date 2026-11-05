@@ -16,8 +16,8 @@ type echoRuntime struct {
 	timeouts []time.Duration
 }
 
-func (e *echoRuntime) Invoke(_ context.Context, op, input string, timeout time.Duration) (string, error) {
-	e.timeouts = append(e.timeouts, timeout)
+func (e *echoRuntime) Invoke(_ context.Context, op, input string, timeout *time.Duration) (string, error) {
+	e.timeouts = append(e.timeouts, orDefault(timeout))
 	if op != "htmlFieldsToSegments" {
 		panic(op)
 	}
@@ -64,7 +64,7 @@ func TestReadsALargeBatchInBoundedCallsAndKeepsTheOrder(t *testing.T) {
 	for i := range 10 {
 		texts = append(texts, string(rune('0'+i))+":"+body)
 	}
-	read, err := RuntimeHTMLReader{runtime}.Read(context.Background(), html(texts...), 0)
+	read, err := RuntimeHTMLReader{runtime}.Read(context.Background(), html(texts...), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestReadsALargeBatchInBoundedCallsAndKeepsTheOrder(t *testing.T) {
 func TestTwoFieldsAtTheEditCapGoInTwoCalls(t *testing.T) {
 	runtime := &echoRuntime{}
 	body := strings.Repeat("x", MaxEditHTMLChars-1)
-	if _, err := (RuntimeHTMLReader{runtime}).Read(context.Background(), html("a"+body, "b"+body), 0); err != nil {
+	if _, err := (RuntimeHTMLReader{runtime}).Read(context.Background(), html("a"+body, "b"+body), nil); err != nil {
 		t.Fatal(err)
 	}
 	if len(runtime.calls) != 2 {
@@ -100,10 +100,10 @@ func TestPassesTheCallersBudgetToEveryCall(t *testing.T) {
 	runtime := &echoRuntime{}
 	body := strings.Repeat("x", MaxCallChars)
 	reader := RuntimeHTMLReader{runtime}
-	if _, err := reader.Read(context.Background(), html(body, body), time.Minute); err != nil {
+	if _, err := reader.Read(context.Background(), html(body, body), new(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reader.Read(context.Background(), html("a"), 0); err != nil {
+	if _, err := reader.Read(context.Background(), html("a"), nil); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Equal(runtime.timeouts, []time.Duration{time.Minute, time.Minute, 0}) {
@@ -114,7 +114,7 @@ func TestPassesTheCallersBudgetToEveryCall(t *testing.T) {
 func TestReadsAnOversizedFieldInACallOfItsOwn(t *testing.T) {
 	runtime := &echoRuntime{}
 	huge := strings.Repeat("h", MaxCallChars+1)
-	read, err := RuntimeHTMLReader{runtime}.Read(context.Background(), html("a", huge, "b"), 0)
+	read, err := RuntimeHTMLReader{runtime}.Read(context.Background(), html("a", huge, "b"), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestReadsAnOversizedFieldInACallOfItsOwn(t *testing.T) {
 func TestTheCallCapCountsUTF16Units(t *testing.T) {
 	runtime := &echoRuntime{}
 	half := strings.Repeat("😀", MaxCallChars/4)
-	if _, err := (RuntimeHTMLReader{runtime}).Read(context.Background(), html(half, half, "x"), 0); err != nil {
+	if _, err := (RuntimeHTMLReader{runtime}).Read(context.Background(), html(half, half, "x"), nil); err != nil {
 		t.Fatal(err)
 	}
 	if len(runtime.calls) != 2 {
@@ -138,10 +138,18 @@ func TestTheCallCapCountsUTF16Units(t *testing.T) {
 func TestFieldsThatExactlyFillACallShareIt(t *testing.T) {
 	runtime := &echoRuntime{}
 	half := strings.Repeat("x", MaxCallChars/2)
-	if _, err := (RuntimeHTMLReader{runtime}).Read(context.Background(), html(half, half), 0); err != nil {
+	if _, err := (RuntimeHTMLReader{runtime}).Read(context.Background(), html(half, half), nil); err != nil {
 		t.Fatal(err)
 	}
 	if len(runtime.calls) != 1 {
 		t.Fatalf("%d calls", len(runtime.calls))
 	}
+}
+
+// orDefault records an unset timeout as 0.
+func orDefault(timeout *time.Duration) time.Duration {
+	if timeout == nil {
+		return 0
+	}
+	return *timeout
 }

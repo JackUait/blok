@@ -14,7 +14,7 @@ type scriptedRuntime struct {
 	calls   int
 }
 
-func (s *scriptedRuntime) Invoke(_ context.Context, _, _ string, _ time.Duration) (string, error) {
+func (s *scriptedRuntime) Invoke(_ context.Context, _, _ string, _ *time.Duration) (string, error) {
 	s.calls++
 	if s.err != nil {
 		return "", s.err
@@ -209,7 +209,7 @@ func TestReadsALoneSurrogateInABareDocumentAsAReplacementCharacter(t *testing.T)
 
 type recordingRuntime struct{ input string }
 
-func (r *recordingRuntime) Invoke(_ context.Context, _, input string, _ time.Duration) (string, error) {
+func (r *recordingRuntime) Invoke(_ context.Context, _, input string, _ *time.Duration) (string, error) {
 	r.input = input
 	return `{"document":{}}`, nil
 }

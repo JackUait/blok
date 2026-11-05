@@ -204,7 +204,7 @@ func TestTheRoomTrimsOnlyDoneSteps(t *testing.T) {
 // would (C# NoHistoryRuntime).
 type historyRuntime struct{ inner invoker }
 
-func (r historyRuntime) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+func (r historyRuntime) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
 	if op == "agentExecute" && (strings.Contains(input, `"name":"history.undo"`) || strings.Contains(input, `"name":"history.redo"`)) {
 		return `{"result":{"ok":false,"error":{"code":"COMMAND_UNAVAILABLE","message":"\"history.undo\" is not available here.","retryable":false,"details":{"reason":"runtime"}},"warnings":[],"revision":"h1"},"document":{"blocks":[]},"edits":[]}`, nil
 	}
@@ -258,7 +258,7 @@ type peerAfterRestoreCheck struct {
 	peer  func()
 }
 
-func (r *peerAfterRestoreCheck) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+func (r *peerAfterRestoreCheck) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
 	output, err := r.inner.Invoke(ctx, op, input, timeout)
 	r.mu.Lock()
 	peer := r.peer
@@ -366,7 +366,7 @@ type failingExecute struct {
 	err   error
 }
 
-func (f failingExecute) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+func (f failingExecute) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
 	if op == "agentExecute" {
 		return "", f.err
 	}
@@ -494,7 +494,7 @@ type cancelOnExecute struct {
 	cancel context.CancelFunc
 }
 
-func (c cancelOnExecute) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+func (c cancelOnExecute) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
 	if op == "agentExecute" {
 		// The plan runs on the room's own context, so the caller's cancel
 		// reaches it as this error.
@@ -569,7 +569,7 @@ type drainAfterRestoreCheck struct {
 	drain func()
 }
 
-func (d *drainAfterRestoreCheck) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+func (d *drainAfterRestoreCheck) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
 	output, err := d.inner.Invoke(ctx, op, input, timeout)
 	if drain := d.drain; drain != nil && op == "agentExecute" && strings.Contains(output, `"restore":`) {
 		d.drain = nil

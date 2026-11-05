@@ -15,7 +15,7 @@ type blockingRuntime struct {
 	err     error
 }
 
-func (b *blockingRuntime) Invoke(_ context.Context, op, input string, _ time.Duration) (string, error) {
+func (b *blockingRuntime) Invoke(_ context.Context, op, input string, _ *time.Duration) (string, error) {
 	b.ops <- op
 	b.inputs <- input
 	<-b.release

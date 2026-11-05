@@ -172,7 +172,7 @@ func (k *rb2Knob) Export(ctx context.Context, doc *yjs.Doc) (*jsjson.Object, err
 // rb2FailingHTML is C# FailingHtmlReader.
 type rb2FailingHTML struct{ err error }
 
-func (h rb2FailingHTML) Read(context.Context, []convert.RichTextHTML, time.Duration) ([][]any, error) {
+func (h rb2FailingHTML) Read(context.Context, []convert.RichTextHTML, *time.Duration) ([][]any, error) {
 	return nil, h.err
 }
 

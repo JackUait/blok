@@ -1,0 +1,378 @@
+{
+  "cases": [
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: CLOSE\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: close\r\nConnection: a b\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: a b\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: a b\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: x-close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: closed\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: close, @\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: @, close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: , close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: keep-alive, close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: \"close\"\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: close;x=1\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection:\tclose\t\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: max=0\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: max=1\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=1\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=0\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=2\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=-1\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: TIMEOUT=1, MAX=5\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=5, max=0\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=1, @\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=\"1\"\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: max=\"0\"\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=1\r\nKeep-Alive: max=5\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.0 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.0 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: keep-alive\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.0 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nab\r\n0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.5 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\n\r\nxyz"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nab\r\n0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 3\r\n\r\nabc"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\n\r\nabc",
+      "close": true
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 524288\r\n\r\n{PAD:524288}"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 2097152\r\n\r\n{PAD:2097152}"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nTransfer-Encoding: chunked\r\n\r\n200000\r\n{PAD:2097152}\r\n0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=01\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout = 1\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=1,max=5\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: max=00\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=99999999999\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: ,timeout=1\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=1,\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nKeep-Alive: timeout=+1\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nProxy-Connection: close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: close,,a\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.0 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: \r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: keep-alive\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "answer": "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nConnection: Keep-Alive, Upgrade\r\nContent-Length: 0\r\n\r\n"
+    }
+  ],
+  "answers": [
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|2 CONNECT",
+      "plain": "407|200|1 GET|2 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    },
+    {
+      "tunnel": "error 403|1 CONNECT|1 CONNECT",
+      "plain": "407|200|1 GET|1 GET"
+    }
+  ]
+}

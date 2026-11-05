@@ -9,6 +9,7 @@ mod decode;
 mod digest;
 mod fetcher;
 mod lanes;
+mod ntlm;
 pub mod operator;
 mod policy;
 mod proxy;
@@ -43,6 +44,8 @@ mod fetcher_test;
 mod fixtures_test;
 #[cfg(test)]
 mod law_test;
+#[cfg(test)]
+mod ntlm_test;
 #[cfg(test)]
 mod origin_test;
 #[cfg(test)]

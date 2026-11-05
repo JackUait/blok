@@ -345,6 +345,8 @@ struct ProxyAuth {
     sent: Option<&'static str>,
     /// Whether the one stale-nonce retry was used.
     stale: bool,
+    /// The NTLM or Negotiate handshake under way.
+    nt: Option<crate::ntlm::NtlmAuth>,
 }
 
 /// HttpConnectionPool.EstablishProxyTunnelAsync (System.Net.Http 10.0.11,
@@ -353,10 +355,11 @@ struct ProxyAuth {
 /// :308-312, :660-664). Credentials only after a 407 challenge:
 /// SendWithProxyAuthAsync passes preAuthenticate false
 /// (AuthenticationHelper.cs:481). The challenge is picked in .NET's order,
-/// Negotiate, NTLM, Digest, Basic; Negotiate and NTLM are not spoken here,
-/// so they fail the tunnel where .NET would send its own token, never
-/// Basic. A Digest answer gets one more try when the nonce is stale. Only
-/// 200 opens the tunnel (HttpConnectionPool.cs:666).
+/// Negotiate, NTLM, Digest, Basic. A Digest answer gets one more try when
+/// the nonce is stale. NTLM and Negotiate are SendWithNtAuthAsync
+/// (:630-745): Type 1 and Type 3 go on one stream; only the first 407 may
+/// close it, and after the Type 3 the answer is final. Only 200 opens the
+/// tunnel (HttpConnectionPool.cs:666).
 async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
     tcp: &mut S,
     authority: &str,
@@ -392,6 +395,10 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
                     let scheme = choose_challenge(&challenges);
                     auth.sent = scheme;
                     match scheme {
+                        Some(scheme @ ("negotiate" | "ntlm")) => {
+                            ntlm_first(auth, scheme, &challenges[scheme], proxy, user, password)
+                                .await?
+                        }
                         Some("digest") => crate::digest::parse(&challenges["digest"])
                             .and_then(|p| crate::digest::token(user, password, &p))
                             .map(|token| format!("Digest {token}")),
@@ -399,6 +406,30 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
                         _ => None,
                     }
                 }
+                Some(scheme @ ("negotiate" | "ntlm")) => match &mut auth.nt {
+                    Some(nt) if !nt.authenticated => match challenges.get(scheme) {
+                        None => None,
+                        Some(data) => {
+                            // A bare challenge is an empty blob, which .NET
+                            // cannot read.
+                            let challenge = base64::engine::general_purpose::STANDARD
+                                .decode(data)
+                                .ok()
+                                .filter(|_| !data.is_empty())
+                                .ok_or_else(ntlm_throw)?;
+                            nt.respond(&challenge)
+                                .map_err(|_| ntlm_throw())?
+                                .map(|token| {
+                                    format!(
+                                        "{} {}",
+                                        ntlm_scheme(scheme),
+                                        base64::engine::general_purpose::STANDARD.encode(token)
+                                    )
+                                })
+                        }
+                    },
+                    _ => None,
+                },
                 Some("digest") if !auth.stale => challenges
                     .get("digest")
                     .and_then(|data| crate::digest::parse(data))
@@ -416,6 +447,8 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
     let Some(next) = next else {
         return Err(OperatorError::Tunnel(head.status));
     };
+    // After the Type 1 the stream is kept whatever the answer says.
+    let handshake = auth.nt.is_some() && auth.authorization.is_some();
     auth.authorization = Some(next);
     let framed = framing(&head)?;
     let close = head
@@ -438,8 +471,14 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
             }
         }
         keep = keep && body.into_inner().buffer().is_empty();
+    } else if handshake {
+        let mut body = Body::after_head(reader, framed, head.budget);
+        let mut sink = [0u8; 512];
+        while let Ok(1..) = body.read(&mut sink).await {}
     }
-    Ok(Tunnel::Again { keep })
+    Ok(Tunnel::Again {
+        keep: keep || handshake,
+    })
 }
 
 /// Proxy-Authenticate lines as each scheme's parameter text, lower-case
@@ -500,12 +539,67 @@ fn split_outside_quotes(s: &str) -> Vec<&str> {
 }
 
 /// TryGetAuthenticationChallenge's order: Negotiate, NTLM, Digest, Basic.
-/// Negotiate and NTLM give None: they are not spoken here.
 fn choose_challenge(challenges: &HashMap<String, String>) -> Option<&'static str> {
-    for scheme in ["negotiate", "ntlm", "digest", "basic"] {
-        if challenges.contains_key(scheme) {
-            return matches!(scheme, "digest" | "basic").then_some(scheme);
-        }
+    ["negotiate", "ntlm", "digest", "basic"]
+        .into_iter()
+        .find(|scheme| challenges.contains_key(*scheme))
+}
+
+fn ntlm_throw() -> OperatorError {
+    OperatorError::Io(io::Error::new(
+        io::ErrorKind::InvalidData,
+        "the NTLM challenge cannot be read",
+    ))
+}
+
+/// The scheme name .NET writes, whatever the server's case.
+fn ntlm_scheme(sent: &str) -> &'static str {
+    if sent == "negotiate" {
+        "Negotiate"
+    } else {
+        "NTLM"
     }
-    None
+}
+
+/// Starts SendWithNtAuthAsync: the credentials are
+/// GetCredentialsFromString's, "domain\\user" split at the first
+/// backslash, and the SPN is "HTTP/" and the proxy host. The first
+/// challenge's data is decoded, which can throw, and then not read.
+async fn ntlm_first(
+    auth: &mut ProxyAuth,
+    sent: &str,
+    data: &str,
+    proxy: &ProxyUrl,
+    user: &str,
+    password: &str,
+) -> Result<Option<String>, OperatorError> {
+    if !data.is_empty()
+        && base64::engine::general_purpose::STANDARD
+            .decode(data)
+            .is_err()
+    {
+        return Err(ntlm_throw());
+    }
+    let (domain, user) = user.split_once('\\').unwrap_or(("", user));
+    let host = proxy
+        .authority
+        .rsplit_once(':')
+        .map_or(proxy.authority.as_str(), |(host, _)| host)
+        .trim_start_matches('[')
+        .trim_end_matches(']');
+    // .NET takes an IP literal as it is (IPv6 without brackets) and a name
+    // as Dns.GetHostEntryAsync's HostName, the canonical name. std cannot
+    // ask for that, so a name stands as given.
+    let Some(mut nt) = crate::ntlm::NtlmAuth::new(
+        sent == "negotiate",
+        user,
+        domain,
+        password,
+        &format!("HTTP/{host}"),
+    ) else {
+        return Ok(None);
+    };
+    let token = base64::engine::general_purpose::STANDARD.encode(nt.initial());
+    auth.nt = Some(nt);
+    Ok(Some(format!("{} {token}", ntlm_scheme(sent))))
 }

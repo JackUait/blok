@@ -338,9 +338,7 @@ fn md5_matches_rfc_1321() {
     }
 }
 
-// The twin of C#'s AnswersADigestChallengeAsSocketsHttpHandlerDoes. Only
-// negotiate+basic differs: .NET sends a Negotiate token, which is not
-// spoken here, and neither sends Basic.
+// The twin of C#'s AnswersADigestChallengeAsSocketsHttpHandlerDoes.
 #[tokio::test]
 async fn answers_a_digest_challenge_as_sockets_http_handler_does() {
     let pki = pki("localhost", |_| {});
@@ -393,7 +391,7 @@ async fn answers_a_digest_challenge_as_sockets_http_handler_does() {
             "u",
             "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"",
         ),
-        ("negotiate+basic", "u", "error|1 auth=no"),
+        ("negotiate+basic", "u", "error|1 auth=no|1 auth=Negotiate T"),
     ] {
         let (port, seen) = digest_proxy(mode, user).await;
         let proxy_user = if user == "é" { "%C3%A9" } else { user };

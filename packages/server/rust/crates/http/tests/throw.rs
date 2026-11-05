@@ -114,6 +114,12 @@ async fn a_status_set_without_a_write_is_held_until_the_head_goes_out() {
                     response.set_status(202);
                     request.cancel_token().cancelled().await;
                 }
+                "/hdr-returns" => {
+                    response.headers_mut().set("X-Probe", "kept");
+                    response
+                        .headers_mut()
+                        .set("Content-Type", "application/json");
+                }
                 "/hdr-status-throw" => {
                     response.headers_mut().set("X-Probe", "kept");
                     response
@@ -159,6 +165,10 @@ async fn a_status_set_without_a_write_is_held_until_the_head_goes_out() {
         (
             "/hdr-status-timeout",
             "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n",
+        ),
+        (
+            "/hdr-returns",
+            "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nContent-Type: application/json\r\nDate: D\r\nServer: Kestrel\r\nX-Probe: kept\r\n\r\n",
         ),
         (
             "/hdr-status-throw",

@@ -61,9 +61,7 @@ func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 		}
 		// By the clock, not ctx.Err(): the read deadline can cancel the
 		// connection's context first, and that reads as Canceled.
-		if !time.Now().Before(deadline) {
-			tracked.timeOut()
-		}
+		tracked.finish()
 		// net/http reads what is left of the body after the answer, under
 		// the read deadline; Kestrel gives it bodyDrainTimeout. Never on a
 		// hijacked conn: the deadline would land on its new owner.
@@ -240,6 +238,17 @@ func (t *trackingWriter) Write(b []byte) (int, error) {
 	t.wrote, t.body = true, true
 	t.mu.Unlock()
 	return t.ResponseWriter.Write(b)
+}
+
+// finish is the handler's return: a head it never wrote still carries its
+// headers, or is the 504 past the deadline. Marked written, so a timer that
+// fires before it is stopped leaves net/http's answer alone.
+func (t *trackingWriter) finish() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if !t.timedOut && t.startLocked() {
+		t.wrote = true
+	}
 }
 
 // FlushError sends the head with the handler's headers; without it the

@@ -27,6 +27,7 @@ public sealed class KestrelHeldStatusTests
   [InlineData("/flushed-timeout", "HTTP/1.1 202 Accepted\r\nDate: D\r\nServer: Kestrel\r\nTransfer-Encoding: chunked\r\n\r\n")]
   [InlineData("/hdr-timeout", "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n")]
   [InlineData("/hdr-status-timeout", "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n")]
+  [InlineData("/hdr-returns", "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nContent-Type: application/json\r\nDate: D\r\nServer: Kestrel\r\nX-Probe: kept\r\n\r\n")]
   [InlineData("/hdr-status-throw", "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n")]
   public async Task AStatusSetWithoutAWriteIsHeldUntilTheHeadGoesOut(string path, string head)
   {
@@ -92,6 +93,12 @@ public sealed class KestrelHeldStatusTests
       context.Response.ContentType = "application/json";
       context.Response.StatusCode = 202;
       await Task.Delay(Timeout.Infinite, context.RequestAborted);
+    });
+    app.MapGet("/hdr-returns", (HttpContext context) =>
+    {
+      context.Response.Headers["X-Probe"] = "kept";
+      context.Response.ContentType = "application/json";
+      return Task.CompletedTask;
     });
     app.MapGet("/hdr-status-throw", (HttpContext context) =>
     {

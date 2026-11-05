@@ -48,6 +48,9 @@ func TestAStatusSetWithoutAWriteIsHeldUntilTheHeadGoesOut(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 			<-r.Context().Done()
+		case "/hdr-returns":
+			w.Header().Set("X-Probe", "kept")
+			w.Header().Set("Content-Type", "application/json")
 		case "/hdr-status-throw":
 			w.Header().Set("X-Probe", "kept")
 			w.Header().Set("Content-Type", "application/json")
@@ -70,6 +73,7 @@ func TestAStatusSetWithoutAWriteIsHeldUntilTheHeadGoesOut(t *testing.T) {
 		{"/flushed-timeout", "HTTP/1.1 202 Accepted\r\nDate: D\r\nServer: Kestrel\r\nTransfer-Encoding: chunked\r\n\r\n"},
 		{"/hdr-timeout", "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n"},
 		{"/hdr-status-timeout", "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n"},
+		{"/hdr-returns", "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nContent-Type: application/json\r\nDate: D\r\nServer: Kestrel\r\nX-Probe: kept\r\n\r\n"},
 		{"/hdr-status-throw", "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n"},
 	} {
 		conn, err := net.Dial("tcp", listener.Addr().String())

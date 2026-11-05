@@ -3,6 +3,7 @@ package blob
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -150,5 +151,26 @@ func TestTheClientConnectsWithinTenSecondsAndFollowsNoRedirect(t *testing.T) {
 	}
 	if s.client.CheckRedirect(nil, nil) != http.ErrUseLastResponse {
 		t.Fatal("follows redirects")
+	}
+}
+
+// S3BlobStoreTests 'PropagatesCallerCancellationWhileReadingTheResponsePrefix':
+// a cancel while the error body is read is the cancellation, not the
+// status error.
+func TestPropagatesCallerCancellationWhileReadingTheResponsePrefix(t *testing.T) {
+	endpoint := rawServer(t, false, func(conn net.Conn, _ *bufio.Reader, stop <-chan struct{}) {
+		_, _ = io.WriteString(conn, "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 100\r\n\r\npartial")
+		<-stop
+	})
+	s, err := NewS3(testS3(endpoint, "media", "path"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(200*time.Millisecond, cancel)
+
+	_, err = s.GetObject(ctx, "collab/key")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v", err)
 	}
 }

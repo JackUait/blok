@@ -359,7 +359,12 @@ func (s *S3) send(ctx context.Context, method, key, mimeType string, body io.Rea
 	if allowNotFound && response.StatusCode == http.StatusNotFound {
 		return nil, nil
 	}
-	prefix, _ := io.ReadAll(io.LimitReader(response.Body, s3ErrorBodyLimit))
+	// A failed read keeps what it read, unless the caller or the request
+	// timeout ended it: C# then throws the cancellation.
+	prefix, err := io.ReadAll(io.LimitReader(response.Body, s3ErrorBodyLimit))
+	if err != nil && ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	return nil, fmt.Errorf("blobstore: s3 %s returned %d: %s", method, response.StatusCode, strings.TrimSpace(string(prefix)))
 }
 

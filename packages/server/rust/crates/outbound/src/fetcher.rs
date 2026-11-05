@@ -120,7 +120,7 @@ pub(crate) struct Trust {
 }
 
 impl Trust {
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg(target_os = "macos")]
     pub(crate) fn platform() -> Trust {
         Trust {
             roots: Arc::new(RootCertStore::empty()),

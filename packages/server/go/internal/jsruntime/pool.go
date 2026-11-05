@@ -23,12 +23,16 @@ const (
 	// MinimumMemoryBudget is C#'s floor. Loading the bundle from a compiled
 	// program allocated 6 MiB (measured), so 8 MiB still loads.
 	MinimumMemoryBudget int64 = 8 << 20
-	// MaxCallStackSize stops runaway recursion before it eats the heap.
-	// Outline levels per frame differ by reader (about 8 frames a level to
-	// HTML, 3 to Markdown and plain text), so one cap cannot match C# for all
-	// three. It is set for HTML: 19500 converts 2435 levels to HTML, where C#
-	// stops at 2416 on its allocation budget (both measured).
+	// MaxCallStackSize stops runaway recursion before it eats the heap. It is
+	// set for HTML, about 8 frames an outline level: 19500 converts 2436
+	// levels, where C# stops at 2416 on its allocation budget (both
+	// measured). Markdown, about 3 frames a level, reaches 6498 levels, past
+	// C#'s 1454.
 	MaxCallStackSize = 19500
+	// PlainTextCallStackSize is the cap of the plain-text readers, about 3
+	// frames a level: it converts 11164 levels, where C# converts 11049
+	// (both measured).
+	PlainTextCallStackSize = 33500
 )
 
 // Kind says why a call failed. The values match C# BlokConversionFailure.
@@ -251,6 +255,7 @@ func (p *Pool) Invoke(ctx context.Context, op, input string, timeout time.Durati
 // guardedInvoke runs one call under the deadline, the memory watchdog and ctx.
 // reusable is false when the engine stopped mid-execution.
 func (r *Runtime) guardedInvoke(ctx context.Context, op, input string, timeout time.Duration, budget int64) (result string, reusable bool, err error) {
+	r.vm.SetMaxCallStackSize(callStackSize(op))
 	g := arm(r.vm, timeout, budget, ctx.Done())
 	result, err = r.safeInvoke(op, input)
 	g.disarm()
@@ -292,6 +297,15 @@ func (r *Runtime) guardedInvoke(ctx context.Context, op, input string, timeout t
 		return "", false, &Failure{Kind: KindUnknown, Err: err}
 	}
 	return "", false, &Failure{Kind: KindUnknown, Err: err}
+}
+
+// callStackSize is the frame cap of one call. An engine serves every op, so
+// it is set on each call.
+func callStackSize(op string) int {
+	if op == "blocksToPlainText" || op == "blocksToPlainTextWithReport" {
+		return PlainTextCallStackSize
+	}
+	return MaxCallStackSize
 }
 
 // classify reads a JS error's name as C# does: only SyntaxError (from

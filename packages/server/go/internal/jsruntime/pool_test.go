@@ -9,6 +9,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dop251/goja"
 )
 
 // Each engine counts its own calls, so a test can tell reuse from a rebuild.
@@ -384,6 +386,49 @@ func TestConvertsAsManyOutlineLevelsToHTMLAsCSharp(t *testing.T) {
 	got, err := p.Invoke(context.Background(), "blocksToHtml", nestedOutline(2411), 0)
 	if err != nil || !strings.Contains(got, "level 2410") {
 		t.Fatalf("err = %v, has level 2410 = %v", err, strings.Contains(got, "level 2410"))
+	}
+}
+
+// C# converts 1454 levels to Markdown and 11049 to plain text at its
+// default budget (measured). The readers spend different frames a level, so
+// Go sets its frame cap per reader.
+func TestConvertsAsManyOutlineLevelsAsCSharpForEachReader(t *testing.T) {
+	if testing.Short() || raceEnabled {
+		t.Skip("slow")
+	}
+	p, err := NewPool(Options{PoolSize: new(1), Timeout: 2 * time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		op     string
+		levels int
+	}{{"blocksToMarkdown", 1454}, {"blocksToPlainText", 11049}, {"blocksToPlainTextWithReport", 11049}, {"blocksToHtml", 2411}} {
+		want := fmt.Sprintf("level %d", c.levels-1)
+		got, err := p.Invoke(context.Background(), c.op, nestedOutline(c.levels), 0)
+		if err != nil || !strings.Contains(got, want) {
+			t.Errorf("%s %d levels: err = %v, has %q = %v", c.op, c.levels, err, want, strings.Contains(got, want))
+		}
+	}
+}
+
+// Raising one reader's cap must not leave it raised for the next call on the
+// same engine: HTML still stops where its own cap is.
+func TestResetsTheFrameCapForEachCall(t *testing.T) {
+	if testing.Short() || raceEnabled {
+		t.Skip("slow")
+	}
+	p, err := NewPool(Options{PoolSize: new(1), Timeout: 2 * time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Invoke(context.Background(), "blocksToPlainText", nestedOutline(100), 0); err != nil {
+		t.Fatal(err)
+	}
+	_, err = p.Invoke(context.Background(), "blocksToHtml", nestedOutline(4000), 0)
+	var overflow *goja.StackOverflowError
+	if !errors.As(err, &overflow) {
+		t.Fatalf("err = %v, want the HTML frame cap", err)
 	}
 }
 

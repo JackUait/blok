@@ -51,7 +51,7 @@ func (h collabStderr) Handle(_ context.Context, record slog.Record) error {
 	return writeLogLine(h.out, kind, record.Message)
 }
 
-// writeLogLine writes "<kind>: <message>\n" with the message on one line.
+// writeLogLine writes "<kind>: <message>" and a newline with the message on one line.
 // Messages carry doc ids from the URL, so a raw newline could forge a record.
 // \n, \r and \t become those two-character escapes; every other C0 control,
 // DEL, C1 control (U+0080-U+009F), U+2028 and U+2029 becomes \uXXXX in upper
@@ -78,7 +78,7 @@ func writeLogLine(out io.Writer, kind, message string) error {
 		}
 		i += size
 	}
-	line.WriteByte('\n')
+	line.WriteString(newline)
 	_, err := io.WriteString(out, line.String())
 	return err
 }

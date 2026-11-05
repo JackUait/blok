@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -599,4 +600,35 @@ func TestTheBinaryDecodesNonUTF8ArgumentsAndEnvironmentAsCSharpDoes(t *testing.T
 	if want := "blok-server refused to start: --secret must be at least 32 characters (got 22)\n"; stderr.String() != want {
 		t.Fatalf("environment: %q", stderr.String())
 	}
+}
+
+// Console.Error.WriteLine ends each C# record with Environment.NewLine:
+// "\r\n" in the Windows CoreLib, "\n" elsewhere. The usage text is a raw
+// literal, so it keeps "\n".
+func TestStderrRecordsEndWithDotNetsNewLine(t *testing.T) {
+	want := "\n"
+	if runtime.GOOS == "windows" {
+		want = "\r\n"
+	}
+	if newline != want {
+		t.Fatalf("newline %q", newline)
+	}
+	var stderr bytes.Buffer
+	run(context.Background(), []string{"--not-a-real-flag"}, noEnv, &stderr)
+	if !strings.HasPrefix(stderr.String(), "flag provided but not defined: -not-a-real-flag"+want+usage[:10]) {
+		t.Fatalf("stderr %q", stderr.String())
+	}
+	line := writeLogLineTo(t, "warning", "x")
+	if line != "warning: x"+want {
+		t.Fatalf("log line %q", line)
+	}
+}
+
+func writeLogLineTo(t *testing.T, kind, message string) string {
+	t.Helper()
+	var out bytes.Buffer
+	if err := writeLogLine(&out, kind, message); err != nil {
+		t.Fatal(err)
+	}
+	return out.String()
 }

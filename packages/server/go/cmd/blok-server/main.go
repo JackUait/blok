@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -68,6 +69,10 @@ const usage = `Usage of blok-server:
     your custom tools' rich text fields as JSON, e.g. {"callout":["title"]};
     list what each tool's richTextFields declares (or set BLOK_RICH_TEXT_FIELDS)
 `
+
+// newline is .NET's Environment.NewLine, which Console.Error.WriteLine ends
+// every C# record with: "\r\n" in the Windows CoreLib.
+var newline = map[bool]string{true: "\r\n", false: "\n"}[runtime.GOOS == "windows"]
 
 // shutdownGrace is C#'s HostCollab.ShutdownTimeout: a ceiling for the drain
 // and the graceful stop, not a wait.
@@ -159,7 +164,7 @@ func configureCollab(options *blokserver.Options, stderr io.Writer) {
 func run(ctx context.Context, args []string, getenv func(string) string, stderr io.Writer) int {
 	hostArgs, conformance, conformanceErr := parseConformanceArguments(args)
 	if conformanceErr != "" {
-		fmt.Fprintln(stderr, conformanceErr)
+		fmt.Fprint(stderr, conformanceErr+newline)
 		fmt.Fprint(stderr, usage)
 		return 2
 	}
@@ -169,7 +174,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 		return 0
 	}
 	if parsed.err != "" {
-		fmt.Fprintln(stderr, parsed.err)
+		fmt.Fprint(stderr, parsed.err+newline)
 		fmt.Fprint(stderr, usage)
 		return 2
 	}
@@ -178,14 +183,14 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	configureCollab(&options, stderr)
 	server, err := blokserver.New(options)
 	if err != nil {
-		fmt.Fprintf(stderr, "blok-server refused to start: %v\n", err)
+		fmt.Fprintf(stderr, "blok-server refused to start: %v%s", err, newline)
 		return 1
 	}
 	if parsed.secretFromFlag {
-		fmt.Fprintln(stderr, "warning: --secret puts the shared secret in this machine's process list; set BLOK_SECRET in the environment instead")
+		fmt.Fprint(stderr, "warning: --secret puts the shared secret in this machine's process list; set BLOK_SECRET in the environment instead"+newline)
 	}
 	if parsed.docEndpointAuthFromFlag {
-		fmt.Fprintln(stderr, "warning: --doc-endpoint-auth puts the credential in this machine's process list; set BLOK_DOC_ENDPOINT_AUTH in the environment instead")
+		fmt.Fprint(stderr, "warning: --doc-endpoint-auth puts the credential in this machine's process list; set BLOK_DOC_ENDPOINT_AUTH in the environment instead"+newline)
 	}
 	applyConformance(server, conformance)
 
@@ -193,7 +198,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	defer stopSignals()
 	listeners, err := listen(options.ListenAddress)
 	if err != nil {
-		fmt.Fprintf(stderr, "blok-server refused to start: %v\n", err)
+		fmt.Fprintf(stderr, "blok-server refused to start: %v%s", err, newline)
 		return 1
 	}
 	httpServer := newHTTPServer(limitUpgrades(server.Handler(""), options), defaultRequestTimeout)
@@ -203,11 +208,11 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	}
 
 	// The harness trusts /health only after this line, so it must follow the bind.
-	fmt.Fprintf(stderr, "blok-server %s listening on %s (--auth %s)\n", version, options.ListenAddress, options.Auth)
+	fmt.Fprintf(stderr, "blok-server %s listening on %s (--auth %s)%s", version, options.ListenAddress, options.Auth, newline)
 
 	select {
 	case err := <-served:
-		fmt.Fprintf(stderr, "blok-server stopped: %v\n", err)
+		fmt.Fprintf(stderr, "blok-server stopped: %v%s", err, newline)
 		return 1
 	case <-ctx.Done():
 	}

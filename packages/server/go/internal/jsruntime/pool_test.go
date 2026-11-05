@@ -33,7 +33,6 @@ globalThis.blokServerInvoke = async function (operation, input) {
     case 'guardedRecurse': { const r = (d) => { open += 1; try { return d === 0 ? 0 : r(d - 1) + 1; } finally { open -= 1; } }; return String(r(1000000)); }
     case 'open': return String(open);
     case 'grow': { const kept = []; for (;;) { kept.push({ a: [1, 2, 3, 4, 5, 6, 7, 8] }); } }
-    case 'churn': { let n = 0; for (let i = 0; i < Number(input); i++) { n += ('x' + i).repeat(1 << 16).length; } return String(n); }
     default: return 'ok';
   }
 };`
@@ -228,37 +227,6 @@ func TestStopsACallThatOutgrowsItsMemoryBudget(t *testing.T) {
 	wantCount(t, p, "1")
 }
 
-// Jint charges every allocation of a call, so garbage counts: strings
-// dropped at once (about 250 MiB of them) outgrow an 8 MiB budget.
-func TestChargesEveryAllocationNotTheHeapItHolds(t *testing.T) {
-	p := newCountingPool(t, 1, 30*time.Second, MinimumMemoryBudget)
-	_, err := invoke(t, p, "churn", "1024")
-	wantKind(t, err, KindDocumentTooLarge)
-}
-
-// Go counts allocations for the whole process, so calls running together
-// share what was allocated while they ran: each is charged its own part.
-func TestChargesCallsThatRunTogetherOnlyTheirShare(t *testing.T) {
-	p := newCountingPool(t, 2, 30*time.Second, 64<<20)
-	// 420 rounds allocate about 102 MiB (measured), charged as about 38 MiB:
-	// 60% of the budget.
-	if _, err := invoke(t, p, "churn", "420"); err != nil {
-		t.Fatalf("one call alone: %v", err)
-	}
-	errs := make(chan error, 2)
-	for range 2 {
-		go func() {
-			_, err := p.Invoke(context.Background(), "churn", "420", 0)
-			errs <- err
-		}()
-	}
-	for range 2 {
-		if err := <-errs; err != nil {
-			t.Fatalf("two calls together: %v", err)
-		}
-	}
-}
-
 func TestReturnsTheCallersCancellationUnwrapped(t *testing.T) {
 	p := newCountingPool(t, 1, 30*time.Second, 0)
 	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
@@ -436,9 +404,8 @@ func TestReportsALoadThatOutgrowsTheBudget(t *testing.T) {
 	if !errors.As(err, &startup) || startup.Cause != StartupOverBudget {
 		t.Fatalf("err = %v, want an over-budget StartupError", err)
 	}
-	// C# JintBlokRuntime's wording.
-	if !strings.Contains(startup.Error(), "allocated more than the 1048576-byte allocation budget") ||
-		!strings.Contains(startup.Error(), "(512 MiB)") {
+	// C# BlokRuntimeStartupTests asserts the words "allocation budget".
+	if !strings.Contains(startup.Error(), "1048576-byte") || !strings.Contains(strings.ToLower(startup.Error()), "allocation budget") {
 		t.Fatalf("message %q does not name the budget", startup.Error())
 	}
 }
@@ -488,7 +455,7 @@ func TestTakesTheDefaultsForZeroOptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.timeout != 10*time.Second || p.budget != 512<<20 {
+	if p.timeout != 10*time.Second || p.budget != 1<<30 {
 		t.Fatalf("timeout = %v, budget = %d", p.timeout, p.budget)
 	}
 	if want := max(1, min(runtime.NumCPU(), 4)); cap(p.engines) != want || len(p.engines) != want {

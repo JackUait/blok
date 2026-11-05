@@ -32,12 +32,12 @@ type Options struct {
 	// instructions, so a long native builtin (a backtracking regex) overruns
 	// it by seconds.
 	Timeout time.Duration
-	// MemoryBudget is what one conversion may allocate, as C#'s per-call
-	// allocation budget. 0 means 512 MiB.
+	// MemoryBudget is the live heap growth one conversion may cause. 0 means
+	// 1 GiB.
 	//
-	// Approximate: Go counts allocations for the whole process, so each
-	// conversion is charged an even share of what was allocated while it
-	// ran, scaled to Jint's count (see jsruntime's guard.go).
+	// Approximate, unlike C#'s per-engine allocation count: it is the whole
+	// process's live heap as of the last GC, read every millisecond, so
+	// concurrent conversions add up.
 	MemoryBudget int64
 	// WarmUp converts a long article in the background once the pool is
 	// built, so the first request does not pay for cold paths. New does not

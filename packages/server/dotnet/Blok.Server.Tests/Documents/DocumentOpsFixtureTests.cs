@@ -138,9 +138,9 @@ public sealed partial class DocumentOpsFixtureTests
           allocationBudgetBytes: 64L * 1024 * 1024));
 
   /*
-   * The Go and Rust runtimes stop the same big documents at 64 MiB (their
-   * jsruntime tests hold this table). At the default budget all of them
-   * convert: MatchesNodeOnTheSharedFixture.
+   * C# only. Go and Rust count memory differently (live heap, QuickJS
+   * allocations), so their refusal points differ; at the default budget
+   * all three convert these: MatchesNodeOnTheSharedFixture.
    */
   [Theory]
   [InlineData("big.plain.text", false)]
@@ -173,7 +173,7 @@ public sealed partial class DocumentOpsFixtureTests
 
   /*
    * One 32 MiB base64 image at the default budget: Markdown is refused,
-   * plain text and HTML convert. The Go and Rust runtimes pin the same.
+   * plain text and HTML convert (the shared big.default.image.32mib cases).
    */
   [Theory]
   [InlineData("blocksToMarkdown", true)]

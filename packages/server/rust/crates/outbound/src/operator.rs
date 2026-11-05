@@ -197,7 +197,7 @@ impl OperatorClient {
         Ok(Response {
             status: head.status,
             headers: head.headers,
-            body: Body::new(reader, framing),
+            body: Body::after_head(reader, framing, head.budget),
         })
     }
 

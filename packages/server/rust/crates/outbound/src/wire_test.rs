@@ -2,26 +2,27 @@ use tokio::io::BufReader;
 
 use crate::wire::{Body, Framing, Source, WireError, framing, read_head};
 
+// .NET has no count of interim answers: one budget covers every head.
 #[tokio::test]
-async fn skips_interim_answers_up_to_go_transports_cap() {
-    let five = format!(
+async fn skips_interim_answers_under_one_budget() {
+    let six = format!(
         "{}HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n",
-        "HTTP/1.1 100 Continue\r\n\r\n".repeat(5)
+        "HTTP/1.1 103 Early Hints\r\n\r\n".repeat(6)
     );
-    let head = read_head(&mut BufReader::new(five.as_bytes()), 1 << 10)
+    let head = read_head(&mut BufReader::new(six.as_bytes()), 1 << 10)
         .await
         .unwrap();
     assert_eq!(head.status, 200);
-    let six = format!(
+    let many = format!(
         "{}HTTP/1.1 200 OK\r\n\r\n",
-        "HTTP/1.1 103 Early Hints\r\n\r\n".repeat(6)
+        "HTTP/1.1 100 Continue\r\n\r\n".repeat(64)
     );
-    let got = read_head(&mut BufReader::new(six.as_bytes()), 1 << 10).await;
-    assert!(matches!(got, Err(WireError::Malformed(_))));
+    let got = read_head(&mut BufReader::new(many.as_bytes()), 1 << 10).await;
+    assert!(matches!(got, Err(WireError::HeadTooLarge)));
 }
 
 #[tokio::test]
-async fn refuses_a_head_over_its_cap_and_conflicting_lengths() {
+async fn refuses_a_head_over_its_cap_and_frames_by_the_first_length() {
     let big = format!("HTTP/1.1 200 OK\r\nX: {}\r\n\r\n", "a".repeat(2048));
     let got = read_head(&mut BufReader::new(big.as_bytes()), 1 << 10).await;
     assert!(matches!(got, Err(WireError::HeadTooLarge)));
@@ -29,7 +30,7 @@ async fn refuses_a_head_over_its_cap_and_conflicting_lengths() {
     let head = read_head(&mut BufReader::new(&two[..]), 1 << 10)
         .await
         .unwrap();
-    assert!(framing(&head).is_err());
+    assert_eq!(framing(&head).unwrap(), Framing::Length(1));
     let chunked = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 9\r\n\r\n";
     let head = read_head(&mut BufReader::new(&chunked[..]), 1 << 10)
         .await
@@ -60,7 +61,7 @@ async fn caps_a_chunk_size_line_and_the_trailers() {
             .unwrap(),
         b"ok"
     );
-    let long_line = format!("2;{}\r\nok\r\n0\r\n\r\n", "x".repeat(10 << 10));
+    let long_line = format!("2;{}\r\nok\r\n0\r\n\r\n", "x".repeat(16 << 10));
     assert!(read_chunked(long_line.as_bytes()).await.is_err());
     let trailers = format!("2\r\nok\r\n0\r\n{}\r\n", "A: b\r\n".repeat(20 << 10));
     assert!(read_chunked(trailers.as_bytes()).await.is_err());

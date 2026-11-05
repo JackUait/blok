@@ -137,8 +137,9 @@ const AUTHORITY_SCHEMES: &[&str] = &[
 /// Uri.TryCreate(s, UriKind.RelativeOrAbsolute): what a Location header
 /// must pass before HttpClient exposes it. Nearly anything is a relative
 /// reference; a scheme .NET knows with a bad authority, and a drive letter
-/// not followed by a slash, are not. file may have no host. mailto, which
-/// has a grammar of its own, is taken as it comes.
+/// not followed by a slash, are not. file may have no host. mailto reads
+/// its authority right after the colon, with http's host and port rules,
+/// and may have no host (MailToLikeUri, AllowEmptyHost).
 pub fn parses_as_uri(s: &str) -> bool {
     let s = trim_uri_whitespace(s);
     if is_drive_letter(s) {
@@ -147,6 +148,11 @@ pub fn parses_as_uri(s: &str) -> bool {
     let Some((scheme, rest)) = split_scheme(s) else {
         return true;
     };
+    if scheme == "mailto" {
+        return rest.is_empty()
+            || matches!(rest.as_bytes()[0], b'/' | b'?' | b'#')
+            || parse_hierarchical("http", rest).is_some();
+    }
     if !two_slashes(rest) {
         return true;
     }

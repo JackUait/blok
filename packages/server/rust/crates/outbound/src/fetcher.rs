@@ -21,7 +21,7 @@ use tokio_rustls::TlsConnector;
 use crate::body::read_bounded;
 use crate::lanes::{CallerLanes, Lease};
 use crate::policy::{Error, Failure, Policy, Target, fail};
-use crate::wire::{Body, Headers, framing, header_text, read_head, request_head};
+use crate::wire::{Body, Headers, content_length, framing, header_text, read_head, request_head};
 
 /// Sent with every fetch, and no other header but Host.
 pub const USER_AGENT: &str = "blok-server (+https://blokeditor.com)";
@@ -344,13 +344,11 @@ impl Fetcher {
                 continue;
             }
             let framing = framing(&head).map_err(|_| blocked)?;
-            let content_length = match framing {
-                crate::wire::Framing::Length(n) => Some(n),
-                _ => None,
-            };
+            // C# checks the typed Content-Length whatever frames the body.
+            let content_length = content_length(&head.headers);
             let encodings: Vec<&[u8]> = head.headers.values("Content-Encoding").collect();
             let body = read_bounded(
-                Body::new(reader, framing),
+                Body::after_head(reader, framing, head.budget),
                 content_length,
                 &encodings,
                 limits.max_bytes,

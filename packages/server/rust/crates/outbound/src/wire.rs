@@ -6,8 +6,8 @@ use std::io;
 
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt};
 
-/// A response head's header lines, in the order received. Values are raw
-/// bytes: a server may send any octet but CR, LF and NUL.
+/// A response head's header lines, in the order received. Values are bytes
+/// as .NET stores them (see `response_header`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Headers(pub Vec<(String, Vec<u8>)>);
 
@@ -46,6 +46,8 @@ pub struct Head {
     pub headers: Headers,
     /// Whether the server spoke HTTP/1.0.
     pub http10: bool,
+    /// What is left of the head budget: the trailers' budget.
+    pub budget: usize,
 }
 
 #[derive(Debug)]
@@ -96,8 +98,9 @@ pub fn request_head(method: &str, target: &str, headers: &[(&str, &str)]) -> Vec
     head.into_bytes()
 }
 
-/// Reads one line, CRLF or LF ended, counting it against `budget`.
-async fn read_line<R: AsyncBufRead + Unpin>(
+/// Reads through the next LF and returns the line without it, CR kept.
+/// The bytes count against `budget`.
+async fn read_raw_line<R: AsyncBufRead + Unpin>(
     r: &mut R,
     budget: &mut usize,
 ) -> Result<Vec<u8>, WireError> {
@@ -119,94 +122,135 @@ async fn read_line<R: AsyncBufRead + Unpin>(
         r.consume(take);
         if done {
             line.pop();
-            if line.last() == Some(&b'\r') {
-                line.pop();
-            }
             return Ok(line);
         }
     }
 }
 
-/// Go's transport gives up after five interim answers; without a cap a
-/// server could stream 1xx heads forever.
-const MAX_INTERIM: usize = 5;
+fn trim_cr(line: &[u8]) -> &[u8] {
+    line.strip_suffix(b"\r").unwrap_or(line)
+}
 
-/// Reads a response head, skipping interim 1xx answers. Each head, status
-/// line included, must fit in `max_head` bytes.
+/// Reads one line, CRLF or LF ended, counting it against `budget`.
+async fn read_line<R: AsyncBufRead + Unpin>(
+    r: &mut R,
+    budget: &mut usize,
+) -> Result<Vec<u8>, WireError> {
+    let mut line = read_raw_line(r, budget).await?;
+    if line.last() == Some(&b'\r') {
+        line.pop();
+    }
+    Ok(line)
+}
+
+/// Reads a response head as .NET's HttpConnection does (System.Net.Http
+/// 10.0.11), skipping interim 1xx answers but 101. One `max_head` budget
+/// covers every status line and header block, interim heads included, and
+/// what is left of it is the trailers' budget.
 pub async fn read_head<R: AsyncBufRead + Unpin>(
     r: &mut R,
     max_head: usize,
 ) -> Result<Head, WireError> {
-    let mut interim = 0;
+    let mut budget = max_head;
     loop {
-        let mut budget = max_head;
         let line = read_line(r, &mut budget).await?;
         let (http10, status) = parse_status_line(&line)?;
-        let mut headers: Vec<(String, Vec<u8>)> = Vec::new();
-        loop {
-            let line = read_line(r, &mut budget).await?;
-            if line.is_empty() {
-                break;
-            }
-            if line[0] == b' ' || line[0] == b'\t' {
-                // An obsolete folded line continues the previous value.
-                let Some((_, value)) = headers.last_mut() else {
-                    return Err(WireError::Malformed("a folded first header"));
-                };
-                value.push(b' ');
-                value.extend_from_slice(line.trim_ascii());
-                continue;
-            }
-            let Some(colon) = line.iter().position(|&c| c == b':') else {
-                return Err(WireError::Malformed("a header line without a colon"));
-            };
-            let name = &line[..colon];
-            if name.is_empty() || !name.iter().all(|&c| is_token_char(c)) {
-                return Err(WireError::Malformed("a bad header name"));
-            }
-            let value = trim_space_tab(&line[colon + 1..]);
-            if value.contains(&0) {
-                return Err(WireError::Malformed("a NUL in a header value"));
-            }
-            headers.push((
-                String::from_utf8(name.to_vec()).expect("a token is ASCII"),
-                value.to_vec(),
-            ));
-        }
-        if (100..200).contains(&status) && status != 101 {
-            interim += 1;
-            if interim > MAX_INTERIM {
-                return Err(WireError::Malformed("too many interim answers"));
-            }
+        let interim = (100..200).contains(&status) && status != 101;
+        let headers = read_header_block(r, &mut budget, !interim).await?;
+        if interim {
             continue;
         }
         return Ok(Head {
             status,
-            headers: Headers(headers),
+            headers,
             http10,
+            budget,
         });
     }
 }
 
+/// ParseHeadersCore up to the blank line. A field runs to the first ':' of
+/// its first line; a line that starts with SP or HT continues it, its line
+/// end becoming spaces (CR too, when it precedes the LF). `keep` is false
+/// for an interim head, whose names .NET never checks.
+async fn read_header_block<R: AsyncBufRead + Unpin>(
+    r: &mut R,
+    budget: &mut usize,
+    keep: bool,
+) -> Result<Headers, WireError> {
+    let mut headers: Vec<(String, Vec<u8>)> = Vec::new();
+    loop {
+        let line = read_raw_line(r, budget).await?;
+        if trim_cr(&line).is_empty() {
+            return Ok(Headers(headers));
+        }
+        let Some(colon) = line.iter().position(|&c| c == b':') else {
+            return Err(WireError::Malformed("a header line without a colon"));
+        };
+        let mut value = line[colon + 1..].to_vec();
+        loop {
+            let next = r.fill_buf().await?;
+            match next.first() {
+                None => return Err(WireError::Io(io::ErrorKind::UnexpectedEof.into())),
+                Some(b' ' | b'\t') => {}
+                Some(_) => break,
+            }
+            if let Some(last) = value.last_mut().filter(|c| **c == b'\r') {
+                *last = b' ';
+            }
+            value.push(b' ');
+            value.extend_from_slice(&read_raw_line(r, budget).await?);
+        }
+        if keep {
+            headers.push(response_header(&line[..colon], trim_cr(&value))?);
+        }
+    }
+}
+
+/// AddResponseHeader: the name loses trailing spaces and must be a token;
+/// the value loses SP and HT at both ends. The value is
+/// HeaderDescriptor.GetHeaderValue kept as bytes: a Location that is valid
+/// UTF-8 stays as it is, anything else turns NUL, CR and LF into spaces.
+fn response_header(mut name: &[u8], value: &[u8]) -> Result<(String, Vec<u8>), WireError> {
+    while let [rest @ .., b' '] = name {
+        name = rest;
+    }
+    if name.is_empty() || !name.iter().all(|&c| is_token_char(c)) {
+        return Err(WireError::Malformed("a bad header name"));
+    }
+    let mut value = trim_space_tab(value).to_vec();
+    if !name.eq_ignore_ascii_case(b"Location") || std::str::from_utf8(&value).is_err() {
+        for c in &mut value {
+            if matches!(*c, 0 | b'\r' | b'\n') {
+                *c = b' ';
+            }
+        }
+    }
+    let name = String::from_utf8(name.to_vec()).expect("a token is ASCII");
+    Ok((name, value))
+}
+
+/// ParseStatusLineCore.
 fn parse_status_line(line: &[u8]) -> Result<(bool, u16), WireError> {
     let malformed = WireError::Malformed("a bad status line");
-    let rest = line.strip_prefix(b"HTTP/1.").ok_or(malformed)?;
-    let http10 = match rest.first() {
-        Some(b'0') => true,
-        Some(b'1') => false,
-        _ => return Err(WireError::Malformed("a bad status line")),
-    };
-    let rest = rest[1..]
-        .strip_prefix(b" ")
-        .ok_or(WireError::Malformed("a bad status line"))?;
-    if rest.len() < 3
-        || !rest[..3].iter().all(u8::is_ascii_digit)
-        || rest.len() > 3 && rest[3] != b' '
+    if line.len() < 12
+        || line[8] != b' '
+        || !line.starts_with(b"HTTP/1.")
+        || !line[7].is_ascii_digit()
     {
-        return Err(WireError::Malformed("a bad status line"));
+        return Err(malformed);
     }
-    let status = std::str::from_utf8(&rest[..3]).unwrap().parse().unwrap();
-    Ok((http10, status))
+    if !line[9..12].iter().all(u8::is_ascii_digit) {
+        return Err(malformed);
+    }
+    // The reason phrase setter refuses CR, LF and NUL.
+    if line.len() > 12 && (line[12] != b' ' || line[13..].iter().any(|&c| matches!(c, b'\r' | 0))) {
+        return Err(malformed);
+    }
+    let status = line[9..12]
+        .iter()
+        .fold(0u16, |n, &d| n * 10 + u16::from(d - b'0'));
+    Ok((line[7] == b'0', status))
 }
 
 pub(crate) fn trim_space_tab(mut s: &[u8]) -> &[u8] {
@@ -232,47 +276,159 @@ pub enum Framing {
     Close,
 }
 
-/// RFC 9112 §6.3 for a response to a request that was not HEAD.
+/// The body stream HttpConnection.SendAsync picks for a response to a
+/// request that was not HEAD. It never refuses a head.
 pub fn framing(head: &Head) -> Result<Framing, WireError> {
-    if (100..200).contains(&head.status) || head.status == 204 || head.status == 304 {
+    if (100..200).contains(&head.status) && head.status != 101
+        || head.status == 204
+        || head.status == 304
+    {
         return Ok(Framing::None);
     }
-    let codings: Vec<&[u8]> = head
-        .headers
-        .values("Transfer-Encoding")
-        .flat_map(|v| v.split(|&c| c == b','))
-        .map(trim_space_tab)
-        .filter(|c| !c.is_empty())
-        .collect();
-    if !codings.is_empty() && !head.http10 {
-        if codings.len() == 1 && codings[0].eq_ignore_ascii_case(b"chunked") {
-            return Ok(Framing::Chunked);
-        }
-        return Err(WireError::Malformed("an unsupported transfer coding"));
+    if head.status == 101 {
+        return Ok(Framing::Close);
     }
-    let mut length = None;
-    for value in head.headers.values("Content-Length") {
-        for part in value.split(|&c| c == b',') {
-            let part = trim_space_tab(part);
-            if part.is_empty() || !part.iter().all(u8::is_ascii_digit) {
-                return Err(WireError::Malformed("a bad Content-Length"));
-            }
-            let n: u64 = std::str::from_utf8(part)
-                .unwrap()
-                .parse()
-                .map_err(|_| WireError::Malformed("a bad Content-Length"))?;
-            if length.is_some_and(|l| l != n) {
-                return Err(WireError::Malformed("conflicting Content-Length values"));
-            }
-            length = Some(n);
-        }
+    if transfer_encoding_chunked(&head.headers) {
+        return Ok(Framing::Chunked);
     }
-    Ok(length.map_or(Framing::Close, Framing::Length))
+    Ok(match content_length(&head.headers) {
+        Some(0) => Framing::None,
+        Some(n) => Framing::Length(n),
+        None => Framing::Close,
+    })
 }
 
-/// The longest chunk-size line or trailer line read; nothing honest is close.
-const MAX_CHUNK_LINE: usize = 4096;
+/// HttpContentHeaders.ContentLength: only the first Content-Length line
+/// counts, and it must hold one number.
+pub fn content_length(headers: &Headers) -> Option<u64> {
+    let digits = trim_space_tab(headers.get("Content-Length")?);
+    if digits.is_empty() || !digits.iter().all(u8::is_ascii_digit) {
+        return None;
+    }
+    let n: u64 = std::str::from_utf8(digits).ok()?.parse().ok()?;
+    (n <= i64::MAX as u64).then_some(n)
+}
+
+/// HttpGeneralHeaders.GetTransferEncodingChunked: one line that is
+/// "chunked", or any line that parses as a coding list holding a bare
+/// "chunked". A line that does not parse counts for nothing.
+fn transfer_encoding_chunked(headers: &Headers) -> bool {
+    let values: Vec<&[u8]> = headers.values("Transfer-Encoding").collect();
+    if let [only] = values[..]
+        && only.eq_ignore_ascii_case(b"chunked")
+    {
+        return true;
+    }
+    values.iter().any(|value| {
+        bare_transfer_codings(value).is_some_and(|bare| bare.contains(&"chunked".to_owned()))
+    })
+}
+
+/// A TransferCodingHeaderParser list: items split by commas, each a token
+/// and ";name[=value]" parameters, empty items allowed. The lowered names
+/// of the items with no parameters, or None when the line does not parse.
+fn bare_transfer_codings(s: &[u8]) -> Option<Vec<String>> {
+    let mut bare = Vec::new();
+    let mut i = 0;
+    let skip = |i: &mut usize| {
+        while *i < s.len() && matches!(s[*i], b' ' | b'\t') {
+            *i += 1;
+        }
+    };
+    let token = |i: &mut usize| {
+        let start = *i;
+        while *i < s.len() && is_token_char(s[*i]) {
+            *i += 1;
+        }
+        &s[start..*i]
+    };
+    loop {
+        skip(&mut i);
+        while i < s.len() && s[i] == b',' {
+            i += 1;
+            skip(&mut i);
+        }
+        if i == s.len() {
+            return Some(bare);
+        }
+        let name = token(&mut i);
+        if name.is_empty() {
+            return None;
+        }
+        skip(&mut i);
+        let mut params = false;
+        while i < s.len() && s[i] == b';' {
+            params = true;
+            i += 1;
+            skip(&mut i);
+            if token(&mut i).is_empty() {
+                return None;
+            }
+            skip(&mut i);
+            if i < s.len() && s[i] == b'=' {
+                i += 1;
+                skip(&mut i);
+                if i < s.len() && s[i] == b'"' {
+                    i = quoted_string_end(s, i)?;
+                } else if token(&mut i).is_empty() {
+                    return None;
+                }
+                skip(&mut i);
+            }
+        }
+        if !params {
+            bare.push(String::from_utf8_lossy(name).to_ascii_lowercase());
+        }
+        if i < s.len() && s[i] != b',' {
+            return None;
+        }
+    }
+}
+
+/// The index after the quoted string at `s[start]`, backslash escapes
+/// included.
+fn quoted_string_end(s: &[u8], start: usize) -> Option<usize> {
+    let mut j = start + 1;
+    while j < s.len() {
+        match s[j] {
+            b'\\' => j += 1,
+            b'"' => return Some(j + 1),
+            _ => {}
+        }
+        j += 1;
+    }
+    None
+}
+
+/// TryReadNextChunkedLine's cap on a chunk-size or chunk-end line, LF
+/// included. These lines are outside the head budget.
+const MAX_CHUNK_LINE: usize = 16384;
+
+/// The trailers' budget for a body read with `Body::new`.
 const MAX_TRAILERS: usize = 64 << 10;
+
+/// Utf8Parser's hex parse of a chunk-size line, then
+/// ValidateChunkExtension: after the digits only SP and HT, up to a ';'.
+fn chunk_size(line: &[u8]) -> Result<u64, WireError> {
+    let malformed = WireError::Malformed("a bad chunk size");
+    let end = line
+        .iter()
+        .position(|c| !c.is_ascii_hexdigit())
+        .unwrap_or(line.len());
+    if end == 0 {
+        return Err(malformed);
+    }
+    let size = u64::from_str_radix(std::str::from_utf8(&line[..end]).unwrap(), 16)
+        .map_err(|_| WireError::Malformed("a bad chunk size"))?;
+    for &c in &line[end..] {
+        match c {
+            b';' => break,
+            b' ' | b'\t' => {}
+            _ => return Err(WireError::Malformed("a bad chunk extension")),
+        }
+    }
+    Ok(size)
+}
 
 /// Something a body reader can pull bytes from.
 pub trait Source {
@@ -294,6 +450,7 @@ impl Source for &[u8] {
 pub struct Body<R> {
     reader: R,
     state: BodyState,
+    trailer_budget: usize,
 }
 
 enum BodyState {
@@ -306,13 +463,23 @@ enum BodyState {
 
 impl<R: AsyncBufRead + Unpin + Send> Body<R> {
     pub fn new(reader: R, framing: Framing) -> Body<R> {
+        Body::after_head(reader, framing, MAX_TRAILERS)
+    }
+
+    /// A body whose trailers get what is left of the head's budget, as
+    /// .NET counts them.
+    pub fn after_head(reader: R, framing: Framing, trailer_budget: usize) -> Body<R> {
         let state = match framing {
             Framing::None | Framing::Length(0) => BodyState::Done,
             Framing::Length(n) => BodyState::Length(n),
             Framing::Chunked => BodyState::ChunkStart,
             Framing::Close => BodyState::Close,
         };
-        Body { reader, state }
+        Body {
+            reader,
+            state,
+            trailer_budget,
+        }
     }
 
     pub fn into_inner(self) -> R {
@@ -352,7 +519,7 @@ impl<R: AsyncBufRead + Unpin + Send> Source for Body<R> {
                     let n = self.read_some(buf, remaining).await?;
                     let left = remaining - n as u64;
                     if left == 0 {
-                        let mut budget = 2;
+                        let mut budget = MAX_CHUNK_LINE;
                         if !read_line(&mut self.reader, &mut budget).await?.is_empty() {
                             return Err(WireError::Malformed("chunk data overran its size").into());
                         }
@@ -365,20 +532,9 @@ impl<R: AsyncBufRead + Unpin + Send> Source for Body<R> {
                 BodyState::ChunkStart => {
                     let mut budget = MAX_CHUNK_LINE;
                     let line = read_line(&mut self.reader, &mut budget).await?;
-                    let size = match line.iter().position(|&c| c == b';') {
-                        Some(at) => &line[..at],
-                        None => &line[..],
-                    };
-                    let size = trim_space_tab(size);
-                    if size.is_empty() || size.len() > 16 || !size.iter().all(u8::is_ascii_hexdigit)
-                    {
-                        return Err(WireError::Malformed("a bad chunk size").into());
-                    }
-                    let size = u64::from_str_radix(std::str::from_utf8(size).unwrap(), 16)
-                        .map_err(|_| io::Error::from(WireError::Malformed("a bad chunk size")))?;
+                    let size = chunk_size(&line)?;
                     if size == 0 {
-                        let mut budget = MAX_TRAILERS;
-                        while !read_line(&mut self.reader, &mut budget).await?.is_empty() {}
+                        read_header_block(&mut self.reader, &mut self.trailer_budget, true).await?;
                         self.state = BodyState::Done;
                         return Ok(0);
                     }

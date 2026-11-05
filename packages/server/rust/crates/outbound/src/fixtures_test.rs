@@ -191,9 +191,6 @@ async fn redirect_locations_match_the_c_sharp_fixture() {
     let cases = items(field(&fixture, "cases"));
     let answers = items(field(&fixture, "answers"));
     assert!(!cases.is_empty() && cases.len() == answers.len());
-    // Known gaps, not passes: mailto has its own grammar in .NET, and the
-    // wire codec refuses a NUL in a header value, which .NET keeps.
-    let known = ["mailto:a b", "/a\0b"];
     for (case, answer) in cases.iter().zip(answers) {
         let locations: Vec<String> = items(field(case, "locations"))
             .iter()
@@ -201,13 +198,6 @@ async fn redirect_locations_match_the_c_sharp_fixture() {
             .collect();
         let want = crate::test_json::text(answer).unwrap();
         let got = fetch_redirect(locations.clone()).await;
-        if known.contains(&locations[0].as_str()) {
-            assert_ne!(
-                got, want,
-                "{locations:?} now matches C#: drop it from the known gaps"
-            );
-            continue;
-        }
         assert_eq!(got, want, "{locations:?}");
     }
 }
@@ -250,6 +240,75 @@ async fn fetch_redirect(locations: Vec<String>) -> String {
             response.status_code,
             response.final_url[start.len()..].replace(&o.port.to_string(), "PORT")
         ),
+        Err(error) => match error.failure {
+            Failure::Blocked => "BlockedDestination",
+            Failure::TooManyRedirects => "TooManyRedirects",
+            Failure::TooLarge => "ResponseTooLarge",
+            Failure::TimedOut => "TimedOut",
+            other => panic!("{other:?}"),
+        }
+        .to_owned(),
+    }
+}
+
+/// ResponseHeadsMatchTheFixture: the origin sends the case's response, and
+/// the answer is what get makes of it. Each char of a response is one byte
+/// on the wire; {PAD:n} is n 'a' bytes.
+#[tokio::test]
+async fn response_heads_match_the_c_sharp_fixture() {
+    let fixture = load("outbound-response-heads.json");
+    let cases = items(field(&fixture, "cases"));
+    let answers = items(field(&fixture, "answers"));
+    assert!(!cases.is_empty() && cases.len() == answers.len());
+    let mut wrong = Vec::new();
+    for (case, answer) in cases.iter().zip(answers) {
+        let response = string(case, "response");
+        let want = crate::test_json::text(answer).unwrap();
+        let got = fetch_response(&response).await;
+        if got != want {
+            wrong.push(format!("{response:?}: got {got:?}, C# {want:?}"));
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+fn expand_pads(response: &str) -> String {
+    let mut out = String::new();
+    let mut rest = response;
+    while let Some(at) = rest.find("{PAD:") {
+        out.push_str(&rest[..at]);
+        let end = at + rest[at..].find('}').unwrap();
+        let n: usize = rest[at + 5..end].parse().unwrap();
+        out.push_str(&"a".repeat(n));
+        rest = &rest[end + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+async fn fetch_response(response: &str) -> String {
+    // Latin-1: one byte per char.
+    let wire: Vec<u8> = expand_pads(response)
+        .chars()
+        .map(|c| u8::try_from(c).unwrap())
+        .collect();
+    let o = Origin::start("127.0.0.1:0", None, answer(move |_, _| wire.clone()))
+        .await
+        .unwrap();
+    let start = format!("http://127.0.0.1:{}", o.port);
+    let got = conformance_fetcher(o.port)
+        .get(&format!("{start}/"), &limits_of(2000, 1024, 3))
+        .await;
+    match got {
+        Ok(response) => {
+            let probes: Vec<&[u8]> = response.header.values("X-Probe").collect();
+            let mut text = format!("{} ct={} x=", response.status_code, response.content_type);
+            let mut bytes = probes.join(&b"|"[..]);
+            bytes.extend_from_slice(b" b=");
+            bytes.extend_from_slice(&response.body);
+            text.extend(bytes.iter().map(|&b| char::from(b)));
+            text
+        }
         Err(error) => match error.failure {
             Failure::Blocked => "BlockedDestination",
             Failure::TooManyRedirects => "TooManyRedirects",

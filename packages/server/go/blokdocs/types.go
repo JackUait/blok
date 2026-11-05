@@ -77,8 +77,21 @@ type PageReference struct {
 	Order         int     `json:"order"`
 }
 
-// PageInfo is what a host knows about one linked page. In a pages map, a nil
-// *PageInfo means the page is missing; an id left out means unresolved.
+// Page is one entry of the pages a document may link to. A nil Info means
+// the page is missing; an id left out means unresolved. Entries are sent in
+// the caller's order; a repeated ID keeps its first place and its last Info.
+type Page struct {
+	ID   string
+	Info *PageInfo
+}
+
+// IDMapping gives one old id its new id. Mappings are sent in the caller's
+// order; a repeated Old keeps its first place and its last New.
+type IDMapping struct {
+	Old, New string
+}
+
+// PageInfo is what a host knows about one linked page.
 type PageInfo struct {
 	// Title is sent only when non-nil; an empty title is still sent.
 	Title *string

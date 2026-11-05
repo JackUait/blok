@@ -1,10 +1,9 @@
-use std::collections::{BTreeMap, HashMap};
 use std::sync::Mutex;
 use std::time::Duration;
 
 use blok_jsruntime::{Error as RuntimeError, Failure, InvokeError, Kind};
 
-use crate::test_json::{self, Json};
+use crate::test_json::{self, Json, Map};
 use crate::{Degradation, Error, InvokeFuture, PageIcon, PageInfo, Pages, Runtime, new_on_runtime};
 
 pub(crate) fn read_fixture(name: &str) -> Json {
@@ -53,7 +52,7 @@ fn object(members: Vec<(&str, Json)>) -> Json {
         members
             .into_iter()
             .map(|(key, value)| (key.to_owned(), value))
-            .collect::<BTreeMap<_, _>>(),
+            .collect::<Map>(),
     )
 }
 
@@ -87,7 +86,7 @@ fn degradations(list: &[Degradation]) -> Json {
     )
 }
 
-fn args(case: &Json) -> &BTreeMap<String, Json> {
+fn args(case: &Json) -> &Map {
     match case.get("args") {
         Json::Object(map) => map,
         other => panic!("args is {other:?}"),
@@ -105,7 +104,7 @@ fn arg_bool(case: &Json, name: &str) -> bool {
     args(case).get(name).is_some_and(Json::bool)
 }
 
-fn arg_map(case: &Json, name: &str) -> Option<HashMap<String, String>> {
+fn arg_map(case: &Json, name: &str) -> Option<crate::IdMap> {
     match args(case).get(name) {
         None | Some(Json::Null) => None,
         Some(Json::Object(map)) => Some(
@@ -130,7 +129,7 @@ fn fixture_pages(case: &Json) -> Option<Pages> {
                 let icon = match page.get("icon") {
                     Some(Json::Object(icon)) => Some(match icon.get("emoji") {
                         Some(Json::String(emoji)) => PageIcon::Emoji(emoji.clone()),
-                        _ => PageIcon::Image(icon["image"].str().to_owned()),
+                        _ => PageIcon::Image(icon.get("image").expect("image").str().to_owned()),
                     }),
                     _ => None,
                 };
@@ -158,7 +157,8 @@ async fn call(
         href_calls.lock().expect("lock").push(id.to_owned());
         hrefs
             .as_ref()
-            .and_then(|table| table.get(id).cloned())
+            .and_then(|table| table.iter().find(|(key, _)| key == id))
+            .map(|(_, href)| href.clone())
             .unwrap_or_default()
     };
     let href: Option<crate::PageHref<'_>> = hrefs.as_ref().map(|_| &href as crate::PageHref<'_>);

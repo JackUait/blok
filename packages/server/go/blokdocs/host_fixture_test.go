@@ -1,6 +1,7 @@
 package blokdocs
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -84,7 +85,29 @@ func arg[T any](t *testing.T, c hostCase, name string) T {
 	return value
 }
 
-func fixturePages(t *testing.T, c hostCase) map[string]*PageInfo {
+// orderedKeys lists an args object's keys in file order, as C# reads them.
+func orderedKeys(t *testing.T, raw json.RawMessage) []string {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	if _, err := decoder.Token(); err != nil {
+		t.Fatal(err)
+	}
+	var keys []string
+	for decoder.More() {
+		key, err := decoder.Token()
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys = append(keys, key.(string))
+		var skip json.RawMessage
+		if err := decoder.Decode(&skip); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return keys
+}
+
+func fixturePages(t *testing.T, c hostCase) []Page {
 	type icon struct {
 		Emoji *string `json:"emoji"`
 		Image *string `json:"image"`
@@ -98,10 +121,11 @@ func fixturePages(t *testing.T, c hostCase) map[string]*PageInfo {
 	if raw == nil {
 		return nil
 	}
-	pages := map[string]*PageInfo{}
-	for id, p := range raw {
+	pages := []Page{}
+	for _, id := range orderedKeys(t, c.Args["pages"]) {
+		p := raw[id]
 		if p == nil {
-			pages[id] = nil
+			pages = append(pages, Page{ID: id})
 			continue
 		}
 		info := &PageInfo{Title: p.Title, NoAccess: p.NoAccess}
@@ -112,9 +136,21 @@ func fixturePages(t *testing.T, c hostCase) map[string]*PageInfo {
 				info.Icon = ImageIcon(*p.Icon.Image)
 			}
 		}
-		pages[id] = info
+		pages = append(pages, Page{ID: id, Info: info})
 	}
 	return pages
+}
+
+func fixtureIDs(t *testing.T, c hostCase, name string) []IDMapping {
+	raw := arg[map[string]string](t, c, name)
+	if raw == nil {
+		return nil
+	}
+	ids := []IDMapping{}
+	for _, id := range orderedKeys(t, c.Args[name]) {
+		ids = append(ids, IDMapping{Old: id, New: raw[id]})
+	}
+	return ids
 }
 
 func call(t *testing.T, c hostCase, conv *Converter, hrefCalls *[]string) (any, error) {
@@ -167,7 +203,7 @@ func call(t *testing.T, c hostCase, conv *Converter, hrefCalls *[]string) (any, 
 	case "PageIndex":
 		return conv.PageIndex(ctx, document)
 	case "RemapPageDocument":
-		return conv.RemapPageDocument(ctx, document, arg[map[string]string](t, c, "blockIds"), arg[map[string]string](t, c, "pageIds"))
+		return conv.RemapPageDocument(ctx, document, fixtureIDs(t, c, "blockIds"), fixtureIDs(t, c, "pageIds"))
 	case "Validate":
 		v, err := conv.Validate(ctx, document)
 		var failure any

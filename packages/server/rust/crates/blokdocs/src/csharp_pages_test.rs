@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -6,7 +5,7 @@ use crate::converter_test::{is_reason, real_converter};
 use crate::csharp_converter_test::field;
 use crate::test_json::{self, Json};
 use crate::{
-    Error, InvokeFuture, PageIcon, PageIndex, PageInfo, PageOwnerEdge, PageReference,
+    Error, IdMap, InvokeFuture, PageIcon, PageIndex, PageInfo, PageOwnerEdge, PageReference,
     PageTextEntry, Pages, Reason, Runtime, new_on_runtime,
 };
 
@@ -24,7 +23,7 @@ const PAGE_DOCUMENT: &str = r#"
       "#;
 
 fn pages() -> Pages {
-    HashMap::from([
+    Vec::from([
         (
             "p-ok".to_owned(),
             Some(PageInfo {
@@ -204,12 +203,59 @@ async fn sends_a_missing_page_as_json_null() {
     assert!(input.contains(r#""p-denied":{"access":"none"}"#), "{input}");
 }
 
+// A repeated id is what assigning it twice into a C# Dictionary gives: one
+// entry, at the first position, holding the last value.
+#[tokio::test]
+async fn a_repeated_id_keeps_its_first_place_and_its_last_value() {
+    let runtime = Recording::default();
+    let calls = runtime.calls.clone();
+    let converter = new_on_runtime(runtime);
+    let hrefs = Mutex::new(Vec::new());
+    let href = |id: &str| {
+        hrefs.lock().expect("lock").push(id.to_owned());
+        String::new()
+    };
+    let titled = |title: &str| {
+        Some(PageInfo {
+            title: Some(title.to_owned()),
+            ..PageInfo::default()
+        })
+    };
+    let pages: Pages = vec![
+        ("b".to_owned(), titled("first")),
+        ("a".to_owned(), None),
+        ("b".to_owned(), titled("last")),
+    ];
+    converter
+        .to_html_with_pages(r#"{"blocks":[]}"#, Some(&pages), Some(&href))
+        .await
+        .expect("html");
+    let ids: IdMap = vec![
+        ("y".to_owned(), "1".to_owned()),
+        ("x".to_owned(), "2".to_owned()),
+        ("y".to_owned(), "3".to_owned()),
+    ];
+    let _ = converter
+        .remap_page_document(r#"{"blocks":[]}"#, Some(&ids), Some(&IdMap::new()))
+        .await;
+    let calls = calls.lock().expect("lock");
+    assert_eq!(
+        calls[0].1,
+        r#"{"document":{"blocks":[]},"pages":{"b":{"title":"last"},"a":null}}"#
+    );
+    assert_eq!(*hrefs.lock().expect("lock"), ["b"]);
+    assert_eq!(
+        calls[1].1,
+        r#"{"document":{"blocks":[]},"blockIds":{"y":"3","x":"2"},"pageIds":{}}"#
+    );
+}
+
 #[tokio::test]
 async fn sends_an_image_icon_with_its_url() {
     let runtime = Recording::default();
     let calls = runtime.calls.clone();
     let converter = new_on_runtime(runtime);
-    let pages = HashMap::from([(
+    let pages = Vec::from([(
         "p-ok".to_owned(),
         Some(PageInfo {
             icon: Some(PageIcon::Image("https://cdn/i.png".to_owned())),
@@ -375,7 +421,7 @@ mod page_functions {
     #[ignore = "A Rust &str document cannot be null"]
     fn refuses_a_null_document() {}
 
-    fn map(entries: &[(&str, &str)]) -> HashMap<String, String> {
+    fn map(entries: &[(&str, &str)]) -> IdMap {
         entries
             .iter()
             .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
@@ -427,7 +473,7 @@ mod page_functions {
             .remap_page_document(
                 document,
                 Some(&map(&[("a", "X"), ("b", "X"), ("co", "CO")])),
-                Some(&HashMap::new()),
+                Some(&IdMap::new()),
             )
             .await
             .expect_err("refused");
@@ -459,7 +505,7 @@ mod page_functions {
                 .remap_page_document(
                     document,
                     Some(&map(&[("x", "A"), ("a", "A")])),
-                    Some(&HashMap::new()),
+                    Some(&IdMap::new()),
                 )
                 .await
                 .expect_err("refused");
@@ -469,7 +515,7 @@ mod page_functions {
 
     #[tokio::test]
     async fn reports_unreadable_json_to_remap_as_an_invalid_document() {
-        let none = HashMap::new();
+        let none = IdMap::new();
         let failure = real_converter()
             .remap_page_document("{not json", Some(&none), Some(&none))
             .await;
@@ -480,7 +526,7 @@ mod page_functions {
     #[tokio::test]
     async fn refuses_null_remap_arguments() {
         let converter = real_converter();
-        let none = HashMap::new();
+        let none = IdMap::new();
         let blocks = converter.remap_page_document("{}", None, Some(&none)).await;
         let pages = converter.remap_page_document("{}", Some(&none), None).await;
         assert!(

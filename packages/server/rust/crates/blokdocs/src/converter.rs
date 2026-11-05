@@ -21,8 +21,13 @@ use crate::types::{
     PageReference, PageTextEntry, PlainTextConversion, Validation,
 };
 
-/// A host's page metadata: `None` is a missing page.
-pub type Pages = HashMap<String, Option<PageInfo>>;
+/// A host's page metadata, sent in this order: `None` is a missing page. A
+/// repeated id keeps its first place and its last value.
+pub type Pages = Vec<(String, Option<PageInfo>)>;
+
+/// Old id to new id, sent in this order. A repeated old id keeps its first
+/// place and its last new id.
+pub type IdMap = Vec<(String, String)>;
 
 /// Builds each allowed page's link; an empty answer sends no href.
 pub type PageHref<'a> = &'a (dyn Fn(&str) -> String + Sync);
@@ -256,8 +261,8 @@ impl Converter {
     pub async fn remap_page_document(
         &self,
         document_json: &str,
-        block_ids: Option<&HashMap<String, String>>,
-        page_ids: Option<&HashMap<String, String>>,
+        block_ids: Option<&IdMap>,
+        page_ids: Option<&IdMap>,
     ) -> Result<String, Error> {
         let block_ids = block_ids.ok_or(Error::NullArgument { name: "blockIds" })?;
         let page_ids = page_ids.ok_or(Error::NullArgument { name: "pageIds" })?;
@@ -595,10 +600,10 @@ impl Envelope {
         self.buf.extend_from_slice(value);
     }
 
-    fn id_map(&mut self, name: &str, ids: &HashMap<String, String>) {
+    fn id_map(&mut self, name: &str, ids: &IdMap) {
         let mut inner = Envelope::new();
-        for key in sorted_keys(ids) {
-            inner.str(key, &ids[key]);
+        for (old, new) in deduplicate(ids) {
+            inner.str(old, new);
         }
         self.raw(name, &inner.close_bytes());
     }
@@ -613,17 +618,21 @@ impl Envelope {
     }
 }
 
-/// Keys go out in UTF-16 order. Their order is not part of the contract: the
-/// bundle only looks entries up.
-fn sorted_keys<V>(map: &HashMap<String, V>) -> Vec<&String> {
-    let mut keys: Vec<&String> = map.keys().collect();
-    keys.sort_by(|a, b| {
-        blok_jsjson::compare(
-            Str::from_utf8(a.as_bytes()).units(),
-            Str::from_utf8(b.as_bytes()).units(),
-        )
-    });
-    keys
+/// Keeps the first place of a repeated key and its last value, as assigning
+/// into a C# Dictionary does.
+fn deduplicate<V>(entries: &[(String, V)]) -> Vec<(&String, &V)> {
+    let mut out: Vec<(&String, &V)> = Vec::with_capacity(entries.len());
+    let mut at: HashMap<&String, usize> = HashMap::with_capacity(entries.len());
+    for (key, value) in entries {
+        match at.get(key) {
+            Some(&i) => out[i].1 = value,
+            None => {
+                at.insert(key, out.len());
+                out.push((key, value));
+            }
+        }
+    }
+    out
 }
 
 fn single_string_request(name: &str, value: &str) -> String {
@@ -687,8 +696,8 @@ fn pages_request(
 ) -> Result<String, Error> {
     let pages = pages.ok_or(Error::NullArgument { name: "pages" })?;
     let mut entries = Envelope::new();
-    for page_id in sorted_keys(pages) {
-        let entry = page_entry(page_id, pages[page_id].as_ref(), page_href);
+    for (page_id, info) in deduplicate(pages) {
+        let entry = page_entry(page_id, info.as_ref(), page_href);
         entries.raw(page_id, &entry);
     }
     let mut request = Envelope::new();

@@ -2292,5 +2292,399 @@
         "message": "Value cannot be null."
       }
     }
+  },
+  {
+    "name": "html with pages in the caller's order",
+    "method": "ToHtmlWithPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": {
+        "pg-b": {},
+        "pg-a": {
+          "title": "A"
+        },
+        "pg-c": null
+      },
+      "pageHrefs": {
+        "pg-b": "/b",
+        "pg-a": "/a"
+      }
+    },
+    "runtime": {
+      "answer": "<p>x</p>"
+    },
+    "request": {
+      "op": "blocksToHtmlWithPages",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"pages\":{\"pg-b\":{\"href\":\"/b\"},\"pg-a\":{\"title\":\"A\",\"href\":\"/a\"},\"pg-c\":null}}"
+    },
+    "hrefCalls": [
+      "pg-b",
+      "pg-a"
+    ],
+    "expect": {
+      "result": "<p>x</p>"
+    }
+  },
+  {
+    "name": "remap in the caller's order",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": {
+        "h1": "H",
+        "a": "A"
+      },
+      "pageIds": {
+        "pg-2": "x",
+        "pg-1": "y"
+      }
+    },
+    "runtime": {
+      "answer": "{\"document\":{\"blocks\":[]}}"
+    },
+    "request": {
+      "op": "remapPageDocument",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"blockIds\":{\"h1\":\"H\",\"a\":\"A\"},\"pageIds\":{\"pg-2\":\"x\",\"pg-1\":\"y\"}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "{\"blocks\":[]}"
+    }
+  },
+  {
+    "name": "markdown, an empty answer object",
+    "method": "ToMarkdown",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{}"
+    },
+    "request": {
+      "op": "blocksToMarkdown",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "markdown": "",
+        "warnings": []
+      }
+    }
+  },
+  {
+    "name": "markdown, null members",
+    "method": "ToMarkdown",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"markdown\":null,\"warnings\":null}"
+    },
+    "request": {
+      "op": "blocksToMarkdown",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "markdown": "",
+        "warnings": []
+      }
+    }
+  },
+  {
+    "name": "markdown, a null warning and null warning fields",
+    "method": "ToMarkdown",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"markdown\":\"m\",\"warnings\":[null,{\"construct\":null,\"action\":\"a\",\"detail\":null}]}"
+    },
+    "request": {
+      "op": "blocksToMarkdown",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "markdown": "m",
+        "warnings": [
+          {
+            "construct": "",
+            "action": "",
+            "detail": ""
+          },
+          {
+            "construct": "",
+            "action": "a",
+            "detail": ""
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "plain text with report, an empty answer object",
+    "method": "ToPlainTextWithReport",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{}"
+    },
+    "request": {
+      "op": "blocksToPlainTextWithReport",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeHiddenText\":false}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "text": "",
+        "warnings": []
+      }
+    }
+  },
+  {
+    "name": "extract texts, a null text",
+    "method": "ExtractTexts",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "[\"a\",null]"
+    },
+    "request": {
+      "op": "extractTexts",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeCode\":false}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": [
+        "a",
+        ""
+      ]
+    }
+  },
+  {
+    "name": "page index, an empty answer object",
+    "method": "PageIndex",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{}"
+    },
+    "request": {
+      "op": "pageIndex",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "owners": [],
+        "text": [],
+        "references": []
+      }
+    }
+  },
+  {
+    "name": "page index, null rows and null fields",
+    "method": "PageIndex",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"owners\":[null,{\"pageId\":null,\"sourceBlockId\":null,\"order\":1}],\"text\":[null],\"references\":[null]}"
+    },
+    "request": {
+      "op": "pageIndex",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "owners": [
+          {
+            "pageId": "",
+            "sourceBlockId": "",
+            "order": 0
+          },
+          {
+            "pageId": "",
+            "sourceBlockId": "",
+            "order": 1
+          }
+        ],
+        "text": [
+          {
+            "blockId": null,
+            "order": 0,
+            "text": ""
+          }
+        ],
+        "references": [
+          {
+            "pageId": "",
+            "sourceBlockId": null,
+            "order": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "validate, null block types",
+    "method": "Validate",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"unrecognizedBlockTypes\":null}"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": true,
+        "isEmpty": false,
+        "blockCount": 0,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [],
+        "failure": null,
+        "isFullyUnderstood": true
+      }
+    }
+  },
+  {
+    "name": "validate, a null block type",
+    "method": "Validate",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"unrecognizedBlockTypes\":[\"x\",null]}"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": true,
+        "isEmpty": false,
+        "blockCount": 0,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [
+          "x",
+          ""
+        ],
+        "failure": null,
+        "isFullyUnderstood": false
+      }
+    }
+  },
+  {
+    "name": "remap, an empty unmapped report",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": {},
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "{\"unmapped\":{}}"
+    },
+    "request": {
+      "op": "remapPageDocument",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"blockIds\":{},\"pageIds\":{}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "blockIds",
+        "message": "."
+      }
+    }
+  },
+  {
+    "name": "remap, null lists in the unmapped report",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": {},
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "{\"unmapped\":{\"missingBlockIds\":null,\"duplicateBlockIds\":[\"d\"],\"idlessBlocks\":0}}"
+    },
+    "request": {
+      "op": "remapPageDocument",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"blockIds\":{},\"pageIds\":{}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "blockIds",
+        "message": "More than one block maps to \"d\"."
+      }
+    }
+  },
+  {
+    "name": "remap, a null unmapped report and no document",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": {},
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "{\"unmapped\":null}"
+    },
+    "request": {
+      "op": "remapPageDocument",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"blockIds\":{},\"pageIds\":{}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "invalidOperation",
+        "message": "The Blok runtime returned no document."
+      }
+    }
+  },
+  {
+    "name": "from markdown, a null warning",
+    "method": "FromMarkdown",
+    "args": {
+      "text": "x"
+    },
+    "runtime": {
+      "answer": "{\"blocks\":[],\"warnings\":[null]}"
+    },
+    "request": {
+      "op": "markdownToBlocks",
+      "input": "{\"markdown\":\"x\"}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "document": "{\"blocks\":[]}",
+        "warnings": [
+          {
+            "construct": "",
+            "action": "",
+            "detail": ""
+          }
+        ]
+      }
+    }
   }
 ]

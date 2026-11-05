@@ -48,8 +48,8 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
 
     var output = await runtime.InvokeAsync("blocksToMarkdown", documentJson, cancellationToken: cancellationToken);
 
-    return JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
-        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
+    return Complete(JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion."));
   }
 
   public async ValueTask<BlokMarkdownConversion> ToMarkdownAsync(
@@ -63,8 +63,8 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         PagesRequest(documentJson, pages, pageHref),
         cancellationToken: cancellationToken);
 
-    return JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
-        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
+    return Complete(JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion."));
   }
 
   private string? schema;
@@ -87,8 +87,10 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         TextsRequest(documentJson, texts: null, includeCode),
         cancellationToken: cancellationToken);
 
-    return JsonSerializer.Deserialize<string[]>(output)
+    var texts = JsonSerializer.Deserialize<string?[]>(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no texts.");
+
+    return Array.ConvertAll(texts, text => text ?? string.Empty);
   }
 
   public async ValueTask<string> InjectTextsAsync(
@@ -130,8 +132,8 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         Serialize(new JsonObject { ["document"] = ParseDocument(documentJson) }),
         cancellationToken: cancellationToken);
 
-    return JsonSerializer.Deserialize<BlokPageIndex>(output)
-        ?? throw new InvalidOperationException("The Blok runtime returned no page index.");
+    return Complete(JsonSerializer.Deserialize<BlokPageIndex>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no page index."));
   }
 
   public async ValueTask<string> RemapPageDocumentAsync(
@@ -179,11 +181,13 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   {
     var problems = unmapped.Deserialize<UnmappedIds>()
         ?? throw new InvalidOperationException("The Blok runtime returned no id problems.");
+    var missing = Complete(problems.MissingBlockIds);
+    var duplicate = Complete(problems.DuplicateBlockIds);
     static string Quoted(IEnumerable<string> ids) => string.Join(", ", ids.Select(id => $"\"{id}\""));
     string[] parts =
     [
-      problems.MissingBlockIds.Count > 0 ? $"No new id for {Quoted(problems.MissingBlockIds)}" : string.Empty,
-      problems.DuplicateBlockIds.Count > 0 ? $"More than one block maps to {Quoted(problems.DuplicateBlockIds)}" : string.Empty,
+      missing.Count > 0 ? $"No new id for {Quoted(missing)}" : string.Empty,
+      duplicate.Count > 0 ? $"More than one block maps to {Quoted(duplicate)}" : string.Empty,
       problems.IdlessBlocks > 0 ? $"{problems.IdlessBlocks} block(s) without an id" : string.Empty,
     ];
 
@@ -409,8 +413,8 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   {
     var output = await runtime.InvokeAsync("blocksToMarkdown", TitleRequest(documentJson), cancellationToken: cancellationToken);
 
-    return JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
-        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
+    return Complete(JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion."));
   }
 
   public async ValueTask<BlokMarkdownConversion> ToMarkdownWithTitleAsync(
@@ -424,8 +428,8 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         PagesRequest(documentJson, pages, pageHref, title: true),
         cancellationToken: cancellationToken);
 
-    return JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
-        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
+    return Complete(JsonSerializer.Deserialize<BlokMarkdownConversion>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion."));
   }
 
   public ValueTask<string> ToPlainTextWithTitleAsync(
@@ -453,8 +457,10 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         PlainTextRequest(documentJson, includeHiddenText),
         cancellationToken: cancellationToken);
 
-    return JsonSerializer.Deserialize<BlokPlainTextConversion>(output)
+    var conversion = JsonSerializer.Deserialize<BlokPlainTextConversion>(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no plain-text conversion.");
+
+    return new BlokPlainTextConversion(conversion.Text ?? string.Empty, Complete(conversion.Warnings));
   }
 
   /*
@@ -477,10 +483,14 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     {
       var output = await runtime.InvokeAsync("inspect", documentJson!, cancellationToken: cancellationToken);
 
-      return (JsonSerializer.Deserialize<BlokDocumentValidation>(output)
-          ?? new BlokDocumentValidation { Failure = BlokConversionFailure.Unknown })
-          with
-      { IsDocument = true };
+      var validation = JsonSerializer.Deserialize<BlokDocumentValidation>(output)
+          ?? new BlokDocumentValidation { Failure = BlokConversionFailure.Unknown };
+
+      return validation with
+      {
+        IsDocument = true,
+        UnrecognizedBlockTypes = Complete(validation.UnrecognizedBlockTypes),
+      };
     }
     /*
      * Cancellation stays cancellation here as everywhere else; everything the
@@ -534,7 +544,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
 
     var payload = JsonNode.Parse(output)?.AsObject()
         ?? throw new InvalidOperationException("The Blok runtime returned no document.");
-    var warnings = payload["warnings"].Deserialize<List<BlokDegradation>>() ?? [];
+    var warnings = Complete(payload["warnings"].Deserialize<List<BlokDegradation>>());
 
     /*
      * The report rides alongside the document on the wire, but it is not part
@@ -544,6 +554,42 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
 
     return new BlokImportConversion(payload.ToJsonString(), warnings);
   }
+
+  /*
+   * A malformed runtime answer may carry nulls where the records promise
+   * values. These read a null string as empty, a null list as empty and a null
+   * row as a row of empty values, as the Go and Rust converters do. Lists stay
+   * List<T>, the type the serializer built before.
+   */
+  private static BlokMarkdownConversion Complete(BlokMarkdownConversion conversion) =>
+      new(conversion.Markdown ?? string.Empty, Complete(conversion.Warnings));
+
+  private static List<string> Complete(IReadOnlyList<string?>? texts) =>
+      Rows(texts, text => text ?? string.Empty);
+
+  private static List<BlokDegradation> Complete(IReadOnlyList<BlokDegradation?>? warnings) =>
+      Rows(warnings, warning => new BlokDegradation(
+          warning?.Construct ?? string.Empty,
+          warning?.Action ?? string.Empty,
+          warning?.Detail ?? string.Empty));
+
+  private static BlokPageIndex Complete(BlokPageIndex index) => new(
+      Rows(index.Owners, owner => new BlokPageOwnerEdge(
+          owner?.PageId ?? string.Empty,
+          owner?.SourceBlockId ?? string.Empty,
+          owner?.Order ?? 0)),
+      Rows(index.Text, entry => new BlokPageTextEntry(
+          entry?.BlockId,
+          entry?.Order ?? 0,
+          entry?.Text ?? string.Empty)),
+      Rows(index.References, reference => new BlokPageReference(
+          reference?.PageId ?? string.Empty,
+          reference?.SourceBlockId,
+          reference?.Order ?? 0)));
+
+  private static List<TRow> Rows<TRow>(IReadOnlyList<TRow?>? rows, Func<TRow?, TRow> complete)
+      where TRow : class =>
+      rows is null ? [] : rows.Select(complete).ToList();
 
   private sealed record MarkdownInput(
       [property: JsonPropertyName("markdown")] string Markdown);

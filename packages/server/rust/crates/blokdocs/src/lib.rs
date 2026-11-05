@@ -20,7 +20,7 @@ mod errors;
 mod types;
 
 pub use blok_jsruntime::{ConstraintError, PoolError, StartupCause, StartupError};
-pub use converter::{Converter, PageHref, Pages, looks_like_a_document};
+pub use converter::{Converter, IdMap, PageHref, Pages, looks_like_a_document};
 pub use errors::{AnswerError, ConversionError, Error, Reason};
 pub use types::{
     ACTION_DEGRADED, ACTION_DROPPED, Degradation, ImportConversion, MarkdownConversion, PageIcon,

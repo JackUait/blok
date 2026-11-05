@@ -3,7 +3,6 @@ package blokdocs
 import (
 	"context"
 	"errors"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -105,7 +104,7 @@ func (c *Converter) ToMarkdown(ctx context.Context, documentJSON string) (Markdo
 
 // ToMarkdownWithPages is ToMarkdown with page metadata for page blocks and
 // page links. pageHref, when not nil, builds each allowed page's link.
-func (c *Converter) ToMarkdownWithPages(ctx context.Context, documentJSON string, pages map[string]*PageInfo, pageHref func(string) string) (MarkdownConversion, error) {
+func (c *Converter) ToMarkdownWithPages(ctx context.Context, documentJSON string, pages []Page, pageHref func(string) string) (MarkdownConversion, error) {
 	input, err := pagesRequest(documentJSON, pages, pageHref, false)
 	if err != nil {
 		return MarkdownConversion{}, err
@@ -123,7 +122,7 @@ func (c *Converter) ToMarkdownWithTitle(ctx context.Context, documentJSON string
 }
 
 // ToMarkdownWithTitleAndPages is ToMarkdownWithTitle with page metadata.
-func (c *Converter) ToMarkdownWithTitleAndPages(ctx context.Context, documentJSON string, pages map[string]*PageInfo, pageHref func(string) string) (MarkdownConversion, error) {
+func (c *Converter) ToMarkdownWithTitleAndPages(ctx context.Context, documentJSON string, pages []Page, pageHref func(string) string) (MarkdownConversion, error) {
 	input, err := pagesRequest(documentJSON, pages, pageHref, true)
 	if err != nil {
 		return MarkdownConversion{}, err
@@ -137,7 +136,7 @@ func (c *Converter) ToHTML(ctx context.Context, documentJSON string) (string, er
 }
 
 // ToHTMLWithPages is ToHTML with page metadata.
-func (c *Converter) ToHTMLWithPages(ctx context.Context, documentJSON string, pages map[string]*PageInfo, pageHref func(string) string) (string, error) {
+func (c *Converter) ToHTMLWithPages(ctx context.Context, documentJSON string, pages []Page, pageHref func(string) string) (string, error) {
 	input, err := pagesRequest(documentJSON, pages, pageHref, false)
 	if err != nil {
 		return "", err
@@ -155,7 +154,7 @@ func (c *Converter) ToHTMLWithTitle(ctx context.Context, documentJSON string) (s
 }
 
 // ToHTMLWithTitleAndPages is ToHTMLWithTitle with page metadata.
-func (c *Converter) ToHTMLWithTitleAndPages(ctx context.Context, documentJSON string, pages map[string]*PageInfo, pageHref func(string) string) (string, error) {
+func (c *Converter) ToHTMLWithTitleAndPages(ctx context.Context, documentJSON string, pages []Page, pageHref func(string) string) (string, error) {
 	input, err := pagesRequest(documentJSON, pages, pageHref, true)
 	if err != nil {
 		return "", err
@@ -282,9 +281,9 @@ func (c *Converter) PageIndex(ctx context.Context, documentJSON string) (PageInd
 }
 
 // RemapPageDocument copies a page document under new block and page ids.
-// Maps that do not cover the document are an *UnmappedIDsError. A nil map
+// Maps that do not cover the document are an *UnmappedIDsError. A nil list
 // is a *NullArgumentError.
-func (c *Converter) RemapPageDocument(ctx context.Context, documentJSON string, blockIDs, pageIDs map[string]string) (string, error) {
+func (c *Converter) RemapPageDocument(ctx context.Context, documentJSON string, blockIDs, pageIDs []IDMapping) (string, error) {
 	if blockIDs == nil {
 		return "", &NullArgumentError{Name: "blockIds"}
 	}
@@ -557,7 +556,7 @@ func readValidation(output string) (Validation, error) {
 
 func readPageIndex(object *jsjson.Node) (PageIndex, error) {
 	var index PageIndex
-	present, err := readArray(member(object, "owners"), func(element *jsjson.Node) error {
+	err := readArray(member(object, "owners"), func(element *jsjson.Node) error {
 		row, err := readObject(element)
 		if err != nil || row == nil {
 			index.Owners = append(index.Owners, PageOwnerEdge{})
@@ -579,10 +578,10 @@ func readPageIndex(object *jsjson.Node) (PageIndex, error) {
 	if err != nil {
 		return PageIndex{}, err
 	}
-	if present && index.Owners == nil {
+	if index.Owners == nil {
 		index.Owners = []PageOwnerEdge{}
 	}
-	present, err = readArray(member(object, "text"), func(element *jsjson.Node) error {
+	err = readArray(member(object, "text"), func(element *jsjson.Node) error {
 		row, err := readObject(element)
 		if err != nil || row == nil {
 			index.Text = append(index.Text, PageTextEntry{})
@@ -604,10 +603,10 @@ func readPageIndex(object *jsjson.Node) (PageIndex, error) {
 	if err != nil {
 		return PageIndex{}, err
 	}
-	if present && index.Text == nil {
+	if index.Text == nil {
 		index.Text = []PageTextEntry{}
 	}
-	present, err = readArray(member(object, "references"), func(element *jsjson.Node) error {
+	err = readArray(member(object, "references"), func(element *jsjson.Node) error {
 		row, err := readObject(element)
 		if err != nil || row == nil {
 			index.References = append(index.References, PageReference{})
@@ -629,7 +628,7 @@ func readPageIndex(object *jsjson.Node) (PageIndex, error) {
 	if err != nil {
 		return PageIndex{}, err
 	}
-	if present && index.References == nil {
+	if index.References == nil {
 		index.References = []PageReference{}
 	}
 	return index, nil
@@ -681,21 +680,26 @@ func (e *envelope) raw(name string, value []byte) {
 	e.buf = append(e.buf, value...)
 }
 
-// Keys go out in UTF-16 order. Their order is not part of the contract: the
-// bundle only looks entries up.
-func sortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
+// deduplicate keeps the first place of a repeated key and its last value, as
+// assigning into a C# Dictionary does.
+func deduplicate[T any](items []T, key func(T) string) []T {
+	at := make(map[string]int, len(items))
+	out := make([]T, 0, len(items))
+	for _, item := range items {
+		if i, seen := at[key(item)]; seen {
+			out[i] = item
+			continue
+		}
+		at[key(item)] = len(out)
+		out = append(out, item)
 	}
-	slices.SortFunc(keys, func(a, b string) int { return jsjson.Compare(jsjson.FromString(a), jsjson.FromString(b)) })
-	return keys
+	return out
 }
 
-func (e *envelope) idMap(name string, ids map[string]string) {
+func (e *envelope) idMap(name string, ids []IDMapping) {
 	inner := newEnvelope()
-	for _, key := range sortedKeys(ids) {
-		inner.str(key, ids[key])
+	for _, id := range deduplicate(ids, func(m IDMapping) string { return m.Old }) {
+		inner.str(id.Old, id.New)
 	}
 	e.raw(name, append(inner.buf, '}'))
 }
@@ -755,13 +759,13 @@ func titleRequest(documentJSON string) (string, error) {
 
 // pagesRequest builds the entries before parsing the document, as C# does,
 // so pageHref runs even for a document that then fails to parse.
-func pagesRequest(documentJSON string, pages map[string]*PageInfo, pageHref func(string) string, title bool) (string, error) {
+func pagesRequest(documentJSON string, pages []Page, pageHref func(string) string, title bool) (string, error) {
 	if pages == nil {
 		return "", &NullArgumentError{Name: "pages"}
 	}
 	entries := newEnvelope()
-	for _, pageID := range sortedKeys(pages) {
-		entries.raw(pageID, pageEntry(pageID, pages[pageID], pageHref))
+	for _, page := range deduplicate(pages, func(p Page) string { return p.ID }) {
+		entries.raw(page.ID, pageEntry(page.ID, page.Info, pageHref))
 	}
 	request := newEnvelope()
 	if err := request.document(documentJSON); err != nil {

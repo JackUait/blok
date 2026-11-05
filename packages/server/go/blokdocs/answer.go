@@ -81,30 +81,31 @@ func readBool(node *jsjson.Node) (bool, error) {
 	return false, notJSON(errShape)
 }
 
-// readArray calls item for each element. A JSON null array reads as nil.
-func readArray(node *jsjson.Node, item func(*jsjson.Node) error) (bool, error) {
+// readArray calls item for each element. A missing or JSON null array has
+// none; the callers then return an empty, non-nil list, as C# does.
+func readArray(node *jsjson.Node, item func(*jsjson.Node) error) error {
 	if node == nil || node.Kind == jsjson.KindNull {
-		return false, nil
+		return nil
 	}
 	if node.Kind != jsjson.KindArray {
-		return false, notJSON(errShape)
+		return notJSON(errShape)
 	}
 	for _, element := range node.Items {
 		if err := item(element); err != nil {
-			return true, err
+			return err
 		}
 	}
-	return true, nil
+	return nil
 }
 
 func readStrings(node *jsjson.Node) ([]string, error) {
 	var out []string
-	present, err := readArray(node, func(element *jsjson.Node) error {
+	err := readArray(node, func(element *jsjson.Node) error {
 		text, err := readString(element)
 		out = append(out, text)
 		return err
 	})
-	if present && out == nil {
+	if out == nil {
 		out = []string{}
 	}
 	return out, err
@@ -123,7 +124,7 @@ func readObject(node *jsjson.Node) (*jsjson.Node, error) {
 
 func readDegradations(node *jsjson.Node) ([]Degradation, error) {
 	var out []Degradation
-	present, err := readArray(node, func(element *jsjson.Node) error {
+	err := readArray(node, func(element *jsjson.Node) error {
 		object, err := readObject(element)
 		if err != nil || object == nil {
 			out = append(out, Degradation{})
@@ -142,7 +143,7 @@ func readDegradations(node *jsjson.Node) ([]Degradation, error) {
 		out = append(out, d)
 		return nil
 	})
-	if present && out == nil {
+	if out == nil {
 		out = []Degradation{}
 	}
 	return out, err

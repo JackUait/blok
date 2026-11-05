@@ -200,3 +200,37 @@ func TestReadsALoneSurrogateInABareDocumentAsAReplacementCharacter(t *testing.T)
 		t.Fatalf("an envelope operation: err = %v, want InvalidDocument", err)
 	}
 }
+
+type recordingRuntime struct{ input string }
+
+func (r *recordingRuntime) Invoke(_ context.Context, _, input string, _ time.Duration) (string, error) {
+	r.input = input
+	return `{"document":{}}`, nil
+}
+
+// A repeated id is what assigning it twice into a C# Dictionary gives: one
+// entry, at the first position, holding the last value.
+func TestARepeatedIdKeepsItsFirstPlaceAndItsLastValue(t *testing.T) {
+	runtime := &recordingRuntime{}
+	c := newConverter(runtime)
+	first, last := "first", "last"
+	var hrefs []string
+	href := func(id string) string { hrefs = append(hrefs, id); return "" }
+	pages := []Page{{ID: "b", Info: &PageInfo{Title: &first}}, {ID: "a"}, {ID: "b", Info: &PageInfo{Title: &last}}}
+	if _, err := c.ToHTMLWithPages(context.Background(), `{"blocks":[]}`, pages, href); err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"document":{"blocks":[]},"pages":{"b":{"title":"last"},"a":null}}`; runtime.input != want {
+		t.Fatalf("input = %s, want %s", runtime.input, want)
+	}
+	if strings.Join(hrefs, ",") != "b" {
+		t.Fatalf("href calls = %v, want [b]", hrefs)
+	}
+	ids := []IDMapping{{Old: "y", New: "1"}, {Old: "x", New: "2"}, {Old: "y", New: "3"}}
+	if _, err := c.RemapPageDocument(context.Background(), `{"blocks":[]}`, ids, []IDMapping{}); err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"document":{"blocks":[]},"blockIds":{"y":"3","x":"2"},"pageIds":{}}`; runtime.input != want {
+		t.Fatalf("input = %s, want %s", runtime.input, want)
+	}
+}

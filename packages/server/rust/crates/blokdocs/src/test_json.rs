@@ -4,8 +4,6 @@
 
 #![allow(dead_code)]
 
-use std::collections::BTreeMap;
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Json {
     Null,
@@ -13,7 +11,45 @@ pub enum Json {
     Number(f64),
     String(String),
     Array(Vec<Json>),
-    Object(BTreeMap<String, Json>),
+    Object(Map),
+}
+
+/// An object's members in file order, as C# reads them. Equality ignores
+/// the order; a repeated key keeps its first place and its last value.
+#[derive(Clone, Debug, Default)]
+pub struct Map(Vec<(String, Json)>);
+
+impl Map {
+    pub fn get(&self, key: &str) -> Option<&Json> {
+        self.0.iter().find(|(k, _)| k == key).map(|(_, v)| v)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Json)> {
+        self.0.iter().map(|(k, v)| (k, v))
+    }
+
+    pub fn insert(&mut self, key: String, value: Json) {
+        match self.0.iter_mut().find(|(k, _)| *k == key) {
+            Some(entry) => entry.1 = value,
+            None => self.0.push((key, value)),
+        }
+    }
+}
+
+impl PartialEq for Map {
+    fn eq(&self, other: &Map) -> bool {
+        self.0.len() == other.0.len() && self.iter().all(|(k, v)| other.get(k) == Some(v))
+    }
+}
+
+impl FromIterator<(String, Json)> for Map {
+    fn from_iter<I: IntoIterator<Item = (String, Json)>>(items: I) -> Map {
+        let mut map = Map::default();
+        for (key, value) in items {
+            map.insert(key, value);
+        }
+        map
+    }
 }
 
 impl Json {
@@ -130,7 +166,7 @@ impl Parser<'_> {
             }
             b'{' => {
                 self.at += 1;
-                let mut map = BTreeMap::new();
+                let mut map = Map::default();
                 self.space();
                 if self.bytes[self.at] == b'}' {
                     self.at += 1;

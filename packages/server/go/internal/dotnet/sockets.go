@@ -14,6 +14,7 @@ import (
 	"net/netip"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -111,25 +112,35 @@ func (t *SocketsTransport) dial(ctx context.Context, address string, secure bool
 	if proxy != nil && (r.scheme == "https" || proxy.Scheme != "http" && proxy.Scheme != "https") {
 		hop, tunnel = proxyAddress(proxy), address
 	}
-	var dialer net.Dialer
-	raw, err := dialer.DialContext(ctx, "tcp", hop)
+	// open makes the first hop: TCP, then TLS to an https proxy.
+	open := func() (net.Conn, error) {
+		var dialer net.Dialer
+		raw, err := dialer.DialContext(ctx, "tcp", hop)
+		if err != nil {
+			return nil, err
+		}
+		if deadline, ok := ctx.Deadline(); ok {
+			// Lifted once the connection is handed out.
+			_ = raw.SetDeadline(deadline)
+		}
+		var conn net.Conn = &pooledConn{Conn: raw, born: born}
+		if proxy != nil && proxy.Scheme == "https" {
+			if conn, err = t.handshake(ctx, conn, proxy.Hostname()); err != nil {
+				raw.Close()
+				return nil, err
+			}
+		}
+		return conn, nil
+	}
+	conn, err := open()
 	if err != nil {
 		return nil, err
 	}
-	pooled := &pooledConn{Conn: raw, born: born}
-	var conn net.Conn = pooled
 	fail := func(err error) (net.Conn, error) {
-		raw.Close()
-		return nil, err
-	}
-	if deadline, ok := ctx.Deadline(); ok {
-		// Lifted once the connection is handed out.
-		_ = raw.SetDeadline(deadline)
-	}
-	if proxy != nil && proxy.Scheme == "https" {
-		if conn, err = t.handshake(ctx, conn, proxy.Hostname()); err != nil {
-			return fail(err)
+		if conn != nil {
+			conn.Close()
 		}
+		return nil, err
 	}
 	if tunnel != "" {
 		switch proxy.Scheme {
@@ -138,7 +149,7 @@ func (t *SocketsTransport) dial(ctx context.Context, address string, secure bool
 		case "socks5", "socks5h":
 			err = socks5Tunnel(ctx, conn, proxy, tunnel)
 		default:
-			err = connectTunnel(conn, proxy, tunnel)
+			conn, err = connectTunnel(conn, proxy, tunnel, open)
 		}
 		if err != nil {
 			return fail(err)
@@ -183,30 +194,77 @@ func proxyAddress(proxy *url.URL) string {
 	return net.JoinHostPort(proxy.Hostname(), port)
 }
 
-// connectTunnel asks an http or https proxy to CONNECT, as Rust's operator
-// client does: Host, and Basic credentials when the proxy URL has them.
-// Any 2xx opens the tunnel; bytes after the answer are refused.
-func connectTunnel(conn net.Conn, proxy *url.URL, target string) error {
-	head := "CONNECT " + target + " HTTP/1.1\r\nHost: " + target + "\r\n"
-	if user := proxy.User; user != nil {
-		password, _ := user.Password()
-		head += "Proxy-Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte(user.Username()+":"+password)) + "\r\n"
+// connectTunnel is HttpConnectionPool.EstablishProxyTunnelAsync (System.Net.Http
+// 10.0.11, decompiled; measured by C#'s ProxyConnectTunnelTests):
+//   - Host, and a User-Agent only when the request has one
+//     (HttpConnectionPool.cs:308-312, :660-664); the operator requests
+//     have none.
+//   - Credentials only after a 407 Basic challenge: SendWithProxyAuthAsync
+//     passes preAuthenticate false (AuthenticationHelper.cs:481), and the
+//     Basic case resends with the token (:409-428), UTF-8 "user:password"
+//     (:328-329). The retry reuses the conn unless the 407 closed it; then
+//     open makes a new one.
+//   - Only 200 opens the tunnel (HttpConnectionPool.cs:666).
+//
+// It returns the conn the tunnel runs on.
+func connectTunnel(conn net.Conn, proxy *url.URL, target string, open func() (net.Conn, error)) (net.Conn, error) {
+	authorized := false
+	for {
+		head := "CONNECT " + target + " HTTP/1.1\r\nHost: " + target + "\r\n"
+		if authorized {
+			password, _ := proxy.User.Password()
+			head += "Proxy-Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte(proxy.User.Username()+":"+password)) + "\r\n"
+		}
+		if _, err := io.WriteString(conn, head+"\r\n"); err != nil {
+			return conn, err
+		}
+		in := bufio.NewReader(conn)
+		reader := NewResponseReader(in, maxResponseHeadersBytes)
+		status, line, header, err := reader.ReadHead()
+		if err != nil {
+			return conn, err
+		}
+		if status == http.StatusOK {
+			if in.Buffered() > 0 {
+				// .NET hands these to the tunnel; before the server's TLS
+				// answer they fail its handshake there too.
+				return conn, errors.New("proxy: bytes after the tunnel answer")
+			}
+			return conn, nil
+		}
+		if status != http.StatusProxyAuthRequired || authorized || proxy.User == nil ||
+			!offersBasic(header.Values("Proxy-Authenticate")) {
+			return conn, fmt.Errorf("proxy: CONNECT answered %d", status)
+		}
+		authorized = true
+		body, framing := reader.Body(status, false, header)
+		keep := framing != FramedClose && strings.HasPrefix(string(line), "HTTP/1.1 ") &&
+			!strings.Contains(strings.ToLower(connectionTokens(header)), "close")
+		if keep {
+			_, err := io.Copy(io.Discard, body)
+			keep = err == nil && in.Buffered() == 0
+		}
+		if !keep {
+			conn.Close()
+			if conn, err = open(); err != nil {
+				return nil, err
+			}
+		}
 	}
-	if _, err := io.WriteString(conn, head+"\r\n"); err != nil {
-		return err
+}
+
+// offersBasic reports whether a Proxy-Authenticate challenge names Basic.
+// Negotiate, NTLM and Digest, which .NET tries first, are not spoken here.
+func offersBasic(values []string) bool {
+	for _, value := range values {
+		for _, challenge := range strings.Split(value, ",") {
+			scheme, _, _ := strings.Cut(strings.TrimLeft(challenge, " \t"), " ")
+			if strings.EqualFold(scheme, "Basic") {
+				return true
+			}
+		}
 	}
-	in := bufio.NewReader(conn)
-	status, _, _, err := NewResponseReader(in, maxResponseHeadersBytes).ReadHead()
-	if err != nil {
-		return err
-	}
-	if status < 200 || status > 299 {
-		return fmt.Errorf("proxy: CONNECT answered %d", status)
-	}
-	if in.Buffered() > 0 {
-		return errors.New("proxy: bytes after the tunnel answer")
-	}
-	return nil
+	return false
 }
 
 // socks5Tunnel opens a SOCKS5 tunnel on conn with the dialer net/http

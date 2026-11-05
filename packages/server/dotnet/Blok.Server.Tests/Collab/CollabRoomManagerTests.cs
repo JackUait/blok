@@ -1370,6 +1370,41 @@ public sealed class CollabRoomManagerTests
         log.Order(StringComparer.Ordinal));
   }
 
+  /// <summary>
+  /// A drain token already cancelled before the flush's save starts: the
+  /// save fails with the text a token cancelled before the call gets.
+  /// </summary>
+  [Fact]
+  public async Task ADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText()
+  {
+    var log = new List<string>();
+    endpoint.Holds("doc-a", "a");
+    var manager = CreateManager(
+        new CollabRoomOptions
+        {
+          ExportDebounce = TimeSpan.FromMinutes(5),
+          ExportMaxDelay = TimeSpan.FromMinutes(5),
+        },
+        log: log);
+    var member = new FakeMember();
+    var membership = (await manager.JoinAsync("doc-a", member, CancellationToken.None)).Membership!;
+    var client = await SyncedAsync(membership, member);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    using var shutdown = new CancellationTokenSource();
+    await shutdown.CancelAsync();
+
+    await manager.DrainAsync(shutdown.Token).AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Equal(
+        ["collab: room \"doc-a\" could not export during flush: A task was canceled."],
+        log);
+  }
+
   [Theory]
   [InlineData("")]
   [InlineData(".")]

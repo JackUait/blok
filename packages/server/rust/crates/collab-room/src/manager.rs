@@ -521,8 +521,14 @@ impl Manager {
     /// Refuses new joins, flushes every room and closes members 1001. A
     /// join that passed the check a moment ago may add a room, so it loops.
     pub async fn drain(&self) -> Result<(), Error> {
-        self.0.draining.store(true, Ordering::SeqCst);
         let (token, _gone) = caller();
+        self.drain_with(&token).await
+    }
+
+    /// drain, with a caller token. It bounds each room's flush only: every
+    /// room still closes, and the loop runs until no room is left.
+    pub async fn drain_with(&self, caller: &Token) -> Result<(), Error> {
+        self.0.draining.store(true, Ordering::SeqCst);
         loop {
             let rooms = self.live_rooms();
             if rooms.is_empty() {
@@ -530,14 +536,18 @@ impl Manager {
             }
             let mut drains = Vec::new();
             for room in rooms {
-                let t = token.clone();
-                drains.push((
-                    room.clone(),
-                    tokio::spawn(async move { room.drain(&t).await }),
-                ));
+                let (r, t) = (room.clone(), caller.clone());
+                drains.push((room, tokio::spawn(async move { r.drain(&t).await })));
             }
             for (room, drain) in drains {
-                let _ = drain.await;
+                // One room that fails must not strand the others.
+                if let Err(err) = drain.await {
+                    self.0.logf(&format!(
+                        "collab: room \"{}\" could not be drained: {}",
+                        room.doc_id,
+                        panic_message(err)
+                    ));
+                }
                 // The drain always closes the room; forget it in case its
                 // close callback raced a newer room.
                 self.forget(&room);
@@ -584,5 +594,19 @@ impl blok_collab::Rooms for Manager {
                 .await
                 .map_err(|err| Box::new(err) as blok_collab::Error)
         })
+    }
+}
+
+/// A panicked task's message, as C# logs an exception's Message.
+fn panic_message(err: tokio::task::JoinError) -> String {
+    match err.try_into_panic() {
+        Ok(payload) => match payload.downcast::<String>() {
+            Ok(text) => *text,
+            Err(payload) => payload.downcast::<&'static str>().map_or_else(
+                |_| "a room call failed".to_owned(),
+                |text| (*text).to_owned(),
+            ),
+        },
+        Err(err) => err.to_string(),
     }
 }

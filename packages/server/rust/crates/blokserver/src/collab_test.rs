@@ -579,3 +579,44 @@ async fn two_users_keep_restored_content_but_cannot_reopen_after_permanent_purge
     assert_eq!(gets.load(std::sync::atomic::Ordering::SeqCst), 0);
     let _ = restarted.drain(Duration::from_secs(30)).await;
 }
+
+// HostCollab.StoppingAsync: C#'s DrainAsync never throws, so a drain cut
+// short by the shutdown timeout prints no "did not complete" warning. The
+// timeout only cuts each room's flush; every room still closes.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_drain_past_its_grace_still_closes_every_room_without_failing() {
+    let endpoint = start(
+        move |request: Request, mut response: ResponseWriter| async move {
+            if request.method() == "GET" {
+                response
+                    .headers_mut()
+                    .set("Content-Type", "application/json");
+                let _ = response.write(b"null").await;
+                return;
+            }
+            tokio::time::sleep(Duration::from_secs(60)).await;
+            response.set_status(204);
+        },
+    )
+    .await;
+    let s = Server::new(Options {
+        doc_endpoint: format!("http://{}/docs", endpoint.address),
+        ..collab_options()
+    })
+    .unwrap();
+    let running = start(s.handler("")).await;
+    let edit = post_ops(running.address, "k1", &insert("new")).await;
+    assert_eq!(edit.status, 204, "{}", edit.text());
+
+    let started = Instant::now();
+    let result = s.drain(Duration::from_millis(200)).await;
+
+    assert!(result.is_ok(), "{result:?}");
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "{:?}",
+        started.elapsed()
+    );
+    let rooms = s.inner.rooms().unwrap();
+    assert_eq!(rooms.live_room_count(), 0);
+}

@@ -823,7 +823,10 @@ impl Room {
                     .await;
             }
         }
+        // Biased: like C#'s WaitAsync, a settle that is already done wins
+        // over a cancelled caller, so an idle pump logs nothing.
         tokio::select! {
+            biased;
             () = self.settle() => {}
             () = tokio::time::sleep(self.options.commit_timeout) => self.logf(&format!(
                 "collab: room \"{}\" abandoned its activity dispatch while draining: the observer is past its bound",

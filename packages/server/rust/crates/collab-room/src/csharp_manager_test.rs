@@ -195,6 +195,8 @@ impl WorkingSetStore for Store {
 struct Consumer {
     inner: Arc<FakeEndpoint>,
     next_save_failure: Mutex<Option<Error>>,
+    /// Armed, a save panics: the room's drain throws.
+    panics: Mutex<bool>,
 }
 
 impl Endpoint for Consumer {
@@ -209,6 +211,7 @@ impl Endpoint for Consumer {
         projection: Option<&'a Projection>,
     ) -> BoxFuture<'a, Result<Option<String>, Error>> {
         Box::pin(async move {
+            assert!(!*lock(&self.panics), "endpoint exploded");
             let answer = self
                 .inner
                 .save(doc_id, output_data, version, projection)
@@ -386,6 +389,7 @@ impl Bench {
             consumer: Arc::new(Consumer {
                 inner: endpoint.clone(),
                 next_save_failure: Mutex::new(None),
+                panics: Mutex::new(false),
             }),
             endpoint,
             converter: Arc::new(Conv::default()),
@@ -1622,6 +1626,83 @@ async fn drain_closes_a_room_whose_store_fails_and_still_drains_the_others() {
     saves.sort_by(|x, y| x.doc.cmp(&y.doc));
     let texts: Vec<String> = saves.into_iter().map(|s| s.data).collect();
     assert_eq!(texts, [text_json("a!"), text_json("b?")]);
+}
+
+/// The shutdown deadline cancels the drain's token mid-flush. Every room
+/// still closes, and the only lines are each room's own flush failure.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_drain_cut_short_by_its_token_still_closes_every_room() {
+    let b = Bench::new();
+    b.endpoint.holds("doc-a", "a", None);
+    b.endpoint.holds("doc-b", "b", None);
+    let manager = b.manager(slow_export());
+    let member_a = Peer::new();
+    let member_b = Peer::new();
+    let membership_a = enter(&manager, "doc-a", &member_a).await;
+    let membership_b = enter(&manager, "doc-b", &member_b).await;
+    let client_a = synced(&membership_a, &member_a).await;
+    let client_b = synced(&membership_b, &member_b).await;
+    send_update(&membership_a, &client_a, "!").await;
+    send_update(&membership_b, &client_b, "?").await;
+    manager.settle().await;
+    let gate = Gate::new();
+    b.endpoint.set_save_gate(Some(gate.clone()));
+    let shutdown = Token::new();
+
+    let m = manager.clone();
+    let token = shutdown.clone();
+    let drain = tokio::spawn(async move { m.drain_with(&token).await });
+    wait_until("both drains to start their export", || {
+        b.endpoint.saved() == 2
+    })
+    .await;
+    shutdown.cancel();
+    tokio::time::timeout(Duration::from_secs(10), drain)
+        .await
+        .expect("the cancelled drain to finish")
+        .expect("the drain task")
+        .expect("drain");
+    gate.open();
+
+    assert_eq!(manager.live_room_count(), 0);
+    assert_eq!(member_a.closed(), [CloseReason::Draining]);
+    assert_eq!(member_b.closed(), [CloseReason::Draining]);
+    let mut lines = b.logs.lines();
+    lines.sort();
+    // C# prints the cancel as "A task was canceled."; Rust errors say
+    // "context canceled". Only the line around it is compared.
+    assert_eq!(
+        lines,
+        [
+            "collab: room \"doc-a\" could not export during flush: context canceled",
+            "collab: room \"doc-b\" could not export during flush: context canceled",
+        ]
+    );
+}
+
+/// C# DrainRoomAsync: a room whose drain throws is logged and forgotten,
+/// and the drain still ends. A panic is Rust's throw.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_room_whose_drain_panics_is_logged_and_forgotten() {
+    let b = Bench::new();
+    b.endpoint.holds(DOC, "a", None);
+    let manager = b.manager(slow_export());
+    let member = Peer::new();
+    let membership = enter(&manager, DOC, &member).await;
+    let client = synced(&membership, &member).await;
+    send_update(&membership, &client, "!").await;
+    manager.settle().await;
+    *lock(&b.consumer.panics) = true;
+
+    manager.drain().await.expect("drain");
+
+    assert!(
+        b.logs
+            .logged("collab: room \"doc-1\" could not be drained: endpoint exploded"),
+        "{:?}",
+        b.logs.lines()
+    );
+    assert_eq!(manager.live_room_count(), 0);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

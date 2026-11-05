@@ -197,18 +197,23 @@ impl Server {
 
     /// Stops the server's long-lived work before the HTTP server shuts
     /// down: new upgrades get 503, every room flushes, members close 1001.
-    /// Without collaboration there is none. Grace bounds the whole drain.
+    /// Without collaboration there is none. Grace bounds each room's
+    /// flush; every room still closes, as C#'s DrainAsync does.
     pub async fn drain(&self, grace: Duration) -> Result<(), String> {
         let Some(collab) = &self.inner.collab else {
             return Ok(());
         };
         let deadline = tokio::time::Instant::now() + grace;
         let manager = collab.get(&self.inner)?;
-        match tokio::time::timeout_at(deadline, manager.drain()).await {
-            Err(_) => return Err("context deadline exceeded".to_owned()),
-            Ok(Err(err)) => return Err(err.to_string()),
-            Ok(Ok(())) => {}
-        }
+        let shutdown = blok_collab_room::Token::new();
+        let timer = shutdown.clone();
+        let expire = tokio::spawn(async move {
+            tokio::time::sleep_until(deadline).await;
+            timer.cancel();
+        });
+        let drained = manager.drain_with(&shutdown).await;
+        expire.abort();
+        drained.map_err(|err| err.to_string())?;
         // A hijacked socket outlives the HTTP shutdown, and each member's
         // close is only queued: wait for the sockets, as Kestrel waits for
         // upgraded connections, until the grace ends.

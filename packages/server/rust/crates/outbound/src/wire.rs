@@ -544,3 +544,127 @@ impl<R: AsyncBufRead + Unpin + Send> Source for Body<R> {
         }
     }
 }
+
+/// Where a head makes .NET drop the conn after the response
+/// (HttpConnection._connectionClose): a Connection line with a "close"
+/// token, or a Keep-Alive line with max=0 or a timeout of 0 or 1. The
+/// status line's version plays no part. Measured by C#'s
+/// ConnectionReuseMatchesTheFixture.
+pub(crate) fn head_closes_conn(headers: &Headers) -> bool {
+    connection_header_closes(headers) || headers.values("Keep-Alive").any(keep_alive_line_closes)
+}
+
+/// HttpHeaders.ConnectionClose: the token list parser takes each line
+/// whole or not at all, and empty items are skipped.
+pub(crate) fn connection_header_closes(headers: &Headers) -> bool {
+    headers.values("Connection").any(|line| {
+        let mut closes = false;
+        for item in line.split(|&c| c == b',') {
+            let item = trim_space_tab(item);
+            if item.is_empty() {
+                continue;
+            }
+            if !item.iter().copied().all(is_token_char) {
+                return false;
+            }
+            closes |= item.eq_ignore_ascii_case(b"close");
+        }
+        closes
+    })
+}
+
+/// ProcessKeepAliveHeader: the line must parse whole as a name-value list
+/// (NameValueHeaderValue.GetNameValueListLength).
+fn keep_alive_line_closes(value: &[u8]) -> bool {
+    let space = |at: usize| {
+        value[at..]
+            .iter()
+            .take_while(|&&c| c == b' ' || c == b'\t')
+            .count()
+    };
+    let token = |at: usize| {
+        value[at..]
+            .iter()
+            .take_while(|&&c| is_token_char(c))
+            .count()
+    };
+    let mut pairs: Vec<(&[u8], &[u8])> = Vec::new();
+    let mut at = space(0);
+    while at < value.len() {
+        let n = token(at);
+        if n == 0 {
+            return false;
+        }
+        let name = &value[at..at + n];
+        let mut item: &[u8] = &[];
+        at += n;
+        at += space(at);
+        if at < value.len() && value[at] == b'=' {
+            at += 1;
+            at += space(at);
+            let mut v = token(at);
+            if v == 0 {
+                v = quoted_string_length(value, at);
+            }
+            if v == 0 {
+                return false;
+            }
+            item = &value[at..at + v];
+            at += v;
+            at += space(at);
+        }
+        pairs.push((name, item));
+        if at == value.len() || value[at] != b',' {
+            break;
+        }
+        at += 1;
+        at += space(at);
+        if at == value.len() {
+            // A trailing comma leaves an empty item, which does not parse.
+            return false;
+        }
+    }
+    if at != value.len() {
+        return false;
+    }
+    pairs.iter().any(|(name, item)| {
+        if name.eq_ignore_ascii_case(b"timeout") {
+            // int.TryParse with NumberStyles.None: digits only, in range.
+            !item.is_empty()
+                && item.iter().all(u8::is_ascii_digit)
+                && std::str::from_utf8(item)
+                    .ok()
+                    .and_then(|s| s.parse::<i32>().ok())
+                    .is_some_and(|n| n <= 1)
+        } else {
+            name.eq_ignore_ascii_case(b"max") && *item == b"0"
+        }
+    })
+}
+
+/// HttpRuleParser.GetQuotedStringLength: 0 when `s` has no well-formed
+/// quoted string at `at`. A backslash pairs with the next byte only when
+/// two more follow it and that byte is ASCII and not NUL, CR or LF;
+/// otherwise it is a plain byte.
+fn quoted_string_length(s: &[u8], at: usize) -> usize {
+    if s.get(at) != Some(&b'"') {
+        return 0;
+    }
+    let mut i = at + 1;
+    while i < s.len() {
+        if i + 2 < s.len()
+            && s[i] == b'\\'
+            && s[i + 1] <= 0x7f
+            && !matches!(s[i + 1], 0 | b'\n' | b'\r')
+        {
+            i += 2;
+            continue;
+        }
+        match s[i] {
+            b'\r' | b'\n' | 0 => return 0,
+            b'"' => return i - at + 1,
+            _ => i += 1,
+        }
+    }
+    0
+}

@@ -272,7 +272,7 @@ async fn response_heads_match_the_c_sharp_fixture() {
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
 
-fn expand_pads(response: &str) -> String {
+pub(crate) fn expand_pads(response: &str) -> String {
     let mut out = String::new();
     let mut rest = response;
     while let Some(at) = rest.find("{PAD:") {

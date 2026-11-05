@@ -473,38 +473,69 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
     let Some(next) = next else {
         return Err(OperatorError::Tunnel(head.status));
     };
-    // After the Type 1 the stream is kept whatever the answer says.
-    let handshake = auth.nt.is_some() && auth.authorization.is_some();
+    let first = auth.authorization.is_none();
     auth.authorization = Some(next);
     let framed = framing(&head)?;
-    let close = head
-        .headers
-        .values("Connection")
-        .flat_map(|v| v.split(|&c| c == b','))
-        .any(|token| crate::wire::trim_space_tab(token).eq_ignore_ascii_case(b"close"));
-    let mut keep = framed != Framing::Close && !head.http10 && !close;
-    if keep {
-        let mut body = Body::after_head(reader, framed, head.budget);
-        let mut sink = [0u8; 512];
+    if auth.nt.is_some() {
+        // SendWithNtAuthAsync: only a first 407 that says close moves to a
+        // new stream; every other answer is drained or the request fails
+        // (DrainResponseAsync). A body read to the close fails too.
+        if first && crate::wire::connection_header_closes(&head.headers) {
+            return Ok(Tunnel::Again { keep: false });
+        }
+        if framed == Framing::Close
+            || crate::wire::head_closes_conn(&head.headers)
+            || !drain(reader, framed, head.budget).await
+        {
+            return Err(io::Error::other("the authentication conn failed").into());
+        }
+        return Ok(Tunnel::Again { keep: true });
+    }
+    // SendWithAuthAsync disposes the answer, which drains it; a stream that
+    // cannot be drained, or that the answer closes, is dropped.
+    let keep = framed != Framing::Close
+        && !crate::wire::head_closes_conn(&head.headers)
+        && drain(reader, framed, head.budget).await;
+    Ok(Tunnel::Again { keep })
+}
+
+/// SocketsHttpHandler's MaxResponseDrainSize and ResponseDrainTimeout.
+const MAX_DRAIN: u64 = 1 << 20;
+const DRAIN_TIME: Duration = Duration::from_secs(2);
+
+/// HttpContentReadStream.DrainAsync, then CompleteResponse's check that
+/// nothing follows the body. A length body is not read when more than the
+/// cap is left past what is buffered; a chunked one stops at the cap. .NET
+/// counts a chunked body's framing too; this counts its data only.
+async fn drain<S: AsyncRead + Unpin + Send>(
+    reader: BufReader<&mut S>,
+    framed: Framing,
+    budget: usize,
+) -> bool {
+    if let Framing::Length(n) = framed
+        && n.saturating_sub(reader.buffer().len() as u64) > MAX_DRAIN
+    {
+        return false;
+    }
+    let mut body = Body::after_head(reader, framed, budget);
+    let mut sink = [0u8; 4096];
+    let mut drained = 0u64;
+    let read = timeout_at(Instant::now() + DRAIN_TIME, async {
         loop {
             match body.read(&mut sink).await {
-                Ok(0) => break,
-                Ok(_) => {}
-                Err(_) => {
-                    keep = false;
-                    break;
+                Ok(0) => return true,
+                Ok(n) => {
+                    drained += n as u64;
+                    if drained > MAX_DRAIN {
+                        return false;
+                    }
                 }
+                Err(_) => return false,
             }
         }
-        keep = keep && body.into_inner().buffer().is_empty();
-    } else if handshake {
-        let mut body = Body::after_head(reader, framed, head.budget);
-        let mut sink = [0u8; 512];
-        while let Ok(1..) = body.read(&mut sink).await {}
-    }
-    Ok(Tunnel::Again {
-        keep: keep || handshake,
     })
+    .await;
+    matches!(read, Ok(true)) && body.into_inner().buffer().is_empty()
 }
 
 /// Proxy-Authenticate lines as each scheme's parameter text, lower-case

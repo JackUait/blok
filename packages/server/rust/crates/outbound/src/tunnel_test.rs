@@ -458,3 +458,106 @@ async fn answers_a_digest_challenge_as_sockets_http_handler_does() {
         assert_eq!(got.join("|"), want, "{mode}");
     }
 }
+
+/// The C# fixture test's Serve: logs "conn method" for each request,
+/// answers the run's first request with `first` and every later one with
+/// `rest`, and hangs up after the first when `closing`.
+async fn reuse_server(
+    first: Vec<u8>,
+    rest: &'static [u8],
+    closing: bool,
+) -> (u16, Arc<Mutex<Vec<String>>>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let log = seen.clone();
+    let first = Arc::new(first);
+    let requests = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    tokio::spawn(async move {
+        let mut conns = 0;
+        while let Ok((client, _)) = listener.accept().await {
+            conns += 1;
+            let (id, log, first, requests) = (conns, log.clone(), first.clone(), requests.clone());
+            tokio::spawn(async move {
+                let mut reader = BufReader::new(client);
+                loop {
+                    let mut method = String::new();
+                    loop {
+                        let mut line = String::new();
+                        if reader.read_line(&mut line).await.unwrap_or(0) == 0 {
+                            return;
+                        }
+                        let line = line.trim_end();
+                        if line.is_empty() {
+                            break;
+                        }
+                        if method.is_empty() {
+                            method = line.split(' ').next().unwrap().to_owned();
+                        }
+                    }
+                    log.lock().unwrap().push(format!("{id} {method}"));
+                    let is_first = requests.fetch_add(1, std::sync::atomic::Ordering::SeqCst) == 0;
+                    let answer: &[u8] = if is_first { &first } else { rest };
+                    if reader.get_mut().write_all(answer).await.is_err() || is_first && closing {
+                        return;
+                    }
+                }
+            });
+        }
+    });
+    (port, seen)
+}
+
+// The twin of C#'s ConnectionReuseMatchesTheFixture, tunnel rows: after a
+// 407 the retry takes the conn SocketsHttpHandler would take. The plain
+// rows do not apply: this client opens a new conn for every request.
+#[tokio::test]
+async fn connection_reuse_matches_the_fixture() {
+    use crate::test_json::{field, items, load, string};
+    let fixture = load("outbound-conn-reuse.json");
+    let answers = items(field(&fixture, "answers"));
+    let mut wrong = Vec::new();
+    for (i, case) in items(field(&fixture, "cases")).iter().enumerate() {
+        let answer: Vec<u8> = crate::fixtures_test::expand_pads(&string(case, "answer"))
+            .chars()
+            .map(|c| u8::try_from(c).unwrap())
+            .collect();
+        let closing = matches!(field(case, "close"), blok_jsjson::Value::Bool(true));
+        let (port, seen) = reuse_server(
+            answer,
+            b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n",
+            closing,
+        )
+        .await;
+        let client = OperatorClient {
+            connect_timeout: Duration::from_secs(10),
+            header_timeout: None,
+            proxy: EnvironmentProxy::from_lookup(move |name| {
+                (name == "ALL_PROXY").then(|| format!("http://u:p@127.0.0.1:{port}"))
+            }),
+            roots: None,
+        };
+        let url = blok_dotnet::parse_absolute_uri("https://localhost:1/").unwrap();
+        let outcome = match client
+            .send(Request {
+                method: "GET",
+                url: &url,
+                host: "localhost:1",
+                headers: Vec::new(),
+                body: RequestBody::None,
+            })
+            .await
+        {
+            Ok(response) => response.status.to_string(),
+            Err(crate::operator::OperatorError::Tunnel(status)) => format!("error {status}"),
+            Err(_) => "error ".to_owned(),
+        };
+        let mut got = vec![outcome];
+        got.extend(seen.lock().unwrap().iter().cloned());
+        let want = string(&answers[i], "tunnel");
+        if got.join("|") != want {
+            wrong.push(format!("case {i}: got {:?}, C# {want:?}", got.join("|")));
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}

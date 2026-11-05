@@ -361,6 +361,37 @@ fn read_ntlm(scheme: &str, token: &[u8], state: &mut State, password: &str) -> (
     (logged, proof_ok && mic_ok && cbt_ok && mlmic_ok)
 }
 
+/// C#'s DrainShape: the version and what follows the challenge in a drain
+/// row's first 407 (drain1-) or Type 2 (drain2-).
+fn drain_shape(mode: &str, first: bool) -> (&'static str, String) {
+    let prefix = if first { "drain1-" } else { "drain2-" };
+    let Some(shape) = mode.strip_prefix(prefix) else {
+        return ("1.1", "Content-Length: 0\r\n\r\n".to_owned());
+    };
+    let big = "a".repeat(2097152);
+    match shape {
+        "ka0" => (
+            "1.1",
+            "Keep-Alive: max=0\r\nContent-Length: 0\r\n\r\n".to_owned(),
+        ),
+        "extra" => ("1.1", "Content-Length: 0\r\n\r\nxyz".to_owned()),
+        "big" => ("1.1", format!("Content-Length: 2097152\r\n\r\n{big}")),
+        "bigchunked" => (
+            "1.1",
+            format!("Transfer-Encoding: chunked\r\n\r\n200000\r\n{big}\r\n0\r\n\r\n"),
+        ),
+        "http10" => ("1.0", "Content-Length: 0\r\n\r\n".to_owned()),
+        "body" => ("1.1", "Content-Length: 3\r\n\r\nabc".to_owned()),
+        "chunked" => (
+            "1.1",
+            "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n".to_owned(),
+        ),
+        "closeframed" => ("1.1", "\r\nabc".to_owned()),
+        "stall" => ("1.1", "Content-Length: 10\r\n\r\nabc".to_owned()),
+        _ => panic!("{mode}"),
+    }
+}
+
 async fn serve_ntlm<S: AsyncRead + AsyncWrite + Unpin>(
     stream: S,
     id: usize,
@@ -394,6 +425,7 @@ async fn serve_ntlm<S: AsyncRead + AsyncWrite + Unpin>(
             }
         }
         let (mut answer, mut closing) = (String::new(), false);
+        let first_407 = auth.is_none();
         match auth {
             None => {
                 log.lock().unwrap().push(format!("{id} auth=no"));
@@ -448,9 +480,8 @@ async fn serve_ntlm<S: AsyncRead + AsyncWrite + Unpin>(
         if closing {
             answer += "Connection: close\r\n";
         }
-        let head = format!(
-            "HTTP/1.1 407 Proxy Authentication Required\r\n{answer}Content-Length: 0\r\n\r\n"
-        );
+        let (version, tail) = drain_shape(mode, first_407);
+        let head = format!("HTTP/{version} 407 Proxy Authentication Required\r\n{answer}{tail}");
         if reader.get_mut().write_all(head.as_bytes()).await.is_err() || closing {
             return;
         }
@@ -620,6 +651,80 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
             "",
             "p",
             "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "drain1-http10",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok",
+        ),
+        ("drain1-extra", "u", "", "p", "error |1 auth=no"),
+        (
+            "drain2-ka0",
+            "u",
+            "",
+            "p",
+            "error |1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        (
+            "drain2-closeframed",
+            "u",
+            "",
+            "p",
+            "error |1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        ("drain1-ka0", "u", "", "p", "error |1 auth=no"),
+        (
+            "drain2-http10",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok",
+        ),
+        (
+            "drain2-bigchunked",
+            "u",
+            "",
+            "p",
+            "error |1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        (
+            "drain2-extra",
+            "u",
+            "",
+            "p",
+            "error |1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        (
+            "drain2-stall",
+            "u",
+            "",
+            "p",
+            "throw IOException|1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        (
+            "drain2-big",
+            "u",
+            "",
+            "p",
+            "error |1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        ("drain1-closeframed", "u", "", "p", "error |1 auth=no"),
+        (
+            "drain2-chunked",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok",
+        ),
+        ("drain1-big", "u", "", "p", "error |1 auth=no"),
+        (
+            "drain1-body",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok",
         ),
     ] {
         let listener = TcpListener::bind(if mode == "ipv6" {

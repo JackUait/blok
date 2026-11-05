@@ -355,6 +355,7 @@ dependencies = [
  "blok-mediatype",
  "brotli",
  "flate2",
+ "ring",
  "rustls",
  "rustls-native-certs",
  "security-framework",

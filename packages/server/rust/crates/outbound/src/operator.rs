@@ -4,6 +4,7 @@
 //! it honours the environment proxy, follows no redirect, asks for no
 //! compression and pools nothing.
 
+use std::collections::HashMap;
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
@@ -247,15 +248,14 @@ impl OperatorClient {
             return Ok(stream);
         }
         if let Some(proxy) = proxy.filter(|p| is_http_proxy(p)) {
-            let mut authorized = false;
+            let mut auth = ProxyAuth::default();
             loop {
-                let step = timeout_at(deadline, tunnel(&mut stream, &authority, proxy, authorized))
+                let step = timeout_at(deadline, tunnel(&mut stream, &authority, proxy, &mut auth))
                     .await
                     .map_err(|_| OperatorError::ConnectTimeout)??;
                 match step {
                     Tunnel::Open => break,
                     Tunnel::Again { keep } => {
-                        authorized = true;
                         if !keep {
                             stream = self
                                 .open_hop(&dial, url, Some(proxy), &trust, deadline)
@@ -336,22 +336,35 @@ enum Tunnel {
     Again { keep: bool },
 }
 
+/// Where a CONNECT's proxy authentication stands.
+#[derive(Default)]
+struct ProxyAuth {
+    /// The Proxy-Authorization the next CONNECT carries.
+    authorization: Option<String>,
+    /// The scheme answered, lower case.
+    sent: Option<&'static str>,
+    /// Whether the one stale-nonce retry was used.
+    stale: bool,
+}
+
 /// HttpConnectionPool.EstablishProxyTunnelAsync (System.Net.Http 10.0.11,
 /// decompiled; measured by C#'s ProxyConnectTunnelTests). Host, and no
 /// User-Agent, as the operator requests have none (HttpConnectionPool.cs
-/// :308-312, :660-664). Credentials only after a 407 Basic challenge:
+/// :308-312, :660-664). Credentials only after a 407 challenge:
 /// SendWithProxyAuthAsync passes preAuthenticate false
-/// (AuthenticationHelper.cs:481) and the Basic case resends (:409-428).
-/// Only 200 opens the tunnel (HttpConnectionPool.cs:666).
+/// (AuthenticationHelper.cs:481). The challenge is picked in .NET's order,
+/// Negotiate, NTLM, Digest, Basic; Negotiate and NTLM are not spoken here,
+/// so they fail the tunnel where .NET would send its own token, never
+/// Basic. A Digest answer gets one more try when the nonce is stale. Only
+/// 200 opens the tunnel (HttpConnectionPool.cs:666).
 async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
     tcp: &mut S,
     authority: &str,
     proxy: &ProxyUrl,
-    authorized: bool,
+    auth: &mut ProxyAuth,
 ) -> Result<Tunnel, OperatorError> {
     let mut headers = vec![("Host", authority)];
-    let authorization = authorized.then(|| proxy_authorization(proxy)).flatten();
-    if let Some(value) = &authorization {
+    if let Some(value) = &auth.authorization {
         headers.push(("Proxy-Authorization", value));
     }
     tcp.write_all(&request_head("CONNECT", authority, &headers))
@@ -370,13 +383,40 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
         }
         return Ok(Tunnel::Open);
     }
-    if head.status != 407
-        || authorized
-        || proxy.user.is_none()
-        || !offers_basic(head.headers.values("Proxy-Authenticate"))
-    {
+    let next = match (&proxy.user, head.status) {
+        (Some((user, password)), 407) => {
+            let challenges = auth_challenges(head.headers.values("Proxy-Authenticate"));
+            let password = password.as_deref().unwrap_or("");
+            match auth.sent {
+                None => {
+                    let scheme = choose_challenge(&challenges);
+                    auth.sent = scheme;
+                    match scheme {
+                        Some("digest") => crate::digest::parse(&challenges["digest"])
+                            .and_then(|p| crate::digest::token(user, password, &p))
+                            .map(|token| format!("Digest {token}")),
+                        Some("basic") => proxy_authorization(proxy),
+                        _ => None,
+                    }
+                }
+                Some("digest") if !auth.stale => challenges
+                    .get("digest")
+                    .and_then(|data| crate::digest::parse(data))
+                    .filter(|p| p.get("stale").is_some_and(|v| v == "true"))
+                    .and_then(|p| {
+                        auth.stale = true;
+                        crate::digest::token(user, password, &p)
+                    })
+                    .map(|token| format!("Digest {token}")),
+                _ => None,
+            }
+        }
+        _ => None,
+    };
+    let Some(next) = next else {
         return Err(OperatorError::Tunnel(head.status));
-    }
+    };
+    auth.authorization = Some(next);
     let framed = framing(&head)?;
     let close = head
         .headers
@@ -402,14 +442,70 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
     Ok(Tunnel::Again { keep })
 }
 
-/// Whether a Proxy-Authenticate challenge names Basic. Negotiate, NTLM and
-/// Digest, which .NET tries first, are not spoken here.
-fn offers_basic<'a>(values: impl Iterator<Item = &'a [u8]>) -> bool {
-    values
-        .flat_map(|v| v.split(|&c| c == b','))
-        .any(|challenge| {
-            let challenge = crate::wire::trim_space_tab(challenge);
-            let scheme = challenge.split(|&c| c == b' ').next().unwrap_or_default();
-            scheme.eq_ignore_ascii_case(b"Basic")
-        })
+/// Proxy-Authenticate lines as each scheme's parameter text, lower-case
+/// scheme, the first of a scheme kept: a comma-separated piece (commas in
+/// quotes do not split) that starts with a bare token starts a challenge,
+/// the rest are its parameters.
+fn auth_challenges<'a>(values: impl Iterator<Item = &'a [u8]>) -> HashMap<String, String> {
+    let mut challenges = HashMap::new();
+    for value in values {
+        let value = String::from_utf8_lossy(value);
+        let mut scheme: Option<String> = None;
+        let mut data: Vec<String> = Vec::new();
+        let mut flush = |scheme: &Option<String>, data: &mut Vec<String>| {
+            if let Some(scheme) = scheme {
+                challenges
+                    .entry(scheme.clone())
+                    .or_insert_with(|| data.join(", "));
+            }
+            data.clear();
+        };
+        for piece in split_outside_quotes(&value) {
+            let piece = piece.trim_matches([' ', '\t']);
+            let (token, rest) = piece.split_once(' ').unwrap_or((piece, ""));
+            if !token.is_empty() && token.bytes().all(crate::wire::is_token_char) {
+                flush(&scheme, &mut data);
+                scheme = Some(token.to_ascii_lowercase());
+                let rest = rest.trim_matches([' ', '\t']);
+                if !rest.is_empty() {
+                    data.push(rest.to_owned());
+                }
+            } else if !piece.is_empty() {
+                data.push(piece.to_owned());
+            }
+        }
+        flush(&scheme, &mut data);
+    }
+    challenges
+}
+
+/// `s` split at the commas outside quoted strings.
+fn split_outside_quotes(s: &str) -> Vec<&str> {
+    let bytes = s.as_bytes();
+    let (mut pieces, mut start, mut quoted, mut i) = (Vec::new(), 0, false, 0);
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' if quoted => i += 1,
+            b'"' => quoted = !quoted,
+            b',' if !quoted => {
+                pieces.push(&s[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    pieces.push(&s[start..]);
+    pieces
+}
+
+/// TryGetAuthenticationChallenge's order: Negotiate, NTLM, Digest, Basic.
+/// Negotiate and NTLM give None: they are not spoken here.
+fn choose_challenge(challenges: &HashMap<String, String>) -> Option<&'static str> {
+    for scheme in ["negotiate", "ntlm", "digest", "basic"] {
+        if challenges.contains_key(scheme) {
+            return matches!(scheme, "digest" | "basic").then_some(scheme);
+        }
+    }
+    None
 }

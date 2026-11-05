@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -125,6 +126,282 @@ async fn opens_a_tunnel_as_sockets_http_handler_does() {
             header_timeout: None,
             proxy: EnvironmentProxy::from_lookup(move |name| {
                 (name == "ALL_PROXY").then(|| format!("http://u:p@127.0.0.1:{port}"))
+            }),
+            roots: Some(pki.roots.clone()),
+        };
+        let url = blok_dotnet::parse_absolute_uri(&format!("https://localhost:{}/", target.port))
+            .unwrap();
+        let host = format!("localhost:{}", target.port);
+        let outcome = match client
+            .send(Request {
+                method: "GET",
+                url: &url,
+                host: &host,
+                headers: Vec::new(),
+                body: RequestBody::None,
+            })
+            .await
+        {
+            Ok(mut response) => {
+                let mut body = vec![0u8; 16];
+                let n = response.body.read(&mut body).await.unwrap();
+                format!(
+                    "{} {}",
+                    response.status,
+                    String::from_utf8_lossy(&body[..n])
+                )
+            }
+            Err(_) => "error".to_owned(),
+        };
+        let mut got = vec![outcome];
+        got.extend(seen.lock().unwrap().iter().cloned());
+        assert_eq!(got.join("|"), want, "{mode}");
+    }
+}
+
+fn digest_challenge(mode: &str, second: bool) -> &'static str {
+    match mode {
+        "plain" | "utf8" => "Digest realm=\"r\", nonce=\"n\"",
+        "qop" => "Digest realm=\"r\", nonce=\"n\", qop=\"auth\", algorithm=MD5, opaque=\"o\"",
+        "sha-sess" => {
+            "Digest realm=\"r\", nonce=\"n\", qop=\"auth,auth-int\", algorithm=SHA-256-sess"
+        }
+        "auth-int" => "Digest realm=\"r\", nonce=\"n\", qop=\"auth-int\", algorithm=SHA-256",
+        "userhash" => "Digest realm=\"r\", nonce=\"n\", userhash=true, algorithm=MD5",
+        "stale" if second => "Digest realm=\"r\", nonce=\"n2\", stale=true",
+        "stale" => "Digest realm=\"r\", nonce=\"n\"",
+        "unsupported" => "Digest realm=\"r\", nonce=\"n\", algorithm=SHA-512",
+        _ => "",
+    }
+}
+
+fn challenge_lines(mode: &str, second: bool) -> String {
+    match mode {
+        "digest+basic" => "Proxy-Authenticate: Basic realm=\"r\"\r\nProxy-Authenticate: Digest realm=\"r\", nonce=\"n\"\r\n".to_owned(),
+        "negotiate+basic" => "Proxy-Authenticate: Negotiate\r\nProxy-Authenticate: Basic realm=\"r\"\r\n".to_owned(),
+        _ => format!("Proxy-Authenticate: {}\r\n", digest_challenge(mode, second)),
+    }
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The fields of a Digest answer: key=value or key="value".
+fn digest_fields(header: &str) -> HashMap<String, String> {
+    let mut fields = HashMap::new();
+    for part in header.trim_start_matches("Digest ").split(", ") {
+        if let Some((key, value)) = part.split_once('=') {
+            fields.insert(key.to_owned(), value.trim_matches('"').to_owned());
+        }
+    }
+    fields
+}
+
+/// The RFC 7616 check C#'s test makes, password p.
+fn digest_valid(header: &str, user: &str) -> bool {
+    use sha2::Digest as _;
+    let fields = digest_fields(header);
+    let algorithm = fields
+        .get("algorithm")
+        .cloned()
+        .unwrap_or_else(|| "MD5".to_owned());
+    let hash = |data: &str| {
+        if algorithm.starts_with("SHA-256") {
+            hex(&sha2::Sha256::digest(data.as_bytes()))
+        } else {
+            hex(&crate::digest::md5(data.as_bytes()))
+        }
+    };
+    let nonce = &fields["nonce"];
+    let mut a1 = hash(&format!("{user}:r:p"));
+    if algorithm.ends_with("-sess") {
+        a1 = hash(&format!("{a1}:{nonce}:{}", fields["cnonce"]));
+    }
+    let a2 = if fields.get("qop").is_some_and(|q| q == "auth-int") {
+        hash(&format!("CONNECT:/:{}", hash("")))
+    } else {
+        hash("CONNECT:/")
+    };
+    let want = match fields.get("qop") {
+        Some(qop) => hash(&format!(
+            "{a1}:{nonce}:{}:{}:{qop}:{a2}",
+            fields["nc"], fields["cnonce"]
+        )),
+        None => hash(&format!("{a1}:{nonce}:{a2}")),
+    };
+    fields["uri"] == "/" && fields["response"] == want
+}
+
+/// Masks the random cnonce as C and the response as R.
+fn mask(auth: &str) -> String {
+    auth.split(", ")
+        .map(|part| match part.split_once('=') {
+            Some(("response", _)) => "response=\"R\"".to_owned(),
+            Some(("cnonce", value))
+                if value.len() == 18 && value[1..17].bytes().all(|b| b.is_ascii_alphanumeric()) =>
+            {
+                "cnonce=\"C\"".to_owned()
+            }
+            _ => part.to_owned(),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+async fn digest_proxy(mode: &'static str, user: &'static str) -> (u16, Arc<Mutex<Vec<String>>>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let log = seen.clone();
+    tokio::spawn(async move {
+        let mut conns = 0;
+        loop {
+            let Ok((client, _)) = listener.accept().await else {
+                return;
+            };
+            conns += 1;
+            let (id, log) = (conns, log.clone());
+            tokio::spawn(async move {
+                let mut reader = BufReader::new(client);
+                let mut digests = 0;
+                for _ in 0..4 {
+                    let mut target = String::new();
+                    let mut auth: Option<String> = None;
+                    let mut first = true;
+                    loop {
+                        let mut line = String::new();
+                        if reader.read_line(&mut line).await.unwrap_or(0) == 0 {
+                            return;
+                        }
+                        let line = line.trim_end();
+                        if line.is_empty() {
+                            break;
+                        }
+                        if first {
+                            target = line.split(' ').nth(1).unwrap_or_default().to_owned();
+                            first = false;
+                        } else if let Some(value) = line.strip_prefix("Proxy-Authorization:") {
+                            auth = Some(value.trim().to_owned());
+                        }
+                    }
+                    let logged = match &auth {
+                        None => "no".to_owned(),
+                        Some(a) if a.starts_with("Negotiate ") => "Negotiate T".to_owned(),
+                        Some(a) => mask(a),
+                    };
+                    log.lock().unwrap().push(format!("{id} auth={logged}"));
+                    let digest = auth.as_deref().is_some_and(|a| a.starts_with("Digest "));
+                    if digest {
+                        digests += 1;
+                    }
+                    let stale = mode == "stale" && digests == 1;
+                    if digest && !stale && digest_valid(auth.as_deref().unwrap(), user) {
+                        let Ok(mut upstream) = TcpStream::connect(&target).await else {
+                            return;
+                        };
+                        let _ = reader
+                            .get_mut()
+                            .write_all(b"HTTP/1.1 200 Connection established\r\n\r\n")
+                            .await;
+                        let _ = tokio::io::copy_bidirectional(&mut reader, &mut upstream).await;
+                        return;
+                    }
+                    let answer = format!(
+                        "HTTP/1.1 407 Proxy Authentication Required\r\n{}Content-Length: 0\r\n\r\n",
+                        challenge_lines(mode, stale)
+                    );
+                    let _ = reader.get_mut().write_all(answer.as_bytes()).await;
+                }
+            });
+        }
+    });
+    (port, seen)
+}
+
+#[test]
+fn md5_matches_rfc_1321() {
+    for (input, want) in [
+        ("", "d41d8cd98f00b204e9800998ecf8427e"),
+        ("abc", "900150983cd24fb0d6963f7d28e17f72"),
+        ("message digest", "f96b697d7cb7938d525a2f31aaf161d0"),
+        (
+            "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+            "57edf4a22be3c955ac49da2e2107b67a",
+        ),
+    ] {
+        assert_eq!(
+            hex(&crate::digest::md5(input.as_bytes())),
+            want,
+            "{input:?}"
+        );
+    }
+}
+
+// The twin of C#'s AnswersADigestChallengeAsSocketsHttpHandlerDoes. Only
+// negotiate+basic differs: .NET sends a Negotiate token, which is not
+// spoken here, and neither sends Basic.
+#[tokio::test]
+async fn answers_a_digest_challenge_as_sockets_http_handler_does() {
+    let pki = pki("localhost", |_| {});
+    let target = Origin::start(
+        "127.0.0.1:0",
+        Some(acceptor(pki.chain.clone(), pki.key.clone_key(), &[])),
+        ok_handler(),
+    )
+    .await
+    .unwrap();
+    for (mode, user, want) in [
+        (
+            "plain",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"",
+        ),
+        (
+            "qop",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\", opaque=\"o\", algorithm=MD5, qop=auth, nc=00000001, cnonce=\"C\"",
+        ),
+        (
+            "sha-sess",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\", algorithm=SHA-256-sess, qop=auth, nc=00000001, cnonce=\"C\"",
+        ),
+        (
+            "auth-int",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\", algorithm=SHA-256, qop=auth-int, nc=00000001, cnonce=\"C\"",
+        ),
+        (
+            "userhash",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"ba84be203fdfc7d34e054a76d285d0c9\", userhash=true, realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\", algorithm=MD5",
+        ),
+        (
+            "utf8",
+            "é",
+            "200 ok|1 auth=no|1 auth=Digest username*=utf-8''%C3%A9, realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"",
+        ),
+        (
+            "stale",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n2\", uri=\"/\", response=\"R\"",
+        ),
+        ("unsupported", "u", "error|1 auth=no"),
+        (
+            "digest+basic",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"",
+        ),
+        ("negotiate+basic", "u", "error|1 auth=no"),
+    ] {
+        let (port, seen) = digest_proxy(mode, user).await;
+        let proxy_user = if user == "é" { "%C3%A9" } else { user };
+        let client = OperatorClient {
+            connect_timeout: Duration::from_secs(5),
+            header_timeout: None,
+            proxy: EnvironmentProxy::from_lookup(move |name| {
+                (name == "ALL_PROXY").then(|| format!("http://{proxy_user}:p@127.0.0.1:{port}"))
             }),
             roots: Some(pki.roots.clone()),
         };

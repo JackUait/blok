@@ -355,3 +355,20 @@ func TestABadHeadOnAReusedConnIsNotSentAgain(t *testing.T) {
 		}
 	}
 }
+
+// net/http closes the conn of a bodiless answer that says close before
+// RoundTrip takes its head, so the head must outlive the conn.
+func TestABodilessAnswerThatClosesKeepsItsHeaders(t *testing.T) {
+	for round := range 20 {
+		address, _ := reuseServer(t, "HTTP/1.1 200 OK\r\nX-Probe: a\x01\r\nConnection: close\r\nContent-Length: 0\r\n\r\n", "", true)
+		client := &http.Client{Transport: NewSocketsTransport(SocketsOptions{ConnectTimeout: 2 * time.Second})}
+		response, err := client.Get("http://" + address + "/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		if got := response.Header.Get("X-Probe"); got != "a\x01" {
+			t.Fatalf("round %d: X-Probe %q", round, got)
+		}
+	}
+}

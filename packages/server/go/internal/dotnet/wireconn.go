@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // maxResponseHeadersBytes is SocketsHttpHandler's default
@@ -32,6 +33,8 @@ type wireConn struct {
 	err     error
 	// started is set once the next head's first byte is handed out.
 	started bool
+	// ended is set when bytes after a response end the conn.
+	ended atomic.Bool
 
 	mu     sync.Mutex
 	method string
@@ -74,11 +77,16 @@ func (c *wireConn) pendingHeads() int {
 	return len(c.pending)
 }
 
-// Close drops the heads no response took.
+// headGrace is how long a closed conn's untaken heads are kept. net/http
+// closes the conn of a bodiless answer that says close before RoundTrip
+// takes its head.
+const headGrace = 10 * time.Second
+
+// Close drops the heads no response took, after headGrace.
 func (c *wireConn) Close() error {
 	c.mu.Lock()
 	for id := range c.pending {
-		heads.Delete(id)
+		time.AfterFunc(headGrace, func() { heads.Delete(id) })
 	}
 	c.pending = nil
 	c.mu.Unlock()
@@ -163,6 +171,7 @@ func (c *wireConn) Read(p []byte) (int, error) {
 func (c *wireConn) endsConn() bool {
 	if c.err == nil && c.in.Buffered() > 0 {
 		c.err = io.EOF
+		c.ended.Store(true)
 	}
 	return c.err != nil
 }

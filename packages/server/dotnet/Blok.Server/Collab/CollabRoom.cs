@@ -1671,6 +1671,8 @@ internal sealed class CollabRoom : IDisposable
       // thing that could, and it cannot be trusted to report itself. Left set,
       // the flag would make this room's activity dead for the rest of its
       // life.
+      Task next;
+
       lock (activityQueue)
       {
         if (activityQueue.Count == 0)
@@ -1683,8 +1685,12 @@ internal sealed class CollabRoom : IDisposable
         // Records are still waiting. A fresh pump takes them now rather than
         // leaving them for whenever the next enqueue happens — which is a wait
         // SettleAsync would otherwise return in front of.
-        activityDispatch = Task.Run(() => PumpActivityAsync(observer));
+        next = Task.Run(() => PumpActivityAsync(observer));
+        activityDispatch = next;
       }
+
+      // A settle may hold this task: it ends only once the fresh pump does.
+      await next;
     }
   }
 

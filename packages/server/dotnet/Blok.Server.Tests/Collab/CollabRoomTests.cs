@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -3860,6 +3861,47 @@ public sealed class CollabRoomTests
   /// operations before the next one. Retrying on the very next operation
   /// would spend all three strikes inside one disk hiccup.
   /// </summary>
+  /// <summary>
+  /// The checkpoint and commit-failure lines print error.Message. A cancel
+  /// the store throws as is reads as .NET's cancel text; a store that wraps
+  /// a cancel in its own exception keeps its own text.
+  /// </summary>
+  [Theory]
+  [InlineData(false, "The operation was canceled.")]
+  [InlineData(true, "s3 put: The operation was canceled.")]
+  public async Task TheCheckpointLinesPrintTheStoresOwnTextForAWrappedCancel(bool wrapped, string text)
+  {
+    var options = new CollabRoomOptions { CheckpointOperationThreshold = 1 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    operations.FailCheckpoints = _ =>
+    {
+      var cancel = new OperationCanceledException();
+
+      return wrapped ? new IOException("s3 put: " + cancel.Message, cancel) : cancel;
+    };
+
+    foreach (var operationId in new[] { OpOne, OpTwo, OpThree })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, "!")),
+          CancellationToken.None);
+    }
+
+    await manager.SettleAsync();
+
+    Assert.Equal(
+        [
+          $"collab: room \"{DocId}\" could not publish a checkpoint (1 of 3), retrying later: {text}",
+          $"collab: room \"{DocId}\" could not publish a checkpoint (2 of 3), retrying later: {text}",
+          $"collab: room \"{DocId}\" could not publish a checkpoint, closing: {text}",
+        ],
+        log.Where(line => line.Contains("checkpoint", StringComparison.Ordinal)));
+  }
+
   [Fact]
   public async Task AFailedCheckpointCostsAnotherThresholdBeforeItRetries()
   {
@@ -6000,6 +6042,85 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A logger that throws restarts the pump on a new task. A settle that
+  /// began before the restart still waits for the records the new pump
+  /// delivers.
+  /// </summary>
+  [Fact]
+  public async Task ASettleWaitsForRecordsARestartedPumpDelivers()
+  {
+    endpoint.Holds(DocId, "hello");
+    var observer = new RestartingObserver();
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions(),
+        time,
+        message =>
+        {
+          if (message.Contains("activity observer failed", StringComparison.Ordinal))
+          {
+            throw new InvalidOperationException("logger failed");
+          }
+        },
+        activityObserver: observer);
+    var member = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, member).WaitAsync(TimeSpan.FromSeconds(10));
+    await observer.FirstEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None)
+        .AsTask()
+        .WaitAsync(TimeSpan.FromSeconds(10));
+    var settling = manager.SettleAsync();
+    // Long enough for the settle to pass the lane and hold the first pump.
+    await Task.Delay(100);
+
+    observer.First.SetResult();
+    await observer.SecondEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    await Task.Delay(200);
+    var settledEarly = settling.IsCompleted;
+
+    observer.Second.SetResult();
+    await settling.WaitAsync(TimeSpan.FromSeconds(10));
+    Assert.False(settledEarly);
+  }
+
+  /// <summary>The first call throws once released; the second waits on its gate.</summary>
+  private sealed class RestartingObserver : ICollabActivityObserver
+  {
+    private int calls;
+
+    internal TaskCompletionSource First { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    internal TaskCompletionSource FirstEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    internal TaskCompletionSource Second { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    internal TaskCompletionSource SecondEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public async ValueTask RecordAsync(
+        string documentId,
+        string actorId,
+        DateTimeOffset at,
+        CollabActivityKind kind,
+        CancellationToken cancellationToken = default)
+    {
+      if (Interlocked.Increment(ref calls) == 1)
+      {
+        FirstEntered.TrySetResult();
+        await First.Task;
+        throw new InvalidOperationException("the activity table is down");
+      }
+
+      SecondEntered.TrySetResult();
+      await Second.Task;
+    }
+  }
+
+  /// <summary>
   /// What this measures is AWAIT PLACEMENT: the observer has returned a
   /// ValueTask that has not completed, and the question is whether the room
   /// awaited it with the lane held. It is the only test that asks — running
@@ -6101,6 +6222,49 @@ public sealed class CollabRoomTests
             StringComparison.Ordinal));
 
     gate.SetResult();
+  }
+
+  /// <summary>
+  /// SettleAsync queues on the lane at the call. With lane work queued behind
+  /// the drain it cannot complete at once, so a cancelled drain says it gave
+  /// up even with no activity observer. No public call queues slow lane work
+  /// on a closed room, so the room's private Post queues it.
+  /// </summary>
+  [Fact]
+  public async Task ACancelledDrainWithLaneWorkQueuedBehindItSaysItWasCancelled()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var member = new FakeMember(actorId: "user-1");
+    await Join(manager, member).WaitAsync(TimeSpan.FromSeconds(10));
+    var room = ((Dictionary<string, CollabRoom>)typeof(CollabRoomManager)
+        .GetField("rooms", BindingFlags.NonPublic | BindingFlags.Instance)!
+        .GetValue(manager)!)[DocId];
+    var post = typeof(CollabRoom).GetMethod("Post", BindingFlags.NonPublic | BindingFlags.Instance)!;
+    var holding = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var behind = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    post.Invoke(room, [(Func<Task>)(async () =>
+    {
+      entered.TrySetResult();
+      await holding.Task;
+    })]);
+    await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    using var cancelled = new CancellationTokenSource();
+    cancelled.Cancel();
+    var drain = manager.DrainAsync(cancelled.Token).AsTask();
+    post.Invoke(room, [(Func<Task>)(() => behind.Task)]);
+
+    holding.SetResult();
+    await drain.WaitAsync(TimeSpan.FromSeconds(10));
+    behind.SetResult();
+
+    Assert.Contains(
+        log,
+        entry => entry.Contains(
+            "abandoned its activity dispatch while draining: the drain was cancelled",
+            StringComparison.Ordinal));
   }
 
   /// <summary>

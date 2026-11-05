@@ -1410,6 +1410,42 @@ public sealed class CollabRoomManagerTests
         log);
   }
 
+  /// <summary>
+  /// A logger that throws while the drain reports a room it could not drain:
+  /// the throw leaves DrainAsync, so the host says the drain did not complete.
+  /// </summary>
+  [Fact]
+  public async Task ALoggerThatThrowsDuringTheDrainFailsTheDrain()
+  {
+    endpoint.Holds("doc-a", "a");
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions
+        {
+          ExportDebounce = TimeSpan.FromMinutes(5),
+          ExportMaxDelay = TimeSpan.FromMinutes(5),
+        },
+        time,
+        message => throw new InvalidOperationException("logger failed"));
+    var member = new FakeMember();
+    var membership = (await manager.JoinAsync("doc-a", member, CancellationToken.None)).Membership!;
+    var client = await SyncedAsync(membership, member);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    store.RefusesCancelledWrites = true;
+    using var shutdown = new CancellationTokenSource();
+    await shutdown.CancelAsync();
+
+    var error = await Assert.ThrowsAsync<InvalidOperationException>(
+        () => manager.DrainAsync(shutdown.Token).AsTask().WaitAsync(TimeSpan.FromSeconds(10)));
+
+    Assert.Equal("logger failed", error.Message);
+  }
+
   [Theory]
   [InlineData("")]
   [InlineData(".")]

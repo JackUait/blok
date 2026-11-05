@@ -114,7 +114,7 @@ impl Shared {
                 self.logf(&format!(
                     "collab: document \"{}\" failed to load in a way the next open repeats, so it is held off for {} (failure {failures}); the room's own log line says why",
                     room.doc_id,
-                    go_duration(wait)
+                    time_span(wait)
                 ));
             }
         } else {
@@ -152,31 +152,27 @@ fn forget_locked(rooms: &mut Rooms, room: &Arc<Room>) {
 
 /// Go's time.Duration String for the whole seconds and fractions the
 /// backoff produces.
-pub(crate) fn go_duration(d: std::time::Duration) -> String {
-    if d.is_zero() {
-        return "0s".to_owned();
-    }
-    let total = d.as_nanos();
-    if total < 1_000_000_000 {
-        let ms = d.as_secs_f64() * 1000.0;
-        return format!("{}ms", trim(ms));
-    }
-    let secs = d.as_secs();
-    let (h, m, s) = (secs / 3600, (secs / 60) % 60, secs % 60);
-    let frac = f64::from(d.subsec_nanos()) / 1e9;
-    let seconds = trim(s as f64 + frac);
-    if h > 0 {
-        format!("{h}h{m}m{seconds}s")
-    } else if m > 0 {
-        format!("{m}m{seconds}s")
+/// d as a .NET TimeSpan prints it ("c" format): [d.]hh:mm:ss[.fffffff], in
+/// whole 100 ns ticks.
+pub(crate) fn time_span(d: std::time::Duration) -> String {
+    let ticks = d.as_nanos() / 100;
+    let (fraction, seconds) = (ticks % 10_000_000, ticks / 10_000_000);
+    let days = seconds / 86_400;
+    let mut text = if days > 0 {
+        format!("{days}.")
     } else {
-        format!("{seconds}s")
+        String::new()
+    };
+    text += &format!(
+        "{:02}:{:02}:{:02}",
+        seconds / 3600 % 24,
+        seconds / 60 % 60,
+        seconds % 60
+    );
+    if fraction > 0 {
+        text += &format!(".{fraction:07}");
     }
-}
-
-fn trim(value: f64) -> String {
-    let text = format!("{value:.9}");
-    text.trim_end_matches('0').trim_end_matches('.').to_owned()
+    text
 }
 
 impl Manager {

@@ -243,3 +243,22 @@ async fn every_door_checks_purging_then_draining_then_the_cooldown() {
         );
     }
 }
+
+// C# AHeldOffWaitPrintsAsATimeSpan: the "held off" wait prints with
+// TimeSpan's "c" format.
+#[test]
+fn a_held_off_wait_prints_as_a_time_span() {
+    let second = Duration::from_secs(1);
+    let cases = [
+        (2 * second, "00:00:02"),
+        (60 * second, "00:01:00"),
+        (Duration::from_millis(5), "00:00:00.0050000"),
+        (Duration::from_millis(1500), "00:00:01.5000000"),
+        (Duration::from_nanos(150), "00:00:00.0000001"),
+        (90_061 * second, "1.01:01:01"),
+        ((12 * 86_400 + 1) * second, "12.00:00:01"),
+    ];
+    for (wait, printed) in cases {
+        assert_eq!(crate::manager::time_span(wait), printed, "{wait:?}");
+    }
+}

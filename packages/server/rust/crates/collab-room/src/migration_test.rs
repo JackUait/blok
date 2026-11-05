@@ -535,7 +535,14 @@ async fn a_migration_that_runs_past_the_runtimes_limits_is_held_off() {
         "a join while held off"
     );
     assert_eq!(calls.load(Ordering::SeqCst), 1);
-    assert!(r.logged("held off"), "log = {:?}", r.logs.lines());
+    // C# prints the wait as a TimeSpan.
+    assert!(
+        r.logged(&format!(
+            "collab: document \"{TEST_DOC}\" failed to load in a way the next open repeats, so it is held off for 00:00:02 (failure 1); the room's own log line says why"
+        )),
+        "log = {:?}",
+        r.logs.lines()
+    );
 
     r.clock
         .advance(Options::default().with_defaults().backoff(1));

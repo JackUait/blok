@@ -208,7 +208,7 @@ func (s *Server) handler(prefix string, protect func(http.Handler) http.Handler)
 		}
 		route.NotFound.ServeHTTP(w, r)
 	})
-	return withDefaultBodyLimits(router)
+	return dotnet.RecoverLikeKestrel(withDefaultBodyLimits(router))
 }
 
 func (s *Server) syncEndpoint() *synchttp.Endpoint {

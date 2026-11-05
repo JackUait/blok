@@ -113,7 +113,7 @@ var notifyShutdown = func(ctx context.Context) (context.Context, context.CancelF
 // listener wrapped too: serve on a headerListener.
 func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Server {
 	server := &http.Server{
-		Handler:     withServerHeader(withDeadline(handler, requestTimeout)),
+		Handler:     withServerHeader(withDeadline(dotnet.RecoverLikeKestrel(handler), requestTimeout)),
 		IdleTimeout: keepAliveTimeout,
 		// Without this net/http answers "OPTIONS *" itself.
 		DisableGeneralOptionsHandler: true,

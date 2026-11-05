@@ -18,9 +18,15 @@ fn main() {
         &args,
         &getenv,
         stderr,
-        async {
+        || {
             // SIGTERM, SIGINT and SIGQUIT: .NET stops gracefully on each.
-            let _ = blok_http::shutdown_signal().await;
+            let signals = blok_http::shutdown_signal();
+            async move {
+                match signals {
+                    Ok(signals) => signals.await,
+                    Err(_) => std::future::pending().await,
+                }
+            }
         },
         VERSION,
     ));

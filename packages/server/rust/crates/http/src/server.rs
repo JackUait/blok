@@ -145,38 +145,41 @@ impl Server {
     }
 }
 
-/// Resolves on SIGTERM, SIGINT or SIGQUIT: .NET stops gracefully on each.
+/// Installs the handlers now, then resolves on SIGTERM, SIGINT or SIGQUIT:
+/// .NET stops gracefully on each. Must be called inside a tokio runtime.
 #[cfg(unix)]
-pub async fn shutdown_signal() -> io::Result<()> {
+pub fn shutdown_signal() -> io::Result<impl Future<Output = ()>> {
     use tokio::signal::unix::{SignalKind, signal};
     let mut term = signal(SignalKind::terminate())?;
     let mut interrupt = signal(SignalKind::interrupt())?;
     let mut quit = signal(SignalKind::quit())?;
-    tokio::select! {
-        _ = term.recv() => {}
-        _ = interrupt.recv() => {}
-        _ = quit.recv() => {}
-    }
-    Ok(())
+    Ok(async move {
+        tokio::select! {
+            _ = term.recv() => {}
+            _ = interrupt.recv() => {}
+            _ = quit.recv() => {}
+        }
+    })
 }
 
 /// Resolves on what Go's signal.Notify reports on Windows for the same
 /// signals: Ctrl+C or Ctrl+Break (os.Interrupt), and a console close,
 /// logoff or shutdown (syscall.SIGTERM).
 #[cfg(windows)]
-pub async fn shutdown_signal() -> io::Result<()> {
+pub fn shutdown_signal() -> io::Result<impl Future<Output = ()>> {
     use tokio::signal::windows;
     let mut c = windows::ctrl_c()?;
     let mut brk = windows::ctrl_break()?;
     let mut close = windows::ctrl_close()?;
     let mut logoff = windows::ctrl_logoff()?;
     let mut shutdown = windows::ctrl_shutdown()?;
-    tokio::select! {
-        _ = c.recv() => {}
-        _ = brk.recv() => {}
-        _ = close.recv() => {}
-        _ = logoff.recv() => {}
-        _ = shutdown.recv() => {}
-    }
-    Ok(())
+    Ok(async move {
+        tokio::select! {
+            _ = c.recv() => {}
+            _ = brk.recv() => {}
+            _ = close.recv() => {}
+            _ = logoff.recv() => {}
+            _ = shutdown.recv() => {}
+        }
+    })
 }

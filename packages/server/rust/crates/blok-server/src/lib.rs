@@ -48,14 +48,17 @@ fn print(stderr: &Stderr, text: &str) {
     let _ = out.flush();
 }
 
-/// Runs the host until shutdown resolves; returns the exit code. Kestrel's
-/// limits are blok-http's defaults: 10 s for a head, 2 min idle, and every
-/// request cut off with 504 at 10 min.
-pub async fn run(
+/// Runs the host until the future `shutdown` makes resolves; returns the
+/// exit code. `shutdown` is called just before the bind, where C#'s
+/// StartAsync registers its signal handlers: a signal before that takes the
+/// default action, as it does in C#. Kestrel's limits are blok-http's
+/// defaults: 10 s for a head, 2 min idle, and every request cut off with 504
+/// at 10 min.
+pub async fn run<F: Future<Output = ()>>(
     args: &[String],
     getenv: &(dyn Fn(&str) -> String + Sync),
     stderr: Stderr,
-    shutdown: impl Future<Output = ()>,
+    shutdown: impl FnOnce() -> F,
     version: &str,
 ) -> i32 {
     let (host_args, conformance) = match parse_conformance_arguments(args) {
@@ -101,6 +104,7 @@ pub async fn run(
         server.limit_upgrades(max);
     }
 
+    let shutdown = shutdown();
     let options = server.options();
     let listeners = match listen(&options.listen_address, blok_dotnet::parse_ip) {
         Ok(listeners) => listeners,

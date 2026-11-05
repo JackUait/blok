@@ -56,7 +56,7 @@ async fn run_to_exit_with(args: &[&str], getenv: fn(&str) -> String) -> (i32, St
             &strings(args),
             &getenv,
             out.stderr(),
-            std::future::pending(),
+            std::future::pending,
             "dev",
         ),
     )
@@ -118,7 +118,7 @@ impl Running {
                     &all,
                     &getenv,
                     stderr,
-                    async {
+                    || async {
                         let _ = stopped.await;
                     },
                     version,
@@ -518,6 +518,58 @@ fn spawn_binary(args: &[&str], envs: &[(&str, &str)]) -> (std::process::Child, A
         }
     });
     (child, text)
+}
+
+// C#'s generic host registers its signal handlers in StartAsync, before
+// the bind: a signal earlier kills the process, a signal from the bind on
+// stops it gracefully, even before the ready line.
+#[tokio::test]
+async fn signal_handlers_are_installed_before_the_bind_and_after_validation() {
+    let address = free_port();
+    let out = Buffer::default();
+    let stderr = out.stderr();
+    let marked = out.stderr();
+    let code = tokio::time::timeout(
+        Duration::from_secs(10),
+        run(
+            &strings(&["--listen", &address]),
+            &no_env,
+            stderr,
+            move || {
+                let _ = marked.lock().unwrap().write_all(b"<signals>\n");
+                std::future::ready(())
+            },
+            "dev",
+        ),
+    )
+    .await
+    .expect("run did not exit");
+    assert_eq!(code, 0);
+    let text = out.text();
+    assert!(
+        text.starts_with("<signals>\nblok-server dev listening on "),
+        "{text:?}"
+    );
+
+    let refused = Buffer::default();
+    let marked = refused.stderr();
+    let code = run(
+        &strings(&["--auth", "ticket"]),
+        &no_env,
+        refused.stderr(),
+        move || {
+            let _ = marked.lock().unwrap().write_all(b"<signals>\n");
+            std::future::ready(())
+        },
+        "dev",
+    )
+    .await;
+    assert_eq!(code, 1);
+    assert!(
+        !refused.text().contains("<signals>"),
+        "{:?}",
+        refused.text()
+    );
 }
 
 #[tokio::test]

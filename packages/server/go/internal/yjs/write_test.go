@@ -301,3 +301,21 @@ func TestANegativeFormatLengthStillDeletesTheConflictingMarkAtTheStart(t *testin
 		t.Fatalf("bold %v", bold)
 	}
 }
+
+// C# FormattingTheSameNestedMarkObjectTwiceWritesItOnce: the mark keeps
+// the caller's value, so the second call finds it === and writes nothing.
+func TestFormattingTheSameNestedMarkObjectTwiceWritesItOnce(t *testing.T) {
+	doc := docWithID(4242)
+	text := doc.GetText(s("content"))
+	link := obj("link", obj("href", s("h"), "meta", obj("x", 1.0)))
+	doc.Transact(func(txn *Transaction) { text.Insert(txn, 0, s("ab"), obj()) })
+	first := doc.Transact(func(txn *Transaction) { text.Format(txn, 0, 2, link) })
+	second := doc.Transact(func(txn *Transaction) { text.Format(txn, 0, 2, link) })
+	const want = "010292210246922100046C696E6B1B7B2268726566223A2268222C226D657461223A7B2278223A317D7D86922101046C696E6B046E756C6C00"
+	if got := strings.ToUpper(hex.EncodeToString(first)); got != want {
+		t.Fatalf("first %s", got)
+	}
+	if second != nil {
+		t.Fatalf("second wrote %x", second)
+	}
+}

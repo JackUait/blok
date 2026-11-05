@@ -285,6 +285,29 @@ public sealed class YTextFormattingTests
     Assert.Equal("""[{"insert":"ab","attributes":{"bold":true}}]""", DeltaJson(text.ToDelta()).ToJsonString());
   }
 
+  /// <summary>
+  /// The same attributes object formatted twice. The mark keeps the
+  /// caller's value instance, so the second call finds a mark that is ===
+  /// what it wants (its nested object included) and writes nothing.
+  /// </summary>
+  [Fact]
+  public void FormattingTheSameNestedMarkObjectTwiceWritesItOnce()
+  {
+    var doc = new YDoc(4242);
+    var text = doc.GetText("content");
+    var updates = new List<byte[]>();
+    var link = Attrs(("link", Attrs(("href", "h"), ("meta", Attrs(("x", 1d))))));
+
+    doc.Transact(transaction => text.Insert(transaction, 0, "ab", Attrs()));
+    doc.UpdateEmitted += update => updates.Add(update.Update);
+    doc.Transact(transaction => text.Format(transaction, 0, 2, link));
+    doc.Transact(transaction => text.Format(transaction, 0, 2, link));
+
+    Assert.Equal(
+        "010292210246922100046C696E6B1B7B2268726566223A2268222C226D657461223A7B2278223A317D7D86922101046C696E6B046E756C6C00",
+        Convert.ToHexString(Assert.Single(updates)));
+  }
+
   private static AnyObject Attrs(params (string Key, object? Value)[] entries)
   {
     var attributes = new AnyObject();

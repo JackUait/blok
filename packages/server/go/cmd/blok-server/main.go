@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -111,6 +112,9 @@ func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Ser
 		IdleTimeout: keepAliveTimeout,
 		// Without this net/http answers "OPTIONS *" itself.
 		DisableGeneralOptionsHandler: true,
+		// The C# host clears Kestrel's loggers: a handler panic, an accept
+		// retry or a misused writer reaches no one, never raw on stderr.
+		ErrorLog: log.New(io.Discard, "", 0),
 		// The stream holds Kestrel's head limits; this caps heads only after
 		// it stops rewriting (a chunked trailer, an upgrade). net/http adds 4096.
 		MaxHeaderBytes: maxRequestLine + maxHeaderBlock - 4096,

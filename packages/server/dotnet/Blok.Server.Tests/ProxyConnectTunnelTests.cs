@@ -17,6 +17,8 @@ public sealed partial class ProxyConnectTunnelTests
   [Theory]
   // A Basic challenge: the CONNECT goes out again with the credentials.
   [InlineData("challenge", "200 ok|1 CONNECT auth=no|1 CONNECT auth=Basic dTpw")]
+  // A domain credential: Basic sends "domain\\user:password".
+  [InlineData("challenge-domain", "200 ok|1 CONNECT auth=no|1 CONNECT auth=Basic RE9NXHU6cA==")]
   // The challenge closes its conn: the retry opens a new one.
   [InlineData("challenge-close", "200 ok|1 CONNECT auth=no|2 CONNECT auth=Basic dTpw")]
   // A 407 with no challenge .NET can answer is the answer.
@@ -39,7 +41,7 @@ public sealed partial class ProxyConnectTunnelTests
     {
       Proxy = new WebProxy($"http://127.0.0.1:{((IPEndPoint)proxy.LocalEndpoint).Port}")
       {
-        Credentials = new NetworkCredential("u", "p"),
+        Credentials = new NetworkCredential("u", "p", mode == "challenge-domain" ? "DOM" : ""),
       },
       SslOptions = new SslClientAuthenticationOptions
       {
@@ -97,7 +99,7 @@ public sealed partial class ProxyConnectTunnelTests
           seen.Enqueue($"{id} {lines[0].Split(' ')[0]} auth={(auth is null ? "no" : auth["Proxy-Authorization:".Length..].Trim())}");
           string? answer = mode switch
           {
-            "challenge" when auth is null => "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\n\r\n",
+            "challenge" or "challenge-domain" when auth is null => "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\n\r\n",
             "challenge-close" when auth is null => "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
             "no-challenge" => "HTTP/1.1 407 Proxy Authentication Required\r\nContent-Length: 0\r\n\r\n",
             _ => null,

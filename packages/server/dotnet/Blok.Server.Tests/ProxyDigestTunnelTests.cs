@@ -25,6 +25,8 @@ public sealed partial class ProxyConnectTunnelTests
   [InlineData("auth-int", "u", "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\", algorithm=SHA-256, qop=auth-int, nc=00000001, cnonce=\"C\"")]
   [InlineData("userhash", "u", "200 ok|1 auth=no|1 auth=Digest username=\"ba84be203fdfc7d34e054a76d285d0c9\", userhash=true, realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\", algorithm=MD5")]
   [InlineData("utf8", "é", "200 ok|1 auth=no|1 auth=Digest username*=utf-8''%C3%A9, realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"")]
+  // A domain credential: Digest names the user alone.
+  [InlineData("domain", "u", "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"")]
   [InlineData("stale", "u", "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n2\", uri=\"/\", response=\"R\"")]
   [InlineData("unsupported", "u", "error 407|1 auth=no")]
   [InlineData("digest+basic", "u", "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"")]
@@ -44,7 +46,7 @@ public sealed partial class ProxyConnectTunnelTests
     {
       Proxy = new WebProxy($"http://127.0.0.1:{((IPEndPoint)proxy.LocalEndpoint).Port}")
       {
-        Credentials = new NetworkCredential(user, "p"),
+        Credentials = new NetworkCredential(user, "p", mode == "domain" ? "DOM" : ""),
       },
       SslOptions = new SslClientAuthenticationOptions
       {
@@ -82,7 +84,7 @@ public sealed partial class ProxyConnectTunnelTests
 
   private static string DigestChallenge(string mode, bool second) => mode switch
   {
-    "plain" or "utf8" => "Digest realm=\"r\", nonce=\"n\"",
+    "plain" or "utf8" or "domain" => "Digest realm=\"r\", nonce=\"n\"",
     "qop" => "Digest realm=\"r\", nonce=\"n\", qop=\"auth\", algorithm=MD5, opaque=\"o\"",
     "sha-sess" => "Digest realm=\"r\", nonce=\"n\", qop=\"auth,auth-int\", algorithm=SHA-256-sess",
     "auth-int" => "Digest realm=\"r\", nonce=\"n\", qop=\"auth-int\", algorithm=SHA-256",

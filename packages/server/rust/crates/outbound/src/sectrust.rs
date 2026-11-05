@@ -154,17 +154,16 @@ use raw::{detail_keys, evaluated};
 /// The signature_algorithms SslStream's ClientHello carries on macOS
 /// (SecureTransport), in its order, measured with `openssl s_server -trace`
 /// under a C# connect: no RSA-PSS and no EdDSA. SecureTransport also offers
-/// RSA and ECDSA with SHA-1 and ecdsa_secp521r1_sha512; those are left out
-/// on purpose. ring checks the signatures: it has no P-521 and no SHA-512
-/// ECDSA, so offering that scheme would only let a P-256 or P-384 server
-/// pick a signature that then fails. RSA keys under 2048 bits and P-521
-/// fail here where .NET takes them: a security choice, not an oversight.
-const OPERATOR_SCHEMES: [SignatureScheme; 5] = [
+/// RSA and ECDSA with SHA-1; those two are left out on purpose. ring checks
+/// the signatures, so RSA keys under 2048 bits and P-521 fail here where
+/// .NET takes them: a security choice, not an oversight.
+const OPERATOR_SCHEMES: [SignatureScheme; 6] = [
     SignatureScheme::RSA_PKCS1_SHA256,
     SignatureScheme::RSA_PKCS1_SHA384,
     SignatureScheme::RSA_PKCS1_SHA512,
     SignatureScheme::ECDSA_NISTP256_SHA256,
     SignatureScheme::ECDSA_NISTP384_SHA384,
+    SignatureScheme::ECDSA_NISTP521_SHA512,
 ];
 
 /// TrustResultDetails read as AppleCryptoNative_X509ChainGetStatusAtIndex

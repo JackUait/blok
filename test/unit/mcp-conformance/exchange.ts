@@ -218,6 +218,25 @@ const maskAt = (value: unknown, pointer: string): void => {
   }
 };
 
+/** A text content item holding a JSON object or array becomes {"type":"text","json":…}. */
+const parseTextItem = (item: unknown): unknown => {
+  if (!isRecord(item) || item.type !== 'text' || typeof item.text !== 'string') {
+    return item;
+  }
+  try {
+    const parsed: unknown = JSON.parse(item.text);
+
+    if (!isRecord(parsed) && !Array.isArray(parsed)) {
+      return item;
+    }
+    const { text: _text, ...rest } = item;
+
+    return { ...rest, json: parsed };
+  } catch {
+    return item;
+  }
+};
+
 /**
  * Parses JSON text content so ports are free in key order and escaping, and
  * checks that text and structuredContent say the same thing.
@@ -231,34 +250,20 @@ const normalize = (value: unknown, label: string): unknown => {
   }
   const out: Record<string, unknown> = Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, normalize(inner, label)]));
 
-  if (Array.isArray(out.content)) {
-    out.content = out.content.map((item: unknown) => {
-      if (!isRecord(item) || item.type !== 'text' || typeof item.text !== 'string') {
-        return item;
-      }
-      try {
-        const parsed: unknown = JSON.parse(item.text);
+  if (!Array.isArray(out.content)) {
+    return out;
+  }
+  const content: unknown[] = out.content.map((item: unknown) => parseTextItem(item));
+  const json = content.find((item): item is { json: unknown } => isRecord(item) && 'json' in item)?.json;
 
-        if (!isRecord(parsed) && !Array.isArray(parsed)) {
-          return item;
-        }
-        const { text: _text, ...rest } = item;
+  if (json !== undefined && 'structuredContent' in out) {
+    expect(json, `${label}: the text content differs from structuredContent`).toEqual(out.structuredContent);
 
-        return { ...rest, json: parsed };
-      } catch {
-        return item;
-      }
-    });
-    const json = out.content.find((item: unknown): item is { json: unknown } => isRecord(item) && 'json' in item)?.json;
-
-    if (json !== undefined && 'structuredContent' in out) {
-      expect(json, `${label}: the text content differs from structuredContent`).toEqual(out.structuredContent);
-      // Checked above, so the record keeps one copy.
-      out.content = out.content.map((item: unknown) => (isRecord(item) && 'json' in item ? { ...item, json: SAME_AS_STRUCTURED } : item));
-    }
+    // Checked above, so the record keeps one copy.
+    return { ...out, content: content.map((item) => (isRecord(item) && 'json' in item ? { ...item, json: SAME_AS_STRUCTURED } : item)) };
   }
 
-  return out;
+  return { ...out, content };
 };
 
 /** Masks every non-null value under these key names, anywhere in the answer. */
@@ -592,16 +597,31 @@ class CaseRun {
   }
 }
 
+/** JSON with object keys sorted, so a port's own key order in a body does not matter. */
+const canonical = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonical).join(',')}]`;
+  }
+  if (isRecord(value)) {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+  }
+
+  return JSON.stringify(value) ?? 'undefined';
+};
+
 /**
  * "sorted": calls made in parallel (a listing's authorize checks) arrive in any order.
  * "distinct": a room's reconnect attempts repeat on a timer, so only their content counts.
  */
 const orderedRequests = (requests: RecordedRequest[], order: FixtureCase['hostRequestOrder']): RecordedRequest[] => {
+  const keyed = requests.map((request) => ({ request, key: canonical(request) }));
+
   if (order === 'sorted') {
-    return [...requests].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    // Code-unit order, not localeCompare: the same on every machine.
+    return keyed.sort((a, b) => (a.key < b.key ? -1 : Number(a.key > b.key))).map(({ request }) => request);
   }
   if (order === 'distinct') {
-    return requests.filter((request, index) => requests.findIndex((other) => JSON.stringify(other) === JSON.stringify(request)) === index);
+    return keyed.filter(({ key }, index) => keyed.findIndex((other) => other.key === key) === index).map(({ request }) => request);
   }
 
   return requests;

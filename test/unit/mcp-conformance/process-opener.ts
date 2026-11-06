@@ -67,6 +67,12 @@ export const processOpener = (command: string[]): McpOpener => async (seed: Outp
     stderr: 'pipe',
   });
   const client = new Client({ name: PARITY_CLIENT, version: '1' });
+  // Drained so a chatty port cannot stall on a full pipe; shown when the case fails.
+  const stderr = { text: '' };
+
+  transport.stderr?.on('data', (chunk: Buffer) => {
+    stderr.text += chunk.toString('utf8');
+  });
   const close = async (): Promise<void> => {
     try {
       await client.close();
@@ -105,6 +111,6 @@ export const processOpener = (command: string[]): McpOpener => async (seed: Outp
     };
   } catch (thrown) {
     await close();
-    throw thrown;
+    throw new Error(`the spawned server failed: ${thrown instanceof Error ? thrown.message : String(thrown)}\nstderr:\n${stderr.text}`, { cause: thrown });
   }
 };

@@ -24,6 +24,10 @@
  *      `node scripts/test-mcp-conformance.mjs --target node --suite <file> --update`.
  *      Node writes what it answered into the fixture.
  *   3. Read the recorded answers. They are the contract for every port.
+ *   A case with "fsVariants" (letter case of file names) is recorded once per
+ *   kind of disk: run --update as above, then again with TMPDIR on a
+ *   case-sensitive volume (macOS: `hdiutil create -fs 'Case-sensitive APFS'`),
+ *   adding `--test-name-pattern '<case name>'` so only that case is re-recorded.
  * A case that fails on --target node after an engine change is regenerated the
  * same way; read the diff before committing it.
  *
@@ -190,8 +194,8 @@ function selectedOptions(args) {
 
 /**
  * Vitest exits 0 when nothing ran, and a test that skips itself reads as a
- * pass. So every run must execute something, and only the placeholder suite
- * may hold todo tests.
+ * pass. So every run must execute something, and, unless a name pattern
+ * filtered the run, only the placeholder suite may hold todo tests.
  */
 async function requireExecutedTests(reportPath, testNamePattern) {
   let report;
@@ -202,7 +206,8 @@ async function requireExecutedTests(reportPath, testNamePattern) {
     throw new Error(`Could not read the vitest report at ${reportPath}: ${error instanceof Error ? error.message : error}`);
   }
 
-  const notRun = (report.testResults ?? []).flatMap((file) => (file.assertionResults ?? [])
+  // -t reports every test it filters out as skipped.
+  const notRun = testNamePattern !== undefined ? [] : (report.testResults ?? []).flatMap((file) => (file.assertionResults ?? [])
     .filter((test) => test.status !== 'passed' && test.status !== 'failed')
     .filter((test) => !(test.status === 'todo' && file.name.endsWith(`/${PLACEHOLDER_SUITE}.test.ts`)))
     .map((test) => `${relative(repositoryRoot, file.name)}: ${test.fullName} (${test.status})`));

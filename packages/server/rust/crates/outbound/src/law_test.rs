@@ -29,6 +29,9 @@ const CLIENT_OWNERS: &[(&str, usize)] = &[
     ("outbound/src/operator.rs", 1),
     ("blob/src/s3.rs", 1),
     ("collab-docendpoint/src/client.rs", 1),
+    // The MCP server's calls go only to URLs given at start: the doc
+    // endpoint, the authorize webhook, the ticket URL, the JWKS and the room.
+    ("mcp/src/outbound.rs", 1),
 ];
 
 /// `code` with comments, string and char literals blanked, newlines kept.

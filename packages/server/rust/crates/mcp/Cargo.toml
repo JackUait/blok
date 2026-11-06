@@ -1,0 +1,44 @@
+[package]
+name = "blok-mcp"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "blok_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "blok-mcp"
+path = "src/main.rs"
+
+[dependencies]
+base64 = "0.22"
+blok-blokserver-ticket = { path = "../blokserver-ticket" }
+blok-dotnet = { path = "../dotnet" }
+blok-jsjson = { path = "../jsjson" }
+blok-http = { path = "../http" }
+blok-jsruntime = { path = "../jsruntime" }
+blok-outbound = { path = "../outbound" }
+bytes = "1"
+http = "1"
+http-body-util = "0.1"
+ring = "0.17"
+serde = "1"
+# Pinned: rmcp ships a minor release about every week, and the MCP
+# conformance suite is what proves a bump. Client and auth features stay off:
+# they pull reqwest, which dials outside the outbound law.
+rmcp = { version = "=3.9.0", default-features = false, features = ["server", "transport-io", "elicitation", "transport-streamable-http-server"] }
+# preserve_order: rmcp holds tool schemas as serde_json maps, and the default
+# BTreeMap re-sorts their keys. raw_value: documents pass through untouched.
+serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net", "io-util", "io-std", "fs"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "time", "net", "io-util", "fs"] }
+
+[lints]
+workspace = true

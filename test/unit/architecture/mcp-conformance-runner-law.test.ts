@@ -52,7 +52,6 @@ describe('MCP conformance runner law', () => {
   // A port that does not exist yet must fail fast with a message naming what to build.
   it.each([
     ['csharp', 'packages/server/dotnet/Blok.Mcp/Blok.Mcp.csproj'],
-    ['rust', 'blok-mcp'],
   ])('fails clearly, without hanging, while the %s target is missing', (target, names) => {
     const result = runRunner(['--target', target]);
 
@@ -60,6 +59,18 @@ describe('MCP conformance runner law', () => {
     expect(result.stderr).not.toContain('Usage:');
     expect(result.stderr).toContain(`The ${target} MCP target`);
     expect(result.stderr).toContain(names);
+  });
+
+  // A built port is found and built with its own toolchain; with no PATH that spawn fails by name.
+  it.each([
+    ['rust', 'cargo'],
+  ])('finds the %s target and builds it with %s', (target, toolchain) => {
+    const result = runRunner(['--target', target]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).not.toContain('Usage:');
+    expect(result.stderr).not.toContain(`The ${target} MCP target`);
+    expect(result.stderr).toContain(`spawn ${toolchain} ENOENT`);
   });
 
   it('keeps one case per entry with a unique name in every fixture file', () => {

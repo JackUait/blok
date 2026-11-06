@@ -184,3 +184,50 @@ fn undo_removes_an_inserted_nested_map_and_redo_restores_its_entries() {
         Some(&Value::String(Str::from("one")))
     );
 }
+
+#[test]
+fn a_preview_shows_the_undone_state_on_a_copy_and_leaves_the_doc_alone() {
+    let agent = doc(1);
+    agent.enable_undo();
+    let map = agent.get_map("m").unwrap();
+    captured(&agent, |txn| {
+        map.set(txn, "locked", In::Any(Value::Bool(false))).unwrap();
+    });
+    captured(&agent, |txn| {
+        map.set(txn, "locked", In::Any(Value::Bool(true))).unwrap();
+    });
+    let top = agent.stack_top(Direction::Undo);
+
+    let preview = agent.preview(Direction::Undo).unwrap();
+    assert_eq!(
+        preview
+            .get_map("m")
+            .unwrap()
+            .get("locked")
+            .unwrap()
+            .as_value(),
+        Some(&Value::Bool(false))
+    );
+    assert_eq!(
+        map.get("locked").unwrap().as_value(),
+        Some(&Value::Bool(true))
+    );
+    assert_eq!(agent.stack_top(Direction::Undo), top);
+    assert_eq!(agent.stack_top(Direction::Redo), None);
+
+    agent.replay(Direction::Undo).unwrap();
+    let redone = agent.preview(Direction::Redo).unwrap();
+    assert_eq!(
+        redone
+            .get_map("m")
+            .unwrap()
+            .get("locked")
+            .unwrap()
+            .as_value(),
+        Some(&Value::Bool(true))
+    );
+    assert_eq!(
+        map.get("locked").unwrap().as_value(),
+        Some(&Value::Bool(false))
+    );
+}

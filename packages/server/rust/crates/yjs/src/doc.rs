@@ -403,6 +403,38 @@ impl Doc {
         Ok((applied, result?))
     }
 
+    /// What the top step's undo (or redo) would give, replayed on a copy of
+    /// the doc; the doc and its stacks are untouched. The copy knows no
+    /// earlier redone links, so a step redone more than once may differ.
+    pub fn preview(&self, direction: crate::undo::Direction) -> Result<Doc, crate::Error> {
+        let state = self.encode_state_as_update(&[])?;
+        let (client, top) = {
+            let st = self.lock();
+            let top = st.undo.as_ref().and_then(|um| match direction {
+                crate::undo::Direction::Undo => um.undo.last().cloned(),
+                crate::undo::Direction::Redo => um.redo.last().cloned(),
+            });
+            (st.client_id, top)
+        };
+        let copy = Doc::new(Options {
+            client_id: Some(client as u32),
+            no_gc: true,
+        });
+        copy.apply_update(&state)?;
+        copy.adopt_client_id(client);
+        if let Some(top) = top {
+            copy.enable_undo();
+            if let Some(um) = copy.lock().undo.as_mut() {
+                match direction {
+                    crate::undo::Direction::Undo => um.undo.push(top),
+                    crate::undo::Direction::Redo => um.redo.push(top),
+                }
+            }
+            copy.replay(direction)?;
+        }
+        Ok(copy)
+    }
+
     /// Replaces the update encoder, so a test can see each transaction.
     #[cfg(test)]
     pub(crate) fn set_encoder(&self, encoder: Option<EncoderHook>) {

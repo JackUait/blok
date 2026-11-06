@@ -65,7 +65,10 @@ internal sealed class HandleRegistry<TSession>(
 
     try
     {
-      await entry.Queue.WaitAsync();
+      var turn = entry.Queue.WaitAsync();
+
+      HandleArrival.Joined();
+      await turn;
       try
       {
         return await run(entry.Session, entry.DocumentId);
@@ -99,7 +102,10 @@ internal sealed class HandleRegistry<TSession>(
       entries.Remove(handle);
       entry = found;
     }
-    await entry.Queue.WaitAsync();
+    var turn = entry.Queue.WaitAsync();
+
+    HandleArrival.Joined();
+    await turn;
     entry.Queue.Release();
 
     return entry.Session;
@@ -224,5 +230,17 @@ internal static class McpNumbers
     return value == Math.Floor(value) && Math.Abs(value) < 1e21
         ? value.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
         : value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+  }
+}
+
+/// <summary>The call's place in its handle's arrival order (McpServerCore.InArrivalOrderAsync).</summary>
+internal static class HandleArrival
+{
+  internal static readonly AsyncLocal<TaskCompletionSource?> Current = new();
+
+  /// <summary>The call joined the handle's queue: the next call may go on to it.</summary>
+  internal static void Joined()
+  {
+    Current.Value?.TrySetResult();
   }
 }

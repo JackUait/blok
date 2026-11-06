@@ -99,6 +99,14 @@ internal static class McpSdkServer
       throw new McpProtocolException($"Unknown tool: {name}", McpErrorCode.InvalidParams);
     }
     var raw = context.JsonRpcRequest.Params as JsonObject;
+
+    // Before the first await: calls on one handle keep the order they arrived in, as Node's queue does.
+    return await core.InArrivalOrderAsync(McpJson.String(raw?["arguments"]?["handle"]), () => CallInOrderAsync(core, identity, name, raw, context, token));
+  }
+
+  private static async Task<CallToolResult> CallInOrderAsync(
+      McpServerCore core, McpIdentity identity, string name, JsonObject? raw, RequestContext<CallToolRequestParams> context, CancellationToken token)
+  {
     var meta = raw?["_meta"] as JsonObject;
     var clientName = McpJson.String((meta?[ClientInfoMeta] as JsonObject)?["name"]) ?? context.Server.ClientInfo?.Name;
     var capabilities = meta is not null && meta.ContainsKey(ClientCapabilitiesMeta)

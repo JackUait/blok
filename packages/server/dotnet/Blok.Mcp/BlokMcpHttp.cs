@@ -31,6 +31,8 @@ internal static class BlokMcpHttp
       kestrel.Listen(address, port);
     });
     builder.Services.AddBlokMcpServer(host, config);
+    // Stop lets calls in flight finish and answer, as Node's stop drains them (STOP_DRAIN_MS).
+    builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(45));
     await using var app = builder.Build();
     var bound = 0;
     var guard = new McpHttpGuard(config, () => bound, Path);

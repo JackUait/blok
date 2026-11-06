@@ -25,6 +25,11 @@ internal sealed class McpServerCore : IAsyncDisposable
   private readonly PagePorts? pages;
   // page.rename and page.setIcon close their page session without waiting; stop waits for those closes.
   private readonly HashSet<Task> pageCloses = [];
+  // Every tools/call and sweep, so stop waits for it.
+  private readonly HashSet<Task> inFlight = [];
+  private Task? stopping;
+  // Per handle, the last call to arrive: the next one starts after it.
+  private readonly Dictionary<string, Task> arrivals = new(StringComparer.Ordinal);
   private JsonObject? surface;
   private int stopped;
 
@@ -54,10 +59,30 @@ internal sealed class McpServerCore : IAsyncDisposable
     handles = new HandleRegistry<IHandleSession>(config.IdleMs, config.MaxHandles, session => session.CloseAsync("expired"));
     var period = TimeSpan.FromMilliseconds(Math.Min(config.IdleMs, 30_000));
 
-    sweeper = new Timer(_ => _ = SweepAsync(), null, period, period);
+    sweeper = new Timer(_ => Track(inFlight, SweepAsync()), null, period, period);
   }
 
   internal McpBundle Bundle => bundle;
+
+  /// <summary>
+  /// How long stop waits for work in flight (server.ts STOP_DRAIN_MS): above the slowest bounded
+  /// open, 10 s authorize webhook + 30 s endpoint load.
+  /// </summary>
+  internal TimeSpan StopDrain { get; set; } = TimeSpan.FromSeconds(45);
+
+  /// <summary>
+  /// Closes every handle and waits for each call in flight, so its answer can still go out,
+  /// and for page closes. Gives up after <see cref="StopDrain"/>. Runs once.
+  /// </summary>
+  internal Task StopAsync()
+  {
+    lock (inFlight)
+    {
+      stopping ??= StopOnceAsync();
+
+      return stopping;
+    }
+  }
 
   internal McpConfig Config => config;
 
@@ -77,6 +102,51 @@ internal sealed class McpServerCore : IAsyncDisposable
     finally
     {
       surfaceGate.Release();
+    }
+  }
+
+  /// <summary>
+  /// Calls on one handle reach its queue in the order this was called, as Node's queue takes them.
+  /// The SDK starts handlers in arrival order but runs them at once, and the bundle checks before
+  /// the queue would reorder them. Each call waits until the one before it has joined the queue.
+  /// </summary>
+  internal Task<T> InArrivalOrderAsync<T>(string? handle, Func<Task<T>> run)
+  {
+    if (handle is null)
+    {
+      return run();
+    }
+    var mine = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    Task previous;
+
+    lock (arrivals)
+    {
+      previous = arrivals.GetValueOrDefault(handle) ?? Task.CompletedTask;
+      arrivals[handle] = mine.Task;
+    }
+
+    return AfterAsync(handle, previous, mine, run);
+  }
+
+  private async Task<T> AfterAsync<T>(string handle, Task previous, TaskCompletionSource mine, Func<Task<T>> run)
+  {
+    try
+    {
+      await previous;
+      HandleArrival.Current.Value = mine;
+
+      return await run();
+    }
+    finally
+    {
+      lock (arrivals)
+      {
+        if (arrivals.GetValueOrDefault(handle) == mine.Task)
+        {
+          arrivals.Remove(handle);
+        }
+      }
+      mine.TrySetResult();
     }
   }
 
@@ -110,7 +180,16 @@ internal sealed class McpServerCore : IAsyncDisposable
     return await bundle.CallAsync("mcpPrompt", input, cancellationToken);
   }
 
-  internal async Task<McpCallResult> CallToolAsync(string name, JsonObject? arguments, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
+  internal Task<McpCallResult> CallToolAsync(string name, JsonObject? arguments, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
+  {
+    var call = DispatchAsync(name, arguments, caller, approval, cancellationToken);
+
+    Track(inFlight, call);
+
+    return call;
+  }
+
+  private async Task<McpCallResult> DispatchAsync(string name, JsonObject? arguments, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
   {
     var input = new JsonObject
     {
@@ -154,13 +233,65 @@ internal sealed class McpServerCore : IAsyncDisposable
 
   public async ValueTask DisposeAsync()
   {
-    if (Interlocked.Exchange(ref stopped, 1) == 1)
+    await StopAsync();
+    if (Interlocked.Exchange(ref stopped, 1) == 0)
     {
-      return;
+      surfaceGate.Dispose();
     }
+  }
+
+  private async Task StopOnceAsync()
+  {
     await sweeper.DisposeAsync();
-    await handles.CloseAllAsync(session => session.CloseAsync("closed"));
-    surfaceGate.Dispose();
+    var work = Task.Run(async () =>
+    {
+      await Task.WhenAll(handles.CloseAllAsync(session => session.CloseAsync("closed")), DrainAsync());
+      // An execute that closeAll waited for may have closed a page session after the first drain.
+      await DrainAsync();
+    });
+
+    await Task.WhenAny(work, Task.Delay(StopDrain));
+  }
+
+  // Work in flight can add more, so it looks again until nothing new is left.
+  private async Task DrainAsync()
+  {
+    var seen = new HashSet<Task>();
+
+    while (true)
+    {
+      Task[] pending;
+
+      lock (inFlight)
+      {
+        lock (pageCloses)
+        {
+          pending = [.. inFlight.Concat(pageCloses).Where(seen.Add)];
+        }
+      }
+      if (pending.Length == 0)
+      {
+        return;
+      }
+      await Task.WhenAll(pending.Select(task => task.ContinueWith(_ => { }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)));
+    }
+  }
+
+  private static void Track(HashSet<Task> set, Task task)
+  {
+    lock (set)
+    {
+      set.Add(task);
+    }
+    _ = task.ContinueWith(
+        done =>
+        {
+          lock (set)
+          {
+            set.Remove(done);
+          }
+        },
+        CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
   }
 
   private static McpCallResult Answer(JsonObject answer)
@@ -375,19 +506,7 @@ internal sealed class McpServerCore : IAsyncDisposable
 
   private void TrackPageClose(Task closing)
   {
-    lock (pageCloses)
-    {
-      pageCloses.Add(closing);
-    }
-    _ = closing.ContinueWith(
-        done =>
-        {
-          lock (pageCloses)
-          {
-            pageCloses.Remove(done);
-          }
-        },
-        CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    Track(pageCloses, closing);
   }
 
   // The opener's createPage for stored mode: a new id, authorized like a write open, saved empty.
@@ -464,15 +583,30 @@ internal sealed class McpServerCore : IAsyncDisposable
 
   private async Task<JsonObject> CloseAsync(string handle, McpCaller caller)
   {
-    // A revoked document answers FORBIDDEN and the handle stays.
-    await handles.UseAsync(handle, caller.Principal, async (_, documentId) =>
-    {
-      await StillAllowedAsync(caller, documentId, false, CancellationToken.None);
+    // A refused or failed check still closes, so the handle does not keep its --max-handles slot.
+    // An unknown handle fails again in remove. Remove waits for use, so it runs outside the callback.
+    Exception? refusal = null;
 
-      return true;
-    });
+    try
+    {
+      await handles.UseAsync(handle, caller.Principal, async (_, documentId) =>
+      {
+        await StillAllowedAsync(caller, documentId, false, CancellationToken.None);
+
+        return true;
+      });
+    }
+    catch (Exception error)
+    {
+      refusal = error;
+    }
     var session = await handles.RemoveAsync(handle, caller.Principal);
     var summary = await session.CloseAsync("closed");
+
+    if (refusal is not null)
+    {
+      System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(refusal);
+    }
     var answer = new JsonObject { ["closed"] = true };
 
     foreach (var (key, value) in summary)

@@ -12,6 +12,8 @@ internal delegate McpCallerIdentity McpIdentity(RequestContext<CallToolRequestPa
 
 internal sealed record McpCallerIdentity(string Principal, IReadOnlyList<string>? Scopes);
 
+internal sealed record McpSdkSurface(string Version, string? Instructions, List<Tool> Tools, List<Prompt> Prompts);
+
 /// <summary>Builds the SDK server options over the shell: blok-mcp's tools, prompts and instructions.</summary>
 internal static class McpSdkServer
 {
@@ -20,41 +22,56 @@ internal static class McpSdkServer
 
   internal static async Task<McpServerOptions> OptionsAsync(McpServerCore core, McpIdentity identity, CancellationToken cancellationToken)
   {
+    var options = new McpServerOptions();
+
+    Configure(options, await PrepareAsync(core, cancellationToken), core, identity);
+
+    return options;
+  }
+
+  /// <summary>What every server built over one shell shares: built once, as Node caches its surface.</summary>
+  internal static async Task<McpSdkSurface> PrepareAsync(McpServerCore core, CancellationToken cancellationToken)
+  {
     var surface = await core.SurfaceAsync(cancellationToken);
     var version = await core.Bundle.CallTextAsync("version", "{}", cancellationToken);
-    var tools = Deserialize<List<Tool>>(surface["tools"]);
-    var prompts = Deserialize<List<Prompt>>(surface["prompts"]);
+
+    return new McpSdkSurface(
+        version,
+        McpJson.String(surface["instructions"]),
+        Deserialize<List<Tool>>(surface["tools"]),
+        Deserialize<List<Prompt>>(surface["prompts"]));
+  }
+
+  internal static void Configure(McpServerOptions options, McpSdkSurface surface, McpServerCore core, McpIdentity identity)
+  {
+    var tools = surface.Tools;
+    var prompts = surface.Prompts;
     var byName = tools.Select(tool => tool.Name).ToHashSet(StringComparer.Ordinal);
 
-    var options = new McpServerOptions
+    options.ServerInfo = new Implementation { Name = "blok-mcp", Version = surface.Version };
+    options.ServerInstructions = surface.Instructions;
+    options.Capabilities = new ServerCapabilities { Tools = new ToolsCapability(), Prompts = new PromptsCapability() };
+    options.Handlers = new McpServerHandlers
     {
-      ServerInfo = new Implementation { Name = "blok-mcp", Version = version },
-      ServerInstructions = McpJson.String(surface["instructions"]),
-      Capabilities = new ServerCapabilities { Tools = new ToolsCapability(), Prompts = new PromptsCapability() },
-      Handlers = new McpServerHandlers
+      ListToolsHandler = (_, _) => ValueTask.FromResult(new ListToolsResult { Tools = tools }),
+      ListPromptsHandler = (_, _) => ValueTask.FromResult(new ListPromptsResult { Prompts = prompts }),
+      GetPromptHandler = async (context, token) =>
       {
-        ListToolsHandler = (_, _) => ValueTask.FromResult(new ListToolsResult { Tools = tools }),
-        ListPromptsHandler = (_, _) => ValueTask.FromResult(new ListPromptsResult { Prompts = prompts }),
-        GetPromptHandler = async (context, token) =>
+        var name = context.Params?.Name ?? string.Empty;
+        var arguments = context.Params?.Arguments is { } given ? JsonSerializer.SerializeToNode(given, McpJsonUtilities.DefaultOptions) : null;
+        var outcome = await core.PromptAsync(name, arguments, token);
+
+        if (outcome["error"] is JsonObject error)
         {
-          var name = context.Params?.Name ?? string.Empty;
-          var arguments = context.Params?.Arguments is { } given ? JsonSerializer.SerializeToNode(given, McpJsonUtilities.DefaultOptions) : null;
-          var outcome = await core.PromptAsync(name, arguments, token);
+          throw new McpProtocolException(McpJson.String(error["message"]) ?? string.Empty, (McpErrorCode)(int)(McpJson.Number(error["code"]) ?? -32602));
+        }
 
-          if (outcome["error"] is JsonObject error)
-          {
-            throw new McpProtocolException(McpJson.String(error["message"]) ?? string.Empty, (McpErrorCode)(int)(McpJson.Number(error["code"]) ?? -32602));
-          }
-
-          return Deserialize<GetPromptResult>(outcome["result"]);
-        },
-        CallToolHandler = (context, token) => Internal(() => CallToolAsync(core, identity, byName, context, token)),
+        return Deserialize<GetPromptResult>(outcome["result"]);
       },
+      CallToolHandler = (context, token) => Internal(() => CallToolAsync(core, identity, byName, context, token)),
     };
 
     new McpWireFilters().Install(options);
-
-    return options;
   }
 
   /// <summary>As Node: a throw that is not model-fixable is JSON-RPC -32603, not a tool error.</summary>

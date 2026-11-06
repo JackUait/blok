@@ -763,6 +763,16 @@ The binary reports its release version on `/health`. A local `go build` reports 
 
 These names never overlap the C# archives or `checksums.txt`. The npm wrapper downloads only the C# archives, and a test fails if it ever names a Go one.
 
+## MCP server
+
+Blok's MCP server lets an MCP client read and edit Blok documents. Besides the Node package, `@bloklabs/mcp`, it comes in three builds next to the servers here. All four take the same flags, and one shared suite checks each of them against Node: `node scripts/test-mcp-conformance.mjs --target node|csharp|go|rust`.
+
+- **C#.** Two NuGet packages. `Blok.Mcp` is a .NET tool: `dotnet tool install -g Blok.Mcp`, or `dnx Blok.Mcp`. `Blok.Server.Mcp` adds it to an ASP.NET Core app with `builder.Services.AddBlokMcp(...)` and `app.MapBlokMcp("/mcp")`. See `dotnet/Blok.Mcp/README.md` and `dotnet/Blok.Server.Mcp/README.md`.
+- **Go.** `go install github.com/JackUait/blok/packages/server/go/v2/cmd/blok-mcp@latest`, or embed it with `blokmcp.New`. The release also ships `blok-mcp-go_<os>_<arch>` archives beside the Go server's. See `go/blokmcp/README.md`.
+- **Rust.** `cargo build --release -p blok-mcp` in `rust/`. Like the Rust server, it ships nothing yet. See `rust/crates/mcp/README.md`.
+
+The release packs both NuGets with the release version, and writes that version into `Blok.Mcp`'s `.mcp/server.json`.
+
 ## Docs
 
 Full configuration and deployment guidance: [https://blokeditor.com/docs](https://blokeditor.com/docs)

@@ -1,4 +1,9 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { inputRequired, inputResponse } from '@modelcontextprotocol/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { safeClientName, defaultAgentActor } from '../../../src/mcp/actor';
@@ -11,6 +16,13 @@ import { getMcpPrompt, listMcpPrompts } from '../../../src/mcp/prompts';
 import type { HandleSession } from '../../../src/mcp/session';
 import { McpSurfaceError, surfaceError } from '../../../src/mcp/errors';
 import { failure } from '../../../src/shared/agent/errors';
+import { approvalKey } from '../../../src/shared/agent/approval';
+import { modelAnswer } from '../../../src/shared/agent/model-answer';
+import { approvalQuestion, canElicit, elicitationApprover, readInputResponse } from '../../../src/shared/mcp/approval';
+import { createDocumentAgentSession } from '../../../src/shared/agent';
+import { createHeadlessPorts, loadStoredDocument } from '../../../src/view/agent-runtime';
+import type { AgentApprovalRequest, AgentBatch, AgentResult } from '../../../types/agent';
+import type { OutputData } from '../../../types/data-formats/output-data';
 import { assembleMcp } from '../../../src/mcp/server';
 import type { BlokMcpOptions } from '../../../src/mcp/options';
 import { isObject } from '../../../src/shared/type-guards';
@@ -367,5 +379,252 @@ describe('server runtime mcpResolveMode and mcpActor', () => {
 
     expect(await call('mcpActor', { principal: 'alice', ...(raw !== undefined && { clientName: raw }) }))
       .toEqual({ clientName, actor: defaultAgentActor('alice', clientName), presenceName: clientName });
+  });
+});
+
+const NOW = Date.UTC(2026, 10, 7, 12, 0, 0);
+const docFixture: OutputData = {
+  title: 'Notes <é>   😀',
+  blocks: [
+    { id: 'p1', type: 'paragraph', data: { text: 'Hello <b>world</b>' } },
+    { id: 'p2', type: 'paragraph', data: { text: 'Second line' } },
+  ],
+};
+
+describe('server runtime MCP sessions against blok-mcp over a files source', () => {
+  let dir: string;
+  const caller: Caller = { principal: 'alice', clientName: 'Desk', scopes: null };
+  const actor = defaultAgentActor('alice', 'Desk');
+  const mcpFlags = { pageTitles: 'off', sync: false, source: true, uploads: false };
+
+  const openNode = async () => {
+    const assembled = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir } });
+    const opened = await assembled.dispatch('blok_open', { documentId: 'doc', write: true }, caller);
+
+    return { assembled, handle: String(opened.structuredContent.handle) };
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
+    dir = mkdtempSync(join(tmpdir(), 'blok-bundle-mcp-'));
+    writeFileSync(join(dir, 'doc.json'), JSON.stringify(docFixture));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it.each([{}, { detail: 'full' }, { ids: ['p2'] }, { depth: 'x' }])('reads %o as Node does', async (view) => {
+    const { assembled, handle } = await openNode();
+
+    try {
+      const node = await assembled.dispatch('blok_read', { handle, ...view }, caller);
+
+      expect(await call('mcpRead', { mcp: { ...mcpFlags, mode: 'stored' }, document: docFixture, actor, view })).toEqual({ answer: node });
+    } finally {
+      await assembled.stop();
+    }
+  });
+
+  it.each([{}, { tool: 'paragraph' }, { command: 'block.insert' }, { tool: 'nope' }])('describes %o as Node does', async (query) => {
+    const { assembled, handle } = await openNode();
+
+    try {
+      const node = await assembled.dispatch('blok_describe', { handle, ...query }, caller);
+
+      expect(await call('mcpDescribe', { mcp: { ...mcpFlags, mode: 'stored' }, document: docFixture, actor, query })).toEqual({ answer: node });
+    } finally {
+      await assembled.stop();
+    }
+  });
+
+  const batches: Array<[string, AgentBatch]> = [
+    ['a text edit', { commands: [{ name: 'text.replace', args: { id: 'p1', range: { find: 'world' }, with: 'there' } }] }],
+    ['a title', { commands: [{ name: 'doc.setTitle', args: { title: 'Plan <x>  ' } }] }],
+    ['a read', { commands: [{ name: 'doc.read', args: {} }] }],
+    ['an unknown command', { commands: [{ name: 'nope.nope', args: {} }] }],
+    ['a stale revision', { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }], expectRevision: 'old' }],
+  ];
+
+  it.each(batches)('executes %s as Node does, saving the same bytes', async (_label, batch) => {
+    const { assembled, handle } = await openNode();
+
+    try {
+      const node = await assembled.dispatch('blok_execute', { handle, ...batch }, caller);
+      const nodeFile = readFileSync(join(dir, 'doc.json'), 'utf-8');
+      const ran = await call('agentExecute', {
+        mcp: { ...mcpFlags, mode: 'stored', write: true }, document: docFixture, actor, batch, documentText: 'file',
+      });
+      const delivery = ran.save === true && typeof ran.documentText === 'string'
+        ? { durable: true, pending: false, serverSequence: null, savedVersion: createHash('sha256').update(ran.documentText).digest('hex') }
+        : undefined;
+
+      expect(ran.save).toBe(delivery !== undefined);
+      if (typeof ran.documentText === 'string') {
+        expect(ran.documentText).toBe(nodeFile);
+      }
+      expect(await call('mcpExecuteAnswer', { result: ran.result, ...(delivery !== undefined && { delivery }) })).toEqual({ answer: node });
+    } finally {
+      await assembled.stop();
+    }
+  });
+
+  it('refuses a write on a read-only handle before it runs, as Node does', async () => {
+    const assembled = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir } });
+
+    try {
+      const opened = await assembled.dispatch('blok_open', { documentId: 'doc' }, caller);
+      const batch = batches[1][1];
+      const node = await assembled.dispatch('blok_execute', { handle: opened.structuredContent.handle, ...batch }, caller);
+      const ran = await call('agentExecute', { mcp: { ...mcpFlags, mode: 'stored', write: false }, document: docFixture, actor, batch });
+
+      expect(ran).toMatchObject({ writes: true, save: false, document: docFixture });
+      expect(await call('mcpExecuteAnswer', { result: ran.result })).toEqual({ answer: node });
+      expect((await call('agentExecute', { mcp: { ...mcpFlags, mode: 'live', write: false }, document: docFixture, actor, batch })).result)
+        .toMatchObject({ ok: false, error: { code: 'READ_ONLY', message: 'This handle cannot write to the room.' } });
+    } finally {
+      await assembled.stop();
+    }
+  });
+
+  it('answers a save the source refused with the batch warnings, as Node does', async () => {
+    const result: AgentResult = { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [{ code: 'CORRECTED', message: 'Fixed.' }] };
+    const error = surfaceError('DOCUMENT_CHANGED', 'The document changed on disk since you opened it. Read it again, then retry.').agentError;
+
+    expect(await call('mcpExecuteAnswer', { result, failed: { helper: 'surface', error: { code: error.code, message: error.message } } })).toEqual({
+      answer: { structuredContent: { ok: false, warnings: result.warnings, error, delivery: { durable: false, pending: false, serverSequence: null, savedVersion: null } }, isError: true },
+    });
+  });
+
+  it('carries undo steps between calls, as a Node handle keeps them', async () => {
+    const { assembled, handle } = await openNode();
+
+    try {
+      const edit = batches[0][1];
+      const undo: AgentBatch = { commands: [{ name: 'history.undo', args: {} }] };
+
+      await assembled.dispatch('blok_execute', { handle, ...edit }, caller);
+      const node = await assembled.dispatch('blok_execute', { handle, ...undo }, caller);
+      const first = await call('agentExecute', { mcp: { ...mcpFlags, mode: 'stored', write: true }, document: docFixture, actor, batch: edit, history: {} });
+      const second = await call('agentExecute', {
+        mcp: { ...mcpFlags, mode: 'stored', write: true }, document: first.document, actor, batch: undo, history: first.history,
+      });
+
+      expect(await call('mcpExecuteAnswer', {
+        result: second.result,
+        delivery: { durable: true, pending: false, serverSequence: null, savedVersion: node.structuredContent.delivery === undefined ? null : (node.structuredContent.delivery as { savedVersion: string }).savedVersion },
+      })).toEqual({ answer: node });
+    } finally {
+      await assembled.stop();
+    }
+  });
+
+  it('reports the host revision in live mode and refuses a stale one', async () => {
+    const live = { mcp: { ...mcpFlags, sync: true, mode: 'live', write: true }, document: docFixture, actor, revision: { now: 'l4', afterWrite: 'l5' } };
+    const read = await call('mcpRead', { ...live, view: {} });
+    const written = await call('agentExecute', { ...live, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }], expectRevision: 'l4' } });
+    const reading = await call('agentExecute', { ...live, batch: { commands: [{ name: 'doc.read', args: {} }] } });
+    const stale = await call('agentExecute', { ...live, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }], expectRevision: 'l3' } });
+
+    expect(read).toMatchObject({ answer: { structuredContent: { revision: 'l4' }, isError: false } });
+    expect(written.result).toMatchObject({ ok: true, revision: 'l5' });
+    expect(reading.result).toMatchObject({ ok: true, revision: 'l4' });
+    expect(stale.result).toMatchObject({ ok: false, error: { code: 'STALE' } });
+  });
+});
+
+describe('server runtime MCP approvals', () => {
+  const seed: OutputData = {
+    blocks: [{
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Payroll',
+        schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', databaseLocked: true }],
+        views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'v',
+      },
+    }],
+  };
+  const unlock: AgentBatch = { commands: [{ name: 'database.setLock', args: { id: 'db', locked: false } }] };
+  const actor = defaultAgentActor('alice', 'Desktop');
+  const flags = { pageTitles: 'off', sync: false, source: true, uploads: false, mode: 'stored', write: true };
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** blok-mcp's stored agent with the approver sdk-server.ts builds for these replies. */
+  const nodeRun = async (replies: unknown, capabilities: unknown) => {
+    const contracts = buildMcpContracts({ pageTitles: 'off' });
+    const session = createDocumentAgentSession({
+      document: loadStoredDocument(seed, contracts.richTextFieldsFor),
+      tools: contracts.runtimes,
+      contract: contracts.stored,
+      actor,
+      ports: createHeadlessPorts({ sanitizeFor: type => contracts.runtimes.get(type)?.sanitize, richTextFieldsFor: contracts.richTextFieldsFor }),
+    });
+    const asked: AgentApprovalRequest[] = [];
+    const result = await session.execute(unlock, canElicit(capabilities) ? { approve: elicitationApprover(replies, asked, inputResponse) } : {});
+
+    return { result, asked, output: session.output() };
+  };
+
+  it('asks the question blok-mcp asks, and applies nothing', async () => {
+    const node = await nodeRun(undefined, { elicitation: {} });
+    const question = node.asked[0];
+    const ran = await call('agentExecute', { mcp: flags, document: seed, actor, batch: unlock, approval: { capabilities: { elicitation: {} }, clientName: 'Desktop' } });
+    const wire = inputRequired.elicit(approvalQuestion(question, 'Desktop'));
+
+    expect(ran).toEqual({ ask: { key: approvalKey(question), ...JSON.parse(JSON.stringify(wire.params ?? {}), (key, value: unknown) => (key === 'mode' ? undefined : value)) } });
+    expect(wire.params).toMatchObject({ mode: 'form' });
+    expect(node.result.ok).toBe(false);
+    expect(JSON.stringify(node.output)).toContain('"databaseLocked":true');
+  });
+
+  it.each([
+    ['accept with the tick', { action: 'accept', content: { unlock: true } }],
+    ['accept without the tick', { action: 'accept', content: {} }],
+    ['decline', { action: 'decline' }],
+    ['cancel', { action: 'cancel' }],
+  ])('answers %s as blok-mcp does', async (_label, reply) => {
+    const question = (await nodeRun(undefined, { elicitation: {} })).asked[0];
+    const replies = { [approvalKey(question)]: reply };
+    const node = await nodeRun(replies, { elicitation: { form: {} } });
+    const ran = await call('agentExecute', { mcp: flags, document: seed, actor, batch: unlock, approval: { capabilities: { elicitation: { form: {} } }, replies, clientName: 'Desktop' } });
+
+    expect(ran.result).toEqual(JSON.parse(JSON.stringify(node.result)));
+  });
+
+  it.each([
+    ['a reply for another question', { other: { action: 'accept', content: { unlock: true } } }, { elicitation: {} }],
+    ['no elicitation capability', undefined, {}],
+    ['a URL-only client', undefined, { elicitation: { url: {} } }],
+  ])('refuses with %s as blok-mcp does', async (_label, replies, capabilities) => {
+    const node = await nodeRun(replies, capabilities);
+    const ran = await call('agentExecute', { mcp: flags, document: seed, actor, batch: unlock, approval: { capabilities, ...(replies !== undefined && { replies }), clientName: 'Desktop' } });
+
+    expect(ran.result).toEqual(JSON.parse(JSON.stringify(node.result)));
+    expect(modelAnswer(node.result)).toMatchObject({ ok: false, error: { code: 'APPROVAL_REQUIRED' } });
+  });
+
+  it.each([
+    undefined, null, 'x', {}, { k: null }, { k: [] }, { k: 'accept' }, { k: { action: 'accept' } },
+    { k: { action: 'accept', content: [] } }, { k: { action: 'accept', content: { unlock: true } } },
+    { k: { action: 'decline', content: null } }, { k: { action: 'other' } }, { k: { roots: [] } }, { k: { role: 'user', content: 'x' } },
+  ])('reads replies %o as the SDK does, for what the approver uses', (replies) => {
+    const sdk = inputResponse(replies as never, 'k');
+    const own = readInputResponse(replies, 'k');
+
+    expect(own.kind === 'elicit').toBe(sdk.kind === 'elicit');
+    if (sdk.kind === 'elicit' && own.kind === 'elicit' && 'action' in own) {
+      expect(own).toEqual(sdk);
+    }
   });
 });

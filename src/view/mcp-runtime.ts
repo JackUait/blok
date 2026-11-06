@@ -1,13 +1,14 @@
-import type { AgentError } from '../../types/agent';
+import type { AgentError, AgentResult } from '../../types/agent';
 import type { BlokCustomToolsFile, ManifestOverrides } from '../../types/tool-manifest';
 import { failure } from '../shared/agent/errors';
 import { defaultAgentActor, safeClientName } from '../shared/mcp/actor';
 import {
-  checkCall, errorOutcome, listFollowUp, listingAnswer, modelFixable, openAnswer, pickDocument, UnknownToolError,
+  checkCall, errorOutcome, executeOutcome, listFollowUp, listingAnswer, modelFixable, openAnswer, pickDocument, UnknownToolError,
   type ListRequest, type ListResult, type OpenedSession,
 } from '../shared/mcp/calls';
 import { parseCustomToolsFile, parseOverridesFile } from '../shared/mcp/custom-tools-file';
-import { surfaceError } from '../shared/mcp/errors';
+import { failedResult, NO_DELIVERY, surfaceError } from '../shared/mcp/errors';
+import type { Delivery } from '../shared/mcp/session';
 import { resolveMode } from '../shared/mcp/mode';
 import { mcpPromptResult } from '../shared/mcp/prompts';
 import { mcpSurface } from '../shared/mcp/surface';
@@ -187,6 +188,25 @@ export const hostError = (input: Input): AgentError => {
   }
 };
 
+/**
+ * blok_execute's answer for a batch result. `delivery` is what the save or the room gave; absent, nothing
+ * was saved. `failed`: the save was refused (an error input as mcpErrorAnswer takes), so the batch fails
+ * with that error and keeps its warnings.
+ */
+const executeAnswer = (input: Input): string => {
+  const result = input.result;
+
+  if (!isRecord(result) || typeof result.ok !== 'boolean' || !Array.isArray(result.warnings)) {
+    throw new TypeError('mcpExecuteAnswer input requires a batch `result`.');
+  }
+  const ran = result as unknown as AgentResult;
+  const delivery = isRecord(input.delivery) ? input.delivery as unknown as Delivery : NO_DELIVERY;
+
+  return JSON.stringify({
+    answer: executeOutcome(isRecord(input.failed) ? failedResult(hostError(input.failed), ran.warnings) : { ...ran, delivery }),
+  });
+};
+
 const errorAnswer = (input: Input): string => JSON.stringify({ answer: errorOutcome(String(input.tool), hostError(input)) });
 
 const modeResult = (input: Input): string => {
@@ -220,6 +240,7 @@ export const MCP_OPERATIONS: Readonly<Record<string, (input: Input) => string | 
   mcpPickDocument: pick,
   mcpOpenAnswer: openAnswerResult,
   mcpErrorAnswer: errorAnswer,
+  mcpExecuteAnswer: executeAnswer,
   mcpResolveMode: modeResult,
   mcpActor: actorResult,
 };

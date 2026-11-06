@@ -113,9 +113,16 @@ export const createDocumentAgentSession = (input: {
   runtime?: 'node' | 'jint';
   /** Steps an earlier session of this agent left. */
   history?: CarriedHistory;
+  /**
+   * The revision a host counts itself, as a live room counts its updates: `now` until the
+   * session changes the document, then `afterWrite`. Absent: the content hash.
+   */
+  hostRevision?: { now: string; afterWrite: string };
 }): AgentSession & {
   output(): OutputData;
   revision(): string;
+  /** The content hash, whatever revision the host counts. */
+  contentRevision(): string;
   lastEdits(): readonly Edit[];
   history(): CarriedHistory;
   execute(batch: unknown, options?: AgentExecuteOptions): Promise<AgentResult>;
@@ -132,6 +139,16 @@ export const createDocumentAgentSession = (input: {
     batchNo: 0,
   };
   const hashed: { snapshot: DocSnapshot | null; revision: string } = { snapshot: null, revision: '' };
+  const hashOf = (): string => {
+    if (hashed.snapshot !== state.current) {
+      hashed.revision = contentRevision(state.current.toOutput());
+      hashed.snapshot = state.current;
+    }
+
+    return hashed.revision;
+  };
+  // Every write, undo and redo replaces state.current, so this is the document as opened.
+  const opened = state.current;
   const services: Partial<Record<string, unknown>> = { ...(input.services ?? {}) };
 
   if (input.pageTitles === 'page-map' && input.ports.openPageDocument !== undefined) {
@@ -148,12 +165,11 @@ export const createDocumentAgentSession = (input: {
     // and its hash holds until it is replaced. Execute result rows share block data by reference:
     // callers must not change them.
     revision: () => {
-      if (hashed.snapshot !== state.current) {
-        hashed.revision = contentRevision(state.current.toOutput());
-        hashed.snapshot = state.current;
+      if (input.hostRevision !== undefined) {
+        return state.current === opened ? input.hostRevision.now : input.hostRevision.afterWrite;
       }
 
-      return hashed.revision;
+      return hashOf();
     },
     ...(createPage !== undefined && { prepareInsert: pagePrepareInsert(createPage, input.actor) }),
     apply: (plan, draft) => {
@@ -313,6 +329,7 @@ export const createDocumentAgentSession = (input: {
     },
     output: () => state.current.toOutput(),
     revision: () => applier.revision(),
+    contentRevision: hashOf,
     lastEdits: () => applied.edits,
   };
 };

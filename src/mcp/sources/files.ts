@@ -4,6 +4,7 @@ import { chmod, lstat, open, readdir, readFile, rename, rm, stat } from 'node:fs
 import { basename, dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 
+import { savedFileText } from '../../shared/mcp/files';
 import { surfaceError } from '../errors';
 
 import type { DocumentSource } from './types';
@@ -227,7 +228,7 @@ export const createFilesSource = (dir: string): DocumentSource => {
     if ((current === null ? null : hash(current)) !== ifVersion) {
       throw surfaceError('DOCUMENT_CHANGED', 'The document changed on disk since you opened it. Read it again, then retry.');
     }
-    const text = `${JSON.stringify(document, null, 2)}\n`;
+    const text = savedFileText(document);
     // Same directory as the target, so the rename stays on one filesystem and is atomic.
     const temp = join(dirname(target), `.${documentId}.${randomBytes(6).toString('hex')}.tmp`);
     const mode = await modeOf(target);

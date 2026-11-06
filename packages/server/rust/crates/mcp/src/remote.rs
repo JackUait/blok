@@ -39,6 +39,8 @@ const EMPTY_UPDATE_BYTES: usize = 2;
 const MAX_BUFFERED_INBOUND: usize = 64;
 /// headless-session's first-sync wait.
 pub const SYNC_TIMEOUT: Duration = Duration::from_secs(15);
+/// How long a restore waits for the room to send its update back.
+const RESTORE_ECHO_WAIT: Duration = Duration::from_secs(2);
 const HISTORY_STEPS: usize = 100;
 const V2: &str = "blok-sync.v2";
 const V1: &str = "blok-sync.v1";
@@ -252,61 +254,37 @@ struct Batch {
     waiter: Option<oneshot::Sender<Fate>>,
 }
 
-/// A step's own documents and the bundle's carried history around them:
-/// the bundle plans an undo (or redo) there to ask what Node's executor asks.
-#[derive(Clone, Debug)]
-pub struct StepGate {
-    pub document: String,
-    pub history: String,
-}
-
-pub enum Gate {
+enum Approved {
+    Yes,
     Ask(Value),
     /// The result to answer with; nothing runs.
     Refused(String),
-    /// The gate for replaying the other way afterwards.
-    Passed(StepGate),
 }
 
-/// Runs a history.undo or history.redo batch on the step's own documents,
-/// so the approvals (an undone lock unlocks, a share changes) are asked
-/// exactly as the bundle asks them.
-pub async fn gate_step(
-    bundle: &Bundle,
-    mcp: &Value,
-    revision: &Value,
-    gate: &StepGate,
-    batch: &Value,
-    actor: &Value,
-    approval: &Value,
-) -> Result<Gate, Fault> {
-    let input = Obj::new()
-        .val("mcp", mcp)
-        .raw("document", &gate.document)
-        .val("actor", actor)
-        .val("revision", revision)
-        .raw("history", &gate.history)
-        .val("batch", batch)
-        .val("approval", approval)
-        .finish();
-    let out = bundle.call_raw("agentExecute", &input).await?;
-    if let Some(ask) = out.value("ask") {
-        return Ok(Gate::Ask(ask));
-    }
-    let result = out.text("result").unwrap_or("{}").to_owned();
-    if out.value("result").and_then(|r| r.get("ok").cloned()) != Some(Value::Bool(true)) {
-        return Ok(Gate::Refused(result));
-    }
-    Ok(Gate::Passed(StepGate {
-        document: out.text("document").unwrap_or("{}").to_owned(),
-        history: out.text("history").unwrap_or("{}").to_owned(),
-    }))
+/// The database comment actions (COMMENT_COMMANDS); the planner refuses a
+/// batch that mixes them with other writes.
+fn comments_only(batch: &Value) -> bool {
+    const COMMENTS: [&str; 5] = [
+        "database.addComment",
+        "database.replyToComment",
+        "database.editComment",
+        "database.resolveComment",
+        "database.deleteComment",
+    ];
+    batch
+        .get("commands")
+        .and_then(Value::as_array)
+        .is_some_and(|commands| {
+            commands.iter().any(|c| {
+                c.get("name")
+                    .and_then(Value::as_str)
+                    .is_some_and(|name| COMMENTS.contains(&name))
+            })
+        })
 }
 
 /// One applied batch, as undo and redo replay it (store-applier.ts Step).
 struct Step {
-    /// The approval gate for replaying it in its next direction.
-    gate: Option<StepGate>,
     serial: Option<u64>,
     ids: BTreeSet<String>,
     placed_only: BTreeSet<String>,
@@ -357,6 +335,10 @@ struct Room {
     end: Option<End>,
     done: Vec<Step>,
     undone: Vec<Step>,
+    /// The executor's history marks, one per write batch: None for a write,
+    /// Some(previous version) for a restore, which undo cannot cross.
+    marks_past: Vec<Option<String>>,
+    marks_future: Vec<Option<String>>,
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -452,6 +434,8 @@ impl Room {
             end: None,
             done: Vec::new(),
             undone: Vec::new(),
+            marks_past: Vec::new(),
+            marks_future: Vec::new(),
         }
     }
 
@@ -935,6 +919,8 @@ impl Room {
             self.announce();
         }
         if let Some(waiting) = self.first_sync.take() {
+            // l<n> counts updates from the session's start, not the first sync.
+            self.count.store(0, Ordering::SeqCst);
             let _ = waiting.send(Ok(self.protocol));
         }
         self.drain().await;
@@ -1333,8 +1319,6 @@ impl Room {
         if !input.created_pages.is_empty() {
             call = call.val("createdPages", &json!(input.created_pages));
         }
-        // The output's carried history is the step's approval gate.
-        call = call.raw("history", "{}");
         let out = self
             .shared
             .bundle
@@ -1359,27 +1343,40 @@ impl Room {
         }
         let edits = out.text("edits").unwrap_or("[]").to_owned();
         if edits != "[]" {
-            let gate = StepGate {
-                document: out.text("document").unwrap_or("{}").to_owned(),
-                history: out.text("history").unwrap_or("{}").to_owned(),
-            };
             self.apply(
                 &edits,
                 out.text("document").unwrap_or("{}"),
                 &result_text,
                 &document,
-                gate,
+                comments_only(&input.batch),
             )
             .await?;
+            // A comment batch is marked too, as Node's executor does.
+            self.marks_past.push(None);
+            self.marks_future.clear();
         }
+        let mut result_text = result_text;
         // A restore the bundle checked goes to the sync server's history route.
-        if let Some(Value::String(version)) = out.value("restore")
-            && let Err(failed) = self.restore(&version).await
-        {
-            return Ok(Executed::Done {
-                result: result_text,
-                delivery: Delivery::Failed(failed),
-            });
+        if let Some(Value::String(version)) = out.value("restore") {
+            let before = self.count.load(Ordering::SeqCst);
+            if let Err(failed) = self.restore(&version).await {
+                return Ok(Executed::Done {
+                    result: result_text,
+                    delivery: Delivery::Failed(failed),
+                });
+            }
+            // The restore comes back as a peer's update, and the result's
+            // revision counts it, as Node's does.
+            self.wait_for_update(before, RESTORE_ECHO_WAIT).await;
+            let mut restored = result.clone();
+            restored["revision"] = json!(self.revision());
+            result_text = restored.to_string();
+            let previous = result
+                .pointer("/results/0/previous")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            self.marks_past.push(Some(previous.to_owned()));
+            self.marks_future.clear();
         }
         self.finish_batch(result_text, &result, writes).await
     }
@@ -1446,14 +1443,25 @@ impl Room {
         after: &str,
         result: &str,
         before: &str,
-        gate: StepGate,
+        comments: bool,
     ) -> Result<(), Fault> {
         let ops = blok_blokagent::translate(&parse(edits)?, &parse(after)?, &parse(result)?)
             .map_err(|e| Fault::Internal(format!("{e:?}")))?;
         let before_blocks = blocks_of(before);
         let edits: Value = serde_json::from_str(edits).unwrap_or(Value::Null);
+        if comments {
+            // A person's comment is no undo step, so neither is the agent's.
+            return self
+                .shared
+                .converter
+                .apply_ops(&self.doc, &ops)
+                .await
+                .map_err(|err| {
+                    self.read_only = true;
+                    Fault::Internal(err.to_string())
+                });
+        }
         let mut step = Step {
-            gate: Some(gate),
             serial: None,
             ids: BTreeSet::new(),
             placed_only: BTreeSet::new(),
@@ -1515,6 +1523,12 @@ impl Room {
                 delivery: Delivery::None,
             });
         }
+        if let Some(refusal) = self.mark_refusal(undo) {
+            return Ok(Executed::Done {
+                result: refusal,
+                delivery: Delivery::None,
+            });
+        }
         let failed = |code: &str, message: &str, retryable: bool, revision: String| {
             json!({
                 "ok": false,
@@ -1543,42 +1557,24 @@ impl Room {
                 delivery: Delivery::None,
             });
         };
-        let mut step = step;
-        // Node asks before it checks for a conflict.
-        let mut next_gate = None;
-        if let Some(gate) = step.gate.clone() {
-            let mut mcp = self.shared.flags.clone();
-            mcp["mode"] = json!("live");
-            mcp["write"] = json!(!self.read_only);
-            let n = self.count.load(Ordering::SeqCst);
-            let revision = json!({ "now": format!("l{n}"), "afterWrite": format!("l{}", n + 1) });
-            let gated = gate_step(
-                &self.shared.bundle,
-                &mcp,
-                &revision,
-                &gate,
-                &input.batch,
-                &input.actor,
-                &input.approval,
-            )
-            .await?;
-            match gated {
-                Gate::Passed(next) => next_gate = Some(next),
-                Gate::Ask(question) => {
-                    self.put_back(undo, step);
-                    return Ok(Executed::Ask(question));
-                }
-                Gate::Refused(result) => {
-                    self.put_back(undo, step);
-                    let mut result: Value = serde_json::from_str(&result).unwrap_or(Value::Null);
-                    result["revision"] = json!(self.revision());
-                    return Ok(Executed::Done {
-                        result: result.to_string(),
-                        delivery: Delivery::None,
-                    });
-                }
+        // Node asks before it checks for a conflict. The gate and the
+        // replay run in this one turn of the room task, so no peer frame
+        // lands between them: the gate judges the state that is replayed.
+        match self.approve_replay(input, direction).await? {
+            Approved::Yes => {}
+            Approved::Ask(question) => {
+                self.put_back(undo, step);
+                return Ok(Executed::Ask(question));
+            }
+            Approved::Refused(result) => {
+                self.put_back(undo, step);
+                return Ok(Executed::Done {
+                    result,
+                    delivery: Delivery::None,
+                });
             }
         }
+        let mut step = step;
         let blocks = blocks_of(&self.export().await?);
         let top = self.doc.stack_top(direction);
         if shape(&step, &blocks) != step.shape || (step.serial.is_some() && top != step.serial) {
@@ -1606,13 +1602,14 @@ impl Room {
             step.serial = if after != before { after } else { None };
         }
         step.shape = shape(&step, &blocks_of(&self.export().await?));
-        if next_gate.is_some() {
-            step.gate = next_gate;
-        }
         if undo {
             self.undone.push(step);
+            let mark = self.marks_past.pop().flatten();
+            self.marks_future.push(mark);
         } else {
             self.done.push(step);
+            let mark = self.marks_future.pop().flatten();
+            self.marks_past.push(mark);
         }
         let result = json!({
             "ok": true,
@@ -1623,6 +1620,123 @@ impl Room {
             "warnings": [],
         });
         self.finish_batch(result.to_string(), &result, true).await
+    }
+
+    /// The executor's historyStep check: a restore cannot be undone, and
+    /// nothing is redone after one.
+    fn mark_refusal(&self, undo: bool) -> Option<String> {
+        let previous = self.marks_past.last()?.as_ref()?;
+        let (code, message) = if undo {
+            let mut message =
+                "The last batch restored a version. history.undo cannot undo a restore.".to_owned();
+            if !previous.is_empty() {
+                message.push_str(&format!(
+                    " To go back, history.restore \"{previous}\", the version that was current before."
+                ));
+            }
+            ("UNDO_RESTORED", message)
+        } else {
+            (
+                "NOTHING_TO_REDO",
+                "The last batch restored a version. There is nothing to redo after it.".to_owned(),
+            )
+        };
+        Some(
+            json!({
+                "ok": false,
+                "revision": self.revision(),
+                "error": { "code": code, "message": message, "commandIndex": 0, "retryable": false },
+                "warnings": [],
+            })
+            .to_string(),
+        )
+    }
+
+    /// The executor's approval gate, run in the bundle: the live document,
+    /// with the step's outcome (previewed on a copy) as the session's one
+    /// step, so undoing a lock asks as database.setLock does.
+    async fn approve_replay(
+        &self,
+        input: &ExecuteInput,
+        direction: Direction,
+    ) -> Result<Approved, Fault> {
+        let preview = self
+            .doc
+            .preview(direction)
+            .map_err(|e| Fault::Internal(e.to_string()))?;
+        let exported = self
+            .shared
+            .converter
+            .export(&preview)
+            .await
+            .map_err(|e| Fault::Internal(e.to_string()))?;
+        let target = blok_collab_docendpoint::serialize(&blok_jsjson::Value::Object(exported))
+            .map_err(|e| Fault::Internal(e.to_string()))?;
+        let target: Value =
+            serde_json::from_slice(&target).map_err(|e| Fault::Internal(e.to_string()))?;
+        let document = self.export().await?;
+        let mut mcp = self.shared.flags.clone();
+        mcp["mode"] = json!("live");
+        mcp["write"] = json!(!self.read_only);
+        // The carried history is kept only at the document's own revision.
+        let read = self
+            .shared
+            .bundle
+            .call_raw(
+                "mcpRead",
+                &Obj::new()
+                    .val("mcp", &mcp)
+                    .raw("document", &document)
+                    .val("actor", &input.actor)
+                    .val("view", &json!({}))
+                    .finish(),
+            )
+            .await?;
+        let view: Value = serde_json::from_str(read.text("answer").unwrap_or("null"))
+            .map_err(|e| Fault::Internal(e.to_string()))?;
+        let revision = view
+            .pointer("/structuredContent/revision")
+            .cloned()
+            .unwrap_or(Value::Null);
+        let history = if direction == Direction::Undo {
+            json!({ "past": [target], "future": [], "revision": revision })
+        } else {
+            json!({ "past": [], "future": [target], "revision": revision })
+        };
+        let out = self
+            .shared
+            .bundle
+            .call_raw(
+                "agentExecute",
+                &self
+                    .session_input(!self.read_only, &document, &input.actor)
+                    .val("history", &history)
+                    .val("batch", &input.batch)
+                    .val("approval", &input.approval)
+                    .finish(),
+            )
+            .await?;
+        if let Some(ask) = out.value("ask") {
+            return Ok(Approved::Ask(ask));
+        }
+        if out.value("result").and_then(|r| r.get("ok").cloned()) != Some(Value::Bool(true)) {
+            return Ok(Approved::Refused(
+                out.text("result").unwrap_or("{}").to_owned(),
+            ));
+        }
+        Ok(Approved::Yes)
+    }
+
+    /// Reads the room until the doc counts an update past `before`, or
+    /// `timeout` passes.
+    async fn wait_for_update(&mut self, before: u64, timeout: Duration) {
+        let deadline = Instant::now() + timeout;
+        while self.count.load(Ordering::SeqCst) == before && self.end.is_none() {
+            match tokio::time::timeout_at(deadline, recv(&mut self.events)).await {
+                Ok(event) => self.on_event(event).await,
+                Err(_) => return,
+            }
+        }
     }
 
     /// A step that was not replayed goes back where it was.
@@ -2070,7 +2184,6 @@ mod tests {
             { "op": "setData", "id": "x" },
         ]);
         let mut step = Step {
-            gate: None,
             serial: None,
             ids: BTreeSet::new(),
             placed_only: BTreeSet::new(),
@@ -2094,7 +2207,6 @@ mod tests {
     #[test]
     fn a_peer_edit_inside_a_step_block_changes_its_shape() {
         let mut step = Step {
-            gate: None,
             serial: None,
             ids: BTreeSet::from(["p1".to_owned()]),
             placed_only: BTreeSet::new(),

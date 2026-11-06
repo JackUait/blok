@@ -70,6 +70,40 @@ describe('release.mjs Go module tag', () => {
   });
 });
 
+describe('release.mjs version-stamped outputs', () => {
+  const releaseSource = (): string => readFileSync(resolve(repositoryRoot, 'scripts/release.mjs'), 'utf8');
+  const FIXTURE = 'test/unit/server-conformance/fixtures/documents/ops.json';
+
+  // The fixture records the runtime's VERSION, so a bump without it leaves
+  // the release commit failing the C#, Go and node conformance checks.
+  it('regenerates the documents ops fixture from the bumped runtime and commits it', () => {
+    const source = releaseSource();
+    const runtime = source.indexOf("run('node scripts/build-server-runtime.mjs')");
+    const fixture = source.indexOf("run('node scripts/generate-documents-ops-fixture.mjs')");
+    const commitAdd = source.indexOf('run(`git add ');
+
+    const stamped = /const VERSION_STAMPED_FILES = \[([^\]]*)\]/.exec(source)?.[1] ?? '';
+
+    expect(fixture).toBeGreaterThan(runtime);
+    expect(commitAdd).toBeGreaterThan(fixture);
+    expect(stamped).toContain(`'${FIXTURE}'`);
+    expect(source.slice(commitAdd, source.indexOf('\n', commitAdd))).toContain('VERSION_STAMPED_FILES');
+    // A dry run restores what it bumped.
+    expect(source).toMatch(/run\(`git checkout -- \$\{VERSION_STAMPED_FILES\.join/);
+  });
+
+  // Unit tests compare dist with the bumped manifests, so dist must be
+  // rebuilt before preflight runs them.
+  it('builds the family before preflight', () => {
+    const source = releaseSource();
+    const build = source.indexOf("run('node scripts/build-all.mjs --with-cli')");
+    const preflight = source.indexOf("run('yarn release:preflight')");
+
+    expect(build).toBeGreaterThan(-1);
+    expect(preflight).toBeGreaterThan(build);
+  });
+});
+
 describe('release.mjs gprPublishCommand', () => {
   it('builds publish command from pack JSON and directory', () => {
     const packJson = JSON.stringify([{ filename: 'jackuait-blok-cli-1.0.0.tgz' }]);

@@ -219,13 +219,21 @@ const expectServicelessJson = async (c: ParityCase, run: McpRun): Promise<void> 
   }
 };
 
+/** Starts blok-mcp on a seed document. */
+export type McpOpener = (seed: OutputData, actor: AgentActor) => Promise<McpRun>;
+
 /**
  * One corpus case through blok-mcp's dispatcher: the outcome must match the
  * case's expectation, the saved document its golden, and each batch's answer
- * the json engine's.
+ * the json engine's. `open` lets a spawned binary stand in for the in-process
+ * server; the runner name still picks the case's expectations.
  */
-export const checkMcpCase = async (c: ParityCase, runner: McpRunnerName): Promise<void> => {
-  const run = await (runner === 'mcp-stored' ? openMcpStored : openMcpLive)(c.seed, TEST_ACTOR);
+export const checkMcpCase = async (
+  c: ParityCase,
+  runner: McpRunnerName,
+  open: McpOpener = runner === 'mcp-stored' ? openMcpStored : openMcpLive
+): Promise<void> => {
+  const run = await open(c.seed, TEST_ACTOR);
 
   try {
     const recorder = recordAnswers(async (batch) => (await run.execute(batch)).answer);

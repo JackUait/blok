@@ -200,7 +200,9 @@ func (v *jwtVerifier) refresh(ctx context.Context) {
 	done := make(chan struct{})
 	v.pending = done
 	v.mu.Unlock()
-	_ = v.load(ctx)
+	// The fetch is shared, so no one caller's cancellation may fail it;
+	// it has its own timeout, as Node's.
+	_ = v.load(context.WithoutCancel(ctx))
 	v.mu.Lock()
 	v.pending = nil
 	v.mu.Unlock()

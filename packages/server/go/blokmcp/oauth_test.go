@@ -110,3 +110,20 @@ func TestVerifiesBloksAccessTokenRules(t *testing.T) {
 		t.Fatalf("a client token: %v %v", info, err)
 	}
 }
+
+// A client that hangs up mid-fetch must not cool the JWKS down for everyone.
+func TestACancelledJWKSFetchDoesNotRefuseTheNextToken(t *testing.T) {
+	rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	ecKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	keys := testKeys{rsaKey, ecKey}
+	jwks := jwksServer(t, keys)
+	verifier := newJWTVerifier(Auth{Kind: "oauth", Issuer: "https://issuer.test", Audience: "https://mcp.test/mcp", JWKSURL: jwks.URL})
+	token := sign(t, keys, map[string]any{"alg": "RS256", "kid": "rsa-1", "typ": "at+jwt"},
+		map[string]any{"iss": "https://issuer.test", "aud": "https://mcp.test/mcp", "sub": "alice", "exp": time.Now().Unix() + 60})
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, _ = verifier.verify(cancelled, token)
+	if _, err := verifier.verify(context.Background(), token); err != nil {
+		t.Fatalf("the next token was refused: %v", err)
+	}
+}

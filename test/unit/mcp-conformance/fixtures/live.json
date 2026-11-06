@@ -15956,6 +15956,327 @@
       "expectExit": {
         "code": 0
       }
+    },
+    {
+      "argv": [
+        "--sync-url",
+        "${roomWs}",
+        "--origin",
+        "https://app.example.com",
+        "--principal",
+        "alice",
+        "--manifest",
+        "docs/tools.json"
+      ],
+      "name": "a custom tool's rich field is written as rich text in the room",
+      "files": {
+        "tools.json": {
+          "json": {
+            "formatVersion": 1,
+            "blocks": [
+              {
+                "name": "note_x",
+                "description": {
+                  "summary": "A note.",
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "body": {
+                        "type": "array"
+                      }
+                    }
+                  }
+                },
+                "statics": {
+                  "toolbox": [],
+                  "richTextFields": [
+                    "body"
+                  ],
+                  "acceptsChildren": false,
+                  "ownsChildren": false,
+                  "isLayout": false,
+                  "deletesChildren": false,
+                  "selfPlacesChildren": false,
+                  "restrictedInTableCell": false,
+                  "conversion": {},
+                  "convertible": {
+                    "import": false,
+                    "export": false
+                  },
+                  "hasPrepareInsert": false
+                },
+                "sanitize": {
+                  "body": {
+                    "b": true,
+                    "strong": true
+                  },
+                  "enabled": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "fd81294d"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "note_x",
+                      "id": "n1",
+                      "data": {
+                        "body": [
+                          {
+                            "text": "Hi "
+                          },
+                          {
+                            "text": "there",
+                            "marks": {
+                              "bold": true
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "l1",
+                "results": [
+                  {
+                    "id": "n1",
+                    "childIds": []
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "n1"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "n1",
+                    "type": "note_x",
+                    "depth": 0,
+                    "text": "Hi there",
+                    "data": {
+                      "body": [
+                        {
+                          "text": "Hi "
+                        },
+                        {
+                          "text": "there",
+                          "marks": {
+                            "bold": true
+                          }
+                        }
+                      ]
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "alice"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": "1",
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "read": true
+          },
+          "expect": [
+            {
+              "id": "n1",
+              "type": "note_x",
+              "data": {
+                "body": "Hi <strong>there</strong>"
+              },
+              "lastEditedAt": "<masked>",
+              "lastEditedBy": "alice",
+              "createdAt": "<masked>",
+              "createdBy": "alice",
+              "createdWith": "agent:alice:claude-code",
+              "lastEditedWith": "agent:alice:claude-code"
+            }
+          ]
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${h}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "l1",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "n1",
+                    "type": "note_x",
+                    "depth": 0,
+                    "text": "Hi there",
+                    "data": {
+                      "body": [
+                        {
+                          "text": "Hi "
+                        },
+                        {
+                          "text": "there",
+                          "marks": {
+                            "bold": true
+                          }
+                        }
+                      ]
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "alice"
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_close",
+              "arguments": {
+                "handle": "${h}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "closed": true,
+                "unsavedBatches": 0,
+                "hostRecordLags": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
     }
   ]
 }

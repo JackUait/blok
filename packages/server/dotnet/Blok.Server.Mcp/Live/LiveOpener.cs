@@ -8,12 +8,10 @@ using Blok.Server.Tickets;
 
 namespace Blok.Server.Mcp.Live;
 
-/// <summary>
-/// Opens live handles on a remote sync room: mints the handle's ticket, then joins.
-/// This phase stops at the join: a room that accepts the upgrade is not served yet.
-/// </summary>
-internal sealed class LiveOpener(McpConfig config, McpHttpCaller http)
+/// <summary>Opens live handles on a remote sync room (open-live.ts): mints the handle's ticket, joins, and waits for the first sync.</summary>
+internal sealed class LiveOpener(McpConfig config, McpHttpCaller http, McpBundle bundle, JsonObject flags, Func<CancellationToken, Task<JsonObject>> surfaceAsync)
 {
+  private const long TicketRefreshMarginMs = 30_000;
   // A collaboration pass is checked at the handshake only; 1800 s is the ceiling ticket.ts recommends.
   private const long TicketTtlSeconds = 1800;
   // blok_open waits on this; a hung host must not hold the call open.
@@ -57,47 +55,110 @@ internal sealed class LiveOpener(McpConfig config, McpHttpCaller http)
   {
     var sync = config.Sync!;
     var url = SyncUrlFor(sync.Url, documentId);
-    var ticket = await TicketAsync(documentId, write, caller, cancellationToken);
+    var source = await TicketSourceAsync(documentId, write, caller, cancellationToken);
+    var guard = source is null ? null : new RevocableTickets(source);
+    using var refused = new CancellationTokenSource();
+    using var waiting = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, refused.Token);
+    LiveRoom room;
 
-    await JoinAsync(new Uri(url), sync.Origin, ticket, cancellationToken);
+    if (guard is not null)
+    {
+      guard.Refused += refused.Cancel;
+    }
+    try
+    {
+      room = await LiveRoom.OpenAsync(
+          async (protocols, token) => new RoomConnection(await McpRoomSocket.ConnectAsync(new Uri(url), sync.Origin, protocols, token)),
+          guard is null ? null : guard.NextAsync,
+          SyncTimeout,
+          waiting.Token);
+    }
+    catch (OperationCanceledException) when (guard?.Refusal is { } refusal)
+    {
+      // A refused ticket ends the wait at once; name the real cause.
+      throw refusal;
+    }
+    catch (TimeoutException)
+    {
+      throw McpHostError.Surface("ROOM_SYNC_TIMEOUT", "The room did not finish loading in time. Try again.");
+    }
+    catch (LiveRoomTerminalException terminal)
+    {
+      throw await RoomErrorAsync(terminal.Terminal, cancellationToken);
+    }
+    finally
+    {
+      if (guard is not null)
+      {
+        guard.Refused -= refused.Cancel;
+      }
+    }
+    try
+    {
+      if (guard is not null)
+      {
+        // Later refusals end the room for this handle.
+        guard.Refused += () => room.Loop.Post(() => room.EndWith(new RoomEnd(false, "forbidden")));
+      }
+      var surface = await surfaceAsync(cancellationToken);
+      var revision = McpJson.String(surface["contractRevision"]?["live"]) ?? string.Empty;
+      var unavailable = surface["liveUnavailableCommands"] as JsonArray;
+      var history = new LiveVersionHistory(http, url, sync.Origin, guard is null ? null : guard.NextAsync);
+      var session = new LiveSession(room, bundle, flags, caller, write, revision, unavailable, history);
 
-    throw McpHostError.Surface("SOURCE_UNAVAILABLE", "Live rooms over --sync-url are not served by this blok-mcp yet.");
+      await room.Loop.RunAsync(session.Start);
+
+      return session;
+    }
+    catch
+    {
+      await room.CloseAsync();
+      throw;
+    }
   }
 
-  private static async Task JoinAsync(Uri url, string? origin, string? ticket, CancellationToken cancellationToken)
+  private async Task<McpHostError> RoomErrorAsync(string? terminal, CancellationToken cancellationToken)
   {
-    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-    deadline.CancelAfter(SyncTimeout);
-    var pause = TimeSpan.FromMilliseconds(250);
+    var input = new JsonObject();
 
-    while (true)
+    if (terminal is not null)
     {
-      try
-      {
-        using var socket = await McpRoomSocket.ConnectAsync(url, origin, ticket, deadline.Token);
-
-        await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
-
-        return;
-      }
-      catch (Exception error) when (error is WebSocketException or OperationCanceledException or HttpRequestException)
-      {
-        cancellationToken.ThrowIfCancellationRequested();
-      }
-      try
-      {
-        await Task.Delay(pause, deadline.Token);
-      }
-      catch (OperationCanceledException)
-      {
-        cancellationToken.ThrowIfCancellationRequested();
-      }
-      if (deadline.IsCancellationRequested)
-      {
-        throw McpHostError.Surface("ROOM_SYNC_TIMEOUT", "The room did not finish loading in time. Try again.");
-      }
-      pause = TimeSpan.FromMilliseconds(Math.Min(pause.TotalMilliseconds * 2, 2_000));
+      input["terminal"] = terminal;
     }
+
+    return new McpHostError((JsonObject)(await bundle.CallAsync("mcpRoomError", input, cancellationToken))["error"]!);
+  }
+
+  /// <summary>Mints the first ticket eagerly, so a refusal surfaces at blok_open (tickets.ts).</summary>
+  private async Task<RoomTicketSource?> TicketSourceAsync(string documentId, bool write, McpCaller caller, CancellationToken cancellationToken)
+  {
+    var cached = await TicketAsync(documentId, write, caller, cancellationToken);
+
+    if (cached is null)
+    {
+      return null;
+    }
+    if (config.Tickets is not McpTickets.Url)
+    {
+      return _ => TicketAsync(documentId, write, caller, CancellationToken.None);
+    }
+
+    return async force =>
+    {
+      if (force || ExpiresAtMs(cached) - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() < TicketRefreshMarginMs)
+      {
+        cached = await TicketAsync(documentId, write, caller, CancellationToken.None) ?? cached;
+      }
+
+      return cached;
+    };
+  }
+
+  private static long ExpiresAtMs(string ticket)
+  {
+    return ReadTicketClaims(ticket)?["exp"] is JsonValue exp && exp.TryGetValue<double>(out var seconds)
+        ? (long)(seconds * 1000)
+        : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
   }
 
   private async Task<string?> TicketAsync(string documentId, bool write, McpCaller caller, CancellationToken cancellationToken)
@@ -178,5 +239,34 @@ internal sealed class LiveOpener(McpConfig config, McpHttpCaller http)
     }
 
     return ticket;
+  }
+}
+
+/// <summary>
+/// The provider retries a failed mint forever, so a host's refusal on reconnect
+/// would never reach the agent: one FORBIDDEN ends the room, and no later mint runs.
+/// </summary>
+internal sealed class RevocableTickets(RoomTicketSource source)
+{
+  internal event Action? Refused;
+
+  internal McpHostError? Refusal { get; private set; }
+
+  internal async Task<string?> NextAsync(bool forceRefresh)
+  {
+    if (Refusal is not null)
+    {
+      throw Refusal;
+    }
+    try
+    {
+      return await source(forceRefresh);
+    }
+    catch (McpHostError error) when (error.Code == "FORBIDDEN")
+    {
+      Refusal = error;
+      Refused?.Invoke();
+      throw;
+    }
   }
 }

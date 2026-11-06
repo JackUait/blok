@@ -10,6 +10,8 @@ internal sealed class McpBundle(IBlokRuntime runtime)
   // Agent batches on a cold JIT can pass the runtime's 10 s default.
   private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(60);
 
+  internal IBlokRuntime Runtime => runtime;
+
   internal async Task<JsonObject> CallAsync(string operation, JsonObject input, CancellationToken cancellationToken = default)
   {
     var text = await runtime.InvokeAsync(operation, McpJson.Write(input), CallTimeout, cancellationToken);

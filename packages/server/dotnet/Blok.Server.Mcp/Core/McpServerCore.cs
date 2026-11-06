@@ -35,8 +35,8 @@ internal sealed class McpServerCore : IAsyncDisposable
       McpSourceConfig.Endpoint endpoint => new EndpointSource(endpoint, http),
       _ => null,
     };
-    live = config.Sync is null ? null : new LiveOpener(config, http);
     flags = config.SurfaceFlags();
+    live = config.Sync is null ? null : new LiveOpener(config, http, bundle, flags, SurfaceAsync);
     handles = new HandleRegistry<IHandleSession>(config.IdleMs, config.MaxHandles, session => session.CloseAsync("expired"));
     var period = TimeSpan.FromMilliseconds(Math.Min(config.IdleMs, 30_000));
 

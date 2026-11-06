@@ -80,7 +80,12 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
   const late: { open: DispatcherDeps['open'] | null; createPage: ((caller: Caller) => Promise<{ pageId: string }>) | null } = {
     open: null, createPage: null,
   };
-  const portsFor = (caller: Caller, _actor?: AgentActor, isOpenDocument?: (pageId: string) => Promise<boolean>): AgentPorts => createHeadlessPorts({
+  const portsFor = (
+    caller: Caller,
+    _actor?: AgentActor,
+    isOpenDocument?: (pageId: string) => Promise<boolean>,
+    unconfirmed?: () => void,
+  ): AgentPorts => createHeadlessPorts({
     sanitizeFor: (type) => contracts.runtimes.get(type)?.sanitize,
     richTextFieldsFor: contracts.richTextFieldsFor,
     ...(pageMap && {
@@ -95,6 +100,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
         caller,
         isOpenDocument,
         track: trackPageClose,
+        unconfirmed,
       }),
     }),
     ...(createsPages && {

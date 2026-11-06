@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PAGE_CREATE_RULE } from '../../../src/agent/guidance';
 import type { Caller } from '../../../src/mcp/dispatcher';
-import { createOpenPageDocument } from '../../../src/mcp/page-titles';
+import { createOpenPageDocument, createPageDeliveryTracker } from '../../../src/mcp/page-titles';
 import { assembleMcp, type AssembledMcp } from '../../../src/mcp/server';
 import type { HandleSession, McpExecuteResult } from '../../../src/mcp/session';
 
@@ -234,10 +234,72 @@ describe('createOpenPageDocument', () => {
     vi.restoreAllMocks();
   });
 
-  it('never reports a live page write the room did not acknowledge as applied', async () => {
-    const page = await createOpenPageDocument({ open: async () => session, caller })('child', actor);
+  it('passes on a live page write the room did not acknowledge, and reports it as unconfirmed', async () => {
+    const unconfirmed = vi.fn();
+    const page = await createOpenPageDocument({ open: async () => session, caller, unconfirmed })('child', actor);
     const result = await page.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'x' } }] });
 
-    expect(result).toMatchObject({ ok: false, error: { code: 'SOURCE_UNAVAILABLE', retryable: true } });
+    expect(result).toMatchObject({ ok: true, delivery: { durable: false, pending: true } });
+    expect(unconfirmed).toHaveBeenCalledOnce();
+  });
+
+  it('does not report an acknowledged page write', async () => {
+    const unconfirmed = vi.fn();
+    const acked: HandleSession = { ...session, execute: async () => ({ ...pendingWrite, delivery: { durable: true, pending: false, serverSequence: '3', savedVersion: null } }) };
+    const page = await createOpenPageDocument({ open: async () => acked, caller, unconfirmed })('child', actor);
+
+    expect(await page.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'x' } }] })).toMatchObject({ ok: true, delivery: { durable: true } });
+    expect(unconfirmed).not.toHaveBeenCalled();
+  });
+});
+
+describe('createPageDeliveryTracker', () => {
+  const durable: McpExecuteResult = {
+    ok: true, revision: '1', results: [], refs: {}, changed: { created: [], updated: [], moved: [], removed: [] }, warnings: [],
+    delivery: { durable: true, pending: false, serverSequence: '7', savedVersion: null },
+  };
+  const sessionWith = (execute: HandleSession['execute']): HandleSession => ({
+    mode: 'live',
+    write: true,
+    durability: 'acknowledged',
+    contractRevision: 'r',
+    read: async () => ({ revision: '1', rootId: null, blocks: [] }),
+    describe: () => { throw new Error('Unused describe dependency'); },
+    execute,
+    close: async () => ({ unsavedBatches: 0, hostRecordLags: true }),
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('marks the batch not durable and pending when one of its page writes went unconfirmed', async () => {
+    const tracker = createPageDeliveryTracker();
+    const session = tracker.wrap(sessionWith(async () => {
+      tracker.unconfirmed();
+
+      return durable;
+    }));
+
+    expect((await session.execute({ commands: [] })).delivery).toEqual({ durable: false, pending: true, serverSequence: '7', savedVersion: null });
+  });
+
+  it('leaves the delivery alone when no page write of this batch went unconfirmed', async () => {
+    const tracker = createPageDeliveryTracker();
+    const session = tracker.wrap(sessionWith(async () => durable));
+
+    tracker.unconfirmed();
+    expect((await session.execute({ commands: [] })).delivery).toEqual(durable.delivery);
+  });
+
+  it('keeps the session object, so a getter like durability still reads live', () => {
+    const tracker = createPageDeliveryTracker();
+    const session = sessionWith(async () => durable);
+
+    expect(tracker.wrap(session)).toBe(session);
   });
 });

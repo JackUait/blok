@@ -11,6 +11,7 @@ import type { McpContracts } from './contract';
 import type { Caller, DispatcherDeps, ListResult, OpenRequest } from './dispatcher';
 import { isMcpSurfaceError, surfaceError } from './errors';
 import { resolveMode } from './mode';
+import { createPageDeliveryTracker } from './page-titles';
 import type { BlokMcpOptions } from './options';
 import type { HandleSession } from './session';
 import { createEndpointSource } from './sources/endpoint';
@@ -31,7 +32,7 @@ export interface OpenerDeps {
   contracts: McpContracts;
   source: DocumentSource | null;
   openLive?: (request: OpenRequest, caller: Caller, actor: AgentActor) => Promise<HandleSession>;
-  portsFor(caller: Caller, actor: AgentActor, isOpenDocument?: (pageId: string) => Promise<boolean>): AgentPorts;
+  portsFor(caller: Caller, actor: AgentActor, isOpenDocument?: (pageId: string) => Promise<boolean>, unconfirmed?: () => void): AgentPorts;
   /** The host's file uploader, for `<tool>.uploadFile`. */
   uploader?: unknown;
 }
@@ -70,7 +71,9 @@ export const createOpener = (
       throw surfaceError('SOURCE_UNAVAILABLE', 'No document source is configured. Start blok-mcp with --source.');
     }
 
-    return openStoredSession({
+    const pages = createPageDeliveryTracker();
+
+    return pages.wrap(await openStoredSession({
       documentId: request.documentId,
       write: request.write,
       source,
@@ -83,12 +86,12 @@ export const createOpener = (
         contract: deps.contracts.stored,
         actor,
         ports: deps.portsFor(caller, actor, async (pageId) =>
-          pageId === request.documentId || (await source.sameDocument?.(pageId, request.documentId) ?? false)),
+          pageId === request.documentId || (await source.sameDocument?.(pageId, request.documentId) ?? false), pages.unconfirmed),
         // 01 builds the Node pageBackend only with this flag and the openPageDocument port (Task 26).
         ...(deps.options.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
         ...(deps.uploader !== undefined && { services: { uploader: deps.uploader } }),
       }),
-    });
+    }));
   };
 
   const list: DispatcherDeps['list'] = async (request, caller): Promise<ListResult> => {

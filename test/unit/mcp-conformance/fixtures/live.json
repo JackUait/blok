@@ -14915,7 +14915,7 @@
         "--page-titles",
         "page-map"
       ],
-      "name": "page-map: a page write whose ack is lost is SOURCE_UNAVAILABLE \"not saved\", though the title landed",
+      "name": "page-map: a page write whose ack is lost succeeds, not durable and pending; the title landed",
       "steps": [
         {
           "room": {
@@ -15020,26 +15020,22 @@
                 }
               ],
               "structuredContent": {
-                "ok": false,
+                "ok": true,
                 "revision": "l0",
-                "error": {
-                  "code": "SOURCE_UNAVAILABLE",
-                  "message": "The room did not confirm the page write in time. It was not saved; try again.",
-                  "retryable": true,
-                  "details": {
-                    "pending": true,
-                    "pageId": "child-doc"
-                  },
-                  "commandIndex": 0
-                },
+                "results": [
+                  {
+                    "pageId": "child-doc",
+                    "applied": true
+                  }
+                ],
                 "delivery": {
                   "durable": false,
-                  "pending": false,
+                  "pending": true,
                   "serverSequence": null,
                   "savedVersion": null
                 }
               },
-              "isError": true
+              "isError": false
             },
             "jsonrpc": "2.0",
             "id": 2

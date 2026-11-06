@@ -16,6 +16,8 @@ import type { Caller, OpenRequest } from '../dispatcher';
 import { isMcpSurfaceError, McpSurfaceError, surfaceError } from '../errors';
 import type { HandleSession } from '../session';
 import { liveUnavailableCommands } from '../../shared/mcp/surface';
+import { createPageDeliveryTracker } from '../page-titles';
+
 import { createLiveSession, terminalToError } from './live-session';
 import { nodeSocketFactory } from './node-socket';
 import { AgentPresence } from './presence';
@@ -28,7 +30,7 @@ export interface OpenLiveDeps {
   ticketsFor?: (request: OpenRequest, caller: Caller, actor: AgentActor) => Promise<CollabTicketSource>;
   /** Defaults to `ws` with the configured Origin. */
   socketFactory?: CollabSocketFactory;
-  portsFor(caller: Caller, actor: AgentActor, isOpenDocument?: (pageId: string) => Promise<boolean>): AgentPorts;
+  portsFor(caller: Caller, actor: AgentActor, isOpenDocument?: (pageId: string) => Promise<boolean>, unconfirmed?: () => void): AgentPorts;
   /** The name peers see in presence; defaults to actor.name. */
   presenceName?: (caller: Caller, actor: AgentActor) => string;
   pageTitles?: 'off' | 'page-map';
@@ -145,13 +147,14 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
   const room = guard === undefined ? opened : withRevocation(opened, guard);
 
   try {
+    const pages = createPageDeliveryTracker();
     const agent = createStoreAgentSession({
       store: room.store,
       tools: deps.contracts.runtimes,
       contract: deps.contracts.live,
       actor,
       // A room id has no aliases, so only the same id is the open document.
-      ports: deps.portsFor(caller, actor, async (pageId) => pageId === request.documentId),
+      ports: deps.portsFor(caller, actor, async (pageId) => pageId === request.documentId, pages.unconfirmed),
       richTextFieldsFor: deps.contracts.richTextFieldsFor,
       ...(deps.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
       services: {
@@ -164,7 +167,7 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
       { actor, name: deps.presenceName?.(caller, actor) ?? actor.name }
     );
 
-    const session = createLiveSession({ room, agent, contract: deps.contracts.live, presence, write: request.write });
+    const session = pages.wrap(createLiveSession({ room, agent, contract: deps.contracts.live, presence, write: request.write }));
     const unavailableCommands = liveUnavailableCommands(deps.contracts.stored, deps.contracts.live);
 
     // assign, not spread: the session's durability is a getter.

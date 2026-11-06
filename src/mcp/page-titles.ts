@@ -3,14 +3,22 @@ import { AgentFailure, failure } from '../shared/agent/errors';
 import type { AgentPorts } from '../shared/agent/types';
 
 import type { Caller, DispatcherDeps } from './dispatcher';
-import { failedResult, isMcpSurfaceError, surfaceError } from './errors';
+import { isMcpSurfaceError } from './errors';
+import type { HandleSession } from './session';
 
 /**
  * Headless page.rename / page.setIcon: open the target page's own document
  * with the same opener (mode, authorize, tickets) as blok_open.
  */
 export const createOpenPageDocument = (
-  deps: { open: DispatcherDeps['open']; caller: Caller; isOpenDocument?: (pageId: string) => Promise<boolean>; track?: (closing: Promise<unknown>) => void },
+  deps: {
+    open: DispatcherDeps['open'];
+    caller: Caller;
+    isOpenDocument?: (pageId: string) => Promise<boolean>;
+    track?: (closing: Promise<unknown>) => void;
+    /** A live page write the room did not acknowledge in time. */
+    unconfirmed?: () => void;
+  },
 ): NonNullable<AgentPorts['openPageDocument']> => async (pageId, actor) => {
   // A second save of the open document would make this handle's version stale.
   if (await deps.isOpenDocument?.(pageId) === true) {
@@ -27,13 +35,15 @@ export const createOpenPageDocument = (
     actor,
     read: (args) => session.read(args ?? {}),
     describe: (query) => session.describe(query ?? {}),
-    // close() follows at once and drops unacked rows, so a pending write is a failed one.
+    // The write went out but no ack came; it may still land. The batch that made it says so in its delivery.
     execute: async (batch, options) => {
       const result = await session.execute(batch, options);
 
-      return result.ok && result.delivery.pending
-        ? failedResult(surfaceError('SOURCE_UNAVAILABLE', 'The room did not confirm the page write in time. It was not saved; try again.', { pending: true }).agentError, result.warnings)
-        : result;
+      if (result.ok && result.delivery.pending) {
+        deps.unconfirmed?.();
+      }
+
+      return result;
     },
     log: () => [],
     // execute already saved (stored) or waited for acks (live), so close has nothing to flush.
@@ -44,4 +54,36 @@ export const createOpenPageDocument = (
   };
 
   return agent;
+};
+
+/**
+ * A batch whose page.rename or page.setIcon went out unacknowledged is not durable, even when
+ * the open document's own part was saved. Calls on one handle run one at a time, so a count
+ * taken around execute belongs to that batch.
+ */
+export const createPageDeliveryTracker = (): { unconfirmed(): void; wrap(session: HandleSession): HandleSession } => {
+  const state = { unconfirmed: 0 };
+
+  return {
+    unconfirmed: () => {
+      state.unconfirmed += 1;
+    },
+    // Patched in place: a live session's durability is a getter that a spread would freeze.
+    wrap: (session) => {
+      const execute = session.execute.bind(session);
+
+      Object.assign(session, {
+        execute: async (...args: Parameters<HandleSession['execute']>) => {
+          const before = state.unconfirmed;
+          const result = await execute(...args);
+
+          return result.ok && state.unconfirmed !== before
+            ? { ...result, delivery: { ...result.delivery, durable: false, pending: true } }
+            : result;
+        },
+      });
+
+      return session;
+    },
+  };
 };

@@ -316,10 +316,10 @@ Shared step 1: refuse unknown arguments for lifecycle tools.
 1. Unknown arguments.
 2. Scope `blok.read`.
 3. `handle` check.
-4. `onHandle(..., write=false, noop)`. This runs `stillAllowed`, so a revoked document answers `FORBIDDEN` and **the handle stays** until the idle sweep removes it.
-5. `handles.remove`: deletes the entry first, then waits for the queue.
-6. `session.close('closed')`.
-7. Answer `{closed:true, ...summary}`.
+4. `onHandle(..., write=false, noop)`. This runs `stillAllowed`. Its refusal or error is kept, not thrown yet.
+5. `handles.remove`: deletes the entry first, then waits for the queue. An unknown handle fails here with `UNKNOWN_HANDLE`.
+6. `session.close('closed')`. This runs even when access was revoked, so the handle frees its `--max-handles` slot.
+7. If step 4 refused (`FORBIDDEN`) or failed, answer that error. Otherwise answer `{closed:true, ...summary}`.
 
 ### 2.5 Prompts (`prompts.ts`)
 
@@ -822,7 +822,8 @@ Interface (`sources/types.ts:3-26`): `load(id) → {raw, version, missing?}`, `s
      - Stored mode: the same id, or `source.sameDocument` (symlinks) (`opener.ts:85-86`).
      - Live mode: the same id only (`open-live.ts:168`).
   2. Open with the same opener: `{mode:'auto', write:true}`, so the authorize hook and tickets apply. MCP errors are re-wrapped with `details.pageId`.
-  3. A live write still pending after the ack timeout counts as failed: `SOURCE_UNAVAILABLE` "The room did not confirm the page write in time…" with `details.pending: true` (`:31-37`).
+  3. A live page write still pending after the ack timeout is passed on as it is (`ok`), and the page port reports it as unconfirmed. The page room closes right after, so nothing resends it; it may or may not have landed.
+     - The session that ran the batch counts these reports around its own execute (`createPageDeliveryTracker`, live and stored alike). When the count moved and the batch is `ok`, its delivery becomes `durable: false, pending: true`. `serverSequence` and `savedVersion` stay as the open document's own part reported them.
   4. `close()` does not wait. The close is tracked so that `stop` can wait for it (`server.ts:74-79`).
 - Contract effects (`contract.ts:29-40`):
   - `pageTitles: 'page-map'` adds the `pageBackend` service.
@@ -864,16 +865,17 @@ The `--manifest` file is validated by the engine's `readCustomToolsFile`. `--man
 
 - **`createBlokMcpServer.stop()`** (`index.ts:87-99`):
   1. Wait for any start in progress (errors ignored).
-  2. Close the transport (stdio handle or HTTP server).
-  3. **Finally** run `assembled.stop()`.
+  2. Run `assembled.stop()`. Both transports keep serving meanwhile, so calls in flight send their answers. Requests that arrive now are answered too (an open gets "The server is shutting down.").
+  3. Wait one `setImmediate`: the SDK writes an answer a few microtasks after its call settles.
+  4. **Finally** close the transport, with the time left of the 45 s as a grace. HTTP: stop accepting connections, wait up to the grace for requests in flight to finish writing, then drop every socket. Stdio: close, then wait up to the grace for stdout to drain (a macOS pipe takes writes later, and `process.exit` would cut off a large answer).
 - **`assembled.stop()`** (`server.ts:186-213`):
   1. Clear the sweeper.
   2. Race the drain work against a **45 s deadline** (`STOP_DRAIN_MS`, `server.ts:41-43`). The 45 s sits above the slowest bounded open: a 10 s authorize webhook plus a 30 s endpoint load; live is 10 s + 10 s ticket + 15 s sync. An authorize module has no bound, so stop gives up at the deadline.
   3. The drain work:
-     - `handles.closeAll(close 'closed')`, plus waiting for running sweeps, plus `drain(opens, pageCloses)`.
+     - `handles.closeAll(close 'closed')`, plus waiting for running sweeps, plus `drain(calls, pageCloses)`.
      - Then `drain` again, for page closes started by executes that were waited on.
      - `drain` loops until no new promises appear (`server.ts:46-55`).
-- **Opens.** Every in-flight `blok_open` promise is tracked (`server.ts:169-179`). An open that finishes after `closeAll` fails `handles.add` (closed registry), and its session is closed (`dispatcher.ts:217,231-234`).
+- **Calls.** Every in-flight tool call is tracked and drained, not only `blok_open`. An open that finishes after `closeAll` fails `handles.add` (closed registry), and its session is closed (`dispatcher.ts:217,231-234`).
 - **Process.** Exit 0 if `stop` resolves, 1 if it rejects (`index.ts:109`).
 
 ### 8.2 Error codes and `retryable`
@@ -894,7 +896,7 @@ Codes the shell raises itself:
 | `FORBIDDEN` | scope; stillAllowed; authorize on open or create page; ticket 403 or claim mismatch; room forbidden or unauthorized | false |
 | `UNKNOWN_HANDLE` | handles use or remove | false |
 | `HANDLE_LIMIT` | handles.assertRoom | **true** |
-| `SOURCE_UNAVAILABLE` | shutting down; no source; endpoint and files I/O; ticket endpoint (incl. 401); page id taken; room ended for good; pending page write | **true** |
+| `SOURCE_UNAVAILABLE` | shutting down; no source; endpoint and files I/O; ticket endpoint (incl. 401); page id taken; room ended for good | **true** |
 | `DOCUMENT_CHANGED` | endpoint 409; files hash or target mismatch | **true** |
 | `STORED_WRITE_FORBIDDEN` | mode.ts | false |
 | `ROOM_SYNC_TIMEOUT` | open-live | **true** |

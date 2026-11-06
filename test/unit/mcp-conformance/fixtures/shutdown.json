@@ -284,7 +284,7 @@
         "--source",
         "endpoint:${host}/docs"
       ],
-      "name": "stdio: a save in flight at SIGTERM is finished before the exit, but its answer is lost",
+      "name": "stdio: a save in flight at SIGTERM is finished and answered before the exit",
       "env": {
         "BLOK_DOC_ENDPOINT_AUTH": "Token t"
       },
@@ -364,8 +364,33 @@
           },
           "signal": "SIGTERM",
           "signalWhenHost": "PUT /docs/doc",
-          "expect": null,
-          "minElapsedMs": 1400
+          "minElapsedMs": 1400,
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
         }
       ],
       "expectExit": {
@@ -407,7 +432,7 @@
       "session": {
         "protocolVersion": "2026-07-28"
       },
-      "name": "http: a save in flight at SIGTERM is finished before the exit, but the connection drops at once",
+      "name": "http: a save in flight at SIGTERM is finished and answered before the exit",
       "env": {
         "BLOK_DOC_ENDPOINT_AUTH": "Token t"
       },
@@ -510,16 +535,57 @@
           },
           "signal": "SIGTERM",
           "signalWhenHost": "PUT /docs/doc",
-          "expectHttp": null,
-          "expect": null
+          "minElapsedMs": 1400,
+          "expectHttp": {
+            "status": 200,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
         },
         {
           "awaitExit": true,
           "exitTimeoutMs": 20000,
           "expect": {
             "code": 0
-          },
-          "minElapsedMs": 1000
+          }
         }
       ],
       "expectHostRequests": [

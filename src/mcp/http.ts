@@ -107,7 +107,7 @@ const splitListen = (listen: string): { host: string; port: number } => {
  * caller's identity comes from the verified bearer token, or from `principal`
  * when auth is none.
  */
-export const startHttpServer = async (input: HttpServerInput): Promise<{ url: string; close(): Promise<void> }> => {
+export const startHttpServer = async (input: HttpServerInput): Promise<{ url: string; close(graceMs?: number): Promise<void> }> => {
   const path = input.path ?? '/mcp';
   const oauth = input.auth.kind === 'oauth' ? input.auth : null;
   const authenticate = oauth === null ? null : requireBearerAuth({
@@ -185,7 +185,15 @@ export const startHttpServer = async (input: HttpServerInput): Promise<{ url: st
     await send(res, await handler.fetch(request, { authInfo: verdict }));
   };
 
+  // Close lets these finish writing their answers before it drops the sockets.
+  const inFlight = new Set<Promise<void>>();
   const server = createServer((req, res) => {
+    const done = new Promise<void>((resolve) => {
+      res.once('close', resolve);
+    });
+
+    inFlight.add(done);
+    void done.then(() => inFlight.delete(done));
     serve(req, res).catch((error: unknown) => {
       if (res.headersSent || res.destroyed) {
         res.destroy();
@@ -221,12 +229,22 @@ export const startHttpServer = async (input: HttpServerInput): Promise<{ url: st
 
   return {
     url: `http://${shownHost}:${address.port}`,
-    close: async () => {
-      await handler.close();
-      await new Promise<void>((done) => {
+    close: async (graceMs = 0) => {
+      const closed = new Promise<void>((done) => {
         server.close(() => done());
-        server.closeAllConnections();
       });
+      const grace: { timer?: ReturnType<typeof setTimeout> } = {};
+
+      await Promise.race([
+        Promise.allSettled([...inFlight]),
+        new Promise<void>((resolve) => {
+          grace.timer = setTimeout(resolve, graceMs);
+        }),
+      ]);
+      clearTimeout(grace.timer);
+      await handler.close();
+      server.closeAllConnections();
+      await closed;
     },
   };
 };

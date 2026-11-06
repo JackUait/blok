@@ -1,7 +1,6 @@
 import { readFile } from 'node:fs/promises';
+import { setImmediate as afterAnswers } from 'node:timers/promises';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
-
-import type { StdioServerHandle } from '@modelcontextprotocol/server/stdio';
 
 import { getBlokVersion } from '../components/utils/version';
 
@@ -12,7 +11,7 @@ import { startHttpServer } from './http';
 import { DEFAULTS } from './options';
 import type { BlokMcpOptions } from './options';
 import { buildSdkServer } from './sdk-server';
-import { assembleMcp } from './server';
+import { assembleMcp, STOP_DRAIN_MS } from './server';
 
 export type { BlokMcpOptions } from './options';
 
@@ -36,11 +35,29 @@ const readJsonFile = async (path: string): Promise<unknown> => {
   }
 };
 
+// A pipe on macOS takes writes later, so process.exit would cut off an answer the client reads slowly.
+const flushStdout = async (graceMs: number): Promise<void> => {
+  if (process.stdout.writableLength === 0) {
+    return;
+  }
+  const grace: { timer?: ReturnType<typeof setTimeout> } = {};
+
+  await Promise.race([
+    new Promise<void>((resolve) => {
+      process.stdout.write('', () => resolve());
+    }),
+    new Promise<void>((resolve) => {
+      grace.timer = setTimeout(resolve, graceMs);
+    }),
+  ]);
+  clearTimeout(grace.timer);
+};
+
 export const createBlokMcpServer = (options: BlokMcpOptions): { start(): Promise<void>; stop(): Promise<void> } => {
   checkOptionSafety(options);
 
   const assembled = assembleMcp(options);
-  const state: { serving?: StdioServerHandle; starting?: Promise<void>; stopping?: Promise<void> } = {};
+  const state: { serving?: { close(graceMs: number): Promise<void> }; starting?: Promise<void>; stopping?: Promise<void> } = {};
   const principal = options.principal ?? DEFAULTS.principal;
 
   const startHttp = async (listen: string): Promise<void> => {
@@ -76,21 +93,33 @@ export const createBlokMcpServer = (options: BlokMcpOptions): { start(): Promise
       if (options.auth.kind !== 'none') {
         throw new McpConfigError('OAuth authentication needs the HTTP transport (--http)');
       }
-      state.serving = serveStdio(() => buildSdkServer({
+      const stdio = serveStdio(() => buildSdkServer({
         tools: assembled.tools,
         instructions: assembled.instructions,
         dispatch: assembled.dispatch,
         caller: clientName => ({ principal, clientName, scopes: null }),
         version: getBlokVersion(),
       }));
+
+      state.serving = {
+        close: async (graceMs) => {
+          await stdio.close();
+          await flushStdout(graceMs);
+        },
+      };
     },
     stop: () => {
       state.stopping ??= (async () => {
+        const begun = Date.now();
+
+        // Work first, then the transport: closing it first would drop the answers of calls in flight.
         try {
           await state.starting?.catch(() => undefined);
-          await state.serving?.close();
-        } finally {
           await assembled.stop();
+          // The SDK writes an answer a few microtasks after its call settles.
+          await afterAnswers();
+        } finally {
+          await state.serving?.close(Math.max(0, STOP_DRAIN_MS - (Date.now() - begun)));
         }
       })();
 

@@ -199,6 +199,101 @@ describe('createBlokMcpServer', () => {
     }
   });
 
+  const heldSession = (executing: { release(): void }, finish: Promise<void>): HandleSession => ({
+    mode: 'stored',
+    write: true,
+    durability: 'saved-on-execute',
+    contractRevision: 'contract-r1',
+    read: async () => { throw new Error('Unused read dependency'); },
+    describe: () => { throw new Error('Unused describe dependency'); },
+    execute: async () => {
+      executing.release();
+      await finish;
+
+      return { ok: true, results: [], warnings: [], revision: 'r2', delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v2' } };
+    },
+    close: async () => ({ unsavedBatches: 0, hostRecordLags: false }),
+  });
+
+  it('stdio: stop closes the transport only after a call in flight has answered', async () => {
+    const closeTransport = vi.fn(async () => undefined);
+
+    vi.mocked(serveStdio).mockReturnValue({ close: closeTransport });
+    const server = createBlokMcpServer({ transport: { kind: 'stdio' }, auth: { kind: 'none' } });
+    const executing = barrier();
+    const finish = barrier();
+
+    try {
+      await within(server.start());
+      const assembled = owned[0];
+
+      if (assembled === undefined) {
+        throw new Error('Missing assembled server');
+      }
+      const handle = assembled.handles.add('local', 'notes', heldSession(executing, finish.wait));
+      const answered = assembled.dispatch('blok_execute', { handle, commands: [] }, { principal: 'local', clientName: 'test', scopes: null });
+      const order: string[] = [];
+
+      void answered.then(() => order.push('answered'));
+      closeTransport.mockImplementation(async () => {
+        order.push('transport closed');
+      });
+      await within(executing.wait);
+      const stopping = server.stop();
+
+      await within(dispatchCheckpoint());
+      expect(closeTransport).not.toHaveBeenCalled();
+      finish.release();
+      await within(stopping);
+      expect(order).toEqual(['answered', 'transport closed']);
+    } finally {
+      finish.release();
+      await within(server.stop());
+    }
+  });
+
+  it('http: a call in flight at stop still gets its answer', async () => {
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const server = createBlokMcpServer({
+      transport: { kind: 'http', listen: '127.0.0.1:0' },
+      auth: { kind: 'none' },
+      authorize: async () => true,
+    });
+    const executing = barrier();
+    const finish = barrier();
+
+    try {
+      await within(server.start());
+      const url = stderr.mock.calls.map((call) => String(call[0])).find((text) => text.includes('listening on'))?.match(/http:\/\/\S+/)?.[0] ?? '';
+      const assembled = owned[0];
+
+      if (assembled === undefined) {
+        throw new Error('Missing assembled server');
+      }
+      const handle = assembled.handles.add('local', 'notes', heldSession(executing, finish.wait));
+      const response = fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'blok_execute', arguments: { handle, commands: [] } } }),
+      }).then(async answer => ({ status: answer.status, text: await answer.text() }));
+
+      void response.catch(() => undefined);
+      await within(executing.wait);
+      const stopping = server.stop();
+
+      await within(dispatchCheckpoint());
+      finish.release();
+      await within(stopping);
+      const answer = await within(response);
+
+      expect(answer.status).toBe(200);
+      expect(answer.text).toContain('"savedVersion":"v2"');
+    } finally {
+      finish.release();
+      await within(server.stop());
+    }
+  });
+
   it.each(['session', 'transport'])('waits for %s cleanup before stop resolves', async held => {
     const started = barrier();
     const release = barrier();
@@ -651,8 +746,7 @@ describe('runCli shutdown lifecycle', () => {
         expect(closeSession).not.toHaveBeenCalled();
         queuedRelease.release();
         await within(queued);
-        await within(dispatchCheckpoint());
-        expect(held === 'session' ? closeSession : closeTransport).toHaveBeenCalled();
+        // The held cleanup starting proves it was called; the transport closes a tick after the work.
         await within(cleanupStarted.wait);
         await within(dispatchCheckpoint());
         expect(lifecycle.exit).not.toHaveBeenCalled();
@@ -719,8 +813,6 @@ describe('runCli shutdown lifecycle', () => {
         lifecycle.emit('end');
         lifecycle.emit('SIGINT');
         lifecycle.emit('SIGTERM');
-        await within(dispatchCheckpoint());
-        expect(closeTransport).toHaveBeenCalled();
         await within(cleanupStarted.wait);
         await within(dispatchCheckpoint());
         expect(lifecycle.exit).not.toHaveBeenCalled();

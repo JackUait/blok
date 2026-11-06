@@ -40,7 +40,7 @@ export interface AssembleDeps {
 
 // Above the slowest bounded open: 10 s authorize webhook + 30 s endpoint load (live: 10 s + 10 s ticket
 // + 15 s sync). A user --authorize module has no timeout, so stop gives up waiting here.
-const STOP_DRAIN_MS = 45_000;
+export const STOP_DRAIN_MS = 45_000;
 
 // Work in flight can add more promises, so it looks again until nothing new is left.
 const drain = async (sets: Set<Promise<unknown>>[], seen = new Set<Promise<unknown>>()): Promise<void> => {
@@ -164,15 +164,14 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     handleIdleMs,
   });
   const state: { stopping?: Promise<void> } = {};
-  // An open that lands after stop closes its session in the dispatcher, so stop must wait for it.
-  const opens = new Set<Promise<unknown>>();
+  // Stop waits for every call, so its answer goes out before the transport closes.
+  // An open that lands after stop also closes its session in the dispatcher.
+  const calls = new Set<Promise<unknown>>();
   const tracked: Dispatch = (name, args, caller, dispatchOptions) => {
     const outcome = dispatch(name, args, caller, dispatchOptions);
 
-    if (name === 'blok_open') {
-      opens.add(outcome);
-      void outcome.catch(() => undefined).finally(() => opens.delete(outcome));
-    }
+    calls.add(outcome);
+    void outcome.catch(() => undefined).finally(() => calls.delete(outcome));
 
     return outcome;
   };
@@ -195,10 +194,10 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
               await session.close('closed');
             }),
             Promise.allSettled([...sweeps]),
-            drain([opens, pageCloses]),
+            drain([calls, pageCloses]),
           ]);
           // An execute that closeAll waited for may have closed a page session after the first drain.
-          await drain([opens, pageCloses]);
+          await drain([calls, pageCloses]);
         })();
 
         try {

@@ -181,7 +181,8 @@ export class MediaFailures extends Module {
   }
 
   /**
-   * Release timers and the unload listener.
+   * Release timers and the unload listener, and take down every card.
+   * The notifier lives on the page, not in the editor, so cards would outlive it.
    */
   public destroy(): void {
     this.settleLeave(true);
@@ -189,6 +190,8 @@ export class MediaFailures extends Module {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
     }
+    [ ...this.onScreen ].forEach((notice) => this.closeNotice(notice, false));
+    this.saveNotice = null;
     this.entries.clear();
     this.syncLeaveHold();
     this.stopWatchingPresence();

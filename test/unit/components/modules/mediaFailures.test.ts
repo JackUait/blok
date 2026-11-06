@@ -680,6 +680,21 @@ describe('MediaFailures', () => {
     expect(unloadPrevented()).toBe(false);
     expect(show).not.toHaveBeenCalled();
   });
+
+  it('takes its cards down on destroy, so they do not outlive the editor', () => {
+    const { module, show, dismiss } = setup();
+
+    module.report(input('a'));
+    module.report(input('u', 'upload'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    const shown = show.mock.calls.map(([ options ]) => options);
+
+    module.markDestroyed();
+    module.destroy();
+
+    expect(shown).toHaveLength(2);
+    expect(dismiss.mock.calls.map(([ options ]) => options)).toEqual(shown);
+  });
 });
 
 describe('MediaFailures.confirmLeave', () => {

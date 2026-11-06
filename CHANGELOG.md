@@ -2,6 +2,298 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0](https://github.com/JackUait/blok/compare/v1.16.1...v2.0.0) (2026-11-06)
+
+### Breaking Changes
+
+- **Markdown extension options** — Markdown import uses Blok's own parser, so micromark and mdast extensions no longer plug in.
+  - `MarkdownImportConfig` loses `extensions` and `mdastExtensions`. Map custom syntax through `toolMap` or `onUnknownNode`, or post-process the blocks.
+  - Nodes passed to `toolMap` and `onUnknownNode` are typed as `MarkdownNode` and no longer carry `position`, `spread` or `data`.
+  - Code typed with `@types/mdast` must switch to `MarkdownNode` and `MarkdownTree.*` from `@bloklabs/core/markdown`, and narrow on `node.type` first.
+- **Generic embed source** — A generic embed frames only its absolute `https://` `source`, and saves it in canonical form.
+  - `data.embed` is no longer framed or checked against `allowedEmbedOrigins` for a generic embed. Set `source` to the URL to frame.
+  - Values like `https:host.com` or `https:/path` are no longer links anywhere. A saved embed with one renders inert, so store absolute `https://` URLs.
+  - A generic embed saves `source` and `embed` canonical, so `https://Example.com` is saved as `https://example.com/`.
+- **Blob URLs without an uploader** — With no uploader, risky files get a `text/plain` blob URL, and SVG images get a `data:` URL.
+  - Old: the `blob:` URL in `data.url` kept the file's type (HTML, SVG, XML, zip, Office). New: it is `text/plain`. Read the type from the block's `mimeType`.
+  - An SVG image's `data.url` is a `data:image/svg+xml;base64,...` URL up to 256 KB. Larger SVGs do not show, so configure an uploader.
+  - Markdown and HTML import and `blocksToHtml` now keep `data:image/svg+xml` images. Filter them in `transformUrl` if your pipeline must not see them.
+- **`resolveBlokObjectUrl` file types** — The `@bloklabs/presets` resolver no longer returns a blob that keeps a risky stored file's type.
+  - Files outside the safe list come back as a `text/plain` blob. Read the type from the block's `mimeType`, not from the blob.
+  - An SVG stored as an image comes back as a `data:` URL up to 256 KB. Larger ones do not show.
+  - SVG files stored before this release have no saved kind, so they come back as `text/plain`. Upload them again to show them.
+- **Page title and icon in the write-back** — The collaboration service now reads and writes the page's top-level `title` and `icon`.
+  - The room seeds from the host record's `title` and `icon`. The PUT body and `GET /sync/{doc}/state` carry them when the page has them.
+  - A host field named `title` or `icon` with another meaning is overwritten. Rename it, and rename pages through the editor.
+- **HTML sanitizer output** — Blok's own cleaner replaces html-janitor, and `api.sanitizer.clean()`, a host `sanitizer` config and `sanitizeHtmlFragment()` remove more.
+  - `on*` attributes are always removed, even under a `true` rule or a function rule. Attach event listeners in code.
+  - `srcdoc` is always removed, and so are `javascript:`, `vbscript:` and `data:` URLs in attributes such as `action` or `xlink:href`.
+  - `<script>` and `<style>` inside `<svg>` or `<math>` are removed with their content, whatever the config allows.
+- **Embeds in the read-only view** — `blocksToHtml`, `blocksToViewNodes` and `<BlokView>` frame only registry embeds, sandboxed, with the src passed through `transformUrl`.
+  - Old: any https `data.embed` became an `<iframe>` with no sandbox. New: the src is rebuilt from `data.source`, with a `sandbox` and a referrer policy.
+  - Other embeds, and script-widget services such as X, render as a link to their source.
+  - `transformUrl` now sees the frame src. A result off the provider's origin gets the strict generic sandbox, and one not absolute `https://` renders a link.
+- **Generic embed frames** — Generic embeds now load only after the reader clicks, inside a strict sandbox, and never frame the host's own site.
+  - A placeholder with a load button shows first. Set `linkPaste.genericEmbedClickToLoad: false` to load at once.
+  - The frame gets `allow-scripts allow-forms allow-popups`, no `allow` list, no referrer and no cookies. Sites that need sign-in, storage or fullscreen stop working.
+  - An embed of the page host, a `hostAliases` entry, or a subdomain or parent domain of either renders as a link card.
+- **Registry embed popups** — Only video and audio players keep `allow-popups-to-escape-sandbox`, so other providers' popups stay sandboxed.
+  - Popups from CodePen, Figma, Google Docs and other non-player providers inherit the frame's sandbox. Some provider pages may refuse to load there.
+  - Drop `allow-popups-to-escape-sandbox` from tests or CSP checks that match a non-player embed's sandbox string.
+- **Embed host lists** — `allowedEmbedOrigins` and `hostAliases` entries written as origins, with ports, spaces or Unicode now take effect.
+  - Old: `https://good.com`, `good.com:8443` or `bücher.de` matched nothing. New: they match that host, and a port allows only that port.
+  - Review both lists and remove entries you did not mean to be live.
+- **PDF preview** — The file tool's preview no longer frames remote PDFs. They show an "Open in new tab" link instead.
+  - Only `blob:` PDFs are framed. For inline previews of remote files, have your uploader return a `blob:` URL.
+  - A strict CSP may need `blob:` in `connect-src`, since the preview reads the blob with `fetch`.
+- **Code highlighting on the host page** — Blok no longer loads Prism, so it no longer sets `window.Prism` or highlights the host page's code.
+  - `<code class="language-*">` outside the editor stays plain. Load your own highlighter if your page relied on it.
+  - Highlighting inside Blok keeps the `.token.*` classes and `--blok-code-*` variables.
+- **Undo inside keyboard-owner subtrees** — Undo and redo now reach the document from inside `data-blok-keyboard-owner`.
+  - Old: Blok ignored Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z and Ctrl+Y there. New: they undo or redo after the event bubbles.
+  - A tool that handles these keys itself must call `event.preventDefault()`. Text inputs and contenteditables keep their native undo.
+- **`blocks.convert()` data overrides** — Data overrides passed to `blocks.convert()` now go through the same sanitizing as `insert` and `update`.
+  - Old: overrides entered the block as given. New: the tool and global sanitizer rules and unsafe URL stripping apply.
+  - Widen the target tool's sanitize rules or the global `sanitizer` config to keep extra markup.
+- **`api.tooltip.onHover` on press** — Pressing a hover trigger now hides its hint and cancels a pending one.
+  - To keep a hint shown during a press, call `api.tooltip.show()` and `hide()` yourself instead of `onHover`.
+- **Selection tint** — A selected block is now one translucent tint drawn over its content, not a fill under it.
+  - The light `--blok-selection` default is `rgba(35, 131, 226, 0.14)`, was `#e1f2ff`. An opaque override now hides text, so use a translucent colour.
+  - The content wrapper no longer gets the `bg-selection` class. Style `[data-blok-selected="true"]` instead.
+- **Default font and theme colours** — Several CSS variable defaults now follow Notion's look. Set a variable to its old value to keep the old look.
+  - `--blok-font-sans` is the system font stack, not Inter. Set it, or `style.fontFamilySans`, to the old stack to keep Inter.
+  - The dark `--blok-bg-primary` is `#191919`, was `#1d1d1c`.
+  - `--blok-tooltip-bg`, `--blok-tooltip-font`, `--shadow-tooltip` and `--blok-image-lightbox-shortcut-fg` have new defaults, and the toolbox preview card follows them.
+- **Host check on the standalone server** — In `--auth none` and `proxy` modes, `@bloklabs/server` answers 421 unless the Host is loopback or a configured name.
+  - It covers every route except `/health`, local files and the sync socket. Allowed names come from `--allow-origin` and `--public-url`.
+  - Behind a proxy that forwards your public Host, add that origin to `--allow-origin`, or make the proxy send a loopback Host.
+  - In-process `AddBlokServer` apps are unchanged unless they call `UseLoopbackHostCheck()`.
+- **Bare LF line ends on the standalone server** — The standalone server refuses requests whose request line or headers end in a bare LF.
+  - It answers an empty 400 and closes the connection. Send CRLF line ends, as HTTP/1.1 requires.
+- **Outbound fetches from `/unfurl` and `/upload-by-url`** — `Blok.Server` refuses more outbound URLs and charges each redirect to the rate limit.
+  - A URL with a raw control character anywhere is refused. Trim and strip control characters, and escape one that belongs in the URL.
+  - A redirect from https to http is no longer followed. Link to the final http URL directly.
+  - Each redirect hop counts against the caller's limit. Raise `--rate-limit` (`RateLimitPerMinute`) if real traffic now gets 429.
+- **`/unfurl` image and favicon** — `GET /unfurl` returns only `image.url` and `favicon` values a browser can load safely, else the next candidate.
+  - Only https URLs with a public, plain host and no control character, raw or escaped, are returned.
+  - A dropped candidate gives way to the next one, so a dropped icon falls back to `/favicon.ico`.
+  - Hosts come back as punycode. A client that needs an http image or favicon must fetch or proxy it itself.
+- **Collaboration edit limits** — `POST /sync/{doc}/edit` refuses oversized and unreadable text up front.
+  - A rich text HTML string over 32768 characters gets 413. Send that text as segments, or split it across blocks.
+  - A body whose text is not valid Unicode gets 422, not 500. Treat it as final and fix the request instead of retrying.
+- **JSON reading in the C# document converter** — `Blok.Server` reads repeated keys and lone surrogates the way `JSON.parse` and the Go server do.
+  - A repeated key takes its last value, and a lone surrogate reads as U+FFFD. Send documents without repeated keys.
+  - `LooksLikeADocument` and `ValidateAsync` return false for any repeated key, even one inside a block that used to pass. De-duplicate keys first.
+  - Other operations throw `BlokDocumentConversionException`, not a raw `JsonException` or `InvalidOperationException`. Catch only that exception.
+- **Upload file names in code-page charsets** — `POST /upload` ignores a `filename*` in a code-page charset such as windows-1252.
+  - Send `filename*` as utf-8, or send a plain `filename` too. A part with only such a `filename*` is not a file.
+
+### Features
+
+- **Ask AI assistant** — Set `agent.assistant` with your model and users get an Ask AI bar that writes and edits the document, showing edits as they stream.
+  - It opens with Mod+J, Space in an empty block, the inline toolbar's Ask AI row, `editor.agent.ask()` or `editor.agent.openAssistant()`.
+  - Use `actions` for the buttons under the field, `thinking` for a level picker, and `tools` for host tools such as web search.
+  - Use `allowMediaUrl` to choose which image and media URLs an agent may write, so document text cannot leak out through a URL.
+- **Model adapters** — `agentModel({ provider, model, send, stream })` from `@bloklabs/core/agent-models` connects Ask AI to Anthropic, OpenAI, Gemini and many OpenAI-compatible services.
+  - You name the provider and the adapter picks the API it serves. Your backend keeps the API key.
+  - `webSearch` turns on the provider's own web search, where it has one.
+  - Pass `stream` to show edits live as the model writes them.
+- **Agent API (`editor.agent`)** — Run your own LLM loop on the open document. Users see agent edits live, can stop them, and undo each batch in one step.
+  - `editor.agent.tools({ format })` and `guidance()` give the tool definitions and system prompt. `begin()` opens a turn and `call()` runs a tool call.
+  - Set `agent.overrides` to hide tools or actions from agents, or to add guidance for one tool.
+  - Blocks an agent writes name the person in `createdBy` and `lastEditedBy`, and the agent in `createdWith` and `lastEditedWith`.
+- **MCP server (`@bloklabs/mcp`)** — Outside agents, such as Claude Desktop, read and edit Blok documents, either live in a sync room or as stored documents.
+  - Run `npx @bloklabs/mcp --source files:./docs`, or join live rooms with `--sync-url`.
+  - Serve it over HTTP with `--http` and `--auth oauth`, and decide who opens what with `--authorize`.
+  - Ask AI's built-in skills are offered as MCP prompts. Embed it with `createBlokMcpServer` to pass `uploads`.
+- **What agents can do** — Ask AI, `editor.agent`, MCP and the backends share one command set: blocks, rich text, Markdown, HTML paste, comments, databases and uploads.
+  - `history.undo` and `history.redo` take back only the agent's own batches. With `agent.versionHistory`, agents also list, read and restore versions.
+  - Give the page tool `loadDocument` and `saveDocument` so agents can read and write sub-pages.
+  - Unlocking a locked database, changing form sharing or passing a button's confirmation needs a person's yes, through `approve` or MCP elicitation.
+- **Agents on the backend** — The C# server (`IBlokAgentExecutor`) and the Go server (`blokagent`) run agent batches on stored documents and in live rooms.
+  - C# agents create sub-pages through `IBlokPageCreator`.
+  - Agent comments are on by default. Turn them off with `BuiltInComments = false` (C#) or `comments: false` / `--no-comments` (MCP).
+- **"Send message to agent" button action** — A database button can send a message to Ask AI. The person who presses it reads and confirms the message first.
+- **Database views** — Databases now draw `table`, `gallery`, `calendar`, `timeline`, `chart`, `feed`, `form` and `map` views beside `board` and `list`.
+  - Saved filters and sorts now apply, with filter groups, relative dates, grouping, color rules and calculations.
+  - A person's filter and sort edits stay their own until Save for everyone; set `viewState` to store them.
+  - The map view draws with MapLibre GL only once you set `map.styleUrl`.
+- **Database property types** — Rows can hold `status`, `email`, `phone`, `person`, `files`, `createdTime`, `lastEditedTime`, `createdBy`, `lastEditedBy`, `uniqueId`, `relation`, `rollup`, `formula`, `button`, `place` and `verification` values.
+  - Formulas follow Notion's Formula 2.0 language, with an editor, help, examples and a live preview.
+  - Changing a property's type converts every existing value.
+  - Set `people` for the person picker and `relations` for related databases in other documents.
+- **Database row pages** — Open a row in a side peek, a center peek or as a full page, with its properties above an editable body.
+  - A row's body is now its own child blocks, not a blob in a `richText` property.
+  - Row pages get icons, covers, templates, comments, a layout builder and backlinks through `backlinks`.
+  - Set `rowPages.navigate` to show a row's full page in your own page area.
+- **Full-page databases** — The "/" menu's "Database - Full page" makes a sub-page that holds one database.
+  - Turn it on with `databasePages: true` in the page tool's config; your `create` must store the given `document`.
+  - The database inside is saved with `fullPage: true` and uses the page title as its title.
+- **New database panel** — Inserting a database opens a panel with Suggested and More templates, Import CSV and linking an existing source.
+  - The "/" Database entry now starts a table, not a board.
+  - Set `ai.setupDatabase` to add a prompt box that builds the database from a description.
+  - Pasting a CSV or TSV table offers "Convert to database".
+- **Linked views and data sources** — A database can show another database's rows with its own views, or hold a second data source.
+  - Set `linkedSources` to list and load databases from other documents.
+  - The source is saved as `source` on the linked block; its rows are never copied in.
+- **Database import and export** — Import CSV and Merge with CSV map each column to a type, and `exportCsv()` returns the database as CSV.
+  - HTML, Markdown and plain-text exports now write each row once, with its title and page body.
+  - `blocksToHtml` wraps a database in `<section data-blok-database>` and each row in `<section data-blok-database-row>`.
+- **Database host hooks** — New optional config hands work to your app: `automations`, `buttons`, `forms`, `templates`, `reminders`, `comments`, `permissions`, `favorites`, `calendar` and `ai.autofill`.
+  - Without a `comments` hook, row comments are saved in the document as `database-comment` blocks.
+  - Registering `database` now also registers `database-row` and `database-comment`.
+  - Set `adapter.viewRowOrder: true` to give each view its own manual row order.
+- **Page title and icon** — An editable page title with an optional icon above the first block, saved with the document and driven from code through `blok.title`.
+  - Turn it on with `pageTitle: true` or a `TitleConfig` (`holder`, `placeholder`, `icon`, `onChange`, `onIconChange`). It is off by default.
+  - `blok.title` has `get`, `set`, `focus`, `mount` and `icon`; pass `{ record: false }` to skip the undo step.
+  - `extractTexts` and `injectTexts` take `{ title: true }` to translate the title along with the blocks.
+- **"@" menu and page picker** — Typing "@" opens a page menu at once, with recent pages, sections, a loading state, page paths and an empty state.
+  - The menu asks `search('')` for recent pages, so answer an empty query with recents.
+  - `createFromMention: true` adds a New page section; `create` then gets `title` and `parentId` in `PageCreateInit`.
+  - `PageSearchResult.path` shows the page's path under its row; `resolve`'s `path` and `icon` win when set.
+- **"/" Link to page** — The toolbox gets a "Link to page" entry that opens the page picker with a search field and inserts a `page-link` block.
+  - It shows only when the `page-link` tool's config has `search`.
+  - `blocks.insert` and agents insert `page-link` as before; only toolbox picks open the picker.
+- **Draft and creating states for pages** — Pages can show a gray "Draft" badge, and a new page block shows "Creating page…" while the host's `create` runs.
+  - Set `status: 'draft'` on `PageInfo` or `PageSearchResult` to show the badge on page blocks, mentions and picker rows.
+  - The badge and the busy state are styling only; saved data does not change.
+- **In-house file preview engines** — Word, PowerPoint, Excel and zip previews now run on Blok's own read-only engines, hardened against hostile files.
+  - PowerPoint previews keep fonts embedded in the deck and draw charts as SVG.
+  - One broken Excel sheet no longer hides the others.
+  - Code file previews show line numbers and wrap long lines.
+- **`diffOutputData`** — Compare two saved documents by block id and get the added, removed, changed and moved blocks, without a DOM.
+  - Rich text that says the same thing in HTML or segments counts as equal.
+  - Pass `richTextFields` to list rich-text fields for your own tools.
+- **Table full screen** — Open any table in a full-screen view from its corner button or the table menu, and resize it from the header.
+  - Escape, the close button or a click on the backdrop closes it.
+  - The header's size card adds or removes rows and columns, but keeps the ones with content.
+  - Theme it with `--blok-table-fullscreen-backdrop` and `--blok-table-fullscreen-shadow`.
+- **Faster big tables and documents** — Large tables open, grow, resize and scroll much faster, and typing and undo do less work in long documents.
+  - Off-screen table cells skip style and layout until they first scroll into view.
+  - Holding the add-row or add-column bar at the screen edge keeps adding and scrolls along.
+- **`blocks.create` and parent-aware inserts** — `blocks.create(type, options)` adds a block the way a toolbox pick does, and `blocks.insert` takes a `parentId`.
+  - `blocks.create` waits for the tool's `prepareInsert`, and inserts nothing if it rejects.
+  - React, Vue and Angular `useBlocks` get `create(spec)`.
+  - `blocks.insert` and `insertMany` write children straight under their parent instead of the root.
+- **Block creation stamps** — Each block records `createdAt` and `createdBy` once, when it is created, and saves them with the document.
+  - `BlockAPI` gains `createdAt`, `createdBy`, `lastEditedAt` and `lastEditedBy` getters.
+  - `equalsOutputData` ignores the stamps, like the edit metadata.
+- **New tool levers** — Tools can ask the user for data after a toolbox pick, stay out of page content, or bring the tools they need; `prepareInsert` gets the picked entry's data.
+  - `static pickInsert(config, context, data)` runs after a toolbox pick; a rejection inserts nothing.
+  - `static isAnnotation = true` keeps a block saved but out of find, copy, exports and keyboard moves.
+  - `static companionTools` registers the block tools a tool cannot work without.
+- **Generic embed controls** — Hosts can block or pre-check generic embeds, and editors can drag a generic embed's height.
+  - `linkPaste.blockedEmbedOrigins` lists hosts that never get a generic embed.
+  - `linkPaste.checkEmbed(url)` lets your backend refuse a URL; a refused link becomes a bookmark.
+- **Popover options for tool menus** — Tool menus get new popover options for value labels, submenus, placement and close animation.
+  - Items take `valueLabel` and `children.clickOnly`, `children.placement: 'under'`, `children.moreButton`, `children.searchPlaceholder`.
+  - A row with a submenu may also have its own `onActivate`.
+  - Popovers take `offset` and `animateClose`.
+- **Menu and hint polish** — The "/" menu, bookmarks and the selection lasso behave more like Notion, and hints use a tighter box that wraps.
+  - The "/" menu labels results "Filtered results" and ends with a "Close menu esc" row.
+  - A bookmark whose cover fails to load shows a page sketch instead of a broken image.
+  - The lasso scrolls faster the longer it holds the screen edge.
+- **Lighter bundles** — Apps download less up front, and a bundler drops the tools an app never imports.
+  - Paste, find, the emoji picker, the "@" picker and several stylesheets load on first use.
+  - Images below the fold load lazily; video and audio fetch only near the viewport.
+- **New icons** — `@bloklabs/core/icons` exports many new icons, such as `IconTimeline`, `IconSidebarRight`, `IconChevronDoubleRight`, `IconTicket` and `IconCurrency`.
+- **Go server** — A Go build of the server serves the same routes as the C# one, as a Go module or a static binary.
+  - Import `github.com/JackUait/blok/packages/server/go/v2`: `blokserver` for the routes, `blokdocs` for conversion, `blokagent` for agent batches.
+  - Release archives `blok-server-go_<os>_<arch>` cover macOS, Linux and Windows on amd64 and arm64, with `checksums-go.txt`.
+  - Pass `--collab` for live collaboration; it shares the C# server's collaboration directory.
+- **Go server inside your own app** — Mount `blokserver` behind your own auth, journal and activity log.
+  - `Server.HandlerWithAuth(prefix, auth)` keeps `/health` and CORS preflights open, like `RequireAuthorization()` in C#.
+  - Set `Options.CollabOperationStore` and `Options.CollabActivityObserver` to plug in your own store and observer.
+  - An embedded `Handler` caps request bodies as Kestrel does, unless you set `WithRequestBodyLimit`.
+- **Version history** — A journal-backed document keeps its past: list versions, read one, see its edits, restore it or delete old history.
+  - Routes live under `/sync/{doc}/history`; `restore` needs `Blok-Idempotency-Key` and accepts `If-Match`.
+  - History begins with this release; journal generations finished before it are not listed.
+  - Your own journal keeps history only if it also implements `ICollabOperationHistoryStore`.
+- **Frame check** — `GET /frame-check?url=…&embedder=…` tells your editor whether a page can be shown in a frame, plus safe oEmbed details.
+  - `verdict` is `allowed`, `blocked`, `insecure` or `unknown`; use it as a UI hint, not a security check.
+  - It is open whenever `/unfurl` is, and `--no-unfurl` or `UnfurlDisabled` closes both.
+  - `oembed` holds only `title`, `provider_name`, an `https` `thumbnail_url`, `width` and `height`.
+
+### Bug Fixes
+
+- **Read-only databases** — A read-only board no longer turns editable after a redraw, and its view tabs can no longer be renamed or dragged.
+- **Grouped lists** — Adding a row to a grouped list no longer throws before the backend hears about it.
+- **Untitled cards** — Renaming an untitled board card no longer fills in the placeholder as its title.
+- **Empty group values** — Rows with no value in the grouped property now show in a "No <property>" column instead of disappearing.
+- **Multi-select grouping** — Grouping by a multi-select now shows each row under every option it has, instead of hiding every row.
+- **Deleting a board column** — Deleting a column keeps its rows and clears their value; adapters now get `updateRow` instead of `deleteRow`.
+- **Saves from newer clients** — Saving a database keeps unknown keys a newer client wrote, and database motion honours reduced motion.
+- **Deleting a database** — Deleting or replacing a database block now deletes its rows too, instead of dropping them into the document.
+- **Backend deletes** — Deleting rows through Backspace, selection delete, cut or block delete now sends `deleteRow` to the adapter.
+- **Blocks inside a database** — Tab, drops and `api.blocks.moveTo` no longer nest ordinary blocks among a database's rows.
+- **Lost text after an out-of-order collaboration update** — An update that arrives before the one it depends on no longer cuts off the rest of a text.
+- **Empty Yjs items** — A C# room document holding a length-0 item keeps saving and rejects bad writes, as yjs does.
+- **Malformed text in sync frames** — A sync frame with text that is not valid Unicode is dropped instead of closing the socket.
+- **Slow edits on long conjunct runs** — An edit to text with a long run of joined consonants now takes linear time.
+- **Per-user connection cap** — A signed-in user with an empty name is now capped by its id, not let through uncapped.
+- **Collaboration host logs** — Room warnings can no longer be forged by a crafted document id, and nothing is dropped at shutdown.
+  - Control characters in a warning line are escaped.
+  - The C# host now prints warnings from its working-set stores and journal.
+  - The shutdown drain waits for every activity record, even after your logger throws.
+- **Document conversion in C#** — Calls end at their timeout, nest to the same depth every time and report odd script errors as `Unknown`.
+  - A call waiting on a promise that never settles now fails `TimedOut` and frees its engine.
+  - Each call runs on its own large stack, so deep outlines convert on any thread.
+  - Sorting text that holds a lone surrogate no longer fails the call.
+- **Non-ASCII allowed origin** — An allowed origin with non-ASCII characters now gets 403 instead of an empty 500.
+- **UTF-7 upload file names** — An upload with `filename*=utf-7''…` uses the plain `filename` instead of answering 500.
+- **Outbound fetches** — `/unfurl` and `/upload-by-url` refuse two more internal address ranges, and slow downloads no longer hold up link previews.
+  - The Azure WireServer address and SIIT `::ffff:0:a.b.c.d` addresses are refused.
+  - `/upload-by-url` gets its own pool of four fetches, apart from `/unfurl`.
+  - With a rate limit on, one caller runs at most two fetches at once in each pool.
+- **Docker image CVE** — The image upgrades its Ubuntu packages to clear CVE-2026-109518 in apt.
+- **Presence marks before their stylesheet** — Carets, name flags and selection shades no longer push text around when `presence.css` loads late or fails.
+- Word previews no longer run scripts hidden in a `.docx` file.
+- PowerPoint previews no longer load images or CSS from other hosts, and deck links go through Blok's URL check.
+- Crafted Word, PowerPoint and Excel files can no longer freeze the tab or use gigabytes of memory.
+- PowerPoint previews no longer show English placeholder text, and draw decks with odd slide sizes or table spans correctly.
+- PowerPoint shape and picture links work from the keyboard, and pictures get alt text from the deck.
+- A file named like `x.constructor` is no longer previewed as code, and a preview that fails to load shows its error instead of spinning.
+- `transformUrl` now rewrites each URL once in `blocksToHtml` and `BlokView`, not once per revisit.
+- `sanitizeHtmlFragment` and `htmlToBlocks` no longer overflow the stack on deeply nested or very wide HTML, and run in linear time.
+- An exported embed link uses the stored `service` as its text only when the URL matches that service.
+- A mention of a missing page says "Page not found", and page link titles keep only their underline under a host CSS reset.
+- In read-only mode the find field keeps its place in the find bar.
+- The table of contents no longer flashes gray on page load, and an empty block keeps its height through the loading skeleton.
+- One Escape now closes one layer for buttons inside blocks and for the image and embed align menus.
+- Two quick Cmd/Ctrl+Z presses undo two steps, and Cmd/Ctrl+Z in one editor's empty field no longer undoes another editor.
+- A `once` event listener no longer makes the next listener miss the event.
+- Submenus with no room on the right open on the other side, a nested close-on-activate item closes the whole menu, and arrow keys skip hidden items.
+- Popover shortcut labels are escaped, so markup in saved data cannot reach the page.
+- A replaced or dismissed toast goes away even when the page turns off animations.
+- The block handle follows the content column when the page changes width, and a tool's toolbar anchor wins over a hovered list row.
+- Lasso and text drag selection keep following the pointer while the page or a scroll box scrolls.
+- "/" search no longer shows unrelated blocks for loose letter matches.
+- Hints close when their trigger leaves the page, respect a side `gap`, and never cover their trigger's open submenu.
+- A custom inline tool's sanitizer rule now adds to a block's rule for a shared tag instead of being replaced.
+- The sanitizer keeps cleaning a `<constructor>` tag and fields named `constructor` or `toString`, and no longer crashes on a mark inside MathML.
+- Tab no longer nests a block after a field moved the caret out, and navigation-mode arrows skip hidden blocks.
+- Right-clicking text inside a block shows the browser's own menu.
+- The table "+" drag follows the pointer, and hidden column grips no longer make the page scroll sideways.
+- `inlineToolbar.close()` keeps the toolbar closed, and destroyed blocks destroy their tunes, so a destroyed editor no longer leaks.
+- Generic embeds take their render kind from the registry, respect `allowedEmbedOrigins` in the URL input, and keep `embed` equal to `source`.
+- Embeds tolerate odd saved data, keep frame sizes in bounds, and cannot take focus on their own.
+- Markdown export no longer runs `onerror` handlers from stored images, and handles huge lists in table cells.
+- GIF to WebM conversion works again in the ESM build, and video variants copy only codecs every browser plays.
+- C++ and Scala code highlights on first load, and the math tool links the stylesheet of the bundled KaTeX.
+- The link hover card keeps Blok's font on any page, and its URL no longer clips letter tails.
+
+### Maintenance
+
+- **Own HTML parser** — Blok reads and writes HTML with its own spec-following parser instead of parse5.
+- **Own HTML cleaner** — Blok's own cleaner replaces html-janitor and DOMPurify.
+- **Own Markdown parser** — Markdown import, paste and preview no longer use the micromark and mdast-util packages.
+- **Own syntax highlighter** — Code blocks, file previews and `markdownToHtml` highlight with an in-house engine instead of prismjs.
+- **In-house file previews** — Word and PowerPoint previews and zip reading no longer use docx-preview, @aiden0z/pptx-renderer or jszip; slide charts draw as SVG.
+- **Fewer bundled packages** — In-house code replaces lib0, fractional-indexing and webm-muxer.
+- **Mermaid 12.2.0 and Mediabunny 1.64.0** — The bundled diagram renderer moves from 12.0.0 and the video library from 1.61.0.
+- **Build output** — The dist stays within ES2020, CDN bundles lay out RTL editors correctly, and `sideEffects` now lists the files that need it.
+- **NuGet dependencies** — `Blok.Server` now depends on AngleSharp 1.9.0 and Jint 4.17.0.
+
 ## [1.16.1](https://github.com/JackUait/blok/compare/v1.16.0...v1.16.1) (2026-10-07)
 
 ### Bug Fixes

@@ -772,6 +772,8 @@ internal sealed class RoomProvider
       return;
     }
     socket = connection;
+    // Queued before the receive lane starts: a host that closes at once must still see it first, as with ws.
+    Send(connection, new SyncStep1Frame(seam.StateVector()));
     connection.Start(
         bytes => loop.Post(() => OnMessage(opened, connection, bytes)),
         code => loop.Post(() =>
@@ -781,7 +783,6 @@ internal sealed class RoomProvider
             HandleClose(code);
           }
         }));
-    Send(connection, new SyncStep1Frame(seam.StateVector()));
   }
 
   private bool IsStale(int opened)

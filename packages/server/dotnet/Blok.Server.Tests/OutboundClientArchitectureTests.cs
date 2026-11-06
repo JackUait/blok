@@ -40,7 +40,8 @@ public sealed class OutboundClientArchitectureTests
       Normalize("Blok.Server.Mcp/Outbound/McpHttpCaller.cs");
   // blok-mcp joining a sync room at the operator's --sync-url. It is the one
   // place a ClientWebSocket may be created: ONE creation, inside ConnectAsync,
-  // and no other outbound type.
+  // over ONE HttpMessageInvoker field `invoker` built from ONE SocketsHttpHandler
+  // made in CreateHandler, and no other outbound type.
   private static readonly string RoomSocketOwner =
       Normalize("Blok.Server.Mcp/Outbound/McpRoomSocket.cs");
 
@@ -253,27 +254,63 @@ public sealed class OutboundClientArchitectureTests
         StringComparison.Ordinal);
   }
 
+  // The room socket's whole outbound surface: one ClientWebSocket in ConnectAsync,
+  // one HttpMessageInvoker field over one SocketsHttpHandler from CreateHandler.
+  private const string RoomSocketShape =
+      """
+      using System.Net.Http;
+      using System.Net.WebSockets;
+      static class McpRoomSocket
+      {
+        private static readonly HttpMessageInvoker invoker = new(CreateHandler());
+
+        static WebSocket ConnectAsync()
+        {
+          var socket = new ClientWebSocket();
+          return socket;
+        }
+
+        private static SocketsHttpHandler CreateHandler()
+        {
+          return new SocketsHttpHandler();
+        }
+        /*EXTRA*/
+      }
+      """;
+
   [Fact]
-  public void AllowsOneClientWebSocketCreationInsideTheRoomSocketConnect()
+  public void AllowsTheRoomSocketShape()
   {
     var violations = FindViolations(
-        [
-          new SourceFile(
-              "Blok.Server.Mcp/Outbound/McpRoomSocket.cs",
-              """
-              using System.Net.WebSockets;
-              static class McpRoomSocket
-              {
-                static WebSocket ConnectAsync()
-                {
-                  var socket = new ClientWebSocket();
-                  return socket;
-                }
-              }
-              """),
-        ]);
+        [new SourceFile("Blok.Server.Mcp/Outbound/McpRoomSocket.cs", RoomSocketShape)]);
 
     Assert.Empty(violations);
+  }
+
+  [Theory]
+  [InlineData("static SocketsHttpHandler Other() { return new SocketsHttpHandler(); }", "SocketsHttpHandler")]
+  [InlineData("private static readonly HttpMessageInvoker second = new(CreateHandler());", "HttpMessageInvoker")]
+  [InlineData("static object Open() { return new HttpMessageInvoker(CreateHandler()); }", "HttpMessageInvoker")]
+  [InlineData("static object Open() { return new ClientWebSocket(); }", "ClientWebSocket")]
+  [InlineData("static object Open() { return new HttpClient(); }", "HttpClient")]
+  public void PinsTheRoomSocketToOneInvokerOverOneHandler(string extra, string expectedIdentifier)
+  {
+    var violation = Assert.Single(FindViolations(
+        [new SourceFile("Blok.Server.Mcp/Outbound/McpRoomSocket.cs", RoomSocketShape.Replace("/*EXTRA*/", extra, StringComparison.Ordinal))]));
+
+    Assert.Contains(expectedIdentifier, violation, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("private static readonly HttpMessageInvoker invoker = new(CreateHandler());", "HttpMessageInvoker")]
+  [InlineData("return new SocketsHttpHandler();", "SocketsHttpHandler")]
+  public void DetectsARoomSocketMissingItsInvokerOrHandler(string removed, string expectedIdentifier)
+  {
+    var source = RoomSocketShape.Replace(removed, removed.StartsWith("return", StringComparison.Ordinal) ? "return null!;" : string.Empty, StringComparison.Ordinal);
+    var violation = Assert.Single(FindViolations(
+        [new SourceFile("Blok.Server.Mcp/Outbound/McpRoomSocket.cs", source)]));
+
+    Assert.Contains(expectedIdentifier, violation, StringComparison.Ordinal);
   }
 
   [Theory]
@@ -519,10 +556,23 @@ public sealed class OutboundClientArchitectureTests
               ClassifyPinnedUse(use) == PinnedUseSite.None)
           .Where(use =>
               source.Path != RoomSocketOwner ||
-              !(IsRoomSocketCreation(use) || IsRoomSocketVar(use)) ||
-              uses.Count(IsRoomSocketCreation) != 1)
+              !IsAllowedRoomSocketUse(use, uses))
           .Select(use => use.Identifier)
           .ToHashSet(StringComparer.Ordinal);
+
+      if (source.Path == RoomSocketOwner)
+      {
+        if (uses.Count(IsRoomInvokerField) != 1)
+        {
+          identifiers.Add("HttpMessageInvoker");
+        }
+
+        if (uses.Count(use => ClassifyPinnedUse(use) == PinnedUseSite.HandlerReturn) != 1 ||
+            uses.Count(use => ClassifyPinnedUse(use) == PinnedUseSite.HandlerCreation) != 1)
+        {
+          identifiers.Add("SocketsHttpHandler");
+        }
+      }
 
       if (PinnedOwners.Contains(source.Path))
       {
@@ -596,6 +646,41 @@ public sealed class OutboundClientArchitectureTests
         yield return new RestrictedUse("AddHttpClient", name);
       }
     }
+  }
+
+  private static bool IsAllowedRoomSocketUse(RestrictedUse use, RestrictedUse[] uses)
+  {
+    return ((IsRoomSocketCreation(use) || IsRoomSocketVar(use)) && uses.Count(IsRoomSocketCreation) == 1) ||
+        (IsRoomInvokerField(use) && uses.Count(IsRoomInvokerField) == 1) ||
+        (ClassifyPinnedUse(use) is PinnedUseSite.HandlerReturn or PinnedUseSite.HandlerCreation &&
+         uses.Count(other => ClassifyPinnedUse(other) == ClassifyPinnedUse(use)) == 1);
+  }
+
+  // `private static readonly HttpMessageInvoker invoker = new(CreateHandler());`
+  private static bool IsRoomInvokerField(RestrictedUse use)
+  {
+    return use.Identifier == "HttpMessageInvoker" &&
+        use.Node.Parent is VariableDeclarationSyntax declaration &&
+        declaration.Type == use.Node &&
+        declaration.Parent is FieldDeclarationSyntax &&
+        declaration.Variables is
+        [
+        {
+          Identifier.ValueText: "invoker",
+          Initializer.Value: ImplicitObjectCreationExpressionSyntax
+          {
+            ArgumentList.Arguments:
+            [
+            {
+              Expression: InvocationExpressionSyntax
+              {
+                Expression: IdentifierNameSyntax { Identifier.ValueText: "CreateHandler" },
+              },
+            },
+            ],
+          },
+        },
+        ];
   }
 
   private static bool IsRoomSocketCreation(RestrictedUse use)

@@ -45,10 +45,17 @@ impl Pending {
         self.ids.lock().unwrap_or_else(|p| p.into_inner())
     }
 
-    /// Notes a line going to the server, if it is a request.
+    /// Notes a line going to the server, if it is a request. A cancelled
+    /// request is never answered, so it stops counting.
     fn sent(&self, line: &str) {
-        if let Ok(message) = serde_json::from_str::<Value>(line)
-            && message.get("method").is_some()
+        let Ok(message) = serde_json::from_str::<Value>(line) else {
+            return;
+        };
+        if message.get("method").and_then(Value::as_str) == Some("notifications/cancelled") {
+            if let Some(id) = message.pointer("/params/requestId") {
+                self.ids().remove(&id.to_string());
+            }
+        } else if message.get("method").is_some()
             && let Some(id) = message.get("id")
         {
             self.ids().insert(id.to_string());
@@ -202,6 +209,18 @@ mod tests {
         )
         .await;
         assert_eq!(*log.lock().unwrap(), vec!["answered", "input ended"]);
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_request_does_not_hold_the_stop() {
+        let pending = Pending::default();
+        pending.sent(r#"{"jsonrpc":"2.0","id":77,"method":"tools/call"}"#);
+        pending.sent(
+            r#"{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":77}}"#,
+        );
+        let started = std::time::Instant::now();
+        pending.drained(DRAIN_LIMIT).await;
+        assert!(started.elapsed() < Duration::from_secs(1));
     }
 
     #[test]

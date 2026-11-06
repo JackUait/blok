@@ -235,8 +235,61 @@ struct Batch {
     waiter: Option<oneshot::Sender<Fate>>,
 }
 
+/// A step's own documents and the bundle's carried history around them:
+/// the bundle plans an undo (or redo) there to ask what Node's executor asks.
+#[derive(Clone, Debug)]
+pub struct StepGate {
+    pub document: String,
+    pub history: String,
+}
+
+pub enum Gate {
+    Ask(Value),
+    /// The result to answer with; nothing runs.
+    Refused(String),
+    /// The gate for replaying the other way afterwards.
+    Passed(StepGate),
+}
+
+/// Runs a history.undo or history.redo batch on the step's own documents,
+/// so the approvals (an undone lock unlocks, a share changes) are asked
+/// exactly as the bundle asks them.
+pub async fn gate_step(
+    bundle: &Bundle,
+    mcp: &Value,
+    revision: &Value,
+    gate: &StepGate,
+    batch: &Value,
+    actor: &Value,
+    approval: &Value,
+) -> Result<Gate, Fault> {
+    let input = Obj::new()
+        .val("mcp", mcp)
+        .raw("document", &gate.document)
+        .val("actor", actor)
+        .val("revision", revision)
+        .raw("history", &gate.history)
+        .val("batch", batch)
+        .val("approval", approval)
+        .finish();
+    let out = bundle.call_raw("agentExecute", &input).await?;
+    if let Some(ask) = out.value("ask") {
+        return Ok(Gate::Ask(ask));
+    }
+    let result = out.text("result").unwrap_or("{}").to_owned();
+    if out.value("result").and_then(|r| r.get("ok").cloned()) != Some(Value::Bool(true)) {
+        return Ok(Gate::Refused(result));
+    }
+    Ok(Gate::Passed(StepGate {
+        document: out.text("document").unwrap_or("{}").to_owned(),
+        history: out.text("history").unwrap_or("{}").to_owned(),
+    }))
+}
+
 /// One applied batch, as undo and redo replay it (store-applier.ts Step).
 struct Step {
+    /// The approval gate for replaying it in its next direction.
+    gate: Option<StepGate>,
     serial: Option<u64>,
     ids: BTreeSet<String>,
     placed_only: BTreeSet<String>,
@@ -1240,6 +1293,8 @@ impl Room {
         if !input.created_pages.is_empty() {
             call = call.val("createdPages", &json!(input.created_pages));
         }
+        // The output's carried history is the step's approval gate.
+        call = call.raw("history", "{}");
         let out = self
             .shared
             .bundle
@@ -1264,11 +1319,16 @@ impl Room {
         }
         let edits = out.text("edits").unwrap_or("[]").to_owned();
         if edits != "[]" {
+            let gate = StepGate {
+                document: out.text("document").unwrap_or("{}").to_owned(),
+                history: out.text("history").unwrap_or("{}").to_owned(),
+            };
             self.apply(
                 &edits,
                 out.text("document").unwrap_or("{}"),
                 &result_text,
                 &document,
+                gate,
             )
             .await?;
         }
@@ -1346,12 +1406,14 @@ impl Room {
         after: &str,
         result: &str,
         before: &str,
+        gate: StepGate,
     ) -> Result<(), Fault> {
         let ops = blok_blokagent::translate(&parse(edits)?, &parse(after)?, &parse(result)?)
             .map_err(|e| Fault::Internal(format!("{e:?}")))?;
         let before_blocks = blocks_of(before);
         let edits: Value = serde_json::from_str(edits).unwrap_or(Value::Null);
         let mut step = Step {
+            gate: Some(gate),
             serial: None,
             ids: BTreeSet::new(),
             placed_only: BTreeSet::new(),
@@ -1442,6 +1504,41 @@ impl Room {
             });
         };
         let mut step = step;
+        // Node asks before it checks for a conflict.
+        let mut next_gate = None;
+        if let Some(gate) = step.gate.clone() {
+            let mut mcp = self.shared.flags.clone();
+            mcp["mode"] = json!("live");
+            mcp["write"] = json!(!self.read_only);
+            let n = self.count.load(Ordering::SeqCst);
+            let revision = json!({ "now": format!("l{n}"), "afterWrite": format!("l{}", n + 1) });
+            let gated = gate_step(
+                &self.shared.bundle,
+                &mcp,
+                &revision,
+                &gate,
+                &input.batch,
+                &input.actor,
+                &input.approval,
+            )
+            .await?;
+            match gated {
+                Gate::Passed(next) => next_gate = Some(next),
+                Gate::Ask(question) => {
+                    self.put_back(undo, step);
+                    return Ok(Executed::Ask(question));
+                }
+                Gate::Refused(result) => {
+                    self.put_back(undo, step);
+                    let mut result: Value = serde_json::from_str(&result).unwrap_or(Value::Null);
+                    result["revision"] = json!(self.revision());
+                    return Ok(Executed::Done {
+                        result: result.to_string(),
+                        delivery: Delivery::None,
+                    });
+                }
+            }
+        }
         let blocks = blocks_of(&self.export().await?);
         let top = self.doc.stack_top(direction);
         if shape(&step, &blocks) != step.shape || (step.serial.is_some() && top != step.serial) {
@@ -1449,11 +1546,7 @@ impl Room {
             let message = format!(
                 "Someone else changed the blocks this step added, removed or moved, so it can no longer be {word}. Re-read the document before retrying."
             );
-            if undo {
-                self.done.push(step);
-            } else {
-                self.undone.push(step);
-            }
+            self.put_back(undo, step);
             return Ok(Executed::Done {
                 result: failed("CONFLICT", &message, true, self.revision()),
                 delivery: Delivery::None,
@@ -1473,6 +1566,9 @@ impl Room {
             step.serial = if after != before { after } else { None };
         }
         step.shape = shape(&step, &blocks_of(&self.export().await?));
+        if next_gate.is_some() {
+            step.gate = next_gate;
+        }
         if undo {
             self.undone.push(step);
         } else {
@@ -1487,6 +1583,15 @@ impl Room {
             "warnings": [],
         });
         self.finish_batch(result.to_string(), &result, true).await
+    }
+
+    /// A step that was not replayed goes back where it was.
+    fn put_back(&mut self, undo: bool, step: Step) {
+        if undo {
+            self.done.push(step);
+        } else {
+            self.undone.push(step);
+        }
     }
 
     // ---- version history over HTTP (src/mcp/live/version-history.ts) ----
@@ -1925,6 +2030,7 @@ mod tests {
             { "op": "setData", "id": "x" },
         ]);
         let mut step = Step {
+            gate: None,
             serial: None,
             ids: BTreeSet::new(),
             placed_only: BTreeSet::new(),
@@ -1948,6 +2054,7 @@ mod tests {
     #[test]
     fn a_peer_edit_inside_a_step_block_changes_its_shape() {
         let mut step = Step {
+            gate: None,
             serial: None,
             ids: BTreeSet::from(["p1".to_owned()]),
             placed_only: BTreeSet::new(),

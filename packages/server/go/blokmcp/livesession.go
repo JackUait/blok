@@ -338,11 +338,9 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		input["versionHistory"] = versions
 	}
 	if l.write && !l.readOnly && l.server.createsPages() && isBatchEnvelope(batch) && call.who != nil {
-		created, err := l.server.createPages(ctx, input, call.who)
-		if err != nil {
+		if err := l.server.createPages(ctx, input, call.who); err != nil {
 			return nil, err
 		}
-		input["createdPages"] = created
 	}
 	var out liveExecuteOutput
 	if _, err := l.server.bundle.call(ctx, "agentExecute", input, &out); err != nil {

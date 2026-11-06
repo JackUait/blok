@@ -26,10 +26,12 @@ func (s *Server) createsPages() bool {
 }
 
 // createPages makes the page documents a batch will point at, before it
-// runs: the bundle cannot wait on the host mid-batch, so agentPagesNeeded
-// counts them first. The client's cancel is not checked between pages, as
-// Node does not check it inside a batch.
-func (s *Server) createPages(ctx context.Context, input map[string]any, who *caller) ([]string, error) {
+// runs, and puts them in input as createdPages: the bundle cannot wait on
+// the host mid-batch, so agentPagesNeeded counts them first. A refused page
+// stops there and goes in as createPageFailure, so the bundle fails its
+// insert as Node's port does. The client's cancel is not checked between
+// pages, as Node does not check it inside a batch.
+func (s *Server) createPages(ctx context.Context, input map[string]any, who *caller) error {
 	var needed struct {
 		Count  int `json:"count"`
 		Result *struct {
@@ -46,7 +48,7 @@ func (s *Server) createPages(ctx context.Context, input map[string]any, who *cal
 		} `json:"result"`
 	}
 	if _, err := s.bundle.call(ctx, "agentPagesNeeded", input, &needed); err != nil {
-		return nil, err
+		return err
 	}
 	count := needed.Count
 	// A batch that would be refused, or that waits on a person's answer,
@@ -73,11 +75,17 @@ func (s *Server) createPages(ctx context.Context, input map[string]any, who *cal
 			pageID, err = s.createPage(ctx, who.principal)
 		}
 		if err != nil {
-			return nil, err
+			failure, ok := asSurface(err)
+			if !ok {
+				return err
+			}
+			input["createPageFailure"] = map[string]any{"helper": failure.Helper, "error": failure.errorJSON()}
+			break
 		}
 		created = append(created, pageID)
 	}
-	return created, nil
+	input["createdPages"] = created
+	return nil
 }
 
 // createLivePage joins the new page's room once: the sync service seeds it,

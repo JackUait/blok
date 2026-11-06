@@ -130,11 +130,9 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		input["approval"] = call.approval
 	}
 	if st.write && st.server.createsPages() && isBatchEnvelope(batch) {
-		created, err := st.server.createPages(ctx, input, call.who)
-		if err != nil {
+		if err := st.server.createPages(ctx, input, call.who); err != nil {
 			return nil, err
 		}
-		input["createdPages"] = created
 	}
 	input["documentText"] = st.source.documentForm()
 	var out executeOutput

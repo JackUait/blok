@@ -775,7 +775,7 @@ export const serverLimits: ServerLimit[] = [
 ];
 
 export const serverMcpIntro: string =
-  'Blok\'s MCP server lets an outside agent read and edit Blok documents through any MCP client. It comes in four builds: Node, C#, Go and Rust.\n\nAll four serve the same six tools and take the same flags and environment variables. One shared test suite checks every build against the Node one. The Node README lists the flags.';
+  'Blok\'s MCP server lets an outside agent read and edit Blok documents through any MCP client. It comes in four builds: Node, C#, Go and Rust. No release has shipped the C#, Go and Rust builds yet.\n\nAll four serve the same six tools and take the same flags and environment variables. One shared test suite checks every build against the Node one. The Node README lists the flags.';
 
 /**
  * The MCP server's builds. Node leads: it is the one the others are tested

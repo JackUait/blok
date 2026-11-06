@@ -3184,7 +3184,7 @@
       }
     },
     "mcpHeading": "Let agents edit documents: the MCP server",
-    "mcpIntro": "Blok's MCP server lets an outside agent read and edit Blok documents through any MCP client. It comes in four builds: Node, C#, Go and Rust.\n\nAll four serve the same six tools and take the same flags and environment variables. One shared test suite checks every build against the Node one. The Node README lists the flags.",
+    "mcpIntro": "Blok's MCP server lets an outside agent read and edit Blok documents through any MCP client. It comes in four builds: Node, C#, Go and Rust. No release has shipped the C#, Go and Rust builds yet.\n\nAll four serve the same six tools and take the same flags and environment variables. One shared test suite checks every build against the Node one. The Node README lists the flags.",
     "mcp": {
       "node": {
         "title": "Node: @bloklabs/mcp",

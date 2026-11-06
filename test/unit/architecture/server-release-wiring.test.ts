@@ -647,8 +647,8 @@ describe('server release wiring', () => {
     );
   });
 
-  // Dependency order: nuget.org must hold Blok.Server.AspNetCore before
-  // Blok.Server.Mcp, which needs it. Blok.Mcp is a tool and needs nothing.
+  // Pushed in dependency order, so no feed ever lists Blok.Server.Mcp while
+  // the Blok.Server.AspNetCore it depends on is missing.
   it('packs, pushes, mirrors, uploads and verifies the two MCP NuGets', () => {
     const steps = (parse(read(RELEASE_WORKFLOW)) as Workflow).jobs['release-server']?.steps ?? [];
     const run = (name: string): string => steps.find((step) => step.name === name)?.run ?? '';

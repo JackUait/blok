@@ -144,7 +144,8 @@ internal static partial class BlokMcpCli
 
     try
     {
-      text = await File.ReadAllTextAsync(path);
+      // Bytes, not ReadAllText: that drops a BOM, which JSON.parse refuses.
+      text = System.Text.Encoding.UTF8.GetString(await File.ReadAllBytesAsync(path));
     }
     catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
     {

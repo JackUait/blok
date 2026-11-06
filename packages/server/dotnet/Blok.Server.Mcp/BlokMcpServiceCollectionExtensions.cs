@@ -35,7 +35,7 @@ public static class BlokMcpServiceCollectionExtensions
 
     configure(options);
     services.TryAddSingleton<IBlokRuntime>(_ => JintBlokRuntime.FromEmbeddedResource());
-    services.TryAddSingleton<McpHttpCaller>();
+    services.TryAddSingleton(_ => new McpHttpCaller());
     services.TryAddSingleton(provider => new BlokMcpHost(new McpBundle(provider.GetRequiredService<IBlokRuntime>()), provider.GetRequiredService<McpHttpCaller>()));
     services.TryAddSingleton(provider => ConfigOf(options, provider));
 

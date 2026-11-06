@@ -345,3 +345,108 @@ async fn undoing_a_lock_in_the_hosts_room_asks_and_a_yes_unlocks() {
     assert_eq!(unlock["ok"], true, "{unlock}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn undoing_a_sharing_change_in_the_hosts_room_asks_and_a_yes_applies() {
+    let dir = std::env::temp_dir().join(format!("blok-mcp-rooms-share-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let mcp = mcp_on_rooms(&dir).await;
+    let opened = call(
+        &mcp,
+        "blok_open",
+        json!({ "documentId": "doc", "write": true }),
+    )
+    .await;
+    let handle = opened["handle"].as_str().unwrap().to_owned();
+    let inserted = call(&mcp, "blok_execute", json!({ "handle": handle, "commands": [{ "name": "block.insert", "args": { "type": "database", "id": "db", "data": {
+        "title": "Signup", "activeViewId": "v1",
+        "schema": [{ "id": "t", "name": "Name", "type": "title", "position": "a0" }],
+        "views": [{ "id": "v1", "name": "Form", "type": "form", "position": "a0", "sorts": [], "filters": [], "visibleProperties": [], "form": {} }],
+    } } }] })).await;
+    assert_eq!(inserted["ok"], true, "{inserted}");
+    let caller = Caller {
+        principal: "alice".to_owned(),
+        client_name: Some("Desk".to_owned()),
+        scopes: None,
+    };
+    let reply = |key: &str, yes: bool| Approval {
+        capabilities: json!({ "elicitation": {} }),
+        replies: Some(if yes {
+            json!({ key: { "action": "accept", "content": { "share": true } } })
+        } else {
+            json!({ key: { "action": "decline" } })
+        }),
+    };
+    let asking = Approval {
+        capabilities: json!({ "elicitation": {} }),
+        replies: None,
+    };
+    let asked = |outcome: Result<Outcome, _>| match outcome {
+        Ok(Outcome::Ask(ask)) => ask.key,
+        other => panic!("expected a question, got {other:?}"),
+    };
+    let form_of = |read: &Value| {
+        let blocks = read["blocks"].as_array().cloned().unwrap_or_default();
+        let db = blocks
+            .into_iter()
+            .find(|b| b["id"] == "db")
+            .unwrap_or(Value::Null);
+        db["data"]["views"][0]["form"].clone()
+    };
+    let close = json!({ "handle": handle, "commands": [{ "name": "database.updateView", "args": { "id": "db", "viewId": "v1", "changes": { "form": { "closed": true } } } }] });
+    let key = asked(
+        mcp.call("blok_execute", &close, &caller, &asking, &|| false)
+            .await,
+    );
+    let closed = mcp
+        .call("blok_execute", &close, &caller, &reply(&key, true), &|| {
+            false
+        })
+        .await;
+    assert!(
+        matches!(closed, Ok(Outcome::Answer(ref a)) if !a.is_error),
+        "{closed:?}"
+    );
+
+    let undo = json!({ "handle": handle, "commands": [{ "name": "history.undo", "args": {} }] });
+    let key = asked(
+        mcp.call("blok_execute", &undo, &caller, &asking, &|| false)
+            .await,
+    );
+    match mcp
+        .call("blok_execute", &undo, &caller, &reply(&key, false), &|| {
+            false
+        })
+        .await
+    {
+        Ok(Outcome::Answer(answer)) => {
+            let result: Value = serde_json::from_str(&answer.structured).unwrap();
+            assert_eq!(result["error"]["details"]["reason"], "denied", "{result}");
+        }
+        other => panic!("expected a refusal, got {other:?}"),
+    }
+    let read = call(
+        &mcp,
+        "blok_read",
+        json!({ "handle": handle, "detail": "full" }),
+    )
+    .await;
+    assert_eq!(form_of(&read), json!({ "closed": true }), "{read}");
+    match mcp
+        .call("blok_execute", &undo, &caller, &reply(&key, true), &|| {
+            false
+        })
+        .await
+    {
+        Ok(Outcome::Answer(answer)) => assert!(!answer.is_error, "{}", answer.structured),
+        other => panic!("expected the undo to apply, got {other:?}"),
+    }
+    let read = call(
+        &mcp,
+        "blok_read",
+        json!({ "handle": handle, "detail": "full" }),
+    )
+    .await;
+    assert_eq!(form_of(&read), json!({}), "{read}");
+    let _ = std::fs::remove_dir_all(&dir);
+}

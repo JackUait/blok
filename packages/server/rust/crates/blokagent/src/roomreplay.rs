@@ -9,9 +9,9 @@ use sha2::{Digest, Sha256};
 
 use crate::cancel::Cancel;
 use crate::errors::{Error, from_json, into_room, no_answer};
-use crate::executor::Executor;
+use crate::executor::{Executor, Invoker, agent_execute_on, invoke_on};
 use crate::room::{
-    error_code, new_guid, parse_head_text, receipt_head, retryable_edit, room_unreadable, stale,
+    error_code, new_guid, parse_head_text, receipt_head, retryable_edit, stale, to_node_json,
     with_head,
 };
 use crate::roomhistory::{
@@ -31,8 +31,8 @@ struct HistoryRefusal {
     message: String,
     retryable: bool,
     details: Option<Node>,
-    /// The databases a refused replay would unlock, for a host that can ask.
-    unlocking: Vec<String>,
+    /// The bundle's own answer to send as it is: its question or refusal.
+    answer: Option<Node>,
 }
 
 impl fmt::Display for HistoryRefusal {
@@ -49,7 +49,7 @@ fn refused(code: &'static str, message: String, retryable: bool) -> Box<HistoryR
         message,
         retryable,
         details: None,
-        unlocking: Vec::new(),
+        answer: None,
     })
 }
 
@@ -88,7 +88,7 @@ impl Executor {
         let mut attempt = 0;
         loop {
             let execution = self
-                .run_room_history_once(cancel, doc_id, undo, actor, expect.clone(), asking, &[])
+                .run_room_history_once(cancel, doc_id, undo, actor, expect.clone(), asking)
                 .await?;
             if expect.is_some() || attempt == 2 {
                 return Ok(execution);
@@ -110,9 +110,7 @@ impl Executor {
         actor: &Actor,
         mut expect: Option<Precondition>,
         asking: Option<&Node>,
-        approved: &[String],
     ) -> Result<Execution, Error> {
-        let given = expect.clone();
         let live = self.live().expect("rooms");
         let (verb, short) = if undo {
             ("undone", "undo")
@@ -159,7 +157,7 @@ impl Executor {
             actor,
             undo,
             expect.clone(),
-            approved.to_vec(),
+            asking.map(|input| (self.runtime.clone(), input.clone())),
             slot.clone(),
         );
         let applied = replayed_step(
@@ -187,19 +185,15 @@ impl Executor {
             Ok(edit) => edit,
             Err(blok_collab_room::Error::Other(inner)) if inner.is::<HistoryRefusal>() => {
                 let refusal = inner.downcast::<HistoryRefusal>().expect("a refusal");
-                if let Some(asking) = asking
-                    && !refusal.unlocking.is_empty()
-                {
-                    return Box::pin(self.ask_unlock(
-                        cancel,
-                        doc_id,
-                        undo,
-                        actor,
-                        given,
-                        asking,
-                        &refusal.unlocking,
-                    ))
-                    .await;
+                if let Some(answer) = &refusal.answer {
+                    let execution = Execution {
+                        result_json: write(answer)?,
+                        ..Execution::default()
+                    };
+                    if field(Some(answer), "ask")?.is_some() {
+                        return Ok(execution);
+                    }
+                    return with_head(execution, "");
                 }
                 return failure(
                     refusal.code,
@@ -255,73 +249,6 @@ impl Executor {
     }
 }
 
-impl Executor {
-    /// Asks the person as database.setLock does, on the room as it is now.
-    /// A yes replays again in the lane, approved for these databases only.
-    #[allow(clippy::too_many_arguments)]
-    async fn ask_unlock(
-        &self,
-        cancel: &Cancel,
-        doc_id: &str,
-        undo: bool,
-        actor: &Actor,
-        expect: Option<Precondition>,
-        asking: &Node,
-        unlocking: &[String],
-    ) -> Result<Execution, Error> {
-        let (document, head, _) = self.room_status(Some(cancel), doc_id).await?;
-        let Some(document) = document else {
-            return room_unreadable();
-        };
-        let commands: Vec<Node> = unlocking
-            .iter()
-            .map(|id| {
-                new_object(vec![
-                    member("name", str_node("database.setLock")),
-                    member(
-                        "args",
-                        new_object(vec![
-                            member("id", str_node(id)),
-                            member("locked", new_bool(false)),
-                        ]),
-                    ),
-                ])
-            })
-            .collect();
-        let mut input = asking.clone();
-        input
-            .set(
-                "batch",
-                new_object(vec![member("commands", new_array(commands))]),
-            )
-            .map_err(from_json)?;
-        input.set("document", document).map_err(from_json)?;
-        let output = parse(&self.invoke(cancel, "agentExecute", &input).await?)?;
-        if let Some(ask) = field(Some(&output), "ask")?.filter(|a| a.kind == Kind::Object) {
-            return Ok(Execution {
-                result_json: write(&new_object(vec![member("ask", ask.clone())]))?,
-                document_json: None,
-                revision: String::new(),
-            });
-        }
-        let Some(result) = field(Some(&output), "result")?.filter(|r| r.kind == Kind::Object)
-        else {
-            return Err(no_answer("agent result"));
-        };
-        if !is_true(Some(result), "ok")? {
-            return with_head(
-                Execution {
-                    result_json: write(result)?,
-                    ..Execution::default()
-                },
-                &head,
-            );
-        }
-        self.run_room_history_once(cancel, doc_id, undo, actor, expect, None, unlocking)
-            .await
-    }
-}
-
 #[allow(clippy::too_many_arguments)]
 fn plan_replay(
     manager: Manager,
@@ -330,24 +257,27 @@ fn plan_replay(
     actor: &Actor,
     undo: bool,
     expect: Option<Precondition>,
-    approved: Vec<String>,
+    gate: Option<(Arc<dyn Invoker>, Node)>,
     slot: Arc<Mutex<Option<Arc<RoomStep>>>>,
 ) -> PlanOps {
     let (doc_id, actor) = (doc_id.to_owned(), actor.clone());
     Arc::new(move |doc: Doc| {
-        let (manager, history, doc_id, actor, expect, approved, slot) = (
+        let (manager, history, doc_id, actor, expect, gate, slot) = (
             manager.clone(),
             history.clone(),
             doc_id.clone(),
             actor.clone(),
             expect.clone(),
-            approved.clone(),
+            gate.clone(),
             slot.clone(),
         );
         Box::pin(async move {
             let step = history.top(&doc_id, &actor, undo);
             *slot.lock().unwrap_or_else(PoisonError::into_inner) = step.clone();
-            replay_ops(&manager, step, undo, expect.as_ref(), &approved, &doc)
+            let gate = gate
+                .as_ref()
+                .map(|(runtime, input)| (runtime.as_ref(), input));
+            replay_ops(&manager, step, undo, expect.as_ref(), gate, &doc)
                 .await
                 .map_err(|err| match err {
                     ReplayError::Agent(err) => into_room(err),
@@ -373,7 +303,7 @@ async fn replay_ops(
     step: Option<Arc<RoomStep>>,
     undo: bool,
     expect: Option<&Precondition>,
-    approved: &[String],
+    gate: Option<(&dyn Invoker, &Node)>,
     doc: &Doc,
 ) -> Result<Vec<EditOp>, ReplayError> {
     let (verb, short) = if undo {
@@ -426,48 +356,56 @@ async fn replay_ops(
             true,
         )));
     }
-    // Undoing a lock or redoing an unlock unlocks: only with a person's yes
-    // for each of these databases, asked before the lane.
-    let unlocking: Vec<String> = unlocks(&projected, wanted.as_ref())?
-        .iter()
-        .map(ToString::to_string)
-        .collect();
-    if !approved.is_empty() && unlocking.iter().any(|id| !approved.contains(id)) {
-        return Err(ReplayError::Refused(refused(
-            "STALE",
-            "The history changed while the person decided, so nothing was undone or redone. Read the document again, then retry.".to_owned(),
-            false,
-        )));
-    }
-    if let Some(unlocked) = unlocking.first().filter(|_| approved.is_empty()) {
+    let unlocking = unlocks(&projected, wanted.as_ref())?;
+    let sharing = shares(&projected, wanted.as_ref())?;
+    let (blocks, target) = restore_target(&export, &maps, &step, wanted.as_ref(), page)?;
+    // A host that can ask runs the bundle's own history gate here, in the
+    // lane, on the state that is replayed: it asks as database.setLock and
+    // a sharing change do, and a yes applies now.
+    if let Some((runtime, input)) = gate
+        && (!unlocking.is_empty() || sharing.is_some())
+    {
+        let mut wanted_doc = export.clone();
+        wanted_doc.set("blocks".into(), Value::Array(blocks.clone()));
+        if let Some(answer) = history_gate(runtime, input, &export, &wanted_doc, undo).await? {
+            return Err(ReplayError::Refused(Box::new(HistoryRefusal {
+                code: "APPROVAL_REQUIRED",
+                message: String::new(),
+                retryable: false,
+                details: None,
+                answer: Some(answer),
+            })));
+        }
+    } else if let Some(unlocked) = unlocking.first() {
+        // Undoing a lock or redoing an unlock unlocks; with no one to ask, it is refused.
         return Err(ReplayError::Refused(Box::new(HistoryRefusal {
-            unlocking: unlocking.clone(),
             code: "APPROVAL_REQUIRED",
             message: format!(
                 "This {short} would unlock database \"{unlocked}\". Unlocking needs a person's explicit approval, and nothing here can ask one. Nothing was written. Ask the person to unlock it themselves."
             ),
             retryable: false,
+            answer: None,
             details: Some(new_object(vec![
                 member("reason", str_node("no-channel")),
                 member(
                     "approval",
                     new_object(vec![
                         member("kind", str_node("database.unlock")),
-                        member("blockId", str_node(unlocked)),
+                        member("blockId", str_node(&unlocked.to_string())),
                     ]),
                 ),
             ])),
         })));
     }
     // Who can see or fill out a view is the person's too.
-    if let Some((block_id, view_id)) = shares(&projected, wanted.as_ref())? {
+    if let Some((block_id, view_id)) = sharing.filter(|_| gate.is_none()) {
         return Err(ReplayError::Refused(Box::new(HistoryRefusal {
             code: "APPROVAL_REQUIRED",
             message: format!(
                 "This {short} would change who can see or fill out view \"{view_id}\" of database \"{block_id}\". That needs a person's explicit approval, and nothing here can ask one. Nothing was written. Ask the person to do it themselves."
             ),
             retryable: false,
-            unlocking: Vec::new(),
+            answer: None,
             details: Some(new_object(vec![
                 member("reason", str_node("no-channel")),
                 member(
@@ -481,7 +419,6 @@ async fn replay_ops(
             ])),
         })));
     }
-    let (blocks, target) = restore_target(&export, &maps, &step, wanted.as_ref(), page)?;
     let current = match export.get(&"blocks".into()) {
         Some(Value::Array(current)) => current.clone(),
         _ => Vec::new(),
@@ -490,6 +427,75 @@ async fn replay_ops(
     let mut ops = plan_restore(&current, &structure, &blocks, &maps, &target);
     ops.extend(stamps(wanted.as_ref())?);
     Ok(ops)
+}
+
+/// The bundle's history.undo (or redo) on the room's document, with what
+/// the replay writes as the session's one step. None when it may run;
+/// otherwise its question (`{ ask }`) or refusal, to answer as it is.
+async fn history_gate(
+    runtime: &dyn Invoker,
+    input: &Node,
+    now: &Object,
+    wanted: &Object,
+    undo: bool,
+) -> Result<Option<Node>, Error> {
+    let cancel = Cancel::new();
+    let document = to_node_json(now)?;
+    let target = to_node_json(wanted)?;
+    let pick = |key: &str| -> Result<Node, Error> {
+        Ok(field(Some(input), key)?
+            .cloned()
+            .unwrap_or_else(|| new_object(Vec::new())))
+    };
+    // The bundle keeps a carried step only at the document's own revision.
+    let read = parse(
+        &invoke_on(
+            runtime,
+            &cancel,
+            "mcpRead",
+            &new_object(vec![
+                member("mcp", pick("mcp")?),
+                member("document", document.clone()),
+                member("actor", pick("actor")?),
+                member("view", new_object(Vec::new())),
+            ]),
+        )
+        .await?,
+    )?;
+    let revision = field(
+        field(field(Some(&read), "answer")?, "structuredContent")?,
+        "revision",
+    )?
+    .cloned()
+    .unwrap_or_else(|| str_node(""));
+    let (past, future) = if undo {
+        (vec![target], Vec::new())
+    } else {
+        (Vec::new(), vec![target])
+    };
+    let mut asking = input.clone();
+    asking.set("document", document).map_err(from_json)?;
+    asking
+        .set(
+            "history",
+            new_object(vec![
+                member("past", new_array(past)),
+                member("future", new_array(future)),
+                member("revision", revision),
+            ]),
+        )
+        .map_err(from_json)?;
+    let output = agent_execute_on(runtime, &cancel, &asking).await?;
+    if let Some(ask) = field(Some(&output), "ask")?.filter(|a| a.kind == Kind::Object) {
+        return Ok(Some(new_object(vec![member("ask", ask.clone())])));
+    }
+    let Some(result) = field(Some(&output), "result")?.filter(|r| r.kind == Kind::Object) else {
+        return Err(no_answer("agent result"));
+    };
+    if is_true(Some(result), "ok")? {
+        return Ok(None);
+    }
+    Ok(Some(result.clone()))
 }
 
 /// What the room holds now is what the opposite replay checks against.

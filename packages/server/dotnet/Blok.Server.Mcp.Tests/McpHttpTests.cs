@@ -158,6 +158,40 @@ public sealed class McpHttpTests
   }
 
   [Fact]
+  public async Task Serves20241007AsNodeDoes()
+  {
+    var context = Request("POST", "/mcp", body: "{}");
+    var seen = "unset";
+
+    context.Request.Headers["MCP-Protocol-Version"] = "2024-10-07";
+    await McpRequestGate.InvokeAsync(context, inner =>
+    {
+      seen = inner.Request.Headers["MCP-Protocol-Version"].ToString();
+
+      return Task.CompletedTask;
+    });
+
+    Assert.Equal("2024-11-05", seen);
+  }
+
+  [Fact]
+  public async Task LeavesA20241007InitializeToTheWireFilter()
+  {
+    var context = Request("POST", "/mcp", body: """{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-10-07"}}""");
+    var seen = "unset";
+
+    context.Request.Headers["MCP-Protocol-Version"] = "2024-10-07";
+    await McpRequestGate.InvokeAsync(context, inner =>
+    {
+      seen = inner.Request.Headers["MCP-Protocol-Version"].ToString();
+
+      return Task.CompletedTask;
+    });
+
+    Assert.Equal(string.Empty, seen);
+  }
+
+  [Fact]
   public async Task Answers20260728WithOneJsonBody()
   {
     var context = Request("POST", "/mcp", body: "{}");

@@ -108,6 +108,19 @@ internal static class McpRequestGate
     }
     // Stateless, as Node: a session id names nothing, so it is not checked.
     request.Headers.Remove("Mcp-Session-Id");
+    // Node still serves 2024-10-07; the C# SDK knows 2024-11-05 as its oldest, the same wire.
+    // An initialize names its version in the body, which the wire filter answers, so its header goes.
+    if (request.Headers["MCP-Protocol-Version"].ToString() == "2024-10-07")
+    {
+      if (request.Body is MemoryStream sent && IsInitialize(sent))
+      {
+        request.Headers.Remove("MCP-Protocol-Version");
+      }
+      else
+      {
+        request.Headers["MCP-Protocol-Version"] = "2024-11-05";
+      }
+    }
     if (request.Headers["MCP-Protocol-Version"].ToString() != Modern)
     {
       await next(context);
@@ -133,6 +146,19 @@ internal static class McpRequestGate
   {
     response.ContentType = "application/json";
     await response.WriteAsync(json);
+  }
+
+  private static bool IsInitialize(MemoryStream body)
+  {
+    try
+    {
+      return McpJson.Parse(System.Text.Encoding.UTF8.GetString(body.ToArray())) is JsonObject message
+          && McpJson.String(message["method"]) == "initialize";
+    }
+    catch (System.Text.Json.JsonException)
+    {
+      return false;
+    }
   }
 
   private static bool IsJson(MemoryStream body)

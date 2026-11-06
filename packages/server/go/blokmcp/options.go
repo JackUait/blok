@@ -42,7 +42,7 @@ type AuthorizeFunc func(ctx context.Context, principal, documentID string, write
 // Transport is stdio, or HTTP on Listen (host:port).
 type Transport struct {
 	Kind   string `json:"kind"`
-	Listen string `json:"listen,omitempty"`
+	Listen string `json:"listen"`
 	Public bool   `json:"public,omitempty"`
 }
 

@@ -59,9 +59,13 @@ func (s *Server) roomReadOnly(ctx context.Context) (map[string]bool, error) {
 	return commands, nil
 }
 
-// agentOptions are the executor options the start options imply.
+// agentOptions are the executor options the start options imply, with the
+// MCP's own live contract.
 func (s *Server) agentOptions() *blokagent.Options {
 	options := &blokagent.Options{DisableBuiltInComments: s.options.Comments != nil && !*s.options.Comments}
+	flags, _ := marshal(s.mcpFlags("live", true))
+	mcp := string(flags)
+	options.MCPJSON = &mcp
 	if len(s.options.Manifest) > 0 {
 		text := string(s.options.Manifest)
 		options.CustomToolsJSON = &text
@@ -110,14 +114,27 @@ type roomResult struct {
 	Revision string            `json:"revision"`
 }
 
-func (r *roomSession) run(ctx context.Context, call *callContext, batch json.RawMessage) (string, roomResult, error) {
-	execution, err := r.server.options.Rooms.ExecuteInRoom(ctx, r.documentID, string(batch), blokActor(call.actor), r.server.agentOptions())
+func (r *roomSession) run(ctx context.Context, call *callContext, batch json.RawMessage) (string, roomResult, *askedQuestion, error) {
+	options := r.server.agentOptions()
+	if call.approval != nil {
+		approval, _ := marshal(call.approval)
+		text := string(approval)
+		options.ApprovalJSON = &text
+	}
+	execution, err := r.server.options.Rooms.ExecuteInRoom(ctx, r.documentID, string(batch), blokActor(call.actor), options)
 	if err != nil {
-		return "", roomResult{}, err
+		return "", roomResult{}, nil, err
+	}
+	if execution.AskJSON != nil {
+		var ask askedQuestion
+		if err := json.Unmarshal([]byte(*execution.AskJSON), &ask); err != nil {
+			return "", roomResult{}, nil, err
+		}
+		return "", roomResult{}, &ask, nil
 	}
 	var result roomResult
 	err = json.Unmarshal([]byte(execution.ResultJSON), &result)
-	return execution.ResultJSON, result, err
+	return execution.ResultJSON, result, nil, err
 }
 
 func (r *roomSession) read(ctx context.Context, call *callContext, view json.RawMessage) (json.RawMessage, error) {
@@ -125,7 +142,7 @@ func (r *roomSession) read(ctx context.Context, call *callContext, view json.Raw
 		view = json.RawMessage("{}")
 	}
 	batch, _ := marshal(map[string]any{"commands": []map[string]any{{"name": "doc.read", "args": view}}})
-	_, result, err := r.run(ctx, call, batch)
+	_, result, _, err := r.run(ctx, call, batch)
 	if err != nil {
 		return nil, err
 	}
@@ -169,9 +186,12 @@ func (r *roomSession) execute(ctx context.Context, call *callContext, batch json
 		})
 		return &executed{answer: answer}, err
 	}
-	written, result, err := r.run(ctx, call, batch)
+	written, result, ask, err := r.run(ctx, call, batch)
 	if err != nil {
 		return nil, err
+	}
+	if ask != nil {
+		return &executed{ask: ask}, nil
 	}
 	input := map[string]any{"result": json.RawMessage(written)}
 	if !result.OK {

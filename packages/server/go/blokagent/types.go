@@ -33,6 +33,10 @@ type Execution struct {
 	DocumentJSON *string
 	// Revision is the stored content hash, or "" when the result has none.
 	Revision string
+	// AskJSON is the question a person must answer before the batch runs
+	// ({key, message, requestedSchema}); nothing was applied. Only with
+	// Options.ApprovalJSON.
+	AskJSON *string
 }
 
 // Options are the host's agent options. The zero value is C#'s
@@ -51,6 +55,11 @@ type Options struct {
 	// editors keep comments in their own system. C#'s BuiltInComments is
 	// true by default; this is its inverse, so the zero value matches.
 	DisableBuiltInComments bool
+	// MCPJSON and ApprovalJSON are the bundle's mcp and approval inputs, for
+	// blokmcp's in-process live handles: the contract is then the MCP's own,
+	// and an approval the batch needs comes back as AskJSON. nil for none.
+	MCPJSON      *string
+	ApprovalJSON *string
 }
 
 // PageTarget finds the document behind a page id, for an agent that renames

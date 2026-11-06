@@ -205,6 +205,19 @@ func common(options *Options) (*jsjson.Node, error) {
 	if options.DisableBuiltInComments {
 		input.Members = append(input.Members, member("comments", jsjson.NewBool(false)))
 	}
+	for _, host := range []struct {
+		name string
+		json *string
+	}{{"mcp", options.MCPJSON}, {"approval", options.ApprovalJSON}} {
+		if host.json == nil {
+			continue
+		}
+		value, err := parse(*host.json)
+		if err != nil {
+			return nil, err
+		}
+		input.Members = append(input.Members, member(host.name, value))
+	}
 	return input, nil
 }
 

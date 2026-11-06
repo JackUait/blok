@@ -23,15 +23,15 @@ func structured(t *testing.T, answer json.RawMessage) map[string]any {
 	return parts.StructuredContent
 }
 
-// An app that hosts Blok collaboration gives the MCP server its own rooms.
-func TestLiveHandlesEditTheRoomsOfTheSameProcess(t *testing.T) {
+func roomHost(t *testing.T, document string) *blokserver.Server {
+	t.Helper()
 	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
-			_, _ = io.WriteString(w, `{"blocks":[{"id":"a","type":"paragraph","data":{"text":"Hello"}}]}`)
+			_, _ = io.WriteString(w, document)
 		}
 	}))
-	defer endpoint.Close()
+	t.Cleanup(endpoint.Close)
 	options := blokserver.DefaultOptions()
 	options.CollabEnabled = true
 	options.CollabDirectory = t.TempDir()
@@ -43,6 +43,11 @@ func TestLiveHandlesEditTheRoomsOfTheSameProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = host.Drain(context.Background()) })
+	return host
+}
+
+func roomServer(t *testing.T, host *blokserver.Server) (*Server, func(name string, arguments map[string]any, approval map[string]any) *outcome) {
+	t.Helper()
 	executor, err := host.AgentExecutor()
 	if err != nil {
 		t.Fatal(err)
@@ -57,29 +62,52 @@ func TestLiveHandlesEditTheRoomsOfTheSameProcess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	call := func(name string, arguments map[string]any) map[string]any {
+	return server, func(name string, arguments map[string]any, approval map[string]any) *outcome {
 		raw, _ := json.Marshal(arguments)
-		result, err := server.dispatch(ctx, &toolCall{name: name, arguments: raw, caller: who})
+		result, err := server.dispatch(ctx, &toolCall{name: name, arguments: raw, caller: who, approval: approval})
 		if err != nil {
 			t.Fatal(err)
 		}
-		return structured(t, result.answer)
+		return result
 	}
+}
 
-	opened := call("blok_open", map[string]any{"documentId": "doc", "write": true})
-	if opened["mode"] != "live" || opened["durability"] != "acknowledged" {
-		t.Fatalf("opened %v", opened)
+// An app that hosts Blok collaboration gives the MCP server its own rooms.
+func TestLiveHandlesEditTheRoomsOfTheSameProcess(t *testing.T) {
+	server, call := roomServer(t, roomHost(t, `{"blocks":[{"id":"a","type":"paragraph","data":{"text":"Hello"}}]}`))
+	opened := structured(t, call("blok_open", map[string]any{"documentId": "doc", "write": true}, nil).answer)
+	if opened["mode"] != "live" || opened["durability"] != "acknowledged" || opened["contractRevision"] != server.surface.ContractRevision.Live {
+		t.Fatalf("opened %v, live contract %s", opened, server.surface.ContractRevision.Live)
 	}
 	handle := opened["handle"]
-	ran := call("blok_execute", map[string]any{"handle": handle, "commands": []any{map[string]any{"name": "doc.setTitle", "args": map[string]any{"title": "From MCP"}}}})
+	ran := structured(t, call("blok_execute", map[string]any{"handle": handle, "commands": []any{map[string]any{"name": "doc.setTitle", "args": map[string]any{"title": "From MCP"}}}}, nil).answer)
 	delivery, _ := ran["delivery"].(map[string]any)
 	if ran["ok"] != true || delivery["durable"] != true {
 		t.Fatalf("executed %v", ran)
 	}
-	read := call("blok_read", map[string]any{"handle": handle})
+	read := structured(t, call("blok_read", map[string]any{"handle": handle}, nil).answer)
 	page, _ := read["page"].(map[string]any)
 	if page["title"] != "From MCP" {
 		t.Fatalf("read %v", read)
+	}
+}
+
+// A room's unlock asks the person through the client, as a remote one does.
+func TestAnInProcessUnlockAsksThenApplies(t *testing.T) {
+	_, call := roomServer(t, roomHost(t, `{"blocks":[{"id":"db","type":"database","content":[],"data":{"title":"Payroll","activeViewId":"v",`+
+		`"schema":[{"id":"t","name":"Name","type":"title","position":"a0","databaseLocked":true}],`+
+		`"views":[{"id":"v","name":"Table","type":"table","position":"a0","sorts":[],"filters":[],"visibleProperties":[]}]}}]}`))
+	handle := structured(t, call("blok_open", map[string]any{"documentId": "doc", "write": true}, nil).answer)["handle"]
+	unlock := map[string]any{"handle": handle, "commands": []any{map[string]any{"name": "database.setLock", "args": map[string]any{"id": "db", "locked": false}}}}
+	approval := map[string]any{"capabilities": map[string]any{"elicitation": map[string]any{}}, "clientName": "c"}
+	asked := call("blok_execute", unlock, approval)
+	if asked.ask == nil {
+		t.Fatalf("no question: %s", asked.answer)
+	}
+	approval["replies"] = map[string]any{asked.ask.Key: map[string]any{"action": "accept", "content": map[string]any{"unlock": true}}}
+	ran := structured(t, call("blok_execute", unlock, approval).answer)
+	if ran["ok"] != true {
+		t.Fatalf("the approved unlock answered %v", ran)
 	}
 }
 
@@ -90,7 +118,7 @@ func TestACancelledFirstContractLoadIsNotKept(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := &Server{options: Options{Rooms: executor}}
+	server := &Server{options: Options{Rooms: executor}, flags: map[string]any{"sync": true, "source": false, "uploads": false}}
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, _ = server.roomReadOnly(cancelled)

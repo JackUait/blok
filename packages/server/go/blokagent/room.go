@@ -246,6 +246,12 @@ func (e *Executor) ExecuteInRoom(ctx context.Context, docID, batchJSON string, a
 		if err != nil {
 			return nil, err
 		}
+		if asked, err := askOf(output); err != nil || asked != nil {
+			if err == nil {
+				err = asked
+			}
+			return nil, err
+		}
 		result, err := field(output, "result")
 		if err != nil {
 			return nil, err
@@ -307,6 +313,10 @@ func (e *Executor) ExecuteInRoom(ctx context.Context, docID, batchJSON string, a
 		e.history.add(docID, actor, recorded)
 		return nil
 	})
+	var asked *askError
+	if errors.As(err, &asked) {
+		return Execution{AskJSON: &asked.json}, nil
+	}
 	if err != nil {
 		if errors.Is(err, errNoRoomWrite) && planned != nil {
 			// A refusal, or a read with no journal head. The bundle's
@@ -710,4 +720,23 @@ func toNodeJSON(exported *jsjson.Object) (*jsjson.Node, error) {
 		return nil, err
 	}
 	return parse(string(written))
+}
+
+// askError carries a bundle question out of the room lane: the batch
+// applied nothing.
+type askError struct{ json string }
+
+func (e *askError) Error() string { return "the batch waits on a person's approval" }
+
+// askOf reads an agentExecute answer's question, if it asks one.
+func askOf(output *jsjson.Node) (*askError, error) {
+	ask, err := field(output, "ask")
+	if err != nil || ask == nil || ask.Kind != jsjson.KindObject {
+		return nil, err
+	}
+	written, err := write(ask)
+	if err != nil {
+		return nil, err
+	}
+	return &askError{json: written}, nil
 }

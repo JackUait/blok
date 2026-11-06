@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using Blok.Server.Mcp.Core;
 using Blok.Server.Yjs;
 
 namespace Blok.Server.Mcp.Live;
@@ -165,6 +166,11 @@ internal sealed class LiveAgentHistory
     }
     var (from, to) = undo ? (undoManager.UndoStack, undoManager.RedoStack) : (undoManager.RedoStack, undoManager.UndoStack);
 
+    // The bundle approved the lock and sharing change from the pair kept on the step; a peer's change to them since would be replayed unasked.
+    if ((undo ? step.UndoGate : step.RedoGate) is { } pair && GuardsMoved(pair, undo))
+    {
+      return Error("CONFLICT", $"Someone else changed the blocks this step added, removed or moved, so it can no longer be {verb}. Re-read the document before retrying.", true);
+    }
 
     // Yjs merges a replay with a peer's text and map writes, but not with a peer's change to the step's blocks.
     if (Shape(step) != step.Shape || (step.Item is not null && (from.Count == 0 || !ReferenceEquals(from[^1], step.Item))))
@@ -209,6 +215,70 @@ internal sealed class LiveAgentHistory
     marksTo.Add(moved);
 
     return null;
+  }
+
+  /// <summary>
+  /// Whether a database lock or view sharing the step changes (its pair's two sides differ)
+  /// is no longer as the pair's current side has it.
+  /// </summary>
+  private bool GuardsMoved(JsonObject pair, bool undo)
+  {
+    var now = BlocksOf(pair["document"]);
+    var target = BlocksOf((pair["history"]?[undo ? "past" : "future"] as JsonArray)?.LastOrDefault());
+    var touched = now.Keys.Union(target.Keys).Where(id => Guard(now, id) != Guard(target, id)).ToList();
+
+    if (touched.Count == 0)
+    {
+      return false;
+    }
+    var live = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+
+    foreach (var block in Blocks())
+    {
+      if (Id(block) is { } id)
+      {
+        live.TryAdd(id, block);
+      }
+    }
+
+    return touched.Any(id => Guard(now, id) != Guard(live, id));
+  }
+
+  private static Dictionary<string, JsonObject> BlocksOf(JsonNode? document)
+  {
+    var blocks = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+
+    foreach (var block in (document?["blocks"] as JsonArray ?? []).OfType<JsonObject>())
+    {
+      if (Id(block) is { } id)
+      {
+        blocks.TryAdd(id, block);
+      }
+    }
+
+    return blocks;
+  }
+
+  /// <summary>A database's lock flag and each view's sharing settings, as approval.ts compares them.</summary>
+  private static string Guard(Dictionary<string, JsonObject> blocks, string id)
+  {
+    if (!blocks.TryGetValue(id, out var block) || block["type"] is not JsonValue type || !type.TryGetValue<string>(out var name) || name != "database")
+    {
+      return "";
+    }
+    var data = block["data"];
+    var locked = (data?["schema"] as JsonArray ?? []).OfType<JsonObject>()
+        .Any(property => McpJson.String(property["type"]) == "title" && McpJson.Bool(property["databaseLocked"]) == true);
+    var views = (data?["views"] as JsonArray ?? []).OfType<JsonObject>().Select(view =>
+    {
+      var form = view["form"];
+
+      return new JsonArray(
+          view["id"]?.DeepClone(), form?["closed"]?.DeepClone(), form?["public"]?.DeepClone(), form?["anonymous"]?.DeepClone(),
+          form?["submissionAccess"]?.DeepClone(), view["calendarSync"]?.DeepClone()).ToJsonString();
+    }).Order(StringComparer.Ordinal);
+
+    return $"{locked}\n{string.Join("\n", views)}";
   }
 
   private static JsonObject NoStep() => new() { ["blocks"] = new JsonArray() };

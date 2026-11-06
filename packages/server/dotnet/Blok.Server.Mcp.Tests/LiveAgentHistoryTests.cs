@@ -129,6 +129,37 @@ public sealed class LiveAgentHistoryTests
     await room.CloseAsync();
   }
 
+  [Theory]
+  [InlineData(false, null)]
+  [InlineData(true, "CONFLICT")]
+  public async Task APeerFlippingALockTheStepChangedRefusesTheReplay(bool peerLocks, string? refusal)
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+    var origin = new object();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, origin);
+      // The step unlocked db: the bundle's pair is the document after it and, as the undo target, before it.
+      var pair = new JsonObject
+      {
+        ["document"] = new JsonObject { ["blocks"] = new JsonArray(Database(false)) },
+        ["history"] = new JsonObject { ["past"] = new JsonArray(new JsonObject { ["blocks"] = new JsonArray(Database(true)) }) },
+      };
+      var edits = new JsonArray(new JsonObject { ["op"] = "setData", ["id"] = "db", ["patch"] = new JsonObject() });
+
+      room.WriteLocal(new object(), _ => YDocConverter.ApplyOps(room.Doc, [new CollabEditOp.Insert("db", Database(true), null, null)]));
+      history.Apply(edits, () => room.WriteLocal(origin, _ => YDocConverter.ApplyOps(room.Doc, [new CollabEditOp.Update("db", (JsonObject)Database(false)["data"]!)])), pair);
+      if (peerLocks)
+      {
+        room.WriteLocal(new object(), _ => YDocConverter.ApplyOps(room.Doc, [new CollabEditOp.Update("db", (JsonObject)Database(true)["data"]!)]));
+      }
+
+      Assert.Equal(refusal, history.Replay(true, Pair)?["code"]?.GetValue<string>());
+    });
+    await room.CloseAsync();
+  }
+
   [Fact]
   public async Task EachGateIsItsOwnJson()
   {
@@ -144,6 +175,19 @@ public sealed class LiveAgentHistoryTests
     });
     await room.CloseAsync();
   }
+
+  private static JsonObject Database(bool locked) => new()
+  {
+    ["id"] = "db",
+    ["type"] = "database",
+    ["data"] = new JsonObject
+    {
+      ["title"] = "Payroll",
+      ["activeViewId"] = "v",
+      ["schema"] = new JsonArray(new JsonObject { ["id"] = "t", ["name"] = "Name", ["type"] = "title", ["position"] = "a0", ["databaseLocked"] = locked }),
+      ["views"] = new JsonArray(new JsonObject { ["id"] = "v", ["name"] = "Table", ["type"] = "table", ["position"] = "a0" }),
+    },
+  };
 
   private static void Insert(LiveRoom room, LiveAgentHistory history, object origin, string id, string text, JsonObject? gate = null)
   {

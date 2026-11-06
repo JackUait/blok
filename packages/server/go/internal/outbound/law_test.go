@@ -46,6 +46,10 @@ const guardOwner = "internal/outbound/fetcher.go"
 var pinned = map[string]map[string]int{
 	"internal/blob/s3.go":                   {"http.Client": 1, "dotnet.NewSocketsTransport": 1},
 	"internal/collab/docendpoint/client.go": {"http.Client": 1, "dotnet.NewSocketsTransport": 1},
+	// The MCP server's one client. It reaches only URLs the operator set at
+	// start: the doc endpoint and list route, the authorize webhook, the
+	// ticket route, the OAuth JWKS and the sync upgrade.
+	"blokmcp/outbound.go": {"http.Client": 1, "dotnet.NewSocketsTransport": 1},
 	// SocketsHttpHandler's rules, shared by those two operator clients only.
 	socketsOwner: {"http.Transport": 1, "net.Dialer": 1, "tls.Client": 1},
 }
@@ -182,7 +186,7 @@ func TestOnlyTheGuardedFetcherOwnsOutboundClients(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(found) > 0 {
-		t.Fatalf("outbound networking may only be owned by the guarded fetcher, the pinned S3 store or the doc-endpoint client:\n%s",
+		t.Fatalf("outbound networking may only be owned by the guarded fetcher, the pinned S3 store, the doc-endpoint client or the MCP client:\n%s",
 			strings.Join(found, "\n"))
 	}
 }

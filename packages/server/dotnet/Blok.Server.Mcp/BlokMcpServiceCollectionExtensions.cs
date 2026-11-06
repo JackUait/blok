@@ -138,7 +138,15 @@ public static class BlokMcpServiceCollectionExtensions
           ? new JsonObject(fields.Select(pair => KeyValuePair.Create(pair.Key, (JsonNode?)new JsonArray([.. pair.Value.Select(name => (JsonNode)name)]))))
           : null,
       Authorize = hook,
+      Rooms = options.LiveRooms ? RoomsOf(provider) : null,
     };
+  }
+
+  private static Blok.Server.Agent.BlokAgentExecutor RoomsOf(IServiceProvider provider)
+  {
+    return provider.GetService<Blok.Server.Agent.IBlokAgentExecutor>() is Blok.Server.Agent.BlokAgentExecutor { HasRooms: true } rooms
+        ? rooms
+        : throw new InvalidOperationException("BlokMcpOptions.LiveRooms needs AddBlokServer with CollabEnabled, so the app hosts the rooms.");
   }
 
   // IBlokAuthorization only narrows: a write also needs read.

@@ -39,6 +39,13 @@ public sealed class BlokMcpOptions
   /// </summary>
   public Func<BlokMcpAccessRequest, CancellationToken, ValueTask<bool>>? Authorize { get; set; }
 
+  /// <summary>
+  /// Serve live handles from this app's own Blok collab rooms (<c>AddBlokServer</c> with
+  /// <c>CollabEnabled</c>), in process: no socket and no ticket. A live handle's revision
+  /// is the room's journal head.
+  /// </summary>
+  public bool LiveRooms { get; set; }
+
   /// <summary>Blok's OAuth rules for bearer tokens (blok-mcp <c>--auth oauth</c>).</summary>
   public BlokMcpOAuthOptions? OAuth { get; set; }
 }

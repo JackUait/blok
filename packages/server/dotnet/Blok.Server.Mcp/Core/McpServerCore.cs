@@ -194,7 +194,7 @@ internal sealed class McpServerCore : IAsyncDisposable
       {
         var entry = (JsonObject)documents[index].DeepClone();
 
-        entry["live"] = config.Sync is not null;
+        entry["live"] = config.Live;
         readable.Add(entry);
       }
     }
@@ -330,7 +330,7 @@ internal sealed class McpServerCore : IAsyncDisposable
     {
       throw McpHostError.Surface("FORBIDDEN", "You may not open this document with this access.");
     }
-    var resolved = await bundle.CallAsync("mcpResolveMode", new JsonObject { ["requested"] = requested, ["sync"] = config.Sync is not null }, cancellationToken);
+    var resolved = await bundle.CallAsync("mcpResolveMode", new JsonObject { ["requested"] = requested, ["sync"] = config.Live }, cancellationToken);
 
     if (resolved["error"] is JsonObject error)
     {
@@ -338,6 +338,15 @@ internal sealed class McpServerCore : IAsyncDisposable
     }
     if (McpJson.String(resolved["mode"]) == "live")
     {
+      if (config.Rooms is { } rooms)
+      {
+        var surface = await SurfaceAsync(cancellationToken);
+
+        return new RoomSession(
+            bundle, rooms, documentId, write, flags, caller.Actor,
+            McpJson.String(surface["contractRevision"]?["live"]) ?? string.Empty,
+            surface["liveUnavailableCommands"] as JsonArray);
+      }
       if (live is null)
       {
         throw McpHostError.Surface("INVALID_ARGS", "Live mode needs blok-mcp to run with --sync-url.");
@@ -353,7 +362,7 @@ internal sealed class McpServerCore : IAsyncDisposable
 
     return await StoredSession.OpenAsync(
         bundle, source, documentId, write, flags, caller.Actor, revision,
-        config.PageTitles == "page-map" && config.Sync is null ? CreatePageAsync : null,
+        config.PageTitles == "page-map" && !config.Live ? CreatePageAsync : null,
         cancellationToken);
   }
 

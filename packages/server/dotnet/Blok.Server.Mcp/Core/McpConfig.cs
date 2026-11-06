@@ -62,6 +62,12 @@ internal sealed class McpConfig
 
   internal McpAuthorize? Authorize { get; init; }
 
+  /// <summary>The library form: live handles run on this app's own collab rooms.</summary>
+  internal Blok.Server.Agent.BlokAgentExecutor? Rooms { get; init; }
+
+  /// <summary>Live mode is on: a sync URL, or this app's own rooms.</summary>
+  internal bool Live => Sync is not null || Rooms is not null;
+
   internal double IdleMs => HandleIdleMs ?? DefaultHandleIdleMs;
 
   internal double MaxHandles => MaxHandlesPerPrincipal ?? DefaultMaxHandles;
@@ -123,7 +129,7 @@ internal sealed class McpConfig
     {
       flags["pageTitles"] = PageTitles;
     }
-    flags["sync"] = Sync is not null;
+    flags["sync"] = Live;
     flags["source"] = Source is not null;
     flags["uploads"] = false;
     if (Comments == false)

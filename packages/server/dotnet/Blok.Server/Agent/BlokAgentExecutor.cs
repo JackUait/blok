@@ -494,6 +494,8 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     }
 
     JsonObject? planned = null;
+    JsonObject? asked = null;
+    var writes = false;
     JsonObject? before = null;
     CollabPageMaps? beforeMaps = null;
     var wrote = false;
@@ -512,10 +514,21 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
         var output = JsonNode.Parse(await runtime.InvokeAsync("agentExecute", input.ToJsonString(), cancellationToken: token)) as JsonObject
             ?? throw new InvalidOperationException("The Blok runtime returned no agent execution.");
+
+        // The person must answer first; the batch applied nothing.
+        if (output["ask"] is JsonObject question)
+        {
+          asked = question;
+          planned = new JsonObject();
+
+          throw new NoRoomWriteException();
+        }
+
         var result = output["result"] as JsonObject
             ?? throw new InvalidOperationException("The Blok runtime returned no agent result.");
 
         planned = result;
+        writes = output["writes"] is JsonValue flag && flag.TryGetValue<bool>(out var writing) && writing;
 
         // A failed batch must not reach the room.
         if (result["ok"]?.GetValue<bool>() != true)
@@ -551,10 +564,14 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         }
       }, cancellationToken);
     }
+    catch (NoRoomWriteException) when (asked is not null)
+    {
+      return new BlokAgentExecution(string.Empty, null, string.Empty) { Ask = asked };
+    }
     catch (NoRoomWriteException) when (planned is not null)
     {
       // A refusal, or a read with no journal head. Jint's content hash means nothing in a room.
-      return WithHead(new BlokAgentExecution(planned.ToJsonString(), null, string.Empty), string.Empty);
+      return WithHead(new BlokAgentExecution(planned.ToJsonString(), null, string.Empty), string.Empty) with { Writes = writes };
     }
     catch (Exception error) when (created is { Count: > 0 } && error is not NoRoomWriteException)
     {
@@ -579,7 +596,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     switch (edit.Status)
     {
       case CollabEditStatus.Applied when planned is not null:
-        return WithHead(new BlokAgentExecution(planned.ToJsonString(), null, head), head);
+        return WithHead(new BlokAgentExecution(planned.ToJsonString(), null, head), head) with { Writes = writes, Wrote = wrote };
       default:
         return await RoomRefusalAsync(edit, docId, input, head, cancellationToken);
     }
@@ -1043,6 +1060,15 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   }
 
   /// <summary>The room's export and its journal head, read in one lane hold.</summary>
+  /// <summary>Whether this executor edits live rooms, and whether they keep a journal.</summary>
+  internal bool HasRooms => rooms is not null && converter is not null;
+
+  internal bool HasRoomJournal => rooms is { HasJournal: true };
+
+  /// <summary>A room's document and journal head, for an MCP live handle's read.</summary>
+  internal ValueTask<(JsonObject? Document, string Head)> ReadRoomAsync(string docId, CancellationToken cancellationToken) =>
+      RoomStateAsync(docId, cancellationToken);
+
   private async ValueTask<(JsonObject? Document, string Head)> RoomStateAsync(string docId, CancellationToken cancellationToken)
   {
     var (document, head, _) = await RoomStatusAsync(docId, cancellationToken);
@@ -1211,6 +1237,19 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   /// <summary>Room calls also read the version history when the journal keeps it.</summary>
   private JsonObject RoomCommon(BlokAgentOptions? options)
   {
+    // The bundle builds an MCP handle's contract from its own flags and ignores the rest.
+    if (options?.Mcp is { } mcp)
+    {
+      var handle = new JsonObject { ["mcp"] = mcp.DeepClone() };
+
+      if (options.Approval is { } approval)
+      {
+        handle["approval"] = approval.DeepClone();
+      }
+
+      return handle;
+    }
+
     var input = Common(options);
 
     // A room keeps no per-agent undo history, so its contract says so.

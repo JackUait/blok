@@ -71,11 +71,30 @@ public sealed record BlokAgentActor(string Id, string Name, string? OnBehalfOf =
 /// <param name="ResultJson">The AgentResult as JSON.</param>
 /// <param name="DocumentJson">The stored document to save, or null on failure.</param>
 /// <param name="Revision">The stored content hash or room journal head.</param>
-public sealed record BlokAgentExecution(string ResultJson, string? DocumentJson, string Revision);
+public sealed record BlokAgentExecution(string ResultJson, string? DocumentJson, string Revision)
+{
+  /// <summary>An MCP room run that must ask the person first: nothing was written.</summary>
+  internal System.Text.Json.Nodes.JsonObject? Ask { get; init; }
+
+  /// <summary>An MCP room run: the batch holds a writing command of the handle's contract.</summary>
+  internal bool Writes { get; init; }
+
+  /// <summary>The room took edits from this run.</summary>
+  internal bool Wrote { get; init; }
+}
 
 /// <summary>The host options passed to the agent runtime.</summary>
 public sealed class BlokAgentOptions
 {
+  /// <summary>
+  /// An MCP live handle's input (its start flags, mode and write). Set, the bundle runs the
+  /// MCP contract, so the contract revision and refusals match the handle's.
+  /// </summary>
+  internal System.Text.Json.Nodes.JsonObject? Mcp { get; init; }
+
+  /// <summary>The MCP call's approval input: client capabilities, replies and client name.</summary>
+  internal System.Text.Json.Nodes.JsonObject? Approval { get; init; }
+
   /// <summary>Opts in to writing target page titles and icons.</summary>
   public bool PageTitles { get; init; }
 

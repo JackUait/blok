@@ -90,25 +90,31 @@ type liveRoom struct {
 	pendingLocal [][]byte
 	holdAppends  bool
 
-	generation         int
-	phase              string
-	conn               *wsConn
-	protocol           string
-	lineage            *string
-	buffered           []wire.Message
-	handshakeTimer     *time.Timer
-	firstSyncTimer     *time.Timer
-	reconnectTimer     *time.Timer
-	awarenessTimer     *time.Timer
-	ackTimer           *time.Timer
-	sweepTimer         *time.Timer
-	awarenessClients   []uint64
-	awarenessFull      bool
-	hooked             bool
-	attempt            int
-	unauthorizedSince  int
-	handshakeTimeouts  int
-	announcedMax       *int64
+	generation        int
+	phase             string
+	conn              *wsConn
+	protocol          string
+	lineage           *string
+	buffered          []wire.Message
+	handshakeTimer    *time.Timer
+	firstSyncTimer    *time.Timer
+	reconnectTimer    *time.Timer
+	awarenessTimer    *time.Timer
+	ackTimer          *time.Timer
+	sweepTimer        *time.Timer
+	awarenessClients  []uint64
+	awarenessFull     bool
+	hooked            bool
+	attempt           int
+	unauthorizedSince int
+	handshakeTimeouts int
+	announcedMax      *int64
+	// oversizedSince counts 1009 closes since a resync answer shipped;
+	// refusedFrame is the smallest frame a 1009 refused, 0 for none, and
+	// largestSent the largest frame this connection wrote.
+	oversizedSince     int
+	refusedFrame       int
+	largestSent        int
 	forceTicketRefresh bool
 	synced             bool
 	everSynced         bool
@@ -190,7 +196,7 @@ func (r *liveRoom) onLocalUpdate(update []byte) {
 		r.terminate("oversized-update")
 		return
 	}
-	_ = r.conn.sendBinary(bytes)
+	r.sendBytes(bytes)
 }
 
 // flushAppendsLocked journals the local updates a batch made and drains.
@@ -223,6 +229,13 @@ func (r *liveRoom) send(message wire.Message) {
 	if err != nil {
 		return
 	}
+	r.sendBytes(bytes)
+}
+
+// sendBytes writes a frame, keeping the largest this connection wrote: a
+// 1009 names no frame, so that is the only guess at what was too big.
+func (r *liveRoom) sendBytes(bytes []byte) {
+	r.largestSent = max(r.largestSent, len(bytes))
 	_ = r.conn.sendBinary(bytes)
 }
 
@@ -509,6 +522,7 @@ func (r *liveRoom) openSocket(generation int, token string) {
 	r.phase = phaseAwaitingControl
 	r.buffered = nil
 	r.announcedMax = nil
+	r.largestSent = 0
 	r.handshakeTimer = r.after(handshakeTimeout, func() {
 		r.handshakeTimer = nil
 		r.handleHandshakeTimeout()
@@ -725,7 +739,16 @@ func (r *liveRoom) answerResync(stateVector []byte) {
 		r.terminate("oversized-update")
 		return
 	}
-	_ = r.conn.sendBinary(bytes)
+	// The same bytes would draw the same 1009 again.
+	if r.refusedFrame > 0 && len(bytes) >= r.refusedFrame {
+		r.terminate("oversized-update")
+		return
+	}
+	r.sendBytes(bytes)
+	// An answer that ships ends the 1009 memory. Not a sync: the server
+	// sends its SyncStep2 before its SyncStep1.
+	r.refusedFrame = 0
+	r.oversizedSince = 0
 }
 
 // drain sends the oldest pending row, one at a time, on a synced v2
@@ -756,7 +779,7 @@ func (r *liveRoom) drain() {
 		r.quarantineTail(row.lineage, oversizedReason)
 		return
 	}
-	_ = r.conn.sendBinary(bytes)
+	r.sendBytes(bytes)
 	id := row.operationID
 	r.inFlight = &id
 	r.ackTimer = r.after(ackTimeout, func() {
@@ -810,6 +833,13 @@ func (r *liveRoom) handleClose(code int) {
 	if code == 4401 {
 		r.unauthorizedSince++
 	}
+	if code == 1009 {
+		r.oversizedSince++
+		// A 1009 on a connection that wrote nothing says nothing of our frames.
+		if r.largestSent > 0 && (r.refusedFrame == 0 || r.largestSent < r.refusedFrame) {
+			r.refusedFrame = r.largestSent
+		}
+	}
 	switch {
 	case code == 4400:
 		r.terminate("bad-request")
@@ -819,6 +849,8 @@ func (r *liveRoom) handleClose(code int) {
 		r.relineage(code)
 	case code == 4401 && r.unauthorizedSince > 1:
 		r.terminate("unauthorized")
+	case code == 1009 && r.oversizedSince > 1:
+		r.terminate("oversized-update")
 	default:
 		if code == 4401 {
 			r.forceTicketRefresh = true

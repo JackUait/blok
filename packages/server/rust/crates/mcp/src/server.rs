@@ -149,11 +149,32 @@ fn answer_of(raw: &RawObject) -> Result<Answer, Fault> {
 
 /// How many page documents to make before a batch runs: the count, or the
 /// pages a refused batch had already prepared (Node made those too).
-fn pages_to_make(counted: &Value) -> u64 {
+pub fn pages_to_make(counted: &Value) -> u64 {
     match counted.get("result") {
+        // Nothing is made before a question or an approval refusal.
+        Some(result)
+            if result.pointer("/error/code").and_then(Value::as_str)
+                == Some("APPROVAL_REQUIRED") =>
+        {
+            0
+        }
         Some(_) => counted.get("prepared").and_then(Value::as_u64).unwrap_or(0),
         None => counted.get("count").and_then(Value::as_u64).unwrap_or(0),
     }
+}
+
+/// The bundle's isBatchEnvelope: commands of {name, args, ref?}.
+pub fn is_batch_envelope(batch: &Value) -> bool {
+    batch
+        .get("commands")
+        .and_then(Value::as_array)
+        .is_some_and(|commands| {
+            commands.iter().all(|command| {
+                command.get("name").is_some_and(Value::is_string)
+                    && command.get("args").is_some_and(Value::is_object)
+                    && command.get("ref").is_none_or(Value::is_string)
+            })
+        })
 }
 
 // src/shared/mint-id.ts's alphabet, so ids look the same.
@@ -916,7 +937,7 @@ impl Mcp {
                 }
                 let batch = call.get("batch").cloned().unwrap_or(Value::Null);
                 let mut created_pages = Vec::new();
-                if self.creates_pages() {
+                if self.creates_pages() && is_batch_envelope(&batch) {
                     let pages = room
                         .pages_needed(batch.clone(), actor.clone(), asking.clone())
                         .await?;
@@ -1233,7 +1254,8 @@ impl Mcp {
         }
         let batch = call.get("batch").unwrap_or(&Value::Null);
         let mut created = Vec::new();
-        if self.creates_pages() {
+        // A read-only handle or a malformed batch is refused before any page.
+        if self.creates_pages() && stored.write && is_batch_envelope(batch) {
             let counting = self
                 .session_input("stored", stored.write, &stored.document, actor)
                 .val("batch", batch)

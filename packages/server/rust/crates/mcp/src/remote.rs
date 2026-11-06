@@ -1275,7 +1275,7 @@ impl Room {
         actor: &Value,
         approval: &Value,
     ) -> Result<u64, Fault> {
-        if self.end.is_some() {
+        if self.end.is_some() || self.read_only {
             return Ok(0);
         }
         let document = self.export().await?;
@@ -1285,10 +1285,7 @@ impl Room {
             .val("approval", approval)
             .finish();
         let counted = self.shared.bundle.call("agentPagesNeeded", &input).await?;
-        Ok(match counted.get("result") {
-            Some(_) => counted.get("prepared").and_then(Value::as_u64).unwrap_or(0),
-            None => counted.get("count").and_then(Value::as_u64).unwrap_or(0),
-        })
+        Ok(crate::server::pages_to_make(&counted))
     }
 
     async fn read(&mut self, view: &Value, actor: &Value) -> Result<String, Fault> {

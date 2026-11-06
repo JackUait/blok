@@ -230,7 +230,7 @@ func (s *Server) list(ctx context.Context, request listRequest, who *caller) (*l
 	result := &listResult{Documents: []listedEntry{}, NextCursor: listing.NextCursor, Supported: true}
 	for index, doc := range listing.Documents {
 		if readable[index] {
-			result.Documents = append(result.Documents, listedEntry{ID: doc.ID, Title: doc.Title, Live: s.options.Sync != nil})
+			result.Documents = append(result.Documents, listedEntry{ID: doc.ID, Title: doc.Title, Live: s.options.live()})
 		}
 	}
 	return result, nil
@@ -356,13 +356,16 @@ func (s *Server) open(ctx context.Context, documentID, requested string, write b
 		Mode  string          `json:"mode"`
 		Error json.RawMessage `json:"error"`
 	}
-	if _, err := s.bundle.call(ctx, "mcpResolveMode", map[string]any{"requested": requested, "sync": s.options.Sync != nil}, &resolved); err != nil {
+	if _, err := s.bundle.call(ctx, "mcpResolveMode", map[string]any{"requested": requested, "sync": s.options.live()}, &resolved); err != nil {
 		return nil, err
 	}
 	if len(resolved.Error) > 0 {
 		return nil, rawError(resolved.Error)
 	}
 	if resolved.Mode == "live" {
+		if s.options.Rooms != nil {
+			return s.openRoom(ctx, documentID, write)
+		}
 		return s.openLive(ctx, documentID, write, who)
 	}
 	if s.source == nil {

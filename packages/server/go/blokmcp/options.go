@@ -3,6 +3,8 @@ package blokmcp
 import (
 	"context"
 	"encoding/json"
+
+	"github.com/JackUait/blok/packages/server/go/v2/blokagent"
 )
 
 // Options configure a Server. Their JSON form is what the bundle's
@@ -33,6 +35,11 @@ type Options struct {
 	// Authorize, when set, decides every open and every handle call, and
 	// filters listings (write false). An error denies.
 	Authorize AuthorizeFunc `json:"-"`
+
+	// Rooms, when set, opens live handles on the rooms of this process:
+	// pass blokserver.Server.AgentExecutor() of a server with collaboration
+	// on. Live handles then need no Sync, ticket or socket.
+	Rooms *blokagent.Executor `json:"-"`
 }
 
 // AuthorizeFunc answers whether principal may use documentID, for writing
@@ -100,3 +107,7 @@ func numberOr(n json.Number, fallback float64) float64 {
 	}
 	return value
 }
+
+// live says whether documents live in rooms: a remote sync service, or
+// this process's own rooms.
+func (o *Options) live() bool { return o.Sync != nil || o.Rooms != nil }

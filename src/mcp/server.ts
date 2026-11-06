@@ -2,10 +2,10 @@ import type { CollabSocketFactory } from '../components/modules/collaboration/ty
 import type { AgentActor } from '../../types/agent';
 import type { AgentPorts } from '../shared/agent/types';
 import { createHeadlessPorts } from '../view/agent-runtime';
+import { mcpContractsFor } from '../view/mcp-contracts';
 
 import { agentPresenceName } from './actor';
 import { createTicketProvider } from './auth/tickets';
-import { buildMcpContracts } from './contract';
 import { createToolDispatcher } from './dispatcher';
 import type { Caller, DispatcherDeps } from './dispatcher';
 import { HandleRegistry } from './handles';
@@ -58,17 +58,16 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
   const handleIdleMs = options.handleIdleMs ?? DEFAULTS.handleIdleMs;
   const pageMap = (options.pageTitles ?? DEFAULTS.pageTitles) === 'page-map';
   const source = createSource(options.source);
-  // Stored saves the new document through the source; live joins its room once (opener.createPage).
   const createsPages = pageMap && (options.sync !== undefined || source !== null);
-  const contracts = buildMcpContracts({
+  const contracts = mcpContractsFor({
     manifest: options.manifest,
     overrides: options.overrides,
     pageTitles: options.pageTitles ?? DEFAULTS.pageTitles,
-    createsPages,
     richTextFields: options.richTextFields,
-    versionHistory: options.sync !== undefined,
-    uploadsFiles: options.uploads !== undefined,
-    comments: options.comments !== false,
+    sync: options.sync !== undefined,
+    source: source !== null,
+    uploads: options.uploads !== undefined,
+    comments: options.comments,
   });
   const uploader = options.uploads === undefined ? undefined : createUploaderService(options.uploads);
   // page.rename / page.setIcon close their page session without waiting, so stop waits for those closes.

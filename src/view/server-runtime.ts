@@ -17,6 +17,7 @@ import { buildAgentContract, buildToolManifest } from '../shared/tool-manifest';
 import { createHeadlessAgentSetup, loadStoredDocument } from './agent-runtime';
 import { blocksToHtml } from './blocks-to-html';
 import { htmlToBlocksWithReport } from './html-to-blocks';
+import { MCP_OPERATIONS } from './mcp-runtime';
 import type { MarkdownDegradation } from './blocks-to-markdown';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
 import type { BlocksToPlainTextOptions } from './blocks-to-plain-text';
@@ -871,8 +872,15 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       return agentPlanHostResult(inputJson);
     case 'agentPagesNeeded':
       return agentPagesNeededResult(inputJson);
-    default:
-      throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
+    default: {
+      const mcp = Object.hasOwn(MCP_OPERATIONS, operation) ? MCP_OPERATIONS[operation] : undefined;
+
+      if (mcp === undefined) {
+        throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
+      }
+
+      return mcp(parseRecord(inputJson));
+    }
   }
 };
 

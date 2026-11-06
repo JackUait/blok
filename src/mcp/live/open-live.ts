@@ -14,7 +14,8 @@ import { htmlToSegmentsNode } from '../../view/rich-text-node';
 import type { McpContracts } from '../contract';
 import type { Caller, OpenRequest } from '../dispatcher';
 import { isMcpSurfaceError, McpSurfaceError, surfaceError } from '../errors';
-import type { HandleSession, UnavailableCommand } from '../session';
+import type { HandleSession } from '../session';
+import { liveUnavailableCommands } from '../../shared/mcp/surface';
 import { createLiveSession, terminalToError } from './live-session';
 import { nodeSocketFactory } from './node-socket';
 import { AgentPresence } from './presence';
@@ -121,21 +122,6 @@ const withRevocation = (room: HeadlessRoom, guard: ReturnType<typeof revocable>)
   close: () => room.close(),
 });
 
-// tools/list renders the stored contract, so a live handle names what it refuses from that list.
-const refusedHere = (contracts: McpContracts): UnavailableCommand[] => {
-  const live = new Map(contracts.live.commands.map((entry) => [entry.name, entry]));
-
-  return contracts.stored.commands.flatMap((entry) => {
-    const here = live.get(entry.name);
-
-    if (!entry.available || here?.available === true) {
-      return [];
-    }
-
-    return [{ name: entry.name, reason: here?.unavailableReason ?? 'runtime' }];
-  });
-};
-
 export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenRequest, caller: Caller, actor: AgentActor): Promise<HandleSession> => {
   const url = syncUrlFor(deps.sync.url, request.documentId);
   const guard = deps.ticketsFor === undefined ? undefined : revocable(await deps.ticketsFor(request, caller, actor));
@@ -179,7 +165,7 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
     );
 
     const session = createLiveSession({ room, agent, contract: deps.contracts.live, presence, write: request.write });
-    const unavailableCommands = refusedHere(deps.contracts);
+    const unavailableCommands = liveUnavailableCommands(deps.contracts.stored, deps.contracts.live);
 
     // assign, not spread: the session's durability is a getter.
     return unavailableCommands.length === 0 ? session : Object.assign(session, { unavailableCommands });

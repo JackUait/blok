@@ -247,7 +247,7 @@ export const startFakeHost = async (routes: RouteTable, options: { secret?: stri
       seen.set(key, nth + 1);
       const response = (route?.sequence === undefined ? undefined : route.sequence[Math.min(nth, route.sequence.length - 1)])
         ?? route?.byBody?.find((rule) => subsetOf(rule.when, body))?.response
-        ?? (route?.status === undefined ? undefined : route as RouteResponse);
+        ?? (route?.status === undefined && route?.stall !== true ? undefined : route as RouteResponse);
 
       if (response === undefined) {
         res.writeHead(404).end();

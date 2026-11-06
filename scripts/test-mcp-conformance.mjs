@@ -56,6 +56,9 @@ const SUITES = [
   'approvals',
   'tickets',
   'pages',
+  'handles',
+  'shutdown',
+  'timeouts',
   'live',
 ];
 

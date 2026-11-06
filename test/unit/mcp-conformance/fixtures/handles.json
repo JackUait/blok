@@ -1,0 +1,1016 @@
+{
+  "description": "Handle lifetime: idle expiry (--handle-idle-ms), the per-principal cap after an expiry, and a handle whose access was taken away. The sweep runs every min(idle, 30 s), so cases sleep several sweeps past the cutoff, never near it.",
+  "defaults": {
+    "transport": "stdio",
+    "argv": [
+      "--source",
+      "files:${dir}"
+    ],
+    "files": {
+      "doc.json": {
+        "json": {
+          "title": "Notes",
+          "blocks": [
+            {
+              "id": "p1",
+              "type": "paragraph",
+              "data": {
+                "text": "Hello"
+              }
+            }
+          ]
+        }
+      },
+      "other.json": {
+        "json": {
+          "blocks": []
+        }
+      }
+    },
+    "session": {
+      "protocolVersion": "2025-11-25"
+    },
+    "maskKeys": [
+      "lastEditedAt",
+      "savedVersion",
+      "revision"
+    ]
+  },
+  "cases": [
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--handle-idle-ms",
+        "300"
+      ],
+      "name": "an idle handle expires: read and close then answer UNKNOWN_HANDLE",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 300,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "sleepMs": 1500
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "UNKNOWN_HANDLE",
+                  "message": "No open document has this handle. It may have expired; call blok_open again.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_close",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "UNKNOWN_HANDLE",
+                  "message": "No open document has this handle. It may have expired; call blok_open again.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--handle-idle-ms",
+        "300",
+        "--max-handles",
+        "1"
+      ],
+      "name": "an expired handle frees its place under --max-handles",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 300,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "other",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "second": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "HANDLE_LIMIT",
+                  "message": "You already have 1 open documents. Close one with blok_close.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "sleepMs": 1500
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "other",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "third": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${third}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 300,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${third}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": []
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--handle-idle-ms",
+        "2000"
+      ],
+      "name": "use keeps a handle alive past its idle time",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 2000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "sleepMs": 800
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "page": {
+                  "title": "Notes"
+                },
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "Hello"
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "sleepMs": 800
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "page": {
+                  "title": "Notes"
+                },
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "Hello"
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "sleepMs": 800
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "page": {
+                  "title": "Notes"
+                },
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "Hello"
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize",
+        "--max-handles",
+        "1"
+      ],
+      "name": "access taken away: read, execute and close answer FORBIDDEN, and the handle keeps its place",
+      "hosts": {
+        "POST /authorize": {
+          "sequence": [
+            {
+              "status": 200,
+              "json": {
+                "allowed": true
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "allowed": false
+              }
+            }
+          ]
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "You no longer have access to this document.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "X"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "You no longer have access to this document.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_close",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "You no longer have access to this document.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "other",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "second": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "HANDLE_LIMIT",
+                  "message": "You already have 1 open documents. Close one with blok_close.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 5
+          }
+        }
+      ],
+      "watchFiles": [
+        "doc.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "doc.json": {
+          "text": "{\"title\":\"Notes\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello\"}}]}"
+        }
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "write access taken away: reads still run, a write batch is FORBIDDEN",
+      "hosts": {
+        "POST /authorize": {
+          "sequence": [
+            {
+              "status": 200,
+              "json": {
+                "allowed": true
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "allowed": false
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "allowed": true
+              }
+            }
+          ]
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "X"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "You no longer have access to this document.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "page": {
+                  "title": "Notes"
+                },
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "Hello"
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_close",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "closed": true,
+                "unsavedBatches": 0,
+                "hostRecordLags": false
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "watchFiles": [
+        "doc.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "doc.json": {
+          "text": "{\"title\":\"Notes\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello\"}}]}"
+        }
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
+    }
+  ]
+}

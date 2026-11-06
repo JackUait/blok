@@ -1,0 +1,735 @@
+{
+  "description": "Stopping: SIGTERM and SIGINT over stdio and HTTP, a save in flight when the signal comes, the 45 s stop deadline, and a second signal during a stop.",
+  "defaults": {
+    "transport": "stdio",
+    "argv": [
+      "--source",
+      "files:${dir}"
+    ],
+    "files": {
+      "doc.json": {
+        "json": {
+          "title": "Notes",
+          "blocks": [
+            {
+              "id": "p1",
+              "type": "paragraph",
+              "data": {
+                "text": "Hello"
+              }
+            }
+          ]
+        }
+      },
+      "other.json": {
+        "json": {
+          "blocks": []
+        }
+      }
+    },
+    "session": {
+      "protocolVersion": "2025-11-25"
+    },
+    "maskKeys": [
+      "lastEditedAt",
+      "savedVersion",
+      "revision"
+    ]
+  },
+  "cases": [
+    {
+      "name": "stdio: SIGTERM while idle",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "signal": "SIGTERM",
+          "expect": {
+            "code": 0
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "stdio: SIGINT while idle",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "signal": "SIGINT",
+          "expect": {
+            "code": 0
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "transport": "http",
+      "argv": [
+        "--http",
+        "127.0.0.1:0",
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "http: SIGTERM while idle",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "nothing"
+              }
+            }
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "UNKNOWN_HANDLE",
+                  "message": "No open document has this handle. It may have expired; call blok_open again.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "signal": "SIGTERM",
+          "expect": {
+            "code": 0
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "transport": "http",
+      "argv": [
+        "--http",
+        "127.0.0.1:0",
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "http: SIGINT while idle",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "nothing"
+              }
+            }
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "UNKNOWN_HANDLE",
+                  "message": "No open document has this handle. It may have expired; call blok_open again.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "signal": "SIGINT",
+          "expect": {
+            "code": 0
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "argv": [
+        "--source",
+        "endpoint:${host}/docs"
+      ],
+      "name": "stdio: a save in flight at SIGTERM is finished before the exit, but its answer is lost",
+      "env": {
+        "BLOK_DOC_ENDPOINT_AUTH": "Token t"
+      },
+      "hosts": {
+        "GET /docs/doc": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": []
+            },
+            "version": "v1"
+          }
+        },
+        "PUT /docs/doc": {
+          "status": 200,
+          "json": {
+            "version": "v2"
+          },
+          "delayMs": 1500
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Kept"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "signal": "SIGTERM",
+          "signalWhenHost": "PUT /docs/doc",
+          "expect": null,
+          "minElapsedMs": 1400
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "Token t"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "Token t",
+            "content-type": "application/json",
+            "blok-doc-version": "v1"
+          },
+          "body": {
+            "title": "Kept",
+            "blocks": []
+          }
+        }
+      ]
+    },
+    {
+      "transport": "http",
+      "argv": [
+        "--http",
+        "127.0.0.1:0",
+        "--source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "session": {
+        "protocolVersion": "2026-07-28"
+      },
+      "name": "http: a save in flight at SIGTERM is finished before the exit, but the connection drops at once",
+      "env": {
+        "BLOK_DOC_ENDPOINT_AUTH": "Token t"
+      },
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /docs/doc": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": []
+            },
+            "version": "v1"
+          }
+        },
+        "PUT /docs/doc": {
+          "status": 200,
+          "json": {
+            "version": "v2"
+          },
+          "delayMs": 1500
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Kept"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "signal": "SIGTERM",
+          "signalWhenHost": "PUT /docs/doc",
+          "expectHttp": null,
+          "expect": null
+        },
+        {
+          "awaitExit": true,
+          "exitTimeoutMs": 20000,
+          "expect": {
+            "code": 0
+          },
+          "minElapsedMs": 1000
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "Token t"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "Token t",
+            "content-type": "application/json",
+            "blok-doc-version": "v1"
+          },
+          "body": {
+            "title": "Kept",
+            "blocks": []
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${dir}/hang.mjs"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "title": "Notes",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": "Hello"
+                }
+              }
+            ]
+          }
+        },
+        "other.json": {
+          "json": {
+            "blocks": []
+          }
+        },
+        "hang.mjs": {
+          "text": "export default async () => {\n  await fetch(process.env.HANG_URL, { method: \"POST\" });\n\n  return new Promise(() => {});\n};\n"
+        }
+      },
+      "name": "stdio: an open that never finishes holds the stop for 45 s, then the process exits",
+      "env": {
+        "HANG_URL": "${host}/seen"
+      },
+      "hosts": {
+        "POST /seen": {
+          "status": 200,
+          "text": ""
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "noAnswer": true
+        },
+        {
+          "signal": "SIGTERM",
+          "signalWhenHost": "POST /seen",
+          "exitTimeoutMs": 60000,
+          "minElapsedMs": 44000,
+          "expect": {
+            "code": 0
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/seen",
+          "headers": {}
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${dir}/hang.mjs"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "title": "Notes",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": "Hello"
+                }
+              }
+            ]
+          }
+        },
+        "other.json": {
+          "json": {
+            "blocks": []
+          }
+        },
+        "hang.mjs": {
+          "text": "export default async () => {\n  await fetch(process.env.HANG_URL, { method: \"POST\" });\n\n  return new Promise(() => {});\n};\n"
+        }
+      },
+      "name": "stdio: a second SIGTERM during a held stop ends the process at once",
+      "env": {
+        "HANG_URL": "${host}/seen"
+      },
+      "hosts": {
+        "POST /seen": {
+          "status": 200,
+          "text": ""
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "noAnswer": true
+        },
+        {
+          "signal": "SIGTERM",
+          "signalWhenHost": "POST /seen",
+          "noWait": true
+        },
+        {
+          "sleepMs": 500
+        },
+        {
+          "signal": "SIGTERM",
+          "exitTimeoutMs": 5000,
+          "expect": {
+            "code": null,
+            "signal": "SIGTERM",
+            "stderr": ""
+          }
+        }
+      ],
+      "expectExit": {
+        "code": null,
+        "signal": "SIGTERM",
+        "stderr": ""
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/seen",
+          "headers": {}
+        }
+      ]
+    }
+  ]
+}

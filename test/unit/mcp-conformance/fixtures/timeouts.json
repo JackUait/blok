@@ -1,0 +1,235 @@
+{
+  "description": "Outbound timeouts against a fake host that never answers: the document endpoint (30 s), the authorize webhook (10 s) and the ticket route (10 s). Slow by design; kept to one case each.",
+  "defaults": {
+    "transport": "stdio",
+    "session": {
+      "protocolVersion": "2025-11-25"
+    }
+  },
+  "cases": [
+    {
+      "name": "a document endpoint that never answers fails the open after 30 s",
+      "argv": [
+        "--source",
+        "endpoint:${host}/docs"
+      ],
+      "env": {
+        "BLOK_DOC_ENDPOINT_AUTH": "Token t"
+      },
+      "hosts": {
+        "GET /docs/doc": {
+          "stall": true
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "readTimeoutMs": 45000,
+          "minElapsedMs": 29000,
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The document endpoint could not be reached.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "Token t"
+          }
+        }
+      ]
+    },
+    {
+      "name": "an authorize webhook that never answers refuses the open after 10 s",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "title": "Notes",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": "Hello"
+                }
+              }
+            ]
+          }
+        },
+        "other.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /authorize": {
+          "stall": true
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "readTimeoutMs": 25000,
+          "minElapsedMs": 9500,
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "You may not open this document with this access.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "a ticket route that never answers fails the open after 10 s",
+      "argv": [
+        "--sync-url",
+        "ws://127.0.0.1:9/sync",
+        "--ticket-url",
+        "${host}/tickets"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "stall": true
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "readTimeoutMs": 25000,
+          "minElapsedMs": 9500,
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The ticket endpoint could not be reached.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "conformance",
+            "actorId": "agent:local:conformance"
+          }
+        }
+      ]
+    }
+  ]
+}

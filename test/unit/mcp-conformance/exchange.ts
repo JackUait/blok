@@ -68,7 +68,7 @@ import {
  *               "maskKeys" masks those key names anywhere in every answer).
  *   expectSavedVersion  {"file", "pointer"}: the answer's value there must be the
  *               SHA-256 hex of that file's bytes. Checked on every run.
- *   minElapsedMs  stdio send: the answer must not come sooner, e.g. a timeout the
+ *   minElapsedMs  send: the answer must not come sooner, e.g. a timeout the
  *               server has to wait out. Checked on every run, never recorded.
  *   readTimeoutMs  how long to wait for this step's answer (default 20 s).
  *   sleepMs     alone: wait this long, e.g. for an idle handle to expire.
@@ -77,6 +77,10 @@ import {
  *               counts from the signal. With send/http: send the request, wait for
  *               "signalWhenHost" ("METHOD /path" seen once by the fake host), send the
  *               signal, then record the answer, or null when none came before the exit.
+ *               A lone signal also takes "signalWhenHost", and "noWait": true sends it
+ *               without waiting for the exit (nothing is recorded).
+ *   awaitExit   alone: wait for an exit already under way and record it, as a lone signal does.
+ *   noAnswer    stdio send: write the request and go on without reading an answer.
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
@@ -108,6 +112,9 @@ export interface Step {
   signal?: NodeJS.Signals;
   signalWhenHost?: string;
   exitTimeoutMs?: number;
+  noWait?: boolean;
+  awaitExit?: boolean;
+  noAnswer?: boolean;
   expect?: unknown;
   expectHttp?: unknown;
   notifications?: unknown[];
@@ -579,16 +586,22 @@ class CaseRun {
 
       return true;
     }
-    if (step.signal === undefined) {
+    if (step.signal === undefined && step.awaitExit !== true) {
       return false;
     }
+    await this.waitForHost(step, label);
     const sentAt = Date.now();
 
-    server.signal(step.signal);
+    if (step.signal !== undefined) {
+      server.signal(step.signal);
+    }
+    if (step.noWait === true) {
+      return true;
+    }
     const exit = await server.waitExit(step.exitTimeoutMs ?? EXIT_TIMEOUT_MS);
 
     if (exit === undefined) {
-      throw new Error(`${label}: the server did not exit within ${step.exitTimeoutMs ?? EXIT_TIMEOUT_MS} ms of ${step.signal}.\nstderr:\n${server.stderr}`);
+      throw new Error(`${label}: the server did not exit within ${step.exitTimeoutMs ?? EXIT_TIMEOUT_MS} ms.\nstderr:\n${server.stderr}`);
     }
     expect(Date.now() - sentAt, `${label}: exited sooner than minElapsedMs`).toBeGreaterThanOrEqual(step.minElapsedMs ?? 0);
     this.finishStep(step, holder, exitRecord(exit.code, exit.signal, server.stderr), label);
@@ -601,13 +614,18 @@ class CaseRun {
     if (step.signal === undefined) {
       return;
     }
-    if (step.signalWhenHost !== undefined) {
-      if (this.host === undefined) {
-        throw new Error(`${label}: signalWhenHost needs the case's "hosts"`);
-      }
-      await this.host.waitForRequests(step.signalWhenHost, 1, HOST_WAIT_MS);
-    }
+    await this.waitForHost(step, label);
     server.signal(step.signal);
+  }
+
+  private async waitForHost(step: Step, label: string): Promise<void> {
+    if (step.signalWhenHost === undefined) {
+      return;
+    }
+    if (this.host === undefined) {
+      throw new Error(`${label}: signalWhenHost needs the case's "hosts"`);
+    }
+    await this.host.waitForRequests(step.signalWhenHost, 1, HOST_WAIT_MS);
   }
 
   public async stdioStep(server: StdioServer, step: Step, holder: Holder, label: string): Promise<void> {
@@ -630,6 +648,9 @@ class CaseRun {
     const sentAt = Date.now();
 
     server.send(withMeta({ jsonrpc: '2.0', ...message, id }, this.c.session, raw));
+    if (step.noAnswer === true) {
+      return;
+    }
     await this.signalAfterSend(server, step, label);
     // After a signal the process may exit without answering: that is recorded as null.
     const read = (): Promise<JsonMessage | null> => (step.signal === undefined
@@ -681,12 +702,15 @@ class CaseRun {
     const id = isNotify ? undefined : base.id ?? this.nextId++;
     const message = withMeta({ jsonrpc: '2.0', ...base, ...(id !== undefined && { id }) }, this.c.session, raw);
     const headers = mergeHeaders(mergeHeaders(sessionHeaders(this.c.session, message, raw), this.c.session?.headers, this.vars), step.headers, this.vars);
+    const sentAt = Date.now();
     const sending = sendHttp(server.url, {
       method: 'POST', path: new URL(server.url).pathname, headers, body: Buffer.from(JSON.stringify(message)), timeoutMs: step.readTimeoutMs,
     });
 
     await this.signalAfterSend(server, step, label);
     const answer = step.signal === undefined ? await sending : await sending.catch(() => null);
+
+    expect(Date.now() - sentAt, `${label}: answered sooner than minElapsedMs`).toBeGreaterThanOrEqual(step.minElapsedMs ?? 0);
 
     if (answer === null) {
       this.check(holder, 'expectHttp', null, `${label} http`);

@@ -673,6 +673,13 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
 
     // Asked before any prepare step, so a no leaves no host work behind. Kept for this batch only.
     const approved = new Set<string>();
+
+    /*
+     * A statement between keeps the minifier from joining `approved` and the await below into one
+     * declaration list: Jint then made `approved` a new, empty set after the await (measured), and
+     * the final plan went STALE on an approved unlock.
+     */
+    checkCancel(input.signal);
     const pre = await planWithApprovals(granted => {
       warnings.splice(0, warnings.length, ...corrected);
 

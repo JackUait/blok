@@ -54,26 +54,14 @@ describe('MCP conformance runner law', () => {
     const unknown = runRunner(['--target', 'csharp', '--suite', 'live', '--host', 'java']);
 
     expect(known.stderr).not.toContain('Usage:');
-    expect(known.stderr).toContain('The csharp MCP target');
     expect(unknown.status).toBe(1);
     expect(unknown.stderr).toContain('Usage:');
-  });
-
-  // A port that does not exist yet must fail fast with a message naming what to build.
-  it.each([
-    ['csharp', 'packages/server/dotnet/Blok.Mcp/Blok.Mcp.csproj'],
-  ])('fails clearly, without hanging, while the %s target is missing', (target, names) => {
-    const result = runRunner(['--target', target]);
-
-    expect(result.status).toBe(1);
-    expect(result.stderr).not.toContain('Usage:');
-    expect(result.stderr).toContain(`The ${target} MCP target`);
-    expect(result.stderr).toContain(names);
   });
 
   // A built port is found and built with its own toolchain; with no PATH that spawn fails by name.
   it.each([
     ['rust', 'cargo'],
+    ['csharp', 'dotnet'],
   ])('finds the %s target and builds it with %s', (target, toolchain) => {
     const result = runRunner(['--target', target]);
 

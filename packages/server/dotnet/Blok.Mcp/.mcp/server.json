@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.jackuait/blok-mcp",
+  "description": "Read and edit Blok documents from an MCP client.",
+  "version": "0.0.0",
+  "packages": [
+    {
+      "registryType": "nuget",
+      "identifier": "Blok.Mcp",
+      "version": "0.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [],
+      "environmentVariables": []
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/JackUait/blok",
+    "source": "github"
+  }
+}

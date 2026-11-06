@@ -1,0 +1,404 @@
+using System.Text.Json.Nodes;
+using Blok.Server.Mcp.Live;
+using Blok.Server.Mcp.Outbound;
+using Blok.Server.Mcp.Sources;
+
+namespace Blok.Server.Mcp.Core;
+
+/// <summary>What one tools/call came to.</summary>
+internal sealed record McpCallResult(string? UnknownTool, JsonObject? Answer, JsonObject? Ask);
+
+/// <summary>
+/// The MCP shell: the bundle does every check and builds every answer; this class
+/// does the IO between the steps, in Node's dispatcher order.
+/// </summary>
+internal sealed class McpServerCore : IAsyncDisposable
+{
+  private readonly McpBundle bundle;
+  private readonly McpConfig config;
+  private readonly IDocumentSource? source;
+  private readonly LiveOpener? live;
+  private readonly HandleRegistry<IHandleSession> handles;
+  private readonly JsonObject flags;
+  private readonly Timer sweeper;
+  private readonly SemaphoreSlim surfaceGate = new(1, 1);
+  private JsonObject? surface;
+  private int stopped;
+
+  internal McpServerCore(McpBundle bundle, McpConfig config, McpHttpCaller http)
+  {
+    this.bundle = bundle;
+    this.config = config;
+    source = config.Source switch
+    {
+      McpSourceConfig.Files files => new FilesSource(files.Dir, bundle),
+      McpSourceConfig.Endpoint endpoint => new EndpointSource(endpoint, http),
+      _ => null,
+    };
+    live = config.Sync is null ? null : new LiveOpener(config, http);
+    flags = config.SurfaceFlags();
+    handles = new HandleRegistry<IHandleSession>(config.IdleMs, config.MaxHandles, session => session.CloseAsync("expired"));
+    var period = TimeSpan.FromMilliseconds(Math.Min(config.IdleMs, 30_000));
+
+    sweeper = new Timer(_ => _ = SweepAsync(), null, period, period);
+  }
+
+  internal McpBundle Bundle => bundle;
+
+  internal McpConfig Config => config;
+
+  internal async Task<JsonObject> SurfaceAsync(CancellationToken cancellationToken = default)
+  {
+    if (surface is not null)
+    {
+      return surface;
+    }
+    await surfaceGate.WaitAsync(cancellationToken);
+    try
+    {
+      surface ??= await bundle.CallAsync("mcpSurface", (JsonObject)flags.DeepClone(), cancellationToken);
+
+      return surface;
+    }
+    finally
+    {
+      surfaceGate.Release();
+    }
+  }
+
+  internal async Task<McpCaller> CallerAsync(string principal, string? rawClientName, IReadOnlyList<string>? scopes, CancellationToken cancellationToken)
+  {
+    var input = new JsonObject { ["principal"] = principal };
+
+    if (rawClientName is not null)
+    {
+      input["clientName"] = rawClientName;
+    }
+    var named = await bundle.CallAsync("mcpActor", input, cancellationToken);
+
+    return new McpCaller(
+        principal,
+        McpJson.String(named["clientName"]) ?? string.Empty,
+        scopes,
+        (JsonObject)named["actor"]!.DeepClone(),
+        McpJson.String(named["presenceName"]) ?? string.Empty);
+  }
+
+  internal async Task<JsonObject> PromptAsync(string name, JsonNode? arguments, CancellationToken cancellationToken)
+  {
+    var input = new JsonObject { ["name"] = name };
+
+    if (arguments is not null)
+    {
+      input["arguments"] = arguments.DeepClone();
+    }
+
+    return await bundle.CallAsync("mcpPrompt", input, cancellationToken);
+  }
+
+  internal async Task<McpCallResult> CallToolAsync(string name, JsonObject? arguments, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
+  {
+    var input = new JsonObject
+    {
+      ["name"] = name,
+      ["arguments"] = arguments?.DeepClone() ?? new JsonObject(),
+      ["scopes"] = caller.Scopes is null ? null : new JsonArray([.. caller.Scopes.Select(scope => (JsonNode)scope)]),
+    };
+    var checkedCall = await bundle.CallAsync("mcpCheckCall", input, cancellationToken);
+
+    if (McpJson.String(checkedCall["unknownTool"]) is string unknown)
+    {
+      return new McpCallResult(unknown, null, null);
+    }
+    if (checkedCall["answer"] is JsonObject refused)
+    {
+      return Answer(refused);
+    }
+    var step = (JsonObject)checkedCall["step"]!;
+
+    try
+    {
+      return McpJson.String(step["tool"]) switch
+      {
+        "blok_list_documents" => Answer(new JsonObject
+        {
+          ["structuredContent"] = await ListDocumentsAsync((JsonObject)step["list"]!, caller, cancellationToken),
+          ["isError"] = false,
+        }),
+        "blok_open" => Answer(await OpenAsync(step, caller, cancellationToken)),
+        "blok_close" => Answer(await CloseAsync(McpJson.String(step["handle"])!, caller)),
+        _ => await OnHandleAsync(step, caller, approval, cancellationToken),
+      };
+    }
+    catch (McpHostError error)
+    {
+      var built = await bundle.CallAsync("mcpErrorAnswer", error.ToInput(name), cancellationToken);
+
+      return Answer((JsonObject)built["answer"]!);
+    }
+  }
+
+  public async ValueTask DisposeAsync()
+  {
+    if (Interlocked.Exchange(ref stopped, 1) == 1)
+    {
+      return;
+    }
+    await sweeper.DisposeAsync();
+    await handles.CloseAllAsync(session => session.CloseAsync("closed"));
+    surfaceGate.Dispose();
+  }
+
+  private static McpCallResult Answer(JsonObject answer)
+  {
+    return new McpCallResult(null, answer, null);
+  }
+
+  private async Task SweepAsync()
+  {
+    try
+    {
+      await handles.SweepAsync();
+    }
+    catch (Exception error)
+    {
+      // stdout carries the protocol, so failures go to stderr.
+      await Console.Error.WriteLineAsync($"blok-mcp: closing an idle handle failed {error.Message}");
+    }
+  }
+
+  private async Task<bool> AllowedAsync(McpCaller caller, string documentId, bool write, CancellationToken cancellationToken)
+  {
+    return config.Authorize is null || await config.Authorize(caller.Principal, documentId, write, cancellationToken);
+  }
+
+  private async Task<JsonObject> ListAsync(int limit, string? query, string? cursor, McpCaller caller, CancellationToken cancellationToken)
+  {
+    if (source is null || !source.CanList)
+    {
+      return new JsonObject { ["documents"] = new JsonArray(), ["nextCursor"] = null, ["supported"] = false };
+    }
+    var listing = await source.ListAsync(limit, query, cursor, cancellationToken);
+    var documents = (listing["documents"] as JsonArray ?? []).OfType<JsonObject>().ToArray();
+    // A listed id is a read; without a hook (stdio) every document is visible.
+    var allowed = await Task.WhenAll(documents.Select(doc => AllowedAsync(caller, McpJson.String(doc["id"]) ?? string.Empty, false, cancellationToken)));
+    var readable = new JsonArray();
+
+    for (var index = 0; index < documents.Length; index++)
+    {
+      if (allowed[index])
+      {
+        var entry = (JsonObject)documents[index].DeepClone();
+
+        entry["live"] = config.Sync is not null;
+        readable.Add(entry);
+      }
+    }
+
+    return new JsonObject { ["documents"] = readable, ["nextCursor"] = listing["nextCursor"]?.DeepClone(), ["supported"] = true };
+  }
+
+  private Task<JsonObject> ListOfRequestAsync(JsonObject request, McpCaller caller, CancellationToken cancellationToken)
+  {
+    return ListAsync(
+        (int)(McpJson.Number(request["limit"]) ?? 25),
+        McpJson.String(request["query"]),
+        McpJson.String(request["cursor"]),
+        caller,
+        cancellationToken);
+  }
+
+  private async Task<JsonObject> ListDocumentsAsync(JsonObject request, McpCaller caller, CancellationToken cancellationToken)
+  {
+    var listing = await ListOfRequestAsync(request, caller, cancellationToken);
+    var answer = await bundle.CallAsync("mcpListAnswer", new JsonObject { ["request"] = request.DeepClone(), ["listing"] = listing }, cancellationToken);
+
+    if (answer["relist"] is JsonObject relist)
+    {
+      var relisted = await ListOfRequestAsync(relist, caller, cancellationToken);
+
+      answer = await bundle.CallAsync("mcpListAnswer", new JsonObject
+      {
+        ["request"] = request.DeepClone(),
+        ["listing"] = listing.DeepClone(),
+        ["relisted"] = relisted,
+      }, cancellationToken);
+    }
+
+    return (JsonObject)answer["listing"]!.DeepClone();
+  }
+
+  private async Task<JsonObject> OpenAsync(JsonObject step, McpCaller caller, CancellationToken cancellationToken)
+  {
+    if (step["find"] is not JsonObject find)
+    {
+      return await OpenFoundAsync(step, McpJson.String(step["documentId"])!, null, caller, cancellationToken);
+    }
+    var request = new JsonObject { ["limit"] = 25 };
+
+    if (McpJson.String(find["query"]) is string query)
+    {
+      request["query"] = query;
+    }
+    var listing = await ListDocumentsAsync(request, caller, cancellationToken);
+    var picked = await bundle.CallAsync("mcpPickDocument", new JsonObject { ["find"] = find.DeepClone(), ["listing"] = listing }, cancellationToken);
+
+    if (picked["answer"] is JsonObject answer)
+    {
+      return answer;
+    }
+    var open = (JsonObject)picked["open"]!;
+    var found = new JsonObject { ["documentId"] = open["documentId"]?.DeepClone(), ["title"] = open["title"]?.DeepClone() };
+
+    return await OpenFoundAsync(step, McpJson.String(open["documentId"])!, found, caller, cancellationToken);
+  }
+
+  private async Task<JsonObject> OpenFoundAsync(JsonObject step, string documentId, JsonObject? found, McpCaller caller, CancellationToken cancellationToken)
+  {
+    var write = McpJson.Bool(step["write"]) == true;
+
+    // Opening can mint a ticket and join a room, so refuse at the cap first.
+    handles.AssertRoom(caller.Principal);
+    var session = await OpenSessionAsync(documentId, McpJson.String(step["mode"]) ?? "auto", write, caller, cancellationToken);
+
+    try
+    {
+      JsonNode? view = null;
+
+      if (step["view"] is JsonNode wanted)
+      {
+        var read = await session.ReadAsync(wanted, cancellationToken);
+
+        if (McpJson.Bool(read["isError"]) == true)
+        {
+          await CloseQuietlyAsync(session);
+
+          return read;
+        }
+        view = read["structuredContent"]?.DeepClone();
+      }
+      // Nobody would hold the handle.
+      if (cancellationToken.IsCancellationRequested)
+      {
+        throw new McpHostError("CANCELLED", "The request was cancelled before the document opened.", helper: "failure");
+      }
+      var handle = handles.Add(caller.Principal, documentId, session);
+      var input = new JsonObject
+      {
+        ["handle"] = handle,
+        ["session"] = session.Describe(),
+        ["expiresAfterIdleMs"] = config.IdleMs,
+      };
+
+      if (found is not null)
+      {
+        input["found"] = found;
+      }
+      if (view is not null)
+      {
+        input["view"] = view;
+      }
+
+      return (JsonObject)(await bundle.CallAsync("mcpOpenAnswer", input, cancellationToken))["answer"]!;
+    }
+    catch
+    {
+      await CloseQuietlyAsync(session);
+      throw;
+    }
+  }
+
+  private static async Task CloseQuietlyAsync(IHandleSession session)
+  {
+    try
+    {
+      await session.CloseAsync("closed");
+    }
+    catch (Exception error)
+    {
+      await Console.Error.WriteLineAsync($"blok-mcp: closing a session failed: {error.Message}");
+    }
+  }
+
+  private async Task<IHandleSession> OpenSessionAsync(string documentId, string requested, bool write, McpCaller caller, CancellationToken cancellationToken)
+  {
+    if (!await AllowedAsync(caller, documentId, write, cancellationToken))
+    {
+      throw McpHostError.Surface("FORBIDDEN", "You may not open this document with this access.");
+    }
+    var resolved = await bundle.CallAsync("mcpResolveMode", new JsonObject { ["requested"] = requested, ["sync"] = config.Sync is not null }, cancellationToken);
+
+    if (resolved["error"] is JsonObject error)
+    {
+      throw new McpHostError(error);
+    }
+    if (McpJson.String(resolved["mode"]) == "live")
+    {
+      if (live is null)
+      {
+        throw McpHostError.Surface("INVALID_ARGS", "Live mode needs blok-mcp to run with --sync-url.");
+      }
+
+      return await live.OpenAsync(documentId, write, caller, cancellationToken);
+    }
+    if (source is null)
+    {
+      throw McpHostError.Surface("SOURCE_UNAVAILABLE", "No document source is configured. Start blok-mcp with --source.");
+    }
+    var revision = McpJson.String((await SurfaceAsync(cancellationToken))["contractRevision"]?["stored"]) ?? string.Empty;
+
+    return await StoredSession.OpenAsync(bundle, source, documentId, write, flags, caller.Actor, revision, cancellationToken);
+  }
+
+  private async Task<JsonObject> CloseAsync(string handle, McpCaller caller)
+  {
+    // A revoked document answers FORBIDDEN and the handle stays.
+    await handles.UseAsync(handle, caller.Principal, async (_, documentId) =>
+    {
+      await StillAllowedAsync(caller, documentId, false, CancellationToken.None);
+
+      return true;
+    });
+    var session = await handles.RemoveAsync(handle, caller.Principal);
+    var summary = await session.CloseAsync("closed");
+    var answer = new JsonObject { ["closed"] = true };
+
+    foreach (var (key, value) in summary)
+    {
+      answer[key] = value?.DeepClone();
+    }
+
+    return new JsonObject { ["structuredContent"] = answer, ["isError"] = false };
+  }
+
+  private async Task StillAllowedAsync(McpCaller caller, string documentId, bool write, CancellationToken cancellationToken)
+  {
+    if (!await AllowedAsync(caller, documentId, write, cancellationToken))
+    {
+      throw McpHostError.Surface("FORBIDDEN", "You no longer have access to this document.");
+    }
+  }
+
+  private async Task<McpCallResult> OnHandleAsync(JsonObject step, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
+  {
+    var write = McpJson.Bool(step["write"]) == true;
+    var call = (JsonObject)step["call"]!;
+
+    return await handles.UseAsync(McpJson.String(step["handle"])!, caller.Principal, async (session, documentId) =>
+    {
+      await StillAllowedAsync(caller, documentId, write, cancellationToken);
+
+      switch (McpJson.String(call["name"]))
+      {
+        case "blok_read":
+          return Answer(await session.ReadAsync(call["view"], cancellationToken));
+        case "blok_describe":
+          return Answer(await session.DescribeAsync(call["query"], cancellationToken));
+        default:
+          var outcome = await session.ExecuteAsync(call["batch"], approval, cancellationToken);
+
+          return outcome.Ask is not null ? new McpCallResult(null, null, outcome.Ask) : Answer(outcome.Answer!);
+      }
+    });
+  }
+}

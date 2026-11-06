@@ -34,11 +34,20 @@ public sealed class OutboundClientArchitectureTests
       Normalize("Blok.Server/Storage/S3BlobStore.cs");
   private static readonly string DocEndpointOwner =
       Normalize("Blok.Server/Collab/DocEndpointClient.cs");
+  // blok-mcp calls hosts the operator names, loopback included (the endpoint
+  // source, ticket route, authorize webhook and JWKS), which the guard refuses.
+  private static readonly string McpOwner =
+      Normalize("Blok.Server.Mcp/Outbound/McpHttpCaller.cs");
+  // blok-mcp joining a sync room at the operator's --sync-url. It is the one
+  // place a ClientWebSocket may be created: ONE creation, inside ConnectAsync,
+  // and no other outbound type.
+  private static readonly string RoomSocketOwner =
+      Normalize("Blok.Server.Mcp/Outbound/McpRoomSocket.cs");
 
   // Every owner outside the guard is pinned to ONE client field, ONE client
   // creation and ONE SocketsHttpHandler factory named CreateHandler.
   private static readonly HashSet<string> PinnedOwners =
-      [S3Owner, DocEndpointOwner];
+      [S3Owner, DocEndpointOwner, McpOwner];
 
   [Fact]
   public void OnlyTheDocumentedOwnersOwnOutboundClients()
@@ -56,7 +65,8 @@ public sealed class OutboundClientArchitectureTests
     Assert.True(
         violations.Count == 0,
         "Outbound networking may only be owned by the guarded fetcher, " +
-        "the configured S3 store or the doc-endpoint client:\n" +
+        "the configured S3 store, the doc-endpoint client or blok-mcp's " +
+        "HTTP caller and room socket:\n" +
         string.Join("\n", violations));
   }
 
@@ -243,10 +253,69 @@ public sealed class OutboundClientArchitectureTests
         StringComparison.Ordinal);
   }
 
+  [Fact]
+  public void AllowsOneClientWebSocketCreationInsideTheRoomSocketConnect()
+  {
+    var violations = FindViolations(
+        [
+          new SourceFile(
+              "Blok.Server.Mcp/Outbound/McpRoomSocket.cs",
+              """
+              using System.Net.WebSockets;
+              static class McpRoomSocket
+              {
+                static WebSocket ConnectAsync()
+                {
+                  var socket = new ClientWebSocket();
+                  return socket;
+                }
+              }
+              """),
+        ]);
+
+    Assert.Empty(violations);
+  }
+
+  [Theory]
+  [InlineData("var a = new ClientWebSocket(); var b = new ClientWebSocket();", "ClientWebSocket")]
+  [InlineData("ClientWebSocket socket = new();", "ClientWebSocket")]
+  [InlineData("var socket = new ClientWebSocket(); var client = new System.Net.Http.HttpClient();", "HttpClient")]
+  public void PinsTheRoomSocketOwnerToOneCreationAndNothingElse(
+      string body,
+      string expectedIdentifier)
+  {
+    var violation = Assert.Single(FindViolations(
+        [
+          new SourceFile(
+              "Blok.Server.Mcp/Outbound/McpRoomSocket.cs",
+              "using System.Net.WebSockets;\n" +
+              "static class McpRoomSocket { static object ConnectAsync() { " +
+              body +
+              " return null; } }"),
+        ]));
+
+    Assert.Contains(expectedIdentifier, violation, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RefusesAClientWebSocketCreatedOutsideTheRoomSocketConnect()
+  {
+    var violation = Assert.Single(FindViolations(
+        [
+          new SourceFile(
+              "Blok.Server.Mcp/Outbound/McpRoomSocket.cs",
+              "using System.Net.WebSockets;\n" +
+              "static class McpRoomSocket { static object Open() { return new ClientWebSocket(); } }"),
+        ]));
+
+    Assert.Contains("ClientWebSocket", violation, StringComparison.Ordinal);
+  }
+
   [Theory]
   [InlineData("Blok.Server.AspNetCore/Sneaky.cs")]
   [InlineData("Blok.Server/Collab/DocEndpointClient.cs")]
   [InlineData("Blok.Server/Storage/S3BlobStore.cs")]
+  [InlineData("Blok.Server.Mcp/Outbound/McpHttpCaller.cs")]
   public void RestrictsClientWebSocketEverywhereIncludingThePinnedOwners(
       string path)
   {
@@ -448,6 +517,10 @@ public sealed class OutboundClientArchitectureTests
           .Where(use =>
               !PinnedOwners.Contains(source.Path) ||
               ClassifyPinnedUse(use) == PinnedUseSite.None)
+          .Where(use =>
+              source.Path != RoomSocketOwner ||
+              !(IsRoomSocketCreation(use) || IsRoomSocketVar(use)) ||
+              uses.Count(IsRoomSocketCreation) != 1)
           .Select(use => use.Identifier)
           .ToHashSet(StringComparer.Ordinal);
 
@@ -523,6 +596,28 @@ public sealed class OutboundClientArchitectureTests
         yield return new RestrictedUse("AddHttpClient", name);
       }
     }
+  }
+
+  private static bool IsRoomSocketCreation(RestrictedUse use)
+  {
+    return use.Identifier == "ClientWebSocket" &&
+        use.Node.Parent is ObjectCreationExpressionSyntax creation &&
+        creation.Type == use.Node &&
+        creation.FirstAncestorOrSelf<MethodDeclarationSyntax>() is
+        {
+          Identifier.ValueText: "ConnectAsync",
+        };
+  }
+
+  // `var socket = new ClientWebSocket();` resolves `var` to the type too.
+  private static bool IsRoomSocketVar(RestrictedUse use)
+  {
+    return use.Node is IdentifierNameSyntax { IsVar: true } &&
+        use.Node.Parent is VariableDeclarationSyntax
+        {
+          Variables: [{ Initializer.Value: ObjectCreationExpressionSyntax creation }],
+        } &&
+        IsRoomSocketCreation(new RestrictedUse("ClientWebSocket", creation.Type));
   }
 
   private static PinnedUseSite ClassifyPinnedUse(RestrictedUse use)

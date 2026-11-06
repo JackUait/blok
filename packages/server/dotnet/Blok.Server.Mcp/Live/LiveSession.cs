@@ -101,6 +101,21 @@ internal sealed class LiveSession : IHandleSession
     });
   }
 
+  /// <summary>
+  /// Whether the room holds no block, title or icon, as createLivePage checks a new page's
+  /// view. Read here, not through the bundle: the check must end before the presence
+  /// throttle sends the announce, as Node's does.
+  /// </summary>
+  internal Task<bool> IsEmptyAsync()
+  {
+    return room.Loop.RunAsync(async () =>
+    {
+      await ThrowIfEndedAsync(CancellationToken.None);
+
+      return YDocConverter.Export(room.Doc, RichTextFields.BuiltIn, null, out _).Count == 0 && YDocConverter.ExportPage(room.Doc).Count == 0;
+    });
+  }
+
   public Task<JsonObject> DescribeAsync(JsonNode? query, CancellationToken cancellationToken)
   {
     return room.Loop.RunAsync(async () =>

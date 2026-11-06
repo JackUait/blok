@@ -55,6 +55,17 @@ public sealed class LiveSessionPagesTests(BundleFixture fixture) : IClassFixture
     await room.CloseAsync();
   }
 
+  [Fact]
+  public async Task ANewPageRoomIsEmptyUntilItHoldsABlockOrATitle()
+  {
+    var (session, _, room) = await OpenAsync();
+
+    Assert.True(await session.IsEmptyAsync());
+    await room.Loop.RunAsync(() => room.WriteLocal(new object(), tx => room.Doc.GetMap("page").Set(tx, "title", "Taken")));
+    Assert.False(await session.IsEmptyAsync());
+    await room.CloseAsync();
+  }
+
   private async Task<(LiveSession Session, List<string> Made, LiveRoom Room)> OpenAsync()
   {
     var (room, _) = await LiveRoomTests.OpenAsync();

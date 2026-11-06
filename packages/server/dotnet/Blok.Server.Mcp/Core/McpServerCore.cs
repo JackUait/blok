@@ -403,14 +403,7 @@ internal sealed class McpServerCore : IAsyncDisposable
 
       try
       {
-        var read = await session.ReadAsync(new JsonObject(), cancellationToken);
-        var view = read["structuredContent"];
-
-        if (McpJson.Bool(read["isError"]) == true && view?["error"] is JsonObject error)
-        {
-          throw new McpHostError(error);
-        }
-        if (view?["blocks"] is JsonArray { Count: > 0 } || view?["page"]?["title"] is not null || view?["page"]?["icon"] is not null)
+        if (!await ((LiveSession)session).IsEmptyAsync())
         {
           throw McpHostError.Surface("SOURCE_UNAVAILABLE", "The new page id is taken. Try again.");
         }

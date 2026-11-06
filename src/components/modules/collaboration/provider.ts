@@ -948,6 +948,15 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       return;
     }
 
+    // The server took this vector before it had the operation now in flight, so the diff
+    // would send that work a second time. Ask again once the outbox drains.
+    if (state.inFlight !== null) {
+      state.residual = 'none';
+      state.resyncOwed = true;
+
+      return;
+    }
+
     state.residual = 'done';
 
     const residual = yjs.encodeStateAsUpdate(stateVector);

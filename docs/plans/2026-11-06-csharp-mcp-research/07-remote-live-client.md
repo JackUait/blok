@@ -141,6 +141,7 @@ This order is code-derived. No trace was taken.
    - it marks a resync as owed and drains;
    - the outbox is empty, so the client sends one more **SyncStep1**, the residual round (`:790-798`);
    - the next server SyncStep1 is answered by enveloping the residual diff as a 102 only if the diff is longer than 2 bytes (`:951-959`).
+   - if an operation is in flight when that answer lands, the answer is not used: the server took its state vector before it had that operation, so the diff would send the same work again. The client sets the round back to "not asked" and asks again once the outbox drains. Before this rule, a page write sent one or two operations from run to run.
 
    On a fresh agent, nothing goes out. This is one extra SyncStep1 round per connection.
 10. `createLiveSession` calls `presence.announce()` (`live-session.ts:79`). This writes the `user` and `agent` awareness fields. Awareness frames are throttled to one per 100 ms and carry only the changed clients (`provider.ts:475-486, 382-403`).

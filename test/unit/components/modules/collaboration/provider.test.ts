@@ -2677,6 +2677,40 @@ describe('createCollabProvider', () => {
       expect(applied.toJSON().map((block) => block.id)).toEqual(['residual']);
     });
 
+    it('a residual answer that lands while an operation is out is not enveloped, so that work is not sent twice', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+      expect(socket.frameTypes.filter((type) => type === 'syncStep1'), 'the residual round was not asked for').toHaveLength(2);
+
+      // A write made after the residual request, before the server answered it.
+      harness.store.addBlock({ id: 'late', type: 'paragraph', data: { text: 'written during the round' } });
+      const row = outbox.seed(harness.store.encodeStateAsUpdate(peer.getStateVector()));
+
+      harness.provider.drain();
+      await settle();
+      expect(operationFrames(socket)).toHaveLength(1);
+
+      // The server answers the residual request with the state it had before the write.
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+      await settle();
+
+      expect(outbox.appended, 'the in-flight write was enveloped again as a residual operation').toEqual([]);
+
+      peer.applyRemoteUpdate(row.bytes, {});
+      socket.deliver({ type: 'acknowledgement', lineage: LINEAGE_A, operationId: row.operationId, serverSequence: '1' });
+      await settle();
+      expect(socket.frameTypes.filter((type) => type === 'syncStep1'), 'the deferred residual round was not asked for again').toHaveLength(3);
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+      await settle();
+
+      expect(outbox.appended).toEqual([]);
+      expect(operationFrames(socket)).toHaveLength(1);
+    });
+
     it('envelopes nothing when the server already holds every local struct', async () => {
       const outbox = new FakeOutbox(LINEAGE_A);
       const peer = newPeer();

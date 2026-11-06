@@ -71,7 +71,11 @@ func (s *Server) actorFor(ctx context.Context, principal string, rawClientName *
 // dispatch is Node's createToolDispatcher. A model-fixable refusal is an
 // answer; any other error is a JSON-RPC internal error.
 func (s *Server) dispatch(ctx context.Context, call *toolCall) (*outcome, error) {
-	result, err := s.dispatchStep(ctx, call)
+	// Node checks the client's cancel only before an open hands out its
+	// handle; a batch that runs is saved even if the client hung up.
+	signal := ctx
+	ctx = context.WithoutCancel(ctx)
+	result, err := s.dispatchStep(ctx, call, signal)
 	if err == nil {
 		return result, nil
 	}
@@ -86,7 +90,7 @@ func (s *Server) dispatch(ctx context.Context, call *toolCall) (*outcome, error)
 	return &outcome{answer: answer}, nil
 }
 
-func (s *Server) dispatchStep(ctx context.Context, call *toolCall) (*outcome, error) {
+func (s *Server) dispatchStep(ctx context.Context, call *toolCall, signal context.Context) (*outcome, error) {
 	var arguments any = call.arguments
 	if len(call.arguments) == 0 {
 		arguments = map[string]any{}
@@ -114,7 +118,7 @@ func (s *Server) dispatchStep(ctx context.Context, call *toolCall) (*outcome, er
 		}
 		return s.plainAnswer(listing), nil
 	case "blok_open":
-		return s.openDocument(ctx, step, call.caller)
+		return s.openDocument(ctx, step, call.caller, signal)
 	case "blok_close":
 		if err := s.onHandle(ctx, call.caller, step.Handle, false, func(session) error { return nil }); err != nil {
 			return nil, err
@@ -263,9 +267,9 @@ func (s *Server) listDocuments(ctx context.Context, request listRequest, who *ca
 	return out.Listing, nil
 }
 
-func (s *Server) openDocument(ctx context.Context, step *callStep, who *caller) (*outcome, error) {
+func (s *Server) openDocument(ctx context.Context, step *callStep, who *caller, signal context.Context) (*outcome, error) {
 	if step.DocumentID != nil {
-		return s.openFound(ctx, step, *step.DocumentID, nil, who)
+		return s.openFound(ctx, step, *step.DocumentID, nil, who, signal)
 	}
 	var find struct {
 		Query *string `json:"query"`
@@ -289,10 +293,10 @@ func (s *Server) openDocument(ctx context.Context, step *callStep, who *caller) 
 		return &outcome{answer: picked.Answer}, nil
 	}
 	found := map[string]any{"documentId": picked.Open.DocumentID, "title": picked.Open.Title}
-	return s.openFound(ctx, step, picked.Open.DocumentID, found, who)
+	return s.openFound(ctx, step, picked.Open.DocumentID, found, who, signal)
 }
 
-func (s *Server) openFound(ctx context.Context, step *callStep, documentID string, found map[string]any, who *caller) (*outcome, error) {
+func (s *Server) openFound(ctx context.Context, step *callStep, documentID string, found map[string]any, who *caller, signal context.Context) (*outcome, error) {
 	// Opening can mint a ticket and join a room, so the cap is checked first.
 	if err := s.handles.assertRoom(who.principal); err != nil {
 		return nil, err
@@ -319,7 +323,7 @@ func (s *Server) openFound(ctx context.Context, step *callStep, documentID strin
 		}
 		view = read.StructuredContent
 	}
-	if ctx.Err() != nil {
+	if signal.Err() != nil {
 		sess.close()
 		return nil, failureError("CANCELLED", "The request was cancelled before the document opened.")
 	}

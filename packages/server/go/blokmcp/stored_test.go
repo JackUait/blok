@@ -126,3 +126,34 @@ func TestABatchThatAsksOrFailsMakesNoPage(t *testing.T) {
 		t.Fatalf("approved %v, err %v, %d files", approved, err, fileCount(t, dir))
 	}
 }
+
+// A page.rename writes only the page's document, so history.undo after it
+// is refused, as Node's executor refuses an 'other' step.
+func TestUndoAfterAPageRenameIsRefused(t *testing.T) {
+	server, dir, who, handle := pageMapServer(t, `{"blocks":[{"id":"pb","type":"page","data":{"pageId":"child"}}]}`)
+	_ = os.WriteFile(filepath.Join(dir, "child.json"), []byte(`{"blocks":[]}`), 0o644)
+	run := func(commands string) map[string]any {
+		t.Helper()
+		ran, err := server.dispatch(context.Background(), &toolCall{name: "blok_execute", caller: who,
+			arguments: json.RawMessage(`{"handle":` + handle + `,"commands":` + commands + `}`)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return structured(t, ran.answer)
+	}
+	if answer := run(`[{"name":"doc.setTitle","args":{"title":"Parent"}}]`); answer["ok"] != true {
+		t.Fatalf("title: %v", answer)
+	}
+	if answer := run(`[{"name":"page.rename","args":{"id":"pb","title":"Child"}}]`); answer["ok"] != true {
+		t.Fatalf("rename: %v", answer)
+	}
+	answer := run(`[{"name":"history.undo","args":{}}]`)
+	failure, _ := answer["error"].(map[string]any)
+	if failure["code"] != "UNDO_OTHER_DOCUMENT" {
+		t.Fatalf("undo: %v", answer)
+	}
+	written, _ := os.ReadFile(filepath.Join(dir, "doc.json"))
+	if !strings.Contains(string(written), `"title": "Parent"`) {
+		t.Fatalf("the parent's own step was undone: %s", written)
+	}
+}

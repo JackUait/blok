@@ -384,3 +384,20 @@ func (s *filesSource) list(ctx context.Context, request listRequest) (*sourceLis
 	}
 	return &listing, nil
 }
+
+// sameDocument is Node's files sameDocument: two ids that save to one file.
+func (s *filesSource) sameDocument(ctx context.Context, first, second string) bool {
+	keyOf := func(documentID string) string {
+		path, err := s.pathOf(ctx, documentID)
+		if err != nil {
+			return ""
+		}
+		target, err := s.writeTargetOf(documentID, path)
+		if err != nil {
+			return ""
+		}
+		return sameFileKey(target)
+	}
+	a := keyOf(first)
+	return a != "" && a == keyOf(second)
+}

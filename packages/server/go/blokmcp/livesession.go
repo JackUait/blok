@@ -337,6 +337,9 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 	if versions != nil {
 		input["versionHistory"] = versions
 	}
+	if l.write && !l.readOnly && l.server.pageMap() && hasPageAction(batch) && call.who != nil {
+		return l.pageAction(ctx, call, input, mark)
+	}
 	if l.write && !l.readOnly && l.server.createsPages() && isBatchEnvelope(batch) && call.who != nil {
 		if err := l.server.createPages(ctx, input, call.who); err != nil {
 			return nil, err
@@ -415,6 +418,25 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		l.marksFuture = nil
 	}
 	return l.deliver(ctx, out, mark)
+}
+
+// pageAction runs page.rename or page.setIcon in the page's own room. The
+// lock is let go meanwhile: the page write waits up to deliveryWait for its
+// ack, and this room keeps taking peer updates. mu is held.
+func (l *liveSession) pageAction(ctx context.Context, call *callContext, input map[string]any, mark int) (*executed, error) {
+	room := l.room
+	room.mu.Unlock()
+	result, wrote, err := l.server.runPageAction(ctx, call, input, func(pageID string) bool { return pageID == l.documentID })
+	room.mu.Lock()
+	if err != nil {
+		return nil, err
+	}
+	if !wrote {
+		answer, err := l.server.executeAnswer(ctx, map[string]any{"result": result})
+		return &executed{answer: answer}, err
+	}
+	l.marksPast = append(l.marksPast, historyMark{other: true})
+	return l.deliver(ctx, liveExecuteOutput{Result: result, Writes: true}, mark)
 }
 
 // deliver announces the batch, journals its update and waits for the

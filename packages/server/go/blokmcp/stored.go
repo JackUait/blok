@@ -126,6 +126,9 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	}
 	input := st.sessionInput(call)
 	input["batch"] = batch
+	if st.write && st.server.pageMap() && hasPageAction(batch) {
+		return st.pageAction(ctx, call, input)
+	}
 	if call.approval != nil {
 		input["approval"] = call.approval
 	}
@@ -168,6 +171,29 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		"result":   out.Result,
 		"delivery": map[string]any{"durable": true, "pending": false, "serverSequence": nil, "savedVersion": saved},
 	})
+	return &executed{answer: answer}, err
+}
+
+// pageAction runs page.rename or page.setIcon on the page's own document.
+// This document is not saved.
+func (st *storedSession) pageAction(ctx context.Context, call *callContext, input map[string]any) (*executed, error) {
+	same, _ := st.source.(interface {
+		sameDocument(ctx context.Context, first, second string) bool
+	})
+	result, wrote, err := st.server.runPageAction(ctx, call, input, func(pageID string) bool {
+		return pageID == st.documentID || (same != nil && same.sameDocument(ctx, pageID, st.documentID))
+	})
+	if err != nil {
+		return nil, err
+	}
+	if wrote {
+		var parsed struct {
+			Revision json.RawMessage `json:"revision"`
+		}
+		_ = json.Unmarshal(result, &parsed)
+		st.history = withOtherStep(st.history, parsed.Revision)
+	}
+	answer, err := st.server.executeAnswer(ctx, map[string]any{"result": result})
 	return &executed{answer: answer}, err
 }
 

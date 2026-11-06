@@ -306,6 +306,8 @@ func (l *liveSession) recordStep(step *liveStep, before, after json.RawMessage, 
 // a restore (restored names the version current before it).
 type historyMark struct {
 	restored *string
+	// other: the batch wrote only another document (page.rename).
+	other bool
 }
 
 func restoredPrevious(result json.RawMessage) *string {
@@ -338,6 +340,9 @@ func (l *liveSession) markRefusal(name string) json.RawMessage {
 		return nil
 	}
 	last := l.marksPast[len(l.marksPast)-1]
+	if last.other && name == "history.undo" {
+		return l.refusedResult("UNDO_OTHER_DOCUMENT", "The last batch wrote another document (a sub-page title or icon). history.undo cannot undo it. To revert it, run that command again with the old value.", false)
+	}
 	if last.restored == nil {
 		return nil
 	}

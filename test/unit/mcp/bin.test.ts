@@ -120,15 +120,20 @@ describe('blok-mcp binary', () => {
     const handle: unknown = JSON.parse(lines[1]).result.structuredContent.handle;
 
     child.stdout.pause();
-    // A read answer is capped, so three of them overfill the pipe.
-    [3, 4, 5].forEach((id) => send({ id, method: 'tools/call', params: { name: 'blok_read', arguments: { handle } } }));
-    await sleep(500);
+    send({ id: 3, method: 'tools/call', params: { name: 'blok_read', arguments: { handle, detail: 'full', limit: 400, textLimit: 2000 } } });
+    // Data waiting here means the read was taken and its answer has started.
+    const deadline = Date.now() + 20_000;
+
+    while (child.stdout.readableLength === 0 && Date.now() < deadline) {
+      await sleep(20);
+    }
     child.kill('SIGTERM');
     await sleep(500);
     child.stdout.resume();
 
     expect(await exit).toBe(0);
     expect(buffered).toBe('');
-    expect(lines.slice(2).map((line): unknown => JSON.parse(line))).toMatchObject([3, 4, 5].map((id) => ({ id, result: { isError: false } })));
+    expect(lines[2].length).toBeGreaterThan(300_000);
+    expect(JSON.parse(lines[2])).toMatchObject({ id: 3, result: { isError: false } });
   }, TIMEOUT_MS);
 });

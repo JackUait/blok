@@ -132,6 +132,7 @@ pub struct ExecuteInput {
 enum Command {
     Execute(ExecuteInput, oneshot::Sender<Result<Executed, Fault>>),
     Read(Value, Value, oneshot::Sender<Result<String, Fault>>),
+    PagesNeeded(Value, Value, Value, oneshot::Sender<Result<u64, Fault>>),
     Close(oneshot::Sender<Value>),
 }
 
@@ -146,6 +147,22 @@ impl RemoteRoom {
         let (reply, answer) = oneshot::channel();
         self.commands
             .send(Command::Execute(input, reply))
+            .map_err(|_| Fault::Internal("the room is gone".to_owned()))?;
+        answer
+            .await
+            .map_err(|_| Fault::Internal("the room is gone".to_owned()))?
+    }
+
+    /// How many page documents to make before `batch` runs here.
+    pub async fn pages_needed(
+        &self,
+        batch: Value,
+        actor: Value,
+        approval: Value,
+    ) -> Result<u64, Fault> {
+        let (reply, answer) = oneshot::channel();
+        self.commands
+            .send(Command::PagesNeeded(batch, actor, approval, reply))
             .map_err(|_| Fault::Internal("the room is gone".to_owned()))?;
         answer
             .await
@@ -469,6 +486,10 @@ impl Room {
                     }
                     Some(Command::Execute(input, reply)) => {
                         let answer = Box::pin(self.execute(input)).await;
+                        let _ = reply.send(answer);
+                    }
+                    Some(Command::PagesNeeded(batch, actor, approval, reply)) => {
+                        let answer = self.pages_needed(&batch, &actor, &approval).await;
                         let _ = reply.send(answer);
                     }
                     Some(Command::Read(view, actor, reply)) => {
@@ -1246,6 +1267,28 @@ impl Room {
         let bytes = blok_collab_docendpoint::serialize(&blok_jsjson::Value::Object(exported))
             .map_err(|e| Fault::Internal(e.to_string()))?;
         Ok(String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    async fn pages_needed(
+        &mut self,
+        batch: &Value,
+        actor: &Value,
+        approval: &Value,
+    ) -> Result<u64, Fault> {
+        if self.end.is_some() {
+            return Ok(0);
+        }
+        let document = self.export().await?;
+        let input = self
+            .session_input(!self.read_only, &document, actor)
+            .val("batch", batch)
+            .val("approval", approval)
+            .finish();
+        let counted = self.shared.bundle.call("agentPagesNeeded", &input).await?;
+        Ok(match counted.get("result") {
+            Some(_) => counted.get("prepared").and_then(Value::as_u64).unwrap_or(0),
+            None => counted.get("count").and_then(Value::as_u64).unwrap_or(0),
+        })
     }
 
     async fn read(&mut self, view: &Value, actor: &Value) -> Result<String, Fault> {

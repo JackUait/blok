@@ -147,6 +147,29 @@ fn answer_of(raw: &RawObject) -> Result<Answer, Fault> {
     })
 }
 
+/// How many page documents to make before a batch runs: the count, or the
+/// pages a refused batch had already prepared (Node made those too).
+fn pages_to_make(counted: &Value) -> u64 {
+    match counted.get("result") {
+        Some(_) => counted.get("prepared").and_then(Value::as_u64).unwrap_or(0),
+        None => counted.get("count").and_then(Value::as_u64).unwrap_or(0),
+    }
+}
+
+// src/shared/mint-id.ts's alphabet, so ids look the same.
+const PAGE_ID_ALPHABET: &[u8; 64] =
+    b"57X6y3wQZNzYjJB2L_10pxbackgroundhimselfUTF-8DEMOGRAPHICSVqvt4KW9";
+
+fn mint_page_id() -> String {
+    use ring::rand::{SecureRandom, SystemRandom};
+    let mut bytes = [0u8; 10];
+    let _ = SystemRandom::new().fill(&mut bytes);
+    bytes
+        .iter()
+        .map(|b| PAGE_ID_ALPHABET[usize::from(b & 63)] as char)
+        .collect()
+}
+
 /// live-session.ts's ack wait: past it the batch is pending.
 const DELIVERY_WAIT: Duration = Duration::from_secs(10);
 
@@ -385,6 +408,124 @@ impl Mcp {
             }
         };
         Ok(Outcome::Answer(answer))
+    }
+
+    /// Page blocks get their own documents (Node's createsPages).
+    fn creates_pages(&self) -> bool {
+        str_of(&self.flags, "pageTitles") == Some("page-map")
+            && (self.live.is_some() || self.source.is_some())
+    }
+
+    /// Node's opener.createPage: a new id, authorized like a write open; a
+    /// stored page is saved empty, a live one is joined once and must be.
+    async fn create_page(
+        &self,
+        caller: &Caller,
+        actor: &Value,
+        client_name: &str,
+    ) -> Result<String, Fault> {
+        let page_id = mint_page_id();
+        let named = |fault: Fault| match fault {
+            Fault::Host(mut error) => {
+                // Node re-wraps the error keeping its flag, with the page named.
+                let mut agent = error.error.clone();
+                if error.helper != crate::errors::Helper::AsIs {
+                    agent["retryable"] = json!(matches!(
+                        error.code(),
+                        "ROOM_SYNC_TIMEOUT"
+                            | "SOURCE_UNAVAILABLE"
+                            | "DOCUMENT_CHANGED"
+                            | "HANDLE_LIMIT"
+                    ));
+                }
+                let mut details = agent.get("details").cloned().unwrap_or(json!({}));
+                details["pageId"] = json!(page_id);
+                agent["details"] = details;
+                error = HostError::as_is(agent);
+                Fault::Host(error)
+            }
+            other => other,
+        };
+        let made = async {
+            if !self.allowed(&caller.principal, &page_id, true).await {
+                return Err(HostError::surface(
+                    "FORBIDDEN",
+                    "You may not create a page document here.",
+                )
+                .into());
+            }
+            if let (Some(live), Some(shared)) = (&self.live, &self.live_shared) {
+                let actor_id = str_of(actor, "id").unwrap_or_default().to_owned();
+                let presence = Presence {
+                    color: presence_color(&actor_id),
+                    name: client_name.to_owned(),
+                    on_behalf_of: str_of(actor, "onBehalfOf").unwrap_or(&actor_id).to_owned(),
+                    actor_id: actor_id.clone(),
+                };
+                let request = TicketRequest {
+                    document_id: page_id.clone(),
+                    write: true,
+                    principal: caller.principal.clone(),
+                    client_name: client_name.to_owned(),
+                    actor_id,
+                };
+                let room = live.open(shared.clone(), request, presence).await?;
+                let read = room.read(json!({}), actor.clone()).await;
+                room.close().await;
+                let view = room_answer(&read?)?;
+                let view: Value = serde_json::from_str(&view.structured).unwrap_or(Value::Null);
+                let taken = view
+                    .get("blocks")
+                    .and_then(Value::as_array)
+                    .is_some_and(|b| !b.is_empty())
+                    || view.pointer("/page/title").is_some()
+                    || view.pointer("/page/icon").is_some();
+                if taken {
+                    return Err(HostError::surface(
+                        "SOURCE_UNAVAILABLE",
+                        "The new page id is taken. Try again.",
+                    )
+                    .into());
+                }
+                return Ok(());
+            }
+            let Some(source) = &self.source else {
+                return Err(HostError::surface(
+                    "SOURCE_UNAVAILABLE",
+                    "No document source is configured, so no page document can be created.",
+                )
+                .into());
+            };
+            let loaded = source.load(&page_id).await?;
+            // The endpoint source saves without a version check, so this is its only guard.
+            if !loaded.missing {
+                return Err(HostError::surface(
+                    "SOURCE_UNAVAILABLE",
+                    "The new page id is taken. Try again.",
+                )
+                .into());
+            }
+            let text = self
+                .bundle
+                .call(
+                    "mcpDocumentText",
+                    &json!({ "document": { "blocks": [] }, "form": source.document_text_form() })
+                        .to_string(),
+                )
+                .await?;
+            source
+                .save(
+                    &page_id,
+                    text.get("text").and_then(Value::as_str).unwrap_or_default(),
+                    loaded.version.as_deref(),
+                )
+                .await?;
+            Ok(())
+        };
+        match made.await {
+            Ok(()) => Ok(page_id),
+            Err(fault) => Err(named(fault)),
+        }
     }
 
     /// A sync URL or the host's own rooms: live mode is on.
@@ -739,6 +880,7 @@ impl Mcp {
 
     async fn on_remote(
         &self,
+        caller: &Caller,
         room: &RemoteRoom,
         call: &Value,
         actor: &Value,
@@ -772,12 +914,22 @@ impl Mcp {
                 if let Some(replies) = &approval.replies {
                     asking["replies"] = replies.clone();
                 }
+                let batch = call.get("batch").cloned().unwrap_or(Value::Null);
+                let mut created_pages = Vec::new();
+                if self.creates_pages() {
+                    let pages = room
+                        .pages_needed(batch.clone(), actor.clone(), asking.clone())
+                        .await?;
+                    for _ in 0..pages {
+                        created_pages.push(self.create_page(caller, actor, client_name).await?);
+                    }
+                }
                 let executed = room
                     .execute(ExecuteInput {
-                        batch: call.get("batch").cloned().unwrap_or(Value::Null),
+                        batch,
                         actor: actor.clone(),
                         approval: asking,
-                        created_pages: Vec::new(),
+                        created_pages,
                     })
                     .await?;
                 let (result, delivery) = match executed {
@@ -1015,7 +1167,7 @@ impl Mcp {
             }
             Session::Remote(room) => {
                 return self
-                    .on_remote(room, &call, &actor, &client_name, approval)
+                    .on_remote(caller, room, &call, &actor, &client_name, approval)
                     .await;
             }
         };
@@ -1042,14 +1194,24 @@ impl Mcp {
                 )?))
             }
             _ => {
-                self.execute(&document_id, stored, &call, &actor, &client_name, approval)
-                    .await
+                self.execute(
+                    caller,
+                    &document_id,
+                    stored,
+                    &call,
+                    &actor,
+                    &client_name,
+                    approval,
+                )
+                .await
             }
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn execute(
         &self,
+        caller: &Caller,
         document_id: &str,
         stored: &mut Stored,
         call: &Value,
@@ -1069,14 +1231,32 @@ impl Mcp {
         if let Some(replies) = &approval.replies {
             asking["replies"] = replies.clone();
         }
-        let input = self
+        let batch = call.get("batch").unwrap_or(&Value::Null);
+        let mut created = Vec::new();
+        if self.creates_pages() {
+            let counting = self
+                .session_input("stored", stored.write, &stored.document, actor)
+                .val("batch", batch)
+                .val("approval", &asking)
+                .finish();
+            let pages = pages_to_make(&self.bundle.call("agentPagesNeeded", &counting).await?);
+            for _ in 0..pages {
+                created.push(self.create_page(caller, actor, client_name).await?);
+            }
+        }
+        let mut input = self
             .session_input("stored", stored.write, &stored.document, actor)
             .raw("history", &stored.history)
-            .val("batch", call.get("batch").unwrap_or(&Value::Null))
+            .val("batch", batch)
             .str("documentText", source.document_text_form())
-            .val("approval", &asking)
-            .finish();
-        let out = self.bundle.call_raw("agentExecute", &input).await?;
+            .val("approval", &asking);
+        if !created.is_empty() {
+            input = input.val("createdPages", &json!(created));
+        }
+        let out = self
+            .bundle
+            .call_raw("agentExecute", &input.finish())
+            .await?;
         if let Some(ask) = out.value("ask") {
             return Ok(Outcome::Ask(Ask {
                 key: str_of(&ask, "key").unwrap_or_default().to_owned(),

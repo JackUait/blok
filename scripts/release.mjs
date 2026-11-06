@@ -342,13 +342,6 @@ if (isDirectRun) {
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   }
 
-  const VERSION_STAMPED_FILES = [
-    'package.json',
-    'yarn.lock',
-    'packages/server/go/internal/jsruntime/blok-server-runtime.js',
-    'test/unit/server-conformance/fixtures/documents/ops.json',
-  ];
-
   // yarn.lock records the workspaces' peer ranges; without this sync the
   // release commit fails CI's `yarn install --immutable` with YN0028.
   run('yarn install --mode=update-lockfile');
@@ -368,7 +361,7 @@ if (isDirectRun) {
   }
 
   if (!isDryRun) {
-    run(`git add ${VERSION_STAMPED_FILES.join(' ')} ${WORKSPACE_MANIFESTS.join(' ')}`);
+    run(`git add package.json yarn.lock packages/server/go/internal/jsruntime/blok-server-runtime.js test/unit/server-conformance/fixtures/documents/ops.json ${WORKSPACE_MANIFESTS.join(' ')}`);
     run(`git commit -m "chore(release): ${version}"`);
 
     if (runCapture('git status --porcelain') !== '') {
@@ -461,7 +454,7 @@ if (isDirectRun) {
   cleanupNpmrc = false; // the family loop always removes .npmrc in restoreName
 
   if (isDryRun) {
-    run(`git checkout -- ${VERSION_STAMPED_FILES.join(' ')} ${WORKSPACE_MANIFESTS.join(' ')}`);
+    run('git checkout -- package.json yarn.lock packages/server/go/internal/jsruntime/blok-server-runtime.js test/unit/server-conformance/fixtures/documents/ops.json ' + WORKSPACE_MANIFESTS.join(' '));
     console.log(`\nDry run complete for ${version} — nothing was published.`);
     process.exit(0);
   }

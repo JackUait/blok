@@ -82,14 +82,13 @@ describe('release.mjs version-stamped outputs', () => {
     const fixture = source.indexOf("run('node scripts/generate-documents-ops-fixture.mjs')");
     const commitAdd = source.indexOf('run(`git add ');
 
-    const stamped = /const VERSION_STAMPED_FILES = \[([^\]]*)\]/.exec(source)?.[1] ?? '';
+    const lineAt = (index: number): string => source.slice(index, source.indexOf('\n', index));
 
     expect(fixture).toBeGreaterThan(runtime);
     expect(commitAdd).toBeGreaterThan(fixture);
-    expect(stamped).toContain(`'${FIXTURE}'`);
-    expect(source.slice(commitAdd, source.indexOf('\n', commitAdd))).toContain('VERSION_STAMPED_FILES');
+    expect(lineAt(commitAdd)).toContain(FIXTURE);
     // A dry run restores what it bumped.
-    expect(source).toMatch(/run\(`git checkout -- \$\{VERSION_STAMPED_FILES\.join/);
+    expect(lineAt(source.indexOf("run('git checkout -- "))).toContain(FIXTURE);
   });
 
   // Unit tests compare dist with the bumped manifests, so dist must be

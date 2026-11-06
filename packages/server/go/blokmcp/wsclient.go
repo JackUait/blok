@@ -136,20 +136,59 @@ func (c *wsConn) sendClose(code uint16) {
 // abort drops the connection without a closing handshake.
 func (c *wsConn) abort() { _ = c.rw.Close() }
 
+// errProtocol is a frame ws refuses; the connection closes with 1002.
+var errProtocol = errors.New("the server broke the WebSocket framing")
+
+// refuse closes with code, as ws does on a receiver error, and ends the
+// connection.
+func (c *wsConn) refuse(code int, err error) ([]byte, int, error) {
+	c.writeMu.Lock()
+	wasClosed := c.closed
+	c.writeMu.Unlock()
+	if !wasClosed {
+		c.sendClose(uint16(code))
+	}
+	_ = c.rw.Close()
+	return nil, code, err
+}
+
 // readMessage returns the next data message, or the close code (1005 for
-// none, 1006 for a dropped connection) once the connection ends.
+// none, 1006 for a dropped connection, 1002 or 1009 for a frame ws
+// refuses) once the connection ends.
 func (c *wsConn) readMessage() ([]byte, int, error) {
 	var message []byte
+	fragmented := false
 	for {
 		head := make([]byte, 2)
 		if _, err := io.ReadFull(c.reader, head); err != nil {
 			return nil, 1006, err
 		}
 		fin, opcode := head[0]&0x80 != 0, head[0]&0x0F
+		if head[0]&0x70 != 0 {
+			// No extension is negotiated, so every RSV bit must be clear.
+			return c.refuse(1002, errProtocol)
+		}
 		if head[1]&0x80 != 0 {
-			return nil, 1002, errors.New("a server frame was masked")
+			return c.refuse(1002, errors.New("a server frame was masked"))
 		}
 		length := uint64(head[1] & 0x7F)
+		switch {
+		case opcode == opContinuation:
+			if !fragmented {
+				return c.refuse(1002, errProtocol)
+			}
+		case opcode == opText || opcode == opBinary:
+			if fragmented {
+				return c.refuse(1002, errProtocol)
+			}
+		case opcode >= opClose && opcode <= opPong:
+			// RFC 6455 §5.5: control frames are whole and short.
+			if !fin || length > 125 || (opcode == opClose && length == 1) {
+				return c.refuse(1002, errProtocol)
+			}
+		default:
+			return c.refuse(1002, errProtocol)
+		}
 		switch length {
 		case 126:
 			extended := make([]byte, 2)
@@ -164,8 +203,9 @@ func (c *wsConn) readMessage() ([]byte, int, error) {
 			}
 			length = binary.BigEndian.Uint64(extended)
 		}
-		if length > maxMessageBytes || uint64(len(message))+length > maxMessageBytes {
-			return nil, 1009, errors.New("a message is too big")
+		// ws counts the whole message against maxPayload, fragments included.
+		if opcode < opClose && (length > maxMessageBytes || uint64(len(message))+length > maxMessageBytes) {
+			return c.refuse(1009, errors.New("a message is too big"))
 		}
 		payload := make([]byte, length)
 		if _, err := io.ReadFull(c.reader, payload); err != nil {
@@ -195,6 +235,7 @@ func (c *wsConn) readMessage() ([]byte, int, error) {
 			return nil, code, io.EOF
 		}
 		message = append(message, payload...)
+		fragmented = !fin
 		if fin {
 			return message, 0, nil
 		}

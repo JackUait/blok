@@ -128,6 +128,21 @@ export const createToolDispatcher = (
     return executeOutcome(result);
   };
 
+  const closeHandle = async (caller: Caller, handle: string): Promise<ToolOutcome> => {
+    // A refused or failed check still closes, so the handle does not keep its --max-handles slot.
+    // An unknown handle fails again in remove. remove waits for use, so it must run outside the callback.
+    const refusal = await onHandle(caller, handle, false, async () => undefined)
+      .then(() => null, (thrown: unknown) => ({ thrown }));
+    const session = await deps.handles.remove(handle, caller.principal);
+    const summary = await session.close('closed');
+
+    if (refusal !== null) {
+      throw refusal.thrown;
+    }
+
+    return ok({ closed: true, ...summary });
+  };
+
   return async (name, args, caller, options = {}): Promise<ToolOutcome> => {
     try {
       const step = checkCall(name, args, caller.scopes);
@@ -137,14 +152,8 @@ export const createToolDispatcher = (
           return ok({ ...await listDocuments(step.list, caller) });
         case 'blok_open':
           return await openDocument(step, caller, options.signal);
-        case 'blok_close': {
-          await onHandle(caller, step.handle, false, async () => undefined);
-          // remove waits for use, so it must run outside the callback.
-          const session = await deps.handles.remove(step.handle, caller.principal);
-          const summary = await session.close('closed');
-
-          return ok({ closed: true, ...summary });
-        }
+        case 'blok_close':
+          return await closeHandle(caller, step.handle);
         case 'blok_read':
         case 'blok_describe':
         case 'blok_execute':

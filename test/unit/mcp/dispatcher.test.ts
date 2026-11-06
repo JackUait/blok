@@ -713,7 +713,7 @@ describe('createToolDispatcher', () => {
     expect(deps.stillAllowed).toHaveBeenCalledExactlyOnceWith(stdio, 'doc-1', name === 'blok_execute');
   });
 
-  it.each(handleTools)('does not call $name after document access is revoked', async ({ name, args }) => {
+  it.each(handleTools.filter(tool => tool.name !== 'blok_close'))('does not call $name after document access is revoked', async ({ name, args }) => {
     const { deps, session, dispatch } = fixture();
     const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
     vi.mocked(deps.stillAllowed).mockResolvedValueOnce(false);
@@ -726,6 +726,29 @@ describe('createToolDispatcher', () => {
     expect(session.close).not.toHaveBeenCalled();
     expect(deps.handles.count('alice')).toBe(1);
     expect((await invoke(dispatch, 'blok_read', { handle })).isError).toBe(false);
+  });
+
+  it('answers FORBIDDEN to a close after access is revoked, but still closes and frees the handle', async () => {
+    const { deps, session, dispatch } = fixture();
+    const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
+    vi.mocked(deps.stillAllowed).mockResolvedValueOnce(false);
+    const outcome = await invoke(dispatch, 'blok_close', { handle });
+
+    expectFailure(outcome, 'FORBIDDEN');
+    expect(deps.handles.count('alice')).toBe(0);
+    expect(session.close).toHaveBeenCalledExactlyOnceWith('closed');
+    expectFailure(await invoke(dispatch, 'blok_read', { handle }), 'UNKNOWN_HANDLE');
+  });
+
+  it('still closes and frees the handle when the access check itself fails', async () => {
+    const { deps, session, dispatch } = fixture();
+    const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
+    vi.mocked(deps.stillAllowed).mockRejectedValueOnce(surfaceError('SOURCE_UNAVAILABLE', 'The authorize webhook could not be reached.'));
+    const outcome = await invoke(dispatch, 'blok_close', { handle });
+
+    expectFailure(outcome, 'SOURCE_UNAVAILABLE');
+    expect(deps.handles.count('alice')).toBe(0);
+    expect(session.close).toHaveBeenCalledExactlyOnceWith('closed');
   });
 
   it('re-checks access again for a second call on the same handle', async () => {

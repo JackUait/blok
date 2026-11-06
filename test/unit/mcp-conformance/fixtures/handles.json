@@ -499,7 +499,7 @@
         "--max-handles",
         "1"
       ],
-      "name": "access taken away: read, execute and close answer FORBIDDEN, and the handle keeps its place",
+      "name": "access taken away: read, execute and close answer FORBIDDEN, and the close still frees the place",
       "hosts": {
         "POST /authorize": {
           "sequence": [
@@ -513,6 +513,24 @@
               "status": 200,
               "json": {
                 "allowed": false
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "allowed": false
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "allowed": false
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "allowed": true
               }
             }
           ]
@@ -690,13 +708,15 @@
                 }
               ],
               "structuredContent": {
-                "error": {
-                  "code": "HANDLE_LIMIT",
-                  "message": "You already have 1 open documents. Close one with blok_close.",
-                  "retryable": true
-                }
+                "handle": "${second}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
               },
-              "isError": true
+              "isError": false
             },
             "jsonrpc": "2.0",
             "id": 5
@@ -761,6 +781,18 @@
             "principal": "local",
             "documentId": "doc",
             "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "other",
+            "write": true
           }
         }
       ]

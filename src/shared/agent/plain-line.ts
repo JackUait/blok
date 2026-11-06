@@ -6,8 +6,9 @@ const MAX_TITLE = 80;
  * format characters (bidi overrides, zero-width) are dropped, so a title cannot fake more of the question.
  */
 export const plainLine = (raw: string, max = MAX_TITLE): string | undefined => {
+  // \x0B, not \v: Stryker mutates \v to \V, which is invalid with the u flag and breaks the mutation run.
   const line = raw
-    .replace(/[\p{Zl}\p{Zp}\r\n\t\v\f\u0085]/gu, ' ')
+    .replace(/[\p{Zl}\p{Zp}\r\n\t\x0B\f\u0085]/gu, ' ')
     .replace(/[\p{Cc}\p{Cf}]/gu, '')
     .replace(/\s+/gu, ' ')
     .trim();

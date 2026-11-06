@@ -347,7 +347,41 @@ internal sealed class McpServerCore : IAsyncDisposable
     }
     var revision = McpJson.String((await SurfaceAsync(cancellationToken))["contractRevision"]?["stored"]) ?? string.Empty;
 
-    return await StoredSession.OpenAsync(bundle, source, documentId, write, flags, caller.Actor, revision, cancellationToken);
+    return await StoredSession.OpenAsync(
+        bundle, source, documentId, write, flags, caller.Actor, revision,
+        config.PageTitles == "page-map" && config.Sync is null ? CreatePageAsync : null,
+        cancellationToken);
+  }
+
+  // The opener's createPage for stored mode: a new id, authorized like a write open, saved empty.
+  private async Task<string> CreatePageAsync(McpCaller caller, CancellationToken cancellationToken)
+  {
+    var pageId = PageIds.Mint();
+
+    try
+    {
+      if (!await AllowedAsync(caller, pageId, true, cancellationToken))
+      {
+        throw McpHostError.Surface("FORBIDDEN", "You may not create a page document here.");
+      }
+      var loaded = await source!.LoadAsync(pageId, cancellationToken);
+
+      // The endpoint source saves without a version check, so this is its only guard against an overwrite.
+      if (!loaded.Missing)
+      {
+        throw McpHostError.Surface("SOURCE_UNAVAILABLE", "The new page id is taken. Try again.");
+      }
+      var text = await bundle.CallAsync("mcpDocumentText", new JsonObject { ["document"] = new JsonObject { ["blocks"] = new JsonArray() }, ["form"] = source.DocumentTextForm }, cancellationToken);
+
+      await source.SaveAsync(pageId, McpJson.String(text["text"])!, loaded.Version, cancellationToken);
+
+      return pageId;
+    }
+    catch (McpHostError error)
+    {
+      // Node names the page in the refusal, keeping the error's own flag.
+      throw error.WithDetail("pageId", pageId);
+    }
   }
 
   private async Task<JsonObject> CloseAsync(string handle, McpCaller caller)
@@ -395,7 +429,7 @@ internal sealed class McpServerCore : IAsyncDisposable
         case "blok_describe":
           return Answer(await session.DescribeAsync(call["query"], cancellationToken));
         default:
-          var outcome = await session.ExecuteAsync(call["batch"], approval, cancellationToken);
+          var outcome = await session.ExecuteAsync(call["batch"], caller, approval, cancellationToken);
 
           return outcome.Ask is not null ? new McpCallResult(null, null, outcome.Ask) : Answer(outcome.Answer!);
       }

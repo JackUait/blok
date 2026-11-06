@@ -53,6 +53,25 @@ internal sealed class McpHostError : Exception
     return new JsonObject { ["tool"] = tool, ["helper"] = Helper, ["error"] = error };
   }
 
+  internal McpHostError WithDetail(string key, string value)
+  {
+    if (Prebuilt is not null)
+    {
+      var error = (JsonObject)Prebuilt.DeepClone();
+      var details = error["details"] as JsonObject ?? [];
+
+      details[key] = value;
+      error["details"] = details;
+
+      return new McpHostError(error);
+    }
+    var merged = (JsonObject?)Details?.DeepClone() ?? [];
+
+    merged[key] = value;
+
+    return new McpHostError(Code, Message, merged, Helper);
+  }
+
   internal static McpHostError Surface(string code, string message, JsonObject? details = null)
   {
     return new McpHostError(code, message, details);

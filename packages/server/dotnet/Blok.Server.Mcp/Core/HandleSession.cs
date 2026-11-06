@@ -22,7 +22,7 @@ internal interface IHandleSession
 
   Task<JsonObject> DescribeAsync(JsonNode? query, CancellationToken cancellationToken);
 
-  Task<McpExecuteOutcome> ExecuteAsync(JsonNode? batch, McpApproval? approval, CancellationToken cancellationToken);
+  Task<McpExecuteOutcome> ExecuteAsync(JsonNode? batch, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken);
 
   /// <returns><c>{ unsavedBatches, hostRecordLags }</c>.</returns>
   Task<JsonObject> CloseAsync(string reason);
@@ -46,6 +46,7 @@ internal sealed class StoredSession : IHandleSession
 
   private StoredSession(McpBundle bundle, IDocumentSource source, string documentId, bool write, JsonObject flags, JsonObject actor, string contractRevision, LoadedDocument first)
   {
+    // Node creates a page's document mid-batch; Jint cannot wait on the host, so pages are made first.
     this.bundle = bundle;
     this.source = source;
     this.documentId = documentId;
@@ -60,12 +61,16 @@ internal sealed class StoredSession : IHandleSession
     exists = !first.Missing;
   }
 
+  /// <summary>Set under page-map with a source: makes one page document and returns its id.</summary>
+  private Func<McpCaller, CancellationToken, Task<string>>? CreatePage { get; init; }
+
   internal static async Task<StoredSession> OpenAsync(
-      McpBundle bundle, IDocumentSource source, string documentId, bool write, JsonObject flags, JsonObject actor, string contractRevision, CancellationToken cancellationToken)
+      McpBundle bundle, IDocumentSource source, string documentId, bool write, JsonObject flags, JsonObject actor, string contractRevision,
+      Func<McpCaller, CancellationToken, Task<string>>? createPage, CancellationToken cancellationToken)
   {
     var first = await source.LoadAsync(documentId, cancellationToken);
 
-    return new StoredSession(bundle, source, documentId, write, flags, actor, contractRevision, first);
+    return new StoredSession(bundle, source, documentId, write, flags, actor, contractRevision, first) { CreatePage = createPage };
   }
 
   public JsonObject Describe()
@@ -99,7 +104,7 @@ internal sealed class StoredSession : IHandleSession
     return (JsonObject)(await bundle.CallAsync("mcpDescribe", input, cancellationToken))["answer"]!;
   }
 
-  public async Task<McpExecuteOutcome> ExecuteAsync(JsonNode? batch, McpApproval? approval, CancellationToken cancellationToken)
+  public async Task<McpExecuteOutcome> ExecuteAsync(JsonNode? batch, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
   {
     await ReloadIfStaleAsync(cancellationToken);
     var input = SessionInput();
@@ -120,6 +125,10 @@ internal sealed class StoredSession : IHandleSession
         approvalInput["replies"] = approval.Replies.DeepClone();
       }
       input["approval"] = approvalInput;
+    }
+    if (write && CreatePage is not null && IsBatchEnvelope(batch))
+    {
+      input["createdPages"] = await CreatePagesAsync(input, caller, cancellationToken);
     }
     var ran = await bundle.CallAsync("agentExecute", input, cancellationToken);
 
@@ -181,6 +190,33 @@ internal sealed class StoredSession : IHandleSession
   public Task<JsonObject> CloseAsync(string reason)
   {
     return Task.FromResult(new JsonObject { ["unsavedBatches"] = 0, ["hostRecordLags"] = false });
+  }
+
+  // The bundle's own check: commands is an array of objects.
+  private static bool IsBatchEnvelope(JsonNode? batch)
+  {
+    return batch is JsonObject envelope && envelope["commands"] is JsonArray commands && commands.All(command => command is JsonObject);
+  }
+
+  /*
+   * A batch that would be refused, or that waits on a person's answer, makes no page:
+   * Node plans the whole batch before it makes one, and agentExecute answers it.
+   */
+  private async Task<JsonArray> CreatePagesAsync(JsonObject input, McpCaller caller, CancellationToken cancellationToken)
+  {
+    var needed = await bundle.CallAsync("agentPagesNeeded", input, cancellationToken);
+    var created = new JsonArray();
+
+    if (needed["result"] is not null)
+    {
+      return created;
+    }
+    for (var count = (int)(McpJson.Number(needed["count"]) ?? 0); count > 0; count--)
+    {
+      created.Add(await CreatePage!(caller, cancellationToken));
+    }
+
+    return created;
   }
 
   private async Task<JsonObject> AnswerAsync(JsonObject input, CancellationToken cancellationToken)

@@ -154,7 +154,11 @@ internal sealed class StoredSession : IHandleSession
     }
     if (McpJson.Bool(ran["save"]) != true)
     {
-      return new McpExecuteOutcome(await AnswerAsync(new JsonObject { ["result"] = result.DeepClone() }, cancellationToken), null);
+      var answerInput = new JsonObject { ["result"] = result.DeepClone() };
+
+      PagePorts.MarkUnconfirmed(ran, answerInput);
+
+      return new McpExecuteOutcome(await AnswerAsync(answerInput, cancellationToken), null);
     }
     try
     {

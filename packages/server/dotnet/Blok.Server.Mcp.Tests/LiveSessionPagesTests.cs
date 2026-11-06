@@ -84,18 +84,18 @@ public sealed class LiveSessionPagesTests(BundleFixture fixture) : IClassFixture
   }
 
   [Fact]
-  public async Task APageWriteTheRoomDidNotConfirmIsSourceUnavailable()
+  public async Task APageWriteTheRoomDidNotConfirmSucceedsAsPending()
   {
     var (session, _, room) = await OpenAsync(new FakeTarget(Ok(pending: true)));
 
     await session.ExecuteAsync(Batch(new JsonObject { ["name"] = "block.insert", ["args"] = new JsonObject { ["type"] = "page", ["id"] = "pb" } }), Caller, null, CancellationToken.None);
     var outcome = await session.ExecuteAsync(Batch(new JsonObject { ["name"] = "page.rename", ["args"] = new JsonObject { ["id"] = "pb", ["title"] = "Renamed" } }), Caller, null, CancellationToken.None);
-    var error = outcome.Answer?["structuredContent"]?["error"];
+    var answer = outcome.Answer?["structuredContent"];
 
-    Assert.Equal("SOURCE_UNAVAILABLE", McpJson.String(error?["code"]));
-    Assert.Equal(true, McpJson.Bool(error?["retryable"]));
-    Assert.Equal("""{"pending":true,"pageId":"page-1"}""", error?["details"]?.ToJsonString());
-    Assert.Equal(0, (int?)error?["commandIndex"]);
+    Assert.Equal(true, McpJson.Bool(answer?["ok"]));
+    Assert.Equal("""[{"pageId":"page-1","applied":true}]""", answer?["results"]?.ToJsonString());
+    Assert.Equal(false, McpJson.Bool(answer?["delivery"]?["durable"]));
+    Assert.Equal(true, McpJson.Bool(answer?["delivery"]?["pending"]));
     await room.CloseAsync();
   }
 

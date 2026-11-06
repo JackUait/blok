@@ -156,6 +156,7 @@ internal sealed class LiveSession : IHandleSession
     var failuresBefore = room.AppendFailures;
     JsonObject result;
     bool writing;
+    JsonObject? pageRun = null;
 
     // Single lane: the doc must stay as exported until the write is queued.
     room.HoldDocFrames();
@@ -196,6 +197,7 @@ internal sealed class LiveSession : IHandleSession
       if (gate is null && !readOnly && Pages is not null && envelope && PagePorts.HasPageAction(batch))
       {
         ran = await Pages.RunActionAsync(bundle, input, caller, pageId => Task.FromResult(pageId == DocumentId), cancellationToken);
+        pageRun = ran;
       }
       else
       {
@@ -292,9 +294,18 @@ internal sealed class LiveSession : IHandleSession
       room.ReleaseDocFrames();
     }
     presence.AfterBatch(result);
+    Task<JsonObject> DeliveredAsync(JsonObject answerInput)
+    {
+      if (pageRun is not null)
+      {
+        PagePorts.MarkUnconfirmed(pageRun, answerInput);
+      }
+
+      return AnswerAsync(answerInput, cancellationToken);
+    }
     if (!writing || room.Protocol == "v1")
     {
-      return new McpExecuteOutcome(await AnswerAsync(new JsonObject { ["result"] = result.DeepClone() }, cancellationToken), null);
+      return new McpExecuteOutcome(await DeliveredAsync(new JsonObject { ["result"] = result.DeepClone() }), null);
     }
     // A write the outbox could not take is in our doc but never reaches the room.
     if (room.AppendFailures != failuresBefore)
@@ -321,17 +332,17 @@ internal sealed class LiveSession : IHandleSession
       case BatchDelivery.Acked acked:
         unacked.Remove(number);
 
-        return new McpExecuteOutcome(await AnswerAsync(new JsonObject
+        return new McpExecuteOutcome(await DeliveredAsync(new JsonObject
         {
           ["result"] = result.DeepClone(),
           ["delivery"] = Delivery(true, false, acked.ServerSequence),
-        }, cancellationToken), null);
+        }), null);
       case BatchDelivery.Timeout:
-        return new McpExecuteOutcome(await AnswerAsync(new JsonObject
+        return new McpExecuteOutcome(await DeliveredAsync(new JsonObject
         {
           ["result"] = result.DeepClone(),
           ["delivery"] = Delivery(false, true, null),
-        }, cancellationToken), null);
+        }), null);
       case BatchDelivery.Quarantined { Reason: RoomProvider.RelineageReason }:
         // A reset lost this batch too, so it stays in unacked.
         return new McpExecuteOutcome(await FailedAsync(result, await EndErrorAsync(new RoomEnd(true, null), cancellationToken), cancellationToken), null);

@@ -8,6 +8,11 @@ namespace Blok.Server.Mcp.Core;
 /// </summary>
 internal sealed class PagePorts
 {
+  /// <summary>Set on the run's output when a page write went out but no ack came.</summary>
+  internal const string UnconfirmedKey = "pageWriteUnconfirmed";
+
+  private static readonly JsonObject Unconfirmed = [];
+
   private const string OpenDocumentMessage = "This page block points at the document you have open. Use doc.setTitle or doc.setIcon instead.";
 
   /// <summary>Makes one page document and returns its id; null when blok-mcp makes none.</summary>
@@ -105,8 +110,9 @@ internal sealed class PagePorts
       }),
     };
     var refused = await WriteAsync(bundle, pageId, write, caller, cancellationToken);
+    var unconfirmed = ReferenceEquals(refused, Unconfirmed);
 
-    if (refused is not null)
+    if (refused is not null && !unconfirmed)
     {
       var details = refused["details"] as JsonObject ?? [];
 
@@ -117,11 +123,17 @@ internal sealed class PagePorts
       return Ran(input, Failure(revision, refused, warnings));
     }
     result["results"] = new JsonArray(new JsonObject { ["pageId"] = pageId, ["applied"] = true });
+    var ran = Ran(input, result, wroteOther: true);
 
-    return Ran(input, result, wroteOther: true);
+    if (unconfirmed)
+    {
+      ran[UnconfirmedKey] = true;
+    }
+
+    return ran;
   }
 
-  // Null when the page took the write; otherwise the error, as Node's executor keeps it.
+  // Null when the page took the write, Unconfirmed when no ack came; otherwise the error, as Node's executor keeps it.
   private async Task<JsonObject?> WriteAsync(McpBundle bundle, string pageId, JsonObject batch, McpCaller caller, CancellationToken cancellationToken)
   {
     IHandleSession session;
@@ -144,13 +156,10 @@ internal sealed class PagePorts
       {
         return (JsonObject)answer["error"]!.DeepClone();
       }
-      // The close drops unacked rows, so a pending write is a failed one.
+      // No ack came, but the write went out and may still land: the batch says so in its delivery.
       if (McpJson.Bool(answer["delivery"]?["pending"]) == true)
       {
-        return await AgentErrorAsync(bundle, McpHostError.Surface(
-            "SOURCE_UNAVAILABLE",
-            "The room did not confirm the page write in time. It was not saved; try again.",
-            new JsonObject { ["pending"] = true }), cancellationToken);
+        return Unconfirmed;
       }
 
       return null;
@@ -163,6 +172,24 @@ internal sealed class PagePorts
     {
       TrackClose(CloseQuietlyAsync(session));
     }
+  }
+
+  /*
+   * A batch whose page write went out unacknowledged is not durable, even when its own room
+   * acked: the answer's delivery says pending (page-titles.ts createPageDeliveryTracker).
+   */
+  internal static void MarkUnconfirmed(JsonObject ran, JsonObject answerInput)
+  {
+    if (McpJson.Bool(ran[UnconfirmedKey]) != true || McpJson.Bool(answerInput["result"]?["ok"]) != true || answerInput.ContainsKey("failed"))
+    {
+      return;
+    }
+    var delivery = answerInput["delivery"]?.DeepClone() as JsonObject
+        ?? new JsonObject { ["durable"] = false, ["pending"] = false, ["serverSequence"] = null, ["savedVersion"] = null };
+
+    delivery["durable"] = false;
+    delivery["pending"] = true;
+    answerInput["delivery"] = delivery;
   }
 
   private static async Task CloseQuietlyAsync(IHandleSession session)

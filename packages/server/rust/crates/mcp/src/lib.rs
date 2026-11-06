@@ -15,6 +15,7 @@ pub mod live;
 pub mod oauth;
 pub mod outbound;
 pub mod protocol;
+pub mod rooms;
 pub mod server;
 pub mod sources;
 pub mod stdio;
@@ -60,27 +61,56 @@ pub async fn run_cli(argv: Vec<String>, env: Value, cwd: &Path) -> i32 {
         .authorize
         .as_ref()
         .map(|AuthorizeSpec::Webhook(url)| Webhook::new(url.clone(), Outbound::new()));
-    // serverInfo.version: the version Blok stamps, as Node's getBlokVersion.
-    let version = match bundle.call_text("version", "{}").await {
-        Ok(version) => version,
+    let embedded = match Embedded::new(bundle, &started.options, authorize, None).await {
+        Ok(embedded) => embedded,
         Err(err) => {
             eprintln!("blok-mcp: {err}");
             return 1;
         }
     };
-    let mcp = match Mcp::new(bundle, &started.options, authorize).await {
-        Ok(mcp) => Arc::new(mcp),
-        Err(err) => {
-            eprintln!("blok-mcp: {err:?}");
-            return 1;
-        }
-    };
-    mcp.spawn_sweeper();
-    let options = &started.options;
-    if options.pointer("/transport/kind").and_then(Value::as_str) == Some("http") {
-        return serve_http(mcp, version, options).await;
+    // Boxed: the whole server future nested here passes the compiler's layout depth.
+    Box::pin(embedded.serve(&started.options)).await
+}
+
+/// blok-mcp inside a Rust host. Give it the host's own collab rooms
+/// (`blok_blokserver::Server::agent_executor()`) and live handles run in
+/// this process, with no ticket and no socket.
+pub struct Embedded {
+    pub mcp: Arc<Mcp>,
+    /// What serverInfo.version reports: the version Blok stamps.
+    pub version: String,
+}
+
+impl Embedded {
+    /// `options` is the options object mcpParseArgs gives (BlokMcpOptions as data).
+    pub async fn new(
+        bundle: Arc<Bundle>,
+        options: &Value,
+        authorize: Option<Webhook>,
+        rooms: Option<Arc<blok_blokagent::Executor>>,
+    ) -> Result<Embedded, String> {
+        let version = bundle.call_text("version", "{}").await.map_err(|e| e.0)?;
+        let mcp = Mcp::new(bundle, options, authorize, rooms)
+            .await
+            .map_err(|err| format!("{err:?}"))?;
+        let mcp = Arc::new(mcp);
+        mcp.spawn_sweeper();
+        Ok(Embedded { mcp, version })
     }
-    serve_stdio(mcp, version).await
+
+    /// The rmcp handler, to serve on a transport the host picks.
+    pub fn handler(&self, http: bool) -> Handler {
+        Handler::new(self.mcp.clone(), self.version.clone(), http)
+    }
+
+    /// Serves `options.transport` until stdin ends (stdio) or a signal.
+    /// Returns the process exit code.
+    pub async fn serve(self, options: &Value) -> i32 {
+        if options.pointer("/transport/kind").and_then(Value::as_str) == Some("http") {
+            return serve_http(self.mcp, self.version, options).await;
+        }
+        serve_stdio(self.mcp, self.version).await
+    }
 }
 
 async fn serve_http(mcp: Arc<Mcp>, version: String, options: &Value) -> i32 {

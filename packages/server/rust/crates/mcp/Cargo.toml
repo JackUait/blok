@@ -16,6 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 base64 = "0.22"
+blok-blokagent = { path = "../blokagent" }
 blok-blokserver-ticket = { path = "../blokserver-ticket" }
 blok-dotnet = { path = "../dotnet" }
 blok-jsjson = { path = "../jsjson" }
@@ -38,6 +39,12 @@ sha2 = "0.10"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net", "io-util", "io-std", "fs"] }
 
 [dev-dependencies]
+blok-collab = { path = "../collab" }
+blok-collab-convert = { path = "../collab-convert" }
+blok-collab-docendpoint = { path = "../collab-docendpoint" }
+blok-collab-journal = { path = "../collab-journal" }
+blok-collab-room = { path = "../collab-room" }
+blok-collab-workingset = { path = "../collab-workingset" }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "time", "net", "io-util", "fs"] }
 
 [lints]

@@ -4,6 +4,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use blok_blokagent::Executor;
 use serde_json::{Map, Value, json};
 
 use crate::authorize::Webhook;
@@ -12,6 +13,7 @@ use crate::errors::{Fault, HostError};
 use crate::handles::Handles;
 use crate::live::Live;
 use crate::outbound::Outbound;
+use crate::rooms::{RoomSession, Rooms, delivery};
 use crate::sources::{EndpointSource, ListRequest, Source};
 
 /// Who is calling: the principal, the client's raw name, and OAuth scopes.
@@ -76,6 +78,7 @@ pub struct Stored {
 
 pub enum Session {
     Stored(Stored),
+    Room(RoomSession),
 }
 
 pub struct Mcp {
@@ -88,6 +91,7 @@ pub struct Mcp {
     source: Option<Source>,
     authorize: Option<Webhook>,
     live: Option<Live>,
+    rooms: Option<Rooms>,
 }
 
 const DEFAULT_IDLE_MS: u64 = 600_000;
@@ -142,12 +146,18 @@ fn str_of<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
 }
 
 impl Mcp {
+    /// `rooms`: the embedding host's own collab rooms (`Server::agent_executor()`).
+    /// Live handles then run in this process, with no ticket and no socket.
     pub async fn new(
         bundle: Arc<Bundle>,
         options: &Value,
         authorize: Option<Webhook>,
+        rooms: Option<Arc<Executor>>,
     ) -> Result<Mcp, Fault> {
-        let flags = surface_flags(options);
+        let mut flags = surface_flags(options);
+        if rooms.is_some() {
+            flags["sync"] = Value::Bool(true);
+        }
         let surface = bundle.call("mcpSurface", &flags.to_string()).await?;
         let list = |key: &str| {
             surface
@@ -205,13 +215,14 @@ impl Mcp {
         Ok(Mcp {
             bundle,
             surface,
-            flags,
             principal: str_of(options, "principal").unwrap_or("local").to_owned(),
             idle_ms,
             handles: Handles::new(idle, max),
             source,
             authorize,
             live,
+            rooms: rooms.map(|executor| Rooms::new(executor, &flags)),
+            flags,
         })
     }
 
@@ -321,10 +332,13 @@ impl Mcp {
             Some("blok_close") => {
                 let handle = str_of(&step, "handle").unwrap_or_default();
                 drop(self.on_handle(caller, handle, false).await?);
-                drop(self.handles.remove(handle, &caller.principal).await?);
+                let session = self.handles.remove(handle, &caller.principal).await?;
+                // A journaled room records the batch before the host's own copy does.
+                let lags = matches!(&*session, Session::Room(room) if room.journaled);
                 Answer {
-                    structured: r#"{"closed":true,"unsavedBatches":0,"hostRecordLags":false}"#
-                        .to_owned(),
+                    structured:
+                        json!({ "closed": true, "unsavedBatches": 0, "hostRecordLags": lags })
+                            .to_string(),
                     is_error: false,
                 }
             }
@@ -336,6 +350,11 @@ impl Mcp {
             }
         };
         Ok(Outcome::Answer(answer))
+    }
+
+    /// A sync URL or the host's own rooms: live mode is on.
+    fn syncs(&self) -> bool {
+        self.live.is_some() || self.rooms.is_some()
     }
 
     async fn allowed(&self, principal: &str, document_id: &str, write: bool) -> bool {
@@ -375,7 +394,7 @@ impl Mcp {
             return Ok(unsupported);
         };
         let listing = listing?;
-        let live = self.live.is_some();
+        let live = self.syncs();
         let mut documents = Vec::new();
         for (id, title) in listing.documents {
             if self.allowed(&caller.principal, &id, false).await {
@@ -485,7 +504,7 @@ impl Mcp {
             .bundle
             .call(
                 "mcpResolveMode",
-                &json!({ "requested": requested, "sync": self.live.is_some() }).to_string(),
+                &json!({ "requested": requested, "sync": self.syncs() }).to_string(),
             )
             .await?;
         if let Some(error) = resolved.get("error") {
@@ -493,6 +512,20 @@ impl Mcp {
         }
         let (actor, client_name) = self.actor(caller).await?;
         if str_of(&resolved, "mode") == Some("live") {
+            if let Some(rooms) = &self.rooms {
+                return self
+                    .open_room(
+                        rooms,
+                        step,
+                        document_id,
+                        write,
+                        found,
+                        caller,
+                        &actor,
+                        cancelled,
+                    )
+                    .await;
+            }
             let Some(live) = &self.live else {
                 return Err(HostError::surface(
                     "INVALID_ARGS",
@@ -573,6 +606,148 @@ impl Mcp {
         answer_of(&raw)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    async fn open_room(
+        &self,
+        rooms: &Rooms,
+        step: &Value,
+        document_id: &str,
+        write: bool,
+        found: Option<Value>,
+        caller: &Caller,
+        actor: &Value,
+        cancelled: &(dyn Fn() -> bool + Send + Sync),
+    ) -> Result<Answer, Fault> {
+        // Loads the room, as Node's open waits for the room to sync.
+        let view_args = step.get("view").cloned();
+        let (view, ran) = rooms
+            .read(document_id, view_args.as_ref().unwrap_or(&json!({})), actor)
+            .await?;
+        if cancelled() {
+            return Err(HostError::failure(
+                "CANCELLED",
+                "The request was cancelled before the document opened.",
+            )
+            .into());
+        }
+        let journaled = ran.head.is_some();
+        let mut session = json!({
+            "mode": "live",
+            "write": write,
+            "durability": if journaled { "acknowledged" } else { "best-effort" },
+            "contractRevision": self.surface.live_revision,
+        });
+        if self
+            .surface
+            .live_unavailable
+            .as_array()
+            .is_some_and(|a| !a.is_empty())
+        {
+            session["unavailableCommands"] = self.surface.live_unavailable.clone();
+        }
+        let room = RoomSession {
+            write,
+            read_only: !write,
+            journaled,
+        };
+        let handle = self
+            .handles
+            .add(&caller.principal, document_id, Session::Room(room))?;
+        let mut input = Obj::new()
+            .str("handle", &handle)
+            .val("expiresAfterIdleMs", &self.idle_ms)
+            .val("session", &session);
+        if let Some(found) = &found {
+            input = input.val("found", found);
+        }
+        if view_args.is_some() {
+            input = input.val("view", &view);
+        }
+        answer_of(
+            &self
+                .bundle
+                .call_raw("mcpOpenAnswer", &input.finish())
+                .await?,
+        )
+    }
+
+    async fn on_room(
+        &self,
+        document_id: &str,
+        room: &mut RoomSession,
+        call: &Value,
+        actor: &Value,
+    ) -> Result<Outcome, Fault> {
+        let rooms = self
+            .rooms
+            .as_ref()
+            .ok_or_else(|| Fault::Internal("a room handle without rooms".to_owned()))?;
+        let answer = |structured: &Value| Answer {
+            structured: structured.to_string(),
+            is_error: false,
+        };
+        match str_of(call, "name") {
+            Some("blok_read") => {
+                let (view, _) = rooms
+                    .read(document_id, call.get("view").unwrap_or(&json!({})), actor)
+                    .await?;
+                Ok(Outcome::Answer(answer(&view)))
+            }
+            // The answer depends on the contract only, so an empty document does.
+            Some("blok_describe") => {
+                let input = self
+                    .session_input("live", room.write, r#"{"blocks":[]}"#, actor)
+                    .val("query", call.get("query").unwrap_or(&json!({})))
+                    .finish();
+                Ok(Outcome::Answer(answer_of(
+                    &self.bundle.call_raw("mcpDescribe", &input).await?,
+                )?))
+            }
+            _ => {
+                let batch = call.get("batch").cloned().unwrap_or(Value::Null);
+                // A dry run on an empty read-only copy says whether the batch writes.
+                let probe = self
+                    .bundle
+                    .call_raw(
+                        "agentExecute",
+                        &self
+                            .session_input("live", false, r#"{"blocks":[]}"#, actor)
+                            .val("batch", &batch)
+                            .finish(),
+                    )
+                    .await?;
+                let writes = probe.value("writes") == Some(Value::Bool(true));
+                if writes && room.read_only {
+                    let result = probe.text("result").unwrap_or("null").to_owned();
+                    let raw = self
+                        .bundle
+                        .call_raw(
+                            "mcpExecuteAnswer",
+                            &Obj::new().raw("result", &result).finish(),
+                        )
+                        .await?;
+                    return Ok(Outcome::Answer(answer_of(&raw)?));
+                }
+                let ran = rooms.run(document_id, &batch, actor).await?;
+                let result: Value = serde_json::from_str(&ran.result)
+                    .map_err(|e| Fault::Internal(e.to_string()))?;
+                let ok = result.get("ok") == Some(&Value::Bool(true));
+                if result.pointer("/error/code").and_then(Value::as_str) == Some("APPLY_FAILED") {
+                    room.read_only = true;
+                }
+                let mut input = Obj::new().raw("result", &ran.result);
+                if let Some(delivery) = delivery(&ran, ok, writes, room.journaled) {
+                    input = input.val("delivery", &delivery);
+                }
+                let raw = self
+                    .bundle
+                    .call_raw("mcpExecuteAnswer", &input.finish())
+                    .await?;
+                Ok(Outcome::Answer(answer_of(&raw)?))
+            }
+        }
+    }
+
     async fn reload(&self, document_id: &str, stored: &mut Stored) -> Result<(), Fault> {
         let source = self
             .source
@@ -599,7 +774,12 @@ impl Mcp {
         let mut lease = self.on_handle(caller, handle, write).await?;
         let document_id = lease.document_id.clone();
         let (actor, client_name) = self.actor(caller).await?;
-        let Session::Stored(stored) = &mut *lease.session;
+        let stored = match &mut *lease.session {
+            Session::Stored(stored) => stored,
+            Session::Room(room) => {
+                return self.on_room(&document_id, room, &call, &actor).await;
+            }
+        };
         match str_of(&call, "name") {
             Some("blok_read") => {
                 if stored.stale {

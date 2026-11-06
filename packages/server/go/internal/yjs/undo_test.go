@@ -125,3 +125,56 @@ func TestPreviewShowsTheUndoAndLeavesTheDocAlone(t *testing.T) {
 		t.Fatalf("the doc changed to %v", value)
 	}
 }
+
+// The copy must replay the step the real stacks replay, redone links
+// included, or an approval gate judges the wrong outcome.
+func TestPreviewMatchesTheUndoAfterUndoRedo(t *testing.T) {
+	doc, _, _ := peers(t)
+	undo := NewUndoManager(doc)
+	doc.Transact(func(t *Transaction) {
+		block := NewMap()
+		doc.GetMap(s("blocks")).Set(t, s("db"), block)
+		block.Set(t, s("locked"), false)
+	})
+	block := func(d *Doc) *Map {
+		value, _ := d.GetMap(s("blocks")).Get(s("db"))
+		m, _ := value.(*Map)
+		return m
+	}
+	undo.Capture(func(t *Transaction) { block(doc).Set(t, s("locked"), true) })
+	if _, err := undo.Undo(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := undo.Redo(); err != nil {
+		t.Fatal(err)
+	}
+	preview, err := undo.Preview(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := undo.Undo(); err != nil {
+		t.Fatal(err)
+	}
+	want, _ := block(doc).Get(s("locked"))
+	got, _ := block(preview).Get(s("locked"))
+	if got != want || want != false {
+		t.Fatalf("the preview has locked=%v, the undo locked=%v", got, want)
+	}
+	for item, live := range redoneLinks(doc) {
+		if copied := redoneLinks(preview)[item]; copied != live {
+			t.Fatalf("the copy lost the redone link of %v", item)
+		}
+	}
+}
+
+func redoneLinks(d *Doc) map[ID]ID {
+	links := map[ID]ID{}
+	for _, structs := range d.store.clients {
+		for _, s := range structs {
+			if item, ok := s.(*Item); ok && item.redone != nil {
+				links[item.id] = *item.redone
+			}
+		}
+	}
+	return links
+}

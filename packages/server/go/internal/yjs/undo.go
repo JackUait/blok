@@ -361,8 +361,7 @@ func (u *UndoManager) inStacks(id ID) bool {
 }
 
 // Preview replays the step Undo (or Redo) would replay on a copy of the
-// doc, and returns the copy; the doc itself is untouched. The copy knows
-// no earlier redone links, so a step redone more than once may differ.
+// doc, and returns the copy; the doc itself is untouched.
 func (u *UndoManager) Preview(undo bool) (*Doc, error) {
 	state, err := u.doc.EncodeStateAsUpdate(nil)
 	if err != nil {
@@ -371,6 +370,13 @@ func (u *UndoManager) Preview(undo bool) (*Doc, error) {
 	clientID := uint32(u.doc.clientID)
 	copied := NewDoc(Options{ClientID: &clientID, NoGC: true})
 	if _, err := copied.ApplyUpdate(state); err != nil {
+		return nil, err
+	}
+	// Applying its own state minted the copy a new client: the replay
+	// writes under the real one, so its links name the same clocks.
+	copied.AdoptClientID(u.doc.clientID)
+	// The update carries no redone links, and the replay follows them.
+	if err := carryRedone(u.doc, copied); err != nil {
 		return nil, err
 	}
 	stack := u.undoStack
@@ -386,4 +392,31 @@ func (u *UndoManager) Preview(undo bool) (*Doc, error) {
 		return nil, err
 	}
 	return copied, nil
+}
+
+// carryRedone sets every redone link of from's items on the same clocks of
+// to, splitting to's items where from's are shorter.
+func carryRedone(from, to *Doc) (err error) {
+	defer recoverEngine(&err)
+	for client, structs := range from.store.clients {
+		for _, s := range structs {
+			item, ok := s.(*Item)
+			if !ok || item.redone == nil {
+				continue
+			}
+			if _, known := to.store.clients[client]; !known {
+				fail("yjs: the copy has no client %d", client)
+			}
+			target := to.store.getItemCleanStart(nil, item.id)
+			if target.length > item.length {
+				to.store.getItemCleanEnd(nil, item.lastID())
+			}
+			if target.length != item.length {
+				fail("yjs: the copy splits %v differently", item.id)
+			}
+			redone := *item.redone
+			target.redone = &redone
+		}
+	}
+	return nil
 }

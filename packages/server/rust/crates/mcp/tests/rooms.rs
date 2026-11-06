@@ -270,3 +270,78 @@ async fn a_live_unlock_on_the_hosts_room_asks_the_person() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn undoing_a_lock_in_the_hosts_room_asks_and_a_yes_unlocks() {
+    let dir = std::env::temp_dir().join(format!("blok-mcp-rooms-undo-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let mcp = mcp_on_rooms(&dir).await;
+    let opened = call(
+        &mcp,
+        "blok_open",
+        json!({ "documentId": "doc", "write": true }),
+    )
+    .await;
+    let handle = opened["handle"].as_str().unwrap().to_owned();
+    let inserted = call(
+        &mcp,
+        "blok_execute",
+        json!({ "handle": handle, "commands": [{ "name": "block.insert", "args": { "type": "database", "id": "db", "data": {
+            "title": "Payroll", "activeViewId": "v",
+            "schema": [{ "id": "t", "name": "Name", "type": "title", "position": "a0" }],
+            "views": [{ "id": "v", "name": "Table", "type": "table", "position": "a0", "sorts": [], "filters": [], "visibleProperties": [] }],
+        } } }] }),
+    )
+    .await;
+    assert_eq!(inserted["ok"], true, "{inserted}");
+    let locked = call(&mcp, "blok_execute", json!({ "handle": handle, "commands": [{ "name": "database.setLock", "args": { "id": "db", "locked": true } }] })).await;
+    assert_eq!(locked["ok"], true, "{locked}");
+
+    let caller = Caller {
+        principal: "alice".to_owned(),
+        client_name: Some("Desk".to_owned()),
+        scopes: None,
+    };
+    let undo = json!({ "handle": handle, "commands": [{ "name": "history.undo", "args": {} }] });
+    let key = r#"["database.unlock","db","Payroll"]"#;
+    let asking = Approval {
+        capabilities: json!({ "elicitation": {} }),
+        replies: None,
+    };
+    match mcp
+        .call("blok_execute", &undo, &caller, &asking, &|| false)
+        .await
+    {
+        Ok(Outcome::Ask(ask)) => assert_eq!(ask.key, key),
+        other => panic!("expected a question, got {other:?}"),
+    }
+    let no = Approval {
+        capabilities: json!({ "elicitation": {} }),
+        replies: Some(json!({ key: { "action": "decline" } })),
+    };
+    match mcp
+        .call("blok_execute", &undo, &caller, &no, &|| false)
+        .await
+    {
+        Ok(Outcome::Answer(answer)) => {
+            let result: Value = serde_json::from_str(&answer.structured).unwrap();
+            assert_eq!(result["error"]["details"]["reason"], "denied", "{result}");
+        }
+        other => panic!("expected a refusal, got {other:?}"),
+    }
+    let yes = Approval {
+        capabilities: json!({ "elicitation": {} }),
+        replies: Some(json!({ key: { "action": "accept", "content": { "unlock": true } } })),
+    };
+    match mcp
+        .call("blok_execute", &undo, &caller, &yes, &|| false)
+        .await
+    {
+        Ok(Outcome::Answer(answer)) => assert!(!answer.is_error, "{}", answer.structured),
+        other => panic!("expected the undo to apply, got {other:?}"),
+    }
+    // Unlocked now: a plain unlock needs no yes.
+    let unlock = call(&mcp, "blok_execute", json!({ "handle": handle, "commands": [{ "name": "database.setLock", "args": { "id": "db", "locked": false } }] })).await;
+    assert_eq!(unlock["ok"], true, "{unlock}");
+    let _ = std::fs::remove_dir_all(&dir);
+}

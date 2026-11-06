@@ -217,6 +217,8 @@ impl Executor {
                     revision: String::new(),
                 });
             }
+            // A host with an approval channel asks before an unlock.
+            let asks = options.is_some_and(|o| o.approval_json.is_some());
             return self
                 .run_room_history(
                     cancel,
@@ -224,6 +226,7 @@ impl Executor {
                     history_name == "history.undo",
                     actor,
                     expect,
+                    asks.then_some(&input),
                 )
                 .await;
         }

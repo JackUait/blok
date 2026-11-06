@@ -463,12 +463,13 @@ fn blocks_object(projection: Option<&Object>) -> Option<&Object> {
     }
 }
 
-/// A database the replay would unlock: locked in now, still there and
+/// The databases the replay would unlock: locked in now, still there and
 /// unlocked in wanted. Mirrors unlockedBetween in
 /// src/shared/agent/approval.ts.
-pub(crate) fn unlocks(now: &Object, wanted: Option<&Object>) -> Result<Option<Str>, Error> {
+pub(crate) fn unlocks(now: &Object, wanted: Option<&Object>) -> Result<Vec<Str>, Error> {
+    let mut found = Vec::new();
     let (Some(current), Some(target)) = (blocks_object(Some(now)), blocks_object(wanted)) else {
-        return Ok(None);
+        return Ok(found);
     };
     for m in current.members() {
         if !locked(Some(&m.value))? {
@@ -479,10 +480,10 @@ pub(crate) fn unlocks(now: &Object, wanted: Option<&Object>) -> Result<Option<St
             continue;
         }
         if !locked(there)? {
-            return Ok(Some(m.key.clone()));
+            found.push(m.key.clone());
         }
     }
-    Ok(None)
+    Ok(found)
 }
 
 fn try_text(value: Option<&Value>) -> Option<&Str> {

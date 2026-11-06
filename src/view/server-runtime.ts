@@ -567,6 +567,60 @@ const createdPagesPort = (input: Record<string, unknown>): { port: NonNullable<A
   };
 };
 
+/** An AgentError a host sends back; anything else is no error. */
+const agentErrorOf = (value: unknown): AgentError | undefined => (
+  isRecord(value) && typeof value.code === 'string' && typeof value.message === 'string'
+    ? value as unknown as AgentError
+    : undefined
+);
+
+/** blok-mcp's page-map handle: page.rename and page.setIcon write the page's own document. */
+const writesPages = (input: Record<string, unknown>): boolean => isRecord(input.mcp) && input.mcp.pageTitles === 'page-map';
+
+type OpenPage = NonNullable<AgentPorts['openPageDocument']>;
+
+const pageSession = (pageId: string, actor: AgentActor, execute: (batch: unknown) => Promise<AgentResult>): Awaited<ReturnType<OpenPage>> => ({
+  id: `page:${pageId}`,
+  actor,
+  read: () => Promise.reject(new Error('A page target only writes.')),
+  describe: () => Promise.reject(new Error('A page target only writes.')),
+  execute,
+  log: () => [],
+  close: () => undefined,
+} as unknown as Awaited<ReturnType<OpenPage>>);
+
+/** Counting: each page write the batch asks for, answered as if it succeeded. */
+const recordedWritesPort = (writes: { pageId: string; batch: unknown }[]): OpenPage => (pageId, actor) =>
+  Promise.resolve(pageSession(pageId, actor, (batch) => {
+    writes.push({ pageId, batch });
+
+    return Promise.resolve({ ok: true, revision: '', results: [{}], warnings: [] } as unknown as AgentResult);
+  }));
+
+/**
+ * Jint cannot wait on the host, so blok-mcp writes the page first (agentPagesNeeded names it)
+ * and sends what happened as `pageWrites`: the inner result, or the error opening it raised.
+ */
+const pageWritesPort = (input: Record<string, unknown>): OpenPage => {
+  const outcomes = Array.isArray(input.pageWrites) ? input.pageWrites.filter(isRecord) : [];
+
+  return (pageId, actor) => {
+    const next = outcomes.shift();
+
+    if (next === undefined || next.pageId !== pageId) {
+      return Promise.reject(failure('STALE', 'The document changed while its page was written. Read it again, then retry.'));
+    }
+    const opened = agentErrorOf(next.error);
+
+    // As src/mcp/page-titles.ts: an open that failed names the page.
+    if (opened !== undefined) {
+      return Promise.reject(new AgentFailure({ ...opened, details: { ...opened.details, pageId } }));
+    }
+
+    return Promise.resolve(pageSession(pageId, actor, () => Promise.resolve(next.result as AgentResult)));
+  };
+};
+
 /** A created page the batch did not point at: the batch fails, and the host is told to clean it up. */
 const withUnusedPages = (result: AgentResult, unused: readonly string[]): AgentResult => {
   if (unused.length === 0) {
@@ -763,7 +817,8 @@ const createServerAgentSession = (
   actor: AgentActor,
   onRestore?: (version: string) => void,
   createPage?: AgentPorts['createPageDocument'],
-  uploader?: Record<string, unknown>
+  uploader?: Record<string, unknown>,
+  openPage?: OpenPage
 ): ReturnType<typeof createDocumentAgentSession> => {
   const setup = isRecord(input.mcp) ? mcpSetup(input.mcp) : serverSetup(input);
   const versionHistory = loadedVersionHistory(input.versionHistory, setup.restores ? onRestore : undefined);
@@ -775,8 +830,12 @@ const createServerAgentSession = (
   return createDocumentAgentSession({
     document: loaded,
     tools: setup.tools, contract: setup.contract, actor, runtime: 'jint',
-    ports: createPage === undefined ? setup.ports : { ...setup.ports, createPageDocument: createPage },
-    ...(createPage !== undefined && { pageTitles: 'page-map' as const }),
+    ports: {
+      ...setup.ports,
+      ...(createPage !== undefined && { createPageDocument: createPage }),
+      ...(openPage !== undefined && { openPageDocument: openPage }),
+    },
+    ...((createPage !== undefined || openPage !== undefined) && { pageTitles: 'page-map' as const }),
     ...((versionHistory !== undefined || uploader !== undefined) && { services: {
       ...(versionHistory !== undefined && { versionHistory }),
       ...(uploader !== undefined && { uploader }),
@@ -845,7 +904,7 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
   const uploads = isRecord(input.uploads) ? replayUploader(input.uploads) : undefined;
   const session = createServerAgentSession(input, document, actor, (version) => {
     restoring.version = version;
-  }, pages?.port, uploads?.service);
+  }, pages?.port, uploads?.service, writesPages(input) ? pageWritesPort(input) : undefined);
   const mcp = isRecord(input.mcp) ? input.mcp : undefined;
   const approval = approvalOf(input.approval);
 
@@ -958,11 +1017,12 @@ const agentPagesNeededResult = async (inputJson: string): Promise<string> => {
     throw new TypeError('agentPagesNeeded input requires a `batch` with a `commands` array of command objects.');
   }
   const counted = { count: 0 };
+  const writes: { pageId: string; batch: unknown }[] = [];
   const session = createServerAgentSession(input, document, actor, undefined, () => {
     counted.count += 1;
 
     return Promise.resolve({ pageId: `planned-page-${counted.count}` });
-  });
+  }, undefined, writesPages(input) ? recordedWritesPort(writes) : undefined);
 
   // The same approver as agentExecute: a retry that carries the yes counts its pages.
   const approve = approvalOf(input.approval)?.approve;
@@ -971,6 +1031,11 @@ const agentPagesNeededResult = async (inputJson: string): Promise<string> => {
     const result = await session.execute(batch, approve === undefined ? {} : { approve });
 
     // A refused batch may have prepared pages first, as Node makes them mid-batch: `prepared` says how many.
+    // page.rename is the only command in its batch, so a write is never mixed with page inserts.
+    if (result.ok && writes.length > 0) {
+      return JSON.stringify({ count: 0, writes });
+    }
+
     return JSON.stringify(result.ok ? { count: counted.count } : { count: 0, result, ...(counted.count > 0 && { prepared: counted.count }) });
   } finally {
     session.close();

@@ -368,6 +368,19 @@ const buildCases = async (invoke) => {
   add('mcp.execute.upload.read', 'agentExecute', J({ mcp: { ...mcpStored, uploads: true }, document: mcpDoc, actor: mcpActor, batch: uploadBatch, uploads: { root: true, answers: [] } }));
   add('mcp.execute.upload.send', 'agentExecute', J({ mcp: { ...mcpStored, uploads: true }, document: mcpDoc, actor: mcpActor, batch: uploadBatch, uploads: { root: true, answers: [{ name: 'cat.png', size: 9 }] } }));
 
+  const pageMapStored = { ...mcpStored, pageTitles: 'page-map' };
+  const withPageBlock = { blocks: [{ id: 'pb', type: 'page', data: { pageId: 'child é' } }] };
+  const renamePb = { commands: [{ name: 'page.rename', args: { id: 'pb', title: 'New <name>' } }] };
+  add('mcp.pagesNeeded.write', 'agentPagesNeeded', J({ mcp: pageMapStored, document: withPageBlock, actor: mcpActor, batch: renamePb }));
+  add('mcp.execute.pageWrite', 'agentExecute', J({
+    mcp: pageMapStored, document: withPageBlock, actor: mcpActor, batch: renamePb,
+    pageWrites: [{ pageId: 'child é', result: { ok: true, revision: 'r', results: [{}], warnings: [] } }],
+  }));
+  add('mcp.execute.pageWriteRefused', 'agentExecute', J({
+    mcp: pageMapStored, document: withPageBlock, actor: mcpActor, batch: { commands: [{ name: 'page.setIcon', args: { id: 'pb', icon: { type: 'emoji', value: '😀' } } }] },
+    pageWrites: [{ pageId: 'child é', error: { code: 'FORBIDDEN', message: 'No.', retryable: false } }],
+  }));
+  add('mcp.execute.pageWriteStale', 'agentExecute', J({ mcp: pageMapStored, document: withPageBlock, actor: mcpActor, batch: renamePb, pageWrites: [] }));
   add('mcp.execute.liveRevision', 'agentExecute', J({ mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor, revision: { now: 'l4', afterWrite: 'l5' }, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }], expectRevision: 'l4' } }));
   add('mcp.executeAnswer', 'mcpExecuteAnswer', J({ result: { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [] }, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v' } }));
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));

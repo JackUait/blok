@@ -2508,6 +2508,30 @@
     "output": "{\"upload\":{\"op\":\"uploadByFile\",\"fileName\":\"cat.png\",\"type\":\"image/png\",\"size\":9,\"kind\":\"image\",\"tool\":\"image\",\"local\":0}}"
   },
   {
+    "name": "mcp.pagesNeeded.write",
+    "op": "agentPagesNeeded",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true,\"pageTitles\":\"page-map\"},\"document\":{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child é\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pb\",\"title\":\"New <name>\"}}]}}",
+    "output": "{\"count\":0,\"writes\":[{\"pageId\":\"child é\",\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"New <name>\"}}]}}]}"
+  },
+  {
+    "name": "mcp.execute.pageWrite",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true,\"pageTitles\":\"page-map\"},\"document\":{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child é\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pb\",\"title\":\"New <name>\"}}]},\"pageWrites\":[{\"pageId\":\"child é\",\"result\":{\"ok\":true,\"revision\":\"r\",\"results\":[{}],\"warnings\":[]}}]}",
+    "output": "{\"result\":{\"ok\":true,\"revision\":\"he80f084f33fe4\",\"results\":[{\"pageId\":\"child é\",\"applied\":true}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"document\":{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child é\"}}]},\"edits\":[],\"writes\":true,\"save\":false}"
+  },
+  {
+    "name": "mcp.execute.pageWriteRefused",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true,\"pageTitles\":\"page-map\"},\"document\":{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child é\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{\"commands\":[{\"name\":\"page.setIcon\",\"args\":{\"id\":\"pb\",\"icon\":{\"type\":\"emoji\",\"value\":\"😀\"}}}]},\"pageWrites\":[{\"pageId\":\"child é\",\"error\":{\"code\":\"FORBIDDEN\",\"message\":\"No.\",\"retryable\":false}}]}",
+    "output": "{\"result\":{\"ok\":false,\"revision\":\"he80f084f33fe4\",\"error\":{\"code\":\"FORBIDDEN\",\"message\":\"No.\",\"retryable\":false,\"details\":{\"pageId\":\"child é\"},\"commandIndex\":0},\"warnings\":[]},\"document\":{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child é\"}}]},\"edits\":[],\"writes\":true,\"save\":false}"
+  },
+  {
+    "name": "mcp.execute.pageWriteStale",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true,\"pageTitles\":\"page-map\"},\"document\":{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child é\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pb\",\"title\":\"New <name>\"}}]},\"pageWrites\":[]}",
+    "output": "{\"result\":{\"ok\":false,\"revision\":\"he80f084f33fe4\",\"error\":{\"code\":\"STALE\",\"message\":\"The document changed while its page was written. Read it again, then retry.\",\"retryable\":true,\"commandIndex\":0},\"warnings\":[]},\"document\":{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child é\"}}]},\"edits\":[],\"writes\":true,\"save\":false}"
+  },
+  {
     "name": "mcp.execute.liveRevision",
     "op": "agentExecute",
     "input": "{\"mcp\":{\"source\":true,\"mode\":\"live\",\"write\":true,\"sync\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"revision\":{\"now\":\"l4\",\"afterWrite\":\"l5\"},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"T\"}},{\"name\":\"doc.read\",\"args\":{}}],\"expectRevision\":\"l4\"}}",

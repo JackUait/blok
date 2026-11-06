@@ -34,9 +34,9 @@ public static class BlokMcpServiceCollectionExtensions
     var options = new BlokMcpOptions();
 
     configure(options);
-    services.TryAddSingleton<IBlokRuntime>(_ => JintBlokRuntime.FromEmbeddedResource());
     services.TryAddSingleton(_ => new McpHttpCaller());
-    services.TryAddSingleton(provider => new BlokMcpHost(new McpBundle(provider.GetRequiredService<IBlokRuntime>()), provider.GetRequiredService<McpHttpCaller>()));
+    // Its own runtime, not the app's IBlokRuntime: MCP batches need a larger allocation budget.
+    services.TryAddSingleton(provider => new BlokMcpHost(new McpBundle(BlokMcpHost.Runtime()), provider.GetRequiredService<McpHttpCaller>()));
     services.TryAddSingleton(provider => ConfigOf(options, provider));
 
     return services.AddBlokMcpServer(options.OAuth is not null);

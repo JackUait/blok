@@ -1,5 +1,14 @@
 # 03 — The official C# MCP SDK, measured against what Blok's Node MCP uses
 
+> **Review corrections (2026-11-07, independent re-build on 2.3.1):**
+> - "Byte for byte" schemas is WRONG in general. It holds only for plain ASCII without `' < > & + "` or `\/`. The default System.Text.Json encoder escapes those and all non-ASCII as `\uXXXX`, in schemas and in `Tool.Description`. Compare parsed JSON.
+> - The 1.x line did not end: v1.4.2 shipped 2026-11-03 as a security patch.
+> - 2024-10-07 is not rejected: C# answers 200 and offers 2025-11-25.
+> - `InputRequiredException` for a 2025-era client on stateless HTTP gives JSON-RPC error -32603.
+> - ASP.NET Core `AllowedHosts` can block a foreign Host (400). Origin still needs middleware.
+> - With default settings, resource metadata is served at the root and at `/mcp`; only the 401 header points at `/mcp`.
+> - The first `dnx` run of an unsigned local package prints a NuGet line to stdout before the JSON-RPC.
+
 Date: 2026-11-06. Research only. No repo code changed.
 
 How to read this:

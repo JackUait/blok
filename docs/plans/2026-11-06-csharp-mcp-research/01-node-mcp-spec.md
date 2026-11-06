@@ -1,5 +1,7 @@
 # Node MCP server: behavioural spec for a C# port
 
+> **Review 2026-11-07:** an independent check confirmed the load-bearing claims and found corrections and 12 omissions. Read `review-2026-11-07/verify-01.md` with this spec. Key items: `test/unit/mcp` has 39 files; tool sizes here are pretty-printed (wire: 22,089 / 14,182 / 112,225 B); `dist/mcp.mjs` is stale; `reason:'host'` is unreachable; live handles report a different `contractRevision` than stored; ticket-URL mode refuses non-ASCII ids (Node `atob` bug); saved files write `é`, U+2028, emoji, `<`, `>` as raw UTF-8.
+
 Date: 2026-11-06. Source: `src/mcp/` at `07b2326d` (main). Package: `packages/mcp` (`@bloklabs/mcp` 2.0.0).
 
 Every claim cites `file:line`. Paths are relative to the repo root. "Measured" means I ran it in this session. "Unverified" means I could not check it.

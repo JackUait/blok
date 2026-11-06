@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 )
 
 // webhook is Node's test for an http(s) authorize hook; anything else is a
@@ -96,15 +97,36 @@ func serveCLI(args []string, env map[string]string, stdin io.ReadCloser, stdout 
 	if err != nil {
 		return err
 	}
-	defer server.Close()
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	stopping := make(chan time.Time, 1)
+	go func() {
+		select {
+		case <-signals:
+			// The first signal stops once. Node then drops its listeners, so a
+			// second one kills the process at once.
+			signal.Reset(syscall.SIGINT, syscall.SIGTERM)
+			stopping <- time.Now()
+			stop()
+		case <-ctx.Done():
+		}
+	}()
 	if options.Transport.Kind == "http" {
-		return server.ListenAndServe(ctx, func(url string) {
+		err = server.ListenAndServe(ctx, func(url string) {
 			fmt.Fprintf(os.Stderr, "blok-mcp: listening on %s/mcp\n", url)
 		})
+	} else {
+		err = server.ServeStdio(ctx, stdin, stdout)
 	}
-	return server.ServeStdio(ctx, stdin, stdout)
+	since := time.Now()
+	select {
+	case since = <-stopping:
+	default:
+	}
+	server.closeWithin(stopDrain - time.Since(since))
+	return err
 }
 
 func loadAuthorize(spec string) (AuthorizeFunc, error) {

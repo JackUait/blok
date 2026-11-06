@@ -162,6 +162,22 @@ func (s *Server) sweepLoop() {
 	}
 }
 
+// closeWithin is Close, given up after wait: the stop's whole drain is
+// bounded, as Node's is.
+func (s *Server) closeWithin(wait time.Duration) {
+	closed := make(chan struct{})
+	go func() {
+		s.Close()
+		close(closed)
+	}()
+	timer := time.NewTimer(max(wait, 0))
+	defer timer.Stop()
+	select {
+	case <-closed:
+	case <-timer.C:
+	}
+}
+
 // Close closes every handle after its running call.
 func (s *Server) Close() {
 	s.stopOnce.Do(func() {

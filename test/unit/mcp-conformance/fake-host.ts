@@ -96,6 +96,8 @@ export interface TicketSpec {
   claims: Record<string, unknown>;
   /** Seconds from now for `exp`. */
   expiresIn?: number;
+  /** HS256-sign it, so a real sync host accepts it. */
+  secret?: string;
 }
 
 /** A ticket the host would mint. blok-mcp reads its claims without checking the signature. */
@@ -104,8 +106,9 @@ export const mintTicket = (spec: TicketSpec): string => {
     ...spec.claims,
     ...(spec.expiresIn !== undefined && { exp: Math.floor(Date.now() / 1000) + spec.expiresIn }),
   };
+  const signingInput = `${base64url('{"alg":"HS256","typ":"JWT"}')}.${base64url(JSON.stringify(claims))}`;
 
-  return `${base64url('{"alg":"HS256","typ":"JWT"}')}.${base64url(JSON.stringify(claims))}.${base64url('not-checked')}`;
+  return `${signingInput}.${spec.secret === undefined ? base64url('not-checked') : createHmac('sha256', spec.secret).update(signingInput).digest('base64url')}`;
 };
 
 const materialize = (value: unknown): unknown => {

@@ -8,7 +8,7 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use blok_outbound::operator::Stream;
 use ring::rand::{SecureRandom, SystemRandom};
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
 use tokio::sync::mpsc;
 
 use crate::outbound::Outbound;
@@ -132,9 +132,15 @@ async fn read_frames(mut reader: Reader, events: mpsc::UnboundedSender<Event>) {
     let _ = events.send(Event::Closed(code));
 }
 
-/// Ok(code) on a close frame; Err on a dropped or broken connection.
-async fn read_loop(reader: &mut Reader, events: &mpsc::UnboundedSender<Event>) -> Result<u16, ()> {
+/// Ok(code) on a close frame; Err on a dropped connection or a frame the
+/// `ws` receiver refuses (RFC 6455 §5).
+async fn read_loop<R: AsyncRead + Unpin>(
+    reader: &mut R,
+    events: &mpsc::UnboundedSender<Event>,
+) -> Result<u16, ()> {
     let mut message: Vec<u8> = Vec::new();
+    // The opcode of the fragmented message in progress.
+    let mut fragmented: Option<u8> = None;
     loop {
         let mut head = [0u8; 2];
         reader.read_exact(&mut head).await.map_err(|_| ())?;
@@ -149,19 +155,36 @@ async fn read_loop(reader: &mut Reader, events: &mpsc::UnboundedSender<Event>) -
             127 => reader.read_u64().await.map_err(|_| ())?,
             n => u64::from(n),
         };
-        if length > MAX_PAYLOAD {
-            return Err(());
+        match opcode {
+            0 if fragmented.is_none() => return Err(()),
+            1 | 2 if fragmented.is_some() => return Err(()),
+            0..=2 => {
+                // The cap counts the whole message, as `ws` counts it.
+                if message.len() as u64 + length > MAX_PAYLOAD {
+                    return Err(());
+                }
+            }
+            8..=10 => {
+                if !fin || length > 125 || (opcode == 8 && length == 1) {
+                    return Err(());
+                }
+            }
+            _ => return Err(()),
         }
         let mut payload = vec![0u8; length as usize];
         reader.read_exact(&mut payload).await.map_err(|_| ())?;
         match opcode {
             0..=2 => {
+                let kind = fragmented.unwrap_or(opcode);
                 message.extend_from_slice(&payload);
-                if fin {
-                    let done = std::mem::take(&mut message);
-                    if opcode != 1 && events.send(Event::Binary(done)).is_err() {
-                        return Ok(1000);
-                    }
+                if !fin {
+                    fragmented = Some(kind);
+                    continue;
+                }
+                fragmented = None;
+                let done = std::mem::take(&mut message);
+                if kind == 2 && events.send(Event::Binary(done)).is_err() {
+                    return Ok(1000);
                 }
             }
             8 => {
@@ -242,6 +265,75 @@ mod tests {
             accept_for("dGhlIHNhbXBsZSBub25jZQ=="),
             "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
         );
+    }
+
+    fn frame(fin: bool, opcode: u8, payload: &[u8]) -> Vec<u8> {
+        let mut out = vec![if fin { 0x80 } else { 0 } | opcode];
+        match payload.len() {
+            n if n < 126 => out.push(n as u8),
+            n if n <= 0xffff => {
+                out.push(126);
+                out.extend_from_slice(&(n as u16).to_be_bytes());
+            }
+            n => {
+                out.push(127);
+                out.extend_from_slice(&(n as u64).to_be_bytes());
+            }
+        }
+        out.extend_from_slice(payload);
+        out
+    }
+
+    async fn read_all(bytes: Vec<u8>) -> (Result<u16, ()>, Vec<Event>) {
+        let (events, mut received) = mpsc::unbounded_channel();
+        let ended = read_loop(&mut std::io::Cursor::new(bytes), &events).await;
+        drop(events);
+        let mut seen = Vec::new();
+        while let Some(event) = received.recv().await {
+            seen.push(event);
+        }
+        (ended, seen)
+    }
+
+    #[tokio::test]
+    async fn joins_fragments_and_hands_on_binary_only() {
+        let mut bytes = frame(false, 2, b"ab");
+        bytes.extend(frame(true, 9, b"p"));
+        bytes.extend(frame(true, 0, b"cd"));
+        bytes.extend(frame(false, 1, b"text"));
+        bytes.extend(frame(true, 0, b"!"));
+        bytes.extend(frame(true, 8, &1000u16.to_be_bytes()));
+        let (ended, events) = read_all(bytes).await;
+        assert_eq!(ended, Ok(1000));
+        assert_eq!(
+            events,
+            vec![Event::Ping(b"p".to_vec()), Event::Binary(b"abcd".to_vec())]
+        );
+    }
+
+    #[tokio::test]
+    async fn refuses_frames_ws_refuses() {
+        let cases: Vec<Vec<u8>> = vec![
+            frame(true, 0, b"x"),
+            [frame(false, 2, b"a"), frame(true, 2, b"b")].concat(),
+            frame(false, 9, b"p"),
+            frame(true, 9, &[0u8; 126]),
+            frame(true, 8, &[3]),
+            frame(true, 3, b""),
+        ];
+        for bytes in cases {
+            assert_eq!(read_all(bytes.clone()).await.0, Err(()), "{bytes:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn caps_the_whole_message_not_each_fragment() {
+        // Each frame is under the cap; together they pass it by one byte. The
+        // second header is refused before its payload is read.
+        let mut second = vec![0x80u8, 127];
+        second.extend_from_slice(&(MAX_PAYLOAD - 9).to_be_bytes());
+        let bytes = [frame(false, 2, &[0u8; 10]), second].concat();
+        assert_eq!(read_all(bytes).await.0, Err(()));
     }
 
     #[test]

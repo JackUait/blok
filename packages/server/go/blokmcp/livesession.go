@@ -12,6 +12,7 @@ import (
 	"github.com/JackUait/blok/packages/server/go/v2/blokagent"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/docendpoint"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // Delivery and presence timings of Node's live session.
@@ -44,7 +45,9 @@ type liveSession struct {
 	batch      int
 	unacked    map[int][]string
 	batchOrder []int
-	history    json.RawMessage
+	undo       *yjs.UndoManager
+	done       []*liveStep
+	undone     []*liveStep
 }
 
 func (s *Server) liveConverter() *convert.DocConverter {
@@ -96,7 +99,7 @@ func (s *Server) openLive(ctx context.Context, documentID string, write bool, wh
 	}
 	live := &liveSession{server: s, room: room, documentID: documentID, write: write, readOnly: !write,
 		actorID: actor.ID, name: who.presenceName, color: presenceColor(actor.ID), onBehalfOf: onBehalfOf,
-		unacked: map[int][]string{}, history: emptyHistory}
+		unacked: map[int][]string{}, undo: yjs.NewUndoManager(room.doc)}
 	room.mu.Lock()
 	room.setAwarenessField("user", map[string]string{"name": live.name, "color": live.color, "id": actor.ID})
 	room.setAwarenessField("agent", map[string]string{"via": "mcp", "onBehalfOf": onBehalfOf})
@@ -197,7 +200,6 @@ func (l *liveSession) sessionInput(call *callContext, document json.RawMessage, 
 		"document": document,
 		"actor":    call.actor,
 		"revision": revision,
-		"history":  l.history,
 	}
 }
 
@@ -294,7 +296,6 @@ type liveExecuteOutput struct {
 	Result   json.RawMessage `json:"result"`
 	Document json.RawMessage `json:"document"`
 	Edits    json.RawMessage `json:"edits"`
-	History  json.RawMessage `json:"history"`
 	Writes   bool            `json:"writes"`
 	Restore  string          `json:"restore"`
 }
@@ -346,6 +347,24 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 	}
 	var parsed liveResult
 	_ = json.Unmarshal(out.Result, &parsed)
+	if name := historyReplay(batch); name != "" && parsed.Error != nil &&
+		(parsed.Error.Code == "NOTHING_TO_UNDO" || parsed.Error.Code == "NOTHING_TO_REDO") {
+		// The bundle checked the call with no steps; the session's own
+		// steps replay natively, as Node's Y.UndoManager does.
+		room.holdAppends = true
+		result, wrote, err := l.replay(ctx, name, out.Result)
+		if err != nil || !wrote {
+			room.holdAppends = false
+			room.pendingLocal = nil
+			if err != nil {
+				return nil, err
+			}
+			answer, err := l.server.executeAnswer(ctx, map[string]any{"result": result})
+			return &executed{answer: answer}, err
+		}
+		out.Result, out.Writes = result, true
+		return l.deliver(ctx, out, mark)
+	}
 	if !parsed.OK {
 		if parsed.Error != nil && parsed.Error.Code == "APPLY_FAILED" {
 			l.readOnly = true
@@ -364,8 +383,9 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 	room.holdAppends = true
 	if len(edits) > 0 {
 		ops, err := blokagent.RoomOps(string(out.Edits), string(out.Document), string(out.Result))
+		stacked := l.undo.UndoTop()
 		if err == nil {
-			err = room.converter.ApplyOps(ctx, room.doc, ops)
+			l.undo.Capture(func(*yjs.Transaction) { err = room.converter.ApplyOps(ctx, room.doc, ops) })
 		}
 		if err != nil {
 			room.holdAppends = false
@@ -373,10 +393,19 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 			l.readOnly = true
 			return l.failed(ctx, out.Result, surfaceError("APPLY_FAILED", "The batch could not be applied to the room."))
 		}
+		after, _, err := l.exportLocked(ctx)
+		if err != nil {
+			return nil, err
+		}
+		l.recordStep(stepFor(out.Edits, document), document, after, stacked)
 	}
-	if len(out.History) > 0 {
-		l.history = out.History
-	}
+	return l.deliver(ctx, out, mark)
+}
+
+// deliver announces the batch, journals its update and waits for the
+// room's answer. mu is held.
+func (l *liveSession) deliver(ctx context.Context, out liveExecuteOutput, mark int) (*executed, error) {
+	room := l.room
 	l.afterBatch(out.Result)
 	room.holdAppends = false
 	failuresBefore := room.appendFailures

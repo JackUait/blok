@@ -151,7 +151,8 @@ func (r *liveRoom) resetDoc() {
 	if r.unhookDoc != nil {
 		r.unhookDoc()
 	}
-	r.doc = yjs.NewDoc(yjs.Options{})
+	// Deleted content stays, so an undo can put it back.
+	r.doc = yjs.NewDoc(yjs.Options{NoGC: true})
 	// A new doc is a new client: the presence moves to it, state kept.
 	if r.aware != nil {
 		fields, present := r.aware.fields, r.aware.hasLocal

@@ -49,15 +49,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -102,19 +94,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h1e70639786b2c1",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "f07345cc78db1535e69bc63075737121134881baab9466130cab71a09eb6a41f"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -152,34 +132,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h1e70639786b2c1",
-                    "rootId": null,
-                    "page": {
-                      "title": "é     😀 <b> & \"q\" \\ / \u0001    🏳️‍🌈"
-                    },
-                    "blocks": [
-                      {
-                        "id": "p1",
-                        "type": "paragraph",
-                        "depth": 0,
-                        "text": "é     😀  & \"q\" \\ / \u0001    🏳️‍🌈",
-                        "data": {
-                          "text": [
-                            {
-                              "text": "é     😀 "
-                            },
-                            {
-                              "text": " & \"q\" \\ / \u0001    🏳️‍🌈",
-                              "marks": {
-                                "bold": true
-                              }
-                            }
-                          ]
-                        }
-                      }
-                    ]
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -252,15 +205,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -305,19 +250,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "hae66ff7bc5b4",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "b951b503bdacd19f5c5a1dd787a3606309cf2732438f02e97c2cd9fed1fce12a"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -379,15 +312,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -432,19 +357,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h1dbd98f076a661",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "b25fd43eb2432786392d45f5c4aa5170db71d00692262294c7b37be3536f0b79"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -506,15 +419,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -559,19 +464,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h18aeb1425ab3a4",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "796bce6c9c248bb4c2910f8240aa3bf3bbf38af311a794cc10f5ca141ba736f7"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -628,15 +521,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -669,11 +554,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h155265c9b42162",
-                    "rootId": null,
-                    "blocks": []
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -702,11 +583,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "closed": true,
-                    "unsavedBatches": 0,
-                    "hostRecordLags": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -760,13 +637,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "doc.json is not valid JSON.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -816,13 +687,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "doc.json is not valid JSON.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -882,13 +747,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "arr.json is not a Blok document: expected an object with a \"blocks\" array.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -925,13 +784,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "nob.json is not a Blok document: expected an object with a \"blocks\" array.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -968,13 +821,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "bad.json is not a Blok document: expected an object with a \"blocks\" array.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1091,13 +938,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "error": {
-                          "code": "INVALID_ARGS",
-                          "message": "Doc.json already uses this name with different letter case. This disk ignores case, so the two ids cannot both exist.",
-                          "retryable": false
-                        }
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -1134,13 +975,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "error": {
-                          "code": "INVALID_ARGS",
-                          "message": "Doc.json already uses this name with different letter case. This disk ignores case, so the two ids cannot both exist.",
-                          "retryable": false
-                        }
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -1177,15 +1012,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "handle": "${h13}",
-                        "mode": "stored",
-                        "write": false,
-                        "durability": "saved-on-execute",
-                        "expiresAfterIdleMs": 600000,
-                        "contractRevision": "ace641df",
-                        "exists": true
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -1216,17 +1043,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "documents": [
-                          {
-                            "id": "Doc",
-                            "title": null,
-                            "live": false
-                          }
-                        ],
-                        "nextCursor": null,
-                        "supported": true
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -1274,15 +1091,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "handle": "${h11}",
-                        "mode": "stored",
-                        "write": false,
-                        "durability": "saved-on-execute",
-                        "expiresAfterIdleMs": 600000,
-                        "contractRevision": "ace641df",
-                        "exists": false
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -1321,15 +1130,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "handle": "${h12}",
-                        "mode": "stored",
-                        "write": false,
-                        "durability": "saved-on-execute",
-                        "expiresAfterIdleMs": 600000,
-                        "contractRevision": "ace641df",
-                        "exists": false
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -1368,15 +1169,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "handle": "${h13}",
-                        "mode": "stored",
-                        "write": false,
-                        "durability": "saved-on-execute",
-                        "expiresAfterIdleMs": 600000,
-                        "contractRevision": "ace641df",
-                        "exists": true
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -1407,17 +1200,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "documents": [
-                          {
-                            "id": "Doc",
-                            "title": null,
-                            "live": false
-                          }
-                        ],
-                        "nextCursor": null,
-                        "supported": true
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -1476,15 +1259,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1529,19 +1304,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h35cf1c7d5744",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "d86e5ee92c99d139cb6c76c46b193bb8b17a940ed2b166c86df86780cd3900a8"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1605,13 +1368,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "doc.json is a link to a missing file.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1664,15 +1421,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1713,20 +1462,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "doc.json is being saved by another process. Retry shortly.",
-                      "retryable": true
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1799,15 +1535,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1852,19 +1580,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h18aeb1425ab3a4",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "796bce6c9c248bb4c2910f8240aa3bf3bbf38af311a794cc10f5ca141ba736f7"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1965,42 +1681,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "-y",
-                        "title": null,
-                        "live": false
-                      },
-                      {
-                        "id": "B2",
-                        "title": "  ",
-                        "live": false
-                      },
-                      {
-                        "id": "Z",
-                        "title": "Zed",
-                        "live": false
-                      },
-                      {
-                        "id": "_x",
-                        "title": null,
-                        "live": false
-                      },
-                      {
-                        "id": "a.b",
-                        "title": "dotted",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": "B",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2060,17 +1741,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "Z",
-                        "title": "Zed",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2106,22 +1777,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "Z",
-                        "title": "Zed",
-                        "live": false
-                      },
-                      {
-                        "id": "_x",
-                        "title": null,
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": "_x",
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {

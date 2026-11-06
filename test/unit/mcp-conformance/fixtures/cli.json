@@ -877,15 +877,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 16,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -946,15 +938,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 1000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1015,15 +999,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 7,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1084,15 +1060,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 3,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1153,15 +1121,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 1,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1222,15 +1182,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 9007199254740992,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1293,15 +1245,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1334,13 +1278,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "HANDLE_LIMIT",
-                      "message": "You already have 1 open documents. Close one with blok_close.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {

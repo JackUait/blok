@@ -63,14 +63,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "blok_list_documents: unknown field \"zzz\"; accepted fields: query, cursor, limit",
-                      "path": "/zzz",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -112,14 +105,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "blok_list_documents: unknown field \"b\"; accepted fields: query, cursor, limit",
-                      "path": "/b",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -159,13 +145,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "limit must be a number; query and cursor must be strings.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -204,13 +184,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "limit must be a number; query and cursor must be strings.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -249,13 +223,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "limit must be a number; query and cursor must be strings.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -292,32 +260,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": "Beta",
-                        "live": false
-                      },
-                      {
-                        "id": "c",
-                        "title": "alpha two",
-                        "live": false
-                      },
-                      {
-                        "id": "doc",
-                        "title": "Notes",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -375,17 +318,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": "a",
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -420,22 +353,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": "Beta",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": "b",
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -475,32 +393,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": "Beta",
-                        "live": false
-                      },
-                      {
-                        "id": "c",
-                        "title": "alpha two",
-                        "live": false
-                      },
-                      {
-                        "id": "doc",
-                        "title": "Notes",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -550,17 +443,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": "a",
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -603,22 +486,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": "Beta",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": "b",
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -659,22 +527,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "c",
-                        "title": "alpha two",
-                        "live": false
-                      },
-                      {
-                        "id": "doc",
-                        "title": "Notes",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -714,11 +567,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -755,22 +604,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "c",
-                        "title": "alpha two",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -810,17 +644,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "doc",
-                        "title": "Notes",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -855,33 +679,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": "Beta",
-                        "live": false
-                      },
-                      {
-                        "id": "c",
-                        "title": "alpha two",
-                        "live": false
-                      },
-                      {
-                        "id": "doc",
-                        "title": "Notes",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true,
-                    "queryMatched": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -941,11 +739,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -989,14 +783,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "blok_open: unknown field \"zzz\"; accepted fields: documentId, query, mode, write, view",
-                      "path": "/zzz",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1043,13 +830,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "write must be true or false.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1094,13 +875,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "documentId must be a string of 1 to 512 characters.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1137,13 +912,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "documentId must be a string of 1 to 512 characters.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1180,13 +949,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "documentId must be a string of 1 to 512 characters.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1223,13 +986,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "With the files source, a document id uses letters, digits, \".\", \"_\" and \"-\" only (max 200), and is not a Windows device name such as CON or NUL.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1266,13 +1023,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "With the files source, a document id uses letters, digits, \".\", \"_\" and \"-\" only (max 200), and is not a Windows device name such as CON or NUL.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1309,13 +1060,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "documentId must be a string of 1 to 512 characters.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1360,13 +1105,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "query must be a string.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1412,15 +1151,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h10}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1468,13 +1199,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "mode must be \"auto\", \"live\" or \"stored\".",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1512,13 +1237,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "Live mode needs blok-mcp to run with --sync-url.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1556,13 +1275,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "mode must be \"auto\", \"live\" or \"stored\".",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1608,13 +1321,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "view must be an object of blok_read arguments.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1652,13 +1359,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "view must be an object of blok_read arguments.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1696,13 +1397,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "view must be an object of blok_read arguments.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1748,30 +1443,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h17}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true,
-                    "view": {
-                      "revision": "h155643a6091673",
-                      "rootId": null,
-                      "page": {
-                        "title": "Notes"
-                      },
-                      "blocks": [
-                        {
-                          "id": "p1",
-                          "type": "paragraph",
-                          "depth": 0,
-                          "text": "Hello"
-                        }
-                      ]
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1828,37 +1500,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h18}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true,
-                    "view": {
-                      "revision": "h155643a6091673",
-                      "rootId": null,
-                      "page": {
-                        "title": "Notes"
-                      },
-                      "blocks": [
-                        {
-                          "id": "p1",
-                          "type": "paragraph",
-                          "depth": 0,
-                          "text": "Hello",
-                          "data": {
-                            "text": [
-                              {
-                                "text": "Hello"
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1930,23 +1572,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "doc.read: must be >= 0",
-                      "commandIndex": 0,
-                      "path": "/commands/0/args/depth",
-                      "retryable": false,
-                      "details": {
-                        "problems": [
-                          {
-                            "path": "/depth",
-                            "message": "must be >= 0"
-                          }
-                        ]
-                      }
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1996,23 +1622,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "doc.read: unknown field \"zzz\"; accepted fields: rootId, depth, ids, detail, limit, cursor, textLimit",
-                      "commandIndex": 0,
-                      "path": "/commands/0/args/zzz",
-                      "retryable": false,
-                      "details": {
-                        "problems": [
-                          {
-                            "path": "/zzz",
-                            "message": "unknown field \"zzz\"; accepted fields: rootId, depth, ids, detail, limit, cursor, textLimit"
-                          }
-                        ]
-                      }
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2065,32 +1675,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": "Beta",
-                        "live": false
-                      },
-                      {
-                        "id": "c",
-                        "title": "alpha two",
-                        "live": false
-                      },
-                      {
-                        "id": "doc",
-                        "title": "Notes",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2146,17 +1731,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h22}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "documentId": "doc",
-                    "title": "Notes",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2197,17 +1772,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h23}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "documentId": "a",
-                    "title": "Alpha",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2248,17 +1813,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h24}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "documentId": "a",
-                    "title": "Alpha",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2299,33 +1854,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": "Beta",
-                        "live": false
-                      },
-                      {
-                        "id": "c",
-                        "title": "alpha two",
-                        "live": false
-                      },
-                      {
-                        "id": "doc",
-                        "title": "Notes",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true,
-                    "queryMatched": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2388,15 +1917,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2429,11 +1950,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h155265c9b42162",
-                    "rootId": null,
-                    "blocks": []
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2483,15 +2000,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h27}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2532,15 +2041,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h28}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2593,15 +2094,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h29}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2640,15 +2133,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h30}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2687,13 +2172,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "HANDLE_LIMIT",
-                      "message": "You already have 2 open documents. Close one with blok_close.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2738,13 +2217,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "With the files source, a document id uses letters, digits, \".\", \"_\" and \"-\" only (max 200), and is not a Windows device name such as CON or NUL.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2781,13 +2254,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "With the files source, a document id uses letters, digits, \".\", \"_\" and \"-\" only (max 200), and is not a Windows device name such as CON or NUL.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2824,13 +2291,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "With the files source, a document id uses letters, digits, \".\", \"_\" and \"-\" only (max 200), and is not a Windows device name such as CON or NUL.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2867,13 +2328,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "With the files source, a document id uses letters, digits, \".\", \"_\" and \"-\" only (max 200), and is not a Windows device name such as CON or NUL.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2910,13 +2365,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "With the files source, a document id uses letters, digits, \".\", \"_\" and \"-\" only (max 200), and is not a Windows device name such as CON or NUL.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2953,13 +2402,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "With the files source, a document id uses letters, digits, \".\", \"_\" and \"-\" only (max 200), and is not a Windows device name such as CON or NUL.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2999,14 +2442,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "blok_close: unknown field \"zzz\"; accepted fields: handle",
-                      "path": "/zzz",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3044,13 +2480,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "handle must be the string blok_open returned.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3081,13 +2511,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "handle must be the string blok_open returned.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3118,13 +2542,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "handle must be the string blok_open returned.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3155,13 +2573,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "UNKNOWN_HANDLE",
-                      "message": "No open document has this handle. It may have expired; call blok_open again.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3204,15 +2616,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3245,11 +2649,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "closed": true,
-                    "unsavedBatches": 0,
-                    "hostRecordLags": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3278,13 +2678,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "UNKNOWN_HANDLE",
-                      "message": "No open document has this handle. It may have expired; call blok_open again.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3315,13 +2709,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "UNKNOWN_HANDLE",
-                      "message": "No open document has this handle. It may have expired; call blok_open again.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3358,13 +2746,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "handle must be the string blok_open returned.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3395,13 +2777,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "handle must be the string blok_open returned.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3433,13 +2809,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "handle must be the string blok_open returned.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3470,13 +2840,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "UNKNOWN_HANDLE",
-                      "message": "No open document has this handle. It may have expired; call blok_open again.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3519,15 +2883,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3561,14 +2917,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "COMMAND_UNAVAILABLE",
-                      "message": "This surface cannot open sub-page documents, so `page` is not accepted. Omit it. Where blok_open exists, open the page block's pageId with it instead.",
-                      "path": "/page",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3601,14 +2950,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "`page` must be the id of a page block.",
-                      "path": "/page",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3641,14 +2983,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "`page` must be the id of a page block.",
-                      "path": "/page",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3681,23 +3016,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "doc.read: unknown field \"zzz\"; accepted fields: rootId, depth, ids, detail, limit, cursor, textLimit",
-                      "commandIndex": 0,
-                      "path": "/commands/0/args/zzz",
-                      "retryable": false,
-                      "details": {
-                        "problems": [
-                          {
-                            "path": "/zzz",
-                            "message": "unknown field \"zzz\"; accepted fields: rootId, depth, ids, detail, limit, cursor, textLimit"
-                          }
-                        ]
-                      }
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3739,23 +3058,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "doc.read: must be >= 0",
-                      "commandIndex": 0,
-                      "path": "/commands/0/args/depth",
-                      "retryable": false,
-                      "details": {
-                        "problems": [
-                          {
-                            "path": "/depth",
-                            "message": "must be >= 0"
-                          }
-                        ]
-                      }
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3797,23 +3100,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "doc.read: must be one of the allowed values",
-                      "commandIndex": 0,
-                      "path": "/commands/0/args/detail",
-                      "retryable": false,
-                      "details": {
-                        "problems": [
-                          {
-                            "path": "/detail",
-                            "message": "must be one of the allowed values"
-                          }
-                        ]
-                      }
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3866,15 +3153,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3907,21 +3186,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h155643a6091673",
-                    "rootId": null,
-                    "page": {
-                      "title": "Notes"
-                    },
-                    "blocks": [
-                      {
-                        "id": "p1",
-                        "type": "paragraph",
-                        "depth": 0,
-                        "text": "Hello"
-                      }
-                    ]
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3961,28 +3226,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h155643a6091673",
-                    "rootId": null,
-                    "page": {
-                      "title": "Notes"
-                    },
-                    "blocks": [
-                      {
-                        "id": "p1",
-                        "type": "paragraph",
-                        "depth": 0,
-                        "text": "Hello",
-                        "data": {
-                          "text": [
-                            {
-                              "text": "Hello"
-                            }
-                          ]
-                        }
-                      }
-                    ]
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4031,28 +3275,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h155643a6091673",
-                    "rootId": null,
-                    "page": {
-                      "title": "Notes"
-                    },
-                    "blocks": [
-                      {
-                        "id": "p1",
-                        "type": "paragraph",
-                        "depth": 0,
-                        "text": "Hello",
-                        "data": {
-                          "text": [
-                            {
-                              "text": "Hello"
-                            }
-                          ]
-                        }
-                      }
-                    ]
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4101,17 +3324,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "BLOCK_NOT_FOUND",
-                      "message": "Block \"nope\" does not exist.",
-                      "path": "/ids/0",
-                      "retryable": false,
-                      "details": {
-                        "id": "nope"
-                      }
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4147,21 +3360,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h155643a6091673",
-                    "rootId": null,
-                    "page": {
-                      "title": "Notes"
-                    },
-                    "blocks": [
-                      {
-                        "id": "p1",
-                        "type": "paragraph",
-                        "depth": 0,
-                        "text": "Hello"
-                      }
-                    ]
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4212,15 +3411,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4254,14 +3445,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "blok_describe: unknown field \"zzz\"; accepted fields: tool, command",
-                      "path": "/zzz",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4294,14 +3478,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "`tool` must be a string.",
-                      "path": "/tool",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4334,14 +3511,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "`command` must be a string.",
-                      "path": "/command",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4371,13 +3541,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "handle must be the string blok_open returned.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4408,13 +3572,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "UNKNOWN_HANDLE",
-                      "message": "No open document has this handle. It may have expired; call blok_open again.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4457,15 +3615,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4498,549 +3648,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "index": {
-                      "tools": [
-                        {
-                          "name": "paragraph",
-                          "summary": "A paragraph of rich text. The default block."
-                        },
-                        {
-                          "name": "header",
-                          "summary": "A heading. With isToggleable it collapses and owns the blocks nested under it."
-                        },
-                        {
-                          "name": "list",
-                          "summary": "One list item. A list is a run of sibling list blocks."
-                        },
-                        {
-                          "name": "table",
-                          "summary": "A grid. Each cell holds child blocks; content maps cells to those block ids."
-                        },
-                        {
-                          "name": "toggle",
-                          "summary": "A collapsible line. Its body is the blocks nested under it."
-                        },
-                        {
-                          "name": "callout",
-                          "summary": "A highlighted panel with an emoji. Its body is child blocks."
-                        },
-                        {
-                          "name": "database",
-                          "summary": "A database: a schema of properties and saved views. Rows are child database-row blocks."
-                        },
-                        {
-                          "name": "database-row",
-                          "summary": "One row of a database. Its child blocks are its page body. An optional pageId points to a separate body document instead."
-                        },
-                        {
-                          "name": "database-comment",
-                          "summary": "A comment on a database row, kept out of the row's page content."
-                        },
-                        {
-                          "name": "divider",
-                          "summary": "A horizontal rule."
-                        },
-                        {
-                          "name": "spacer",
-                          "summary": "Vertical whitespace."
-                        },
-                        {
-                          "name": "table_of_contents",
-                          "summary": "An outline of the page headings, read from the document each time."
-                        },
-                        {
-                          "name": "quote",
-                          "summary": "A quotation."
-                        },
-                        {
-                          "name": "code",
-                          "summary": "A code block with a language and an optional file name."
-                        },
-                        {
-                          "name": "image",
-                          "summary": "An image with optional caption, crop, turn, colour look and drawings."
-                        },
-                        {
-                          "name": "file",
-                          "summary": "A downloadable file card."
-                        },
-                        {
-                          "name": "audio",
-                          "summary": "An audio player with optional title, artist and cover."
-                        },
-                        {
-                          "name": "video",
-                          "summary": "A video player."
-                        },
-                        {
-                          "name": "column_list",
-                          "summary": "A row of columns. The columns are its children."
-                        },
-                        {
-                          "name": "column",
-                          "summary": "One column of a column_list. Its content is its children."
-                        },
-                        {
-                          "name": "tabs",
-                          "summary": "A set of tabs. Each tab is a child tab block."
-                        },
-                        {
-                          "name": "tab",
-                          "summary": "One tab of a tabs block. Its content is its children."
-                        },
-                        {
-                          "name": "embed",
-                          "summary": "A live embed from a known provider (YouTube, Figma, …)."
-                        },
-                        {
-                          "name": "bookmark",
-                          "summary": "A link preview card."
-                        },
-                        {
-                          "name": "page",
-                          "summary": "A sub-page. Its body is a separate document named by pageId."
-                        },
-                        {
-                          "name": "page-link",
-                          "summary": "A link to an existing page. It owns nothing."
-                        }
-                      ],
-                      "commands": [
-                        {
-                          "name": "audio.setCover",
-                          "summary": "Set the cover picture from a URL."
-                        },
-                        {
-                          "name": "audio.setSource",
-                          "summary": "Set or replace the audio from a URL."
-                        },
-                        {
-                          "name": "audio.uploadFile",
-                          "summary": "Upload a file and insert it as an audio block, as a person's upload does.",
-                          "available": false,
-                          "reason": "host"
-                        },
-                        {
-                          "name": "block.convert",
-                          "summary": "Turn a block into another type. Its text carries over, and its block colour onto a text block that has one; data sets only the new type's other fields. A style or level, such as a heading 2, is a variant: pass the tool as type and the variant's data, e.g. { \"type\": \"header\", \"data\": { \"level\": 2 } }. describe({ tool }) lists each tool's variants."
-                        },
-                        {
-                          "name": "block.delete",
-                          "summary": "Delete a block. Children move up unless the tool deletes them."
-                        },
-                        {
-                          "name": "block.duplicate",
-                          "summary": "Deep-copy a block with new ids."
-                        },
-                        {
-                          "name": "block.insert",
-                          "summary": "Insert a block, with optional children."
-                        },
-                        {
-                          "name": "block.move",
-                          "summary": "Move a block and its subtree."
-                        },
-                        {
-                          "name": "block.update",
-                          "summary": "Merge data or tunes into a block. A key set to null is cleared: removed, or set to its empty or off value (rich text [], code lineNumbers false, callout emoji \"\") where the tool would otherwise refill a default. A required field with no such value (a heading level, a list style) cannot be cleared."
-                        },
-                        {
-                          "name": "bookmark.create",
-                          "summary": "Create a link preview card. When the host fetches link previews, it fills the title, description and image."
-                        },
-                        {
-                          "name": "column_list.addColumn",
-                          "summary": "Add a column at a zero-based index and reset all columns to even widths."
-                        },
-                        {
-                          "name": "column_list.create",
-                          "summary": "Create a row of columns, or wrap existing blocks in columns."
-                        },
-                        {
-                          "name": "column_list.removeColumn",
-                          "summary": "Delete a column and its children."
-                        },
-                        {
-                          "name": "column_list.setWidths",
-                          "summary": "Set relative widths for every column."
-                        },
-                        {
-                          "name": "database.addComment",
-                          "summary": "Start a comment thread on a row, or on one of its cells with propertyId. You write it for the person you act for."
-                        },
-                        {
-                          "name": "database.addOption",
-                          "summary": "Add an option to a select, multi-select or status property, last."
-                        },
-                        {
-                          "name": "database.addProperty",
-                          "summary": "Add a property (a column). It goes last unless before or after names a property."
-                        },
-                        {
-                          "name": "database.addRow",
-                          "summary": "Add a row (a database-row child block), as the New button does. It goes last in every view, unless before or after names a row: then it goes there in the open view's order."
-                        },
-                        {
-                          "name": "database.addTemplate",
-                          "summary": "Add an empty page template (a database-row child with template true), after the last template."
-                        },
-                        {
-                          "name": "database.addView",
-                          "summary": "Add a view at the end and open it."
-                        },
-                        {
-                          "name": "database.applyTemplate",
-                          "summary": "Apply a template to a row whose page is empty, as picking one on the row page does: it fills the row's empty values, a missing icon, cover and width, and copies the template's page body."
-                        },
-                        {
-                          "name": "database.changePropertyType",
-                          "summary": "Change a property's type and convert every row's value, as the property menu does."
-                        },
-                        {
-                          "name": "database.create",
-                          "summary": "Create a database with a Title and a Status property and one view."
-                        },
-                        {
-                          "name": "database.deleteComment",
-                          "summary": "Delete a reply, or a thread with every reply in it."
-                        },
-                        {
-                          "name": "database.deleteOption",
-                          "summary": "Delete an option. rows: keep empties the value on rows that had it (what the editor does); delete removes those rows."
-                        },
-                        {
-                          "name": "database.deleteProperty",
-                          "summary": "Remove a property from the schema. Row values stay in the rows."
-                        },
-                        {
-                          "name": "database.deleteRow",
-                          "summary": "Delete a row or a template with its page, as the row menu does: its sub-items go too, and relations pointing at it let go of it. block.delete on a row does the same."
-                        },
-                        {
-                          "name": "database.deleteView",
-                          "summary": "Delete a view. If it was open, its neighbour opens."
-                        },
-                        {
-                          "name": "database.duplicateProperty",
-                          "summary": "Copy a property right after itself, named \"<name> (copy)\", with every row's value."
-                        },
-                        {
-                          "name": "database.duplicateRow",
-                          "summary": "Copy a row right after itself with its page body, as the row menu's Duplicate does; in an open view with its own manual order the copy goes right after it there too. A parent's sub-items are copied under the copy. A template copy stays a template. block.duplicate on a row does the same."
-                        },
-                        {
-                          "name": "database.duplicateView",
-                          "summary": "Copy a view with all its settings to the end, and open the copy."
-                        },
-                        {
-                          "name": "database.editComment",
-                          "summary": "Change the text of a comment, which then shows as edited."
-                        },
-                        {
-                          "name": "database.moveOption",
-                          "summary": "Move an option before or after another option."
-                        },
-                        {
-                          "name": "database.moveRow",
-                          "summary": "Move a row before or after another row in the open view, as a drag does, and optionally into another board column. In a view with its own manual order, only that order changes; otherwise the row moves for every view on the shared order, and the other views keep it where they show it."
-                        },
-                        {
-                          "name": "database.moveRowTo",
-                          "summary": "Move a row, its sub-items and their pages to the end of another database in this document, as the row menu's Move to does."
-                        },
-                        {
-                          "name": "database.moveView",
-                          "summary": "Move a view before or after another view."
-                        },
-                        {
-                          "name": "database.pressButton",
-                          "summary": "Press a button property on a row, as a click on its cell does: the button's steps run in order.",
-                          "available": false,
-                          "reason": "runtime"
-                        },
-                        {
-                          "name": "database.recolorOption",
-                          "summary": "Set the color of a select, multi-select or status option."
-                        },
-                        {
-                          "name": "database.renameOption",
-                          "summary": "Rename an option."
-                        },
-                        {
-                          "name": "database.renameView",
-                          "summary": "Rename a view."
-                        },
-                        {
-                          "name": "database.replyToComment",
-                          "summary": "Reply in a thread. Anyone's thread takes a reply; a reply takes none."
-                        },
-                        {
-                          "name": "database.resolveComment",
-                          "summary": "Resolve a thread, anyone's, as its resolve button does. Then it leaves reads and takes no reply, edit or delete: nothing reopens it."
-                        },
-                        {
-                          "name": "database.setDefaultTemplate",
-                          "summary": "Set the template new rows start from, or null for none."
-                        },
-                        {
-                          "name": "database.setLayout",
-                          "summary": "Change a view's layout type, as the view settings Layout menu does."
-                        },
-                        {
-                          "name": "database.setLock",
-                          "summary": "Lock or unlock the database. A locked database's properties and views cannot change; rows can."
-                        },
-                        {
-                          "name": "database.setRowValues",
-                          "summary": "Set property values on a row. Values not named stay. The row title mirrors the title property."
-                        },
-                        {
-                          "name": "database.setTemplateRepeat",
-                          "summary": "Set or clear (null) a template's repeating schedule. Blok stores it; the host makes the rows."
-                        },
-                        {
-                          "name": "database.submitForm",
-                          "summary": "Fill out and submit a form view, as the person, as its Submit button does: the answer becomes a row and the host hears of it (forms.onSubmit).",
-                          "available": false,
-                          "reason": "runtime"
-                        },
-                        {
-                          "name": "database.updateProperty",
-                          "summary": "Rename a property or change its settings (description, icon, page visibility, number, date, status, option sort, ID, person, files limit, URL show full URL, formula, relation, rollup, button, dependency, autofill), or the row page layout on the title property."
-                        },
-                        {
-                          "name": "database.updateView",
-                          "summary": "Change a view's saved settings: filters, sorts, grouping, calculations, columns, card, calendar, timeline, chart, map, form texts and form sharing. It applies for everyone."
-                        },
-                        {
-                          "name": "doc.find",
-                          "summary": "Find text as the find bar does: every hit with its field and offsets, and a count. Or list blocks by type."
-                        },
-                        {
-                          "name": "doc.read",
-                          "summary": "Read the document as an outline, a subtree, or chosen blocks in full. A full read adds meta: when the block was last edited and by whom, as the block menu shows; a person has a name only when the host's user directory knows them."
-                        },
-                        {
-                          "name": "doc.setIcon",
-                          "summary": "Set this document's icon. null clears it."
-                        },
-                        {
-                          "name": "doc.setTitle",
-                          "summary": "Set this document's title. '' clears it."
-                        },
-                        {
-                          "name": "embed.create",
-                          "summary": "Create an embed from a URL. The provider is found from the URL."
-                        },
-                        {
-                          "name": "embed.setUrl",
-                          "summary": "Set or change the embedded URL. The provider is found from the URL."
-                        },
-                        {
-                          "name": "file.setSource",
-                          "summary": "Set or replace the file from a URL."
-                        },
-                        {
-                          "name": "file.uploadFile",
-                          "summary": "Upload a file and insert it as a file card, as a person's upload does.",
-                          "available": false,
-                          "reason": "host"
-                        },
-                        {
-                          "name": "history.changes",
-                          "summary": "What changed between two versions: added, removed, changed and moved blocks.",
-                          "available": false,
-                          "reason": "service"
-                        },
-                        {
-                          "name": "history.read",
-                          "summary": "Read one saved version, in the shape doc.read gives.",
-                          "available": false,
-                          "reason": "service"
-                        },
-                        {
-                          "name": "history.redo",
-                          "summary": "Redo this session's last undone step. CONFLICT as for history.undo."
-                        },
-                        {
-                          "name": "history.restore",
-                          "summary": "Restore a saved version, as the version history's Restore does: the document becomes that version, title and icon too.",
-                          "available": false,
-                          "reason": "service"
-                        },
-                        {
-                          "name": "history.undo",
-                          "summary": "Undo this session's last step. Never the user's or a peer's. A page.rename or page.setIcon step wrote another document and cannot be undone. CONFLICT: someone else changed what the step wrote; re-read and write the fix by hand."
-                        },
-                        {
-                          "name": "history.versions",
-                          "summary": "List the saved versions of this document, newest first, with who edited and when.",
-                          "available": false,
-                          "reason": "service"
-                        },
-                        {
-                          "name": "html.insert",
-                          "summary": "Paste HTML as blocks: the blocks a person's paste of it gives in the editor. Additive.",
-                          "available": false,
-                          "reason": "runtime"
-                        },
-                        {
-                          "name": "image.addMarkup",
-                          "summary": "Draw shapes, strokes or text labels over the image. Returns their markup ids."
-                        },
-                        {
-                          "name": "image.crop",
-                          "summary": "Crop the image to a rectangle given in percent of the turned image. The full rectangle removes the crop."
-                        },
-                        {
-                          "name": "image.flip",
-                          "summary": "Mirror the image left to right. The crop and drawings mirror with it."
-                        },
-                        {
-                          "name": "image.removeMarkup",
-                          "summary": "Remove markup items by id, or all of them."
-                        },
-                        {
-                          "name": "image.rotate",
-                          "summary": "Turn the image clockwise by quarter turns. The crop and drawings turn with it."
-                        },
-                        {
-                          "name": "image.setSource",
-                          "summary": "Set or replace the image from a URL."
-                        },
-                        {
-                          "name": "image.straighten",
-                          "summary": "Tilt the image by a few degrees clockwise. The crop shrinks so no empty corner shows."
-                        },
-                        {
-                          "name": "image.updateMarkup",
-                          "summary": "Change fields of one markup item. Its id and type stay."
-                        },
-                        {
-                          "name": "image.uploadFile",
-                          "summary": "Upload a file and insert it as an image block, as a person's upload does.",
-                          "available": false,
-                          "reason": "host"
-                        },
-                        {
-                          "name": "markdown.export",
-                          "summary": "Export the document or a subtree as Markdown."
-                        },
-                        {
-                          "name": "markdown.insert",
-                          "summary": "Convert Markdown into blocks and insert them. Additive."
-                        },
-                        {
-                          "name": "page.rename",
-                          "summary": "Rename the page this block points to. Not this document: use doc.setTitle for that.",
-                          "available": false,
-                          "reason": "service"
-                        },
-                        {
-                          "name": "page.setIcon",
-                          "summary": "Set or clear the icon of the page this block points to.",
-                          "available": false,
-                          "reason": "service"
-                        },
-                        {
-                          "name": "table.clearCells",
-                          "summary": "Empty the cells in a range; each keeps one empty paragraph."
-                        },
-                        {
-                          "name": "table.create",
-                          "summary": "Create a table with rows x cols cells, each holding one paragraph."
-                        },
-                        {
-                          "name": "table.deleteColumns",
-                          "summary": "Delete columns and the blocks in their cells."
-                        },
-                        {
-                          "name": "table.deleteRows",
-                          "summary": "Delete rows and the blocks in their cells."
-                        },
-                        {
-                          "name": "table.duplicateColumns",
-                          "summary": "Copy columns, with their blocks, colours, placement and width, right after the copied range."
-                        },
-                        {
-                          "name": "table.duplicateRows",
-                          "summary": "Copy rows, with their blocks, colours and placement, right after the copied range."
-                        },
-                        {
-                          "name": "table.fillCells",
-                          "summary": "Copy the first column (right) or first row (down) of a range across the range. The other cells lose their blocks."
-                        },
-                        {
-                          "name": "table.insertColumns",
-                          "summary": "Insert empty columns before column at (use the column count to append)."
-                        },
-                        {
-                          "name": "table.insertRows",
-                          "summary": "Insert empty rows before row at (use the row count to append)."
-                        },
-                        {
-                          "name": "table.mergeCells",
-                          "summary": "Merge a rectangle of cells into its top-left cell. Their blocks move into it."
-                        },
-                        {
-                          "name": "table.moveColumn",
-                          "summary": "Move one column to another index."
-                        },
-                        {
-                          "name": "table.moveRow",
-                          "summary": "Move one row to another index."
-                        },
-                        {
-                          "name": "table.splitCell",
-                          "summary": "Split a merged cell back into single cells. Its content stays in the top-left cell."
-                        },
-                        {
-                          "name": "table.styleCells",
-                          "summary": "Set or clear background colour, text colour and placement on a range of cells."
-                        },
-                        {
-                          "name": "tabs.addTab",
-                          "summary": "Add a tab at a zero-based index."
-                        },
-                        {
-                          "name": "tabs.create",
-                          "summary": "Create a tabs block with its tabs."
-                        },
-                        {
-                          "name": "tabs.deleteTab",
-                          "summary": "Delete a tab and its content."
-                        },
-                        {
-                          "name": "text.delete",
-                          "summary": "Delete a range of text."
-                        },
-                        {
-                          "name": "text.format",
-                          "summary": "Set or clear marks on a range."
-                        },
-                        {
-                          "name": "text.insert",
-                          "summary": "Insert text into a rich-text field."
-                        },
-                        {
-                          "name": "text.replace",
-                          "summary": "Replace a range, or the whole field. Plain text takes the marks where a found or offset range starts."
-                        },
-                        {
-                          "name": "video.setSource",
-                          "summary": "Set or replace the video from a URL."
-                        },
-                        {
-                          "name": "video.uploadFile",
-                          "summary": "Upload a file and insert it as a video block, as a person's upload does.",
-                          "available": false,
-                          "reason": "host"
-                        }
-                      ],
-                      "guidance": "Rich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.\nMarks: bold, italic, underline, strikethrough, code, sup, sub, highlight, color, background, link, and tag:<name> for a custom inline tool. sup and sub cannot share a run.\nhighlight alone is stored as background \"yellow\"; with a background, as that background. color and background take a preset: \"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.\nA link needs href. With no target or rel it gets target \"_blank\" and rel \"nofollow\"; an \"#anchor\" href gets target \"_self\". A target or rel you give is kept, but in the editor a host link config replaces both.\nEmbeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page: id is the pageId in a page block's data, not the block id.\ntext.format with unset [\"*\"] clears every mark; \"tag:*\" clears every custom mark.\nmarkdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format."
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -5608,134 +4216,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "command": {
-                      "name": "block.insert",
-                      "summary": "Insert a block, with optional children.",
-                      "guidance": "Rich-text fields take segments or plain text, never Markdown. Use markdown.insert for Markdown.",
-                      "args": {
-                        "type": "object",
-                        "properties": {
-                          "type": {
-                            "type": "string",
-                            "minLength": 1,
-                            "description": "A block tool: paragraph, header, list, table, toggle, callout, database, database-row, divider, spacer, table_of_contents, quote, code, image, file, audio, video, column_list, column, tabs, tab, embed, bookmark, page-link. A variant sets these data fields; the tool's other required fields still go in data: header {level: 1|2|3|4|5|6, isToggleable: true}, list {style: \"unordered\"|\"ordered\"|\"checklist\"}."
-                          },
-                          "data": {
-                            "type": "object",
-                            "description": "Rich-text fields take what text.replace \"with\" takes."
-                          },
-                          "tunes": {
-                            "type": "object"
-                          },
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "children": {
-                            "type": "array",
-                            "items": {
-                              "$ref": "#/$defs/insertSpec"
-                            }
-                          },
-                          "parentId": {
-                            "oneOf": [
-                              {
-                                "type": "string",
-                                "minLength": 1,
-                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "position": {
-                            "description": "'start' | 'end' | { before: id } | { after: id }",
-                            "oneOf": [
-                              {
-                                "enum": [
-                                  "start",
-                                  "end"
-                                ]
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "before": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
-                                  }
-                                },
-                                "required": [
-                                  "before"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "after": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
-                                  }
-                                },
-                                "required": [
-                                  "after"
-                                ],
-                                "additionalProperties": false
-                              }
-                            ]
-                          },
-                          "demote": {
-                            "type": "boolean"
-                          }
-                        },
-                        "required": [
-                          "type"
-                        ],
-                        "additionalProperties": false,
-                        "$defs": {
-                          "insertSpec": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "data": {
-                                "type": "object"
-                              },
-                              "tunes": {
-                                "type": "object"
-                              },
-                              "id": {
-                                "type": "string",
-                                "minLength": 1,
-                                "description": "Later commands use this id as is, no \"$\"."
-                              },
-                              "children": {
-                                "type": "array",
-                                "items": {
-                                  "$ref": "#/$defs/insertSpec"
-                                }
-                              }
-                            },
-                            "required": [
-                              "type"
-                            ],
-                            "additionalProperties": false
-                          }
-                        }
-                      },
-                      "readOnly": false,
-                      "runtime": "any",
-                      "source": "core",
-                      "available": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -5888,335 +4369,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "tool": {
-                      "name": "paragraph",
-                      "title": "Text",
-                      "summary": "A paragraph of rich text. The default block.",
-                      "guidance": "Rich-text fields take segments: [{ \"text\": \"…\", \"marks\": { \"bold\": true } }]. Never write Markdown into them; use markdown.insert to import Markdown. textColor and backgroundColor take a preset name: gray, brown, orange, yellow, green, blue, purple, pink, red.",
-                      "level": "described",
-                      "insertable": true,
-                      "variants": [
-                        {
-                          "name": "paragraph-0",
-                          "title": "Text",
-                          "data": {}
-                        }
-                      ],
-                      "data": {
-                        "type": "object",
-                        "description": "A line of rich text.",
-                        "required": [
-                          "text"
-                        ],
-                        "additionalProperties": false,
-                        "properties": {
-                          "text": {
-                            "description": "The line's rich text.",
-                            "oneOf": [
-                              {
-                                "type": "array",
-                                "description": "Rich-text segments, in order. Preferred: this is the shape Blok saves.",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "required": [
-                                        "text"
-                                      ],
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "text": {
-                                          "type": "string",
-                                          "description": "Line breaks are \"\\n\"."
-                                        },
-                                        "marks": {
-                                          "type": "object",
-                                          "description": "Formatting on one run. Unknown keys drop, except custom `tag:<name>` marks.",
-                                          "properties": {
-                                            "bold": {
-                                              "const": true
-                                            },
-                                            "italic": {
-                                              "const": true
-                                            },
-                                            "underline": {
-                                              "const": true
-                                            },
-                                            "strikethrough": {
-                                              "const": true
-                                            },
-                                            "code": {
-                                              "const": true
-                                            },
-                                            "sup": {
-                                              "const": true,
-                                              "description": "Not with sub on one run."
-                                            },
-                                            "sub": {
-                                              "const": true
-                                            },
-                                            "highlight": {
-                                              "const": true,
-                                              "description": "Stored as background \"yellow\" unless background is set."
-                                            },
-                                            "color": {
-                                              "type": "string",
-                                              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb, hsl snap to the nearest; names and var() stay; other syntaxes drop."
-                                            },
-                                            "background": {
-                                              "type": "string",
-                                              "description": "Like color; page backgrounds drop."
-                                            },
-                                            "link": {
-                                              "type": "object",
-                                              "description": "Default \"_blank\"/\"nofollow\", \"_self\" for #anchors.",
-                                              "required": [
-                                                "href"
-                                              ],
-                                              "additionalProperties": false,
-                                              "properties": {
-                                                "href": {
-                                                  "type": "string"
-                                                },
-                                                "target": {
-                                                  "type": "string"
-                                                },
-                                                "rel": {
-                                                  "type": "string"
-                                                }
-                                              }
-                                            }
-                                          },
-                                          "patternProperties": {
-                                            "^tag:": {
-                                              "type": "object",
-                                              "additionalProperties": {
-                                                "type": "string"
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "object",
-                                      "required": [
-                                        "embed"
-                                      ],
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "embed": {
-                                          "oneOf": [
-                                            {
-                                              "type": "object",
-                                              "required": [
-                                                "equation"
-                                              ],
-                                              "additionalProperties": false,
-                                              "properties": {
-                                                "equation": {
-                                                  "type": "object",
-                                                  "required": [
-                                                    "expression"
-                                                  ],
-                                                  "additionalProperties": false,
-                                                  "properties": {
-                                                    "expression": {
-                                                      "type": "string",
-                                                      "description": "LaTeX."
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "type": "object",
-                                              "required": [
-                                                "page"
-                                              ],
-                                              "additionalProperties": false,
-                                              "properties": {
-                                                "page": {
-                                                  "type": "object",
-                                                  "required": [
-                                                    "id"
-                                                  ],
-                                                  "additionalProperties": false,
-                                                  "properties": {
-                                                    "id": {
-                                                      "type": "string"
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "type": "object",
-                                              "required": [
-                                                "html"
-                                              ],
-                                              "additionalProperties": false,
-                                              "properties": {
-                                                "html": {
-                                                  "type": "string",
-                                                  "description": "Kept verbatim."
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "marks": {
-                                          "type": "object",
-                                          "description": "Formatting on one run. Unknown keys drop, except custom `tag:<name>` marks.",
-                                          "properties": {
-                                            "bold": {
-                                              "const": true
-                                            },
-                                            "italic": {
-                                              "const": true
-                                            },
-                                            "underline": {
-                                              "const": true
-                                            },
-                                            "strikethrough": {
-                                              "const": true
-                                            },
-                                            "code": {
-                                              "const": true
-                                            },
-                                            "sup": {
-                                              "const": true,
-                                              "description": "Not with sub on one run."
-                                            },
-                                            "sub": {
-                                              "const": true
-                                            },
-                                            "highlight": {
-                                              "const": true,
-                                              "description": "Stored as background \"yellow\" unless background is set."
-                                            },
-                                            "color": {
-                                              "type": "string",
-                                              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb, hsl snap to the nearest; names and var() stay; other syntaxes drop."
-                                            },
-                                            "background": {
-                                              "type": "string",
-                                              "description": "Like color; page backgrounds drop."
-                                            },
-                                            "link": {
-                                              "type": "object",
-                                              "description": "Default \"_blank\"/\"nofollow\", \"_self\" for #anchors.",
-                                              "required": [
-                                                "href"
-                                              ],
-                                              "additionalProperties": false,
-                                              "properties": {
-                                                "href": {
-                                                  "type": "string"
-                                                },
-                                                "target": {
-                                                  "type": "string"
-                                                },
-                                                "rel": {
-                                                  "type": "string"
-                                                }
-                                              }
-                                            }
-                                          },
-                                          "patternProperties": {
-                                            "^tag:": {
-                                              "type": "object",
-                                              "additionalProperties": {
-                                                "type": "string"
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "type": "string",
-                                "description": "In saved data, inline HTML. An agent command stores a string as plain text, tags and all: use segments for formatting."
-                              }
-                            ]
-                          },
-                          "textColor": {
-                            "type": "string",
-                            "description": "Text color preset name, e.g. \"red\"."
-                          },
-                          "backgroundColor": {
-                            "type": "string",
-                            "description": "Background color preset name."
-                          }
-                        }
-                      },
-                      "defaultData": {
-                        "text": []
-                      },
-                      "examples": [
-                        {
-                          "text": [
-                            {
-                              "text": "Ship it "
-                            },
-                            {
-                              "text": "today",
-                              "marks": {
-                                "bold": true
-                              }
-                            }
-                          ]
-                        }
-                      ],
-                      "richTextFields": [
-                        "text"
-                      ],
-                      "viewState": [],
-                      "guardedFields": {},
-                      "children": {
-                        "accepts": true,
-                        "ownedByTool": false,
-                        "layout": false,
-                        "deletedWithParent": false
-                      },
-                      "selfPlacesChildren": false,
-                      "restrictedInTableCell": false,
-                      "convertsTo": [
-                        "header",
-                        "list",
-                        "toggle",
-                        "callout",
-                        "quote",
-                        "code"
-                      ],
-                      "conversion": {
-                        "export": "text",
-                        "import": "text"
-                      },
-                      "inlineTools": [
-                        "convertTo",
-                        "marker",
-                        "bold",
-                        "italic",
-                        "underline",
-                        "clearFormat",
-                        "link",
-                        "strikethrough",
-                        "inlineCode",
-                        "equation",
-                        "supSub"
-                      ],
-                      "tunes": [
-                        "delete",
-                        "copyLink"
-                      ]
-                    },
-                    "commands": []
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6570,13 +4723,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "UNKNOWN_COMMAND",
-                      "message": "No command \"nope\". Call describe() for the list.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6608,13 +4755,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "UNKNOWN_TOOL",
-                      "message": "No tool \"nope\". Known: paragraph, header, list, table, toggle, callout, database, database-row, database-comment, divider, spacer, table_of_contents, quote, code, image, file, audio, video, column_list, column, tabs, tab, embed, bookmark, page, page-link. Inline tools: convertTo, marker, bold, italic, underline, clearFormat, link, strikethrough, inlineCode, equation, supSub.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6653,20 +4794,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "handle must be the string blok_open returned.",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6708,15 +4836,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6758,21 +4878,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "blok_execute: unknown field \"zzz\"; accepted fields: commands, expectRevision",
-                      "path": "/zzz",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6811,22 +4917,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "revision": "h155643a6091673",
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "A batch is { commands: [ { name, args } ... ] } with at least one command.",
-                      "path": "/commands",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6867,22 +4958,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "revision": "h155643a6091673",
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "A batch is { commands: [ { name, args } ... ] } with at least one command.",
-                      "path": "/commands",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6923,22 +4999,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "revision": "h155643a6091673",
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "A batch is { commands: [ { name, args } ... ] } with at least one command.",
-                      "path": "/commands",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6987,22 +5048,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "revision": "h155643a6091673",
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "expectRevision must be the string a read or result returned.",
-                      "path": "/expectRevision",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7051,21 +5097,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "COMMAND_UNAVAILABLE",
-                      "message": "This surface cannot open sub-page documents, so `page` is not accepted. Omit it. Where blok_open exists, open the page block's pageId with it instead.",
-                      "path": "/page",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7110,23 +5142,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "revision": "h155643a6091673",
-                    "error": {
-                      "code": "UNKNOWN_COMMAND",
-                      "message": "\"nope\" is not a command here. Call describe() for the list.",
-                      "commandIndex": 0,
-                      "path": "/commands/0/name",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7172,23 +5188,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "revision": "h155643a6091673",
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "Each command is { name: string, args: object, ref?: string }.",
-                      "commandIndex": 0,
-                      "path": "/commands/0",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7240,15 +5240,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7289,20 +5281,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "READ_ONLY",
-                      "message": "This handle is read-only. Open the document with write: true.",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7348,31 +5327,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h155643a6091673",
-                    "results": [
-                      {
-                        "count": 1,
-                        "matches": [
-                          {
-                            "id": "p1",
-                            "type": "paragraph",
-                            "field": "text",
-                            "start": 0,
-                            "end": 5,
-                            "snippet": "Hello"
-                          }
-                        ]
-                      }
-                    ],
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7433,15 +5388,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7486,19 +5433,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h1b906b2d62bf99",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "2fda6ebddcec8eb6264d02af74bc2b5f74711680e433dca8b32ef910a13f2f88"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7543,19 +5478,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h1b906b2d62bf99",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7612,15 +5535,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7662,25 +5577,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "revision": "h155643a6091673",
-                    "error": {
-                      "code": "STALE",
-                      "message": "The document changed since you read it. Read it again, then retry.",
-                      "retryable": true,
-                      "details": {
-                        "revision": "h155643a6091673",
-                        "current": []
-                      }
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7735,15 +5632,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7780,15 +5669,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${other}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7829,19 +5710,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h1cc2d393e20c92",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "440498b14e77f4fe7683f076877431ed36fbd6afdf74d5a2b6df1f9f5cb51282"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7886,20 +5755,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "DOCUMENT_CHANGED",
-                      "message": "The document changed on disk since you opened it. Read it again, then retry.",
-                      "retryable": true
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7937,21 +5793,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h1cc2d393e20c92",
-                    "rootId": null,
-                    "page": {
-                      "title": "A"
-                    },
-                    "blocks": [
-                      {
-                        "id": "p1",
-                        "type": "paragraph",
-                        "depth": 0,
-                        "text": "Hello"
-                      }
-                    ]
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -7998,19 +5840,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "hdb212e0e0c4ae",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "a530eba939d6606acc9c3b5b18f3011a73c946804ea99c00550d62d12434480b"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {

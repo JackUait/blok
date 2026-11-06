@@ -59,15 +59,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -100,21 +92,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h155643a6091673",
-                    "rootId": null,
-                    "page": {
-                      "title": "Notes"
-                    },
-                    "blocks": [
-                      {
-                        "id": "p1",
-                        "type": "paragraph",
-                        "depth": 0,
-                        "text": "Hello"
-                      }
-                    ]
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -161,19 +139,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h26a047c9fdd05",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -218,19 +184,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "hffd2a79c535a4",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -383,15 +337,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -432,19 +378,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h26a047c9fdd05",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "v2"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -489,19 +423,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "hffd2a79c535a4",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "v2"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -546,19 +468,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h144d03c5dda5fc",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "v2"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -700,15 +610,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -741,11 +643,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h155265c9b42162",
-                    "rootId": null,
-                    "blocks": []
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -782,19 +680,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "hae66ff7bc5b4",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -877,15 +763,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -926,19 +804,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "hae66ff7bc5b4",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "v0"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1033,15 +899,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1082,19 +940,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h26a047c9fdd05",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1199,15 +1045,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1248,20 +1086,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "DOCUMENT_CHANGED",
-                      "message": "Someone saved this document since you opened it. Read it again, then retry.",
-                      "retryable": true
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1373,15 +1198,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1422,20 +1239,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "The document endpoint refused the save with 500.",
-                      "retryable": true
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1561,13 +1365,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "The document endpoint answered 404 for gone.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1604,13 +1402,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "The document endpoint answered non-JSON for text.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1647,13 +1439,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "shape is not a Blok document: expected an object with a \"blocks\" array.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1690,13 +1476,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "env is not a Blok document: expected an object with a \"blocks\" array.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1733,13 +1513,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "The document endpoint answered 302 for moved.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1776,13 +1550,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "array is not a Blok document: expected an object with a \"blocks\" array.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1888,15 +1656,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h14}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1935,13 +1695,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "\".\" is not a document id.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -1978,13 +1732,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "INVALID_ARGS",
-                      "message": "\"..\" is not a document id.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2056,22 +1804,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": null,
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": "c1",
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2113,22 +1846,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": null,
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": "c1",
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2172,22 +1890,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "a",
-                        "title": "Alpha",
-                        "live": false
-                      },
-                      {
-                        "id": "b",
-                        "title": null,
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": "c1",
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2266,12 +1969,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [],
-                    "nextCursor": null,
-                    "supported": true,
-                    "queryMatched": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2334,13 +2032,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "The document endpoint list answered 500.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2400,13 +2092,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "The document endpoint list answered without a \"documents\" array.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2473,11 +2159,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [],
-                    "nextCursor": null,
-                    "supported": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2510,11 +2192,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [],
-                    "nextCursor": null,
-                    "supported": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2549,15 +2227,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h19}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2631,15 +2301,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h20}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -2699,13 +2361,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "SOURCE_UNAVAILABLE",
-                      "message": "The document endpoint could not be reached.",
-                      "retryable": true
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {

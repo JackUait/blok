@@ -59,13 +59,14 @@ import {
  *               there) or {"name": {"pointer", "optional": true}} (no error when absent):
  *               a string from the answer, usable as ${name} later. A captured value
  *               is recorded as its placeholder, so random handles compare equal.
- *   mask        pointers into the answer whose values vary run to run.
+ *   mask        pointers into the answer whose values vary run to run (a case's
+ *               "maskKeys" masks those key names anywhere in every answer).
  *   expectSavedVersion  {"file", "pointer"}: the answer's value there must be the
  *               SHA-256 hex of that file's bytes. Checked on every run.
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
- * A text content item that holds JSON is parsed into {"type":"text","json":…} and
- * must equal structuredContent. Placeholders: ${dir}, ${host}, ${mcpUrl},
+ * A text content item that holds JSON must equal structuredContent once parsed; it
+ * is recorded as {"type":"text","json":"<same as structuredContent>"}. Placeholders: ${dir}, ${host}, ${mcpUrl},
  * ${mcpPort}, ${version} (packages/mcp/package.json) and captured names.
  * Inputs may use {"$bearer": BearerSpec} for an OAuth access token and
  * {"$repeat": {"text", "count"}} for a long string.
@@ -113,6 +114,7 @@ export interface FixtureCase {
   fsVariants?: boolean;
   stderrPattern?: string;
   hostRequestOrder?: 'sorted';
+  maskKeys?: string[];
   variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
   expectFiles?: Record<string, FileSpec | null>;
@@ -122,6 +124,7 @@ export interface FixtureCase {
 export interface FixtureFile { description?: string; defaults?: Partial<FixtureCase>; cases: FixtureCase[] }
 
 const MODERN = '2026-07-28';
+const SAME_AS_STRUCTURED = '<same as structuredContent>';
 const RECORDED_RESPONSE_HEADERS = ['allow', 'www-authenticate', 'mcp-session-id', 'access-control-allow-origin'];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -249,10 +252,24 @@ const normalize = (value: unknown, label: string): unknown => {
 
     if (json !== undefined && 'structuredContent' in out) {
       expect(json, `${label}: the text content differs from structuredContent`).toEqual(out.structuredContent);
+      // Checked above, so the record keeps one copy.
+      out.content = out.content.map((item: unknown) => (isRecord(item) && 'json' in item ? { ...item, json: SAME_AS_STRUCTURED } : item));
     }
   }
 
   return out;
+};
+
+/** Masks every value under these key names, anywhere in the answer. */
+const maskKeys = (value: unknown, keys: ReadonlySet<string>): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((item) => maskKeys(item, keys));
+  }
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, keys.has(key) ? '<masked>' : maskKeys(inner, keys)]));
 };
 
 const captured = (answer: unknown, source: CaptureSource): unknown => {
@@ -456,7 +473,7 @@ class CaseRun {
   }
 
   private finishStep(step: Step, holder: Holder, answer: unknown, label: string): void {
-    const masked = structuredClone(answer);
+    const masked = maskKeys(answer, new Set(this.c.maskKeys ?? []));
 
     (step.mask ?? []).forEach((pointer) => maskAt(masked, pointer));
     for (const [name, source] of Object.entries(step.capture ?? {})) {

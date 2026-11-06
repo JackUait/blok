@@ -254,17 +254,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "documents": [
-                          {
-                            "id": "doc",
-                            "title": null,
-                            "live": false
-                          }
-                        ],
-                        "nextCursor": null,
-                        "supported": true
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -376,17 +366,7 @@
                   "content": [
                     {
                       "type": "text",
-                      "json": {
-                        "documents": [
-                          {
-                            "id": "doc",
-                            "title": null,
-                            "live": false
-                          }
-                        ],
-                        "nextCursor": null,
-                        "supported": true
-                      }
+                      "json": "<same as structuredContent>"
                     }
                   ],
                   "structuredContent": {
@@ -3240,17 +3220,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "doc",
-                        "title": null,
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3500,15 +3470,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3558,14 +3520,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h18aeb1425ab3a4",
-                    "rootId": null,
-                    "page": {
-                      "title": "T"
-                    },
-                    "blocks": []
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3617,14 +3572,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h18aeb1425ab3a4",
-                    "rootId": null,
-                    "page": {
-                      "title": "T"
-                    },
-                    "blocks": []
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3676,14 +3624,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h18aeb1425ab3a4",
-                    "rootId": null,
-                    "page": {
-                      "title": "T"
-                    },
-                    "blocks": []
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3810,15 +3751,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": true,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3869,19 +3802,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": true,
-                    "revision": "h3ec3773135829",
-                    "results": [
-                      {}
-                    ],
-                    "delivery": {
-                      "durable": true,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": "c006092aca7ce3c48b78d43b57e83c8eeeef5ded3c063ee868b55edca5aae2d2"
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -3928,11 +3849,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "closed": true,
-                    "unsavedBatches": 0,
-                    "hostRecordLags": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4126,22 +4043,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [
-                      {
-                        "id": "doc",
-                        "title": "doc",
-                        "live": false
-                      },
-                      {
-                        "id": "ro",
-                        "title": "ro",
-                        "live": false
-                      }
-                    ],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4197,13 +4099,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "FORBIDDEN",
-                      "message": "You may not open this document with this access.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4250,13 +4146,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "FORBIDDEN",
-                      "message": "You may not open this document with this access.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4303,13 +4193,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "FORBIDDEN",
-                      "message": "You may not open this document with this access.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4356,13 +4240,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "FORBIDDEN",
-                      "message": "You may not open this document with this access.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4410,13 +4288,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "FORBIDDEN",
-                      "message": "You may not open this document with this access.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4460,15 +4332,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4511,14 +4375,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "revision": "h1e09cfc238cd66",
-                    "rootId": null,
-                    "page": {
-                      "title": "ro"
-                    },
-                    "blocks": []
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4568,20 +4425,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "FORBIDDEN",
-                      "message": "You no longer have access to this document.",
-                      "retryable": false
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4629,11 +4473,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "closed": true,
-                    "unsavedBatches": 0,
-                    "hostRecordLags": false
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4914,13 +4754,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "FORBIDDEN",
-                      "message": "You may not open this document with this access.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -4959,11 +4793,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "documents": [],
-                    "nextCursor": null,
-                    "supported": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6576,16 +6406,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "FORBIDDEN",
-                      "message": "This call needs the blok.write scope.",
-                      "retryable": false,
-                      "details": {
-                        "requiredScope": "blok.write"
-                      }
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6632,15 +6453,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${handle}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6691,23 +6504,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "ok": false,
-                    "error": {
-                      "code": "FORBIDDEN",
-                      "message": "This call needs the blok.write scope.",
-                      "retryable": false,
-                      "details": {
-                        "requiredScope": "blok.write"
-                      }
-                    },
-                    "delivery": {
-                      "durable": false,
-                      "pending": false,
-                      "serverSequence": null,
-                      "savedVersion": null
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6776,13 +6573,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "error": {
-                      "code": "UNKNOWN_HANDLE",
-                      "message": "No open document has this handle. It may have expired; call blok_open again.",
-                      "retryable": false
-                    }
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6848,15 +6639,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h12}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {
@@ -6923,15 +6706,7 @@
               "content": [
                 {
                   "type": "text",
-                  "json": {
-                    "handle": "${h13}",
-                    "mode": "stored",
-                    "write": false,
-                    "durability": "saved-on-execute",
-                    "expiresAfterIdleMs": 600000,
-                    "contractRevision": "ace641df",
-                    "exists": true
-                  }
+                  "json": "<same as structuredContent>"
                 }
               ],
               "structuredContent": {

@@ -315,7 +315,7 @@ func (e *Executor) ExecuteInRoom(ctx context.Context, docID, batchJSON string, a
 	})
 	var asked *askError
 	if errors.As(err, &asked) {
-		return Execution{AskJSON: &asked.json}, nil
+		return Execution{askJSON: &asked.json}, nil
 	}
 	if err != nil {
 		if errors.Is(err, errNoRoomWrite) && planned != nil {

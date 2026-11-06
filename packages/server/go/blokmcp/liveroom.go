@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/v2/blokagent"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/agentbridge"
 )
 
 // roomSession is a live handle on a room of the same process: each call
@@ -63,9 +64,6 @@ func (s *Server) roomReadOnly(ctx context.Context) (map[string]bool, error) {
 // MCP's own live contract.
 func (s *Server) agentOptions() *blokagent.Options {
 	options := &blokagent.Options{DisableBuiltInComments: s.options.Comments != nil && !*s.options.Comments}
-	flags, _ := marshal(s.mcpFlags("live", true))
-	mcp := string(flags)
-	options.MCPJSON = &mcp
 	if len(s.options.Manifest) > 0 {
 		text := string(s.options.Manifest)
 		options.CustomToolsJSON = &text
@@ -115,26 +113,28 @@ type roomResult struct {
 }
 
 func (r *roomSession) run(ctx context.Context, call *callContext, batch json.RawMessage) (string, roomResult, *askedQuestion, error) {
-	options := r.server.agentOptions()
+	flags, _ := marshal(r.server.mcpFlags("live", true))
+	mcp := string(flags)
+	var approval *string
 	if call.approval != nil {
-		approval, _ := marshal(call.approval)
-		text := string(approval)
-		options.ApprovalJSON = &text
+		written, _ := marshal(call.approval)
+		text := string(written)
+		approval = &text
 	}
-	execution, err := r.server.options.Rooms.ExecuteInRoom(ctx, r.documentID, string(batch), blokActor(call.actor), options)
+	written, _, asked, err := agentbridge.RoomCall(ctx, r.server.options.Rooms, r.documentID, string(batch), blokActor(call.actor), r.server.agentOptions(), &mcp, approval)
 	if err != nil {
 		return "", roomResult{}, nil, err
 	}
-	if execution.AskJSON != nil {
+	if asked != nil {
 		var ask askedQuestion
-		if err := json.Unmarshal([]byte(*execution.AskJSON), &ask); err != nil {
+		if err := json.Unmarshal([]byte(*asked), &ask); err != nil {
 			return "", roomResult{}, nil, err
 		}
 		return "", roomResult{}, &ask, nil
 	}
 	var result roomResult
-	err = json.Unmarshal([]byte(execution.ResultJSON), &result)
-	return execution.ResultJSON, result, nil, err
+	err = json.Unmarshal([]byte(written), &result)
+	return written, result, nil, err
 }
 
 func (r *roomSession) read(ctx context.Context, call *callContext, view json.RawMessage) (json.RawMessage, error) {

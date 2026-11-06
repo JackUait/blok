@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/v2/blokagent"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/agentbridge"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/docendpoint"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
@@ -386,7 +386,7 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 	_ = json.Unmarshal(out.Edits, &edits)
 	room.holdAppends = true
 	if len(edits) > 0 {
-		ops, err := blokagent.RoomOps(string(out.Edits), string(out.Document), string(out.Result))
+		ops, err := agentbridge.RoomOps(string(out.Edits), string(out.Document), string(out.Result))
 		stacked := l.undo.UndoTop()
 		comments := commentsOnly(batch)
 		if err == nil && comments {

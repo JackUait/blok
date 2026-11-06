@@ -45,7 +45,7 @@ func (e *Executor) runVersionRead(ctx context.Context, docID string, input *jsjs
 		if err != nil {
 			return Execution{}, err
 		}
-		return Execution{AskJSON: &asked.json}, nil
+		return Execution{askJSON: &asked.json}, nil
 	}
 	result, err := field(output, "result")
 	if err != nil {

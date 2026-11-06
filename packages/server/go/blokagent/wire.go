@@ -208,7 +208,7 @@ func common(options *Options) (*jsjson.Node, error) {
 	for _, host := range []struct {
 		name string
 		json *string
-	}{{"mcp", options.MCPJSON}, {"approval", options.ApprovalJSON}} {
+	}{{"mcp", options.mcpJSON}, {"approval", options.approvalJSON}} {
 		if host.json == nil {
 			continue
 		}

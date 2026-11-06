@@ -17,7 +17,24 @@ export const RELEASE_PACKAGES = [
 export const SERVER_NUGET_PACKAGES = [
   'Blok.Server',
   'Blok.Server.AspNetCore',
+  'Blok.Server.Mcp',
+  'Blok.Mcp',
 ];
+
+/** The last release each package did NOT ship in; see SERVER_ASSET_SINCE for why. */
+export const SERVER_NUGET_AFTER = {
+  'Blok.Server.Mcp': '2.0.0',
+  'Blok.Mcp': '2.0.0',
+};
+
+/** The NuGet packages a given release is actually expected to carry. */
+export function requiredNuGetPackagesFor(version, packageIds = SERVER_NUGET_PACKAGES) {
+  return packageIds.filter((id) => {
+    const after = SERVER_NUGET_AFTER[id];
+
+    return after === undefined || compareVersions(version, after) > 0;
+  });
+}
 
 export const SERVER_RELEASE_ASSETS = [
   'blok-server_darwin_amd64.tar.gz',
@@ -258,7 +275,7 @@ export async function verifyPublishedServerDelivery(version, {
   lookupNuGetVersion: lookupNuGet = lookupNuGetVersion,
   lookupReleaseAssets = lookupGitHubReleaseAssets,
   lookupContainerVersion = lookupGhcrVersion,
-  nugetPackageIds = SERVER_NUGET_PACKAGES,
+  nugetPackageIds = requiredNuGetPackagesFor(version),
   onRetry = () => {},
   requiredAssets = requiredAssetsFor(version),
   retryDelayMs = 10_000,

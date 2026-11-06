@@ -179,6 +179,8 @@ describe('docs release verification', () => {
     expect(SERVER_NUGET_PACKAGES).toEqual([
       'Blok.Server',
       'Blok.Server.AspNetCore',
+      'Blok.Server.Mcp',
+      'Blok.Mcp',
     ]);
     expect(SERVER_RELEASE_ASSETS).toEqual([
       'blok-server_darwin_amd64.tar.gz',
@@ -306,6 +308,31 @@ describe('docs release verification', () => {
         },
       },
     );
+  });
+
+  // 2.0.0 shipped before the C# MCP existed, so verifying it must not ask for it.
+  it('asks NuGet for the MCP packages only after 2.0.0', async () => {
+    const { verifyPublishedServerDelivery } = await loadVerifier();
+    const checked = async (version: string): Promise<string[]> => {
+      const ids: string[] = [];
+
+      await verifyPublishedServerDelivery(version, {
+        attempts: 1,
+        lookupNuGetVersion: async (id: string) => {
+          ids.push(id);
+
+          return version;
+        },
+        lookupReleaseAssets: async () => [],
+        lookupContainerVersion: async () => version,
+        requiredAssets: [],
+      });
+
+      return ids;
+    };
+
+    expect(await checked('2.0.0')).toEqual(['Blok.Server', 'Blok.Server.AspNetCore']);
+    expect(await checked('2.0.1')).toEqual(['Blok.Server', 'Blok.Server.AspNetCore', 'Blok.Server.Mcp', 'Blok.Mcp']);
   });
 
   it('retries until NuGet, release assets, and the image are all observable', async () => {

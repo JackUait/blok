@@ -414,8 +414,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # The MCP packages are checked in MCP Conformance, which has the minutes.
       - name: Test packed .NET packages
-        run: node scripts/test-server-packages.mjs
+        run: node scripts/test-server-packages.mjs --packages server
 
       - name: Test C# conformance
         run: node scripts/test-server-conformance.mjs --target csharp
@@ -510,6 +511,10 @@ jobs:
 
       - name: Test MCP conformance
         run: node scripts/test-mcp-conformance.mjs --target ${{ matrix.target }} ${{ matrix.suites }}
+
+      - name: Test packed MCP NuGets
+        if: matrix.part == 'csharp 3/3'
+        run: node scripts/test-server-packages.mjs --packages mcp
 
   # No `needs: build`: the tests that read build output run in
   # workspace-unit-tests instead (DIST_TESTS in vitest.config.ts).

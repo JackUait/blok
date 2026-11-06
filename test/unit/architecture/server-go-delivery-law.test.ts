@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 
 import { resolveTarget } from '../../../packages/server/bin/blok-server.mjs';
-import { CHECKSUMS_FILE, GO_TARGETS } from '../../../scripts/publish-server-go.mjs';
+import { CHECKSUMS_FILE, GO_MCP_TARGETS, GO_TARGETS } from '../../../scripts/publish-server-go.mjs';
 import { TARGETS } from '../../../scripts/publish-server.mjs';
 
 type Step = { name?: string; run?: string; uses?: string; with?: Record<string, string> };
@@ -142,6 +142,24 @@ describe('server Go delivery law', () => {
 
       expect(order.every((index) => index >= 0)).toBe(true);
       expect([...order].sort((left, right) => left - right)).toEqual(order);
+    });
+
+    // The Go blok-mcp ships beside the Go server, and its checksums share checksums-go.txt.
+    it('builds, smokes, uploads and verifies the Go MCP archives', () => {
+      const steps = releaseSteps(read(RELEASE_WORKFLOW));
+      const upload = stepRun(steps, 'Upload release assets');
+      const verify = stepRun(steps, 'Verify published server delivery');
+      const requiredAssets = /required_assets=\(([\s\S]*?)\)/.exec(verify)?.[1] ?? '';
+      const smoke = stepRun(steps, 'Smoke Go archives');
+
+      expect(GO_MCP_TARGETS.map((target) => target.archive)).toHaveLength(6);
+      for (const { archive } of GO_MCP_TARGETS) {
+        expect(upload).toContain(`.server-release-dist/${archive}`);
+        expect(requiredAssets.split(/\s+/)).toContain(archive);
+      }
+      // stdin at its end stops a stdio MCP server with 0, as the MCP conformance suite pins.
+      expect(smoke).toContain('blok-mcp-go_linux_amd64.tar.gz');
+      expect(smoke).toContain('.server-release-smoke/go-mcp/blok-mcp </dev/null');
     });
 
     it('smokes the stamped version and the linux archive on Alpine', () => {

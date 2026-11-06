@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   CHECKSUMS_FILE,
+  GO_MCP_TARGETS,
   GO_TARGETS,
   buildCommand,
 } from '../../../scripts/publish-server-go.mjs';
@@ -43,12 +44,36 @@ describe('publish-server-go', () => {
     expect(CHECKSUMS_FILE).toBe('checksums-go.txt');
   });
 
+  // blok-mcp ships beside the Go server, under names no server archive uses.
+  it('maps exactly six Go MCP archives that build cmd/blok-mcp', () => {
+    expect(GO_MCP_TARGETS).toEqual([
+      { goos: 'darwin', goarch: 'amd64', archive: 'blok-mcp-go_darwin_amd64.tar.gz', binary: 'blok-mcp', command: './cmd/blok-mcp' },
+      { goos: 'darwin', goarch: 'arm64', archive: 'blok-mcp-go_darwin_arm64.tar.gz', binary: 'blok-mcp', command: './cmd/blok-mcp' },
+      { goos: 'linux', goarch: 'amd64', archive: 'blok-mcp-go_linux_amd64.tar.gz', binary: 'blok-mcp', command: './cmd/blok-mcp' },
+      { goos: 'linux', goarch: 'arm64', archive: 'blok-mcp-go_linux_arm64.tar.gz', binary: 'blok-mcp', command: './cmd/blok-mcp' },
+      { goos: 'windows', goarch: 'amd64', archive: 'blok-mcp-go_windows_amd64.zip', binary: 'blok-mcp.exe', command: './cmd/blok-mcp' },
+      { goos: 'windows', goarch: 'arm64', archive: 'blok-mcp-go_windows_arm64.zip', binary: 'blok-mcp.exe', command: './cmd/blok-mcp' },
+    ]);
+
+    const target = GO_MCP_TARGETS.find((entry) => entry.goos === 'linux' && entry.goarch === 'amd64');
+
+    expect(target && buildCommand(target, '2.0.1', '/scratch/blok-mcp').args).toEqual([
+      'build',
+      '-trimpath',
+      '-ldflags',
+      '-s -w -X main.version=2.0.1',
+      '-o',
+      '/scratch/blok-mcp',
+      './cmd/blok-mcp',
+    ]);
+  });
+
   // The npm wrapper downloads the C# names and checksums.txt. Sharing one
   // would swap the binary it runs.
   it('never reuses a C# archive name or the C# checksums file', () => {
     const csharpNames = new Set([...TARGETS.map((target) => target.archive), 'checksums.txt']);
 
-    expect([...GO_TARGETS.map((target) => target.archive), CHECKSUMS_FILE]
+    expect([...GO_TARGETS, ...GO_MCP_TARGETS].map((target) => target.archive).concat(CHECKSUMS_FILE)
       .filter((name) => csharpNames.has(name))).toEqual([]);
   });
 
@@ -105,12 +130,14 @@ describe('publish-server-go', () => {
 
     const lines = result.stdout.trim().split('\n');
 
-    expect(lines).toHaveLength(GO_TARGETS.length * 2 + 1);
+    expect(lines).toHaveLength((GO_TARGETS.length + GO_MCP_TARGETS.length) * 2 + 1);
 
-    for (const target of GO_TARGETS) {
+    for (const target of [...GO_TARGETS, ...GO_MCP_TARGETS]) {
+      const command = 'command' in target ? target.command : './cmd/blok-server';
+
       expect(lines).toContain(
         `CGO_ENABLED=0 GOOS=${target.goos} GOARCH=${target.goarch} go build -trimpath -ldflags -s -w -X main.version=1.10.1 ` +
-        `-o ${join('<scratch>', `${target.goos}_${target.goarch}`, target.binary)} ./cmd/blok-server`,
+        `-o ${join('<scratch>', `${target.goos}_${target.goarch}`, target.binary)} ${command}`,
       );
       expect(lines).toContain(
         `archive ${join('<scratch>', `${target.goos}_${target.goarch}`, target.binary)} -> ${join(output, target.archive)}`,

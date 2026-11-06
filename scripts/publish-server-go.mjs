@@ -23,11 +23,21 @@ export const GO_TARGETS = [
   { goos: 'windows', goarch: 'arm64', archive: 'blok-server-go_windows_arm64.zip', binary: 'blok-server.exe' },
 ];
 
+// The Go blok-mcp. Its checksums go into the same checksums-go.txt.
+export const GO_MCP_TARGETS = GO_TARGETS.map((target) => ({
+  ...target,
+  archive: target.archive.replace('blok-server-go_', 'blok-mcp-go_'),
+  binary: target.binary.replace('blok-server', 'blok-mcp'),
+  command: './cmd/blok-mcp',
+}));
+
+const ALL_TARGETS = [...GO_TARGETS, ...GO_MCP_TARGETS];
+
 /**
  * The binary reads its /health version from main.version. Build info is no
  * substitute: a local build reports "(devel)" and a module build "v1.2.3".
  *
- * @param {(typeof GO_TARGETS)[number]} target
+ * @param {(typeof GO_TARGETS)[number] & { command?: string }} target
  * @param {string} version
  * @param {string} output - the binary path
  * @returns {{ command: string, args: string[], cwd: string, env: Record<string, string> }}
@@ -42,7 +52,7 @@ export function buildCommand(target, version, output) {
       `-s -w -X main.version=${version}`,
       '-o',
       output,
-      './cmd/blok-server',
+      target.command ?? './cmd/blok-server',
     ],
     cwd: moduleDirectory,
     env: { CGO_ENABLED: '0', GOOS: target.goos, GOARCH: target.goarch },
@@ -61,7 +71,7 @@ function describeCommand(command) {
  */
 export async function publishGoArtifacts(options) {
   if (options.dryRun) {
-    for (const target of GO_TARGETS) {
+    for (const target of ALL_TARGETS) {
       const binary = join('<scratch>', `${target.goos}_${target.goarch}`, target.binary);
 
       console.log(describeCommand(buildCommand(target, options.version, binary)));
@@ -78,7 +88,7 @@ export async function publishGoArtifacts(options) {
   try {
     mkdirSync(options.output, { recursive: true });
 
-    for (const target of GO_TARGETS) {
+    for (const target of ALL_TARGETS) {
       const binary = join(scratch, `${target.goos}_${target.goarch}`, target.binary);
       const command = buildCommand(target, options.version, binary);
 

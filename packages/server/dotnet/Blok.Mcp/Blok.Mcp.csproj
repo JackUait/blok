@@ -29,6 +29,18 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="/" />
-    <None Include=".mcp/server.json" Pack="true" PackagePath="/.mcp/" />
   </ItemGroup>
+
+  <!-- .mcp/server.json keeps 0.0.0 in git. The packed copy carries the package
+       version in both of its version fields, so nuget.org lists the right one. -->
+  <Target Name="BlokStampMcpServerJson" BeforeTargets="_GetPackageFiles">
+    <PropertyGroup>
+      <BlokMcpServerJson>$(IntermediateOutputPath)mcp/server.json</BlokMcpServerJson>
+      <BlokMcpServerJsonText>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/.mcp/server.json').Replace('"version": "0.0.0"', '"version": "$(PackageVersion)"'))</BlokMcpServerJsonText>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(BlokMcpServerJson)" Lines="$(BlokMcpServerJsonText)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <None Include="$(BlokMcpServerJson)" Pack="true" PackagePath="/.mcp/" />
+    </ItemGroup>
+  </Target>
 </Project>

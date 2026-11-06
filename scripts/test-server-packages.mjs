@@ -24,6 +24,7 @@ function parseArgs(args) {
   let packageDirectory;
   let packageVersion = defaultPackageVersion;
   let suppliedVersion = false;
+  let packages = 'all';
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -53,6 +54,18 @@ function parseArgs(args) {
       continue;
     }
 
+    if (argument === '--packages') {
+      const value = args[index + 1];
+
+      if (!['all', 'server', 'mcp'].includes(value)) {
+        throw new Error('--packages takes all, server or mcp');
+      }
+
+      packages = value;
+      index += 1;
+      continue;
+    }
+
     throw new Error(`unknown argument: ${argument}`);
   }
 
@@ -60,10 +73,10 @@ function parseArgs(args) {
     throw new Error('--package-dir requires --version');
   }
 
-  return { packageDirectory, packageVersion };
+  return { packageDirectory, packageVersion, packages };
 }
 
-const { packageDirectory, packageVersion } = parseArgs(process.argv.slice(2));
+const { packageDirectory, packageVersion, packages: selectedPackages } = parseArgs(process.argv.slice(2));
 const packageProjects = {
   'Blok.Server': {
     description: 'Shared server services and embedded document runtime for Blok.',
@@ -81,6 +94,18 @@ const packageProjects = {
   },
 };
 const packageIds = Object.keys(packageProjects);
+// Packed and checked beside the server packages; the consumer fixture does not use them.
+const mcpProjects = {
+  'Blok.Server.Mcp': {
+    description: 'An MCP server for Blok documents, for ASP.NET Core apps.',
+    path: join(repositoryRoot, 'packages/server/dotnet/Blok.Server.Mcp/Blok.Server.Mcp.csproj'),
+  },
+  'Blok.Mcp': {
+    description: 'The Blok MCP server as a .NET tool: blok-mcp over stdio or HTTP.',
+    path: join(repositoryRoot, 'packages/server/dotnet/Blok.Mcp/Blok.Mcp.csproj'),
+  },
+};
+const mcpIds = Object.keys(mcpProjects);
 
 function run(command, args, options = {}) {
   return new Promise((resolveRun, reject) => {
@@ -175,7 +200,7 @@ function unzip(args) {
   return execFileSync('unzip', args, { maxBuffer: 512 * 1024 * 1024 });
 }
 
-async function readPackedPackage(feed, packageId) {
+function openPackedPackage(feed, packageId) {
   const packagePath = join(feed, `${packageId}.${packageVersion}.nupkg`);
   const names = unzip(['-Z1', packagePath]).toString('utf8').split('\n').filter(Boolean);
   // unzip -p reads a name as a wildcard pattern; these names hold no wildcards.
@@ -187,25 +212,26 @@ async function readPackedPackage(feed, packageId) {
   const nuspec = read(nuspecName)?.toString('utf8');
 
   assert.notEqual(nuspec, undefined, `${packageId} nuspec could not be read`);
+  assert.notEqual(read('README.md'), undefined, `${packageId} package is missing README.md`);
 
+  return { nuspec, read };
+}
+
+async function readPackedPackage(feed, packageId) {
+  const { nuspec, read } = openPackedPackage(feed, packageId);
   const dllPath = `lib/net10.0/${packageId}.dll`;
   const dll = read(dllPath);
-  const readme = read('README.md')?.toString('utf8');
 
   assert.notEqual(dll, undefined, `${packageId} package is missing ${dllPath}`);
-  assert.notEqual(readme, undefined, `${packageId} package is missing README.md`);
 
   return { dll, nuspec };
 }
 
-function assertPackageMetadata(packageId, nuspec) {
+function assertCommonMetadata(packageId, nuspec, description) {
   assert.equal(xmlText(nuspec, 'id'), packageId);
   assert.equal(xmlText(nuspec, 'version'), packageVersion);
   assert.equal(xmlText(nuspec, 'authors'), 'JackUait');
-  assert.equal(
-    xmlText(nuspec, 'description'),
-    packageProjects[packageId].description,
-  );
+  assert.equal(xmlText(nuspec, 'description'), description);
 
   const license = xmlTag(nuspec, 'license');
   assert.equal(xmlAttributes(license).type, 'expression');
@@ -216,6 +242,46 @@ function assertPackageMetadata(packageId, nuspec) {
   const repository = xmlAttributes(xmlTag(nuspec, 'repository'));
   assert.equal(repository.type, 'git');
   assert.equal(repository.url, 'https://github.com/JackUait/blok.git');
+}
+
+const blokDependenciesOf = (nuspec) => [...nuspec.matchAll(/<dependency\b[^>]*>/g)]
+  .map((match) => xmlAttributes(match[0]))
+  .filter((dependency) => dependency.id?.startsWith('Blok.'))
+  .map(({ id, version }) => ({ id, version }));
+
+function assertMcpPackages(feed) {
+  const library = openPackedPackage(feed, 'Blok.Server.Mcp');
+
+  assertCommonMetadata('Blok.Server.Mcp', library.nuspec, mcpProjects['Blok.Server.Mcp'].description);
+  assert.notEqual(library.read('lib/net10.0/Blok.Server.Mcp.dll'), undefined, 'Blok.Server.Mcp package is missing its DLL');
+  assert.deepEqual(blokDependenciesOf(library.nuspec), [{ id: 'Blok.Server.AspNetCore', version: packageVersion }]);
+
+  const tool = openPackedPackage(feed, 'Blok.Mcp');
+
+  assertCommonMetadata('Blok.Mcp', tool.nuspec, mcpProjects['Blok.Mcp'].description);
+  assert.notEqual(tool.read('tools/net10.0/any/Blok.Mcp.dll'), undefined, 'Blok.Mcp package is missing tools/net10.0/any/Blok.Mcp.dll');
+  assert.deepEqual(
+    [...tool.nuspec.matchAll(/<packageType\b[^>]*>/g)].map((match) => xmlAttributes(match[0]).name),
+    ['DotnetTool', 'McpServer'],
+  );
+  // A tool package carries its dependencies inside; it must declare none.
+  assert.deepEqual(blokDependenciesOf(tool.nuspec), []);
+
+  const serverJson = tool.read('.mcp/server.json');
+
+  assert.notEqual(serverJson, undefined, 'Blok.Mcp package is missing .mcp/server.json');
+
+  const server = JSON.parse(serverJson.toString('utf8'));
+
+  assert.equal(server.version, packageVersion, '.mcp/server.json version is not the package version');
+  assert.deepEqual(
+    server.packages.map(({ identifier, version }) => ({ identifier, version })),
+    [{ identifier: 'Blok.Mcp', version: packageVersion }],
+  );
+}
+
+function assertPackageMetadata(packageId, nuspec) {
+  assertCommonMetadata(packageId, nuspec, packageProjects[packageId].description);
 
   const targetFrameworks = [...nuspec.matchAll(/<group\b[^>]*>/g)]
     .map((match) => xmlAttributes(match[0]).targetFramework);
@@ -310,8 +376,136 @@ function escapeXml(value) {
     .replaceAll('>', '&gt;');
 }
 
+// The installed tool speaks MCP over stdio, so stdin at its end must stop it
+// with code 0 ("stdio exits 0 when stdin closes" in the MCP conformance suite).
+function expectStdioExit(command) {
+  return new Promise((resolveRun, reject) => {
+    const child = spawn(command, [], { stdio: ['ignore', 'ignore', 'inherit'] });
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error(`${command} did not exit within 30s of stdin closing`));
+    }, 30_000);
+
+    child.once('error', (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.once('close', (code, signal) => {
+      clearTimeout(timer);
+      if (code === 0) {
+        resolveRun();
+        return;
+      }
+      reject(new Error(`${command} exited with ${code === null ? `signal ${signal}` : `code ${code}`} when stdin closed`));
+    });
+  });
+}
+
+function feedConfig(feed) {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="blok-local" value="${escapeXml(feed)}" />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+  <packageSourceMapping>
+    <packageSource key="blok-local">
+      <package pattern="Blok.Server" />
+      <package pattern="Blok.Server.AspNetCore" />
+      <package pattern="Blok.Mcp" />
+    </packageSource>
+    <packageSource key="nuget.org">
+      <package pattern="Jint" />
+      <package pattern="Acornima" />
+      <package pattern="AngleSharp" />
+      <package pattern="BouncyCastle.Cryptography" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+`;
+}
+
+async function expectPackedFiles(feed, ids) {
+  const feedFiles = (await readdir(feed)).filter((name) => name.endsWith('.nupkg'));
+
+  for (const packageId of ids) {
+    assert(feedFiles.includes(`${packageId}.${packageVersion}.nupkg`), `${packageId} ${packageVersion} is not in ${feed}`);
+  }
+  if (packageDirectory !== undefined) {
+    // A release feed holds exactly the packages it ships.
+    assert.deepEqual(feedFiles.sort(), [...packageIds, ...mcpIds]
+      .map((packageId) => `${packageId}.${packageVersion}.nupkg`)
+      .sort());
+  }
+}
+
+// Packs (unless --package-dir), checks, installs and runs the MCP packages.
+async function testMcpPackages(temporaryRoot) {
+  const feed = packageDirectory ?? join(temporaryRoot, 'mcp-feed');
+  const toolPath = join(temporaryRoot, 'tool');
+  const nugetConfig = join(temporaryRoot, 'mcp-NuGet.Config');
+  const executableSuffix = process.platform === 'win32' ? '.exe' : '';
+
+  for (const [packageId, project] of Object.entries(mcpProjects)) {
+    const projectXml = stripXmlComments(await readFile(project.path, 'utf8'));
+
+    assert.doesNotMatch(
+      projectXml,
+      /<(?:Version|PackageVersion)\b/,
+      `${packageId} must not declare Version or PackageVersion`,
+    );
+  }
+
+  if (packageDirectory === undefined) {
+    await mkdir(feed, { recursive: true });
+    for (const packageId of mcpIds) {
+      await run('dotnet', [
+        'pack',
+        mcpProjects[packageId].path,
+        '--configuration',
+        'Release',
+        `-p:PackageVersion=${packageVersion}`,
+        '-p:ContinuousIntegrationBuild=true',
+        '--output',
+        feed,
+      ]);
+    }
+  }
+
+  await expectPackedFiles(feed, mcpIds);
+  assertMcpPackages(feed);
+  await writeFile(nugetConfig, feedConfig(feed));
+  await run('dotnet', [
+    'tool',
+    'install',
+    'Blok.Mcp',
+    '--tool-path',
+    toolPath,
+    '--version',
+    packageVersion,
+    '--configfile',
+    nugetConfig,
+  ]);
+  await expectStdioExit(join(toolPath, `blok-mcp${executableSuffix}`));
+}
+
 async function main() {
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'blok-server-packages-'));
+
+  try {
+    if (selectedPackages !== 'mcp') {
+      await testServerPackages(temporaryRoot);
+    }
+    if (selectedPackages !== 'server') {
+      await testMcpPackages(temporaryRoot);
+    }
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+}
+
+async function testServerPackages(temporaryRoot) {
   const feed = packageDirectory ?? join(temporaryRoot, 'feed');
   const expectedRuntimeDirectory = join(temporaryRoot, 'expected-runtime');
   const globalPackages = join(temporaryRoot, 'global-packages');
@@ -332,206 +526,178 @@ async function main() {
     'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj',
   );
 
-  try {
-    for (const [packageId, project] of Object.entries(packageProjects)) {
-      const projectXml = stripXmlComments(await readFile(project.path, 'utf8'));
+  for (const [packageId, project] of Object.entries(packageProjects)) {
+    const projectXml = stripXmlComments(await readFile(project.path, 'utf8'));
 
-      assert.doesNotMatch(
-        projectXml,
-        /<(?:Version|PackageVersion)\b/,
-        `${packageId} must not declare Version or PackageVersion`,
-      );
-    }
-
-    const hostProjectXml = stripXmlComments(await readFile(hostProject, 'utf8'));
-    const hostPackableValues = [
-      ...hostProjectXml.matchAll(
-        /<IsPackable\b[^>]*>([\s\S]*?)<\/IsPackable>/g,
-      ),
-    ].map((match) => match[1].trim());
-
-    assert.deepEqual(
-      hostPackableValues,
-      ['false'],
-      'Blok.Server.Host must be explicitly non-packable',
+    assert.doesNotMatch(
+      projectXml,
+      /<(?:Version|PackageVersion)\b/,
+      `${packageId} must not declare Version or PackageVersion`,
     );
-
-    if (packageDirectory === undefined) {
-      await mkdir(feed, { recursive: true });
-    }
-
-    await mkdir(globalPackages, { recursive: true });
-
-    const expectedRuntimePath = await buildServerRuntime(expectedRuntimeDirectory);
-    const expectedRuntimeHash = sha256(await readFile(expectedRuntimePath));
-
-    await run('dotnet', [
-      'build',
-      solution,
-      '--configuration',
-      'Release',
-      `-p:PackageVersion=${packageVersion}`,
-      '-p:ContinuousIntegrationBuild=true',
-    ]);
-
-    if (packageDirectory === undefined) {
-      for (const packageId of packageIds) {
-        await run('dotnet', [
-          'pack',
-          packageProjects[packageId].path,
-          '--configuration',
-          'Release',
-          '--no-build',
-          `-p:PackageVersion=${packageVersion}`,
-          '-p:ContinuousIntegrationBuild=true',
-          '--output',
-          feed,
-        ]);
-      }
-    }
-
-    const feedFiles = (await readdir(feed))
-      .filter((name) => name.endsWith('.nupkg'))
-      .sort();
-    assert.deepEqual(feedFiles, packageIds
-      .map((packageId) => `${packageId}.${packageVersion}.nupkg`)
-      .sort());
-
-    const packages = {};
-
-    for (const packageId of packageIds) {
-      const packedPackage = await readPackedPackage(feed, packageId);
-
-      assertPackageMetadata(packageId, packedPackage.nuspec);
-      packages[packageId] = packedPackage;
-    }
-
-    for (const packageId of packageIds) {
-      const hostDll = await readFile(join(
-        repositoryRoot,
-        'packages/server/dotnet/Blok.Server.Host/bin/Release/net10.0',
-        `${packageId}.dll`,
-      ));
-
-      assert(
-        packages[packageId].dll.equals(hostDll),
-        `${packageId} package and Host build DLLs differ`,
-      );
-    }
-
-    await writeFile(nugetConfig, `<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <clear />
-    <add key="blok-local" value="${escapeXml(feed)}" />
-    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-  </packageSources>
-  <packageSourceMapping>
-    <packageSource key="blok-local">
-      <package pattern="Blok.Server" />
-      <package pattern="Blok.Server.AspNetCore" />
-    </packageSource>
-    <packageSource key="nuget.org">
-      <package pattern="Jint" />
-      <package pattern="Acornima" />
-      <package pattern="AngleSharp" />
-      <package pattern="BouncyCastle.Cryptography" />
-    </packageSource>
-  </packageSourceMapping>
-</configuration>
-`);
-
-    const intermediateProperty =
-      `-p:BaseIntermediateOutputPath=${withTrailingSeparator(fixtureIntermediate)}`;
-    const outputProperty =
-      `-p:BaseOutputPath=${withTrailingSeparator(fixtureOutput)}`;
-    const packageVersionProperty =
-      `-p:BlokServerPackageVersion=${packageVersion}`;
-
-    await run('dotnet', [
-      'restore',
-      fixtureProject,
-      '--configfile',
-      nugetConfig,
-      '--packages',
-      globalPackages,
-      '--no-cache',
-      '--force-evaluate',
-      intermediateProperty,
-      outputProperty,
-      packageVersionProperty,
-    ]);
-
-    const assets = JSON.parse(
-      await readFile(join(fixtureIntermediate, 'project.assets.json'), 'utf8'),
-    );
-
-    assertConsumerAssets(assets);
-
-    await run('dotnet', [
-      'build',
-      fixtureProject,
-      '--configuration',
-      'Release',
-      '--no-restore',
-      '-p:ContinuousIntegrationBuild=true',
-      intermediateProperty,
-      outputProperty,
-      packageVersionProperty,
-    ]);
-
-    const executableSuffix = process.platform === 'win32' ? '.exe' : '';
-    const consumerExecutable = join(
-      fixtureOutput,
-      'Release/net10.0',
-      `Blok.Server.Consumer${executableSuffix}`,
-    );
-
-    await runAndProbe(
-      consumerExecutable,
-      (port) => ['--urls', `http://127.0.0.1:${port}`],
-      { BLOK_EXPECTED_RUNTIME_SHA256: expectedRuntimeHash },
-      '/api/blok',
-      consumerVersion,
-      true,
-    );
-
-    await run('dotnet', [
-      'publish',
-      hostProject,
-      '--configuration',
-      'Release',
-      '--runtime',
-      currentRuntimeIdentifier(),
-      '--self-contained',
-      'true',
-      `-p:PackageVersion=${packageVersion}`,
-      '-p:ContinuousIntegrationBuild=true',
-      '-p:PublishSingleFile=true',
-      '--output',
-      hostPublish,
-    ]);
-
-    const hostExecutable = join(
-      hostPublish,
-      `Blok.Server.Host${executableSuffix}`,
-    );
-
-    await runAndProbe(
-      hostExecutable,
-      (port) => [
-        '--listen',
-        `127.0.0.1:${port}`,
-        '--storage-dir',
-        '',
-      ],
-      {},
-      '',
-      'dev',
-    );
-  } finally {
-    await rm(temporaryRoot, { recursive: true, force: true });
   }
+
+  const hostProjectXml = stripXmlComments(await readFile(hostProject, 'utf8'));
+  const hostPackableValues = [
+    ...hostProjectXml.matchAll(
+      /<IsPackable\b[^>]*>([\s\S]*?)<\/IsPackable>/g,
+    ),
+  ].map((match) => match[1].trim());
+
+  assert.deepEqual(
+    hostPackableValues,
+    ['false'],
+    'Blok.Server.Host must be explicitly non-packable',
+  );
+
+  if (packageDirectory === undefined) {
+    await mkdir(feed, { recursive: true });
+  }
+
+  await mkdir(globalPackages, { recursive: true });
+
+  const expectedRuntimePath = await buildServerRuntime(expectedRuntimeDirectory);
+  const expectedRuntimeHash = sha256(await readFile(expectedRuntimePath));
+
+  await run('dotnet', [
+    'build',
+    solution,
+    '--configuration',
+    'Release',
+    `-p:PackageVersion=${packageVersion}`,
+    '-p:ContinuousIntegrationBuild=true',
+  ]);
+
+  if (packageDirectory === undefined) {
+    for (const packageId of packageIds) {
+      await run('dotnet', [
+        'pack',
+        packageProjects[packageId].path,
+        '--configuration',
+        'Release',
+        '--no-build',
+        `-p:PackageVersion=${packageVersion}`,
+        '-p:ContinuousIntegrationBuild=true',
+        '--output',
+        feed,
+      ]);
+    }
+  }
+
+  await expectPackedFiles(feed, packageIds);
+
+  const packages = {};
+
+  for (const packageId of packageIds) {
+    const packedPackage = await readPackedPackage(feed, packageId);
+
+    assertPackageMetadata(packageId, packedPackage.nuspec);
+    packages[packageId] = packedPackage;
+  }
+
+  for (const packageId of packageIds) {
+    const hostDll = await readFile(join(
+      repositoryRoot,
+      'packages/server/dotnet/Blok.Server.Host/bin/Release/net10.0',
+      `${packageId}.dll`,
+    ));
+
+    assert(
+      packages[packageId].dll.equals(hostDll),
+      `${packageId} package and Host build DLLs differ`,
+    );
+  }
+
+  await writeFile(nugetConfig, feedConfig(feed));
+
+  const intermediateProperty =
+    `-p:BaseIntermediateOutputPath=${withTrailingSeparator(fixtureIntermediate)}`;
+  const outputProperty =
+    `-p:BaseOutputPath=${withTrailingSeparator(fixtureOutput)}`;
+  const packageVersionProperty =
+    `-p:BlokServerPackageVersion=${packageVersion}`;
+
+  await run('dotnet', [
+    'restore',
+    fixtureProject,
+    '--configfile',
+    nugetConfig,
+    '--packages',
+    globalPackages,
+    '--no-cache',
+    '--force-evaluate',
+    intermediateProperty,
+    outputProperty,
+    packageVersionProperty,
+  ]);
+
+  const assets = JSON.parse(
+    await readFile(join(fixtureIntermediate, 'project.assets.json'), 'utf8'),
+  );
+
+  assertConsumerAssets(assets);
+
+  await run('dotnet', [
+    'build',
+    fixtureProject,
+    '--configuration',
+    'Release',
+    '--no-restore',
+    '-p:ContinuousIntegrationBuild=true',
+    intermediateProperty,
+    outputProperty,
+    packageVersionProperty,
+  ]);
+
+  const executableSuffix = process.platform === 'win32' ? '.exe' : '';
+  const consumerExecutable = join(
+    fixtureOutput,
+    'Release/net10.0',
+    `Blok.Server.Consumer${executableSuffix}`,
+  );
+
+  await runAndProbe(
+    consumerExecutable,
+    (port) => ['--urls', `http://127.0.0.1:${port}`],
+    { BLOK_EXPECTED_RUNTIME_SHA256: expectedRuntimeHash },
+    '/api/blok',
+    consumerVersion,
+    true,
+  );
+
+  await run('dotnet', [
+    'publish',
+    hostProject,
+    '--configuration',
+    'Release',
+    '--runtime',
+    currentRuntimeIdentifier(),
+    '--self-contained',
+    'true',
+    `-p:PackageVersion=${packageVersion}`,
+    '-p:ContinuousIntegrationBuild=true',
+    '-p:PublishSingleFile=true',
+    '--output',
+    hostPublish,
+  ]);
+
+  const hostExecutable = join(
+    hostPublish,
+    `Blok.Server.Host${executableSuffix}`,
+  );
+
+  await runAndProbe(
+    hostExecutable,
+    (port) => [
+      '--listen',
+      `127.0.0.1:${port}`,
+      '--storage-dir',
+      '',
+    ],
+    {},
+    '',
+    'dev',
+  );
+
 }
 
 try {

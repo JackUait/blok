@@ -383,7 +383,8 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Test packed .NET packages',
-        run: 'node scripts/test-server-packages.mjs',
+        // The MCP packages are checked in MCP Conformance, which has the minutes.
+        run: 'node scripts/test-server-packages.mjs --packages server',
       },
       {
         name: 'Test C# conformance',
@@ -482,6 +483,11 @@ describe('CI critical-path law', () => {
       {
         name: 'Test MCP conformance',
         run: 'node scripts/test-mcp-conformance.mjs --target ${{ matrix.target }} ${{ matrix.suites }}',
+      },
+      {
+        name: 'Test packed MCP NuGets',
+        if: "matrix.part == 'csharp 3/3'",
+        run: 'node scripts/test-server-packages.mjs --packages mcp',
       },
     ]);
   });

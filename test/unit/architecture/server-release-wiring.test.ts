@@ -647,6 +647,34 @@ describe('server release wiring', () => {
     );
   });
 
+  // Dependency order: nuget.org must hold Blok.Server.AspNetCore before
+  // Blok.Server.Mcp, which needs it. Blok.Mcp is a tool and needs nothing.
+  it('packs, pushes, mirrors, uploads and verifies the two MCP NuGets', () => {
+    const steps = (parse(read(RELEASE_WORKFLOW)) as Workflow).jobs['release-server']?.steps ?? [];
+    const run = (name: string): string => steps.find((step) => step.name === name)?.run ?? '';
+    const build = run('Build NuGet and host artifacts');
+    const verify = run('Verify published server delivery');
+    const ids = ['Blok.Server', 'Blok.Server.AspNetCore', 'Blok.Server.Mcp', 'Blok.Mcp'];
+
+    for (const project of ['Blok.Server.Mcp/Blok.Server.Mcp.csproj', 'Blok.Mcp/Blok.Mcp.csproj']) {
+      const pack = build.indexOf(`dotnet pack packages/server/dotnet/${project}`);
+
+      expect(pack).toBeGreaterThan(-1);
+      expect(build.indexOf('node scripts/test-server-packages.mjs')).toBeGreaterThan(pack);
+    }
+    for (const name of [PUBLIC_PUBLISH_STEP, MIRROR_STEP]) {
+      const pushes = ids.map((id) => run(name).indexOf(`.server-release-dist/nuget/${id}."$BLOK_SERVER_VERSION".nupkg`));
+
+      expect(pushes.every((index) => index > -1)).toBe(true);
+      expect([...pushes].sort((left, right) => left - right)).toEqual(pushes);
+    }
+    for (const id of ['Blok.Server.Mcp', 'Blok.Mcp']) {
+      expect(run('Upload release assets')).toContain(`.server-release-dist/nuget/${id}."$BLOK_SERVER_VERSION".nupkg`);
+      expect(verify).toContain(`"${id}.$BLOK_SERVER_VERSION.nupkg"`);
+    }
+    expect(verify).toContain('for package in blok.server blok.server.aspnetcore blok.server.mcp blok.mcp; do');
+  });
+
   it('lets the package fixture validate the exact release NuGets', () => {
     const fixture = read('scripts/test-server-packages.mjs');
     const project = read(

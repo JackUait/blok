@@ -152,6 +152,17 @@ jobs:
             -p:PackageVersion="$BLOK_SERVER_VERSION" \
             -p:ContinuousIntegrationBuild=true \
             --output .server-release-dist/nuget
+          dotnet pack packages/server/dotnet/Blok.Server.Mcp/Blok.Server.Mcp.csproj \
+            --configuration Release \
+            -p:PackageVersion="$BLOK_SERVER_VERSION" \
+            -p:ContinuousIntegrationBuild=true \
+            --output .server-release-dist/nuget
+          # The pack writes the version into the package's .mcp/server.json.
+          dotnet pack packages/server/dotnet/Blok.Mcp/Blok.Mcp.csproj \
+            --configuration Release \
+            -p:PackageVersion="$BLOK_SERVER_VERSION" \
+            -p:ContinuousIntegrationBuild=true \
+            --output .server-release-dist/nuget
           node scripts/test-server-packages.mjs --package-dir .server-release-dist/nuget --version "$BLOK_SERVER_VERSION"
           node scripts/publish-server.mjs --version "$BLOK_SERVER_VERSION" --output .server-release-dist
 
@@ -201,6 +212,11 @@ jobs:
               /smoke/blok-server --help 2>/dev/null
             '
 
+          # A stdio MCP server exits 0 when stdin ends.
+          mkdir -p .server-release-smoke/go-mcp
+          tar -xzf .server-release-dist/blok-mcp-go_linux_amd64.tar.gz -C .server-release-smoke/go-mcp
+          .server-release-smoke/go-mcp/blok-mcp </dev/null
+
       - name: Publish NuGet packages
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
@@ -210,6 +226,14 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
           dotnet nuget push .server-release-dist/nuget/Blok.Server.AspNetCore."$BLOK_SERVER_VERSION".nupkg \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          dotnet nuget push .server-release-dist/nuget/Blok.Server.Mcp."$BLOK_SERVER_VERSION".nupkg \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          dotnet nuget push .server-release-dist/nuget/Blok.Mcp."$BLOK_SERVER_VERSION".nupkg \
             --api-key "$NUGET_API_KEY" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
@@ -226,6 +250,14 @@ jobs:
             --source https://nuget.pkg.github.com/dodopizza/index.json \
             --skip-duplicate
           dotnet nuget push .server-release-dist/nuget/Blok.Server.AspNetCore."$BLOK_SERVER_VERSION".nupkg \
+            --api-key "$DODO_PACKAGES_TOKEN" \
+            --source https://nuget.pkg.github.com/dodopizza/index.json \
+            --skip-duplicate
+          dotnet nuget push .server-release-dist/nuget/Blok.Server.Mcp."$BLOK_SERVER_VERSION".nupkg \
+            --api-key "$DODO_PACKAGES_TOKEN" \
+            --source https://nuget.pkg.github.com/dodopizza/index.json \
+            --skip-duplicate
+          dotnet nuget push .server-release-dist/nuget/Blok.Mcp."$BLOK_SERVER_VERSION".nupkg \
             --api-key "$DODO_PACKAGES_TOKEN" \
             --source https://nuget.pkg.github.com/dodopizza/index.json \
             --skip-duplicate
@@ -250,9 +282,17 @@ jobs:
             .server-release-dist/blok-server-go_linux_arm64.tar.gz \
             .server-release-dist/blok-server-go_windows_amd64.zip \
             .server-release-dist/blok-server-go_windows_arm64.zip \
+            .server-release-dist/blok-mcp-go_darwin_amd64.tar.gz \
+            .server-release-dist/blok-mcp-go_darwin_arm64.tar.gz \
+            .server-release-dist/blok-mcp-go_linux_amd64.tar.gz \
+            .server-release-dist/blok-mcp-go_linux_arm64.tar.gz \
+            .server-release-dist/blok-mcp-go_windows_amd64.zip \
+            .server-release-dist/blok-mcp-go_windows_arm64.zip \
             .server-release-dist/checksums-go.txt \
             .server-release-dist/nuget/Blok.Server."$BLOK_SERVER_VERSION".nupkg \
             .server-release-dist/nuget/Blok.Server.AspNetCore."$BLOK_SERVER_VERSION".nupkg \
+            .server-release-dist/nuget/Blok.Server.Mcp."$BLOK_SERVER_VERSION".nupkg \
+            .server-release-dist/nuget/Blok.Mcp."$BLOK_SERVER_VERSION".nupkg \
             --clobber
 
       - name: Build and smoke linux/amd64 image
@@ -389,16 +429,24 @@ jobs:
             blok-server-go_linux_arm64.tar.gz
             blok-server-go_windows_amd64.zip
             blok-server-go_windows_arm64.zip
+            blok-mcp-go_darwin_amd64.tar.gz
+            blok-mcp-go_darwin_arm64.tar.gz
+            blok-mcp-go_linux_amd64.tar.gz
+            blok-mcp-go_linux_arm64.tar.gz
+            blok-mcp-go_windows_amd64.zip
+            blok-mcp-go_windows_arm64.zip
             checksums-go.txt
             "Blok.Server.$BLOK_SERVER_VERSION.nupkg"
             "Blok.Server.AspNetCore.$BLOK_SERVER_VERSION.nupkg"
+            "Blok.Server.Mcp.$BLOK_SERVER_VERSION.nupkg"
+            "Blok.Mcp.$BLOK_SERVER_VERSION.nupkg"
           )
           anonymous_docker_config="$(mktemp -d)"
           go_module="$(go -C packages/server/go list -m)"
 
           for _ in $(seq 1 60); do
             ready=true
-            for package in blok.server blok.server.aspnetcore; do
+            for package in blok.server blok.server.aspnetcore blok.server.mcp blok.mcp; do
               curl --fail --silent \
                 "https://api.nuget.org/v3-flatcontainer/$package/$version_path/$package.$version_path.nupkg" \
                 >/dev/null || ready=false

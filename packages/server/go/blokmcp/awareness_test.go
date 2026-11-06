@@ -10,7 +10,7 @@ import (
 
 func awarenessUpdate(entries ...struct {
 	client, clock uint64
-	state string
+	state         string
 }) []byte {
 	w := &lib0.Writer{}
 	w.WriteVarUint(uint64(len(entries)))
@@ -24,7 +24,7 @@ func awarenessUpdate(entries ...struct {
 
 type entry = struct {
 	client, clock uint64
-	state string
+	state         string
 }
 
 func TestARemovedPeerLeavesNoOrderBehind(t *testing.T) {

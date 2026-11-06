@@ -285,6 +285,8 @@ fn node_error_shape(status: u16, bytes: &[u8]) -> (u16, String) {
 pub struct Listening {
     pub url: String,
     pub serve: std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send>>,
+    /// Stops accepting and waits up to the grace for requests in flight.
+    pub server: Arc<Server>,
 }
 
 fn split_listen(listen: &str) -> (String, u16) {
@@ -332,21 +334,25 @@ pub async fn listen(
         public,
         port,
     });
-    let server = Server::new(
+    let server = Arc::new(Server::new(
         move |req, resp| front.clone().serve(req, resp),
         Config {
             server_header: None,
             request_timeout: None,
             ..Config::default()
         },
-    );
+    ));
     let shown = match address {
         SocketAddr::V6(v6) => format!("[{}]", v6.ip()),
         SocketAddr::V4(v4) => v4.ip().to_string(),
     };
     Ok(Listening {
         url: format!("http://{shown}:{port}"),
-        serve: Box::pin(async move { server.serve(listener).await }),
+        serve: {
+            let server = server.clone();
+            Box::pin(async move { server.serve(listener).await })
+        },
+        server,
     })
 }
 

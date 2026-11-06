@@ -149,7 +149,10 @@ async fn serve_http(mcp: Arc<Mcp>, version: String, options: &Value) -> i32 {
     eprintln!("blok-mcp: listening on {}/mcp", listening.url);
     tokio::select! {
         _ = listening.serve => {}
-        () = shutdown_signal() => {}
+        // As Node's stop: requests in flight finish first, within the drain limit.
+        () = shutdown_signal() => {
+            listening.server.shutdown(stdio::DRAIN_LIMIT).await;
+        }
     }
     mcp.close_all();
     0
@@ -157,10 +160,11 @@ async fn serve_http(mcp: Arc<Mcp>, version: String, options: &Value) -> i32 {
 
 async fn serve_stdio(mcp: Arc<Mcp>, version: String) -> i32 {
     let handler = Handler::new(mcp.clone(), version, false);
-    let shutdown = shutdown_signal();
+    let pending = Arc::new(stdio::Pending::default());
     let served = stdio::proxy(
         tokio::io::stdin(),
         tokio::io::stdout(),
+        pending.clone(),
         |read, write| async move {
             // A client that leaves before initialize ends the session; that is a clean exit.
             if let Ok(running) = handler.serve((read, write)).await {
@@ -168,9 +172,16 @@ async fn serve_stdio(mcp: Arc<Mcp>, version: String) -> i32 {
             }
         },
     );
+    let mut served = std::pin::pin!(served);
     tokio::select! {
-        () = served => {}
-        () = shutdown => {}
+        () = &mut served => {}
+        // As Node's stop: the calls in flight finish first, within the drain limit.
+        () = shutdown_signal() => {
+            tokio::select! {
+                () = &mut served => {}
+                () = pending.drained(stdio::DRAIN_LIMIT) => {}
+            }
+        }
     }
     mcp.close_all();
     0

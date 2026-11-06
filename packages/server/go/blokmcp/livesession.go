@@ -388,7 +388,11 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 	if len(edits) > 0 {
 		ops, err := blokagent.RoomOps(string(out.Edits), string(out.Document), string(out.Result))
 		stacked := l.undo.UndoTop()
-		if err == nil {
+		comments := commentsOnly(batch)
+		if err == nil && comments {
+			// A person's comment is no undo step, so neither is the agent's.
+			err = room.converter.ApplyOps(ctx, room.doc, ops)
+		} else if err == nil {
 			l.undo.Capture(func(*yjs.Transaction) { err = room.converter.ApplyOps(ctx, room.doc, ops) })
 		}
 		if err != nil {
@@ -401,7 +405,10 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		if err != nil {
 			return nil, err
 		}
-		l.recordStep(stepFor(out.Edits, document), document, after, stacked)
+		if !comments {
+			l.recordStep(stepFor(out.Edits, document), document, after, stacked)
+		}
+		// The executor marks a comment batch too, as Node's does.
 		l.marksPast = append(l.marksPast, historyMark{})
 		l.marksFuture = nil
 	}
@@ -506,4 +513,26 @@ func withRevision(result json.RawMessage, revision string) json.RawMessage {
 		return result
 	}
 	return written
+}
+
+// commentCommands are the database comment actions (COMMENT_COMMANDS);
+// the planner refuses a batch that mixes them with other writes.
+var commentCommands = map[string]bool{
+	"database.addComment": true, "database.replyToComment": true, "database.editComment": true,
+	"database.resolveComment": true, "database.deleteComment": true,
+}
+
+func commentsOnly(batch json.RawMessage) bool {
+	var envelope struct {
+		Commands []struct {
+			Name string `json:"name"`
+		} `json:"commands"`
+	}
+	_ = json.Unmarshal(batch, &envelope)
+	for _, command := range envelope.Commands {
+		if commentCommands[command.Name] {
+			return true
+		}
+	}
+	return false
 }

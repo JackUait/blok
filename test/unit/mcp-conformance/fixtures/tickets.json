@@ -1,0 +1,1287 @@
+{
+  "description": "Room tickets: secret mode (BLOK_SECRET) and ticket URL mode against the harness's ticket route. The fake room refuses every WebSocket upgrade, so these cases stop at the room's door; LIVE mode itself is live.test.ts.",
+  "defaults": {
+    "transport": "stdio",
+    "session": {
+      "protocolVersion": "2025-11-25",
+      "clientName": "tix"
+    }
+  },
+  "cases": [
+    {
+      "name": "ticket URL: 401 refuses the host token, retryable",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 401
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h1": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The ticket endpoint refused the host token.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: 403 is FORBIDDEN",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 403
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h2": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The host did not grant this document to this agent.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: another status is SOURCE_UNAVAILABLE",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 500,
+          "text": "down"
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h3": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The ticket endpoint answered 500.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: an answer without a ticket field",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "json": {
+            "token": "x"
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h4": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The ticket endpoint answered without a \"ticket\" field.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: a non-JSON answer",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "text": "not json"
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h5": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The ticket endpoint answered without a \"ticket\" field.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: a ticket that is not a JWT",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "json": {
+            "ticket": "abc"
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h6": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The host minted a ticket for another user or document. Its \"user\" must equal actorId.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: a ticket for another user",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "json": {
+            "ticket": {
+              "$ticket": {
+                "claims": {
+                  "user": "human-1",
+                  "doc": "doc",
+                  "write": false
+                },
+                "expiresIn": 1800
+              }
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h7": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The host minted a ticket for another user or document. Its \"user\" must equal actorId.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: a ticket for another document",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "json": {
+            "ticket": {
+              "$ticket": {
+                "claims": {
+                  "user": "agent:local:tix",
+                  "doc": "other",
+                  "write": false
+                },
+                "expiresIn": 1800
+              }
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h8": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The host minted a ticket for another user or document. Its \"user\" must equal actorId.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: a write ticket for a read-only open",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "json": {
+            "ticket": {
+              "$ticket": {
+                "claims": {
+                  "user": "agent:local:tix",
+                  "doc": "doc",
+                  "write": true
+                },
+                "expiresIn": 1800
+              }
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h9": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The host minted a write ticket for a read-only open.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: an endpoint that cannot be reached",
+      "argv": [
+        "--sync-url",
+        "ws://127.0.0.1:9/sync",
+        "--ticket-url",
+        "http://127.0.0.1:9/tickets"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h10": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The ticket endpoint could not be reached.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "ticket URL: a matching ticket reaches the room, which refuses the upgrade",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "json": {
+            "ticket": {
+              "$ticket": {
+                "claims": {
+                  "user": "agent:local:tix",
+                  "doc": "doc",
+                  "write": true
+                },
+                "expiresIn": 1800
+              }
+            }
+          }
+        },
+        "$upgradeStatus": 403
+      },
+      "hostRequestOrder": "distinct",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h11": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "ROOM_SYNC_TIMEOUT",
+                  "message": "The room did not finish loading in time. Try again.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": true,
+            "principal": "local",
+            "clientName": "tix",
+            "actorId": "agent:local:tix"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/sync/doc",
+          "headers": {
+            "origin": "http://app.test",
+            "sec-websocket-protocol": [
+              "blok-sync.v2",
+              "blok-sync.v1",
+              {
+                "$jwt": {
+                  "headerBytes": "{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+                  "header": {
+                    "alg": "HS256",
+                    "typ": "JWT"
+                  },
+                  "payload": {
+                    "user": "agent:local:tix",
+                    "doc": "doc",
+                    "write": true,
+                    "exp": "<exp>"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "ticket URL: non-ASCII document ids and principals are decoded as UTF-8",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test",
+        "--principal",
+        "Jöhn"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "json": {
+            "ticket": {
+              "$ticket": {
+                "claims": {
+                  "user": "agent:Jöhn:tix",
+                  "doc": "документ-😀",
+                  "write": false
+                },
+                "expiresIn": 1800
+              }
+            }
+          }
+        },
+        "$upgradeStatus": 403
+      },
+      "hostRequestOrder": "distinct",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "документ-😀",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h12": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "ROOM_SYNC_TIMEOUT",
+                  "message": "The room did not finish loading in time. Try again.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "документ-😀",
+            "write": false,
+            "principal": "Jöhn",
+            "clientName": "tix",
+            "actorId": "agent:Jöhn:tix"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/sync/%D0%B4%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82-%F0%9F%98%80",
+          "headers": {
+            "origin": "http://app.test",
+            "sec-websocket-protocol": [
+              "blok-sync.v2",
+              "blok-sync.v1",
+              {
+                "$jwt": {
+                  "headerBytes": "{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+                  "header": {
+                    "alg": "HS256",
+                    "typ": "JWT"
+                  },
+                  "payload": {
+                    "user": "agent:Jöhn:tix",
+                    "doc": "документ-😀",
+                    "write": false,
+                    "exp": "<exp>"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "secret mode: the first ticket is minted at open and offered to the room",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_SECRET": "a-secret-that-is-at-least-32-chars-long"
+      },
+      "hosts": {
+        "$upgradeStatus": 403
+      },
+      "hostRequestOrder": "distinct",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "é-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h13": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "ROOM_SYNC_TIMEOUT",
+                  "message": "The room did not finish loading in time. Try again.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/sync/%C3%A9-doc",
+          "headers": {
+            "origin": "http://app.test",
+            "sec-websocket-protocol": [
+              "blok-sync.v2",
+              "blok-sync.v1",
+              {
+                "$jwt": {
+                  "headerBytes": "{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+                  "header": {
+                    "alg": "HS256",
+                    "typ": "JWT"
+                  },
+                  "payload": {
+                    "user": "agent:local:tix",
+                    "doc": "é-doc",
+                    "write": true,
+                    "exp": "<exp>"
+                  },
+                  "signedWithSecret": true
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "secret mode: a secret shorter than 32 characters fails the open",
+      "argv": [
+        "--sync-url",
+        "${hostWs}/sync"
+      ],
+      "env": {
+        "BLOK_SECRET": "short"
+      },
+      "hosts": {
+        "$upgradeStatus": 403
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h14": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "mask": [
+            "/error/message"
+          ],
+          "expect": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "error": {
+              "code": -32603,
+              "message": "<masked>"
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": []
+    },
+    {
+      "transport": "http",
+      "name": "ticket URL over HTTP with no source needs no --authorize",
+      "argv": [
+        "--http",
+        "127.0.0.1:0",
+        "--sync-url",
+        "${hostWs}/sync",
+        "--ticket-url",
+        "${host}/tickets",
+        "--origin",
+        "http://app.test"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "hosts": {
+        "POST /tickets": {
+          "status": 403
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "h15": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The host did not grant this document to this agent.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "doc",
+            "write": false,
+            "principal": "local",
+            "clientName": "mcp-client",
+            "actorId": "agent:local:mcp-client"
+          }
+        }
+      ]
+    }
+  ]
+}

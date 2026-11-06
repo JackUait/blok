@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { expect } from 'vitest';
 
-import { type BearerSpec, type FakeHost, type RouteTable, signAccessToken, startFakeHost } from './fake-host';
+import { type BearerSpec, type FakeHost, type RecordedRequest, type RouteTable, signAccessToken, startFakeHost } from './fake-host';
 import {
   caseEnv, type HttpAnswer, type HttpServer, type JsonMessage, runToExit, sendHttp, startHttp, startStdio, type StdioServer,
 } from './mcp-process';
@@ -29,7 +29,7 @@ import {
  *               written compact.
  *   hosts       a route table for the fake host (fake-host.ts) at ${host}, plus
  *               "$upgradeStatus" for the sync upgrade it refuses. Every request it
- *               gets is recorded in order, or sorted with "hostRequestOrder": "sorted".
+ *               gets is recorded in order, or by "hostRequestOrder": "sorted" | "distinct".
  *   session     {"protocolVersion", "capabilities"?, "clientName"?, "headers"?}: the
  *               harness opens the session the way the SDK client does.
  *               2025 versions: initialize + notifications/initialized first, and
@@ -66,7 +66,7 @@ import {
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
- * is recorded as {"type":"text","json":"<same as structuredContent>"}. Placeholders: ${dir}, ${host}, ${mcpUrl},
+ * is recorded as {"type":"text","json":"<same as structuredContent>"}. Placeholders: ${dir}, ${root}, ${host}, ${hostWs}, ${mcpUrl},
  * ${mcpPort}, ${version} (packages/mcp/package.json) and captured names.
  * Inputs may use {"$bearer": BearerSpec} for an OAuth access token and
  * {"$repeat": {"text", "count"}} for a long string.
@@ -113,7 +113,7 @@ export interface FixtureCase {
   watchFiles?: string[];
   fsVariants?: boolean;
   stderrPattern?: string;
-  hostRequestOrder?: 'sorted';
+  hostRequestOrder?: 'sorted' | 'distinct';
   maskKeys?: string[];
   variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
@@ -592,6 +592,21 @@ class CaseRun {
   }
 }
 
+/**
+ * "sorted": calls made in parallel (a listing's authorize checks) arrive in any order.
+ * "distinct": a room's reconnect attempts repeat on a timer, so only their content counts.
+ */
+const orderedRequests = (requests: RecordedRequest[], order: FixtureCase['hostRequestOrder']): RecordedRequest[] => {
+  if (order === 'sorted') {
+    return [...requests].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  }
+  if (order === 'distinct') {
+    return requests.filter((request, index) => requests.findIndex((other) => JSON.stringify(other) === JSON.stringify(request)) === index);
+  }
+
+  return requests;
+};
+
 const withHost = async (c: FixtureCase, run: CaseRun, body: () => Promise<void>): Promise<void> => {
   if (c.hosts === undefined) {
     await body();
@@ -602,12 +617,10 @@ const withHost = async (c: FixtureCase, run: CaseRun, body: () => Promise<void>)
   const host: FakeHost = await startFakeHost(routes, { secret: c.env?.BLOK_SECRET, upgradeStatus: $upgradeStatus });
 
   run.vars.set('host', host.url);
+  run.vars.set('hostWs', host.url.replace(/^http:/, 'ws:'));
   try {
     await body();
-    // Calls made in parallel (a listing's authorize checks) arrive in any order.
-    const requests = c.hostRequestOrder === 'sorted'
-      ? [...host.requests].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
-      : host.requests;
+    const requests = orderedRequests(host.requests, c.hostRequestOrder);
 
     run.checkCase('expectHostRequests', requests, `${c.name} host requests`);
   } finally {

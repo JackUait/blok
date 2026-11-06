@@ -638,42 +638,25 @@
     {
       "argv": [
         "--source",
-        "files:${dir}",
-        "--authorize",
-        "${dir}/hang.mjs"
+        "endpoint:${host}/docs"
       ],
-      "files": {
-        "doc.json": {
-          "json": {
-            "title": "Notes",
-            "blocks": [
-              {
-                "id": "p1",
-                "type": "paragraph",
-                "data": {
-                  "text": "Hello"
-                }
-              }
-            ]
-          }
-        },
-        "other.json": {
-          "json": {
-            "blocks": []
-          }
-        },
-        "hang.mjs": {
-          "text": "export default async () => {\n  await fetch(process.env.HANG_URL, { method: \"POST\" });\n\n  return new Promise(() => {});\n};\n"
-        }
-      },
-      "name": "stdio: an open that never finishes holds the stop for 45 s, then the process exits",
-      "env": {
-        "HANG_URL": "${host}/seen"
-      },
+      "name": "stdio: two queued saves that outlast the deadline hold the stop for 45 s, then the process exits",
       "hosts": {
-        "POST /seen": {
+        "GET /docs/doc": {
           "status": 200,
-          "text": ""
+          "json": {
+            "data": {
+              "blocks": []
+            },
+            "version": "v1"
+          }
+        },
+        "PUT /docs/doc": {
+          "status": 200,
+          "json": {
+            "version": "v2"
+          },
+          "delayMs": 25000
         }
       },
       "steps": [
@@ -688,11 +671,75 @@
               }
             }
           },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "First"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "noAnswer": true
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Second"
+                    }
+                  }
+                ]
+              }
+            }
+          },
           "noAnswer": true
         },
         {
           "signal": "SIGTERM",
-          "signalWhenHost": "POST /seen",
+          "signalWhenHost": "PUT /docs/doc",
           "exitTimeoutMs": 60000,
           "minElapsedMs": 44000,
           "expect": {
@@ -705,51 +752,49 @@
       },
       "expectHostRequests": [
         {
-          "method": "POST",
-          "path": "/seen",
-          "headers": {}
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": ""
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "",
+            "content-type": "application/json",
+            "blok-doc-version": "v1"
+          },
+          "body": {
+            "title": "First",
+            "blocks": []
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "",
+            "content-type": "application/json",
+            "blok-doc-version": "v2"
+          },
+          "body": {
+            "title": "Second",
+            "blocks": []
+          }
         }
       ]
     },
     {
       "argv": [
         "--source",
-        "files:${dir}",
-        "--authorize",
-        "${dir}/hang.mjs"
+        "endpoint:${host}/docs"
       ],
-      "files": {
-        "doc.json": {
-          "json": {
-            "title": "Notes",
-            "blocks": [
-              {
-                "id": "p1",
-                "type": "paragraph",
-                "data": {
-                  "text": "Hello"
-                }
-              }
-            ]
-          }
-        },
-        "other.json": {
-          "json": {
-            "blocks": []
-          }
-        },
-        "hang.mjs": {
-          "text": "export default async () => {\n  await fetch(process.env.HANG_URL, { method: \"POST\" });\n\n  return new Promise(() => {});\n};\n"
-        }
-      },
       "name": "stdio: a second SIGTERM during a held stop ends the process at once",
-      "env": {
-        "HANG_URL": "${host}/seen"
-      },
       "hosts": {
-        "POST /seen": {
-          "status": 200,
-          "text": ""
+        "GET /docs/doc": {
+          "stall": true
         }
       },
       "steps": [
@@ -768,7 +813,7 @@
         },
         {
           "signal": "SIGTERM",
-          "signalWhenHost": "POST /seen",
+          "signalWhenHost": "GET /docs/doc",
           "noWait": true
         },
         {
@@ -791,9 +836,11 @@
       },
       "expectHostRequests": [
         {
-          "method": "POST",
-          "path": "/seen",
-          "headers": {}
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": ""
+          }
         }
       ]
     }

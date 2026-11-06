@@ -125,6 +125,9 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	}
 	input := st.sessionInput(call)
 	input["batch"] = batch
+	if call.approval != nil {
+		input["approval"] = call.approval
+	}
 	if st.write && st.server.createsPages() && isBatchEnvelope(batch) {
 		created, err := st.server.createPages(ctx, input, call.principal)
 		if err != nil {
@@ -133,9 +136,6 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		input["createdPages"] = created
 	}
 	input["documentText"] = st.source.documentForm()
-	if call.approval != nil {
-		input["approval"] = call.approval
-	}
 	var out executeOutput
 	if _, err := st.server.bundle.call(ctx, "agentExecute", input, &out); err != nil {
 		return nil, err

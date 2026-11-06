@@ -26,13 +26,21 @@ func (s *Server) createsPages() bool {
 
 // createPages makes the page documents a batch will point at, before it
 // runs: the bundle cannot wait on the host mid-batch, so agentPagesNeeded
-// counts them first.
+// counts them first. The client's cancel is not checked between pages, as
+// Node does not check it inside a batch.
 func (s *Server) createPages(ctx context.Context, input map[string]any, who string) ([]string, error) {
 	var needed struct {
-		Count int `json:"count"`
+		Count  int             `json:"count"`
+		Result json.RawMessage `json:"result"`
 	}
 	if _, err := s.bundle.call(ctx, "agentPagesNeeded", input, &needed); err != nil {
 		return nil, err
+	}
+	// A batch that would be refused, or that waits on a person's answer,
+	// makes no page: Node plans the whole batch before it makes one, and
+	// agentExecute answers the refusal or the question.
+	if len(needed.Result) > 0 {
+		return nil, nil
 	}
 	created := make([]string, 0, needed.Count)
 	for range needed.Count {

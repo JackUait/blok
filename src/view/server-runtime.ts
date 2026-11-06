@@ -9,7 +9,7 @@ import { pagesInsert } from '../agent/guidance';
 import { approvalKey } from '../shared/agent/approval';
 import { COMMANDS } from '../shared/agent/commands';
 import { createDocumentAgentSession, type CarriedHistory } from '../shared/agent/document-session';
-import { failure } from '../shared/agent/errors';
+import { AgentFailure, failure } from '../shared/agent/errors';
 import { contentRevision } from '../shared/agent/revision';
 import type { AgentPorts } from '../shared/agent/types';
 import { DocSnapshot } from '../shared/agent/snapshot';
@@ -24,7 +24,7 @@ import { createHeadlessAgentSetup, createHeadlessPorts, loadStoredDocument } fro
 import { blocksToHtml } from './blocks-to-html';
 import { htmlToBlocksWithReport } from './html-to-blocks';
 import { mcpContractFor } from './mcp-contracts';
-import { contractFlagsOf, MCP_OPERATIONS } from './mcp-runtime';
+import { contractFlagsOf, hostError, MCP_OPERATIONS } from './mcp-runtime';
 import type { MarkdownDegradation } from './blocks-to-markdown';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
 import type { BlocksToPlainTextOptions } from './blocks-to-plain-text';
@@ -553,9 +553,16 @@ const createdPagesPort = (input: Record<string, unknown>): { port: NonNullable<A
     port: () => {
       const pageId = unused.shift();
 
-      return pageId === undefined
-        ? Promise.reject(failure('STALE', 'The document changed while its new pages were created, so this batch needs more pages than were made. Read it again, then retry.'))
-        : Promise.resolve({ pageId });
+      if (pageId !== undefined) {
+        return Promise.resolve({ pageId });
+      }
+      // The page the host could not make, `{ helper, error }` as mcpErrorAnswer takes it: the executor
+      // fails its command with that error, as Node's port throws it.
+      if (isRecord(input.createPageFailure)) {
+        return Promise.reject(new AgentFailure(hostError(input.createPageFailure)));
+      }
+
+      return Promise.reject(failure('STALE', 'The document changed while its new pages were created, so this batch needs more pages than were made. Read it again, then retry.'));
     },
   };
 };

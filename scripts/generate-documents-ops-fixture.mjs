@@ -357,6 +357,12 @@ const buildCases = async (invoke) => {
     ] },
     batch: { commands: [{ name: 'database.deleteComment', args: { id: 'db', commentId: 'c1' } }] },
   }));
+  // The host could not make the second page: the batch fails at that insert with the host's error, the first page orphaned.
+  add('mcp.execute.pageFailure', 'agentExecute', J({
+    mcp: { ...mcpStored, pageTitles: 'page-map' }, document: mcpDoc, actor: mcpActor, createdPages: ['host-a'],
+    createPageFailure: { helper: 'surface', error: { code: 'FORBIDDEN', message: 'You may not create a page document here.', details: { pageId: 'host-b' } } },
+    batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'block.insert', args: { type: 'page', id: 'np0' } }, { name: 'block.insert', args: { type: 'page', id: 'np1' } }] },
+  }));
   add('mcp.execute.liveRevision', 'agentExecute', J({ mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor, revision: { now: 'l4', afterWrite: 'l5' }, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }], expectRevision: 'l4' } }));
   add('mcp.executeAnswer', 'mcpExecuteAnswer', J({ result: { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [] }, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v' } }));
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));

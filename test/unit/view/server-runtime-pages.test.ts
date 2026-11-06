@@ -106,6 +106,27 @@ describe('server runtime page creation', () => {
     expect(JSON.stringify(output.result)).toContain('host-b');
   });
 
+  it('fails the page insert the host could not create with the host error, at its command', async () => {
+    const refused = { code: 'FORBIDDEN', message: 'You may not create a page document here.', details: { pageId: 'host-x' } };
+    const batch: AgentBatch = { commands: [{ name: 'doc.setTitle', args: { title: 'Parent' } }, ...insertPage(1).commands] };
+    const output = await wire('agentExecute', { ...creating, document: empty, actor, batch, createPageFailure: { helper: 'surface', error: refused } });
+
+    expect(output.result).toMatchObject({ ok: false, error: { ...refused, retryable: false, commandIndex: 1 } });
+    expect(output.document).toEqual(empty);
+  });
+
+  it('reports the pages made before the one the host could not create as orphaned', async () => {
+    const refused = { code: 'SOURCE_UNAVAILABLE', message: 'The new page id is taken. Try again.', retryable: true, details: { pageId: 'host-x' } };
+    const output = await wire('agentExecute', {
+      ...creating, document: empty, actor, batch: insertPage(2), createdPages: ['host-a'], createPageFailure: { helper: 'as-is', error: refused },
+    });
+
+    expect(output.result).toMatchObject({
+      ok: false,
+      error: { code: 'ORPHANED_SIDE_EFFECT', details: { cause: refused, orphaned: [{ prepared: { pageId: 'host-a' } }] } },
+    });
+  });
+
   it('refuses a page insert where the host creates none, with reason host', async () => {
     const output = await wire('agentExecute', { services: ['pageBackend'], document: empty, actor, batch: insertPage(1) });
 

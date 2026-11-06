@@ -915,3 +915,22 @@ describe('server runtime mcpRoomError', () => {
     expect(await call('mcpRoomError', terminal === undefined ? {} : { terminal })).toEqual({ error: terminalToError(terminal as never) });
   });
 });
+
+describe('server runtime mcpRichTextFields', () => {
+  it('lists the rich fields the live converter needs, as Node richTextFieldsFor answers them', async () => {
+    const statics = {
+      toolbox: [], richTextFields: ['body'], acceptsChildren: false, ownsChildren: false, isLayout: false, deletesChildren: false,
+      selfPlacesChildren: false, restrictedInTableCell: false, conversion: {}, convertible: { import: false, export: false }, hasPrepareInsert: false,
+    };
+    const manifest = { formatVersion: 1, blocks: [{ name: 'note_x', description: { summary: 'A note.', data: { type: 'object' } }, statics }] };
+    const flags = { manifest, richTextFields: { widget: ['caption'], paragraph: ['nope'] }, source: true };
+    const contracts = buildMcpContracts({ manifest: parseCustomToolsFile(manifest), richTextFields: flags.richTextFields, sync: false, source: true });
+    const { fields } = await call('mcpRichTextFields', flags) as { fields: Record<string, string[]> };
+
+    expect(fields.note_x).toEqual(['body']);
+    expect(fields.widget).toEqual(['caption']);
+    // A manifest type keeps its own list over the flag.
+    expect(fields.paragraph).toEqual(contracts.richTextFieldsFor('paragraph'));
+    Object.entries(fields).forEach(([type, list]) => expect(list).toEqual(contracts.richTextFieldsFor(type)));
+  });
+});

@@ -381,6 +381,13 @@ const buildCases = async (invoke) => {
     pageWrites: [{ pageId: 'child é', error: { code: 'FORBIDDEN', message: 'No.', retryable: false } }],
   }));
   add('mcp.execute.pageWriteStale', 'agentExecute', J({ mcp: pageMapStored, document: withPageBlock, actor: mcpActor, batch: renamePb, pageWrites: [] }));
+  add('mcp.richTextFields', 'mcpRichTextFields', J({
+    manifest: { formatVersion: 1, blocks: [{ name: 'note_x', description: { summary: 'A note.', data: { type: 'object' } }, statics: {
+      toolbox: [], richTextFields: ['body', 'é'], acceptsChildren: false, ownsChildren: false, isLayout: false, deletesChildren: false,
+      selfPlacesChildren: false, restrictedInTableCell: false, conversion: {}, convertible: { import: false, export: false }, hasPrepareInsert: false,
+    } }] },
+    richTextFields: { widget: ['caption'], paragraph: ['nope'] }, sync: true, source: true,
+  }));
   add('mcp.execute.liveRevision', 'agentExecute', J({ mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor, revision: { now: 'l4', afterWrite: 'l5' }, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }], expectRevision: 'l4' } }));
   add('mcp.executeAnswer', 'mcpExecuteAnswer', J({ result: { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [] }, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v' } }));
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));

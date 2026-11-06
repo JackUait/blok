@@ -2532,6 +2532,12 @@
     "output": "{\"result\":{\"ok\":false,\"revision\":\"he80f084f33fe4\",\"error\":{\"code\":\"STALE\",\"message\":\"The document changed while its page was written. Read it again, then retry.\",\"retryable\":true,\"commandIndex\":0},\"warnings\":[]},\"document\":{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child é\"}}]},\"edits\":[],\"writes\":true,\"save\":false}"
   },
   {
+    "name": "mcp.richTextFields",
+    "op": "mcpRichTextFields",
+    "input": "{\"manifest\":{\"formatVersion\":1,\"blocks\":[{\"name\":\"note_x\",\"description\":{\"summary\":\"A note.\",\"data\":{\"type\":\"object\"}},\"statics\":{\"toolbox\":[],\"richTextFields\":[\"body\",\"é\"],\"acceptsChildren\":false,\"ownsChildren\":false,\"isLayout\":false,\"deletesChildren\":false,\"selfPlacesChildren\":false,\"restrictedInTableCell\":false,\"conversion\":{},\"convertible\":{\"import\":false,\"export\":false},\"hasPrepareInsert\":false}}]},\"richTextFields\":{\"widget\":[\"caption\"],\"paragraph\":[\"nope\"]},\"sync\":true,\"source\":true}",
+    "output": "{\"fields\":{\"paragraph\":[\"text\"],\"header\":[\"text\"],\"list\":[\"text\"],\"table\":[],\"toggle\":[\"text\"],\"callout\":[],\"database\":[],\"database-row\":[],\"database-comment\":[],\"divider\":[],\"spacer\":[],\"table_of_contents\":[],\"quote\":[\"text\"],\"code\":[],\"image\":[],\"file\":[],\"audio\":[],\"video\":[],\"column_list\":[],\"column\":[],\"tabs\":[],\"tab\":[],\"embed\":[],\"bookmark\":[],\"page\":[],\"page-link\":[],\"note_x\":[\"body\",\"é\"],\"widget\":[\"caption\"]}}"
+  },
+  {
     "name": "mcp.execute.liveRevision",
     "op": "agentExecute",
     "input": "{\"mcp\":{\"source\":true,\"mode\":\"live\",\"write\":true,\"sync\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"revision\":{\"now\":\"l4\",\"afterWrite\":\"l5\"},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"T\"}},{\"name\":\"doc.read\",\"args\":{}}],\"expectRevision\":\"l4\"}}",

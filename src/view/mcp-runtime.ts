@@ -312,7 +312,17 @@ const filesList = (input: Input): string => {
 const documentText = (input: Input): string =>
   JSON.stringify({ text: input.form === 'compact' ? JSON.stringify(input.document) : savedFileText(input.document) });
 
+/** Each block type's rich-text fields, for a live converter: a manifest type's own list, else --rich-text-fields. */
+const richTextFieldsResult = (input: Input): string => {
+  const flags = contractFlagsOf(input);
+  const contracts = mcpContractsFor(flags);
+  const types = new Set([...contracts.stored.manifest.blocks.map(block => block.name), ...Object.keys(flags.richTextFields ?? {})]);
+
+  return JSON.stringify({ fields: Object.fromEntries([...types].map(type => [type, contracts.richTextFieldsFor(type)])) });
+};
+
 export const MCP_OPERATIONS: Readonly<Record<string, (input: Input) => string | Promise<string>>> = {
+  mcpRichTextFields: richTextFieldsResult,
   mcpSurface: surface,
   mcpPrompt: prompt,
   mcpCheckCall: checkCallResult,

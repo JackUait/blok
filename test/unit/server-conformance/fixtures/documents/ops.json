@@ -2460,6 +2460,12 @@
     "output": "{\"ask\":{\"key\":\"[\\\"database.unlock\\\",\\\"db\\\",\\\"Payroll\\\"]\",\"message\":\"Desk's agent wants to unlock the database \\\"Payroll\\\" (id \\\"db\\\"). A person locked it, so its properties and views cannot change. Unlock it?\",\"requestedSchema\":{\"type\":\"object\",\"properties\":{\"unlock\":{\"type\":\"boolean\",\"title\":\"Unlock\",\"description\":\"Tick to let the agent unlock this database.\",\"default\":false}},\"required\":[\"unlock\"]}}}"
   },
   {
+    "name": "mcp.execute.noCommands",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{}}",
+    "output": "{\"result\":{\"ok\":false,\"revision\":\"h329376fbdd2ad\",\"error\":{\"code\":\"INVALID_ARGS\",\"message\":\"A batch is { commands: [ { name, args } ... ] } with at least one command.\",\"path\":\"/commands\",\"retryable\":false},\"warnings\":[]},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello & \"},{\"text\":\"world\",\"marks\":{\"bold\":true}}]}}]},\"edits\":[],\"writes\":false,\"save\":false}"
+  },
+  {
     "name": "mcp.execute.liveRevision",
     "op": "agentExecute",
     "input": "{\"mcp\":{\"source\":true,\"mode\":\"live\",\"write\":true,\"sync\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"revision\":{\"now\":\"l4\",\"afterWrite\":\"l5\"},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"T\"}},{\"name\":\"doc.read\",\"args\":{}}],\"expectRevision\":\"l4\"}}",

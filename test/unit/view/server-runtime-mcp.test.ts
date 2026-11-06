@@ -444,7 +444,9 @@ describe('server runtime MCP sessions against blok-mcp over a files source', () 
     }
   });
 
-  const batches: Array<[string, AgentBatch]> = [
+  // Not AgentBatch: a call without commands reaches the engine as {}, and core refuses it.
+  const batches: Array<[string, Record<string, unknown>]> = [
+    ['a call without commands', {}],
     ['a text edit', { commands: [{ name: 'text.replace', args: { id: 'p1', range: { find: 'world' }, with: 'there' } }] }],
     ['a title', { commands: [{ name: 'doc.setTitle', args: { title: 'Plan <x>  ' } }] }],
     ['a read', { commands: [{ name: 'doc.read', args: {} }] }],
@@ -480,7 +482,7 @@ describe('server runtime MCP sessions against blok-mcp over a files source', () 
 
     try {
       const opened = await assembled.dispatch('blok_open', { documentId: 'doc' }, caller);
-      const batch = batches[1][1];
+      const batch = batches[2][1];
       const node = await assembled.dispatch('blok_execute', { handle: opened.structuredContent.handle, ...batch }, caller);
       const ran = await call('agentExecute', { mcp: { ...mcpFlags, mode: 'stored', write: false }, document: docFixture, actor, batch });
 
@@ -506,7 +508,7 @@ describe('server runtime MCP sessions against blok-mcp over a files source', () 
     const { assembled, handle } = await openNode();
 
     try {
-      const edit = batches[0][1];
+      const edit = batches[1][1];
       const undo: AgentBatch = { commands: [{ name: 'history.undo', args: {} }] };
 
       await assembled.dispatch('blok_execute', { handle, ...edit }, caller);

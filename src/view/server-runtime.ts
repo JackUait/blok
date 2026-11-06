@@ -1,6 +1,6 @@
 import type { HostService, ManifestOverrides } from '../../types';
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from '../../types/data-formats/output-data';
-import type { AgentActor, AgentApprovalRequest, AgentApprover, AgentResult, AgentVersion, AgentVersionHistory } from '../../types/agent';
+import type { AgentActor, AgentApprovalRequest, AgentApprover, AgentBatch, AgentResult, AgentVersion, AgentVersionHistory } from '../../types/agent';
 // Imported by file rather than through `src/components/utils`: the barrel
 // reaches the DOM, this module does not.
 import { getBlokVersion } from '../components/utils/version';
@@ -722,7 +722,8 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
   if (!isAgentActor(actor)) {
     throw new TypeError('agentExecute input requires an `actor` with string `id`, string `name` and kind `agent`.');
   }
-  if (!isBatchEnvelope(batch)) {
+  // An MCP call's batch is unchecked wire input, as in Node: core's checkEnvelope refuses a malformed one.
+  if (!isRecord(input.mcp) && !isBatchEnvelope(batch)) {
     throw new TypeError('agentExecute input requires a `batch` with a `commands` array of command objects.');
   }
 
@@ -746,7 +747,8 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
     if (mcp !== undefined && writes === true && mcp.write !== true) {
       return JSON.stringify({ result: readOnlyRefusal(mcp.mode), document, edits: [], writes, save: false });
     }
-    const ran = await session.execute(batch, approval?.approve === undefined ? {} : { approve: approval.approve });
+    // Unchecked on purpose, as Node's dispatcher passes it: core refuses a malformed batch.
+    const ran = await session.execute(batch as AgentBatch, approval?.approve === undefined ? {} : { approve: approval.approve });
     const question = approval?.asked[0];
 
     // The batch applied nothing; the host asks the person, and the client sends the call again with the reply.

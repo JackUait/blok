@@ -2676,6 +2676,7 @@
           }
         },
         {
+          "note": "the revision races the restore's room update against the HTTP answer; blok_read below pins it",
           "send": {
             "method": "tools/call",
             "params": {
@@ -2693,6 +2694,9 @@
               }
             }
           },
+          "mask": [
+            "/result/structuredContent/revision"
+          ],
           "expect": {
             "result": {
               "content": [
@@ -2703,7 +2707,7 @@
               ],
               "structuredContent": {
                 "ok": true,
-                "revision": "l2",
+                "revision": "<masked>",
                 "results": [
                   {
                     "version": "${vBase}",

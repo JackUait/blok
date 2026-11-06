@@ -14,6 +14,14 @@ namespace Blok.Server.Mcp.Live;
 internal sealed class LiveSession : IHandleSession
 {
   private static readonly object AgentOrigin = new();
+  // Not tracked by the undo manager: a person's comment is no undo step, so neither is the agent's.
+  private static readonly object CommentOrigin = new();
+
+  // COMMENT_COMMANDS in src/shared/tool-descriptions/database-comments.ts; the planner refuses a batch that mixes them with other writes.
+  private static readonly HashSet<string> CommentCommands = new(StringComparer.Ordinal)
+  {
+    "database.addComment", "database.replyToComment", "database.editComment", "database.resolveComment", "database.deleteComment",
+  };
 
   private readonly LiveRoom room;
   private readonly McpBundle bundle;
@@ -30,6 +38,7 @@ internal sealed class LiveSession : IHandleSession
   // Batch number -> its row ids, until every row is acked.
   private readonly Dictionary<int, IReadOnlyList<string>> unacked = [];
   private bool readOnly;
+  private string? emptyRevision;
   private int batches;
 
   internal LiveSession(
@@ -138,11 +147,21 @@ internal sealed class LiveSession : IHandleSession
       var replay = HistoryCommand(batch);
       // Undo and redo: the bundle checks the batch and asks what the step unlocks or shares, then the room replays it.
       var gate = replay is null ? null : steps.GateFor(replay == "history.undo");
+      var comments = CommentsOnly(batch);
 
-      input["history"] = gate?.History ?? new JsonObject();
+      // The bundle cannot carry a comment batch's history: it clears the steps but keeps the mark.
+      if (!comments)
+      {
+        input["history"] = gate?.History ?? new JsonObject();
+      }
       if (gate is not null)
       {
         input["document"] = gate.Document;
+        // The bundle keeps carried marks only for the document they were made on.
+        if (gate.History.ContainsKey("past") && !gate.History.ContainsKey("revision"))
+        {
+          gate.History["revision"] = await EmptyRevisionAsync(input, cancellationToken);
+        }
       }
       input["batch"] = batch?.DeepClone();
       if (approval is not null)
@@ -206,6 +225,10 @@ internal sealed class LiveSession : IHandleSession
           }, cancellationToken), null);
         }
         steps.MarkRestored(previous);
+        // Node applies the room's frames while it waits on the POST, so its revision counts the restored update when it came first.
+        room.ReleaseDocFrames();
+        room.HoldDocFrames();
+        result["revision"] = room.Revision;
       }
       else if (ran["edits"] is JsonArray { Count: > 0 } edits && ran["document"] is JsonObject after)
       {
@@ -213,13 +236,24 @@ internal sealed class LiveSession : IHandleSession
 
         var html = ops.Count > 0 ? await converter.ReadOpsHtmlAsync(room.Doc, ops, cancellationToken) : null;
 
-        steps.Apply(edits, () =>
+        if (comments)
+        {
+          if (html is not null)
+          {
+            room.WriteLocal(CommentOrigin, _ => YDocConverter.ApplyOps(room.Doc, ops, html));
+          }
+          steps.MarkComment();
+        }
+        else
+        {
+          steps.Apply(edits, () =>
         {
           if (html is not null)
           {
             room.WriteLocal(AgentOrigin, _ => YDocConverter.ApplyOps(room.Doc, ops, html));
           }
         }, new JsonObject { ["document"] = after.DeepClone(), ["history"] = ran["history"]?.DeepClone() });
+        }
       }
       else if (McpJson.Bool(result["ok"]) == true && ran["history"]?["past"] is JsonArray { Count: > 0 } marks && McpJson.String(marks[^1]) == "other")
       {
@@ -400,6 +434,27 @@ internal sealed class LiveSession : IHandleSession
 
     return created;
   }
+
+  /// <summary>The bundle's content revision of an empty document, read once from a batch that runs nothing.</summary>
+  private async Task<string?> EmptyRevisionAsync(JsonObject input, CancellationToken cancellationToken)
+  {
+    if (emptyRevision is null)
+    {
+      var probe = (JsonObject)input.DeepClone();
+
+      probe["document"] = new JsonObject { ["blocks"] = new JsonArray() };
+      probe["history"] = new JsonObject();
+      probe["batch"] = new JsonObject { ["commands"] = new JsonArray() };
+      probe.Remove("approval");
+      emptyRevision = McpJson.String((await bundle.CallAsync("agentExecute", probe, cancellationToken))["history"]?["revision"]);
+    }
+
+    return emptyRevision;
+  }
+
+  private static bool CommentsOnly(JsonNode? batch) =>
+      batch is JsonObject { } source && source["commands"] is JsonArray commands
+      && commands.Any(command => command is JsonObject entry && McpJson.String(entry["name"]) is { } name && CommentCommands.Contains(name));
 
   /// <summary>The batch's first command when it is history.undo or history.redo; the bundle refuses anything else with it.</summary>
   private static string? HistoryCommand(JsonNode? batch) =>

@@ -16,7 +16,6 @@ internal sealed class LiveAgentHistory
   // AGENT_HISTORY_LIMITS.steps in src/shared/agent/document-session.ts.
   internal const int MaxSteps = 100;
 
-  private static readonly JsonObject NoStep = new() { ["blocks"] = new JsonArray() };
 
   private readonly LiveRoom room;
   private readonly object origin;
@@ -99,6 +98,16 @@ internal sealed class LiveAgentHistory
     }
   }
 
+  /// <summary>
+  /// A comment batch: written outside undo, so no step, but the executor still marks it,
+  /// so the next undo reverts the step before it (store-applier.ts applyComments).
+  /// </summary>
+  internal void MarkComment()
+  {
+    past.Add(new Mark("own"));
+    future.Clear();
+  }
+
   /// <summary>A batch that only wrote another document (a host action).</summary>
   internal void MarkOther()
   {
@@ -119,22 +128,22 @@ internal sealed class LiveAgentHistory
     {
       // The empty other-mark lets the bundle check the envelope; its answer is then replaced.
       return undo
-          ? new Gate(NoStep, new JsonObject { ["past"] = new JsonArray("other") }, Refusal(
+          ? new Gate(NoStep(), new JsonObject { ["past"] = new JsonArray("other") }, Refusal(
               "UNDO_OTHER_DOCUMENT", "UNDO_RESTORED",
               "The last batch restored a version. history.undo cannot undo a restore."
               + (last.Restored is null ? "" : $" To go back, history.restore \"{last.Restored}\", the version that was current before.")))
-          : new Gate(NoStep, [], Refusal("NOTHING_TO_REDO", "NOTHING_TO_REDO", "The last batch restored a version. There is nothing to redo after it."));
+          : new Gate(NoStep(), [], Refusal("NOTHING_TO_REDO", "NOTHING_TO_REDO", "The last batch restored a version. There is nothing to redo after it."));
     }
     if (undo && last is { Kind: "other" })
     {
-      return new Gate(NoStep, new JsonObject { ["past"] = new JsonArray("other") }, null);
+      return new Gate(NoStep(), new JsonObject { ["past"] = new JsonArray("other") }, null);
     }
     var step = undo ? done.LastOrDefault() : undone.LastOrDefault();
     var pair = step is null ? null : undo ? step.UndoGate : step.RedoGate;
 
     // No step: an empty document, so the gate asks about no locked database (Node's pendingUnlocks is []).
     return pair is null
-        ? new Gate(NoStep, [], null)
+        ? new Gate(NoStep(), [], null)
         : new Gate((JsonObject)pair["document"]!.DeepClone(), (JsonObject)pair["history"]!.DeepClone(), null);
   }
 
@@ -155,6 +164,7 @@ internal sealed class LiveAgentHistory
           : Error("NOTHING_TO_REDO", "This session has no undone step to redo.", false);
     }
     var (from, to) = undo ? (undoManager.UndoStack, undoManager.RedoStack) : (undoManager.RedoStack, undoManager.UndoStack);
+
 
     // Yjs merges a replay with a peer's text and map writes, but not with a peer's change to the step's blocks.
     if (Shape(step) != step.Shape || (step.Item is not null && (from.Count == 0 || !ReferenceEquals(from[^1], step.Item))))
@@ -200,6 +210,8 @@ internal sealed class LiveAgentHistory
 
     return null;
   }
+
+  private static JsonObject NoStep() => new() { ["blocks"] = new JsonArray() };
 
   private static JsonObject Refusal(string when, string code, string message) => new()
   {

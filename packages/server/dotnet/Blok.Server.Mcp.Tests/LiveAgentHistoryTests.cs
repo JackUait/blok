@@ -109,6 +109,42 @@ public sealed class LiveAgentHistoryTests
     await room.CloseAsync();
   }
 
+  [Fact]
+  public async Task ACommentBatchIsNoStepSoUndoRevertsTheWriteBeforeIt()
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+    var origin = new object();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, origin);
+
+      Insert(room, history, origin, "p1", "one");
+      history.MarkComment();
+
+      Assert.Null(history.GateFor(true).Refusal);
+      Assert.Null(history.Replay(true, Pair));
+      Assert.Empty(Ids(room));
+    });
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task EachGateIsItsOwnJson()
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, new object());
+
+      history.MarkRestored(null);
+      _ = new JsonObject { ["document"] = history.GateFor(true).Document, ["history"] = history.GateFor(true).History };
+      _ = new JsonObject { ["document"] = history.GateFor(false).Document, ["history"] = history.GateFor(false).History };
+    });
+    await room.CloseAsync();
+  }
+
   private static void Insert(LiveRoom room, LiveAgentHistory history, object origin, string id, string text, JsonObject? gate = null)
   {
     var edits = new JsonArray(new JsonObject

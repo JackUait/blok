@@ -129,12 +129,16 @@ pub struct ExecuteInput {
     pub actor: Value,
     pub approval: Value,
     pub created_pages: Vec<String>,
+    /// The page the host could not create, for the insert that needs it.
+    pub create_failure: Option<Value>,
+    /// What each page write the host made gave, in batch order.
+    pub page_writes: Vec<Value>,
 }
 
 enum Command {
     Execute(ExecuteInput, oneshot::Sender<Result<Executed, Fault>>),
     Read(Value, Value, oneshot::Sender<Result<String, Fault>>),
-    PagesNeeded(Value, Value, Value, oneshot::Sender<Result<u64, Fault>>),
+    PagesNeeded(Value, Value, Value, oneshot::Sender<Result<Value, Fault>>),
     Close(oneshot::Sender<Value>),
 }
 
@@ -161,7 +165,7 @@ impl RemoteRoom {
         batch: Value,
         actor: Value,
         approval: Value,
-    ) -> Result<u64, Fault> {
+    ) -> Result<Value, Fault> {
         let (reply, answer) = oneshot::channel();
         self.commands
             .send(Command::PagesNeeded(batch, actor, approval, reply))
@@ -1241,9 +1245,9 @@ impl Room {
         batch: &Value,
         actor: &Value,
         approval: &Value,
-    ) -> Result<u64, Fault> {
+    ) -> Result<Value, Fault> {
         if self.end.is_some() || self.read_only {
-            return Ok(0);
+            return Ok(json!({ "count": 0 }));
         }
         let document = self.export().await?;
         let input = self
@@ -1251,8 +1255,7 @@ impl Room {
             .val("batch", batch)
             .val("approval", approval)
             .finish();
-        let counted = self.shared.bundle.call("agentPagesNeeded", &input).await?;
-        Ok(crate::server::pages_to_make(&counted))
+        Ok(self.shared.bundle.call("agentPagesNeeded", &input).await?)
     }
 
     async fn read(&mut self, view: &Value, actor: &Value) -> Result<String, Fault> {
@@ -1299,6 +1302,12 @@ impl Room {
         }
         if !input.created_pages.is_empty() {
             call = call.val("createdPages", &json!(input.created_pages));
+        }
+        if let Some(failure) = &input.create_failure {
+            call = call.val("createFailure", failure);
+        }
+        if !input.page_writes.is_empty() {
+            call = call.val("pageWrites", &json!(input.page_writes));
         }
         let out = self
             .shared

@@ -136,6 +136,22 @@ impl FilesSource {
         ))
     }
 
+    /// Whether two ids save to one file, through a symlink or a case alias
+    /// (Node's sameDocument). An id that cannot be resolved matches nothing.
+    pub async fn same_document(&self, first: &str, second: &str) -> bool {
+        let mut keys = Vec::new();
+        for id in [first, second] {
+            let Ok(path) = self.path_of(id).await else {
+                return false;
+            };
+            let Ok(target) = self.write_target_of(id, &path) else {
+                return false;
+            };
+            keys.push(same_file_key(&target));
+        }
+        keys[0] == keys[1]
+    }
+
     /// The file a save replaces, fully resolved. A symlinked document is
     /// written through to its target; a link to a missing file is refused.
     fn write_target_of(&self, id: &str, path: &Path) -> Result<PathBuf, HostError> {

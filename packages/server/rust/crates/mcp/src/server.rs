@@ -163,6 +163,41 @@ pub fn pages_to_make(counted: &Value) -> u64 {
     }
 }
 
+/// The page writes the pre-pass named: page.rename and page.setIcon write
+/// the page's own document first.
+fn page_writes(counted: &Value) -> Vec<(String, Value)> {
+    counted
+        .get("writes")
+        .and_then(Value::as_array)
+        .map(|writes| {
+            writes
+                .iter()
+                .filter_map(|w| Some((str_of(w, "pageId")?.to_owned(), w.get("batch")?.clone())))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// What the host did for a batch before the bundle runs it.
+#[derive(Default)]
+struct HostWork {
+    created: Vec<String>,
+    create_failure: Option<Value>,
+    page_writes: Vec<Value>,
+}
+
+/// A host error as Node's surface error carries it, with its retryable flag.
+fn agent_error_of(error: &HostError) -> Value {
+    let mut agent = error.error.clone();
+    if error.helper != crate::errors::Helper::AsIs {
+        agent["retryable"] = json!(matches!(
+            error.code(),
+            "ROOM_SYNC_TIMEOUT" | "SOURCE_UNAVAILABLE" | "DOCUMENT_CHANGED" | "HANDLE_LIMIT"
+        ));
+    }
+    agent
+}
+
 /// The bundle's isBatchEnvelope: commands of {name, args, ref?}.
 pub fn is_batch_envelope(batch: &Value) -> bool {
     batch
@@ -449,16 +484,7 @@ impl Mcp {
         let named = |fault: Fault| match fault {
             Fault::Host(mut error) => {
                 // Node re-wraps the error keeping its flag, with the page named.
-                let mut agent = error.error.clone();
-                if error.helper != crate::errors::Helper::AsIs {
-                    agent["retryable"] = json!(matches!(
-                        error.code(),
-                        "ROOM_SYNC_TIMEOUT"
-                            | "SOURCE_UNAVAILABLE"
-                            | "DOCUMENT_CHANGED"
-                            | "HANDLE_LIMIT"
-                    ));
-                }
+                let mut agent = agent_error_of(&error);
                 let mut details = agent.get("details").cloned().unwrap_or(json!({}));
                 details["pageId"] = json!(page_id);
                 agent["details"] = details;
@@ -546,6 +572,189 @@ impl Mcp {
         match made.await {
             Ok(()) => Ok(page_id),
             Err(fault) => Err(named(fault)),
+        }
+    }
+
+    /// Makes the pages and does the page write a batch needs, in Node's
+    /// order: a creation that fails stops there and goes to the bundle,
+    /// which refuses that insert inside the batch.
+    async fn host_work(
+        &self,
+        caller: &Caller,
+        actor: &Value,
+        client_name: &str,
+        open_document: &str,
+        live_parent: bool,
+        counted: &Value,
+    ) -> Result<HostWork, Fault> {
+        let mut work = HostWork::default();
+        for _ in 0..pages_to_make(counted) {
+            match self.create_page(caller, actor, client_name).await {
+                Ok(page_id) => work.created.push(page_id),
+                Err(Fault::Host(error)) => {
+                    work.create_failure = Some(error.error.clone());
+                    break;
+                }
+                Err(other) => return Err(other),
+            }
+        }
+        for (page_id, batch) in page_writes(counted) {
+            let outcome = Box::pin(self.write_page(
+                caller,
+                actor,
+                client_name,
+                open_document,
+                live_parent,
+                &page_id,
+                &batch,
+            ))
+            .await?;
+            let failed = outcome.get("error").is_some();
+            work.page_writes.push(outcome);
+            if failed {
+                break;
+            }
+        }
+        Ok(work)
+    }
+
+    /// Node's openPageDocument (src/mcp/page-titles.ts): the page's own
+    /// document, opened as blok_open opens it but with no handle, written
+    /// and closed. Answers `{ pageId, result }` or `{ pageId, error }`.
+    #[allow(clippy::too_many_arguments)]
+    async fn write_page(
+        &self,
+        caller: &Caller,
+        actor: &Value,
+        client_name: &str,
+        open_document: &str,
+        live_parent: bool,
+        page_id: &str,
+        batch: &Value,
+    ) -> Result<Value, Fault> {
+        // A room id has no aliases; a file can be a symlink or a case alias.
+        let same = page_id == open_document
+            || (!live_parent
+                && match &self.source {
+                    Some(source) => source.same_document(page_id, open_document).await,
+                    None => false,
+                });
+        if same {
+            return Ok(json!({ "pageId": page_id, "error": {
+                "code": "INVALID_ARGS",
+                "message": "This page block points at the document you have open. Use doc.setTitle or doc.setIcon instead.",
+                "retryable": false,
+            } }));
+        }
+        let call = json!({ "name": "blok_execute", "batch": batch });
+        let ran = async {
+            if !self.allowed(&caller.principal, page_id, true).await {
+                return Err(HostError::surface(
+                    "FORBIDDEN",
+                    "You may not open this document with this access.",
+                )
+                .into());
+            }
+            let resolved = self
+                .bundle
+                .call(
+                    "mcpResolveMode",
+                    &json!({ "requested": "auto", "sync": self.syncs() }).to_string(),
+                )
+                .await?;
+            if let Some(error) = resolved.get("error") {
+                return Err(HostError::as_is(error.clone()).into());
+            }
+            if str_of(&resolved, "mode") == Some("live") {
+                let (Some(live), Some(shared)) = (&self.live, &self.live_shared) else {
+                    return Err(HostError::surface(
+                        "INVALID_ARGS",
+                        "Live mode needs blok-mcp to run with --sync-url.",
+                    )
+                    .into());
+                };
+                let actor_id = str_of(actor, "id").unwrap_or_default().to_owned();
+                let presence = Presence {
+                    color: presence_color(&actor_id),
+                    name: client_name.to_owned(),
+                    on_behalf_of: str_of(actor, "onBehalfOf").unwrap_or(&actor_id).to_owned(),
+                    actor_id: actor_id.clone(),
+                };
+                let request = TicketRequest {
+                    document_id: page_id.to_owned(),
+                    write: true,
+                    principal: caller.principal.clone(),
+                    client_name: client_name.to_owned(),
+                    actor_id,
+                };
+                let room = live.open(shared.clone(), request, presence).await?;
+                let ran = Box::pin(self.on_remote(
+                    caller,
+                    page_id,
+                    &room,
+                    &call,
+                    actor,
+                    client_name,
+                    &Approval::default(),
+                ))
+                .await;
+                room.close().await;
+                return ran;
+            }
+            let Some(source) = &self.source else {
+                return Err(HostError::surface(
+                    "SOURCE_UNAVAILABLE",
+                    "No document source is configured. Start blok-mcp with --source.",
+                )
+                .into());
+            };
+            let loaded = source.load(page_id).await?;
+            let mut stored = Stored {
+                write: true,
+                document: loaded.document,
+                history: "{}".to_owned(),
+                version: loaded.version,
+                stale: false,
+            };
+            Box::pin(self.execute(
+                caller,
+                page_id,
+                &mut stored,
+                &call,
+                actor,
+                client_name,
+                &Approval::default(),
+            ))
+            .await
+        };
+        match ran.await {
+            Ok(Outcome::Answer(answer)) => {
+                let mut result: Value = serde_json::from_str(&answer.structured)
+                    .map_err(|e| Fault::Internal(e.to_string()))?;
+                // As page-titles.ts: close() drops unacked rows, so a pending write failed.
+                if result.get("ok") == Some(&Value::Bool(true))
+                    && result.pointer("/delivery/pending") == Some(&Value::Bool(true))
+                {
+                    let warnings = result.get("warnings").cloned().unwrap_or(json!([]));
+                    result = json!({
+                        "ok": false,
+                        "error": agent_error_of(&HostError::surface_with(
+                            "SOURCE_UNAVAILABLE",
+                            "The room did not confirm the page write in time. It was not saved; try again.",
+                            json!({ "pending": true }),
+                        )),
+                        "warnings": warnings,
+                    });
+                }
+                Ok(json!({ "pageId": page_id, "result": result }))
+            }
+            Ok(_) => Err(Fault::Internal(
+                "a page write did not answer as blok_execute".to_owned(),
+            )),
+            Err(Fault::Host(error)) => {
+                Ok(json!({ "pageId": page_id, "error": agent_error_of(&error) }))
+            }
+            Err(other) => Err(other),
         }
     }
 
@@ -899,9 +1108,11 @@ impl Mcp {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn on_remote(
         &self,
         caller: &Caller,
+        document_id: &str,
         room: &RemoteRoom,
         call: &Value,
         actor: &Value,
@@ -936,21 +1147,23 @@ impl Mcp {
                     asking["replies"] = replies.clone();
                 }
                 let batch = call.get("batch").cloned().unwrap_or(Value::Null);
-                let mut created_pages = Vec::new();
+                let mut work = HostWork::default();
                 if self.creates_pages() && is_batch_envelope(&batch) {
-                    let pages = room
+                    let counted = room
                         .pages_needed(batch.clone(), actor.clone(), asking.clone())
                         .await?;
-                    for _ in 0..pages {
-                        created_pages.push(self.create_page(caller, actor, client_name).await?);
-                    }
+                    work = self
+                        .host_work(caller, actor, client_name, document_id, true, &counted)
+                        .await?;
                 }
                 let executed = room
                     .execute(ExecuteInput {
                         batch,
                         actor: actor.clone(),
                         approval: asking,
-                        created_pages,
+                        created_pages: work.created,
+                        create_failure: work.create_failure,
+                        page_writes: work.page_writes,
                     })
                     .await?;
                 let (result, delivery) = match executed {
@@ -1219,7 +1432,15 @@ impl Mcp {
             }
             Session::Remote(room) => {
                 return self
-                    .on_remote(caller, room, &call, &actor, &client_name, approval)
+                    .on_remote(
+                        caller,
+                        &document_id,
+                        room,
+                        &call,
+                        &actor,
+                        &client_name,
+                        approval,
+                    )
                     .await;
             }
         };
@@ -1284,7 +1505,7 @@ impl Mcp {
             asking["replies"] = replies.clone();
         }
         let batch = call.get("batch").unwrap_or(&Value::Null);
-        let mut created = Vec::new();
+        let mut work = HostWork::default();
         // A read-only handle or a malformed batch is refused before any page.
         if self.creates_pages() && stored.write && is_batch_envelope(batch) {
             let counting = self
@@ -1292,10 +1513,10 @@ impl Mcp {
                 .val("batch", batch)
                 .val("approval", &asking)
                 .finish();
-            let pages = pages_to_make(&self.bundle.call("agentPagesNeeded", &counting).await?);
-            for _ in 0..pages {
-                created.push(self.create_page(caller, actor, client_name).await?);
-            }
+            let counted = self.bundle.call("agentPagesNeeded", &counting).await?;
+            work = self
+                .host_work(caller, actor, client_name, document_id, false, &counted)
+                .await?;
         }
         let mut input = self
             .session_input("stored", stored.write, &stored.document, actor)
@@ -1303,8 +1524,14 @@ impl Mcp {
             .val("batch", batch)
             .str("documentText", source.document_text_form())
             .val("approval", &asking);
-        if !created.is_empty() {
-            input = input.val("createdPages", &json!(created));
+        if let Some(failure) = &work.create_failure {
+            input = input.val("createFailure", failure);
+        }
+        if !work.page_writes.is_empty() {
+            input = input.val("pageWrites", &json!(work.page_writes));
+        }
+        if !work.created.is_empty() {
+            input = input.val("createdPages", &json!(work.created));
         }
         let out = self
             .bundle

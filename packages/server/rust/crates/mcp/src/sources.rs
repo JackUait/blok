@@ -115,6 +115,14 @@ impl Source {
         }
     }
 
+    /// Whether two ids are one document; only files have aliases.
+    pub async fn same_document(&self, first: &str, second: &str) -> bool {
+        match self {
+            Source::Files(files) => files.same_document(first, second).await,
+            Source::Endpoint(_) => false,
+        }
+    }
+
     /// None: this source cannot list.
     pub async fn list(&self, request: &ListRequest) -> Option<Result<Listing, Fault>> {
         match self {

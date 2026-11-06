@@ -52,6 +52,70 @@ const PEEK_INSET_PX = 12;
 
 const px = (value: number): string => `${value}px`;
 
+/** Fewest cards in the deck (front one included) that get a "close all" button. */
+const CLEAR_ALL_FROM = 3;
+
+/**
+ * Close every card in the deck. Waiting cards go first: closing the front
+ * card first would bring the next one up.
+ */
+const clearAll = (): void => {
+  const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="notifier-container"]');
+
+  waiting.splice(0).forEach((entry) => dropped.add(entry.options));
+  wrapper?.setAttribute('data-blok-toast-clearing', 'true');
+  const card = frontCard();
+  const close = card === null ? undefined : toastDismiss.get(card);
+
+  if (close === undefined) {
+    syncBehind();
+  } else {
+    close();
+  }
+};
+
+/**
+ * Keeps the "close all" button in step with the deck. CSS shows it only while
+ * the pointer is over the deck or keyboard focus is in it.
+ * @param wrapper - the toast wrapper
+ */
+const syncClearAll = (wrapper: HTMLElement): void => {
+  const existing = wrapper.querySelector<HTMLElement>(':scope > [data-blok-toast-clear]');
+
+  if (waiting.length + 1 < CLEAR_ALL_FROM) {
+    existing?.remove();
+    wrapper.querySelector(':scope > [data-blok-toast-deck-hit]')?.remove();
+    wrapper.removeAttribute('data-blok-toast-clearing');
+
+    return;
+  }
+  // No data-blok-testid on these: `show` takes the first such child for the toast to replace.
+  const bar = existing ?? document.createElement('div');
+
+  if (existing === null) {
+    const hit = document.createElement('div');
+    const count = document.createElement('span');
+    const button = document.createElement('button');
+
+    hit.setAttribute('data-blok-toast-deck-hit', '');
+    bar.setAttribute('data-blok-toast-clear', '');
+    count.setAttribute('data-blok-toast-part', 'clear-count');
+    button.type = 'button';
+    button.addEventListener('click', clearAll);
+    bar.append(count, button);
+    wrapper.append(hit, bar);
+  }
+  const count = bar.querySelector('[data-blok-toast-part="clear-count"]');
+  const button = bar.querySelector('button');
+
+  if (count !== null) {
+    count.textContent = `+${waiting.length}`;
+  }
+  if (button !== null) {
+    button.textContent = waiting[0]?.options.dismissAllText ?? 'Close all';
+  }
+};
+
 /**
  * The wrapper draws the waiting cards as edges peeking out behind the front one.
  * The edges follow the front card's box: mid-swap the wrapper also spans the leaving card.
@@ -63,6 +127,7 @@ const syncBehind = (): void => {
   if (wrapper === null) {
     return;
   }
+  syncClearAll(wrapper);
   if (waiting.length === 0) {
     wrapper.removeAttribute('data-blok-toast-behind');
 

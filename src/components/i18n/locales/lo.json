@@ -947,6 +947,7 @@
   "tools.audio.coverSourceAria": "ແຫຼ່ງຮູບປົກ",
   "a11y.back": "ກັບຄືນ",
   "notifier.dismiss": "ປິດ",
+  "notifier.dismissAll": "ປິດທັງໝົດ",
   "notifier.confirm": "ຢືນຢັນ",
   "notifier.cancel": "ຍົກເລີກ",
   "notifier.ok": "ຕົກລົງ",

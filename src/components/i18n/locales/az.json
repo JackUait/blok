@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " menyunu açır",
   "a11y.back": "Geri",
   "notifier.dismiss": "Bağla",
+  "notifier.dismissAll": "Hamısını bağla",
   "notifier.confirm": "Təsdiqlə",
   "notifier.cancel": "Ləğv et",
   "notifier.ok": "OK",

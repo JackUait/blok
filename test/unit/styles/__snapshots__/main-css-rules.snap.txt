@@ -31239,6 +31239,111 @@ textarea[data-blok-field] {
   translate: 0 calc(2 * var(--blok-toast-peek));
 }
 
+[data-blok-interface='notifier'] > [data-blok-toast-deck-hit] {
+  position: absolute;
+  grid-area: auto;
+  top: calc(var(--_blok-toast-peek-top, 0px) - 2 * var(--blok-toast-peek));
+  right: calc(var(--_blok-toast-peek-right, 0px) + 12px);
+  left: calc(var(--_blok-toast-peek-left, 0px) + 12px);
+  height: calc(2 * var(--blok-toast-peek));
+}
+
+[data-blok-interface='notifier'][data-blok-position^='top'] > [data-blok-toast-deck-hit] {
+  top: auto;
+  bottom: calc(var(--_blok-toast-peek-bottom, 0px) - 2 * var(--blok-toast-peek));
+}
+
+[data-blok-interface='notifier'] > [data-blok-toast-clear] {
+  --blok-toast-clear-gap: 6px;
+  --blok-toast-clear-shift: 4px;
+  --blok-toast-clear-bg: #1c1c1f;
+  --blok-toast-clear-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 6px 16px -4px rgb(0 0 0 / 0.45);
+  --blok-toast-clear-ink: #f5f5f5;
+  --blok-toast-clear-ink-muted: #a1a1aa;
+  --blok-toast-clear-hover: rgb(255 255 255 / 0.12);
+  --blok-toast-clear-pad: 0 4px 0 10px;
+  --blok-toast-clear-action-pad: 0 10px;
+  --blok-toast-clear-part-gap: 2px;
+  position: absolute;
+  z-index: 2;
+  grid-area: auto;
+  left: calc((100% + var(--_blok-toast-peek-left, 0px) - var(--_blok-toast-peek-right, 0px)) / 2);
+  bottom: calc(100% - var(--_blok-toast-peek-top, 0px) + 2 * var(--blok-toast-peek) + var(--blok-toast-clear-gap));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-toast-clear-part-gap);
+  height: 28px;
+  padding: var(--blok-toast-clear-pad);
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-toast-clear-bg);
+  box-shadow: var(--blok-toast-clear-shadow);
+  color: var(--blok-toast-clear-ink-muted);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  translate: -50% var(--blok-toast-clear-shift);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease 200ms, translate 160ms ease 200ms;
+}
+
+[data-blok-interface='notifier'] > [data-blok-toast-clear]::after {
+  content: '';
+  position: absolute;
+  inset: 100% 0 auto;
+  height: calc(var(--blok-toast-clear-gap) + 2 * var(--blok-toast-peek));
+}
+
+[data-blok-interface='notifier'][data-blok-position^='top'] > [data-blok-toast-clear] {
+  --blok-toast-clear-shift: -4px;
+  top: calc(100% - var(--_blok-toast-peek-bottom, 0px) + 2 * var(--blok-toast-peek) + var(--blok-toast-clear-gap));
+  bottom: auto;
+}
+
+[data-blok-interface='notifier'][data-blok-position^='top'] > [data-blok-toast-clear]::after {
+  inset: auto 0 100%;
+}
+
+[data-blok-interface='notifier']:not([data-blok-toast-clearing]):hover > [data-blok-toast-clear], [data-blok-interface='notifier']:not([data-blok-toast-clearing]):has(:focus-visible) > [data-blok-toast-clear] {
+  translate: -50% 0;
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0ms;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast-clear] button {
+  height: 22px;
+  padding: var(--blok-toast-clear-action-pad);
+  border: none;
+  border-radius: var(--blok-radius-pill);
+  background: transparent;
+  color: var(--blok-toast-clear-ink);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast-clear] button:hover {
+  background: var(--blok-toast-clear-hover);
+}
+
+[data-blok-interface='notifier'] [data-blok-toast-clear] button:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+[data-blok-interface='notifier'][data-blok-toast-clearing][data-blok-toast-behind]::after, [data-blok-interface='notifier'][data-blok-toast-clearing][data-blok-toast-behind='2']::before {
+  translate: 0 0;
+  opacity: 0;
+  transition-property: translate, inset, opacity;
+}
+
+[data-blok-interface='notifier'][data-blok-toast-clearing] > [data-blok-toast-clear] {
+  transition-delay: 0ms;
+}
+
 [data-blok-interface='notifier'] [data-blok-toast='card'][data-state='closed'] {
   z-index: 1;
   pointer-events: none;
@@ -31604,7 +31709,7 @@ textarea[data-blok-field] {
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-interface='notifier'][data-blok-toast-behind]::after, [data-blok-interface='notifier'][data-blok-toast-behind]::before {
+[@media (prefers-reduced-motion: reduce)] [data-blok-interface='notifier'][data-blok-toast-behind]::after, [data-blok-interface='notifier'][data-blok-toast-behind]::before, [data-blok-interface='notifier'] > [data-blok-toast-clear], [data-blok-interface='notifier'] [data-blok-toast-clear] button {
   transition: none;
 }
 

@@ -949,6 +949,7 @@
   "tools.audio.coverSourceAria": "Viršelio šaltinis",
   "a11y.back": "Atgal",
   "notifier.dismiss": "Uždaryti pranešimą",
+  "notifier.dismissAll": "Uždaryti visus",
   "notifier.confirm": "Patvirtinti",
   "notifier.cancel": "Atšaukti",
   "notifier.ok": "Gerai",

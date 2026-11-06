@@ -947,6 +947,7 @@
   "tools.linkPaste.mention": "Mention",
   "a11y.back": "Back",
   "notifier.dismiss": "Dismiss",
+  "notifier.dismissAll": "Dismiss all",
   "notifier.confirm": "Confirm",
   "notifier.cancel": "Cancel",
   "notifier.ok": "OK",

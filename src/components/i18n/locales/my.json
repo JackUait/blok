@@ -947,6 +947,7 @@
   "tools.audio.coverSourceAria": "အဖုံးပုံရင်းမြစ်",
   "a11y.back": "နောက်သို့",
   "notifier.dismiss": "ပိတ်ရန်",
+  "notifier.dismissAll": "အားလုံးပိတ်ရန်",
   "notifier.confirm": "အတည်ပြုရန်",
   "notifier.cancel": "ပယ်ဖျက်",
   "notifier.ok": "OK",

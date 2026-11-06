@@ -66,6 +66,11 @@ export interface NotifierOptions {
   dismissText?: string;
 
   /**
+   * Label of the "close all" button that shows over a deck of three or more cards.
+   */
+  dismissAllText?: string;
+
+  /**
    * A muted second line under the message. Plain text.
    */
   detail?: string;

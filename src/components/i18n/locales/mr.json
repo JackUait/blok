@@ -947,6 +947,7 @@
   "tools.audio.coverSourceAria": "कव्हर प्रतिमेचा स्रोत",
   "a11y.back": "मागे",
   "notifier.dismiss": "बंद करा",
+  "notifier.dismissAll": "सर्व बंद करा",
   "notifier.confirm": "पुष्टी करा",
   "notifier.cancel": "रद्द करा",
   "notifier.ok": "ठीक आहे",

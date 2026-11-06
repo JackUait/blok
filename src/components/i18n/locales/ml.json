@@ -947,6 +947,7 @@
   "tools.audio.coverSourceAria": "കവർ ഉറവിടം",
   "a11y.back": "പിന്നോട്ട്",
   "notifier.dismiss": "അടയ്ക്കുക",
+  "notifier.dismissAll": "എല്ലാം അടയ്ക്കുക",
   "notifier.confirm": "സ്ഥിരീകരിക്കുക",
   "notifier.cancel": "റദ്ദാക്കുക",
   "notifier.ok": "ശരി",

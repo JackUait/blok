@@ -949,6 +949,7 @@
   "blockSettings.openMenuAction": " za odpiranje menija",
   "a11y.back": "Nazaj",
   "notifier.dismiss": "Opusti",
+  "notifier.dismissAll": "Opusti vse",
   "notifier.confirm": "Potrdi",
   "notifier.cancel": "Prekliči",
   "notifier.ok": "V redu",

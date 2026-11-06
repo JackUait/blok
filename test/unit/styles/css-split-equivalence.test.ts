@@ -726,6 +726,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const NOTIFIER_CARD_STACK_BYTES = 5_687;
     // Notifier card launch: the spring curve, the launch and its light, the staggered insides, the peek entrance and their reduced motion.
     const NOTIFIER_CARD_LAUNCH_BYTES = 5_099;
+    // Notifier deck "close all": the hover strip over the edges, the pill, its tokens and the edges sinking on close.
+    const NOTIFIER_CARD_CLEAR_ALL_BYTES = 4_648;
     // Table of contents block: its stylesheet and import, then the toolbox preview drawing.
     const TABLE_OF_CONTENTS_BYTES = 6_071 + 35 + 2_544;
     // Tabs toolbox preview: the tab strip, the open tab's panel and its line motion.
@@ -1490,6 +1492,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + SPOTLIGHT_BYTES
       + NOTIFIER_CARD_STACK_BYTES
       + NOTIFIER_CARD_LAUNCH_BYTES
+      + NOTIFIER_CARD_CLEAR_ALL_BYTES
       + TABLE_OF_CONTENTS_BYTES
       + MEDIA_RADIUS_ROLES_BYTES
       + RADIUS_SYSTEM_BYTES

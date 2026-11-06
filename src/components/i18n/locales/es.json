@@ -948,6 +948,7 @@
   "blockSettings.openMenuAction": " para abrir el menú",
   "a11y.back": "Atrás",
   "notifier.dismiss": "Descartar",
+  "notifier.dismissAll": "Descartar todo",
   "notifier.confirm": "Confirmar",
   "notifier.cancel": "Cancelar",
   "notifier.ok": "Aceptar",

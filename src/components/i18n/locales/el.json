@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " για να ανοίξετε το μενού",
   "a11y.back": "Πίσω",
   "notifier.dismiss": "Κλείσιμο",
+  "notifier.dismissAll": "Κλείσιμο όλων",
   "notifier.confirm": "Επιβεβαίωση",
   "notifier.cancel": "Ακύρωση",
   "notifier.ok": "OK",

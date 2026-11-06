@@ -173,18 +173,32 @@ describe('NotifierAPI', () => {
     expect(api.isClosed({ message: 'm' })).toBe(true);
   });
 
-  it('fills a localized close label for toasts with actions', async () => {
+  it('fills localized close labels for toasts with actions', async () => {
     const { show: builtInShow } = await import('../../../../../src/components/utils/notifier/index');
     const api = new NotifierAPI(makeConfig());
-    const { state } = makeTranslatorState({ 'notifier.dismiss': 'Schließen' });
+    const { state } = makeTranslatorState({ 'notifier.dismiss': 'Schließen', 'notifier.dismissAll': 'Alle schließen' });
     api.state = state;
     const options: NotifierOptions = { message: 'm', actions: [ { label: 'Retry', onClick: vi.fn() } ] };
 
     api.show(options);
     await new Promise(r => setTimeout(r, 0));
 
-    expect(builtInShow).toHaveBeenCalledWith({ ...options, dismissText: 'Schließen' }, expect.anything());
+    expect(builtInShow).toHaveBeenCalledWith({ ...options, dismissText: 'Schließen', dismissAllText: 'Alle schließen' }, expect.anything());
     expect(options).not.toHaveProperty('dismissText');
+    expect(options).not.toHaveProperty('dismissAllText');
+  });
+
+  it('keeps close labels the caller set', async () => {
+    const { show: builtInShow } = await import('../../../../../src/components/utils/notifier/index');
+    const api = new NotifierAPI(makeConfig());
+    const { state } = makeTranslatorState({ 'notifier.dismiss': 'Schließen', 'notifier.dismissAll': 'Alle schließen' });
+    api.state = state;
+    const options: NotifierOptions = { message: 'm', dismissText: 'Weg', dismissAllText: 'Alle weg', actions: [ { label: 'Retry', onClick: vi.fn() } ] };
+
+    api.show(options);
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(builtInShow).toHaveBeenCalledWith({ ...options }, expect.anything());
   });
 
   it('uses localized defaults for the built-in confirm buttons', async () => {

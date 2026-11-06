@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " ili kufungua menyu",
   "a11y.back": "Rudi",
   "notifier.dismiss": "Ondoa",
+  "notifier.dismissAll": "Ondoa zote",
   "notifier.confirm": "Thibitisha",
   "notifier.cancel": "Ghairi",
   "notifier.ok": "Sawa",

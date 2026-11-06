@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " a menü megnyitásához",
   "a11y.back": "Vissza",
   "notifier.dismiss": "Bezárás",
+  "notifier.dismissAll": "Összes bezárása",
   "notifier.confirm": "Megerősítés",
   "notifier.cancel": "Mégse",
   "notifier.ok": "Rendben",

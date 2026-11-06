@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " منو را باز کنید",
   "a11y.back": "بازگشت",
   "notifier.dismiss": "بستن",
+  "notifier.dismissAll": "بستن همه",
   "notifier.confirm": "تأیید",
   "notifier.cancel": "لغو",
   "notifier.ok": "تأیید",

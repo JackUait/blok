@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " ምናሌውን ይክፈቱ",
   "a11y.back": "ተመለስ",
   "notifier.dismiss": "አሰናብት",
+  "notifier.dismissAll": "ሁሉንም አሰናብት",
   "notifier.confirm": "አረጋግጥ",
   "notifier.cancel": "ይቅር",
   "notifier.ok": "እሺ",

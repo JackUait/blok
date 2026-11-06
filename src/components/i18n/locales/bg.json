@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " за отваряне на менюто",
   "a11y.back": "Назад",
   "notifier.dismiss": "Затвори",
+  "notifier.dismissAll": "Затвори всички",
   "notifier.confirm": "Потвърди",
   "notifier.cancel": "Отказ",
   "notifier.ok": "OK",

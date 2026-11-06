@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " મેનૂ ખોલવા માટે",
   "a11y.back": "પાછળ",
   "notifier.dismiss": "બંધ કરો",
+  "notifier.dismissAll": "બધું બંધ કરો",
   "notifier.confirm": "પુષ્ટિ કરો",
   "notifier.cancel": "રદ કરો",
   "notifier.ok": "ઓકે",

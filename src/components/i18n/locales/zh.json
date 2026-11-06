@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " 以打开菜单",
   "a11y.back": "返回",
   "notifier.dismiss": "关闭",
+  "notifier.dismissAll": "全部关闭",
   "notifier.confirm": "确认",
   "notifier.cancel": "取消",
   "notifier.ok": "确定",

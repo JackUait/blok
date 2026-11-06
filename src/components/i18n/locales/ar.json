@@ -951,6 +951,7 @@
   "blockSettings.openMenuAction": " لفتح القائمة",
   "a11y.back": "رجوع",
   "notifier.dismiss": "إغلاق",
+  "notifier.dismissAll": "إغلاق الكل",
   "notifier.confirm": "تأكيد",
   "notifier.cancel": "إلغاء",
   "notifier.ok": "حسنًا",

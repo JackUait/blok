@@ -949,6 +949,7 @@
   "blockSettings.openMenuAction": " na otvorenie ponuky",
   "a11y.back": "Späť",
   "notifier.dismiss": "Zavrieť",
+  "notifier.dismissAll": "Zavrieť všetko",
   "notifier.confirm": "Potvrdiť",
   "notifier.cancel": "Zrušiť",
   "notifier.ok": "OK",

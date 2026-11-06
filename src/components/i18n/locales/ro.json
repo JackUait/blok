@@ -948,6 +948,7 @@
   "blockSettings.openMenuAction": " pentru a deschide meniul",
   "a11y.back": "Înapoi",
   "notifier.dismiss": "Închide",
+  "notifier.dismissAll": "Închide tot",
   "notifier.confirm": "Confirmă",
   "notifier.cancel": "Anulează",
   "notifier.ok": "OK",

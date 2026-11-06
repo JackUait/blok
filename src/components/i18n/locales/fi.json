@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " avataksesi valikon",
   "a11y.back": "Takaisin",
   "notifier.dismiss": "Sulje",
+  "notifier.dismissAll": "Sulje kaikki",
   "notifier.confirm": "Vahvista",
   "notifier.cancel": "Peruuta",
   "notifier.ok": "OK",

@@ -947,6 +947,7 @@
   "tools.audio.coverSourceAria": "Хавтасны эх сурвалж",
   "a11y.back": "Буцах",
   "notifier.dismiss": "Хаах",
+  "notifier.dismissAll": "Бүгдийг хаах",
   "notifier.confirm": "Баталгаажуулах",
   "notifier.cancel": "Цуцлах",
   "notifier.ok": "ОК",

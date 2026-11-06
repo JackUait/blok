@@ -947,6 +947,7 @@
   "tools.audio.coverSourceAria": "سەرچاوەی بەرگ",
   "a11y.back": "گەڕانەوە",
   "notifier.dismiss": "داخستن",
+  "notifier.dismissAll": "هەموو دابخە",
   "notifier.confirm": "پشتڕاستکردنەوە",
   "notifier.cancel": "پاشگەزبوونەوە",
   "notifier.ok": "باشە",

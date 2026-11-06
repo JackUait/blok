@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " से मेनू खोलें",
   "a11y.back": "वापस",
   "notifier.dismiss": "खारिज करें",
+  "notifier.dismissAll": "सभी खारिज करें",
   "notifier.confirm": "पुष्टि करें",
   "notifier.cancel": "रद्द करें",
   "notifier.ok": "ठीक है",

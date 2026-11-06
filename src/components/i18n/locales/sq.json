@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " për të hapur menynë",
   "a11y.back": "Prapa",
   "notifier.dismiss": "Mbyll",
+  "notifier.dismissAll": "Mbyll të gjitha",
   "notifier.confirm": "Konfirmo",
   "notifier.cancel": "Anulo",
   "notifier.ok": "Në rregull",

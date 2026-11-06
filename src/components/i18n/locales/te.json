@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " నొక్కి మెనూను తెరవండి",
   "a11y.back": "వెనుకకు",
   "notifier.dismiss": "తీసివేయి",
+  "notifier.dismissAll": "అన్నీ తీసివేయి",
   "notifier.confirm": "నిర్ధారించండి",
   "notifier.cancel": "రద్దు",
   "notifier.ok": "సరే",

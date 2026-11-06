@@ -948,6 +948,7 @@
   "blockSettings.openMenuAction": " za otvaranje izbornika",
   "a11y.back": "Natrag",
   "notifier.dismiss": "Odbaci",
+  "notifier.dismissAll": "Odbaci sve",
   "notifier.confirm": "Potvrdi",
   "notifier.cancel": "Odustani",
   "notifier.ok": "U redu",

@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": "でメニューを開く",
   "a11y.back": "戻る",
   "notifier.dismiss": "閉じる",
+  "notifier.dismissAll": "すべて閉じる",
   "notifier.confirm": "確認",
   "notifier.cancel": "キャンセル",
   "notifier.ok": "OK",

@@ -947,6 +947,7 @@
   "tools.audio.coverSourceAria": "Извор на омотот",
   "a11y.back": "Назад",
   "notifier.dismiss": "Отфрли",
+  "notifier.dismissAll": "Отфрли ги сите",
   "notifier.confirm": "Потврди",
   "notifier.cancel": "Откажи",
   "notifier.ok": "Во ред",

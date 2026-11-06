@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " მენიუს გასახსნელად",
   "a11y.back": "უკან",
   "notifier.dismiss": "დახურვა",
+  "notifier.dismissAll": "ყველას დახურვა",
   "notifier.confirm": "დადასტურება",
   "notifier.cancel": "გაუქმება",
   "notifier.ok": "კარგი",

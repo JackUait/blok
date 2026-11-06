@@ -948,6 +948,7 @@
   "blockSettings.openMenuAction": " per aprire il menu",
   "a11y.back": "Indietro",
   "notifier.dismiss": "Chiudi",
+  "notifier.dismissAll": "Chiudi tutto",
   "notifier.confirm": "Conferma",
   "notifier.cancel": "Annulla",
   "notifier.ok": "Ok",

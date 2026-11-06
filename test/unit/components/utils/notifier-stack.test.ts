@@ -153,6 +153,61 @@ describe('Notifier card stack', () => {
     expect(behind()).toBeNull();
   });
 
+  describe('close all', () => {
+    const closeAllButton = (): HTMLButtonElement | null =>
+      document.querySelector<HTMLButtonElement>('[data-blok-toast-clear] button');
+
+    it('offers close all only once three or more cards are stacked', () => {
+      show(card('first'));
+      show(card('second'));
+
+      expect(closeAllButton()).toBeNull();
+
+      show(card('third'));
+
+      expect(closeAllButton()?.textContent).toBe('Close all');
+    });
+
+    it('counts the cards waiting behind the front one', () => {
+      show(card('first'));
+      show(card('second'));
+      show(card('third'));
+      show(card('fourth'));
+
+      expect(document.querySelector('[data-blok-toast-clear]')?.textContent).toBe('+3Close all');
+
+      dismiss(card('unknown'));
+      closeFront();
+
+      expect(document.querySelector('[data-blok-toast-clear]')?.textContent).toBe('+2Close all');
+    });
+
+    it('closes every card in the deck, not just the front one', () => {
+      const cards = [ card('first'), card('second'), card('third'), card('fourth') ];
+
+      cards.forEach((options) => show(options));
+      closeAllButton()?.click();
+
+      expect(cards.map((options) => isClosed(options))).toEqual([ true, true, true, true ]);
+      expect(openCards()).toHaveLength(0);
+      vi.runAllTimers();
+      expect([ behind(), closeAllButton() ]).toEqual([ null, null ]);
+    });
+
+    it('takes its label from the card options', () => {
+      [ 'first', 'second', 'third' ].forEach((message) => show({ ...card(message), dismissAllText: 'Закрыть все' }));
+
+      expect(closeAllButton()?.textContent).toBe('Закрыть все');
+    });
+
+    it('goes away when a plain toast replaces the deck', () => {
+      [ 'first', 'second', 'third' ].forEach((message) => show(card(message)));
+      show({ message: 'saved' });
+
+      expect(closeAllButton()).toBeNull();
+    });
+  });
+
   it('settle stops a busy action so it can be clicked again', () => {
     const options: NotifierOptions = {
       message: 'first',

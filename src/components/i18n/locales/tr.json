@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " kısayoluna bas",
   "a11y.back": "Geri",
   "notifier.dismiss": "Kapat",
+  "notifier.dismissAll": "Tümünü kapat",
   "notifier.confirm": "Onayla",
   "notifier.cancel": "İptal",
   "notifier.ok": "Tamam",

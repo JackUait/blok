@@ -948,6 +948,7 @@
   "blockSettings.openMenuAction": " за отварање менија",
   "a11y.back": "Назад",
   "notifier.dismiss": "Одбаци",
+  "notifier.dismissAll": "Одбаци све",
   "notifier.confirm": "Потврди",
   "notifier.cancel": "Откажи",
   "notifier.ok": "У реду",

@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " ඔබන්න",
   "a11y.back": "ආපසු",
   "notifier.dismiss": "ඉවත් කරන්න",
+  "notifier.dismissAll": "සියල්ල ඉවත් කරන්න",
   "notifier.confirm": "තහවුරු කරන්න",
   "notifier.cancel": "අවලංගු කරන්න",
   "notifier.ok": "හරි",

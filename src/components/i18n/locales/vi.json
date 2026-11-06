@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " để mở menu",
   "a11y.back": "Quay lại",
   "notifier.dismiss": "Bỏ qua",
+  "notifier.dismissAll": "Bỏ qua tất cả",
   "notifier.confirm": "Xác nhận",
   "notifier.cancel": "Hủy",
   "notifier.ok": "OK",

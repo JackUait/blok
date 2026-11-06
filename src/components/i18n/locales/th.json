@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " เพื่อเปิดเมนู",
   "a11y.back": "ย้อนกลับ",
   "notifier.dismiss": "ปิด",
+  "notifier.dismissAll": "ปิดทั้งหมด",
   "notifier.confirm": "ยืนยัน",
   "notifier.cancel": "ยกเลิก",
   "notifier.ok": "ตกลง",

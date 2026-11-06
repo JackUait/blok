@@ -947,6 +947,7 @@
   "tools.audio.coverSourceAria": "커버 이미지 추가 방법",
   "a11y.back": "뒤로",
   "notifier.dismiss": "닫기",
+  "notifier.dismissAll": "모두 닫기",
   "notifier.confirm": "확인",
   "notifier.cancel": "취소",
   "notifier.ok": "확인",

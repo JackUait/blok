@@ -181,6 +181,7 @@ export type BlokMessageKey =
   | 'notifier.cancel'
   | 'notifier.confirm'
   | 'notifier.dismiss'
+  | 'notifier.dismissAll'
   | 'notifier.ok'
   | 'popover.actions'
   | 'popover.convertTo'

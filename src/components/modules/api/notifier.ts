@@ -123,8 +123,12 @@ export class NotifierAPI extends Module {
       return;
     }
 
-    if (options.actions !== undefined && options.dismissText === undefined) {
-      const sent = { ...options, dismissText: this.Blok.I18n.t('notifier.dismiss') };
+    if (options.actions !== undefined && (options.dismissText === undefined || options.dismissAllText === undefined)) {
+      const sent = {
+        ...options,
+        dismissText: options.dismissText ?? this.Blok.I18n.t('notifier.dismiss'),
+        dismissAllText: options.dismissAllText ?? this.Blok.I18n.t('notifier.dismissAll'),
+      };
 
       this.sentCopies.set(options, sent);
       this.builtInNotifier.show(sent);

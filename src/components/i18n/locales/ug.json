@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " نى بېسىڭ",
   "a11y.back": "قايتىش",
   "notifier.dismiss": "يېپىش",
+  "notifier.dismissAll": "ھەممىنى يېپىش",
   "notifier.confirm": "جەزملەش",
   "notifier.cancel": "بىكار قىلىش",
   "notifier.ok": "ماقۇل",

@@ -948,6 +948,7 @@
   "blockSettings.openMenuAction": " za otvaranje menija",
   "a11y.back": "Nazad",
   "notifier.dismiss": "Zatvori",
+  "notifier.dismissAll": "Zatvori sve",
   "notifier.confirm": "Potvrdi",
   "notifier.cancel": "Otkaži",
   "notifier.ok": "U redu",

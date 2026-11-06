@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " for at åbne menuen",
   "a11y.back": "Tilbage",
   "notifier.dismiss": "Luk",
+  "notifier.dismissAll": "Luk alle",
   "notifier.confirm": "Bekræft",
   "notifier.cancel": "Annuller",
   "notifier.ok": "OK",

@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " մենյուն բացելու համար",
   "a11y.back": "Հետ",
   "notifier.dismiss": "Փակել",
+  "notifier.dismissAll": "Փակել բոլորը",
   "notifier.confirm": "Հաստատել",
   "notifier.cancel": "Չեղարկել",
   "notifier.ok": "Լավ",

@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " ބޭނުންކުރުމުން މެނޫ ހުޅުވޭނެ",
   "a11y.back": "ފަހަތަށް",
   "notifier.dismiss": "ބަންދުކުރޭ",
+  "notifier.dismissAll": "ހުރިހާ އެއްޗެއް ބަންދުކުރޭ",
   "notifier.confirm": "ޔަގީންކުރޭ",
   "notifier.cancel": "ކެންސަލް",
   "notifier.ok": "އޯކޭ",

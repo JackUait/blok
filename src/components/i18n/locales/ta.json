@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " விசைகளை அழுத்தவும்",
   "a11y.back": "பின்செல்",
   "notifier.dismiss": "மூடு",
+  "notifier.dismissAll": "அனைத்தையும் மூடு",
   "notifier.confirm": "உறுதிப்படுத்து",
   "notifier.cancel": "ரத்துசெய்",
   "notifier.ok": "சரி",

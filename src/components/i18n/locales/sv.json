@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " för att öppna menyn",
   "a11y.back": "Tillbaka",
   "notifier.dismiss": "Stäng",
+  "notifier.dismissAll": "Stäng alla",
   "notifier.confirm": "Bekräfta",
   "notifier.cancel": "Avbryt",
   "notifier.ok": "OK",

@@ -947,6 +947,7 @@
   "tools.linkPaste.mention": "提及",
   "a11y.back": "返回",
   "notifier.dismiss": "關閉",
+  "notifier.dismissAll": "全部關閉",
   "notifier.confirm": "確認",
   "notifier.cancel": "取消",
   "notifier.ok": "確定",

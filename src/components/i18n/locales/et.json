@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " menüü avamiseks",
   "a11y.back": "Tagasi",
   "notifier.dismiss": "Sulge",
+  "notifier.dismissAll": "Sulge kõik",
   "notifier.confirm": "Kinnita",
   "notifier.cancel": "Tühista",
   "notifier.ok": "OK",

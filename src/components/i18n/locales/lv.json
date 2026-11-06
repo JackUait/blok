@@ -948,6 +948,7 @@
   "tools.audio.coverSourceAria": "Vāka avots",
   "a11y.back": "Atpakaļ",
   "notifier.dismiss": "Aizvērt paziņojumu",
+  "notifier.dismissAll": "Aizvērt visus",
   "notifier.confirm": "Apstiprināt",
   "notifier.cancel": "Atcelt",
   "notifier.ok": "Labi",

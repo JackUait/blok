@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " دبائیں",
   "a11y.back": "واپس",
   "notifier.dismiss": "برخاست کریں",
+  "notifier.dismissAll": "سب برخاست کریں",
   "notifier.confirm": "تصدیق کریں",
   "notifier.cancel": "منسوخ کریں",
   "notifier.ok": "ٹھیک ہے",

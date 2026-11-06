@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " untuk membuka menu",
   "a11y.back": "Kembali",
   "notifier.dismiss": "Tutup",
+  "notifier.dismissAll": "Tutup semua",
   "notifier.confirm": "Konfirmasi",
   "notifier.cancel": "Batal",
   "notifier.ok": "Oke",

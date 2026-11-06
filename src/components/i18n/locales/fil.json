@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " para buksan ang menu",
   "a11y.back": "Bumalik",
   "notifier.dismiss": "I-dismiss",
+  "notifier.dismissAll": "I-dismiss lahat",
   "notifier.confirm": "Kumpirmahin",
   "notifier.cancel": "Kanselahin",
   "notifier.ok": "OK",

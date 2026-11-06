@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " کېکاږئ",
   "a11y.back": "شاته",
   "notifier.dismiss": "رد کړئ",
+  "notifier.dismissAll": "ټول رد کړئ",
   "notifier.confirm": "تایید کړئ",
   "notifier.cancel": "لغوه کړئ",
   "notifier.ok": "سمه ده",

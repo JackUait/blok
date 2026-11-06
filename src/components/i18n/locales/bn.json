@@ -947,6 +947,7 @@
   "blockSettings.openMenuAction": " দিয়ে মেনু খুলুন",
   "a11y.back": "ফিরে যান",
   "notifier.dismiss": "বন্ধ করুন",
+  "notifier.dismissAll": "সব বন্ধ করুন",
   "notifier.confirm": "নিশ্চিত করুন",
   "notifier.cancel": "বাতিল",
   "notifier.ok": "ঠিক আছে",

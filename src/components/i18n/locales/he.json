@@ -948,6 +948,7 @@
   "blockSettings.openMenuAction": " לפתיחת התפריט",
   "a11y.back": "חזרה",
   "notifier.dismiss": "סגור",
+  "notifier.dismissAll": "סגור הכול",
   "notifier.confirm": "אישור",
   "notifier.cancel": "ביטול",
   "notifier.ok": "אישור",

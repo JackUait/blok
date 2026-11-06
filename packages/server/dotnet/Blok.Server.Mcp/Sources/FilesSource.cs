@@ -82,6 +82,14 @@ internal sealed class FilesSource(string dir, McpBundle bundle) : IDocumentSourc
     }
   }
 
+  public async Task<bool> SameDocumentAsync(string first, string second)
+  {
+    var a = await KeyOfAsync(first);
+    var b = await KeyOfAsync(second);
+
+    return a is not null && a == b;
+  }
+
   public async Task<JsonObject> ListAsync(int limit, string? query, string? cursor, CancellationToken cancellationToken)
   {
     var names = ListNames();
@@ -134,6 +142,19 @@ internal sealed class FilesSource(string dir, McpBundle bundle) : IDocumentSourc
   private static string SameFileKey(string target)
   {
     return target.ToLowerInvariant();
+  }
+
+  // Null for an id that has no file key: one the id check or the disk refuses.
+  private async Task<string?> KeyOfAsync(string documentId)
+  {
+    try
+    {
+      return SameFileKey(WriteTargetOf(documentId, await PathOfAsync(documentId, CancellationToken.None)));
+    }
+    catch (McpHostError)
+    {
+      return null;
+    }
   }
 
   private static void TryDelete(string path)

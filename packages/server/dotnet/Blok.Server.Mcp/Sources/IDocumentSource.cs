@@ -18,6 +18,12 @@ internal interface IDocumentSource
   /// <returns>The saved version.</returns>
   Task<string?> SaveAsync(string documentId, string text, string? ifVersion, CancellationToken cancellationToken);
 
+  /// <summary>Whether two ids name one stored document (a symlink or a case alias).</summary>
+  Task<bool> SameDocumentAsync(string first, string second)
+  {
+    return Task.FromResult(false);
+  }
+
   /// <returns><c>{ documents: [{ id, title }], nextCursor }</c>.</returns>
   Task<JsonObject> ListAsync(int limit, string? query, string? cursor, CancellationToken cancellationToken);
 }

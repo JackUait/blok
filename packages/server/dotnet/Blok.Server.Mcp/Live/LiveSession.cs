@@ -67,8 +67,11 @@ internal sealed class LiveSession : IHandleSession
     presence.Announce();
   }
 
-  /// <summary>Makes a new page's document (opener.ts createLivePage); null when pages are not documents.</summary>
-  internal Func<McpCaller, CancellationToken, Task<string>>? CreatePage { get; init; }
+  /// <summary>Page documents under page-map; null when pages are not documents.</summary>
+  internal PagePorts? Pages { get; init; }
+
+  /// <summary>The room's document id: a page block pointing here is refused.</summary>
+  internal string DocumentId { get; init; } = string.Empty;
 
   public JsonObject Describe()
   {
@@ -187,12 +190,21 @@ internal sealed class LiveSession : IHandleSession
       {
         input["versionHistory"] = versions;
       }
-      if (gate is null && !readOnly && CreatePage is not null && batch is JsonObject { } envelope
-          && envelope["commands"] is JsonArray commands && commands.All(command => command is JsonObject))
+      var envelope = batch is JsonObject { } source && source["commands"] is JsonArray commands && commands.All(command => command is JsonObject);
+      JsonObject ran;
+
+      if (gate is null && !readOnly && Pages is not null && envelope && PagePorts.HasPageAction(batch))
       {
-        input["createdPages"] = await CreatePagesAsync(input, caller, cancellationToken);
+        ran = await Pages.RunActionAsync(bundle, input, caller, pageId => Task.FromResult(pageId == DocumentId), cancellationToken);
       }
-      var ran = await bundle.CallAsync("agentExecute", input, cancellationToken);
+      else
+      {
+        if (gate is null && !readOnly && Pages?.Create is not null && envelope)
+        {
+          await Pages.AddCreatedPagesAsync(bundle, input, caller, cancellationToken);
+        }
+        ran = await bundle.CallAsync("agentExecute", input, cancellationToken);
+      }
 
       if (ran["ask"] is JsonObject ask)
       {
@@ -420,24 +432,6 @@ internal sealed class LiveSession : IHandleSession
       ["actor"] = actor.DeepClone(),
       ["revision"] = new JsonObject { ["now"] = room.Revision, ["afterWrite"] = $"l{room.UpdateCount + 1}" },
     };
-  }
-
-  /*
-   * A batch that would be refused, or that waits on a person's answer, makes no page:
-   * Node plans the whole batch before it makes one, and agentExecute answers it.
-   */
-  private async Task<JsonArray> CreatePagesAsync(JsonObject input, McpCaller caller, CancellationToken cancellationToken)
-  {
-    var needed = await bundle.CallAsync("agentPagesNeeded", input, cancellationToken);
-    var created = new JsonArray();
-    var count = PageIds.ToMake(needed);
-
-    for (; count > 0; count--)
-    {
-      created.Add(await CreatePage!(caller, cancellationToken));
-    }
-
-    return created;
   }
 
   /// <summary>The bundle's content revision of an empty document, read once from a batch that runs nothing.</summary>

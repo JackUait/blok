@@ -61,16 +61,16 @@ internal sealed class StoredSession : IHandleSession
     exists = !first.Missing;
   }
 
-  /// <summary>Set under page-map with a source: makes one page document and returns its id.</summary>
-  private Func<McpCaller, CancellationToken, Task<string>>? CreatePage { get; init; }
+  /// <summary>Set under page-map: page documents this batch makes or writes.</summary>
+  private PagePorts? Pages { get; init; }
 
   internal static async Task<StoredSession> OpenAsync(
       McpBundle bundle, IDocumentSource source, string documentId, bool write, JsonObject flags, JsonObject actor, string contractRevision,
-      Func<McpCaller, CancellationToken, Task<string>>? createPage, CancellationToken cancellationToken)
+      PagePorts? pages, CancellationToken cancellationToken)
   {
     var first = await source.LoadAsync(documentId, cancellationToken);
 
-    return new StoredSession(bundle, source, documentId, write, flags, actor, contractRevision, first) { CreatePage = createPage };
+    return new StoredSession(bundle, source, documentId, write, flags, actor, contractRevision, first) { Pages = pages };
   }
 
   public JsonObject Describe()
@@ -126,11 +126,20 @@ internal sealed class StoredSession : IHandleSession
       }
       input["approval"] = approvalInput;
     }
-    if (write && CreatePage is not null && IsBatchEnvelope(batch))
+    JsonObject ran;
+
+    if (write && Pages is not null && IsBatchEnvelope(batch) && PagePorts.HasPageAction(batch))
     {
-      input["createdPages"] = await CreatePagesAsync(input, caller, cancellationToken);
+      ran = await Pages.RunActionAsync(bundle, input, caller, IsOpenDocumentAsync, cancellationToken);
     }
-    var ran = await bundle.CallAsync("agentExecute", input, cancellationToken);
+    else
+    {
+      if (write && Pages?.Create is not null && IsBatchEnvelope(batch))
+      {
+        await Pages.AddCreatedPagesAsync(bundle, input, caller, cancellationToken);
+      }
+      ran = await bundle.CallAsync("agentExecute", input, cancellationToken);
+    }
 
     if (ran["ask"] is JsonObject ask)
     {
@@ -198,17 +207,10 @@ internal sealed class StoredSession : IHandleSession
     return batch is JsonObject envelope && envelope["commands"] is JsonArray commands && commands.All(command => command is JsonObject);
   }
 
-  private async Task<JsonArray> CreatePagesAsync(JsonObject input, McpCaller caller, CancellationToken cancellationToken)
+  // A second save of the open document would make this handle's version stale.
+  private async Task<bool> IsOpenDocumentAsync(string pageId)
   {
-    var needed = await bundle.CallAsync("agentPagesNeeded", input, cancellationToken);
-    var created = new JsonArray();
-
-    for (var count = PageIds.ToMake(needed); count > 0; count--)
-    {
-      created.Add(await CreatePage!(caller, cancellationToken));
-    }
-
-    return created;
+    return pageId == documentId || await source.SameDocumentAsync(pageId, documentId);
   }
 
   private async Task<JsonObject> AnswerAsync(JsonObject input, CancellationToken cancellationToken)

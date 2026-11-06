@@ -22,6 +22,9 @@ internal sealed class McpServerCore : IAsyncDisposable
   private readonly JsonObject flags;
   private readonly Timer sweeper;
   private readonly SemaphoreSlim surfaceGate = new(1, 1);
+  private readonly PagePorts? pages;
+  // page.rename and page.setIcon close their page session without waiting; stop waits for those closes.
+  private readonly HashSet<Task> pageCloses = [];
   private JsonObject? surface;
   private int stopped;
 
@@ -37,9 +40,16 @@ internal sealed class McpServerCore : IAsyncDisposable
     };
     flags = config.SurfaceFlags();
     live = config.Sync is null ? null : new LiveOpener(config, http, bundle, flags, SurfaceAsync);
-    if (live is not null && config.PageTitles == "page-map")
+    // Node's openPageDocument is there under page-map; createPageDocument only where a page can be made.
+    pages = config.PageTitles != "page-map" ? null : new PagePorts
     {
-      live.CreatePage = CreateLivePageAsync;
+      Create = config.Sync is not null ? CreateLivePageAsync : config.Rooms is null && source is not null ? CreatePageAsync : null,
+      Open = (pageId, caller, cancellationToken) => OpenSessionAsync(pageId, "auto", true, caller, cancellationToken),
+      TrackClose = TrackPageClose,
+    };
+    if (live is not null)
+    {
+      live.Pages = pages;
     }
     handles = new HandleRegistry<IHandleSession>(config.IdleMs, config.MaxHandles, session => session.CloseAsync("expired"));
     var period = TimeSpan.FromMilliseconds(Math.Min(config.IdleMs, 30_000));
@@ -360,10 +370,24 @@ internal sealed class McpServerCore : IAsyncDisposable
     }
     var revision = McpJson.String((await SurfaceAsync(cancellationToken))["contractRevision"]?["stored"]) ?? string.Empty;
 
-    return await StoredSession.OpenAsync(
-        bundle, source, documentId, write, flags, caller.Actor, revision,
-        config.PageTitles == "page-map" && !config.Live ? CreatePageAsync : null,
-        cancellationToken);
+    return await StoredSession.OpenAsync(bundle, source, documentId, write, flags, caller.Actor, revision, pages, cancellationToken);
+  }
+
+  private void TrackPageClose(Task closing)
+  {
+    lock (pageCloses)
+    {
+      pageCloses.Add(closing);
+    }
+    _ = closing.ContinueWith(
+        done =>
+        {
+          lock (pageCloses)
+          {
+            pageCloses.Remove(done);
+          }
+        },
+        CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
   }
 
   // The opener's createPage for stored mode: a new id, authorized like a write open, saved empty.

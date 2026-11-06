@@ -66,7 +66,88 @@ public sealed class LiveSessionPagesTests(BundleFixture fixture) : IClassFixture
     await room.CloseAsync();
   }
 
-  private async Task<(LiveSession Session, List<string> Made, LiveRoom Room)> OpenAsync()
+  [Fact]
+  public async Task PageRenameWritesTheTitleThroughThePagesOwnSession()
+  {
+    var target = new FakeTarget(Ok(pending: false));
+    var (session, _, room) = await OpenAsync(target);
+
+    await session.ExecuteAsync(Batch(new JsonObject { ["name"] = "block.insert", ["args"] = new JsonObject { ["type"] = "page", ["id"] = "pb" } }), Caller, null, CancellationToken.None);
+    var outcome = await session.ExecuteAsync(Batch(new JsonObject { ["name"] = "page.rename", ["args"] = new JsonObject { ["id"] = "pb", ["title"] = "Renamed" } }), Caller, null, CancellationToken.None);
+    var answer = outcome.Answer?["structuredContent"];
+
+    Assert.Equal(true, McpJson.Bool(answer?["ok"]));
+    Assert.Equal("""[{"pageId":"page-1","applied":true}]""", answer?["results"]?.ToJsonString());
+    Assert.Equal("page-1", target.OpenedId);
+    Assert.Equal("""{"commands":[{"name":"doc.setTitle","args":{"title":"Renamed"}}]}""", target.Batch?.ToJsonString());
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task APageWriteTheRoomDidNotConfirmIsSourceUnavailable()
+  {
+    var (session, _, room) = await OpenAsync(new FakeTarget(Ok(pending: true)));
+
+    await session.ExecuteAsync(Batch(new JsonObject { ["name"] = "block.insert", ["args"] = new JsonObject { ["type"] = "page", ["id"] = "pb" } }), Caller, null, CancellationToken.None);
+    var outcome = await session.ExecuteAsync(Batch(new JsonObject { ["name"] = "page.rename", ["args"] = new JsonObject { ["id"] = "pb", ["title"] = "Renamed" } }), Caller, null, CancellationToken.None);
+    var error = outcome.Answer?["structuredContent"]?["error"];
+
+    Assert.Equal("SOURCE_UNAVAILABLE", McpJson.String(error?["code"]));
+    Assert.Equal(true, McpJson.Bool(error?["retryable"]));
+    Assert.Equal("""{"pending":true,"pageId":"page-1"}""", error?["details"]?.ToJsonString());
+    Assert.Equal(0, (int?)error?["commandIndex"]);
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task PageRenameOfAPageBlockThatPointsAtTheOpenRoomIsRefused()
+  {
+    var target = new FakeTarget(Ok(pending: false));
+    var (session, _, room) = await OpenAsync(target, documentId: "page-1");
+
+    await session.ExecuteAsync(Batch(new JsonObject { ["name"] = "block.insert", ["args"] = new JsonObject { ["type"] = "page", ["id"] = "pb" } }), Caller, null, CancellationToken.None);
+    var outcome = await session.ExecuteAsync(Batch(new JsonObject { ["name"] = "page.rename", ["args"] = new JsonObject { ["id"] = "pb", ["title"] = "Renamed" } }), Caller, null, CancellationToken.None);
+
+    Assert.Equal("INVALID_ARGS", McpJson.String(outcome.Answer?["structuredContent"]?["error"]?["code"]));
+    Assert.Null(target.OpenedId);
+    await room.CloseAsync();
+  }
+
+  private static JsonObject Ok(bool pending) => new()
+  {
+    ["structuredContent"] = new JsonObject
+    {
+      ["ok"] = true,
+      ["revision"] = "l1",
+      ["results"] = new JsonArray(new JsonObject()),
+      ["delivery"] = new JsonObject { ["durable"] = !pending, ["pending"] = pending, ["serverSequence"] = null, ["savedVersion"] = null },
+    },
+    ["isError"] = false,
+  };
+
+  private sealed class FakeTarget(JsonObject answer) : IHandleSession
+  {
+    internal string? OpenedId { get; set; }
+
+    internal JsonNode? Batch { get; private set; }
+
+    public JsonObject Describe() => [];
+
+    public Task<JsonObject> ReadAsync(JsonNode? view, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+    public Task<JsonObject> DescribeAsync(JsonNode? query, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+    public Task<McpExecuteOutcome> ExecuteAsync(JsonNode? batch, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
+    {
+      Batch = batch?.DeepClone();
+
+      return Task.FromResult(new McpExecuteOutcome((JsonObject)answer.DeepClone(), null));
+    }
+
+    public Task<JsonObject> CloseAsync(string reason) => Task.FromResult(new JsonObject());
+  }
+
+  private async Task<(LiveSession Session, List<string> Made, LiveRoom Room)> OpenAsync(FakeTarget? target = null, string documentId = "doc")
   {
     var (room, _) = await LiveRoomTests.OpenAsync();
     var flags = new McpConfig { PageTitles = "page-map", Sync = new McpSync("ws://127.0.0.1:1/sync", null) }.SurfaceFlags();
@@ -75,11 +156,26 @@ public sealed class LiveSessionPagesTests(BundleFixture fixture) : IClassFixture
         room, fixture.Host.Bundle, flags, Caller, true, "", null,
         new LiveVersionHistory(new McpHttpCaller(), "ws://127.0.0.1:1/sync/doc", null, null), TimeSpan.FromMilliseconds(50))
     {
-      CreatePage = (_, _) =>
+      DocumentId = documentId,
+      Pages = new PagePorts
       {
-        made.Add($"page-{made.Count + 1}");
+        Create = (_, _) =>
+        {
+          made.Add($"page-{made.Count + 1}");
 
-        return Task.FromResult(made[^1]);
+          return Task.FromResult(made[^1]);
+        },
+        Open = (pageId, _, _) =>
+        {
+          if (target is null)
+          {
+            throw new InvalidOperationException("No page target.");
+          }
+          target.OpenedId = pageId;
+
+          return Task.FromResult<IHandleSession>(target);
+        },
+        TrackClose = _ => { },
       },
     };
 

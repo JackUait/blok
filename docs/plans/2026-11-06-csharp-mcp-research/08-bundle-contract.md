@@ -4,7 +4,11 @@ Date: 2026-11-07. Lane: `mcp/bundle`.
 
 The C#, Go and Rust MCP ports call these operations through the existing `invoke(operation, inputJson)` of `src/view/server-runtime.ts`. Each one runs the Node MCP's own code, so a port that only does IO answers what `blok-mcp` answers.
 
-Every shape below is pinned by `test/unit/view/server-runtime-mcp.test.ts`. That test runs each operation next to Node's own function, or Node's whole dispatcher, on the same input.
+How the shapes are pinned:
+
+- `test/unit/view/server-runtime-mcp.test.ts` runs each operation next to Node's own function, or Node's whole dispatcher and files source, on the same input.
+- `test/unit/server-conformance/fixtures/documents/ops.json` (cases `mcp.*`, 30 of them) holds node:vm's exact output bytes. Goja (Go `TestMatchesNodeOnTheDocumentOpsFixture`), the Rust jsruntime (`matches_node_on_the_document_ops_fixture`) and Jint (C# `DocumentOpsFixtureTests`) must answer byte for byte the same. All three passed on 2026-11-07.
+- **Not pinned:** that a `live` handle gets the live contract. The two contracts differ only in `revision`, and no answer of a handle call shows it. It is set by `mode` in `mcpContractFor` (`src/view/mcp-contracts.ts`).
 
 ## 0. Ground rules
 
@@ -180,6 +184,10 @@ All three take the **session input**:
 
 The contract, rich-text fields, sanitizers and ports come from `mcp`, exactly as blok-mcp builds them. The old `customTools`, `services`, `runtime` and `prepares` inputs are ignored when `mcp` is set. Existing callers without `mcp` see no change.
 
+**How Node's runtime tags are accepted.** The plan asked the bundle to accept Node's live runtime tag. That is done through `mcp.mode`: `stored` builds the contract with `runtime: 'node'`, and `live` with `runtime: 'node-live'`. Both are built from the same start flags as Node, so the revisions match Node's. The older `runtime` input and the `manifest` operation still accept only `jint` and `csharp-live`. Do not send `runtime: 'node-live'`.
+
+Only one contract is built per call, for the handle's mode. Measured in node:vm on 2026-11-07, one `doc.setTitle` batch averaged 33.6 ms through the `mcp` path and 33.9 ms through the old path, over 40 runs each.
+
 ### `mcpRead` / `mcpDescribe`
 
 - In: the session input plus `view` (from `step.call.view`), or plus `query` (from `step.call.query`).
@@ -230,7 +238,10 @@ Then answer with **`mcpExecuteAnswer`**:
 ### Live revision (`revision`)
 
 - Node live reports `l<n>`, where `n` counts Y updates on the local doc.
-- Pass `revision: { now: 'l<n>', afterWrite: 'l<n+1>' }`. The bundle checks `expectRevision` against `now`, and reports `afterWrite` in `result.revision` and in every `doc.read` result, once the batch changed the document. A batch is one transaction, so one update.
+- Pass `revision: { now: 'l<n>', afterWrite: 'l<n+1>' }`.
+  - The bundle checks `expectRevision` against `now`.
+  - Once the batch changed the document, it reports `afterWrite` in `result.revision` and in a later `doc.read` result of the same batch. Both are tested.
+  - **Unverified:** that a Node live batch always adds exactly one Y update. That covers undo, redo and comment-only plans. `07` §3.2 leaves the same question open. The parity corpus does not compare revision values, so only stale detection has to match.
 - Reads report `now`.
 - Without `revision`, the content hash is used, as on stored handles.
 
@@ -278,9 +289,21 @@ The messages these raise are Node's literal strings in `src/mcp/handles.ts`, `so
    - The stored contract still lists these commands. Through the bundle they fail at run time, because there is no `pageBackend`.
    - A fix needs a pre-pass like `agentPagesNeeded`: name the page ids, have the host load them, then pass them in and return their new documents.
    - Not done in this lane.
-2. **Uploads.** With `uploads: true`, the contract lists `<tool>.uploadFile`, but the bundle has no uploader service. That is milestone 6.
-3. **Live undo** with concurrent peers (§3).
-4. **Host error messages** are not single-source yet (§6).
-5. **JSON readers.** `mcpParseDocument` parses with JS `JSON.parse`, but the host then re-reads `document` from the output. Lone surrogates come out escaped (`\udXXX`). A host JSON reader that maps them to U+FFFD would differ from Node, which keeps them.
+2. **Page creation timing.**
+   - Node creates a page's document in the middle of the batch: authorize with `write=true`, a new id, then a save or a room join.
+   - A failure there comes back as a batch failure with `commandIndex` and `revision`.
+   - Ports create pages before the batch (`agentPagesNeeded`, then `createdPages`), so their failure shape and timing differ from Node's.
+   - Not yet decided.
+3. **Uploads.** With `uploads: true`, the contract lists `<tool>.uploadFile`, but the bundle has no uploader service. That is milestone 6.
+4. **Live undo** with concurrent peers (§3).
+5. **Host error messages** are not single-source yet (§6).
+6. **JSON readers.** `mcpParseDocument` parses with JS `JSON.parse`, but the host then re-reads `document` from the output. Lone surrogates come out escaped (`\udXXX`). A host JSON reader that maps them to U+FFFD would differ from Node, which keeps them. Goja's own `JSON.parse` already reads a lone-surrogate escape as U+FFFD, and so does the C# runner's (`packages/server/go/internal/jsruntime/ops_fixture_test.go`, `gojaReadsLoneSurrogates`). So the Go and C# bundles differ from Node there before any MCP code runs.
 
 No Node behaviour was changed, and no Node bug was found in this lane.
+
+## 8. Jint trap found in this lane
+
+- **What happened.** esbuild joined `const before = session.contentRevision(), ran = await session.execute(...)` into one declaration list. Under Jint, `before` then held the hash from *after* the batch, so `save` came back false. This was measured through the C# `DocumentOpsFixtureTests`. Goja, Rust and V8 were right.
+- **The fix.** Keep an `await` out of a declaration list that has earlier declarators (`server-runtime.ts`, `agentExecuteResult`). The `mcp.execute.*` fixture cases now pin it in all three hosts.
+- **Hypothesis, not verified:** Jint evaluates the earlier declarators again when it resumes after the `await`.
+- **Existing code with the same shape:** the page backend's `const l=n(s),c=await e(l,t)` in the built bundle. There the repeated call is a pure lookup.

@@ -1120,6 +1120,565 @@
           "send": {
             "method": "tools/call",
             "params": {
+              "name": "blok_describe",
+              "arguments": {
+                "handle": "${h}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "index": {
+                  "tools": [
+                    {
+                      "name": "paragraph",
+                      "summary": "A paragraph of rich text. The default block."
+                    },
+                    {
+                      "name": "header",
+                      "summary": "A heading. With isToggleable it collapses and owns the blocks nested under it."
+                    },
+                    {
+                      "name": "list",
+                      "summary": "One list item. A list is a run of sibling list blocks."
+                    },
+                    {
+                      "name": "table",
+                      "summary": "A grid. Each cell holds child blocks; content maps cells to those block ids."
+                    },
+                    {
+                      "name": "toggle",
+                      "summary": "A collapsible line. Its body is the blocks nested under it."
+                    },
+                    {
+                      "name": "callout",
+                      "summary": "A highlighted panel with an emoji. Its body is child blocks."
+                    },
+                    {
+                      "name": "database",
+                      "summary": "A database: a schema of properties and saved views. Rows are child database-row blocks."
+                    },
+                    {
+                      "name": "database-row",
+                      "summary": "One row of a database. Its child blocks are its page body. An optional pageId points to a separate body document instead."
+                    },
+                    {
+                      "name": "database-comment",
+                      "summary": "A comment on a database row, kept out of the row's page content."
+                    },
+                    {
+                      "name": "divider",
+                      "summary": "A horizontal rule."
+                    },
+                    {
+                      "name": "spacer",
+                      "summary": "Vertical whitespace."
+                    },
+                    {
+                      "name": "table_of_contents",
+                      "summary": "An outline of the page headings, read from the document each time."
+                    },
+                    {
+                      "name": "quote",
+                      "summary": "A quotation."
+                    },
+                    {
+                      "name": "code",
+                      "summary": "A code block with a language and an optional file name."
+                    },
+                    {
+                      "name": "image",
+                      "summary": "An image with optional caption, crop, turn, colour look and drawings."
+                    },
+                    {
+                      "name": "file",
+                      "summary": "A downloadable file card."
+                    },
+                    {
+                      "name": "audio",
+                      "summary": "An audio player with optional title, artist and cover."
+                    },
+                    {
+                      "name": "video",
+                      "summary": "A video player."
+                    },
+                    {
+                      "name": "column_list",
+                      "summary": "A row of columns. The columns are its children."
+                    },
+                    {
+                      "name": "column",
+                      "summary": "One column of a column_list. Its content is its children."
+                    },
+                    {
+                      "name": "tabs",
+                      "summary": "A set of tabs. Each tab is a child tab block."
+                    },
+                    {
+                      "name": "tab",
+                      "summary": "One tab of a tabs block. Its content is its children."
+                    },
+                    {
+                      "name": "embed",
+                      "summary": "A live embed from a known provider (YouTube, Figma, …)."
+                    },
+                    {
+                      "name": "bookmark",
+                      "summary": "A link preview card."
+                    },
+                    {
+                      "name": "page",
+                      "summary": "A sub-page. Its body is a separate document named by pageId."
+                    },
+                    {
+                      "name": "page-link",
+                      "summary": "A link to an existing page. It owns nothing."
+                    }
+                  ],
+                  "commands": [
+                    {
+                      "name": "audio.setCover",
+                      "summary": "Set the cover picture from a URL."
+                    },
+                    {
+                      "name": "audio.setSource",
+                      "summary": "Set or replace the audio from a URL."
+                    },
+                    {
+                      "name": "audio.uploadFile",
+                      "summary": "Upload a file and insert it as an audio block, as a person's upload does.",
+                      "available": false,
+                      "reason": "host"
+                    },
+                    {
+                      "name": "block.convert",
+                      "summary": "Turn a block into another type. Its text carries over, and its block colour onto a text block that has one; data sets only the new type's other fields. A style or level, such as a heading 2, is a variant: pass the tool as type and the variant's data, e.g. { \"type\": \"header\", \"data\": { \"level\": 2 } }. describe({ tool }) lists each tool's variants."
+                    },
+                    {
+                      "name": "block.delete",
+                      "summary": "Delete a block. Children move up unless the tool deletes them."
+                    },
+                    {
+                      "name": "block.duplicate",
+                      "summary": "Deep-copy a block with new ids."
+                    },
+                    {
+                      "name": "block.insert",
+                      "summary": "Insert a block, with optional children."
+                    },
+                    {
+                      "name": "block.move",
+                      "summary": "Move a block and its subtree."
+                    },
+                    {
+                      "name": "block.update",
+                      "summary": "Merge data or tunes into a block. A key set to null is cleared: removed, or set to its empty or off value (rich text [], code lineNumbers false, callout emoji \"\") where the tool would otherwise refill a default. A required field with no such value (a heading level, a list style) cannot be cleared."
+                    },
+                    {
+                      "name": "bookmark.create",
+                      "summary": "Create a link preview card. When the host fetches link previews, it fills the title, description and image."
+                    },
+                    {
+                      "name": "column_list.addColumn",
+                      "summary": "Add a column at a zero-based index and reset all columns to even widths."
+                    },
+                    {
+                      "name": "column_list.create",
+                      "summary": "Create a row of columns, or wrap existing blocks in columns."
+                    },
+                    {
+                      "name": "column_list.removeColumn",
+                      "summary": "Delete a column and its children."
+                    },
+                    {
+                      "name": "column_list.setWidths",
+                      "summary": "Set relative widths for every column."
+                    },
+                    {
+                      "name": "database.addComment",
+                      "summary": "Start a comment thread on a row, or on one of its cells with propertyId. You write it for the person you act for."
+                    },
+                    {
+                      "name": "database.addOption",
+                      "summary": "Add an option to a select, multi-select or status property, last."
+                    },
+                    {
+                      "name": "database.addProperty",
+                      "summary": "Add a property (a column). It goes last unless before or after names a property."
+                    },
+                    {
+                      "name": "database.addRow",
+                      "summary": "Add a row (a database-row child block), as the New button does. It goes last in every view, unless before or after names a row: then it goes there in the open view's order."
+                    },
+                    {
+                      "name": "database.addTemplate",
+                      "summary": "Add an empty page template (a database-row child with template true), after the last template."
+                    },
+                    {
+                      "name": "database.addView",
+                      "summary": "Add a view at the end and open it."
+                    },
+                    {
+                      "name": "database.applyTemplate",
+                      "summary": "Apply a template to a row whose page is empty, as picking one on the row page does: it fills the row's empty values, a missing icon, cover and width, and copies the template's page body."
+                    },
+                    {
+                      "name": "database.changePropertyType",
+                      "summary": "Change a property's type and convert every row's value, as the property menu does."
+                    },
+                    {
+                      "name": "database.create",
+                      "summary": "Create a database with a Title and a Status property and one view."
+                    },
+                    {
+                      "name": "database.deleteComment",
+                      "summary": "Delete a reply, or a thread with every reply in it."
+                    },
+                    {
+                      "name": "database.deleteOption",
+                      "summary": "Delete an option. rows: keep empties the value on rows that had it (what the editor does); delete removes those rows."
+                    },
+                    {
+                      "name": "database.deleteProperty",
+                      "summary": "Remove a property from the schema. Row values stay in the rows."
+                    },
+                    {
+                      "name": "database.deleteRow",
+                      "summary": "Delete a row or a template with its page, as the row menu does: its sub-items go too, and relations pointing at it let go of it. block.delete on a row does the same."
+                    },
+                    {
+                      "name": "database.deleteView",
+                      "summary": "Delete a view. If it was open, its neighbour opens."
+                    },
+                    {
+                      "name": "database.duplicateProperty",
+                      "summary": "Copy a property right after itself, named \"<name> (copy)\", with every row's value."
+                    },
+                    {
+                      "name": "database.duplicateRow",
+                      "summary": "Copy a row right after itself with its page body, as the row menu's Duplicate does; in an open view with its own manual order the copy goes right after it there too. A parent's sub-items are copied under the copy. A template copy stays a template. block.duplicate on a row does the same."
+                    },
+                    {
+                      "name": "database.duplicateView",
+                      "summary": "Copy a view with all its settings to the end, and open the copy."
+                    },
+                    {
+                      "name": "database.editComment",
+                      "summary": "Change the text of a comment, which then shows as edited."
+                    },
+                    {
+                      "name": "database.moveOption",
+                      "summary": "Move an option before or after another option."
+                    },
+                    {
+                      "name": "database.moveRow",
+                      "summary": "Move a row before or after another row in the open view, as a drag does, and optionally into another board column. In a view with its own manual order, only that order changes; otherwise the row moves for every view on the shared order, and the other views keep it where they show it."
+                    },
+                    {
+                      "name": "database.moveRowTo",
+                      "summary": "Move a row, its sub-items and their pages to the end of another database in this document, as the row menu's Move to does."
+                    },
+                    {
+                      "name": "database.moveView",
+                      "summary": "Move a view before or after another view."
+                    },
+                    {
+                      "name": "database.pressButton",
+                      "summary": "Press a button property on a row, as a click on its cell does: the button's steps run in order.",
+                      "available": false,
+                      "reason": "runtime"
+                    },
+                    {
+                      "name": "database.recolorOption",
+                      "summary": "Set the color of a select, multi-select or status option."
+                    },
+                    {
+                      "name": "database.renameOption",
+                      "summary": "Rename an option."
+                    },
+                    {
+                      "name": "database.renameView",
+                      "summary": "Rename a view."
+                    },
+                    {
+                      "name": "database.replyToComment",
+                      "summary": "Reply in a thread. Anyone's thread takes a reply; a reply takes none."
+                    },
+                    {
+                      "name": "database.resolveComment",
+                      "summary": "Resolve a thread, anyone's, as its resolve button does. Then it leaves reads and takes no reply, edit or delete: nothing reopens it."
+                    },
+                    {
+                      "name": "database.setDefaultTemplate",
+                      "summary": "Set the template new rows start from, or null for none."
+                    },
+                    {
+                      "name": "database.setLayout",
+                      "summary": "Change a view's layout type, as the view settings Layout menu does."
+                    },
+                    {
+                      "name": "database.setLock",
+                      "summary": "Lock or unlock the database. A locked database's properties and views cannot change; rows can."
+                    },
+                    {
+                      "name": "database.setRowValues",
+                      "summary": "Set property values on a row. Values not named stay. The row title mirrors the title property."
+                    },
+                    {
+                      "name": "database.setTemplateRepeat",
+                      "summary": "Set or clear (null) a template's repeating schedule. Blok stores it; the host makes the rows."
+                    },
+                    {
+                      "name": "database.submitForm",
+                      "summary": "Fill out and submit a form view, as the person, as its Submit button does: the answer becomes a row and the host hears of it (forms.onSubmit).",
+                      "available": false,
+                      "reason": "runtime"
+                    },
+                    {
+                      "name": "database.updateProperty",
+                      "summary": "Rename a property or change its settings (description, icon, page visibility, number, date, status, option sort, ID, person, files limit, URL show full URL, formula, relation, rollup, button, dependency, autofill), or the row page layout on the title property."
+                    },
+                    {
+                      "name": "database.updateView",
+                      "summary": "Change a view's saved settings: filters, sorts, grouping, calculations, columns, card, calendar, timeline, chart, map, form texts and form sharing. It applies for everyone."
+                    },
+                    {
+                      "name": "doc.find",
+                      "summary": "Find text as the find bar does: every hit with its field and offsets, and a count. Or list blocks by type."
+                    },
+                    {
+                      "name": "doc.read",
+                      "summary": "Read the document as an outline, a subtree, or chosen blocks in full. A full read adds meta: when the block was last edited and by whom, as the block menu shows; a person has a name only when the host's user directory knows them."
+                    },
+                    {
+                      "name": "doc.setIcon",
+                      "summary": "Set this document's icon. null clears it."
+                    },
+                    {
+                      "name": "doc.setTitle",
+                      "summary": "Set this document's title. '' clears it."
+                    },
+                    {
+                      "name": "embed.create",
+                      "summary": "Create an embed from a URL. The provider is found from the URL."
+                    },
+                    {
+                      "name": "embed.setUrl",
+                      "summary": "Set or change the embedded URL. The provider is found from the URL."
+                    },
+                    {
+                      "name": "file.setSource",
+                      "summary": "Set or replace the file from a URL."
+                    },
+                    {
+                      "name": "file.uploadFile",
+                      "summary": "Upload a file and insert it as a file card, as a person's upload does.",
+                      "available": false,
+                      "reason": "host"
+                    },
+                    {
+                      "name": "history.changes",
+                      "summary": "What changed between two versions: added, removed, changed and moved blocks."
+                    },
+                    {
+                      "name": "history.read",
+                      "summary": "Read one saved version, in the shape doc.read gives."
+                    },
+                    {
+                      "name": "history.redo",
+                      "summary": "Redo this session's last undone step. CONFLICT as for history.undo."
+                    },
+                    {
+                      "name": "history.restore",
+                      "summary": "Restore a saved version, as the version history's Restore does: the document becomes that version, title and icon too."
+                    },
+                    {
+                      "name": "history.undo",
+                      "summary": "Undo this session's last step. Never the user's or a peer's. A page.rename or page.setIcon step wrote another document and cannot be undone. CONFLICT: someone else changed what the step wrote; re-read and write the fix by hand."
+                    },
+                    {
+                      "name": "history.versions",
+                      "summary": "List the saved versions of this document, newest first, with who edited and when."
+                    },
+                    {
+                      "name": "html.insert",
+                      "summary": "Paste HTML as blocks: the blocks a person's paste of it gives in the editor. Additive.",
+                      "available": false,
+                      "reason": "runtime"
+                    },
+                    {
+                      "name": "image.addMarkup",
+                      "summary": "Draw shapes, strokes or text labels over the image. Returns their markup ids."
+                    },
+                    {
+                      "name": "image.crop",
+                      "summary": "Crop the image to a rectangle given in percent of the turned image. The full rectangle removes the crop."
+                    },
+                    {
+                      "name": "image.flip",
+                      "summary": "Mirror the image left to right. The crop and drawings mirror with it."
+                    },
+                    {
+                      "name": "image.removeMarkup",
+                      "summary": "Remove markup items by id, or all of them."
+                    },
+                    {
+                      "name": "image.rotate",
+                      "summary": "Turn the image clockwise by quarter turns. The crop and drawings turn with it."
+                    },
+                    {
+                      "name": "image.setSource",
+                      "summary": "Set or replace the image from a URL."
+                    },
+                    {
+                      "name": "image.straighten",
+                      "summary": "Tilt the image by a few degrees clockwise. The crop shrinks so no empty corner shows."
+                    },
+                    {
+                      "name": "image.updateMarkup",
+                      "summary": "Change fields of one markup item. Its id and type stay."
+                    },
+                    {
+                      "name": "image.uploadFile",
+                      "summary": "Upload a file and insert it as an image block, as a person's upload does.",
+                      "available": false,
+                      "reason": "host"
+                    },
+                    {
+                      "name": "markdown.export",
+                      "summary": "Export the document or a subtree as Markdown."
+                    },
+                    {
+                      "name": "markdown.insert",
+                      "summary": "Convert Markdown into blocks and insert them. Additive."
+                    },
+                    {
+                      "name": "page.rename",
+                      "summary": "Rename the page this block points to. Not this document: use doc.setTitle for that.",
+                      "available": false,
+                      "reason": "service"
+                    },
+                    {
+                      "name": "page.setIcon",
+                      "summary": "Set or clear the icon of the page this block points to.",
+                      "available": false,
+                      "reason": "service"
+                    },
+                    {
+                      "name": "table.clearCells",
+                      "summary": "Empty the cells in a range; each keeps one empty paragraph."
+                    },
+                    {
+                      "name": "table.create",
+                      "summary": "Create a table with rows x cols cells, each holding one paragraph."
+                    },
+                    {
+                      "name": "table.deleteColumns",
+                      "summary": "Delete columns and the blocks in their cells."
+                    },
+                    {
+                      "name": "table.deleteRows",
+                      "summary": "Delete rows and the blocks in their cells."
+                    },
+                    {
+                      "name": "table.duplicateColumns",
+                      "summary": "Copy columns, with their blocks, colours, placement and width, right after the copied range."
+                    },
+                    {
+                      "name": "table.duplicateRows",
+                      "summary": "Copy rows, with their blocks, colours and placement, right after the copied range."
+                    },
+                    {
+                      "name": "table.fillCells",
+                      "summary": "Copy the first column (right) or first row (down) of a range across the range. The other cells lose their blocks."
+                    },
+                    {
+                      "name": "table.insertColumns",
+                      "summary": "Insert empty columns before column at (use the column count to append)."
+                    },
+                    {
+                      "name": "table.insertRows",
+                      "summary": "Insert empty rows before row at (use the row count to append)."
+                    },
+                    {
+                      "name": "table.mergeCells",
+                      "summary": "Merge a rectangle of cells into its top-left cell. Their blocks move into it."
+                    },
+                    {
+                      "name": "table.moveColumn",
+                      "summary": "Move one column to another index."
+                    },
+                    {
+                      "name": "table.moveRow",
+                      "summary": "Move one row to another index."
+                    },
+                    {
+                      "name": "table.splitCell",
+                      "summary": "Split a merged cell back into single cells. Its content stays in the top-left cell."
+                    },
+                    {
+                      "name": "table.styleCells",
+                      "summary": "Set or clear background colour, text colour and placement on a range of cells."
+                    },
+                    {
+                      "name": "tabs.addTab",
+                      "summary": "Add a tab at a zero-based index."
+                    },
+                    {
+                      "name": "tabs.create",
+                      "summary": "Create a tabs block with its tabs."
+                    },
+                    {
+                      "name": "tabs.deleteTab",
+                      "summary": "Delete a tab and its content."
+                    },
+                    {
+                      "name": "text.delete",
+                      "summary": "Delete a range of text."
+                    },
+                    {
+                      "name": "text.format",
+                      "summary": "Set or clear marks on a range."
+                    },
+                    {
+                      "name": "text.insert",
+                      "summary": "Insert text into a rich-text field."
+                    },
+                    {
+                      "name": "text.replace",
+                      "summary": "Replace a range, or the whole field. Plain text takes the marks where a found or offset range starts."
+                    },
+                    {
+                      "name": "video.setSource",
+                      "summary": "Set or replace the video from a URL."
+                    },
+                    {
+                      "name": "video.uploadFile",
+                      "summary": "Upload a file and insert it as a video block, as a person's upload does.",
+                      "available": false,
+                      "reason": "host"
+                    }
+                  ],
+                  "guidance": "Rich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.\nMarks: bold, italic, underline, strikethrough, code, sup, sub, highlight, color, background, link, and tag:<name> for a custom inline tool. sup and sub cannot share a run.\nhighlight alone is stored as background \"yellow\"; with a background, as that background. color and background take a preset: \"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.\nA link needs href. With no target or rel it gets target \"_blank\" and rel \"nofollow\"; an \"#anchor\" href gets target \"_self\". A target or rel you give is kept, but in the editor a host link config replaces both.\nEmbeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page: id is the pageId in a page block's data, not the block id.\ntext.format with unset [\"*\"] clears every mark; \"tag:*\" clears every custom mark.\nmarkdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format."
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
               "name": "blok_close",
               "arguments": {
                 "handle": "${h}"
@@ -1142,7 +1701,7 @@
               "isError": false
             },
             "jsonrpc": "2.0",
-            "id": 4
+            "id": 5
           }
         }
       ],
@@ -9733,6 +10292,7 @@
               }
             }
           },
+          "minElapsedMs": 14000,
           "expect": {
             "result": {
               "content": [
@@ -9805,6 +10365,7 @@
               }
             }
           },
+          "minElapsedMs": 14000,
           "expect": {
             "result": {
               "content": [

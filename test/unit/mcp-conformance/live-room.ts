@@ -38,6 +38,10 @@ import { startServer, type RunningServer } from '../server-conformance/run-again
  *   {"settle": true}                      wait for quiet
  *   {"wait": ms}                          sleep, then wait for quiet
  *   {"history": true}                     the host's GET /sync/<doc>/history, normalized
+ *
+ * Writing cases: settle after every batch. The agent sends at most one awareness
+ * frame per 100 ms, so two batches closer than that merge their frames. After a
+ * close (injected or a redrive), wait past the reconnect backoff before reading frames.
  */
 
 export const ROOM_SECRET = 'mcp-live-conformance-secret-0123456789';

@@ -67,6 +67,8 @@ import {
  *               "maskKeys" masks those key names anywhere in every answer).
  *   expectSavedVersion  {"file", "pointer"}: the answer's value there must be the
  *               SHA-256 hex of that file's bytes. Checked on every run.
+ *   minElapsedMs  stdio send: the answer must not come sooner, e.g. a timeout the
+ *               server has to wait out. Checked on every run, never recorded.
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
@@ -92,6 +94,7 @@ export interface Step {
   capture?: Record<string, CaptureSource>;
   mask?: string[];
   expectSavedVersion?: { file: string; pointer: string };
+  minElapsedMs?: number;
   expect?: unknown;
   expectHttp?: unknown;
   notifications?: unknown[];
@@ -540,6 +543,8 @@ class CaseRun {
     const seen: ServerRequestSpec[] = [];
     const notifications: unknown[] = [];
 
+    const sentAt = Date.now();
+
     server.send(withMeta({ jsonrpc: '2.0', ...message, id }, this.c.session, raw));
     let incoming = await server.next();
 
@@ -552,6 +557,7 @@ class CaseRun {
       incoming = await server.next();
     }
     expect(seen.length, `${label}: server requests`).toBe(wanted.length);
+    expect(Date.now() - sentAt, `${label}: answered sooner than minElapsedMs`).toBeGreaterThanOrEqual(step.minElapsedMs ?? 0);
     if (wanted.length > 0) {
       Reflect.set(holder, 'serverRequests', seen);
     }

@@ -80,6 +80,7 @@ import {
  *               A lone signal also takes "signalWhenHost", and "noWait": true sends it
  *               without waiting for the exit (nothing is recorded).
  *   awaitExit   alone: wait for an exit already under way and record it, as a lone signal does.
+ *   afterHost   stdio send/notify: wait until the fake host saw this "METHOD /path" once first.
  *   noAnswer    stdio send: write the request and go on without reading an answer.
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
@@ -115,6 +116,7 @@ export interface Step {
   noWait?: boolean;
   awaitExit?: boolean;
   noAnswer?: boolean;
+  afterHost?: string;
   expect?: unknown;
   expectHttp?: unknown;
   notifications?: unknown[];
@@ -618,14 +620,14 @@ class CaseRun {
     server.signal(step.signal);
   }
 
-  private async waitForHost(step: Step, label: string): Promise<void> {
-    if (step.signalWhenHost === undefined) {
+  private async waitForHost(step: Step, label: string, key = step.signalWhenHost): Promise<void> {
+    if (key === undefined) {
       return;
     }
     if (this.host === undefined) {
-      throw new Error(`${label}: signalWhenHost needs the case's "hosts"`);
+      throw new Error(`${label}: waiting for a host request needs the case's "hosts"`);
     }
-    await this.host.waitForRequests(step.signalWhenHost, 1, HOST_WAIT_MS);
+    await this.host.waitForRequests(key, 1, HOST_WAIT_MS);
   }
 
   public async stdioStep(server: StdioServer, step: Step, holder: Holder, label: string): Promise<void> {
@@ -634,6 +636,7 @@ class CaseRun {
     }
     const raw = step.raw === true;
 
+    await this.waitForHost(step, label, step.afterHost);
     if (step.notify !== undefined) {
       server.send(withMeta({ jsonrpc: '2.0', ...materialize(step.notify, this.vars) as JsonMessage }, this.c.session, raw));
 

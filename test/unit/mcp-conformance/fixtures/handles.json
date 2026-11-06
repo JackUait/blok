@@ -1011,6 +1011,177 @@
           }
         }
       ]
+    },
+    {
+      "argv": [
+        "--source",
+        "endpoint:${host}/docs",
+        "--max-handles",
+        "2"
+      ],
+      "name": "a cancelled open sends no answer and keeps no handle",
+      "env": {
+        "BLOK_DOC_ENDPOINT_AUTH": "Token t"
+      },
+      "hosts": {
+        "GET /docs/a": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": []
+            },
+            "version": "v1"
+          },
+          "delayMs": 1500
+        },
+        "GET /docs/b": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": []
+            },
+            "version": "v1"
+          }
+        },
+        "GET /docs/c": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": []
+            },
+            "version": "v1"
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "id": 77,
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "a"
+              }
+            }
+          },
+          "noAnswer": true
+        },
+        {
+          "notify": {
+            "method": "notifications/cancelled",
+            "params": {
+              "requestId": 77,
+              "reason": "changed my mind"
+            }
+          },
+          "afterHost": "GET /docs/a"
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "b"
+              }
+            }
+          },
+          "capture": {
+            "b": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${b}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "sleepMs": 2500
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "c"
+              }
+            }
+          },
+          "capture": {
+            "c": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${c}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/docs/a",
+          "headers": {
+            "authorization": "Token t"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/b",
+          "headers": {
+            "authorization": "Token t"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/c",
+          "headers": {
+            "authorization": "Token t"
+          }
+        }
+      ]
     }
   ]
 }

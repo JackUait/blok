@@ -184,6 +184,12 @@ pub(crate) fn common(options: Option<&Options>) -> Result<Node, Error> {
     if options.disable_built_in_comments {
         input.members.push(member("comments", new_bool(false)));
     }
+    if let Some(mcp) = &options.mcp_json {
+        input.members.push(member("mcp", parse(mcp)?));
+    }
+    if let Some(approval) = &options.approval_json {
+        input.members.push(member("approval", parse(approval)?));
+    }
     Ok(input)
 }
 

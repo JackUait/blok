@@ -371,6 +371,7 @@ async fn run_host_case(case: &Json, deadline: bool) -> (Vec<Json>, Vec<Json>, Ve
             }) as Arc<dyn PageTarget>),
             Some(other) => panic!("unknown target {other}"),
         },
+        ..Options::default()
     });
     if member(case, "cancelled").is_some_and(Json::bool) {
         recorder.stop();

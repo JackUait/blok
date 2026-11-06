@@ -538,6 +538,12 @@ async fn plan_once(
     let mut input = input.clone();
     input.set("document", document).map_err(from_json)?;
     let output = agent_execute_on(runtime, &Cancel::new(), &input).await?;
+    // A batch waiting on a person's yes applied nothing.
+    if let Some(ask) = field(Some(&output), "ask")?.filter(|a| a.kind == Kind::Object) {
+        slot.lock().unwrap_or_else(PoisonError::into_inner).result =
+            Some(new_object(vec![member("ask", ask.clone())]));
+        return Err(PlanError::Nothing);
+    }
     let Some(result) = field(Some(&output), "result")?.filter(|r| r.kind == Kind::Object) else {
         return Err(no_answer("agent result").into());
     };

@@ -205,3 +205,68 @@ async fn a_read_only_live_handle_refuses_writes_with_nodes_live_message() {
     assert!(read["page"].get("title").is_none(), "{read}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_live_unlock_on_the_hosts_room_asks_the_person() {
+    let dir = std::env::temp_dir().join(format!("blok-mcp-rooms-ask-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let mcp = mcp_on_rooms(&dir).await;
+    let opened = call(
+        &mcp,
+        "blok_open",
+        json!({ "documentId": "doc", "write": true }),
+    )
+    .await;
+    let handle = opened["handle"].as_str().unwrap().to_owned();
+    let locked = call(
+        &mcp,
+        "blok_execute",
+        json!({ "handle": handle, "commands": [{ "name": "block.insert", "args": { "type": "database", "id": "db", "data": {
+            "title": "Payroll", "activeViewId": "v",
+            "schema": [{ "id": "t", "name": "Name", "type": "title", "position": "a0" }],
+            "views": [{ "id": "v", "name": "Table", "type": "table", "position": "a0", "sorts": [], "filters": [], "visibleProperties": [] }],
+        } } }, { "name": "database.setLock", "args": { "id": "db", "locked": true } }] }),
+    )
+    .await;
+    assert_eq!(locked["ok"], true, "{locked}");
+
+    let caller = Caller {
+        principal: "alice".to_owned(),
+        client_name: Some("Desk".to_owned()),
+        scopes: None,
+    };
+    let asking = Approval {
+        capabilities: json!({ "elicitation": {} }),
+        replies: None,
+    };
+    let unlock = json!({ "handle": handle, "commands": [{ "name": "database.setLock", "args": { "id": "db", "locked": false } }] });
+    match mcp
+        .call("blok_execute", &unlock, &caller, &asking, &|| false)
+        .await
+    {
+        Ok(Outcome::Ask(ask)) => assert_eq!(ask.key, r#"["database.unlock","db","Payroll"]"#),
+        other => panic!("expected a question, got {other:?}"),
+    }
+    let yes = Approval {
+        capabilities: json!({ "elicitation": {} }),
+        replies: Some(
+            json!({ r#"["database.unlock","db","Payroll"]"#: { "action": "accept", "content": { "unlock": true } } }),
+        ),
+    };
+    match mcp
+        .call("blok_execute", &unlock, &caller, &yes, &|| false)
+        .await
+    {
+        Ok(Outcome::Answer(answer)) => assert!(!answer.is_error, "{}", answer.structured),
+        other => panic!("expected the unlock to apply, got {other:?}"),
+    }
+    // Unlocked now, so the same call no longer needs a yes.
+    match mcp
+        .call("blok_execute", &unlock, &caller, &asking, &|| false)
+        .await
+    {
+        Ok(Outcome::Answer(answer)) => assert!(!answer.is_error, "{}", answer.structured),
+        other => panic!("expected no question once unlocked, got {other:?}"),
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}

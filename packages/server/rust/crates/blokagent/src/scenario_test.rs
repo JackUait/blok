@@ -167,6 +167,7 @@ fn scenario_options(
         disable_built_in_comments: lookup(Some(node), "builtInComments")
             .is_some_and(|v| v.kind == Kind::False),
         page_target: None,
+        ..Options::default()
     };
     let mut host = None;
     match string_of(lookup(Some(node), "target")).as_deref() {

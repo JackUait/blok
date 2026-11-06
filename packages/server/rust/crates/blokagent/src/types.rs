@@ -46,6 +46,13 @@ pub struct Options {
     /// in their own system. C#'s BuiltInComments is true by default; this is
     /// its inverse, so the default matches.
     pub disable_built_in_comments: bool,
+    /// blok-mcp's handle input (its start flags with `mode` and `write`).
+    /// When set, the bundle builds blok-mcp's contract from it and skips
+    /// customTools, overrides and services.
+    pub mcp_json: Option<String>,
+    /// blok-mcp's approval input ({capabilities, clientName, replies?}). A
+    /// batch that needs a person's yes then answers `{"ask": …}`.
+    pub approval_json: Option<String>,
 }
 
 /// Finds the document behind a page id, for an agent that renames a page or

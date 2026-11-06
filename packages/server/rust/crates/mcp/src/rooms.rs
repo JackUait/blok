@@ -12,6 +12,7 @@ use crate::errors::{Fault, HostError};
 pub struct Rooms {
     executor: Arc<Executor>,
     options: Options,
+    flags: Value,
 }
 
 /// What one room batch gave.
@@ -56,10 +57,28 @@ impl Rooms {
                 disable_built_in_comments: flags.get("comments") == Some(&Value::Bool(false)),
                 ..Options::default()
             },
+            flags: flags.clone(),
         }
     }
 
-    pub async fn run(&self, document_id: &str, batch: &Value, actor: &Value) -> Result<Ran, Fault> {
+    /// The bundle gets the handle's own mcp input, so a room batch meets
+    /// the contract blok_describe shows, and `approval` lets it ask.
+    pub async fn run(
+        &self,
+        document_id: &str,
+        batch: &Value,
+        actor: &Value,
+        write: bool,
+        approval: Option<&Value>,
+    ) -> Result<Ran, Fault> {
+        let mut mcp = self.flags.clone();
+        mcp["mode"] = json!("live");
+        mcp["write"] = json!(write);
+        let options = Options {
+            mcp_json: Some(mcp.to_string()),
+            approval_json: approval.map(Value::to_string),
+            ..self.options.clone()
+        };
         let execution = self
             .executor
             .execute_in_room(
@@ -67,7 +86,7 @@ impl Rooms {
                 document_id,
                 &batch.to_string(),
                 &actor_of(actor),
-                Some(&self.options),
+                Some(&options),
             )
             .await
             .map_err(|err| Fault::Internal(format!("{err:?}")))?;
@@ -83,9 +102,10 @@ impl Rooms {
         document_id: &str,
         view: &Value,
         actor: &Value,
+        write: bool,
     ) -> Result<(Value, Ran), Fault> {
         let batch = json!({ "commands": [{ "name": "doc.read", "args": view }] });
-        let ran = self.run(document_id, &batch, actor).await?;
+        let ran = self.run(document_id, &batch, actor, write, None).await?;
         let result: Value =
             serde_json::from_str(&ran.result).map_err(|e| Fault::Internal(e.to_string()))?;
         if result.get("ok") != Some(&Value::Bool(true)) {

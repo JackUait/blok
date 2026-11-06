@@ -1028,7 +1028,12 @@ impl Mcp {
         // Loads the room, as Node's open waits for the room to sync.
         let view_args = step.get("view").cloned();
         let (view, ran) = rooms
-            .read(document_id, view_args.as_ref().unwrap_or(&json!({})), actor)
+            .read(
+                document_id,
+                view_args.as_ref().unwrap_or(&json!({})),
+                actor,
+                write,
+            )
             .await?;
         if cancelled() {
             return Err(HostError::failure(
@@ -1084,6 +1089,8 @@ impl Mcp {
         room: &mut RoomSession,
         call: &Value,
         actor: &Value,
+        client_name: &str,
+        approval: &Approval,
     ) -> Result<Outcome, Fault> {
         let rooms = self
             .rooms
@@ -1096,7 +1103,12 @@ impl Mcp {
         match str_of(call, "name") {
             Some("blok_read") => {
                 let (view, _) = rooms
-                    .read(document_id, call.get("view").unwrap_or(&json!({})), actor)
+                    .read(
+                        document_id,
+                        call.get("view").unwrap_or(&json!({})),
+                        actor,
+                        room.write,
+                    )
                     .await?;
                 Ok(Outcome::Answer(answer(&view)))
             }
@@ -1135,9 +1147,26 @@ impl Mcp {
                         .await?;
                     return Ok(Outcome::Answer(answer_of(&raw)?));
                 }
-                let ran = rooms.run(document_id, &batch, actor).await?;
+                let mut asking =
+                    json!({ "capabilities": approval.capabilities, "clientName": client_name });
+                if let Some(replies) = &approval.replies {
+                    asking["replies"] = replies.clone();
+                }
+                let ran = rooms
+                    .run(document_id, &batch, actor, room.write, Some(&asking))
+                    .await?;
                 let result: Value = serde_json::from_str(&ran.result)
                     .map_err(|e| Fault::Internal(e.to_string()))?;
+                if let Some(ask) = result.get("ask") {
+                    return Ok(Outcome::Ask(Ask {
+                        key: str_of(ask, "key").unwrap_or_default().to_owned(),
+                        message: ask.get("message").cloned().unwrap_or(Value::Null),
+                        requested_schema: ask
+                            .get("requestedSchema")
+                            .cloned()
+                            .unwrap_or(Value::Null),
+                    }));
+                }
                 let ok = result.get("ok") == Some(&Value::Bool(true));
                 if result.pointer("/error/code").and_then(Value::as_str) == Some("APPLY_FAILED") {
                     room.read_only = true;
@@ -1184,7 +1213,9 @@ impl Mcp {
         let stored = match &mut *lease.session {
             Session::Stored(stored) => stored,
             Session::Room(room) => {
-                return self.on_room(&document_id, room, &call, &actor).await;
+                return self
+                    .on_room(&document_id, room, &call, &actor, &client_name, approval)
+                    .await;
             }
             Session::Remote(room) => {
                 return self

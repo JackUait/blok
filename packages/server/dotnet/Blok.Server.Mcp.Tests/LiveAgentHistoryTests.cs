@@ -1,0 +1,130 @@
+using System.Text.Json.Nodes;
+using Blok.Server.Collab;
+using Blok.Server.Mcp.Live;
+using Blok.Server.Yjs;
+using Xunit;
+
+namespace Blok.Server.Mcp.Tests;
+
+/// <summary>The agent's live undo steps, as store-applier.ts and the executor's marks keep them.</summary>
+public sealed class LiveAgentHistoryTests
+{
+  private static readonly JsonObject Pair = new() { ["document"] = new JsonObject { ["blocks"] = new JsonArray() }, ["history"] = new JsonObject() };
+
+  [Fact]
+  public async Task UndoAndRedoReplayTheStepAsOneWriteEach()
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+    var origin = new object();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, origin);
+
+      Insert(room, history, origin, "p1", "one");
+      var undone = history.Replay(true, Pair);
+
+      Assert.Null(undone);
+      Assert.Empty(Ids(room));
+      Assert.Equal("l2", room.Revision);
+      Assert.Null(history.Replay(false, Pair));
+      Assert.Equal(["p1"], Ids(room));
+      Assert.Equal("l3", room.Revision);
+      Assert.Equal(3, room.Outbox.AppendedCount);
+    });
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task APeerRemovingTheStepsBlockIsAConflictAndWritesNothing()
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+    var origin = new object();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, origin);
+
+      Insert(room, history, origin, "p1", "keep");
+      Insert(room, history, origin, "p2", "gone");
+      var peer = new YDoc();
+
+      peer.ApplyUpdate(room.Doc.EncodeStateAsUpdate());
+      room.ApplyRemote(peer.Transact(tx => YDocConverter.ApplyOps(peer, [new CollabEditOp.Remove("p2")]))!);
+      var refused = history.Replay(true, Pair);
+
+      Assert.Equal("CONFLICT", refused?["code"]?.GetValue<string>());
+      Assert.Equal(
+          "Someone else changed the blocks this step added, removed or moved, so it can no longer be undone. Re-read the document before retrying.",
+          refused?["message"]?.GetValue<string>());
+      Assert.Equal("l3", room.Revision);
+      Assert.Equal(2, room.Outbox.AppendedCount);
+    });
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task ARestoreRefusesUndoAndRedoBehindIt()
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+    var origin = new object();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, origin);
+
+      Insert(room, history, origin, "p1", "one");
+      history.MarkRestored("L1:1");
+
+      var undo = history.GateFor(true);
+      var redo = history.GateFor(false);
+
+      Assert.Equal("UNDO_OTHER_DOCUMENT", undo.Refusal?["when"]?.GetValue<string>());
+      Assert.Equal(
+          "The last batch restored a version. history.undo cannot undo a restore. To go back, history.restore \"L1:1\", the version that was current before.",
+          undo.Refusal?["error"]?["message"]?.GetValue<string>());
+      Assert.Equal("[]", undo.Document["blocks"]?.ToJsonString());
+      Assert.Equal("NOTHING_TO_REDO", redo.Refusal?["error"]?["code"]?.GetValue<string>());
+    });
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task TheGateGetsTheBundlePairOfTheStepOnTop()
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+    var origin = new object();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, origin);
+      var after = new JsonObject { ["document"] = new JsonObject { ["blocks"] = new JsonArray("after") }, ["history"] = new JsonObject { ["past"] = new JsonArray("before") } };
+
+      Assert.Equal("[]", history.GateFor(true).Document["blocks"]?.ToJsonString());
+      Insert(room, history, origin, "p1", "one", after);
+      Assert.Equal("[\"after\"]", history.GateFor(true).Document["blocks"]?.ToJsonString());
+      Assert.Equal("{\"past\":[\"before\"]}", history.GateFor(true).History.ToJsonString());
+      Assert.Equal("[]", history.GateFor(false).Document["blocks"]?.ToJsonString());
+    });
+    await room.CloseAsync();
+  }
+
+  private static void Insert(LiveRoom room, LiveAgentHistory history, object origin, string id, string text, JsonObject? gate = null)
+  {
+    var edits = new JsonArray(new JsonObject
+    {
+      ["op"] = "insert",
+      ["block"] = new JsonObject { ["id"] = id, ["type"] = "paragraph", ["data"] = new JsonObject(), ["children"] = new JsonArray() },
+      ["parentId"] = null,
+      ["afterId"] = null,
+    });
+    var last = Ids(room).LastOrDefault();
+
+    history.Apply(edits, () => room.WriteLocal(origin, _ => YDocConverter.ApplyOps(room.Doc,
+        [new CollabEditOp.Insert(id, new JsonObject { ["type"] = "paragraph", ["data"] = new JsonObject { ["note"] = text } }, last, null)])),
+        gate ?? Pair);
+  }
+
+  private static List<string> Ids(LiveRoom room) =>
+      [.. YDocConverter.Export(room.Doc, RichTextFields.BuiltIn, null, out _).OfType<JsonObject>().Select(block => block["id"]!.GetValue<string>())];
+}

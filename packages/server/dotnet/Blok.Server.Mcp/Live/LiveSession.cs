@@ -25,6 +25,7 @@ internal sealed class LiveSession : IHandleSession
   private readonly JsonArray? unavailableCommands;
   private readonly LivePresence presence;
   private readonly LiveVersionHistory history;
+  private readonly LiveAgentHistory steps;
   private readonly TimeSpan ackTimeout;
   // Batch number -> its row ids, until every row is acked.
   private readonly Dictionary<int, IReadOnlyList<string>> unacked = [];
@@ -46,6 +47,7 @@ internal sealed class LiveSession : IHandleSession
     this.ackTimeout = ackTimeout ?? TimeSpan.FromSeconds(10);
     readOnly = !write;
     converter = new CollabDocConverter(TimeProvider.System, new RuntimeRichTextHtmlReader(bundle.Runtime));
+    steps = new LiveAgentHistory(room, AgentOrigin);
     presence = new LivePresence(room.SetAwarenessField, room.Provider.SendActivity, actor, caller.PresenceName);
   }
 
@@ -130,14 +132,21 @@ internal sealed class LiveSession : IHandleSession
     try
     {
       var input = await SessionInputAsync(cancellationToken);
+      var replay = HistoryCommand(batch);
+      // Undo and redo: the bundle checks the batch and asks what the step unlocks or shares, then the room replays it.
+      var gate = replay is null ? null : steps.GateFor(replay == "history.undo");
 
-      input["history"] = new JsonObject();
+      input["history"] = gate?.History ?? new JsonObject();
+      if (gate is not null)
+      {
+        input["document"] = gate.Document;
+      }
       input["batch"] = batch?.DeepClone();
       if (approval is not null)
       {
         input["approval"] = ApprovalInput(approval);
       }
-      if (await history.LoadAsync(batch, cancellationToken) is { } versions)
+      if (gate is null && await history.LoadAsync(batch, cancellationToken) is { } versions)
       {
         input["versionHistory"] = versions;
       }
@@ -151,6 +160,10 @@ internal sealed class LiveSession : IHandleSession
       writing = McpJson.Bool(ran["writes"]) == true;
       if (McpJson.Bool(result["ok"]) != true)
       {
+        if (gate?.Refusal is { } refusal && McpJson.String(result["error"]?["code"]) == McpJson.String(refusal["when"]))
+        {
+          result["error"] = refusal["error"]!.DeepClone();
+        }
         if (McpJson.String(result["error"]?["code"]) == "APPLY_FAILED")
         {
           readOnly = true;
@@ -158,7 +171,21 @@ internal sealed class LiveSession : IHandleSession
 
         return new McpExecuteOutcome(await AnswerAsync(new JsonObject { ["result"] = result.DeepClone() }, cancellationToken), null);
       }
-      if (ran["restore"] is not null)
+      if (replay is not null)
+      {
+        var refused = steps.Replay(replay == "history.undo", new JsonObject { ["document"] = ran["document"]?.DeepClone(), ["history"] = ran["history"]?.DeepClone() });
+
+        if (refused is not null)
+        {
+          // Nothing was written, so nothing is sent: no presence either.
+          return new McpExecuteOutcome(await AnswerAsync(new JsonObject
+          {
+            ["result"] = new JsonObject { ["ok"] = false, ["revision"] = room.Revision, ["error"] = refused, ["warnings"] = result["warnings"]?.DeepClone() ?? new JsonArray() },
+          }, cancellationToken), null);
+        }
+        result["revision"] = room.Revision;
+      }
+      else if (ran["restore"] is not null)
       {
         return new McpExecuteOutcome(await FailedAsync(result, McpHostError.Surface("SOURCE_UNAVAILABLE", "Restoring a version is not served on remote live rooms yet."), cancellationToken), null);
       }
@@ -166,12 +193,19 @@ internal sealed class LiveSession : IHandleSession
       {
         var ops = RoomEditTranslator.Translate(edits, after, result);
 
-        if (ops.Count > 0)
-        {
-          var html = await converter.ReadOpsHtmlAsync(room.Doc, ops, cancellationToken);
+        var html = ops.Count > 0 ? await converter.ReadOpsHtmlAsync(room.Doc, ops, cancellationToken) : null;
 
-          room.WriteLocal(AgentOrigin, _ => YDocConverter.ApplyOps(room.Doc, ops, html));
-        }
+        steps.Apply(edits, () =>
+        {
+          if (html is not null)
+          {
+            room.WriteLocal(AgentOrigin, _ => YDocConverter.ApplyOps(room.Doc, ops, html));
+          }
+        }, new JsonObject { ["document"] = after.DeepClone(), ["history"] = ran["history"]?.DeepClone() });
+      }
+      else if (McpJson.Bool(result["ok"]) == true && ran["history"]?["past"] is JsonArray { Count: > 0 } marks && McpJson.String(marks[^1]) == "other")
+      {
+        steps.MarkOther();
       }
     }
     finally
@@ -320,6 +354,13 @@ internal sealed class LiveSession : IHandleSession
       ["revision"] = new JsonObject { ["now"] = room.Revision, ["afterWrite"] = $"l{room.UpdateCount + 1}" },
     };
   }
+
+  /// <summary>The batch's first command when it is history.undo or history.redo; the bundle refuses anything else with it.</summary>
+  private static string? HistoryCommand(JsonNode? batch) =>
+      batch is JsonObject { } source && source["commands"] is JsonArray { Count: > 0 } commands && commands[0] is JsonObject first
+      && McpJson.String(first["name"]) is "history.undo" or "history.redo"
+          ? McpJson.String(first["name"])
+          : null;
 
   private static JsonObject ApprovalInput(McpApproval approval)
   {

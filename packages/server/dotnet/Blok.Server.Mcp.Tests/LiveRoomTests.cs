@@ -104,7 +104,7 @@ public sealed class LiveRoomTests
     await room.CloseAsync();
   }
 
-  private static async Task<(LiveRoom Room, Host Host)> OpenAsync()
+  internal static async Task<(LiveRoom Room, Host Host)> OpenAsync()
   {
     var host = new Host();
     var room = await LiveRoom.OpenAsync(
@@ -118,7 +118,7 @@ public sealed class LiveRoomTests
     return (room, host);
   }
 
-  private sealed class Host
+  internal sealed class Host
   {
     private WebSocket? server;
 

@@ -4,11 +4,14 @@ import { useI18n } from '../contexts/I18nContext';
 import {
   serverCoverageNote,
   serverLimits,
+  serverMcpBuilds,
+  serverMcpIntro,
   serverPaths,
 } from '../components/server/server-data';
 import type {
   ServerCodeSample,
   ServerLimit,
+  ServerMcpBuild,
   ServerPath,
 } from '../components/server/server-data';
 
@@ -57,10 +60,22 @@ export const useServerTranslations = () => {
       body: translateOr(`server.limits.${limit.id}.body`, limit.body),
     }));
 
+    const mcpBuilds: ServerMcpBuild[] = serverMcpBuilds.map((build) => {
+      const base = `server.mcp.${build.id}`;
+      return {
+        ...build,
+        title: translateOr(`${base}.title`, build.title),
+        description: translateOr(`${base}.description`, build.description),
+        samples: build.samples.map((item, i) => sample(`${base}.samples.${i}`, item)),
+      };
+    });
+
     return {
       coverageNote: translateOr('server.coverageNote', serverCoverageNote),
       paths,
       limits,
+      mcpIntro: translateOr('server.mcpIntro', serverMcpIntro),
+      mcpBuilds,
     };
   }, [t, locale]);
 

@@ -3182,6 +3182,58 @@
         "title": "Terminate TLS before internet traffic reaches the service",
         "body": "The standalone host speaks plain HTTP. It does not terminate TLS or manage certificates. An internet-facing deployment must sit behind a reverse proxy or hosting platform that accepts HTTPS and forwards HTTP over a private or loopback connection. Never send a ticket over plain internet traffic."
       }
+    },
+    "mcpHeading": "Let agents edit documents: the MCP server",
+    "mcpIntro": "Blok's MCP server lets an outside agent read and edit Blok documents through any MCP client. It comes in four builds: Node, C#, Go and Rust.\n\nAll four serve the same six tools and take the same flags and environment variables. One shared test suite checks every build against the Node one. The Node README lists the flags.",
+    "mcp": {
+      "node": {
+        "title": "Node: @bloklabs/mcp",
+        "description": "The npm package. It needs Node 20.19 or newer.",
+        "samples": {
+          "0": {
+            "label": "Run it against a folder of JSON documents"
+          }
+        }
+      },
+      "csharp": {
+        "title": "C#: Blok.Mcp and Blok.Server.Mcp",
+        "description": "Two NuGet packages, for .NET 10. `Blok.Mcp` is a .NET tool that runs `blok-mcp` on its own. `Blok.Server.Mcp` puts the same server inside your ASP.NET Core app.\n\nIn the app:\n\n- `AddBlokMcp` takes the document source and the access check.\n- Without `Authorize`, a registered `IBlokAuthorization` decides. With neither, every caller reaches every document.\n- `MapBlokMcp` serves stateless streamable HTTP. Its path defaults to `/mcp`.",
+        "samples": {
+          "0": {
+            "label": "Install the tool and run it"
+          },
+          "1": {
+            "label": "Or run it once without installing"
+          },
+          "2": {
+            "label": "Add the library to your app"
+          },
+          "3": {
+            "label": "Register and map it"
+          }
+        }
+      },
+      "go": {
+        "title": "Go: blok-mcp and the blokmcp package",
+        "description": "The `blok-mcp` command and the `blokmcp` package are part of the Go module. Each release also carries `blok-mcp-go_<os>_<arch>` archives, if you would rather not build it.\n\nIn your app:\n\n- `blokmcp.New` takes `blokmcp.Options`, whose fields match the flags.\n- `Authorize` decides every open and every handle call.\n- `Handler()` serves `/mcp`, so mount it at the root. It needs `Transport.Kind` set to `\"http\"`.",
+        "samples": {
+          "0": {
+            "label": "Install the command and run it"
+          },
+          "1": {
+            "label": "Serve it from your app"
+          }
+        }
+      },
+      "rust": {
+        "title": "Rust: build it from source",
+        "description": "The Rust build ships nothing yet, like the Rust server. Build it from a clone of the repository, with the Rust version that `rust-toolchain.toml` names.",
+        "samples": {
+          "0": {
+            "label": "Build it and run it"
+          }
+        }
+      }
     }
   }
 }

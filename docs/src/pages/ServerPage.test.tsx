@@ -4,7 +4,7 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { ServerPage } from './ServerPage';
 import { I18nProvider } from '../contexts/I18nContext';
-import { serverLimits, serverPaths } from '../components/server/server-data';
+import { serverLimits, serverMcpBuilds, serverPaths } from '../components/server/server-data';
 import { getRouteMetadata } from '../seo/route-metadata';
 import { applyTypography } from '../utils/typography';
 
@@ -129,6 +129,31 @@ describe('ServerPage', () => {
       const card = screen.getByTestId(`server-limit-${limit.id}`);
       expect(within(card).queryByText(limit.body)).toBeNull();
       expect(card).toHaveTextContent(/[\u0400-\u04FF]{4}/);
+    }
+  });
+
+  it('shows the four MCP builds, each with its install and its samples', () => {
+    renderPage();
+
+    const mcp = screen.getByTestId('server-mcp');
+    expect(within(mcp).getByRole('heading', { level: 2 })).toBeInTheDocument();
+    for (const build of serverMcpBuilds) {
+      const card = within(mcp).getByTestId(`server-mcp-${build.id}`);
+      expect(within(card).getByRole('heading', { level: 3 })).toHaveTextContent(build.title);
+      for (const sample of build.samples) {
+        expect(within(card).getByText(sample.label)).toBeInTheDocument();
+      }
+    }
+  });
+
+  it('localizes the MCP section on a ru page', () => {
+    renderPage('ru', '/ru/server');
+
+    const mcp = screen.getByTestId('server-mcp');
+    expect(mcp).toHaveTextContent(/[\u0400-\u04FF]{4}/);
+    for (const build of serverMcpBuilds) {
+      const card = within(mcp).getByTestId(`server-mcp-${build.id}`);
+      expect(within(card).queryByText(build.description)).toBeNull();
     }
   });
 

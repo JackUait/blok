@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { getTranslation, translations } from '../../i18n';
-import { serverCoverageNote, serverLimits, serverPaths } from './server-data';
+import { serverCoverageNote, serverLimits, serverMcpBuilds, serverPaths } from './server-data';
 
 /** Repo root — docs/src/components/server → up four levels. */
 const BLOK_ROOT = resolve(__dirname, '..', '..', '..', '..');
@@ -66,9 +66,61 @@ const overlayKeys = (): string[] => [
     `server.limits.${limit.id}.title`,
     `server.limits.${limit.id}.body`,
   ]),
+  'server.mcpHeading',
+  'server.mcpIntro',
+  ...serverMcpBuilds.flatMap((build) => {
+    const base = `server.mcp.${build.id}`;
+
+    return [
+      `${base}.title`,
+      `${base}.description`,
+      ...build.samples.map((_, index) => `${base}.samples.${index}.label`),
+    ];
+  }),
 ];
 
 describe('server docs data', () => {
+  describe('MCP builds', () => {
+    const build = (id: string) => serverMcpBuilds.find((entry) => entry.id === id);
+    const code = (id: string): string => (build(id)?.samples ?? []).map((sample) => sample.code).join('\n');
+
+    it('lists Node, C#, Go and Rust, Node first', () => {
+      expect(serverMcpBuilds.map((entry) => entry.id)).toEqual(['node', 'csharp', 'go', 'rust']);
+    });
+
+    // Signatures read from Blok.Server.Mcp: AddBlokMcp(Action<BlokMcpOptions>), MapBlokMcp(string pattern = "/mcp").
+    it('installs the C# tool and maps the library the way its API reads', () => {
+      expect(code('csharp')).toContain('dotnet tool install -g Blok.Mcp');
+      expect(code('csharp')).toContain('dnx Blok.Mcp --yes -- --source files:./docs');
+      expect(code('csharp')).toContain('dotnet add package Blok.Server.Mcp');
+      expect(code('csharp')).toContain('builder.Services.AddBlokMcp(options =>');
+      expect(code('csharp')).toContain('options.FilesDirectory = ');
+      expect(code('csharp')).toContain('app.MapBlokMcp("/mcp");');
+    });
+
+    // Handler() refuses unless Transport.Kind is "http". The module path ends in /v2.
+    it('installs the Go command and embeds blokmcp.New with an HTTP transport', () => {
+      expect(code('go')).toContain('go install github.com/JackUait/blok/packages/server/go/v2/cmd/blok-mcp@latest');
+      expect(code('go')).toContain('blokmcp.New(blokmcp.Options{');
+      expect(code('go')).toContain('Transport: blokmcp.Transport{Kind: "http"');
+      expect(code('go')).toContain('server.Handler()');
+    });
+
+    it('builds the Rust server from source, since it ships nothing', () => {
+      expect(code('rust')).toContain('cargo build --release -p blok-mcp');
+      expect(build('rust')?.description).toMatch(/ships nothing|not published/i);
+    });
+
+    it('flags package and tool installs, and only those, as install copies', () => {
+      const isInstall = (text: string) =>
+        /^(dotnet add package|dotnet tool install|go install|npm install)\b/.test(text);
+
+      for (const sample of serverMcpBuilds.flatMap((entry) => entry.samples)) {
+        expect(sample.install === true, sample.label).toBe(isInstall(sample.code));
+      }
+    });
+  });
+
   // The gap that let three separate corrections ship to nobody. `translateOr`
   // falls back to the TypeScript literal, so a key missing from BOTH bundles
   // renders English on /ru with no error; and `yarn i18n:check:docs` only diffs

@@ -68,12 +68,13 @@ const setInitPromise = (promise: Promise<HighlighterCore> | null): void => {
 /**
  * Every language the docs render, and nothing else. Grammars are imported one
  * by one instead of through the `shiki` bundle entry, which would put all ~200
- * of them in the build (emacs-lisp alone is 780 KB) for the eight we use.
+ * of them in the build (emacs-lisp alone is 780 KB) for the few we use.
  * `CodeBlock.languages.test.ts` keeps this list and the docs in sync.
  */
 export const SUPPORTED_LANGUAGES = [
   "bash",
   "csharp",
+  "go",
   "html",
   "javascript",
   "json",
@@ -88,6 +89,7 @@ export const SUPPORTED_LANGUAGES = [
 // comes from the catalogue instead.
 const languageDisplayNames: Record<string, string> = {
   csharp: "C#",
+  go: "Go",
   html: "HTML",
   javascript: "JavaScript",
   json: "JSON",
@@ -119,6 +121,7 @@ const getHighlighter = async (): Promise<HighlighterCore> => {
       langs: [
         () => import("shiki/langs/bash.mjs"),
         () => import("shiki/langs/csharp.mjs"),
+        () => import("shiki/langs/go.mjs"),
         () => import("shiki/langs/html.mjs"),
         () => import("shiki/langs/javascript.mjs"),
         () => import("shiki/langs/json.mjs"),

@@ -5,6 +5,7 @@ import { Footer } from '../components/layout/Footer';
 import { Typo } from '../components/common/Typo';
 import { Prose } from '../components/common/Prose';
 import { ServerPathSection } from '../components/server/ServerPathSection';
+import { CodeBlock } from '../components/common/CodeBlock';
 import { useServerTranslations } from '../hooks/useServerTranslations';
 import { NAV_LINKS } from '../utils/constants';
 import { useI18n } from '../contexts/I18nContext';
@@ -20,7 +21,7 @@ const ENGLISH_H1 = 'Uploads and link previews';
  */
 export const ServerContent: React.FC = () => {
   const { locale, t } = useI18n();
-  const { coverageNote, paths: serverPaths, limits: serverLimits } = useServerTranslations();
+  const { coverageNote, paths: serverPaths, limits: serverLimits, mcpIntro, mcpBuilds } = useServerTranslations();
   // See PresetsContent: the descriptive H1 lives in route-metadata.ts, keyed off
   // the locale in the path, so a /ru/server reader gets the Russian heading
   // route-metadata.ru.ts already authors instead of a hardcoded English one.
@@ -113,6 +114,41 @@ export const ServerContent: React.FC = () => {
           <ServerPathSection key={path.id} section={path} />
         ))}
       </div>
+
+      <section id="mcp" className="mt-16 scroll-mt-24" data-blok-testid="server-mcp" aria-label={t('server.mcpHeading')}>
+        <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+          <Typo>{t('server.mcpHeading')}</Typo>
+        </h2>
+        <div className="mt-3 max-w-2xl">
+          <Prose text={mcpIntro} className="text-base leading-relaxed text-muted-foreground" />
+        </div>
+        <div className="mt-8 flex flex-col gap-12">
+          {mcpBuilds.map((build) => (
+            <div key={build.id} id={`mcp-${build.id}`} className="scroll-mt-24" data-blok-testid={`server-mcp-${build.id}`}>
+              <h3 className="text-xl font-bold tracking-tight text-foreground">
+                <Typo>{build.title}</Typo>
+              </h3>
+              <div className="mt-2 max-w-2xl">
+                <Prose text={build.description} className="text-base leading-relaxed text-muted-foreground" />
+              </div>
+              <div className="mt-5 flex flex-col gap-4">
+                {build.samples.map((sample) => (
+                  <div key={sample.label}>
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      <Typo>{sample.label}</Typo>
+                    </p>
+                    <CodeBlock
+                      code={sample.code}
+                      language={sample.language}
+                      copyKind={sample.install ? 'install' : undefined}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

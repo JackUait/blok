@@ -58,6 +58,9 @@ internal sealed class YItem : YStruct
   /// <summary>Set by the undo/GC machinery to hold an item's content; unused until GC lands.</summary>
   public bool Keep { get; set; }
 
+  /// <summary>The item an undo manager re-inserted in this one's place (yjs's item.redone).</summary>
+  public YId? Redone { get; set; }
+
   public void MarkDeleted()
   {
     Deleted = true;
@@ -495,7 +498,7 @@ internal sealed class YItem : YStruct
   /// <summary>
   /// Cuts this item at <paramref name="diff"/> clocks, keeping the left half in
   /// place and returning the new right half — yjs's splitItem, minus the
-  /// transaction's merge queue and the redone pointer.
+  /// transaction's merge queue.
   ///
   /// The map head is re-pointed when the right half becomes the last value for
   /// a key, because a map reads its head item and the head is the newest one.
@@ -523,6 +526,7 @@ internal sealed class YItem : YStruct
       Content = Content.Splice(diff),
       Deleted = Deleted,
       Keep = Keep,
+      Redone = Redone is { } redone ? new YId(redone.Client, redone.Clock + (ulong)diff) : null,
     };
 
     Right = right;

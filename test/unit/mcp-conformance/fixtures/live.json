@@ -12534,6 +12534,7 @@
           "expect": null
         },
         {
+          "note": "the revision races the restore's room update against the HTTP answer, as in the restore case above",
           "send": {
             "method": "tools/call",
             "params": {
@@ -12551,6 +12552,9 @@
               }
             }
           },
+          "mask": [
+            "/result/structuredContent/revision"
+          ],
           "expect": {
             "result": {
               "content": [
@@ -12561,7 +12565,7 @@
               ],
               "structuredContent": {
                 "ok": true,
-                "revision": "l2",
+                "revision": "<masked>",
                 "results": [
                   {
                     "version": "${vBase}",

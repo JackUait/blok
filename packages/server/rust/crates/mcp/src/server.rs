@@ -309,13 +309,18 @@ impl Mcp {
             .unwrap_or(8.0) as usize;
         let live = opt(options, "sync")
             .map(|sync| Live::new(sync, opt(options, "tickets"), outbound.clone()));
-        let live_shared = live.as_ref().map(|_| {
-            Arc::new(LiveShared::new(
-                bundle.clone(),
-                outbound.clone(),
-                flags.clone(),
-            ))
-        });
+        let live_shared = match &live {
+            None => None,
+            Some(_) => {
+                let fields = bundle.call("mcpRichTextFields", &flags.to_string()).await?;
+                Some(Arc::new(LiveShared::new(
+                    bundle.clone(),
+                    outbound.clone(),
+                    flags.clone(),
+                    fields.get("fields").unwrap_or(&Value::Null),
+                )))
+            }
+        };
         Ok(Mcp {
             bundle,
             surface,

@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use blok_collab_convert::{DocConverter, RuntimeHtmlReader};
+use blok_collab_convert::{DocConverter, RichTextFieldEntry, RichTextFields, RuntimeHtmlReader};
 use blok_collab_wire::{Message, decode, encode};
 use blok_jsjson::{Node, Options as JsonOptions, parse_node};
 use blok_yjs::{Direction, Doc, Options as DocOptions};
@@ -55,14 +55,37 @@ pub struct LiveShared {
 }
 
 impl LiveShared {
-    pub fn new(bundle: Arc<Bundle>, outbound: Outbound, flags: Value) -> LiveShared {
+    /// `fields`: mcpRichTextFields' answer, each type's rich-text fields.
+    pub fn new(
+        bundle: Arc<Bundle>,
+        outbound: Outbound,
+        flags: Value,
+        fields: &Value,
+    ) -> LiveShared {
+        let entries: Vec<RichTextFieldEntry> = fields
+            .as_object()
+            .into_iter()
+            .flatten()
+            .map(|(kind, list)| RichTextFieldEntry {
+                kind: blok_jsjson::Str::from(kind.as_str()),
+                fields: list.as_array().map(|list| {
+                    list.iter()
+                        .filter_map(Value::as_str)
+                        .map(blok_jsjson::Str::from)
+                        .collect()
+                }),
+            })
+            .collect();
         LiveShared {
             converter: DocConverter {
                 now: Box::new(std::time::SystemTime::now),
                 html: RuntimeHtmlReader {
                     runtime: BundleInvoker(bundle.clone()),
                 },
-                fields: None,
+                // A name the converter cannot hold leaves the client's own table.
+                fields: Some(
+                    RichTextFields::new(&entries).unwrap_or_else(|_| RichTextFields::built_in()),
+                ),
                 log: None,
             },
             bundle,

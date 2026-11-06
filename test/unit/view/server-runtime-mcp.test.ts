@@ -477,6 +477,29 @@ describe('server runtime MCP sessions against blok-mcp over a files source', () 
     }
   });
 
+  it.each<[string, Record<string, unknown>]>([
+    ['no commands', {}],
+    ['an empty command list', { commands: [] }],
+    ['commands that are not a list', { commands: 'x' }],
+    ['a command without args', { commands: [{ name: 'doc.setTitle' }] }],
+  ])('answers a malformed batch (%s) as Node does, not with an exception', async (_label, args) => {
+    const { assembled, handle } = await openNode();
+
+    try {
+      const node = await assembled.dispatch('blok_execute', { handle, ...args }, caller);
+      const checked = await call('mcpCheckCall', { name: 'blok_execute', arguments: { handle, ...args }, scopes: null });
+      const step = isObject(checked.step) && isObject(checked.step.call) ? checked.step.call : {};
+      const ran = await call('agentExecute', {
+        mcp: { ...mcpFlags, mode: 'stored', write: true }, document: docFixture, actor, batch: step.batch, documentText: 'file',
+      });
+
+      expect(ran.save).toBe(false);
+      expect(await call('mcpExecuteAnswer', { result: ran.result })).toEqual({ answer: node });
+    } finally {
+      await assembled.stop();
+    }
+  });
+
   it('refuses a write on a read-only handle before it runs, as Node does', async () => {
     const assembled = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir } });
 

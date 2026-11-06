@@ -22,7 +22,11 @@ func testHTTPServer(t *testing.T) (*httptest.Server, string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(server.Close)
-	front := httptest.NewServer(server.Handler())
+	handler, err := server.Handler()
+	if err != nil {
+		t.Fatal(err)
+	}
+	front := httptest.NewServer(handler)
 	t.Cleanup(front.Close)
 	return front, front.URL[strings.LastIndexByte(front.URL, ':')+1:]
 }
@@ -84,5 +88,25 @@ func TestRefusesABodyOverFourMiBWith413(t *testing.T) {
 	response, _ = send(t, http.MethodPost, front.URL+"/mcp", nil, strings.Repeat("a", maxBodyBytes))
 	if response.StatusCode != http.StatusBadRequest {
 		t.Fatalf("exactly 4 MiB: %d", response.StatusCode)
+	}
+}
+
+// New checks the HTTP rules only for an HTTP transport, so a stdio server
+// must not hand out an HTTP handler that skipped them.
+func TestAStdioServerHasNoHTTPHandler(t *testing.T) {
+	runtime := fakeRuntime{
+		"mcpCheckOptions": func(string) string { return "{}" },
+		"version":         func(string) string { return "1.0.0" },
+		"mcpSurface": func(string) string {
+			return `{"tools":[],"instructions":"","prompts":[],"contractRevision":{"stored":"s","live":"l"},"liveUnavailableCommands":[]}`
+		},
+	}
+	server, err := newServer(Options{Transport: Transport{Kind: "stdio"}}, runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	if _, err := server.Handler(); err == nil {
+		t.Fatal("a stdio server gave out an HTTP handler")
 	}
 }

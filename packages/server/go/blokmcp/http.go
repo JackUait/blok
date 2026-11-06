@@ -49,8 +49,17 @@ func isLoopbackHost(r *http.Request) bool {
 }
 
 // Handler serves stateless streamable HTTP at /mcp, plus the OAuth
-// protected-resource metadata when OAuth is on. Mount it at the root.
-func (s *Server) Handler() http.Handler {
+// protected-resource metadata when OAuth is on. Mount it at the root. The
+// server must have Transport.Kind "http": New checks the HTTP rules
+// (authorize hook, loopback bind, OAuth for --public) only for that kind.
+func (s *Server) Handler() (http.Handler, error) {
+	if s.options.Transport.Kind != "http" {
+		return nil, &ConfigError{Message: `Handler needs Transport.Kind "http", so that New checks the HTTP rules`}
+	}
+	return s.handler(), nil
+}
+
+func (s *Server) handler() http.Handler {
 	var verifier *jwtVerifier
 	var metadataURL string
 	if s.options.Auth.Kind == "oauth" {
@@ -284,7 +293,7 @@ func (s *Server) ListenAndServe(ctx context.Context, onListening func(url string
 		shown = "[" + shown + "]"
 	}
 	onListening("http://" + shown + ":" + strconv.Itoa(address.Port))
-	server := &http.Server{Handler: s.Handler(), ReadHeaderTimeout: 30 * time.Second}
+	server := &http.Server{Handler: s.handler(), ReadHeaderTimeout: 30 * time.Second}
 	done := make(chan error, 1)
 	go func() { done <- server.Serve(listener) }()
 	select {

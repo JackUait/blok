@@ -4869,6 +4869,741 @@
       "expectExit": {
         "code": 0
       }
+    },
+    {
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "db",
+                "type": "database",
+                "content": [
+                  "r1"
+                ],
+                "data": {
+                  "title": "Tasks",
+                  "schema": [
+                    {
+                      "id": "t",
+                      "name": "Name",
+                      "type": "title",
+                      "position": "a0"
+                    },
+                    {
+                      "id": "c",
+                      "name": "Done",
+                      "type": "checkbox",
+                      "position": "a1"
+                    },
+                    {
+                      "id": "ask",
+                      "name": "Ask",
+                      "type": "button",
+                      "position": "a2",
+                      "button": {
+                        "label": "Ask",
+                        "buttonActions": [
+                          {
+                            "id": "q",
+                            "type": "showConfirmation",
+                            "message": "Really mark it done?",
+                            "confirmLabel": "Do it",
+                            "cancelLabel": "Stop"
+                          },
+                          {
+                            "id": "s1",
+                            "type": "editProperty",
+                            "propertyId": "c",
+                            "value": true
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "id": "hook",
+                      "name": "Hook",
+                      "type": "button",
+                      "position": "a3",
+                      "button": {
+                        "label": "Hook",
+                        "buttonActions": [
+                          {
+                            "id": "cb",
+                            "type": "callback",
+                            "name": "Sync CRM"
+                          },
+                          {
+                            "id": "n",
+                            "type": "sendNotification",
+                            "recipients": {
+                              "type": "people",
+                              "people": [
+                                {
+                                  "id": "u2"
+                                }
+                              ]
+                            },
+                            "message": "Pressed"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "id": "plain",
+                      "name": "Plain",
+                      "type": "button",
+                      "position": "a4",
+                      "button": {
+                        "label": "Plain",
+                        "buttonActions": [
+                          {
+                            "id": "s2",
+                            "type": "editProperty",
+                            "propertyId": "c",
+                            "value": true
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "views": [
+                    {
+                      "id": "v1",
+                      "name": "Table",
+                      "type": "table",
+                      "position": "a0",
+                      "sorts": [],
+                      "filters": [],
+                      "visibleProperties": []
+                    }
+                  ],
+                  "activeViewId": "v1"
+                }
+              },
+              {
+                "id": "r1",
+                "type": "database-row",
+                "parent": "db",
+                "data": {
+                  "position": "a0",
+                  "title": "One",
+                  "properties": {
+                    "t": "One",
+                    "c": false
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "name": "button: database.pressButton is unavailable in MCP, so a \"Show confirmation\" press asks no one (2026, elicitation)",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.pressButton",
+                    "args": {
+                      "id": "db",
+                      "rowId": "r1",
+                      "propertyId": "ask"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "COMMAND_UNAVAILABLE",
+                  "message": "\"database.pressButton\" is not available here.",
+                  "commandIndex": 0,
+                  "path": "/commands/0/name",
+                  "retryable": false,
+                  "details": {
+                    "reason": "runtime"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "doc.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "doc.json": {
+          "text": "{\"blocks\":[{\"id\":\"db\",\"type\":\"database\",\"content\":[\"r1\"],\"data\":{\"title\":\"Tasks\",\"schema\":[{\"id\":\"t\",\"name\":\"Name\",\"type\":\"title\",\"position\":\"a0\"},{\"id\":\"c\",\"name\":\"Done\",\"type\":\"checkbox\",\"position\":\"a1\"},{\"id\":\"ask\",\"name\":\"Ask\",\"type\":\"button\",\"position\":\"a2\",\"button\":{\"label\":\"Ask\",\"buttonActions\":[{\"id\":\"q\",\"type\":\"showConfirmation\",\"message\":\"Really mark it done?\",\"confirmLabel\":\"Do it\",\"cancelLabel\":\"Stop\"},{\"id\":\"s1\",\"type\":\"editProperty\",\"propertyId\":\"c\",\"value\":true}]}},{\"id\":\"hook\",\"name\":\"Hook\",\"type\":\"button\",\"position\":\"a3\",\"button\":{\"label\":\"Hook\",\"buttonActions\":[{\"id\":\"cb\",\"type\":\"callback\",\"name\":\"Sync CRM\"},{\"id\":\"n\",\"type\":\"sendNotification\",\"recipients\":{\"type\":\"people\",\"people\":[{\"id\":\"u2\"}]},\"message\":\"Pressed\"}]}},{\"id\":\"plain\",\"name\":\"Plain\",\"type\":\"button\",\"position\":\"a4\",\"button\":{\"label\":\"Plain\",\"buttonActions\":[{\"id\":\"s2\",\"type\":\"editProperty\",\"propertyId\":\"c\",\"value\":true}]}}],\"views\":[{\"id\":\"v1\",\"name\":\"Table\",\"type\":\"table\",\"position\":\"a0\",\"sorts\":[],\"filters\":[],\"visibleProperties\":[]}],\"activeViewId\":\"v1\"}},{\"id\":\"r1\",\"type\":\"database-row\",\"parent\":\"db\",\"data\":{\"position\":\"a0\",\"title\":\"One\",\"properties\":{\"t\":\"One\",\"c\":false}}}]}"
+        }
+      }
+    },
+    {
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "db",
+                "type": "database",
+                "content": [
+                  "r1"
+                ],
+                "data": {
+                  "title": "Tasks",
+                  "schema": [
+                    {
+                      "id": "t",
+                      "name": "Name",
+                      "type": "title",
+                      "position": "a0"
+                    },
+                    {
+                      "id": "c",
+                      "name": "Done",
+                      "type": "checkbox",
+                      "position": "a1"
+                    },
+                    {
+                      "id": "ask",
+                      "name": "Ask",
+                      "type": "button",
+                      "position": "a2",
+                      "button": {
+                        "label": "Ask",
+                        "buttonActions": [
+                          {
+                            "id": "q",
+                            "type": "showConfirmation",
+                            "message": "Really mark it done?",
+                            "confirmLabel": "Do it",
+                            "cancelLabel": "Stop"
+                          },
+                          {
+                            "id": "s1",
+                            "type": "editProperty",
+                            "propertyId": "c",
+                            "value": true
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "id": "hook",
+                      "name": "Hook",
+                      "type": "button",
+                      "position": "a3",
+                      "button": {
+                        "label": "Hook",
+                        "buttonActions": [
+                          {
+                            "id": "cb",
+                            "type": "callback",
+                            "name": "Sync CRM"
+                          },
+                          {
+                            "id": "n",
+                            "type": "sendNotification",
+                            "recipients": {
+                              "type": "people",
+                              "people": [
+                                {
+                                  "id": "u2"
+                                }
+                              ]
+                            },
+                            "message": "Pressed"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "id": "plain",
+                      "name": "Plain",
+                      "type": "button",
+                      "position": "a4",
+                      "button": {
+                        "label": "Plain",
+                        "buttonActions": [
+                          {
+                            "id": "s2",
+                            "type": "editProperty",
+                            "propertyId": "c",
+                            "value": true
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "views": [
+                    {
+                      "id": "v1",
+                      "name": "Table",
+                      "type": "table",
+                      "position": "a0",
+                      "sorts": [],
+                      "filters": [],
+                      "visibleProperties": []
+                    }
+                  ],
+                  "activeViewId": "v1"
+                }
+              },
+              {
+                "id": "r1",
+                "type": "database-row",
+                "parent": "db",
+                "data": {
+                  "position": "a0",
+                  "title": "One",
+                  "properties": {
+                    "t": "One",
+                    "c": false
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "name": "button: database.pressButton is unavailable in MCP, so a press that calls the host sends no elicitation/create (2025 stdio)",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.pressButton",
+                    "args": {
+                      "id": "db",
+                      "rowId": "r1",
+                      "propertyId": "hook"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "COMMAND_UNAVAILABLE",
+                  "message": "\"database.pressButton\" is not available here.",
+                  "commandIndex": 0,
+                  "path": "/commands/0/name",
+                  "retryable": false,
+                  "details": {
+                    "reason": "runtime"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "db",
+                "type": "database",
+                "content": [
+                  "r1"
+                ],
+                "data": {
+                  "title": "Tasks",
+                  "schema": [
+                    {
+                      "id": "t",
+                      "name": "Name",
+                      "type": "title",
+                      "position": "a0"
+                    },
+                    {
+                      "id": "c",
+                      "name": "Done",
+                      "type": "checkbox",
+                      "position": "a1"
+                    },
+                    {
+                      "id": "ask",
+                      "name": "Ask",
+                      "type": "button",
+                      "position": "a2",
+                      "button": {
+                        "label": "Ask",
+                        "buttonActions": [
+                          {
+                            "id": "q",
+                            "type": "showConfirmation",
+                            "message": "Really mark it done?",
+                            "confirmLabel": "Do it",
+                            "cancelLabel": "Stop"
+                          },
+                          {
+                            "id": "s1",
+                            "type": "editProperty",
+                            "propertyId": "c",
+                            "value": true
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "id": "hook",
+                      "name": "Hook",
+                      "type": "button",
+                      "position": "a3",
+                      "button": {
+                        "label": "Hook",
+                        "buttonActions": [
+                          {
+                            "id": "cb",
+                            "type": "callback",
+                            "name": "Sync CRM"
+                          },
+                          {
+                            "id": "n",
+                            "type": "sendNotification",
+                            "recipients": {
+                              "type": "people",
+                              "people": [
+                                {
+                                  "id": "u2"
+                                }
+                              ]
+                            },
+                            "message": "Pressed"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "id": "plain",
+                      "name": "Plain",
+                      "type": "button",
+                      "position": "a4",
+                      "button": {
+                        "label": "Plain",
+                        "buttonActions": [
+                          {
+                            "id": "s2",
+                            "type": "editProperty",
+                            "propertyId": "c",
+                            "value": true
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "views": [
+                    {
+                      "id": "v1",
+                      "name": "Table",
+                      "type": "table",
+                      "position": "a0",
+                      "sorts": [],
+                      "filters": [],
+                      "visibleProperties": []
+                    }
+                  ],
+                  "activeViewId": "v1"
+                }
+              },
+              {
+                "id": "r1",
+                "type": "database-row",
+                "parent": "db",
+                "data": {
+                  "position": "a0",
+                  "title": "One",
+                  "properties": {
+                    "t": "One",
+                    "c": false
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "name": "button: database.pressButton is unavailable in MCP even for a press that only edits the row",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.pressButton",
+                    "args": {
+                      "id": "db",
+                      "rowId": "r1",
+                      "propertyId": "plain"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "COMMAND_UNAVAILABLE",
+                  "message": "\"database.pressButton\" is not available here.",
+                  "commandIndex": 0,
+                  "path": "/commands/0/name",
+                  "retryable": false,
+                  "details": {
+                    "reason": "runtime"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
     }
   ]
 }

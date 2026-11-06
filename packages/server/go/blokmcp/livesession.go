@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -56,16 +57,51 @@ type liveSession struct {
 
 func (s *Server) liveConverter() *convert.DocConverter {
 	converter := &convert.DocConverter{Now: time.Now, HTML: convert.RuntimeHTMLReader{Runtime: s.bundle.runtime}}
-	if len(s.options.RichTextFields) > 0 {
-		var entries []convert.RichTextFieldEntry
-		for kind, fields := range s.options.RichTextFields {
-			entries = append(entries, convert.RichTextFieldEntry{Type: kind, Fields: fields})
-		}
-		if fields, err := convert.NewRichTextFields(entries); err == nil {
-			converter.Fields = fields
-		}
+	if s.liveFields != nil {
+		converter.Fields = s.liveFields
 	}
 	return converter
+}
+
+// richTextFieldsOf is Node's richTextFieldsOf: a type the contract's
+// manifest names keeps the manifest's fields, and --rich-text-fields counts
+// only for the other types.
+func (s *Server) richTextFieldsOf(ctx context.Context) (*convert.RichTextFields, error) {
+	input := map[string]any{}
+	if len(s.options.Manifest) > 0 {
+		input["customTools"] = s.options.Manifest
+	}
+	if len(s.options.Overrides) > 0 {
+		input["overrides"] = s.options.Overrides
+	}
+	var out struct {
+		Manifest struct {
+			Blocks []struct {
+				Name           string   `json:"name"`
+				RichTextFields []string `json:"richTextFields"`
+			} `json:"blocks"`
+		} `json:"manifest"`
+	}
+	if _, err := s.bundle.call(ctx, "manifest", input, &out); err != nil {
+		return nil, err
+	}
+	named := map[string]bool{}
+	var entries []convert.RichTextFieldEntry
+	for _, block := range out.Manifest.Blocks {
+		named[block.Name] = true
+		entries = append(entries, convert.RichTextFieldEntry{Type: block.Name, Fields: append([]string{}, block.RichTextFields...)})
+	}
+	kinds := make([]string, 0, len(s.options.RichTextFields))
+	for kind := range s.options.RichTextFields {
+		kinds = append(kinds, kind)
+	}
+	sort.Strings(kinds)
+	for _, kind := range kinds {
+		if !named[kind] {
+			entries = append(entries, convert.RichTextFieldEntry{Type: kind, Fields: s.options.RichTextFields[kind]})
+		}
+	}
+	return convert.NewRichTextFields(entries)
 }
 
 // openLive joins the room and waits for its first sync.

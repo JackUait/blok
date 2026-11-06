@@ -8,6 +8,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
 )
 
 // Version, when set, is the server version clients see. Empty means the
@@ -45,6 +47,9 @@ type Server struct {
 
 	roomMu       sync.Mutex
 	roomCommands map[string]bool
+
+	// liveFields are the rich-text fields a live room's converter reads.
+	liveFields *convert.RichTextFields
 }
 
 // New builds a Server. The bundle loads into its own engine pool.
@@ -109,6 +114,13 @@ func newServer(options Options, runtime invoker) (*Server, error) {
 		} else {
 			s.source = newEndpointSource(options.Source)
 		}
+	}
+	if options.live() {
+		fields, err := s.richTextFieldsOf(ctx)
+		if err != nil {
+			return nil, err
+		}
+		s.liveFields = fields
 	}
 	s.idleMs = numberOr(options.HandleIdleMs, defaultHandleIdleMs)
 	s.handles = newHandleRegistry[session](s.idleMs, int(numberOr(options.MaxHandlesPerPrincipal, defaultMaxHandlesPerPrincipal)))

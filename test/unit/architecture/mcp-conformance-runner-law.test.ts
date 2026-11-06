@@ -49,6 +49,16 @@ describe('MCP conformance runner law', () => {
     expect(result.stderr).toContain('Usage:');
   });
 
+  it('takes --host for the live suite and refuses an unknown one', () => {
+    const known = runRunner(['--target', 'csharp', '--suite', 'live', '--host', 'rust']);
+    const unknown = runRunner(['--target', 'csharp', '--suite', 'live', '--host', 'java']);
+
+    expect(known.stderr).not.toContain('Usage:');
+    expect(known.stderr).toContain('The csharp MCP target');
+    expect(unknown.status).toBe(1);
+    expect(unknown.stderr).toContain('Usage:');
+  });
+
   // A port that does not exist yet must fail fast with a message naming what to build.
   it.each([
     ['csharp', 'packages/server/dotnet/Blok.Mcp/Blok.Mcp.csproj'],

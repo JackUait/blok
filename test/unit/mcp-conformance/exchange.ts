@@ -6,6 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import { expect } from 'vitest';
 
 import { type BearerSpec, type FakeHost, type RecordedRequest, type RouteTable, signAccessToken, startFakeHost } from './fake-host';
+import { type LiveRoom, type RoomAction, type RoomSpec, startLiveRoom } from './live-room';
 import {
   caseEnv, type HttpAnswer, type HttpServer, type JsonMessage, runToExit, sendHttp, startHttp, startStdio, type StdioServer,
 } from './mcp-process';
@@ -30,6 +31,8 @@ import {
  *   hosts       a route table for the fake host (fake-host.ts) at ${host}, plus
  *               "$upgradeStatus" for the sync upgrade it refuses. Every request it
  *               gets is recorded in order, or by "hostRequestOrder": "sorted" | "distinct".
+ *   room        {"journal"?: false}: a real sync host (live-room.ts) at ${roomWs}; without
+ *               a journal the host speaks blok-sync.v1 only. stdio only.
  *   session     {"protocolVersion", "capabilities"?, "clientName"?, "headers"?}: the
  *               harness opens the session the way the SDK client does.
  *               2025 versions: initialize + notifications/initialized first, and
@@ -47,7 +50,8 @@ import {
  *               "caseSensitiveFs": …}, each recorded on such a disk (set TMPDIR).
  *   expect*     recorded by --update from Node; never hand-written.
  *
- * Step (one of send / notify / http):
+ * Step (one of send / notify / http / room):
+ *   room        an action on the case's room (live-room.ts); its answer is the step's "expect".
  *   send        a JSON-RPC request; "id" is filled in when left out. The answer
  *               is the message with the same id.
  *   notify      a JSON-RPC notification; no answer is read (HTTP records the status).
@@ -78,6 +82,7 @@ export interface ServerRequestSpec { expect?: unknown; reply: Record<string, unk
 
 export interface Step {
   note?: string;
+  room?: RoomAction;
   send?: JsonMessage;
   notify?: JsonMessage;
   http?: { method: string; path: string; headers?: Record<string, unknown>; body?: unknown; bodyText?: string; bodyRepeat?: { text: string; count: number } };
@@ -108,6 +113,7 @@ export interface FixtureCase {
   env?: Record<string, string>;
   files?: Record<string, FileSpec>;
   hosts?: RouteTable & { $upgradeStatus?: number };
+  room?: RoomSpec;
   session?: Session;
   steps?: Step[];
   watchFiles?: string[];
@@ -513,6 +519,13 @@ class CaseRun {
     return copy;
   }
 
+  public async roomStep(room: LiveRoom | undefined, step: Step, holder: Holder, label: string): Promise<void> {
+    if (room === undefined) {
+      throw new Error(`${label}: a room step needs the case's "room"`);
+    }
+    this.finishStep(step, holder, await room.act(materialize(step.room, this.vars) as RoomAction), label);
+  }
+
   public async stdioStep(server: StdioServer, step: Step, holder: Holder, label: string): Promise<void> {
     const raw = step.raw === true;
 
@@ -648,7 +661,7 @@ const withHost = async (c: FixtureCase, run: CaseRun, body: () => Promise<void>)
   }
 };
 
-const runStdio = async (run: CaseRun, c: FixtureCase, launch: Launch): Promise<void> => {
+const runStdio = async (run: CaseRun, c: FixtureCase, launch: Launch, room?: LiveRoom): Promise<void> => {
   const server = startStdio(launch.command, launch.argv, launch.env, launch.cwd);
 
   try {
@@ -658,7 +671,11 @@ const runStdio = async (run: CaseRun, c: FixtureCase, launch: Launch): Promise<v
       return message.id === undefined ? undefined : server.next();
     });
     for (const [index, step] of (c.steps ?? []).entries()) {
-      await run.stdioStep(server, step, run.stepHolder(index), `${c.name} step ${index}`);
+      const label = `${c.name} step ${index}`;
+
+      await (step.room === undefined
+        ? run.stdioStep(server, step, run.stepHolder(index), label)
+        : run.roomStep(room, step, run.stepHolder(index), label));
     }
     const exit = await server.closeInput();
 
@@ -705,7 +722,13 @@ export const runCase = async (command: string[], c: FixtureCase, record: boolean
   const run = new CaseRun(c, record, dir, root);
 
   mkdirSync(dir);
+  let room: LiveRoom | undefined;
+
   try {
+    room = c.room === undefined ? undefined : await startLiveRoom(c.room);
+    if (room !== undefined) {
+      run.vars.set('roomWs', room.wsUrl);
+    }
     await withHost(c, run, async () => {
       writeFiles(dir, c.files ?? {}, run.vars);
       const launch: Launch = {
@@ -720,7 +743,7 @@ export const runCase = async (command: string[], c: FixtureCase, record: boolean
 
         run.checkCase('expectExit', exitRecord(exit.code, exit.signal, exit.stderr, c.stderrPattern), `${c.name} exit`);
       } else if (c.transport === 'stdio') {
-        await runStdio(run, c, launch);
+        await runStdio(run, c, launch, room);
       } else {
         await runHttp(run, c, launch);
       }
@@ -729,6 +752,7 @@ export const runCase = async (command: string[], c: FixtureCase, record: boolean
       }
     });
   } finally {
+    await room?.close();
     rmSync(root, { recursive: true, force: true });
   }
 

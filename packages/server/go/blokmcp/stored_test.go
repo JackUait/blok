@@ -44,3 +44,32 @@ func TestACancelledCallStillSavesItsBatch(t *testing.T) {
 		t.Fatalf("answer %v, file %s", answer, written)
 	}
 }
+
+// Under --page-titles page-map with a source, a page block gets its own
+// new document, made before the batch runs.
+func TestAnInsertedPageGetsItsOwnDocument(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(dir, "doc.json"), []byte(`{"blocks":[]}`), 0o644)
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: dir}, PageTitles: "page-map"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx := context.Background()
+	who, _ := server.actorFor(ctx, "alice", nil)
+	opened, err := server.dispatch(ctx, &toolCall{name: "blok_open", arguments: json.RawMessage(`{"documentId":"doc","write":true}`), caller: who})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handle, _ := json.Marshal(structured(t, opened.answer)["handle"])
+	ran, err := server.dispatch(ctx, &toolCall{name: "blok_execute", caller: who,
+		arguments: json.RawMessage(`{"handle":` + string(handle) + `,"commands":[{"name":"block.insert","args":{"type":"page"}}]}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	answer := structured(t, ran.answer)
+	entries, _ := os.ReadDir(dir)
+	if answer["ok"] != true || len(entries) != 2 {
+		t.Fatalf("answer %v, %d files", answer, len(entries))
+	}
+}

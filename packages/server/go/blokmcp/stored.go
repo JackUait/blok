@@ -19,8 +19,9 @@ type session interface {
 
 // callContext is what a handle call knows about its caller.
 type callContext struct {
-	actor    json.RawMessage
-	approval map[string]any
+	principal string
+	actor     json.RawMessage
+	approval  map[string]any
 }
 
 // executed is an agentExecute run made into an answer, or a question.
@@ -124,6 +125,13 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	}
 	input := st.sessionInput(call)
 	input["batch"] = batch
+	if st.write && st.server.createsPages() && isBatchEnvelope(batch) {
+		created, err := st.server.createPages(ctx, input, call.principal)
+		if err != nil {
+			return nil, err
+		}
+		input["createdPages"] = created
+	}
 	input["documentText"] = st.source.documentForm()
 	if call.approval != nil {
 		input["approval"] = call.approval
@@ -174,3 +182,21 @@ func (st *storedSession) keep(out executeOutput) {
 }
 
 func (st *storedSession) close() (int, bool) { return 0, false }
+
+// isBatchEnvelope is the bundle's check: commands is an array of objects.
+func isBatchEnvelope(batch json.RawMessage) bool {
+	record, ok := isRecordJSON(batch)
+	if !ok || !isArrayJSON(record["commands"]) {
+		return false
+	}
+	var commands []json.RawMessage
+	if json.Unmarshal(record["commands"], &commands) != nil {
+		return false
+	}
+	for _, command := range commands {
+		if _, ok := isRecordJSON(command); !ok {
+			return false
+		}
+	}
+	return true
+}

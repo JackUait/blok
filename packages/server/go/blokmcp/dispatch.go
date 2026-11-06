@@ -137,7 +137,7 @@ func (s *Server) dispatchStep(ctx context.Context, call *toolCall, signal contex
 	}
 	var result *outcome
 	err := s.onHandle(ctx, call.caller, step.Handle, step.Write, func(sess session) error {
-		context := &callContext{actor: call.caller.actor, approval: call.approval}
+		context := &callContext{principal: call.caller.principal, actor: call.caller.actor, approval: call.approval}
 		var err error
 		switch step.Call.Name {
 		case "blok_read":

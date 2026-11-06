@@ -451,6 +451,66 @@ jobs:
             test/unit/architecture/ci-critical-path-law.test.ts \
             test/unit/architecture/package-metadata-law.test.ts
 
+  # The MCP servers in Node, Go, Rust and C#, each driven by the same black-box
+  # suite. It waits for Server so it starts after the E2E shards took their
+  # slots: a job that starts at t=0 holds a slot of the 20-job cap while they
+  # queue. C# starts a process per case slowly, so its suites run in three parts
+  # to stay under seven minutes.
+  mcp-conformance:
+    name: MCP Conformance (${{ matrix.part }})
+    needs: [server]
+    # A red Server must not hide the MCP result.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { part: node, target: node, suites: '' }
+          - { part: go, target: go, suites: '' }
+          - { part: rust, target: rust, suites: '' }
+          - { part: 'csharp 1/3', target: csharp, suites: '--suite live --suite http --suite files-source --suite endpoint-source' }
+          - { part: 'csharp 2/3', target: csharp, suites: '--suite corpus --suite approvals --suite cli' }
+          - { part: 'csharp 3/3', target: csharp, suites: '--suite protocol --suite tool-args --suite tickets' }
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      # The live suite's sync host is the Go conformance build, for every target.
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: packages/server/go/go.mod
+          cache-dependency-path: packages/server/go/go.sum
+
+      - name: Setup .NET
+        if: matrix.target == 'csharp'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      # Its own key: Lint's cache never built blok-mcp, and a cache saves only
+      # when its key missed. Falls back to Lint's for the shared crates.
+      - name: Cache Rust MCP release build
+        if: matrix.target == 'rust'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/server/rust/target
+          key: rust-mcp-release-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}
+          restore-keys: |
+            rust-mcp-release-${{ runner.os }}-
+            rust-release-${{ runner.os }}-
+
+      - name: Test MCP conformance
+        run: node scripts/test-mcp-conformance.mjs --target ${{ matrix.target }} ${{ matrix.suites }}
+
   # No `needs: build`: the tests that read build output run in
   # workspace-unit-tests instead (DIST_TESTS in vitest.config.ts).
   unit-tests:
@@ -840,6 +900,7 @@ jobs:
       - server-security
       - server
       - server-delivery
+      - mcp-conformance
       - unit-tests
       - workspace-unit-tests
       - validate-spec-coverage

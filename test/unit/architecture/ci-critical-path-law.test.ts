@@ -185,6 +185,7 @@ describe('CI critical-path law', () => {
       'server-security',
       'server',
       'server-delivery',
+      'mcp-conformance',
       'unit-tests',
       'workspace-unit-tests',
       'validate-spec-coverage',
@@ -423,6 +424,64 @@ describe('CI critical-path law', () => {
           '  test/unit/architecture/ci-critical-path-law.test.ts \\',
           '  test/unit/architecture/package-metadata-law.test.ts',
         ].join('\n'),
+      },
+    ]);
+  });
+
+  // Waits for Server so it starts once the E2E shards have their slots: a
+  // job started at t=0 holds a slot of the 20-job cap while shards queue.
+  // `!cancelled()` keeps the MCP result when Server fails.
+  it('runs MCP conformance for every target after Server, in parts under seven minutes', () => {
+    const mcp = getJob(ci, 'mcp-conformance');
+
+    expect(mcp.name).toBe('MCP Conformance (${{ matrix.part }})');
+    expect(mcp.needs).toEqual(['server']);
+    expect(mcp.if).toBe('${{ !cancelled() }}');
+    expect(mcp['runs-on']).toBe('ubuntu-latest');
+    expect(mcp['timeout-minutes']).toBe(10);
+    expect(mcp.strategy?.['fail-fast']).toBe(false);
+    expect(mcp.strategy?.matrix?.include).toEqual([
+      { part: 'node', target: 'node', suites: '' },
+      { part: 'go', target: 'go', suites: '' },
+      { part: 'rust', target: 'rust', suites: '' },
+      { part: 'csharp 1/3', target: 'csharp', suites: '--suite live --suite http --suite files-source --suite endpoint-source' },
+      { part: 'csharp 2/3', target: 'csharp', suites: '--suite corpus --suite approvals --suite cli' },
+      { part: 'csharp 3/3', target: 'csharp', suites: '--suite protocol --suite tool-args --suite tickets' },
+    ]);
+    expectOrderedSteps('ci.mcp-conformance', mcp, [
+      checkout,
+      setupNodeDependencies,
+      // The live suite's sync host is the Go conformance build, for every target.
+      {
+        name: 'Setup Go',
+        uses: 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e',
+        with: {
+          'go-version-file': 'packages/server/go/go.mod',
+          'cache-dependency-path': 'packages/server/go/go.sum',
+        },
+      },
+      {
+        name: 'Setup .NET',
+        if: "matrix.target == 'csharp'",
+        uses: 'actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68',
+        with: {
+          'dotnet-version': '10.0.x',
+        },
+      },
+      // Its own key: Lint's cache never built blok-mcp, and it saves only on a miss.
+      {
+        name: 'Cache Rust MCP release build',
+        if: "matrix.target == 'rust'",
+        uses: 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
+        with: {
+          path: ['~/.cargo/registry', '~/.cargo/git', 'packages/server/rust/target', ''].join('\n'),
+          key: "rust-mcp-release-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}",
+          'restore-keys': 'rust-mcp-release-${{ runner.os }}-\nrust-release-${{ runner.os }}-\n',
+        },
+      },
+      {
+        name: 'Test MCP conformance',
+        run: 'node scripts/test-mcp-conformance.mjs --target ${{ matrix.target }} ${{ matrix.suites }}',
       },
     ]);
   });

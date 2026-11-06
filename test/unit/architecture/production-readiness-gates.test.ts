@@ -83,6 +83,7 @@ describe('production readiness gates', () => {
       'server-security',
       'server',
       'server-delivery',
+      'mcp-conformance',
       'unit-tests',
       'workspace-unit-tests',
       'validate-spec-coverage',

@@ -131,7 +131,7 @@ These change saved data or hashes if a port gets them wrong:
 
 - **Saved files.** The files source writes `JSON.stringify(doc,null,2)+"\n"` with `é`, U+2028, emoji, `<` and `>` as raw UTF-8, and the version is the SHA-256 of those bytes. C#'s default JSON writer escapes them, and Go's `encoding/json` escapes `<`, `>`, `&` and U+2028 by default (measured with `json.MarshalIndent`). Each port needs a writer that matches Node byte for byte, with a fixture test.
 - **Two contract revisions.** Live handles report a different `contractRevision` than stored ones. `tools/list` is always built from the stored contract.
-- **Ticket URL mode and non-ASCII ids.** Node decodes the ticket with `atob` (Latin-1), so any non-ASCII document id or principal is refused as FORBIDDEN. That is a Node bug. See decision 6.
+- **Ticket URL mode and non-ASCII ids.** Node decoded the ticket with `atob` (Latin-1), so any non-ASCII document id or principal was refused as FORBIDDEN. Fixed in Node on 2026-11-07; ports decode UTF-8.
 - **Lenient parsing to match:** empty env vars count as set (except `BLOK_SECRET` and `BLOK_MCP_HOST_TOKEN`), number flags use JS `Number()` (`0x10`, `1e3`), base64 decoders skip bad characters, and `--authorize HTTP://…` is treated as a module path.
 - **2026-07-28 wire:** JSON responses, not SSE, with `resultType:"complete"`. The SDK requires `Mcp-Method`, answers `ping` and `server/discover`, and does not enforce `Mcp-Param-Blok-Handle`; the argument wins. An unknown protocol version is answered with 2025-11-25.
 
@@ -195,7 +195,12 @@ The questions as they were asked:
 3. **Internal or public API?** Reuse room, ticket and endpoint internals through `InternalsVisibleTo("Blok.Server.Mcp")`, or make them public, which is new published surface.
 4. **Package names.** The plan assumes `Blok.Server.Mcp` (library) and `Blok.Mcp` (tool).
 
-## 4b. New decisions for the user
+## 4b. User decisions (2026-11-07)
+
+- **Rust: use the official `rmcp` SDK.** This is an approved exception to `packages/server/rust/README.md:37-38` (own HTTP server, all JSON through `blok-jsjson`). Amend the README in the same change that adds the crate. Turn on `serde_json`'s `preserve_order`. Server-side OAuth is still ours to write, since `rmcp`'s `auth` feature is client-only.
+- **Non-ASCII ids: fix Node first.** Done: `readTicketClaims` now decodes the payload as UTF-8. All ports decode UTF-8 too.
+
+The questions as they were asked:
 
 5. **Rust: official `rmcp` or a hand-written MCP layer?** `rmcp` works but breaks the Rust workspace's own-HTTP and own-JSON rules and adds about 45 crates. Hand-written is about 2–3k lines (estimate).
 6. **Non-ASCII ids in ticket URL mode.** Node refuses them because of an `atob` bug. Fix Node first so all ports decode UTF-8, or copy the bug?

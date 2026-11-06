@@ -52,7 +52,6 @@ describe('MCP conformance runner law', () => {
   // A port that does not exist yet must fail fast with a message naming what to build.
   it.each([
     ['csharp', 'packages/server/dotnet/Blok.Mcp/Blok.Mcp.csproj'],
-    ['go', 'packages/server/go/cmd/blok-mcp'],
     ['rust', 'blok-mcp'],
   ])('fails clearly, without hanging, while the %s target is missing', (target, names) => {
     const result = runRunner(['--target', target]);

@@ -22,7 +22,7 @@ afterEach(() => {
 
 describe('@bloklabs/mcp README', () => {
   // The names come from the parser, so a flag added later fails here until it is documented.
-  const config = readFileSync(resolve(ROOT, 'src/mcp/config.ts'), 'utf-8');
+  const config = readFileSync(resolve(ROOT, 'src/shared/mcp/config.ts'), 'utf-8');
   const readme = readFileSync(resolve(ROOT, 'packages/mcp/README.md'), 'utf-8');
   const flags = [...new Set([...config.matchAll(/'(--[a-z][a-z-]*)'/g)].map((match) => match[1]))];
   const envs = [...new Set([...config.matchAll(/env(?:\.|\[')([A-Z][A-Z0-9_]*)/g)].map((match) => match[1]))];

@@ -357,8 +357,8 @@ describe('MCP tools come from the shared renderer', () => {
     expect(open.description).toContain('markdown.insert');
   });
 
-  it('does not hand-write core tool names in src/mcp/tools.ts', () => {
-    const path = resolve(__dirname, '../../../src/mcp/tools.ts');
+  it('does not hand-write core tool names in src/shared/mcp/tools.ts', () => {
+    const path = resolve(__dirname, '../../../src/shared/mcp/tools.ts');
     const source = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true);
     const coreNames = new Set<string>(CORE_TOOL_NAMES);
     const violations: string[] = [];

@@ -198,20 +198,12 @@ internal sealed class StoredSession : IHandleSession
     return batch is JsonObject envelope && envelope["commands"] is JsonArray commands && commands.All(command => command is JsonObject);
   }
 
-  /*
-   * A batch that would be refused, or that waits on a person's answer, makes no page:
-   * Node plans the whole batch before it makes one, and agentExecute answers it.
-   */
   private async Task<JsonArray> CreatePagesAsync(JsonObject input, McpCaller caller, CancellationToken cancellationToken)
   {
     var needed = await bundle.CallAsync("agentPagesNeeded", input, cancellationToken);
     var created = new JsonArray();
 
-    if (needed["result"] is not null)
-    {
-      return created;
-    }
-    for (var count = (int)(McpJson.Number(needed["count"]) ?? 0); count > 0; count--)
+    for (var count = PageIds.ToMake(needed); count > 0; count--)
     {
       created.Add(await CreatePage!(caller, cancellationToken));
     }

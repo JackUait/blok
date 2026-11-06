@@ -54,6 +54,27 @@ public sealed class StoredPagesTests : IClassFixture<BundleFixture>, IDisposable
   }
 
   [Fact]
+  public async Task ABatchRefusedAfterItPreparedAPageStillMakesItAsNodeDoes()
+  {
+    File.WriteAllText(Path.Combine(dir, "doc.json"), """{"blocks":[]}""");
+    await using var core = Core();
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = (string?)(await CallAsync(core, caller, "blok_open", new JsonObject { ["documentId"] = "doc", ["write"] = true }))["handle"];
+
+    var ran = await CallAsync(core, caller, "blok_execute", new JsonObject
+    {
+      ["handle"] = handle,
+      ["commands"] = new JsonArray(new JsonObject { ["name"] = "block.insert", ["args"] = new JsonObject { ["type"] = "page", ["data"] = new JsonObject { ["title"] = "Sub" } } }),
+    });
+
+    Assert.Equal("ORPHANED_SIDE_EFFECT", (string?)ran["error"]?["code"]);
+    var pageId = (string?)ran["error"]?["details"]?["orphaned"]?[0]?["prepared"]?["pageId"];
+
+    Assert.NotNull(pageId);
+    Assert.True(File.Exists(Path.Combine(dir, $"{pageId}.json")));
+  }
+
+  [Fact]
   public async Task ABatchThatAsksFirstMakesNoPage()
   {
     File.WriteAllText(Path.Combine(dir, "doc.json"), """

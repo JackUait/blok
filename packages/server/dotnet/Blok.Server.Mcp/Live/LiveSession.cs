@@ -430,18 +430,8 @@ internal sealed class LiveSession : IHandleSession
   {
     var needed = await bundle.CallAsync("agentPagesNeeded", input, cancellationToken);
     var created = new JsonArray();
-    var count = (int)(McpJson.Number(needed["count"]) ?? 0);
+    var count = PageIds.ToMake(needed);
 
-    if (needed["result"] is JsonObject refused)
-    {
-      // Only a batch refused after its pages were prepared made them in Node; the bundle lists those as orphans.
-      var error = refused["error"];
-
-      count = McpJson.String(error?["code"]) != "ORPHANED_SIDE_EFFECT"
-          ? 0
-          : (error?["details"]?["orphaned"] as JsonArray ?? [])
-              .Count(orphan => McpJson.String(orphan?["prepared"]?["pageId"])?.StartsWith("planned-page-", StringComparison.Ordinal) == true);
-    }
     for (; count > 0; count--)
     {
       created.Add(await CreatePage!(caller, cancellationToken));

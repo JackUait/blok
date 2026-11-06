@@ -155,12 +155,18 @@ async fn read_loop<R: AsyncRead + Unpin>(
             127 => reader.read_u64().await.map_err(|_| ())?,
             n => u64::from(n),
         };
+        // RFC 6455 §5.2: the most significant bit of a 64-bit length is 0.
+        if length >> 63 != 0 {
+            return Err(());
+        }
         match opcode {
             0 if fragmented.is_none() => return Err(()),
             1 | 2 if fragmented.is_some() => return Err(()),
             0..=2 => {
                 // The cap counts the whole message, as `ws` counts it.
-                if message.len() as u64 + length > MAX_PAYLOAD {
+                if length > MAX_PAYLOAD
+                    || (message.len() as u64).saturating_add(length) > MAX_PAYLOAD
+                {
                     return Err(());
                 }
             }
@@ -334,6 +340,22 @@ mod tests {
         second.extend_from_slice(&(MAX_PAYLOAD - 9).to_be_bytes());
         let bytes = [frame(false, 2, &[0u8; 10]), second].concat();
         assert_eq!(read_all(bytes).await.0, Err(()));
+    }
+
+    #[tokio::test]
+    async fn refuses_a_length_no_allocation_could_hold() {
+        for declared in [u64::MAX - 1, 1 << 62, MAX_PAYLOAD + 1] {
+            let mut bytes = vec![0x82u8, 127];
+            bytes.extend_from_slice(&declared.to_be_bytes());
+            assert_eq!(read_all(bytes).await.0, Err(()), "{declared}");
+        }
+        // Inside a message in progress too, where the sum would wrap.
+        let mut next = vec![0x80u8, 127];
+        next.extend_from_slice(&(u64::MAX - 1).to_be_bytes());
+        assert_eq!(
+            read_all([frame(false, 2, b"ab"), next].concat()).await.0,
+            Err(())
+        );
     }
 
     #[test]

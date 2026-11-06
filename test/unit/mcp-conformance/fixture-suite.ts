@@ -64,7 +64,13 @@ export const fixtureSuite = (file: string): void => {
           return;
         }
         const kind = tempDiskKind();
-        const result = await runCase(command, forThisDisk(withDefaults(fixture.defaults, c), kind), isUpdate());
+        const result = await runCase(command, forThisDisk(withDefaults(fixture.defaults, c), kind), isUpdate()).catch((thrown: unknown) => {
+          // On the oracle a mismatch usually means the engine changed: say how to re-record.
+          if (process.env.BLOK_MCP_CONFORMANCE_TARGET === 'node') {
+            console.error(`${c.name}: if Node's new answer is right, re-record with: node scripts/test-mcp-conformance.mjs --target node --suite ${file.replace(/\.json$/, '')} --update`);
+          }
+          throw thrown;
+        });
 
         if (isUpdate() && c.fsVariants === true) {
           const variant = Object.fromEntries(Object.entries(result).filter(([key]) => RECORDED_KEYS.includes(key)));

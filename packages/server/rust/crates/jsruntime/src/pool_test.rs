@@ -28,6 +28,7 @@ globalThis.blokServerInvoke = async function (operation, input) {
     case 'guardedRecurse': { const r = (d) => { open += 1; try { return d === 0 ? 0 : r(d - 1) + 1; } finally { open -= 1; } }; return String(r(1000000)); }
     case 'open': return String(open);
     case 'grow': { const kept = []; for (;;) { kept.push({ a: [1, 2, 3, 4, 5, 6, 7, 8] }); } }
+    case 'churn': { let n = 0; for (let i = 0; i < 2000; i += 1) { n += 'x'.repeat(65536 + i).length; } return String(n); }
     default: return 'ok';
   }
 };";
@@ -249,6 +250,18 @@ async fn stops_a_call_that_outgrows_its_memory_budget() {
     let pool = counting_pool(1, Duration::from_secs(30), 64 << 20);
     want_kind(invoke(&pool, "grow", "").await, Kind::DocumentTooLarge);
     want_count(&pool, "1").await;
+}
+
+#[tokio::test]
+async fn a_pool_charged_by_bytes_held_lets_churn_pass_and_stops_a_call_that_holds_too_much() {
+    // churn allocates about 130 MiB in all and holds 64 KiB at a time.
+    let counted = counting_pool(1, Duration::from_secs(30), 64 << 20);
+    want_kind(invoke(&counted, "churn", "").await, Kind::DocumentTooLarge);
+
+    let held = counting_pool(1, Duration::from_secs(30), 64 << 20).charging_held();
+    assert!(invoke(&held, "churn", "").await.is_ok());
+    want_kind(invoke(&held, "grow", "").await, Kind::DocumentTooLarge);
+    want_count(&held, "1").await;
 }
 
 #[tokio::test]

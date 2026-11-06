@@ -46,6 +46,8 @@ fn set_max_stack(ctx: &Ctx<'_>, limit: usize) {
 pub(crate) struct Limits {
     pub(crate) deadline: Instant,
     pub(crate) budget: i64,
+    /// Charge the bytes the call holds at its peak, not every allocation.
+    pub(crate) held: bool,
     pub(crate) cancel: Option<Arc<AtomicBool>>,
 }
 
@@ -176,7 +178,12 @@ impl Engine {
     ) -> Result<String, Error> {
         if let Some(limits) = limits {
             self.guard.arm(limits.deadline, limits.cancel.clone());
-            self.budget.arm(limits.budget, Charge::Allocated);
+            let charge = if limits.held {
+                Charge::Held
+            } else {
+                Charge::Allocated
+            };
+            self.budget.arm(limits.budget, charge);
         }
         let settled = self.ctx.with(|ctx| self.run(&ctx, op, input));
         // The limit comes off before any host-side read: reading a result

@@ -18,6 +18,7 @@ fn next_runs(engine: &mut Engine) {
     let limits = Limits {
         deadline: Instant::now() + Duration::from_secs(60),
         budget: DEFAULT_MEMORY_BUDGET,
+        held: false,
         cancel: None,
     };
     assert_eq!(

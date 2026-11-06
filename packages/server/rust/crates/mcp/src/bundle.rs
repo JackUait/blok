@@ -27,22 +27,29 @@ pub struct Bundle {
 
 // A big batch can take seconds; the pool's own 10 s default would cut it.
 const CALL_TIMEOUT: Duration = Duration::from_secs(60);
-// The budget counts bytes allocated, freed or not. A batch of 300 inserts of
-// 2000 characters allocates about 620 MiB, past the server's 512 MiB; one
-// that fills the 4 MiB HTTP body (1300 inserts) allocates 2-3 GiB and holds
-// under 200 MiB. Node runs both.
-const MEMORY_BUDGET: i64 = 4 << 30;
+// Each call is charged what it holds, not every byte it allocates. A batch
+// of 300 inserts of 2000 characters allocates about 620 MiB but holds under
+// 32 MiB; one that fills the 4 MiB HTTP body (1300 inserts) holds under
+// 64 MiB. Node runs both, its heap peaking at 46 and 66 MiB. The limit is
+// per engine, and loading the bundle needs about 30 MiB of it.
+const MEMORY_BUDGET: i64 = 256 << 20;
 
 impl Bundle {
     /// Loads the engines. Every process start pays for each one, and the
     /// conformance suite starts one process per case, so keep the pool small.
     pub fn new(pool_size: usize) -> Result<Bundle, BundleError> {
+        Bundle::with_budget(pool_size, MEMORY_BUDGET)
+    }
+
+    /// `budget`: the bytes one call may hold at once.
+    pub fn with_budget(pool_size: usize, budget: i64) -> Result<Bundle, BundleError> {
         let pool = Pool::new(Options {
             pool_size: Some(pool_size),
             timeout: Some(CALL_TIMEOUT),
-            memory_budget: Some(MEMORY_BUDGET),
+            memory_budget: Some(budget),
         })
-        .map_err(|e| BundleError(e.to_string()))?;
+        .map_err(|e| BundleError(e.to_string()))?
+        .charging_held();
         Ok(Bundle { pool })
     }
 

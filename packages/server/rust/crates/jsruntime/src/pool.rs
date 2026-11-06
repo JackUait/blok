@@ -229,6 +229,7 @@ pub struct Pool {
     size: usize,
     timeout: Duration,
     budget: i64,
+    held: bool,
 }
 
 /// Set when the caller drops the future, so the engine stops at its next
@@ -341,7 +342,16 @@ impl Pool {
             size,
             timeout,
             budget,
+            held: false,
         })
+    }
+
+    /// Charges each call the bytes it holds at its peak instead of every
+    /// byte it allocates (see budget.rs), so a long call that frees as it
+    /// goes passes and one that keeps what it builds still stops.
+    pub fn charging_held(mut self) -> Pool {
+        self.held = true;
+        self
     }
 
     #[cfg(test)]
@@ -392,12 +402,14 @@ impl Pool {
         let mut on_drop = CancelOnDrop(Some((cancel.clone(), woken.clone())));
         let (reply, answer) = oneshot::channel();
         let (op, input) = (op.to_owned(), input.to_owned());
-        let (budget, shared, slot) = (self.budget, self.shared.clone(), worker.clone());
+        let (budget, held, shared, slot) =
+            (self.budget, self.held, self.shared.clone(), worker.clone());
         worker.send(Box::new(move |engine| {
             let deadline = Instant::now() + timeout;
             let limits = Limits {
                 deadline,
                 budget,
+                held,
                 cancel: Some(cancel),
             };
             let mut run = worker::run(engine, &op, &input, Some(&limits));

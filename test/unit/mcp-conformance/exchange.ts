@@ -28,7 +28,8 @@ import {
  *               {"text": s} | {"link": "<target name>"}}, plus "mtimeAgoSeconds". json is
  *               written compact.
  *   hosts       a route table for the fake host (fake-host.ts) at ${host}, plus
- *               "$upgradeStatus" for the sync upgrade it refuses.
+ *               "$upgradeStatus" for the sync upgrade it refuses. Every request it
+ *               gets is recorded in order, or sorted with "hostRequestOrder": "sorted".
  *   session     {"protocolVersion", "capabilities"?, "clientName"?, "headers"?}: the
  *               harness opens the session the way the SDK client does.
  *               2025 versions: initialize + notifications/initialized first, and
@@ -111,6 +112,7 @@ export interface FixtureCase {
   watchFiles?: string[];
   fsVariants?: boolean;
   stderrPattern?: string;
+  hostRequestOrder?: 'sorted';
   variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
   expectFiles?: Record<string, FileSpec | null>;
@@ -297,9 +299,13 @@ const httpSummary = (answer: HttpAnswer): Record<string, unknown> => ({
   headers: Object.fromEntries(RECORDED_RESPONSE_HEADERS.map((name) => [name, answer.headers[name] ?? null])),
 });
 
+/** A raw HTTP answer body: SSE and JSON are parsed, so escaping and framing are free. */
 const httpBody = (answer: HttpAnswer): unknown => {
   if (answer.body === '') {
     return null;
+  }
+  if ((answer.headers['content-type'] ?? '').startsWith('text/event-stream')) {
+    return { sse: parseHttpMessages(answer) };
   }
   try {
     return { json: JSON.parse(answer.body) };
@@ -580,7 +586,12 @@ const withHost = async (c: FixtureCase, run: CaseRun, body: () => Promise<void>)
   run.vars.set('host', host.url);
   try {
     await body();
-    run.checkCase('expectHostRequests', host.requests, `${c.name} host requests`);
+    // Calls made in parallel (a listing's authorize checks) arrive in any order.
+    const requests = c.hostRequestOrder === 'sorted'
+      ? [...host.requests].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+      : host.requests;
+
+    run.checkCase('expectHostRequests', requests, `${c.name} host requests`);
   } finally {
     await host.close();
   }

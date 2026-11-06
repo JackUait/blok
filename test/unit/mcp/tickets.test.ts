@@ -96,6 +96,15 @@ describe('ticket URL', () => {
       .toBe('FORBIDDEN');
   });
 
+  it('accepts a ticket for a document and agent whose names are not ASCII', async () => {
+    const wide = { ...request, documentId: 'документ-✓', actorId: 'agent:алиса:claude' };
+
+    answer(200, { ticket: jwt({ user: wide.actorId, doc: wide.documentId, write: true, exp: 2_000_000_000 }) });
+    const source = await createTicketProvider({ kind: 'url', url: 'https://app/t', hostToken: 'h' }, fetchMock)(wide);
+
+    expect(readTicketClaims(await source())).toMatchObject({ user: wide.actorId, doc: wide.documentId });
+  });
+
   it('refuses a ticket for another document', async () => {
     answer(200, { ticket: jwt({ user: 'agent:alice:claude', doc: 'other', exp: 2_000_000_000 }) });
     expect(await codeOf(createTicketProvider({ kind: 'url', url: 'https://app/t', hostToken: 'h' }, fetchMock)(request))).toBe('FORBIDDEN');

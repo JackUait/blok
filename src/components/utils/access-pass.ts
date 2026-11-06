@@ -72,7 +72,10 @@ export function readTicketClaims(token: string): Record<string, unknown> | null 
   }
 
   try {
-    const decoded: unknown = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    // atob yields one char per byte (Latin-1); the payload is UTF-8 JSON, so decode the bytes.
+    const binary = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const decoded: unknown = JSON.parse(new TextDecoder().decode(bytes));
 
     return typeof decoded === 'object' && decoded !== null ? (decoded as Record<string, unknown>) : null;
   } catch {

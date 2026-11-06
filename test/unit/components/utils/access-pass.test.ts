@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createPassSource, createTicketSource } from '../../../../src/components/utils/access-pass';
+import { createPassSource, createTicketSource, readTicketClaims } from '../../../../src/components/utils/access-pass';
 
 // A pass whose payload declares exp = 1000 (seconds).
 const PASS = `x.${btoa(JSON.stringify({ exp: 1000 })).replace(/=+$/, '')}.y`;
@@ -183,5 +183,14 @@ describe('createTicketSource', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('readTicketClaims', () => {
+  it('decodes a payload whose claims hold non-ASCII text as UTF-8', () => {
+    const claims = { user: 'алиса', doc: 'документ-✓ 😀' };
+    const pass = `x.${Buffer.from(JSON.stringify(claims), 'utf-8').toString('base64url')}.y`;
+
+    expect(readTicketClaims(pass)).toEqual(claims);
   });
 });

@@ -1,6 +1,6 @@
 import type { HostService, ManifestOverrides } from '../../types';
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from '../../types/data-formats/output-data';
-import type { AgentActor, AgentApprovalRequest, AgentApprover, AgentBatch, AgentResult, AgentVersion, AgentVersionHistory } from '../../types/agent';
+import type { AgentActor, AgentApprovalRequest, AgentApprover, AgentBatch, AgentError, AgentResult, AgentVersion, AgentVersionHistory } from '../../types/agent';
 // Imported by file rather than through `src/components/utils`: the barrel
 // reaches the DOM, this module does not.
 import { getBlokVersion } from '../components/utils/version';
@@ -593,6 +593,100 @@ const withUnusedPages = (result: AgentResult, unused: readonly string[]): AgentR
   };
 };
 
+/** What a host upload answers stand for, in the order the batch asks them. */
+type HostUpload =
+  | { op: 'readLocal'; path: string; maxBytes: number }
+  | { op: 'uploadByFile'; fileName: string; type: string; size: number; kind: string; tool: string; data?: string; local?: number }
+  | { op: 'uploadByUrl'; url: string; kind: string; tool: string };
+
+/** Jint and goja have no File: the prepare step only builds one to hand it to the uploader. */
+class HostFile {
+  public readonly name: string;
+  public readonly type: string;
+  public readonly size: number;
+
+  constructor(parts: readonly unknown[], name: string, options?: { type?: string }) {
+    this.name = name;
+    this.type = options?.type ?? '';
+    this.size = parts.reduce((sum: number, part) => sum + (part instanceof Uint8Array ? part.byteLength : 0), 0);
+  }
+}
+
+/** Raised when the host must run the next upload call before this batch can go on. */
+class HostUploadNeeded extends Error {}
+
+const isAgentErrorRecord = (value: unknown): value is AgentError =>
+  isRecord(value) && typeof value.code === 'string' && typeof value.message === 'string' && typeof value.retryable === 'boolean';
+
+/**
+ * The host's uploader where the engine cannot wait on the host. Each call takes the next of
+ * `uploads.answers`, in call order; past the last one it is kept as the call the host runs next,
+ * and the batch stops. The host runs it and sends the batch again with one more answer.
+ *
+ * Bytes stay with the host: base64 data and local reads become stand-ins of the right length for
+ * the size checks, and the upload names its source. A prepare step reads its bytes just before it
+ * uploads them, and prepare steps run one at a time, so the last stand-in is the upload's.
+ */
+const replayUploader = (uploads: Record<string, unknown>): { service: Record<string, unknown>; next: () => HostUpload | undefined } => {
+  if (typeof Reflect.get(globalThis, 'File') !== 'function') {
+    Reflect.set(globalThis, 'File', HostFile);
+  }
+  const answers = Array.isArray(uploads.answers) ? uploads.answers : [];
+  const state: { at: number; next?: HostUpload; source?: { data: string } | { local: number } } = { at: 0 };
+  const limits = isRecord(uploads.limits) ? uploads.limits : {};
+  const ask = (call: HostUpload): Record<string, unknown> => {
+    if (state.at >= answers.length) {
+      state.next = call;
+      throw new HostUploadNeeded('blok: the host runs this upload first');
+    }
+    const answer: unknown = answers[state.at];
+
+    state.at += 1;
+    if (isRecord(answer) && isAgentErrorRecord(answer.failure)) {
+      throw new AgentFailure(answer.failure);
+    }
+    if (isRecord(answer) && typeof answer.error === 'string') {
+      throw new Error(answer.error);
+    }
+
+    return isRecord(answer) ? answer : {};
+  };
+  const asked = (call: HostUpload): Promise<Record<string, unknown>> => Promise.resolve().then(() => ask(call));
+  const service: Record<string, unknown> = {
+    limits: (kind: string) => limits[kind],
+    decodeBase64: (data: string) => {
+      state.source = { data };
+
+      return new Uint8Array(Math.floor(data.replace(/=+$/, '').length * 3 / 4));
+    },
+    uploadByFile: (file: { name: string; type: string; size: number }, ctx: { kind: string; tool?: string }) => {
+      const source = state.source;
+
+      state.source = undefined;
+
+      return asked({ op: 'uploadByFile', fileName: file.name, type: file.type, size: file.size, kind: ctx.kind, tool: ctx.tool ?? ctx.kind, ...source });
+    },
+    ...(uploads.root === true && {
+      readLocal: (path: string, maxBytes: number) => {
+        const local = state.at;
+
+        return asked({ op: 'readLocal', path, maxBytes }).then((read) => {
+          const size = typeof read.size === 'number' && Number.isSafeInteger(read.size) && read.size >= 0 ? read.size : 0;
+
+          state.source = { local };
+
+          return { bytes: new Uint8Array(size), name: typeof read.name === 'string' ? read.name : '' };
+        });
+      },
+    }),
+    ...(uploads.byUrl === true && {
+      uploadByUrl: (url: string, ctx: { kind: string; tool?: string }) => asked({ op: 'uploadByUrl', url, kind: ctx.kind, tool: ctx.tool ?? ctx.kind }),
+    }),
+  };
+
+  return { service, next: () => state.next };
+};
+
 interface ServerSetup {
   contract: ReturnType<typeof createHeadlessAgentSetup>['contract'];
   tools: ReturnType<typeof createHeadlessAgentSetup>['tools'];
@@ -668,7 +762,8 @@ const createServerAgentSession = (
   document: OutputData,
   actor: AgentActor,
   onRestore?: (version: string) => void,
-  createPage?: AgentPorts['createPageDocument']
+  createPage?: AgentPorts['createPageDocument'],
+  uploader?: Record<string, unknown>
 ): ReturnType<typeof createDocumentAgentSession> => {
   const setup = isRecord(input.mcp) ? mcpSetup(input.mcp) : serverSetup(input);
   const versionHistory = loadedVersionHistory(input.versionHistory, setup.restores ? onRestore : undefined);
@@ -682,7 +777,10 @@ const createServerAgentSession = (
     tools: setup.tools, contract: setup.contract, actor, runtime: 'jint',
     ports: createPage === undefined ? setup.ports : { ...setup.ports, createPageDocument: createPage },
     ...(createPage !== undefined && { pageTitles: 'page-map' as const }),
-    ...(versionHistory !== undefined && { services: { versionHistory } }),
+    ...((versionHistory !== undefined || uploader !== undefined) && { services: {
+      ...(versionHistory !== undefined && { versionHistory }),
+      ...(uploader !== undefined && { uploader }),
+    } }),
     ...(history !== undefined && { history }),
     ...(hostRevision !== undefined && { hostRevision }),
   });
@@ -744,9 +842,10 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
 
   const restoring: { version?: string } = {};
   const pages = createsPages(input) ? createdPagesPort(input) : undefined;
+  const uploads = isRecord(input.uploads) ? replayUploader(input.uploads) : undefined;
   const session = createServerAgentSession(input, document, actor, (version) => {
     restoring.version = version;
-  }, pages?.port);
+  }, pages?.port, uploads?.service);
   const mcp = isRecord(input.mcp) ? input.mcp : undefined;
   const approval = approvalOf(input.approval);
 
@@ -769,6 +868,12 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
     // The batch applied nothing; the host asks the person, and the client sends the call again with the reply.
     if (question !== undefined) {
       return JSON.stringify({ ask: { key: approvalKey(question), ...approvalQuestion(question, approval?.clientName ?? '') } });
+    }
+    const hostUpload = uploads?.next();
+
+    // Stopped in a prepare step, before anything was written: the host runs the call and sends the batch again.
+    if (hostUpload !== undefined) {
+      return JSON.stringify({ upload: hostUpload });
     }
     const result = withUnusedPages(ran, pages?.unused ?? []);
 

@@ -2496,6 +2496,18 @@
     "output": "{\"result\":{\"ok\":false,\"revision\":\"h329376fbdd2ad\",\"error\":{\"code\":\"ORPHANED_SIDE_EFFECT\",\"message\":\"The batch failed after the host did work for it (You may not create a page document here.). Clean up the listed items.\",\"commandIndex\":2,\"retryable\":false,\"details\":{\"orphaned\":[{\"command\":\"block.insert\",\"type\":\"page\",\"prepared\":{\"pageId\":\"host-a\"}}],\"cause\":{\"code\":\"FORBIDDEN\",\"message\":\"You may not create a page document here.\",\"retryable\":false,\"details\":{\"pageId\":\"host-b\"},\"commandIndex\":2}}},\"warnings\":[]},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello & \"},{\"text\":\"world\",\"marks\":{\"bold\":true}}]}}]},\"edits\":[],\"writes\":true,\"save\":false}"
   },
   {
+    "name": "mcp.execute.upload.read",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true,\"uploads\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{\"commands\":[{\"name\":\"image.uploadFile\",\"args\":{\"path\":\"cat.png\"}}]},\"uploads\":{\"root\":true,\"answers\":[]}}",
+    "output": "{\"upload\":{\"op\":\"readLocal\",\"path\":\"cat.png\",\"maxBytes\":31457280}}"
+  },
+  {
+    "name": "mcp.execute.upload.send",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true,\"uploads\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{\"commands\":[{\"name\":\"image.uploadFile\",\"args\":{\"path\":\"cat.png\"}}]},\"uploads\":{\"root\":true,\"answers\":[{\"name\":\"cat.png\",\"size\":9}]}}",
+    "output": "{\"upload\":{\"op\":\"uploadByFile\",\"fileName\":\"cat.png\",\"type\":\"image/png\",\"size\":9,\"kind\":\"image\",\"tool\":\"image\",\"local\":0}}"
+  },
+  {
     "name": "mcp.execute.liveRevision",
     "op": "agentExecute",
     "input": "{\"mcp\":{\"source\":true,\"mode\":\"live\",\"write\":true,\"sync\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"revision\":{\"now\":\"l4\",\"afterWrite\":\"l5\"},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"T\"}},{\"name\":\"doc.read\",\"args\":{}}],\"expectRevision\":\"l4\"}}",

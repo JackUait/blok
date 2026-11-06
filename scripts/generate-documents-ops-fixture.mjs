@@ -363,6 +363,11 @@ const buildCases = async (invoke) => {
     createPageFailure: { helper: 'surface', error: { code: 'FORBIDDEN', message: 'You may not create a page document here.', details: { pageId: 'host-b' } } },
     batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'block.insert', args: { type: 'page', id: 'np0' } }, { name: 'block.insert', args: { type: 'page', id: 'np1' } }] },
   }));
+  // A host that cannot wait mid-batch runs each upload call between agentExecute calls.
+  const uploadBatch = { commands: [{ name: 'image.uploadFile', args: { path: 'cat.png' } }] };
+  add('mcp.execute.upload.read', 'agentExecute', J({ mcp: { ...mcpStored, uploads: true }, document: mcpDoc, actor: mcpActor, batch: uploadBatch, uploads: { root: true, answers: [] } }));
+  add('mcp.execute.upload.send', 'agentExecute', J({ mcp: { ...mcpStored, uploads: true }, document: mcpDoc, actor: mcpActor, batch: uploadBatch, uploads: { root: true, answers: [{ name: 'cat.png', size: 9 }] } }));
+
   add('mcp.execute.liveRevision', 'agentExecute', J({ mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor, revision: { now: 'l4', afterWrite: 'l5' }, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }], expectRevision: 'l4' } }));
   add('mcp.executeAnswer', 'mcpExecuteAnswer', J({ result: { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [] }, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v' } }));
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));

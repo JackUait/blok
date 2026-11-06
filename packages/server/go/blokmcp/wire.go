@@ -84,3 +84,26 @@ func (c fixedConnection) Write(ctx context.Context, message jsonrpc.Message) err
 	fixOutgoing(message)
 	return c.Connection.Write(ctx, message)
 }
+
+// acceptedReplies is Node's SDK partitionInputResponses: only bare reply
+// objects count. A wrapped {method}/{result} entry, or anything that is not
+// an object, is dropped, so the approver asks again.
+func acceptedReplies(raw json.RawMessage) map[string]json.RawMessage {
+	accepted := map[string]json.RawMessage{}
+	entries, ok := isRecordJSON(raw)
+	if !ok {
+		return accepted
+	}
+	for key, entry := range entries {
+		members, isObject := isRecordJSON(entry)
+		if !isObject {
+			continue
+		}
+		_, hasMethod := members["method"]
+		_, hasResult := members["result"]
+		if !hasMethod && !hasResult {
+			accepted[key] = entry
+		}
+	}
+	return accepted
+}

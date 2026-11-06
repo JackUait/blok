@@ -3,6 +3,7 @@ package blokmcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -110,9 +111,9 @@ func (s *Server) newSDKServer(who identity) *mcp.Server {
 			case "prompts/list":
 				return listAnswerResult(req, "prompts", s.surface.Prompts), nil
 			case "prompts/get":
-				return s.getPrompt(ctx, req)
+				return internalError(s.getPrompt(ctx, req))
 			case "tools/call":
-				return s.callTool(ctx, req, who, &asks)
+				return internalError(s.callTool(ctx, req, who, &asks))
 			case "initialize":
 				result, err := next(ctx, method, req)
 				if initialized, ok := result.(*mcp.InitializeResult); ok && err == nil {
@@ -140,6 +141,16 @@ func (s *Server) newSDKServer(who identity) *mcp.Server {
 		}
 	})
 	return server
+}
+
+// internalError answers a failure that is not a JSON-RPC error as -32603,
+// as Node's SDK does; the Go SDK would send code 0.
+func internalError(result mcp.Result, err error) (mcp.Result, error) {
+	var wire *jsonrpc.Error
+	if err == nil || errors.As(err, &wire) {
+		return result, err
+	}
+	return nil, &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: err.Error()}
 }
 
 func (s *Server) getPrompt(ctx context.Context, req mcp.Request) (mcp.Result, error) {
@@ -214,10 +225,10 @@ func (s *Server) callTool(ctx context.Context, req mcp.Request, who identity, as
 		return nil, err
 	}
 	caller.scopes = who.scopes
-	replies, _ := call.Params.GetMeta()[rawResponsesKey]
 	approval := map[string]any{"capabilities": clientCapabilities(call), "clientName": caller.clientName}
-	if replies != nil {
-		approval["replies"] = replies
+	if replies, sent := call.Params.GetMeta()[rawResponsesKey]; sent {
+		raw, _ := marshal(replies)
+		approval["replies"] = acceptedReplies(raw)
 	}
 	modern := isModern(req)
 	for round := 0; ; round++ {

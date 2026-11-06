@@ -84,6 +84,11 @@ func (s *Server) Handler() http.Handler {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		if r.Method != http.MethodPost {
+			w.Header()["Allow"] = []string{"POST"}
+			writeRPCError(w, http.StatusMethodNotAllowed, -32000, "Method not allowed.")
+			return
+		}
 		who := identity{principal: s.options.principal()}
 		// The bearer gate reads only the header, so a refused caller never
 		// gets a body read.
@@ -94,19 +99,21 @@ func (s *Server) Handler() http.Handler {
 			}
 			who = identity{principal: info.principal, scopes: info.scopes}
 		}
-		if r.Method == http.MethodPost {
-			body, err := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes+1))
-			if err != nil {
-				return
-			}
-			if len(body) > maxBodyBytes {
-				w.WriteHeader(http.StatusRequestEntityTooLarge)
-				return
-			}
-			body = liftBody(body)
-			r.Body = io.NopCloser(bytes.NewReader(body))
-			r.ContentLength = int64(len(body))
+		body, err := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes+1))
+		if err != nil {
+			return
 		}
+		if len(body) > maxBodyBytes {
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+		if !json.Valid(body) {
+			writeRPCError(w, http.StatusBadRequest, -32700, "Parse error: Invalid JSON")
+			return
+		}
+		body = liftBody(body)
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		r.ContentLength = int64(len(body))
 		// Node's SDK still takes the 2024-10-07 header; the Go SDK refuses it.
 		if r.Header.Get("Mcp-Protocol-Version") == "2024-10-07" {
 			r.Header.Set("Mcp-Protocol-Version", "2024-11-05")
@@ -115,6 +122,15 @@ func (s *Server) Handler() http.Handler {
 		sdk.ServeHTTP(answer, r.WithContext(context.WithValue(r.Context(), identityKey{}, who)))
 		answer.send(w, r.Header.Get("Mcp-Protocol-Version") >= modernVersion)
 	})
+}
+
+// writeRPCError answers a request that never reached the SDK, as Node's
+// SDK words it: a JSON-RPC error with a null id.
+func writeRPCError(w http.ResponseWriter, status int, code int64, message string) {
+	body, _ := marshal(map[string]any{"jsonrpc": "2.0", "error": map[string]any{"code": code, "message": message}, "id": nil})
+	w.Header()["Content-Type"] = []string{"application/json"}
+	w.WriteHeader(status)
+	_, _ = w.Write(body)
 }
 
 // liftBody applies liftInputResponses to a single tools/call request.
@@ -182,19 +198,29 @@ func sseMessages(body []byte) [][]byte {
 	return messages
 }
 
-// fixMessage words "method not found" as Node's SDK does.
-func fixMessage(message []byte) []byte {
+// fixMessage words "method not found" as Node's SDK does, and gives a
+// refused 2026 request the data member Node's SDK always sends.
+func fixMessage(message []byte, refused bool) []byte {
 	var members map[string]json.RawMessage
 	if json.Unmarshal(message, &members) != nil {
 		return message
 	}
 	var failure struct {
-		Code int64 `json:"code"`
+		Code    int64           `json:"code"`
+		Message string          `json:"message"`
+		Data    json.RawMessage `json:"data"`
 	}
-	if json.Unmarshal(members["error"], &failure) != nil || failure.Code != -32601 {
+	if json.Unmarshal(members["error"], &failure) != nil || failure.Code == 0 {
 		return message
 	}
-	members["error"], _ = json.Marshal(map[string]any{"code": failure.Code, "message": "Method not found"})
+	switch {
+	case failure.Code == -32601:
+		members["error"], _ = json.Marshal(map[string]any{"code": failure.Code, "message": "Method not found"})
+	case refused && len(failure.Data) == 0:
+		members["error"], _ = json.Marshal(map[string]any{"code": failure.Code, "message": failure.Message, "data": map[string]string{"reason": failure.Message}})
+	default:
+		return message
+	}
 	written, err := json.Marshal(members)
 	if err != nil {
 		return message
@@ -207,23 +233,24 @@ func fixMessage(message []byte) []byte {
 func (r *recorder) send(w http.ResponseWriter, modern bool) {
 	body := r.body.Bytes()
 	contentType := r.header.Get("Content-Type")
+	refused := modern && r.status == http.StatusBadRequest
 	switch {
 	case strings.HasPrefix(contentType, "text/event-stream"):
 		messages := sseMessages(body)
 		if modern && len(messages) == 1 {
 			r.header.Set("Content-Type", "application/json")
-			body = fixMessage(messages[0])
+			body = fixMessage(messages[0], refused)
 			break
 		}
 		var out bytes.Buffer
 		for _, message := range messages {
 			out.WriteString("event: message\ndata: ")
-			out.Write(fixMessage(message))
+			out.Write(fixMessage(message, refused))
 			out.WriteString("\n\n")
 		}
 		body = out.Bytes()
 	case strings.HasPrefix(contentType, "application/json"):
-		body = fixMessage(body)
+		body = fixMessage(body, refused)
 	}
 	for name, values := range r.header {
 		w.Header()[name] = values

@@ -332,6 +332,31 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
       }
     });
 
+    it('an undo with no step asks nobody, and says there is nothing to undo', async () => {
+      const session = open(seed());
+      const approve = vi.fn<Approve>(() => Promise.resolve(true));
+
+      try {
+        expect(codeOf(await run(session, [undo], approve))).toBe('NOTHING_TO_UNDO');
+        expect(approve).not.toHaveBeenCalled();
+        expect(codeOf(await run(session, [undo]))).toBe('NOTHING_TO_UNDO');
+      } finally {
+        session.close();
+      }
+    });
+
+    it('a redo with no step asks nobody, and says there is nothing to redo', async () => {
+      const session = open(seed());
+      const approve = vi.fn<Approve>(() => Promise.resolve(true));
+
+      try {
+        expect(codeOf(await run(session, [redo], approve))).toBe('NOTHING_TO_REDO');
+        expect(approve).not.toHaveBeenCalled();
+      } finally {
+        session.close();
+      }
+    });
+
     it('undoing an unlock locks again without asking', async () => {
       const session = open(seed());
       const approve = vi.fn<Approve>(() => Promise.resolve(true));

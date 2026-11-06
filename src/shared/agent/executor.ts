@@ -241,10 +241,11 @@ export const marksOf = (applier: AgentApplier): HistoryMarks => {
  * documents, a native one reads the record kept on that step. Unknown means every locked database.
  */
 const unlockedByStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): readonly string[] => {
-  const target = applier.historyTarget?.(name);
+  if (applier.historyTarget !== undefined) {
+    const target = applier.historyTarget(name);
 
-  if (target !== undefined) {
-    return unlockedBetween(applier.snapshot(), target);
+    // No target: no step, which undo and redo then refuse themselves.
+    return target === undefined ? [] : unlockedBetween(applier.snapshot(), target);
   }
 
   return applier.pendingUnlocks?.(name) ?? lockedDatabases(applier.snapshot());

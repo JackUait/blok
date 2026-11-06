@@ -244,7 +244,8 @@ internal sealed class LiveRoom : IRoomSeam
 
   private YDoc NewDoc()
   {
-    var doc = new YDoc();
+    // No content GC: an undo manager reads deleted items after the write, and YDoc collects them before observers run.
+    var doc = new YDoc { Gc = false };
 
     doc.UpdateEmitted += _ => UpdateCount += 1;
 

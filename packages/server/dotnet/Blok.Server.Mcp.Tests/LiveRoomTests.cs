@@ -43,6 +43,33 @@ public sealed class LiveRoomTests
   }
 
   [Fact]
+  public async Task AWriteObserverStillReadsTheContentItDeleted()
+  {
+    var (room, _) = await OpenAsync();
+    var kept = new List<Type>();
+
+    await room.Loop.RunAsync(() =>
+    {
+      room.WriteLocal(new object(), tx => room.Doc.GetMap("m").Set(tx, "a", "one"));
+      room.LocalWriteCommitted += write =>
+      {
+        foreach (var (client, ranges) in write.Transaction.DeleteSet.Clients)
+        {
+          foreach (var range in ranges)
+          {
+            kept.Add(((YItem)room.Doc.Store.Find(new YId(client, range.Clock))).Content.GetType());
+          }
+        }
+      };
+      room.WriteLocal(new object(), tx => room.Doc.GetMap("m").Remove(tx, "a"));
+    });
+
+    // An undo manager restores deleted items, so their content must outlive the write.
+    Assert.Equal([typeof(ContentAny)], kept);
+    await room.CloseAsync();
+  }
+
+  [Fact]
   public async Task AWriteThatChangesNothingMakesNoRow()
   {
     var (room, _) = await OpenAsync();

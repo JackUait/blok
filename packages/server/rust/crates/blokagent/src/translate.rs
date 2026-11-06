@@ -8,7 +8,7 @@ use crate::wire::{field, get, member, str_node, text};
 
 /// C# RoomEditTranslator.Translate: the planner's edits as room ops.
 /// `after` is the document the bundle returned, `result` its AgentResult.
-pub(crate) fn translate(edits: &Node, after: &Node, result: &Node) -> Result<Vec<EditOp>, Error> {
+pub fn translate(edits: &Node, after: &Node, result: &Node) -> Result<Vec<EditOp>, Error> {
     let mut blocks: HashMap<String, &Node> = HashMap::new();
     if let Some(listed) = field(Some(after), "blocks")?.filter(|l| l.kind == Kind::Array) {
         for block in listed.items.iter().filter(|b| b.kind == Kind::Object) {

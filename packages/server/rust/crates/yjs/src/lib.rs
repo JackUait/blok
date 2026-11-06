@@ -21,6 +21,7 @@ mod item;
 mod store;
 mod text;
 mod types;
+mod undo;
 mod yata;
 
 #[cfg(test)]
@@ -45,6 +46,8 @@ mod store_test;
 #[cfg(test)]
 mod structstore_test;
 #[cfg(test)]
+mod undo_test;
+#[cfg(test)]
 mod write_test;
 
 use std::fmt;
@@ -63,6 +66,7 @@ pub use types::{
     Array, In, Map, MapEntry, Out, Text, TypeKind, TypeRef, XmlElement, XmlFragment, XmlHook,
     XmlText,
 };
+pub use undo::Direction;
 
 /// How deep a raw JSON payload (refs 2, 5, 6) may nest. C# validates with
 /// JsonDocument at MaxDepth 512.

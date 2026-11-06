@@ -113,6 +113,7 @@ pub fn item_with(client: u64, clock: u64, content: crate::content::Content) -> c
         content,
         deleted: false,
         keep: false,
+        redone: None,
     }
 }
 

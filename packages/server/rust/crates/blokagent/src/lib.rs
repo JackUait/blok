@@ -30,6 +30,7 @@ pub use errors::Error;
 pub use executor::{Executor, FactoryOptions, InvokeFuture, Invoker};
 pub use room::Rooms;
 pub use session::Session;
+pub use translate::translate;
 pub use types::{
     Actor, Execution, HostFuture, Options, PageCreator, PageLocation, PageTarget, StoredPage,
 };

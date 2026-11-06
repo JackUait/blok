@@ -607,6 +607,7 @@ impl DocState {
             content,
             deleted: false,
             keep: false,
+            redone: None,
         })
     }
 

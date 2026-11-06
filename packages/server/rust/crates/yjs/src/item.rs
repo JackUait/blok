@@ -42,6 +42,8 @@ pub(crate) struct Item {
     pub content: Content,
     pub deleted: bool,
     pub keep: bool,
+    /// Where an undo or redo re-created this item (yjs's Item.redone).
+    pub redone: Option<Id>,
 }
 
 impl Item {

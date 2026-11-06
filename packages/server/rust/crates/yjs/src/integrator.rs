@@ -84,6 +84,7 @@ pub(crate) fn to_runtime_struct(decoded: &DecodedStruct) -> Runtime {
             .copy(),
         deleted: false,
         keep: false,
+        redone: None,
     }))
 }
 

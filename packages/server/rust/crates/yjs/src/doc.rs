@@ -68,6 +68,8 @@ pub(crate) struct DocState {
     next_listener: u64,
     /// Replaces update_from_transaction in tests.
     pub encoder: Option<EncoderHook>,
+    /// The undo manager, once enable_undo turned it on.
+    pub(crate) undo: Option<crate::undo::UndoState>,
     pub self_ref: Weak<DocShared>,
 }
 
@@ -163,6 +165,7 @@ impl Doc {
                 listeners: Vec::new(),
                 next_listener: 0,
                 encoder: None,
+                undo: None,
                 self_ref: weak.clone(),
             }),
         }))
@@ -337,6 +340,67 @@ impl Doc {
             }
         }
         Ok((update, moved))
+    }
+
+    /// Turns on the undo manager. Nothing is captured until set_capturing.
+    pub fn enable_undo(&self) {
+        let mut st = self.lock();
+        if st.undo.is_none() {
+            st.undo = Some(crate::undo::UndoState::default());
+        }
+    }
+
+    /// While on, local transactions become undo steps (yjs's
+    /// captureTransaction); a new step clears the redo stack.
+    pub fn set_capturing(&self, capturing: bool) {
+        if let Some(um) = self.lock().undo.as_mut() {
+            um.capturing = capturing;
+        }
+    }
+
+    /// The serial of the step an undo (or redo) would replay next.
+    pub fn stack_top(&self, direction: crate::undo::Direction) -> Option<u64> {
+        let st = self.lock();
+        let um = st.undo.as_ref()?;
+        let stack = match direction {
+            crate::undo::Direction::Undo => &um.undo,
+            crate::undo::Direction::Redo => &um.redo,
+        };
+        stack.last().map(|s| s.serial)
+    }
+
+    /// Drops one undo step, as a history limit does.
+    pub fn forget_step(&self, serial: u64) {
+        if let Some(um) = self.lock().undo.as_mut() {
+            um.undo.retain(|s| s.serial != serial);
+        }
+    }
+
+    /// Undoes (or redoes) the top step in one local transaction. Answers
+    /// the serial of the step applied, or None when nothing changed, and
+    /// the update the transaction emitted.
+    pub fn replay(
+        &self,
+        direction: crate::undo::Direction,
+    ) -> EngineResult<(Option<u64>, Option<Vec<u8>>)> {
+        {
+            let mut st = self.lock();
+            let Some(um) = st.undo.as_mut() else {
+                return Ok((None, None));
+            };
+            um.undoing = direction == crate::undo::Direction::Undo;
+            um.redoing = direction == crate::undo::Direction::Redo;
+        }
+        let mut applied = None;
+        let result = self.transact(|txn| {
+            applied = txn.doc.lock().pop_stack_item(direction)?;
+            Ok(())
+        });
+        if let Some(um) = self.lock().undo.as_mut() {
+            um.undoing = false;
+            um.redoing = false;
+        }
+        Ok((applied, result?))
     }
 
     /// Replaces the update encoder, so a test can see each transaction.
@@ -518,6 +582,8 @@ impl DocState {
     fn cleanup(&mut self, t: &mut TxnState) -> EngineResult<Option<Vec<u8>>> {
         t.delete_set.sort_and_merge();
         let after = self.store.get_state_vector();
+        t.after_state = Some(after.clone());
+        self.capture_step(t)?;
         if self.gc {
             self.collect_deleted(&t.delete_set)?;
         }

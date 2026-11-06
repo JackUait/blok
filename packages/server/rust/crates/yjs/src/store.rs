@@ -186,6 +186,9 @@ impl Store {
             content,
             deleted: left.deleted,
             keep: left.keep,
+            redone: left
+                .redone
+                .map(|redone| Id::new(redone.client, redone.clock + diff as u64)),
         };
         let right_id = self.items.len();
         self.items.push(right);

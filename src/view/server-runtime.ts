@@ -23,7 +23,8 @@ import { buildAgentContract, buildToolManifest } from '../shared/tool-manifest';
 import { createHeadlessAgentSetup, createHeadlessPorts, loadStoredDocument } from './agent-runtime';
 import { blocksToHtml } from './blocks-to-html';
 import { htmlToBlocksWithReport } from './html-to-blocks';
-import { contractsOf, MCP_OPERATIONS } from './mcp-runtime';
+import { mcpContractFor } from './mcp-contracts';
+import { contractFlagsOf, MCP_OPERATIONS } from './mcp-runtime';
 import type { MarkdownDegradation } from './blocks-to-markdown';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
 import type { BlocksToPlainTextOptions } from './blocks-to-plain-text';
@@ -622,20 +623,31 @@ const serverSetup = (input: Record<string, unknown>): ServerSetup => {
  * An MCP handle's call: the contract blok-mcp serves for its start options (`mcp`, as mcpSurface
  * takes them) and the handle's mode, so the contract revision and the commands match Node's.
  */
-const mcpSetup = (options: Record<string, unknown>): ServerSetup => {
-  const contracts = contractsOf(options);
+const mcpSetups = new WeakMap<Record<string, unknown>, ServerSetup>();
 
-  return {
-    contract: options.mode === 'live' ? contracts.live : contracts.stored,
-    tools: contracts.runtimes,
+// Memoized per input object: one call asks for it several times, and a contract costs a manifest build.
+const mcpSetup = (options: Record<string, unknown>): ServerSetup => {
+  const known = mcpSetups.get(options);
+
+  if (known !== undefined) {
+    return known;
+  }
+  const built = mcpContractFor(contractFlagsOf(options), options.mode === 'live' ? 'live' : 'stored');
+  const setup: ServerSetup = {
+    contract: built.contract,
+    tools: built.runtimes,
     ports: createHeadlessPorts({
-      sanitizeFor: type => contracts.runtimes.get(type)?.sanitize,
-      richTextFieldsFor: contracts.richTextFieldsFor,
+      sanitizeFor: type => built.runtimes.get(type)?.sanitize,
+      richTextFieldsFor: built.richTextFieldsFor,
     }),
-    richTextFieldsFor: contracts.richTextFieldsFor,
+    richTextFieldsFor: built.richTextFieldsFor,
     // buildMcpContracts lets a sync URL's history restore.
     restores: options.sync === true,
   };
+
+  mcpSetups.set(options, setup);
+
+  return setup;
 };
 
 /** A host revision: `now` until this call changes the document, then `afterWrite`. */
@@ -723,13 +735,17 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
   const approval = approvalOf(input.approval);
 
   try {
+    /*
+     * Not in one declaration list with the await below: the minifier would join them, and Jint
+     * then gave `before` the hash after the batch (measured).
+     */
+    const before = session.contentRevision();
     // MCP only: a write on a read-only handle never runs (src/mcp stored and live sessions).
     const writes = mcp === undefined ? undefined : mcpWrites(mcp, batch);
 
     if (mcp !== undefined && writes === true && mcp.write !== true) {
       return JSON.stringify({ result: readOnlyRefusal(mcp.mode), document, edits: [], writes, save: false });
     }
-    const before = session.contentRevision();
     const ran = await session.execute(batch, approval?.approve === undefined ? {} : { approve: approval.approve });
     const question = approval?.asked[0];
 

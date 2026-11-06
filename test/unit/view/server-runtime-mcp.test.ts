@@ -513,9 +513,11 @@ describe('server runtime MCP sessions against blok-mcp over a files source', () 
       const node = await assembled.dispatch('blok_execute', { handle, ...undo }, caller);
       const first = await call('agentExecute', { mcp: { ...mcpFlags, mode: 'stored', write: true }, document: docFixture, actor, batch: edit, history: {} });
       const second = await call('agentExecute', {
-        mcp: { ...mcpFlags, mode: 'stored', write: true }, document: first.document, actor, batch: undo, history: first.history,
+        mcp: { ...mcpFlags, mode: 'stored', write: true }, document: first.document, actor, batch: undo, history: first.history, documentText: 'file',
       });
 
+      expect(second.save).toBe(true);
+      expect(second.documentText).toBe(readFileSync(join(dir, 'doc.json'), 'utf-8'));
       expect(await call('mcpExecuteAnswer', {
         result: second.result,
         delivery: { durable: true, pending: false, serverSequence: null, savedVersion: node.structuredContent.delivery === undefined ? null : (node.structuredContent.delivery as { savedVersion: string }).savedVersion },
@@ -536,6 +538,39 @@ describe('server runtime MCP sessions against blok-mcp over a files source', () 
     expect(written.result).toMatchObject({ ok: true, revision: 'l5' });
     expect(reading.result).toMatchObject({ ok: true, revision: 'l4' });
     expect(stale.result).toMatchObject({ ok: false, error: { code: 'STALE' } });
+  });
+
+  it('reports the host revision in a doc.read after a write in the same batch', async () => {
+    const live = { mcp: { ...mcpFlags, sync: true, mode: 'live', write: true }, document: docFixture, actor, revision: { now: 'l4', afterWrite: 'l5' } };
+    const ran = await call('agentExecute', { ...live, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }] } });
+
+    expect(ran.result).toMatchObject({ ok: true, revision: 'l5', results: [{}, { revision: 'l5' }] });
+  });
+
+  it('hands a live restore to the host, as blok-mcp restores through the sync server', async () => {
+    const versionHistory = {
+      versions: [{ version: 'L:2', savedAt: 20, startedAt: 10, actors: ['u1'] }],
+      documents: { 'L:1': { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Then' } }] } },
+    };
+    const ran = await call('agentExecute', {
+      mcp: { ...mcpFlags, sync: true, mode: 'live', write: true }, document: docFixture, actor, versionHistory,
+      batch: { commands: [{ name: 'history.restore', args: { version: 'L:1' } }] },
+    });
+
+    expect(ran.restore).toBe('L:1');
+    expect(ran.result).toMatchObject({ ok: true });
+  });
+
+  it('points inserted pages at the pages the host created, under page-map with a source', async () => {
+    const pageMap = { ...mcpFlags, pageTitles: 'page-map', mode: 'stored', write: true };
+    const batch = { commands: [{ name: 'block.insert', args: { type: 'page', id: 'np0', position: 'end' } }] };
+    const needed = await call('agentPagesNeeded', { mcp: pageMap, document: docFixture, actor, batch });
+    const ran = await call('agentExecute', { mcp: pageMap, document: docFixture, actor, batch, createdPages: ['host-a'] });
+    const blocks = isObject(ran.document) && Array.isArray(ran.document.blocks) ? ran.document.blocks : [];
+
+    expect(needed).toEqual({ count: 1 });
+    expect(ran.result).toMatchObject({ ok: true });
+    expect(blocks.find((block: unknown) => isObject(block) && block.id === 'np0')).toMatchObject({ data: { pageId: 'host-a' } });
   });
 });
 

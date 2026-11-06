@@ -16,7 +16,7 @@ import { resolveMode } from '../shared/mcp/mode';
 import { mcpPromptResult } from '../shared/mcp/prompts';
 import { mcpSurface } from '../shared/mcp/surface';
 
-import { mcpContractsFor, type McpContracts } from './mcp-contracts';
+import { mcpContractsFor, type McpContractFlags } from './mcp-contracts';
 
 /*
  * The MCP operations of the server runtime. Each one is the Node MCP's own code over JSON,
@@ -36,11 +36,11 @@ const oneOf = <T extends string>(value: unknown, allowed: readonly T[]): T | und
   allowed.find(item => item === value);
 
 /** The start options that shape the contracts, as blok-mcp's own options read them. */
-export const contractsOf = (input: Input): McpContracts => {
+export const contractFlagsOf = (input: Input): McpContractFlags => {
   const manifest: BlokCustomToolsFile | undefined = input.manifest === undefined ? undefined : parseCustomToolsFile(input.manifest);
   const overrides: ManifestOverrides | undefined = input.overrides === undefined ? undefined : parseOverridesFile(input.overrides);
 
-  return mcpContractsFor({
+  return {
     manifest,
     overrides,
     pageTitles: oneOf(input.pageTitles, ['off', 'page-map'] as const),
@@ -49,10 +49,10 @@ export const contractsOf = (input: Input): McpContracts => {
     source: input.source === true,
     uploads: input.uploads === true,
     ...(input.comments === false && { comments: false }),
-  });
+  };
 };
 
-const surface = (input: Input): string => JSON.stringify(mcpSurface(contractsOf(input), {
+const surface = (input: Input): string => JSON.stringify(mcpSurface(mcpContractsFor(contractFlagsOf(input)), {
   schema: oneOf(input.schema, ['envelope', 'full', 'mixed'] as const),
   ...(typeof input.handleIdleMs === 'number' && { handleIdleMs: input.handleIdleMs }),
 }));

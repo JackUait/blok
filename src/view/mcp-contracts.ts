@@ -11,7 +11,7 @@ export interface McpContracts {
   richTextFieldsFor(type: string): string[];
 }
 
-export const buildMcpContracts = (input: {
+export interface McpContractInput {
   manifest?: BlokCustomToolsFile;
   overrides?: ManifestOverrides;
   pageTitles: 'off' | 'page-map';
@@ -24,41 +24,45 @@ export const buildMcpContracts = (input: {
   uploadsFiles?: boolean;
   /** BlokMcpOptions.comments. */
   comments?: boolean;
-}): McpContracts => {
+}
+
+/** One mode's contract. Both modes get the same inputs; only the runtime tag differs. */
+const setupFor = (input: McpContractInput, runtime: 'node' | 'node-live'): ReturnType<typeof createHeadlessAgentSetup> => {
   // With a sync URL every handle is live (resolveMode), so the listed stored contract may name the history reads too.
   const services: HostService[] = [
     ...(input.pageTitles === 'page-map' ? ['pageBackend' as const] : []),
     ...(input.versionHistory === true ? ['versionHistory' as const] : []),
     ...(input.uploadsFiles === true ? ['uploader' as const] : []),
   ];
-  const prepares = {
+
+  return createHeadlessAgentSetup({
+    customTools: input.manifest,
+    overrides: input.overrides,
+    services,
+    runtime,
     ...(input.createsPages === true && input.pageTitles === 'page-map' && { prepares: ['page'] }),
     // The sync server's history restores too.
     ...(input.versionHistory === true && { restores: true }),
     ...(input.uploadsFiles === true && { uploadsFiles: true }),
     ...(input.comments === false && { comments: false }),
-  };
-  const stored = createHeadlessAgentSetup({
-    customTools: input.manifest,
-    overrides: input.overrides,
-    services,
-    runtime: 'node',
-    ...prepares,
   });
-  const live = createHeadlessAgentSetup({
-    customTools: input.manifest,
-    overrides: input.overrides,
-    services,
-    runtime: 'node-live',
-    ...prepares,
-  });
-  const fromManifest = new Map(stored.contract.manifest.blocks.map(block => [block.name, block.richTextFields ?? []]));
+};
+
+const richTextFieldsOf = (input: McpContractInput, contract: AgentContract): ((type: string) => string[]) => {
+  const fromManifest = new Map(contract.manifest.blocks.map(block => [block.name, block.richTextFields ?? []]));
+
+  return type => fromManifest.get(type) ?? input.richTextFields?.[type] ?? [];
+};
+
+export const buildMcpContracts = (input: McpContractInput): McpContracts => {
+  const stored = setupFor(input, 'node');
+  const live = setupFor(input, 'node-live');
 
   return {
     stored: stored.contract,
     live: live.contract,
     runtimes: stored.tools,
-    richTextFieldsFor: type => fromManifest.get(type) ?? input.richTextFields?.[type] ?? [],
+    richTextFieldsFor: richTextFieldsOf(input, stored.contract),
   };
 };
 
@@ -77,11 +81,10 @@ export interface McpContractFlags {
   comments?: boolean;
 }
 
-/** The contracts blok-mcp serves for these start options. */
-export const mcpContractsFor = (flags: McpContractFlags): McpContracts => {
+const contractInputOf = (flags: McpContractFlags): McpContractInput => {
   const pageTitles = flags.pageTitles ?? 'off';
 
-  return buildMcpContracts({
+  return {
     manifest: flags.manifest,
     overrides: flags.overrides,
     pageTitles,
@@ -91,5 +94,20 @@ export const mcpContractsFor = (flags: McpContractFlags): McpContracts => {
     versionHistory: flags.sync,
     uploadsFiles: flags.uploads,
     comments: flags.comments !== false,
-  });
+  };
+};
+
+/** The contracts blok-mcp serves for these start options. */
+export const mcpContractsFor = (flags: McpContractFlags): McpContracts => buildMcpContracts(contractInputOf(flags));
+
+/** One mode's contract and tools, built once: what a single call on a handle needs. */
+export const mcpContractFor = (
+  flags: McpContractFlags,
+  mode: 'stored' | 'live',
+): { contract: AgentContract; runtimes: ToolRuntimeRegistry; richTextFieldsFor(type: string): string[] } => {
+  const input = contractInputOf(flags);
+  const setup = setupFor(input, mode === 'live' ? 'node-live' : 'node');
+
+  // Both setups build the same tool registry and manifest, so one mode's serves.
+  return { contract: setup.contract, runtimes: setup.tools, richTextFieldsFor: richTextFieldsOf(input, setup.contract) };
 };

@@ -28,6 +28,8 @@ type Item struct {
 	content          Content
 	deleted          bool
 	keep             bool
+	// redone is the copy an undo manager put back in this item's place.
+	redone *ID
 }
 
 // IsDeleted reports a deleted item.
@@ -350,6 +352,9 @@ func (i *Item) splitAt(diff int) *Item {
 		content:     i.content.splice(diff),
 		deleted:     i.deleted,
 		keep:        i.keep,
+	}
+	if i.redone != nil {
+		right.redone = &ID{i.redone.Client, i.redone.Clock + uint64(diff)}
 	}
 	i.right = right
 	i.length = diff

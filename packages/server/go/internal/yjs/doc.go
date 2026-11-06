@@ -64,6 +64,8 @@ type Doc struct {
 	listeners []*func(UpdateEvent)
 	// encoder is replaceable by tests.
 	encoder func(*Transaction) []byte
+	// observers see each finished transaction before its update emits.
+	observers []*func(*Transaction)
 }
 
 // Options configure NewDoc.
@@ -111,6 +113,18 @@ func (d *Doc) OnUpdate(listener func(UpdateEvent)) func() {
 	return func() {
 		if at := slices.Index(d.listeners, entry); at >= 0 {
 			d.listeners = slices.Delete(slices.Clone(d.listeners), at, at+1)
+		}
+	}
+}
+
+// onTransaction observes finished transactions; it returns an
+// unsubscribe func.
+func (d *Doc) onTransaction(observer func(*Transaction)) func() {
+	entry := &observer
+	d.observers = append(d.observers, entry)
+	return func() {
+		if at := slices.Index(d.observers, entry); at >= 0 {
+			d.observers = slices.Delete(slices.Clone(d.observers), at, at+1)
 		}
 	}
 }
@@ -438,6 +452,9 @@ func (d *Doc) cleanup(t *Transaction) []byte {
 	if !t.local && (t.afterState.Get(d.clientID) != t.beforeState.Get(d.clientID) ||
 		t.afterState.has(d.clientID) != t.beforeState.has(d.clientID)) {
 		d.clientID = newClientID()
+	}
+	for _, observer := range slices.Clone(d.observers) {
+		(*observer)(t)
 	}
 	var update []byte
 	if d.encoder != nil {

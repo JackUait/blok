@@ -14729,6 +14729,234 @@
         "--page-titles",
         "page-map"
       ],
+      "name": "page-map: history.undo after page.rename is refused",
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "edit": [
+              {
+                "insert": {
+                  "id": "pb",
+                  "type": "page",
+                  "data": {
+                    "pageId": "child-doc"
+                  }
+                }
+              }
+            ]
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "peer": "bob",
+            "connect": true,
+            "doc": "child-doc"
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "8dfbc24a"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "page.rename",
+                    "args": {
+                      "id": "pb",
+                      "title": "Renamed"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "l0",
+                "results": [
+                  {
+                    "pageId": "child-doc",
+                    "applied": true
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.undo",
+                    "args": {}
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "l0",
+                "error": {
+                  "code": "UNDO_OTHER_DOCUMENT",
+                  "message": "The last batch wrote another document (a sub-page title or icon). history.undo cannot undo it. To revert it, run that command again with the old value.",
+                  "commandIndex": 0,
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_close",
+              "arguments": {
+                "handle": "${h}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "closed": true,
+                "unsavedBatches": 0,
+                "hostRecordLags": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "argv": [
+        "--sync-url",
+        "${roomWs}",
+        "--origin",
+        "https://app.example.com",
+        "--principal",
+        "alice",
+        "--page-titles",
+        "page-map"
+      ],
       "name": "page-map: page.rename of a page block that points at the open room is refused",
       "steps": [
         {

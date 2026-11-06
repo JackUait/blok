@@ -2292,6 +2292,186 @@
     "output": "{\"result\":{\"ok\":true,\"revision\":\"h3ab860abb0926\",\"results\":[{\"revision\":\"h3ab860abb0926\",\"rootId\":null,\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"depth\":0,\"text\":\"one\"}]}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"one\"}]}}]},\"edits\":[]}"
   },
   {
+    "name": "mcp.surface.default",
+    "op": "mcpSurface",
+    "input": "{\"source\":true}",
+    "outputSha256": "ff9cfd771429284eed1d211bc61536d61c53ad1b01e312f52ca73702526fcca0"
+  },
+  {
+    "name": "mcp.surface.pageMap.live",
+    "op": "mcpSurface",
+    "input": "{\"pageTitles\":\"page-map\",\"sync\":true,\"source\":true,\"uploads\":true,\"comments\":false,\"schema\":\"full\",\"handleIdleMs\":90500}",
+    "outputSha256": "30f488a56b032af4e42e84c65ede2cc9f7edefd3af5b8d13b757068b73d1562e"
+  },
+  {
+    "name": "mcp.prompt",
+    "op": "mcpPrompt",
+    "input": "{\"name\":\"improve\",\"arguments\":{\"selection\":\"Teh \\\"cat\\\"\",\"blockId\":\"b1\",\"documentId\":\"doc é\"}}",
+    "output": "{\"result\":{\"description\":\"Improve writing\",\"messages\":[{\"role\":\"user\",\"content\":{\"type\":\"text\",\"text\":\"Improve the writing of the selected text: clearer and smoother, with the same meaning. Replace the selected text with the result. Write in the language of the document, and reply in it too.\\n\\n(Context: the user selected this text in block b1: \\\"Teh \\\\\\\"cat\\\\\\\"\\\". \\\"This\\\" in the request means that text.)\\n\\nWork in the Blok document with documentId \\\"doc é\\\".\\n\\nUse the Blok tools: open the document with blok_open (pass write: true if you will edit it), read it with blok_read, find the text the request is about with the doc.find command in blok_execute, and make every edit with blok_execute.\"}}]}}"
+  },
+  {
+    "name": "mcp.prompt.unknown",
+    "op": "mcpPrompt",
+    "input": "{\"name\":\"nope\"}",
+    "output": "{\"error\":{\"code\":-32602,\"message\":\"Unknown prompt: nope\"}}"
+  },
+  {
+    "name": "mcp.parseArgs.number",
+    "op": "mcpParseArgs",
+    "input": "{\"argv\":[\"--handle-idle-ms\",\"0x10\",\"--max-handles\",\"1e3\",\"--source\",\"files:./d\"],\"env\":{}}",
+    "output": "{\"ok\":{\"options\":{\"transport\":{\"kind\":\"stdio\"},\"auth\":{\"kind\":\"none\"},\"source\":{\"kind\":\"files\",\"dir\":\"./d\"},\"handleIdleMs\":16,\"maxHandlesPerPrincipal\":1000},\"files\":{}}}"
+  },
+  {
+    "name": "mcp.parseArgs.emptyEnv",
+    "op": "mcpParseArgs",
+    "input": "{\"argv\":[],\"env\":{\"BLOK_MCP_HTTP\":\"\",\"BLOK_SYNC_URL\":\"\",\"BLOK_SECRET\":\"\"}}",
+    "output": "{\"ok\":{\"options\":{\"transport\":{\"kind\":\"http\",\"listen\":\"\"},\"auth\":{\"kind\":\"none\"},\"sync\":{\"url\":\"\"}},\"files\":{}}}"
+  },
+  {
+    "name": "mcp.parseArgs.refused",
+    "op": "mcpParseArgs",
+    "input": "{\"argv\":[\"--http\",\"--public\"],\"env\":{}}",
+    "output": "{\"error\":\"--http needs a value\"}"
+  },
+  {
+    "name": "mcp.checkOptions",
+    "op": "mcpCheckOptions",
+    "input": "{\"options\":{\"transport\":{\"kind\":\"http\",\"listen\":\"0.0.0.0:1\"},\"auth\":{\"kind\":\"none\"}}}",
+    "output": "{\"error\":\"Refusing to bind 0.0.0.0:1: a non-loopback address needs --public\"}"
+  },
+  {
+    "name": "mcp.configFile",
+    "op": "mcpConfigFile",
+    "input": "{\"kind\":\"overrides\",\"value\":{\"paragraph\":{\"nope\":1}}}",
+    "output": "{\"error\":\"Invalid file at $.paragraph.nope: unknown key\"}"
+  },
+  {
+    "name": "mcp.checkCall.refused",
+    "op": "mcpCheckCall",
+    "input": "{\"name\":\"blok_open\",\"arguments\":{\"zzz\":1},\"scopes\":null}",
+    "output": "{\"answer\":{\"structuredContent\":{\"error\":{\"code\":\"INVALID_ARGS\",\"message\":\"blok_open: unknown field \\\"zzz\\\"; accepted fields: documentId, query, mode, write, view\",\"path\":\"/zzz\",\"retryable\":false}},\"isError\":true}}"
+  },
+  {
+    "name": "mcp.checkCall.execute",
+    "op": "mcpCheckCall",
+    "input": "{\"name\":\"blok_execute\",\"arguments\":{\"handle\":\"h\",\"commands\":[{\"name\":\"doc.read\",\"args\":{}}]},\"scopes\":[\"blok.write\"]}",
+    "output": "{\"step\":{\"tool\":\"blok_execute\",\"handle\":\"h\",\"write\":true,\"call\":{\"name\":\"blok_execute\",\"batch\":{\"commands\":[{\"name\":\"doc.read\",\"args\":{}}]}}}}"
+  },
+  {
+    "name": "mcp.checkCall.page",
+    "op": "mcpCheckCall",
+    "input": "{\"name\":\"blok_read\",\"arguments\":{\"handle\":\"h\",\"page\":\"p\"},\"scopes\":null}",
+    "output": "{\"answer\":{\"structuredContent\":{\"error\":{\"code\":\"COMMAND_UNAVAILABLE\",\"message\":\"This surface cannot open sub-page documents, so `page` is not accepted. Omit it. Where blok_open exists, open the page block's pageId with it instead.\",\"path\":\"/page\",\"retryable\":false}},\"isError\":true}}"
+  },
+  {
+    "name": "mcp.listAnswer",
+    "op": "mcpListAnswer",
+    "input": "{\"request\":{\"query\":\"z\",\"limit\":5},\"listing\":{\"documents\":[],\"nextCursor\":null,\"supported\":true}}",
+    "output": "{\"relist\":{\"limit\":5}}"
+  },
+  {
+    "name": "mcp.pickDocument",
+    "op": "mcpPickDocument",
+    "input": "{\"find\":{\"query\":\"notes\"},\"listing\":{\"documents\":[{\"id\":\"x\",\"title\":\" Notes \",\"live\":false}],\"nextCursor\":null,\"supported\":true}}",
+    "output": "{\"open\":{\"documentId\":\"x\",\"title\":\" Notes \"}}"
+  },
+  {
+    "name": "mcp.openAnswer",
+    "op": "mcpOpenAnswer",
+    "input": "{\"handle\":\"h\",\"session\":{\"mode\":\"stored\",\"write\":true,\"durability\":\"saved-on-execute\",\"contractRevision\":\"c\",\"exists\":false},\"expiresAfterIdleMs\":600000,\"found\":{\"documentId\":\"d\",\"title\":null}}",
+    "output": "{\"answer\":{\"structuredContent\":{\"handle\":\"h\",\"mode\":\"stored\",\"write\":true,\"durability\":\"saved-on-execute\",\"expiresAfterIdleMs\":600000,\"contractRevision\":\"c\",\"documentId\":\"d\",\"title\":null,\"exists\":false},\"isError\":false}}"
+  },
+  {
+    "name": "mcp.errorAnswer.execute",
+    "op": "mcpErrorAnswer",
+    "input": "{\"tool\":\"blok_execute\",\"helper\":\"surface\",\"error\":{\"code\":\"HANDLE_LIMIT\",\"message\":\"Too many.\"}}",
+    "output": "{\"answer\":{\"structuredContent\":{\"ok\":false,\"error\":{\"code\":\"HANDLE_LIMIT\",\"message\":\"Too many.\",\"retryable\":true},\"delivery\":{\"durable\":false,\"pending\":false,\"serverSequence\":null,\"savedVersion\":null}},\"isError\":true}}"
+  },
+  {
+    "name": "mcp.resolveMode",
+    "op": "mcpResolveMode",
+    "input": "{\"requested\":\"stored\",\"sync\":true}",
+    "output": "{\"error\":{\"code\":\"STORED_WRITE_FORBIDDEN\",\"message\":\"A live room owns this document, so stored edits would be overwritten. Open it with mode \\\"live\\\" or \\\"auto\\\".\",\"retryable\":false}}"
+  },
+  {
+    "name": "mcp.actor",
+    "op": "mcpActor",
+    "input": "{\"principal\":\"alice\",\"clientName\":\"Claude 😀 Desktop\"}",
+    "output": "{\"clientName\":\"Claude----Desktop\",\"actor\":{\"id\":\"agent:alice:Claude----Desktop\",\"name\":\"Claude----Desktop (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"presenceName\":\"Claude----Desktop\"}"
+  },
+  {
+    "name": "mcp.fileIds",
+    "op": "mcpFileIds",
+    "input": "{\"names\":[\"b.json\",\"A.json\",\"a.json\",\".x.json\",\"nul.json\",\"é.json\",\"n.txt\"]}",
+    "output": "{\"ids\":[\"A\",\"a\",\"b\"]}"
+  },
+  {
+    "name": "mcp.filesList",
+    "op": "mcpFilesList",
+    "input": "{\"entries\":[{\"id\":\"A\",\"text\":\"{\\\"title\\\":\\\"Alpha\\\",\\\"blocks\\\":[]}\"},{\"id\":\"b\",\"text\":\"nope\"},{\"id\":\"c\",\"text\":null}],\"query\":\"ALP\",\"limit\":5}",
+    "output": "{\"documents\":[{\"id\":\"A\",\"title\":\"Alpha\"}],\"nextCursor\":null}"
+  },
+  {
+    "name": "mcp.parseDocument.bom",
+    "op": "mcpParseDocument",
+    "input": "{\"id\":\"doc\",\"text\":\"﻿{\\\"blocks\\\":[]}\"}",
+    "output": "{\"error\":{\"code\":\"SOURCE_UNAVAILABLE\",\"message\":\"doc.json is not valid JSON.\",\"retryable\":true}}"
+  },
+  {
+    "name": "mcp.documentText",
+    "op": "mcpDocumentText",
+    "input": "{\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"form\":\"file\"}",
+    "output": "{\"text\":\"{\\n  \\\"title\\\": \\\"Notes <é>   😀\\\",\\n  \\\"blocks\\\": [\\n    {\\n      \\\"id\\\": \\\"p1\\\",\\n      \\\"type\\\": \\\"paragraph\\\",\\n      \\\"data\\\": {\\n        \\\"text\\\": \\\"Hello & <b>world</b>\\\"\\n      }\\n    }\\n  ]\\n}\\n\"}"
+  },
+  {
+    "name": "mcp.roomError",
+    "op": "mcpRoomError",
+    "input": "{\"terminal\":\"handshake-timeout\"}",
+    "output": "{\"error\":{\"code\":\"SOURCE_UNAVAILABLE\",\"message\":\"The room connection stopped for good. Open the document again.\",\"retryable\":true,\"details\":{\"terminal\":\"handshake-timeout\"}}}"
+  },
+  {
+    "name": "mcp.read",
+    "op": "mcpRead",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"view\":{\"detail\":\"full\"}}",
+    "output": "{\"answer\":{\"structuredContent\":{\"revision\":\"h329376fbdd2ad\",\"rootId\":null,\"page\":{\"title\":\"Notes <é>   😀\"},\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"depth\":0,\"text\":\"Hello & world\",\"data\":{\"text\":[{\"text\":\"Hello & \"},{\"text\":\"world\",\"marks\":{\"bold\":true}}]}}]},\"isError\":false}}"
+  },
+  {
+    "name": "mcp.describe",
+    "op": "mcpDescribe",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"query\":{\"tool\":\"paragraph\"}}",
+    "output": "{\"answer\":{\"structuredContent\":{\"tool\":{\"name\":\"paragraph\",\"title\":\"Text\",\"summary\":\"A paragraph of rich text. The default block.\",\"guidance\":\"Rich-text fields take segments: [{ \\\"text\\\": \\\"…\\\", \\\"marks\\\": { \\\"bold\\\": true } }]. Never write Markdown into them; use markdown.insert to import Markdown. textColor and backgroundColor take a preset name: gray, brown, orange, yellow, green, blue, purple, pink, red.\",\"level\":\"described\",\"insertable\":true,\"variants\":[{\"name\":\"paragraph-0\",\"title\":\"Text\",\"data\":{}}],\"data\":{\"type\":\"object\",\"description\":\"A line of rich text.\",\"required\":[\"text\"],\"additionalProperties\":false,\"properties\":{\"text\":{\"description\":\"The line's rich text.\",\"oneOf\":[{\"type\":\"array\",\"description\":\"Rich-text segments, in order. Preferred: this is the shape Blok saves.\",\"items\":{\"anyOf\":[{\"type\":\"object\",\"required\":[\"text\"],\"additionalProperties\":false,\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"Line breaks are \\\"\\\\n\\\".\"},\"marks\":{\"type\":\"object\",\"description\":\"Formatting on one run. Unknown keys drop, except custom `tag:<name>` marks.\",\"properties\":{\"bold\":{\"const\":true},\"italic\":{\"const\":true},\"underline\":{\"const\":true},\"strikethrough\":{\"const\":true},\"code\":{\"const\":true},\"sup\":{\"const\":true,\"description\":\"Not with sub on one run.\"},\"sub\":{\"const\":true},\"highlight\":{\"const\":true,\"description\":\"Stored as background \\\"yellow\\\" unless background is set.\"},\"color\":{\"type\":\"string\",\"description\":\"\\\"gray\\\", \\\"brown\\\", \\\"orange\\\", \\\"yellow\\\", \\\"green\\\", \\\"blue\\\", \\\"purple\\\", \\\"pink\\\", \\\"red\\\". Hex, rgb, hsl snap to the nearest; names and var() stay; other syntaxes drop.\"},\"background\":{\"type\":\"string\",\"description\":\"Like color; page backgrounds drop.\"},\"link\":{\"type\":\"object\",\"description\":\"Default \\\"_blank\\\"/\\\"nofollow\\\", \\\"_self\\\" for #anchors.\",\"required\":[\"href\"],\"additionalProperties\":false,\"properties\":{\"href\":{\"type\":\"string\"},\"target\":{\"type\":\"string\"},\"rel\":{\"type\":\"string\"}}}},\"patternProperties\":{\"^tag:\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}}}}}},{\"type\":\"object\",\"required\":[\"embed\"],\"additionalProperties\":false,\"properties\":{\"embed\":{\"oneOf\":[{\"type\":\"object\",\"required\":[\"equation\"],\"additionalProperties\":false,\"properties\":{\"equation\":{\"type\":\"object\",\"required\":[\"expression\"],\"additionalProperties\":false,\"properties\":{\"expression\":{\"type\":\"string\",\"description\":\"LaTeX.\"}}}}},{\"type\":\"object\",\"required\":[\"page\"],\"additionalProperties\":false,\"properties\":{\"page\":{\"type\":\"object\",\"required\":[\"id\"],\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"}}}}},{\"type\":\"object\",\"required\":[\"html\"],\"additionalProperties\":false,\"properties\":{\"html\":{\"type\":\"string\",\"description\":\"Kept verbatim.\"}}}]},\"marks\":{\"type\":\"object\",\"description\":\"Formatting on one run. Unknown keys drop, except custom `tag:<name>` marks.\",\"properties\":{\"bold\":{\"const\":true},\"italic\":{\"const\":true},\"underline\":{\"const\":true},\"strikethrough\":{\"const\":true},\"code\":{\"const\":true},\"sup\":{\"const\":true,\"description\":\"Not with sub on one run.\"},\"sub\":{\"const\":true},\"highlight\":{\"const\":true,\"description\":\"Stored as background \\\"yellow\\\" unless background is set.\"},\"color\":{\"type\":\"string\",\"description\":\"\\\"gray\\\", \\\"brown\\\", \\\"orange\\\", \\\"yellow\\\", \\\"green\\\", \\\"blue\\\", \\\"purple\\\", \\\"pink\\\", \\\"red\\\". Hex, rgb, hsl snap to the nearest; names and var() stay; other syntaxes drop.\"},\"background\":{\"type\":\"string\",\"description\":\"Like color; page backgrounds drop.\"},\"link\":{\"type\":\"object\",\"description\":\"Default \\\"_blank\\\"/\\\"nofollow\\\", \\\"_self\\\" for #anchors.\",\"required\":[\"href\"],\"additionalProperties\":false,\"properties\":{\"href\":{\"type\":\"string\"},\"target\":{\"type\":\"string\"},\"rel\":{\"type\":\"string\"}}}},\"patternProperties\":{\"^tag:\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}}}}}}]}},{\"type\":\"string\",\"description\":\"In saved data, inline HTML. An agent command stores a string as plain text, tags and all: use segments for formatting.\"}]},\"textColor\":{\"type\":\"string\",\"description\":\"Text color preset name, e.g. \\\"red\\\".\"},\"backgroundColor\":{\"type\":\"string\",\"description\":\"Background color preset name.\"}}},\"defaultData\":{\"text\":[]},\"examples\":[{\"text\":[{\"text\":\"Ship it \"},{\"text\":\"today\",\"marks\":{\"bold\":true}}]}],\"richTextFields\":[\"text\"],\"viewState\":[],\"guardedFields\":{},\"children\":{\"accepts\":true,\"ownedByTool\":false,\"layout\":false,\"deletedWithParent\":false},\"selfPlacesChildren\":false,\"restrictedInTableCell\":false,\"convertsTo\":[\"header\",\"list\",\"toggle\",\"callout\",\"quote\",\"code\"],\"conversion\":{\"export\":\"text\",\"import\":\"text\"},\"inlineTools\":[\"convertTo\",\"marker\",\"bold\",\"italic\",\"underline\",\"clearFormat\",\"link\",\"strikethrough\",\"inlineCode\",\"equation\",\"supSub\"],\"tunes\":[\"delete\",\"copyLink\"]},\"commands\":[]},\"isError\":false}}"
+  },
+  {
+    "name": "mcp.execute.title",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"documentText\":\"file\",\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"Plan <x>  \"}}]}}",
+    "output": "{\"result\":{\"ok\":true,\"revision\":\"h139a9403216f9f\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"document\":{\"title\":\"Plan <x>  \",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello & \"},{\"text\":\"world\",\"marks\":{\"bold\":true}}]}}]},\"edits\":[{\"op\":\"setPageField\",\"key\":\"title\",\"value\":\"Plan <x>  \"}],\"writes\":true,\"save\":true,\"documentText\":\"{\\n  \\\"title\\\": \\\"Plan <x>  \\\",\\n  \\\"blocks\\\": [\\n    {\\n      \\\"id\\\": \\\"p1\\\",\\n      \\\"type\\\": \\\"paragraph\\\",\\n      \\\"data\\\": {\\n        \\\"text\\\": [\\n          {\\n            \\\"text\\\": \\\"Hello & \\\"\\n          },\\n          {\\n            \\\"text\\\": \\\"world\\\",\\n            \\\"marks\\\": {\\n              \\\"bold\\\": true\\n            }\\n          }\\n        ]\\n      }\\n    }\\n  ]\\n}\\n\"}"
+  },
+  {
+    "name": "mcp.execute.readOnly",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":false},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"T\"}}]}}",
+    "output": "{\"result\":{\"ok\":false,\"error\":{\"code\":\"READ_ONLY\",\"message\":\"This handle is read-only. Open the document with write: true.\",\"retryable\":false},\"warnings\":[]},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"edits\":[],\"writes\":true,\"save\":false}"
+  },
+  {
+    "name": "mcp.execute.ask",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true},\"document\":{\"blocks\":[{\"id\":\"db\",\"type\":\"database\",\"content\":[],\"data\":{\"title\":\"Payroll\",\"activeViewId\":\"v\",\"schema\":[{\"id\":\"t\",\"name\":\"Name\",\"type\":\"title\",\"position\":\"a0\",\"databaseLocked\":true}],\"views\":[{\"id\":\"v\",\"name\":\"Table\",\"type\":\"table\",\"position\":\"a0\",\"sorts\":[],\"filters\":[],\"visibleProperties\":[]}]}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"approval\":{\"capabilities\":{\"elicitation\":{}},\"clientName\":\"Desk\"},\"batch\":{\"commands\":[{\"name\":\"database.setLock\",\"args\":{\"id\":\"db\",\"locked\":false}}]}}",
+    "output": "{\"ask\":{\"key\":\"[\\\"database.unlock\\\",\\\"db\\\",\\\"Payroll\\\"]\",\"message\":\"Desk's agent wants to unlock the database \\\"Payroll\\\" (id \\\"db\\\"). A person locked it, so its properties and views cannot change. Unlock it?\",\"requestedSchema\":{\"type\":\"object\",\"properties\":{\"unlock\":{\"type\":\"boolean\",\"title\":\"Unlock\",\"description\":\"Tick to let the agent unlock this database.\",\"default\":false}},\"required\":[\"unlock\"]}}}"
+  },
+  {
+    "name": "mcp.execute.liveRevision",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"live\",\"write\":true,\"sync\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"revision\":{\"now\":\"l4\",\"afterWrite\":\"l5\"},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"T\"}},{\"name\":\"doc.read\",\"args\":{}}],\"expectRevision\":\"l4\"}}",
+    "output": "{\"result\":{\"ok\":true,\"revision\":\"l5\",\"results\":[{},{\"revision\":\"l5\",\"rootId\":null,\"page\":{\"title\":\"T\"},\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"depth\":0,\"text\":\"Hello & world\"}]}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"document\":{\"title\":\"T\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello & \"},{\"text\":\"world\",\"marks\":{\"bold\":true}}]}}]},\"edits\":[{\"op\":\"setPageField\",\"key\":\"title\",\"value\":\"T\"}],\"writes\":true,\"save\":true}"
+  },
+  {
+    "name": "mcp.executeAnswer",
+    "op": "mcpExecuteAnswer",
+    "input": "{\"result\":{\"ok\":true,\"revision\":\"r\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[\"p1\"],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"delivery\":{\"durable\":true,\"pending\":false,\"serverSequence\":null,\"savedVersion\":\"v\"}}",
+    "output": "{\"answer\":{\"structuredContent\":{\"ok\":true,\"revision\":\"r\",\"results\":[{}],\"changed\":{\"updated\":[\"p1\"]},\"delivery\":{\"durable\":true,\"pending\":false,\"serverSequence\":null,\"savedVersion\":\"v\"}},\"isError\":false}}"
+  },
+  {
     "name": "fromMarkdown",
     "op": "markdownToBlocks",
     "input": "{\"markdown\":\"# Hello\\n\\nA **bold** claim with `code`, a [link](https://x.com) and ~~strike~~.\\n\\n- a\\n  - b\\n\\n1. one\\n2. two\\n\\n- [x] done\\n- [ ] todo\\n\\n| a | b |\\n|---|---|\\n| 1 | 2 |\\n\\n$$E = mc^2$$\\n\\ninline $x^2$ math\\n\\n<div>raw html</div>\\n\\n```js\\nconst a = 1;\\n```\\n\\n> quote\\n\\n---\\n\\nEmail <me@example.com>, auto <https://a.b>, &amp; &copy; &#x41; ü 日本 🍎\\n\\n[ref]: https://ref.example\\nsee [ref] and [missing]\\n\\n![img](javascript:x)\"}",

@@ -294,6 +294,45 @@ const buildCases = async (invoke) => {
   add('repeated.root.text', 'blocksToPlainText', repeatedRoot);
   add('repeated.order.inject', 'injectTexts', `{"document":${repeatedOrder},"includeCode":false,"texts":["z"]}`);
   add('repeated.agent', 'agentExecute', `{"services":[],"document":${repeatedAgentDoc},"batch":{"commands":[],"commands":[{"name":"block.update","name":"doc.read","args":{}}]},"actor":{"id":"agent-x","name":"Agent","kind":"agent"}}`);
+  // MCP operations (docs/plans/2026-11-06-csharp-mcp-research/08-bundle-contract.md). No case stamps a time.
+  const mcpActor = { id: 'agent:alice:Desk', name: 'Desk (for alice)', kind: 'agent', onBehalfOf: 'alice' };
+  const mcpStored = { source: true, mode: 'stored', write: true };
+  const mcpDoc = { title: 'Notes <é> \u2028 😀', blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hello & <b>world</b>' } }] };
+  const lockedDb = { blocks: [{ id: 'db', type: 'database', content: [], data: {
+    title: 'Payroll', activeViewId: 'v',
+    schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', databaseLocked: true }],
+    views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+  } }] };
+  add('mcp.surface.default', 'mcpSurface', J({ source: true }));
+  add('mcp.surface.pageMap.live', 'mcpSurface', J({ pageTitles: 'page-map', sync: true, source: true, uploads: true, comments: false, schema: 'full', handleIdleMs: 90500 }));
+  add('mcp.prompt', 'mcpPrompt', J({ name: 'improve', arguments: { selection: 'Teh "cat"', blockId: 'b1', documentId: 'doc é' } }));
+  add('mcp.prompt.unknown', 'mcpPrompt', J({ name: 'nope' }));
+  add('mcp.parseArgs.number', 'mcpParseArgs', J({ argv: ['--handle-idle-ms', '0x10', '--max-handles', '1e3', '--source', 'files:./d'], env: {} }));
+  add('mcp.parseArgs.emptyEnv', 'mcpParseArgs', J({ argv: [], env: { BLOK_MCP_HTTP: '', BLOK_SYNC_URL: '', BLOK_SECRET: '' } }));
+  add('mcp.parseArgs.refused', 'mcpParseArgs', J({ argv: ['--http', '--public'], env: {} }));
+  add('mcp.checkOptions', 'mcpCheckOptions', J({ options: { transport: { kind: 'http', listen: '0.0.0.0:1' }, auth: { kind: 'none' } } }));
+  add('mcp.configFile', 'mcpConfigFile', J({ kind: 'overrides', value: { paragraph: { nope: 1 } } }));
+  add('mcp.checkCall.refused', 'mcpCheckCall', J({ name: 'blok_open', arguments: { zzz: 1 }, scopes: null }));
+  add('mcp.checkCall.execute', 'mcpCheckCall', J({ name: 'blok_execute', arguments: { handle: 'h', commands: [{ name: 'doc.read', args: {} }] }, scopes: ['blok.write'] }));
+  add('mcp.checkCall.page', 'mcpCheckCall', J({ name: 'blok_read', arguments: { handle: 'h', page: 'p' }, scopes: null }));
+  add('mcp.listAnswer', 'mcpListAnswer', J({ request: { query: 'z', limit: 5 }, listing: { documents: [], nextCursor: null, supported: true } }));
+  add('mcp.pickDocument', 'mcpPickDocument', J({ find: { query: 'notes' }, listing: { documents: [{ id: 'x', title: ' Notes ', live: false }], nextCursor: null, supported: true } }));
+  add('mcp.openAnswer', 'mcpOpenAnswer', J({ handle: 'h', session: { mode: 'stored', write: true, durability: 'saved-on-execute', contractRevision: 'c', exists: false }, expiresAfterIdleMs: 600000, found: { documentId: 'd', title: null } }));
+  add('mcp.errorAnswer.execute', 'mcpErrorAnswer', J({ tool: 'blok_execute', helper: 'surface', error: { code: 'HANDLE_LIMIT', message: 'Too many.' } }));
+  add('mcp.resolveMode', 'mcpResolveMode', J({ requested: 'stored', sync: true }));
+  add('mcp.actor', 'mcpActor', J({ principal: 'alice', clientName: 'Claude 😀 Desktop' }));
+  add('mcp.fileIds', 'mcpFileIds', J({ names: ['b.json', 'A.json', 'a.json', '.x.json', 'nul.json', 'é.json', 'n.txt'] }));
+  add('mcp.filesList', 'mcpFilesList', J({ entries: [{ id: 'A', text: '{"title":"Alpha","blocks":[]}' }, { id: 'b', text: 'nope' }, { id: 'c', text: null }], query: 'ALP', limit: 5 }));
+  add('mcp.parseDocument.bom', 'mcpParseDocument', J({ id: 'doc', text: '\ufeff{"blocks":[]}' }));
+  add('mcp.documentText', 'mcpDocumentText', J({ document: mcpDoc, form: 'file' }));
+  add('mcp.roomError', 'mcpRoomError', J({ terminal: 'handshake-timeout' }));
+  add('mcp.read', 'mcpRead', J({ mcp: mcpStored, document: mcpDoc, actor: mcpActor, view: { detail: 'full' } }));
+  add('mcp.describe', 'mcpDescribe', J({ mcp: mcpStored, document: mcpDoc, actor: mcpActor, query: { tool: 'paragraph' } }));
+  add('mcp.execute.title', 'agentExecute', J({ mcp: mcpStored, document: mcpDoc, actor: mcpActor, documentText: 'file', batch: { commands: [{ name: 'doc.setTitle', args: { title: 'Plan <x> \u2028' } }] } }));
+  add('mcp.execute.readOnly', 'agentExecute', J({ mcp: { ...mcpStored, write: false }, document: mcpDoc, actor: mcpActor, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }] } }));
+  add('mcp.execute.ask', 'agentExecute', J({ mcp: mcpStored, document: lockedDb, actor: mcpActor, approval: { capabilities: { elicitation: {} }, clientName: 'Desk' }, batch: { commands: [{ name: 'database.setLock', args: { id: 'db', locked: false } }] } }));
+  add('mcp.execute.liveRevision', 'agentExecute', J({ mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor, revision: { now: 'l4', afterWrite: 'l5' }, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }], expectRevision: 'l4' } }));
+  add('mcp.executeAnswer', 'mcpExecuteAnswer', J({ result: { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [] }, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v' } }));
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));
   add('fromHtml', 'htmlToBlocks', J({ html }));
   tableHtml.forEach((source, i) => add(`fromHtml.table.${i}`, 'htmlToBlocks', J({ html: source })));

@@ -11,7 +11,7 @@ use crate::{EngineResult, FormatError, Header, Id, fail, format_err};
 /// what could not be integrated yet. Clients keep the order they were first
 /// added in, as a .NET Dictionary does. Items and types live in the two
 /// arenas here.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct Store {
     pub clients: HashMap<u64, Vec<Struct>>,
     pub order: Vec<u64>,

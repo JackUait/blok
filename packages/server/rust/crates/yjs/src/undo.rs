@@ -19,7 +19,7 @@ pub(crate) struct StackItem {
     pub deletions: DeleteSet,
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct UndoState {
     pub undo: Vec<StackItem>,
     pub redo: Vec<StackItem>,

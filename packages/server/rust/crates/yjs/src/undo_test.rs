@@ -33,6 +33,13 @@ fn map_number(map: &Map, key: &str) -> Option<f64> {
     }
 }
 
+/// A fork of the doc with the top step replayed on it.
+fn replayed(doc: &Doc, direction: Direction) -> Doc {
+    let fork = doc.fork().unwrap();
+    fork.replay(direction).unwrap();
+    fork
+}
+
 /// The agent writes captured steps; the peer writes plain transactions.
 fn captured(doc: &Doc, body: impl FnOnce(&crate::doc::Transaction<'_>)) {
     doc.set_capturing(true);
@@ -186,7 +193,7 @@ fn undo_removes_an_inserted_nested_map_and_redo_restores_its_entries() {
 }
 
 #[test]
-fn a_preview_shows_the_undone_state_on_a_copy_and_leaves_the_doc_alone() {
+fn a_forks_replay_leaves_the_doc_and_its_stacks_alone() {
     let agent = doc(1);
     agent.enable_undo();
     let map = agent.get_map("m").unwrap();
@@ -198,14 +205,9 @@ fn a_preview_shows_the_undone_state_on_a_copy_and_leaves_the_doc_alone() {
     });
     let top = agent.stack_top(Direction::Undo);
 
-    let preview = agent.preview(Direction::Undo).unwrap();
+    let fork = replayed(&agent, Direction::Undo);
     assert_eq!(
-        preview
-            .get_map("m")
-            .unwrap()
-            .get("locked")
-            .unwrap()
-            .as_value(),
+        fork.get_map("m").unwrap().get("locked").unwrap().as_value(),
         Some(&Value::Bool(false))
     );
     assert_eq!(
@@ -216,7 +218,7 @@ fn a_preview_shows_the_undone_state_on_a_copy_and_leaves_the_doc_alone() {
     assert_eq!(agent.stack_top(Direction::Redo), None);
 
     agent.replay(Direction::Undo).unwrap();
-    let redone = agent.preview(Direction::Redo).unwrap();
+    let redone = replayed(&agent, Direction::Redo);
     assert_eq!(
         redone
             .get_map("m")
@@ -230,4 +232,76 @@ fn a_preview_shows_the_undone_state_on_a_copy_and_leaves_the_doc_alone() {
         map.get("locked").unwrap().as_value(),
         Some(&Value::Bool(false))
     );
+}
+
+#[test]
+fn a_forks_replay_follows_redone_links_as_the_docs_does() {
+    let agent = doc(1);
+    agent.enable_undo();
+    let map = agent.get_map("m").unwrap();
+    captured(&agent, |txn| {
+        map.set(txn, "locked", In::Any(Value::Bool(true))).unwrap();
+    });
+    captured(&agent, |txn| {
+        map.set(txn, "locked", In::Any(Value::Bool(false))).unwrap();
+    });
+    agent.replay(Direction::Undo).unwrap();
+    assert_eq!(
+        map.get("locked").unwrap().as_value(),
+        Some(&Value::Bool(true))
+    );
+
+    let fork = replayed(&agent, Direction::Undo);
+    agent.replay(Direction::Undo).unwrap();
+    assert_eq!(map.get("locked").map(|v| v.as_value().cloned()), None);
+    assert_eq!(
+        fork.get_map("m")
+            .unwrap()
+            .get("locked")
+            .map(|v| v.as_value().cloned()),
+        None,
+        "the fork must write what the doc writes"
+    );
+}
+
+#[test]
+fn a_forks_nested_types_write_to_the_fork_only() {
+    let agent = doc(1);
+    let blocks = agent.get_map("blocks").unwrap();
+    agent
+        .transact(|txn| {
+            let block = Map::new(vec![crate::types::MapEntry::new(
+                "text",
+                In::Any(Value::String(Str::from("one"))),
+            )]);
+            blocks.set(txn, "p1", block)
+        })
+        .unwrap();
+    let fork = agent.fork().unwrap();
+    let forked = fork
+        .get_map("blocks")
+        .unwrap()
+        .get("p1")
+        .unwrap()
+        .as_map()
+        .unwrap();
+    fork.transact(|txn| forked.set(txn, "text", In::Any(Value::String(Str::from("two")))))
+        .unwrap();
+    let text = |doc: &Doc| {
+        doc.get_map("blocks")
+            .unwrap()
+            .get("p1")
+            .unwrap()
+            .as_map()
+            .unwrap()
+            .get("text")
+            .unwrap()
+            .as_value()
+            .cloned()
+    };
+    assert_eq!(text(&fork), Some(Value::String(Str::from("two"))));
+    assert_eq!(text(&agent), Some(Value::String(Str::from("one"))));
+    // The fork's update applies on the doc as any peer's would.
+    sync(&fork, &agent);
+    assert_eq!(text(&agent), Some(Value::String(Str::from("two"))));
 }

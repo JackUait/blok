@@ -403,36 +403,51 @@ impl Doc {
         Ok((applied, result?))
     }
 
-    /// What the top step's undo (or redo) would give, replayed on a copy of
-    /// the doc; the doc and its stacks are untouched. The copy knows no
-    /// earlier redone links, so a step redone more than once may differ.
-    pub fn preview(&self, direction: crate::undo::Direction) -> Result<Doc, crate::Error> {
-        let state = self.encode_state_as_update(&[])?;
-        let (client, top) = {
-            let st = self.lock();
-            let top = st.undo.as_ref().and_then(|um| match direction {
-                crate::undo::Direction::Undo => um.undo.last().cloned(),
-                crate::undo::Direction::Redo => um.redo.last().cloned(),
-            });
-            (st.client_id, top)
+    /// An exact copy: the same items with their redone links, the same
+    /// types and both undo stacks, with no listeners. A replay on it writes
+    /// what the same replay on this doc would.
+    pub fn fork(&self) -> Result<Doc, crate::Error> {
+        let st = self.lock();
+        if st.current.is_some() {
+            return Err(
+                crate::EngineError::new("a doc cannot be forked inside a transaction").into(),
+            );
+        }
+        let rebind = |content: &mut crate::content::Content, doc: &Weak<DocShared>| {
+            if let crate::content::Content::Type(handle) = content {
+                *handle = handle.rebound(doc);
+            }
         };
-        let copy = Doc::new(Options {
-            client_id: Some(client as u32),
-            no_gc: true,
-        });
-        copy.apply_update(&state)?;
-        copy.adopt_client_id(client);
-        if let Some(top) = top {
-            copy.enable_undo();
-            if let Some(um) = copy.lock().undo.as_mut() {
-                match direction {
-                    crate::undo::Direction::Undo => um.undo.push(top),
-                    crate::undo::Direction::Redo => um.redo.push(top),
+        Ok(Doc(Arc::new_cyclic(|weak| {
+            let mut store = st.store.clone();
+            for item in &mut store.items {
+                rebind(&mut item.content, weak);
+            }
+            for pending in &mut store.pending_structs {
+                if let crate::item::Runtime::Item(item) = pending {
+                    rebind(&mut item.content, weak);
                 }
             }
-            copy.replay(direction)?;
-        }
-        Ok(copy)
+            let share = st
+                .share
+                .iter()
+                .map(|(name, handle)| (name.clone(), handle.rebound(weak)))
+                .collect();
+            DocShared {
+                state: Mutex::new(DocState {
+                    client_id: st.client_id,
+                    store,
+                    share,
+                    gc: st.gc,
+                    current: None,
+                    listeners: Vec::new(),
+                    next_listener: 0,
+                    encoder: None,
+                    undo: st.undo.clone(),
+                    self_ref: weak.clone(),
+                }),
+            }
+        })))
     }
 
     /// Replaces the update encoder, so a test can see each transaction.

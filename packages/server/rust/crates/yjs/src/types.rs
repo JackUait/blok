@@ -181,6 +181,23 @@ impl TypeRef {
         self.0.name.as_ref()
     }
 
+    /// The same type in a fork of its document; a type not in a document
+    /// stays an empty one of its own.
+    pub(crate) fn rebound(&self, doc: &Weak<DocShared>) -> TypeRef {
+        let state = match self.attached_id() {
+            Some(id) => TypeState::Attached {
+                doc: doc.clone(),
+                id,
+            },
+            None => TypeState::Prelim(Prelim::Empty),
+        };
+        TypeRef(Arc::new(TypeShared {
+            kind: self.0.kind,
+            name: self.0.name.clone(),
+            state: Mutex::new(state),
+        }))
+    }
+
     pub(crate) fn attached_id(&self) -> Option<TypeId> {
         match &*self.state() {
             TypeState::Attached { id, .. } => Some(*id),

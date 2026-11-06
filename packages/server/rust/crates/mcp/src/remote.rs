@@ -376,19 +376,7 @@ impl Room {
         doc.enable_undo();
         let local = Arc::new(Mutex::new(Vec::new()));
         let count = Arc::new(AtomicU64::new(0));
-        {
-            let (local, count) = (local.clone(), count.clone());
-            // Kept for the life of the doc: the subscription is never dropped.
-            std::mem::forget(doc.on_update(move |event| {
-                count.fetch_add(1, Ordering::SeqCst);
-                if event.local {
-                    local
-                        .lock()
-                        .unwrap_or_else(|p| p.into_inner())
-                        .push(event.update.clone());
-                }
-            }));
-        }
+        watch(&doc, &local, &count);
         let awareness = Awareness::new(doc.client_id());
         let read_only = !spec.write;
         Room {
@@ -753,18 +741,7 @@ impl Room {
         // A fresh doc; the agent's view of the old one is gone.
         let doc = Doc::new(DocOptions::default());
         doc.enable_undo();
-        {
-            let (local, count) = (self.local.clone(), self.count.clone());
-            std::mem::forget(doc.on_update(move |event| {
-                count.fetch_add(1, Ordering::SeqCst);
-                if event.local {
-                    local
-                        .lock()
-                        .unwrap_or_else(|p| p.into_inner())
-                        .push(event.update.clone());
-                }
-            }));
-        }
+        watch(&doc, &self.local, &self.count);
         self.doc = doc;
         self.lineage = None;
         self.schedule_reconnect(code);
@@ -1244,10 +1221,14 @@ impl Room {
     }
 
     async fn export(&self) -> Result<String, Fault> {
+        self.export_doc(&self.doc).await
+    }
+
+    async fn export_doc(&self, doc: &Doc) -> Result<String, Fault> {
         let exported = self
             .shared
             .converter
-            .export(&self.doc)
+            .export(doc)
             .await
             .map_err(|e| Fault::Internal(e.to_string()))?;
         let bytes = blok_collab_docendpoint::serialize(&blok_jsjson::Value::Object(exported))
@@ -1557,10 +1538,31 @@ impl Room {
                 delivery: Delivery::None,
             });
         };
-        // Node asks before it checks for a conflict. The gate and the
-        // replay run in this one turn of the room task, so no peer frame
-        // lands between them: the gate judges the state that is replayed.
-        match self.approve_replay(input, direction).await? {
+        // The replay runs on an exact fork of the doc and the gate judges
+        // that fork, so what is approved is what is written. The fork
+        // becomes the doc only after the yes; the room task reads no frame
+        // in between.
+        let other = if undo {
+            Direction::Redo
+        } else {
+            Direction::Undo
+        };
+        let fork = self
+            .doc
+            .fork()
+            .map_err(|e| Fault::Internal(e.to_string()))?;
+        let mut replayed = None;
+        if step.serial.is_some() {
+            let before = fork.stack_top(other);
+            let (_, update) = fork
+                .replay(direction)
+                .map_err(|e| Fault::Internal(e.to_string()))?;
+            let after = fork.stack_top(other);
+            replayed = Some((if after != before { after } else { None }, update));
+        }
+        let target = self.export_doc(&fork).await?;
+        // Node asks before it checks for a conflict.
+        match self.approve_replay(input, &target, direction).await? {
             Approved::Yes => {}
             Approved::Ask(question) => {
                 self.put_back(undo, step);
@@ -1588,20 +1590,19 @@ impl Room {
                 delivery: Delivery::None,
             });
         }
-        if step.serial.is_some() {
-            let other = if undo {
-                Direction::Redo
-            } else {
-                Direction::Undo
-            };
-            let before = self.doc.stack_top(other);
-            self.doc
-                .replay(direction)
-                .map_err(|e| Fault::Internal(e.to_string()))?;
-            let after = self.doc.stack_top(other);
-            step.serial = if after != before { after } else { None };
+        if let Some((serial, update)) = replayed {
+            step.serial = serial;
+            watch(&fork, &self.local, &self.count);
+            self.doc = fork;
+            if let Some(update) = update {
+                self.local
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .push(update);
+                self.count.fetch_add(1, Ordering::SeqCst);
+            }
         }
-        step.shape = shape(&step, &blocks_of(&self.export().await?));
+        step.shape = shape(&step, &blocks_of(&target));
         if undo {
             self.undone.push(step);
             let mark = self.marks_past.pop().flatten();
@@ -1653,27 +1654,16 @@ impl Room {
     }
 
     /// The executor's approval gate, run in the bundle: the live document,
-    /// with the step's outcome (previewed on a copy) as the session's one
+    /// with `target` (the step replayed on a fork) as the session's one
     /// step, so undoing a lock asks as database.setLock does.
     async fn approve_replay(
         &self,
         input: &ExecuteInput,
+        target: &str,
         direction: Direction,
     ) -> Result<Approved, Fault> {
-        let preview = self
-            .doc
-            .preview(direction)
-            .map_err(|e| Fault::Internal(e.to_string()))?;
-        let exported = self
-            .shared
-            .converter
-            .export(&preview)
-            .await
-            .map_err(|e| Fault::Internal(e.to_string()))?;
-        let target = blok_collab_docendpoint::serialize(&blok_jsjson::Value::Object(exported))
-            .map_err(|e| Fault::Internal(e.to_string()))?;
         let target: Value =
-            serde_json::from_slice(&target).map_err(|e| Fault::Internal(e.to_string()))?;
+            serde_json::from_str(target).map_err(|e| Fault::Internal(e.to_string()))?;
         let document = self.export().await?;
         let mut mcp = self.shared.flags.clone();
         mcp["mode"] = json!("live");
@@ -1962,6 +1952,21 @@ impl Room {
             String::from_utf8_lossy(&answer.body).trim()
         )))
     }
+}
+
+/// Counts the doc's updates for l<n> and keeps its local ones to send.
+fn watch(doc: &Doc, local: &Arc<Mutex<Vec<Vec<u8>>>>, count: &Arc<AtomicU64>) {
+    let (local, count) = (local.clone(), count.clone());
+    // Kept for the life of the doc: the subscription is never dropped.
+    std::mem::forget(doc.on_update(move |event| {
+        count.fetch_add(1, Ordering::SeqCst);
+        if event.local {
+            local
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .push(event.update.clone());
+        }
+    }));
 }
 
 async fn recv(events: &mut Option<mpsc::UnboundedReceiver<Event>>) -> Option<Event> {

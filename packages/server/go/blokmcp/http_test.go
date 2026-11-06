@@ -12,6 +12,7 @@ func testHTTPServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
 	runtime := fakeRuntime{
 		"mcpCheckOptions": func(string) string { return "{}" },
+		"version":         func(string) string { return "1.0.0" },
 		"mcpSurface": func(string) string {
 			return `{"tools":[],"instructions":"","prompts":[],"contractRevision":{"stored":"s","live":"l"},"liveUnavailableCommands":[]}`
 		},

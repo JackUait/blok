@@ -10,10 +10,9 @@ import (
 	"time"
 )
 
-// Version is the server version clients see. Release builds stamp it with
-// -ldflags "-X .../blokmcp.Version=<v>"; the default follows
-// packages/mcp/package.json, which a test checks.
-var Version = "2.0.0"
+// Version, when set, is the server version clients see. Empty means the
+// bundle's: the release rebuilds it from the version it bumps everywhere.
+var Version = ""
 
 // surface is mcpSurface's answer: what a client sees before any open.
 type surface struct {
@@ -32,6 +31,7 @@ type surface struct {
 // over HTTP with Handler.
 type Server struct {
 	options  Options
+	version  string
 	bundle   bundle
 	surface  surface
 	flags    map[string]any
@@ -93,6 +93,15 @@ func newServer(options Options, runtime invoker) (*Server, error) {
 	}
 	if _, err := b.call(ctx, "mcpSurface", s.flags, &s.surface); err != nil {
 		return nil, err
+	}
+	s.version = Version
+	if s.version == "" {
+		// The version op answers a bare string.
+		version, err := runtime.Invoke(ctx, "version", "{}", nil)
+		if err != nil {
+			return nil, err
+		}
+		s.version = version
 	}
 	if options.Source != nil {
 		if options.Source.Kind == "files" {

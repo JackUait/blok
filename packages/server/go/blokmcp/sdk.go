@@ -94,7 +94,7 @@ func completeResult(req mcp.Request, object json.RawMessage) (*rawResult, error)
 // bundle's raw JSON, so the SDK's own tool and prompt types never reshape
 // an answer.
 func (s *Server) newSDKServer(who identity) *mcp.Server {
-	server := mcp.NewServer(&mcp.Implementation{Name: "blok-mcp", Version: Version}, &mcp.ServerOptions{
+	server := mcp.NewServer(&mcp.Implementation{Name: "blok-mcp", Version: s.version}, &mcp.ServerOptions{
 		Instructions: s.surface.Instructions,
 		Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}, Prompts: &mcp.PromptCapabilities{}},
 		SetCacheable: func(_ context.Context, _ mcp.Request, c *mcp.Cacheable) {

@@ -165,7 +165,7 @@ func (s *Server) openLive(ctx context.Context, documentID string, write bool, wh
 		status, err := upgrade(attempt, url, header)
 		cancel()
 		if err == nil && status == http.StatusSwitchingProtocols {
-			return nil, surfaceError("SOURCE_UNAVAILABLE", "This blok-mcp build cannot join live rooms yet. Open the document with mode \"stored\".")
+			return nil, surfaceError("SOURCE_UNAVAILABLE", "This blok-mcp build cannot join a remote room yet.")
 		}
 		wait := min(roomRetryEvery, time.Until(deadline))
 		if wait <= 0 {

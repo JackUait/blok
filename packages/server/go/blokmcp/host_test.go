@@ -30,7 +30,9 @@ func idsAreFine() fakeRuntime {
 	return fakeRuntime{"mcpFileId": func(string) string { return "{}" }}
 }
 
-func TestVersionFollowsTheNodePackage(t *testing.T) {
+// The release bumps packages/mcp/package.json and rebuilds the bundle from
+// the same version, so the served version comes from the bundle.
+func TestServesTheVersionOfTheNodePackage(t *testing.T) {
 	_, here, _, _ := runtime.Caller(0)
 	bytes, err := os.ReadFile(filepath.Join(filepath.Dir(here), "../../../mcp/package.json"))
 	if err != nil {
@@ -40,8 +42,13 @@ func TestVersionFollowsTheNodePackage(t *testing.T) {
 	if err := json.Unmarshal(bytes, &pkg); err != nil {
 		t.Fatal(err)
 	}
-	if Version != pkg.Version {
-		t.Fatalf("Version is %q, packages/mcp/package.json says %q", Version, pkg.Version)
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	if server.version != pkg.Version {
+		t.Fatalf("serves %q, packages/mcp/package.json says %q", server.version, pkg.Version)
 	}
 }
 

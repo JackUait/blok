@@ -18,10 +18,15 @@ path = "src/main.rs"
 base64 = "0.22"
 blok-blokagent = { path = "../blokagent" }
 blok-blokserver-ticket = { path = "../blokserver-ticket" }
+blok-collab-convert = { path = "../collab-convert" }
+blok-collab-docendpoint = { path = "../collab-docendpoint" }
+blok-collab-wire = { path = "../collab-wire" }
+blok-lib0 = { path = "../lib0" }
 blok-dotnet = { path = "../dotnet" }
 blok-jsjson = { path = "../jsjson" }
 blok-http = { path = "../http" }
 blok-jsruntime = { path = "../jsruntime" }
+blok-yjs = { path = "../yjs" }
 blok-outbound = { path = "../outbound" }
 bytes = "1"
 http = "1"
@@ -40,8 +45,6 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal"
 
 [dev-dependencies]
 blok-collab = { path = "../collab" }
-blok-collab-convert = { path = "../collab-convert" }
-blok-collab-docendpoint = { path = "../collab-docendpoint" }
 blok-collab-journal = { path = "../collab-journal" }
 blok-collab-room = { path = "../collab-room" }
 blok-collab-workingset = { path = "../collab-workingset" }

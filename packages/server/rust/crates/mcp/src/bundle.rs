@@ -41,6 +41,11 @@ impl Bundle {
         Ok(Bundle { pool })
     }
 
+    /// The engines, for the collab converter's HTML reads.
+    pub fn pool(&self) -> &Pool {
+        &self.pool
+    }
+
     pub async fn call_text(&self, op: &str, input: &str) -> Result<String, BundleError> {
         self.pool
             .invoke(op, input, None)
@@ -167,5 +172,22 @@ impl Obj {
     pub fn finish(mut self) -> String {
         self.text.push('}');
         self.text
+    }
+}
+
+/// The bundle's engines as the collab converter's runtime.
+#[derive(Clone)]
+pub struct BundleInvoker(pub std::sync::Arc<Bundle>);
+
+impl blok_collab_convert::Invoker for BundleInvoker {
+    fn invoke(
+        &self,
+        op: &str,
+        input: &str,
+        timeout: Option<Duration>,
+    ) -> impl std::future::Future<Output = Result<String, blok_jsruntime::InvokeError>> + Send {
+        let bundle = self.0.clone();
+        let (op, input) = (op.to_owned(), input.to_owned());
+        async move { bundle.pool.invoke(&op, &input, timeout).await }
     }
 }

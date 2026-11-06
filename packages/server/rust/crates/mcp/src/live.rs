@@ -1,19 +1,16 @@
-//! Live mode up to the room: the ticket (src/mcp/auth/tickets.ts) and the
-//! sync upgrade (src/mcp/live/open-live.ts). The remote room client itself
-//! is not built yet; a room that accepts the upgrade is refused.
+//! Live mode: the ticket (src/mcp/auth/tickets.ts) and opening a room
+//! (src/mcp/live/open-live.ts). The room client itself is remote.rs.
 
-use std::time::{Duration, SystemTime};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use base64::Engine;
-use base64::engine::general_purpose::STANDARD;
 use blok_blokserver_ticket::{Claims, mint};
 use blok_jsjson::Str;
-use ring::rand::{SecureRandom, SystemRandom};
 use serde_json::{Value, json};
 
 use crate::errors::{Fault, HostError};
 use crate::outbound::Outbound;
-use crate::server::Caller;
+use crate::remote::{self, LiveShared, Presence, RemoteRoom, RoomSpec};
 use crate::sources::encode_uri_component;
 
 // A collaboration pass is checked at the handshake only; 1800 s is the
@@ -21,25 +18,42 @@ use crate::sources::encode_uri_component;
 const TTL_SECONDS: i64 = 1800;
 // blok_open waits on this request; a hung host must not hold it forever.
 const TICKET_TIMEOUT: Duration = Duration::from_secs(10);
-// Node's headless room gives up loading after this long.
-const ROOM_SYNC_TIMEOUT: Duration = Duration::from_secs(15);
-const UPGRADE_RETRY: Duration = Duration::from_millis(500);
-const UPGRADE_TIMEOUT: Duration = Duration::from_secs(10);
+// A cached ticket this close to expiry is fetched again.
+const REFRESH_MARGIN_MS: i64 = 30_000;
 
-enum Tickets {
+#[derive(Clone)]
+enum Mode {
     Secret(String),
     Url { url: String, host_token: String },
 }
 
-pub struct Live {
-    url: String,
-    origin: Option<String>,
-    tickets: Option<Tickets>,
+/// What a ticket is minted or fetched for.
+#[derive(Clone, Debug)]
+pub struct TicketRequest {
+    pub document_id: String,
+    pub write: bool,
+    pub principal: String,
+    pub client_name: String,
+    pub actor_id: String,
+}
+
+/// One handle's ticket source. URL mode caches the ticket until it is near
+/// expiry, as Node's provider does.
+pub struct Tickets {
+    mode: Mode,
+    request: TicketRequest,
     outbound: Outbound,
+    cached: Mutex<Option<(String, i64)>>,
 }
 
 fn unavailable(message: &str) -> HostError {
     HostError::surface("SOURCE_UNAVAILABLE", message)
+}
+
+fn now_ms() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis() as i64)
 }
 
 /// atob, then UTF-8 with replacement: whitespace dropped, `=` padding
@@ -95,94 +109,47 @@ pub fn ticket_claims(ticket: &str) -> Option<serde_json::Map<String, Value>> {
     }
 }
 
-impl Live {
-    pub fn new(sync: &Value, tickets: Option<&Value>, outbound: Outbound) -> Live {
-        let text = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).map(str::to_owned);
-        let tickets = tickets.and_then(|t| match t.get("kind").and_then(Value::as_str) {
-            Some("secret") => text(t, "secret").map(Tickets::Secret),
-            Some("url") => Some(Tickets::Url {
-                url: text(t, "url").unwrap_or_default(),
-                host_token: text(t, "hostToken").unwrap_or_default(),
-            }),
-            _ => None,
-        });
-        Live {
-            url: text(sync, "url").unwrap_or_default(),
-            origin: text(sync, "origin"),
-            tickets,
-            outbound,
-        }
-    }
-
-    fn room_url(&self, document_id: &str) -> Result<String, HostError> {
-        if document_id.is_empty() || document_id == "." || document_id == ".." {
-            return Err(HostError::surface(
-                "INVALID_ARGS",
-                format!("\"{document_id}\" is not a document id."),
-            ));
-        }
-        let base = self.url.strip_suffix('/').unwrap_or(&self.url);
-        Ok(format!("{base}/{}", encode_uri_component(document_id)))
-    }
-
-    /// Mints the first ticket, then waits for the room. Never succeeds yet.
-    pub async fn open(
-        &self,
-        document_id: &str,
-        write: bool,
-        caller: &Caller,
-        actor: &Value,
-        client_name: &str,
-    ) -> Result<(), Fault> {
-        let url = self.room_url(document_id)?;
-        let actor_id = actor.get("id").and_then(Value::as_str).unwrap_or_default();
-        let ticket = match &self.tickets {
-            None => None,
-            Some(Tickets::Secret(secret)) => {
+impl Tickets {
+    /// The ticket to offer now. A URL ticket is fetched again near its
+    /// expiry or when `fresh` asks for it.
+    pub async fn get(&self, fresh: bool) -> Result<String, Fault> {
+        match &self.mode {
+            Mode::Secret(secret) => {
                 let claims = Claims {
-                    user: Some(Str::from(actor_id)),
-                    doc: Some(Str::from(document_id)),
-                    write,
+                    user: Some(Str::from(self.request.actor_id.as_str())),
+                    doc: Some(Str::from(self.request.document_id.as_str())),
+                    write: self.request.write,
                     ttl_seconds: Some(TTL_SECONDS),
                 };
-                Some(
-                    mint(secret, &claims, SystemTime::now())
-                        .map_err(|e| Fault::Internal(e.to_string()))?,
-                )
+                mint(secret, &claims, SystemTime::now()).map_err(|e| Fault::Internal(e.to_string()))
             }
-            Some(Tickets::Url { url, host_token }) => Some(
-                self.fetch_ticket(
-                    url,
-                    host_token,
-                    document_id,
-                    write,
-                    &caller.principal,
-                    client_name,
-                    actor_id,
-                )
-                .await?,
-            ),
-        };
-        self.join(&url, ticket.as_deref()).await
+            Mode::Url { url, host_token } => {
+                let cached = self
+                    .cached
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone();
+                if let Some((ticket, expires)) = cached
+                    && !fresh
+                    && expires - now_ms() >= REFRESH_MARGIN_MS
+                {
+                    return Ok(ticket);
+                }
+                let fetched = self.fetch(url, host_token).await?;
+                *self.cached.lock().unwrap_or_else(|p| p.into_inner()) = Some(fetched.clone());
+                Ok(fetched.0)
+            }
+        }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    async fn fetch_ticket(
-        &self,
-        url: &str,
-        host_token: &str,
-        document_id: &str,
-        write: bool,
-        principal: &str,
-        client_name: &str,
-        actor_id: &str,
-    ) -> Result<String, HostError> {
+    async fn fetch(&self, url: &str, host_token: &str) -> Result<(String, i64), HostError> {
+        let r = &self.request;
         let body = json!({
-            "doc": document_id,
-            "write": write,
-            "principal": principal,
-            "clientName": client_name,
-            "actorId": actor_id,
+            "doc": r.document_id,
+            "write": r.write,
+            "principal": r.principal,
+            "clientName": r.client_name,
+            "actorId": r.actor_id,
         });
         let headers = vec![
             ("Authorization".to_owned(), format!("Bearer {host_token}")),
@@ -225,79 +192,101 @@ impl Live {
             ));
         };
         let claims = ticket_claims(&ticket);
-        let user = claims.as_ref().and_then(|c| c.get("user"));
-        let doc = claims.as_ref().and_then(|c| c.get("doc"));
+        let field = |key: &str| claims.as_ref().and_then(|c| c.get(key));
         // The journal names the ticket's user; it must be the agent, never the human.
-        if user.and_then(Value::as_str) != Some(actor_id)
-            || doc.and_then(Value::as_str) != Some(document_id)
+        if field("user").and_then(Value::as_str) != Some(r.actor_id.as_str())
+            || field("doc").and_then(Value::as_str) != Some(r.document_id.as_str())
         {
             return Err(HostError::surface(
                 "FORBIDDEN",
                 "The host minted a ticket for another user or document. Its \"user\" must equal actorId.",
             ));
         }
-        if claims.as_ref().and_then(|c| c.get("write")) == Some(&Value::Bool(true)) && !write {
+        if field("write") == Some(&Value::Bool(true)) && !r.write {
             return Err(HostError::surface(
                 "FORBIDDEN",
                 "The host minted a write ticket for a read-only open.",
             ));
         }
-        Ok(ticket)
-    }
-
-    /// Offers the upgrade until the room sync timeout, as Node's provider
-    /// retries a refused one.
-    async fn join(&self, url: &str, ticket: Option<&str>) -> Result<(), Fault> {
-        let http_url = match url.split_once("://") {
-            Some(("wss", rest)) => format!("https://{rest}"),
-            Some((_, rest)) => format!("http://{rest}"),
-            None => url.to_owned(),
-        };
-        let deadline = tokio::time::Instant::now() + ROOM_SYNC_TIMEOUT;
-        loop {
-            let mut headers = vec![
-                ("Connection".to_owned(), "Upgrade".to_owned()),
-                ("Upgrade".to_owned(), "websocket".to_owned()),
-                ("Sec-WebSocket-Version".to_owned(), "13".to_owned()),
-                ("Sec-WebSocket-Key".to_owned(), websocket_key()),
-            ];
-            let mut protocols = vec!["blok-sync.v2", "blok-sync.v1"];
-            if let Some(ticket) = ticket {
-                protocols.push(ticket);
-            }
-            headers.push(("Sec-WebSocket-Protocol".to_owned(), protocols.join(", ")));
-            if let Some(origin) = &self.origin {
-                headers.push(("Origin".to_owned(), origin.clone()));
-            }
-            let left = deadline.saturating_duration_since(tokio::time::Instant::now());
-            let attempt = self
-                .outbound
-                .send("GET", &http_url, headers, None, UPGRADE_TIMEOUT.min(left))
-                .await;
-            if let Ok(answer) = attempt
-                && answer.status == 101
-            {
-                return Err(Fault::Internal(
-                    "blok-mcp (Rust) cannot join a remote room yet".to_owned(),
-                ));
-            }
-            if tokio::time::Instant::now() + UPGRADE_RETRY >= deadline {
-                tokio::time::sleep_until(deadline).await;
-                return Err(HostError::surface(
-                    "ROOM_SYNC_TIMEOUT",
-                    "The room did not finish loading in time. Try again.",
-                )
-                .into());
-            }
-            tokio::time::sleep(UPGRADE_RETRY).await;
-        }
+        let expires = field("exp")
+            .and_then(Value::as_f64)
+            .map_or_else(now_ms, |exp| (exp * 1000.0) as i64);
+        Ok((ticket, expires))
     }
 }
 
-fn websocket_key() -> String {
-    let mut key = [0u8; 16];
-    let _ = SystemRandom::new().fill(&mut key);
-    STANDARD.encode(key)
+pub struct Live {
+    url: String,
+    origin: Option<String>,
+    mode: Option<Mode>,
+    outbound: Outbound,
+}
+
+impl Live {
+    pub fn new(sync: &Value, tickets: Option<&Value>, outbound: Outbound) -> Live {
+        let text = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).map(str::to_owned);
+        let mode = tickets.and_then(|t| match t.get("kind").and_then(Value::as_str) {
+            Some("secret") => text(t, "secret").map(Mode::Secret),
+            Some("url") => Some(Mode::Url {
+                url: text(t, "url").unwrap_or_default(),
+                host_token: text(t, "hostToken").unwrap_or_default(),
+            }),
+            _ => None,
+        });
+        Live {
+            url: text(sync, "url").unwrap_or_default(),
+            origin: text(sync, "origin"),
+            mode,
+            outbound,
+        }
+    }
+
+    fn room_url(&self, document_id: &str) -> Result<String, HostError> {
+        if document_id.is_empty() || document_id == "." || document_id == ".." {
+            return Err(HostError::surface(
+                "INVALID_ARGS",
+                format!("\"{document_id}\" is not a document id."),
+            ));
+        }
+        let base = self.url.strip_suffix('/').unwrap_or(&self.url);
+        Ok(format!("{base}/{}", encode_uri_component(document_id)))
+    }
+
+    /// Mints the first ticket eagerly, so a refusal surfaces here, then
+    /// joins the room and waits for its first sync.
+    pub async fn open(
+        &self,
+        shared: Arc<LiveShared>,
+        request: TicketRequest,
+        presence: Presence,
+    ) -> Result<RemoteRoom, Fault> {
+        let url = self.room_url(&request.document_id)?;
+        let tickets = match &self.mode {
+            None => None,
+            Some(mode) => {
+                let tickets = Arc::new(Tickets {
+                    mode: mode.clone(),
+                    request: request.clone(),
+                    outbound: self.outbound.clone(),
+                    cached: Mutex::new(None),
+                });
+                tickets.get(false).await?;
+                Some(tickets)
+            }
+        };
+        remote::open(
+            shared,
+            RoomSpec {
+                document_id: request.document_id,
+                url,
+                origin: self.origin.clone(),
+                tickets,
+                write: request.write,
+                presence,
+            },
+        )
+        .await
+    }
 }
 
 #[cfg(test)]
@@ -306,8 +295,10 @@ mod tests {
 
     #[test]
     fn reads_claims_as_utf8_like_the_fixed_node() {
-        let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD
-            .encode(r#"{"user":"agent:Jöhn:tix","doc":"документ-😀"}"#);
+        let payload = base64::Engine::encode(
+            &base64::engine::general_purpose::URL_SAFE_NO_PAD,
+            r#"{"user":"agent:Jöhn:tix","doc":"документ-😀"}"#,
+        );
         let claims = ticket_claims(&format!("h.{payload}.s")).unwrap();
         assert_eq!(claims["user"], "agent:Jöhn:tix");
         assert_eq!(claims["doc"], "документ-😀");

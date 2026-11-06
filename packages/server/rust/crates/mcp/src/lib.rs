@@ -5,6 +5,7 @@
 #![deny(clippy::print_stdout)]
 
 pub mod authorize;
+pub mod awareness;
 pub mod bundle;
 pub mod cli;
 pub mod errors;
@@ -15,10 +16,12 @@ pub mod live;
 pub mod oauth;
 pub mod outbound;
 pub mod protocol;
+pub mod remote;
 pub mod rooms;
 pub mod server;
 pub mod sources;
 pub mod stdio;
+pub mod ws;
 
 use std::path::Path;
 use std::sync::Arc;

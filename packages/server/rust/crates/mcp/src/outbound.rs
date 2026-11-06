@@ -6,8 +6,9 @@
 use std::time::Duration;
 
 use blok_dotnet::{Uri, parse_absolute_uri};
-use blok_outbound::operator::{OperatorClient, Request, RequestBody};
-use blok_outbound::wire::Source;
+use blok_outbound::operator::{OperatorClient, Request, RequestBody, Stream};
+use blok_outbound::wire::{Headers, Source};
+use tokio::io::BufReader;
 
 /// What came back. The body is read whole; these answers are small.
 #[derive(Debug, Clone)]
@@ -94,6 +95,46 @@ impl Outbound {
         Ok(Answer {
             status: response.status,
             body: out,
+        })
+    }
+}
+
+/// An upgrade's answer: on 101 the stream carries the new protocol, with
+/// whatever the server already sent after the head still in the buffer.
+pub struct Upgraded {
+    pub status: u16,
+    pub headers: Headers,
+    pub stream: BufReader<Box<dyn Stream>>,
+}
+
+impl Outbound {
+    /// A GET carrying `headers` whose answer body is never read: a 101 hands
+    /// the connection over, and any other status is all the caller needs.
+    pub async fn upgrade(
+        &self,
+        url: &str,
+        headers: Vec<(String, String)>,
+        timeout: Duration,
+    ) -> Result<Upgraded, Unreachable> {
+        let uri = parse_absolute_uri(url)
+            .filter(Uri::is_http)
+            .ok_or(Unreachable)?;
+        let host = host_header(&uri);
+        let request = Request {
+            method: "GET",
+            url: &uri,
+            host: &host,
+            headers,
+            body: RequestBody::None,
+        };
+        let response = tokio::time::timeout(timeout, self.client.send(request))
+            .await
+            .map_err(|_| Unreachable)?
+            .map_err(|_| Unreachable)?;
+        Ok(Upgraded {
+            status: response.status,
+            headers: response.headers,
+            stream: response.body.into_inner(),
         })
     }
 }

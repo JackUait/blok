@@ -11,8 +11,12 @@ use crate::authorize::Webhook;
 use crate::bundle::{Bundle, Obj, RawObject};
 use crate::errors::{Fault, HostError};
 use crate::handles::Handles;
-use crate::live::Live;
+use crate::live::{Live, TicketRequest};
 use crate::outbound::Outbound;
+use crate::remote::{
+    Delivery, ExecuteInput, Executed, Fate, LiveShared, Presence, Protocol, RemoteRoom,
+    presence_color,
+};
 use crate::rooms::{RoomSession, Rooms, delivery};
 use crate::sources::{EndpointSource, ListRequest, Source};
 
@@ -79,6 +83,7 @@ pub struct Stored {
 pub enum Session {
     Stored(Stored),
     Room(RoomSession),
+    Remote(RemoteRoom),
 }
 
 pub struct Mcp {
@@ -91,6 +96,7 @@ pub struct Mcp {
     source: Option<Source>,
     authorize: Option<Webhook>,
     live: Option<Live>,
+    live_shared: Option<Arc<LiveShared>>,
     rooms: Option<Rooms>,
 }
 
@@ -135,6 +141,18 @@ fn answer_of(raw: &RawObject) -> Result<Answer, Fault> {
         .text("answer")
         .ok_or_else(|| Fault::Internal("the bundle gave no answer".to_owned()))?;
     let answer = RawObject::parse(answer).map_err(|e| Fault::Internal(e.to_string()))?;
+    Ok(Answer {
+        structured: answer.text("structuredContent").unwrap_or("{}").to_owned(),
+        is_error: answer.value("isError") == Some(Value::Bool(true)),
+    })
+}
+
+/// live-session.ts's ack wait: past it the batch is pending.
+const DELIVERY_WAIT: Duration = Duration::from_secs(10);
+
+/// A room's `{ structuredContent, isError }` answer text.
+fn room_answer(text: &str) -> Result<Answer, Fault> {
+    let answer = RawObject::parse(text).map_err(|e| Fault::Internal(e.to_string()))?;
     Ok(Answer {
         structured: answer.text("structuredContent").unwrap_or("{}").to_owned(),
         is_error: answer.value("isError") == Some(Value::Bool(true)),
@@ -212,6 +230,13 @@ impl Mcp {
             .unwrap_or(8.0) as usize;
         let live = opt(options, "sync")
             .map(|sync| Live::new(sync, opt(options, "tickets"), outbound.clone()));
+        let live_shared = live.as_ref().map(|_| {
+            Arc::new(LiveShared::new(
+                bundle.clone(),
+                outbound.clone(),
+                flags.clone(),
+            ))
+        });
         Ok(Mcp {
             bundle,
             surface,
@@ -220,6 +245,7 @@ impl Mcp {
             handles: Handles::new(idle, max),
             source,
             authorize,
+            live_shared,
             live,
             rooms: rooms.map(|executor| Rooms::new(executor, &flags)),
             flags,
@@ -333,12 +359,21 @@ impl Mcp {
                 let handle = str_of(&step, "handle").unwrap_or_default();
                 drop(self.on_handle(caller, handle, false).await?);
                 let session = self.handles.remove(handle, &caller.principal).await?;
-                // A journaled room records the batch before the host's own copy does.
-                let lags = matches!(&*session, Session::Room(room) if room.journaled);
+                let summary = match &*session {
+                    Session::Remote(room) => room.close().await,
+                    // A journaled room records the batch before the host's own copy does.
+                    Session::Room(room) => {
+                        json!({ "unsavedBatches": 0, "hostRecordLags": room.journaled })
+                    }
+                    Session::Stored(_) => json!({ "unsavedBatches": 0, "hostRecordLags": false }),
+                };
                 Answer {
-                    structured:
-                        json!({ "closed": true, "unsavedBatches": 0, "hostRecordLags": lags })
-                            .to_string(),
+                    structured: json!({
+                        "closed": true,
+                        "unsavedBatches": summary["unsavedBatches"],
+                        "hostRecordLags": summary["hostRecordLags"],
+                    })
+                    .to_string(),
                     is_error: false,
                 }
             }
@@ -533,9 +568,19 @@ impl Mcp {
                 )
                 .into());
             };
-            live.open(document_id, write, caller, &actor, &client_name)
-                .await?;
-            return Err(Fault::Internal("live rooms are not built yet".to_owned()));
+            return self
+                .open_remote(
+                    live,
+                    step,
+                    document_id,
+                    write,
+                    found,
+                    caller,
+                    &actor,
+                    &client_name,
+                    cancelled,
+                )
+                .await;
         }
         let Some(source) = &self.source else {
             return Err(HostError::surface(
@@ -604,6 +649,195 @@ impl Mcp {
             .call_raw("mcpOpenAnswer", &input.finish())
             .await?;
         answer_of(&raw)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn open_remote(
+        &self,
+        live: &Live,
+        step: &Value,
+        document_id: &str,
+        write: bool,
+        found: Option<Value>,
+        caller: &Caller,
+        actor: &Value,
+        client_name: &str,
+        cancelled: &(dyn Fn() -> bool + Send + Sync),
+    ) -> Result<Answer, Fault> {
+        let shared = self
+            .live_shared
+            .clone()
+            .ok_or_else(|| Fault::Internal("live mode without its engines".to_owned()))?;
+        let actor_id = str_of(actor, "id").unwrap_or_default().to_owned();
+        let presence = Presence {
+            color: presence_color(&actor_id),
+            name: client_name.to_owned(),
+            on_behalf_of: str_of(actor, "onBehalfOf").unwrap_or(&actor_id).to_owned(),
+            actor_id: actor_id.clone(),
+        };
+        let request = TicketRequest {
+            document_id: document_id.to_owned(),
+            write,
+            principal: caller.principal.clone(),
+            client_name: client_name.to_owned(),
+            actor_id,
+        };
+        let room = live.open(shared, request, presence).await?;
+        let view = match step.get("view") {
+            None => None,
+            Some(view) => {
+                let answer = room_answer(&room.read(view.clone(), actor.clone()).await?)?;
+                if answer.is_error {
+                    room.close().await;
+                    return Ok(answer);
+                }
+                Some(answer.structured)
+            }
+        };
+        if cancelled() {
+            room.close().await;
+            return Err(HostError::failure(
+                "CANCELLED",
+                "The request was cancelled before the document opened.",
+            )
+            .into());
+        }
+        let mut session = json!({
+            "mode": "live",
+            "write": write,
+            "durability": if room.protocol == Protocol::V2 { "acknowledged" } else { "best-effort" },
+            "contractRevision": self.surface.live_revision,
+        });
+        if self
+            .surface
+            .live_unavailable
+            .as_array()
+            .is_some_and(|a| !a.is_empty())
+        {
+            session["unavailableCommands"] = self.surface.live_unavailable.clone();
+        }
+        let handle = self
+            .handles
+            .add(&caller.principal, document_id, Session::Remote(room))?;
+        let mut input = Obj::new()
+            .str("handle", &handle)
+            .val("expiresAfterIdleMs", &self.idle_ms)
+            .val("session", &session);
+        if let Some(found) = &found {
+            input = input.val("found", found);
+        }
+        if let Some(view) = &view {
+            input = input.raw("view", view);
+        }
+        answer_of(
+            &self
+                .bundle
+                .call_raw("mcpOpenAnswer", &input.finish())
+                .await?,
+        )
+    }
+
+    async fn on_remote(
+        &self,
+        room: &RemoteRoom,
+        call: &Value,
+        actor: &Value,
+        client_name: &str,
+        approval: &Approval,
+    ) -> Result<Outcome, Fault> {
+        match str_of(call, "name") {
+            Some("blok_read") => {
+                let view = call.get("view").cloned().unwrap_or(json!({}));
+                Ok(Outcome::Answer(room_answer(
+                    &room.read(view, actor.clone()).await?,
+                )?))
+            }
+            Some("blok_describe") => {
+                let mut mcp = self.flags.clone();
+                mcp["mode"] = json!("live");
+                mcp["write"] = json!(true);
+                let input = Obj::new()
+                    .val("mcp", &mcp)
+                    .raw("document", r#"{"blocks":[]}"#)
+                    .val("actor", actor)
+                    .val("query", call.get("query").unwrap_or(&json!({})))
+                    .finish();
+                Ok(Outcome::Answer(answer_of(
+                    &self.bundle.call_raw("mcpDescribe", &input).await?,
+                )?))
+            }
+            _ => {
+                let mut asking =
+                    json!({ "capabilities": approval.capabilities, "clientName": client_name });
+                if let Some(replies) = &approval.replies {
+                    asking["replies"] = replies.clone();
+                }
+                let executed = room
+                    .execute(ExecuteInput {
+                        batch: call.get("batch").cloned().unwrap_or(Value::Null),
+                        actor: actor.clone(),
+                        approval: asking,
+                        created_pages: Vec::new(),
+                    })
+                    .await?;
+                let (result, delivery) = match executed {
+                    Executed::Ask(ask) => {
+                        return Ok(Outcome::Ask(Ask {
+                            key: str_of(&ask, "key").unwrap_or_default().to_owned(),
+                            message: ask.get("message").cloned().unwrap_or(Value::Null),
+                            requested_schema: ask
+                                .get("requestedSchema")
+                                .cloned()
+                                .unwrap_or(Value::Null),
+                        }));
+                    }
+                    Executed::Done { result, delivery } => (result, delivery),
+                };
+                let mut answer = Obj::new().raw("result", &result);
+                match delivery {
+                    Delivery::None => {}
+                    Delivery::Now(value) => answer = answer.val("delivery", &value),
+                    Delivery::Failed(error) => answer = answer.val("failed", &error.failed_input()),
+                    Delivery::Wait(fate) => match tokio::time::timeout(DELIVERY_WAIT, fate).await {
+                        Ok(Ok(Fate::Acked(sequence))) => {
+                            answer = answer.val(
+                                "delivery",
+                                &json!({ "durable": true, "pending": false, "serverSequence": sequence, "savedVersion": null }),
+                            );
+                        }
+                        Ok(Ok(Fate::Ended(error))) => {
+                            answer = answer.val("failed", &error.failed_input());
+                        }
+                        Ok(Ok(Fate::Quarantined(reason))) => {
+                            let error = if reason == "read-only" {
+                                HostError::surface(
+                                    "READ_ONLY",
+                                    "The room refused the write: this agent may only read. The batch was not saved.",
+                                )
+                            } else {
+                                HostError::surface_with(
+                                    "REJECTED",
+                                    "The room refused this batch. It was not saved.",
+                                    json!({ "rejectionCode": reason }),
+                                )
+                            };
+                            answer = answer.val("failed", &error.failed_input());
+                        }
+                        _ => {
+                            answer = answer.val(
+                                "delivery",
+                                &json!({ "durable": false, "pending": true, "serverSequence": null, "savedVersion": null }),
+                            );
+                        }
+                    },
+                }
+                let raw = self
+                    .bundle
+                    .call_raw("mcpExecuteAnswer", &answer.finish())
+                    .await?;
+                Ok(Outcome::Answer(answer_of(&raw)?))
+            }
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -778,6 +1012,11 @@ impl Mcp {
             Session::Stored(stored) => stored,
             Session::Room(room) => {
                 return self.on_room(&document_id, room, &call, &actor).await;
+            }
+            Session::Remote(room) => {
+                return self
+                    .on_remote(room, &call, &actor, &client_name, approval)
+                    .await;
             }
         };
         match str_of(&call, "name") {

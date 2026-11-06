@@ -1,5 +1,3 @@
-import { surfaceError } from '../errors';
-
 export interface LoadedDocument {
   raw: unknown;
   version: string | null;
@@ -28,8 +26,4 @@ export interface DocumentSource {
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-export const assertDocumentShape = (value: unknown, where: string): void => {
-  if (!isRecord(value) || !Array.isArray(value.blocks)) {
-    throw surfaceError('SOURCE_UNAVAILABLE', `${where} is not a Blok document: expected an object with a "blocks" array.`);
-  }
-};
+export { assertDocumentShape } from '../../shared/mcp/files';

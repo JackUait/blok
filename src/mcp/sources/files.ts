@@ -4,18 +4,12 @@ import { chmod, lstat, open, readdir, readFile, rename, rm, stat } from 'node:fs
 import { basename, dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 
-import { savedFileText } from '../../shared/mcp/files';
+import { assertSafeId, listedIds, listPage, parseDocumentText, savedFileText, titleOfText } from '../../shared/mcp/files';
 import { surfaceError } from '../errors';
 
 import type { DocumentSource } from './types';
-import { assertDocumentShape, isRecord } from './types';
+import { isRecord } from './types';
 
-// Never starts with ".", so ".", ".." and dotfiles never match; no "/" or "\" can appear.
-// "-" and "_" may lead: nanoid page and document ids use them.
-const SAFE_ID = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,199}$/;
-// Windows opens a device for these names whatever the extension, so "nul.json" would drop every save.
-const WINDOWS_DEVICE = /^(con|prn|aux|nul|com\d|lpt\d)(\.|$)/i;
-const isSafeId = (id: string): boolean => SAFE_ID.test(id) && !WINDOWS_DEVICE.test(id);
 
 // Only the native realpath reports the on-disk case of a name.
 const nativeRealpath = promisify(realpath.native);
@@ -115,9 +109,7 @@ export const createFilesSource = (dir: string): DocumentSource => {
   };
 
   const pathOf = (documentId: string): string => {
-    if (!isSafeId(documentId)) {
-      throw surfaceError('INVALID_ARGS', 'With the files source, a document id uses letters, digits, ".", "_" and "-" only (max 200), and is not a Windows device name such as CON or NUL.');
-    }
+    assertSafeId(documentId);
 
     return join(dir, `${documentId}.json`);
   };
@@ -173,9 +165,7 @@ export const createFilesSource = (dir: string): DocumentSource => {
 
   const titleOf = async (id: string): Promise<string | null> => {
     try {
-      const parsed: unknown = JSON.parse(await readFile(join(dir, `${id}.json`), 'utf-8'));
-
-      return isRecord(parsed) && typeof parsed.title === 'string' && parsed.title !== '' ? parsed.title : null;
+      return titleOfText(await readFile(join(dir, `${id}.json`), 'utf-8'));
     } catch {
       return null;
     }
@@ -269,17 +259,7 @@ export const createFilesSource = (dir: string): DocumentSource => {
         return { raw: { blocks: [] }, version: null, missing: true };
       }
       await assertExactName(documentId, path);
-      const raw: unknown = (() => {
-        try {
-          const parsed: unknown = JSON.parse(bytes.toString('utf-8'));
-
-          return parsed;
-        } catch {
-          throw surfaceError('SOURCE_UNAVAILABLE', `${documentId}.json is not valid JSON.`);
-        }
-      })();
-
-      assertDocumentShape(raw, `${documentId}.json`);
+      const raw = parseDocumentText(documentId, bytes.toString('utf-8'));
 
       return { raw, version: hash(bytes) };
     },
@@ -314,20 +294,10 @@ export const createFilesSource = (dir: string): DocumentSource => {
       const names = await readdir(dir).catch((thrown: unknown) => {
         throw unavailable('Cannot list the documents directory.', dir, thrown);
       });
-      const ids = names
-        .filter((name) => name.endsWith('.json'))
-        .map((name) => name.slice(0, -'.json'.length))
-        .filter(isSafeId)
-        .sort();
+      const ids = listedIds(names);
       const titled = await Promise.all(ids.map(async (id) => ({ id, title: await titleOf(id) })));
-      const needle = query?.toLowerCase();
-      const matching = titled.filter((doc) => needle === undefined
-        || doc.id.toLowerCase().includes(needle) || (doc.title ?? '').toLowerCase().includes(needle));
-      const start = cursor === undefined ? 0 : matching.findIndex((doc) => doc.id > cursor);
-      const page = start === -1 ? [] : matching.slice(start, start + limit);
-      const more = start !== -1 && start + limit < matching.length;
 
-      return { documents: page, nextCursor: more ? page[page.length - 1].id : null };
+      return listPage(titled, { query, cursor, limit });
     },
   };
 };

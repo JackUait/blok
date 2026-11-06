@@ -6,8 +6,11 @@ import {
   checkCall, errorOutcome, executeOutcome, listFollowUp, listingAnswer, modelFixable, openAnswer, pickDocument, UnknownToolError,
   type ListRequest, type ListResult, type OpenedSession,
 } from '../shared/mcp/calls';
+import { checkOptionSafety, McpConfigError, parseMcpArgs } from '../shared/mcp/config';
 import { parseCustomToolsFile, parseOverridesFile } from '../shared/mcp/custom-tools-file';
-import { failedResult, NO_DELIVERY, surfaceError } from '../shared/mcp/errors';
+import { assertSafeId, listedIds, listPage, parseDocumentText, savedFileText, titleOfText } from '../shared/mcp/files';
+import type { BlokMcpOptions } from '../shared/mcp/options';
+import { failedResult, NO_DELIVERY, surfaceError, terminalToError } from '../shared/mcp/errors';
 import type { Delivery } from '../shared/mcp/session';
 import { resolveMode } from '../shared/mcp/mode';
 import { mcpPromptResult } from '../shared/mcp/prompts';
@@ -232,6 +235,83 @@ const actorResult = (input: Input): string => {
   return JSON.stringify({ clientName, actor: defaultAgentActor(String(input.principal), clientName), presenceName: clientName });
 };
 
+/** A config refusal is data; blok-mcp prints `blok-mcp: <error>` and exits with code 2. */
+const configResult = (run: () => unknown): string => {
+  try {
+    const value = run();
+
+    return JSON.stringify(value === undefined ? {} : value);
+  } catch (thrown) {
+    if (thrown instanceof McpConfigError) {
+      return JSON.stringify({ error: thrown.message });
+    }
+    throw thrown;
+  }
+};
+
+const stringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+
+const parseArgs = (input: Input): string => {
+  const env = isRecord(input.env)
+    ? Object.fromEntries(Object.entries(input.env).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
+    : {};
+
+  return configResult(() => ({ ok: parseMcpArgs(stringArray(input.argv), env) }));
+};
+
+const unused = (): Promise<never> => Promise.reject(new Error('Only checked, never called.'));
+
+/**
+ * Options as data: the functions blok-mcp checks only for presence are flags here.
+ * `authorize: true` stands for a hook; `uploads.uploadByFile: true` for the uploader's function.
+ */
+const checkOptions = (input: Input): string => configResult(() => {
+  const options = isRecord(input.options) ? input.options : {};
+  const { authorize, uploads, ...rest } = options;
+  const upload = isRecord(uploads) ? uploads : undefined;
+  const { uploadByFile, ...limits } = upload ?? {};
+
+  checkOptionSafety({
+    ...rest,
+    ...(authorize === true && { authorize: unused }),
+    ...(upload !== undefined && { uploads: { ...limits, uploader: uploadByFile === true ? { uploadByFile: unused } : {} } }),
+  } as unknown as BlokMcpOptions);
+});
+
+const configFile = (input: Input): string => configResult(() => ({
+  value: input.kind === 'manifest' ? parseCustomToolsFile(input.value) : parseOverridesFile(input.value),
+}));
+
+/** A refusal the files source raises as an MCP error; `{}` when there is none. */
+const surfaceRefusal = (run: () => unknown): string => {
+  try {
+    return JSON.stringify(run() ?? {});
+  } catch (thrown) {
+    const error = modelFixable(thrown);
+
+    if (error === null) {
+      throw thrown;
+    }
+
+    return JSON.stringify({ error });
+  }
+};
+
+const filesList = (input: Input): string => {
+  const entries = Array.isArray(input.entries) ? input.entries.filter(isRecord) : [];
+  const titled = entries.map(entry => ({
+    id: String(entry.id),
+    // A file the host could not read lists without a title.
+    title: typeof entry.text === 'string' ? titleOfText(entry.text) : null,
+  }));
+
+  return JSON.stringify(listPage(titled, listRequestOf(input)));
+};
+
+const documentText = (input: Input): string =>
+  JSON.stringify({ text: input.form === 'compact' ? JSON.stringify(input.document) : savedFileText(input.document) });
+
 export const MCP_OPERATIONS: Readonly<Record<string, (input: Input) => string | Promise<string>>> = {
   mcpSurface: surface,
   mcpPrompt: prompt,
@@ -243,4 +323,13 @@ export const MCP_OPERATIONS: Readonly<Record<string, (input: Input) => string | 
   mcpExecuteAnswer: executeAnswer,
   mcpResolveMode: modeResult,
   mcpActor: actorResult,
+  mcpParseArgs: parseArgs,
+  mcpCheckOptions: checkOptions,
+  mcpConfigFile: configFile,
+  mcpFileId: input => surfaceRefusal(() => assertSafeId(String(input.id))),
+  mcpFileIds: input => JSON.stringify({ ids: listedIds(stringArray(input.names)) }),
+  mcpFilesList: filesList,
+  mcpParseDocument: input => surfaceRefusal(() => ({ document: parseDocumentText(String(input.id), String(input.text)) })),
+  mcpDocumentText: documentText,
+  mcpRoomError: input => JSON.stringify({ error: terminalToError(typeof input.terminal === 'string' ? input.terminal : undefined) }),
 };

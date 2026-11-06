@@ -1,9 +1,8 @@
 import type { HeadlessRoom, HeadlessRoomEnd } from '../../components/modules/collaboration/headless-session';
 import type { BatchDelivery } from '../../components/modules/collaboration/tracking-outbox';
-import type { CollabTerminalError } from '../../components/modules/collaboration/types';
 import type { AgentContract } from '../../../types/tool-manifest';
 import type { AgentBatch, AgentError, AgentExecuteOptions, AgentResult, AgentSession } from '../../../types/agent';
-import { failedResult, isWriteBatch, NO_DELIVERY, surfaceError } from '../errors';
+import { failedResult, isWriteBatch, NO_DELIVERY, surfaceError, terminalToError } from '../errors';
 import type { HandleSession, McpExecuteResult } from '../session';
 
 export interface PresenceSink { announce(): void; afterBatch(result: AgentResult): void; clear(): void }
@@ -19,16 +18,7 @@ export interface LiveSessionInput {
 
 const DEFAULT_ACK_TIMEOUT_MS = 10_000;
 
-export const terminalToError = (error: CollabTerminalError | undefined): AgentError => {
-  if (error === 'unsupported-format') {
-    return surfaceError('VERSION_SKEW', 'The room uses a newer document format. Upgrade @bloklabs/mcp to the server family version.').agentError;
-  }
-  if (error === 'forbidden' || error === 'unauthorized') {
-    return surfaceError('FORBIDDEN', 'The room refused this agent. Its ticket may not grant this document.').agentError;
-  }
-
-  return surfaceError('SOURCE_UNAVAILABLE', 'The room connection stopped for good. Open the document again.', { terminal: error ?? 'unknown' }).agentError;
-};
+export { terminalToError } from '../../shared/mcp/errors';
 
 export const createLiveSession = (input: LiveSessionInput): HandleSession => {
   const { room } = input;

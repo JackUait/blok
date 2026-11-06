@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { inputRequired, inputResponse } from '@modelcontextprotocol/server';
@@ -8,6 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { safeClientName, defaultAgentActor } from '../../../src/mcp/actor';
 import { buildMcpContracts } from '../../../src/mcp/contract';
+import { checkOptionSafety, McpConfigError, parseMcpArgs } from '../../../src/mcp/config';
+import { parseCustomToolsFile, parseOverridesFile } from '../../../src/mcp/custom-tools-file';
+import { terminalToError } from '../../../src/mcp/live/live-session';
+import { createFilesSource } from '../../../src/mcp/sources/files';
 import { createToolDispatcher } from '../../../src/mcp/dispatcher';
 import type { Caller, ListResult } from '../../../src/mcp/dispatcher';
 import { HandleRegistry } from '../../../src/mcp/handles';
@@ -626,5 +630,197 @@ describe('server runtime MCP approvals', () => {
     if (sdk.kind === 'elicit' && own.kind === 'elicit' && 'action' in own) {
       expect(own).toEqual(sdk);
     }
+  });
+});
+
+describe('server runtime CLI operations', () => {
+  const nodeParse = (argv: string[], env: Record<string, string>): Record<string, unknown> => {
+    try {
+      return { ok: JSON.parse(JSON.stringify(parseMcpArgs(argv, env))) };
+    } catch (thrown) {
+      return { error: thrown instanceof McpConfigError ? thrown.message : 'not a config error' };
+    }
+  };
+
+  it.each<[string[], Record<string, string>]>([
+    [[], {}],
+    [['--http', '127.0.0.1:0', '--public'], {}],
+    [['--http', '--public'], {}],
+    [['--public'], {}],
+    [['--auth=oauth'], {}],
+    [['--auth', 'oauth'], {}],
+    [['--auth', 'oauth', '--oauth-issuer', 'i', '--oauth-audience', 'a', '--oauth-jwks', 'j'], {}],
+    [['--auth', 'other'], {}],
+    [['x'], {}],
+    [['--nope'], {}],
+    [['--schema', 'full', '--schema', 'full'], {}],
+    [['--handle-idle-ms', '0x10', '--max-handles', '1e3'], {}],
+    [['--handle-idle-ms', ' 7 '], {}],
+    [['--handle-idle-ms', '1.5'], {}],
+    [['--source', 'files:./docs', '--source-list'], {}],
+    [['--source', 'endpoint:https://h/docs', '--source-list', 'https://h/list'], { BLOK_DOC_ENDPOINT_AUTH: 'Bearer x' }],
+    [['--source', 'ftp:x'], {}],
+    [['--rich-text-fields', '{"callout":["title"]}'], {}],
+    [['--rich-text-fields', '[1]'], {}],
+    [[], { BLOK_RICH_TEXT_FIELDS: '{"a":[1]}' }],
+    [['--sync-url', 'ws://h/s', '--origin', 'http://o'], { BLOK_SECRET: 's' }],
+    [[], { BLOK_MCP_HTTP: '', BLOK_SYNC_URL: '', BLOK_SECRET: '' }],
+    [['--ticket-url', 'https://t'], {}],
+    [['--ticket-url', 'https://t'], { BLOK_MCP_HOST_TOKEN: 'tok' }],
+    [['--no-comments', '--comments', '--page-titles', 'page-map', '--principal', 'bob'], {}],
+    [['--manifest', 'm.json', '--manifest-overrides', 'o.json', '--authorize', 'HTTP://x'], {}],
+  ])('parses %o with env %o as Node does', async (argv, env) => {
+    expect(await call('mcpParseArgs', { argv, env })).toEqual(nodeParse(argv, env));
+  });
+
+  const base: BlokMcpOptions = { transport: { kind: 'stdio' }, auth: { kind: 'none' } };
+  const http = (listen: string, extra: Partial<BlokMcpOptions> = {}): BlokMcpOptions =>
+    ({ ...base, transport: { kind: 'http', listen }, ...extra });
+  const authorize = async (): Promise<boolean> => true;
+  const uploader = { uploadByFile: () => Promise.reject(new Error('unused')) };
+
+  it.each<[string, BlokMcpOptions, Record<string, unknown>]>([
+    ['stdio', base, {}],
+    ['url tickets without a token', { ...base, tickets: { kind: 'url', url: 'u', hostToken: '' } }, {}],
+    ['sync without tickets', { ...base, sync: { url: 'ws://x' } }, {}],
+    ['a secret over http', http('127.0.0.1:1', { tickets: { kind: 'secret', secret: 's' } }), {}],
+    ['a public bind', http('0.0.0.0:1'), {}],
+    ['a bracketed loopback', http('[::1]:1', { authorize }), { authorize: true }],
+    ['public without auth', { ...base, transport: { kind: 'http', listen: '0.0.0.0:1', public: true } }, {}],
+    ['http without authorize', http('localhost:1'), {}],
+    ['http with ticket url and no source', http('localhost:1', { tickets: { kind: 'url', url: 'u', hostToken: 't' } }), {}],
+    ['uploads without uploadByFile', { ...base, uploads: { uploader: {} as never } }, { uploads: { uploadByFile: false } }],
+    ['bad upload limits', { ...base, uploads: { uploader, limits: { image: { maxSize: 0 } } } }, { uploads: { uploadByFile: true, limits: { image: { maxSize: 0 } } } }],
+    ['a bad upload kind', { ...base, uploads: { uploader, limits: { doc: {} } as never } }, { uploads: { uploadByFile: true, limits: { doc: {} } } }],
+    ['an upload root over http', http('localhost:1', { authorize, uploads: { uploader, root: '/r' } }), { authorize: true, uploads: { uploadByFile: true, root: '/r' } }],
+  ])('checks %s as Node does', async (_label, options, flags) => {
+    const node = ((): Record<string, unknown> => {
+      try {
+        checkOptionSafety(options);
+
+        return {};
+      } catch (thrown) {
+        return { error: thrown instanceof McpConfigError ? thrown.message : 'not a config error' };
+      }
+    })();
+    const { authorize: _hook, uploads: _uploads, ...data } = options;
+
+    expect(await call('mcpCheckOptions', { options: { ...data, ...flags } })).toEqual(node);
+  });
+
+  it.each<[string, 'manifest' | 'overrides', unknown]>([
+    ['a good manifest', 'manifest', customTools],
+    ['a bad manifest', 'manifest', { formatVersion: 2, blocks: [] }],
+    ['good overrides', 'overrides', overrides],
+    ['overrides that are not an object', 'overrides', []],
+    ['an unknown override key', 'overrides', { paragraph: { nope: 1 } }],
+    ['bad hiddenActions', 'overrides', { paragraph: { hiddenActions: [1] } }],
+  ])('validates %s as Node does', async (_label, kind, value) => {
+    const node = ((): Record<string, unknown> => {
+      try {
+        return { value: JSON.parse(JSON.stringify(kind === 'manifest' ? parseCustomToolsFile(value) : parseOverridesFile(value))) };
+      } catch (thrown) {
+        return { error: thrown instanceof McpConfigError ? thrown.message : 'not a config error' };
+      }
+    })();
+
+    expect(await call('mcpConfigFile', { kind, value })).toEqual(node);
+  });
+});
+
+describe('server runtime files-source operations', () => {
+  it.each(['doc', 'a.b-c_d', '-lead', '.hidden', 'a/b', '', 'x'.repeat(201), 'CON', 'nul.json', 'com1', 'lpt9.txt', 'é'])('checks id %o as the files source does', async (id) => {
+    const dir = mkdtempSync(join(tmpdir(), 'blok-bundle-ids-'));
+
+    try {
+      const source = createFilesSource(dir);
+      const node = await source.load(id).then(() => ({}), (thrown: unknown) => ({ error: thrown instanceof McpSurfaceError ? thrown.agentError : 'other' }));
+
+      expect(await call('mcpFileId', { id })).toEqual(node);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it.each<[Record<string, unknown>]>([
+    [{ limit: 25 }],
+    [{ limit: 2 }],
+    [{ limit: 2, cursor: 'b' }],
+    [{ limit: 2, cursor: 'zz' }],
+    [{ limit: 25, query: 'ALP' }],
+    [{ limit: 25, query: 'second' }],
+    [{ limit: 1, query: 'a', cursor: 'A' }],
+  ])('lists %o as the files source does', async (request) => {
+    const dir = mkdtempSync(join(tmpdir(), 'blok-bundle-list-'));
+    const files: Record<string, string> = {
+      'b.json': JSON.stringify({ title: 'Second', blocks: [] }),
+      'a.json': JSON.stringify({ title: '', blocks: [] }),
+      'A.json': JSON.stringify({ title: 'Alpha', blocks: [] }),
+      'c.json': 'not json',
+      'd.json': JSON.stringify([1]),
+      'e.json': '﻿{"title":"Bom","blocks":[]}',
+      '.x.json': '{}',
+      'bad id!.json': '{}',
+      'notes.txt': 'x',
+      'z.json': JSON.stringify({ title: 7, blocks: [] }),
+    };
+
+    try {
+      for (const [name, text] of Object.entries(files)) {
+        writeFileSync(join(dir, name), text);
+      }
+      const names = readdirSync(dir);
+      const node = await createFilesSource(dir).list?.(request as { limit: number });
+      const ids = await call('mcpFileIds', { names });
+      const entries = (ids.ids as string[]).map(id => ({ id, text: readFileSync(join(dir, `${id}.json`), 'utf-8') }));
+
+      expect(await call('mcpFilesList', { entries, ...request })).toEqual(node);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['a document', '{"blocks":[{"id":"p","type":"paragraph","data":{"text":"\\u2028<é>"}}]}'],
+    ['not JSON', '{"blocks":'],
+    ['a BOM', '﻿{"blocks":[]}'],
+    ['no blocks', '{"title":"x"}'],
+    ['an array', '[]'],
+  ])('reads %s as the files source does', async (_label, text) => {
+    const dir = mkdtempSync(join(tmpdir(), 'blok-bundle-load-'));
+
+    try {
+      writeFileSync(join(dir, 'doc.json'), text);
+      const node = await createFilesSource(dir).load('doc').then(
+        loaded => ({ document: loaded.raw }),
+        (thrown: unknown) => ({ error: thrown instanceof McpSurfaceError ? thrown.agentError : 'other' }),
+      );
+
+      expect(await call('mcpParseDocument', { id: 'doc', text })).toEqual(node);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('writes the bytes the files source writes', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'blok-bundle-save-'));
+
+    try {
+      const source = createFilesSource(dir);
+      const saved = await source.save('doc', docFixture, { ifVersion: null });
+      const text = await call('mcpDocumentText', { document: docFixture, form: 'file' });
+
+      expect(text.text).toBe(readFileSync(join(dir, 'doc.json'), 'utf-8'));
+      expect(createHash('sha256').update(String(text.text)).digest('hex')).toBe(saved.version);
+      expect(await call('mcpDocumentText', { document: docFixture, form: 'compact' })).toEqual({ text: JSON.stringify(docFixture) });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('server runtime mcpRoomError', () => {
+  it.each(['unsupported-format', 'forbidden', 'unauthorized', 'handshake-timeout', undefined])('maps the room end %o as Node does', async (terminal) => {
+    expect(await call('mcpRoomError', terminal === undefined ? {} : { terminal })).toEqual({ error: terminalToError(terminal as never) });
   });
 });

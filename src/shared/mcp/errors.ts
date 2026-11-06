@@ -42,3 +42,15 @@ export const isWriteBatch = (batch: unknown, readOnlyByName: ReadonlyMap<string,
   return Array.isArray(commands) && commands.some((command: unknown) =>
     isRecord(command) && typeof command.name === 'string' && readOnlyByName.get(command.name) === false);
 };
+
+/** Why a room ended for good, as the agent reads it. `error` is the collab terminal error. */
+export const terminalToError = (error: string | undefined): AgentError => {
+  if (error === 'unsupported-format') {
+    return surfaceError('VERSION_SKEW', 'The room uses a newer document format. Upgrade @bloklabs/mcp to the server family version.').agentError;
+  }
+  if (error === 'forbidden' || error === 'unauthorized') {
+    return surfaceError('FORBIDDEN', 'The room refused this agent. Its ticket may not grant this document.').agentError;
+  }
+
+  return surfaceError('SOURCE_UNAVAILABLE', 'The room connection stopped for good. Open the document again.', { terminal: error ?? 'unknown' }).agentError;
+};

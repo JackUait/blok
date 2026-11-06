@@ -39,6 +39,8 @@ import {
  *               A step with "raw": true gets none of this.
  *   steps       see Step.
  *   watchFiles  names under ${dir} whose exact bytes are recorded as expectFiles.
+ *   stderrPattern  a regular expression the failed process's stderr must match,
+ *               recorded instead of the exact text.
  *   fsVariants  true when the answer depends on whether the temp disk ignores letter
  *               case. Expectations then live in "variants": {"caseInsensitiveFs": …,
  *               "caseSensitiveFs": …}, each recorded on such a disk (set TMPDIR).
@@ -108,6 +110,7 @@ export interface FixtureCase {
   steps?: Step[];
   watchFiles?: string[];
   fsVariants?: boolean;
+  stderrPattern?: string;
   variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
   expectFiles?: Record<string, FileSpec | null>;
@@ -388,8 +391,21 @@ const requestBody = (spec: NonNullable<Step['http']>): Buffer | undefined => {
   return spec.body === undefined ? undefined : Buffer.from(JSON.stringify(spec.body));
 };
 
-const exitRecord = (code: number | null, signal: string | null, stderr: string): Record<string, unknown> =>
-  code === 0 ? { code } : { code, signal, stderr };
+/**
+ * stderr is part of the contract only when the process failed. `pattern` stands in
+ * for text a port cannot match byte for byte (a JSON parser's own message).
+ */
+const exitRecord = (code: number | null, signal: string | null, stderr: string, pattern?: string): Record<string, unknown> => {
+  if (code === 0) {
+    return { code };
+  }
+  if (pattern === undefined) {
+    return { code, signal, stderr };
+  }
+  expect(stderr, 'stderr').toMatch(new RegExp(pattern));
+
+  return { code, signal, stderr: { pattern } };
+};
 
 const readFileSpec = (path: string): FileSpec | null => (existsSync(path) ? { text: readFileSync(path, 'utf8') } : null);
 
@@ -584,7 +600,7 @@ const runStdio = async (run: CaseRun, c: FixtureCase, launch: Launch): Promise<v
     }
     const exit = await server.closeInput();
 
-    run.checkCase('expectExit', exitRecord(exit.code, exit.signal, server.stderr), `${c.name} exit`);
+    run.checkCase('expectExit', exitRecord(exit.code, exit.signal, server.stderr, c.stderrPattern), `${c.name} exit`);
   } finally {
     await server.kill();
   }
@@ -640,7 +656,7 @@ export const runCase = async (command: string[], c: FixtureCase, record: boolean
       if (c.transport === 'cli') {
         const exit = await runToExit(command, launch.argv, launch.env, root);
 
-        run.checkCase('expectExit', exitRecord(exit.code, exit.signal, exit.stderr), `${c.name} exit`);
+        run.checkCase('expectExit', exitRecord(exit.code, exit.signal, exit.stderr, c.stderrPattern), `${c.name} exit`);
       } else if (c.transport === 'stdio') {
         await runStdio(run, c, launch);
       } else {

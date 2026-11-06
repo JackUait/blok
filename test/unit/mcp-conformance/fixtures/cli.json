@@ -1,0 +1,1365 @@
+{
+  "description": "CLI flags and env vars: refusals print \"blok-mcp: <message>\" and exit 2; stdio exits 0 when stdin closes. Every case runs with no other BLOK_* variable set.",
+  "cases": [
+    {
+      "name": "a bare argument",
+      "transport": "cli",
+      "argv": [
+        "serve"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Unexpected argument \"serve\"\n"
+      }
+    },
+    {
+      "name": "--flag=value",
+      "transport": "cli",
+      "argv": [
+        "--auth=oauth"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --auth takes its value as the next argument, not after \"=\"\n"
+      }
+    },
+    {
+      "name": "an unknown flag",
+      "transport": "cli",
+      "argv": [
+        "--nope"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Unknown flag --nope\n"
+      }
+    },
+    {
+      "name": "a repeated flag",
+      "transport": "cli",
+      "argv": [
+        "--principal",
+        "a",
+        "--principal",
+        "b"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --principal is given twice\n"
+      }
+    },
+    {
+      "name": "a repeated switch",
+      "transport": "cli",
+      "argv": [
+        "--no-comments",
+        "--no-comments"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --no-comments is given twice\n"
+      }
+    },
+    {
+      "name": "a value flag at the end",
+      "transport": "cli",
+      "argv": [
+        "--principal"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --principal needs a value\n"
+      }
+    },
+    {
+      "name": "a value that looks like a flag",
+      "transport": "cli",
+      "argv": [
+        "--http",
+        "--public"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --http needs a value\n"
+      }
+    },
+    {
+      "name": "--public in a value slot without --http",
+      "transport": "cli",
+      "argv": [
+        "--principal",
+        "--public"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --public applies to --http only\n"
+      }
+    },
+    {
+      "name": "--auth must be none or oauth",
+      "transport": "cli",
+      "argv": [
+        "--auth",
+        "basic"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --auth must be one of none, oauth, got \"basic\"\n"
+      }
+    },
+    {
+      "name": "--auth oauth needs all three oauth flags",
+      "transport": "cli",
+      "argv": [
+        "--auth",
+        "oauth",
+        "--oauth-issuer",
+        "https://i"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --auth oauth needs --oauth-issuer, --oauth-audience and --oauth-jwks\n"
+      }
+    },
+    {
+      "name": "--public without --http",
+      "transport": "cli",
+      "argv": [
+        "--public"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --public applies to --http only\n"
+      }
+    },
+    {
+      "name": "--source must be files: or endpoint:",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "docs"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --source must be files:<dir> or endpoint:<url>, got \"docs\"\n"
+      }
+    },
+    {
+      "name": "--source-list is parsed even for files",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--source-list"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --source-list needs a value\n"
+      }
+    },
+    {
+      "name": "--page-titles must be off or page-map",
+      "transport": "cli",
+      "argv": [
+        "--page-titles",
+        "on"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --page-titles must be one of off, page-map, got \"on\"\n"
+      }
+    },
+    {
+      "name": "--schema must be envelope, full or mixed",
+      "transport": "cli",
+      "argv": [
+        "--schema",
+        "compact"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --schema must be one of envelope, full, mixed, got \"compact\"\n"
+      }
+    },
+    {
+      "name": "--rich-text-fields must be an object of string arrays",
+      "transport": "cli",
+      "argv": [
+        "--rich-text-fields",
+        "{\"callout\":[1]}"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --rich-text-fields must be JSON like {\"callout\":[\"title\"]}\n"
+      }
+    },
+    {
+      "name": "--rich-text-fields must be JSON",
+      "transport": "cli",
+      "argv": [
+        "--rich-text-fields",
+        "callout:title"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --rich-text-fields must be JSON like {\"callout\":[\"title\"]}\n"
+      }
+    },
+    {
+      "name": "--rich-text-fields as an array",
+      "transport": "cli",
+      "argv": [
+        "--rich-text-fields",
+        "[]"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --rich-text-fields must be JSON like {\"callout\":[\"title\"]}\n"
+      }
+    },
+    {
+      "name": "BLOK_RICH_TEXT_FIELDS is read when the flag is absent",
+      "transport": "cli",
+      "argv": [],
+      "env": {
+        "BLOK_RICH_TEXT_FIELDS": ""
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --rich-text-fields must be JSON like {\"callout\":[\"title\"]}\n"
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"0\" is refused",
+      "transport": "cli",
+      "argv": [
+        "--handle-idle-ms",
+        "0"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --handle-idle-ms must be a positive integer, got \"0\"\n"
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"-1\" is refused",
+      "transport": "cli",
+      "argv": [
+        "--handle-idle-ms",
+        "-1"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --handle-idle-ms must be a positive integer, got \"-1\"\n"
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"1.5\" is refused",
+      "transport": "cli",
+      "argv": [
+        "--handle-idle-ms",
+        "1.5"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --handle-idle-ms must be a positive integer, got \"1.5\"\n"
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"abc\" is refused",
+      "transport": "cli",
+      "argv": [
+        "--handle-idle-ms",
+        "abc"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --handle-idle-ms must be a positive integer, got \"abc\"\n"
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"\" is refused",
+      "transport": "cli",
+      "argv": [
+        "--handle-idle-ms",
+        ""
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --handle-idle-ms must be a positive integer, got \"\"\n"
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"Infinity\" is refused",
+      "transport": "cli",
+      "argv": [
+        "--handle-idle-ms",
+        "Infinity"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --handle-idle-ms must be a positive integer, got \"Infinity\"\n"
+      }
+    },
+    {
+      "name": "--max-handles 0 is refused",
+      "transport": "cli",
+      "argv": [
+        "--max-handles",
+        "0"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --max-handles must be a positive integer, got \"0\"\n"
+      }
+    },
+    {
+      "name": "--ticket-url needs BLOK_MCP_HOST_TOKEN",
+      "transport": "cli",
+      "argv": [
+        "--ticket-url",
+        "http://127.0.0.1:9/t"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --ticket-url needs BLOK_MCP_HOST_TOKEN\n"
+      }
+    },
+    {
+      "name": "an empty BLOK_MCP_HOST_TOKEN is absent",
+      "transport": "cli",
+      "argv": [
+        "--ticket-url",
+        "http://127.0.0.1:9/t"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": ""
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --ticket-url needs BLOK_MCP_HOST_TOKEN\n"
+      }
+    },
+    {
+      "name": "BLOK_TICKET_URL counts when empty",
+      "transport": "cli",
+      "argv": [],
+      "env": {
+        "BLOK_TICKET_URL": ""
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --ticket-url needs BLOK_MCP_HOST_TOKEN\n"
+      }
+    },
+    {
+      "name": "--sync-url needs a ticket mode",
+      "transport": "cli",
+      "argv": [
+        "--sync-url",
+        "ws://127.0.0.1:9/sync"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --sync-url needs a ticket mode: set BLOK_SECRET, or --ticket-url with BLOK_MCP_HOST_TOKEN\n"
+      }
+    },
+    {
+      "name": "an empty BLOK_SECRET is absent",
+      "transport": "cli",
+      "argv": [
+        "--sync-url",
+        "ws://127.0.0.1:9/sync"
+      ],
+      "env": {
+        "BLOK_SECRET": ""
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --sync-url needs a ticket mode: set BLOK_SECRET, or --ticket-url with BLOK_MCP_HOST_TOKEN\n"
+      }
+    },
+    {
+      "name": "an empty BLOK_SYNC_URL counts as set",
+      "transport": "cli",
+      "argv": [],
+      "env": {
+        "BLOK_SYNC_URL": ""
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --sync-url needs a ticket mode: set BLOK_SECRET, or --ticket-url with BLOK_MCP_HOST_TOKEN\n"
+      }
+    },
+    {
+      "name": "an empty BLOK_MCP_HTTP counts as set",
+      "transport": "cli",
+      "argv": [],
+      "env": {
+        "BLOK_MCP_HTTP": ""
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Refusing to bind : a non-loopback address needs --public\n"
+      }
+    },
+    {
+      "name": "an empty BLOK_MCP_ORIGIN without sync is ignored",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}"
+      ],
+      "env": {
+        "BLOK_MCP_ORIGIN": ""
+      },
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "a signing secret over HTTP needs --authorize",
+      "transport": "cli",
+      "argv": [
+        "--http",
+        "127.0.0.1:0",
+        "--sync-url",
+        "ws://127.0.0.1:9/sync"
+      ],
+      "env": {
+        "BLOK_SECRET": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: A signing secret over HTTP needs --authorize, or use --ticket-url\n"
+      }
+    },
+    {
+      "name": "a non-loopback bind needs --public",
+      "transport": "cli",
+      "argv": [
+        "--http",
+        "0.0.0.0:0",
+        "--authorize",
+        "http://127.0.0.1:9/a"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Refusing to bind 0.0.0.0:0: a non-loopback address needs --public\n"
+      }
+    },
+    {
+      "name": "loopback names are exact and case-sensitive",
+      "transport": "cli",
+      "argv": [
+        "--http",
+        "LOCALHOST:0",
+        "--authorize",
+        "http://127.0.0.1:9/a"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Refusing to bind LOCALHOST:0: a non-loopback address needs --public\n"
+      }
+    },
+    {
+      "name": "an IPv6 non-loopback bind needs --public",
+      "transport": "cli",
+      "argv": [
+        "--http",
+        "[::]:0",
+        "--authorize",
+        "http://127.0.0.1:9/a"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Refusing to bind [::]:0: a non-loopback address needs --public\n"
+      }
+    },
+    {
+      "name": "--public needs --auth oauth",
+      "transport": "cli",
+      "argv": [
+        "--http",
+        "0.0.0.0:0",
+        "--public",
+        "--authorize",
+        "http://127.0.0.1:9/a"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --public needs --auth oauth: a public MCP endpoint without auth opens every document\n"
+      }
+    },
+    {
+      "name": "HTTP needs a per-document check",
+      "transport": "cli",
+      "argv": [
+        "--http",
+        "127.0.0.1:0",
+        "--source",
+        "files:${dir}"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: HTTP needs a per-document check: pass --authorize, or serve live rooms only with --ticket-url and no --source\n"
+      }
+    },
+    {
+      "name": "HTTP with --ticket-url and a source still needs --authorize",
+      "transport": "cli",
+      "argv": [
+        "--http",
+        "127.0.0.1:0",
+        "--ticket-url",
+        "http://127.0.0.1:9/t",
+        "--source",
+        "files:${dir}"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "tok"
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: HTTP needs a per-document check: pass --authorize, or serve live rooms only with --ticket-url and no --source\n"
+      }
+    },
+    {
+      "name": "OAuth over stdio is refused at start",
+      "transport": "cli",
+      "argv": [
+        "--auth",
+        "oauth",
+        "--oauth-issuer",
+        "https://i",
+        "--oauth-audience",
+        "https://a",
+        "--oauth-jwks",
+        "https://j"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: OAuth authentication needs the HTTP transport (--http)\n"
+      }
+    },
+    {
+      "name": "a missing --manifest file",
+      "transport": "cli",
+      "argv": [
+        "--manifest",
+        "missing.json"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Cannot read \"missing.json\": no such file\n"
+      }
+    },
+    {
+      "name": "a --manifest file with bad JSON",
+      "transport": "cli",
+      "argv": [
+        "--manifest",
+        "docs/bad.json"
+      ],
+      "env": {},
+      "files": {
+        "bad.json": {
+          "text": "{\"tools\":"
+        }
+      },
+      "stderrPattern": "^blok-mcp: Invalid JSON in \"docs/bad\\.json\": .+\\n$",
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": {
+          "pattern": "^blok-mcp: Invalid JSON in \"docs/bad\\.json\": .+\\n$"
+        }
+      }
+    },
+    {
+      "name": "a --manifest file of the wrong shape",
+      "transport": "cli",
+      "argv": [
+        "--manifest",
+        "docs/m.json"
+      ],
+      "env": {},
+      "files": {
+        "m.json": {
+          "json": {
+            "tools": 5
+          }
+        }
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Invalid --manifest file: Not a Blok custom tools file: / missing required field \"formatVersion\"; / missing required field \"blocks\"\n"
+      }
+    },
+    {
+      "name": "a --manifest-overrides key that is not allowed",
+      "transport": "cli",
+      "argv": [
+        "--manifest-overrides",
+        "docs/o.json"
+      ],
+      "env": {},
+      "files": {
+        "o.json": {
+          "json": {
+            "paragraph": {
+              "label": "x"
+            }
+          }
+        }
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Invalid file at $.paragraph.label: unknown key\n"
+      }
+    },
+    {
+      "name": "a --manifest-overrides value of the wrong type",
+      "transport": "cli",
+      "argv": [
+        "--manifest-overrides",
+        "docs/o.json"
+      ],
+      "env": {},
+      "files": {
+        "o.json": {
+          "json": {
+            "paragraph": {
+              "hidden": "yes"
+            }
+          }
+        }
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Invalid file at $.paragraph.hidden: expected a boolean\n"
+      }
+    },
+    {
+      "name": "a --manifest-overrides file that is not an object",
+      "transport": "cli",
+      "argv": [
+        "--manifest-overrides",
+        "docs/o.json"
+      ],
+      "env": {},
+      "files": {
+        "o.json": {
+          "json": []
+        }
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: Invalid file at $: expected an object\n"
+      }
+    },
+    {
+      "name": "an --authorize module that does not exist",
+      "transport": "cli",
+      "argv": [
+        "--authorize",
+        "./nope.mjs"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --authorize ./nope.mjs: no module at ${root}/nope.mjs\n"
+      }
+    },
+    {
+      "name": "an upper-case HTTP:// --authorize is a module path",
+      "transport": "cli",
+      "argv": [
+        "--authorize",
+        "HTTP://127.0.0.1:9/a"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --authorize HTTP://127.0.0.1:9/a: no module at ${root}/HTTP:/127.0.0.1:9/a\n"
+      }
+    },
+    {
+      "name": "stdio exits 0 when stdin closes",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "stdio with no flags at all",
+      "transport": "cli",
+      "argv": [],
+      "env": {},
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "stdio with --comments, a no-op",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--comments"
+      ],
+      "env": {},
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "stdio with valid --manifest-overrides",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--manifest-overrides",
+        "docs/o.json"
+      ],
+      "env": {},
+      "files": {
+        "o.json": {
+          "json": {
+            "paragraph": {
+              "hidden": false,
+              "hiddenActions": [],
+              "guidance": "g"
+            }
+          }
+        }
+      },
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "stdio with --sync-url and a short BLOK_SECRET starts",
+      "transport": "cli",
+      "argv": [
+        "--sync-url",
+        "ws://127.0.0.1:9/sync"
+      ],
+      "env": {
+        "BLOK_SECRET": "short"
+      },
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"0x10\" is read with JS Number()",
+      "transport": "stdio",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--handle-idle-ms",
+        "0x10"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "handle": "${handle}",
+                    "mode": "stored",
+                    "write": false,
+                    "durability": "saved-on-execute",
+                    "expiresAfterIdleMs": 16,
+                    "contractRevision": "ace641df",
+                    "exists": true
+                  }
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 16,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"1e3\" is read with JS Number()",
+      "transport": "stdio",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--handle-idle-ms",
+        "1e3"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "handle": "${handle}",
+                    "mode": "stored",
+                    "write": false,
+                    "durability": "saved-on-execute",
+                    "expiresAfterIdleMs": 1000,
+                    "contractRevision": "ace641df",
+                    "exists": true
+                  }
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 1000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "--handle-idle-ms \" 7 \" is read with JS Number()",
+      "transport": "stdio",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--handle-idle-ms",
+        " 7 "
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "handle": "${handle}",
+                    "mode": "stored",
+                    "write": false,
+                    "durability": "saved-on-execute",
+                    "expiresAfterIdleMs": 7,
+                    "contractRevision": "ace641df",
+                    "exists": true
+                  }
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 7,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"0b11\" is read with JS Number()",
+      "transport": "stdio",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--handle-idle-ms",
+        "0b11"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "handle": "${handle}",
+                    "mode": "stored",
+                    "write": false,
+                    "durability": "saved-on-execute",
+                    "expiresAfterIdleMs": 3,
+                    "contractRevision": "ace641df",
+                    "exists": true
+                  }
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 3,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"1.0\" is read with JS Number()",
+      "transport": "stdio",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--handle-idle-ms",
+        "1.0"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "handle": "${handle}",
+                    "mode": "stored",
+                    "write": false,
+                    "durability": "saved-on-execute",
+                    "expiresAfterIdleMs": 1,
+                    "contractRevision": "ace641df",
+                    "exists": true
+                  }
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 1,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "--handle-idle-ms \"9007199254740993\" is read with JS Number()",
+      "transport": "stdio",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--handle-idle-ms",
+        "9007199254740993"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "handle": "${handle}",
+                    "mode": "stored",
+                    "write": false,
+                    "durability": "saved-on-execute",
+                    "expiresAfterIdleMs": 9007199254740992,
+                    "contractRevision": "ace641df",
+                    "exists": true
+                  }
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 9007199254740992,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "--max-handles \"1e0\" caps at one handle",
+      "transport": "stdio",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--max-handles",
+        "1e0",
+        "--principal",
+        "p é"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "handle": "${handle}",
+                    "mode": "stored",
+                    "write": false,
+                    "durability": "saved-on-execute",
+                    "expiresAfterIdleMs": 600000,
+                    "contractRevision": "ace641df",
+                    "exists": true
+                  }
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "error": {
+                      "code": "HANDLE_LIMIT",
+                      "message": "You already have 1 open documents. Close one with blok_close.",
+                      "retryable": true
+                    }
+                  }
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "HANDLE_LIMIT",
+                  "message": "You already have 1 open documents. Close one with blok_close.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    }
+  ]
+}

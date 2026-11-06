@@ -90,7 +90,10 @@ export interface JsonMessage { [key: string]: unknown }
 export interface StdioServer {
   send(message: JsonMessage): void;
   /** The next JSON-RPC message the server wrote, in order. */
-  next(): Promise<JsonMessage>;
+  next(timeoutMs?: number): Promise<JsonMessage>;
+  /** Sends a signal; waitExit then waits for the process to end. */
+  signal(name: NodeJS.Signals): void;
+  waitExit(timeoutMs: number): Promise<Exit | undefined>;
   /** Ends stdin and waits for the process to exit by itself. */
   closeInput(): Promise<Exit>;
   readonly stderr: string;
@@ -157,7 +160,7 @@ export const startStdio = (command: string[], argv: string[], env: NodeJS.Proces
     send: (message) => {
       child.stdin?.write(`${JSON.stringify(message)}\n`);
     },
-    next: () => {
+    next: (timeoutMs = READ_TIMEOUT_MS) => {
       if (failure !== undefined) {
         return Promise.reject(failure);
       }
@@ -177,8 +180,8 @@ export const startStdio = (command: string[], argv: string[], env: NodeJS.Proces
           if (index >= 0) {
             waiters.splice(index, 1);
           }
-          reject(new Error(`no message from the server within ${READ_TIMEOUT_MS} ms.\nstderr:\n${spawned.stderr}`));
-        }, READ_TIMEOUT_MS);
+          reject(new Error(`no message from the server within ${timeoutMs} ms.\nstderr:\n${spawned.stderr}`));
+        }, timeoutMs);
         const settle = (item: JsonMessage | Error): void => {
           clearTimeout(timer);
           if (item instanceof Error) {
@@ -205,6 +208,10 @@ export const startStdio = (command: string[], argv: string[], env: NodeJS.Proces
     get stderr() {
       return spawned.stderr;
     },
+    signal: (name) => {
+      child.kill(name);
+    },
+    waitExit: (timeoutMs) => waitForExit(child, timeoutMs),
     kill: () => kill(child),
   };
 };
@@ -220,6 +227,7 @@ export interface HttpRequestSpec {
   path: string;
   headers: Record<string, string>;
   body?: Buffer;
+  timeoutMs?: number;
 }
 
 /** node:http, because fetch will not send a Host header of the test's choosing. */
@@ -233,7 +241,7 @@ export const sendHttp = (baseUrl: string, spec: HttpRequestSpec): Promise<HttpAn
       path: `${url.pathname}${url.search}`,
       method: spec.method,
       headers: spec.body === undefined ? spec.headers : { 'content-length': String(spec.body.length), ...spec.headers },
-      timeout: READ_TIMEOUT_MS,
+      timeout: spec.timeoutMs ?? READ_TIMEOUT_MS,
     }, (res) => {
       const chunks: Buffer[] = [];
 
@@ -246,7 +254,7 @@ export const sendHttp = (baseUrl: string, spec: HttpRequestSpec): Promise<HttpAn
       res.on('error', reject);
     });
 
-    req.on('timeout', () => req.destroy(new Error(`no HTTP answer within ${READ_TIMEOUT_MS} ms`)));
+    req.on('timeout', () => req.destroy(new Error(`no HTTP answer within ${spec.timeoutMs ?? READ_TIMEOUT_MS} ms`)));
     // The server may answer 413 and close while the body is still going out.
     req.on('error', (error: NodeJS.ErrnoException) => {
       reject(error);
@@ -260,6 +268,8 @@ export interface HttpServer {
   url: string;
   port: string;
   readonly stderr: string;
+  signal(name: NodeJS.Signals): void;
+  waitExit(timeoutMs: number): Promise<Exit | undefined>;
   stop(): Promise<void>;
 }
 
@@ -301,6 +311,10 @@ export const startHttp = async (command: string[], argv: string[], env: NodeJS.P
     get stderr() {
       return spawned.stderr;
     },
+    signal: (name) => {
+      child.kill(name);
+    },
+    waitExit: (timeoutMs) => waitForExit(child, timeoutMs),
     stop: async () => {
       if (!hasExited(child)) {
         child.kill('SIGTERM');

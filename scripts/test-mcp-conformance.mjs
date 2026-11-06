@@ -55,6 +55,7 @@ const SUITES = [
   'http',
   'approvals',
   'tickets',
+  'pages',
   'live',
 ];
 

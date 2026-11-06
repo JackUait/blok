@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
@@ -8,7 +8,7 @@ import { expect } from 'vitest';
 import { type BearerSpec, type FakeHost, type RecordedRequest, type RouteTable, signAccessToken, startFakeHost } from './fake-host';
 import { type LiveRoom, type RoomAction, type RoomSpec, startLiveRoom } from './live-room';
 import {
-  caseEnv, type HttpAnswer, type HttpServer, type JsonMessage, runToExit, sendHttp, startHttp, startStdio, type StdioServer,
+  caseEnv, type Exit, type HttpAnswer, type HttpServer, type JsonMessage, runToExit, sendHttp, startHttp, startStdio, type StdioServer,
 } from './mcp-process';
 
 /**
@@ -26,8 +26,8 @@ import {
  *   argv, env   flags and env vars, with ${placeholders}. The binary sees no
  *               other BLOK_* variable.
  *   files       written under ${dir} before spawning: {"<name>": {"json": v} |
- *               {"text": s} | {"link": "<target name>"}}, plus "mtimeAgoSeconds". json is
- *               written compact.
+ *               {"text": s} | {"link": "<target name>"}}, plus "mtimeAgoSeconds" and "mode"
+ *               (octal text, e.g. "0640"). json is written compact.
  *   hosts       a route table for the fake host (fake-host.ts) at ${host}, plus
  *               "$upgradeStatus" for the sync upgrade it refuses. Every request it
  *               gets is recorded in order, or by "hostRequestOrder": "sorted" | "distinct".
@@ -43,6 +43,7 @@ import {
  *               A step with "raw": true gets none of this.
  *   steps       see Step.
  *   watchFiles  names under ${dir} whose exact bytes are recorded as expectFiles.
+ *   watchModes  names under ${dir} whose permission bits are recorded as expectModes.
  *   stderrPattern  a regular expression the failed process's stderr must match,
  *               recorded instead of the exact text.
  *   fsVariants  true when the answer depends on whether the temp disk ignores letter
@@ -50,7 +51,7 @@ import {
  *               "caseSensitiveFs": …}, each recorded on such a disk (set TMPDIR).
  *   expect*     recorded by --update from Node; never hand-written.
  *
- * Step (one of send / notify / http / room):
+ * Step (one of send / notify / http / room / sleepMs / signal):
  *   room        an action on the case's room (live-room.ts); its answer is the step's "expect".
  *   send        a JSON-RPC request; "id" is filled in when left out. The answer
  *               is the message with the same id.
@@ -69,6 +70,13 @@ import {
  *               SHA-256 hex of that file's bytes. Checked on every run.
  *   minElapsedMs  stdio send: the answer must not come sooner, e.g. a timeout the
  *               server has to wait out. Checked on every run, never recorded.
+ *   readTimeoutMs  how long to wait for this step's answer (default 20 s).
+ *   sleepMs     alone: wait this long, e.g. for an idle handle to expire.
+ *   signal      "SIGTERM" | "SIGINT". Alone: send it, wait up to exitTimeoutMs
+ *               (default 15 s) for the exit and record it as "expect"; minElapsedMs
+ *               counts from the signal. With send/http: send the request, wait for
+ *               "signalWhenHost" ("METHOD /path" seen once by the fake host), send the
+ *               signal, then record the answer, or null when none came before the exit.
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
@@ -78,7 +86,7 @@ import {
  * {"$repeat": {"text", "count"}} for a long string.
  */
 
-export interface FileSpec { json?: unknown; text?: string; link?: string; mtimeAgoSeconds?: number }
+export interface FileSpec { json?: unknown; text?: string; link?: string; mtimeAgoSeconds?: number; mode?: string }
 
 export interface ServerRequestSpec { expect?: unknown; reply: Record<string, unknown> }
 
@@ -95,6 +103,11 @@ export interface Step {
   mask?: string[];
   expectSavedVersion?: { file: string; pointer: string };
   minElapsedMs?: number;
+  readTimeoutMs?: number;
+  sleepMs?: number;
+  signal?: NodeJS.Signals;
+  signalWhenHost?: string;
+  exitTimeoutMs?: number;
   expect?: unknown;
   expectHttp?: unknown;
   notifications?: unknown[];
@@ -120,6 +133,7 @@ export interface FixtureCase {
   session?: Session;
   steps?: Step[];
   watchFiles?: string[];
+  watchModes?: string[];
   fsVariants?: boolean;
   stderrPattern?: string;
   hostRequestOrder?: 'sorted' | 'distinct';
@@ -127,6 +141,7 @@ export interface FixtureCase {
   variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
   expectFiles?: Record<string, FileSpec | null>;
+  expectModes?: Record<string, string | null>;
   expectHostRequests?: unknown;
 }
 
@@ -358,6 +373,9 @@ const writeFiles = (dir: string, files: Record<string, FileSpec>, vars: Vars): v
     } else {
       writeFileSync(path, JSON.stringify(materialize(spec.json, vars)));
     }
+    if (spec.mode !== undefined) {
+      chmodSync(path, Number.parseInt(spec.mode, 8));
+    }
     if (spec.mtimeAgoSeconds !== undefined) {
       const when = new Date(Date.now() - spec.mtimeAgoSeconds * 1000);
 
@@ -447,12 +465,28 @@ const exitRecord = (code: number | null, signal: string | null, stderr: string, 
 
 const readFileSpec = (path: string): FileSpec | null => (existsSync(path) ? { text: readFileSync(path, 'utf8') } : null);
 
+const readMode = (path: string): string | null =>
+  (existsSync(path) ? `0${(statSync(path).mode & 0o7777).toString(8)}` : null);
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+const EXIT_TIMEOUT_MS = 15_000;
+const HOST_WAIT_MS = 20_000;
+
+/** The process side a signal step needs, the same for stdio and HTTP. */
+interface Signalled {
+  signal(name: NodeJS.Signals): void;
+  waitExit(timeoutMs: number): Promise<Exit | undefined>;
+  readonly stderr: string;
+}
+
 type Holder = Record<string, unknown>;
 
 /** One case against one binary: checks each answer, or records it under --update. */
 class CaseRun {
   public readonly vars: Vars;
   public readonly recorded: FixtureCase;
+  private host: FakeHost | undefined;
   private nextId = 1;
 
   public constructor(
@@ -463,6 +497,12 @@ class CaseRun {
   ) {
     this.vars = new Map([['dir', dir], ['root', root], ['version', packageVersion()]]);
     this.recorded = structuredClone(c);
+  }
+
+  public useHost(host: FakeHost): void {
+    this.host = host;
+    this.vars.set('host', host.url);
+    this.vars.set('hostWs', host.url.replace(/^http:/, 'ws:'));
   }
 
   public stepHolder(index: number): Holder {
@@ -529,7 +569,51 @@ class CaseRun {
     this.finishStep(step, holder, await room.act(materialize(step.room, this.vars) as RoomAction), label);
   }
 
+  /** A step with no request: a pause, or a signal and the exit it causes. Returns false for other steps. */
+  public async bareStep(server: Signalled, step: Step, holder: Holder, label: string): Promise<boolean> {
+    if (step.send !== undefined || step.notify !== undefined || step.http !== undefined) {
+      return false;
+    }
+    if (step.sleepMs !== undefined) {
+      await sleep(step.sleepMs);
+
+      return true;
+    }
+    if (step.signal === undefined) {
+      return false;
+    }
+    const sentAt = Date.now();
+
+    server.signal(step.signal);
+    const exit = await server.waitExit(step.exitTimeoutMs ?? EXIT_TIMEOUT_MS);
+
+    if (exit === undefined) {
+      throw new Error(`${label}: the server did not exit within ${step.exitTimeoutMs ?? EXIT_TIMEOUT_MS} ms of ${step.signal}.\nstderr:\n${server.stderr}`);
+    }
+    expect(Date.now() - sentAt, `${label}: exited sooner than minElapsedMs`).toBeGreaterThanOrEqual(step.minElapsedMs ?? 0);
+    this.finishStep(step, holder, exitRecord(exit.code, exit.signal, server.stderr), label);
+
+    return true;
+  }
+
+  /** For a request step with a signal: waits for the host to see the named request, then signals. */
+  private async signalAfterSend(server: Signalled, step: Step, label: string): Promise<void> {
+    if (step.signal === undefined) {
+      return;
+    }
+    if (step.signalWhenHost !== undefined) {
+      if (this.host === undefined) {
+        throw new Error(`${label}: signalWhenHost needs the case's "hosts"`);
+      }
+      await this.host.waitForRequests(step.signalWhenHost, 1, HOST_WAIT_MS);
+    }
+    server.signal(step.signal);
+  }
+
   public async stdioStep(server: StdioServer, step: Step, holder: Holder, label: string): Promise<void> {
+    if (await this.bareStep(server, step, holder, label)) {
+      return;
+    }
     const raw = step.raw === true;
 
     if (step.notify !== undefined) {
@@ -546,15 +630,26 @@ class CaseRun {
     const sentAt = Date.now();
 
     server.send(withMeta({ jsonrpc: '2.0', ...message, id }, this.c.session, raw));
-    let incoming = await server.next();
+    await this.signalAfterSend(server, step, label);
+    // After a signal the process may exit without answering: that is recorded as null.
+    const read = (): Promise<JsonMessage | null> => (step.signal === undefined
+      ? server.next(step.readTimeoutMs)
+      : server.next(step.readTimeoutMs).catch(async (thrown: unknown) => {
+        if (await server.waitExit(EXIT_TIMEOUT_MS) === undefined) {
+          throw thrown;
+        }
 
-    while (!(incoming.id === id && ('result' in incoming || 'error' in incoming))) {
+        return null;
+      }));
+    let incoming = await read();
+
+    while (incoming !== null && !(incoming.id === id && ('result' in incoming || 'error' in incoming))) {
       if (typeof incoming.method === 'string' && incoming.id !== undefined) {
         seen.push(this.replyToServer(server, incoming, wanted[seen.length], label));
       } else {
         notifications.push(normalize(incoming, label));
       }
-      incoming = await server.next();
+      incoming = await read();
     }
     expect(seen.length, `${label}: server requests`).toBe(wanted.length);
     expect(Date.now() - sentAt, `${label}: answered sooner than minElapsedMs`).toBeGreaterThanOrEqual(step.minElapsedMs ?? 0);
@@ -568,6 +663,9 @@ class CaseRun {
   }
 
   public async httpStep(server: HttpServer, step: Step, holder: Holder, label: string): Promise<void> {
+    if (await this.bareStep(server, step, holder, label)) {
+      return;
+    }
     if (step.http !== undefined) {
       const spec = materialize(step.http, this.vars) as NonNullable<Step['http']>;
       const answer = await sendHttp(server.url, { method: spec.method, path: spec.path, headers: mergeHeaders({}, spec.headers, this.vars), body: requestBody(spec) });
@@ -583,8 +681,19 @@ class CaseRun {
     const id = isNotify ? undefined : base.id ?? this.nextId++;
     const message = withMeta({ jsonrpc: '2.0', ...base, ...(id !== undefined && { id }) }, this.c.session, raw);
     const headers = mergeHeaders(mergeHeaders(sessionHeaders(this.c.session, message, raw), this.c.session?.headers, this.vars), step.headers, this.vars);
-    const answer = await sendHttp(server.url, { method: 'POST', path: new URL(server.url).pathname, headers, body: Buffer.from(JSON.stringify(message)) });
+    const sending = sendHttp(server.url, {
+      method: 'POST', path: new URL(server.url).pathname, headers, body: Buffer.from(JSON.stringify(message)), timeoutMs: step.readTimeoutMs,
+    });
 
+    await this.signalAfterSend(server, step, label);
+    const answer = step.signal === undefined ? await sending : await sending.catch(() => null);
+
+    if (answer === null) {
+      this.check(holder, 'expectHttp', null, `${label} http`);
+      this.finishStep(step, holder, null, label);
+
+      return;
+    }
     this.check(holder, 'expectHttp', httpSummary(answer), `${label} http`);
     if (isNotify) {
       return;
@@ -655,8 +764,7 @@ const withHost = async (c: FixtureCase, run: CaseRun, body: () => Promise<void>)
   const { $upgradeStatus, ...routes } = c.hosts;
   const host: FakeHost = await startFakeHost(routes, { secret: c.env?.BLOK_SECRET, upgradeStatus: $upgradeStatus });
 
-  run.vars.set('host', host.url);
-  run.vars.set('hostWs', host.url.replace(/^http:/, 'ws:'));
+  run.useHost(host);
   try {
     await body();
     const requests = orderedRequests(host.requests, c.hostRequestOrder);
@@ -752,6 +860,9 @@ export const runCase = async (command: string[], c: FixtureCase, record: boolean
         await runStdio(run, c, launch, room);
       } else {
         await runHttp(run, c, launch);
+      }
+      if (c.watchModes !== undefined) {
+        run.checkCase('expectModes', Object.fromEntries(c.watchModes.map((name) => [name, readMode(join(dir, name))])), `${c.name} modes`);
       }
       if (c.watchFiles !== undefined) {
         run.checkCase('expectFiles', Object.fromEntries(c.watchFiles.map((name) => [name, readFileSpec(join(dir, name))])), `${c.name} files`);

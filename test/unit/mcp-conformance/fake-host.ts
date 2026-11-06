@@ -6,7 +6,8 @@ import type { AddressInfo, Socket } from 'node:net';
  * One loopback HTTP server per case, standing in for every outside service
  * blok-mcp calls: the document endpoint, the authorize webhook, the ticket
  * route, the JWKS and the sync room's WebSocket upgrade. A case scripts it with
- * a route table keyed `"METHOD /path"` (query left out of the key).
+ * a route table keyed `"METHOD /path"` (query left out of the key). A key ending
+ * in `/*` matches any deeper path when no exact key does.
  */
 
 export interface RouteResponse {
@@ -18,11 +19,17 @@ export interface RouteResponse {
   /** Serve the harness's public signing keys as a JWKS. */
   jwks?: boolean;
   headers?: Record<string, string>;
+  /** Answer this many ms late. */
+  delayMs?: number;
+  /** Never answer; the socket closes with the host. */
+  stall?: boolean;
 }
 
 export interface Route extends Partial<RouteResponse> {
   /** First rule whose `when` is a subset of the JSON request body wins. */
   byBody?: Array<{ when: Record<string, unknown>; response: RouteResponse }>;
+  /** The nth request on this route gets the nth answer; the last one repeats. */
+  sequence?: RouteResponse[];
 }
 
 export type RouteTable = Record<string, Route>;
@@ -187,6 +194,8 @@ export interface FakeHost {
   /** `http://127.0.0.1:<port>` */
   url: string;
   requests: RecordedRequest[];
+  /** Resolves once `count` requests matched "METHOD /path" (exact path, query left out). */
+  waitForRequests(key: string, count: number, timeoutMs: number): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -213,7 +222,18 @@ const recordOf = (req: IncomingMessage, body: unknown, secret?: string): Recorde
  */
 export const startFakeHost = async (routes: RouteTable, options: { secret?: string; upgradeStatus?: number } = {}): Promise<FakeHost> => {
   const requests: RecordedRequest[] = [];
+  const seen = new Map<string, number>();
   const sockets = new Set<Socket>();
+  const routeFor = (key: string): Route | undefined => {
+    if (routes[key] !== undefined) {
+      return routes[key];
+    }
+    const wildcard = Object.keys(routes).filter((name) => name.endsWith('/*') && key.startsWith(name.slice(0, -1)))
+      .sort((a, b) => b.length - a.length)[0];
+
+    return wildcard === undefined ? undefined : routes[wildcard];
+  };
+  const keyOf = (request: RecordedRequest): string => `${request.method} ${request.path.split('?')[0]}`;
   const server: Server = createServer((req, res) => {
     void (async () => {
       const raw = await readBody(req);
@@ -221,13 +241,23 @@ export const startFakeHost = async (routes: RouteTable, options: { secret?: stri
 
       requests.push(recordOf(req, body, options.secret));
       const key = `${req.method ?? ''} ${(req.url ?? '').split('?')[0]}`;
-      const route = routes[key];
-      const response = route?.byBody?.find((rule) => subsetOf(rule.when, body))?.response
+      const route = routeFor(key);
+      const nth = seen.get(key) ?? 0;
+
+      seen.set(key, nth + 1);
+      const response = (route?.sequence === undefined ? undefined : route.sequence[Math.min(nth, route.sequence.length - 1)])
+        ?? route?.byBody?.find((rule) => subsetOf(rule.when, body))?.response
         ?? (route?.status === undefined ? undefined : route as RouteResponse);
 
       if (response === undefined) {
         res.writeHead(404).end();
         return;
+      }
+      if (response.stall === true) {
+        return;
+      }
+      if (response.delayMs !== undefined) {
+        await new Promise((resolve) => setTimeout(resolve, response.delayMs));
       }
       if (response.jwks === true) {
         res.writeHead(response.status, { 'content-type': 'application/json', ...response.headers })
@@ -261,6 +291,16 @@ export const startFakeHost = async (routes: RouteTable, options: { secret?: stri
   return {
     url: `http://127.0.0.1:${port}`,
     requests,
+    waitForRequests: async (key, count, timeoutMs) => {
+      const deadline = Date.now() + timeoutMs;
+
+      while (requests.filter((request) => keyOf(request) === key).length < count) {
+        if (Date.now() > deadline) {
+          throw new Error(`the fake host got no ${count} × ${key} within ${timeoutMs} ms`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    },
     close: () => new Promise<void>((resolve) => {
       sockets.forEach((socket) => socket.destroy());
       server.close(() => resolve());

@@ -1,0 +1,1661 @@
+{
+  "description": "Sub-pages under --page-titles page-map: page.rename and page.setIcon write the page's own document, and inserting a page block creates one. Refusals come back inside the batch result.",
+  "defaults": {
+    "transport": "stdio",
+    "argv": [
+      "--source",
+      "files:${dir}",
+      "--page-titles",
+      "page-map"
+    ],
+    "session": {
+      "protocolVersion": "2025-11-25"
+    },
+    "maskKeys": [
+      "lastEditedAt",
+      "savedVersion",
+      "revision"
+    ]
+  },
+  "cases": [
+    {
+      "name": "stored: page.rename writes the title into the page's own document",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "pb",
+                "type": "page",
+                "data": {
+                  "pageId": "child"
+                }
+              }
+            ]
+          }
+        },
+        "child.json": {
+          "json": {
+            "blocks": [],
+            "title": "Old"
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "page.rename",
+                    "args": {
+                      "id": "pb",
+                      "title": "New name"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "pageId": "child",
+                    "applied": true
+                  }
+                ],
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json",
+        "child.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child\"}}]}"
+        },
+        "child.json": {
+          "text": "{\n  \"title\": \"New name\",\n  \"blocks\": []\n}\n"
+        }
+      }
+    },
+    {
+      "name": "stored: page.setIcon writes the icon into the page's own document",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "pb",
+                "type": "page",
+                "data": {
+                  "pageId": "child"
+                }
+              }
+            ]
+          }
+        },
+        "child.json": {
+          "json": {
+            "blocks": [],
+            "title": "Old"
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "page.setIcon",
+                    "args": {
+                      "id": "pb",
+                      "icon": {
+                        "type": "emoji",
+                        "value": "🌱"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "pageId": "child",
+                    "applied": true
+                  }
+                ],
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json",
+        "child.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child\"}}]}"
+        },
+        "child.json": {
+          "text": "{\n  \"title\": \"Old\",\n  \"icon\": {\n    \"type\": \"emoji\",\n    \"value\": \"🌱\"\n  },\n  \"blocks\": []\n}\n"
+        }
+      }
+    },
+    {
+      "name": "stored: page.rename of a page block that points at the open document is refused",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "pb",
+                "type": "page",
+                "data": {
+                  "pageId": "parent"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "page.rename",
+                    "args": {
+                      "id": "pb",
+                      "title": "New name"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "INVALID_ARGS",
+                  "message": "This page block points at the document you have open. Use doc.setTitle or doc.setIcon instead.",
+                  "retryable": false,
+                  "details": {
+                    "pageId": "parent"
+                  },
+                  "commandIndex": 0
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"parent\"}}]}"
+        }
+      }
+    },
+    {
+      "name": "stored: page.setIcon of a page block that reaches the open document through a symlink is refused",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "pb",
+                "type": "page",
+                "data": {
+                  "pageId": "alias"
+                }
+              }
+            ]
+          }
+        },
+        "alias.json": {
+          "link": "parent.json"
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "page.setIcon",
+                    "args": {
+                      "id": "pb",
+                      "icon": {
+                        "type": "emoji",
+                        "value": "🌱"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "INVALID_ARGS",
+                  "message": "This page block points at the document you have open. Use doc.setTitle or doc.setIcon instead.",
+                  "retryable": false,
+                  "details": {
+                    "pageId": "alias"
+                  },
+                  "commandIndex": 0
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"alias\"}}]}"
+        }
+      }
+    },
+    {
+      "name": "stored: page.rename of a page whose document is missing",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "pb",
+                "type": "page",
+                "data": {
+                  "pageId": "ghost"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "page.rename",
+                    "args": {
+                      "id": "pb",
+                      "title": "New name"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "pageId": "ghost",
+                    "applied": true
+                  }
+                ],
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json",
+        "ghost.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"ghost\"}}]}"
+        },
+        "ghost.json": {
+          "text": "{\n  \"title\": \"New name\",\n  \"blocks\": []\n}\n"
+        }
+      }
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "stored: page.rename of a page the authorize webhook refuses",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "pb",
+                "type": "page",
+                "data": {
+                  "pageId": "child"
+                }
+              }
+            ]
+          }
+        },
+        "child.json": {
+          "json": {
+            "blocks": [],
+            "title": "Old"
+          }
+        }
+      },
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "byBody": [
+            {
+              "when": {
+                "documentId": "child"
+              },
+              "response": {
+                "status": 200,
+                "json": {
+                  "allowed": false
+                }
+              }
+            }
+          ],
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "page.rename",
+                    "args": {
+                      "id": "pb",
+                      "title": "New name"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "You may not open this document with this access.",
+                  "retryable": false,
+                  "details": {
+                    "pageId": "child"
+                  },
+                  "commandIndex": 0
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json",
+        "child.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child\"}}]}"
+        },
+        "child.json": {
+          "text": "{\"blocks\":[],\"title\":\"Old\"}"
+        }
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "parent",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "parent",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "child",
+            "write": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "stored: page.rename on a read-only handle",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "pb",
+                "type": "page",
+                "data": {
+                  "pageId": "child"
+                }
+              }
+            ]
+          }
+        },
+        "child.json": {
+          "json": {
+            "blocks": [],
+            "title": "Old"
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "page.rename",
+                    "args": {
+                      "id": "pb",
+                      "title": "New name"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "READ_ONLY",
+                  "message": "This handle is read-only. Open the document with write: true.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "child.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "child.json": {
+          "text": "{\"blocks\":[],\"title\":\"Old\"}"
+        }
+      }
+    },
+    {
+      "name": "stored: inserting a page block creates its document, which opens empty",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "pageId": "/result/structuredContent/blocks/0/data/pageId"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "id": "np",
+                    "childIds": []
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "np"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "np",
+                    "type": "page",
+                    "depth": 0,
+                    "attrs": {
+                      "pageId": "${pageId}"
+                    },
+                    "data": {
+                      "pageId": "${pageId}"
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "${pageId}",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "pageHandle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${pageHandle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${pageHandle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": []
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "stored: creating a page is refused when authorize refuses the new id",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "byBody": [
+            {
+              "when": {
+                "documentId": "parent"
+              },
+              "response": {
+                "status": 200,
+                "json": {
+                  "allowed": true
+                }
+              }
+            }
+          ],
+          "json": {
+            "allowed": false
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Parent"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "pageId": {
+              "pointer": "/result/structuredContent/error/details/pageId",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "You may not create a page document here.",
+                  "retryable": false,
+                  "details": {
+                    "pageId": "${pageId}"
+                  },
+                  "commandIndex": 1
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[]}"
+        }
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "parent",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "parent",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "${pageId}",
+            "write": true
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "endpoint:${host}/docs",
+        "--page-titles",
+        "page-map"
+      ],
+      "name": "endpoint: a new page id the host already has is refused as taken",
+      "env": {
+        "BLOK_DOC_ENDPOINT_AUTH": "Token t"
+      },
+      "hosts": {
+        "GET /docs/parent": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": []
+            },
+            "version": "v1"
+          }
+        },
+        "GET /docs/*": {
+          "status": 200,
+          "json": {
+            "data": {
+              "title": "Someone else",
+              "blocks": []
+            },
+            "version": "v9"
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "pageId": {
+              "pointer": "/result/structuredContent/error/details/pageId",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The new page id is taken. Try again.",
+                  "retryable": true,
+                  "details": {
+                    "pageId": "${pageId}"
+                  },
+                  "commandIndex": 0
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/docs/parent",
+          "headers": {
+            "authorization": "Token t"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/${pageId}",
+          "headers": {
+            "authorization": "Token t"
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "endpoint:${host}/docs",
+        "--page-titles",
+        "page-map"
+      ],
+      "name": "endpoint: a new page whose first save fails",
+      "env": {
+        "BLOK_DOC_ENDPOINT_AUTH": "Token t"
+      },
+      "hosts": {
+        "GET /docs/parent": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": []
+            },
+            "version": "v1"
+          }
+        },
+        "GET /docs/*": {
+          "status": 200,
+          "json": null
+        },
+        "PUT /docs/*": {
+          "status": 500,
+          "text": "down"
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "0a086976",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "pageId": {
+              "pointer": "/result/structuredContent/error/details/pageId",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The document endpoint refused the save with 500.",
+                  "retryable": true,
+                  "details": {
+                    "pageId": "${pageId}"
+                  },
+                  "commandIndex": 0
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/docs/parent",
+          "headers": {
+            "authorization": "Token t"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/${pageId}",
+          "headers": {
+            "authorization": "Token t"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/${pageId}",
+          "headers": {
+            "authorization": "Token t",
+            "content-type": "application/json"
+          },
+          "body": {
+            "blocks": []
+          }
+        }
+      ]
+    }
+  ]
+}

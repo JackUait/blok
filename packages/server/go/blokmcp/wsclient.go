@@ -204,6 +204,8 @@ func (c *wsConn) readMessage() ([]byte, int, error) {
 			length = binary.BigEndian.Uint64(extended)
 		}
 		// ws counts the whole message against maxPayload, fragments included.
+		// The length is checked alone first: a 64-bit one (top bit set
+		// too) must not wrap the sum.
 		if opcode < opClose && (length > maxMessageBytes || uint64(len(message))+length > maxMessageBytes) {
 			return c.refuse(1009, errors.New("a message is too big"))
 		}

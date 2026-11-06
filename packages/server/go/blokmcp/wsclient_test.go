@@ -83,3 +83,15 @@ func TestCapsTheWholeMessageAtWsMaxPayload(t *testing.T) {
 	}
 	_ = io.EOF
 }
+
+// A declared length near 2^64 must not wrap when added to what is buffered.
+func TestRefusesAHugeDeclaredLengthWithoutOverflow(t *testing.T) {
+	for _, declared := range []uint64{^uint64(0), 1 << 63, ^uint64(0) - 3} {
+		stream := append(serverFrame(0x02, []byte("ab")), 0x80, 127)
+		stream = binary.BigEndian.AppendUint64(stream, declared)
+		_, _, code, err := readFrom(stream)
+		if err == nil || code != 1009 {
+			t.Errorf("%d: code %d, err %v", declared, code, err)
+		}
+	}
+}

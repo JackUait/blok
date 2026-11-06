@@ -19,6 +19,7 @@ type session interface {
 
 // callContext is what a handle call knows about its caller.
 type callContext struct {
+	who       *caller
 	principal string
 	actor     json.RawMessage
 	approval  map[string]any
@@ -129,7 +130,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		input["approval"] = call.approval
 	}
 	if st.write && st.server.createsPages() && isBatchEnvelope(batch) {
-		created, err := st.server.createPages(ctx, input, call.principal)
+		created, err := st.server.createPages(ctx, input, call.who)
 		if err != nil {
 			return nil, err
 		}

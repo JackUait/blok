@@ -48,8 +48,9 @@ var pinned = map[string]map[string]int{
 	"internal/collab/docendpoint/client.go": {"http.Client": 1, "dotnet.NewSocketsTransport": 1},
 	// The MCP server's one client. It reaches only URLs the operator set at
 	// start: the doc endpoint and list route, the authorize webhook, the
-	// ticket route, the OAuth JWKS and the sync upgrade.
-	"blokmcp/outbound.go": {"http.Client": 1, "dotnet.NewSocketsTransport": 1},
+	// ticket route, the OAuth JWKS and the sync upgrade. The upgrade needs
+	// net/http's own transport: the sockets one hands back no writable body.
+	"blokmcp/outbound.go": {"http.Client": 1, "dotnet.NewSocketsTransport": 1, "http.Transport": 1},
 	// SocketsHttpHandler's rules, shared by those two operator clients only.
 	socketsOwner: {"http.Transport": 1, "net.Dialer": 1, "tls.Client": 1},
 }

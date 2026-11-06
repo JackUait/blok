@@ -31,8 +31,12 @@ type fetched struct {
 
 // fetch sends one request and reads the whole answer within timeout.
 func fetch(ctx context.Context, timeout time.Duration, method, url string, header http.Header, body []byte) (*fetched, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	// 0 is no timeout, as the history routes have none.
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
 	var reader io.Reader
 	if body != nil {
 		reader = bytesReader(body)
@@ -56,20 +60,7 @@ func fetch(ctx context.Context, timeout time.Duration, method, url string, heade
 	return &fetched{status: response.StatusCode, header: response.Header, body: read}, nil
 }
 
-// upgrade sends a WebSocket upgrade and reports the status. A 101 is
-// closed at once: the live room client is not ported yet.
-func upgrade(ctx context.Context, url string, header http.Header) (int, error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return 0, err
-	}
-	for name, values := range header {
-		request.Header[name] = values
-	}
-	response, err := operatorClient.Do(request)
-	if err != nil {
-		return 0, err
-	}
-	_ = response.Body.Close()
-	return response.StatusCode, nil
-}
+// upgradeTransport carries the sync WebSocket upgrade. The sockets
+// transport's wrapped connections hand back no writable body on a 101, so
+// the upgrade runs on net/http's own, with the environment proxy.
+var upgradeTransport = &http.Transport{Proxy: http.ProxyFromEnvironment, DisableCompression: true}

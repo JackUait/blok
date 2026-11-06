@@ -9,10 +9,11 @@ import (
 // caller is who makes a call: the principal, the cleaned client name and
 // the OAuth scopes (nil without OAuth).
 type caller struct {
-	principal  string
-	clientName string
-	scopes     []string
-	actor      json.RawMessage
+	principal    string
+	clientName   string
+	scopes       []string
+	actor        json.RawMessage
+	presenceName string
 }
 
 // toolCall is one tools/call as the dispatcher reads it.
@@ -59,13 +60,14 @@ func (s *Server) actorFor(ctx context.Context, principal string, rawClientName *
 		input["clientName"] = *rawClientName
 	}
 	var out struct {
-		ClientName string          `json:"clientName"`
-		Actor      json.RawMessage `json:"actor"`
+		ClientName   string          `json:"clientName"`
+		Actor        json.RawMessage `json:"actor"`
+		PresenceName string          `json:"presenceName"`
 	}
 	if _, err := s.bundle.call(ctx, "mcpActor", input, &out); err != nil {
 		return nil, err
 	}
-	return &caller{principal: principal, clientName: out.ClientName, actor: out.Actor}, nil
+	return &caller{principal: principal, clientName: out.ClientName, actor: out.Actor, presenceName: out.PresenceName}, nil
 }
 
 // dispatch is Node's createToolDispatcher. A model-fixable refusal is an
@@ -137,7 +139,7 @@ func (s *Server) dispatchStep(ctx context.Context, call *toolCall, signal contex
 	}
 	var result *outcome
 	err := s.onHandle(ctx, call.caller, step.Handle, step.Write, func(sess session) error {
-		context := &callContext{principal: call.caller.principal, actor: call.caller.actor, approval: call.approval}
+		context := &callContext{who: call.caller, principal: call.caller.principal, actor: call.caller.actor, approval: call.approval}
 		var err error
 		switch step.Call.Name {
 		case "blok_read":

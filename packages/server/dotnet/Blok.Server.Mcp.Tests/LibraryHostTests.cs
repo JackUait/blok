@@ -127,6 +127,19 @@ public sealed class LibraryHostTests : IDisposable
   }
 
   [Fact]
+  public async Task LeavesTheAppsDefaultSchemeAloneWithoutOAuth()
+  {
+    var (app, _) = await StartAsync();
+
+    await using (app)
+    {
+      var schemes = app.Services.GetService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
+
+      Assert.True(schemes is null || (await schemes.GetAllSchemesAsync()).All(scheme => scheme.Name != "BlokMcpBearer"));
+    }
+  }
+
+  [Fact]
   public async Task AnswersGetWith405()
   {
     var (app, client) = await StartAsync();

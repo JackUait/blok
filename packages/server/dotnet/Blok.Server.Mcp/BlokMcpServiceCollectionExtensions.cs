@@ -39,7 +39,7 @@ public static class BlokMcpServiceCollectionExtensions
     services.TryAddSingleton(provider => new BlokMcpHost(new McpBundle(provider.GetRequiredService<IBlokRuntime>()), provider.GetRequiredService<McpHttpCaller>()));
     services.TryAddSingleton(provider => ConfigOf(options, provider));
 
-    return services.AddBlokMcpServer();
+    return services.AddBlokMcpServer(options.OAuth is not null);
   }
 
   /// <summary>The tool's registration: the host and config it already built.</summary>
@@ -48,10 +48,11 @@ public static class BlokMcpServiceCollectionExtensions
     services.TryAddSingleton(host);
     services.TryAddSingleton(config);
 
-    return services.AddBlokMcpServer();
+    return services.AddBlokMcpServer(config.OAuth is not null);
   }
 
-  private static IServiceCollection AddBlokMcpServer(this IServiceCollection services)
+  // The bearer scheme only with OAuth: as an app's only scheme it would become its default.
+  private static IServiceCollection AddBlokMcpServer(this IServiceCollection services, bool oauth)
   {
     services.TryAddSingleton(provider =>
     {
@@ -72,15 +73,18 @@ public static class BlokMcpServiceCollectionExtensions
         McpSdkServer.Configure(options, surface, core, _ => who);
       };
     });
-    services.AddAuthentication();
+    if (!oauth)
+    {
+      return services;
+    }
     services.AddOptions<JwtBearerOptions>(BlokMcpBearer.Scheme).Configure<McpConfig, BlokMcpHost>((bearer, config, host) =>
     {
-      if (config.OAuth is McpOAuth oauth)
+      if (config.OAuth is McpOAuth settings)
       {
-        BlokMcpBearer.Configure(bearer, new AccessTokenVerifier(oauth.Issuer, oauth.Audience, token => FetchJwksAsync(host.Http, oauth.JwksUrl, token)), oauth);
+        BlokMcpBearer.Configure(bearer, new AccessTokenVerifier(settings.Issuer, settings.Audience, token => FetchJwksAsync(host.Http, settings.JwksUrl, token)), settings);
       }
     });
-    new Microsoft.AspNetCore.Authentication.AuthenticationBuilder(services).AddJwtBearer(BlokMcpBearer.Scheme, _ => { });
+    services.AddAuthentication().AddJwtBearer(BlokMcpBearer.Scheme, _ => { });
     services.AddAuthorizationBuilder().AddPolicy(BlokMcpBearer.ReadPolicy, policy => policy
         .AddAuthenticationSchemes(BlokMcpBearer.Scheme)
         .RequireClaim(BlokMcpBearer.ScopeClaim, "blok.read"));
@@ -122,9 +126,9 @@ public static class BlokMcpServiceCollectionExtensions
       Source = options.FilesDirectory is string dir
           ? new McpSourceConfig.Files(dir)
           : options.DocumentEndpoint is Uri endpoint
-              ? new McpSourceConfig.Endpoint(endpoint.ToString(), options.DocumentEndpointAuthorization, options.DocumentListEndpoint?.ToString())
+              ? new McpSourceConfig.Endpoint(endpoint.OriginalString, options.DocumentEndpointAuthorization, options.DocumentListEndpoint?.OriginalString)
               : null,
-      OAuth = options.OAuth is { } oauth ? new McpOAuth(oauth.Issuer, oauth.Audience, oauth.JwksUri.ToString()) : null,
+      OAuth = options.OAuth is { } oauth ? new McpOAuth(oauth.Issuer, oauth.Audience, oauth.JwksUri.OriginalString) : null,
       Principal = options.Principal,
       Schema = options.Schema,
       HandleIdleMs = options.HandleIdleTimeout?.TotalMilliseconds,

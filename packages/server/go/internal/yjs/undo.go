@@ -359,3 +359,31 @@ func (u *UndoManager) inStacks(id ID) bool {
 	}
 	return false
 }
+
+// Preview replays the step Undo (or Redo) would replay on a copy of the
+// doc, and returns the copy; the doc itself is untouched. The copy knows
+// no earlier redone links, so a step redone more than once may differ.
+func (u *UndoManager) Preview(undo bool) (*Doc, error) {
+	state, err := u.doc.EncodeStateAsUpdate(nil)
+	if err != nil {
+		return nil, err
+	}
+	clientID := uint32(u.doc.clientID)
+	copied := NewDoc(Options{ClientID: &clientID, NoGC: true})
+	if _, err := copied.ApplyUpdate(state); err != nil {
+		return nil, err
+	}
+	stack := u.undoStack
+	if !undo {
+		stack = u.redoStack
+	}
+	if len(stack) == 0 {
+		return copied, nil
+	}
+	preview := &UndoManager{doc: copied}
+	steps := []*StackItem{stack[len(stack)-1]}
+	if _, err := preview.pop(&steps); err != nil {
+		return nil, err
+	}
+	return copied, nil
+}

@@ -48,6 +48,10 @@ type liveSession struct {
 	undo       *yjs.UndoManager
 	done       []*liveStep
 	undone     []*liveStep
+	// marksPast and marksFuture are the executor's history marks: a write,
+	// or a restore that undo cannot cross.
+	marksPast   []historyMark
+	marksFuture []historyMark
 }
 
 func (s *Server) liveConverter() *convert.DocConverter {
@@ -101,6 +105,8 @@ func (s *Server) openLive(ctx context.Context, documentID string, write bool, wh
 		actorID: actor.ID, name: who.presenceName, color: presenceColor(actor.ID), onBehalfOf: onBehalfOf,
 		unacked: map[int][]string{}, undo: yjs.NewUndoManager(room.doc)}
 	room.mu.Lock()
+	// l<n> counts updates from the session's start, not the first sync.
+	room.count = 0
 	room.setAwarenessField("user", map[string]string{"name": live.name, "color": live.color, "id": actor.ID})
 	room.setAwarenessField("agent", map[string]string{"via": "mcp", "onBehalfOf": onBehalfOf})
 	room.mu.Unlock()
@@ -351,19 +357,7 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		(parsed.Error.Code == "NOTHING_TO_UNDO" || parsed.Error.Code == "NOTHING_TO_REDO") {
 		// The bundle checked the call with no steps; the session's own
 		// steps replay natively, as Node's Y.UndoManager does.
-		room.holdAppends = true
-		result, wrote, err := l.replay(ctx, name, out.Result)
-		if err != nil || !wrote {
-			room.holdAppends = false
-			room.pendingLocal = nil
-			if err != nil {
-				return nil, err
-			}
-			answer, err := l.server.executeAnswer(ctx, map[string]any{"result": result})
-			return &executed{answer: answer}, err
-		}
-		out.Result, out.Writes = result, true
-		return l.deliver(ctx, out, mark)
+		return l.historyBatch(ctx, call, batch, name, out, mark)
 	}
 	if !parsed.OK {
 		if parsed.Error != nil && parsed.Error.Code == "APPLY_FAILED" {
@@ -373,7 +367,17 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		return &executed{answer: answer}, err
 	}
 	if out.Restore != "" {
-		if refusal := l.restore(ctx, out.Restore); refusal != nil {
+		// The lane opens while the host restores: its update comes back as a
+		// peer's, and the result's revision counts it, as Node's does.
+		before := room.count
+		room.mu.Unlock()
+		refusal := l.restore(ctx, out.Restore)
+		room.mu.Lock()
+		if refusal == nil {
+			room.waitForUpdate(before, restoreEchoWait)
+			out.Result = withRevision(out.Result, fmt.Sprintf("l%d", room.count))
+		}
+		if refusal != nil {
 			answer, err := l.server.errorAnswer(ctx, "blok_execute", refusal)
 			return &executed{answer: answer}, err
 		}
@@ -398,6 +402,12 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 			return nil, err
 		}
 		l.recordStep(stepFor(out.Edits, document), document, after, stacked)
+		l.marksPast = append(l.marksPast, historyMark{})
+		l.marksFuture = nil
+	}
+	if out.Restore != "" {
+		l.marksPast = append(l.marksPast, historyMark{restored: restoredPrevious(out.Result)})
+		l.marksFuture = nil
 	}
 	return l.deliver(ctx, out, mark)
 }
@@ -480,4 +490,20 @@ func (l *liveSession) restore(ctx context.Context, version string) *surfaceErr {
 		return failureError("STALE", "The room changed since you read it, so nothing was restored. Read it again, then retry.")
 	}
 	return nil
+}
+
+// restoreEchoWait bounds the wait for a restore's own update.
+const restoreEchoWait = 2 * time.Second
+
+func withRevision(result json.RawMessage, revision string) json.RawMessage {
+	var members map[string]json.RawMessage
+	if json.Unmarshal(result, &members) != nil {
+		return result
+	}
+	members["revision"] = quoted(revision)
+	written, err := marshal(members)
+	if err != nil {
+		return result
+	}
+	return written
 }

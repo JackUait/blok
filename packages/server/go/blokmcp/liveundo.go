@@ -7,6 +7,8 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/docendpoint"
+
 	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
@@ -298,4 +300,168 @@ func (l *liveSession) recordStep(step *liveStep, before, after json.RawMessage, 
 			l.undo.DropOldest(oldest.item)
 		}
 	}
+}
+
+// historyMark is one write batch in undo order: the session's own step, or
+// a restore (restored names the version current before it).
+type historyMark struct {
+	restored *string
+}
+
+func restoredPrevious(result json.RawMessage) *string {
+	var parsed struct {
+		Results []struct {
+			Previous *string `json:"previous"`
+		} `json:"results"`
+	}
+	_ = json.Unmarshal(result, &parsed)
+	if len(parsed.Results) == 0 || parsed.Results[0].Previous == nil {
+		return new(string)
+	}
+	return parsed.Results[0].Previous
+}
+
+// refusedResult is an AgentResult refusing the batch at its first command.
+func (l *liveSession) refusedResult(code, message string, retryable bool) json.RawMessage {
+	result, _ := marshal(map[string]any{
+		"ok": false, "revision": fmt.Sprintf("l%d", l.room.count),
+		"error":    map[string]any{"code": code, "message": message, "commandIndex": 0, "retryable": retryable},
+		"warnings": []any{},
+	})
+	return result
+}
+
+// markRefusal is the executor's historyStep check: a restore cannot be
+// undone, and nothing is redone after one.
+func (l *liveSession) markRefusal(name string) json.RawMessage {
+	if len(l.marksPast) == 0 {
+		return nil
+	}
+	last := l.marksPast[len(l.marksPast)-1]
+	if last.restored == nil {
+		return nil
+	}
+	if name == "history.redo" {
+		return l.refusedResult("NOTHING_TO_REDO", "The last batch restored a version. There is nothing to redo after it.", false)
+	}
+	message := "The last batch restored a version. history.undo cannot undo a restore."
+	if *last.restored != "" {
+		message += ` To go back, history.restore "` + *last.restored + `", the version that was current before.`
+	}
+	return l.refusedResult("UNDO_RESTORED", message, false)
+}
+
+// approveReplay runs the executor's approval gate in the bundle: the step's
+// outcome, previewed on a copy of the doc, is carried as the session's
+// one step, so undoing a lock asks as database.setLock does. It returns a
+// refusal result, a question, or neither when the replay may run.
+func (l *liveSession) approveReplay(ctx context.Context, call *callContext, name string, batch json.RawMessage, document json.RawMessage, revision map[string]string) (json.RawMessage, *askedQuestion, error) {
+	preview, err := l.undo.Preview(name == "history.undo")
+	if err != nil {
+		return nil, nil, err
+	}
+	exported, err := l.room.converter.Export(ctx, preview)
+	if err != nil {
+		return nil, nil, err
+	}
+	target, err := docendpoint.Serialize(exported)
+	if err != nil {
+		return nil, nil, err
+	}
+	read, err := l.server.answerOf(ctx, "mcpRead", map[string]any{
+		"mcp": l.server.mcpFlags("live", l.write), "document": document, "actor": call.actor, "view": map[string]any{},
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	var view struct {
+		StructuredContent struct {
+			Revision string `json:"revision"`
+		} `json:"structuredContent"`
+	}
+	_ = json.Unmarshal(read, &view)
+	history := map[string]any{"past": []any{}, "future": []any{}, "revision": view.StructuredContent.Revision}
+	if name == "history.undo" {
+		history["past"] = []any{json.RawMessage(target)}
+	} else {
+		history["future"] = []any{json.RawMessage(target)}
+	}
+	input := l.sessionInput(call, document, revision)
+	input["history"] = history
+	input["batch"] = batch
+	if call.approval != nil {
+		input["approval"] = call.approval
+	}
+	var out liveExecuteOutput
+	if _, err := l.server.bundle.call(ctx, "agentExecute", input, &out); err != nil {
+		return nil, nil, err
+	}
+	if out.Ask != nil {
+		return nil, out.Ask, nil
+	}
+	var parsed liveResult
+	_ = json.Unmarshal(out.Result, &parsed)
+	if !parsed.OK {
+		return out.Result, nil, nil
+	}
+	return nil, nil, nil
+}
+
+// historyBatch is history.undo or history.redo on a live handle: the
+// executor's checks, then the native replay. mu is held.
+func (l *liveSession) historyBatch(ctx context.Context, call *callContext, batch json.RawMessage, name string, gate liveExecuteOutput, mark int) (*executed, error) {
+	answer := func(result json.RawMessage) (*executed, error) {
+		written, err := l.server.executeAnswer(ctx, map[string]any{"result": result})
+		return &executed{answer: written}, err
+	}
+	if refusal := l.markRefusal(name); refusal != nil {
+		return answer(refusal)
+	}
+	from := l.done
+	if name == "history.redo" {
+		from = l.undone
+	}
+	if len(from) == 0 {
+		return answer(gate.Result)
+	}
+	document, revision, err := l.exportLocked(ctx)
+	if err != nil {
+		return nil, err
+	}
+	refusal, ask, err := l.approveReplay(ctx, call, name, batch, document, revision)
+	if err != nil {
+		return nil, err
+	}
+	if ask != nil {
+		return &executed{ask: ask}, nil
+	}
+	if refusal != nil {
+		return answer(refusal)
+	}
+	l.room.holdAppends = true
+	result, wrote, err := l.replay(ctx, name, gate.Result)
+	if err != nil || !wrote {
+		l.room.holdAppends = false
+		l.room.pendingLocal = nil
+		if err != nil {
+			return nil, err
+		}
+		return answer(result)
+	}
+	if name == "history.undo" {
+		l.marksFuture = append(l.marksFuture, popMark(&l.marksPast))
+	} else {
+		l.marksPast = append(l.marksPast, popMark(&l.marksFuture))
+	}
+	gate.Result, gate.Writes = result, true
+	return l.deliver(ctx, gate, mark)
+}
+
+func popMark(marks *[]historyMark) historyMark {
+	if len(*marks) == 0 {
+		return historyMark{}
+	}
+	last := (*marks)[len(*marks)-1]
+	*marks = (*marks)[:len(*marks)-1]
+	return last
 }

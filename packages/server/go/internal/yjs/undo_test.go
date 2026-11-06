@@ -108,3 +108,20 @@ func equalStr(value any, want string) bool {
 	text, ok := value.(jsjson.Str)
 	return ok && text.String() == want
 }
+
+func TestPreviewShowsTheUndoAndLeavesTheDocAlone(t *testing.T) {
+	doc, _, _ := peers(t)
+	undo := NewUndoManager(doc)
+	doc.Transact(func(t *Transaction) { doc.GetMap(s("m")).Set(t, s("k"), s("one")) })
+	undo.Capture(func(t *Transaction) { doc.GetMap(s("m")).Set(t, s("k"), s("two")) })
+	preview, err := undo.Preview(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value, _ := preview.GetMap(s("m")).Get(s("k")); !equalStr(value, "one") {
+		t.Fatalf("the preview has %v", value)
+	}
+	if value, _ := doc.GetMap(s("m")).Get(s("k")); !equalStr(value, "two") || undo.UndoTop() == nil {
+		t.Fatalf("the doc changed to %v", value)
+	}
+}

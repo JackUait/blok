@@ -163,6 +163,7 @@ func (r *liveRoom) resetDoc() {
 	}
 	r.unhookDoc = r.doc.OnUpdate(func(event yjs.UpdateEvent) {
 		r.count++
+		r.changed.Broadcast()
 		if event.Local {
 			r.onLocalUpdate(event.Update)
 		}
@@ -935,3 +936,18 @@ func roomErrorFor(err error) error {
 type roomTerminal struct{ terminal string }
 
 func (e *roomTerminal) Error() string { return fmt.Sprintf("the room ended: %s", e.terminal) }
+
+// waitForUpdate waits, mu held, until the doc counts an update past
+// before, or timeout passes.
+func (r *liveRoom) waitForUpdate(before int, timeout time.Duration) {
+	deadline := time.Now().Add(timeout)
+	timer := time.AfterFunc(timeout, func() {
+		r.mu.Lock()
+		r.changed.Broadcast()
+		r.mu.Unlock()
+	})
+	defer timer.Stop()
+	for r.count == before && time.Now().Before(deadline) && !r.destroyed {
+		r.changed.Wait()
+	}
+}

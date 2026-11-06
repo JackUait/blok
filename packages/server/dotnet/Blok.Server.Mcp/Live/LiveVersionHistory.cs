@@ -26,13 +26,17 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
       var args = command["args"] as JsonObject ?? [];
       List<string> versions;
 
-      switch (McpJson.String(command["name"]))
+      var name = McpJson.String(command["name"]);
+
+      switch (name)
       {
         case "history.versions":
+        case "history.restore":
           loaded ??= [];
+          // A restore lists the versions too: the newest one is what it pins.
           if (loaded["versions"] is null)
           {
-            var group = args["group"] is JsonValue value && value.TryGetValue<double>(out var minutes) ? minutes.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
+            var group = name == "history.versions" && args["group"] is JsonValue value && value.TryGetValue<double>(out var minutes) ? minutes.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
             var listed = await GetAsync(group is null ? historyBase : $"{historyBase}?group={group}", cancellationToken);
 
             if (listed.Failed is not null)
@@ -41,7 +45,12 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
             }
             loaded["versions"] = VersionsOf(listed.Body);
           }
-          continue;
+          if (name == "history.versions")
+          {
+            continue;
+          }
+          versions = [McpJson.String(args["version"]) ?? string.Empty];
+          break;
         case "history.read":
           versions = [McpJson.String(args["version"]) ?? string.Empty];
           break;
@@ -75,16 +84,91 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
     return loaded;
   }
 
+  /// <summary>
+  /// Posts the restore the bundle checked, as the history drawer does: null when it landed,
+  /// else the error Node's runRestore answers. <paramref name="previous"/> pins the newest version.
+  /// </summary>
+  internal async Task<JsonObject?> RestoreAsync(string version, string? previous, CancellationToken cancellationToken)
+  {
+    if (PointPath(version) is not { } path)
+    {
+      return NotFound(version);
+    }
+    // A pin the server cannot read would restore unpinned, so it never leaves here.
+    if (previous is not null && PointPath(previous) is null)
+    {
+      return Stale();
+    }
+    // One key per restore: a retried request that already landed is answered, never applied twice.
+    var headers = new List<KeyValuePair<string, string>> { new("Blok-Idempotency-Key", Guid.NewGuid().ToString()) };
+
+    if (previous is not null)
+    {
+      headers.Add(new("If-Match", $"\"{previous}\""));
+    }
+    McpHttpResponse response;
+
+    try
+    {
+      response = await SendAsync("POST", $"{historyBase}/{path}/restore", headers, false, cancellationToken);
+      if (response.Status == 401 && tickets is not null)
+      {
+        response = await SendAsync("POST", $"{historyBase}/{path}/restore", headers, true, cancellationToken);
+      }
+    }
+    catch (Exception error) when (error is McpUnreachableException or McpBodyException)
+    {
+      return HostFailure($"The sync server could not be reached: {error.Message}", true);
+    }
+
+    return response.Status switch
+    {
+      404 => NotFound(version),
+      412 => Stale(),
+      < 200 or > 299 => HostFailure(
+          $"The sync server answered {response.Status}: {response.Body.Trim()}",
+          response.Status != 500 && (response.Status == 429 || (response.Status is >= 500 and <= 599 && response.Status != 501))),
+      _ => null,
+    };
+  }
+
+  // Key order as Node builds them: failure(), then the executor's atCommand.
+  private static JsonObject Stale() => new()
+  {
+    ["code"] = "STALE",
+    ["message"] = "The document changed since the version history was read, so nothing was restored. Read it again, then retry.",
+    ["commandIndex"] = 0,
+    ["retryable"] = true,
+  };
+
+  private static JsonObject NotFound(string version) => new()
+  {
+    ["code"] = "VERSION_NOT_FOUND",
+    ["message"] = $"There is no version \"{version}\". history.versions lists them.",
+    ["path"] = "/commands/0/args/version",
+    ["retryable"] = false,
+    ["commandIndex"] = 0,
+  };
+
+  private static JsonObject HostFailure(string message, bool retryable) => new()
+  {
+    ["code"] = "TOOL_ACTION_FAILED",
+    ["message"] = $"The version history failed: {message}",
+    ["retryable"] = retryable,
+    ["commandIndex"] = 0,
+    ["path"] = "/commands/0/args",
+  };
+
   private async Task<(JsonNode? Body, JsonObject? Failed)> GetAsync(string url, CancellationToken cancellationToken, bool notFoundIsNull = false)
   {
     McpHttpResponse response;
 
     try
     {
-      response = await SendAsync(url, false, cancellationToken);
+      response = await SendAsync("GET", url, [], false, cancellationToken);
       if (response.Status == 401 && tickets is not null)
       {
-        response = await SendAsync(url, true, cancellationToken);
+        response = await SendAsync("GET", url, [], true, cancellationToken);
       }
     }
     catch (Exception error) when (error is McpUnreachableException or McpBodyException)
@@ -109,9 +193,10 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
     }
   }
 
-  private async Task<McpHttpResponse> SendAsync(string url, bool fresh, CancellationToken cancellationToken)
+  private async Task<McpHttpResponse> SendAsync(
+      string method, string url, IReadOnlyList<KeyValuePair<string, string>> extra, bool fresh, CancellationToken cancellationToken)
   {
-    var headers = new List<KeyValuePair<string, string>>();
+    var headers = extra.ToList();
 
     if (tickets is not null && await tickets(fresh) is { } ticket)
     {
@@ -122,7 +207,7 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
       headers.Add(new("Origin", origin));
     }
 
-    return await http.SendAsync(new McpHttpRequest("GET", url, headers), Timeout.InfiniteTimeSpan, cancellationToken);
+    return await http.SendAsync(new McpHttpRequest(method, url, headers), Timeout.InfiniteTimeSpan, cancellationToken);
   }
 
   private static JsonArray VersionsOf(JsonNode? body)

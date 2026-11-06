@@ -185,11 +185,21 @@ internal sealed class LiveSession : IHandleSession
         }
         result["revision"] = room.Revision;
       }
-      else if (ran["restore"] is not null)
+      else if (McpJson.String(ran["restore"]) is { } version)
       {
-        return new McpExecuteOutcome(await FailedAsync(result, McpHostError.Surface("SOURCE_UNAVAILABLE", "Restoring a version is not served on remote live rooms yet."), cancellationToken), null);
+        // The bundle checked the restore; the room's history route runs it, and the result arrives as a peer update.
+        var previous = McpJson.String(result["results"]?[0]?["previous"]);
+
+        if (await history.RestoreAsync(version, previous, cancellationToken) is { } refused)
+        {
+          return new McpExecuteOutcome(await AnswerAsync(new JsonObject
+          {
+            ["result"] = new JsonObject { ["ok"] = false, ["revision"] = room.Revision, ["error"] = refused, ["warnings"] = result["warnings"]?.DeepClone() ?? new JsonArray() },
+          }, cancellationToken), null);
+        }
+        steps.MarkRestored(previous);
       }
-      if (ran["edits"] is JsonArray { Count: > 0 } edits && ran["document"] is JsonObject after)
+      else if (ran["edits"] is JsonArray { Count: > 0 } edits && ran["document"] is JsonObject after)
       {
         var ops = RoomEditTranslator.Translate(edits, after, result);
 

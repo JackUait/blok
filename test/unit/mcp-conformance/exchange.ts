@@ -165,7 +165,8 @@ const materialize = (value: unknown, vars: Vars): unknown => {
     return String(value.$repeat.text).repeat(Number(value.$repeat.count));
   }
 
-  return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, materialize(inner, vars)]));
+  // Keys too: a 2026 retry names its answer by the key the server chose.
+  return Object.fromEntries(Object.entries(value).map(([key, inner]) => [substituteString(key, vars), materialize(inner, vars)]));
 };
 
 /** Turns run-specific values back into placeholders before an answer is recorded. */
@@ -185,7 +186,7 @@ const placeholdersFor = (value: unknown, vars: Vars): unknown => {
       return inner.map(walk);
     }
     if (isRecord(inner)) {
-      return Object.fromEntries(Object.entries(inner).map(([key, v]) => [key, walk(v)]));
+      return Object.fromEntries(Object.entries(inner).map(([key, v]) => [walk(key) as string, walk(v)]));
     }
 
     return inner;
@@ -260,7 +261,7 @@ const normalize = (value: unknown, label: string): unknown => {
   return out;
 };
 
-/** Masks every value under these key names, anywhere in the answer. */
+/** Masks every non-null value under these key names, anywhere in the answer. */
 const maskKeys = (value: unknown, keys: ReadonlySet<string>): unknown => {
   if (Array.isArray(value)) {
     return value.map((item) => maskKeys(item, keys));
@@ -269,7 +270,7 @@ const maskKeys = (value: unknown, keys: ReadonlySet<string>): unknown => {
     return value;
   }
 
-  return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, keys.has(key) ? '<masked>' : maskKeys(inner, keys)]));
+  return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, keys.has(key) && inner !== null ? '<masked>' : maskKeys(inner, keys)]));
 };
 
 const captured = (answer: unknown, source: CaptureSource): unknown => {

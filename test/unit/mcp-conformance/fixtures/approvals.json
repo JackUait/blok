@@ -1,0 +1,4874 @@
+{
+  "description": "Approvals for a database unlock: the 2026 input_required retry, the 2025 elicitation/create fallback over stdio, and the one-per-call refusal.",
+  "defaults": {
+    "transport": "stdio",
+    "argv": [
+      "--source",
+      "files:${dir}"
+    ],
+    "files": {
+      "doc.json": {
+        "json": {
+          "blocks": [
+            {
+              "id": "db",
+              "type": "database",
+              "content": [],
+              "data": {
+                "title": "Payroll",
+                "schema": [
+                  {
+                    "id": "t",
+                    "name": "Name",
+                    "type": "title",
+                    "position": "a0",
+                    "databaseLocked": true
+                  }
+                ],
+                "views": [
+                  {
+                    "id": "v",
+                    "name": "Table",
+                    "type": "table",
+                    "position": "a0",
+                    "sorts": [],
+                    "filters": [],
+                    "visibleProperties": []
+                  }
+                ],
+                "activeViewId": "v"
+              }
+            },
+            {
+              "id": "db2",
+              "type": "database",
+              "content": [],
+              "data": {
+                "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                "schema": [
+                  {
+                    "id": "t",
+                    "name": "Name",
+                    "type": "title",
+                    "position": "a0",
+                    "databaseLocked": true
+                  }
+                ],
+                "views": [
+                  {
+                    "id": "v",
+                    "name": "Table",
+                    "type": "table",
+                    "position": "a0",
+                    "sorts": [],
+                    "filters": [],
+                    "visibleProperties": []
+                  }
+                ],
+                "activeViewId": "v"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "maskKeys": [
+      "lastEditedAt",
+      "savedVersion",
+      "revision"
+    ]
+  },
+  "cases": [
+    {
+      "name": "2026: an unlock asks with input_required, applies nothing, and the retry with a yes unlocks",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              },
+              "inputResponses": {
+                "${key}": {
+                  "action": "accept",
+                  "content": {
+                    "unlock": true
+                  }
+                }
+              }
+            }
+          },
+          "expectSavedVersion": {
+            "file": "doc.json",
+            "pointer": "/result/structuredContent/delivery/savedVersion"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  null
+                ],
+                "changed": {
+                  "updated": [
+                    "db"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0"
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0"
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 5
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: a retry with decline is APPROVAL_REQUIRED",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              },
+              "inputResponses": {
+                "${key}": {
+                  "action": "decline"
+                }
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "The person did not approve unlocking database \"Payroll\" (db), so it stays locked. Nothing in this batch was applied. Send the other commands again without this database.setLock. Do not ask to unlock it again unless the person asks you to.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "denied",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  },
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: a retry with cancel is APPROVAL_REQUIRED",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              },
+              "inputResponses": {
+                "${key}": {
+                  "action": "cancel"
+                }
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "The person did not approve unlocking database \"Payroll\" (db), so it stays locked. Nothing in this batch was applied. Send the other commands again without this database.setLock. Do not ask to unlock it again unless the person asks you to.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "denied",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  },
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: a retry with accept without the tick is APPROVAL_REQUIRED",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              },
+              "inputResponses": {
+                "${key}": {
+                  "action": "accept",
+                  "content": {
+                    "unlock": false
+                  }
+                }
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "The person did not approve unlocking database \"Payroll\" (db), so it stays locked. Nothing in this batch was applied. Send the other commands again without this database.setLock. Do not ask to unlock it again unless the person asks you to.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "denied",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  },
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: a retry with accept with no content is APPROVAL_REQUIRED",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              },
+              "inputResponses": {
+                "${key}": {
+                  "action": "accept"
+                }
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "The person did not approve unlocking database \"Payroll\" (db), so it stays locked. Nothing in this batch was applied. Send the other commands again without this database.setLock. Do not ask to unlock it again unless the person asks you to.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "denied",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  },
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: a retry with a reply that is not an elicit result is APPROVAL_REQUIRED",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              },
+              "inputResponses": {
+                "${key}": "yes"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: a retry that meets a second question is refused one-per-call",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  },
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db2",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  },
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db2",
+                      "locked": false
+                    }
+                  }
+                ]
+              },
+              "inputResponses": {
+                "${key}": {
+                  "action": "accept",
+                  "content": {
+                    "unlock": true
+                  }
+                }
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "Only one database can be unlocked per call, and nothing in this batch was applied. Send each database.setLock that unlocks in its own blok_execute.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "one-per-call",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db2",
+                      "title": "Budget \"Q4\" and a very long title that goes past the sixty four character cut"
+                    }
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: a retry with a reply under another key is refused one-per-call",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              },
+              "inputResponses": {
+                "[\"database.unlock\",\"other\",\"x\"]": {
+                  "action": "accept",
+                  "content": {
+                    "unlock": true
+                  }
+                }
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "Only one database can be unlocked per call, and nothing in this batch was applied. Send each database.setLock that unlocks in its own blok_execute.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "one-per-call",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: without the elicitation capability nothing is asked",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {}
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "A person locked database \"Payroll\" (db). Unlocking it needs a person's explicit approval, and nothing here can ask one. Nothing in this batch was applied. Ask the person to unlock it themselves (Lock database in the database's view menu), then read it again. Never try to unlock it another way.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "no-channel",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  },
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: elicitation with only url mode is not asked",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {
+            "url": {}
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "A person locked database \"Payroll\" (db). Unlocking it needs a person's explicit approval, and nothing here can ask one. Nothing in this batch was applied. Ask the person to unlock it themselves (Lock database in the database's view menu), then read it again. Never try to unlock it another way.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "no-channel",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  },
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: elicitation with form mode is asked",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {
+            "form": {},
+            "url": {}
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2026: the question names the second database with a cleaned, cut title",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db2",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Budget \\\"Q4\\\" and a very long title that goes past the sixty four character cut\" (id \"db2\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "transport": "http",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:0",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "2026 over HTTP: input_required, then the retry unlocks",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "key": {
+              "keyOf": "/result/inputRequests"
+            }
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "resultType": "input_required",
+              "inputRequests": {
+                "${key}": {
+                  "method": "elicitation/create",
+                  "params": {
+                    "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                    "requestedSchema": {
+                      "type": "object",
+                      "properties": {
+                        "unlock": {
+                          "type": "boolean",
+                          "title": "Unlock",
+                          "description": "Tick to let the agent unlock this database.",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "unlock"
+                      ]
+                    },
+                    "mode": "form"
+                  }
+                }
+              },
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              },
+              "inputResponses": {
+                "${key}": {
+                  "action": "accept",
+                  "content": {
+                    "unlock": true
+                  }
+                }
+              }
+            }
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  null
+                ],
+                "changed": {
+                  "updated": [
+                    "db"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0"
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0"
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false,
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "blok-mcp",
+                  "version": "${version}"
+                }
+              }
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "transport": "http",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:0",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "2025 over HTTP: stateless, so an unlock cannot ask",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "A person locked database \"Payroll\" (db). Unlocking it needs a person's explicit approval, and nothing here can ask one. Nothing in this batch was applied. Ask the person to unlock it themselves (Lock database in the database's view menu), then read it again. Never try to unlock it another way.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "no-channel",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  },
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "2025 stdio: the server sends elicitation/create, and a yes unlocks",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "serverRequests": [
+            {
+              "reply": {
+                "result": {
+                  "action": "accept",
+                  "content": {
+                    "unlock": true
+                  }
+                }
+              },
+              "expect": {
+                "method": "elicitation/create",
+                "params": {
+                  "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                  "requestedSchema": {
+                    "type": "object",
+                    "properties": {
+                      "unlock": {
+                        "type": "boolean",
+                        "title": "Unlock",
+                        "description": "Tick to let the agent unlock this database.",
+                        "default": false
+                      }
+                    },
+                    "required": [
+                      "unlock"
+                    ]
+                  },
+                  "mode": "form",
+                  "_meta": {
+                    "progressToken": 0
+                  }
+                },
+                "jsonrpc": "2.0",
+                "id": "<server>"
+              }
+            }
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  null
+                ],
+                "changed": {
+                  "updated": [
+                    "db"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0"
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0"
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2025 stdio: a decline is APPROVAL_REQUIRED",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "serverRequests": [
+            {
+              "reply": {
+                "result": {
+                  "action": "decline"
+                }
+              },
+              "expect": {
+                "method": "elicitation/create",
+                "params": {
+                  "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                  "requestedSchema": {
+                    "type": "object",
+                    "properties": {
+                      "unlock": {
+                        "type": "boolean",
+                        "title": "Unlock",
+                        "description": "Tick to let the agent unlock this database.",
+                        "default": false
+                      }
+                    },
+                    "required": [
+                      "unlock"
+                    ]
+                  },
+                  "mode": "form",
+                  "_meta": {
+                    "progressToken": 0
+                  }
+                },
+                "jsonrpc": "2.0",
+                "id": "<server>"
+              }
+            }
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "The person did not approve unlocking database \"Payroll\" (db), so it stays locked. Nothing in this batch was applied. Send the other commands again without this database.setLock. Do not ask to unlock it again unless the person asks you to.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "denied",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  },
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2025 stdio: an error reply to elicitation/create",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "serverRequests": [
+            {
+              "reply": {
+                "error": {
+                  "code": -32603,
+                  "message": "no person here"
+                }
+              },
+              "expect": {
+                "method": "elicitation/create",
+                "params": {
+                  "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                  "requestedSchema": {
+                    "type": "object",
+                    "properties": {
+                      "unlock": {
+                        "type": "boolean",
+                        "title": "Unlock",
+                        "description": "Tick to let the agent unlock this database.",
+                        "default": false
+                      }
+                    },
+                    "required": [
+                      "unlock"
+                    ]
+                  },
+                  "mode": "form",
+                  "_meta": {
+                    "progressToken": 0
+                  }
+                },
+                "jsonrpc": "2.0",
+                "id": "<server>"
+              }
+            }
+          ],
+          "mask": [
+            "/result/content/0/text"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "<masked>"
+                }
+              ],
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2025 stdio: a second question in one call is refused one-per-call",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop",
+        "capabilities": {
+          "elicitation": {}
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  },
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db2",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "serverRequests": [
+            {
+              "reply": {
+                "result": {
+                  "action": "accept",
+                  "content": {
+                    "unlock": true
+                  }
+                }
+              },
+              "expect": {
+                "method": "elicitation/create",
+                "params": {
+                  "message": "Desktop's agent wants to unlock the database \"Payroll\" (id \"db\"). A person locked it, so its properties and views cannot change. Unlock it?",
+                  "requestedSchema": {
+                    "type": "object",
+                    "properties": {
+                      "unlock": {
+                        "type": "boolean",
+                        "title": "Unlock",
+                        "description": "Tick to let the agent unlock this database.",
+                        "default": false
+                      }
+                    },
+                    "required": [
+                      "unlock"
+                    ]
+                  },
+                  "mode": "form",
+                  "_meta": {
+                    "progressToken": 0
+                  }
+                },
+                "jsonrpc": "2.0",
+                "id": "<server>"
+              }
+            }
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "Only one database can be unlocked per call, and nothing in this batch was applied. Send each database.setLock that unlocks in its own blok_execute.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "one-per-call",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db2",
+                      "title": "Budget \"Q4\" and a very long title that goes past the sixty four character cut"
+                    }
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "db",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Payroll",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Payroll",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  },
+                  {
+                    "id": "db2",
+                    "type": "database",
+                    "depth": 0,
+                    "attrs": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "activeViewId": "v"
+                    },
+                    "data": {
+                      "title": "Budget \"Q4\"\u0007 and a very long title that goes past the sixty four character cut",
+                      "schema": [
+                        {
+                          "id": "t",
+                          "name": "Name",
+                          "type": "title",
+                          "position": "a0",
+                          "databaseLocked": true
+                        }
+                      ],
+                      "views": [
+                        {
+                          "id": "v",
+                          "name": "Table",
+                          "type": "table",
+                          "position": "a0",
+                          "sorts": [],
+                          "filters": [],
+                          "visibleProperties": []
+                        }
+                      ],
+                      "activeViewId": "v",
+                      "automations": {
+                        "version": 1,
+                        "definitions": []
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "2025 stdio: without the capability nothing is asked",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop",
+        "capabilities": {}
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "database.setLock",
+                    "args": {
+                      "id": "db",
+                      "locked": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "APPROVAL_REQUIRED",
+                  "message": "A person locked database \"Payroll\" (db). Unlocking it needs a person's explicit approval, and nothing here can ask one. Nothing in this batch was applied. Ask the person to unlock it themselves (Lock database in the database's view menu), then read it again. Never try to unlock it another way.",
+                  "retryable": false,
+                  "details": {
+                    "reason": "no-channel",
+                    "approval": {
+                      "kind": "database.unlock",
+                      "blockId": "db",
+                      "title": "Payroll"
+                    }
+                  },
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    }
+  ]
+}

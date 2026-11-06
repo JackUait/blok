@@ -745,6 +745,10 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     }
     if (plan.edits.length > 0) {
       await input.applier.apply(plan, draft);
+    }
+    // A comment is no undo step: the applier keeps none for it, so a mark or an unlock record here
+    // would land on the step before it.
+    if (plan.edits.length > 0 && plan.commentsOnly !== true) {
       const marks = marksOf(input.applier);
 
       marks.past.push('own');
@@ -756,7 +760,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
         backward: unlockedBetween(draft, snapshot),
         ...(shares !== undefined && { shares }),
       });
-    } else if (batch.commands.some(command => input.ctx.commands.get(command.name)?.effects === 'host')) {
+    } else if (plan.edits.length === 0 && batch.commands.some(command => input.ctx.commands.get(command.name)?.effects === 'host')) {
       marksOf(input.applier).past.push('other');
     }
     // After the writes landed, as the person's click runs them; a turn stopped meanwhile runs none.

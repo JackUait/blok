@@ -170,6 +170,27 @@ describe('server runtime agentExecute', () => {
         .toMatchObject({ result: { ok: true }, document: normalizedDocument() });
     });
 
+    it('a comment batch is no step: it answers, and undo after it has nothing to undo', async () => {
+      const withRow: OutputData = { blocks: [
+        { id: 'db', type: 'database', content: ['r1'], data: {
+          title: 'Payroll', activeViewId: 'v',
+          schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }],
+          views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        } },
+        { id: 'r1', type: 'database-row', parent: 'db', data: { properties: {} } },
+      ] };
+      const first = await executeWire({ document: withRow, actor, batch: rename('One'), history: {} });
+      const commented = await executeWire({
+        document: first.document, actor, history: first.history,
+        batch: { commands: [{ name: 'database.addComment', args: { id: 'db', rowId: 'r1', text: 'a note' } }] },
+      });
+
+      expect(commented.result).toMatchObject({ ok: true });
+      expect(commented.history).toMatchObject({ past: [], future: [] });
+      expect((await executeWire({ document: commented.document, actor, batch: undo, history: commented.history })).result)
+        .toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
+    });
+
     it('refuses with CONFLICT when someone else saved the document since the last step', async () => {
       const first = await executeWire({ document, actor, batch: rename('One'), history: {} });
       const theirs = { ...normalizedDocument(), title: 'Theirs' };

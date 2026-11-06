@@ -343,6 +343,20 @@ const buildCases = async (invoke) => {
     mcp: { ...mcpStored, pageTitles: 'page-map' }, document: mcpDoc, actor: mcpActor,
     batch: { commands: [{ name: 'block.insert', args: { type: 'page', id: 'np0', data: { title: 'x' } } }] },
   }));
+  // A comment batch is no undo step, so the history it hands back is empty. deleteComment: no clock, no minted id.
+  add('agent.history.comment', 'agentExecute', J({
+    services: [], actor: { id: 'agent-x', name: 'Agent', kind: 'agent' }, history: {},
+    document: { blocks: [
+      { id: 'db', type: 'database', content: ['r1'], data: {
+        title: 'Payroll', activeViewId: 'v',
+        schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      } },
+      { id: 'r1', type: 'database-row', parent: 'db', content: ['c1'], data: { properties: {} } },
+      { id: 'c1', type: 'database-comment', parent: 'r1', data: { text: 'a note', createdAt: 1, authorId: 'agent-x' } },
+    ] },
+    batch: { commands: [{ name: 'database.deleteComment', args: { id: 'db', commentId: 'c1' } }] },
+  }));
   add('mcp.execute.liveRevision', 'agentExecute', J({ mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor, revision: { now: 'l4', afterWrite: 'l5' }, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }], expectRevision: 'l4' } }));
   add('mcp.executeAnswer', 'mcpExecuteAnswer', J({ result: { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [] }, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v' } }));
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));

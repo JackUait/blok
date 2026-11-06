@@ -174,8 +174,10 @@ export const createDocumentAgentSession = (input: {
     ...(createPage !== undefined && { prepareInsert: pagePrepareInsert(createPage, input.actor) }),
     apply: (plan, draft) => {
       // Undo here restores a whole earlier document, which would take the comments with it.
+      // The marks go too: history() pairs each 'own' mark with a snapshot.
       if (plan.commentsOnly === true) {
         past.length = 0;
+        Object.assign(marksOf(applier), { past: [], future: [] });
       } else {
         past.push(state.current);
       }

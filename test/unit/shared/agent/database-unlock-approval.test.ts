@@ -312,6 +312,26 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
       }
     });
 
+    it('a comment after a lock does not hide it: undo never unlocks unasked', async () => {
+      const withRow: OutputData = { blocks: [
+        database('db', false, ['r1']),
+        { id: 'r1', type: 'database-row', parent: 'db', data: { properties: {} } },
+      ] };
+      const session = open(withRow);
+      const comment = { name: 'database.addComment', args: { id: 'db', rowId: 'r1', text: 'a note' } };
+
+      try {
+        expect(codeOf(await run(session, [lock]))).toBeUndefined();
+        expect(codeOf(await run(session, [comment]))).toBeUndefined();
+        const undone = await run(session, [undo]);
+
+        expect(await isLocked(session)).toBe(true);
+        expect(['APPROVAL_REQUIRED', 'NOTHING_TO_UNDO']).toContain(codeOf(undone));
+      } finally {
+        session.close();
+      }
+    });
+
     it('undoing an unlock locks again without asking', async () => {
       const session = open(seed());
       const approve = vi.fn<Approve>(() => Promise.resolve(true));

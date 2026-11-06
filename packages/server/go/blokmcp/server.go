@@ -43,9 +43,8 @@ type Server struct {
 	stopOnce sync.Once
 	stopped  chan struct{}
 
-	roomOnce     sync.Once
+	roomMu       sync.Mutex
 	roomCommands map[string]bool
-	roomErr      error
 }
 
 // New builds a Server. The bundle loads into its own engine pool.

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/JackUait/blok/packages/server/go/v2/blokagent"
 	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 )
 
@@ -79,5 +80,22 @@ func TestLiveHandlesEditTheRoomsOfTheSameProcess(t *testing.T) {
 	page, _ := read["page"].(map[string]any)
 	if page["title"] != "From MCP" {
 		t.Fatalf("read %v", read)
+	}
+}
+
+// One caller's cancelled request must not become every later caller's
+// answer.
+func TestACancelledFirstContractLoadIsNotKept(t *testing.T) {
+	executor, err := blokagent.New(blokagent.FactoryOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := &Server{options: Options{Rooms: executor}}
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, _ = server.roomReadOnly(cancelled)
+	readOnly, err := server.roomReadOnly(context.Background())
+	if err != nil || len(readOnly) == 0 {
+		t.Fatalf("the second load answered %v (%d commands)", err, len(readOnly))
 	}
 }

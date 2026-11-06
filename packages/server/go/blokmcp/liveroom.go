@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/JackUait/blok/packages/server/go/v2/blokagent"
 )
@@ -22,27 +23,40 @@ type roomSession struct {
 	latched    bool
 }
 
-// roomContract reads which commands write, from the executor's room
-// contract.
+// contractLoadTimeout bounds the room contract load, which no caller's
+// cancellation may end.
+const contractLoadTimeout = 30 * time.Second
+
+// roomReadOnly reads which commands write, from the executor's room
+// contract. Only a successful load is kept: a failed one is tried again by
+// the next caller.
 func (s *Server) roomReadOnly(ctx context.Context) (map[string]bool, error) {
-	s.roomOnce.Do(func() {
-		var contract struct {
-			Commands []struct {
-				Name     string `json:"name"`
-				ReadOnly bool   `json:"readOnly"`
-			} `json:"commands"`
-		}
-		written, err := s.options.Rooms.RoomContract(ctx, s.agentOptions())
-		if err == nil {
-			err = json.Unmarshal([]byte(written), &contract)
-		}
-		s.roomErr = err
-		s.roomCommands = map[string]bool{}
-		for _, command := range contract.Commands {
-			s.roomCommands[command.Name] = command.ReadOnly
-		}
-	})
-	return s.roomCommands, s.roomErr
+	s.roomMu.Lock()
+	defer s.roomMu.Unlock()
+	if s.roomCommands != nil {
+		return s.roomCommands, nil
+	}
+	load, cancel := context.WithTimeout(context.WithoutCancel(ctx), contractLoadTimeout)
+	defer cancel()
+	written, err := s.options.Rooms.RoomContract(load, s.agentOptions())
+	if err != nil {
+		return nil, err
+	}
+	var contract struct {
+		Commands []struct {
+			Name     string `json:"name"`
+			ReadOnly bool   `json:"readOnly"`
+		} `json:"commands"`
+	}
+	if err := json.Unmarshal([]byte(written), &contract); err != nil {
+		return nil, err
+	}
+	commands := map[string]bool{}
+	for _, command := range contract.Commands {
+		commands[command.Name] = command.ReadOnly
+	}
+	s.roomCommands = commands
+	return commands, nil
 }
 
 // agentOptions are the executor options the start options imply.

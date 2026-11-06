@@ -694,9 +694,17 @@ const approvalOf = (value: unknown): { approve?: AgentApprover; asked: AgentAppr
   return {
     asked,
     clientName: typeof value.clientName === 'string' ? value.clientName : '',
-    ...(canElicit(value.capabilities) && { approve: elicitationApprover(value.replies, asked, readInputResponse) }),
+    ...(canElicit(value.capabilities) && { approve: elicitationApprover(bareReplies(value.replies), asked, readInputResponse) }),
   };
 };
+
+/**
+ * The replies blok-mcp's handler sees: the SDK keeps only bare result objects and drops any other
+ * entry, and a wrapped `{ method, result }` one, before the handler runs (partitionInputResponses).
+ */
+const bareReplies = (replies: unknown): Record<string, unknown> | undefined => (isRecord(replies)
+  ? Object.fromEntries(Object.entries(replies).filter(([, entry]) => isRecord(entry) && !('method' in entry) && !('result' in entry)))
+  : undefined);
 
 const readOnlyRefusal = (mode: unknown): AgentResult => ({
   ok: false,

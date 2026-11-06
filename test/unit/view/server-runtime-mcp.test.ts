@@ -666,6 +666,21 @@ describe('server runtime MCP approvals', () => {
     expect(ran.result).toEqual(JSON.parse(JSON.stringify(node.result)));
   });
 
+  // The SDK keeps only bare result objects in ctx.mcpReq.inputResponses (partitionInputResponses).
+  it.each([
+    ['a reply that is not an object', 'yes'],
+    ['a wrapped { method, result } reply', { method: 'elicitation/create', result: { action: 'accept', content: { unlock: true } } }],
+    ['a reply with a result key', { action: 'accept', content: { unlock: true }, result: {} }],
+  ])('drops %s as the SDK does before the approver, so it asks again', async (_label, reply) => {
+    const question = (await nodeRun(undefined, { elicitation: {} })).asked[0];
+    const ran = await call('agentExecute', {
+      mcp: flags, document: seed, actor, batch: unlock,
+      approval: { capabilities: { elicitation: {} }, replies: { [approvalKey(question)]: reply }, clientName: 'Desktop' },
+    });
+
+    expect(ran).toHaveProperty('ask.key', approvalKey(question));
+  });
+
   it.each([
     ['a reply for another question', { other: { action: 'accept', content: { unlock: true } } }, { elicitation: {} }],
     ['no elicitation capability', undefined, {}],

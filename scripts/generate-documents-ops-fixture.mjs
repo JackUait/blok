@@ -337,6 +337,8 @@ const buildCases = async (invoke) => {
     approval: { capabilities: { elicitation: {} }, clientName: 'Desk', replies: { '["database.unlock","db","Payroll"]': { action: 'accept', content: { unlock: true } } } },
     batch: { commands: [{ name: 'block.insert', args: { type: 'page', id: 'np0', position: 'end' } }, { name: 'database.setLock', args: { id: 'db', locked: false } }] },
   }));
+  // A reply that is not a bare result object is dropped, as the SDK drops it, so the question comes again.
+  add('mcp.execute.askAgain', 'agentExecute', J({ mcp: mcpStored, document: lockedDb, actor: mcpActor, approval: { capabilities: { elicitation: {} }, clientName: 'Desk', replies: { [J(['database.unlock', 'db', 'Payroll'])]: 'yes' } }, batch: { commands: [{ name: 'database.setLock', args: { id: 'db', locked: false } }] } }));
   add('mcp.execute.liveRevision', 'agentExecute', J({ mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor, revision: { now: 'l4', afterWrite: 'l5' }, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }], expectRevision: 'l4' } }));
   add('mcp.executeAnswer', 'mcpExecuteAnswer', J({ result: { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [] }, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v' } }));
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));

@@ -591,7 +591,7 @@ class CaseRun {
     if (step.signal === undefined && step.awaitExit !== true) {
       return false;
     }
-    await this.waitForHost(step, label);
+    await this.waitForHost(step.signalWhenHost, label);
     const sentAt = Date.now();
 
     if (step.signal !== undefined) {
@@ -616,11 +616,11 @@ class CaseRun {
     if (step.signal === undefined) {
       return;
     }
-    await this.waitForHost(step, label);
+    await this.waitForHost(step.signalWhenHost, label);
     server.signal(step.signal);
   }
 
-  private async waitForHost(step: Step, label: string, key = step.signalWhenHost): Promise<void> {
+  private async waitForHost(key: string | undefined, label: string): Promise<void> {
     if (key === undefined) {
       return;
     }
@@ -636,7 +636,7 @@ class CaseRun {
     }
     const raw = step.raw === true;
 
-    await this.waitForHost(step, label, step.afterHost);
+    await this.waitForHost(step.afterHost, label);
     if (step.notify !== undefined) {
       server.send(withMeta({ jsonrpc: '2.0', ...materialize(step.notify, this.vars) as JsonMessage }, this.c.session, raw));
 

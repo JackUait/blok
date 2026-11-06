@@ -1,0 +1,56 @@
+{
+  "description": "Handshake, discovery, tools/list, prompts and ping, over stdio and HTTP, per protocol version.",
+  "defaults": {
+    "transport": "stdio",
+    "argv": [
+      "--source",
+      "files:${dir}"
+    ],
+    "files": {
+      "doc.json": {
+        "json": {
+          "blocks": []
+        }
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "stdio initialize 2025-06-18",
+      "steps": [
+        {
+          "send": {
+            "method": "initialize",
+            "params": {
+              "protocolVersion": "2025-06-18",
+              "capabilities": {},
+              "clientInfo": {
+                "name": "conformance",
+                "version": "1"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "protocolVersion": "2025-06-18",
+              "capabilities": {
+                "tools": {},
+                "prompts": {}
+              },
+              "serverInfo": {
+                "name": "blok-mcp",
+                "version": "${version}"
+              },
+              "instructions": "How to write rich text in Blok:\nRich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.\nMarks: bold, italic, underline, strikethrough, code, sup, sub, highlight, color, background, link, and tag:<name> for a custom inline tool. sup and sub cannot share a run.\nhighlight alone is stored as background \"yellow\"; with a background, as that background. color and background take a preset: \"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.\nA link needs href. With no target or rel it gets target \"_blank\" and rel \"nofollow\"; an \"#anchor\" href gets target \"_self\". A target or rel you give is kept, but in the editor a host link config replaces both.\nEmbeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page: id is the pageId in a page block's data, not the block id.\ntext.format with unset [\"*\"] clears every mark; \"tag:*\" clears every custom mark.\nmarkdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format.\n\nRules for editing a Blok document:\n- Call blok_read when you need blocks, text or data you do not have. Address blocks by the ids it returns.\n- Rich text is segments, not Markdown and not HTML. To add Markdown, use the markdown.insert command.\n- When the blok_execute schema lists a command's full arguments, use them. Otherwise call blok_describe with { command } before using it for the first time. Call it with { tool } for a block type's data.\n- Someone may be typing in the document at the same time, so its text can change between your calls.\n- On a STALE error, call blok_read again and retry with fresh ids and text.\n- A CORRECTED warning means Blok changed your command. Check the result is what you meant.\n- Change only the blocks the request is about. To add something, insert a new block; do not convert or rewrite a nearby block to get it.\n- Put related edits in one blok_execute call.\n- A page block's data.pageId is the id of its sub-page document; open it with blok_open to write inside it."
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 package blokmcp
 
 import (
+	"cmp"
 	"encoding/json"
 	"slices"
 	"time"
@@ -13,8 +14,11 @@ import (
 // with its clock, the local one as ordered fields, as JSON.stringify keeps
 // them.
 type awareness struct {
-	local    uint64
-	order    []uint64 // insertion order of known clients, as a JS Map
+	local uint64
+	// seq is each state's insertion order, as a JS Map keeps it: a
+	// removed state leaves, and comes back at the end.
+	seq      map[uint64]uint64
+	next     uint64
 	states   map[uint64]json.RawMessage
 	meta     map[uint64]awarenessMeta
 	fields   []awarenessField
@@ -35,16 +39,29 @@ type awarenessField struct {
 // awarenessOutdated is y-protocols' outdatedTimeout.
 const awarenessOutdated = 30 * time.Second
 
+// awarenessTombstoneTTL is how long the store keeps a stateless peer's
+// clock row (AWARENESS_TOMBSTONE_TTL_MS), so a relayed old state cannot
+// come back.
+const awarenessTombstoneTTL = 90 * time.Second
+
 func newAwareness(clientID uint64) *awareness {
-	a := &awareness{local: clientID, states: map[uint64]json.RawMessage{}, meta: map[uint64]awarenessMeta{}, now: time.Now}
+	a := &awareness{local: clientID, seq: map[uint64]uint64{}, states: map[uint64]json.RawMessage{}, meta: map[uint64]awarenessMeta{}, now: time.Now}
 	a.setLocal([]awarenessField{}, true)
 	return a
 }
 
-func (a *awareness) remember(client uint64) {
-	if !slices.Contains(a.order, client) {
-		a.order = append(a.order, client)
+// setState stores a client's state; a new one goes to the end of the order.
+func (a *awareness) setState(client uint64, state json.RawMessage) {
+	if _, ok := a.states[client]; !ok {
+		a.next++
+		a.seq[client] = a.next
 	}
+	a.states[client] = state
+}
+
+func (a *awareness) removeState(client uint64) {
+	delete(a.states, client)
+	delete(a.seq, client)
 }
 
 func (a *awareness) localJSON() json.RawMessage {
@@ -69,10 +86,9 @@ func (a *awareness) setLocal(fields []awarenessField, present bool) {
 	}
 	a.fields, a.hasLocal = fields, present
 	if present {
-		a.remember(a.local)
-		a.states[a.local] = a.localJSON()
+		a.setState(a.local, a.localJSON())
 	} else {
-		delete(a.states, a.local)
+		a.removeState(a.local)
 	}
 	a.meta[a.local] = awarenessMeta{clock: clock, lastUpdated: a.now()}
 }
@@ -105,20 +121,29 @@ func (a *awareness) renewDue() bool {
 func (a *awareness) sweepRemote() {
 	for client, meta := range a.meta {
 		if client != a.local && a.now().Sub(meta.lastUpdated) >= awarenessOutdated {
-			delete(a.states, client)
+			a.removeState(client)
 		}
 	}
 }
 
 // known lists every client with a state, in Map order.
 func (a *awareness) known() []uint64 {
-	var clients []uint64
-	for _, client := range a.order {
-		if _, ok := a.states[client]; ok {
-			clients = append(clients, client)
+	clients := make([]uint64, 0, len(a.states))
+	for client := range a.states {
+		clients = append(clients, client)
+	}
+	slices.SortFunc(clients, func(x, y uint64) int { return cmp.Compare(a.seq[x], a.seq[y]) })
+	return clients
+}
+
+// pruneMeta drops the clock rows of remote peers with no state, silent past
+// the tombstone time, as the store does before each inbound apply.
+func (a *awareness) pruneMeta() {
+	for client, meta := range a.meta {
+		if _, has := a.states[client]; client != a.local && !has && a.now().Sub(meta.lastUpdated) > awarenessTombstoneTTL {
+			delete(a.meta, client)
 		}
 	}
-	return clients
 }
 
 // encode is encodeAwarenessUpdate over clients (with a meta row).
@@ -159,6 +184,7 @@ func (a *awareness) departure() []byte {
 // apply is applyAwarenessUpdate; it reports the clients that changed. A
 // malformed update is dropped.
 func (a *awareness) apply(update []byte) (changed []uint64, ok bool) {
+	a.pruneMeta()
 	r := lib0.NewReader(update)
 	count, err := r.ReadVarUint()
 	if err != nil {
@@ -192,11 +218,10 @@ func (a *awareness) apply(update []byte) (changed []uint64, ok bool) {
 			if client == a.local && a.hasLocal {
 				clock++
 			} else {
-				delete(a.states, client)
+				a.removeState(client)
 			}
 		} else {
-			a.remember(client)
-			a.states[client] = raw
+			a.setState(client, raw)
 		}
 		a.meta[client] = awarenessMeta{clock: clock, lastUpdated: now}
 		changed = append(changed, client)
@@ -208,7 +233,7 @@ func (a *awareness) apply(update []byte) (changed []uint64, ok bool) {
 func (a *awareness) clearRemote() {
 	for client := range a.states {
 		if client != a.local {
-			delete(a.states, client)
+			a.removeState(client)
 		}
 	}
 }

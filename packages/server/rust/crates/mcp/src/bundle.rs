@@ -27,6 +27,11 @@ pub struct Bundle {
 
 // A big batch can take seconds; the pool's own 10 s default would cut it.
 const CALL_TIMEOUT: Duration = Duration::from_secs(60);
+// The budget counts bytes allocated, freed or not. A batch of 300 inserts of
+// 2000 characters allocates about 620 MiB, past the server's 512 MiB; one
+// that fills the 4 MiB HTTP body (1300 inserts) allocates 2-3 GiB and holds
+// under 200 MiB. Node runs both.
+const MEMORY_BUDGET: i64 = 4 << 30;
 
 impl Bundle {
     /// Loads the engines. Every process start pays for each one, and the
@@ -35,7 +40,7 @@ impl Bundle {
         let pool = Pool::new(Options {
             pool_size: Some(pool_size),
             timeout: Some(CALL_TIMEOUT),
-            memory_budget: None,
+            memory_budget: Some(MEMORY_BUDGET),
         })
         .map_err(|e| BundleError(e.to_string()))?;
         Ok(Bundle { pool })

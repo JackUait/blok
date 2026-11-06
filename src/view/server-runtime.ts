@@ -844,8 +844,11 @@ const agentPagesNeededResult = async (inputJson: string): Promise<string> => {
     return Promise.resolve({ pageId: `planned-page-${counted.count}` });
   });
 
+  // The same approver as agentExecute: a retry that carries the yes counts its pages.
+  const approve = approvalOf(input.approval)?.approve;
+
   try {
-    const result = await session.execute(batch);
+    const result = await session.execute(batch, approve === undefined ? {} : { approve });
 
     return JSON.stringify(result.ok ? { count: counted.count } : { count: 0, result });
   } finally {

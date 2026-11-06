@@ -332,6 +332,11 @@ const buildCases = async (invoke) => {
   add('mcp.execute.readOnly', 'agentExecute', J({ mcp: { ...mcpStored, write: false }, document: mcpDoc, actor: mcpActor, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }] } }));
   add('mcp.execute.ask', 'agentExecute', J({ mcp: mcpStored, document: lockedDb, actor: mcpActor, approval: { capabilities: { elicitation: {} }, clientName: 'Desk' }, batch: { commands: [{ name: 'database.setLock', args: { id: 'db', locked: false } }] } }));
   add('mcp.execute.noCommands', 'agentExecute', J({ mcp: mcpStored, document: mcpDoc, actor: mcpActor, batch: {} }));
+  add('mcp.pagesNeeded.approved', 'agentPagesNeeded', J({
+    mcp: { ...mcpStored, pageTitles: 'page-map' }, document: lockedDb, actor: mcpActor,
+    approval: { capabilities: { elicitation: {} }, clientName: 'Desk', replies: { '["database.unlock","db","Payroll"]': { action: 'accept', content: { unlock: true } } } },
+    batch: { commands: [{ name: 'block.insert', args: { type: 'page', id: 'np0', position: 'end' } }, { name: 'database.setLock', args: { id: 'db', locked: false } }] },
+  }));
   add('mcp.execute.liveRevision', 'agentExecute', J({ mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor, revision: { now: 'l4', afterWrite: 'l5' }, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }], expectRevision: 'l4' } }));
   add('mcp.executeAnswer', 'mcpExecuteAnswer', J({ result: { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [] }, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v' } }));
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));

@@ -2466,6 +2466,12 @@
     "output": "{\"result\":{\"ok\":false,\"revision\":\"h329376fbdd2ad\",\"error\":{\"code\":\"INVALID_ARGS\",\"message\":\"A batch is { commands: [ { name, args } ... ] } with at least one command.\",\"path\":\"/commands\",\"retryable\":false},\"warnings\":[]},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello & \"},{\"text\":\"world\",\"marks\":{\"bold\":true}}]}}]},\"edits\":[],\"writes\":false,\"save\":false}"
   },
   {
+    "name": "mcp.pagesNeeded.approved",
+    "op": "agentPagesNeeded",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true,\"pageTitles\":\"page-map\"},\"document\":{\"blocks\":[{\"id\":\"db\",\"type\":\"database\",\"content\":[],\"data\":{\"title\":\"Payroll\",\"activeViewId\":\"v\",\"schema\":[{\"id\":\"t\",\"name\":\"Name\",\"type\":\"title\",\"position\":\"a0\",\"databaseLocked\":true}],\"views\":[{\"id\":\"v\",\"name\":\"Table\",\"type\":\"table\",\"position\":\"a0\",\"sorts\":[],\"filters\":[],\"visibleProperties\":[]}]}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"approval\":{\"capabilities\":{\"elicitation\":{}},\"clientName\":\"Desk\",\"replies\":{\"[\\\"database.unlock\\\",\\\"db\\\",\\\"Payroll\\\"]\":{\"action\":\"accept\",\"content\":{\"unlock\":true}}}},\"batch\":{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"np0\",\"position\":\"end\"}},{\"name\":\"database.setLock\",\"args\":{\"id\":\"db\",\"locked\":false}}]}}",
+    "output": "{\"count\":1}"
+  },
+  {
     "name": "mcp.execute.liveRevision",
     "op": "agentExecute",
     "input": "{\"mcp\":{\"source\":true,\"mode\":\"live\",\"write\":true,\"sync\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"revision\":{\"now\":\"l4\",\"afterWrite\":\"l5\"},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"T\"}},{\"name\":\"doc.read\",\"args\":{}}],\"expectRevision\":\"l4\"}}",

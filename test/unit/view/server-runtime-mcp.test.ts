@@ -668,6 +668,22 @@ describe('server runtime MCP approvals', () => {
       expect(own).toEqual(sdk);
     }
   });
+
+  // The count runs before the person is asked, and again on the retry that carries the yes.
+  it('counts the pages of a batch that waits on an approval, once the reply grants it', async () => {
+    const pageMap = { ...flags, pageTitles: 'page-map' };
+    const batch = { commands: [{ name: 'block.insert', args: { type: 'page', id: 'np0', position: 'end' } }, ...unlock.commands] };
+    const capabilities = { elicitation: {} };
+    const asking = await call('agentPagesNeeded', { mcp: pageMap, document: seed, actor, batch, approval: { capabilities, clientName: 'Desktop' } });
+    const key = approvalKey({ kind: 'database.unlock', blockId: 'db', title: 'Payroll' });
+    const granted = await call('agentPagesNeeded', {
+      mcp: pageMap, document: seed, actor, batch,
+      approval: { capabilities, clientName: 'Desktop', replies: { [key]: { action: 'accept', content: { unlock: true } } } },
+    });
+
+    expect(asking).toMatchObject({ count: 0, result: { ok: false } });
+    expect(granted).toEqual({ count: 1 });
+  });
 });
 
 describe('server runtime CLI operations', () => {

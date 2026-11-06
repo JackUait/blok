@@ -135,6 +135,40 @@ These change saved data or hashes if a port gets them wrong:
 - **Lenient parsing to match:** empty env vars count as set (except `BLOK_SECRET` and `BLOK_MCP_HOST_TOKEN`), number flags use JS `Number()` (`0x10`, `1e3`), base64 decoders skip bad characters, and `--authorize HTTP://…` is treated as a module path.
 - **2026-07-28 wire:** JSON responses, not SSE, with `resultType:"complete"`. The SDK requires `Mcp-Method`, answers `ping` and `server/discover`, and does not enforce `Mcp-Param-Blok-Handle`; the argument wins. An unknown protocol version is answered with 2025-11-25.
 
+## 2d. Review round 2 (2026-11-07): corrections the lanes must follow
+
+Full reports: `review-2026-11-07/verify-05-06.md`, `review-2026-11-07/verify-07.md`.
+
+**Go:**
+- `supportedVersions`: a middleware sets `DiscoverResult.SupportedVersions = ["2026-07-28"]`.
+- `"content": null` on input-required: Node sends no `content` key. Swap the result for a small custom one with only `resultType` and `inputRequests`.
+- `-32020` without `Mcp-Param-Blok-Handle`: register tools without `x-mcp-header`, and add it back in `tools/list` on a COPY of each tool. This also stops Go refusing a header that disagrees with the argument.
+- An `MCP-Protocol-Version: 2024-10-07` header gets 400 from Go and rmcp, 200 from Node. Over stdio Go answers 2025-11-25 where Node echoes 2024-10-07. No SDK option; wrap or rewrite.
+- Go's 2025 `elicitation/create` has no `_meta.progressToken`; Node sends one.
+- Go's outbound law bans `x/net/websocket` dials, raw dialing and `http.Client`. It does not ban third-party WS libraries. History and ticket HTTP calls need pinned entries.
+
+**Rust:**
+- `rmcp`'s HTTP server runs on the workspace's own `blok-http` through a ~30-line adapter, with no hyper. So README line 37 (own HTTP) stays true. Only line 38 (JSON through `blok-jsjson`) needs the approved exception.
+- Override `ServerHandler::discover` for `supportedVersions`. Add `_meta` serverInfo on 2026 results. Set `allowed_hosts` with `host:port` and `allowed_origins`.
+- A long-lived handle needs no `blokagent` API change: a task per handle owns `Arc<Executor>` and keeps the `Session` inside its future.
+
+**Remote live (all three):**
+- Keep the v1 path. Hosts without a journal or operation store pick v1, and Node then sends writes as Update frames and answers SyncStep1 with SyncStep2.
+- Activity 106 has two separate 60 s budgets (provider at handshake, presence after a batch). On the first batch Activity goes before the operation frame.
+- A write batch that adds no outbox rows reports `{durable: true, serverSequence: null}`.
+- On v2 the server echoes the agent's own operation as an Update before the ack. It must not bump the `l<n>` revision.
+- A full awareness flush carries every known state, peers included.
+- **Single lane per batch.** Hold incoming doc frames from export until apply and outbox append are done. Write only the keys the agent patched, as Node does. Otherwise a peer's concurrent edit is reverted.
+- **Undo must match Node's.** Node's undo is Yjs `UndoManager`, scoped to the agent's own changes. Pin Node's behaviour with live conformance cases (peer edits in the same block, CONFLICT cases) and match it.
+- C#: the outbound architecture test needs a new owner kind covering `ClientWebSocket`, `HttpMessageInvoker` and `SocketsHttpHandler`. Measured: `ClientWebSocket` with Origin, a ticket subprotocol, `ConnectAsync(uri, invoker, ct)` and auto-pong all work against the Go host.
+- Go: `translate` is unexported; Rust: `translate` is `pub(crate)`. Both need visibility changes. Rust `OperatorClient::connect` is private.
+
+**Node facts the harness measured that correct earlier notes:**
+- 2026 `ping` answers -32601 "Method not found". 2026 `initialize` on stdio answers 2025-11-25.
+- A refused room upgrade is retried until the 15 s room-sync timeout.
+- A `BLOK_SECRET` under 32 characters fails `blok_open` with -32603.
+- HTTP with a 2025 client loses the client name: the agent id is `agent:local:mcp-client`.
+
 ## 3. Milestones
 
 Each milestone ships green, with tests written first.

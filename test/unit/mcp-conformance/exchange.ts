@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
@@ -25,7 +25,8 @@ import {
  *   argv, env   flags and env vars, with ${placeholders}. The binary sees no
  *               other BLOK_* variable.
  *   files       written under ${dir} before spawning: {"<name>": {"json": v} |
- *               {"text": s} | {"link": "<target name>"}}. json is written compact.
+ *               {"text": s} | {"link": "<target name>"}}, plus "mtimeAgoSeconds". json is
+ *               written compact.
  *   hosts       a route table for the fake host (fake-host.ts) at ${host}, plus
  *               "$upgradeStatus" for the sync upgrade it refuses.
  *   session     {"protocolVersion", "capabilities"?, "clientName"?, "headers"?}: the
@@ -38,6 +39,9 @@ import {
  *               A step with "raw": true gets none of this.
  *   steps       see Step.
  *   watchFiles  names under ${dir} whose exact bytes are recorded as expectFiles.
+ *   fsVariants  true when the answer depends on whether the temp disk ignores letter
+ *               case. Expectations then live in "variants": {"caseInsensitiveFs": …,
+ *               "caseSensitiveFs": …}, each recorded on such a disk (set TMPDIR).
  *   expect*     recorded by --update from Node; never hand-written.
  *
  * Step (one of send / notify / http):
@@ -64,7 +68,7 @@ import {
  * {"$repeat": {"text", "count"}} for a long string.
  */
 
-export interface FileSpec { json?: unknown; text?: string; link?: string }
+export interface FileSpec { json?: unknown; text?: string; link?: string; mtimeAgoSeconds?: number }
 
 export interface ServerRequestSpec { expect?: unknown; reply: Record<string, unknown> }
 
@@ -103,6 +107,8 @@ export interface FixtureCase {
   session?: Session;
   steps?: Step[];
   watchFiles?: string[];
+  fsVariants?: boolean;
+  variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
   expectFiles?: Record<string, FileSpec | null>;
   expectHostRequests?: unknown;
@@ -310,6 +316,11 @@ const writeFiles = (dir: string, files: Record<string, FileSpec>, vars: Vars): v
       writeFileSync(path, spec.text);
     } else {
       writeFileSync(path, JSON.stringify(materialize(spec.json, vars)));
+    }
+    if (spec.mtimeAgoSeconds !== undefined) {
+      const when = new Date(Date.now() - spec.mtimeAgoSeconds * 1000);
+
+      utimesSync(path, when, when);
     }
   }
 };

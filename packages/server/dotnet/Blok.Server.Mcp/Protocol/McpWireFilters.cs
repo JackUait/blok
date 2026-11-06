@@ -15,10 +15,14 @@ internal sealed class McpWireFilters
   private const string Legacy20241007 = "2024-10-07";
   private const string Latest2025 = "2025-11-25";
 
+  // How the SDK words a request the client answered with an error. Only elicitation/create is ever sent.
+  private const string RemoteFailure = "Request failed (remote)";
+
   // The initialize versions the C# SDK accepts; Node answers any other with 2025-11-25.
   private static readonly HashSet<string> Initializable = ["2024-11-05", "2025-03-26", "2025-06-18", Latest2025];
 
   private readonly ConcurrentDictionary<string, string> echoVersion = new(StringComparer.Ordinal);
+  private long requestsSent = -1;
 
   internal void Install(McpServerOptions options)
   {
@@ -35,7 +39,7 @@ internal sealed class McpWireFilters
     });
   }
 
-  private void Incoming(JsonRpcMessage message)
+  internal void Incoming(JsonRpcMessage message)
   {
     if (message is not JsonRpcRequest { Method: "initialize", Params: JsonObject parameters } request)
     {
@@ -58,7 +62,7 @@ internal sealed class McpWireFilters
     parameters["protocolVersion"] = Latest2025;
   }
 
-  private JsonRpcError? Outgoing(JsonRpcMessage message)
+  internal JsonRpcMessage? Outgoing(JsonRpcMessage message)
   {
     switch (message)
     {
@@ -71,6 +75,26 @@ internal sealed class McpWireFilters
         }
 
         return null;
+      // Node's SDK puts a progress token on every request it sends, counted from 0 per connection.
+      case JsonRpcRequest { Params: JsonObject parameters }:
+        var meta = parameters["_meta"] as JsonObject ?? [];
+
+        meta["progressToken"] ??= Interlocked.Increment(ref requestsSent);
+        parameters["_meta"] = meta;
+
+        return null;
+      // A 2025 stdio client refused elicitation/create: Node's SDK answers the tools/call with a tool error.
+      case JsonRpcError error when error.Error.Message.StartsWith(RemoteFailure, StringComparison.Ordinal):
+        return new JsonRpcResponse
+        {
+          Id = error.Id,
+          Result = new JsonObject
+          {
+            ["content"] = new JsonArray(new JsonObject { ["type"] = "text", ["text"] = error.Error.Message }),
+            ["isError"] = true,
+          },
+          Context = error.Context,
+        };
       case JsonRpcError { Error.Code: -32601 } error when error.Error.Message != "Method not found":
         return new JsonRpcError
         {

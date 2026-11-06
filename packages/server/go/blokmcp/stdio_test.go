@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"os"
-	"path/filepath"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -81,9 +81,16 @@ func TestACancelledRequestGetsNoAnswer(t *testing.T) {
 
 // A stop waits for a call in flight, and its answer still goes out.
 func TestStdioStopDeliversTheAnswerInFlight(t *testing.T) {
-	dir := t.TempDir()
-	_ = os.WriteFile(filepath.Join(dir, "doc.json"), []byte(`{"blocks":[]}`), 0o644)
-	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: dir}})
+	loading := make(chan struct{}, 1)
+	host := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		loading <- struct{}{}
+		time.Sleep(300 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"data":{"blocks":[]},"version":"v1"}`)
+	}))
+	t.Cleanup(host.Close)
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"},
+		Source: &Source{Kind: "endpoint", URL: host.URL + "/docs", EndpointAuth: "Token t"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,6 +98,7 @@ func TestStdioStopDeliversTheAnswerInFlight(t *testing.T) {
 	ctx, stop := context.WithCancel(context.Background())
 	send, reader, done := stdioClient(t, server, ctx)
 	send(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"doc"}}}`)
+	<-loading
 	stop()
 	line, err := reader.ReadString('\n')
 	if err != nil || !strings.Contains(line, `"id":1`) || !strings.Contains(line, "handle") {

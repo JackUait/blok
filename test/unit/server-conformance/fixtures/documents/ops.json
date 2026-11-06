@@ -3,7 +3,7 @@
     "name": "version",
     "op": "version",
     "input": "{}",
-    "output": "1.16.1"
+    "output": "2.0.0"
   },
   {
     "name": "schema",
@@ -15,7 +15,7 @@
     "name": "manifest",
     "op": "manifest",
     "input": "{}",
-    "outputSha256": "d7e7d0e57bf33ca26b027f80c10388770c4c34d43e4dc0000a65c55e1b2d77c3"
+    "outputSha256": "cac88d5af0ad1b996362f7632b9e8ce59aa0668124f3ca2fa23df26d55669ed7"
   },
   {
     "name": "article.markdown",

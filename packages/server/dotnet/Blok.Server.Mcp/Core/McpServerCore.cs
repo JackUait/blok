@@ -37,6 +37,10 @@ internal sealed class McpServerCore : IAsyncDisposable
     };
     flags = config.SurfaceFlags();
     live = config.Sync is null ? null : new LiveOpener(config, http, bundle, flags, SurfaceAsync);
+    if (live is not null && config.PageTitles == "page-map")
+    {
+      live.CreatePage = CreateLivePageAsync;
+    }
     handles = new HandleRegistry<IHandleSession>(config.IdleMs, config.MaxHandles, session => session.CloseAsync("expired"));
     var period = TimeSpan.FromMilliseconds(Math.Min(config.IdleMs, 30_000));
 
@@ -380,6 +384,54 @@ internal sealed class McpServerCore : IAsyncDisposable
     catch (McpHostError error)
     {
       // Node names the page in the refusal, keeping the error's own flag.
+      throw error.WithDetail("pageId", pageId);
+    }
+  }
+
+  // The opener's createLivePage: the join runs the ticket mint and the service's own authorization, and loads the room.
+  private async Task<string> CreateLivePageAsync(McpCaller caller, CancellationToken cancellationToken)
+  {
+    var pageId = PageIds.Mint();
+
+    try
+    {
+      if (!await AllowedAsync(caller, pageId, true, cancellationToken))
+      {
+        throw McpHostError.Surface("FORBIDDEN", "You may not create a page document here.");
+      }
+      var session = await live!.OpenAsync(pageId, true, caller, cancellationToken);
+
+      try
+      {
+        var read = await session.ReadAsync(new JsonObject(), cancellationToken);
+        var view = read["structuredContent"];
+
+        if (McpJson.Bool(read["isError"]) == true && view?["error"] is JsonObject error)
+        {
+          throw new McpHostError(error);
+        }
+        if (view?["blocks"] is JsonArray { Count: > 0 } || view?["page"]?["title"] is not null || view?["page"]?["icon"] is not null)
+        {
+          throw McpHostError.Surface("SOURCE_UNAVAILABLE", "The new page id is taken. Try again.");
+        }
+      }
+      finally
+      {
+        // Awaited: this runs inside blok_execute, so nothing else waits for the socket to close.
+        try
+        {
+          await session.CloseAsync("closed");
+        }
+        catch (Exception error)
+        {
+          await Console.Error.WriteLineAsync($"blok-mcp: closing a new page room failed: {error.Message}");
+        }
+      }
+
+      return pageId;
+    }
+    catch (McpHostError error)
+    {
       throw error.WithDetail("pageId", pageId);
     }
   }

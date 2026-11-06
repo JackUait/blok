@@ -18,6 +18,9 @@ internal sealed class LiveOpener(McpConfig config, McpHttpCaller http, McpBundle
   private static readonly TimeSpan TicketFetchTimeout = TimeSpan.FromSeconds(10);
   private static readonly TimeSpan SyncTimeout = TimeSpan.FromSeconds(15);
 
+  /// <summary>Handed to each live session for page inserts; null when pages are not documents.</summary>
+  internal Func<McpCaller, CancellationToken, Task<string>>? CreatePage { get; set; }
+
   internal static string SyncUrlFor(string baseUrl, string documentId)
   {
     if (documentId is "" or "." or "..")
@@ -104,7 +107,7 @@ internal sealed class LiveOpener(McpConfig config, McpHttpCaller http, McpBundle
       var revision = McpJson.String(surface["contractRevision"]?["live"]) ?? string.Empty;
       var unavailable = surface["liveUnavailableCommands"] as JsonArray;
       var history = new LiveVersionHistory(http, url, sync.Origin, guard is null ? null : guard.NextAsync);
-      var session = new LiveSession(room, bundle, flags, caller, write, revision, unavailable, history);
+      var session = new LiveSession(room, bundle, flags, caller, write, revision, unavailable, history) { CreatePage = CreatePage };
 
       await room.Loop.RunAsync(session.Start);
 

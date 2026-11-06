@@ -58,6 +58,9 @@ internal sealed class LiveSession : IHandleSession
     presence.Announce();
   }
 
+  /// <summary>Makes a new page's document (opener.ts createLivePage); null when pages are not documents.</summary>
+  internal Func<McpCaller, CancellationToken, Task<string>>? CreatePage { get; init; }
+
   public JsonObject Describe()
   {
     var described = new JsonObject
@@ -103,7 +106,7 @@ internal sealed class LiveSession : IHandleSession
 
   public Task<McpExecuteOutcome> ExecuteAsync(JsonNode? batch, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
   {
-    return room.Loop.RunAsync(() => ExecuteOnLoopAsync(batch, approval, cancellationToken));
+    return room.Loop.RunAsync(() => ExecuteOnLoopAsync(batch, caller, approval, cancellationToken));
   }
 
   public Task<JsonObject> CloseAsync(string reason)
@@ -119,7 +122,7 @@ internal sealed class LiveSession : IHandleSession
     });
   }
 
-  private async Task<McpExecuteOutcome> ExecuteOnLoopAsync(JsonNode? batch, McpApproval? approval, CancellationToken cancellationToken)
+  private async Task<McpExecuteOutcome> ExecuteOnLoopAsync(JsonNode? batch, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
   {
     await ThrowIfEndedAsync(cancellationToken);
     var mark = room.Outbox.AppendedCount;
@@ -149,6 +152,11 @@ internal sealed class LiveSession : IHandleSession
       if (gate is null && await history.LoadAsync(batch, cancellationToken) is { } versions)
       {
         input["versionHistory"] = versions;
+      }
+      if (gate is null && !readOnly && CreatePage is not null && batch is JsonObject { } envelope
+          && envelope["commands"] is JsonArray commands && commands.All(command => command is JsonObject))
+      {
+        input["createdPages"] = await CreatePagesAsync(input, caller, cancellationToken);
       }
       var ran = await bundle.CallAsync("agentExecute", input, cancellationToken);
 
@@ -363,6 +371,34 @@ internal sealed class LiveSession : IHandleSession
       ["actor"] = actor.DeepClone(),
       ["revision"] = new JsonObject { ["now"] = room.Revision, ["afterWrite"] = $"l{room.UpdateCount + 1}" },
     };
+  }
+
+  /*
+   * A batch that would be refused, or that waits on a person's answer, makes no page:
+   * Node plans the whole batch before it makes one, and agentExecute answers it.
+   */
+  private async Task<JsonArray> CreatePagesAsync(JsonObject input, McpCaller caller, CancellationToken cancellationToken)
+  {
+    var needed = await bundle.CallAsync("agentPagesNeeded", input, cancellationToken);
+    var created = new JsonArray();
+    var count = (int)(McpJson.Number(needed["count"]) ?? 0);
+
+    if (needed["result"] is JsonObject refused)
+    {
+      // Only a batch refused after its pages were prepared made them in Node; the bundle lists those as orphans.
+      var error = refused["error"];
+
+      count = McpJson.String(error?["code"]) != "ORPHANED_SIDE_EFFECT"
+          ? 0
+          : (error?["details"]?["orphaned"] as JsonArray ?? [])
+              .Count(orphan => McpJson.String(orphan?["prepared"]?["pageId"])?.StartsWith("planned-page-", StringComparison.Ordinal) == true);
+    }
+    for (; count > 0; count--)
+    {
+      created.Add(await CreatePage!(caller, cancellationToken));
+    }
+
+    return created;
   }
 
   /// <summary>The batch's first command when it is history.undo or history.redo; the bundle refuses anything else with it.</summary>

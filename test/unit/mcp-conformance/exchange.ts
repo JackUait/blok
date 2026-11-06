@@ -48,8 +48,10 @@ import {
  *   headers     extra HTTP headers for send/notify; null removes a default.
  *   serverRequests  stdio only: server-to-client requests expected while the
  *               answer is pending, in order, each with the "reply" to send back.
- *   capture     {"name": "/json/pointer"} or {"name": {"keyOf": "/pointer"}}: a value
- *               (or the first key) from the answer, usable as ${name} later.
+ *   capture     {"name": "/json/pointer"}, {"name": {"keyOf": "/pointer"}} (the first key
+ *               there) or {"name": {"pointer", "optional": true}} (no error when absent):
+ *               a string from the answer, usable as ${name} later. A captured value
+ *               is recorded as its placeholder, so random handles compare equal.
  *   mask        pointers into the answer whose values vary run to run.
  *   expectSavedVersion  {"file", "pointer"}: the answer's value there must be the
  *               SHA-256 hex of that file's bytes. Checked on every run.
@@ -74,13 +76,15 @@ export interface Step {
   raw?: boolean;
   headers?: Record<string, unknown>;
   serverRequests?: ServerRequestSpec[];
-  capture?: Record<string, string | { keyOf: string }>;
+  capture?: Record<string, CaptureSource>;
   mask?: string[];
   expectSavedVersion?: { file: string; pointer: string };
   expect?: unknown;
   expectHttp?: unknown;
   notifications?: unknown[];
 }
+
+export type CaptureSource = string | { keyOf: string } | { pointer: string; optional: true };
 
 export interface Session {
   protocolVersion: string;
@@ -238,6 +242,18 @@ const normalize = (value: unknown, label: string): unknown => {
   }
 
   return out;
+};
+
+const captured = (answer: unknown, source: CaptureSource): unknown => {
+  if (typeof source === 'string') {
+    return at(answer, source);
+  }
+  if ('pointer' in source) {
+    return at(answer, source.pointer);
+  }
+  const container = at(answer, source.keyOf);
+
+  return Object.keys(isRecord(container) ? container : {})[0];
 };
 
 const sha256 = (bytes: Buffer): string => createHash('sha256').update(bytes).digest('hex');
@@ -411,9 +427,11 @@ class CaseRun {
 
     (step.mask ?? []).forEach((pointer) => maskAt(masked, pointer));
     for (const [name, source] of Object.entries(step.capture ?? {})) {
-      const container = typeof source === 'string' ? undefined : at(answer, source.keyOf);
-      const value = typeof source === 'string' ? at(answer, source) : Object.keys(isRecord(container) ? container : {})[0];
+      const value = captured(answer, source);
 
+      if (typeof source !== 'string' && 'optional' in source && value === undefined) {
+        continue;
+      }
       if (typeof value !== 'string') {
         throw new Error(`${label}: capture ${name} found no string in ${JSON.stringify(answer)}`);
       }

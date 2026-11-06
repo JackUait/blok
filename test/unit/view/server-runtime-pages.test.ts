@@ -64,6 +64,21 @@ describe('server runtime page creation', () => {
       .toMatchObject({ count: 0, result: { ok: false, error: { code: 'BLOCK_NOT_FOUND' } } });
   });
 
+  it('names the pages a refused batch had already prepared, as Node makes them before the refusal', async () => {
+    const badPage = { commands: [{ name: 'block.insert', args: { type: 'page', id: 'np0', data: { title: 'x' } } }] };
+    const counted = await wire('agentPagesNeeded', { ...creating, document: empty, actor, batch: badPage });
+
+    expect(counted).toMatchObject({ count: 0, prepared: 1, result: { ok: false, error: { code: 'ORPHANED_SIDE_EFFECT' } } });
+    expect(await wire('agentPagesNeeded', { ...creating, document: empty, actor, batch: { commands: [{ name: 'block.delete', args: { id: 'x' } }] } }))
+      .not.toHaveProperty('prepared');
+    const ran = await wire('agentExecute', { ...creating, document: empty, actor, batch: badPage, createdPages: ['host-a'] });
+
+    expect(ran.result).toMatchObject({
+      ok: false,
+      error: { code: 'ORPHANED_SIDE_EFFECT', details: { orphaned: [{ command: 'block.insert', type: 'page', prepared: { pageId: 'host-a' } }] } },
+    });
+  });
+
   it('points each inserted page at the next page the host created', async () => {
     const output = await wire('agentExecute', { ...creating, document: empty, actor, batch: insertPage(2), createdPages: ['host-a', 'host-b'] });
 

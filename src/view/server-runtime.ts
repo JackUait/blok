@@ -858,7 +858,8 @@ const agentPagesNeededResult = async (inputJson: string): Promise<string> => {
   try {
     const result = await session.execute(batch, approve === undefined ? {} : { approve });
 
-    return JSON.stringify(result.ok ? { count: counted.count } : { count: 0, result });
+    // A refused batch may have prepared pages first, as Node makes them mid-batch: `prepared` says how many.
+    return JSON.stringify(result.ok ? { count: counted.count } : { count: 0, result, ...(counted.count > 0 && { prepared: counted.count }) });
   } finally {
     session.close();
   }

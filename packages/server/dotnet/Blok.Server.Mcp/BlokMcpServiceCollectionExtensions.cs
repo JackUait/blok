@@ -264,7 +264,8 @@ public static class BlokMcpServiceCollectionExtensions
       ["auth"] = new JsonObject { ["kind"] = options.OAuth is null ? "none" : "oauth" },
     };
 
-    // The per-document refusal above is the library's own; only a real hook counts for a secret.
+    // The per-document check already passed above: a hook, AllowEveryCallerEveryDocument, or a
+    // ticket route with no source each stand for Node's --authorize here.
     if (authorize || options.AllowEveryCallerEveryDocument || (options.TicketUrl is not null && options.FilesDirectory is null && options.DocumentEndpoint is null))
     {
       check["authorize"] = true;

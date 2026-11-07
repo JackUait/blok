@@ -35,7 +35,7 @@ app.Run();
 
 - `BlokMcpOptions` holds the same choices as the command line flags: the document source, the principal, the schema, handle limits, comments and OAuth.
 - Read documents from a folder with `FilesDirectory`, or from your own route with `DocumentEndpoint`.
-- Without `Authorize`, a registered `IBlokAuthorization` decides. With neither, every caller reaches every document.
+- Without `Authorize`, a registered `IBlokAuthorization` decides. With neither, startup fails. Set `AllowEveryCallerEveryDocument` to let every caller reach every document. A server with only `TicketUrl` and no document source needs neither: the ticket route decides.
 - `MapBlokMcp` takes a path, `/mcp` by default.
 
 To run the server on its own instead, use the `Blok.Mcp` tool.

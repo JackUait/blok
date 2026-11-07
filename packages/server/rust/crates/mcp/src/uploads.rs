@@ -3,8 +3,7 @@
 //! upload folder reader (src/mcp/local-files.ts).
 
 use std::future::Future;
-use std::io::Read;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -223,17 +222,37 @@ fn refuse(message: String) -> Value {
     refusal("PRECONDITION_FAILED", message)
 }
 
+#[cfg(unix)]
 fn too_large(size: u64, max: u64) -> Value {
     refuse(format!(
         "The file is too large: {size} bytes, and this host takes at most {max}."
     ))
 }
 
+/// No local reads off Unix: the checks need a no-follow open and the
+/// file's identity, and std has no stable file index on Windows
+/// (windows_by_handle).
+#[cfg(not(unix))]
+pub fn read_local(_root: &Path, path: &str, _max_bytes: u64) -> Result<(Vec<u8>, String), Value> {
+    if path.is_empty() || path.chars().count() > MAX_PATH || path.contains('\0') {
+        return Err(refusal(
+            "INVALID_ARGS",
+            format!("path must be 1 to {MAX_PATH} characters with no NUL byte."),
+        ));
+    }
+    Err(refuse(format!(
+        "\"{path}\" was not read: this host reads upload files only on Unix."
+    )))
+}
+
 /// Node's createLocalFileReader: a path that resolves outside `root`, a
 /// hidden file, a hard-linked file or one that is not regular is refused,
 /// with one answer for missing and outside.
+#[cfg(unix)]
 pub fn read_local(root: &Path, path: &str, max_bytes: u64) -> Result<(Vec<u8>, String), Value> {
+    use std::io::Read;
     use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
+    use std::path::Component;
     if path.is_empty() || path.chars().count() > MAX_PATH || path.contains('\0') {
         return Err(refusal(
             "INVALID_ARGS",

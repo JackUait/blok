@@ -7,6 +7,8 @@
 /// Which stop signal came.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stop {
+    // Only Unix has SIGTERM.
+    #[cfg_attr(not(unix), allow(dead_code))]
     Terminate,
     Interrupt,
 }

@@ -19,7 +19,7 @@ func TestAnUnreachableHistoryRouteIsRetryable(t *testing.T) {
 	room := newLiveRoom("http://"+address+"/sync/doc", "doc", nil, func(bool) (string, error) { return "t", nil }, nil)
 	t.Cleanup(room.close)
 	loaded := room.loadVersions(context.Background(), json.RawMessage(`{"commands":[{"name":"history.versions","args":{}}]}`))
-	if loaded["retryable"] != true {
+	if loaded["retryable"] != true || loaded["failed"] != "The sync server could not be reached: fetch failed" {
 		t.Fatalf("loaded %v", loaded)
 	}
 }

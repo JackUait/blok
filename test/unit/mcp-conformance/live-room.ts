@@ -32,8 +32,9 @@ import { startServer, type RunningServer } from '../server-conformance/run-again
  *   {"frames": true | "withPeers"}        agent frames since the last call, per connection
  *   {"upgrades": true}                    every distinct upgrade answer so far, and whether it repeated
  *   {"inject": Injection}                 a fault: drop the agent's next ack, reject its next
- *                                         operation, refuse every upgrade from now on, close it now, or
- *                                         send it a QueryAwareness now
+ *                                         operation, refuse every upgrade from now on, close it now,
+ *                                         send it a QueryAwareness now, or cut every history request
+ *                                         from now on before it is answered
  *   {"settle": true}                      wait for quiet
  *   {"wait": ms}                          sleep, then wait for quiet
  *   {"history": true}                     the host's GET /sync/<doc>/history, normalized
@@ -64,7 +65,8 @@ export type Injection =
   | { reject: string }
   | { close: number }
   | { refuseUpgrades: number }
-  | { queryAwareness: true };
+  | { queryAwareness: true }
+  | { cutHistory: true };
 
 export interface RoomAction {
   peer?: string;
@@ -293,6 +295,13 @@ class FrameProxy {
     const upstream = createConnection(this.target);
 
     this.track(upstream);
+    if (!isUpgrade && path.includes('/history') && this.injections.some((injection) => 'cutHistory' in injection)) {
+      // No answer at all, as when the route is down.
+      upstream.destroy();
+      client.destroy();
+
+      return;
+    }
     if (!isUpgrade) {
       // Plain HTTP (the history routes): pass it through untouched.
       upstream.write(Buffer.concat([head, rest]));

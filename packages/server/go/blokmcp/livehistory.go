@@ -37,7 +37,8 @@ func (r *liveRoom) historySend(ctx context.Context, method, url string, header h
 		}
 		answer, err := fetch(ctx, 0, method, url, headers, nil)
 		if err != nil {
-			return nil, &unreachableError{fmt.Sprintf("The sync server could not be reached: %v", err)}
+			// Node's fetch names every network failure "fetch failed".
+			return nil, &unreachableError{"The sync server could not be reached: fetch failed"}
 		}
 		if answer.status == http.StatusUnauthorized && !fresh {
 			continue

@@ -22,10 +22,23 @@ pub struct Answer {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Unreachable {
     pub too_large: bool,
+    /// The head came back, then the body failed: Node's text() rejects
+    /// there, not fetch().
+    pub mid_body: bool,
 }
 
-const FAILED: Unreachable = Unreachable { too_large: false };
-const TOO_LARGE: Unreachable = Unreachable { too_large: true };
+const FAILED: Unreachable = Unreachable {
+    too_large: false,
+    mid_body: false,
+};
+const TOO_LARGE: Unreachable = Unreachable {
+    too_large: true,
+    mid_body: true,
+};
+const DROPPED: Unreachable = Unreachable {
+    too_large: false,
+    mid_body: true,
+};
 
 #[derive(Clone)]
 pub struct Outbound {
@@ -59,9 +72,14 @@ impl Outbound {
         timeout: Duration,
     ) -> Result<Answer, Unreachable> {
         let uri = parse_absolute_uri(url).filter(Uri::is_http).ok_or(FAILED)?;
-        tokio::time::timeout(timeout, self.exchange(method, &uri, headers, body))
-            .await
-            .map_err(|_| FAILED)?
+        self.exchange(
+            method,
+            &uri,
+            headers,
+            body,
+            tokio::time::Instant::now() + timeout,
+        )
+        .await
     }
 
     async fn exchange(
@@ -70,6 +88,7 @@ impl Outbound {
         uri: &Uri,
         headers: Vec<(String, String)>,
         body: Option<&[u8]>,
+        deadline: tokio::time::Instant,
     ) -> Result<Answer, Unreachable> {
         let host = host_header(uri);
         let mut headers = headers;
@@ -82,19 +101,27 @@ impl Outbound {
             headers,
             body: body.map_or(RequestBody::None, RequestBody::Bytes),
         };
-        let mut response = self.client.send(request).await.map_err(|_| FAILED)?;
-        let mut out = Vec::new();
-        let mut buf = vec![0u8; 16 << 10];
-        loop {
-            let n = response.body.read(&mut buf).await.map_err(|_| FAILED)?;
-            if n == 0 {
-                break;
+        let mut response = tokio::time::timeout_at(deadline, self.client.send(request))
+            .await
+            .map_err(|_| FAILED)?
+            .map_err(|_| FAILED)?;
+        let read = async {
+            let mut out = Vec::new();
+            let mut buf = vec![0u8; 16 << 10];
+            loop {
+                let n = response.body.read(&mut buf).await.map_err(|_| DROPPED)?;
+                if n == 0 {
+                    return Ok(out);
+                }
+                out.extend_from_slice(&buf[..n]);
+                if out.len() > MAX_ANSWER {
+                    return Err(TOO_LARGE);
+                }
             }
-            out.extend_from_slice(&buf[..n]);
-            if out.len() > MAX_ANSWER {
-                return Err(TOO_LARGE);
-            }
-        }
+        };
+        let out = tokio::time::timeout_at(deadline, read)
+            .await
+            .map_err(|_| DROPPED)??;
         let encoding = response
             .headers
             .get("Content-Encoding")
@@ -166,7 +193,7 @@ fn decoded(encoding: Option<&str>, body: Vec<u8>) -> Result<Vec<u8>, Unreachable
         reader
             .take(MAX_ANSWER as u64 + 1)
             .read_to_end(&mut out)
-            .map_err(|_| FAILED)?;
+            .map_err(|_| DROPPED)?;
         if out.len() > MAX_ANSWER {
             return Err(TOO_LARGE);
         }

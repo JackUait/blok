@@ -242,6 +242,8 @@ impl EndpointSource {
                         "answered more than {} MiB, more than this server opens",
                         crate::outbound::MAX_ANSWER >> 20
                     )
+                } else if failed.mid_body {
+                    "dropped the connection while answering".to_owned()
                 } else {
                     "could not be reached".to_owned()
                 })
@@ -490,6 +492,37 @@ mod tests {
         assert!(
             head.contains("\r\naccept-encoding: gzip, deflate\r\n"),
             "{head}"
+        );
+    }
+
+    // fetch() resolves at the head; a socket that closes before the body
+    // ends rejects text(), which Node words apart from an unreachable host.
+    #[tokio::test]
+    async fn a_connection_dropped_mid_body_says_so() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            while let Ok((mut tcp, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let _ = tcp.read(&mut buf).await;
+                let _ = tcp
+                    .write_all(
+                        b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n{\"data\":{\"blocks\":[",
+                    )
+                    .await;
+            }
+        });
+        let source = EndpointSource::new(
+            format!("http://{address}/docs"),
+            "Bearer t".to_owned(),
+            None,
+            Outbound::new(),
+        );
+        let dropped = message(source.load("a").await.err().unwrap());
+        assert_eq!(
+            dropped,
+            "The document endpoint dropped the connection while answering."
         );
     }
 

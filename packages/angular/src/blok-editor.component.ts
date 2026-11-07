@@ -16,7 +16,7 @@ import {
   type OnDestroy,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
-import { BlokContentDirective, getConstructedCollaboration } from './blok-content.directive';
+import { BlokContentDirective, getConstructedCollaboration, getConstructedData } from './blok-content.directive';
 import { BLOK_DEFAULT_CONFIG } from './provide-blok';
 import { createEmittedEchoWindow } from '@bloklabs/core/adapters';
 import { deepEqual } from '@bloklabs/core/adapters';
@@ -899,18 +899,22 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, OnDestroy, C
         return;
       }
 
-      // A freshly created editor was already seeded with `data` at construction;
-      // record it without re-rendering.
+      // A freshly created editor was already seeded at construction. When
+      // `data` still matches that seed, record it without re-rendering; when it
+      // changed before the editor was ready, render it.
       if (this.seededEditor !== editor) {
         this.seededEditor = editor;
-        this.lastRenderedData = data;
         // A render still pending on a PRIOR editor is moot for this fresh one;
         // clear it so its content cannot dedupe a needed render here.
         this.pendingData = undefined;
         // Payloads emitted by a PRIOR editor are likewise moot for this one.
         this.emittedEcho.clear();
 
-        return;
+        if (deepEqual(data, getConstructedData(editor))) {
+          this.lastRenderedData = data;
+
+          return;
+        }
       }
 
       // Structural comparison (`equalsOutputData`, not a raw deep-equal): a host

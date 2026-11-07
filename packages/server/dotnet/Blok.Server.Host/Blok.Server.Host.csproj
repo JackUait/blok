@@ -24,8 +24,17 @@
                                     Value="true" />
   </ItemGroup>
 
+  <!-- The release publish sets AssemblyName=blok-server, a global property.
+       A default here also covers the references the SDK adds for Blok.Server.
+       Without it Blok.Server builds again as blok-server.dll in its own obj
+       and deletes the Blok.Server.dll that other projects compile against. -->
+  <ItemDefinitionGroup>
+    <ProjectReference>
+      <GlobalPropertiesToRemove>AssemblyName</GlobalPropertiesToRemove>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+
   <ItemGroup>
-    <ProjectReference Include="../Blok.Server.AspNetCore/Blok.Server.AspNetCore.csproj"
-                      GlobalPropertiesToRemove="AssemblyName" />
+    <ProjectReference Include="../Blok.Server.AspNetCore/Blok.Server.AspNetCore.csproj" />
   </ItemGroup>
 </Project>

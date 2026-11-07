@@ -143,6 +143,16 @@ public sealed class HostProcessTests
           $"dotnet publish exited with {publish.ExitCode}:{Environment.NewLine}" +
           $"{await standardOutput}{Environment.NewLine}{await standardError}");
 
+      // AssemblyName is a global property. A library built under it writes
+      // its obj/ref as blok-server.dll and deletes Blok.Server.dll, which a
+      // build running beside this publish still compiles against (CS0006).
+      Assert.DoesNotMatch(
+          @"Blok\.Server(\.AspNetCore)? -> \S*blok-server\.dll",
+          await standardOutput);
+      Assert.False(
+          File.Exists(Path.Combine(outputDirectory, "blok-server.xml")),
+          "the publish built a library under the host's assembly name");
+      Assert.True(File.Exists(Path.Combine(outputDirectory, "Blok.Server.dll")));
       await using var host = await StartHostAsync(
           ["--listen", HostProcess.AllocateListenAddress()],
           assemblyPath: Path.Combine(outputDirectory, "blok-server.dll"));

@@ -173,11 +173,7 @@ internal sealed class LiveSession : IHandleSession
       var gate = replay is null ? null : steps.GateFor(replay == "history.undo");
       var comments = CommentsOnly(batch);
 
-      // The bundle cannot carry a comment batch's history: it clears the steps but keeps the mark.
-      if (!comments)
-      {
-        input["history"] = gate?.History ?? new JsonObject();
-      }
+      input["history"] = gate?.History ?? new JsonObject();
       if (gate is not null)
       {
         input["document"] = gate.Document;

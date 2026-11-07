@@ -10,6 +10,8 @@ use crate::bundle::{Bundle, BundleError};
 #[derive(Debug)]
 pub enum StartError {
     Config(String),
+    /// Not a refusal Node names (e.g. a config path that is a folder): exit code 1.
+    Failed(String),
     Bundle(BundleError),
 }
 
@@ -153,7 +155,7 @@ fn read_json_file(path: &str, cwd: &Path) -> Result<Value, StartError> {
             )));
         }
         Err(err) => {
-            return Err(StartError::Config(format!("Cannot read \"{path}\": {err}")));
+            return Err(StartError::Failed(format!("Cannot read \"{path}\": {err}")));
         }
     };
     let text = String::from_utf8_lossy(&bytes);
@@ -181,6 +183,20 @@ mod tests {
             PathBuf::from("/work/x/y/z")
         );
         assert_eq!(resolve_like_node(cwd, "/abs/../b"), PathBuf::from("/b"));
+    }
+
+    // Node's readJsonFile rethrows any error but ENOENT, so the start fails with 1.
+    #[test]
+    fn a_config_file_that_cannot_be_read_is_not_a_config_refusal() {
+        let dir = std::env::temp_dir();
+        match read_json_file(".", &dir) {
+            Err(StartError::Failed(message)) => assert!(message.contains("Is a directory")),
+            other => panic!("expected a start failure, got {other:?}"),
+        }
+        assert!(matches!(
+            read_json_file("no-such-file.json", &dir),
+            Err(StartError::Config(_))
+        ));
     }
 
     #[test]

@@ -653,24 +653,19 @@
       }
     },
     {
-      "name": "a --manifest that is a folder exits 1",
+      "name": "a --manifest that is a folder fails the start with code 1",
       "transport": "cli",
       "argv": [
         "--manifest",
         "docs"
       ],
       "env": {},
-      "files": {
-        "x.json": {
-          "text": "{}"
-        }
-      },
-      "stderrPattern": "EISDIR: illegal operation on a directory, read",
+      "stderrPattern": "(EISDIR|Is a directory)",
       "expectExit": {
         "code": 1,
         "signal": null,
         "stderr": {
-          "pattern": "EISDIR: illegal operation on a directory, read"
+          "pattern": "(EISDIR|Is a directory)"
         }
       }
     },

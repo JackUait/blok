@@ -59,6 +59,10 @@ pub async fn run_cli(argv: Vec<String>, env: Value, cwd: &Path) -> i32 {
             eprintln!("blok-mcp: {message}");
             return 2;
         }
+        Err(StartError::Failed(message)) => {
+            eprintln!("blok-mcp: {message}");
+            return 1;
+        }
         Err(StartError::Bundle(err)) => {
             eprintln!("blok-mcp: {err}");
             return 1;

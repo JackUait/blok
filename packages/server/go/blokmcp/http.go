@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -302,6 +303,51 @@ func (r *recorder) send(w http.ResponseWriter, modern bool) {
 	_, _ = w.Write(body)
 }
 
+// bindLikeNode reads the port as Node's splitListen does (up to five
+// digits, 0 to 65535), binds the first address a name resolves to, and
+// words a failure as Node prints it.
+func bindLikeNode(ctx context.Context, listen string, at int) (net.Listener, error) {
+	digits := listen[at+1:]
+	port, parsed := strconv.Atoi(digits)
+	if digits == "" {
+		port, parsed = 0, nil
+	}
+	if len(digits) > 5 || strings.TrimLeft(digits, "0123456789") != "" || parsed != nil || port > 65535 {
+		return nil, errors.New(`--http needs a port from 0 to 65535 after the last ":", got "` + listen + `"`)
+	}
+	failed := func(detail string) error { return errors.New("Cannot listen on " + listen + ": " + detail) }
+	host := strings.TrimSuffix(strings.TrimPrefix(listen[:at], "["), "]")
+	// Node listens on the first address the resolver gives for a name;
+	// Go's own listen would prefer IPv4.
+	if host != "" && net.ParseIP(host) == nil {
+		addresses, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		if err != nil || len(addresses) == 0 {
+			return nil, failed("getaddrinfo ENOTFOUND " + host)
+		}
+		host = addresses[0].IP.String()
+	}
+	listener, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+	if err == nil {
+		return listener, nil
+	}
+	var words string
+	switch {
+	case errors.Is(err, syscall.EADDRINUSE):
+		words = "EADDRINUSE: address already in use"
+	case errors.Is(err, syscall.EADDRNOTAVAIL):
+		words = "EADDRNOTAVAIL: address not available"
+	case errors.Is(err, syscall.EACCES):
+		words = "EACCES: permission denied"
+	default:
+		return nil, failed(err.Error())
+	}
+	shown := host
+	if port > 0 {
+		shown += ":" + strconv.Itoa(port)
+	}
+	return nil, failed("listen " + words + " " + shown)
+}
+
 // ListenAndServe serves Handler on the listen address until ctx ends.
 // onListening gets the base URL once the port is bound.
 func (s *Server) ListenAndServe(ctx context.Context, onListening func(url string)) error {
@@ -310,19 +356,7 @@ func (s *Server) ListenAndServe(ctx context.Context, onListening func(url string
 	if at < 0 {
 		return &ConfigError{Message: "Refusing to bind " + listen + ": a non-loopback address needs --public"}
 	}
-	host := strings.TrimSuffix(strings.TrimPrefix(listen[:at], "["), "]")
-	// Node listens on the first address the resolver gives for a name;
-	// Go's own listen would prefer IPv4.
-	if host != "" && net.ParseIP(host) == nil {
-		addresses, err := net.DefaultResolver.LookupIPAddr(ctx, host)
-		if err != nil {
-			return err
-		}
-		if len(addresses) > 0 {
-			host = addresses[0].IP.String()
-		}
-	}
-	listener, err := net.Listen("tcp", net.JoinHostPort(host, listen[at+1:]))
+	listener, err := bindLikeNode(ctx, listen, at)
 	if err != nil {
 		return err
 	}

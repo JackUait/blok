@@ -33,7 +33,8 @@ type Options struct {
 	Overrides json.RawMessage `json:"overrides,omitempty"`
 
 	// Authorize, when set, decides every open and every handle call, and
-	// filters listings (write false). An error denies.
+	// filters listings (write false). An error fails the call with -32603
+	// and its text, as Node does.
 	Authorize AuthorizeFunc `json:"-"`
 
 	// AgentActor, when set, builds the session's actor from the principal

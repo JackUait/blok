@@ -466,7 +466,8 @@ const isBatchEnvelope = (value: unknown): boolean =>
  * Jint cannot call back into the host, so the host loads what one history
  * read needs before the call: `versions`, `documents` keyed by version (null:
  * no such version), or `failed` with why it could not and the HTTP `status`
- * the history routes would answer, which decides whether a retry can help.
+ * the history routes would answer, or `retryable` when no answer came (Node's
+ * fetch error says so), which decide whether a retry can help.
  * A restore needs both `versions` and its version in `documents`; with
  * `restores: true` Jint checks it and names it as `restore` in the output.
  */
@@ -474,11 +475,12 @@ const loadedVersionHistory = (value: unknown, onRestore?: (version: string) => v
   if (!isRecord(value)) {
     return undefined;
   }
-  const { versions, documents, failed, status } = value;
+  const { versions, documents, failed, status, retryable } = value;
   const loaded = (version: string): boolean => isRecord(documents) && Object.hasOwn(documents, version);
   const refuse = (what: string): Promise<never> => Promise.reject(Object.assign(
     new Error(typeof failed === 'string' ? failed : `The host did not load ${what}.`),
-    typeof status === 'number' ? { status } : {}
+    typeof status === 'number' ? { status } : {},
+    typeof retryable === 'boolean' ? { retryable } : {}
   ));
 
   return {

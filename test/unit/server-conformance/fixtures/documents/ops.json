@@ -2538,6 +2538,12 @@
     "output": "{\"fields\":{\"paragraph\":[\"text\"],\"header\":[\"text\"],\"list\":[\"text\"],\"table\":[],\"toggle\":[\"text\"],\"callout\":[],\"database\":[],\"database-row\":[],\"database-comment\":[],\"divider\":[],\"spacer\":[],\"table_of_contents\":[],\"quote\":[\"text\"],\"code\":[],\"image\":[],\"file\":[],\"audio\":[],\"video\":[],\"column_list\":[],\"column\":[],\"tabs\":[],\"tab\":[],\"embed\":[],\"bookmark\":[],\"page\":[],\"page-link\":[],\"note_x\":[\"body\",\"é\"],\"widget\":[\"caption\"]}}"
   },
   {
+    "name": "mcp.execute.historyUnreachable",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"live\",\"write\":true,\"sync\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"versionHistory\":{\"failed\":\"The sync server could not be reached: connection refused\",\"retryable\":true},\"batch\":{\"commands\":[{\"name\":\"history.versions\",\"args\":{}}]}}",
+    "output": "{\"result\":{\"ok\":false,\"revision\":\"h329376fbdd2ad\",\"error\":{\"code\":\"TOOL_ACTION_FAILED\",\"message\":\"The version history failed: The sync server could not be reached: connection refused\",\"retryable\":true,\"commandIndex\":0,\"path\":\"/commands/0/args\"},\"warnings\":[]},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello & \"},{\"text\":\"world\",\"marks\":{\"bold\":true}}]}}]},\"edits\":[],\"writes\":false,\"save\":false}"
+  },
+  {
     "name": "mcp.execute.liveRevision",
     "op": "agentExecute",
     "input": "{\"mcp\":{\"source\":true,\"mode\":\"live\",\"write\":true,\"sync\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"revision\":{\"now\":\"l4\",\"afterWrite\":\"l5\"},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"T\"}},{\"name\":\"doc.read\",\"args\":{}}],\"expectRevision\":\"l4\"}}",

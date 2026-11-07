@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -36,13 +37,29 @@ func (r *liveRoom) historySend(ctx context.Context, method, url string, header h
 		}
 		answer, err := fetch(ctx, 0, method, url, headers, nil)
 		if err != nil {
-			return nil, fmt.Errorf("The sync server could not be reached: %v", err)
+			return nil, &unreachableError{fmt.Sprintf("The sync server could not be reached: %v", err)}
 		}
 		if answer.status == http.StatusUnauthorized && !fresh {
 			continue
 		}
 		return answer, nil
 	}
+}
+
+// unreachableError: no answer came, so a retry can help (Node's fetch
+// error carries retryable: true).
+type unreachableError struct{ message string }
+
+func (e *unreachableError) Error() string { return e.message }
+
+// historyFailed is a load's failure as the bundle reads it.
+func historyFailed(err error) map[string]any {
+	failed := map[string]any{"failed": err.Error()}
+	var unreachable *unreachableError
+	if errors.As(err, &unreachable) {
+		failed["retryable"] = true
+	}
+	return failed
 }
 
 // pointPath is "lineage:sequence" as its route path, or "".
@@ -118,7 +135,7 @@ func (r *liveRoom) loadVersions(ctx context.Context, batch json.RawMessage) map[
 		}
 		answer, err := r.historySend(ctx, http.MethodGet, r.historyBase()+group, nil)
 		if err != nil {
-			return map[string]any{"failed": err.Error()}
+			return historyFailed(err)
 		}
 		if answer.status < 200 || answer.status > 299 {
 			return refusedHistory(answer)
@@ -137,7 +154,7 @@ func (r *liveRoom) loadVersions(ctx context.Context, batch json.RawMessage) map[
 		}
 		answer, err := r.historySend(ctx, http.MethodGet, r.historyBase()+"/"+path, nil)
 		if err != nil {
-			return map[string]any{"failed": err.Error()}
+			return historyFailed(err)
 		}
 		switch {
 		case answer.status == http.StatusNotFound:

@@ -388,6 +388,12 @@ const buildCases = async (invoke) => {
     } }] },
     richTextFields: { widget: ['caption'], paragraph: ['nope'] }, sync: true, source: true,
   }));
+  // No answer from the sync server: the host says a retry can help, as Node's fetch error does.
+  add('mcp.execute.historyUnreachable', 'agentExecute', J({
+    mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor,
+    versionHistory: { failed: 'The sync server could not be reached: connection refused', retryable: true },
+    batch: { commands: [{ name: 'history.versions', args: {} }] },
+  }));
   add('mcp.execute.liveRevision', 'agentExecute', J({ mcp: { ...mcpStored, sync: true, mode: 'live' }, document: mcpDoc, actor: mcpActor, revision: { now: 'l4', afterWrite: 'l5' }, batch: { commands: [{ name: 'doc.setTitle', args: { title: 'T' } }, { name: 'doc.read', args: {} }], expectRevision: 'l4' } }));
   add('mcp.executeAnswer', 'mcpExecuteAnswer', J({ result: { ok: true, revision: 'r', results: [{}], refs: {}, changed: { created: [], updated: ['p1'], moved: [], removed: [] }, warnings: [] }, delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v' } }));
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));

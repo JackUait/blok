@@ -91,6 +91,33 @@ public sealed class LiveVersionHistoryTests
     Assert.Empty(server.Requests);
   }
 
+  private static string NothingListening()
+  {
+    var probe = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+
+    probe.Start();
+    var port = ((IPEndPoint)probe.LocalEndpoint).Port;
+
+    probe.Stop();
+
+    return $"ws://127.0.0.1:{port}/sync/doc";
+  }
+
+  // Node's fetch error: "fetch failed", and no answer is worth a retry.
+  [Fact]
+  public async Task NoAnswerFromTheHistoryRouteIsWorthARetryInNodesWords()
+  {
+    using var http = new McpHttpCaller();
+    var history = new LiveVersionHistory(http, NothingListening(), null, null);
+
+    var loaded = await history.LoadAsync(Batch("history.versions", []), CancellationToken.None);
+    var restore = await history.RestoreAsync("L1:0", null, CancellationToken.None);
+
+    Assert.Equal("""{"failed":"The sync server could not be reached: fetch failed","retryable":true}""", loaded?.ToJsonString());
+    Assert.Equal("The version history failed: The sync server could not be reached: fetch failed", restore?["message"]?.GetValue<string>());
+    Assert.True(restore?["retryable"]?.GetValue<bool>());
+  }
+
   private static JsonObject Batch(string name, JsonObject args) =>
       new() { ["commands"] = new JsonArray(new JsonObject { ["name"] = name, ["args"] = args }) };
 

@@ -116,7 +116,11 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
         response = await SendAsync("POST", $"{historyBase}/{path}/restore", headers, true, cancellationToken);
       }
     }
-    catch (Exception error) when (error is McpUnreachableException or McpBodyException)
+    catch (McpUnreachableException)
+    {
+      return HostFailure($"The sync server could not be reached: {NodeFetchError}", true);
+    }
+    catch (McpBodyException error)
     {
       return HostFailure($"The sync server could not be reached: {error.Message}", true);
     }
@@ -159,6 +163,8 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
     ["path"] = "/commands/0/args",
   };
 
+  private const string NodeFetchError = "fetch failed";
+
   private async Task<(JsonNode? Body, JsonObject? Failed)> GetAsync(string url, CancellationToken cancellationToken, bool notFoundIsNull = false)
   {
     McpHttpResponse response;
@@ -171,7 +177,12 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
         response = await SendAsync("GET", url, [], true, cancellationToken);
       }
     }
-    catch (Exception error) when (error is McpUnreachableException or McpBodyException)
+    // No answer at all: the network may come back. "fetch failed" is Node's fetch error.
+    catch (McpUnreachableException)
+    {
+      return (null, new JsonObject { ["failed"] = $"The sync server could not be reached: {NodeFetchError}", ["retryable"] = true });
+    }
+    catch (McpBodyException error)
     {
       return (null, new JsonObject { ["failed"] = $"The sync server could not be reached: {error.Message}" });
     }

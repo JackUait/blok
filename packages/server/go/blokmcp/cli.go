@@ -150,6 +150,10 @@ func loadAuthorize(spec string) (AuthorizeFunc, error) {
 
 // configFile reads and validates a --manifest or --manifest-overrides file.
 func configFile(engine bundle, kind, path string) (json.RawMessage, error) {
+	// Node's readFile words a folder this way; Go's read differs per OS.
+	if info, statErr := os.Stat(path); statErr == nil && info.IsDir() {
+		return nil, errors.New("EISDIR: illegal operation on a directory, read")
+	}
 	bytes, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, &configError{fmt.Sprintf("Cannot read \"%s\": no such file", path)}

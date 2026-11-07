@@ -102,3 +102,12 @@ func TestHTTPRefusesToolsCallShapesAsNodesSDK(t *testing.T) {
 		t.Fatalf("bad arguments: %d %q", response.StatusCode, text)
 	}
 }
+
+// Node fails a --manifest that is a folder with EISDIR, exit code 1.
+func TestAManifestThatIsAFolderFailsAsNodeReadsIt(t *testing.T) {
+	dir := t.TempDir()
+	_, err := configFile(bundle{runtime: fakeRuntime{}}, "manifest", dir)
+	if _, isConfig := err.(*configError); err == nil || isConfig || !strings.HasPrefix(err.Error(), "EISDIR: ") {
+		t.Fatalf("got %T %v", err, err)
+	}
+}

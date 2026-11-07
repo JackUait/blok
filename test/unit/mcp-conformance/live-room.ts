@@ -4,7 +4,6 @@ import { createConnection, createServer, type Server, type Socket } from 'node:n
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import * as decoding from 'lib0/decoding';
 import * as Y from 'yjs';
 
 import { createCollabProvider } from '../../../src/components/modules/collaboration/provider';
@@ -491,14 +490,44 @@ class FrameProxy {
 
 /** One awareness update as role + state keys; clientIDs and clocks vary per run. */
 const awarenessEntries = (update: Uint8Array): Array<{ clientId: number; state: Record<string, unknown> | null }> => {
-  const decoder = decoding.createDecoder(update);
-  const count = decoding.readVarUint(decoder);
+  // lib0's varuint: seven bits per byte, low bits first. Read here because lib0 is not a declared dependency.
+  const cursor = { at: 0 };
+  const readVarUint = (): number => {
+    let num = 0;
+    let scale = 1;
+
+    for (;;) {
+      if (cursor.at >= update.length) {
+        throw new Error('awareness update ends inside a varuint');
+      }
+      const byte = update[cursor.at++];
+
+      num += (byte & 0x7f) * scale;
+      if (byte < 0x80) {
+        return num;
+      }
+      scale *= 128;
+    }
+  };
+  const readVarString = (): string => {
+    const length = readVarUint();
+
+    if (cursor.at + length > update.length) {
+      throw new Error('awareness update ends inside a string');
+    }
+    const text = new TextDecoder().decode(update.subarray(cursor.at, cursor.at + length));
+
+    cursor.at += length;
+
+    return text;
+  };
+  const count = readVarUint();
 
   return Array.from({ length: count }, () => {
-    const clientId = decoding.readVarUint(decoder);
+    const clientId = readVarUint();
 
-    decoding.readVarUint(decoder);
-    const state: unknown = JSON.parse(decoding.readVarString(decoder));
+    readVarUint();
+    const state: unknown = JSON.parse(readVarString());
 
     return { clientId, state: isRecord(state) ? state : null };
   });

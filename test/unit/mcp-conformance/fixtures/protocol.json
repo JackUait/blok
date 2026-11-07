@@ -600,6 +600,50 @@
       }
     },
     {
+      "name": "stdio: a message past 10 MiB closes the transport, and nothing more is answered",
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "ping",
+            "params": {
+              "pad": {
+                "$repeat": {
+                  "text": "a",
+                  "count": 10485760
+                }
+              }
+            }
+          },
+          "noAnswer": true
+        },
+        {
+          "sleepMs": 2000
+        },
+        {
+          "send": {
+            "method": "ping"
+          },
+          "noAnswer": true
+        },
+        {
+          "sleepMs": 1000
+        },
+        {
+          "send": {
+            "method": "ping"
+          },
+          "signal": "SIGTERM",
+          "expect": null
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
       "transport": "http",
       "argv": [
         "--source",

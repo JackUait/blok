@@ -8,9 +8,9 @@ import type { I18nInstance } from '../../components/utils/tools';
 export type EmptyStateElement = MediaEmptyStateElement;
 
 export interface EmptyStateOptions {
-  /** MIME types to accept on the file picker + show in the formats hint. */
+  /** MIME types to accept on the file picker. */
   acceptTypes: string[];
-  /** Max file size in bytes — surfaced in the formats hint when set. */
+  /** Max file size in bytes — shown under the button when set. */
   maxSize?: number;
   /** Which insert sources to expose. Default `'both'`. */
   sources?: MediaSource;

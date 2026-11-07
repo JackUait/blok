@@ -10,9 +10,9 @@ import type { I18nInstance } from '../../components/utils/tools';
 export interface EmptyStateOptions {
   onFile(file: File): void;
   onUrl(url: string): void;
-  /** MIME types to accept on file picker + show in the formats hint. */
+  /** MIME types to accept on file picker. */
   acceptTypes?: string[];
-  /** Max file size in bytes — surfaced in the formats hint when set. */
+  /** Max file size in bytes — shown under the button when set. */
   maxSize?: number;
   /** Which insert sources to expose. Default `'both'`. */
   sources?: MediaSource;

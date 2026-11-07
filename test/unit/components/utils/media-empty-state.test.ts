@@ -105,6 +105,30 @@ describe('media tools pick their own preview', () => {
   ] as const)('%s', (kind, make) => {
     expect(make().querySelector(`[data-blok-media-preview="${kind}"]`)).not.toBeNull();
   });
+
+  it.each([
+    ['video', () => renderVideo({ ...handlers, acceptTypes: ['video/mp4', 'video/webm', 'video/quicktime'] })],
+    ['audio', () => renderAudio({ ...handlers, acceptTypes: ['audio/mpeg', 'audio/ogg'] })],
+    ['image', () => renderImage({ ...handlers, acceptTypes: ['image/png', 'image/jpeg'] })],
+    ['file', () => renderFile({ ...handlers, acceptTypes: ['application/pdf', 'application/zip'], i18n })],
+  ] as const)('%s never lists the accepted formats', (_kind, make) => {
+    const el = make();
+
+    expect(el.textContent).not.toMatch(/MP4|WEBM|QUICKTIME|MPEG|MP3|OGG|PNG|JPG|JPEG|PDF|ZIP/);
+    expect(el.querySelector('.blok-media-empty__meta')).toBeNull();
+  });
+});
+
+describe('upload panel meta line', () => {
+  it('shows only the size limit, without formats', () => {
+    const el = render({
+      acceptTypes: ['video/mp4', 'video/webm'],
+      maxSize: 10 * 1024 * 1024,
+      labels: { ...LABELS, maxSize: (size) => `Up to ${size}` },
+    });
+
+    expect(el.querySelector('.blok-media-empty__meta')?.textContent).toBe('Up to 10 MB');
+  });
 });
 
 describe('preview depth follows the pointer', () => {

@@ -49,9 +49,9 @@ export interface MediaEmptyStateLabels {
 }
 
 export interface MediaEmptyStateOptions {
-  /** Accepted MIME types — drives the file picker and the formats hint. */
+  /** Accepted MIME types — drives the file picker. */
   acceptTypes: string[];
-  /** Max file size in bytes — surfaced in the formats hint when set. */
+  /** Max file size in bytes — shown under the button when set. */
   maxSize?: number;
   labels: MediaEmptyStateLabels;
   onFile(file: File): void;
@@ -145,19 +145,6 @@ function readLink(raw: string, types: readonly string[]): { domain: string; type
     domain: parts.slice(-keep).join('.'),
     type: accepted ? label : null,
   };
-}
-
-function formatsLabel(types: readonly string[]): string {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const t of types) {
-    if (t === '*' || t === '*/*' || t.endsWith('/*') || !t.includes('/')) continue;
-    const label = mimeToLabel(t);
-    if (seen.has(label)) continue;
-    seen.add(label);
-    out.push(label);
-  }
-  return out.join(' · ');
 }
 
 export interface MediaEmptyStateElement extends HTMLElement {
@@ -266,7 +253,6 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   const { labels } = opts;
   const types = opts.acceptTypes;
   const accept = types.length ? types.join(',') : '*';
-  const formats = formatsLabel(types);
   const sizeHint = opts.maxSize !== undefined ? formatBytes(opts.maxSize) : '';
 
   const swapMode: MediaEmptyStateSwap = opts.swap ?? 'reflow';
@@ -392,15 +378,13 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
 
     primary.append(choose, hint);
 
-    const meta = document.createElement('div');
-    meta.className = 'blok-media-empty__meta';
-    const metaParts: string[] = [];
-    if (formats) metaParts.push(formats);
-    if (sizeHint && labels.maxSize) metaParts.push(labels.maxSize(sizeHint));
-    meta.textContent = metaParts.join('  ·  ');
-
     content.append(primary);
-    if (metaParts.length) content.append(meta);
+    if (sizeHint && labels.maxSize) {
+      const meta = document.createElement('div');
+      meta.className = 'blok-media-empty__meta';
+      meta.textContent = labels.maxSize(sizeHint);
+      content.append(meta);
+    }
 
     panel.append(content, input);
   };

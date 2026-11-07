@@ -38,8 +38,8 @@ type callTracker struct {
 	calls     map[jsonrpc.ID]bool
 	stdinDone bool
 	inUse     map[jsonrpc.ID]int
-	aliases map[jsonrpc.ID]jsonrpc.ID
-	latest  map[jsonrpc.ID]jsonrpc.ID
+	aliases   map[jsonrpc.ID]jsonrpc.ID
+	latest    map[jsonrpc.ID]jsonrpc.ID
 }
 
 // closeTransport drops every later message, as Node's closed transport

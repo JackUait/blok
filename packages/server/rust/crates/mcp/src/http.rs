@@ -932,50 +932,60 @@ pub struct Listening {
     pub server: Arc<Server>,
 }
 
+/// Node's splitListen: up to five digits after the last colon, 0 to 65535.
 fn split_listen(listen: &str) -> std::io::Result<(String, u16)> {
-    let at = listen.rfind(':').unwrap_or(listen.len());
-    let host = listen[..at]
-        .trim_start_matches('[')
-        .trim_end_matches(']')
-        .to_owned();
-    let text = listen.get(at + 1..).unwrap_or_default();
-    let port = js_number(text)
-        .filter(|n| n.fract() == 0.0 && (0.0..=65535.0).contains(n))
-        .ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("the port in --http {listen} must be a whole number from 0 to 65535"),
-            )
-        })?;
-    Ok((host, port as u16))
+    let refused = || {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("--http needs a port from 0 to 65535 after the last \":\", got \"{listen}\""),
+        )
+    };
+    let at = listen.rfind(':').ok_or_else(refused)?;
+    let text = &listen[at + 1..];
+    if text.len() > 5 || !text.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(refused());
+    }
+    let port = if text.is_empty() {
+        0
+    } else {
+        text.parse::<u32>()
+            .ok()
+            .and_then(|n| u16::try_from(n).ok())
+            .ok_or_else(refused)?
+    };
+    let host = &listen[..at];
+    let host = host.strip_prefix('[').unwrap_or(host);
+    let host = host.strip_suffix(']').unwrap_or(host);
+    Ok((host.to_owned(), port))
 }
 
-/// JS Number(text) for a port: an empty text is 0, 0x/0o/0b prefixes count.
-fn js_number(text: &str) -> Option<f64> {
-    let text = text.trim();
-    if text.is_empty() {
-        return Some(0.0);
-    }
-    for (prefix, radix) in [
-        ("0x", 16),
-        ("0X", 16),
-        ("0o", 8),
-        ("0O", 8),
-        ("0b", 2),
-        ("0B", 2),
-    ] {
-        if let Some(digits) = text.strip_prefix(prefix) {
-            return u64::from_str_radix(digits, radix).ok().map(|n| n as f64);
-        }
-    }
-    // Rust also reads "inf" and "nan"; Number() reads neither as a port.
-    if !text
-        .bytes()
-        .all(|b| b.is_ascii_digit() || matches!(b, b'.' | b'e' | b'E' | b'+' | b'-'))
+/// Binds the first address the host names, as Node's listen() does, and
+/// words a failure as Node prints it.
+async fn bind(listen: &str) -> std::io::Result<tokio::net::TcpListener> {
+    let (host, port) = split_listen(listen)?;
+    let failed =
+        |detail: String| std::io::Error::other(format!("Cannot listen on {listen}: {detail}"));
+    let address = match tokio::net::lookup_host((host.as_str(), port))
+        .await
+        .ok()
+        .and_then(|mut found| found.next())
     {
-        return None;
-    }
-    text.parse::<f64>().ok()
+        Some(address) => address,
+        None => return Err(failed(format!("getaddrinfo ENOTFOUND {host}"))),
+    };
+    tokio::net::TcpListener::bind(address).await.map_err(|err| {
+        let words = match err.kind() {
+            std::io::ErrorKind::AddrInUse => "EADDRINUSE: address already in use",
+            std::io::ErrorKind::AddrNotAvailable => "EADDRNOTAVAIL: address not available",
+            std::io::ErrorKind::PermissionDenied => "EACCES: permission denied",
+            _ => return failed(err.to_string()),
+        };
+        let shown = match port {
+            0 => address.ip().to_string(),
+            port => format!("{}:{port}", address.ip()),
+        };
+        failed(format!("listen {words} {shown}"))
+    })
 }
 
 pub async fn listen(
@@ -985,8 +995,7 @@ pub async fn listen(
     principal: String,
     public: bool,
 ) -> std::io::Result<Listening> {
-    let (host, port) = split_listen(listen)?;
-    let listener = tokio::net::TcpListener::bind((host.as_str(), port)).await?;
+    let listener = bind(listen).await?;
     let address: SocketAddr = listener.local_addr()?;
     let port = address.port();
     let front = Arc::new(Front {
@@ -1020,8 +1029,8 @@ pub async fn listen(
 mod tests {
     use super::*;
 
-    // Node reads the port with Number() and listen() refuses any that is
-    // not an integer 0..65535; an empty port is 0, a free one.
+    // Node's splitListen: up to five digits after the last colon, 0 to
+    // 65535; an empty port is 0, a free one.
     #[test]
     fn a_port_node_cannot_listen_on_is_refused() {
         assert_eq!(
@@ -1029,13 +1038,49 @@ mod tests {
             ("127.0.0.1".to_owned(), 0)
         );
         assert_eq!(split_listen("[::1]:80").unwrap(), ("::1".to_owned(), 80));
-        assert_eq!(split_listen("h:8080.0").unwrap().1, 8080);
-        assert_eq!(split_listen("h:0x10").unwrap().1, 16);
+        assert_eq!(split_listen("h:65535").unwrap().1, 65535);
         for bad in [
-            "h:abc", "h:99999", "h:-1", "h:65535x", "h:1.5", "h:NaN", "h:inf",
+            "h:abc", "h:99999", "h:-1", "h:65535x", "h:1.5", "h:NaN", "h:inf", "h:0x10",
+            "h:8080.0", "h: 0", "h:000001", "h",
         ] {
-            assert!(split_listen(bad).is_err(), "{bad}");
+            assert_eq!(
+                split_listen(bad).unwrap_err().to_string(),
+                format!("--http needs a port from 0 to 65535 after the last \":\", got \"{bad}\""),
+                "{bad}"
+            );
         }
+    }
+
+    // Node prints libuv's words for a failed bind and getaddrinfo's for a
+    // name that does not resolve.
+    #[tokio::test]
+    async fn a_failed_bind_is_worded_as_node_words_it() {
+        let held = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = held.local_addr().unwrap().port();
+        let listen = format!("127.0.0.1:{port}");
+        let Err(err) = bind(&listen).await else {
+            panic!("bound a port in use");
+        };
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "Cannot listen on {listen}: listen EADDRINUSE: address already in use 127.0.0.1:{port}"
+            )
+        );
+        let Err(err) = bind("203.0.113.9:0").await else {
+            panic!("bound an address this host lacks");
+        };
+        assert_eq!(
+            err.to_string(),
+            "Cannot listen on 203.0.113.9:0: listen EADDRNOTAVAIL: address not available 203.0.113.9"
+        );
+        let Err(err) = bind("nope.invalid:0").await else {
+            panic!("bound a name that does not resolve");
+        };
+        assert_eq!(
+            err.to_string(),
+            "Cannot listen on nope.invalid:0: getaddrinfo ENOTFOUND nope.invalid"
+        );
     }
 
     #[test]

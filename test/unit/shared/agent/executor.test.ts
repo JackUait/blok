@@ -1009,8 +1009,10 @@ describe('runBatch contract', () => {
     const applier = memoryApplier({}, recordDoc);
     const result = await run({ commands: [{ name: 'record.change', args: { id: 'rec' } }] }, applier, { ctx });
 
+    // The executor keeps the message: Blok's own prepare steps word fixes this way (setSource's
+    // "Pass an http(s) URL."). Host uploader errors are cut where the MCP builds the uploader.
     expect(result).toMatchObject({ ok: false, error: {
-      code: 'TOOL_ACTION_FAILED', commandIndex: 0, retryable: false,
+      code: 'TOOL_ACTION_FAILED', message: 'A prepare step failed: host unavailable', commandIndex: 0, retryable: false,
     } });
     expect(ran).toBe(0);
     expect(applier.applied).toBe(0);

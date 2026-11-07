@@ -455,8 +455,9 @@ jobs:
   # The MCP servers in Node, Go, Rust and C#, each driven by the same black-box
   # suite. It waits for Server so it starts after the E2E shards took their
   # slots: a job that starts at t=0 holds a slot of the 20-job cap while they
-  # queue. C# starts a process per case slowly, so its suites run in three parts
-  # to stay under seven minutes.
+  # queue. The live suite alone takes about three minutes, so it runs as a part
+  # of its own; C# starts each case's process slowly and runs in four parts.
+  # All parts stay under seven minutes.
   mcp-conformance:
     name: MCP Conformance (${{ matrix.part }})
     needs: [server]
@@ -469,11 +470,14 @@ jobs:
       matrix:
         include:
           - { part: node, target: node, suites: '' }
-          - { part: go, target: go, suites: '' }
-          - { part: rust, target: rust, suites: '' }
-          - { part: 'csharp 1/3', target: csharp, suites: '--suite live --suite http --suite files-source --suite endpoint-source' }
-          - { part: 'csharp 2/3', target: csharp, suites: '--suite corpus --suite approvals --suite cli' }
-          - { part: 'csharp 3/3', target: csharp, suites: '--suite protocol --suite tool-args --suite tickets' }
+          - { part: 'go 1/2', target: go, suites: '--suite live' }
+          - { part: 'go 2/2', target: go, suites: '--suite protocol --suite tool-args --suite corpus --suite files-source --suite endpoint-source --suite cli --suite http --suite approvals --suite tickets --suite pages --suite handles --suite shutdown --suite timeouts' }
+          - { part: 'rust 1/2', target: rust, suites: '--suite live' }
+          - { part: 'rust 2/2', target: rust, suites: '--suite protocol --suite tool-args --suite corpus --suite files-source --suite endpoint-source --suite cli --suite http --suite approvals --suite tickets --suite pages --suite handles --suite shutdown --suite timeouts' }
+          - { part: 'csharp 1/4', target: csharp, suites: '--suite live' }
+          - { part: 'csharp 2/4', target: csharp, suites: '--suite corpus --suite tool-args --suite handles --suite pages' }
+          - { part: 'csharp 3/4', target: csharp, suites: '--suite protocol --suite tickets --suite approvals --suite http' }
+          - { part: 'csharp 4/4', target: csharp, suites: '--suite shutdown --suite cli --suite timeouts --suite files-source --suite endpoint-source' }
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -513,7 +517,7 @@ jobs:
         run: node scripts/test-mcp-conformance.mjs --target ${{ matrix.target }} ${{ matrix.suites }}
 
       - name: Test packed MCP NuGets
-        if: matrix.part == 'csharp 3/3'
+        if: matrix.part == 'csharp 3/4'
         run: node scripts/test-server-packages.mjs --packages mcp
 
   # No `needs: build`: the tests that read build output run in

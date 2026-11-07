@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -19,8 +20,23 @@ type McpRun = { target?: string; suites: string[]; filtered: boolean };
 const repoRoot = resolve(__dirname, '../../..');
 const TARGETS = ['node', 'csharp', 'go', 'rust'];
 
-// One suite per test file; the runner refuses any other --suite.
-const SUITES = readdirSync(resolve(repoRoot, 'test/unit/mcp-conformance'))
+/** The suites the runner registers, from its own usage text. */
+const runnerSuites = (): string[] => {
+  const result = spawnSync(process.execPath, [resolve(repoRoot, 'scripts/test-mcp-conformance.mjs'), '--target', 'java'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: { ...process.env, PATH: '' },
+    timeout: 30_000,
+  });
+  const line = /^Suites: (.+)\.$/m.exec(result.stderr)?.[1] ?? '';
+
+  return line.split(', ').filter(Boolean).sort();
+};
+
+const SUITES = runnerSuites();
+
+// Each test file is one suite; a file the runner does not register never runs.
+const SUITE_FILES = readdirSync(resolve(repoRoot, 'test/unit/mcp-conformance'))
   .filter((name) => name.endsWith('.test.ts'))
   .map((name) => name.slice(0, -'.test.ts'.length))
   .sort();
@@ -75,9 +91,9 @@ describe('MCP conformance CI law', () => {
     vi.restoreAllMocks();
   });
 
-  it('finds the ten suites', () => {
-    expect(SUITES).toHaveLength(10);
+  it('reads the runner suites, and every suite file is one of them', () => {
     expect(SUITES).toContain('live');
+    expect(SUITES).toEqual(SUITE_FILES);
   });
 
   it.each(TARGETS)('runs every MCP conformance suite on %s in CI', (target) => {

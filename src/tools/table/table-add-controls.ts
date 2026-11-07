@@ -481,14 +481,20 @@ export class TableAddControls {
     }
     const sc = this.scrollContainer;
 
-    // Only a grid clipped by its scroll container has columns out of view.
-    if (sc === null || sc.scrollWidth <= sc.clientWidth + 1) {
+    if (sc === null) {
       return 0;
     }
     const axis = inlineAxis(state.direction);
-    const edge = axis.end(new DOMRect(port.left, port.top, port.right - port.left, port.bottom - port.top));
+    const band = axis.end(port) - AUTO_SCROLL_VIEWPORT_BAND;
+    const isClipped = sc.scrollWidth > sc.clientWidth + 1;
 
-    return Math.max(0, state.pointerPos - (edge - AUTO_SCROLL_VIEWPORT_BAND));
+    // A grid that fits is armed once one more column and the bar would not fit
+    // before the band: in full screen the bar already sits by the window edge.
+    if (!isClipped && axis.end(this.grid.getBoundingClientRect()) + this.measureAddUnit('col') + this.addColBtn.offsetWidth < band) {
+      return 0;
+    }
+
+    return Math.max(0, state.pointerPos - band);
   }
 
   private syncAutoScroll(): void {

@@ -389,7 +389,7 @@ export class TableCornerDrag {
       return;
     }
 
-    const edge = this.scrollContainer ? state.axis.end(this.scrollContainer.getBoundingClientRect()) : Infinity;
+    const edge = this.scrollContainer ? this.columnEdge(this.scrollContainer, state.axis) : Infinity;
 
     if (nextX <= edge) {
       state.retreatPeak = null;
@@ -436,7 +436,7 @@ export class TableCornerDrag {
       return state.targetWidth + nextX - previousX;
     }
 
-    const edge = state.axis.end(this.scrollContainer.getBoundingClientRect());
+    const edge = this.columnEdge(this.scrollContainer, state.axis);
     const outward = Math.max(nextX, edge) - Math.max(previousX, edge);
     const inward = Math.min(nextX, edge) - Math.min(previousX, edge);
 
@@ -504,7 +504,7 @@ export class TableCornerDrag {
       return false;
     }
 
-    return this.dragState.pointerX > this.dragState.axis.end(sc.getBoundingClientRect()) + AUTO_SCROLL_OVERSHOOT;
+    return this.dragState.pointerX > this.columnEdge(sc, this.dragState.axis) + AUTO_SCROLL_OVERSHOOT;
   }
 
   private shouldAutoScrollDown(): boolean {
@@ -519,7 +519,16 @@ export class TableCornerDrag {
       return 0;
     }
 
-    return Math.max(0, this.dragState.pointerX - this.dragState.axis.end(sc.getBoundingClientRect()));
+    return Math.max(0, this.dragState.pointerX - this.columnEdge(sc, this.dragState.axis));
+  }
+
+  /**
+   * Where columns start auto-growing: the container's end, but never closer to
+   * the screen edge than the band. In full screen the container runs to the
+   * window edge, so without the band there is no room to hold the pointer past it.
+   */
+  private columnEdge(sc: HTMLElement, axis: InlineAxis): number {
+    return Math.min(axis.end(sc.getBoundingClientRect()), axis.end(verticalPort(this.gridEl)) - AUTO_SCROLL_VIEWPORT_BAND);
   }
 
   private overshootDown(): number {

@@ -155,6 +155,43 @@ test.describe('Adding rows and columns keeps them in view', () => {
     await page.mouse.up();
   });
 
+  test('holding the add-column bar of a full-screen table that fits keeps adding columns', async ({ page }) => {
+    await createBlok(page, tableOf(5, 3));
+    const modal = await openFullscreen(page);
+    const columns = page.locator(ROW_SELECTOR).first().locator('[data-blok-table-cell]');
+    const grid = await box(modal.getByRole('table'));
+
+    await page.mouse.move(grid.x + grid.width - 10, grid.y + grid.height / 2);
+    const bar = await box(page.locator('[data-blok-table-add-col]'));
+
+    await page.mouse.move(bar.x + bar.width / 2, bar.y + bar.height / 2);
+    await page.mouse.down();
+    // The bar sits by the window edge: there is no room left to drag a column out.
+    await page.mouse.move((page.viewportSize()?.width ?? 1280) - 2, bar.y + bar.height / 2, { steps: 8 });
+
+    await expect.poll(() => columns.count(), { timeout: 5_000 }).toBeGreaterThan(5);
+    await page.mouse.up();
+  });
+
+  test('holding the corner of a full-screen table at the window edge keeps adding columns and rows', async ({ page }) => {
+    await createBlok(page, tableOf(5, 3));
+    const modal = await openFullscreen(page);
+    const columns = page.locator(ROW_SELECTOR).first().locator('[data-blok-table-cell]');
+    const grid = await box(modal.getByRole('table'));
+
+    await page.mouse.move(grid.x + grid.width - 4, grid.y + grid.height - 4);
+    const corner = await box(page.locator('[data-blok-table-corner-drag]'));
+    const start = { x: corner.x + corner.width / 2, y: corner.y + corner.height / 2 };
+
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move((page.viewportSize()?.width ?? 1280) - 2, start.y + 120, { steps: 12 });
+
+    await expect.poll(() => columns.count(), { timeout: 5_000 }).toBeGreaterThan(6);
+    expect(await page.locator(ROW_SELECTOR).count()).toBeGreaterThan(5);
+    await page.mouse.up();
+  });
+
   test('clicking add row with the table at the bottom of the window scrolls the new row into view', async ({ page }) => {
     await createBlok(page, tableOf(30, 3));
     const rows = page.locator(ROW_SELECTOR);

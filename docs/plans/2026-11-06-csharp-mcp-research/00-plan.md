@@ -251,3 +251,22 @@ The questions as they were asked:
 - Whether JSON-diff undo matches Yjs undo when a peer edits the same block at the same time.
 
 Resolved in review: an `unavailableCommands` reason of `host` is unreachable (32 option combinations measured), so the schema mismatch is latent only.
+
+## 6. Outcome (2026-11-07)
+
+The MCP server is built in C#, Go and Rust, next to Node, and all four pass the same black-box suite: `node scripts/test-mcp-conformance.mjs --target node|csharp|go|rust` (378 Node-recorded cases in 14 suites, live rooms run against the Go, C# and Rust sync hosts). CI runs every suite for every target (`mcp-conformance` job, nine parts, each under 7 minutes); `mcp-conformance-ci-law.test.ts` fails if a target or suite stops running.
+
+Where each one lives:
+
+- C#: `packages/server/dotnet/Blok.Server.Mcp` (library: `AddBlokMcp`, `MapBlokMcp`) and `Blok.Mcp` (dotnet tool, `dnx Blok.Mcp`).
+- Go: `packages/server/go/blokmcp` (embedding: `blokmcp.New`, `Handler`) and `cmd/blok-mcp`.
+- Rust: `packages/server/rust/crates/mcp` (`blok-mcp`, on rmcp behind `blok-http`). Ships nothing yet, like the Rust server.
+- Shared pure logic: `src/shared/mcp/` and the `mcp*` operations of the runtime bundle (`08-bundle-contract.md`).
+
+Review rounds: four independent reviewers (C#, Go, Rust, parity) plus automated security review. Every confirmed finding is fixed with a test, among them a read-only bypass in Go's in-process rooms, missing Origin/Host/remote-address gates in the C# and Rust library forms, an OAuth key-fetch stall in Rust, undo approval gates judged on the wrong state, and several resource limits.
+
+Node fixes found on the way (release notes owed): ticket claims read as UTF-8; `blok_close` frees the slot after revoked access; an in-flight save is answered at SIGTERM; a lost page-write ack is reported as pending; a comment batch no longer breaks undo (and no longer lets undo unlock a database without asking); collab no longer sends a write twice during the residual round; **BREAKING** host uploader errors are hidden from the agent by default (`agentMessage` opts in); tab sync no longer loses a join hello (data loss).
+
+Deliberate differences, documented in the READMEs and the server docs page: `--authorize <module path>` is Node-only (ports take webhooks); a 60 s per-call limit and per-engine memory budgets; the C# library's live mode uses in-process rooms.
+
+Open: the CI timing of the slowest MCP parts on a cold cache; Go and C# are slower than Node on very large batches; the release needs `NUGET_API_KEY` to cover `Blok.Mcp` and `Blok.Server.Mcp`, and the "not shipped yet" doc lines removed at release.

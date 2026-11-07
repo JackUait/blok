@@ -9,6 +9,18 @@ const HOLDER_ID = 'blok';
 /** Whether a code block's preview area shows a rendered formula or diagram. */
 const drawn = (area: Locator): Promise<boolean> =>
   area.evaluate((element) => element.querySelector('.katex, svg') !== null && element.getBoundingClientRect().height > 0);
+/*
+ * KaTeX adds its stylesheet from a CDN on first render, and that sheet then loads the fonts. Each
+ * one changes a formula's height. fonts.ready alone does not wait for the sheet.
+ */
+const styled = (page: Page): Promise<boolean> => page.evaluate(() => {
+  const links = [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')];
+
+  // A layout starts the font loads a newly arrived sheet asks for, so the status below sees them.
+  document.body.getBoundingClientRect();
+
+  return links.every(link => link.sheet !== null) && document.fonts.status === 'loaded';
+});
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 /** One model call the test drives: stream events into it, then answer it. */
@@ -771,8 +783,7 @@ test.describe('Ask AI live edits', () => {
         content: box(element.querySelector('[data-blok-testid="code-preview"]:not([hidden])') ?? element.querySelector('[data-blok-testid="code-content"]')),
       };
     });
-    // KaTeX's fonts change the formula's height when they arrive.
-    await page.evaluate(() => document.fonts.ready);
+    await expect.poll(() => styled(page)).toBe(true);
     const before = [await look(previewBlocks.nth(0)), await look(previewBlocks.nth(1))];
 
     await emit(page, 0, { type: 'tool_end', index: 0 });
@@ -781,7 +792,7 @@ test.describe('Ask AI live edits', () => {
     const real = page.locator(`#${HOLDER_ID} [data-blok-tool="code"]`);
 
     await expect.poll(() => drawn(real.nth(1).getByTestId('code-preview'))).toBe(true);
-    await page.evaluate(() => document.fonts.ready);
+    await expect.poll(() => styled(page)).toBe(true);
     expect([await look(real.nth(0)), await look(real.nth(1))]).toEqual(before);
   });
 

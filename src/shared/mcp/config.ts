@@ -289,7 +289,8 @@ const checkValues = (options: BlokMcpOptions): void => {
   for (const name of ['handleIdleMs', 'maxHandlesPerPrincipal'] as const) {
     const value: unknown = options[name];
 
-    if (value !== undefined && !(typeof value === 'number' && Number.isSafeInteger(value) && value > 0)) {
+    // Number.isInteger, as the CLI flags: --handle-idle-ms 9007199254740993 is accepted.
+    if (value !== undefined && !(typeof value === 'number' && Number.isInteger(value) && value > 0)) {
       throw new McpConfigError(`${name} must be a positive integer, got ${shown(value)}`);
     }
   }

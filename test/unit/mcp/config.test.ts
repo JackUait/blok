@@ -685,6 +685,7 @@ describe('checkOptionSafety', () => {
       expect(() => checkOptionSafety({
         ...base, schema: 'full', pageTitles: 'page-map', handleIdleMs: 1, maxHandlesPerPrincipal: 1,
       })).not.toThrow();
+      expect(() => checkOptionSafety({ ...base, handleIdleMs: 2 ** 53, maxHandlesPerPrincipal: 2 ** 53 })).not.toThrow();
     });
   });
 });

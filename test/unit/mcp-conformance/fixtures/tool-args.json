@@ -39701,6 +39701,91 @@
       "expectExit": {
         "code": 0
       }
+    },
+    {
+      "files": {
+        "doc.json": {
+          "json": {
+            "title": "Smile 😀, line sep par, café 中",
+            "blocks": []
+          }
+        }
+      },
+      "name": "content[].text carries emoji, U+2028 and U+2029 raw, byte for byte",
+      "steps": [
+        {
+          "note": "a title in a listing",
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_list_documents",
+              "arguments": {}
+            }
+          },
+          "rawText": true,
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"documents\":[{\"id\":\"doc\",\"title\":\"Smile 😀, line sep par, café 中\",\"live\":false}],\"nextCursor\":null,\"supported\":true}"
+                }
+              ],
+              "structuredContent": {
+                "documents": [
+                  {
+                    "id": "doc",
+                    "title": "Smile 😀, line sep par, café 中",
+                    "live": false
+                  }
+                ],
+                "nextCursor": null,
+                "supported": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "note": "a field name echoed in an error",
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_list_documents",
+              "arguments": {
+                "Smile 😀, line sep par, café 中": 1
+              }
+            }
+          },
+          "rawText": true,
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"error\":{\"code\":\"INVALID_ARGS\",\"message\":\"blok_list_documents: unknown field \\\"Smile 😀, line sep par, café 中\\\"; accepted fields: query, cursor, limit\",\"path\":\"/Smile 😀, line sep par, café 中\",\"retryable\":false}}"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "INVALID_ARGS",
+                  "message": "blok_list_documents: unknown field \"Smile 😀, line sep par, café 中\"; accepted fields: query, cursor, limit",
+                  "path": "/Smile 😀, line sep par, café 中",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
     }
   ]
 }

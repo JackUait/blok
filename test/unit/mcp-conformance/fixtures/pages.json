@@ -2071,6 +2071,216 @@
           }
         }
       ]
+    },
+    {
+      "name": "stored: a repeated key in a page document keeps its last value, on read and on rename",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": [
+              {
+                "id": "pb",
+                "type": "page",
+                "data": {
+                  "pageId": "child"
+                }
+              }
+            ]
+          }
+        },
+        "child.json": {
+          "text": "{\"title\":\"first\",\"blocks\":[],\"title\":\"last\",\"extra\":1,\"extra\":2}"
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "mask": [
+            "/result/structuredContent/handle"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "<masked>",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "pb",
+                    "type": "page",
+                    "depth": 0,
+                    "attrs": {
+                      "pageId": "child"
+                    },
+                    "data": {
+                      "pageId": "child"
+                    }
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_list_documents",
+              "arguments": {}
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "documents": [
+                  {
+                    "id": "child",
+                    "title": "last",
+                    "live": false
+                  },
+                  {
+                    "id": "parent",
+                    "title": null,
+                    "live": false
+                  }
+                ],
+                "nextCursor": null,
+                "supported": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "page.setIcon",
+                    "args": {
+                      "id": "pb",
+                      "icon": {
+                        "type": "emoji",
+                        "value": "x"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "pageId": "child",
+                    "applied": true
+                  }
+                ],
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json",
+        "child.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child\"}}]}"
+        },
+        "child.json": {
+          "text": "{\n  \"extra\": 2,\n  \"title\": \"last\",\n  \"icon\": {\n    \"type\": \"emoji\",\n    \"value\": \"x\"\n  },\n  \"blocks\": []\n}\n"
+        }
+      }
     }
   ]
 }

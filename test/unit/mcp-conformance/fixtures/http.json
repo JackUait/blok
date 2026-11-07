@@ -7262,6 +7262,964 @@
           }
         }
       ]
+    },
+    {
+      "name": "matrix: PUT, PATCH, OPTIONS and HEAD on /mcp",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "http": {
+            "method": "PUT",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 405,
+            "contentType": "application/json",
+            "headers": {
+              "allow": "POST",
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Method not allowed."
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "http": {
+            "method": "PATCH",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 405,
+            "contentType": "application/json",
+            "headers": {
+              "allow": "POST",
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Method not allowed."
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "http": {
+            "method": "OPTIONS",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            }
+          },
+          "expectHttp": {
+            "status": 405,
+            "contentType": "application/json",
+            "headers": {
+              "allow": "POST",
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Method not allowed."
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "http": {
+            "method": "HEAD",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            }
+          },
+          "expectHttp": {
+            "status": 405,
+            "contentType": "application/json",
+            "headers": {
+              "allow": "POST",
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": null
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "name": "matrix: a missing Content-Type, and text/plain",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "accept": "application/json, text/event-stream"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 415,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Unsupported Media Type: Content-Type must be application/json"
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "accept": "application/json, text/event-stream",
+              "content-type": "text/plain"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 415,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Unsupported Media Type: Content-Type must be application/json"
+              },
+              "id": null
+            }
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "name": "matrix: a missing Accept, only one of the two types, and */*",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 406,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Not Acceptable: Client must accept both application/json and text/event-stream"
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 406,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Not Acceptable: Client must accept both application/json and text/event-stream"
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "text/event-stream"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 406,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Not Acceptable: Client must accept both application/json and text/event-stream"
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 406,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Not Acceptable: Client must accept both application/json and text/event-stream"
+              },
+              "id": null
+            }
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "name": "matrix: an empty and an unsupported MCP-Protocol-Version",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream",
+              "mcp-protocol-version": ""
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 400,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Bad Request: Unsupported protocol version:  (supported versions: 2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05, 2024-10-07)"
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream",
+              "mcp-protocol-version": "1999-01-01"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 400,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32000,
+                "message": "Bad Request: Unsupported protocol version: 1999-01-01 (supported versions: 2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05, 2024-10-07)"
+              },
+              "id": null
+            }
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "name": "matrix: bodies that are not one JSON-RPC request",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "note": "a number",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "bodyText": "42"
+          },
+          "expectHttp": {
+            "status": 400,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32600,
+                "message": "Bad Request: the request body is not a valid JSON-RPC message"
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "note": "null",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "bodyText": "null"
+          },
+          "expectHttp": {
+            "status": 400,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32600,
+                "message": "Bad Request: the request body is not a valid JSON-RPC message"
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "note": "an empty batch",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "bodyText": "[]"
+          },
+          "expectHttp": {
+            "status": 400,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32600,
+                "message": "Bad Request: empty JSON-RPC batch"
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "note": "no jsonrpc",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "bodyText": "{\"id\":1,\"method\":\"ping\"}"
+          },
+          "expectHttp": {
+            "status": 400,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32600,
+                "message": "Bad Request: the request body is not a valid JSON-RPC message"
+              },
+              "id": 1
+            }
+          }
+        },
+        {
+          "note": "a response object",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}"
+          },
+          "expectHttp": {
+            "status": 202,
+            "contentType": null,
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": null
+        },
+        {
+          "note": "a batch of two pings",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "bodyText": "[{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"},{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"ping\"}]"
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "sse": [
+              {
+                "result": {},
+                "jsonrpc": "2.0",
+                "id": 1
+              },
+              {
+                "result": {},
+                "jsonrpc": "2.0",
+                "id": 2
+              }
+            ]
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "name": "matrix: invalid UTF-8 inside a body string reads as U+FFFD",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "note": "the unknown field name is echoed back",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "bodyBase64": "eyJqc29ucnBjIjoiMi4wIiwiaWQiOjEsIm1ldGhvZCI6InRvb2xzL2NhbGwiLCJwYXJhbXMiOnsibmFtZSI6ImJsb2tfbGlzdF9kb2N1bWVudHMiLCJhcmd1bWVudHMiOnsiYf/+YiI6MX19fQ=="
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "sse": [
+              {
+                "result": {
+                  "content": [
+                    {
+                      "type": "text",
+                      "json": "<same as structuredContent>"
+                    }
+                  ],
+                  "structuredContent": {
+                    "error": {
+                      "code": "INVALID_ARGS",
+                      "message": "blok_list_documents: unknown field \"a��b\"; accepted fields: query, cursor, limit",
+                      "path": "/a��b",
+                      "retryable": false
+                    }
+                  },
+                  "isError": true
+                },
+                "jsonrpc": "2.0",
+                "id": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "name": "matrix: /MCP in upper case is not the endpoint",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "http": {
+            "method": "POST",
+            "path": "/MCP",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 404,
+            "contentType": null,
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": null
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "--http 127.0.0.1: with no port binds a free port",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "sse": [
+              {
+                "result": {},
+                "jsonrpc": "2.0",
+                "id": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:0",
+        "--authorize",
+        "${host}/authorize",
+        "--auth",
+        "oauth",
+        "--oauth-issuer",
+        "https://issuer.test",
+        "--oauth-audience",
+        "https://mcp.test/mcp",
+        "--oauth-jwks",
+        "${host}/jwks"
+      ],
+      "name": "OAuth: GET and DELETE /mcp without a token answer 401",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /jwks": {
+          "status": 200,
+          "jwks": true
+        }
+      },
+      "steps": [
+        {
+          "http": {
+            "method": "GET",
+            "path": "/mcp",
+            "headers": {
+              "accept": "text/event-stream"
+            }
+          },
+          "expectHttp": {
+            "status": 401,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Missing Authorization header\", scope=\"blok.read\", resource_metadata=\"https://mcp.test/.well-known/oauth-protected-resource\"",
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "error": "invalid_token",
+              "error_description": "Missing Authorization header"
+            }
+          }
+        },
+        {
+          "http": {
+            "method": "DELETE",
+            "path": "/mcp",
+            "headers": {}
+          },
+          "expectHttp": {
+            "status": 401,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Missing Authorization header\", scope=\"blok.read\", resource_metadata=\"https://mcp.test/.well-known/oauth-protected-resource\"",
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "error": "invalid_token",
+              "error_description": "Missing Authorization header"
+            }
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:0",
+        "--authorize",
+        "${host}/authorize",
+        "--auth",
+        "oauth",
+        "--oauth-issuer",
+        "https://issuer.test",
+        "--oauth-audience",
+        "https://mcp.test/mcp",
+        "--oauth-jwks",
+        "${host}/jwks"
+      ],
+      "name": "OAuth: a foreign Origin without a token answers 403",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /jwks": {
+          "status": 200,
+          "jwks": true
+        }
+      },
+      "steps": [
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream",
+              "origin": "https://evil.test"
+            },
+            "body": {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "ping"
+            }
+          },
+          "expectHttp": {
+            "status": 403,
+            "contentType": null,
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": null
+        }
+      ],
+      "expectHostRequests": []
     }
   ]
 }

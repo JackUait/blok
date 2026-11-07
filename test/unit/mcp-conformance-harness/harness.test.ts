@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync, inflateSync } from 'node:zlib';
 
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type FixtureCase, runCase } from '../mcp-conformance/exchange';
 import { startFakeHost } from '../mcp-conformance/fake-host';
@@ -61,6 +61,10 @@ const toolCall = { method: 'tools/call', params: { name: 'x', arguments: {} } };
 describe('MCP conformance harness steps', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   afterAll(() => {

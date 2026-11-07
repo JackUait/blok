@@ -17154,6 +17154,1716 @@
       "expectExit": {
         "code": 0
       }
+    },
+    {
+      "maskKeys": [
+        "activeAt",
+        "lastEditedAt",
+        "createdAt",
+        "savedAt",
+        "startedAt"
+      ],
+      "name": "restore: the host answers 404, 412 and 503; each restore carries If-Match and an idempotency key",
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${liveContractRevision}"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p1",
+                      "data": {
+                        "text": "one"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "l1",
+                "results": [
+                  {
+                    "id": "p1",
+                    "childIds": []
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "p1"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "one",
+                    "data": {
+                      "text": [
+                        {
+                          "text": "one"
+                        }
+                      ]
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "alice"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": "1",
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.versions",
+                    "args": {}
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "vNow": "/result/structuredContent/results/0/versions/0/version",
+            "vBase": "/result/structuredContent/results/0/versions/1/version"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "l1",
+                "results": [
+                  {
+                    "versions": [
+                      {
+                        "version": "${vNow}",
+                        "savedAt": "<masked>",
+                        "startedAt": "<masked>",
+                        "actors": [
+                          "agent:alice:claude-code"
+                        ]
+                      },
+                      {
+                        "version": "${vBase}",
+                        "savedAt": "<masked>",
+                        "startedAt": "<masked>",
+                        "actors": []
+                      }
+                    ]
+                  }
+                ],
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "httpRequests": true
+          },
+          "expect": [
+            {
+              "method": "GET",
+              "path": "/sync/live-doc/history",
+              "ifMatch": null,
+              "idempotencyKey": false,
+              "answered": null
+            }
+          ]
+        },
+        {
+          "room": {
+            "inject": {
+              "answerHttp": {
+                "match": "/restore",
+                "status": 404
+              }
+            }
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.restore",
+                    "args": {
+                      "version": "${vBase}"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "l1",
+                "error": {
+                  "code": "VERSION_NOT_FOUND",
+                  "message": "There is no version \"${vBase}\". history.versions lists them.",
+                  "path": "/commands/0/args/version",
+                  "retryable": false,
+                  "commandIndex": 0
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "httpRequests": true
+          },
+          "expect": [
+            {
+              "method": "GET",
+              "path": "/sync/live-doc/history",
+              "ifMatch": null,
+              "idempotencyKey": false,
+              "answered": null
+            },
+            {
+              "method": "GET",
+              "path": "/sync/live-doc/history/L1/0",
+              "ifMatch": null,
+              "idempotencyKey": false,
+              "answered": null
+            },
+            {
+              "method": "POST",
+              "path": "/sync/live-doc/history/L1/0/restore",
+              "ifMatch": "\"${vNow}\"",
+              "idempotencyKey": true,
+              "answered": 404
+            }
+          ]
+        },
+        {
+          "room": {
+            "inject": {
+              "answerHttp": {
+                "match": "/restore",
+                "status": 412
+              }
+            }
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.restore",
+                    "args": {
+                      "version": "${vBase}"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "l1",
+                "error": {
+                  "code": "STALE",
+                  "message": "The document changed since the version history was read, so nothing was restored. Read it again, then retry.",
+                  "commandIndex": 0,
+                  "retryable": true
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 5
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "httpRequests": true
+          },
+          "expect": [
+            {
+              "method": "GET",
+              "path": "/sync/live-doc/history",
+              "ifMatch": null,
+              "idempotencyKey": false,
+              "answered": null
+            },
+            {
+              "method": "GET",
+              "path": "/sync/live-doc/history/L1/0",
+              "ifMatch": null,
+              "idempotencyKey": false,
+              "answered": null
+            },
+            {
+              "method": "POST",
+              "path": "/sync/live-doc/history/L1/0/restore",
+              "ifMatch": "\"${vNow}\"",
+              "idempotencyKey": true,
+              "answered": 412
+            }
+          ]
+        },
+        {
+          "room": {
+            "inject": {
+              "answerHttp": {
+                "match": "/restore",
+                "status": 503
+              }
+            }
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.restore",
+                    "args": {
+                      "version": "${vBase}"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "l1",
+                "error": {
+                  "code": "TOOL_ACTION_FAILED",
+                  "message": "The version history failed: The sync server answered 503: ",
+                  "retryable": true,
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 6
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "httpRequests": true
+          },
+          "expect": [
+            {
+              "method": "GET",
+              "path": "/sync/live-doc/history",
+              "ifMatch": null,
+              "idempotencyKey": false,
+              "answered": null
+            },
+            {
+              "method": "GET",
+              "path": "/sync/live-doc/history/L1/0",
+              "ifMatch": null,
+              "idempotencyKey": false,
+              "answered": null
+            },
+            {
+              "method": "POST",
+              "path": "/sync/live-doc/history/L1/0/restore",
+              "ifMatch": "\"${vNow}\"",
+              "idempotencyKey": true,
+              "answered": 503
+            }
+          ]
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "read": true
+          },
+          "expect": [
+            {
+              "id": "p1",
+              "type": "paragraph",
+              "data": {
+                "text": "one"
+              },
+              "lastEditedAt": "<masked>",
+              "lastEditedBy": "alice",
+              "createdAt": "<masked>",
+              "createdBy": "alice",
+              "createdWith": "agent:alice:claude-code",
+              "lastEditedWith": "agent:alice:claude-code"
+            }
+          ]
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_close",
+              "arguments": {
+                "handle": "${h}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "closed": true,
+                "unsavedBatches": 0,
+                "hostRecordLags": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 7
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "limits v2: an update past the announced limit is refused before it is sent",
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${liveContractRevision}"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "big",
+                      "data": {
+                        "text": {
+                          "$repeat": {
+                            "text": "x",
+                            "count": 1200000
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "mask": [
+            "/result/structuredContent/blocks/0/text",
+            "/result/structuredContent/blocks/0/data"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "REJECTED",
+                  "message": "The room refused this batch. It was not saved.",
+                  "retryable": false,
+                  "details": {
+                    "rejectionCode": "oversized-update"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p2",
+                      "data": {
+                        "text": "after"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "APPLY_FAILED",
+                  "message": "The batch changed the local copy but could not be queued for the room. It was not saved; open the document again.",
+                  "retryable": false,
+                  "details": {
+                    "stage": "journal"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "frames": true
+          },
+          "expect": {
+            "agent live-doc #1": {
+              "out": [
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "agent",
+                        "user"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "activeAt",
+                        "agent",
+                        "agentCursor",
+                        "blockId",
+                        "user"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "activeAt",
+                        "agent",
+                        "agentCursor",
+                        "blockId",
+                        "user"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "in": [
+                {
+                  "type": "control",
+                  "format": 2,
+                  "epoch": "number",
+                  "lineage": "L1"
+                },
+                {
+                  "type": "limits",
+                  "maxMessageBytes": "number"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "read": true
+          },
+          "expect": []
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "room": {
+        "journal": false
+      },
+      "name": "limits v1: a host without a journal: an update past the announced limit ends the room as oversized-update",
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "best-effort",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${liveContractRevision}"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "big",
+                      "data": {
+                        "text": {
+                          "$repeat": {
+                            "text": "x",
+                            "count": 1200000
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "mask": [
+            "/result/structuredContent/blocks/0/text",
+            "/result/structuredContent/blocks/0/data"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "l1",
+                "results": [
+                  {
+                    "id": "big",
+                    "childIds": []
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "big"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "big",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "<masked>",
+                    "truncated": true,
+                    "data": "<masked>",
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "alice"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "wait": 3000
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p2",
+                      "data": {
+                        "text": "after"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The room connection stopped for good. Open the document again.",
+                  "retryable": true,
+                  "details": {
+                    "terminal": "oversized-update"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "frames": true
+          },
+          "expect": {
+            "agent live-doc #1": {
+              "out": [
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "agent",
+                        "user"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "close",
+                  "code": 1000
+                }
+              ],
+              "in": [
+                {
+                  "type": "control",
+                  "format": 2,
+                  "epoch": "number",
+                  "lineage": "L1"
+                },
+                {
+                  "type": "limits",
+                  "maxMessageBytes": "number"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "close",
+                  "code": 1000
+                }
+              ]
+            }
+          }
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "read": true
+          },
+          "expect": []
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "fault: the host closes 1009 on every operation; the second 1009 ends the room as oversized-update and nothing is saved",
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${liveContractRevision}"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "inject": {
+              "closeOnOperation": 1009
+            }
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p1",
+                      "data": {
+                        "text": "Hello"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The room connection stopped for good. Open the document again.",
+                  "retryable": true,
+                  "details": {
+                    "terminal": "oversized-update"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "wait": 3000
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p2",
+                      "data": {
+                        "text": "World"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The room connection stopped for good. Open the document again.",
+                  "retryable": true,
+                  "details": {
+                    "terminal": "oversized-update"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "frames": true
+          },
+          "expect": {
+            "agent live-doc #1": {
+              "out": [
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "agent",
+                        "user"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "operation",
+                  "lineage": "L1",
+                  "operationId": "op1"
+                }
+              ],
+              "in": [
+                {
+                  "type": "control",
+                  "format": 2,
+                  "epoch": "number",
+                  "lineage": "L1"
+                },
+                {
+                  "type": "limits",
+                  "maxMessageBytes": "number"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "close",
+                  "code": 1009,
+                  "fault": "injected"
+                }
+              ]
+            },
+            "agent live-doc #2": {
+              "out": [
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "operation",
+                  "lineage": "L1",
+                  "operationId": "op1"
+                }
+              ],
+              "in": [
+                {
+                  "type": "control",
+                  "format": 2,
+                  "epoch": "number",
+                  "lineage": "L1"
+                },
+                {
+                  "type": "limits",
+                  "maxMessageBytes": "number"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "close",
+                  "code": 1009,
+                  "fault": "injected"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "read": true
+          },
+          "expect": []
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "argv": [
+        "--sync-url",
+        "${roomWs}",
+        "--origin",
+        "https://app.example.com",
+        "--principal",
+        "alice",
+        "--ticket-url",
+        "${host}/tickets"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "name": "tickets: a reconnect whose ticket URL answers 403 ends the room as FORBIDDEN, and is not asked again and again",
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "sequence": [
+            {
+              "status": 200,
+              "json": {
+                "ticket": {
+                  "$ticket": {
+                    "claims": {
+                      "user": "agent:alice:claude-code",
+                      "doc": "live-doc",
+                      "write": true
+                    },
+                    "expiresIn": 20,
+                    "secret": "mcp-live-conformance-secret-0123456789"
+                  }
+                }
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ticket": {
+                  "$ticket": {
+                    "claims": {
+                      "user": "agent:alice:claude-code",
+                      "doc": "live-doc",
+                      "write": true
+                    },
+                    "expiresIn": 20,
+                    "secret": "mcp-live-conformance-secret-0123456789"
+                  }
+                }
+              }
+            },
+            {
+              "status": 403,
+              "text": "no"
+            }
+          ]
+        }
+      },
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${liveContractRevision}"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "inject": {
+              "close": 1011
+            }
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "wait": 3000
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p1",
+                      "data": {
+                        "text": "x"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The room refused this agent. Its ticket may not grant this document.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "sleepMs": 3000
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p2",
+                      "data": {
+                        "text": "y"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The room refused this agent. Its ticket may not grant this document.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "room": {
+            "upgrades": true
+          },
+          "expect": [
+            {
+              "label": "peer:alice",
+              "status": 101,
+              "repeated": false
+            },
+            {
+              "label": "agent",
+              "status": 101,
+              "repeated": false
+            }
+          ]
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "read": true
+          },
+          "expect": []
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "live-doc",
+            "write": true,
+            "principal": "alice",
+            "clientName": "claude-code",
+            "actorId": "agent:alice:claude-code"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "live-doc",
+            "write": true,
+            "principal": "alice",
+            "clientName": "claude-code",
+            "actorId": "agent:alice:claude-code"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "live-doc",
+            "write": true,
+            "principal": "alice",
+            "clientName": "claude-code",
+            "actorId": "agent:alice:claude-code"
+          }
+        }
+      ]
     }
   ]
 }

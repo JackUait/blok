@@ -264,6 +264,7 @@ export class DatabaseTableGrid {
     window.addEventListener('keydown', this.recordKey, true);
 
     const reminder = row.reminders?.[property.id]?.remind;
+    const closed = { done: false };
     const onDateDisplayChange = property.type === 'date' ? this.callbacks.dateDisplayChanger?.(property.id) : undefined;
     const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
       ...this.cellContext,
@@ -283,10 +284,18 @@ export class DatabaseTableGrid {
         : {}),
       ...(this.callbacks.editProperty !== undefined ? { onEditProperty: () => this.callbacks.editProperty?.(ref.propertyId) } : {}),
       onCommit: (value) => this.commit(ref, value),
-      onClose: () => this.editorClosed(ref),
+      onClose: () => {
+        closed.done = true;
+        this.editorClosed(ref);
+      },
     });
 
     this.editor = handle.isOpen ? handle : null;
+    // No editor opened and none closed (no people source, a type this client lacks): nothing will call onClose.
+    if (!handle.isOpen && !closed.done) {
+      this.state.editing = false;
+      window.removeEventListener('keydown', this.recordKey, true);
+    }
   }
 
   private commit(ref: CellRef, value: PropertyValue): void {

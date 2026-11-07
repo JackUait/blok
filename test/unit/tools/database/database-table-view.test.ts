@@ -950,6 +950,22 @@ describe('DatabaseTableView', () => {
       expect(handlers.commitCell).not.toHaveBeenCalled();
     });
 
+    // Nothing calls onClose when no editor opens, so the table must free itself.
+    it.each([
+      ['a Person cell with no people source', 'person'],
+      ['a cell of a type this client does not know', 'hologram'],
+    ])('clicking %s opens nothing and leaves the table free to redraw', (_label, type: string) => {
+      const { root, view } = mount({
+        schema: [schema[0], { id: 'p-x', name: 'X', type: type as PropertyType, position: 'b0' }],
+        rows: [row('r1', 'Alpha')],
+      });
+
+      cell(root, 'r1', 'p-x').click();
+
+      expect(view.interacting).toBe(false);
+      expect(editor()).toBeNull();
+    });
+
     it('Shift+arrows select a rectangle; Escape turns it into a selection of its rows', () => {
       const { root } = mount();
 

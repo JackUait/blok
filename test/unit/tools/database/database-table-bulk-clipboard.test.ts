@@ -656,6 +656,20 @@ describe('table bulk actions and clipboard', () => {
       expect(state.selection).toEqual({ kind: 'rows', rowIds: ['r1', 'r2', 'r3'] });
     });
 
+    // Nothing calls onClose when no picker opens, so the table must free itself.
+    it('a Person bulk edit with no people source opens nothing and leaves the table free to redraw', () => {
+      const { root, view } = mount({ schema: [schema[0], { id: 'p-who', name: 'Who', type: 'person', position: 'a5' }] });
+
+      selectRows(root, 'r1', 'r2');
+      const button = root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-who"]');
+
+      expect(button).not.toBeNull();
+      button?.click();
+
+      expect(view.interacting).toBe(false);
+      expect(document.querySelector('[data-blok-database-cell-editor]')).toBeNull();
+    });
+
     it('offers one button per visible editable property, and its edit lands on every selected row', () => {
       const { root, handlers } = mount();
 

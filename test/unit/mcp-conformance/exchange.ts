@@ -57,7 +57,8 @@ import {
  *   send        a JSON-RPC request; "id" is filled in when left out. The answer
  *               is the message with the same id.
  *   notify      a JSON-RPC notification; no answer is read (HTTP records the status).
- *   http        a raw request {method, path, headers, body | bodyText | bodyRepeat}.
+ *   http        a raw request {method, path, headers, body | bodyText | bodyRepeat | bodyBase64}.
+ *               bodyBase64 carries bytes a string cannot, e.g. invalid UTF-8.
  *   headers     extra HTTP headers for send/notify; null removes a default.
  *   serverRequests  stdio only: server-to-client requests expected while the
  *               answer is pending, in order, each with the "reply" to send back.
@@ -86,6 +87,11 @@ import {
  *               text JSON.stringify cannot make (e.g. an id of 3.0). The answer is the
  *               message with the id JSON.parse reads from it.
  *   noAnswer    stdio send / sendText: write the request and go on without reading an answer.
+ *               A noAnswer sendText may be any text, JSON or not.
+ *   closeInputAfter  stdio send / sendText: end stdin right after the write, then read the
+ *               answer, or null when the process exits without one.
+ *   rawText     keep content[].text items as the exact strings sent, not parsed, so
+ *               escaping counts (a raw emoji or U+2028 against a \uXXXX escape).
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
@@ -107,7 +113,7 @@ export interface Step {
   send?: JsonMessage;
   sendText?: string;
   notify?: JsonMessage;
-  http?: { method: string; path: string; headers?: Record<string, unknown>; body?: unknown; bodyText?: string; bodyRepeat?: { text: string; count: number } };
+  http?: { method: string; path: string; headers?: Record<string, unknown>; body?: unknown; bodyText?: string; bodyBase64?: string; bodyRepeat?: { text: string; count: number } };
   raw?: boolean;
   headers?: Record<string, unknown>;
   serverRequests?: ServerRequestSpec[];
@@ -123,6 +129,8 @@ export interface Step {
   noWait?: boolean;
   awaitExit?: boolean;
   noAnswer?: boolean;
+  closeInputAfter?: boolean;
+  rawText?: boolean;
   afterHost?: string;
   expect?: unknown;
   expectHttp?: unknown;
@@ -281,16 +289,16 @@ const parseTextItem = (item: unknown): unknown => {
  * Parses JSON text content so ports are free in key order and escaping, and
  * checks that text and structuredContent say the same thing.
  */
-const normalize = (value: unknown, label: string): unknown => {
+const normalize = (value: unknown, label: string, rawText = false): unknown => {
   if (Array.isArray(value)) {
-    return value.map((item) => normalize(item, label));
+    return value.map((item) => normalize(item, label, rawText));
   }
   if (!isRecord(value)) {
     return value;
   }
-  const out: Record<string, unknown> = Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, normalize(inner, label)]));
+  const out: Record<string, unknown> = Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, normalize(inner, label, rawText)]));
 
-  if (!Array.isArray(out.content)) {
+  if (rawText || !Array.isArray(out.content)) {
     return out;
   }
   const content: unknown[] = out.content.map((item: unknown) => parseTextItem(item));
@@ -459,6 +467,9 @@ const requestBody = (spec: NonNullable<Step['http']>): Buffer | undefined => {
   if (spec.bodyText !== undefined) {
     return Buffer.from(spec.bodyText);
   }
+  if (spec.bodyBase64 !== undefined) {
+    return Buffer.from(spec.bodyBase64, 'base64');
+  }
 
   return spec.body === undefined ? undefined : Buffer.from(JSON.stringify(spec.body));
 };
@@ -534,7 +545,7 @@ class CaseRun {
       return;
     }
     if (!(key in holder)) {
-      throw new Error(`${label}: no recorded "${key}". Run the suite with --target node --update.`);
+      throw new Error(`${label}: no recorded "${key}", got ${JSON.stringify(actual)?.slice(0, 1000)}. Run the suite with --target node --update.`);
     }
     expect(actual, label).toEqual(expected(holder[key], this.vars));
   }
@@ -650,6 +661,13 @@ class CaseRun {
       return;
     }
     const text = step.sendText === undefined ? undefined : substituteString(step.sendText, this.vars);
+
+    if (text !== undefined && step.noAnswer === true) {
+      server.sendText(text);
+      this.endInputAfter(server, step);
+
+      return;
+    }
     const message = text === undefined ? materialize(step.send, this.vars) as JsonMessage : JSON.parse(text) as JsonMessage;
     const id = message.id ?? this.nextId++;
     const wanted = step.serverRequests ?? [];
@@ -663,12 +681,13 @@ class CaseRun {
     } else {
       server.sendText(text);
     }
+    this.endInputAfter(server, step);
     if (step.noAnswer === true) {
       return;
     }
     await this.signalAfterSend(server, step, label);
-    // After a signal the process may exit without answering: that is recorded as null.
-    const read = (): Promise<JsonMessage | null> => (step.signal === undefined
+    // After a signal or the end of stdin the process may exit without answering: that is recorded as null.
+    const read = (): Promise<JsonMessage | null> => (step.signal === undefined && step.closeInputAfter !== true
       ? server.next(step.readTimeoutMs)
       : server.next(step.readTimeoutMs).catch(async (thrown: unknown) => {
         if (await server.waitExit(EXIT_TIMEOUT_MS) === undefined) {
@@ -695,7 +714,13 @@ class CaseRun {
     if (notifications.length > 0 || 'notifications' in step) {
       this.check(holder, 'notifications', maskKeys(notifications, new Set(this.c.maskKeys ?? [])), `${label} notifications`);
     }
-    this.finishStep(step, holder, normalize(incoming, label), label);
+    this.finishStep(step, holder, normalize(incoming, label, step.rawText), label);
+  }
+
+  private endInputAfter(server: StdioServer, step: Step): void {
+    if (step.closeInputAfter === true) {
+      server.endInput();
+    }
   }
 
   public async httpStep(server: HttpServer, step: Step, holder: Holder, label: string): Promise<void> {
@@ -707,7 +732,7 @@ class CaseRun {
       const answer = await sendHttp(server.url, { method: spec.method, path: spec.path, headers: mergeHeaders({}, spec.headers, this.vars), body: requestBody(spec) });
 
       this.check(holder, 'expectHttp', httpSummary(answer), `${label} http`);
-      this.finishStep(step, holder, normalize(httpBody(answer), label), label);
+      this.finishStep(step, holder, normalize(httpBody(answer), label, step.rawText), label);
 
       return;
     }
@@ -740,7 +765,7 @@ class CaseRun {
     const messages = parseHttpMessages(answer);
     const reply = messages.find((m) => m.id === id) ?? (messages.length === 1 ? messages[0] : undefined);
 
-    this.finishStep(step, holder, reply === undefined ? null : normalize(reply, label), label);
+    this.finishStep(step, holder, reply === undefined ? null : normalize(reply, label, step.rawText), label);
   }
 
   /** The SDK client's opening exchange for a 2025 session; 2026 has none. */

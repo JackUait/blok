@@ -96,6 +96,8 @@ export interface StdioServer {
   /** Sends a signal; waitExit then waits for the process to end. */
   signal(name: NodeJS.Signals): void;
   waitExit(timeoutMs: number): Promise<Exit | undefined>;
+  /** Ends stdin without waiting. */
+  endInput(): void;
   /** Ends stdin and waits for the process to exit by itself. */
   closeInput(): Promise<Exit>;
   readonly stderr: string;
@@ -198,6 +200,9 @@ export const startStdio = (command: string[], argv: string[], env: NodeJS.Proces
 
         waiters.push(settle);
       });
+    },
+    endInput: () => {
+      child.stdin?.end();
     },
     closeInput: async () => {
       child.stdin?.end();

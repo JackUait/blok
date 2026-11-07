@@ -1,6 +1,7 @@
 import { createHmac, createSign, generateKeyPairSync, type KeyObject } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
+import { deflateSync, gzipSync } from 'node:zlib';
 
 /**
  * One loopback HTTP server per case, standing in for every outside service
@@ -19,6 +20,8 @@ export interface RouteResponse {
   /** Serve the harness's public signing keys as a JWKS. */
   jwks?: boolean;
   headers?: Record<string, string>;
+  /** Compress the body and say so in Content-Encoding, whatever the request asked for. */
+  encoding?: 'gzip' | 'deflate';
   /** Answer this many ms late. */
   delayMs?: number;
   /** Never answer; the socket closes with the host. */
@@ -259,17 +262,25 @@ export const startFakeHost = async (routes: RouteTable, options: { secret?: stri
       if (response.delayMs !== undefined) {
         await new Promise((resolve) => setTimeout(resolve, response.delayMs));
       }
+      const send = (headers: Record<string, string>, body: string): void => {
+        if (response.encoding === undefined) {
+          res.writeHead(response.status, headers).end(body);
+          return;
+        }
+        const bytes = response.encoding === 'gzip' ? gzipSync(body) : deflateSync(body);
+
+        res.writeHead(response.status, { ...headers, 'content-encoding': response.encoding }).end(bytes);
+      };
+
       if (response.jwks === true) {
-        res.writeHead(response.status, { 'content-type': 'application/json', ...response.headers })
-          .end(JSON.stringify({ keys: signingKeys().map((k) => k.jwk) }));
+        send({ 'content-type': 'application/json', ...response.headers }, JSON.stringify({ keys: signingKeys().map((k) => k.jwk) }));
         return;
       }
       if (response.json !== undefined) {
-        res.writeHead(response.status, { 'content-type': 'application/json', ...response.headers })
-          .end(JSON.stringify(materialize(response.json)));
+        send({ 'content-type': 'application/json', ...response.headers }, JSON.stringify(materialize(response.json)));
         return;
       }
-      res.writeHead(response.status, response.headers).end(response.text ?? '');
+      send({ ...response.headers }, response.text ?? '');
     })().catch((error: unknown) => {
       res.writeHead(500).end(String(error));
     });

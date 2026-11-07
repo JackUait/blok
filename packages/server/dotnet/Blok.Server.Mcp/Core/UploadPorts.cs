@@ -7,7 +7,7 @@ namespace Blok.Server.Mcp.Core;
 /// agentExecute stops at each upload call; the host runs it and sends the batch again with one
 /// more answer, in call order (server-runtime.ts replayUploader).
 /// </summary>
-internal sealed class UploadPorts(BlokMcpUploads uploads)
+internal sealed class UploadPorts(BlokMcpUploads uploads, Action<string, Exception>? log = null)
 {
   internal async Task<JsonObject> ExecuteAsync(McpBundle bundle, JsonObject input, CancellationToken cancellationToken)
   {
@@ -72,8 +72,16 @@ internal sealed class UploadPorts(BlokMcpUploads uploads)
     }
     catch (Exception error) when (error is not OperationCanceledException)
     {
+      // The agent sees the message, as Node's prepareAt forwards it; the host gets all of it.
+      (log ?? LogToStderr)("blok-mcp: the host uploader failed", error);
+
       return Thrown(error.Message);
     }
+  }
+
+  private static void LogToStderr(string message, Exception error)
+  {
+    Console.Error.WriteLine($"{message}: {error}");
   }
 
   private static JsonObject Thrown(string message) => new() { ["error"] = message };

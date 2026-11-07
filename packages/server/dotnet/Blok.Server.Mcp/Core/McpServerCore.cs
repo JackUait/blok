@@ -55,7 +55,7 @@ internal sealed class McpServerCore : IAsyncDisposable
       Open = (pageId, caller, cancellationToken) => OpenSessionAsync(pageId, "auto", true, caller, cancellationToken),
       TrackClose = TrackPageClose,
     };
-    uploads = config.Uploads is null ? null : new UploadPorts(config.Uploads);
+    uploads = config.Uploads is null ? null : new UploadPorts(config.Uploads, config.LogError);
     if (live is not null)
     {
       live.Pages = pages;

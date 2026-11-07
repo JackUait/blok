@@ -61,6 +61,9 @@ internal sealed class McpConfig
   /// <summary>The library's uploader hook; the CLI has none.</summary>
   internal BlokMcpUploads? Uploads { get; init; }
 
+  /// <summary>Where a host hook's failure is logged in full; stderr when unset.</summary>
+  internal Action<string, Exception>? LogError { get; init; }
+
   internal JsonNode? Overrides { get; init; }
 
   internal McpAuthorize? Authorize { get; init; }

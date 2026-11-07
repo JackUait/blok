@@ -113,6 +113,17 @@ public static class BlokMcpServiceCollectionExtensions
     return new McpCallerIdentity(named ?? config.PrincipalOrDefault, null);
   }
 
+  // The app's logging, so a hook failure the agent sees only in part is kept in full.
+  private static Action<string, Exception>? LogErrorOf(IServiceProvider provider)
+  {
+    var logger = provider.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger("Blok.Server.Mcp");
+
+    return logger is null ? null : (message, error) => HookFailed(logger, message, error);
+  }
+
+  private static readonly Action<Microsoft.Extensions.Logging.ILogger, string, Exception?> HookFailed =
+      Microsoft.Extensions.Logging.LoggerMessage.Define<string>(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(1, "HookFailed"), "{Message}");
+
   private static McpConfig ConfigOf(BlokMcpOptions options, IServiceProvider provider)
   {
     var authorize = options.Authorize;
@@ -135,6 +146,7 @@ public static class BlokMcpServiceCollectionExtensions
       MaxHandlesPerPrincipal = options.MaxHandlesPerPrincipal,
       Comments = options.Comments ? null : false,
       Uploads = options.Uploads,
+      LogError = LogErrorOf(provider),
       RichTextFields = options.RichTextFields is { } fields
           ? new JsonObject(fields.Select(pair => KeyValuePair.Create(pair.Key, (JsonNode?)new JsonArray([.. pair.Value.Select(name => (JsonNode)name)]))))
           : null,

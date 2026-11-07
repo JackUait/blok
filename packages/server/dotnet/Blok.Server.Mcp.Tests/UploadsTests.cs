@@ -107,4 +107,21 @@ public sealed class UploadsTests : IClassFixture<BundleFixture>, IDisposable
     Assert.Contains("not the 5", McpJson.String(answer["error"]), StringComparison.Ordinal);
     Assert.Empty(sent);
   }
+
+  [Fact]
+  public async Task AHostThrowIsLoggedInFullAndAnsweredAsNodeAnswersIt()
+  {
+    var logged = new List<Exception>();
+    var failing = new BlokMcpUploads
+    {
+      Uploader = new BlokMcpUploader { UploadByFile = (_, _, _) => throw new InvalidOperationException("db.internal refused") },
+    };
+    var ports = new UploadPorts(failing, (_, error) => logged.Add(error));
+
+    var answer = await ports.RunAsync(JsonNode.Parse("""{"op":"uploadByFile","fileName":"a.png","type":"image/png","size":3,"kind":"image","tool":"image","data":"AAAA"}""")!.AsObject(), CancellationToken.None);
+
+    // Node's prepareAt forwards the throw's message (executor.ts), so this matches it.
+    Assert.Equal("db.internal refused", McpJson.String(answer["error"]));
+    Assert.IsType<InvalidOperationException>(Assert.Single(logged));
+  }
 }

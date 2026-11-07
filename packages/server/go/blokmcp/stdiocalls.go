@@ -306,13 +306,36 @@ type trackedConnection struct {
 }
 
 func (c trackedConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
-	message, err := c.Connection.Read(ctx)
-	if err == nil {
-		c.tracker.read(message)
-	} else if errors.Is(err, io.EOF) {
-		c.tracker.stdinEnded(time.Now().Add(stopDrain))
+	for {
+		message, err := c.Connection.Read(ctx)
+		if err == nil {
+			if request, ok := message.(*jsonrpc.Request); ok && c.refused(ctx, request) {
+				continue
+			}
+			c.tracker.read(message)
+		} else if errors.Is(err, io.EOF) {
+			c.tracker.stdinEnded(time.Now().Add(stopDrain))
+		}
+		return message, err
 	}
-	return message, err
+}
+
+// refused answers or drops a request Node's SDK refuses before any
+// handler: one whose params or _meta is not an object gets no answer, a
+// tools/call of a bad shape gets -32602 in zod's words. It takes no place.
+func (c trackedConnection) refused(ctx context.Context, request *jsonrpc.Request) bool {
+	if len(request.Params) > 0 && !isMessage(map[string]json.RawMessage{"params": request.Params}) {
+		return true
+	}
+	if !request.IsCall() || request.Method != "tools/call" {
+		return false
+	}
+	refusal := toolsCallRefusal(request.Params)
+	if refusal == "" {
+		return false
+	}
+	_ = c.Connection.Write(ctx, &jsonrpc.Response{ID: request.ID, Error: &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: refusal}})
+	return true
 }
 
 func (c trackedConnection) Write(ctx context.Context, message jsonrpc.Message) error {

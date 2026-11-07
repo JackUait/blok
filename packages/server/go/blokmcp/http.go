@@ -131,6 +131,10 @@ func (s *Server) handler() http.Handler {
 			writeRPCError(w, http.StatusBadRequest, -32700, "Parse error: Invalid JSON")
 			return
 		}
+		if answer := refusedBody(body); answer != nil {
+			answer.send(w, r.Header.Get("Mcp-Protocol-Version") >= modernVersion)
+			return
+		}
 		body = liftBody(body)
 		r.Body = io.NopCloser(bytes.NewReader(body))
 		r.ContentLength = int64(len(body))

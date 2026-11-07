@@ -91,6 +91,12 @@ export class TabSync extends Module {
   /** True while a tryAcquire or join runs: the lock takes one acquisition at a time. */
   private entering = false;
 
+  /**
+   * Hellos heard while tryAcquire was pending. The lock may already be ours
+   * before we know it, and a joiner says hello only once.
+   */
+  private helloDuringEnter: Array<Extract<TabMessage, { kind: 'hello' }>> = [];
+
   /** Tab updates that arrive while adopt() swaps the document; applied after it. */
   private heldUpdates: Uint8Array[] | null = null;
 
@@ -583,6 +589,7 @@ export class TabSync extends Module {
     }
 
     this.entering = true;
+    this.helloDuringEnter = [];
     try {
       const acquired = !this.Blok.ReadOnly.isEnabled && await session.lock.tryAcquire();
 
@@ -596,12 +603,14 @@ export class TabSync extends Module {
       } else if (acquired) {
         this.holdsLock = true;
         this.setRole('leader');
+        this.helloDuringEnter.forEach((hello) => this.answer(hello.from, hello.stateVector));
 
         return;
       }
       this.join(session);
     } finally {
       this.entering = false;
+      this.helloDuringEnter = [];
     }
   }
 
@@ -686,7 +695,9 @@ export class TabSync extends Module {
 
     switch (message.kind) {
       case 'hello':
-        if (this.currentRole === 'leader') {
+        if (this.entering && this.currentRole === 'solo') {
+          this.helloDuringEnter.push(message);
+        } else if (this.currentRole === 'leader') {
           this.answer(message.from, message.stateVector);
         } else if (this.currentRole === 'follower' && message.stateVector !== null && message.from === this.leaderId) {
           // The leader woke up and asks what it missed.

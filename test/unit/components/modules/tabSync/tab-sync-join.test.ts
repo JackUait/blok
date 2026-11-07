@@ -312,6 +312,44 @@ describe('TabSync — roles, leader lock and join', () => {
     expect([a.sync.role, b.sync.role].sort()).toEqual(['follower', 'leader']);
   });
 
+  it('a hello that lands while the lock winner is still entering is answered once it leads', async () => {
+    const platform = createFakePlatform();
+    const grant: { open: () => void } = { open: () => undefined };
+    const gate = new Promise<void>((resolve) => {
+      grant.open = resolve;
+    });
+    // A takes the lock at once, but hears about it only when the gate opens.
+    const slowGrant: TabPlatform = {
+      ...platform,
+      lock: (key) => {
+        const lock = platform.lock(key);
+
+        return lock === null ? null : { ...lock, tryAcquire: async () => {
+          const acquired = await lock.tryAcquire();
+
+          await gate;
+
+          return acquired;
+        } };
+      },
+    };
+    const a = makeTab(slowGrant, { recordId: 'A' });
+    const aStarted = a.sync.start(CONTEXT);
+
+    await settle();
+    const b = await startTab(platform, { recordId: 'B' });
+
+    await settle();
+    expect(a.sync.role).toBe('solo');
+
+    grant.open();
+    await aStarted;
+    await settle();
+
+    expect(a.sync.role).toBe('leader');
+    expect(b.sync.role).toBe('follower');
+  });
+
   it('destroying the leader frees the lock and stops listening', async () => {
     const platform = createFakePlatform();
     const a = await startTab(platform, { recordId: 'A' });

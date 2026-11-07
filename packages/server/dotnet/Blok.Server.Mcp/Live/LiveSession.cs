@@ -275,7 +275,7 @@ internal sealed class LiveSession : IHandleSession
           {
             room.WriteLocal(CommentOrigin, _ => YDocConverter.ApplyOps(room.Doc, ops, html));
           }
-          steps.MarkComment();
+          // A comment is no undo step, so the history stays as it was (Node's executor).
         }
         else
         {

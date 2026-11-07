@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using Blok.Server.Mcp.Core;
 using Blok.Server.Mcp.Live;
 using Blok.Server.Yjs;
 using Xunit;
@@ -120,11 +121,28 @@ public sealed class LiveAgentHistoryTests
       var history = new LiveAgentHistory(room, origin);
 
       Insert(room, history, origin, "p1", "one");
-      history.MarkComment();
 
       Assert.Null(history.GateFor(true).Refusal);
       Assert.Null(history.Replay(true, Pair));
       Assert.Empty(Ids(room));
+    });
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task ACommentAfterARestoreLeavesUndoRefused()
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+    var origin = new object();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, origin);
+
+      Insert(room, history, origin, "p1", "one");
+      history.MarkRestored("v1");
+
+      Assert.Equal("UNDO_RESTORED", McpJson.String(history.GateFor(true).Refusal?["error"]?["code"]));
     });
     await room.CloseAsync();
   }

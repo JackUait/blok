@@ -105,12 +105,6 @@ internal sealed class LiveAgentHistory
   /// A comment batch: written outside undo, so no step, but the executor still marks it,
   /// so the next undo reverts the step before it (store-applier.ts applyComments).
   /// </summary>
-  internal void MarkComment()
-  {
-    past.Add(new Mark("own"));
-    future.Clear();
-  }
-
   /// <summary>A batch that only wrote another document (a host action).</summary>
   internal void MarkOther()
   {

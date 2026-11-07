@@ -252,6 +252,12 @@ impl Manager {
         self.0.draining.load(Ordering::SeqCst)
     }
 
+    /// Drain's first step alone, for a test that starts it mid-call.
+    #[cfg(test)]
+    pub(crate) fn begin_drain(&self) {
+        self.0.draining.store(true, Ordering::SeqCst);
+    }
+
     /// A document whose commit failed, or whose load repeats its failure,
     /// is refused for a doubling wait.
     fn in_commit_cooldown(&self, doc_id: &str) -> bool {
@@ -263,16 +269,29 @@ impl Manager {
     }
 
     fn room_for(&self, doc_id: &str) -> Option<Arc<Room>> {
+        self.room_for_door(doc_id, false).0
+    }
+
+    /// room_for, but true once a drain has begun. Checked under the lock
+    /// drain's sweep takes, so no room is made after its last empty sweep.
+    fn room_unless_draining(&self, doc_id: &str) -> (Option<Arc<Room>>, bool) {
+        self.room_for_door(doc_id, true)
+    }
+
+    fn room_for_door(&self, doc_id: &str, refuse_draining: bool) -> (Option<Arc<Room>>, bool) {
         let mut rooms = self.0.lock();
         if rooms.purge_lanes.contains_key(doc_id) {
-            return None;
+            return (None, false);
+        }
+        if refuse_draining && self.draining() {
+            return (None, true);
         }
         if let Some(room) = rooms.rooms.get(doc_id) {
-            return Some(room.clone());
+            return (Some(room.clone()), false);
         }
         let room = Room::new(doc_id, &self.0);
         rooms.rooms.insert(doc_id.to_owned(), room.clone());
-        Some(room)
+        (Some(room), false)
     }
 
     fn forget(&self, room: &Arc<Room>) {
@@ -308,7 +327,11 @@ impl Manager {
             if self.in_commit_cooldown(doc_id) {
                 return Ok(status(JoinStatus::Unavailable));
             }
-            let Some(room) = self.room_for(doc_id) else {
+            let (room, draining) = self.room_unless_draining(doc_id);
+            if draining {
+                return Ok(status(JoinStatus::Draining));
+            }
+            let Some(room) = room else {
                 return Ok(status(JoinStatus::Purged));
             };
             let (r, t, m) = (room.clone(), token.clone(), member.clone());
@@ -415,7 +438,11 @@ impl Manager {
             if self.in_commit_cooldown(doc_id) {
                 return Ok(EditResult::status(EditStatus::Unavailable));
             }
-            let Some(room) = self.room_for(doc_id) else {
+            let (room, draining) = self.room_unless_draining(doc_id);
+            if draining {
+                return Ok(EditResult::status(EditStatus::Draining));
+            }
+            let Some(room) = room else {
                 return Ok(EditResult::status(EditStatus::Purged));
             };
             let (r, t, q) = (room.clone(), token.clone(), request.clone());
@@ -446,7 +473,11 @@ impl Manager {
             if self.in_commit_cooldown(doc_id) {
                 return Ok(StateResult::status(StateStatus::Unavailable));
             }
-            let Some(room) = self.room_for(doc_id) else {
+            let (room, draining) = self.room_unless_draining(doc_id);
+            if draining {
+                return Ok(StateResult::status(StateStatus::Draining));
+            }
+            let Some(room) = room else {
                 return Ok(StateResult::status(StateStatus::Purged));
             };
             let (r, t) = (room.clone(), token.clone());

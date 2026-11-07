@@ -460,6 +460,10 @@ export class TableAddControls {
    * the full-screen modal) the pointer is held, in px: the pointer has run out
    * of screen to drag with. Mid-screen, the bar follows the pointer on its own,
    * and growing on top of that would move the table unasked.
+   *
+   * Negative when a column drag is held at the inline start while the table
+   * still reaches past the pointer: held growth has no limit, so pulling back
+   * must not stop where the screen ends.
    */
   private autoScrollOvershoot(): number {
     const state = this.dragState;
@@ -487,6 +491,11 @@ export class TableAddControls {
     const axis = inlineAxis(state.direction);
     const band = axis.end(port) - AUTO_SCROLL_VIEWPORT_BAND;
     const isClipped = sc.scrollWidth > sc.clientWidth + 1;
+    const startBand = axis.start(port) + AUTO_SCROLL_VIEWPORT_BAND;
+
+    if (state.pointerPos < startBand) {
+      return axis.end(this.grid.getBoundingClientRect()) > startBand ? state.pointerPos - startBand : 0;
+    }
 
     // A grid that fits is armed once one more column and the bar would not fit
     // before the band: in full screen the bar already sits by the window edge.
@@ -550,14 +559,17 @@ export class TableAddControls {
 
     // The first frame only starts the clock: a drag released just past the edge adds nothing.
     const elapsed = state.autoScrollAt === 0 ? 0 : (timestamp - state.autoScrollAt) / 1000;
-    const unit = this.measureAddUnit(state.axis);
+    const isShrinking = overshoot < 0;
+    const unit = isShrinking ? this.measureLastUnit(state.axis, state.direction) : this.measureAddUnit(state.axis);
 
     state.autoScrollAt = timestamp;
-    state.pending += overshoot * AUTO_SCROLL_GAIN_PER_SECOND * elapsed;
+    state.pending += Math.abs(overshoot) * AUTO_SCROLL_GAIN_PER_SECOND * elapsed;
 
     if (unit > 0 && state.pending >= unit) {
       state.pending -= unit;
-      (state.axis === 'row' ? this.onDragAddRow : this.onDragAddCol)();
+      const add = state.axis === 'row' ? this.onDragAddRow : this.onDragAddCol;
+
+      (isShrinking ? this.onDragRemoveCol : add)();
       this.syncRowButtonWidth();
       state.startSize = this.measureGridSize(state.axis) - (state.pointerPos - state.startPos);
       this.showDimensionTooltip();

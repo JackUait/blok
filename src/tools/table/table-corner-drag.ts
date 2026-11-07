@@ -490,7 +490,28 @@ export class TableCornerDrag {
   }
 
   private shouldAutoScroll(): boolean {
-    return this.shouldAutoScrollRight() || this.verticalAutoScroll() !== 'none';
+    return this.shouldAutoScrollRight() || this.overshootLeft() > 0 || this.verticalAutoScroll() !== 'none';
+  }
+
+  /**
+   * How far into the screen's inline-start band the pointer is held while the
+   * table still reaches past it. Held growth has no limit, so pulling back must
+   * not stop where the screen ends.
+   */
+  private overshootLeft(): number {
+    const state = this.dragState;
+
+    if (state === null || !state.didDrag) {
+      return 0;
+    }
+    const band = state.axis.start(verticalPort(this.gridEl)) + AUTO_SCROLL_VIEWPORT_BAND;
+
+    // Asked last: whether the last column may go costs a pass over its cells.
+    if (state.pointerX >= band || state.axis.end(this.gridEl.getBoundingClientRect()) <= band || !this.canRemoveLastColumn()) {
+      return 0;
+    }
+
+    return band - state.pointerX;
   }
 
   private shouldAutoScrollRight(): boolean {
@@ -644,10 +665,11 @@ export class TableCornerDrag {
     state.autoScrollFrame = null;
 
     const right = this.shouldAutoScrollRight();
+    const left = this.overshootLeft();
     const down = this.shouldAutoScrollDown();
     const up = this.shouldAutoScrollUp();
 
-    if (!right && !down && !up) {
+    if (!right && left === 0 && !down && !up) {
       return;
     }
 
@@ -671,6 +693,20 @@ export class TableCornerDrag {
         // Any target past the width appends exactly one column, then settles.
         this.resizeToCorner(rect.width + 1, rect.bottom);
         // The pointer asked for the column the meter just laid down.
+        state.targetWidth += this.gridEl.getBoundingClientRect().width - rect.width;
+      }
+    }
+
+    if (left > 0) {
+      state.pendingX += left * AUTO_SCROLL_GAIN_PER_SECOND * elapsed;
+
+      const rect = this.gridEl.getBoundingClientRect();
+      const step = this.measureLastColumnWidth(rect, state.axis);
+
+      if (step > 0 && state.pendingX >= step) {
+        state.pendingX -= step;
+        // A target one whole last column short drops exactly that column.
+        this.resizeToCorner(rect.width - step, rect.bottom);
         state.targetWidth += this.gridEl.getBoundingClientRect().width - rect.width;
       }
     }

@@ -194,6 +194,51 @@ test.describe('Adding rows and columns keeps them in view', () => {
     expect(await columns.count()).toBeGreaterThan(6);
   });
 
+  // More columns than a screen of pull-back can remove: holding at the start edge keeps removing.
+  test('pulling the add-column bar back to the window start removes every column the drag added', async ({ page }) => {
+    // Growing past a screen and back is held auto-scroll in both directions.
+    test.setTimeout(60_000);
+    await createBlok(page, tableOf(5, 3));
+    const modal = await openFullscreen(page);
+    const columns = page.locator(ROW_SELECTOR).first().locator('[data-blok-table-cell]');
+    const grid = await box(modal.getByRole('table'));
+
+    await page.mouse.move(grid.x + grid.width - 10, grid.y + grid.height / 2);
+    const bar = await box(page.locator('[data-blok-table-add-col]'));
+    const y = bar.y + bar.height / 2;
+
+    await page.mouse.move(bar.x + bar.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move((page.viewportSize()?.width ?? 1280) - 2, y, { steps: 8 });
+    await expect.poll(() => columns.count(), { timeout: 20_000 }).toBeGreaterThan(20);
+    await page.mouse.move(2, y, { steps: 20 });
+
+    await expect.poll(() => columns.count(), { timeout: 15_000 }).toBe(3);
+    await page.mouse.up();
+  });
+
+  test('pulling the corner back to the window start removes every column the drag added', async ({ page }) => {
+    // Growing past a screen and back is held auto-scroll in both directions.
+    test.setTimeout(60_000);
+    await createBlok(page, tableOf(5, 3));
+    const modal = await openFullscreen(page);
+    const columns = page.locator(ROW_SELECTOR).first().locator('[data-blok-table-cell]');
+    const grid = await box(modal.getByRole('table'));
+
+    await page.mouse.move(grid.x + grid.width - 4, grid.y + grid.height - 4);
+    const corner = await box(page.locator('[data-blok-table-corner-drag]'));
+    const y = corner.y + corner.height / 2;
+
+    await page.mouse.move(corner.x + corner.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move((page.viewportSize()?.width ?? 1280) - 2, y, { steps: 8 });
+    await expect.poll(() => columns.count(), { timeout: 20_000 }).toBeGreaterThan(15);
+    await page.mouse.move(2, y, { steps: 20 });
+
+    await expect.poll(() => columns.count(), { timeout: 15_000 }).toBe(3);
+    await page.mouse.up();
+  });
+
   test('clicking add row with the table at the bottom of the window scrolls the new row into view', async ({ page }) => {
     await createBlok(page, tableOf(30, 3));
     const rows = page.locator(ROW_SELECTOR);

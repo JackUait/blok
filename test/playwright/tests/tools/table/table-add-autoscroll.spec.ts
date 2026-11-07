@@ -171,6 +171,7 @@ test.describe('Adding rows and columns keeps them in view', () => {
 
     await expect.poll(() => columns.count(), { timeout: 5_000 }).toBeGreaterThan(5);
     await page.mouse.up();
+    expect(await columns.count()).toBeGreaterThan(5);
   });
 
   test('holding the corner of a full-screen table at the window edge keeps adding columns and rows', async ({ page }) => {
@@ -190,6 +191,7 @@ test.describe('Adding rows and columns keeps them in view', () => {
     await expect.poll(() => columns.count(), { timeout: 5_000 }).toBeGreaterThan(6);
     expect(await page.locator(ROW_SELECTOR).count()).toBeGreaterThan(5);
     await page.mouse.up();
+    expect(await columns.count()).toBeGreaterThan(6);
   });
 
   test('clicking add row with the table at the bottom of the window scrolls the new row into view', async ({ page }) => {

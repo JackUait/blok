@@ -102,6 +102,25 @@ func TestSavesTheGivenBytesAndVersionsThemBySHA256(t *testing.T) {
 	}
 }
 
+// Node drops a document's save chain once it settles, so the lanes of
+// many documents do not pile up.
+func TestASettledSaveLeavesNoLane(t *testing.T) {
+	dir := t.TempDir()
+	source := newFilesSource(dir, bundle{runtime: idsAreFine()})
+	for _, id := range []string{"a", "b", "c"} {
+		if _, err := source.save(context.Background(), id, []byte("{}\n"), nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stale := "not-the-hash"
+	_, _ = source.save(context.Background(), "a", []byte("{}\n"), &stale)
+	source.mu.Lock()
+	defer source.mu.Unlock()
+	if len(source.lanes) != 0 {
+		t.Fatalf("%d lanes left", len(source.lanes))
+	}
+}
+
 func TestRefusesASaveWhenTheFileChangedSinceTheLoad(t *testing.T) {
 	dir := t.TempDir()
 	source := newFilesSource(dir, bundle{runtime: idsAreFine()})

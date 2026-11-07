@@ -29,13 +29,19 @@ const (
 type filesSource struct {
 	dir    string
 	bundle bundle
-	// lanes serialise saves of one target file inside this process.
+	// lanes serialise saves of one target file inside this process. A
+	// lane goes once no save holds or waits for it, as Node's chain does.
 	mu    sync.Mutex
-	lanes map[string]*sync.Mutex
+	lanes map[string]*fileLane
+}
+
+type fileLane struct {
+	mu    sync.Mutex
+	users int
 }
 
 func newFilesSource(dir string, b bundle) *filesSource {
-	return &filesSource{dir: dir, bundle: b, lanes: map[string]*sync.Mutex{}}
+	return &filesSource{dir: dir, bundle: b, lanes: map[string]*fileLane{}}
 }
 
 func (s *filesSource) documentForm() string { return "file" }
@@ -196,15 +202,25 @@ func (s *filesSource) load(ctx context.Context, documentID string) (*loaded, err
 	return &loaded{document: answer.Document, version: &version}, nil
 }
 
-func (s *filesSource) lane(key string) *sync.Mutex {
+// enterLane waits for the lane of key; the returned func leaves it.
+func (s *filesSource) enterLane(key string) func() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	lane, ok := s.lanes[key]
 	if !ok {
-		lane = &sync.Mutex{}
+		lane = &fileLane{}
 		s.lanes[key] = lane
 	}
-	return lane
+	lane.users++
+	s.mu.Unlock()
+	lane.mu.Lock()
+	return func() {
+		lane.mu.Unlock()
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if lane.users--; lane.users == 0 {
+			delete(s.lanes, key)
+		}
+	}
 }
 
 func (s *filesSource) save(ctx context.Context, documentID string, text []byte, ifVersion *string) (*string, error) {
@@ -216,9 +232,7 @@ func (s *filesSource) save(ctx context.Context, documentID string, text []byte, 
 	if err != nil {
 		return nil, err
 	}
-	lane := s.lane(sameFileKey(target))
-	lane.Lock()
-	defer lane.Unlock()
+	defer s.enterLane(sameFileKey(target))()
 	held, err := s.lock(documentID, target)
 	if err != nil {
 		return nil, err

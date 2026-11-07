@@ -111,6 +111,44 @@ public sealed class DocEndpointClientTests
   }
 
   /// <summary>
+  /// Spaces and tabs around a value are not part of it (RFC 9110 5.5): undici and Go's
+  /// net/http drop them, and TryAddWithoutValidation sent them.
+  /// </summary>
+  [Fact]
+  public async Task SendsHeaderValuesWithoutOuterSpacesAndTabs()
+  {
+    using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+    listener.Start();
+    var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+    var heard = Task.Run(async () =>
+    {
+      using var socket = await listener.AcceptSocketAsync();
+      var head = new List<byte>();
+      var buffer = new byte[4096];
+
+      while (!Encoding.Latin1.GetString([.. head]).Contains("\r\n\r\n", StringComparison.Ordinal))
+      {
+        var read = await socket.ReceiveAsync(buffer);
+        if (read == 0)
+        {
+          break;
+        }
+        head.AddRange(buffer.AsSpan(0, read).ToArray());
+      }
+      await socket.SendAsync(Encoding.ASCII.GetBytes("HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n"));
+
+      return head.ToArray();
+    });
+    using var client = new DocEndpointClient(new DocEndpointOptions(new Uri($"http://127.0.0.1:{port}/docs"), " Bearer  x\t", Deadline));
+
+    await client.SaveAsync("doc", JsonNode.Parse("""{"blocks":[]}""")!, "\tv1 ", null, CancellationToken.None);
+    var text = Encoding.Latin1.GetString(await heard.WaitAsync(Deadline));
+
+    Assert.Contains("\r\nAuthorization: Bearer  x\r\n", text, StringComparison.Ordinal);
+    Assert.Contains("\r\nBlok-Doc-Version: v1\r\n", text, StringComparison.Ordinal);
+  }
+
+  /// <summary>
   /// The version comes from the endpoint's own answer. On .NET 10
   /// TryAddWithoutValidation sends a CR or LF in it as a new header line.
   /// </summary>

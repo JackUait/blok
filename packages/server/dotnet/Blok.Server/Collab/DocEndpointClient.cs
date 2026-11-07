@@ -170,7 +170,7 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
         throw new DocEndpointException(
             "collab: the doc endpoint version cannot be sent as a header.");
       }
-      request.Headers.TryAddWithoutValidation(VersionHeader, version);
+      request.Headers.TryAddWithoutValidation(VersionHeader, Trimmed(version));
     }
 
     if (projection is not null)
@@ -222,6 +222,12 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
     }
 
     return true;
+  }
+
+  // Spaces and tabs around a value are not part of it (RFC 9110 5.5); undici and Go drop them.
+  private static string Trimmed(string value)
+  {
+    return value.Trim([' ', '\t']);
   }
 
   private static SocketsHttpHandler CreateHandler()
@@ -365,7 +371,7 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
     // which splits it into a second header line.
     if (options.Authorization != "" &&
         (!Sendable(options.Authorization) ||
-            !request.Headers.TryAddWithoutValidation("Authorization", options.Authorization)))
+            !request.Headers.TryAddWithoutValidation("Authorization", Trimmed(options.Authorization))))
     {
       throw new DocEndpointException(
           "collab: the doc endpoint Authorization value cannot be sent as a header " +

@@ -381,7 +381,8 @@ func (s *filesSource) list(ctx context.Context, request listRequest) (*sourceLis
 	for index, id := range ids.IDs {
 		listed[index] = entry{ID: id}
 		if bytes, readErr := os.ReadFile(filepath.Join(s.dir, id+".json")); readErr == nil {
-			text := decodeUTF8(bytes)
+			// The bundle's JSON.parse refuses 1e400; Node's reads it, title and all.
+			text := string(finiteJSON([]byte(decodeUTF8(bytes))))
 			listed[index].Text = &text
 		}
 	}

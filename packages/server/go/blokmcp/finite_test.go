@@ -96,3 +96,23 @@ func TestAnOverflowingArgumentIsInfinityAsInNode(t *testing.T) {
 		t.Errorf("view limit: %s", opened.answer)
 	}
 }
+
+// Node's list reads such a file with JSON.parse, so its title still shows.
+func TestAFileHoldingAnOverflowingNumberListsWithItsTitle(t *testing.T) {
+	dir := t.TempDir()
+	doc := `{"title":"t","blocks":[{"id":"p1","type":"paragraph","data":{"text":"x","n":1e400,"m":-1e400}}]}`
+	if err := os.WriteFile(filepath.Join(dir, "doc.json"), []byte(doc), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: dir}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	send, answer, end := rawStdio(t, server)
+	defer end()
+	send(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_list_documents","arguments":{}}}`)
+	if got := string(answer("1")["result"]); !strings.Contains(got, `{"id":"doc","title":"t","live":false}`) {
+		t.Fatalf("listed: %s", got)
+	}
+}

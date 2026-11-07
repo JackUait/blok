@@ -485,6 +485,10 @@ where
                 }
                 let line =
                     crate::lenient::mend(&crate::depth::clamp(&line, crate::depth::MESSAGE_LIMIT));
+                // Before shape: Node's schema drops it before any -32602.
+                if has_unsafe_id(&line) {
+                    continue;
+                }
                 let line = match crate::shape::shape(&line) {
                     crate::shape::Shaped::Forward(line) => line,
                     // Node's SDK drops it without an answer.
@@ -496,9 +500,6 @@ where
                         continue;
                     }
                 };
-                if has_unsafe_id(&line) {
-                    continue;
-                }
                 let sent = match own_answer(&line) {
                     Some(answer) => write_line(&out, &answer).await,
                     None => {
@@ -811,11 +812,12 @@ mod tests {
             "\u{feff}{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\"}\n",
             "{\"jsonrpc\":\"2.0\",\"id\":9007199254740993,\"method\":\"ping\"}\n",
             "{\"jsonrpc\":\"2.0\",\"id\":-9007199254740993,\"method\":\"ping\"}\n",
+            "{\"jsonrpc\":\"2.0\",\"id\":9007199254740993,\"method\":\"tools/call\",\"params\":{\"name\":5}}\n",
             "{\"jsonrpc\":\"2.0\",\"id\":9007199254740991,\"method\":\"ping\"}\n",
         );
         let got = Arc::new(std::sync::Mutex::new(Vec::new()));
         let seen = got.clone();
-        let (out, _client) = tokio::io::duplex(1 << 16);
+        let (out, mut client) = tokio::io::duplex(1 << 16);
         proxy(
             std::io::Cursor::new(input.as_bytes().to_vec()),
             out,
@@ -834,6 +836,9 @@ mod tests {
         )
         .await;
         assert_eq!(*got.lock().unwrap(), vec!["9007199254740991"]);
+        let mut written = String::new();
+        client.read_to_string(&mut written).await.unwrap();
+        assert_eq!(written, "");
     }
 
     // Node serves a request that comes before any initialize, without the

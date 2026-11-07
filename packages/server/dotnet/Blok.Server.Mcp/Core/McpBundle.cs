@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Blok.Server.Runtime;
@@ -14,7 +15,7 @@ internal sealed class McpBundle(IBlokRuntime runtime)
 
   internal async Task<JsonObject> CallAsync(string operation, JsonObject input, CancellationToken cancellationToken = default)
   {
-    var text = await runtime.InvokeAsync(operation, McpJson.Write(input), CallTimeout, cancellationToken);
+    var text = await runtime.InvokeAsync(operation, EngineNumbers(operation, McpJson.Write(input)), CallTimeout, cancellationToken);
 
     return McpJson.Parse(text) as JsonObject
         ?? throw new InvalidOperationException($"The runtime answered {operation} with a value that is not an object.");
@@ -22,7 +23,73 @@ internal sealed class McpBundle(IBlokRuntime runtime)
 
   internal async Task<string> CallTextAsync(string operation, string inputJson, CancellationToken cancellationToken = default)
   {
-    return await runtime.InvokeAsync(operation, inputJson, CallTimeout, cancellationToken);
+    return await runtime.InvokeAsync(operation, EngineNumbers(operation, inputJson), CallTimeout, cancellationToken);
+  }
+
+  // What a number past double crosses to mcpCheckCall as, as in Rust (lenient.rs): Jint reads
+  // 1e400 as Infinity, and the step it answers would carry that as null. Every other op gets
+  // 1e400 back, which Jint reads as Infinity, as Node's JSON.parse does.
+  private const string OverflowStandIn = "1.2345e+308";
+
+  internal static string EngineNumbers(string operation, string text)
+  {
+    StringBuilder? output = null;
+    var last = 0;
+    var inString = false;
+
+    for (var at = 0; at < text.Length; at++)
+    {
+      var c = text[at];
+
+      if (inString)
+      {
+        if (c == '\\')
+        {
+          at++;
+        }
+        else if (c == '"')
+        {
+          inString = false;
+        }
+        continue;
+      }
+      if (c == '"')
+      {
+        inString = true;
+        continue;
+      }
+      if (c != '-' && !char.IsAsciiDigit(c))
+      {
+        continue;
+      }
+      var end = at + 1;
+
+      while (end < text.Length && (char.IsAsciiDigit(text[end]) || text[end] is '.' or 'e' or 'E' or '+' or '-'))
+      {
+        end++;
+      }
+      var token = text[at..end];
+      var negative = token[0] == '-';
+      var swapped = operation == "mcpCheckCall"
+          ? Overflows(token) ? (negative ? "-" : string.Empty) + OverflowStandIn : null
+          : token == OverflowStandIn ? "1e400" : token == "-" + OverflowStandIn ? "-1e400" : null;
+
+      if (swapped is not null)
+      {
+        output ??= new StringBuilder(text.Length);
+        output.Append(text, last, at - last).Append(swapped);
+        last = end;
+      }
+      at = end - 1;
+    }
+
+    return output is null ? text : output.Append(text, last, text.Length - last).ToString();
+  }
+
+  private static bool Overflows(string token)
+  {
+    return double.TryParse(token, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value)
+        && double.IsInfinity(value);
   }
 }
 

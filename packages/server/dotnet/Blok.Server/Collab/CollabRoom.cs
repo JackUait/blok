@@ -3546,6 +3546,11 @@ internal sealed class CollabRoom : IDisposable
       log?.Invoke(
           $"collab: room \"{DocId}\" is staying loaded until its export lands");
       UpdateEvictionLocked(Backoff(exportFailures));
+      // A member who joins stops the eviction timer, so the export keeps
+      // its own retry, as a failed save does.
+      dirtySince ??= timeProvider.GetUtcNow();
+      exportRetryAt = timeProvider.GetUtcNow() + Backoff(exportFailures);
+      ScheduleExportLocked();
 
       return;
     }

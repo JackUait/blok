@@ -491,6 +491,9 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
 
   internal Exception? NextSaveFailure { get; set; }
 
+  /// <summary>How many saves after the next one fail the same way.</summary>
+  internal int MoreSaveFailures { get; set; }
+
   internal string? NextSaveVersion { get; set; }
 
   /// <summary>When set, LoadAsync waits for it before answering.</summary>
@@ -575,7 +578,15 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
     if (NextSaveFailure is not null)
     {
       var failure = NextSaveFailure;
-      NextSaveFailure = null;
+
+      if (MoreSaveFailures > 0)
+      {
+        MoreSaveFailures--;
+      }
+      else
+      {
+        NextSaveFailure = null;
+      }
 
       throw failure;
     }

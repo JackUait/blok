@@ -343,8 +343,13 @@ export const buildScope = ({ changedPaths, sourceFiles, testFiles, importers }) 
  * Turns a scope into Stryker CLI arguments. A full sweep passes no selection at
  * all — the config file's own defaults cover the repository, and listing every
  * path would blow the command line length.
+ *
+ * `deadline` (seconds) sets Stryker's dry-run limit a minute past it, so the
+ * run's deadline stops a slow dry run and parks the batch. Stryker's own limit
+ * would fail the run and leave the same batch for the next one.
  */
-export const buildStrykerArgs = ({ mode, mutate, testFiles, allowFull = false }) => {
+export const buildStrykerArgs = ({ mode, mutate, testFiles, allowFull = false, deadline }) => {
+  const limit = deadline === undefined ? [] : ['--dryRunTimeoutMinutes', String(Math.ceil(deadline / 60) + 1)];
   if (mode === 'full') {
     if (!allowFull) {
       throw new Error(
@@ -352,14 +357,14 @@ export const buildStrykerArgs = ({ mode, mutate, testFiles, allowFull = false })
       );
     }
 
-    return ['run'];
+    return ['run', ...limit];
   }
 
   if (mutate.length === 0) {
     return null;
   }
 
-  return ['run', '--mutate', mutate.join(','), '--testFiles', testFiles.join(',')];
+  return ['run', '--mutate', mutate.join(','), '--testFiles', testFiles.join(','), ...limit];
 };
 
 /**
@@ -910,7 +915,13 @@ const writeState = (stateDir, state) => {
 
 const run = async (stateDir, { allowFull, budget, deadline, sweep }) => {
   const scope = plan(stateDir, { budget, sweep });
-  const args = buildStrykerArgs({ ...scope, allowFull });
+  const stopAt = process.env.MUTATION_STOP_AT;
+  const seconds = deadlineSeconds({
+    deadline,
+    stopAt: stopAt === undefined ? undefined : Number(stopAt),
+    now: Math.floor(Date.now() / 1000),
+  });
+  const args = buildStrykerArgs({ ...scope, allowFull, deadline: seconds });
 
   process.stdout.write(
     `Mutation scope: ${scope.mode}` +
@@ -923,12 +934,6 @@ const run = async (stateDir, { allowFull, budget, deadline, sweep }) => {
   }
 
   const state = readJson(join(stateDir, 'state.json'), {});
-  const stopAt = process.env.MUTATION_STOP_AT;
-  const seconds = deadlineSeconds({
-    deadline,
-    stopAt: stopAt === undefined ? undefined : Number(stopAt),
-    now: Math.floor(Date.now() / 1000),
-  });
 
   if (args === null) {
     process.stdout.write('Nothing to mutate.\n');

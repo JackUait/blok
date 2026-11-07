@@ -505,6 +505,22 @@ describe('mutation-scope', () => {
     it('asks for no run at all when nothing changed', () => {
       expect(buildStrykerArgs({ mode: 'incremental', mutate: [], testFiles: [] })).toBeNull();
     });
+
+    // The sweep plans up to an hour of dry run. Stryker's own 15-minute dry-run
+    // limit failed every nightly sweep on the same batch, so the run's deadline
+    // must be the only limit, with Stryker's a minute past it.
+    it('lets the dry run last until the run deadline', () => {
+      const sweep = buildStrykerArgs({
+        mode: 'incremental',
+        mutate: ['src/a.ts'],
+        testFiles: ['test/unit/a.test.ts'],
+        deadline: 5 * 60 * 60,
+      });
+      const full = buildStrykerArgs({ mode: 'full', mutate: [], testFiles: [], allowFull: true, deadline: 90 });
+
+      expect(sweep?.slice(-2)).toEqual(['--dryRunTimeoutMinutes', '301']);
+      expect(full).toEqual(['run', '--dryRunTimeoutMinutes', '3']);
+    });
   });
 
   describe('collectSurvivors', () => {

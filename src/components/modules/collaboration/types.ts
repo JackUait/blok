@@ -198,6 +198,14 @@ export interface CollabDocSeam {
   resetForRelineage(): void;
 
   /**
+   * Swap in an empty document after the room refused a local write; the
+   * provider applies the room's whole copy right after. Same steps as
+   * {@link resetForRelineage}, but the room's history is still ours, so a
+   * headless member must not end its session. Defaults to that method.
+   */
+  rebuildFromRoom?(): void;
+
+  /**
    * Flush the coalescing block-write buffer, so the last thing typed exists as
    * a document update — and, through the Collaboration module's lifetime
    * capture tap, as an outbox row — before the caller quarantines the lineage

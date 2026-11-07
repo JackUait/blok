@@ -1,4 +1,5 @@
 import { surfaceError } from './errors';
+import { MAX_JSON_DEPTH, textNestsDeeperThan, wellFormed } from './wire-json';
 
 /*
  * The files source's pure rules (src/mcp/sources/files.ts): which ids it accepts, how it lists,
@@ -32,8 +33,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /** A file's listed title: its non-empty `title`, else null. Text that is not JSON has none. */
 export const titleOfText = (text: string): string | null => {
+  // The ports' JSON.parse fails past 64 levels, so Node must not find a title there either.
+  if (textNestsDeeperThan(text, MAX_JSON_DEPTH)) {
+    return null;
+  }
   try {
-    const parsed: unknown = JSON.parse(text);
+    const parsed: unknown = wellFormed(JSON.parse(text));
 
     return isRecord(parsed) && typeof parsed.title === 'string' && parsed.title !== '' ? parsed.title : null;
   } catch {
@@ -66,11 +71,15 @@ export const assertDocumentShape = (value: unknown, where: string): void => {
 
 /** A stored file's document, from its UTF-8 text. */
 export const parseDocumentText = (id: string, text: string): unknown => {
+  // Before parsing: the ports' JSON.parse refuses past 64 levels as invalid JSON.
+  if (textNestsDeeperThan(text, MAX_JSON_DEPTH)) {
+    throw surfaceError('SOURCE_UNAVAILABLE', `${id}.json nests deeper than ${MAX_JSON_DEPTH} levels of objects and arrays.`);
+  }
   const raw: unknown = (() => {
     try {
       const parsed: unknown = JSON.parse(text);
 
-      return parsed;
+      return wellFormed(parsed);
     } catch {
       throw surfaceError('SOURCE_UNAVAILABLE', `${id}.json is not valid JSON.`);
     }

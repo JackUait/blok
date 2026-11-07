@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { generateKeyPairSync, sign } from 'node:crypto';
-import { request as httpRequest } from 'node:http';
+import { createServer as createRawServer, request as httpRequest } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildMcpContracts } from '../../../src/mcp/contract';
@@ -43,6 +43,23 @@ describe('startHttpServer', () => {
 
     return server.url;
   };
+
+  it('keeps the bind error\'s code and cause, so a library host can retry on another port', async () => {
+    const taken = createRawServer();
+
+    await new Promise<void>(resolve => taken.listen(0, '127.0.0.1', resolve));
+    const address = taken.address();
+    const port = typeof address === 'object' && address !== null ? address.port : 0;
+
+    try {
+      const failed = await startHttpServer({ listen: `127.0.0.1:${port}`, tools, instructions: '', dispatch, version: '0', auth: { kind: 'none' }, principal: 'local' })
+        .then(() => null, (thrown: unknown) => thrown);
+
+      expect(failed).toMatchObject({ name: 'McpListenError', code: 'EADDRINUSE', cause: expect.objectContaining({ code: 'EADDRINUSE' }) });
+    } finally {
+      await new Promise<void>(resolve => taken.close(() => resolve()));
+    }
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();

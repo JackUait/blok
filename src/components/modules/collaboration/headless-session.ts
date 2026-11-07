@@ -117,6 +117,8 @@ export const openHeadlessRoom = async (input: HeadlessRoomInput): Promise<Headle
       // The agent session read the old doc; after the swap its view is gone.
       finish({ reason: 'reset' });
     },
+    // The room's history is still ours, so the agent session goes on.
+    rebuildFromRoom: () => store.resetForRelineage(),
     flushPendingWrites: () => {},
   };
 

@@ -1,3 +1,4 @@
+import { MAX_JSON_DEPTH, textNestsDeeperThan, wellFormed } from '../../shared/mcp/wire-json';
 import { surfaceError } from '../errors';
 
 import type { DocumentSource, SourceListing } from './types';
@@ -9,10 +10,13 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const unavailable = (what: string): Error => surfaceError('SOURCE_UNAVAILABLE', `The document endpoint ${what}.`);
 
 const parseJson = (text: string, what: string): unknown => {
+  if (textNestsDeeperThan(text, MAX_JSON_DEPTH)) {
+    throw unavailable(`answered JSON nested deeper than ${MAX_JSON_DEPTH} levels ${what}`);
+  }
   try {
     const parsed: unknown = JSON.parse(text);
 
-    return parsed;
+    return wellFormed(parsed);
   } catch {
     throw unavailable(`answered non-JSON ${what}`);
   }

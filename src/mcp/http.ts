@@ -96,10 +96,30 @@ const send = async (res: ServerResponse, response: Response): Promise<void> => {
   res.end();
 };
 
+/** The address cannot be listened on. The CLI prints it and exits with code 1, as a failed bind always did. */
+export class McpListenError extends Error {
+  /** The bind error's code, such as EADDRINUSE; absent for a malformed address. */
+  public readonly code?: string;
+
+  constructor(message: string, cause?: Error & { code?: string }) {
+    super(message, cause === undefined ? undefined : { cause });
+    this.name = 'McpListenError';
+    if (cause?.code !== undefined) {
+      this.code = cause.code;
+    }
+  }
+}
+
 const splitListen = (listen: string): { host: string; port: number } => {
   const at = listen.lastIndexOf(':');
+  const port = listen.slice(at + 1);
 
-  return { host: listen.slice(0, at).replace(/^\[|\]$/g, ''), port: Number(listen.slice(at + 1)) };
+  // Number() alone reads "0x10" as 16 and "1e3" as 1000. An empty port stays 0: any free port.
+  if (at === -1 || !/^\d{0,5}$/.test(port) || Number(port) > 65_535) {
+    throw new McpListenError(`--http needs a port from 0 to 65535 after the last ":", got "${listen}"`);
+  }
+
+  return { host: listen.slice(0, at).replace(/^\[|\]$/g, ''), port: Number(port) };
 };
 
 /**
@@ -212,9 +232,11 @@ export const startHttpServer = async (input: HttpServerInput): Promise<{ url: st
   const { host, port } = splitListen(input.listen);
 
   await new Promise<void>((done, fail) => {
-    server.once('error', fail);
+    const refused = (error: Error): void => fail(new McpListenError(`Cannot listen on ${input.listen}: ${error.message}`, error));
+
+    server.once('error', refused);
     server.listen(port, host, () => {
-      server.off('error', fail);
+      server.off('error', refused);
       done();
     });
   });

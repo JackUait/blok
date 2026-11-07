@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { getTranslation, translations } from '../../i18n';
-import { serverCoverageNote, serverLimits, serverMcpBuilds, serverPaths } from './server-data';
+import { serverCoverageNote, serverLimits, serverMcpBuilds, serverMcpDifferences, serverMcpIntro, serverPaths } from './server-data';
 
 /** Repo root — docs/src/components/server → up four levels. */
 const BLOK_ROOT = resolve(__dirname, '..', '..', '..', '..');
@@ -81,6 +81,59 @@ const overlayKeys = (): string[] => [
 ];
 
 describe('server docs data', () => {
+  describe('MCP facts read from the ports', () => {
+    const value = (locale: 'en' | 'ru', key: string): string => {
+      const found = key.split('.').reduce<unknown>(
+        (node, part) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[part] : undefined),
+        translations[locale],
+      );
+
+      return typeof found === 'string' ? found : '';
+    };
+
+    // BlokMcpOptions.Authorize: with neither hook, MapBlokMcp refuses to start (BlokMcpServiceCollectionExtensions.cs ConfigOf).
+    it.each([
+      ['en', serverMcpBuilds.find(build => build.id === 'csharp')?.description ?? ''],
+      ['ru', ''],
+    ] as const)('says the C# library refuses to start without a per-document check (%s)', (locale, source) => {
+      const csharp = value(locale, 'server.mcp.csharp.description');
+
+      if (locale === 'en') {
+        expect(csharp).toBe(source);
+      }
+      expect(csharp).toMatch(/MapBlokMcp[\s\S]*AllowEveryCallerEveryDocument/);
+      expect(csharp).not.toMatch(/every caller reaches every document|любой вызывающий получает любой документ/);
+    });
+
+    it.each([
+      ['en', serverMcpDifferences],
+      ['ru', ''],
+    ] as const)('lists the Host check, Rust hosts and in-process rooms of every port (%s)', (locale, source) => {
+      const differences = value(locale, 'server.mcpDifferences');
+
+      if (locale === 'en') {
+        expect(differences).toBe(source);
+      }
+      // BlokMcpOptions.AllowedHosts; rust http.rs `opted_in`; Go Options.Rooms, Rust Embedded::new `rooms`, C# LiveRooms + SyncUrl.
+      for (const fact of ['AllowedHosts', '`hosts`', 'LiveRooms', 'Options.Rooms', '`rooms`', 'SyncUrl']) {
+        expect(differences, fact).toContain(fact);
+      }
+      expect(differences).not.toMatch(/C# library opens live handles only|C# открывает живые хэндлы только/);
+    });
+
+    it.each([
+      ['en', serverMcpIntro],
+      ['ru', ''],
+    ] as const)('documents the 48-level nesting limit every build shares (%s)', (locale, source) => {
+      const intro = value(locale, 'server.mcpIntro');
+
+      if (locale === 'en') {
+        expect(intro).toBe(source);
+      }
+      expect(intro).toContain('48');
+    });
+  });
+
   describe('MCP builds', () => {
     const build = (id: string) => serverMcpBuilds.find((entry) => entry.id === id);
     const code = (id: string): string => (build(id)?.samples ?? []).map((sample) => sample.code).join('\n');

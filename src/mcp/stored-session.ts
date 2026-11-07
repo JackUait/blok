@@ -2,6 +2,8 @@ import type { AgentBatch, AgentSession } from '../../types/agent';
 import type { OutputData } from '../../types/data-formats/output-data';
 import type { AgentContract } from '../../types/tool-manifest';
 
+import { tooDeepToSave } from '../shared/mcp/wire-json';
+
 import { failedResult, isMcpSurfaceError, isWriteBatch, NO_DELIVERY, surfaceError } from './errors';
 import type { HandleSession, McpExecuteResult } from './session';
 import type { DocumentSource } from './sources/types';
@@ -73,6 +75,15 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
       // An unchanged write (page.rename edits another document) has nothing to save.
       if (!result.ok || !writing || result.revision === before) {
         return { ...result, delivery: NO_DELIVERY };
+      }
+      // A file this deep is one no port could open again. Memory drops the work, as after a refused save.
+      const tooDeep = tooDeepToSave(state.agent.output());
+
+      if (tooDeep !== null) {
+        state.stale = true;
+        await reload().catch(() => undefined);
+
+        return failedResult(tooDeep.agentError, result.warnings);
       }
       try {
         const saved = await input.source.save(input.documentId, state.agent.output(), { ifVersion: state.version });

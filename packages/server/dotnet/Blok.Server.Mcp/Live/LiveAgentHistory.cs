@@ -21,7 +21,7 @@ internal sealed class LiveAgentHistory
   private readonly LiveRoom room;
   private readonly object origin;
   private readonly Func<RichTextFields> fields;
-  private readonly LiveUndoManager undoManager;
+  private LiveUndoManager undoManager;
   private readonly List<Step> done = [];
   private readonly List<Step> undone = [];
   private readonly List<Mark> past = [];
@@ -32,14 +32,26 @@ internal sealed class LiveAgentHistory
     this.room = room;
     this.origin = origin;
     this.fields = fields ?? (() => RichTextFields.BuiltIn);
+    undoManager = NewUndoManager();
+    room.LocalWriteCommitted += write => undoManager.AfterTransaction(write.Origin, write.Transaction);
+    // Every step was on the swapped-out doc, so the steps start over. The marks stay, as Node's executor keeps them.
+    room.Rebuilt += () =>
+    {
+      undoManager = NewUndoManager();
+      done.Clear();
+      undone.Clear();
+    };
+  }
+
+  private LiveUndoManager NewUndoManager()
+  {
     var doc = room.Doc;
 
-    undoManager = new LiveUndoManager(
+    return new LiveUndoManager(
         doc,
         [doc.GetMap("blocks"), doc.GetArray("root"), doc.GetMap("values"), doc.GetMap("page")],
         tracked => ReferenceEquals(tracked, origin),
         (replay, body) => room.WriteLocal(replay, body));
-    room.LocalWriteCommitted += write => undoManager.AfterTransaction(write.Origin, write.Transaction);
   }
 
   /// <summary>'own', 'other' or a restore (executor.ts HistoryMark).</summary>

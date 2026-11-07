@@ -2994,6 +2994,115 @@ describe('createCollabProvider', () => {
       }
     });
 
+    describe('after a final rejection', () => {
+      /**
+       * A session whose local document holds one refused block, its rows
+       * quarantined, and the store's session recorded again — what the host
+       * does on the next `connected`.
+       */
+      const refuseOneBlock = async (): Promise<{ outbox: FakeOutbox; peer: DocumentStore; harness: Harness; socket: MockSocket }> => {
+        const outbox = new FakeOutbox(LINEAGE_A);
+        const peer = newPeer();
+
+        peer.addBlock({ id: 'room', type: 'paragraph', data: { text: 'in the room' } });
+
+        const { harness, socket } = v2Handshake(outbox);
+
+        // The host's write tap, as the Collaboration module wires it.
+        harness.store.onUpdate((update) => {
+          void outbox.appendLocal(update).then(() => harness.provider.drain(), () => undefined);
+        });
+        serverFirstSync(harness, socket, peer);
+        await settle();
+        harness.store.addBlock({ id: 'refused', type: 'paragraph', data: { text: 'refused' } });
+        await settle();
+
+        const [operation] = operationFrames(socket);
+
+        socket.deliver({ type: 'rejection', lineage: LINEAGE_A, operationId: operation.operationId, code: 'read-only' });
+        await settle();
+
+        return { outbox, peer, harness, socket };
+      };
+
+      /** Drops the connection and lets the next one open. */
+      const reconnectV2 = (harness: Harness, socket: MockSocket): MockSocket => {
+        socket.serverClose(1006);
+        advanceToReconnect(harness);
+
+        const next = harness.socket();
+
+        next.open(PROTOCOL_V2);
+        next.deliver(controlFrame());
+
+        return next;
+      };
+
+      it('never sends the refused write again on the next connection', async () => {
+        const { outbox, peer, harness, socket } = await refuseOneBlock();
+        const next = reconnectV2(harness, socket);
+        const opening = next.frames[0];
+
+        expect(opening.type === 'syncStep1' && clientsIn(opening.stateVector), 'the next connection did not ask for the whole room').toEqual([]);
+
+        next.deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate() });
+        outbox.lineage = LINEAGE_A;
+        next.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+        await settle();
+        next.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+        await settle();
+
+        expect(outbox.appended.slice(1), 'the residual round put the refused write back in the outbox').toEqual([]);
+        expect(operationFrames(next), 'the refused write went out again').toEqual([]);
+        expect(harness.store.toJSON().map((block) => block.id), 'the document still holds the refused write').toEqual(['room']);
+      });
+
+      it('does not send the refused write in a residual round on the same connection', async () => {
+        const { outbox, peer, socket } = await refuseOneBlock();
+
+        outbox.lineage = LINEAGE_A;
+        socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+        await settle();
+        socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+        await settle();
+
+        expect(outbox.appended.slice(1), 'the residual round put the refused write back in the outbox').toEqual([]);
+        expect(operationFrames(socket)).toHaveLength(1);
+      });
+
+      it('still sends a row that was not refused once the room is reloaded', async () => {
+        const { outbox, peer, harness, socket } = await refuseOneBlock();
+
+        // Another tab's edit, journalled after the quarantine.
+        const kept = outbox.seed(new Uint8Array([7]));
+        const next = reconnectV2(harness, socket);
+
+        next.deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate() });
+        await settle();
+
+        expect(operationIds(next), 'a row nobody refused was not sent after the reload').toEqual([kept.operationId]);
+      });
+
+      it('sends an edit made on the reloaded document', async () => {
+        const { outbox, peer, harness, socket } = await refuseOneBlock();
+        const next = reconnectV2(harness, socket);
+
+        next.deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate() });
+        outbox.lineage = LINEAGE_A;
+        await settle();
+        harness.store.addBlock({ id: 'later', type: 'paragraph', data: { text: 'later' } });
+        await settle();
+
+        const [frame] = operationFrames(next);
+        const applied = newPeer();
+
+        applied.applyRemoteUpdate(peer.encodeStateAsUpdate(), {});
+        applied.applyRemoteUpdate(frame.update, {});
+
+        expect(applied.toJSON().map((block) => block.id), 'the new edit did not reach the room whole').toEqual(['room', 'later']);
+      });
+    });
+
     it('transient server close leaves every row pending', async () => {
       const outbox = new FakeOutbox(LINEAGE_A);
       const peer = newPeer();

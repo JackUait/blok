@@ -207,6 +207,36 @@ public sealed class LiveAgentHistoryTests
     },
   };
 
+  [Fact]
+  public async Task AfterTheRoomCopyIsSwappedInOnlyLaterStepsAreUndone()
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+    var origin = new object();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, origin);
+
+      Insert(room, history, origin, "p1", "refused");
+      Insert(room, history, origin, "p2", "refused too");
+      Assert.Null(history.Replay(true, Pair));
+      room.RebuildFromRoom();
+      room.ApplyRemote(new YDoc().EncodeStateAsUpdate());
+      var appended = room.Outbox.AppendedCount;
+
+      Assert.Equal("NOTHING_TO_UNDO", history.Replay(true, Pair)?["code"]?.GetValue<string>());
+      Assert.Equal("NOTHING_TO_REDO", history.Replay(false, Pair)?["code"]?.GetValue<string>());
+      Assert.Equal(appended, room.Outbox.AppendedCount);
+
+      Insert(room, history, origin, "p3", "later");
+      Assert.Null(history.Replay(true, Pair));
+      Assert.Empty(Ids(room));
+      Assert.Null(history.Replay(false, Pair));
+      Assert.Equal(["p3"], Ids(room));
+    });
+    await room.CloseAsync();
+  }
+
   private static void Insert(LiveRoom room, LiveAgentHistory history, object origin, string id, string text, JsonObject? gate = null)
   {
     var edits = new JsonArray(new JsonObject

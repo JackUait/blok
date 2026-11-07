@@ -662,4 +662,30 @@ describe('checkOptionSafety', () => {
       transport: { kind: 'http', listen: '0.0.0.0:4100', public: true },
     })).not.toThrow();
   });
+
+  describe('library option values the CLI flags already check', () => {
+    const cases: Array<[string, Record<string, unknown>, RegExp]> = [
+      ['schema', { schema: 'bogus' }, /^schema must be one of envelope, full, mixed, got "bogus"$/],
+      ['pageTitles', { pageTitles: 'bogus' }, /^pageTitles must be one of off, page-map, got "bogus"$/],
+      ['handleIdleMs 0', { handleIdleMs: 0 }, /^handleIdleMs must be a positive integer, got 0$/],
+      ['handleIdleMs -5', { handleIdleMs: -5 }, /^handleIdleMs must be a positive integer, got -5$/],
+      ['handleIdleMs 1.5', { handleIdleMs: 1.5 }, /^handleIdleMs must be a positive integer, got 1.5$/],
+      ['handleIdleMs text', { handleIdleMs: '600' }, /^handleIdleMs must be a positive integer, got "600"$/],
+      ['maxHandlesPerPrincipal 0', { maxHandlesPerPrincipal: 0 }, /^maxHandlesPerPrincipal must be a positive integer, got 0$/],
+    ];
+
+    it.each(cases)('refuses %s as a config error', (_label, extra, message) => {
+      const options = { ...base, ...extra };
+
+      expect(() => checkOptionSafety(options)).toThrow(McpConfigError);
+      expect(() => checkOptionSafety(options)).toThrow(message);
+    });
+
+    it('accepts every allowed value', () => {
+      expect(() => checkOptionSafety({
+        ...base, schema: 'full', pageTitles: 'page-map', handleIdleMs: 1, maxHandlesPerPrincipal: 1,
+      })).not.toThrow();
+      expect(() => checkOptionSafety({ ...base, handleIdleMs: 2 ** 53, maxHandlesPerPrincipal: 2 ** 53 })).not.toThrow();
+    });
+  });
 });

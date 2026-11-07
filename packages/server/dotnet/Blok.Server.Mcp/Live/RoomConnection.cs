@@ -54,6 +54,14 @@ internal sealed class RoomConnection
     QueueClose(code);
   }
 
+  /// <summary>Drops the socket now. For a connection whose lanes never started.</summary>
+  internal void Abort()
+  {
+    Detach();
+    socket.Abort();
+    socket.Dispose();
+  }
+
   internal void Detach()
   {
     onMessage = null;

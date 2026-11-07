@@ -101,6 +101,9 @@ const ACK_TIMEOUT_MS = 15_000;
  */
 const EMPTY_UPDATE_BYTES = 2;
 
+/** The state vector of a document with no history: `varUint(0)` entries. */
+const EMPTY_STATE_VECTOR = new Uint8Array([0]);
+
 /** Rejection codes that are not final. `not-synced` is the only one. */
 const TRANSIENT_REJECTION_CODE = 'not-synced';
 
@@ -234,6 +237,16 @@ interface ProviderState {
    */
   residual: 'none' | 'requested' | 'done';
   /**
+   * The room refused a local write for good, but the document still holds it.
+   * Nothing local may be sent until the next connection's first SyncStep2
+   * replaces the document with the room's own copy: every later edit of this
+   * client depends on the refused one, and a residual round would send it.
+   * Outlives the connection on purpose.
+   */
+  rebuild: boolean;
+  /** This connection opened with an empty state vector, so its first SyncStep2 is the whole room. */
+  wholeRoomOwed: boolean;
+  /**
    * Last time the handshake-time activity send actually shipped, across every
    * connection generation — deliberately NOT reset by `teardownGeneration`. A
    * fast reconnect loop (a rolling deploy closing with 1001, which
@@ -327,6 +340,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     drainActedOnHead: false,
     resyncOwed: false,
     residual: 'none',
+    rebuild: false,
+    wholeRoomOwed: false,
     lastActivitySentAt: null,
   };
 
@@ -563,6 +578,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     state.inFlight = null;
     state.resyncOwed = false;
     state.residual = 'none';
+    state.wholeRoomOwed = false;
     state.awarenessClients.clear();
     state.awarenessFull = false;
 
@@ -766,6 +782,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       // Quarantined, not terminal, and not retried: the row is DURABLE, so a
       // session that ended here would adopt it on the next boot and end again.
       // Same verdict the server's own `oversized-update` rejection carries.
+      state.rebuild = true;
       void quarantineTail(row.lineage, OVERSIZED_REASON);
 
       return;
@@ -959,6 +976,11 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
     state.residual = 'done';
 
+    // The diff would carry the refused write back to the room.
+    if (state.rebuild) {
+      return;
+    }
+
     const residual = yjs.encodeStateAsUpdate(stateVector);
 
     // Everything the server already has encodes as varUint(0) twice; enveloping
@@ -1080,6 +1102,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     // Final. The tail goes with it: later updates in this lineage may depend on
     // the rejected one, so sending them alone would apply a dependent edit the
     // server has no base for.
+    state.rebuild = true;
     void quarantineTail(lineage, frame.code);
   };
 
@@ -1167,6 +1190,24 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
+   * Drops the document that holds a refused write, just before the room's
+   * whole copy is applied. Only on the SyncStep2 that answers an empty state
+   * vector (see `onopen`): any other one is a diff, and the copy would have holes.
+   *
+   * The seam is hooked again: the reset builds a new Awareness, and the old
+   * subscription would stay on the dead one.
+   * @param origin - this generation's origin object
+   */
+  const rebuildFromRoom = (origin: ProviderOrigin): void => {
+    state.rebuild = false;
+    state.wholeRoomOwed = false;
+    state.unhookDoc?.();
+    state.unhookAwareness?.();
+    (yjs.rebuildFromRoom ?? yjs.resetForRelineage)();
+    hookSeam(origin);
+  };
+
+  /**
    * Runs one presence frame, dropping it if it throws. Never terminal: the
    * server relays awareness after reading only the client count, so a
    * malformed frame from any pass-holder would otherwise end every other
@@ -1193,6 +1234,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   const handleFrame = (socket: WebSocketLike, origin: ProviderOrigin, frame: SyncWireFrame): void => {
     switch (frame.type) {
       case 'syncStep2':
+        if (state.wholeRoomOwed) {
+          rebuildFromRoom(origin);
+        }
         yjs.applyRemoteUpdate(frame.update, origin);
         markSynced();
         break;
@@ -1512,7 +1556,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       }
 
       // A state vector carries no history, so it is safe before validation.
-      send(socket, { type: 'syncStep1', stateVector: yjs.getStateVector() });
+      // An empty one after a refusal: the answer is then the whole room.
+      state.wholeRoomOwed = state.rebuild;
+      send(socket, { type: 'syncStep1', stateVector: state.rebuild ? EMPTY_STATE_VECTOR : yjs.getStateVector() });
     };
 
     socket.onmessage = (event): void => {

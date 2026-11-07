@@ -39,6 +39,9 @@ internal sealed class LiveRoom : IRoomSeam
 
   internal event Action<RoomEnd>? Ended;
 
+  /// <summary>Raised after <see cref="RebuildFromRoom"/> swapped in a new doc.</summary>
+  internal event Action? Rebuilt;
+
   internal LiveLoop Loop => loop;
 
   internal YDoc Doc { get; private set; }
@@ -229,6 +232,19 @@ internal sealed class LiveRoom : IRoomSeam
 
   public void ResetForRelineage()
   {
+    SwapDoc();
+    // The agent read the old doc; after the swap its view is gone.
+    Finish(new RoomEnd(true, null));
+  }
+
+  public void RebuildFromRoom()
+  {
+    SwapDoc();
+    Rebuilt?.Invoke();
+  }
+
+  private void SwapDoc()
+  {
     var local = Awareness.LocalState;
 
     held.Clear();
@@ -238,8 +254,6 @@ internal sealed class LiveRoom : IRoomSeam
     {
       Awareness.SetLocalState(local);
     }
-    // The agent read the old doc; after the swap its view is gone.
-    Finish(new RoomEnd(true, null));
   }
 
   private YDoc NewDoc()

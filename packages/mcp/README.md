@@ -272,7 +272,9 @@ Where they differ from this package, on purpose:
 - Uploads work only through the library API, as here: give the library your uploader. There is no flag for them.
 - Each call runs in an embedded JavaScript engine, with a 60 second limit per call. Node has no such limit.
 - Each engine also has a memory budget. C# counts 2 GiB of allocations per call, Go stops a call whose heap grows by about 1 GiB, and Rust lets one call hold 256 MiB.
-- The C# library opens live handles only on the rooms of its own app (`LiveRooms`), in the same process, with no socket and no ticket. The `Blok.Mcp` tool joins a remote sync service with `--sync-url`, as here.
+- The C# library checks the `Host` header only when you list `AllowedHosts`. Without it, use ASP.NET Core's own `AllowedHosts` host filtering. `blok-mcp --http` here answers 403 to a `Host` that is not loopback, unless `--public`.
+- In the Rust library, naming `hosts` in `Embedded::http` also serves callers from other machines, even without OAuth. Here a caller from another machine needs `--public`, and `--public` needs `--auth oauth`.
+- The libraries can also open live handles on the rooms of their own app, in the same process, with no socket and no ticket: `LiveRooms` in C#, `Options.Rooms` in Go and `rooms` in Rust. They join a remote sync service too, as `--sync-url` does here (`SyncUrl` in C#).
 
 ## Limits
 
@@ -280,6 +282,7 @@ Where they differ from this package, on purpose:
 - No Docker image.
 - A handle expires after 10 minutes idle.
 - A principal may hold 8 open handles.
+- Call arguments, and the documents it opens and saves, may nest at most 48 levels of objects and arrays. Deeper ones are refused, in every build: the C#, Go and Rust engines read JSON only 64 levels deep.
 
 ## Versions
 

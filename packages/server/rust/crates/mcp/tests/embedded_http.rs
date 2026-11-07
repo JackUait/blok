@@ -53,6 +53,8 @@ fn list_tools(host: &str, origin: Option<&str>) -> http::Request<Full<Bytes>> {
 }
 
 const LOOPBACK: &str = "127.0.0.1:50000";
+/// The address the embedding host's server took the request on.
+const LOCAL: &str = "127.0.0.1:4000";
 const REMOTE: &str = "203.0.113.9:50000";
 
 async fn status(http: &blok_mcp::http::EmbeddedHttp, request: http::Request<Full<Bytes>>) -> u16 {
@@ -64,7 +66,9 @@ async fn status_from(
     peer: &str,
     request: http::Request<Full<Bytes>>,
 ) -> u16 {
-    let answer = http.handle(peer.parse().unwrap(), request).await;
+    let answer = http
+        .handle(peer.parse().unwrap(), LOCAL.parse().unwrap(), request)
+        .await;
     let status = answer.status().as_u16();
     let _ = answer.into_body().collect().await;
     status
@@ -139,7 +143,11 @@ async fn oauth_options_refuse_a_caller_with_no_token() {
     let http = embedded.http(None).unwrap();
     // OAuth is the opt-in for remote callers: they get the bearer gate.
     let answer = http
-        .handle(REMOTE.parse().unwrap(), list_tools("localhost:4000", None))
+        .handle(
+            REMOTE.parse().unwrap(),
+            LOCAL.parse().unwrap(),
+            list_tools("localhost:4000", None),
+        )
         .await;
     assert_eq!(answer.status().as_u16(), 401);
     let challenge = answer
@@ -197,4 +205,122 @@ async fn stdio_options_are_never_served_over_http() {
     .await
     .unwrap();
     assert!(typed.http(None).is_err());
+}
+
+async fn answer_of(
+    http: &blok_mcp::http::EmbeddedHttp,
+    request: http::Request<Full<Bytes>>,
+) -> (u16, String, String) {
+    let answer = http
+        .handle(LOOPBACK.parse().unwrap(), LOCAL.parse().unwrap(), request)
+        .await;
+    let status = answer.status().as_u16();
+    let kind = answer
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_owned();
+    let body = answer.into_body().collect().await.unwrap().to_bytes();
+    (status, kind, String::from_utf8_lossy(&body).into_owned())
+}
+
+fn post(path: &str, host: &str, body: &str) -> http::Request<Full<Bytes>> {
+    http::Request::builder()
+        .method("POST")
+        .uri(path)
+        .header("host", host)
+        .header("content-type", "application/json")
+        .header("accept", "application/json, text/event-stream")
+        .body(Full::new(Bytes::from(body.to_owned())))
+        .unwrap()
+}
+
+// The embedded door answers as Node's front door and the CLI's do.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_embedded_door_shapes_requests_as_node_does() {
+    let embedded = embedded().await;
+    let http = embedded.http(None).unwrap();
+    let (status, kind, _) = answer_of(&http, list_tools("localhost:4000", None)).await;
+    assert_eq!((status, kind.as_str()), (200, "application/json"));
+    let (status, kind, body) = answer_of(&http, post("/mcp", "localhost:4000", "{nope")).await;
+    assert_eq!((status, kind.as_str()), (400, "application/json"));
+    assert_eq!(
+        body,
+        r#"{"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error: Invalid JSON"},"id":null}"#
+    );
+    let (status, _, body) = answer_of(&http, post("/mcp", "localhost:4000", "[]")).await;
+    assert_eq!(status, 400);
+    assert_eq!(
+        body,
+        r#"{"jsonrpc":"2.0","error":{"code":-32600,"message":"Bad Request: empty JSON-RPC batch"},"id":null}"#
+    );
+    let (status, _, _) = answer_of(&http, post("/health", "localhost:4000", "{}")).await;
+    assert_eq!(status, 404);
+    let get = http::Request::builder()
+        .method("GET")
+        .uri("/mcp")
+        .header("host", "localhost:4000")
+        .body(Full::new(Bytes::new()))
+        .unwrap();
+    let (status, kind, body) = answer_of(&http, get).await;
+    assert_eq!((status, kind.as_str()), (405, "application/json"));
+    assert_eq!(
+        body,
+        r#"{"jsonrpc":"2.0","error":{"code":-32000,"message":"Method not allowed."},"id":null}"#
+    );
+    let draft = http::Request::builder()
+        .method("POST")
+        .uri("/mcp")
+        .header("host", "localhost:4000")
+        .header("content-type", "application/json")
+        .header("accept", "application/json, text/event-stream")
+        .header("mcp-protocol-version", "2024-10-07")
+        .body(Full::new(Bytes::from(
+            r#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#,
+        )))
+        .unwrap();
+    assert_eq!(answer_of(&http, draft).await.0, 200);
+}
+
+// A DNS-rebound page names the attacker's domain with the bound port: the
+// Host must name a loopback host and the port the request came in on.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_host_must_name_the_port_the_request_came_in_on() {
+    let embedded = embedded().await;
+    let http = embedded.http(None).unwrap();
+    assert_eq!(status(&http, list_tools("localhost:4000", None)).await, 200);
+    assert_eq!(status(&http, list_tools("localhost:4001", None)).await, 403);
+    assert_eq!(status(&http, list_tools("localhost", None)).await, 403);
+}
+
+// The 401 challenge names the metadata route; it must be served.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_oauth_metadata_route_is_served() {
+    let options = json!({
+        "transport": { "kind": "http", "listen": "127.0.0.1:0" },
+        "auth": { "kind": "oauth", "issuer": "https://issuer.test", "audience": "https://mcp.test/mcp", "jwksUrl": "http://127.0.0.1:9/jwks" },
+    });
+    let authorize = Webhook::new("http://127.0.0.1:9/authorize".to_owned(), Outbound::new());
+    let embedded = Embedded::new(
+        Arc::new(Bundle::new(1).unwrap()),
+        &options,
+        Some(authorize),
+        None,
+    )
+    .await
+    .unwrap();
+    let http = embedded.http(None).unwrap();
+    let get = http::Request::builder()
+        .method("GET")
+        .uri("/.well-known/oauth-protected-resource")
+        .header("host", "localhost:4000")
+        .body(Full::new(Bytes::new()))
+        .unwrap();
+    let (status, kind, body) = answer_of(&http, get).await;
+    assert_eq!((status, kind.as_str()), (200, "application/json"));
+    assert!(
+        body.contains(r#""resource":"https://mcp.test/mcp""#),
+        "{body}"
+    );
 }

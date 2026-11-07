@@ -116,6 +116,8 @@ pub struct Turn<S: Send + 'static> {
     handles: Arc<Handles<S>>,
     handle: String,
     ticket: u64,
+    /// It counted as busy on the handle from its arrival, as Node's use does.
+    pinned: bool,
 }
 
 impl<S: Send + 'static> Turn<S> {
@@ -158,6 +160,13 @@ impl<S: Send + 'static> Drop for Turn<S> {
         }
         drop(turns);
         self.handles.turned.notify_waiters();
+        if self.pinned {
+            let mut state = self.handles.lock();
+            if let Some(entry) = state.entries.get_mut(&self.handle) {
+                entry.busy -= 1;
+                entry.last_used = Instant::now();
+            }
+        }
     }
 }
 
@@ -214,7 +223,20 @@ impl<S: Send + 'static> Handles<S> {
 
     /// Takes the next place in `handle`'s line. Synchronous, so calls get
     /// their places in the order they arrived.
-    pub fn reserve(self: &Arc<Self>, handle: &str) -> Turn<S> {
+    /// A call of `principal` on its open handle counts as busy from now, so
+    /// the sweep keeps the handle while the call waits.
+    pub fn reserve(self: &Arc<Self>, handle: &str, principal: &str) -> Turn<S> {
+        let pinned = {
+            let mut state = self.lock();
+            match state.entries.get_mut(handle) {
+                Some(entry) if entry.principal == principal => {
+                    entry.busy += 1;
+                    entry.last_used = Instant::now();
+                    true
+                }
+                _ => false,
+            }
+        };
         let mut turns = self.turns_lock();
         let line = turns.entry(handle.to_owned()).or_default();
         let ticket = line.next;
@@ -223,6 +245,7 @@ impl<S: Send + 'static> Handles<S> {
             handles: self.clone(),
             handle: handle.to_owned(),
             ticket,
+            pinned,
         }
     }
 
@@ -366,8 +389,8 @@ mod tests {
     #[tokio::test]
     async fn calls_on_one_handle_take_turns_in_the_order_they_came() {
         let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
-        let first = handles.reserve("h");
-        let second = handles.reserve("h");
+        let first = handles.reserve("h", "a");
+        let second = handles.reserve("h", "a");
         let order = Arc::new(std::sync::Mutex::new(Vec::new()));
         let waiting = {
             let order = order.clone();
@@ -383,7 +406,7 @@ mod tests {
         waiting.await.unwrap();
         assert_eq!(*order.lock().unwrap(), vec!["first", "second"]);
         // Another handle never waits for this one.
-        let other = handles.reserve("k");
+        let other = handles.reserve("k", "a");
         tokio::time::timeout(Duration::from_millis(50), other.wait())
             .await
             .unwrap();
@@ -399,16 +422,16 @@ mod tests {
     async fn a_cancelled_waiting_call_keeps_the_others_in_order_and_one_at_a_time() {
         let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
         let (first, second, third) = (
-            handles.reserve("h"),
-            handles.reserve("h"),
-            handles.reserve("h"),
+            handles.reserve("h", "a"),
+            handles.reserve("h", "a"),
+            handles.reserve("h", "a"),
         );
         assert!(runs_now(&first).await);
         drop(second);
         assert!(!runs_now(&third).await, "the third ran beside the first");
         drop(first);
         assert!(runs_now(&third).await);
-        let fourth = handles.reserve("h");
+        let fourth = handles.reserve("h", "a");
         assert!(!runs_now(&fourth).await);
         drop(third);
         assert!(runs_now(&fourth).await);
@@ -418,9 +441,9 @@ mod tests {
     async fn a_cancelled_later_call_does_not_let_the_next_one_run_beside_the_first() {
         let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
         let (first, second, third) = (
-            handles.reserve("h"),
-            handles.reserve("h"),
-            handles.reserve("h"),
+            handles.reserve("h", "a"),
+            handles.reserve("h", "a"),
+            handles.reserve("h", "a"),
         );
         assert!(runs_now(&first).await);
         drop(third);
@@ -429,13 +452,13 @@ mod tests {
         assert!(runs_now(&second).await);
         drop(second);
         // The line ended: a new call runs at once.
-        assert!(runs_now(&handles.reserve("h")).await);
+        assert!(runs_now(&handles.reserve("h", "a")).await);
     }
 
     #[tokio::test]
     async fn a_cancelled_running_call_lets_the_next_start() {
         let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
-        let (first, second) = (handles.reserve("h"), handles.reserve("h"));
+        let (first, second) = (handles.reserve("h", "a"), handles.reserve("h", "a"));
         assert!(!runs_now(&second).await);
         drop(first);
         assert!(runs_now(&second).await);
@@ -445,15 +468,15 @@ mod tests {
     async fn a_reused_id_keeps_both_places_and_ends_only_when_both_did() {
         let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
         let mut booked = Booked::default();
-        booked.read("9", "{\"t\":\"A\"}", handles.reserve("h"));
-        booked.read("9", "{\"t\":\"B\"}", handles.reserve("h"));
+        booked.read("9", "{\"t\":\"A\"}", handles.reserve("h", "a"));
+        booked.read("9", "{\"t\":\"B\"}", handles.reserve("h", "a"));
         let b = booked.take("9", "{\"t\":\"B\"}").unwrap();
         let a = booked.take("9", "{\"t\":\"A\"}").unwrap();
         assert!(runs_now(&a).await);
         assert!(!runs_now(&b).await);
         // An unclaimed place goes once every request with the id ended.
-        booked.read("7", "{}", handles.reserve("k"));
-        booked.read("7", "{}", handles.reserve("k"));
+        booked.read("7", "{}", handles.reserve("k", "a"));
+        booked.read("7", "{}", handles.reserve("k", "a"));
         booked.ended("7");
         assert!(booked.take("7", "{}").is_some());
         booked.ended("7");
@@ -519,6 +542,27 @@ mod tests {
         assert_eq!(handles.sweep(), 1);
         drop(lease);
         assert!(handles.use_handle(&busy, "a").await.is_ok());
+    }
+
+    // Node bumps busy as a call arrives, so a call waiting its turn keeps its handle.
+    #[tokio::test]
+    async fn a_call_waiting_its_turn_keeps_its_handle_from_the_sweep() {
+        let handles: Arc<Handles<()>> = Handles::new(Duration::from_millis(10), 8);
+        let handle = handles.add("a", "doc", ()).unwrap();
+        let first = handles.reserve(&handle, "a");
+        let waiting = handles.reserve(&handle, "a");
+        // Another principal's call does not keep it.
+        let other = handles.add("a", "other", ()).unwrap();
+        let foreign = handles.reserve(&other, "b");
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        assert_eq!(handles.sweep(), 1);
+        drop(first);
+        waiting.wait().await;
+        assert!(handles.use_handle(&handle, "a").await.is_ok());
+        drop(waiting);
+        drop(foreign);
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        assert_eq!(handles.sweep(), 1, "an ended call still kept its handle");
     }
 
     #[tokio::test]

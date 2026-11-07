@@ -344,7 +344,7 @@ impl ServerHandler for Handler {
         let id = serde_json::to_value(&context.id)
             .map(|id| id.to_string())
             .unwrap_or_default();
-        let turn = self.mcp.turn_for(&id, &args);
+        let turn = self.mcp.turn_for(&id, &args, &caller.principal);
         if let Some(turn) = &turn {
             turn.wait().await;
         }

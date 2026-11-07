@@ -285,7 +285,7 @@ impl crate::stdio::Requests for Mcp {
             .pointer("/params/arguments")
             .map(Value::to_string)
             .unwrap_or_default();
-        let turn = self.handles.reserve(handle);
+        let turn = self.handles.reserve(handle, &self.principal);
         self.reserved
             .lock()
             .unwrap_or_else(|p| p.into_inner())
@@ -438,13 +438,20 @@ impl Mcp {
 
     /// The turn of the call with this id on its handle: the one stdio took
     /// as it read the call, or a new one.
-    pub fn turn_for(&self, id: &str, args: &Value) -> Option<crate::handles::Turn<Session>> {
+    pub fn turn_for(
+        &self,
+        id: &str,
+        args: &Value,
+        principal: &str,
+    ) -> Option<crate::handles::Turn<Session>> {
         let reserved = self
             .reserved
             .lock()
             .unwrap_or_else(|p| p.into_inner())
             .take(id, &args.to_string());
-        reserved.or_else(|| str_of(args, "handle").map(|handle| self.handles.reserve(handle)))
+        reserved.or_else(|| {
+            str_of(args, "handle").map(|handle| self.handles.reserve(handle, principal))
+        })
     }
 
     /// Waits for every tool call in flight, or `limit`.

@@ -125,6 +125,13 @@ type liveRoom struct {
 	inFlight           *string
 	resyncOwed         bool
 	residual           string
+	// rebuild: the room refused a local write for good, and the doc still
+	// holds it. Nothing local is sent until the next connection's first
+	// SyncStep2 replaces the doc. Outlives the connection on purpose.
+	rebuild bool
+	// wholeRoomOwed: this connection opened with an empty state vector, so
+	// its first SyncStep2 is the whole room.
+	wholeRoomOwed      bool
 	lastActivitySentAt time.Time
 
 	// session is the lineage appends are stamped with: set when a sync
@@ -378,6 +385,7 @@ func (r *liveRoom) teardownGeneration(closeSocket bool) {
 	r.inFlight = nil
 	r.resyncOwed = false
 	r.residual = "none"
+	r.wholeRoomOwed = false
 	r.awarenessClients = nil
 	r.awarenessFull = false
 	conn := r.conn
@@ -563,6 +571,11 @@ func (r *liveRoom) openSocket(generation int, token string) {
 		}
 		r.conn = conn
 		stateVector := r.doc.EncodeStateVector()
+		// After a refusal: an empty vector, so the answer is the whole room.
+		if r.rebuild {
+			stateVector = []byte{0}
+		}
+		r.wholeRoomOwed = r.rebuild
 		r.send(wire.SyncStep1{StateVector: stateVector})
 		r.mu.Unlock()
 		r.readLoop(generation, conn)
@@ -620,6 +633,12 @@ func (r *liveRoom) onMessage(bytes []byte) {
 func (r *liveRoom) handleFrame(decoded wire.Message) {
 	switch frame := decoded.(type) {
 	case wire.SyncStep2:
+		// Only the answer to an empty vector: any other one is a diff.
+		if r.wholeRoomOwed {
+			r.wholeRoomOwed = false
+			r.rebuild = false
+			r.resetDoc()
+		}
 		if !r.applyRemote(frame.Update) {
 			return
 		}
@@ -739,6 +758,10 @@ func (r *liveRoom) handleResync(stateVector []byte) {
 		return
 	}
 	r.residual = "done"
+	// The diff would carry the refused write back to the room.
+	if r.rebuild {
+		return
+	}
 	residual, err := r.doc.EncodeStateAsUpdate(stateVector)
 	if err != nil || len(residual) <= emptyUpdateBytes || r.lineage == nil {
 		return
@@ -797,6 +820,7 @@ func (r *liveRoom) drain() {
 		return
 	}
 	if r.announcedMax != nil && int64(len(bytes)) > *r.announcedMax {
+		r.rebuild = true
 		r.quarantineTail(row.lineage, oversizedReason)
 		return
 	}
@@ -845,6 +869,7 @@ func (r *liveRoom) handleRejection(frame wire.Rejection) {
 		r.teardownGeneration(true)
 		r.scheduleReconnect(0)
 	default:
+		r.rebuild = true
 		r.quarantineTail(*r.lineage, frame.Code)
 	}
 }

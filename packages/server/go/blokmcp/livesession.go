@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -427,16 +428,18 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		// peer's, and the result's revision counts it, as Node's does.
 		before := room.count
 		room.mu.Unlock()
-		refusal := l.restore(ctx, out.Restore)
-		room.mu.Lock()
-		if refusal == nil {
-			room.waitForUpdate(before, restoreEchoWait)
-			out.Result = withRevision(out.Result, fmt.Sprintf("l%d", room.count))
+		var previous *string
+		if restored := restoredPrevious(out.Result); *restored != "" {
+			previous = restored
 		}
+		refusal := l.restore(ctx, out.Restore, previous)
+		room.mu.Lock()
 		if refusal != nil {
-			answer, err := l.server.errorAnswer(ctx, "blok_execute", refusal)
+			answer, err := l.server.executeAnswer(ctx, map[string]any{"result": refusal})
 			return &executed{answer: answer}, err
 		}
+		room.waitForUpdate(before, restoreEchoWait)
+		out.Result = withRevision(out.Result, fmt.Sprintf("l%d", room.count))
 	}
 	var edits []json.RawMessage
 	_ = json.Unmarshal(out.Edits, &edits)
@@ -574,18 +577,27 @@ func (l *liveSession) close() (int, bool) {
 }
 
 // restore posts the restore the bundle checked; the room sends the
-// result back as peer updates. A refusal is the batch's answer.
-func (l *liveSession) restore(ctx context.Context, version string) *surfaceErr {
-	outcome, err := l.room.restoreVersion(ctx, version)
+// result back as peer updates. A refusal is the batch's result, its error
+// keys in the order Node's runRestore writes them.
+func (l *liveSession) restore(ctx context.Context, version string, previous *string) json.RawMessage {
+	outcome := l.room.restoreVersion(ctx, version, previous)
+	var failure string
 	switch {
-	case err != nil:
-		return failureError("TOOL_ACTION_FAILED", "The version history failed: "+err.Error())
-	case outcome == "missing":
-		return failureError("VERSION_NOT_FOUND", `There is no version "`+version+`". history.versions lists them.`)
-	case outcome == "stale":
-		return failureError("STALE", "The room changed since you read it, so nothing was restored. Read it again, then retry.")
+	case outcome.err != nil:
+		failure = `{"code":"TOOL_ACTION_FAILED","message":` + string(quoted("The version history failed: "+outcome.err.Error())) +
+			`,"retryable":` + strconv.FormatBool(outcome.retryable()) + `,"commandIndex":0,"path":"/commands/0/args"}`
+	case outcome.kind == "missing":
+		failure = `{"code":"VERSION_NOT_FOUND","message":` + string(quoted(`There is no version "`+version+`". history.versions lists them.`)) +
+			`,"path":"/commands/0/args/version","retryable":false,"commandIndex":0}`
+	case outcome.kind == "stale":
+		failure = `{"code":"STALE","message":"The document changed since the version history was read, so nothing was restored. Read it again, then retry.","commandIndex":0,"retryable":true}`
+	default:
+		return nil
 	}
-	return nil
+	l.room.mu.Lock()
+	revision := fmt.Sprintf("l%d", l.room.count)
+	l.room.mu.Unlock()
+	return json.RawMessage(`{"ok":false,"revision":"` + revision + `","error":` + failure + `,"warnings":[]}`)
 }
 
 // restoreEchoWait bounds the wait for a restore's own update.

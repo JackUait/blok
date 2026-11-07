@@ -3,7 +3,7 @@
     "name": "version",
     "op": "version",
     "input": "{}",
-    "output": "2.0.0"
+    "output": "2.1.0"
   },
   {
     "name": "schema",
@@ -15,7 +15,7 @@
     "name": "manifest",
     "op": "manifest",
     "input": "{}",
-    "outputSha256": "cac88d5af0ad1b996362f7632b9e8ce59aa0668124f3ca2fa23df26d55669ed7"
+    "outputSha256": "7a5dc66fa8000beff9158669387472be421e78f5ef7d6b415e7fa473c5a1c459"
   },
   {
     "name": "article.markdown",
@@ -2295,13 +2295,13 @@
     "name": "mcp.surface.default",
     "op": "mcpSurface",
     "input": "{\"source\":true}",
-    "outputSha256": "ff9cfd771429284eed1d211bc61536d61c53ad1b01e312f52ca73702526fcca0"
+    "outputSha256": "7d0cb85896951d12a1909de900912b5fd0fd713a58bce88cc92962174508ca99"
   },
   {
     "name": "mcp.surface.pageMap.live",
     "op": "mcpSurface",
     "input": "{\"pageTitles\":\"page-map\",\"sync\":true,\"source\":true,\"uploads\":true,\"comments\":false,\"schema\":\"full\",\"handleIdleMs\":90500}",
-    "outputSha256": "30f488a56b032af4e42e84c65ede2cc9f7edefd3af5b8d13b757068b73d1562e"
+    "outputSha256": "63f7b1b53a13d9d66364103aac1069c9462ef6910fac9825b594e1e74f91bc17"
   },
   {
     "name": "mcp.prompt",

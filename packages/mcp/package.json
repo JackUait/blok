@@ -1,6 +1,6 @@
 {
   "name": "@bloklabs/mcp",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "MCP server for Blok — lets outside agents read and edit Blok documents, in live rooms or stored.",
   "license": "Apache-2.0",
   "author": "JackUait",

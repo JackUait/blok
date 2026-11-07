@@ -423,6 +423,13 @@ public sealed class LibraryHostTests : IDisposable
     {
       Assert.Equal(403, await StatusAsync(client, "https://evil.example"));
       Assert.Equal(401, await StatusAsync(client, null));
+
+      // Node: res.writeHead(403).end(), with no challenge to retry with.
+      using var request = ListRequest("https://evil.example", null);
+      using var refused = await client.SendAsync(request);
+
+      Assert.Empty(refused.Headers.WwwAuthenticate);
+      Assert.Equal(string.Empty, await refused.Content.ReadAsStringAsync());
     }
   }
 

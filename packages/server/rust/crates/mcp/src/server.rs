@@ -89,7 +89,7 @@ pub enum Session {
 pub struct Mcp {
     bundle: Arc<Bundle>,
     /// Turns taken as stdio read each tools/call, by the JSON text of its id.
-    reserved: std::sync::Mutex<std::collections::HashMap<String, crate::handles::Turn<Session>>>,
+    reserved: std::sync::Mutex<crate::handles::Booked<Session>>,
     uploads: Option<crate::uploads::Uploads>,
     calls: Arc<crate::inflight::InFlight>,
     pub surface: Surface,
@@ -281,18 +281,22 @@ impl crate::stdio::Requests for Mcp {
         ) else {
             return;
         };
+        let arguments = message
+            .pointer("/params/arguments")
+            .map(Value::to_string)
+            .unwrap_or_default();
         let turn = self.handles.reserve(handle);
         self.reserved
             .lock()
             .unwrap_or_else(|p| p.into_inner())
-            .insert(id.to_string(), turn);
+            .read(&id.to_string(), &arguments, turn);
     }
 
     fn ended(&self, id: &str) {
         self.reserved
             .lock()
             .unwrap_or_else(|p| p.into_inner())
-            .remove(id);
+            .ended(id);
     }
 }
 
@@ -439,7 +443,7 @@ impl Mcp {
             .reserved
             .lock()
             .unwrap_or_else(|p| p.into_inner())
-            .remove(id);
+            .take(id, &args.to_string());
         reserved.or_else(|| str_of(args, "handle").map(|handle| self.handles.reserve(handle)))
     }
 

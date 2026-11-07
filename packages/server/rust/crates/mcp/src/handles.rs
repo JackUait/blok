@@ -31,9 +31,84 @@ pub struct Handles<S> {
     state: Mutex<State<S>>,
     idle: Duration,
     max_per_principal: usize,
-    /// Per handle: the next ticket to give and the one being served.
-    turns: Mutex<HashMap<String, (u64, u64)>>,
+    /// Per handle: the next ticket to give, the one being served, and the
+    /// later ones that ended before their turn.
+    turns: Mutex<HashMap<String, Line>>,
     turned: tokio::sync::Notify,
+}
+
+/// Turns taken as stdio read each call, until its task claims it. One id
+/// can come twice (Node runs both, in order), so each waits under its id and
+/// its arguments; an id's unclaimed turns go once every request with it has
+/// ended, so a request the server never ran cannot hold the line.
+pub struct Booked<S: Send + 'static> {
+    turns: HashMap<String, std::collections::VecDeque<Turn<S>>>,
+    open: HashMap<String, usize>,
+}
+
+impl<S: Send + 'static> Default for Booked<S> {
+    fn default() -> Self {
+        Booked {
+            turns: HashMap::new(),
+            open: HashMap::new(),
+        }
+    }
+}
+
+fn booked_key(id: &str, arguments: &str) -> String {
+    format!("{id}\u{0}{arguments}")
+}
+
+impl<S: Send + 'static> Booked<S> {
+    pub fn read(&mut self, id: &str, arguments: &str, turn: Turn<S>) {
+        *self.open.entry(id.to_owned()).or_default() += 1;
+        self.turns
+            .entry(booked_key(id, arguments))
+            .or_default()
+            .push_back(turn);
+    }
+
+    /// The call's own turn, when stdio took one for it. Any turn of the
+    /// same id otherwise: an unclaimed turn ahead of a new one would wait
+    /// for itself.
+    pub fn take(&mut self, id: &str, arguments: &str) -> Option<Turn<S>> {
+        let exact = booked_key(id, arguments);
+        let prefix = booked_key(id, "");
+        let key = if self.turns.contains_key(&exact) {
+            exact
+        } else {
+            self.turns
+                .keys()
+                .find(|key| key.starts_with(&prefix))?
+                .clone()
+        };
+        let queue = self.turns.get_mut(&key)?;
+        let turn = queue.pop_front();
+        if queue.is_empty() {
+            self.turns.remove(&key);
+        }
+        turn
+    }
+
+    /// One request with this id was answered or cancelled.
+    pub fn ended(&mut self, id: &str) {
+        let Some(open) = self.open.get_mut(id) else {
+            return;
+        };
+        *open = open.saturating_sub(1);
+        if *open == 0 {
+            self.open.remove(id);
+            let prefix = booked_key(id, "");
+            self.turns.retain(|key, _| !key.starts_with(&prefix));
+        }
+    }
+}
+
+#[derive(Default)]
+struct Line {
+    next: u64,
+    serving: u64,
+    finished: std::collections::BTreeSet<u64>,
 }
 
 /// A call's place in a handle's line. Its turn ends when it is dropped.
@@ -50,7 +125,11 @@ impl<S: Send + 'static> Turn<S> {
             let turned = self.handles.turned.notified();
             tokio::pin!(turned);
             turned.as_mut().enable();
-            let serving = self.handles.turns_lock().get(&self.handle).map(|t| t.1);
+            let serving = self
+                .handles
+                .turns_lock()
+                .get(&self.handle)
+                .map(|t| t.serving);
             if serving == Some(self.ticket) {
                 return;
             }
@@ -62,9 +141,18 @@ impl<S: Send + 'static> Turn<S> {
 impl<S: Send + 'static> Drop for Turn<S> {
     fn drop(&mut self) {
         let mut turns = self.handles.turns_lock();
-        if let Some(turn) = turns.get_mut(&self.handle) {
-            turn.1 += 1;
-            if turn.1 == turn.0 {
+        if let Some(line) = turns.get_mut(&self.handle) {
+            // Only the served ticket moves the line, past every later one
+            // that already ended; one that ends early just waits to be passed.
+            if self.ticket == line.serving {
+                line.serving += 1;
+                while line.finished.remove(&line.serving) {
+                    line.serving += 1;
+                }
+            } else {
+                line.finished.insert(self.ticket);
+            }
+            if line.serving == line.next {
                 turns.remove(&self.handle);
             }
         }
@@ -120,7 +208,7 @@ impl<S: Send + 'static> Handles<S> {
         })
     }
 
-    fn turns_lock(&self) -> std::sync::MutexGuard<'_, HashMap<String, (u64, u64)>> {
+    fn turns_lock(&self) -> std::sync::MutexGuard<'_, HashMap<String, Line>> {
         self.turns.lock().unwrap_or_else(|p| p.into_inner())
     }
 
@@ -128,9 +216,9 @@ impl<S: Send + 'static> Handles<S> {
     /// their places in the order they arrived.
     pub fn reserve(self: &Arc<Self>, handle: &str) -> Turn<S> {
         let mut turns = self.turns_lock();
-        let turn = turns.entry(handle.to_owned()).or_insert((0, 0));
-        let ticket = turn.0;
-        turn.0 += 1;
+        let line = turns.entry(handle.to_owned()).or_default();
+        let ticket = line.next;
+        line.next += 1;
         Turn {
             handles: self.clone(),
             handle: handle.to_owned(),
@@ -299,6 +387,77 @@ mod tests {
         tokio::time::timeout(Duration::from_millis(50), other.wait())
             .await
             .unwrap();
+    }
+
+    async fn runs_now(turn: &Turn<()>) -> bool {
+        tokio::time::timeout(Duration::from_millis(40), turn.wait())
+            .await
+            .is_ok()
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_waiting_call_keeps_the_others_in_order_and_one_at_a_time() {
+        let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
+        let (first, second, third) = (
+            handles.reserve("h"),
+            handles.reserve("h"),
+            handles.reserve("h"),
+        );
+        assert!(runs_now(&first).await);
+        drop(second);
+        assert!(!runs_now(&third).await, "the third ran beside the first");
+        drop(first);
+        assert!(runs_now(&third).await);
+        let fourth = handles.reserve("h");
+        assert!(!runs_now(&fourth).await);
+        drop(third);
+        assert!(runs_now(&fourth).await);
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_later_call_does_not_let_the_next_one_run_beside_the_first() {
+        let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
+        let (first, second, third) = (
+            handles.reserve("h"),
+            handles.reserve("h"),
+            handles.reserve("h"),
+        );
+        assert!(runs_now(&first).await);
+        drop(third);
+        assert!(!runs_now(&second).await, "the second ran beside the first");
+        drop(first);
+        assert!(runs_now(&second).await);
+        drop(second);
+        // The line ended: a new call runs at once.
+        assert!(runs_now(&handles.reserve("h")).await);
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_running_call_lets_the_next_start() {
+        let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
+        let (first, second) = (handles.reserve("h"), handles.reserve("h"));
+        assert!(!runs_now(&second).await);
+        drop(first);
+        assert!(runs_now(&second).await);
+    }
+
+    #[tokio::test]
+    async fn a_reused_id_keeps_both_places_and_ends_only_when_both_did() {
+        let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
+        let mut booked = Booked::default();
+        booked.read("9", "{\"t\":\"A\"}", handles.reserve("h"));
+        booked.read("9", "{\"t\":\"B\"}", handles.reserve("h"));
+        let b = booked.take("9", "{\"t\":\"B\"}").unwrap();
+        let a = booked.take("9", "{\"t\":\"A\"}").unwrap();
+        assert!(runs_now(&a).await);
+        assert!(!runs_now(&b).await);
+        // An unclaimed place goes once every request with the id ended.
+        booked.read("7", "{}", handles.reserve("k"));
+        booked.read("7", "{}", handles.reserve("k"));
+        booked.ended("7");
+        assert!(booked.take("7", "{}").is_some());
+        booked.ended("7");
+        assert!(booked.take("7", "{}").is_none());
     }
 
     #[tokio::test]

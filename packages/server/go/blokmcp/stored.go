@@ -1,7 +1,10 @@
 package blokmcp
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"sync"
 )
@@ -150,6 +153,18 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		answer, err := st.server.executeAnswer(ctx, map[string]any{"result": out.Result})
 		return &executed{answer: answer}, err
 	}
+	// As Node: the answer is built before the save, so nothing that can fail
+	// follows it, and a failed answer saved nothing a retry would repeat.
+	standIn := savedVersionStandIn
+	built, err := st.server.executeAnswer(ctx, map[string]any{
+		"result":   out.Result,
+		"delivery": delivery{Durable: true, Pending: false, ServerSequence: nil, SavedVersion: &standIn},
+	})
+	if err != nil {
+		st.stale = true
+		_ = st.reload(ctx)
+		return nil, err
+	}
 	saved, err := st.source.save(ctx, st.documentID, []byte(*out.DocumentText), st.version)
 	if err != nil {
 		failure, ok := asSurface(err)
@@ -167,11 +182,8 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	}
 	st.keep(out)
 	st.version = saved
-	answer, err := st.server.executeAnswer(ctx, map[string]any{
-		"result":   out.Result,
-		"delivery": delivery{Durable: true, Pending: false, ServerSequence: nil, SavedVersion: saved},
-	})
-	return &executed{answer: answer}, err
+	version, _ := marshal(saved)
+	return &executed{answer: bytes.Replace(built, []byte(`"`+standIn+`"`), version, 1)}, nil
 }
 
 // pageAction runs page.rename or page.setIcon on the page's own document.
@@ -237,3 +249,11 @@ type delivery struct {
 	ServerSequence any  `json:"serverSequence"`
 	SavedVersion   any  `json:"savedVersion"`
 }
+
+// savedVersionStandIn holds the saved version's place in an answer built
+// before the save. Random, so no batch text holds it by chance.
+var savedVersionStandIn = func() string {
+	random := make([]byte, 16)
+	_, _ = rand.Read(random)
+	return "blok-saved-version-" + hex.EncodeToString(random)
+}()

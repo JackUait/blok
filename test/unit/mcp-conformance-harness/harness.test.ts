@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { Agent, createServer, request } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import { type AddressInfo, connect, createServer as createTcpServer, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync, inflateSync } from 'node:zlib';
@@ -10,7 +10,8 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type FixtureCase, runCase } from '../mcp-conformance/exchange';
 import { startFakeHost } from '../mcp-conformance/fake-host';
-import { FrameProxy } from '../mcp-conformance/live-room';
+import { encode } from '../../../src/components/modules/collaboration/sync-wire';
+import { FrameProxy, signTicket } from '../mcp-conformance/live-room';
 
 // Stand-in "binaries" for the harness's own steps; no MCP server is built.
 const scratch = mkdtempSync(join(tmpdir(), 'mcp-harness-test-'));
@@ -223,6 +224,50 @@ describe('MCP conformance live-room proxy', () => {
         { method: 'POST', path: '/sync/d/history/v1/restore', ifMatch: '"v1"', idempotencyKey: true, answered: 412 },
         { method: 'POST', path: '/sync/d/history', ifMatch: null, idempotencyKey: false, answered: null },
       ]);
+    } finally {
+      await proxy.close();
+      await new Promise<void>((resolve) => upstream.close(() => resolve()));
+    }
+  });
+
+  it('a closeOnOperation injection closes the agent with that code on every operation, and the host never sees one', async () => {
+    const upstreamGot: Buffer[] = [];
+    const upstream = createTcpServer((socket) => {
+      socket.once('data', () => {
+        socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n');
+        socket.on('data', (chunk: Buffer) => upstreamGot.push(chunk));
+      });
+    });
+
+    await new Promise<void>((resolve) => upstream.listen(0, '127.0.0.1', resolve));
+    const proxy = new FrameProxy({ host: '127.0.0.1', port: (upstream.address() as AddressInfo).port });
+    const port = await proxy.start();
+    const ticket = signTicket('s', { user: 'agent:alice:x', doc: 'd', write: true });
+    const operation = Buffer.from(encode({ type: 'operation', lineage: 'a'.repeat(32), operationId: 'b'.repeat(32), update: new Uint8Array([0, 0]) }));
+    // A masked client frame with a zero mask, so the payload goes as is.
+    const clientFrame = Buffer.concat([Buffer.from([0x82, 0x80 | operation.length, 0, 0, 0, 0]), operation]);
+    const openAgent = async (): Promise<{ socket: Socket; got: Buffer[] }> => {
+      const socket = connect(port, '127.0.0.1');
+      const got: Buffer[] = [];
+
+      socket.on('data', (chunk: Buffer) => got.push(chunk));
+      socket.write(`GET /sync/d HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Protocol: ${ticket}\r\n\r\n`);
+      await vi.waitFor(() => expect(Buffer.concat(got).toString('latin1')).toContain('101'));
+
+      return { socket, got };
+    };
+
+    try {
+      proxy.injections.push({ closeOnOperation: 1009 });
+      for (let round = 0; round < 2; round += 1) {
+        const agent = await openAgent();
+
+        agent.got.length = 0;
+        agent.socket.write(clientFrame);
+        await vi.waitFor(() => expect(Buffer.concat(agent.got)).toEqual(Buffer.from([0x88, 2, 0x03, 0xf1])));
+        agent.socket.destroy();
+      }
+      expect(Buffer.concat(upstreamGot).includes(operation)).toBe(false);
     } finally {
       await proxy.close();
       await new Promise<void>((resolve) => upstream.close(() => resolve()));

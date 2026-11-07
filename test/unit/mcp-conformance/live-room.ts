@@ -36,7 +36,8 @@ import { startServer, type RunningServer } from '../server-conformance/run-again
  *                                         send it a QueryAwareness now, or cut every history request
  *                                         from now on before it is answered, or answer every history
  *                                         request whose path holds `match` with `status` from now on
- *                                         (the newest such injection wins)
+ *                                         (the newest such injection wins), or close the agent
+ *                                         with a code on every operation it sends from now on
  *   {"settle": true}                      wait for quiet
  *   {"wait": ms}                          sleep, then wait for quiet
  *   {"history": true}                     the host's GET /sync/<doc>/history, normalized
@@ -73,7 +74,8 @@ export type Injection =
   | { refuseUpgrades: number }
   | { queryAwareness: true }
   | { cutHistory: true }
-  | { answerHttp: { match: string; status: number } };
+  | { answerHttp: { match: string; status: number } }
+  | { closeOnOperation: number };
 
 export interface RoomAction {
   peer?: string;
@@ -475,6 +477,13 @@ export class FrameProxy {
     if (frame.type !== 'operation') {
       return false;
     }
+    const closing = this.injections.find((injection) => 'closeOnOperation' in injection);
+
+    if (closing !== undefined && 'closeOnOperation' in closing) {
+      this.closeConnection(connection, closing.closeOnOperation);
+
+      return true;
+    }
     const rejection = this.takeInjection('reject');
 
     if (rejection === undefined) {
@@ -521,8 +530,10 @@ export class FrameProxy {
 
   /** Closes the agent's newest socket with `code`, as if the host had. */
   public closeAgent(code: number): void {
-    const connection = this.openAgent();
+    this.closeConnection(this.openAgent(), code);
+  }
 
+  private closeConnection(connection: Connection, code: number): void {
     this.log.push({ conn: connection.id, dir: 'in', close: code, fault: 'injected' });
     connection.upstream.destroy();
     connection.client.write(serverFrame(8, closePayload(code)));

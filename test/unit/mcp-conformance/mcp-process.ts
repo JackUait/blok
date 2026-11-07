@@ -89,7 +89,7 @@ export interface JsonMessage { [key: string]: unknown }
 
 export interface StdioServer {
   send(message: JsonMessage): void;
-  /** Writes one line as it is. */
+  /** Writes one raw line. */
   sendText(line: string): void;
   /** The next JSON-RPC message the server wrote, in order. */
   next(timeoutMs?: number): Promise<JsonMessage>;

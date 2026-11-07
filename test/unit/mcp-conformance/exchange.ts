@@ -51,7 +51,7 @@ import {
  *               "caseSensitiveFs": …}, each recorded on such a disk (set TMPDIR).
  *   expect*     recorded by --update from Node; never hand-written.
  *
- * Step (one of send / notify / http / room / sleepMs / signal):
+ * Step (one of send / sendText / notify / http / room / sleepMs / signal):
  *   room        an action on the case's room (live-room.ts); its answer is the step's "expect".
  *   send        a JSON-RPC request; "id" is filled in when left out. The answer
  *               is the message with the same id.
@@ -81,9 +81,10 @@ import {
  *               without waiting for the exit (nothing is recorded).
  *   awaitExit   alone: wait for an exit already under way and record it, as a lone signal does.
  *   afterHost   stdio send/notify: wait until the fake host saw this "METHOD /path" once first.
- *   noAnswer    stdio send: write the request and go on without reading an answer.
- *   sendText    stdio only, in place of send: this exact line goes on stdin (JSON cannot
- *               write a repeated key). The answer is the one with the line's id.
+ *   sendText    stdio: one raw input line, written as is (no id or _meta added), for
+ *               text JSON.stringify cannot make (e.g. an id of 3.0). The answer is the
+ *               message with the id JSON.parse reads from it.
+ *   noAnswer    stdio send / sendText: write the request and go on without reading an answer.
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
@@ -645,7 +646,8 @@ class CaseRun {
 
       return;
     }
-    const message = step.sendText === undefined ? materialize(step.send, this.vars) as JsonMessage : JSON.parse(step.sendText) as JsonMessage;
+    const text = step.sendText === undefined ? undefined : substituteString(step.sendText, this.vars);
+    const message = text === undefined ? materialize(step.send, this.vars) as JsonMessage : JSON.parse(text) as JsonMessage;
     const id = message.id ?? this.nextId++;
     const wanted = step.serverRequests ?? [];
     const seen: ServerRequestSpec[] = [];
@@ -653,10 +655,10 @@ class CaseRun {
 
     const sentAt = Date.now();
 
-    if (step.sendText === undefined) {
+    if (text === undefined) {
       server.send(withMeta({ jsonrpc: '2.0', ...message, id }, this.c.session, raw));
     } else {
-      server.sendText(step.sendText);
+      server.sendText(text);
     }
     if (step.noAnswer === true) {
       return;

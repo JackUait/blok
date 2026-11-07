@@ -2,6 +2,7 @@ package blokmcp
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha1"
@@ -209,10 +210,15 @@ func (c *wsConn) readMessage() ([]byte, int, error) {
 		if opcode < opClose && (length > maxMessageBytes || uint64(len(message))+length > maxMessageBytes) {
 			return c.refuse(1009, errors.New("a message is too big"))
 		}
-		payload := make([]byte, length)
-		if _, err := io.ReadFull(c.reader, payload); err != nil {
+		// Read as the bytes come: a header may claim 100 MiB and send none.
+		var read bytes.Buffer
+		if _, err := io.CopyN(&read, c.reader, int64(length)); err != nil {
+			if errors.Is(err, io.EOF) && read.Len() > 0 {
+				err = io.ErrUnexpectedEOF
+			}
 			return nil, 1006, err
 		}
+		payload := read.Bytes()
 		switch opcode {
 		case opPing:
 			_ = c.writeFrame(opPong, payload)

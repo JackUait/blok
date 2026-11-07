@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"runtime"
 	"testing"
 )
 
@@ -93,5 +94,24 @@ func TestRefusesAHugeDeclaredLengthWithoutOverflow(t *testing.T) {
 		if err == nil || code != 1009 {
 			t.Errorf("%d: code %d, err %v", declared, code, err)
 		}
+	}
+}
+
+// A frame header can claim 100 MiB and send nothing: the client must not
+// set the whole size aside before the bytes come.
+func TestAFrameThatClaimsMuchButSendsLittleAllocatesLittle(t *testing.T) {
+	stream := []byte{0x82, 127}
+	stream = binary.BigEndian.AppendUint64(stream, maxMessageBytes)
+	stream = append(stream, "short"...)
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+	_, _, code, err := readFrom(stream)
+	runtime.ReadMemStats(&after)
+	if err == nil || code != 1006 {
+		t.Fatalf("code %d, err %v", code, err)
+	}
+	if grew := after.TotalAlloc - before.TotalAlloc; grew > 1<<20 {
+		t.Fatalf("allocated %d bytes for a 5-byte frame", grew)
 	}
 }

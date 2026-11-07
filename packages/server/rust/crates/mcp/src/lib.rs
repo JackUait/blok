@@ -120,7 +120,14 @@ impl Embedded {
         Ok(Embedded { mcp, version })
     }
 
-    /// The rmcp handler, to serve on a transport the host picks.
+    /// blok-mcp for the host's own HTTP server, with Node's Origin and Host
+    /// checks. `hosts`: the app's own host names; None takes loopback only.
+    pub fn http(&self, hosts: Option<Vec<String>>) -> http::EmbeddedHttp {
+        http::EmbeddedHttp::new(self.handler(true), hosts)
+    }
+
+    /// The rmcp handler, to serve on a transport the host picks. Over HTTP,
+    /// serve `http` instead: it checks Origin and Host first.
     pub fn handler(&self, http: bool) -> Handler {
         Handler::new(self.mcp.clone(), self.version.clone(), http)
     }

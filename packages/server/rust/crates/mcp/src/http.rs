@@ -61,6 +61,67 @@ pub fn loopback_host(host: Option<&str>, port: u16) -> bool {
         && host[at + 1..] == port.to_string()
 }
 
+/// blok-mcp behind an embedding host's own HTTP server, with the checks
+/// Node's front door makes: a browser Origin must be a loopback page, and
+/// the Host a loopback name (any port) or one of the app's own names.
+pub struct EmbeddedHttp {
+    service: Service,
+    hosts: Option<Vec<String>>,
+}
+
+impl EmbeddedHttp {
+    /// `hosts`: the app's own host names, any case, with or without a port.
+    /// None takes loopback names only.
+    pub fn new(handler: Handler, hosts: Option<Vec<String>>) -> EmbeddedHttp {
+        let mut config = StreamableHttpServerConfig::default();
+        config.legacy_session_mode = false;
+        // Checked here, Node's way.
+        config.allowed_hosts.clear();
+        EmbeddedHttp {
+            service: StreamableHttpService::new(
+                move || Ok(handler.clone()),
+                Arc::new(NeverSessionManager::default()),
+                config,
+            ),
+            hosts: hosts.map(|hosts| hosts.iter().map(|h| h.to_lowercase()).collect()),
+        }
+    }
+
+    fn host_allowed(&self, host: Option<&str>) -> bool {
+        let Some(host) = host.map(str::to_lowercase) else {
+            return false;
+        };
+        let name = match host.rfind(':') {
+            Some(at) if !host.ends_with(']') => &host[..at],
+            _ => host.as_str(),
+        };
+        match &self.hosts {
+            None => LOOPBACK_HOST_NAMES.contains(&name),
+            Some(hosts) => hosts.iter().any(|h| *h == host || *h == name),
+        }
+    }
+
+    /// One request: 403 for a foreign Origin or Host, else rmcp's answer.
+    pub async fn handle(
+        &self,
+        request: http::Request<Full<Bytes>>,
+    ) -> http::Response<http_body_util::combinators::BoxBody<Bytes, std::convert::Infallible>> {
+        let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok());
+        if header("origin").is_some_and(|o| !loopback_origin(o))
+            || !self.host_allowed(header("host"))
+        {
+            let mut refused = http::Response::new(
+                Full::new(Bytes::new())
+                    .map_err(|never| match never {})
+                    .boxed(),
+            );
+            *refused.status_mut() = http::StatusCode::FORBIDDEN;
+            return refused;
+        }
+        self.service.handle(request).await
+    }
+}
+
 fn empty(resp: &mut ResponseWriter, status: u16) {
     resp.set_status(status);
     resp.headers_mut().set("Content-Length", "0");

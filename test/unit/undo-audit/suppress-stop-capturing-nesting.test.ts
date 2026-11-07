@@ -10,7 +10,7 @@ interface Runtime {
   destroy: () => void;
   save: () => Promise<OutputData>;
   history: { undo: () => void; redo: () => void; canUndo: () => boolean };
-  blocks: API['blocks'];
+  blocks: API['blocks'] & { transact: (fn: () => void) => void };
   module: {
     yjsManager: { stopCapturing: () => void; joinMovesToStep: (fn: () => void) => void };
     blockManager: {

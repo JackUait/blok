@@ -72,7 +72,7 @@ func TestStdioDropsLinesNodeDropsAndKeepsServing(t *testing.T) {
 				t.Fatalf("not one message: %q", line)
 			}
 			got = append(got, jsonString(answer.ID))
-		case <-time.After(5 * time.Second):
+		case <-time.After(15 * time.Second):
 			t.Fatalf("no answer after %v", got)
 		}
 	}

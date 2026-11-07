@@ -35,6 +35,15 @@ type stdioPeer struct {
 	settled chan struct{}
 	// pending is the call read while the SDK took its own initialize.
 	pending *jsonrpc.Request
+	tracker *callTracker
+}
+
+// signal is a stdio call's cancel signal (see callTracker.withSignal).
+func (c *stdioPeer) signal(token string) context.Context {
+	if c == nil {
+		return nil
+	}
+	return c.tracker.signal(token)
 }
 
 func (c *stdioPeer) initializeParams() *mcp.InitializeParams {

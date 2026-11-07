@@ -15,6 +15,12 @@ import (
 
 // rawStdio serves stdio with no initialize sent; answers are by id.
 func rawStdio(t *testing.T, server *Server) (func(string), func(id string) map[string]json.RawMessage, func()) {
+	send, answer, _, end := rawStdioPeek(t, server)
+	return send, answer, end
+}
+
+// rawStdioPeek is rawStdio plus a check that does not wait.
+func rawStdioPeek(t *testing.T, server *Server) (func(string), func(id string) map[string]json.RawMessage, func(id string) bool, func()) {
 	t.Helper()
 	clientIn, serverOut := io.Pipe()
 	serverIn, clientOut := io.Pipe()
@@ -61,11 +67,17 @@ func rawStdio(t *testing.T, server *Server) (func(string), func(id string) map[s
 			}
 		}
 	}
+	has := func(id string) bool {
+		mu.Lock()
+		defer mu.Unlock()
+		_, ok := answers[id]
+		return ok
+	}
 	end := func() {
 		_ = clientOut.Close()
 		<-done
 	}
-	return send, answer, end
+	return send, answer, has, end
 }
 
 func initializeLine(id, version, name string) string {

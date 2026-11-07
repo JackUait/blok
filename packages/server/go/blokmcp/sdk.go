@@ -232,6 +232,15 @@ func (s *Server) callTool(ctx context.Context, req mcp.Request, who identity, as
 	if !ok || call.Params == nil {
 		return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "Invalid params"}
 	}
+	// Node passes the client's cancel only to its signal, which only an open
+	// reads: the work goes on (see dispatch).
+	signal := ctx
+	if token, ok := call.Params.GetMeta()[signalKey].(string); ok {
+		if own := who.client.signal(token); own != nil {
+			signal = own
+		}
+	}
+	ctx = context.WithoutCancel(ctx)
 	// A stdio call waits, once it holds its handle, for the calls read
 	// before it on that handle (handleRegistry.use).
 	if token, ok := call.Params.GetMeta()[turnKey].(string); ok {
@@ -252,7 +261,7 @@ func (s *Server) callTool(ctx context.Context, req mcp.Request, who identity, as
 	}
 	modern := isModern(req)
 	for round := 0; ; round++ {
-		result, err := s.dispatch(ctx, &toolCall{name: call.Params.Name, arguments: call.Params.Arguments, caller: caller, approval: approval})
+		result, err := s.dispatch(ctx, &toolCall{name: call.Params.Name, arguments: call.Params.Arguments, caller: caller, approval: approval, signal: signal})
 		if err != nil {
 			if unknown, ok := err.(*errUnknownToolName); ok {
 				return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: unknown.message}

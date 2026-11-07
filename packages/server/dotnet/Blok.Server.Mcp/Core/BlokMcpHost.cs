@@ -7,12 +7,15 @@ namespace Blok.Server.Mcp.Core;
 internal sealed class BlokMcpHost(McpBundle bundle, McpHttpCaller http)
 {
   /*
-   * Jint counts every byte a call allocates, not what it holds. A batch of 300 inserts of
-   * 2000 characters needs between 750 and 775 MiB (measured), past the runtime's 512 MiB
-   * default; Node takes it in about 0.1 s at 160 MB resident. 2 GiB leaves room over that
-   * without letting one call run unbounded. MCP only: other runtime users keep the default.
+   * Jint counts every byte a call allocates, not what it holds, and it cannot count what a
+   * call holds: no per-engine retained size, only process-wide GC numbers. A batch of 2000-
+   * character inserts churns about 2.2 MiB per insert, linearly (measured: 1300 pass at
+   * 3 GiB; 5050, which fills stdio's 10 MiB message cap, fail at 10 GiB and pass at 12 GiB in
+   * about 25 s). Node runs 3000 in about 1 s. 16 GiB covers the largest message either
+   * transport takes, with room; the 60 s call timeout still bounds a call. MCP only: other
+   * runtime users keep the default.
    */
-  internal const long AllocationBudgetBytes = 2L * 1024 * 1024 * 1024;
+  internal const long AllocationBudgetBytes = 16L * 1024 * 1024 * 1024;
 
   internal McpBundle Bundle { get; } = bundle;
 

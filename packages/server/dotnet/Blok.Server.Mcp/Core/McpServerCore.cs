@@ -294,6 +294,14 @@ internal sealed class McpServerCore : IAsyncDisposable
 
       return Answer((JsonObject)built["answer"]!);
     }
+    // Node has no such budget; the agent can split the batch, so it is model-fixable.
+    catch (Blok.Server.Documents.BlokDocumentConversionException error) when (error.Reason == Blok.Server.Documents.BlokConversionFailure.DocumentTooLarge)
+    {
+      var tooBig = new McpHostError("INVALID_ARGS", "This call needs more memory than one call may use. Send its commands in smaller batches.", helper: "failure");
+      var built = await bundle.CallAsync("mcpErrorAnswer", tooBig.ToInput(name), cancellationToken);
+
+      return Answer((JsonObject)built["answer"]!);
+    }
   }
 
   public async ValueTask DisposeAsync()

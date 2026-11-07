@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Sulge täisekraan",
   "tools.table.changeSize": "Muuda tabeli suurust",
   "tools.table.columns": "Veerud",
+  "tools.table.pickOnGrid": "Vali ruudustikult",
+  "tools.table.typeNumbers": "Sisesta numbrid",
   "tools.table.rows": "Read",
   "tools.table.sizeKeepsContent": "Sisuga read ja veerud jäävad alles",
   "tools.table.textSize": "Teksti suurus",

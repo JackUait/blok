@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Fechar tela cheia",
   "tools.table.changeSize": "Alterar tamanho da tabela",
   "tools.table.columns": "Colunas",
+  "tools.table.pickOnGrid": "Escolher na grade",
+  "tools.table.typeNumbers": "Digitar números",
   "tools.table.rows": "Linhas",
   "tools.table.sizeKeepsContent": "Linhas e colunas com conteúdo permanecem",
   "tools.table.textSize": "Tamanho do texto",

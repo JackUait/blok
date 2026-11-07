@@ -137,6 +137,8 @@
   "tools.table.closeFullScreen": "បិទអេក្រង់ពេញ",
   "tools.table.changeSize": "ប្ដូរទំហំតារាង",
   "tools.table.columns": "ជួរឈរ",
+  "tools.table.pickOnGrid": "ជ្រើសលើក្រឡា",
+  "tools.table.typeNumbers": "វាយលេខ",
   "tools.table.rows": "ជួរដេក",
   "tools.table.sizeKeepsContent": "ជួរដេក និងជួរឈរដែលមានខ្លឹមសារនៅដដែល",
   "tools.table.textSize": "ទំហំអត្ថបទ",

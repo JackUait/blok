@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Zavřít celou obrazovku",
   "tools.table.changeSize": "Změnit velikost tabulky",
   "tools.table.columns": "Sloupce",
+  "tools.table.pickOnGrid": "Vybrat v mřížce",
+  "tools.table.typeNumbers": "Zadat čísla",
   "tools.table.rows": "Řádky",
   "tools.table.sizeKeepsContent": "Řádky a sloupce s obsahem zůstanou",
   "tools.table.textSize": "Velikost textu",

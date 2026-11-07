@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "پۈتۈن ئېكراننى تاقاش",
   "tools.table.changeSize": "جەدۋەل چوڭلۇقىنى ئۆزگەرتىش",
   "tools.table.columns": "ئىستونلار",
+  "tools.table.pickOnGrid": "كاتەكچىدىن تاللاش",
+  "tools.table.typeNumbers": "سان كىرگۈزۈش",
   "tools.table.rows": "قۇرلار",
   "tools.table.sizeKeepsContent": "مەزمۇنى بار قۇر ۋە ئىستونلار ساقلىنىدۇ",
   "tools.table.textSize": "تېكىست چوڭلۇقى",

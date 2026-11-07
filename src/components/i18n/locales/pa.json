@@ -240,6 +240,8 @@
   "tools.table.closeFullScreen": "ਪੂਰੀ ਸਕ੍ਰੀਨ ਬੰਦ ਕਰੋ",
   "tools.table.changeSize": "ਟੇਬਲ ਦਾ ਆਕਾਰ ਬਦਲੋ",
   "tools.table.columns": "ਕਾਲਮ",
+  "tools.table.pickOnGrid": "ਗਰਿੱਡ 'ਤੇ ਚੁਣੋ",
+  "tools.table.typeNumbers": "ਨੰਬਰ ਲਿਖੋ",
   "tools.table.rows": "ਕਤਾਰਾਂ",
   "tools.table.sizeKeepsContent": "ਸਮੱਗਰੀ ਵਾਲੀਆਂ ਕਤਾਰਾਂ ਅਤੇ ਕਾਲਮ ਰਹਿੰਦੇ ਹਨ",
   "tools.table.textSize": "ਟੈਕਸਟ ਦਾ ਆਕਾਰ",

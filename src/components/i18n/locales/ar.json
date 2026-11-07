@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "إغلاق ملء الشاشة",
   "tools.table.changeSize": "تغيير حجم الجدول",
   "tools.table.columns": "أعمدة",
+  "tools.table.pickOnGrid": "اختر على الشبكة",
+  "tools.table.typeNumbers": "اكتب الأرقام",
   "tools.table.rows": "صفوف",
   "tools.table.sizeKeepsContent": "تبقى الصفوف والأعمدة التي تحتوي على محتوى",
   "tools.table.textSize": "حجم النص",

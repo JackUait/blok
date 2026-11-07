@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "전체 화면 닫기",
   "tools.table.changeSize": "표 크기 변경",
   "tools.table.columns": "열",
+  "tools.table.pickOnGrid": "격자에서 선택",
+  "tools.table.typeNumbers": "숫자 입력",
   "tools.table.rows": "행",
   "tools.table.sizeKeepsContent": "내용이 있는 행과 열은 유지됩니다",
   "tools.table.textSize": "텍스트 크기",

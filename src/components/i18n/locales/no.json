@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Lukk fullskjerm",
   "tools.table.changeSize": "Endre tabellstørrelse",
   "tools.table.columns": "Kolonner",
+  "tools.table.pickOnGrid": "Velg i rutenett",
+  "tools.table.typeNumbers": "Skriv tall",
   "tools.table.rows": "Rader",
   "tools.table.sizeKeepsContent": "Rader og kolonner med innhold blir værende",
   "tools.table.textSize": "Tekststørrelse",

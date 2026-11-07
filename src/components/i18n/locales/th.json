@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "ปิดโหมดเต็มหน้าจอ",
   "tools.table.changeSize": "เปลี่ยนขนาดตาราง",
   "tools.table.columns": "คอลัมน์",
+  "tools.table.pickOnGrid": "เลือกบนตาราง",
+  "tools.table.typeNumbers": "พิมพ์ตัวเลข",
   "tools.table.rows": "แถว",
   "tools.table.sizeKeepsContent": "แถวและคอลัมน์ที่มีเนื้อหาจะยังอยู่",
   "tools.table.textSize": "ขนาดข้อความ",

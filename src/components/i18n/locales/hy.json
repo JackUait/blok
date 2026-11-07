@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "Փակել ամբողջ էկրանը",
   "tools.table.changeSize": "Փոխել աղյուսակի չափը",
   "tools.table.columns": "Սյունակներ",
+  "tools.table.pickOnGrid": "Ընտրել ցանցում",
+  "tools.table.typeNumbers": "Մուտքագրել թվերը",
   "tools.table.rows": "Տողեր",
   "tools.table.sizeKeepsContent": "Բովանդակությամբ տողերն ու սյունակները մնում են",
   "tools.table.textSize": "Տեքստի չափը",

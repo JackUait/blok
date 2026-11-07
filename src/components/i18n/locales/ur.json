@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "پوری اسکرین بند کریں",
   "tools.table.changeSize": "ٹیبل کا سائز بدلیں",
   "tools.table.columns": "کالم",
+  "tools.table.pickOnGrid": "گرڈ پر چنیں",
+  "tools.table.typeNumbers": "نمبر لکھیں",
   "tools.table.rows": "قطاریں",
   "tools.table.sizeKeepsContent": "مواد والی قطاریں اور کالم برقرار رہتے ہیں",
   "tools.table.textSize": "متن کا سائز",

@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Бүтэн дэлгэцийг хаах",
   "tools.table.changeSize": "Хүснэгтийн хэмжээг өөрчлөх",
   "tools.table.columns": "Багана",
+  "tools.table.pickOnGrid": "Торноос сонгох",
+  "tools.table.typeNumbers": "Тоо бичих",
   "tools.table.rows": "Мөр",
   "tools.table.sizeKeepsContent": "Агуулгатай мөр, баганууд хэвээр үлдэнэ",
   "tools.table.textSize": "Текстийн хэмжээ",

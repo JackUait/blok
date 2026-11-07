@@ -141,6 +141,8 @@
   "tools.table.closeFullScreen": "關閉全螢幕",
   "tools.table.changeSize": "變更表格大小",
   "tools.table.columns": "欄",
+  "tools.table.pickOnGrid": "在格線上選取",
+  "tools.table.typeNumbers": "輸入數字",
   "tools.table.rows": "列",
   "tools.table.sizeKeepsContent": "有內容的列與欄會保留",
   "tools.table.textSize": "文字大小",

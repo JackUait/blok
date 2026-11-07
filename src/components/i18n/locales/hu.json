@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Teljes képernyő bezárása",
   "tools.table.changeSize": "Táblázat méretének módosítása",
   "tools.table.columns": "Oszlopok",
+  "tools.table.pickOnGrid": "Kijelölés rácson",
+  "tools.table.typeNumbers": "Számok beírása",
   "tools.table.rows": "Sorok",
   "tools.table.sizeKeepsContent": "A tartalommal rendelkező sorok és oszlopok megmaradnak",
   "tools.table.textSize": "Szövegméret",

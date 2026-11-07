@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "Sulje koko näytön tila",
   "tools.table.changeSize": "Muuta taulukon kokoa",
   "tools.table.columns": "Sarakkeet",
+  "tools.table.pickOnGrid": "Valitse ruudukosta",
+  "tools.table.typeNumbers": "Kirjoita luvut",
   "tools.table.rows": "Rivit",
   "tools.table.sizeKeepsContent": "Rivit ja sarakkeet, joissa on sisältöä, säilyvät",
   "tools.table.textSize": "Tekstin koko",

@@ -141,6 +141,8 @@
   "tools.table.closeFullScreen": "Close full screen",
   "tools.table.changeSize": "Change table size",
   "tools.table.columns": "Columns",
+  "tools.table.pickOnGrid": "Pick on grid",
+  "tools.table.typeNumbers": "Type numbers",
   "tools.table.rows": "Rows",
   "tools.table.sizeKeepsContent": "Rows and columns with content stay",
   "tools.table.textSize": "Text size",

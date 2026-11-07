@@ -137,6 +137,8 @@
   "tools.table.closeFullScreen": "முழுத்திரையை மூடு",
   "tools.table.changeSize": "அட்டவணையின் அளவை மாற்று",
   "tools.table.columns": "நெடுவரிசைகள்",
+  "tools.table.pickOnGrid": "கட்டத்தில் தேர்வுசெய்",
+  "tools.table.typeNumbers": "எண்களை உள்ளிடு",
   "tools.table.rows": "வரிசைகள்",
   "tools.table.sizeKeepsContent": "உள்ளடக்கம் உள்ள வரிசைகளும் நெடுவரிசைகளும் இருக்கும்",
   "tools.table.textSize": "உரை அளவு",

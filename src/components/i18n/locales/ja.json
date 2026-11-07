@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "全画面表示を閉じる",
   "tools.table.changeSize": "表のサイズを変更",
   "tools.table.columns": "列",
+  "tools.table.pickOnGrid": "グリッドで選ぶ",
+  "tools.table.typeNumbers": "数値を入力",
   "tools.table.rows": "行",
   "tools.table.sizeKeepsContent": "内容のある行と列は残ります",
   "tools.table.textSize": "テキストサイズ",

@@ -137,6 +137,8 @@
   "tools.table.closeFullScreen": "Tam ekranı bağla",
   "tools.table.changeSize": "Cədvəlin ölçüsünü dəyiş",
   "tools.table.columns": "Sütunlar",
+  "tools.table.pickOnGrid": "Şəbəkədə seç",
+  "tools.table.typeNumbers": "Rəqəmləri yaz",
   "tools.table.rows": "Sətirlər",
   "tools.table.sizeKeepsContent": "Məzmunu olan sətirlər və sütunlar qalır",
   "tools.table.textSize": "Mətn ölçüsü",

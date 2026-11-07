@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "סגור מסך מלא",
   "tools.table.changeSize": "שנה את גודל הטבלה",
   "tools.table.columns": "עמודות",
+  "tools.table.pickOnGrid": "בחירה ברשת",
+  "tools.table.typeNumbers": "הקלדת מספרים",
   "tools.table.rows": "שורות",
   "tools.table.sizeKeepsContent": "שורות ועמודות עם תוכן נשארות",
   "tools.table.textSize": "גודל טקסט",

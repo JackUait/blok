@@ -251,6 +251,8 @@
   "tools.table.closeFullScreen": "पूर्ण स्क्रिन बन्द गर्नुहोस्",
   "tools.table.changeSize": "तालिकाको आकार बदल्नुहोस्",
   "tools.table.columns": "स्तम्भहरू",
+  "tools.table.pickOnGrid": "ग्रिडमा छान्नुहोस्",
+  "tools.table.typeNumbers": "सङ्ख्या लेख्नुहोस्",
   "tools.table.rows": "पङ्क्तिहरू",
   "tools.table.sizeKeepsContent": "सामग्री भएका पङ्क्ति र स्तम्भहरू रहन्छन्",
   "tools.table.textSize": "पाठको आकार",

@@ -137,6 +137,8 @@
   "tools.table.closeFullScreen": "ഫുൾസ്‌ക്രീൻ അടയ്ക്കുക",
   "tools.table.changeSize": "പട്ടികയുടെ വലുപ്പം മാറ്റുക",
   "tools.table.columns": "കോളങ്ങൾ",
+  "tools.table.pickOnGrid": "ഗ്രിഡിൽ തിരഞ്ഞെടുക്കുക",
+  "tools.table.typeNumbers": "സംഖ്യകൾ ടൈപ്പ് ചെയ്യുക",
   "tools.table.rows": "വരികൾ",
   "tools.table.sizeKeepsContent": "ഉള്ളടക്കമുള്ള വരികളും കോളങ്ങളും നിലനിൽക്കും",
   "tools.table.textSize": "ടെക്സ്റ്റ് വലുപ്പം",

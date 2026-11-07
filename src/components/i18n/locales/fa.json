@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "بستن تمام‌صفحه",
   "tools.table.changeSize": "تغییر اندازه جدول",
   "tools.table.columns": "ستون‌ها",
+  "tools.table.pickOnGrid": "انتخاب روی شبکه",
+  "tools.table.typeNumbers": "وارد کردن عدد",
   "tools.table.rows": "سطرها",
   "tools.table.sizeKeepsContent": "سطرها و ستون‌های دارای محتوا باقی می‌مانند",
   "tools.table.textSize": "اندازه متن",

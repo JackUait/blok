@@ -240,6 +240,8 @@
   "tools.table.closeFullScreen": "සම්පූර්ණ තිරය වසන්න",
   "tools.table.changeSize": "වගුවේ ප්‍රමාණය වෙනස් කරන්න",
   "tools.table.columns": "තීරු",
+  "tools.table.pickOnGrid": "ජාලකයෙන් තෝරන්න",
+  "tools.table.typeNumbers": "අංක ටයිප් කරන්න",
   "tools.table.rows": "පේළි",
   "tools.table.sizeKeepsContent": "අන්තර්ගතය සහිත පේළි සහ තීරු ඉතිරි වේ",
   "tools.table.textSize": "පෙළ ප්‍රමාණය",

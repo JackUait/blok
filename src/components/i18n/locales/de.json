@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Vollbild schließen",
   "tools.table.changeSize": "Tabellengröße ändern",
   "tools.table.columns": "Spalten",
+  "tools.table.pickOnGrid": "Im Raster wählen",
+  "tools.table.typeNumbers": "Zahlen eingeben",
   "tools.table.rows": "Zeilen",
   "tools.table.sizeKeepsContent": "Zeilen und Spalten mit Inhalt bleiben",
   "tools.table.textSize": "Textgröße",

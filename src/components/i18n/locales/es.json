@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Cerrar pantalla completa",
   "tools.table.changeSize": "Cambiar tamaño de la tabla",
   "tools.table.columns": "Columnas",
+  "tools.table.pickOnGrid": "Elegir en la cuadrícula",
+  "tools.table.typeNumbers": "Escribir números",
   "tools.table.rows": "Filas",
   "tools.table.sizeKeepsContent": "Las filas y columnas con contenido se mantienen",
   "tools.table.textSize": "Tamaño del texto",

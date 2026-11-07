@@ -263,6 +263,8 @@
   "tools.table.closeFullScreen": "Uždaryti viso ekrano režimą",
   "tools.table.changeSize": "Keisti lentelės dydį",
   "tools.table.columns": "Stulpeliai",
+  "tools.table.pickOnGrid": "Pasirinkti tinklelyje",
+  "tools.table.typeNumbers": "Įvesti skaičius",
   "tools.table.rows": "Eilutės",
   "tools.table.sizeKeepsContent": "Eilutės ir stulpeliai su turiniu lieka",
   "tools.table.textSize": "Teksto dydis",

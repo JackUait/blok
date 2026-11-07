@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "Κλείσιμο πλήρους οθόνης",
   "tools.table.changeSize": "Αλλαγή μεγέθους πίνακα",
   "tools.table.columns": "Στήλες",
+  "tools.table.pickOnGrid": "Επιλογή σε πλέγμα",
+  "tools.table.typeNumbers": "Πληκτρολόγηση αριθμών",
   "tools.table.rows": "Γραμμές",
   "tools.table.sizeKeepsContent": "Οι γραμμές και οι στήλες με περιεχόμενο παραμένουν",
   "tools.table.textSize": "Μέγεθος κειμένου",

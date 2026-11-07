@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Đóng toàn màn hình",
   "tools.table.changeSize": "Đổi kích thước bảng",
   "tools.table.columns": "Cột",
+  "tools.table.pickOnGrid": "Chọn trên lưới",
+  "tools.table.typeNumbers": "Nhập số",
   "tools.table.rows": "Hàng",
   "tools.table.sizeKeepsContent": "Các hàng và cột có nội dung được giữ lại",
   "tools.table.textSize": "Cỡ chữ",

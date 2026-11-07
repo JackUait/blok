@@ -539,7 +539,6 @@
 }
 
 [data-blok-table-fullscreen-size-done] {
-  grid-column: 1 / -1;
   justify-self: end;
   padding: var(--blok-space-1) var(--blok-space-2-5);
   border: 0;
@@ -550,6 +549,76 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+}
+
+/* Keeps both stepper rows on the card's two-column grid. */
+[data-blok-table-fullscreen-size-numbers]:not([hidden]) {
+  display: contents;
+}
+
+[data-blok-table-fullscreen-size-mode] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  justify-self: start;
+  margin-inline-start: calc(-1 * var(--blok-space-1-5));
+  padding: var(--blok-space-1) var(--blok-space-1-5);
+  border: 0;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: var(--blok-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--blok-item-hover-bg);
+    color: var(--blok-text-primary);
+  }
+
+  & svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+[data-blok-table-fullscreen-size-readout]:not([hidden]) {
+  grid-column: 1 / -1;
+  color: var(--blok-text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* GRID_SIZE in table-fullscreen.ts: 10 cells of 18px with 2px gaps fill the card's 208px content box. */
+[data-blok-table-fullscreen-size-grid]:not([hidden]) {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(10, 18px);
+  gap: var(--blok-space-0-5);
+  justify-content: start;
+  border-radius: var(--blok-radius-control-sm);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+
+[data-blok-table-fullscreen-size-grid]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
+}
+
+[data-blok-table-fullscreen-size-cell] {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-item-hover-bg);
+  box-shadow: inset 0 0 0 1px var(--blok-border-primary);
+}
+
+[data-blok-table-fullscreen-size-cell][data-on] {
+  background-color: var(--blok-text-tertiary);
+  box-shadow: none;
 }
 
 /* In the table's top inline-end corner; table-fullscreen.ts sets the offsets on pointer move. */

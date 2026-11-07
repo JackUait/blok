@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Затвори цео екран",
   "tools.table.changeSize": "Промени величину табеле",
   "tools.table.columns": "Колоне",
+  "tools.table.pickOnGrid": "Изабери на мрежи",
+  "tools.table.typeNumbers": "Унеси бројеве",
   "tools.table.rows": "Редови",
   "tools.table.sizeKeepsContent": "Редови и колоне са садржајем остају",
   "tools.table.textSize": "Величина текста",

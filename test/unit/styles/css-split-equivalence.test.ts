@@ -1447,8 +1447,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // then its header, shadow token, grow motion, the transition reset that keeps it smooth,
     // the clickable size with its two fields, the button following the table's corner,
     // the page width a closing table takes back, the note on the tighter padding,
-    // and the size card with its steppers, note and Done button (replacing the two fields).
-    const TABLE_FULLSCREEN_BYTES = 7_915;
+    // the size card with its steppers, note and Done button (replacing the two fields),
+    // and its "Pick on grid" mode: the text button, readout and cell grid.
+    const TABLE_FULLSCREEN_BYTES = 9_318;
     // preflight.css + tables.css: the pointer focus reset lists focusable kinds under
     // [data-blok-top-layer], and the full-screen box inherits its colour, so neither
     // opening nor closing restyles every cell (net of the dropped closing-width rule).

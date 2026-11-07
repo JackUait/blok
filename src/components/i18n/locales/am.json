@@ -240,6 +240,8 @@
   "tools.table.closeFullScreen": "ሙሉ ማያን ዝጋ",
   "tools.table.changeSize": "የሰንጠረዥ መጠን ቀይር",
   "tools.table.columns": "አምዶች",
+  "tools.table.pickOnGrid": "በፍርግርግ ምረጥ",
+  "tools.table.typeNumbers": "ቁጥሮችን ጻፍ",
   "tools.table.rows": "ረድፎች",
   "tools.table.sizeKeepsContent": "ይዘት ያላቸው ረድፎች እና አምዶች ይቆያሉ",
   "tools.table.textSize": "የጽሑፍ መጠን",

@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Zamknij pełny ekran",
   "tools.table.changeSize": "Zmień rozmiar tabeli",
   "tools.table.columns": "Kolumny",
+  "tools.table.pickOnGrid": "Wybierz na siatce",
+  "tools.table.typeNumbers": "Wpisz liczby",
   "tools.table.rows": "Wiersze",
   "tools.table.sizeKeepsContent": "Wiersze i kolumny z treścią zostają",
   "tools.table.textSize": "Rozmiar tekstu",

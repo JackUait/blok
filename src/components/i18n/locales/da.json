@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Luk fuld skærm",
   "tools.table.changeSize": "Skift tabellens størrelse",
   "tools.table.columns": "Kolonner",
+  "tools.table.pickOnGrid": "Vælg i gitter",
+  "tools.table.typeNumbers": "Skriv tal",
   "tools.table.rows": "Rækker",
   "tools.table.sizeKeepsContent": "Rækker og kolonner med indhold bliver",
   "tools.table.textSize": "Tekststørrelse",

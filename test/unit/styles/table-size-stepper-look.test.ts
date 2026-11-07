@@ -41,4 +41,25 @@ describe('table size stepper look', () => {
   it('shows a deeper fill while pressed', () => {
     expect(css).toMatch(/\[data-blok-table-fullscreen-step\][^{]*:active:not\(:disabled\)\s*\{[^}]*background-color:\s*var\(--blok-icon-active-bg\)/);
   });
+
+  it('keeps the stepper rows on the card grid through their wrapper', () => {
+    expect(ruleBody('[data-blok-table-fullscreen-size-numbers]:not([hidden])')).toMatch(/display:\s*contents/);
+  });
+
+  it('puts "Pick on grid" and Done on one row, at opposite ends', () => {
+    expect(ruleBody('[data-blok-table-fullscreen-size-mode]')).toMatch(/justify-self:\s*start/);
+    expect(ruleBody('[data-blok-table-fullscreen-size-done]')).toMatch(/justify-self:\s*end/);
+    expect(ruleBody('[data-blok-table-fullscreen-size-done]')).not.toMatch(/grid-column:\s*1\s*\/\s*-1/);
+  });
+
+  it('fills picked grid cells with neutral ink, never blue', () => {
+    const on = ruleBody('[data-blok-table-fullscreen-size-cell][data-on]');
+
+    expect(on).toMatch(/background-color:\s*var\(--blok-text-tertiary\)/);
+  });
+
+  it('rings the grid only for keyboard focus', () => {
+    expect(css).toMatch(/\[data-blok-table-fullscreen-size-grid\]:focus-visible\s*\{/);
+    expect(css).not.toMatch(/\[data-blok-table-fullscreen-size-grid\]:focus\s*\{/);
+  });
 });

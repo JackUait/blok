@@ -251,6 +251,8 @@
   "tools.table.closeFullScreen": "पूर्ण स्क्रीन बंद करा",
   "tools.table.changeSize": "तक्त्याचा आकार बदला",
   "tools.table.columns": "स्तंभ",
+  "tools.table.pickOnGrid": "ग्रिडवर निवडा",
+  "tools.table.typeNumbers": "संख्या लिहा",
   "tools.table.rows": "पंक्ती",
   "tools.table.sizeKeepsContent": "मजकूर असलेल्या पंक्ती आणि स्तंभ राहतात",
   "tools.table.textSize": "मजकुराचा आकार",

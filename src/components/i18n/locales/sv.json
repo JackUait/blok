@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Stäng helskärm",
   "tools.table.changeSize": "Ändra tabellens storlek",
   "tools.table.columns": "Kolumner",
+  "tools.table.pickOnGrid": "Välj i rutnät",
+  "tools.table.typeNumbers": "Skriv siffror",
   "tools.table.rows": "Rader",
   "tools.table.sizeKeepsContent": "Rader och kolumner med innehåll blir kvar",
   "tools.table.textSize": "Textstorlek",

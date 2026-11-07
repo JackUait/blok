@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Funga skrini nzima",
   "tools.table.changeSize": "Badilisha ukubwa wa jedwali",
   "tools.table.columns": "Safu wima",
+  "tools.table.pickOnGrid": "Chagua kwenye gridi",
+  "tools.table.typeNumbers": "Andika namba",
   "tools.table.rows": "Safu mlalo",
   "tools.table.sizeKeepsContent": "Safu mlalo na safu wima zenye maudhui zinabaki",
   "tools.table.textSize": "Ukubwa wa maandishi",

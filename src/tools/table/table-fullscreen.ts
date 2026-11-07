@@ -1,4 +1,4 @@
-import { IconCross, IconExpandDiagonal, IconMinus, IconPlus, IconTable } from '../../components/icons';
+import { IconCross, IconExpandDiagonal, IconHash, IconMinus, IconPlus, IconTable } from '../../components/icons';
 import { DATA_ATTR } from '../../components/constants';
 import { ScrollLocker } from '../../components/utils/scroll-locker';
 import { promoteToTopLayer, removeFromTopLayer, TOP_LAYER_MARKER_ATTR } from '../../components/utils/top-layer';
@@ -15,6 +15,11 @@ const SIZE_WRAP_ATTR = 'data-blok-table-fullscreen-size-wrap';
 const SIZE_LABEL_ATTR = 'data-blok-table-fullscreen-size-label';
 const SIZE_NOTE_ATTR = 'data-blok-table-fullscreen-size-note';
 const SIZE_DONE_ATTR = 'data-blok-table-fullscreen-size-done';
+const SIZE_MODE_ATTR = 'data-blok-table-fullscreen-size-mode';
+const SIZE_GRID_ATTR = 'data-blok-table-fullscreen-size-grid';
+const SIZE_CELL_ATTR = 'data-blok-table-fullscreen-size-cell';
+const SIZE_READOUT_ATTR = 'data-blok-table-fullscreen-size-readout';
+const SIZE_NUMBERS_ATTR = 'data-blok-table-fullscreen-size-numbers';
 const STEP_ATTR = 'data-blok-table-fullscreen-step';
 /** Holding a stepper: first repeat after this long, then one step per REPEAT_MS. */
 const HOLD_MS = 380;
@@ -31,6 +36,28 @@ const stepperRow = (axis: 'cols' | 'rows'): string =>
   + `<button type="button" ${STEP_ATTR}="1" data-axis="${axis}" tabindex="-1" aria-hidden="true">${IconPlus}</button></span>`;
 const NEAR_ATTR = 'data-blok-table-fullscreen-near';
 
+/* The grid picks up to 10 × 10; a bigger table takes the numbers. tables.css sizes it to fill the card. */
+const GRID_SIZE = 10;
+
+/** The size card opens in the mode last chosen. Per viewer, so any storage failure reads as numbers. */
+export const SIZE_MODE_STORAGE_KEY = 'blok:table:size-mode';
+
+const readGridPreferred = (): boolean => {
+  try {
+    return localStorage.getItem(SIZE_MODE_STORAGE_KEY) === 'grid';
+  } catch {
+    return false;
+  }
+};
+
+const writeGridPreferred = (grid: boolean): void => {
+  try {
+    localStorage.setItem(SIZE_MODE_STORAGE_KEY, grid ? 'grid' : 'numbers');
+  } catch {
+    /* storage blocked: the card keeps opening on numbers */
+  }
+};
+
 /** How far the button sits in from the table's inline-end edge. */
 const CORNER_INSET = 6;
 /** How close the pointer must come before the button shows. Same reach as the add bars. */
@@ -43,6 +70,14 @@ interface TableSize {
   rows: number;
   cols: number;
 }
+
+/** Arrow keys on the grid: across moves columns, down adds rows. */
+const GRID_KEYS: Record<string, { axis: 'cols' | 'rows'; by: number } | undefined> = {
+  ArrowRight: { axis: 'cols', by: 1 },
+  ArrowLeft: { axis: 'cols', by: -1 },
+  ArrowDown: { axis: 'rows', by: 1 },
+  ArrowUp: { axis: 'rows', by: -1 },
+};
 
 const OPEN_MS = 460;
 const CLOSE_MS = 420;
@@ -158,6 +193,11 @@ export class TableFullscreen {
   private readonly colsInput: HTMLInputElement;
   private readonly rowsInput: HTMLInputElement;
   private readonly steppers: HTMLButtonElement[];
+  /** Wraps both stepper rows, hidden while the grid shows. */
+  private readonly numbers: HTMLElement;
+  private readonly grid: HTMLElement;
+  private readonly readout: HTMLElement;
+  private readonly modeButton: HTMLButtonElement;
   private readonly sizeNote: HTMLElement;
   private holdTimer: ReturnType<typeof setTimeout> | null = null;
   /** The note shows once a value is brought down to the filled cells, not merely sitting there. */
@@ -212,8 +252,10 @@ export class TableFullscreen {
     // The card's fields are steppers, not text boxes, so they skip the data-blok-field look.
     header.innerHTML = `${IconTable}<span ${TITLE_ATTR}></span>`
       + `<span ${SIZE_WRAP_ATTR}><button type="button" ${SIZE_ATTR} aria-expanded="false"></button>`
-      + `<span ${SIZE_EDITOR_ATTR} role="group" hidden>${stepperRow('cols')}${stepperRow('rows')}`
-      + `<span ${SIZE_NOTE_ATTR} hidden></span><button type="button" ${SIZE_DONE_ATTR}></button></span></span>`;
+      + `<span ${SIZE_EDITOR_ATTR} role="group" hidden><span ${SIZE_NUMBERS_ATTR}>${stepperRow('cols')}${stepperRow('rows')}</span>`
+      + `<span ${SIZE_READOUT_ATTR} aria-live="polite" hidden></span><span ${SIZE_GRID_ATTR} data-blok-testid="table-size-grid" tabindex="0" hidden></span>`
+      + `<span ${SIZE_NOTE_ATTR} hidden></span><button type="button" ${SIZE_MODE_ATTR}></button>`
+      + `<button type="button" ${SIZE_DONE_ATTR}></button></span></span>`;
     this.header = header;
 
     const [colsInput, rowsInput] = Array.from(header.querySelectorAll('input'));
@@ -228,6 +270,45 @@ export class TableFullscreen {
     this.sizeNote.textContent = options.t('tools.table.sizeKeepsContent');
     done.textContent = options.t('tools.equation.done');
     done.addEventListener('click', () => this.commitSizeEdit());
+
+    this.numbers = header.querySelector<HTMLElement>(`[${SIZE_NUMBERS_ATTR}]`) ?? document.createElement('span');
+    this.grid = header.querySelector<HTMLElement>(`[${SIZE_GRID_ATTR}]`) ?? document.createElement('span');
+    this.readout = header.querySelector<HTMLElement>(`[${SIZE_READOUT_ATTR}]`) ?? document.createElement('span');
+    this.modeButton = header.querySelector<HTMLButtonElement>(`[${SIZE_MODE_ATTR}]`) ?? document.createElement('button');
+    this.grid.setAttribute('aria-label', options.t('tools.table.changeSize'));
+    this.grid.replaceChildren(...Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, i) => {
+      const cell = document.createElement('span');
+
+      cell.setAttribute(SIZE_CELL_ATTR, '');
+      cell.setAttribute('data-col', String((i % GRID_SIZE) + 1));
+      cell.setAttribute('data-row', String(Math.floor(i / GRID_SIZE) + 1));
+
+      return cell;
+    }));
+    // Keeps focus in the card while the mode swaps, so focusout does not apply the size.
+    this.modeButton.addEventListener('pointerdown', event => event.preventDefault());
+    this.modeButton.addEventListener('click', () => {
+      const grid = this.grid.hidden;
+
+      writeGridPreferred(grid);
+      this.setGridMode(grid);
+    });
+    this.grid.addEventListener('pointermove', (event) => {
+      const pick = this.cellAt(event.target);
+
+      if (pick !== null) {
+        this.previewGrid(pick);
+      }
+    });
+    this.grid.addEventListener('pointerleave', () => this.previewGrid(null));
+    this.grid.addEventListener('click', (event) => {
+      const pick = this.cellAt(event.target);
+
+      if (pick !== null) {
+        this.writeFields(pick);
+        this.commitSizeEdit();
+      }
+    });
 
     this.titleEl = header.querySelector<HTMLElement>(`[${TITLE_ATTR}]`) ?? document.createElement('span');
     this.sizeButton = header.querySelector<HTMLButtonElement>(`[${SIZE_ATTR}]`) ?? document.createElement('button');
@@ -278,6 +359,16 @@ export class TableFullscreen {
       }
     });
     this.sizeEditor.addEventListener('keydown', (event) => {
+      const gridStep = event.target === this.grid ? GRID_KEYS[event.key] : undefined;
+
+      if (gridStep !== undefined) {
+        // Cells run from the inline start, so in RTL the left arrow adds a column.
+        const flip = gridStep.axis === 'cols' && getComputedStyle(this.grid).direction === 'rtl' ? -1 : 1;
+
+        event.preventDefault();
+        this.stepSize(gridStep.axis === 'cols' ? this.colsInput : this.rowsInput, gridStep.by * flip, GRID_SIZE);
+        this.previewGrid(null);
+      }
       if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && event.target instanceof HTMLInputElement) {
         event.preventDefault();
         this.stepSize(event.target, (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 10 : 1));
@@ -594,14 +685,89 @@ export class TableFullscreen {
     this.colsInput.value = String(cols);
     this.rowsInput.value = String(rows);
     this.syncSteppers();
+    this.showNumbers();
     this.sizeEditor.hidden = false;
     this.sizeButton.setAttribute('aria-expanded', 'true');
-    this.colsInput.focus();
-    this.colsInput.select();
+    this.setGridMode(readGridPreferred());
   }
 
-  /** Moves a field by `by`, clamped to the filled cells and MAX_SIZE. */
-  private stepSize(input: HTMLInputElement, by: number): void {
+  /** The fields stay the model in both modes; the grid only reads and writes them. */
+  private setGridMode(on: boolean): void {
+    if (!on) {
+      // Focus moves before the grid hides: hiding the focused grid blurs to nothing, and focusout applies the size.
+      this.numbers.hidden = false;
+      this.colsInput.focus();
+      this.colsInput.select();
+      this.showNumbers();
+
+      return;
+    }
+    this.grid.hidden = false;
+    this.readout.hidden = false;
+    this.renderGrid(null);
+    // Focus moves before the fields hide, or focusout would apply the size.
+    this.grid.focus();
+    this.numbers.hidden = true;
+    this.modeButton.innerHTML = `${IconHash}${this.options.t('tools.table.typeNumbers')}`;
+  }
+
+  private showNumbers(): void {
+    this.numbers.hidden = false;
+    this.grid.hidden = true;
+    this.readout.hidden = true;
+    this.modeButton.innerHTML = `${IconTable}${this.options.t('tools.table.pickOnGrid')}`;
+  }
+
+  private readFields(): TableSize {
+    const min = this.minSize ?? { cols: 1, rows: 1 };
+    const read = (input: HTMLInputElement, floor: number): number => {
+      const value = Number.parseInt(input.value, 10);
+
+      return Math.min(MAX_SIZE, Math.max(floor, Number.isFinite(value) ? value : floor));
+    };
+
+    return { cols: read(this.colsInput, min.cols), rows: read(this.rowsInput, min.rows) };
+  }
+
+  private writeFields(pick: TableSize): void {
+    this.colsInput.value = String(pick.cols);
+    this.rowsInput.value = String(pick.rows);
+    this.stepSize(this.colsInput, 0);
+    this.stepSize(this.rowsInput, 0);
+  }
+
+  private cellAt(target: EventTarget | null): TableSize | null {
+    const cell = target instanceof Element ? target.closest<HTMLElement>(`[${SIZE_CELL_ATTR}]`) : null;
+
+    return cell === null ? null : { cols: Number(cell.dataset.col), rows: Number(cell.dataset.row) };
+  }
+
+  /** Shows `pick`, raised to the filled cells, or the fields' size when there is none. */
+  private previewGrid(pick: TableSize | null): void {
+    const min = this.minSize;
+
+    if (min === null || this.grid.hidden) {
+      return;
+    }
+    if (pick !== null && (pick.cols < min.cols || pick.rows < min.rows)) {
+      this.hitFloor = true;
+    }
+    this.renderGrid(pick === null ? null : { cols: Math.max(min.cols, pick.cols), rows: Math.max(min.rows, pick.rows) });
+    this.syncSteppers();
+  }
+
+  /** Marks the cells, never replaces them: a new cell under the pointer would drop its hover. */
+  private renderGrid(preview: TableSize | null): void {
+    const size = preview ?? this.readFields();
+
+    this.grid.querySelectorAll<HTMLElement>(`[${SIZE_CELL_ATTR}]`).forEach((cell) => {
+      cell.toggleAttribute('data-on', Number(cell.dataset.col) <= size.cols && Number(cell.dataset.row) <= size.rows);
+    });
+    this.readout.textContent = `${size.cols} × ${size.rows}`;
+  }
+
+  /** Moves a field by `by`, clamped to the filled cells and `cap`. */
+  private stepSize(input: HTMLInputElement, by: number, cap = MAX_SIZE): void {
     const min = this.minSize;
 
     if (min === null) {
@@ -609,7 +775,7 @@ export class TableFullscreen {
     }
     const floor = input === this.colsInput ? min.cols : min.rows;
     const value = Number.parseInt(input.value, 10);
-    const next = Math.min(MAX_SIZE, Math.max(floor, (Number.isFinite(value) ? value : floor) + by));
+    const next = Math.min(Math.max(cap, floor), Math.max(floor, (Number.isFinite(value) ? value : floor) + by));
 
     if (next === floor && (by < 0 || value < floor)) {
       this.hitFloor = true;
@@ -706,6 +872,7 @@ export class TableFullscreen {
     }
     this.stopHold();
     this.minSize = null;
+    this.showNumbers();
     this.sizeEditor.hidden = true;
     this.sizeButton.setAttribute('aria-expanded', 'false');
   }

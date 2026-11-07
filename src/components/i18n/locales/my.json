@@ -137,6 +137,8 @@
   "tools.table.closeFullScreen": "မျက်နှာပြင်အပြည့် ပိတ်ရန်",
   "tools.table.changeSize": "ဇယားအရွယ်အစား ပြောင်းရန်",
   "tools.table.columns": "ကော်လံများ",
+  "tools.table.pickOnGrid": "ဇယားကွက်ပေါ်တွင် ရွေးရန်",
+  "tools.table.typeNumbers": "နံပါတ် ရိုက်ရန်",
   "tools.table.rows": "တန်းများ",
   "tools.table.sizeKeepsContent": "အကြောင်းအရာပါသော တန်းများနှင့် ကော်လံများ ကျန်ရှိနေမည်",
   "tools.table.textSize": "စာသားအရွယ်အစား",

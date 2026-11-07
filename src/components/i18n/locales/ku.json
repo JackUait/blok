@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "داخستنی پڕ شاشە",
   "tools.table.changeSize": "گۆڕینی قەبارەی خشتە",
   "tools.table.columns": "ستوونەکان",
+  "tools.table.pickOnGrid": "لەسەر تۆڕ هەڵبژێرە",
+  "tools.table.typeNumbers": "ژمارە بنووسە",
   "tools.table.rows": "ڕیزەکان",
   "tools.table.sizeKeepsContent": "ڕیز و ستوونەکانی خاوەن ناوەڕۆک دەمێننەوە",
   "tools.table.textSize": "قەبارەی دەق",

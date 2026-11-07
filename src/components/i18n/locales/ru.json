@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Закрыть полноэкранный режим",
   "tools.table.changeSize": "Изменить размер таблицы",
   "tools.table.columns": "Столбцы",
+  "tools.table.pickOnGrid": "Выбрать на сетке",
+  "tools.table.typeNumbers": "Ввести числа",
   "tools.table.rows": "Строки",
   "tools.table.sizeKeepsContent": "Строки и столбцы с содержимым остаются",
   "tools.table.textSize": "Размер текста",

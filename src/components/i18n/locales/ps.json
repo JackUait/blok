@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "بشپړ سکرین وتړئ",
   "tools.table.changeSize": "د جدول اندازه بدله کړئ",
   "tools.table.columns": "کالمونه",
+  "tools.table.pickOnGrid": "په جال کې یې وټاکئ",
+  "tools.table.typeNumbers": "شمېرې ولیکئ",
   "tools.table.rows": "قطارونه",
   "tools.table.sizeKeepsContent": "منځپانګې لرونکي قطارونه او کالمونه پاتې کیږي",
   "tools.table.textSize": "د متن اندازه",

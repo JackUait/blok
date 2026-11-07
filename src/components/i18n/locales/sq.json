@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Mbyll ekranin e plotë",
   "tools.table.changeSize": "Ndrysho madhësinë e tabelës",
   "tools.table.columns": "Kolona",
+  "tools.table.pickOnGrid": "Zgjidh në rrjetë",
+  "tools.table.typeNumbers": "Shkruaj numrat",
   "tools.table.rows": "Rreshta",
   "tools.table.sizeKeepsContent": "Rreshtat dhe kolonat me përmbajtje mbeten",
   "tools.table.textSize": "Madhësia e tekstit",

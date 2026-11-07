@@ -920,6 +920,37 @@ test.describe('Table full screen', () => {
     await expect(size).toHaveText('2 × 3');
   });
 
+  test('"Pick on grid" sizes the table by pointing at a 10 × 10 grid, and the card reopens on it', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+    const size = page.getByRole('button', { name: 'Change table size' });
+    const card = page.getByRole('group', { name: 'Change table size' });
+
+    await size.click();
+    await card.getByRole('button', { name: 'Pick on grid' }).click();
+    await expect(card.getByRole('spinbutton', { name: 'Columns' })).toBeHidden();
+    const cells = page.locator('[data-blok-table-fullscreen-size-cell]');
+
+    await expect(cells).toHaveCount(100);
+    await cells.nth(3 * 10 + 5).hover();
+    await expect(card.getByText('6 × 4')).toBeVisible();
+    await cells.nth(3 * 10 + 5).click();
+
+    await expect(card).toBeHidden();
+    await expect(size).toHaveText('6 × 4');
+
+    await size.click();
+    await expect(page.getByTestId('table-size-grid')).toBeFocused();
+    const typeNumbers = card.getByRole('button', { name: 'Type numbers' });
+
+    expect(await typeNumbers.evaluate(el => el.querySelector('svg') !== null)).toBe(true);
+    await typeNumbers.click();
+
+    await expect(card).toBeVisible();
+    await expect(card.getByRole('spinbutton', { name: 'Columns' })).toBeFocused();
+    await expect(card.getByRole('button', { name: 'Pick on grid' })).toBeVisible();
+  });
+
   test('a size change is one undo step', async ({ page }) => {
     await createBlok(page);
     await openWithButton(page);

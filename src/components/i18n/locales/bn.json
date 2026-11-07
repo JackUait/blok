@@ -240,6 +240,8 @@
   "tools.table.closeFullScreen": "পূর্ণ স্ক্রিন বন্ধ করুন",
   "tools.table.changeSize": "টেবিলের আকার বদলান",
   "tools.table.columns": "কলাম",
+  "tools.table.pickOnGrid": "গ্রিডে বাছুন",
+  "tools.table.typeNumbers": "সংখ্যা লিখুন",
   "tools.table.rows": "সারি",
   "tools.table.sizeKeepsContent": "বিষয়বস্তু থাকা সারি ও কলাম থেকে যায়",
   "tools.table.textSize": "টেক্সটের আকার",

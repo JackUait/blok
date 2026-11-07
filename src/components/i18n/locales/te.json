@@ -240,6 +240,8 @@
   "tools.table.closeFullScreen": "పూర్తి స్క్రీన్‌ను మూసివేయండి",
   "tools.table.changeSize": "పట్టిక పరిమాణం మార్చు",
   "tools.table.columns": "స్తంభాలు",
+  "tools.table.pickOnGrid": "గ్రిడ్‌లో ఎంచుకో",
+  "tools.table.typeNumbers": "సంఖ్యలు టైప్ చేయి",
   "tools.table.rows": "వరుసలు",
   "tools.table.sizeKeepsContent": "కంటెంట్ ఉన్న వరుసలు మరియు స్తంభాలు ఉంటాయి",
   "tools.table.textSize": "వచన పరిమాణం",

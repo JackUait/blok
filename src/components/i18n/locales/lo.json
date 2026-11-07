@@ -251,6 +251,8 @@
   "tools.table.closeFullScreen": "ປິດເຕັມຈໍ",
   "tools.table.changeSize": "ປ່ຽນຂະໜາດຕາຕະລາງ",
   "tools.table.columns": "ຖັນ",
+  "tools.table.pickOnGrid": "ເລືອກໃນຕາໜ່າງ",
+  "tools.table.typeNumbers": "ພິມຕົວເລກ",
   "tools.table.rows": "ແຖວ",
   "tools.table.sizeKeepsContent": "ແຖວ ແລະ ຖັນທີ່ມີເນື້ອຫາຍັງຄົງຢູ່",
   "tools.table.textSize": "ຂະໜາດຂໍ້ຄວາມ",

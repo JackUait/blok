@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "Tam ekranı kapat",
   "tools.table.changeSize": "Tablo boyutunu değiştir",
   "tools.table.columns": "Sütunlar",
+  "tools.table.pickOnGrid": "Izgarada seç",
+  "tools.table.typeNumbers": "Sayı gir",
   "tools.table.rows": "Satırlar",
   "tools.table.sizeKeepsContent": "İçerik olan satırlar ve sütunlar kalır",
   "tools.table.textSize": "Metin boyutu",

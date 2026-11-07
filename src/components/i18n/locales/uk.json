@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "Закрити повноекранний режим",
   "tools.table.changeSize": "Змінити розмір таблиці",
   "tools.table.columns": "Колонки",
+  "tools.table.pickOnGrid": "Вибрати на сітці",
+  "tools.table.typeNumbers": "Ввести числа",
   "tools.table.rows": "Рядки",
   "tools.table.sizeKeepsContent": "Рядки й колонки із вмістом залишаються",
   "tools.table.textSize": "Розмір тексту",

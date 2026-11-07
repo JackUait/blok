@@ -240,6 +240,8 @@
   "tools.table.closeFullScreen": "પૂર્ણ સ્ક્રીન બંધ કરો",
   "tools.table.changeSize": "કોષ્ટકનું કદ બદલો",
   "tools.table.columns": "કૉલમ",
+  "tools.table.pickOnGrid": "ગ્રિડ પર પસંદ કરો",
+  "tools.table.typeNumbers": "સંખ્યા લખો",
   "tools.table.rows": "હરોળ",
   "tools.table.sizeKeepsContent": "સામગ્રીવાળી હરોળ અને કૉલમ રહે છે",
   "tools.table.textSize": "ટેક્સ્ટનું કદ",

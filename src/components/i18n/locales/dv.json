@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "ފުލް ސްކްރީން ބަންދުކުރޭ",
   "tools.table.changeSize": "ޓޭބަލްގެ ސައިޒް ބަދަލުކުރޭ",
   "tools.table.columns": "ކޮލަމްތައް",
+  "tools.table.pickOnGrid": "ގްރިޑުން ހޮވާ",
+  "tools.table.typeNumbers": "ނަންބަރު ލިޔޭ",
   "tools.table.rows": "ރޯތައް",
   "tools.table.sizeKeepsContent": "ތަކެތި ހިމެނޭ ރޯތަކާއި ކޮލަމްތައް ދެމިހުރޭ",
   "tools.table.textSize": "ލިޔުމުގެ ސައިޒު",

@@ -149,6 +149,8 @@
   "tools.table.closeFullScreen": "Zapri celozaslonski način",
   "tools.table.changeSize": "Spremeni velikost tabele",
   "tools.table.columns": "Stolpci",
+  "tools.table.pickOnGrid": "Izberi na mreži",
+  "tools.table.typeNumbers": "Vnesi števila",
   "tools.table.rows": "Vrstice",
   "tools.table.sizeKeepsContent": "Vrstice in stolpci z vsebino ostanejo",
   "tools.table.textSize": "Velikost besedila",

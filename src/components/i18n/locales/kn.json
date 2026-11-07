@@ -137,6 +137,8 @@
   "tools.table.closeFullScreen": "ಪೂರ್ಣ ಪರದೆಯನ್ನು ಮುಚ್ಚಿ",
   "tools.table.changeSize": "ಕೋಷ್ಟಕದ ಗಾತ್ರ ಬದಲಿಸಿ",
   "tools.table.columns": "ಕಾಲಮ್‌ಗಳು",
+  "tools.table.pickOnGrid": "ಗ್ರಿಡ್‌ನಲ್ಲಿ ಆರಿಸಿ",
+  "tools.table.typeNumbers": "ಸಂಖ್ಯೆಗಳನ್ನು ಟೈಪ್ ಮಾಡಿ",
   "tools.table.rows": "ಸಾಲುಗಳು",
   "tools.table.sizeKeepsContent": "ವಿಷಯವಿರುವ ಸಾಲುಗಳು ಮತ್ತು ಕಾಲಮ್‌ಗಳು ಉಳಿಯುತ್ತವೆ",
   "tools.table.textSize": "ಪಠ್ಯದ ಗಾತ್ರ",

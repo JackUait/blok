@@ -252,6 +252,8 @@
   "tools.table.closeFullScreen": "Închide ecranul complet",
   "tools.table.changeSize": "Schimbă dimensiunea tabelului",
   "tools.table.columns": "Coloane",
+  "tools.table.pickOnGrid": "Alege pe grilă",
+  "tools.table.typeNumbers": "Introdu numere",
   "tools.table.rows": "Rânduri",
   "tools.table.sizeKeepsContent": "Rândurile și coloanele cu conținut rămân",
   "tools.table.textSize": "Dimensiunea textului",

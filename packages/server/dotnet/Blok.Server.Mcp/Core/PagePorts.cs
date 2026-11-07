@@ -71,15 +71,7 @@ internal sealed class PagePorts
   internal async Task<JsonObject> RunActionAsync(
       McpBundle bundle, JsonObject input, McpCaller caller, Func<string, Task<bool>> isOpenDocument, CancellationToken cancellationToken)
   {
-    var commands = (JsonArray)input["batch"]!["commands"]!;
-
-    // The bundle plans one host action; the rest of a mixed batch would be dropped.
-    if (commands.Count != 1)
-    {
-      var at = commands.ToList().FindIndex(command => McpJson.String(command?["name"]) is "page.rename" or "page.setIcon");
-
-      return Ran(input, Failure(null, Error("INVALID_ARGS", "Send page.rename or page.setIcon in a batch of its own.", false, null, at), []));
-    }
+    // The bundle refuses a mixed batch itself, in Node's shape.
     var planned = await bundle.CallAsync("agentPlanHost", input, cancellationToken);
     var result = (JsonObject)planned["result"]!.DeepClone();
 

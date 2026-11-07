@@ -187,10 +187,20 @@ async fn serve_http(mcp: Arc<Mcp>, version: String, options: &Value) -> i32 {
                 () = stop => {}
                 again = shutdown_signal() => signal::die_by(again),
             }
+            close_all(&mcp, stdio::DRAIN_LIMIT.saturating_sub(started.elapsed())).await;
+            return 0;
         }
     }
-    mcp.close_all();
+    close_all(&mcp, stdio::DRAIN_LIMIT).await;
     0
+}
+
+/// Closes every handle; a second stop signal still ends the process at once.
+async fn close_all(mcp: &Mcp, limit: std::time::Duration) {
+    tokio::select! {
+        () = mcp.close_all(limit) => {}
+        again = shutdown_signal() => signal::die_by(again),
+    }
 }
 
 async fn serve_stdio(mcp: Arc<Mcp>, version: String) -> i32 {
@@ -213,14 +223,17 @@ async fn serve_stdio(mcp: Arc<Mcp>, version: String) -> i32 {
         // As Node's stop: the calls in flight finish first, within the drain limit.
         _ = shutdown_signal() => {
             mcp.stop_opening();
+            let started = std::time::Instant::now();
             tokio::select! {
                 () = &mut served => {}
                 () = pending.drained(stdio::DRAIN_LIMIT) => {}
                 again = shutdown_signal() => signal::die_by(again),
             }
+            close_all(&mcp, stdio::DRAIN_LIMIT.saturating_sub(started.elapsed())).await;
+            return 0;
         }
     }
-    mcp.close_all();
+    close_all(&mcp, stdio::DRAIN_LIMIT).await;
     0
 }
 

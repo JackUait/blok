@@ -16277,6 +16277,156 @@
       "expectExit": {
         "code": 0
       }
+    },
+    {
+      "name": "shutdown: SIGTERM with a live handle open leaves the room first: presence cleared, then a 1000 close",
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "dbccd32d"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "frames": true
+          },
+          "expect": {
+            "agent live-doc #1": {
+              "out": [
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "agent",
+                        "user"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "in": [
+                {
+                  "type": "control",
+                  "format": 2,
+                  "epoch": "number",
+                  "lineage": "L1"
+                },
+                {
+                  "type": "limits",
+                  "maxMessageBytes": "number"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "signal": "SIGTERM",
+          "expect": {
+            "code": 0
+          }
+        },
+        {
+          "room": {
+            "frames": true
+          },
+          "expect": {
+            "agent live-doc #1": {
+              "out": [
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": null
+                    }
+                  ]
+                },
+                {
+                  "type": "close",
+                  "code": 1000
+                }
+              ],
+              "in": [
+                {
+                  "type": "close",
+                  "code": 1000
+                }
+              ]
+            }
+          }
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "presence": true
+          },
+          "expect": []
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
     }
   ]
 }

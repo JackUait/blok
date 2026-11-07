@@ -364,10 +364,12 @@ impl<S: Send + 'static> Handles<S> {
         self.lock().closed = true;
     }
 
-    pub fn close_all(&self) {
+    /// Closes the table and hands back every session, for the caller to
+    /// close once the calls on it are done (Node's closeAll).
+    pub fn take_all(&self) -> Vec<Arc<AsyncMutex<S>>> {
         let mut state = self.lock();
         state.closed = true;
-        state.entries.clear();
+        state.entries.drain().map(|(_, e)| e.session).collect()
     }
 }
 
@@ -491,6 +493,24 @@ mod tests {
         let refused = handles.add("a", "other", ()).unwrap_err();
         assert_eq!(refused.error["message"], "The server is shutting down.");
         assert!(handles.use_handle(&handle, "a").await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn take_all_hands_back_every_session_and_opens_nothing_more() {
+        let handles = Handles::new(Duration::from_secs(60), 8);
+        let handle = handles.add("a", "doc", 1u8).unwrap();
+        handles.add("b", "doc", 2u8).unwrap();
+        let mut taken: Vec<u8> = Vec::new();
+        for session in handles.take_all() {
+            taken.push(*session.lock().await);
+        }
+        taken.sort_unstable();
+        assert_eq!(taken, vec![1, 2]);
+        assert_eq!(
+            handles.use_handle(&handle, "a").await.err().unwrap().code(),
+            "UNKNOWN_HANDLE"
+        );
+        assert!(handles.add("a", "doc", 3).is_err());
     }
 
     #[tokio::test]

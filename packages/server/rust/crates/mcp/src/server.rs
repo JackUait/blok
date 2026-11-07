@@ -420,8 +420,19 @@ impl Mcp {
         });
     }
 
-    pub fn close_all(&self) {
-        self.handles.close_all();
+    /// Node's stop: each handle closes once its calls are done, so a room
+    /// gets its presence departure and close frame. Gives up after `limit`.
+    pub async fn close_all(&self, limit: Duration) {
+        let mut closing = tokio::task::JoinSet::new();
+        for session in self.handles.take_all() {
+            closing.spawn(async move {
+                let session = session.lock_owned().await;
+                if let Session::Remote(room) = &*session {
+                    room.close().await;
+                }
+            });
+        }
+        let _ = tokio::time::timeout(limit, closing.join_all()).await;
     }
 
     /// The turn of the call with this id on its handle: the one stdio took

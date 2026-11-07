@@ -5,8 +5,6 @@ import (
 	"errors"
 	"io"
 	"time"
-
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // stopDrain is Node's STOP_DRAIN_MS: above the slowest bounded open (10 s
@@ -27,8 +25,7 @@ func (s *Server) ServeStdio(ctx context.Context, in io.ReadCloser, out io.WriteC
 	// The session outlives ctx, so the calls in flight can answer.
 	// Node's own cap replaces the SDK's.
 	stdin := &cappedStdin{in: in, tracker: tracker}
-	transport := &mcp.IOTransport{Reader: stdin, Writer: out, MaxLineLength: -1}
-	session, err := server.Connect(context.WithoutCancel(ctx), trackedTransport{fixedTransport{transport}, tracker}, nil)
+	session, err := server.Connect(context.WithoutCancel(ctx), trackedTransport{fixedTransport{lineTransport{in: stdin, out: out}}, tracker}, nil)
 	if err != nil {
 		return err
 	}

@@ -626,17 +626,9 @@ impl Mcp {
                     actor_id,
                 };
                 let room = live.open(shared.clone(), request, presence).await?;
-                let read = room.read(json!({}), actor.clone()).await;
+                let empty = room.is_empty().await;
                 room.close().await;
-                let view = room_answer(&read?)?;
-                let view: Value = serde_json::from_str(&view.structured).unwrap_or(Value::Null);
-                let taken = view
-                    .get("blocks")
-                    .and_then(Value::as_array)
-                    .is_some_and(|b| !b.is_empty())
-                    || view.pointer("/page/title").is_some()
-                    || view.pointer("/page/icon").is_some();
-                if taken {
+                if !empty? {
                     return Err(HostError::surface(
                         "SOURCE_UNAVAILABLE",
                         "The new page id is taken. Try again.",

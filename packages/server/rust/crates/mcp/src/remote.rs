@@ -169,6 +169,7 @@ pub struct ExecuteInput {
 enum Command {
     Execute(ExecuteInput, oneshot::Sender<Result<Executed, Fault>>),
     Read(Value, Value, oneshot::Sender<Result<String, Fault>>),
+    IsEmpty(oneshot::Sender<Result<bool, Fault>>),
     PagesNeeded(Value, Value, Value, oneshot::Sender<Result<Value, Fault>>),
     Close(oneshot::Sender<Value>),
 }
@@ -211,6 +212,17 @@ impl RemoteRoom {
         let (reply, answer) = oneshot::channel();
         self.commands
             .send(Command::Read(view, actor, reply))
+            .map_err(|_| Fault::Internal("the room is gone".to_owned()))?;
+        answer
+            .await
+            .map_err(|_| Fault::Internal("the room is gone".to_owned()))?
+    }
+
+    /// Whether the doc holds no block, title or icon, read without the bundle.
+    pub async fn is_empty(&self) -> Result<bool, Fault> {
+        let (reply, answer) = oneshot::channel();
+        self.commands
+            .send(Command::IsEmpty(reply))
             .map_err(|_| Fault::Internal("the room is gone".to_owned()))?;
         answer
             .await
@@ -527,6 +539,20 @@ impl Room {
                     }
                     Some(Command::Read(view, actor, reply)) => {
                         let answer = self.read(&view, &actor).await;
+                        let _ = reply.send(answer);
+                    }
+                    Some(Command::IsEmpty(reply)) => {
+                        let answer = match self.end.clone() {
+                            Some(end) => Err(self.end_error(&end).into()),
+                            None => page_doc_is_empty(
+                                &self.doc,
+                                self.shared
+                                    .converter
+                                    .fields
+                                    .as_ref()
+                                    .unwrap_or(&RichTextFields::built_in()),
+                            ),
+                        };
                         let _ = reply.send(answer);
                     }
                 },
@@ -2264,6 +2290,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_new_page_doc_is_empty_until_it_holds_a_block_or_a_title() {
+        let doc = Doc::new(DocOptions::default());
+        let fields = RichTextFields::built_in();
+        assert!(page_doc_is_empty(&doc, &fields).unwrap());
+        let page = doc.get_map("page").unwrap();
+        doc.transact(|tx| {
+            page.set(
+                tx,
+                "title",
+                blok_jsjson::Value::String(blok_jsjson::Str::from("Taken")),
+            )
+        })
+        .unwrap();
+        assert!(!page_doc_is_empty(&doc, &fields).unwrap());
+    }
+
+    #[test]
     fn version_paths_are_lineage_and_sequence() {
         assert_eq!(point_path("abc:3").as_deref(), Some("abc/3"));
         assert_eq!(point_path(":3"), None);
@@ -2324,6 +2367,17 @@ mod tests {
         assert_eq!(shape(&step, &other), step.shape);
         assert_ne!(shape(&step, &[]), step.shape);
     }
+}
+
+/// The opener's check that a new page room is empty. It skips the bundle:
+/// Node's check ends inside the 100 ms presence throttle, so the room sees
+/// only the departure, and a bundle read is slow enough to let the announce
+/// out first.
+fn page_doc_is_empty(doc: &Doc, fields: &RichTextFields) -> Result<bool, Fault> {
+    let internal = |e: &dyn std::fmt::Display| Fault::Internal(e.to_string());
+    let (blocks, _) = blok_collab_convert::export(doc, fields, None).map_err(|e| internal(&e))?;
+    let page = blok_collab_convert::export_page(doc).map_err(|e| internal(&e))?;
+    Ok(blocks.is_empty() && page.members().is_empty())
 }
 
 /// presenceColorFor(the SHA-256 seed of the actor id), as presence.ts picks it.

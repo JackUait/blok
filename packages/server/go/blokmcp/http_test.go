@@ -1,7 +1,9 @@
 package blokmcp
 
 import (
+	"context"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +11,13 @@ import (
 )
 
 func testHTTPServer(t *testing.T) (*httptest.Server, string) {
+	t.Helper()
+	front := httptest.NewServer(testHandler(t))
+	t.Cleanup(front.Close)
+	return front, front.URL[strings.LastIndexByte(front.URL, ':')+1:]
+}
+
+func testHandler(t *testing.T) http.Handler {
 	t.Helper()
 	runtime := fakeRuntime{
 		"mcpCheckOptions": func(string) string { return "{}" },
@@ -26,9 +35,7 @@ func testHTTPServer(t *testing.T) (*httptest.Server, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	front := httptest.NewServer(handler)
-	t.Cleanup(front.Close)
-	return front, front.URL[strings.LastIndexByte(front.URL, ':')+1:]
+	return handler
 }
 
 func send(t *testing.T, method, url string, header map[string]string, body string) (*http.Response, string) {
@@ -108,5 +115,28 @@ func TestAStdioServerHasNoHTTPHandler(t *testing.T) {
 	t.Cleanup(server.Close)
 	if _, err := server.Handler(); err == nil {
 		t.Fatal("a stdio server gave out an HTTP handler")
+	}
+}
+
+// An embedder may mount Handler on a listener open to the network. A
+// remote caller can type any Host, so only its own address tells.
+func TestHandlerRefusesARemoteCallerThatNamesLocalhost(t *testing.T) {
+	handler := testHandler(t)
+	for remote, want := range map[string]int{
+		"203.0.113.9:40000":   http.StatusForbidden,
+		"[2001:db8::1]:40000": http.StatusForbidden,
+		"127.0.0.1:40000":     http.StatusNotFound,
+		"[::1]:40000":         http.StatusNotFound,
+	} {
+		request := httptest.NewRequest(http.MethodGet, "/nowhere", nil)
+		request.RemoteAddr = remote
+		request.Host = "localhost:8443"
+		local := &net.TCPAddr{IP: net.IPv4zero, Port: 8443}
+		request = request.WithContext(context.WithValue(request.Context(), http.LocalAddrContextKey, local))
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, request)
+		if recorder.Code != want {
+			t.Errorf("%s: %d, want %d", remote, recorder.Code, want)
+		}
 	}
 }

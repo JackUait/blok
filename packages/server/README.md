@@ -794,6 +794,7 @@ go test -p 2 ./...
 The release workflow ships the Go server in two forms. No release has shipped them yet.
 
 - **Module.** `yarn release X.Y.Z` also tags `packages/server/go/vX.Y.Z` on the release commit. Go reads a module in a subdirectory only from tags with that prefix. The module path is `github.com/JackUait/blok/packages/server/go/v2`. Import `blokserver` for the routes and `blokdocs` for the converter. Your own operation store and activity observer go in `Options.CollabOperationStore` and `Options.CollabActivityObserver`. Their types are in `blokserver/collabstore`. To put your own auth in front of the routes, use `Server.HandlerWithAuth(prefix, auth)`. It works like `RequireAuthorization()` on the C# group: health and CORS preflights stay open.
+- **MCP server.** Import `blokmcp` to run blok-mcp inside your own Go program. `Server.Handler()` serves it on a listener you own, so `New` cannot check that the listener is loopback. Without `Transport.Public`, the handler answers only callers whose address is loopback, and 403 to everyone else. Behind a reverse proxy every caller looks loopback, so set `Transport.Public` and `Auth.Kind: "oauth"` there.
 - **Archives.** The GitHub release gets `blok-server-go_<os>_<arch>` for macOS, Linux and Windows, on amd64 and arm64, with `checksums-go.txt`. They are built with cgo off, so they are static. The release starts the Linux amd64 one on Alpine before it uploads.
 
 The binary reports its release version on `/health`. A local `go build` reports `dev`.

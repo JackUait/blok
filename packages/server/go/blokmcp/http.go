@@ -33,8 +33,15 @@ var loopbackHostNames = map[string]bool{"localhost": true, "127.0.0.1": true, "[
 
 type identityKey struct{}
 
-// isLoopbackHost wants a loopback name and the port the request came in on.
+// isLoopbackHost wants a loopback caller, a loopback name and the port the
+// request came in on. A caller can type any Host, so only its own address
+// shows it is on this machine: an embedder's listener may be open to the
+// network.
 func isLoopbackHost(r *http.Request) bool {
+	remote, _, err := net.SplitHostPort(r.RemoteAddr)
+	if ip := net.ParseIP(remote); err != nil || ip == nil || !ip.IsLoopback() {
+		return false
+	}
 	host := r.Host
 	at := strings.LastIndexByte(host, ':')
 	if at <= 0 || !loopbackHostNames[strings.ToLower(host[:at])] {
@@ -51,7 +58,11 @@ func isLoopbackHost(r *http.Request) bool {
 // Handler serves stateless streamable HTTP at /mcp, plus the OAuth
 // protected-resource metadata when OAuth is on. Mount it at the root. The
 // server must have Transport.Kind "http": New checks the HTTP rules
-// (authorize hook, loopback bind, OAuth for --public) only for that kind.
+// (authorize hook, OAuth for --public) only for that kind. New checks the
+// loopback bind only on Transport.Listen, which Handler does not use, so
+// without Public the handler itself refuses a caller whose address is not
+// loopback. Behind a reverse proxy every caller looks loopback: set Public
+// and OAuth there.
 func (s *Server) Handler() (http.Handler, error) {
 	if s.options.Transport.Kind != "http" {
 		return nil, &ConfigError{Message: `Handler needs Transport.Kind "http", so that New checks the HTTP rules`}

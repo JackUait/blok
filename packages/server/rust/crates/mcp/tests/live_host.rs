@@ -280,3 +280,107 @@ async fn after_the_rebuild_history_acts_on_the_live_copy() {
         .collect();
     assert_eq!(ids, vec!["p1"], "{read}");
 }
+
+/// A ticket URL that mints `grants` tickets of 20 s (inside the refresh
+/// margin, so each use mints again), then answers 403. Counts the POSTs.
+async fn ticket_url(grants: usize) -> (String, Arc<std::sync::atomic::AtomicUsize>) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let posts = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let seen = posts.clone();
+    tokio::spawn(async move {
+        while let Ok((mut tcp, _)) = listener.accept().await {
+            let n = seen.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let mut raw = Vec::new();
+            let mut buf = [0u8; 4096];
+            let body = loop {
+                let got = tcp.read(&mut buf).await.unwrap_or(0);
+                raw.extend_from_slice(&buf[..got]);
+                let text = String::from_utf8_lossy(&raw).into_owned();
+                if let Some((head, body)) = text.split_once("\r\n\r\n") {
+                    let length = head
+                        .lines()
+                        .find_map(|l| {
+                            let (k, v) = l.split_once(':')?;
+                            k.eq_ignore_ascii_case("content-length")
+                                .then(|| v.trim().parse::<usize>().ok())?
+                        })
+                        .unwrap_or(0);
+                    if body.len() >= length || got == 0 {
+                        break body.to_owned();
+                    }
+                }
+                if got == 0 {
+                    break String::new();
+                }
+            };
+            let answer = if n < grants {
+                let request: Value = serde_json::from_str(&body).unwrap_or_default();
+                let claims = blok_blokserver_ticket::Claims {
+                    user: Some(request["actorId"].as_str().unwrap_or_default().into()),
+                    doc: Some(request["doc"].as_str().unwrap_or_default().into()),
+                    write: true,
+                    ttl_seconds: Some(20),
+                };
+                let ticket =
+                    blok_blokserver_ticket::mint(SECRET, &claims, std::time::SystemTime::now())
+                        .unwrap();
+                let json = json!({ "ticket": ticket }).to_string();
+                format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{json}",
+                    json.len()
+                )
+            } else {
+                "HTTP/1.1 403 Forbidden\r\nContent-Length: 2\r\nConnection: close\r\n\r\nno"
+                    .to_owned()
+            };
+            let _ = tcp.write_all(answer.as_bytes()).await;
+        }
+    });
+    (format!("http://{address}/tickets"), posts)
+}
+
+// Node's revocable(): a 403 from the ticket URL while history mints ends
+// the room for the session. The history command names the host's refusal;
+// the writes after it are FORBIDDEN, and no mint is tried again.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_refused_mint_for_version_history_ends_the_room() {
+    let host = host(true).await;
+    let (tickets, posts) = ticket_url(2).await;
+    let options = json!({
+        "transport": { "kind": "stdio" },
+        "auth": { "kind": "none" },
+        "sync": { "url": format!("ws://{}/sync", host.proxy.address), "origin": ORIGIN },
+        "tickets": { "kind": "url", "url": tickets, "hostToken": "t" },
+    });
+    let mcp = Mcp::new(Arc::new(Bundle::new(1).unwrap()), &options, None, None)
+        .await
+        .unwrap();
+    let handle = open(&mcp).await;
+    let versions = history(&mcp, &handle, "history.versions").await;
+    assert_eq!(
+        versions["error"],
+        json!({
+            "code": "TOOL_ACTION_FAILED",
+            "message": "The version history failed: The host did not grant this document to this agent.",
+            "retryable": false,
+            "commandIndex": 0,
+            "path": "/commands/0/args",
+        }),
+        "{versions}"
+    );
+    for id in ["p1", "p2"] {
+        let write = insert(&mcp, &handle, id, "x").await;
+        assert_eq!(
+            write["error"],
+            json!({
+                "code": "FORBIDDEN",
+                "message": "The room refused this agent. Its ticket may not grant this document.",
+                "retryable": false,
+            }),
+            "{write}"
+        );
+    }
+    assert_eq!(posts.load(std::sync::atomic::Ordering::SeqCst), 3);
+}

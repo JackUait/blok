@@ -1493,7 +1493,12 @@ impl Room {
             return self.replay(&input, first == "history.undo").await;
         }
         let version_history = if first.starts_with("history.") {
-            Some(self.load_versions(&first, &input.batch).await)
+            let loaded = self.load_versions(&first, &input.batch).await;
+            // Node's revocable(): a FORBIDDEN mint ends the room here too.
+            if self.spec.tickets.as_ref().is_some_and(|t| t.refused()) {
+                self.terminate("forbidden").await;
+            }
+            Some(loaded)
         } else {
             None
         };
@@ -1999,7 +2004,14 @@ impl Room {
         loop {
             let mut headers = extra.clone();
             if let Some(tickets) = &self.spec.tickets {
-                let ticket = tickets.get(fresh).await.map_err(|f| format!("{f:?}"))?;
+                // Node puts the thrown error's message after "The version history failed: ".
+                let ticket = tickets.get(fresh).await.map_err(|fault| match fault {
+                    Fault::Host(error) => error.error["message"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_owned(),
+                    Fault::Internal(message) => message,
+                })?;
                 headers.push(("Authorization".to_owned(), format!("Bearer {ticket}")));
             }
             if let Some(origin) = &self.spec.origin {

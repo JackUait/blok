@@ -193,7 +193,20 @@ internal static class McpRequestGate
     }
     if (request.Headers["MCP-Protocol-Version"].ToString() != Modern)
     {
-      await next(context);
+      var body = context.Response.Body;
+      var rewriting = new McpNodeBytesStream(body, () => context.Response.ContentType?.StartsWith("text/event-stream", StringComparison.Ordinal) == true);
+
+      // Events stream (an elicitation waits for its reply), so each is rewritten as it goes.
+      context.Response.Body = rewriting;
+      try
+      {
+        await next(context);
+      }
+      finally
+      {
+        context.Response.Body = body;
+        await rewriting.DisposeAsync();
+      }
 
       return;
     }

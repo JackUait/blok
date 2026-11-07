@@ -52,6 +52,24 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
 
   private static string Init => Wire.Split('\n')[0] + "\n" + Wire.Split('\n')[1] + "\n";
 
+  // JSON.stringify writes everything raw but " and \\ and controls; the SDK's encoder escapes far more.
+  [Fact]
+  public async Task WritesAnAnswerWithNodesRawBytes()
+  {
+    File.WriteAllText(Path.Combine(dir, "doc.json"), "{\"title\":\"a\u2028b<&>\\\"\u00e9'\ud83d\ude00\",\"blocks\":[]}");
+    var (live, _, _) = await OpenForWriteAsync();
+
+    await live.SendAsync("""{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"blok_list_documents","arguments":{}}}""");
+    await live.AnswerAsync("2");
+    await live.DisposeAsync();
+
+    // Node's bytes for the same call (blok-mcp.mjs, 2025-11-25).
+    Assert.Contains(
+        "\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"documents\\\":[{\\\"id\\\":\\\"doc\\\",\\\"title\\\":\\\"a\u2028b<&>\\\\\\\"\u00e9'\ud83d\ude00\\\",\\\"live\\\":false}],\\\"nextCursor\\\":null,\\\"supported\\\":true}\"}],"
+        + "\"structuredContent\":{\"documents\":[{\"id\":\"doc\",\"title\":\"a\u2028b<&>\\\"\u00e9'\ud83d\ude00\",\"live\":false}],\"nextCursor\":null,\"supported\":true},\"isError\":false}",
+        live.Lines.Single(line => JsonNode.Parse(line)!["id"]!.ToJsonString() == "2"));
+  }
+
   // Node's ReadBuffer drops a line that fails JSONRPCMessageSchema: no answer, and stdin's end stops at once.
   [Theory]
   [InlineData("""{"id":13,"method":"ping"}""")]
@@ -248,6 +266,9 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     private readonly List<JsonNode> answers = [];
     private readonly Task reading;
 
+    // The lines as written, for byte checks.
+    internal List<string> Lines { get; } = [];
+
     internal Task Session { get; }
 
     internal Live(McpServerCore core, ModelContextProtocol.Server.McpServerOptions options, Task stop)
@@ -262,6 +283,7 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
           lock (answers)
           {
             answers.Add(JsonNode.Parse(line)!);
+            Lines.Add(line);
           }
         }
       });

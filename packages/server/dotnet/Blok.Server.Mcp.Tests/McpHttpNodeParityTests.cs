@@ -66,6 +66,37 @@ public sealed class McpHttpNodeParityTests
     return (context.Response.StatusCode, new StreamReader(context.Response.Body).ReadToEnd());
   }
 
+  // An SDK event goes out as JSON.stringify writes it; a body the SDK sized passes as it is.
+  [Fact]
+  public async Task WritesTheSdksEventsWithNodesRawBytes()
+  {
+    const string Escaped = "{\"result\":{\"t\":\"\\u0022a\\u0027\\u003C\\u00E9\\uD83D\\uDE00\\u2028\"},\"id\":7,\"jsonrpc\":\"2.0\"}";
+    var context = Post(McpHttpTests.Ping, version: "2025-11-25");
+
+    await McpRequestGate.InvokeAsync(context, async inner =>
+    {
+      inner.Response.ContentType = "text/event-stream";
+      await inner.Response.WriteAsync("event: message\ndata: " + Escaped + "\n\n");
+    });
+    context.Response.Body.Position = 0;
+
+    Assert.Equal(
+        "event: message\ndata: {\"result\":{\"t\":\"\\\"a'<\u00e9\ud83d\ude00\u2028\"},\"id\":7,\"jsonrpc\":\"2.0\"}\n\n",
+        new StreamReader(context.Response.Body).ReadToEnd());
+
+    var sized = Post(McpHttpTests.Ping, version: "2025-11-25");
+
+    await McpRequestGate.InvokeAsync(sized, async inner =>
+    {
+      inner.Response.ContentType = "application/json";
+      inner.Response.ContentLength = Escaped.Length;
+      await inner.Response.WriteAsync(Escaped);
+    });
+    sized.Response.Body.Position = 0;
+
+    Assert.Equal(Escaped, new StreamReader(sized.Response.Body).ReadToEnd());
+  }
+
   [Theory]
   [InlineData("PUT")]
   [InlineData("PATCH")]

@@ -15,7 +15,7 @@ internal static class McpStdioSession
     // Wire order is known only while the transport reads, so calls take their handle places there.
     // At stdin's end the read stays open: the SDK would drop the answers still to come.
     var reader = new McpOrderedInput(input, core, holdAtEnd: true);
-    var transport = new StreamServerTransport(reader, output, "blok-mcp", NullLoggerFactory.Instance);
+    var transport = new StreamServerTransport(reader, new McpNodeBytesStream(output), "blok-mcp", NullLoggerFactory.Instance);
     var server = McpServer.Create(transport, options, NullLoggerFactory.Instance);
     var run = server.RunAsync(CancellationToken.None);
 

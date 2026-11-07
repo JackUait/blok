@@ -699,3 +699,26 @@ async fn an_error_body_that_stalls_past_the_timeout_still_reports_the_status() {
         )
     );
 }
+
+// The host's own version comes back on the next PUT: a CR or LF in it
+// must never become a second header on the wire.
+#[tokio::test]
+async fn a_version_with_a_line_break_is_never_sent() {
+    let (endpoint, heads) = raw_endpoint(b"HTTP/1.1 204 No Content\r\n\r\n").await;
+    let c = Client::with_connect_timeout(
+        Options {
+            endpoint: parse_absolute_uri(&endpoint).unwrap(),
+            request_timeout: Some(Duration::from_secs(5)),
+            ..Options::default()
+        },
+        Duration::from_secs(10),
+        None,
+    );
+    let document = node(r#"{"blocks":[]}"#);
+    let saved = c
+        .save("a", &document, Some("v\r\nX-Injected: 2"), None)
+        .await;
+    assert!(saved.is_err(), "{saved:?}");
+    let seen = heads.lock().unwrap().join("");
+    assert!(!seen.contains("X-Injected"), "{seen}");
+}

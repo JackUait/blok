@@ -354,7 +354,8 @@ impl Fetcher {
             "GET",
             &path,
             &[("Host", &host_header(target)), ("User-Agent", USER_AGENT)],
-        );
+        )
+        .map_err(|_| blocked)?;
         stream.write_all(&head).await.map_err(|_| blocked)?;
         stream.flush().await.map_err(|_| blocked)?;
         Ok(stream)

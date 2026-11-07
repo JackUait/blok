@@ -66,3 +66,22 @@ async fn caps_a_chunk_size_line_and_the_trailers() {
     let trailers = format!("2\r\nok\r\n0\r\n{}\r\n", "A: b\r\n".repeat(20 << 10));
     assert!(read_chunked(trailers.as_bytes()).await.is_err());
 }
+
+// A header value that would end its line is refused, so no caller can put
+// a second header on the wire. U+0080..U+00FF go out as one Latin-1 byte,
+// as Node's fetch sends them; anything above has no byte and is refused.
+#[test]
+fn a_header_value_cannot_end_its_line() {
+    use crate::wire::request_head;
+    for bad in ["a\r\nX-Evil: 1", "a\nX", "a\rX", "a\0b", "a\u{100}", "a😀"] {
+        assert!(
+            request_head("GET", "/", &[("Authorization", bad)]).is_err(),
+            "{bad:?}"
+        );
+    }
+    let head = request_head("GET", "/", &[("Authorization", "Bearer \té")]).unwrap();
+    assert_eq!(
+        head,
+        b"GET / HTTP/1.1\r\nAuthorization: Bearer \t\xe9\r\n\r\n"
+    );
+}

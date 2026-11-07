@@ -146,6 +146,23 @@ async fn refuses_an_authorization_value_the_header_cannot_carry() {
     }
 }
 
+// Spaces and tabs around a value are not part of it (RFC 9110 5.5): undici
+// and Go's net/http drop them.
+#[tokio::test]
+async fn sends_header_values_without_outer_spaces_and_tabs() {
+    let r = Recorder::default();
+    let setup = Setup {
+        authorization: " Bearer  x\t",
+        ..Setup::default()
+    };
+    client(&r, setup, json(r#"{"version":"v2"}"#))
+        .save("doc", &node(r#"{"blocks":[]}"#), Some("\tv1 "), None)
+        .await
+        .unwrap();
+    assert_eq!(r.first().header("Authorization"), Some("Bearer  x"));
+    assert_eq!(r.first().header(VERSION_HEADER), Some("v1"));
+}
+
 // undici's rule: tab, printable ASCII and U+0080..U+00FF only.
 const UNSENDABLE: [&str; 8] = [
     "\n",

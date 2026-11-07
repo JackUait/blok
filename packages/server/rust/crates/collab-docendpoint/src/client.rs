@@ -216,7 +216,7 @@ impl Client {
                     "collab: the doc endpoint version cannot be sent as a header.",
                 ));
             }
-            headers.push((VERSION_HEADER.to_owned(), version.to_owned()));
+            headers.push((VERSION_HEADER.to_owned(), trimmed(version).to_owned()));
         }
         if let Some(projection) = projection {
             headers.push((LINEAGE_HEADER.to_owned(), projection.lineage.clone()));
@@ -273,7 +273,10 @@ impl Client {
                     "collab: the doc endpoint Authorization value cannot be sent as a header (a stray newline?).",
                 ));
             }
-            headers.push(("Authorization".to_owned(), authorization.clone()));
+            headers.push((
+                "Authorization".to_owned(),
+                trimmed(authorization).to_owned(),
+            ));
         }
         let deadline = match self.options.request_timeout {
             Some(limit) if !limit.is_zero() => Some(Instant::now() + limit),
@@ -616,4 +619,10 @@ fn sendable(value: &str) -> bool {
     value
         .chars()
         .all(|c| c == '\t' || (' '..='\u{7e}').contains(&c) || ('\u{80}'..='\u{ff}').contains(&c))
+}
+
+/// Spaces and tabs around a value are not part of it (RFC 9110 5.5); undici
+/// and Go's net/http drop them.
+fn trimmed(value: &str) -> &str {
+    value.trim_matches([' ', '\t'])
 }

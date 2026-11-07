@@ -101,6 +101,8 @@ func fetchAnswer(ctx context.Context, timeout time.Duration, method, url string,
 // latin1 is undici's header value check: CR, LF, NUL or a character past
 // U+00FF is refused; the rest goes out one byte per character.
 func latin1(value string) (string, error) {
+	// fetch trims HTTP whitespace around the value before it checks it.
+	value = strings.Trim(value, " \t\r\n")
 	out := make([]byte, 0, len(value))
 	for _, r := range value {
 		if r == '\r' || r == '\n' || r == 0 || r > 0xFF {

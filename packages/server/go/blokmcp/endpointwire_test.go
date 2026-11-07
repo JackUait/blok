@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -120,5 +121,42 @@ func TestEndpointHeaderValuesGoOutAsLatin1(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("%d calls reached the host", calls)
+	}
+}
+
+// Node's fetch trims spaces, tabs, CR and LF around a header value before
+// it checks it; inside the value they stay (or are refused).
+func TestEndpointHeaderValuesAreTrimmedAsNodesFetchDoes(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = listener.Close() })
+	lines := make(chan string, 1)
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			buffer := make([]byte, 4096)
+			n, _ := conn.Read(buffer)
+			for _, line := range strings.Split(string(buffer[:n]), "\r\n") {
+				if strings.HasPrefix(line, "Authorization:") {
+					lines <- line
+				}
+			}
+			_, _ = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: " + strconv.Itoa(len(endpointDoc)) + "\r\n\r\n" + endpointDoc))
+			_ = conn.Close()
+		}
+	}()
+	url := "http://" + listener.Addr().String() + "/docs"
+	for auth, want := range map[string]string{"\t Token  t \r\n": "Authorization: Token  t", "\nToken\tt\t": "Authorization: Token\tt"} {
+		if _, err := endpointLoad(t, url, auth); err != nil {
+			t.Fatalf("%q: %v", auth, err)
+		}
+		if got := <-lines; got != want {
+			t.Errorf("%q: sent %q, want %q", auth, got, want)
+		}
 	}
 }

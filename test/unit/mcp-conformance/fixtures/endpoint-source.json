@@ -2930,6 +2930,168 @@
       ]
     },
     {
+      "env": {
+        "BLOK_DOC_ENDPOINT_AUTH": "\t Token secret-1 \r\n"
+      },
+      "name": "outer spaces, tabs and line breaks around the auth and the host version are trimmed, as Node fetch sends them",
+      "hosts": {
+        "GET /docs/doc": {
+          "status": 200,
+          "json": {
+            "data": {
+              "title": "Notes",
+              "blocks": [
+                {
+                  "id": "p1",
+                  "type": "paragraph",
+                  "data": {
+                    "text": "Hello"
+                  }
+                }
+              ]
+            },
+            "version": "\tv1 \n"
+          }
+        },
+        "PUT /docs/doc": {
+          "status": 200,
+          "json": {
+            "version": "v2"
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "mask": [
+            "/result/structuredContent/handle"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "<masked>",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Changed"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "mask": [
+            "/result/structuredContent/revision"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "v2"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "Token secret-1"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "Token secret-1",
+            "content-type": "application/json",
+            "blok-doc-version": "v1"
+          },
+          "body": {
+            "title": "Changed",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "Hello"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "a host version (sent back as Blok-Doc-Version) with a lone LF is refused, and no save is sent",
       "hosts": {
         "GET /docs/doc": {

@@ -159,24 +159,28 @@ func (r *liveRoom) loadVersions(ctx context.Context, batch json.RawMessage) map[
 
 // versionsOf is the server's version list as AgentVersions, newest first.
 func versionsOf(body []byte) ([]map[string]any, error) {
-	var listing struct {
-		Versions []map[string]json.RawMessage `json:"versions"`
-		Lineages []struct {
-			Lineage string `json:"lineage"`
-			Current bool   `json:"current"`
-		} `json:"lineages"`
-	}
-	if json.Unmarshal(body, &listing) != nil || listing.Versions == nil {
+	// Maps, not structs: a struct decode would also take "VERSIONS".
+	var listing map[string]json.RawMessage
+	var listed []json.RawMessage
+	if json.Unmarshal(body, &listing) != nil || json.Unmarshal(listing["versions"], &listed) != nil || listed == nil {
 		return nil, fmt.Errorf("The sync server sent a version list it could not read.")
 	}
+	var lineages []json.RawMessage
+	_ = json.Unmarshal(listing["lineages"], &lineages)
 	current := map[string]bool{}
-	for _, lineage := range listing.Lineages {
-		if lineage.Current {
-			current[lineage.Lineage] = true
+	for _, raw := range lineages {
+		lineage, _ := isRecordJSON(raw)
+		var name string
+		if string(lineage["current"]) == "true" && json.Unmarshal(lineage["lineage"], &name) == nil {
+			current[name] = true
 		}
 	}
 	versions := []map[string]any{}
-	for _, entry := range listing.Versions {
+	for _, raw := range listed {
+		entry, ok := isRecordJSON(raw)
+		if !ok {
+			continue
+		}
 		var lineage, sequence any
 		_ = json.Unmarshal(entry["lineage"], &lineage)
 		_ = json.Unmarshal(entry["sequence"], &sequence)

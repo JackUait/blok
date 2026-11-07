@@ -124,11 +124,10 @@ func (s *Server) fetchTicket(ctx context.Context, tickets *Tickets, documentID s
 	case answer.status < 200 || answer.status > 299:
 		return "", time.Time{}, surfaceError("SOURCE_UNAVAILABLE", fmt.Sprintf("The ticket endpoint answered %d.", answer.status))
 	}
-	var field struct {
-		Ticket json.RawMessage `json:"ticket"`
-	}
+	// A map, not a struct: a struct decode would also take "TICKET".
+	var field map[string]json.RawMessage
 	var pass string
-	if json.Unmarshal([]byte(decodeUTF8(answer.body)), &field) != nil || !isStringJSON(field.Ticket) || json.Unmarshal(field.Ticket, &pass) != nil {
+	if json.Unmarshal([]byte(decodeUTF8(answer.body)), &field) != nil || !isStringJSON(field["ticket"]) || json.Unmarshal(field["ticket"], &pass) != nil {
 		return "", time.Time{}, surfaceError("SOURCE_UNAVAILABLE", `The ticket endpoint answered without a "ticket" field.`)
 	}
 	claims := readTicketClaims(pass)

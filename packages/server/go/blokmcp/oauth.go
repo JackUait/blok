@@ -157,14 +157,14 @@ func (v *jwtVerifier) load(ctx context.Context) error {
 	if err != nil || answer.status < 200 || answer.status > 299 {
 		return failed()
 	}
-	var body struct {
-		Keys []json.RawMessage `json:"keys"`
-	}
-	if json.Unmarshal(answer.body, &body) != nil {
+	// Maps, not structs: a struct decode would also take "KEYS".
+	var body map[string]json.RawMessage
+	var listed []json.RawMessage
+	if json.Unmarshal(answer.body, &body) != nil || (body["keys"] != nil && json.Unmarshal(body["keys"], &listed) != nil) {
 		return failed()
 	}
 	keys := map[string]signingKey{}
-	for _, raw := range body.Keys {
+	for _, raw := range listed {
 		var jwk map[string]any
 		if json.Unmarshal(raw, &jwk) != nil {
 			continue

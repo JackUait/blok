@@ -85,6 +85,7 @@ impl SaveQueues {
         turn
     }
 
+    #[cfg(test)]
     fn len(&self) -> usize {
         self.0.lock().unwrap_or_else(|p| p.into_inner()).len()
     }

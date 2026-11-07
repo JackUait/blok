@@ -448,17 +448,50 @@ pub struct Listening {
     pub server: Arc<Server>,
 }
 
-fn split_listen(listen: &str) -> (String, u16) {
+fn split_listen(listen: &str) -> std::io::Result<(String, u16)> {
     let at = listen.rfind(':').unwrap_or(listen.len());
     let host = listen[..at]
         .trim_start_matches('[')
         .trim_end_matches(']')
         .to_owned();
-    let port = listen
-        .get(at + 1..)
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(0);
-    (host, port)
+    let text = listen.get(at + 1..).unwrap_or_default();
+    let port = js_number(text)
+        .filter(|n| n.fract() == 0.0 && (0.0..=65535.0).contains(n))
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("the port in --http {listen} must be a whole number from 0 to 65535"),
+            )
+        })?;
+    Ok((host, port as u16))
+}
+
+/// JS Number(text) for a port: an empty text is 0, 0x/0o/0b prefixes count.
+fn js_number(text: &str) -> Option<f64> {
+    let text = text.trim();
+    if text.is_empty() {
+        return Some(0.0);
+    }
+    for (prefix, radix) in [
+        ("0x", 16),
+        ("0X", 16),
+        ("0o", 8),
+        ("0O", 8),
+        ("0b", 2),
+        ("0B", 2),
+    ] {
+        if let Some(digits) = text.strip_prefix(prefix) {
+            return u64::from_str_radix(digits, radix).ok().map(|n| n as f64);
+        }
+    }
+    // Rust also reads "inf" and "nan"; Number() reads neither as a port.
+    if !text
+        .bytes()
+        .all(|b| b.is_ascii_digit() || matches!(b, b'.' | b'e' | b'E' | b'+' | b'-'))
+    {
+        return None;
+    }
+    text.parse::<f64>().ok()
 }
 
 pub async fn listen(
@@ -468,7 +501,7 @@ pub async fn listen(
     principal: String,
     public: bool,
 ) -> std::io::Result<Listening> {
-    let (host, port) = split_listen(listen);
+    let (host, port) = split_listen(listen)?;
     let listener = tokio::net::TcpListener::bind((host.as_str(), port)).await?;
     let address: SocketAddr = listener.local_addr()?;
     let port = address.port();
@@ -518,6 +551,24 @@ pub async fn listen(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Node reads the port with Number() and listen() refuses any that is
+    // not an integer 0..65535; an empty port is 0, a free one.
+    #[test]
+    fn a_port_node_cannot_listen_on_is_refused() {
+        assert_eq!(
+            split_listen("127.0.0.1:").unwrap(),
+            ("127.0.0.1".to_owned(), 0)
+        );
+        assert_eq!(split_listen("[::1]:80").unwrap(), ("::1".to_owned(), 80));
+        assert_eq!(split_listen("h:8080.0").unwrap().1, 8080);
+        assert_eq!(split_listen("h:0x10").unwrap().1, 16);
+        for bad in [
+            "h:abc", "h:99999", "h:-1", "h:65535x", "h:1.5", "h:NaN", "h:inf",
+        ] {
+            assert!(split_listen(bad).is_err(), "{bad}");
+        }
+    }
 
     #[test]
     fn the_era_comes_from_the_body_then_the_header() {

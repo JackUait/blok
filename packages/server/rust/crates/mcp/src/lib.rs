@@ -19,6 +19,7 @@ pub mod protocol;
 pub mod remote;
 pub mod rooms;
 pub mod server;
+mod signal;
 pub mod sources;
 pub mod stdio;
 pub mod ws;
@@ -153,8 +154,11 @@ async fn serve_http(mcp: Arc<Mcp>, version: String, options: &Value) -> i32 {
     tokio::select! {
         _ = listening.serve => {}
         // As Node's stop: requests in flight finish first, within the drain limit.
-        () = shutdown_signal() => {
-            listening.server.shutdown(stdio::DRAIN_LIMIT).await;
+        _ = shutdown_signal() => {
+            tokio::select! {
+                _ = listening.server.shutdown(stdio::DRAIN_LIMIT) => {}
+                again = shutdown_signal() => signal::die_by(again),
+            }
         }
     }
     mcp.close_all();
@@ -179,10 +183,11 @@ async fn serve_stdio(mcp: Arc<Mcp>, version: String) -> i32 {
     tokio::select! {
         () = &mut served => {}
         // As Node's stop: the calls in flight finish first, within the drain limit.
-        () = shutdown_signal() => {
+        _ = shutdown_signal() => {
             tokio::select! {
                 () = &mut served => {}
                 () = pending.drained(stdio::DRAIN_LIMIT) => {}
+                again = shutdown_signal() => signal::die_by(again),
             }
         }
     }
@@ -190,7 +195,7 @@ async fn serve_stdio(mcp: Arc<Mcp>, version: String) -> i32 {
     0
 }
 
-async fn shutdown_signal() {
+async fn shutdown_signal() -> signal::Stop {
     #[cfg(unix)]
     {
         use tokio::signal::unix::{SignalKind, signal};
@@ -201,12 +206,13 @@ async fn shutdown_signal() {
             return std::future::pending().await;
         };
         tokio::select! {
-            _ = term.recv() => {}
-            _ = int.recv() => {}
+            _ = term.recv() => signal::Stop::Terminate,
+            _ = int.recv() => signal::Stop::Interrupt,
         }
     }
     #[cfg(not(unix))]
     {
         let _ = tokio::signal::ctrl_c().await;
+        signal::Stop::Interrupt
     }
 }

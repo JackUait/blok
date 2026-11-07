@@ -16,6 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 base64 = "0.22"
+libc = "0.2"
 blok-blokagent = { path = "../blokagent" }
 blok-blokserver-ticket = { path = "../blokserver-ticket" }
 blok-collab-convert = { path = "../collab-convert" }

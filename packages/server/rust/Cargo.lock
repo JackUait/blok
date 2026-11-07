@@ -406,6 +406,7 @@ dependencies = [
  "bytes",
  "http",
  "http-body-util",
+ "libc",
  "ring",
  "rmcp",
  "serde",

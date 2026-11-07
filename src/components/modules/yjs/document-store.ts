@@ -2538,6 +2538,8 @@ export class DocumentStore {
    */
   private readonly updateHandlers = new Set<(update: Uint8Array, origin: unknown) => void>();
 
+  private readonly resetHandlers = new Set<() => void>();
+
   /**
    * Apply a binary Yjs update coming from outside this editor.
    *
@@ -2898,6 +2900,23 @@ export class DocumentStore {
         this.awareness.setLocalState(localAwarenessState);
       }
     }
+
+    for (const handler of [...this.resetHandlers]) {
+      handler();
+    }
+  }
+
+  /**
+   * Called after {@link resetForRelineage} swapped in the fresh doc. Anything
+   * built on the old doc's types (an undo manager) rebuilds here.
+   * @param handler - runs once per reset
+   */
+  public onReset(handler: () => void): () => void {
+    this.resetHandlers.add(handler);
+
+    return (): void => {
+      this.resetHandlers.delete(handler);
+    };
   }
 
   /**
@@ -2909,6 +2928,7 @@ export class DocumentStore {
       this.ydoc.off('update', handler);
     }
     this.updateHandlers.clear();
+    this.resetHandlers.clear();
 
     // Destroy awareness BEFORE the doc: its own `doc.on('destroy')` hook would
     // otherwise reach a half-torn-down instance. Clears the sweep timer.

@@ -1286,6 +1286,29 @@ describe('collaboration transport — a write the room refused', () => {
     expect(room.texts(), 'an edit made on the reloaded document never reached the room').toEqual(['typed after the reload']);
   }, 30_000);
 
+  it('undo and redo after the reload act on the room\'s copy and send nothing stale', async () => {
+    const { room, bob } = await refuseOneEdit(false);
+    const yjs = bob.core.moduleInstances.YjsManager;
+
+    await reconnect(room, bob);
+
+    expect(yjs.canUndo(), 'the editor can still undo a step of the discarded document').toBe(false);
+    expect(() => {
+      yjs.undo();
+      yjs.redo();
+    }).not.toThrow();
+    await settle(room, 10);
+    expect(room.texts(), 'an undo or redo sent stale content').toEqual(['shared']);
+
+    yjs.updateBlockData('b1', 'text', 'after the reload');
+    await converge(room, () => room.texts()[0] === 'after the reload', 'the new edit');
+    yjs.undo();
+    await converge(room, () => room.texts()[0] === 'shared', 'the undo to reach the room');
+
+    expect(room.texts(), 'the undo of a new edit did not reach the room').toEqual(['shared']);
+    expect(docTexts(bob.core)).toEqual(['shared']);
+  }, 30_000);
+
   it('does not save a refused edit from the offline copy after a reload', async () => {
     const { room, bob } = await refuseOneEdit(true);
 

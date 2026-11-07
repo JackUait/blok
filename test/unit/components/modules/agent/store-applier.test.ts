@@ -591,4 +591,48 @@ describe('StoreApplier', () => {
     expect(applier.snapshot().get('z')?.data.text).toEqual([{ text: 'Host wrote this' }]);
     await expect(applier.undo()).rejects.toMatchObject({ error: { code: 'NOTHING_TO_UNDO' } });
   });
+
+  describe('after the store swaps in the room\'s copy', () => {
+    /** The room's own copy: the fixture as it was before any agent step. */
+    const swapToRoom = (store: DocumentStore): void => {
+      const room = createStore();
+      const update = room.encodeStateAsUpdate();
+
+      store.resetForRelineage();
+      store.applyRemoteUpdate(update, {});
+    };
+
+    it('has nothing to undo or redo from before the swap, and writes nothing', async () => {
+      const store = createStore();
+      const applier = createApplier(store);
+
+      await apply(applier, [{ op: 'setData', id: 'a', patch: { keep: 2 } }], ['a']);
+      await apply(applier, [{ op: 'setData', id: 'a', patch: { keep: 3 } }], ['a']);
+      await applier.undo();
+      swapToRoom(store);
+
+      const origins = localOrigins(store);
+      const before = applier.snapshot().toOutput();
+
+      await expect(applier.undo(), 'an undo replayed a step of the discarded document').rejects.toMatchObject({ error: { code: 'NOTHING_TO_UNDO' } });
+      await expect(applier.redo(), 'a redo replayed a step of the discarded document').rejects.toMatchObject({ error: { code: 'NOTHING_TO_REDO' } });
+      expect(origins, 'a history call after the swap wrote to the document').toEqual([]);
+      expect(applier.snapshot().toOutput()).toEqual(before);
+    });
+
+    it('undoes and redoes a step made on the swapped-in document', async () => {
+      const store = createStore();
+      const applier = createApplier(store);
+
+      await apply(applier, [{ op: 'setData', id: 'a', patch: { keep: 2 } }], ['a']);
+      swapToRoom(store);
+      await apply(applier, [{ op: 'setData', id: 'z', patch: { keep: 9 } }], ['z']);
+      await applier.undo();
+
+      expect(applier.snapshot().get('z')?.data.keep, 'the undo missed the live document').toBeUndefined();
+      expect(applier.snapshot().get('a')?.data.keep).toBe(1);
+      await applier.redo();
+      expect(applier.snapshot().get('z')?.data.keep).toBe(9);
+    });
+  });
 });

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,7 +12,7 @@ namespace Blok.Server.Mcp.Protocol;
 /// stdin as the stdio transport reads it, one line at a time in wire order. Each tools/call on a
 /// handle takes its place in that handle's order here, before the SDK runs messages at once.
 /// </summary>
-internal sealed class McpOrderedInput(Stream inner, McpServerCore core) : Stream
+internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool holdAtEnd = false) : Stream
 {
   /*
    * Node's SDK holds at most 10 MiB of unread stdin (STDIO_DEFAULT_MAX_BUFFER_SIZE) and closes the
@@ -24,7 +25,14 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core) : Stream
   private readonly byte[] chunk = new byte[64 * 1024];
   private byte[] ready = [];
   private int readyAt;
+  private readonly TaskCompletionSource endOfInput = new(TaskCreationOptions.RunContinuationsAsynchronously);
   private bool ended;
+
+  /// <summary>Completes when the inner stream ends (not when a line is too long).</summary>
+  internal Task Ended => endOfInput.Task;
+
+  /// <summary>The ids of the requests (an id and a method) passed on, as RequestId prints them.</summary>
+  internal ConcurrentQueue<string> RequestIds { get; } = new();
 
   public override bool CanRead => true;
 
@@ -57,6 +65,12 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core) : Stream
       {
         // A last line with no newline is dropped, as Node's ReadBuffer drops it.
         ended = true;
+        core.InputEnded = true;
+        endOfInput.TrySetResult();
+        if (holdAtEnd && readyAt == ready.Length)
+        {
+          await Task.Delay(Timeout.Infinite, cancellationToken);
+        }
         break;
       }
       Seen(chunk.AsSpan(0, read));
@@ -137,9 +151,16 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core) : Stream
     {
       using (document)
       {
-        if (!McpRequestShape.IsMessage(document.RootElement))
+        var root = document.RootElement;
+
+        if (!McpRequestShape.IsMessage(root))
         {
           return null;
+        }
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("id", out var id) && root.TryGetProperty("method", out _)
+            && id.ValueKind is JsonValueKind.String or JsonValueKind.Number)
+        {
+          RequestIds.Enqueue(IdOf(JsonNode.Parse(id.GetRawText())!));
         }
       }
       if (repeated)

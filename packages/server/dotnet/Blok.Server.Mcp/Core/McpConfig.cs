@@ -71,6 +71,9 @@ internal sealed class McpConfig
 
   internal McpAuthorize? Authorize { get; init; }
 
+  /// <summary>The library's agentActor hook: (principal, client name) → actor.</summary>
+  internal Func<string, string, JsonObject>? AgentActor { get; init; }
+
   /// <summary>The library's front door: <see cref="Blok.Server.Mcp.Http.McpRequestGate"/> checks Origin and Host. The CLI's guard does it instead.</summary>
   internal McpCallerGate? Gate { get; init; }
 

@@ -224,10 +224,19 @@ internal sealed class McpServerCore : IAsyncDisposable
       input["clientName"] = rawClientName;
     }
     var named = await bundle.CallAsync("mcpActor", input, cancellationToken);
+    var clientName = McpJson.String(named["clientName"]) ?? string.Empty;
+
+    // A host's own actor publishes its name as given (actor.ts agentPresenceName).
+    if (config.AgentActor is { } build)
+    {
+      var actor = build(principal, clientName);
+
+      return new McpCaller(principal, clientName, scopes, actor, McpJson.String(actor["name"]) ?? string.Empty);
+    }
 
     return new McpCaller(
         principal,
-        McpJson.String(named["clientName"]) ?? string.Empty,
+        clientName,
         scopes,
         (JsonObject)named["actor"]!.DeepClone(),
         McpJson.String(named["presenceName"]) ?? string.Empty);

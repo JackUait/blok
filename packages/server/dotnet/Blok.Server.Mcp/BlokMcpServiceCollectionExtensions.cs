@@ -147,17 +147,37 @@ public static class BlokMcpServiceCollectionExtensions
         ? async (principal, documentId, write, token) => await authorize(new BlokMcpAccessRequest(principal, documentId, write), token)
         : rules is not null ? (principal, documentId, write, token) => AllowedByRulesAsync(rules, provider.GetService<IHttpContextAccessor>(), principal, documentId, write, token) : null;
 
+    var source = options.FilesDirectory is not null || options.DocumentEndpoint is not null;
+    // As Node's hostDecides: the host's ticket route decides when there is no source.
+    var hostDecides = options.TicketUrl is not null && !source;
+
+    if (options.SyncUrl is not null && options.LiveRooms)
+    {
+      throw new InvalidOperationException("Set BlokMcpOptions.SyncUrl or LiveRooms, not both.");
+    }
+    if (options.PageTitles is not null and not "off" and not "page-map")
+    {
+      throw new InvalidOperationException($"BlokMcpOptions.PageTitles must be \"off\" or \"page-map\", got \"{options.PageTitles}\"");
+    }
     // Node's checkOptionSafety over HTTP: OAuth says who calls, not which documents they may open.
-    if (hook is null && !options.AllowEveryCallerEveryDocument)
+    if (hook is null && !hostDecides && !options.AllowEveryCallerEveryDocument)
     {
       throw new InvalidOperationException(
           "Blok's MCP endpoint needs a per-document check: set BlokMcpOptions.Authorize or register IBlokAuthorization. "
           + "To let every caller reach every document, set BlokMcpOptions.AllowEveryCallerEveryDocument.");
     }
-    CheckOptions(provider.GetRequiredService<BlokMcpHost>(), options);
+    var host = provider.GetRequiredService<BlokMcpHost>();
+
+    CheckOptions(host, options, hook is not null);
 
     return new McpConfig
     {
+      PageTitles = options.PageTitles,
+      Manifest = options.Manifest is { } manifest ? ConfigFile(host, "manifest", manifest) : null,
+      Overrides = options.Overrides is { } overrides ? ConfigFile(host, "overrides", overrides) : null,
+      Sync = options.SyncUrl is { } sync ? new McpSync(sync.OriginalString, options.SyncOrigin) : null,
+      Tickets = TicketsOf(options),
+      AgentActor = options.AgentActor is { } actor ? (principal, clientName) => ActorJson(actor(principal, clientName)) : null,
       Gate = new McpCallerGate(options.AllowedOrigins?.ToArray(), options.AllowedHosts?.ToArray()),
       Source = options.FilesDirectory is string dir
           ? new McpSourceConfig.Files(dir)
@@ -180,15 +200,67 @@ public static class BlokMcpServiceCollectionExtensions
     };
   }
 
-  // The rest of Node's checks (upload limits), run by the same bundle the CLI uses.
-  private static void CheckOptions(BlokMcpHost host, BlokMcpOptions options)
+  private static McpTickets? TicketsOf(BlokMcpOptions options)
+  {
+    return options.TicketUrl is { } url
+        ? new McpTickets.Url(url.OriginalString, options.TicketHostToken ?? string.Empty)
+        : options.TicketSecret is { } secret ? new McpTickets.Secret(secret) : null;
+  }
+
+  private static JsonObject ActorJson(BlokMcpAgentActor actor)
+  {
+    var json = new JsonObject { ["id"] = actor.Id, ["name"] = actor.Name, ["kind"] = "agent" };
+
+    if (actor.OnBehalfOf is not null)
+    {
+      json["onBehalfOf"] = actor.OnBehalfOf;
+    }
+    if (actor.Color is not null)
+    {
+      json["color"] = actor.Color;
+    }
+
+    return json;
+  }
+
+  // As the CLI checks a --manifest or --manifest-overrides file.
+  private static JsonNode? ConfigFile(BlokMcpHost host, string kind, JsonObject value)
+  {
+    var checkedFile = host.Bundle.CallAsync("mcpConfigFile", new JsonObject { ["kind"] = kind, ["value"] = value.DeepClone() }).GetAwaiter().GetResult();
+
+    return McpJson.String(checkedFile["error"]) is string refused
+        ? throw new InvalidOperationException(refused)
+        : checkedFile["value"]?.DeepClone();
+  }
+
+  // The rest of Node's checks (uploads, tickets, sync), run by the same bundle the CLI uses.
+  private static void CheckOptions(BlokMcpHost host, BlokMcpOptions options, bool authorize)
   {
     var check = new JsonObject
     {
       ["transport"] = new JsonObject { ["kind"] = "http", ["listen"] = "127.0.0.1:0" },
       ["auth"] = new JsonObject { ["kind"] = options.OAuth is null ? "none" : "oauth" },
-      ["authorize"] = true,
     };
+
+    // The per-document refusal above is the library's own; only a real hook counts for a secret.
+    if (authorize || options.AllowEveryCallerEveryDocument || (options.TicketUrl is not null && options.FilesDirectory is null && options.DocumentEndpoint is null))
+    {
+      check["authorize"] = true;
+    }
+    if (options.FilesDirectory is not null || options.DocumentEndpoint is not null)
+    {
+      check["source"] = new JsonObject { ["kind"] = options.FilesDirectory is not null ? "files" : "endpoint" };
+    }
+    if (options.SyncUrl is { } sync)
+    {
+      check["sync"] = new JsonObject { ["url"] = sync.OriginalString };
+    }
+    if (TicketsOf(options) is { } tickets)
+    {
+      check["tickets"] = tickets is McpTickets.Url url
+          ? new JsonObject { ["kind"] = "url", ["url"] = url.Endpoint, ["hostToken"] = url.HostToken }
+          : new JsonObject { ["kind"] = "secret", ["secret"] = "set" };
+    }
 
     if (options.Uploads is { } uploads)
     {

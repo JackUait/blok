@@ -89,6 +89,13 @@ Browsers and DNS rebinding:
 - A request with a foreign `Origin` gets 403. By default only loopback pages (`http://localhost`, `127.0.0.1`, `[::1]`) may call. List your own in `AllowedOrigins`.
 - `AllowedHosts` limits the `Host` header to the names you list. Without it, set ASP.NET Core's own `AllowedHosts` host filtering.
 
+The other options follow `createBlokMcpServer` in `@bloklabs/mcp`: `PageTitles`, `Manifest`, `Overrides`, `SyncUrl` with `TicketSecret` or `TicketUrl`, `AgentActor`, `Uploads` and the rest. They are checked at startup with the same rules. Two of Node's options are not here:
+
+- `uploads.root` reads local files, and Node allows it over stdio only.
+- The stdio form: run the `blok-mcp` tool for that.
+
+With `TicketUrl` and no document source, the host's ticket route decides who may open what, so no `Authorize` is needed.
+
 ## Convert documents
 
 `Blok.Server` embeds Blok's own serializer as a JavaScript bundle and runs it in this process. A document therefore converts through the editor's implementation, not a port of it. A port has to be taught every block Blok gains, and it silently drops the ones nobody remembered.

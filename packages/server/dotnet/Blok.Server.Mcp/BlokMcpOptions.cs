@@ -75,6 +75,52 @@ public sealed class BlokMcpOptions
 
   /// <summary>Blok's OAuth rules for bearer tokens (blok-mcp <c>--auth oauth</c>).</summary>
   public BlokMcpOAuthOptions? OAuth { get; set; }
+
+  /// <summary><c>page-map</c> turns on page.rename, page.setIcon and page creation (<c>--page-titles</c>). Default <c>off</c>.</summary>
+  public string? PageTitles { get; set; }
+
+  /// <summary>The host's custom tool descriptions, as <c>--manifest &lt;file&gt;</c> holds them. Checked at startup.</summary>
+  public System.Text.Json.Nodes.JsonObject? Manifest { get; set; }
+
+  /// <summary>Per-tool overrides, as <c>--manifest-overrides &lt;file&gt;</c> holds them. Checked at startup.</summary>
+  public System.Text.Json.Nodes.JsonObject? Overrides { get; set; }
+
+  /// <summary>A remote Blok sync server for live handles (<c>--sync-url</c>). Needs a ticket mode.</summary>
+  public Uri? SyncUrl { get; set; }
+
+  /// <summary>The Origin sent to <see cref="SyncUrl"/> (<c>--sync-origin</c>).</summary>
+  public string? SyncOrigin { get; set; }
+
+  /// <summary>Signs live tickets with this secret (<c>BLOK_SECRET</c>). Needs <see cref="Authorize"/> or IBlokAuthorization.</summary>
+  public string? TicketSecret { get; set; }
+
+  /// <summary>
+  /// The host's ticket route (<c>--ticket-url</c>), which also decides who may open what: with no
+  /// document source, no other per-document check is needed. Needs <see cref="TicketHostToken"/>.
+  /// </summary>
+  public Uri? TicketUrl { get; set; }
+
+  /// <summary>The bearer token sent to <see cref="TicketUrl"/> (<c>BLOK_MCP_HOST_TOKEN</c>).</summary>
+  public string? TicketHostToken { get; set; }
+
+  /// <summary>
+  /// Builds the agent's actor from the principal and client name. A ticket's user must equal its id.
+  /// Blocks the agent writes name <c>OnBehalfOf</c> as their author and the actor's id as co-author.
+  /// The default actor is <c>agent:&lt;principal&gt;:&lt;client&gt;</c>, on behalf of the principal.
+  /// </summary>
+  public Func<string, string, BlokMcpAgentActor>? AgentActor { get; set; }
+}
+
+/// <summary>The agent as Blok records it.</summary>
+/// <param name="Id">Its id; a ticket's user must equal it.</param>
+/// <param name="Name">The name peers see.</param>
+public sealed record BlokMcpAgentActor(string Id, string Name)
+{
+  /// <summary>The person it works for; absent names the agent alone.</summary>
+  public string? OnBehalfOf { get; init; }
+
+  /// <summary>Its presence colour, as hex.</summary>
+  public string? Color { get; init; }
 }
 
 /// <summary>One access question: may this principal open this document, for writing or not.</summary>

@@ -39,6 +39,9 @@ internal sealed class LiveRoom : IRoomSeam
 
   internal event Action<RoomEnd>? Ended;
 
+  /// <summary>Raised after <see cref="RebuildFromRoom"/> swapped in a new doc.</summary>
+  internal event Action? Rebuilt;
+
   internal LiveLoop Loop => loop;
 
   internal YDoc Doc { get; private set; }
@@ -237,6 +240,7 @@ internal sealed class LiveRoom : IRoomSeam
   public void RebuildFromRoom()
   {
     SwapDoc();
+    Rebuilt?.Invoke();
   }
 
   private void SwapDoc()

@@ -1149,6 +1149,18 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
     }
   }
 
+  /// <summary>Test hook: waits until no room has a working-set write in flight.</summary>
+  internal async Task SettleWritesAsync()
+  {
+    foreach (var room in LiveRooms())
+    {
+      while (await room.PersistInFlightAsync())
+      {
+        await Task.Delay(1);
+      }
+    }
+  }
+
   private async Task DrainRoomAsync(
       CollabRoom room,
       CancellationToken cancellationToken)

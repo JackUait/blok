@@ -1366,6 +1366,16 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
+  /// Test hook: whether a working-set write runs beside the lane. Its finish
+  /// is posted back to the lane later, and a finish that lands during a drain
+  /// queues the drain's settle behind it.
+  /// </summary>
+  internal Task<bool> PersistInFlightAsync()
+  {
+    return RunAsync(() => Task.FromResult(inFlightPersist is not null), CancellationToken.None);
+  }
+
+  /// <summary>
   /// Completes once every lane operation queued before it has run AND the
   /// activity those operations handed to the host has been delivered. That
   /// second half awaits HOST code and carries no bound of its own, so a caller

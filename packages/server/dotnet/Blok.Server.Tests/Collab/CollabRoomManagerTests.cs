@@ -1391,10 +1391,17 @@ public sealed class CollabRoomManagerTests
     var member = new FakeMember();
     var membership = (await manager.JoinAsync("doc-a", member, CancellationToken.None)).Membership!;
     var client = await SyncedAsync(membership, member);
+    // A slow store, as on a loaded CI runner: the edit's write is still in
+    // flight after the lane pass below.
+    store.BeforeWrite = () => Task.Delay(200);
     await membership.ReceiveAsync(
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
         CancellationToken.None);
     await manager.SettleAsync();
+    // The write's finish is posted to the lane. If it lands during the drain,
+    // the drain's settle waits behind it and the cancelled drain logs that.
+    await manager.SettleWritesAsync();
+    store.BeforeWrite = null;
     endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     store.RefusesCancelledWrites = true;
     using var shutdown = new CancellationTokenSource();

@@ -464,7 +464,9 @@ export class RectangleSelection extends Module {
      * The button came up where no mouseup reached the document. Leaving the
      * body is NOT the end: a band dragged below a short page must live on.
      */
-    if (this.mousedown && (mouseEvent.buttons & 1) === 0) {
+    const pressInFlight = this.mousedown || this.mouseDownWithinBoundsFromContentEditable;
+
+    if (pressInFlight && (mouseEvent.buttons & 1) === 0) {
       this.clearSelection();
       this.endSelection();
 

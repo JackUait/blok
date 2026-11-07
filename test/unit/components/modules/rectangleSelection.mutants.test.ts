@@ -987,6 +987,25 @@ describe('RectangleSelection — surviving mutants', () => {
     });
   });
 
+  describe('a press in text released outside the window', () => {
+    it('stops closing the toolbar once a move shows the button is up', () => {
+      const h = createHarness();
+
+      h.mouseDownAt(640, 500, h.contentEditable);
+      h.moveTo(660, 520);
+      h.releaseThrottle();
+
+      /** The button came up outside the window: no mouseup reached the page. */
+      h.moveTo(680, 540, 0);
+      h.releaseThrottle();
+      h.toolbar.close.mockClear();
+      h.moveTo(700, 560, 0);
+
+      expect(h.toolbar.close).not.toHaveBeenCalled();
+      expect(h.rect.isMouseDownWithinBounds).toBe(false);
+    });
+  });
+
   describe('endSelection', () => {
     it('forgets that the mouse went down inside the content bounds', () => {
       const h = createHarness();

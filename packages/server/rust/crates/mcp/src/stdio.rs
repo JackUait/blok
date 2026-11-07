@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::{Value, json};
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::sync::Mutex;
 
 const MODERN: &str = "2026-07-28";
@@ -83,6 +83,33 @@ impl Pending {
     }
 }
 
+/// Node's SDK StdioServerTransport (STDIO_DEFAULT_MAX_BUFFER_SIZE): input
+/// that grows past this without a newline closes the transport.
+pub const MAX_MESSAGE: usize = 10 * 1024 * 1024;
+
+/// The next line of input, without its line end. None at the end of input,
+/// or for a message past MAX_MESSAGE: the input then counts as closed.
+async fn next_message<R: tokio::io::AsyncBufRead + Unpin>(reader: &mut R) -> Option<String> {
+    let mut line = Vec::new();
+    let read = (&mut *reader)
+        .take(MAX_MESSAGE as u64 + 1)
+        .read_until(b'\n', &mut line)
+        .await
+        .ok()?;
+    if read == 0 {
+        return None;
+    }
+    if line.last() == Some(&b'\n') {
+        line.pop();
+        if line.last() == Some(&b'\r') {
+            line.pop();
+        }
+    } else if line.len() > MAX_MESSAGE {
+        return None;
+    }
+    Some(String::from_utf8_lossy(&line).into_owned())
+}
+
 async fn write_line<W: AsyncWrite + Unpin>(out: &Mutex<W>, line: &str) -> std::io::Result<()> {
     let mut out = out.lock().await;
     out.write_all(line.as_bytes()).await?;
@@ -111,8 +138,8 @@ where
         let out = out.clone();
         let pending = pending.clone();
         tokio::spawn(async move {
-            let mut lines = BufReader::new(input).lines();
-            while let Ok(Some(line)) = lines.next_line().await {
+            let mut reader = BufReader::new(input);
+            while let Some(line) = next_message(&mut reader).await {
                 let sent = match own_answer(&line) {
                     Some(answer) => write_line(&out, &answer).await,
                     None => {
@@ -209,6 +236,41 @@ mod tests {
         )
         .await;
         assert_eq!(*log.lock().unwrap(), vec!["answered", "input ended"]);
+    }
+
+    #[tokio::test]
+    async fn a_message_past_10_mib_closes_the_input_as_nodes_sdk_does() {
+        // Notifications: nothing waits for an answer to them.
+        let note = |name: &str, pad: usize| {
+            format!(
+                "{{\"jsonrpc\":\"2.0\",\"method\":\"{name}\",\"params\":{{\"p\":\"{}\"}}}}\n",
+                "x".repeat(pad)
+            )
+        };
+        let input = format!(
+            "{}{}{}",
+            note("fits", 1 << 20),
+            note("past", MAX_MESSAGE),
+            note("after", 0)
+        )
+        .into_bytes();
+        let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let got = seen.clone();
+        let (out, _keep) = tokio::io::duplex(1 << 16);
+        proxy(
+            std::io::Cursor::new(input),
+            out,
+            Arc::default(),
+            move |read, _write| async move {
+                let mut lines = BufReader::new(read).lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    let method = serde_json::from_str::<Value>(&line).unwrap()["method"].clone();
+                    got.lock().unwrap().push(method);
+                }
+            },
+        )
+        .await;
+        assert_eq!(*seen.lock().unwrap(), vec![json!("fits")]);
     }
 
     #[tokio::test]

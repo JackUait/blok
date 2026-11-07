@@ -288,6 +288,37 @@ impl crate::stdio::Requests for Mcp {
     }
 }
 
+/// Node's checkOptionSafety, which createBlokMcpServer runs for every
+/// host: the CLI's checks hold for a library host too.
+async fn check_options(
+    bundle: &Bundle,
+    options: &Value,
+    authorize: bool,
+    uploads: Option<&crate::uploads::Uploads>,
+) -> Result<(), Fault> {
+    let mut checked = options.clone();
+    if authorize {
+        checked["authorize"] = Value::Bool(true);
+    }
+    if let Some(uploads) = uploads {
+        let mut described = json!({ "uploadByFile": true, "limits": uploads.limits });
+        if let Some(root) = &uploads.root {
+            described["root"] = json!(root.to_string_lossy());
+        }
+        checked["uploads"] = described;
+    }
+    let answer = bundle
+        .call(
+            "mcpCheckOptions",
+            &json!({ "options": checked }).to_string(),
+        )
+        .await?;
+    match answer.get("error").and_then(Value::as_str) {
+        Some(error) => Err(Fault::Internal(error.to_owned())),
+        None => Ok(()),
+    }
+}
+
 impl Mcp {
     /// `rooms`: the embedding host's own collab rooms (`Server::agent_executor()`).
     /// Live handles then run in this process, with no ticket and no socket.
@@ -310,6 +341,7 @@ impl Mcp {
         rooms: Option<Arc<Executor>>,
         uploads: Option<crate::uploads::Uploads>,
     ) -> Result<Mcp, Fault> {
+        check_options(&bundle, options, authorize.is_some(), uploads.as_ref()).await?;
         let mut flags = surface_flags(options);
         if uploads.is_some() {
             flags["uploads"] = Value::Bool(true);

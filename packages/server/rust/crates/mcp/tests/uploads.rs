@@ -263,3 +263,46 @@ async fn a_7_mib_base64_upload_reaches_the_uploader_as_in_node() {
     assert_eq!(memory.calls.lock().unwrap()[0]["size"], json!(bytes.len()));
     let _ = std::fs::remove_dir_all(&work);
 }
+
+// Node's createBlokMcpServer runs checkOptionSafety: an upload folder over
+// HTTP would read this machine's disk for a remote caller.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_library_refuses_unsafe_options_as_nodes_does() {
+    let uploads = || Uploads {
+        uploader: Arc::new(Memory::default()),
+        root: Some(std::env::temp_dir()),
+        limits: json!({}),
+    };
+    let http = json!({
+        "transport": { "kind": "http", "listen": "127.0.0.1:0" }, "auth": { "kind": "none" },
+    });
+    let refused = Mcp::with_uploads(
+        Arc::new(Bundle::new(1).unwrap()),
+        &http,
+        None,
+        None,
+        Some(uploads()),
+    )
+    .await
+    .err()
+    .map(|e| format!("{e:?}"));
+    assert!(
+        refused.as_deref().is_some_and(
+            |e| e.contains("uploads.root reads local files, so it works over stdio only")
+        ),
+        "{refused:?}"
+    );
+    // Over stdio the same uploads are fine.
+    let stdio = json!({ "transport": { "kind": "stdio" }, "auth": { "kind": "none" } });
+    assert!(
+        Mcp::with_uploads(
+            Arc::new(Bundle::new(1).unwrap()),
+            &stdio,
+            None,
+            None,
+            Some(uploads())
+        )
+        .await
+        .is_ok()
+    );
+}

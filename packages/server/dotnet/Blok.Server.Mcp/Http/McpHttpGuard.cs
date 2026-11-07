@@ -31,6 +31,19 @@ internal sealed partial class McpHttpGuard(McpConfig config, Func<int> boundPort
         && host[(at + 1)..] == boundPort().ToString(System.Globalization.CultureInfo.InvariantCulture);
   }
 
+  /// <summary>RFC 9728 protected-resource metadata, which a 401's WWW-Authenticate points at.</summary>
+  internal static async Task WriteMetadataAsync(HttpResponse response, McpOAuth oauth)
+  {
+    response.ContentType = "application/json";
+    await response.WriteAsync(McpJson.Write(new JsonObject
+    {
+      ["resource"] = oauth.Audience,
+      ["authorization_servers"] = new JsonArray(oauth.Issuer),
+      ["scopes_supported"] = new JsonArray("blok.read", "blok.write"),
+      ["bearer_methods_supported"] = new JsonArray("header"),
+    }));
+  }
+
   internal async Task InvokeAsync(HttpContext context, RequestDelegate next)
   {
     var origin = context.Request.Headers.Origin;
@@ -44,14 +57,7 @@ internal sealed partial class McpHttpGuard(McpConfig config, Func<int> boundPort
     }
     if (config.OAuth is McpOAuth oauth && HttpMethods.IsGet(context.Request.Method) && context.Request.Path == MetadataPath)
     {
-      context.Response.ContentType = "application/json";
-      await context.Response.WriteAsync(McpJson.Write(new JsonObject
-      {
-        ["resource"] = oauth.Audience,
-        ["authorization_servers"] = new JsonArray(oauth.Issuer),
-        ["scopes_supported"] = new JsonArray("blok.read", "blok.write"),
-        ["bearer_methods_supported"] = new JsonArray("header"),
-      }));
+      await WriteMetadataAsync(context.Response, oauth);
 
       return;
     }

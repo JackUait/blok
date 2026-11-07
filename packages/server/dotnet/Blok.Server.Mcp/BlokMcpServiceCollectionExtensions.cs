@@ -244,7 +244,8 @@ public static class BlokMcpEndpointRouteBuilderExtensions
   /// Maps the MCP endpoint at <paramref name="pattern"/>: POST serves MCP, GET and DELETE
   /// answer 405, and a body over 4 MiB answers 413. With OAuth configured, every request
   /// needs a Blok bearer token with the blok.read scope; add UseAuthentication and
-  /// UseAuthorization to the pipeline.
+  /// UseAuthorization to the pipeline. OAuth also maps GET /.well-known/oauth-protected-resource,
+  /// which the 401's WWW-Authenticate names.
   /// </summary>
   /// <param name="endpoints">The route builder.</param>
   /// <param name="pattern">The route, <c>/mcp</c> by default.</param>
@@ -266,9 +267,16 @@ public static class BlokMcpEndpointRouteBuilderExtensions
         endpoint.RequestDelegate = context => McpRequestGate.InvokeAsync(context, inner);
       }
     });
-    if (endpoints.ServiceProvider.GetRequiredService<McpConfig>().OAuth is not null)
+    var config = endpoints.ServiceProvider.GetRequiredService<McpConfig>();
+
+    if (config.OAuth is McpOAuth oauth)
     {
       mapped.RequireAuthorization(BlokMcpBearer.ReadPolicy);
+      // The CLI's guard answers it before routing.
+      if (config.Gate is not null)
+      {
+        endpoints.MapGet(McpHttpGuard.MetadataPath, context => McpHttpGuard.WriteMetadataAsync(context.Response, oauth));
+      }
     }
 
     return mapped;

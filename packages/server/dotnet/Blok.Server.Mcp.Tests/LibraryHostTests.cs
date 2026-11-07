@@ -324,4 +324,25 @@ public sealed class LibraryHostTests : IDisposable
       Assert.Equal(401, await StatusAsync(client, null));
     }
   }
+
+  // The 401's WWW-Authenticate names this URL, so the app must serve it.
+  [Fact]
+  public async Task ServesTheProtectedResourceMetadataWithOAuth()
+  {
+    var (app, client) = await StartAsync(configure: options =>
+    {
+      options.Authorize = (_, _) => ValueTask.FromResult(true);
+      options.OAuth = new BlokMcpOAuthOptions { Issuer = "https://issuer.test", Audience = "https://mcp.test/mcp", JwksUri = new Uri("https://issuer.test/jwks") };
+    });
+
+    await using (app)
+    {
+      using var response = await client.GetAsync(new Uri("/.well-known/oauth-protected-resource", UriKind.Relative));
+
+      Assert.Equal(200, (int)response.StatusCode);
+      Assert.Equal(
+          """{"resource":"https://mcp.test/mcp","authorization_servers":["https://issuer.test"],"scopes_supported":["blok.read","blok.write"],"bearer_methods_supported":["header"]}""",
+          await response.Content.ReadAsStringAsync());
+    }
+  }
 }

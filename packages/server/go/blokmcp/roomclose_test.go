@@ -220,3 +220,33 @@ func TestAClosedRoomDropsAServerThatNeverAnswersTheClose(t *testing.T) {
 		t.Fatal("the read loop kept running")
 	}
 }
+
+// When the server closed first, nothing more will come: close must not
+// wait for a close answer.
+func TestAClosedRoomDoesNotWaitWhenTheServerClosedFirst(t *testing.T) {
+	client, server := net.Pipe()
+	t.Cleanup(func() { _ = client.Close(); _ = server.Close() })
+	room := newLiveRoom("ws://127.0.0.1:1/sync", "doc", nil, func(bool) (string, error) { return "t", nil }, nil)
+	conn := &wsConn{rw: client, reader: bufio.NewReader(client), ended: make(chan struct{})}
+	room.mu.Lock()
+	room.conn = conn
+	generation := room.generation
+	go room.readLoop(generation, conn)
+	echoed := make(chan struct{})
+	go func() {
+		_, _ = server.Write([]byte{0x88, 0x02, 0x11, 0x39}) // 4409
+		head := make([]byte, 2)
+		if _, err := io.ReadFull(server, head); err == nil {
+			close(echoed)
+		}
+		_, _ = io.Copy(io.Discard, server)
+	}()
+	<-echoed
+	// The read loop has the server's close and waits for the lock.
+	room.mu.Unlock()
+	started := time.Now()
+	room.close()
+	if waited := time.Since(started); waited > time.Second {
+		t.Fatalf("close waited %v after the server closed", waited)
+	}
+}

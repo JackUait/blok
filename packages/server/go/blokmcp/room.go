@@ -936,7 +936,7 @@ func (r *liveRoom) close() {
 	// Node's close waits for the server's close frame, so a stop that exits
 	// next never cuts the handshake short. A server that never answers is
 	// dropped after closeWait, as ws's close timer drops it.
-	if conn != nil && conn.ended != nil {
+	if conn != nil && conn.ended != nil && !conn.serverClosed.Load() {
 		select {
 		case <-conn.ended:
 		case <-time.After(closeWait):

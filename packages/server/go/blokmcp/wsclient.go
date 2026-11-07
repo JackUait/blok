@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -29,6 +30,8 @@ type wsConn struct {
 	// the closing handshake included. Nil: no read loop runs.
 	ended   chan struct{}
 	endOnce sync.Once
+	// serverClosed: the server's close frame came; no other will.
+	serverClosed atomic.Bool
 }
 
 func (c *wsConn) markEnded() {
@@ -241,6 +244,7 @@ func (c *wsConn) readMessage() ([]byte, int, error) {
 				code = int(binary.BigEndian.Uint16(payload))
 			}
 			// Echo the close, then the server ends the TCP connection.
+			c.serverClosed.Store(true)
 			c.writeMu.Lock()
 			wasClosed := c.closed
 			c.writeMu.Unlock()

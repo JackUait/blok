@@ -903,7 +903,7 @@
                 "write": false,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 16,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false
@@ -964,7 +964,7 @@
                 "write": false,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 1000,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false
@@ -1025,7 +1025,7 @@
                 "write": false,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 7,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false
@@ -1086,7 +1086,7 @@
                 "write": false,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 3,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false
@@ -1147,7 +1147,7 @@
                 "write": false,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 1,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false
@@ -1208,7 +1208,7 @@
                 "write": false,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 9007199254740992,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false
@@ -1271,7 +1271,7 @@
                 "write": false,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false

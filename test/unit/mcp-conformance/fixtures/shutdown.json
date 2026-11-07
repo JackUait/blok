@@ -68,7 +68,7 @@
                 "write": true,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false
@@ -119,7 +119,7 @@
                 "write": true,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false
@@ -335,7 +335,7 @@
                 "write": true,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false
@@ -499,7 +499,7 @@
                 "write": true,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false,
@@ -688,7 +688,7 @@
                 "write": true,
                 "durability": "saved-on-execute",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "ace641df",
+                "contractRevision": "${contractRevision}",
                 "exists": true
               },
               "isError": false

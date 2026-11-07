@@ -124,6 +124,11 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
     {
       return HostFailure($"The sync server could not be reached: {error.Message}", true);
     }
+    // Node's ask(): a failed mint is a plain error, named after "The version history failed: ".
+    catch (McpHostError error)
+    {
+      return HostFailure(error.Message, false);
+    }
 
     return response.Status switch
     {
@@ -185,6 +190,10 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
     catch (McpBodyException error)
     {
       return (null, new JsonObject { ["failed"] = $"The sync server could not be reached: {error.Message}" });
+    }
+    catch (McpHostError error)
+    {
+      return (null, new JsonObject { ["failed"] = error.Message });
     }
     if (notFoundIsNull && response.Status == 404)
     {

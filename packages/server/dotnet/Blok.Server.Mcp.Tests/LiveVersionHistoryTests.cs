@@ -118,6 +118,26 @@ public sealed class LiveVersionHistoryTests
     Assert.True(restore?["retryable"]?.GetValue<bool>());
   }
 
+  // Node's ask() puts a refused mint's message after "The version history failed: ",
+  // and a refusal says nothing of a retry. No request goes out without a ticket.
+  [Fact]
+  public async Task ARefusedTicketIsAFailedHistoryInNodesWords()
+  {
+    using var server = new Server((_, _) => (200, Versions));
+    using var http = new McpHttpCaller();
+    var history = new LiveVersionHistory(http, server.RoomUrl, null, _ =>
+        throw Blok.Server.Mcp.Core.McpHostError.Surface("FORBIDDEN", "The host did not grant this document to this agent."));
+
+    var loaded = await history.LoadAsync(Batch("history.versions", []), CancellationToken.None);
+    var restore = await history.RestoreAsync("L1:0", null, CancellationToken.None);
+
+    Assert.Equal("""{"failed":"The host did not grant this document to this agent."}""", loaded?.ToJsonString());
+    Assert.Equal(
+        """{"code":"TOOL_ACTION_FAILED","message":"The version history failed: The host did not grant this document to this agent.","retryable":false,"commandIndex":0,"path":"/commands/0/args"}""",
+        restore?.ToJsonString());
+    Assert.Empty(server.Requests);
+  }
+
   private static JsonObject Batch(string name, JsonObject args) =>
       new() { ["commands"] = new JsonArray(new JsonObject { ["name"] = name, ["args"] = args }) };
 

@@ -122,14 +122,17 @@ func (s *Server) dispatchStep(ctx context.Context, call *toolCall, signal contex
 	case "blok_open":
 		return s.openDocument(ctx, step, call.caller, signal)
 	case "blok_close":
-		if err := s.onHandle(ctx, call.caller, step.Handle, false, func(session) error { return nil }); err != nil {
-			return nil, err
-		}
+		// A refused check still closes, so the handle does not keep its
+		// --max-handles place. An unknown handle fails again in remove.
+		refusal := s.onHandle(ctx, call.caller, step.Handle, false, func(session) error { return nil })
 		sess, err := s.handles.remove(step.Handle, call.caller.principal)
 		if err != nil {
 			return nil, err
 		}
 		unsaved, lags := sess.close()
+		if refusal != nil {
+			return nil, refusal
+		}
 		answer, _ := marshal(struct {
 			Closed         bool `json:"closed"`
 			UnsavedBatches int  `json:"unsavedBatches"`

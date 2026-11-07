@@ -52,8 +52,19 @@ fn list_tools(host: &str, origin: Option<&str>) -> http::Request<Full<Bytes>> {
         .unwrap()
 }
 
+const LOOPBACK: &str = "127.0.0.1:50000";
+const REMOTE: &str = "203.0.113.9:50000";
+
 async fn status(http: &blok_mcp::http::EmbeddedHttp, request: http::Request<Full<Bytes>>) -> u16 {
-    let answer = http.handle(request).await;
+    status_from(http, LOOPBACK, request).await
+}
+
+async fn status_from(
+    http: &blok_mcp::http::EmbeddedHttp,
+    peer: &str,
+    request: http::Request<Full<Bytes>>,
+) -> u16 {
+    let answer = http.handle(peer.parse().unwrap(), request).await;
     let status = answer.status().as_u16();
     let _ = answer.into_body().collect().await;
     status
@@ -124,7 +135,10 @@ async fn oauth_options_refuse_a_caller_with_no_token() {
     .await
     .unwrap();
     let http = embedded.http(None);
-    let answer = http.handle(list_tools("localhost:4000", None)).await;
+    // OAuth is the opt-in for remote callers: they get the bearer gate.
+    let answer = http
+        .handle(REMOTE.parse().unwrap(), list_tools("localhost:4000", None))
+        .await;
     assert_eq!(answer.status().as_u16(), 401);
     let challenge = answer
         .headers()
@@ -135,5 +149,26 @@ async fn oauth_options_refuse_a_caller_with_no_token() {
     assert!(
         challenge.starts_with("Bearer error=\"invalid_token\""),
         "{challenge}"
+    );
+}
+
+// Node binds loopback itself; a Host header proves nothing about the caller.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_remote_caller_naming_localhost_is_refused_without_an_opt_in() {
+    let embedded = embedded().await;
+    let http = embedded.http(None);
+    assert_eq!(
+        status_from(&http, REMOTE, list_tools("localhost:4000", None)).await,
+        403
+    );
+    assert_eq!(
+        status_from(&http, "[::1]:50000", list_tools("localhost:4000", None)).await,
+        200
+    );
+    // An app that names its own hosts serves remote callers.
+    let public = embedded.http(Some(vec!["app.example.com".to_owned()]));
+    assert_eq!(
+        status_from(&public, REMOTE, list_tools("app.example.com", None)).await,
+        200
     );
 }

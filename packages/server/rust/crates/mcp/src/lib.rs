@@ -165,6 +165,8 @@ impl Embedded {
 
     /// blok-mcp for the host's own HTTP server, with Node's Origin and Host
     /// checks. `hosts`: the app's own host names; None takes loopback only.
+    /// Without OAuth or `hosts`, only loopback peers are served; behind a
+    /// proxy, set OAuth or name the hosts.
     pub fn http(&self, hosts: Option<Vec<String>>) -> http::EmbeddedHttp {
         http::EmbeddedHttp::new(
             self.handler(true),

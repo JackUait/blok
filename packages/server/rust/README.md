@@ -33,6 +33,8 @@ One crate per Go package, named after its Go path:
 
 A host that embeds `blok-mcp` with its own uploader (`blok_mcp::uploads::Uploader`) returns `UploadError::Failed` for its own errors: the full message goes to stderr, and the agent sees only "The upload failed.". Return `UploadError::Agent` for words meant for the agent, as Node's `agentMessage`.
 
+A host that serves `blok-mcp` on its own HTTP server uses `Embedded::http` and passes each request's peer address to `handle`. With no OAuth and no host names of its own, only loopback peers are served, as Node binds loopback itself. Behind a proxy every peer is the proxy, so set OAuth or name the app's hosts.
+
 Each Go `foo_test.go` has a Rust twin: a `#[cfg(test)] mod` in `foo.rs`, or `tests/foo.rs`. Keep the Go test names in snake case, so the two lists can be compared.
 
 ## Rules

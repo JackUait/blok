@@ -64,6 +64,11 @@ pub fn loopback_host(host: Option<&str>, port: u16) -> bool {
 /// blok-mcp behind an embedding host's own HTTP server, with the checks
 /// Node's front door makes: a browser Origin must be a loopback page, and
 /// the Host a loopback name (any port) or one of the app's own names.
+///
+/// With neither OAuth nor the app's own host names, only a loopback peer is
+/// served, as Node binds loopback itself: a Host header proves nothing about
+/// the caller. A host behind a proxy (the peer is the proxy) must set OAuth
+/// or name its hosts.
 pub struct EmbeddedHttp {
     service: Service,
     hosts: Option<Vec<String>>,
@@ -110,13 +115,17 @@ impl EmbeddedHttp {
         }
     }
 
-    /// One request: 403 for a foreign Origin or Host, else rmcp's answer.
+    /// One request from `peer`, the socket address that sent it: 403 for a
+    /// foreign Origin or Host, or a remote peer with no opt-in; else rmcp's answer.
     pub async fn handle(
         &self,
+        peer: SocketAddr,
         request: http::Request<Full<Bytes>>,
     ) -> http::Response<http_body_util::combinators::BoxBody<Bytes, std::convert::Infallible>> {
         let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok());
-        if header("origin").is_some_and(|o| !loopback_origin(o))
+        let opted_in = self.oauth.is_some() || self.hosts.is_some();
+        if (!opted_in && !is_loopback(peer.ip()))
+            || header("origin").is_some_and(|o| !loopback_origin(o))
             || !self.host_allowed(header("host"))
         {
             let mut refused = http::Response::new(
@@ -161,6 +170,16 @@ impl EmbeddedHttp {
         let mut request = request;
         request.extensions_mut().insert(identity);
         self.service.handle(request).await
+    }
+}
+
+/// A loopback address, IPv4-mapped IPv6 too.
+fn is_loopback(ip: std::net::IpAddr) -> bool {
+    match ip {
+        std::net::IpAddr::V4(v4) => v4.is_loopback(),
+        std::net::IpAddr::V6(v6) => {
+            v6.is_loopback() || v6.to_ipv4_mapped().is_some_and(|v4| v4.is_loopback())
+        }
     }
 }
 

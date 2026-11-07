@@ -112,6 +112,17 @@ impl Uploads {
                 let Some(root) = &self.root else {
                     return thrown("This host reads no local files.".to_owned());
                 };
+                // Only the path of the upload command the bundle checked.
+                match upload_args(batch, None) {
+                    Ok(args)
+                        if args.get("path").and_then(Value::as_str)
+                            == Some(text("path").as_str()) => {}
+                    _ => {
+                        return thrown(
+                            "The upload read is not the one this batch makes.".to_owned(),
+                        );
+                    }
+                }
                 let max = need.get("maxBytes").and_then(Value::as_u64).unwrap_or(0);
                 match read_local(root, &text("path"), max) {
                     Ok((bytes, name)) => {
@@ -122,15 +133,33 @@ impl Uploads {
                 }
             }
             Some("uploadByFile") => {
-                // The bundle checked the data already; a read file's bytes come first.
-                let bytes = read.take().unwrap_or_else(|| {
-                    let data = batch
-                        .pointer("/commands/0/args/data")
-                        .and_then(Value::as_str)
-                        .unwrap_or_default();
-                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, data)
-                        .unwrap_or_default()
-                });
+                // A read file's bytes (the reader bounds them by maxBytes), or the
+                // data of the one upload command the bundle checked, at the size
+                // it checked.
+                let bytes = match read.take() {
+                    Some(bytes) => bytes,
+                    None => {
+                        let data = match upload_args(batch, Some(&ctx.tool)) {
+                            Ok(args) => {
+                                args.get("data").and_then(Value::as_str).unwrap_or_default()
+                            }
+                            Err(message) => return thrown(message),
+                        };
+                        let Ok(bytes) = base64::Engine::decode(
+                            &base64::engine::general_purpose::STANDARD,
+                            data,
+                        ) else {
+                            return thrown("The upload's data is not base64.".to_owned());
+                        };
+                        if need.get("size").and_then(Value::as_u64) != Some(bytes.len() as u64) {
+                            return thrown(
+                                "The upload's bytes are not the size the batch was checked at."
+                                    .to_owned(),
+                            );
+                        }
+                        bytes
+                    }
+                };
                 let file = UploadFile {
                     name: text("name"),
                     mime_type: text("type"),
@@ -151,6 +180,29 @@ impl Uploads {
             },
             _ => thrown("The bundle asked for an unknown upload call.".to_owned()),
         }
+    }
+}
+
+/// The args of the batch's one command, when it is `<tool>.uploadFile`:
+/// an upload is the only command in its batch, as the bundle requires.
+/// A read names no tool (`None`): any upload command then.
+fn upload_args<'a>(batch: &'a Value, tool: Option<&str>) -> Result<&'a Value, String> {
+    let commands = batch.get("commands").and_then(Value::as_array);
+    let named = |command: &Value| {
+        let name = command
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        match tool {
+            Some(tool) => name == format!("{tool}.uploadFile"),
+            None => name.ends_with(".uploadFile"),
+        }
+    };
+    match commands.map(Vec::as_slice) {
+        Some([command]) if named(command) => command
+            .get("args")
+            .ok_or_else(|| "The upload command has no args.".to_owned()),
+        _ => Err("The upload is not the one command of this batch.".to_owned()),
     }
 }
 
@@ -240,4 +292,82 @@ pub fn read_local(root: &Path, path: &str, max_bytes: u64) -> Result<(Vec<u8>, S
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
     Ok((bytes, name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[derive(Default)]
+    struct Counting(AtomicUsize);
+
+    impl Uploader for Counting {
+        fn upload_by_file(
+            &self,
+            _file: UploadFile,
+            _ctx: UploadContext,
+        ) -> BoxFuture<'_, Result<Uploaded, String>> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async {
+                Ok(Uploaded {
+                    url: "https://cdn.test/x".to_owned(),
+                    file_name: None,
+                    size: None,
+                    mime_type: None,
+                })
+            })
+        }
+    }
+
+    fn uploads() -> (Arc<Counting>, Uploads) {
+        let counting = Arc::new(Counting::default());
+        (
+            counting.clone(),
+            Uploads {
+                uploader: counting,
+                root: None,
+                limits: Value::Null,
+            },
+        )
+    }
+
+    fn need(size: usize) -> Value {
+        json!({ "call": "uploadByFile", "name": "a.png", "type": "image/png", "size": size, "kind": "image", "tool": "image" })
+    }
+
+    #[tokio::test]
+    async fn uploads_only_the_bytes_of_the_upload_command_the_bundle_checked() {
+        let (counting, uploads) = uploads();
+        let two = json!({ "commands": [
+            { "name": "doc.setTitle", "args": { "title": "T", "data": "QUJD" } },
+            { "name": "image.uploadFile", "args": { "data": "QUJD", "fileName": "a.png" } },
+        ] });
+        let outcome = uploads.answer(&need(3), &two, &mut None).await;
+        assert!(outcome.get("error").is_some(), "{outcome}");
+        assert_eq!(counting.0.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn bad_base64_or_another_size_is_an_error_not_empty_bytes() {
+        let (counting, uploads) = uploads();
+        let batch = |data: &str| json!({ "commands": [{ "name": "image.uploadFile", "args": { "data": data, "fileName": "a.png" } }] });
+        assert!(
+            uploads
+                .answer(&need(3), &batch("Q!JD"), &mut None)
+                .await
+                .get("error")
+                .is_some()
+        );
+        assert!(
+            uploads
+                .answer(&need(9), &batch("QUJD"), &mut None)
+                .await
+                .get("error")
+                .is_some()
+        );
+        assert_eq!(counting.0.load(Ordering::SeqCst), 0);
+        let fine = uploads.answer(&need(3), &batch("QUJD"), &mut None).await;
+        assert!(fine.get("value").is_some(), "{fine}");
+    }
 }

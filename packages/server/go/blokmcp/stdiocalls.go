@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"sync"
 	"sync/atomic"
@@ -32,7 +33,11 @@ type callTracker struct {
 	// reused id runs under an alias (alias to the client's id), and
 	// latest is the id a cancel of the client's id reaches, as Node's
 	// SDK keeps only the newest request per id.
-	inUse   map[jsonrpc.ID]int
+	// calls are the running requests that are tools/call. Once stdin
+	// ended, their answers are dropped, as Node's transport closes there.
+	calls     map[jsonrpc.ID]bool
+	stdinDone bool
+	inUse     map[jsonrpc.ID]int
 	aliases map[jsonrpc.ID]jsonrpc.ID
 	latest  map[jsonrpc.ID]jsonrpc.ID
 }
@@ -104,7 +109,7 @@ func (t *callTracker) endedLocked(id jsonrpc.ID) {
 func newCallTracker() *callTracker {
 	tracker := &callTracker{running: map[jsonrpc.ID]bool{}, cancelled: map[jsonrpc.ID]bool{},
 		lines: newHandleLines(), booked: map[jsonrpc.ID][]string{}, open: map[jsonrpc.ID]int{},
-		inUse: map[jsonrpc.ID]int{}, aliases: map[jsonrpc.ID]jsonrpc.ID{}, latest: map[jsonrpc.ID]jsonrpc.ID{}}
+		calls: map[jsonrpc.ID]bool{}, inUse: map[jsonrpc.ID]int{}, aliases: map[jsonrpc.ID]jsonrpc.ID{}, latest: map[jsonrpc.ID]jsonrpc.ID{}}
 	tracker.idle = sync.NewCond(&tracker.mu)
 	return tracker
 }
@@ -124,6 +129,9 @@ func (t *callTracker) read(message jsonrpc.Message) {
 	defer t.mu.Unlock()
 	if request.IsCall() {
 		t.running[request.ID] = true
+		if request.Method == "tools/call" {
+			t.calls[request.ID] = true
+		}
 		return
 	}
 	if request.Method != "notifications/cancelled" {
@@ -217,7 +225,25 @@ func (t *callTracker) answer(message jsonrpc.Message) bool {
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return !t.closed && !t.cancelled[response.ID]
+	return !t.closed && !t.cancelled[response.ID] && !(t.stdinDone && t.calls[response.ID])
+}
+
+// stdinEnded waits, up to the deadline, for the answers of the requests
+// already read that are not tools/call: Node answers those before it sees
+// stdin end, and its tools/call answers come after and are dropped.
+func (t *callTracker) stdinEnded(deadline time.Time) {
+	timer := time.AfterFunc(time.Until(deadline), func() {
+		t.mu.Lock()
+		t.idle.Broadcast()
+		t.mu.Unlock()
+	})
+	defer timer.Stop()
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.stdinDone = true
+	for len(t.running) > len(t.calls) && time.Now().Before(deadline) {
+		t.idle.Wait()
+	}
 }
 
 // answered ends a request once its answer is written or dropped.
@@ -230,6 +256,7 @@ func (t *callTracker) answered(message jsonrpc.Message) {
 	defer t.mu.Unlock()
 	delete(t.running, response.ID)
 	delete(t.cancelled, response.ID)
+	delete(t.calls, response.ID)
 	t.endedLocked(response.ID)
 	client, aliased := t.aliases[response.ID]
 	if !aliased {
@@ -242,9 +269,7 @@ func (t *callTracker) answered(message jsonrpc.Message) {
 			delete(t.latest, client)
 		}
 	}
-	if len(t.running) == 0 {
-		t.idle.Broadcast()
-	}
+	t.idle.Broadcast()
 }
 
 // waitIdle waits until no request runs, or until the deadline.
@@ -284,6 +309,8 @@ func (c trackedConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
 	message, err := c.Connection.Read(ctx)
 	if err == nil {
 		c.tracker.read(message)
+	} else if errors.Is(err, io.EOF) {
+		c.tracker.stdinEnded(time.Now().Add(stopDrain))
 	}
 	return message, err
 }

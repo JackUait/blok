@@ -2,13 +2,18 @@ package blokmcp
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -264,5 +269,79 @@ func TestStdioClosesPastTenMiBUnread(t *testing.T) {
 			t.Fatalf("%d bytes: ServeStdio did not end with stdin", c.size)
 		}
 		server.Close()
+	}
+}
+
+type closingWriter struct {
+	mu  sync.Mutex
+	out bytes.Buffer
+}
+
+func (w *closingWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.out.Write(p)
+}
+func (w *closingWriter) Close() error { return nil }
+
+// When stdin ends, Node answers what it already read and answers at once,
+// and drops a tools/call still running (measured: ids 0 and 2, not 1).
+func TestStdinEndAnswersWhatWasReadButNotARunningCall(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(dir, "doc.json"), []byte(`{"blocks":[]}`), 0o644)
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: dir}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	in := io.NopCloser(strings.NewReader(strings.Join([]string{
+		`{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}`,
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"doc"}}}`,
+		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`,
+	}, "\n") + "\n"))
+	out := &closingWriter{}
+	done := make(chan error, 1)
+	go func() { done <- server.ServeStdio(context.Background(), in, out) }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("ServeStdio did not return")
+	}
+	time.Sleep(300 * time.Millisecond)
+	out.mu.Lock()
+	written := out.out.String()
+	out.mu.Unlock()
+	var ids []string
+	for _, line := range strings.Split(strings.TrimSpace(written), "\n") {
+		var answer struct {
+			ID json.RawMessage `json:"id"`
+		}
+		_ = json.Unmarshal([]byte(line), &answer)
+		ids = append(ids, string(answer.ID))
+	}
+	sort.Strings(ids)
+	if strings.Join(ids, ",") != "0,2" {
+		t.Fatalf("answered ids %v", ids)
+	}
+}
+
+// Node answers a tools/list sent with no params; it must not crash here.
+func TestAToolsListWithNoParamsIsAnswered(t *testing.T) {
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	send, reader, _ := stdioClient(t, server, ctx)
+	send(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
+	line, err := reader.ReadString('\n')
+	if err != nil || !strings.Contains(line, `"id":2`) || !strings.Contains(line, `"tools":[`) {
+		t.Fatalf("%q %v", line, err)
 	}
 }

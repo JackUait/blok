@@ -2,9 +2,13 @@
 package jsruntime
 
 import (
+	"crypto/rand"
 	_ "embed"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -83,8 +87,11 @@ const maxJSONDepth = 64
 
 // jsonParseWrapper takes the engine's JSON.parse and a scan that answers the
 // UTF-16 index of the first bracket nested past the cap, or -1. A method, so
-// it is named "parse", has length 2, and is no constructor.
-const jsonParseWrapper = `(function (parse, tooDeepAt, SyntaxErrorType) {
+// it is named "parse", has length 2, and is no constructor. overflowing
+// answers the text with each number past float64 as a marker string, or ""
+// when there is none: goja's JSON.parse refuses such a number, which Node's
+// reads as Infinity. The markers are random, so no text holds them.
+const jsonParseWrapper = `(function (parse, tooDeepAt, SyntaxErrorType, overflowing, plus, minus) {
   const wrapped = {
     parse(text, reviver) {
       const source = ` + "`${text}`" + `;
@@ -92,7 +99,14 @@ const jsonParseWrapper = `(function (parse, tooDeepAt, SyntaxErrorType) {
       if (at >= 0) {
         throw new SyntaxErrorType('Max. depth level of JSON reached at position ' + at);
       }
-      return parse(source, reviver);
+      const marked = overflowing(source);
+      if (marked === '') {
+        return parse(source, reviver);
+      }
+      return parse(marked, function (key, value) {
+        const read = value === plus ? Infinity : value === minus ? -Infinity : value;
+        return typeof reviver === 'function' ? reviver.call(this, key, read) : read;
+      });
     },
   }.parse;
   Object.defineProperty(JSON, 'parse', { value: wrapped, writable: true, enumerable: false, configurable: true });
@@ -107,10 +121,61 @@ func installJSONParseDepth(vm *goja.Runtime) {
 	tooDeep := func(call goja.FunctionCall) goja.Value {
 		return vm.ToValue(jsonTooDeepAt(call.Argument(0).String()))
 	}
+	random := make([]byte, 16)
+	_, _ = rand.Read(random)
+	plus, minus := "blok-infinity-"+hex.EncodeToString(random), "blok-minus-infinity-"+hex.EncodeToString(random)
+	overflowing := func(call goja.FunctionCall) goja.Value {
+		return vm.ToValue(markOverflows(call.Argument(0).String(), plus, minus))
+	}
 	parse := vm.Get("JSON").ToObject(vm).Get("parse")
-	if _, err := call(goja.Undefined(), parse, vm.ToValue(tooDeep), vm.Get("SyntaxError")); err != nil {
+	if _, err := call(goja.Undefined(), parse, vm.ToValue(tooDeep), vm.Get("SyntaxError"), vm.ToValue(overflowing), vm.ToValue(plus), vm.ToValue(minus)); err != nil {
 		panic(err)
 	}
+}
+
+// markOverflows writes each number past float64 outside strings as the
+// JSON string plus or minus; "" when there is none.
+func markOverflows(text, plus, minus string) string {
+	var out strings.Builder
+	last := 0
+	inString := false
+	for i := 0; i < len(text); i++ {
+		c := text[i]
+		if inString {
+			if c == '\\' {
+				i++
+			} else if c == '"' {
+				inString = false
+			}
+			continue
+		}
+		if c == '"' {
+			inString = true
+			continue
+		}
+		if c != '-' && (c < '0' || c > '9') {
+			continue
+		}
+		end := i + 1
+		for end < len(text) && strings.IndexByte("0123456789.eE+-", text[end]) >= 0 {
+			end++
+		}
+		if value, err := strconv.ParseFloat(text[i:end], 64); err != nil && math.IsInf(value, 0) {
+			out.WriteString(text[last:i])
+			if value > 0 {
+				out.WriteString(`"` + plus + `"`)
+			} else {
+				out.WriteString(`"` + minus + `"`)
+			}
+			last = end
+		}
+		i = end - 1
+	}
+	if last == 0 {
+		return ""
+	}
+	out.WriteString(text[last:])
+	return out.String()
 }
 
 // jsonTooDeepAt scans brackets outside strings. It does not check the rest

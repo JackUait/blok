@@ -81,7 +81,7 @@ func (b bundle) call(ctx context.Context, op string, input any, out any) (json.R
 	if err != nil {
 		return nil, err
 	}
-	answer, err := b.runtime.Invoke(ctx, op, string(finiteJSON(written)), nil)
+	answer, err := b.runtime.Invoke(ctx, op, string(engineJSON(op, written)), nil)
 	if err != nil {
 		// The engine's stack means nothing to a caller: a limit is named.
 		var failure *jsruntime.Failure

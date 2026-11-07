@@ -1,6 +1,8 @@
 package blokmcp
 
 import (
+	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -58,5 +60,39 @@ func TestADocumentHoldingAnOverflowingNumberOpensAndSavesNull(t *testing.T) {
 	}
 	if !strings.Contains(put, `"n":null`) {
 		t.Fatalf("endpoint saved: %s", put)
+	}
+}
+
+// JSON.parse reads 1e400 in the arguments as Infinity: a list limit takes
+// it, and a read view refuses it as not finite.
+func TestAnOverflowingArgumentIsInfinityAsInNode(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(dir, "doc.json"), []byte(`{"blocks":[]}`), 0o644)
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: dir}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx := context.Background()
+	who, err := server.actorFor(ctx, "alice", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, limit := range []string{"1e400", "-1e400"} {
+		listed, err := server.dispatch(ctx, &toolCall{name: "blok_list_documents", arguments: json.RawMessage(`{"limit":` + limit + `}`), caller: who})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := structured(t, listed.answer)["documents"]; !ok {
+			t.Errorf("limit %s: %s", limit, listed.answer)
+		}
+	}
+	opened, err := server.dispatch(ctx, &toolCall{name: "blok_open", arguments: json.RawMessage(`{"documentId":"doc","view":{"limit":1e400}}`), caller: who})
+	if err != nil {
+		t.Fatal(err)
+	}
+	failure, _ := structured(t, opened.answer)["error"].(map[string]any)
+	if failure["message"] != "doc.read: must be a finite number" {
+		t.Errorf("view limit: %s", opened.answer)
 	}
 }

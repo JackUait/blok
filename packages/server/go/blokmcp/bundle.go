@@ -36,7 +36,41 @@ func marshal(value any) ([]byte, error) {
 	if err := encoder.Encode(value); err != nil {
 		return nil, err
 	}
-	return bytes.TrimRight(buffer.Bytes(), "\n"), nil
+	return rawLineSeparators(bytes.TrimRight(buffer.Bytes(), "\n")), nil
+}
+
+// rawLineSeparators turns the \u2028 and \u2029 escapes Go's encoder
+// always writes back into the characters, as JSON.stringify writes them. An
+// escape whose backslash is itself escaped is text and stays.
+func rawLineSeparators(written []byte) []byte {
+	if !bytes.Contains(written, []byte(`\u202`)) {
+		return written
+	}
+	out := make([]byte, 0, len(written))
+	for i := 0; i < len(written); i++ {
+		if written[i] != '\\' {
+			out = append(out, written[i])
+			continue
+		}
+		if i+5 < len(written) && string(written[i+1:i+5]) == "u202" && (written[i+5] == '8' || written[i+5] == '9') {
+			if written[i+5] == '8' {
+				out = append(out, "\u2028"...)
+			} else {
+				out = append(out, "\u2029"...)
+			}
+			i += 5
+			continue
+		}
+		// Any other escape is two bytes or \uXXXX; copy its backslash and
+		// the next byte together so an escaped backslash is never read as
+		// the start of an escape.
+		out = append(out, written[i])
+		if i+1 < len(written) {
+			out = append(out, written[i+1])
+			i++
+		}
+	}
+	return out
 }
 
 // call runs op on input and decodes the answer into out (a pointer), unless

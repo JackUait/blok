@@ -502,7 +502,7 @@ func (l *liveSession) pageAction(ctx context.Context, call *callContext, input m
 		// had not acknowledged it.
 		l.afterBatch(result)
 		answer, err := l.server.executeAnswer(ctx, map[string]any{"result": result,
-			"delivery": map[string]any{"durable": false, "pending": true, "serverSequence": nil, "savedVersion": nil}})
+			"delivery": delivery{Durable: false, Pending: true, ServerSequence: nil, SavedVersion: nil}})
 		return &executed{answer: answer}, err
 	}
 	return l.deliver(ctx, liveExecuteOutput{Result: result, Writes: true}, mark)
@@ -542,11 +542,11 @@ func (l *liveSession) deliver(ctx context.Context, out liveExecuteOutput, mark i
 			seq = *sequence
 		}
 		answer, err := l.server.executeAnswer(ctx, map[string]any{"result": out.Result,
-			"delivery": map[string]any{"durable": true, "pending": false, "serverSequence": seq, "savedVersion": nil}})
+			"delivery": delivery{Durable: true, Pending: false, ServerSequence: seq, SavedVersion: nil}})
 		return &executed{answer: answer}, err
 	case "timeout":
 		answer, err := l.server.executeAnswer(ctx, map[string]any{"result": out.Result,
-			"delivery": map[string]any{"durable": false, "pending": true, "serverSequence": nil, "savedVersion": nil}})
+			"delivery": delivery{Durable: false, Pending: true, ServerSequence: nil, SavedVersion: nil}})
 		return &executed{answer: answer}, err
 	}
 	if reason == relineageReason {

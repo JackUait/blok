@@ -169,7 +169,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	st.version = saved
 	answer, err := st.server.executeAnswer(ctx, map[string]any{
 		"result":   out.Result,
-		"delivery": map[string]any{"durable": true, "pending": false, "serverSequence": nil, "savedVersion": saved},
+		"delivery": delivery{Durable: true, Pending: false, ServerSequence: nil, SavedVersion: saved},
 	})
 	return &executed{answer: answer}, err
 }
@@ -195,7 +195,7 @@ func (st *storedSession) pageAction(ctx context.Context, call *callContext, inpu
 		st.history = withOtherStep(st.history, parsed.Revision)
 	}
 	if page.pending {
-		answerInput["delivery"] = map[string]any{"durable": false, "pending": true, "serverSequence": nil, "savedVersion": nil}
+		answerInput["delivery"] = delivery{Durable: false, Pending: true, ServerSequence: nil, SavedVersion: nil}
 	}
 	answer, err := st.server.executeAnswer(ctx, answerInput)
 	return &executed{answer: answer}, err
@@ -228,4 +228,12 @@ func isBatchEnvelope(batch json.RawMessage) bool {
 		}
 	}
 	return true
+}
+
+// delivery is an answer's delivery, its keys in Node's order.
+type delivery struct {
+	Durable        bool `json:"durable"`
+	Pending        bool `json:"pending"`
+	ServerSequence any  `json:"serverSequence"`
+	SavedVersion   any  `json:"savedVersion"`
 }

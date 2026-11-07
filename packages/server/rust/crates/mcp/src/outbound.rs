@@ -18,9 +18,14 @@ pub struct Answer {
 }
 
 /// The call failed before a full answer: refused, unreachable, timed out,
-/// or the connection dropped mid-body.
+/// or the connection dropped mid-body; or the answer passed MAX_ANSWER.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Unreachable;
+pub struct Unreachable {
+    pub too_large: bool,
+}
+
+const FAILED: Unreachable = Unreachable { too_large: false };
+const TOO_LARGE: Unreachable = Unreachable { too_large: true };
 
 #[derive(Clone)]
 pub struct Outbound {
@@ -33,8 +38,9 @@ impl Default for Outbound {
     }
 }
 
-// Answers above this are refused, so a broken host cannot exhaust memory.
-const MAX_ANSWER: usize = 64 << 20;
+/// Answers above this are refused, so a broken host cannot exhaust memory.
+/// A document this big is past the engine's memory budget anyway.
+pub const MAX_ANSWER: usize = 64 << 20;
 
 impl Outbound {
     pub fn new() -> Outbound {
@@ -52,12 +58,10 @@ impl Outbound {
         body: Option<&[u8]>,
         timeout: Duration,
     ) -> Result<Answer, Unreachable> {
-        let uri = parse_absolute_uri(url)
-            .filter(Uri::is_http)
-            .ok_or(Unreachable)?;
+        let uri = parse_absolute_uri(url).filter(Uri::is_http).ok_or(FAILED)?;
         tokio::time::timeout(timeout, self.exchange(method, &uri, headers, body))
             .await
-            .map_err(|_| Unreachable)?
+            .map_err(|_| FAILED)?
     }
 
     async fn exchange(
@@ -68,6 +72,9 @@ impl Outbound {
         body: Option<&[u8]>,
     ) -> Result<Answer, Unreachable> {
         let host = host_header(uri);
+        let mut headers = headers;
+        // Node's fetch asks for these and decodes them.
+        headers.push(("Accept-Encoding".to_owned(), "gzip, deflate".to_owned()));
         let request = Request {
             method,
             url: uri,
@@ -75,26 +82,26 @@ impl Outbound {
             headers,
             body: body.map_or(RequestBody::None, RequestBody::Bytes),
         };
-        let mut response = self.client.send(request).await.map_err(|_| Unreachable)?;
+        let mut response = self.client.send(request).await.map_err(|_| FAILED)?;
         let mut out = Vec::new();
         let mut buf = vec![0u8; 16 << 10];
         loop {
-            let n = response
-                .body
-                .read(&mut buf)
-                .await
-                .map_err(|_| Unreachable)?;
+            let n = response.body.read(&mut buf).await.map_err(|_| FAILED)?;
             if n == 0 {
                 break;
             }
             out.extend_from_slice(&buf[..n]);
             if out.len() > MAX_ANSWER {
-                return Err(Unreachable);
+                return Err(TOO_LARGE);
             }
         }
+        let encoding = response
+            .headers
+            .get("Content-Encoding")
+            .map(|v| String::from_utf8_lossy(v).to_ascii_lowercase());
         Ok(Answer {
             status: response.status,
-            body: out,
+            body: decoded(encoding.as_deref(), out)?,
         })
     }
 }
@@ -116,9 +123,7 @@ impl Outbound {
         headers: Vec<(String, String)>,
         timeout: Duration,
     ) -> Result<Upgraded, Unreachable> {
-        let uri = parse_absolute_uri(url)
-            .filter(Uri::is_http)
-            .ok_or(Unreachable)?;
+        let uri = parse_absolute_uri(url).filter(Uri::is_http).ok_or(FAILED)?;
         let host = host_header(&uri);
         let request = Request {
             method: "GET",
@@ -129,14 +134,45 @@ impl Outbound {
         };
         let response = tokio::time::timeout(timeout, self.client.send(request))
             .await
-            .map_err(|_| Unreachable)?
-            .map_err(|_| Unreachable)?;
+            .map_err(|_| FAILED)?
+            .map_err(|_| FAILED)?;
         Ok(Upgraded {
             status: response.status,
             headers: response.headers,
             stream: response.body.into_inner(),
         })
     }
+}
+
+/// The body with each Content-Encoding undone, last applied first, as
+/// undici does; a coding it does not know leaves the body as sent.
+fn decoded(encoding: Option<&str>, body: Vec<u8>) -> Result<Vec<u8>, Unreachable> {
+    use std::io::Read;
+    let Some(encoding) = encoding else {
+        return Ok(body);
+    };
+    let mut body = body;
+    for coding in encoding.split(',').map(str::trim).rev() {
+        let reader: Box<dyn Read + '_> = match coding {
+            "gzip" | "x-gzip" => Box::new(flate2::read::MultiGzDecoder::new(&body[..])),
+            // undici reads zlib-wrapped and raw deflate alike.
+            "deflate" if body.first().is_some_and(|b| b & 0x0f == 8) => {
+                Box::new(flate2::read::ZlibDecoder::new(&body[..]))
+            }
+            "deflate" => Box::new(flate2::read::DeflateDecoder::new(&body[..])),
+            _ => return Ok(body),
+        };
+        let mut out = Vec::new();
+        reader
+            .take(MAX_ANSWER as u64 + 1)
+            .read_to_end(&mut out)
+            .map_err(|_| FAILED)?;
+        if out.len() > MAX_ANSWER {
+            return Err(TOO_LARGE);
+        }
+        body = out;
+    }
+    Ok(body)
 }
 
 fn host_header(url: &Uri) -> String {

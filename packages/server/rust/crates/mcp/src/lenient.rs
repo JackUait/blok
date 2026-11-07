@@ -44,6 +44,13 @@ pub fn mend(text: &str) -> Mended {
     }
 }
 
+/// `text` as serde_json can read what JSON.parse reads: lone surrogates as
+/// U+FFFD, numbers past f64 as the stand-in the engine reads back.
+pub fn as_json_parse_reads(text: &str) -> String {
+    let text = replace_lone_surrogates(text).unwrap_or_else(|| text.to_owned());
+    replace_infinities(&text).unwrap_or(text)
+}
+
 /// A quick scan, so most messages are not parsed twice: a `\uD...`
 /// escape, nesting at serde_json's limit, or a number that may pass f64.
 fn may_need_mending(text: &str) -> bool {

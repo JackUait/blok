@@ -30,6 +30,7 @@ blok-jsruntime = { path = "../jsruntime" }
 blok-yjs = { path = "../yjs" }
 blok-outbound = { path = "../outbound" }
 bytes = "1"
+flate2 = "1"
 http = "1"
 http-body-util = "0.1"
 ring = "0.17"

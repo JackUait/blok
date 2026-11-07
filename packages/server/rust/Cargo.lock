@@ -405,6 +405,7 @@ dependencies = [
  "blok-outbound",
  "blok-yjs",
  "bytes",
+ "flate2",
  "http",
  "http-body-util",
  "libc",

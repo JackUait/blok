@@ -50,6 +50,8 @@ type Server struct {
 
 	// liveFields are the rich-text fields a live room's converter reads.
 	liveFields *convert.RichTextFields
+	// localFiles reads upload paths under Uploads.Root.
+	localFiles *localReader
 }
 
 // New builds a Server. The bundle loads into its own engine pool.
@@ -71,7 +73,7 @@ func newServer(options Options, runtime invoker) (*Server, error) {
 	s.flags = map[string]any{
 		"sync":    options.live(),
 		"source":  options.Source != nil,
-		"uploads": false,
+		"uploads": options.Uploads != nil,
 	}
 	if options.PageTitles != "" {
 		s.flags["pageTitles"] = options.PageTitles
@@ -115,6 +117,13 @@ func newServer(options Options, runtime invoker) (*Server, error) {
 			s.source = newEndpointSource(options.Source)
 		}
 	}
+	if options.Uploads != nil && options.Uploads.Root != "" {
+		reader, err := newLocalReader(options.Uploads.Root)
+		if err != nil {
+			return nil, err
+		}
+		s.localFiles = reader
+	}
 	if options.live() {
 		fields, err := s.richTextFieldsOf(ctx)
 		if err != nil {
@@ -141,6 +150,9 @@ func (s *Server) checkOptions(ctx context.Context) error {
 	}
 	if s.options.Authorize != nil {
 		options["authorize"] = json.RawMessage("true")
+	}
+	if s.options.Uploads != nil {
+		options["uploads"], _ = marshal(s.options.Uploads.checkJSON())
 	}
 	var answer struct {
 		Error *string `json:"error"`

@@ -382,7 +382,18 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		}
 	}
 	var out liveExecuteOutput
-	if _, err := l.server.bundle.call(ctx, "agentExecute", input, &out); err != nil {
+	// The room takes peer updates while the host uploads, so the next run
+	// reads the room again.
+	unlocked := func(run func()) {
+		room.mu.Unlock()
+		run()
+		room.mu.Lock()
+		if fresh, freshRevision, err := l.exportLocked(ctx); err == nil {
+			document = fresh
+			input["document"], input["revision"] = fresh, freshRevision
+		}
+	}
+	if err := l.server.agentExecute(ctx, input, &out, unlocked); err != nil {
 		return nil, err
 	}
 	if out.Ask != nil {

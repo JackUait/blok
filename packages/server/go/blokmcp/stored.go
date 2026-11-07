@@ -139,7 +139,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	}
 	input["documentText"] = st.source.documentForm()
 	var out executeOutput
-	if _, err := st.server.bundle.call(ctx, "agentExecute", input, &out); err != nil {
+	if err := st.server.agentExecute(ctx, input, &out, func(run func()) { run() }); err != nil {
 		return nil, err
 	}
 	if out.Ask != nil {

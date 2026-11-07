@@ -36,6 +36,10 @@ type Options struct {
 	// filters listings (write false). An error denies.
 	Authorize AuthorizeFunc `json:"-"`
 
+	// Uploads, when set, lets the agent upload files through the host's
+	// own uploader.
+	Uploads *Uploads `json:"-"`
+
 	// Rooms, when set, opens live handles on the rooms of this process:
 	// pass blokserver.Server.AgentExecutor() of a server with collaboration
 	// on. Live handles then need no Sync, ticket or socket.

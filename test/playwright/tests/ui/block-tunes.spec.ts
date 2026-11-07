@@ -448,12 +448,18 @@ test.describe('ui.block-tunes', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
       const nestedPopover = page.locator(NESTED_POPOVER_SELECTOR);
+      const container = page.locator(POPOVER_CONTAINER_SELECTOR);
+
+      // The menu scales in on open. Boxes read mid-animation do not match where
+      // the submenu lands, so wait for it to settle first.
+      await container.evaluate((el) => Promise.all(
+        el.getAnimations({ subtree: true }).map((animation) => animation.finished)
+      ));
 
       const triggerBox = await convertToOption.boundingBox();
-      const containerBox = await page.locator(POPOVER_CONTAINER_SELECTOR).boundingBox();
 
-      if (triggerBox === null || containerBox === null) {
-        throw new Error('Expected the trigger row and the popover container to be laid out');
+      if (triggerBox === null) {
+        throw new Error('Expected the trigger row to be laid out');
       }
 
       await page.mouse.move(triggerBox.x + (triggerBox.width / 2), triggerBox.y + (triggerBox.height / 2));
@@ -465,17 +471,32 @@ test.describe('ui.block-tunes', () => {
         throw new Error('Expected the submenu to be laid out');
       }
 
-      // The row's box stops short of the container's own padding, so a pointer
-      // travelling straight at the submenu samples that band on the way.
-      const bandLeft = triggerBox.x + triggerBox.width;
-      const bandRight = Math.min(containerBox.x + containerBox.width, nestedBox.x);
+      // Just under the trigger row, near its submenu side: inside the menu but
+      // on neither the trigger nor the submenu, as a pointer heading for a
+      // lower submenu item passes.
+      const offPoint = {
+        x: triggerBox.x + triggerBox.width - 8,
+        y: triggerBox.y + triggerBox.height + 2,
+      };
 
-      expect(bandRight).toBeGreaterThan(bandLeft);
+      const offPointHits = await page.evaluate(({ point, triggerSelector, nestedSelector, containerSelector }) => {
+        const hit = document.elementFromPoint(point.x, point.y);
 
-      await page.mouse.move(
-        (bandLeft + bandRight) / 2,
-        triggerBox.y + (triggerBox.height / 2)
-      );
+        return {
+          trigger: (hit?.closest(triggerSelector) ?? null) !== null,
+          submenu: (hit?.closest(nestedSelector) ?? null) !== null,
+          menu: (hit?.closest(containerSelector) ?? null) !== null,
+        };
+      }, {
+        point: offPoint,
+        triggerSelector: CONVERT_TO_OPTION_SELECTOR,
+        nestedSelector: NESTED_POPOVER_SELECTOR,
+        containerSelector: POPOVER_CONTAINER_SELECTOR,
+      });
+
+      expect(offPointHits).toStrictEqual({ trigger: false, submenu: false, menu: true });
+
+      await page.mouse.move(offPoint.x, offPoint.y);
 
       // Still standing: the grace period is what makes the submenu catchable.
       await expect(nestedPopover).toBeVisible();

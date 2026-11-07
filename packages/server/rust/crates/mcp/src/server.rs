@@ -184,6 +184,26 @@ struct HostWork {
     created: Vec<String>,
     create_failure: Option<Value>,
     page_writes: Vec<Value>,
+    /// A live page write went out but was not acknowledged.
+    unconfirmed: bool,
+}
+
+/// As page-titles.ts: a batch whose page write the room did not confirm is
+/// not durable, though it succeeded.
+fn unconfirmed_delivery(unconfirmed: bool, result: &str, delivery: Option<Value>) -> Option<Value> {
+    {
+        let ok = serde_json::from_str::<Value>(result)
+            .is_ok_and(|r| r.get("ok") == Some(&Value::Bool(true)));
+        if !unconfirmed || !ok {
+            return delivery;
+        }
+        let mut delivery = delivery.unwrap_or_else(|| {
+            json!({ "durable": false, "pending": false, "serverSequence": null, "savedVersion": null })
+        });
+        delivery["durable"] = json!(false);
+        delivery["pending"] = json!(true);
+        Some(delivery)
+    }
 }
 
 /// A host error as Node's surface error carries it, with its retryable flag.
@@ -615,6 +635,11 @@ impl Mcp {
             ))
             .await?;
             let failed = outcome.get("error").is_some();
+            work.unconfirmed |= outcome.get("unconfirmed") == Some(&Value::Bool(true));
+            let mut outcome = outcome;
+            if let Some(outcome) = outcome.as_object_mut() {
+                outcome.remove("unconfirmed");
+            }
             work.page_writes.push(outcome);
             if failed {
                 break;
@@ -736,22 +761,14 @@ impl Mcp {
             Ok(Outcome::Answer(answer)) => {
                 let mut result: Value = serde_json::from_str(&answer.structured)
                     .map_err(|e| Fault::Internal(e.to_string()))?;
-                // As page-titles.ts: close() drops unacked rows, so a pending write failed.
-                if result.get("ok") == Some(&Value::Bool(true))
-                    && result.pointer("/delivery/pending") == Some(&Value::Bool(true))
-                {
-                    let warnings = result.get("warnings").cloned().unwrap_or(json!([]));
-                    result = json!({
-                        "ok": false,
-                        "error": agent_error_of(&HostError::surface_with(
-                            "SOURCE_UNAVAILABLE",
-                            "The room did not confirm the page write in time. It was not saved; try again.",
-                            json!({ "pending": true }),
-                        )),
-                        "warnings": warnings,
-                    });
+                // The write went out but no ack came; it may still land, and the
+                // batch that made it says so in its delivery.
+                let unconfirmed = result.get("ok") == Some(&Value::Bool(true))
+                    && result.pointer("/delivery/pending") == Some(&Value::Bool(true));
+                if let Some(result) = result.as_object_mut() {
+                    result.remove("delivery");
                 }
-                Ok(json!({ "pageId": page_id, "result": result }))
+                Ok(json!({ "pageId": page_id, "result": result, "unconfirmed": unconfirmed }))
             }
             Ok(_) => Err(Fault::Internal(
                 "a page write did not answer as blok_execute".to_owned(),
@@ -1161,6 +1178,7 @@ impl Mcp {
                         .host_work(caller, actor, client_name, document_id, true, &counted)
                         .await?;
                 }
+                let unconfirmed = work.unconfirmed;
                 let executed = room
                     .execute(ExecuteInput {
                         batch,
@@ -1185,15 +1203,15 @@ impl Mcp {
                     Executed::Done { result, delivery } => (result, delivery),
                 };
                 let mut answer = Obj::new().raw("result", &result);
+                let mut delivered = None;
                 match delivery {
                     Delivery::None => {}
-                    Delivery::Now(value) => answer = answer.val("delivery", &value),
+                    Delivery::Now(value) => delivered = Some(value),
                     Delivery::Failed(error) => answer = answer.val("failed", &error.failed_input()),
                     Delivery::Wait(fate) => match tokio::time::timeout(DELIVERY_WAIT, fate).await {
                         Ok(Ok(Fate::Acked(sequence))) => {
-                            answer = answer.val(
-                                "delivery",
-                                &json!({ "durable": true, "pending": false, "serverSequence": sequence, "savedVersion": null }),
+                            delivered = Some(
+                                json!({ "durable": true, "pending": false, "serverSequence": sequence, "savedVersion": null }),
                             );
                         }
                         Ok(Ok(Fate::Ended(error))) => {
@@ -1215,12 +1233,14 @@ impl Mcp {
                             answer = answer.val("failed", &error.failed_input());
                         }
                         _ => {
-                            answer = answer.val(
-                                "delivery",
-                                &json!({ "durable": false, "pending": true, "serverSequence": null, "savedVersion": null }),
+                            delivered = Some(
+                                json!({ "durable": false, "pending": true, "serverSequence": null, "savedVersion": null }),
                             );
                         }
                     },
+                }
+                if let Some(delivery) = unconfirmed_delivery(unconfirmed, &result, delivered) {
+                    answer = answer.val("delivery", &delivery);
                 }
                 let raw = self
                     .bundle
@@ -1560,6 +1580,7 @@ impl Mcp {
             stored.history = history.to_owned();
         }
         let mut answer = Obj::new().raw("result", &result);
+        let mut delivery = None;
         if out.value("save") == Some(Value::Bool(true)) {
             let text = out
                 .value("documentText")
@@ -1571,9 +1592,8 @@ impl Mcp {
             {
                 Ok(version) => {
                     stored.version = version.clone();
-                    answer = answer.val(
-                        "delivery",
-                        &json!({ "durable": true, "pending": false, "serverSequence": null, "savedVersion": version }),
+                    delivery = Some(
+                        json!({ "durable": true, "pending": false, "serverSequence": null, "savedVersion": version }),
                     );
                 }
                 Err(fault) => {
@@ -1586,6 +1606,9 @@ impl Mcp {
                     }
                 }
             }
+        }
+        if let Some(delivery) = unconfirmed_delivery(work.unconfirmed, &result, delivery) {
+            answer = answer.val("delivery", &delivery);
         }
         let raw = self
             .bundle

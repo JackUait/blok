@@ -86,7 +86,11 @@ export interface McpUploadContext {
   tool?: string;
 }
 
-/** The host's own uploader, which an agent's upload goes through. */
+/**
+ * The host's own uploader, which an agent's upload goes through. When it throws, the agent sees
+ * TOOL_ACTION_FAILED "The upload failed." and the error goes to stderr. A string `agentMessage`
+ * on the thrown error is shown to the agent instead.
+ */
 export interface McpUploads {
   uploader: {
     /** A file card keeps `size` and `mimeType` when the host returns them. */

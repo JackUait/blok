@@ -153,6 +153,95 @@ describe('blok-mcp uploads a file through the host uploader', () => {
   });
 });
 
+describe('blok-mcp keeps a host uploader\'s error out of the agent\'s answer', () => {
+  const SECRET = 'connect ECONNREFUSED db.internal:5432 (password=hunter2)';
+  const state: { dir: string; mcp?: AssembledMcp } = { dir: '' };
+
+  const start = (uploader: NonNullable<BlokMcpOptions['uploads']>['uploader']): AssembledMcp => {
+    state.mcp = assembleMcp({
+      transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir: state.dir }, uploads: { uploader },
+    });
+
+    return state.mcp;
+  };
+
+  const execute = async (mcp: AssembledMcp, commands: Array<{ name: string; args: Record<string, unknown> }>): Promise<Record<string, unknown>> => {
+    const opened = await mcp.dispatch('blok_open', { documentId: 'doc', write: true }, caller);
+    const outcome = await mcp.dispatch('blok_execute', { handle: opened.structuredContent.handle, commands }, caller);
+
+    return outcome as unknown as Record<string, unknown>;
+  };
+
+  const upload = [{ name: 'file.uploadFile', args: { data: btoa('hello'), fileName: 'hello.txt' } }];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    state.dir = mkdtempSync(join(tmpdir(), 'blok-mcp-docs-'));
+    writeFileSync(join(state.dir, 'doc.json'), JSON.stringify({ blocks: [{ id: 'img', type: 'image', data: { url: 'https://cdn.test/a.png' } }] }));
+  });
+
+  afterEach(async () => {
+    await state.mcp?.stop();
+    state.mcp = undefined;
+    rmSync(state.dir, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  it('answers a generic TOOL_ACTION_FAILED for a thrown uploadByFile, and logs the error to stderr', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const thrown = new Error(SECRET);
+    const outcome = await execute(start({ uploadByFile: () => Promise.reject(thrown) }), upload);
+
+    expect(JSON.stringify(outcome)).not.toContain('hunter2');
+    expect(outcome.structuredContent).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', message: 'The upload failed.', commandIndex: 0 } });
+    expect(logged).toHaveBeenCalledWith('blok-mcp: the host uploader failed', thrown);
+  });
+
+  it('answers the same for an uploader that throws before it returns a promise', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const outcome = await execute(start({
+      uploadByFile: () => {
+        throw new Error(SECRET);
+      },
+    }), upload);
+
+    expect(JSON.stringify(outcome)).not.toContain('hunter2');
+    expect(outcome.structuredContent).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', message: 'The upload failed.' } });
+  });
+
+  it('answers the same for a thrown uploadByUrl in setSource', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const outcome = await execute(start({
+      uploadByFile: () => Promise.reject(new Error('unused')),
+      uploadByUrl: () => Promise.reject(new Error(SECRET)),
+    }), [{ name: 'image.setSource', args: { id: 'img', url: 'https://cdn.test/b.png' } }]);
+
+    expect(JSON.stringify(outcome)).not.toContain('hunter2');
+    expect(outcome.structuredContent).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', message: 'The upload failed.', commandIndex: 0 } });
+    expect(logged).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the agent an error\'s agentMessage, which the host wrote for it', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const outcome = await execute(start({
+      uploadByFile: () => Promise.reject(Object.assign(new Error(SECRET), { agentMessage: 'Your storage quota is full.' })),
+    }), upload);
+
+    expect(JSON.stringify(outcome)).not.toContain('hunter2');
+    expect(outcome.structuredContent).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', message: 'Your storage quota is full.' } });
+  });
+
+  it('keeps Blok\'s own refusals word for word, and never calls the uploader', async () => {
+    const uploadByFile = vi.fn(() => Promise.reject(new Error(SECRET)));
+    const outcome = await execute(start({ uploadByFile }), [{ name: 'image.uploadFile', args: { data: btoa('hi'), fileName: 'a.txt' } }]);
+
+    expect(outcome.structuredContent).toMatchObject({
+      ok: false, error: { code: 'PRECONDITION_FAILED', message: 'This host does not take text/plain for image. It takes: image/*.' },
+    });
+    expect(uploadByFile).not.toHaveBeenCalled();
+  });
+});
+
 describe('checkOptionSafety and uploads', () => {
   const http: BlokMcpOptions = {
     transport: { kind: 'http', listen: '127.0.0.1:0' }, auth: { kind: 'none' },

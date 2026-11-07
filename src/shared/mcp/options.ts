@@ -27,7 +27,10 @@ export interface BlokMcpOptions {
   comments?: boolean;
 }
 
-/** The host's own uploader, which `<tool>.uploadFile` sends files through. */
+/**
+ * The host's own uploader, which `<tool>.uploadFile` sends files through. A throw reaches the
+ * agent as "The upload failed.", or as the error's string `agentMessage` (src/mcp/uploads.ts).
+ */
 export interface McpUploads {
   uploader: {
     uploadByFile(file: File, ctx: UploadContext): Promise<UploadedAsset & { size?: number; mimeType?: string }>;

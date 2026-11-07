@@ -183,6 +183,8 @@ An agent can upload a file with `image.uploadFile`, `video.uploadFile`, `audio.u
 - `uploads.limits` sets `types` and `maxSize` per kind, like a media tool's own config. The defaults are the tools' defaults: `image/*`, `audio/*` and `video/*`, any type for files; 30 MiB, and 100 MiB for video.
   - The size is checked before the bytes are decoded.
 - An SVG is sent unchanged, as a person's upload sends it. Leave `image/svg+xml` out of `types` if your storage serves it on your own origin.
+- When your uploader throws, the agent sees `TOOL_ACTION_FAILED` with the message "The upload failed." Your error's own message never reaches the agent, because it may name hosts, paths or credentials. The server logs the full error to stderr.
+  - To tell the agent something, set a string `agentMessage` on the error you throw. The agent sees that text instead: `throw Object.assign(new Error('quota exceeded for tenant 42'), { agentMessage: 'The storage is full.' })`.
 - An upload runs alone in its batch. When the batch fails after the upload, `error.details.orphaned` names the stored file. Delete it yourself.
 - The server does not compress images, turn GIFs into video, read audio tags or make variants. The editor does those in the browser.
 

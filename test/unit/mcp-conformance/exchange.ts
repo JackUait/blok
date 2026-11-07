@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { expect } from 'vitest';
 
+import { nodeContractRevisions } from './contract-revision';
 import { type BearerSpec, type FakeHost, type RecordedRequest, type RouteTable, signAccessToken, startFakeHost } from './fake-host';
 import { type LiveRoom, type RoomAction, type RoomSpec, startLiveRoom } from './live-room';
 import {
@@ -89,7 +90,9 @@ import {
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
  * is recorded as {"type":"text","json":"<same as structuredContent>"}. Placeholders: ${dir}, ${root}, ${host}, ${hostWs}, ${mcpUrl},
- * ${mcpPort}, ${version} (packages/mcp/package.json) and captured names.
+ * ${mcpPort}, ${version} (packages/mcp/package.json), ${contractRevision} and
+ * ${liveContractRevision} (what Node reports for the case's flags at that version,
+ * see contract-revision.ts) and captured names.
  * Inputs may use {"$bearer": BearerSpec} for an OAuth access token and
  * {"$repeat": {"text", "count"}} for a long string.
  */
@@ -887,7 +890,12 @@ export const runCase = async (command: string[], c: FixtureCase, record: boolean
         env: caseEnv(Object.fromEntries(Object.entries(c.env ?? {}).map(([key, value]) => [key, substituteString(value, run.vars)]))),
         cwd: root,
       };
+      const revisions = await nodeContractRevisions({ argv: launch.argv, env: launch.env, cwd: root, version: packageVersion() });
 
+      if (revisions !== undefined) {
+        run.vars.set('contractRevision', revisions.stored);
+        run.vars.set('liveContractRevision', revisions.live);
+      }
       if (c.transport === 'cli') {
         const exit = await runToExit(command, launch.argv, launch.env, root);
 

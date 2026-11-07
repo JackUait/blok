@@ -168,4 +168,34 @@ public sealed class AccessTokenVerifierTests : IDisposable
     Assert.Equal("alice", (await verifier.VerifyAsync(Token(Claims(c => c["exp"] = (now / 1000) + 60)), CancellationToken.None)).Principal);
     Assert.Equal(2, fetches);
   }
+
+  private static string RawToken(string header)
+  {
+    return $"{B64(Encoding.UTF8.GetBytes(header))}.{B64(Encoding.UTF8.GetBytes("{}"))}.sig";
+  }
+
+  // As JSON.parse: a repeated key keeps its last value (measured on Node's verifier).
+  [Fact]
+  public async Task ReadsARepeatedHeaderKeyAsItsLastValue()
+  {
+    jwks = """{"keys":[]}""";
+
+    Assert.Equal("Signing keys unavailable", await Refusal(RawToken("""{"alg":"none","alg":"RS256","kid":"k","typ":"at+jwt"}""")));
+    Assert.Equal("Unsupported token", await Refusal(RawToken("""{"alg":"RS256","alg":"none","kid":"k","typ":"at+jwt"}""")));
+  }
+
+  [Fact]
+  public async Task CoolsDownAfterAKeySetWithARepeatedKey()
+  {
+    jwks = """{"keys":[{"kid":"k","kid":"k"}]}""";
+    var verifier = Verifier();
+
+    for (var i = 0; i < 5; i++)
+    {
+      var error = await Assert.ThrowsAsync<AccessTokenException>(() => verifier.VerifyAsync(RawToken("""{"alg":"RS256","kid":"k","typ":"at+jwt"}"""), CancellationToken.None));
+
+      Assert.Equal("Signing keys unavailable", error.Message);
+    }
+    Assert.Equal(1, fetches);
+  }
 }

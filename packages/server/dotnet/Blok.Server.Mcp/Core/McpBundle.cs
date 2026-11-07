@@ -40,17 +40,45 @@ internal static class McpJson
 
   private static readonly JsonDocumentOptions ReadOptions = new() { MaxDepth = MaxDepth };
 
-  /// <summary>Parses JSON text; throws <see cref="JsonException"/> for anything JSON.parse refuses.</summary>
+  /// <summary>
+  /// Parses JSON text as JSON.parse does: a repeated key keeps its last value, at its first
+  /// key's place. Throws <see cref="JsonException"/> for anything JSON.parse refuses.
+  /// </summary>
   internal static JsonNode? Parse(string text)
   {
-    try
+    // JsonNode.Parse would throw on a repeated key only when the object is first read.
+    using var document = JsonDocument.Parse(text, ReadOptions);
+
+    return NodeOf(document.RootElement);
+  }
+
+  private static JsonNode? NodeOf(JsonElement element)
+  {
+    switch (element.ValueKind)
     {
-      return JsonNode.Parse(text, documentOptions: ReadOptions);
-    }
-    catch (ArgumentException error)
-    {
-      // A repeated key: JSON.parse keeps the last one, System.Text.Json refuses.
-      throw new JsonException(error.Message, error);
+      case JsonValueKind.Object:
+        var node = new JsonObject();
+
+        foreach (var property in element.EnumerateObject())
+        {
+          node[property.Name] = NodeOf(property.Value);
+        }
+
+        return node;
+      case JsonValueKind.Array:
+        var list = new JsonArray();
+
+        foreach (var item in element.EnumerateArray())
+        {
+          list.Add(NodeOf(item));
+        }
+
+        return list;
+      case JsonValueKind.Null:
+        return null;
+      default:
+        // A clone outlives the document and keeps the number's text.
+        return JsonValue.Create(element.Clone());
     }
   }
 

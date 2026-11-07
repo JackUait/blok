@@ -774,6 +774,26 @@ export class DatabaseTableGrid {
     this.fillDrag = { start: bounds, reach: bounds.r1 };
     document.addEventListener('pointermove', this.handleFillMove);
     document.addEventListener('pointerup', this.handleFillEnd);
+    document.addEventListener('pointercancel', this.handleFillCancel);
+  };
+
+  /** Ends a fill drag without filling, and puts back the selection it started from. */
+  private readonly handleFillCancel = (): void => {
+    const drag = this.fillDrag;
+
+    this.stopFill();
+    if (drag === null) {
+      return;
+    }
+    const rows = this.rowIds();
+    const cols = this.columnIds();
+
+    this.state.selection = {
+      kind: 'cell',
+      anchor: { rowId: rows[drag.start.r0], propertyId: cols[drag.start.c0] },
+      focus: { rowId: rows[drag.start.r1], propertyId: cols[drag.start.c1] },
+    };
+    this.paint();
   };
 
   private readonly handleFillMove = (event: PointerEvent): void => {
@@ -824,6 +844,7 @@ export class DatabaseTableGrid {
     this.fillDrag = null;
     document.removeEventListener('pointermove', this.handleFillMove);
     document.removeEventListener('pointerup', this.handleFillEnd);
+    document.removeEventListener('pointercancel', this.handleFillCancel);
   }
 
   // ─── Keys ───
@@ -833,6 +854,12 @@ export class DatabaseTableGrid {
       return;
     }
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    if (event.key === 'Escape' && this.fillDrag !== null) {
+      event.preventDefault();
+      this.handleFillCancel();
+
       return;
     }
     if (event.target instanceof HTMLButtonElement && (event.key === 'Enter' || event.key === ' ')) {

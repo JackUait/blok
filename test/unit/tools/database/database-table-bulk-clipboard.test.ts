@@ -625,6 +625,62 @@ describe('table bulk actions and clipboard', () => {
 
       expect(cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-table-fill-handle]')).not.toBeNull();
     });
+
+    // A touch scroll cancels the press; the next release anywhere must not fill.
+    it('a cancelled fill-handle drag fills nothing', () => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r1', 'p-notes');
+      cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-table-fill-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => cell(root, 'r3', 'p-notes') });
+      try {
+        document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      } finally {
+        Reflect.deleteProperty(document, 'elementFromPoint');
+      }
+
+      expect(commitsOf(handlers)).toEqual([]);
+      expect([...root.querySelectorAll('[role="gridcell"][aria-selected="true"]')]).toEqual([cell(root, 'r1', 'p-notes')]);
+    });
+
+    it('Escape during a fill-handle drag fills nothing on release', () => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r1', 'p-notes');
+      cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-table-fill-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => cell(root, 'r3', 'p-notes') });
+      try {
+        document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        press(grid(root), 'Escape');
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      } finally {
+        Reflect.deleteProperty(document, 'elementFromPoint');
+      }
+
+      expect(commitsOf(handlers)).toEqual([]);
+      expect([...root.querySelectorAll('[role="gridcell"][aria-selected="true"]')]).toEqual([cell(root, 'r1', 'p-notes')]);
+    });
+
+    it('a fill-handle drag released after the move fills the rows it reached', () => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r1', 'p-notes');
+      cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-table-fill-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => cell(root, 'r3', 'p-notes') });
+      try {
+        document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      } finally {
+        Reflect.deleteProperty(document, 'elementFromPoint');
+      }
+
+      expect(commitsOf(handlers)).toHaveLength(1);
+    });
   });
 
   describe('undo', () => {

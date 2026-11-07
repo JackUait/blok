@@ -38,7 +38,7 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
 
     before?.Invoke(core);
     await McpStdioSession.RunAsync(core, options, new MemoryStream(Encoding.UTF8.GetBytes(Wire)), output, new TaskCompletionSource().Task)
-        .WaitAsync(TimeSpan.FromSeconds(20));
+        .WaitAsync(TimeSpan.FromSeconds(60));
 
     return [.. Encoding.UTF8.GetString(output.ToArray()).Split('\n', StringSplitOptions.RemoveEmptyEntries)
         .Select(line => JsonNode.Parse(line)!["id"]!.ToJsonString())];
@@ -47,12 +47,11 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
   [Fact]
   public async Task AnswersWhatItReadBeforeStdinEnded()
   {
-    var started = DateTime.UtcNow;
-    var ids = await AnsweredIdsAsync();
+    // Far past the 60s wait: a session that sat out the drain limit fails, however slow the machine.
+    var ids = await AnsweredIdsAsync(core => core.StopDrain = TimeSpan.FromMinutes(10));
 
     Assert.Contains("0", ids);
     Assert.Contains("2", ids);
-    Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(10));
   }
 
   // As Node's stop: a call not yet dispatched when stdin ends never runs.

@@ -123,12 +123,8 @@ internal sealed class McpServerCore : IAsyncDisposable
   /// </summary>
   internal Task<T> InArrivalOrderAsync<T>(string? handle, string? requestId, Func<Task<T>> run, long? tag = null)
   {
-    var call = InOrderAsync(handle, requestId, tag, run);
-
     // Tracked from arrival, so stop also waits for a call still waiting its turn.
-    Track(inFlight, call);
-
-    return call;
+    return TrackedFromStart(inFlight, () => InOrderAsync(handle, requestId, tag, run));
   }
 
   /// <summary>
@@ -285,11 +281,7 @@ internal sealed class McpServerCore : IAsyncDisposable
 
   internal Task<McpCallResult> CallToolAsync(string name, JsonObject? arguments, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
   {
-    var call = DispatchAsync(name, arguments, caller, approval, cancellationToken);
-
-    Track(inFlight, call);
-
-    return call;
+    return TrackedFromStart(inFlight, () => DispatchAsync(name, arguments, caller, approval, cancellationToken));
   }
 
   private async Task<McpCallResult> DispatchAsync(string name, JsonObject? arguments, McpCaller caller, McpApproval? approval, CancellationToken cancellationToken)
@@ -386,6 +378,22 @@ internal sealed class McpServerCore : IAsyncDisposable
       }
       await Task.WhenAll(pending.Select(task => task.ContinueWith(_ => { }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)));
     }
+  }
+
+  /// <summary>
+  /// Adds the call to the set before it starts, then starts it on this thread. A Jint call can
+  /// answer before its await looks, so the call may reach Authorize before it returns; a stop
+  /// that looked in between would not wait for it.
+  /// </summary>
+  private static Task<T> TrackedFromStart<T>(HashSet<Task> set, Func<Task<T>> run)
+  {
+    var start = new Task<Task<T>>(run);
+    var call = start.Unwrap();
+
+    Track(set, call);
+    start.RunSynchronously(TaskScheduler.Default);
+
+    return call;
   }
 
   private static void Track(HashSet<Task> set, Task task)

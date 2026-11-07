@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Mcp.Core;
 using Blok.Server.Mcp.Outbound;
+using Blok.Server.Runtime;
 using Xunit;
 
 namespace Blok.Server.Mcp.Tests;
@@ -60,6 +61,52 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
     gate.SetResult(true);
     await stop.WaitAsync(TimeSpan.FromSeconds(10));
     Assert.True(open.IsCompleted);
+  }
+
+  // Jint answers at once when its thread ends before the await looks. The call then reaches
+  // Authorize before CallToolAsync returns, and a stop started there must still wait for it.
+  [Fact]
+  public async Task StopWaitsForACallThatReachedAuthorizeBeforeItReturned()
+  {
+    var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var returned = false;
+    var authorizedFirst = false;
+    var stoppedEarly = false;
+    Task? stop = null;
+    McpServerCore? core = null;
+    await using var built = new McpServerCore(new McpBundle(new AnsweredAtOnce(fixture.Host.Bundle.Runtime)), new McpConfig
+    {
+      Source = new McpSourceConfig.Files(dir),
+      Authorize = (_, _, _, _) =>
+      {
+        authorizedFirst = !returned;
+        stop = core!.StopAsync();
+        // Gives the drain time to look. A stop that ignores this call ends here.
+        stoppedEarly = stop.Wait(TimeSpan.FromSeconds(2), CancellationToken.None);
+
+        return gate.Task;
+      },
+    }, new McpHttpCaller());
+    core = built;
+    // Far past the wait below, so giving up on the call cannot pass for waiting on it.
+    core.StopDrain = TimeSpan.FromMinutes(10);
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var open = OpenAsync(core, caller);
+
+    returned = true;
+    Assert.False(stoppedEarly);
+    Assert.True(authorizedFirst);
+    gate.SetResult(true);
+    await stop!.WaitAsync(TimeSpan.FromSeconds(60));
+    Assert.True(open.IsCompleted);
+  }
+
+  private sealed class AnsweredAtOnce(IBlokRuntime inner) : IBlokRuntime
+  {
+    public ValueTask<string> InvokeAsync(string operation, string inputJson, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+      return ValueTask.FromResult(inner.InvokeAsync(operation, inputJson, timeout, cancellationToken).AsTask().GetAwaiter().GetResult());
+    }
   }
 
   [Fact]

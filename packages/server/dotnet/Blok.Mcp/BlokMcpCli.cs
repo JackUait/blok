@@ -31,6 +31,13 @@ internal static partial class BlokMcpCli
 
       return 2;
     }
+    // Node's top-level await: any other startup failure prints and exits 1.
+    catch (Exception error)
+    {
+      await Console.Error.WriteLineAsync($"Error: {error.Message}");
+
+      return 1;
+    }
     finally
     {
       host.Http.Dispose();
@@ -142,6 +149,11 @@ internal static partial class BlokMcpCli
   {
     string text;
 
+    // Node's read error word for word: .NET says "Access denied" for a folder.
+    if (Directory.Exists(path))
+    {
+      throw new IOException("EISDIR: illegal operation on a directory, read");
+    }
     try
     {
       // Bytes, not ReadAllText: that drops a BOM, which JSON.parse refuses.

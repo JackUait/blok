@@ -653,6 +653,28 @@
       }
     },
     {
+      "name": "a --manifest that is a folder exits 1",
+      "transport": "cli",
+      "argv": [
+        "--manifest",
+        "docs"
+      ],
+      "env": {},
+      "files": {
+        "x.json": {
+          "text": "{}"
+        }
+      },
+      "stderrPattern": "EISDIR: illegal operation on a directory, read",
+      "expectExit": {
+        "code": 1,
+        "signal": null,
+        "stderr": {
+          "pattern": "EISDIR: illegal operation on a directory, read"
+        }
+      }
+    },
+    {
       "name": "a --manifest file of the wrong shape",
       "transport": "cli",
       "argv": [

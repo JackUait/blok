@@ -156,12 +156,21 @@ pub struct ExecuteInput {
     pub create_failure: Option<Value>,
     /// What each page write the host made gave, in batch order.
     pub page_writes: Vec<Value>,
+    /// The host's uploader (its `uploader` input) and what each call gave.
+    pub uploader: Option<Value>,
+    pub uploads: Vec<Value>,
 }
 
 enum Command {
     Execute(ExecuteInput, oneshot::Sender<Result<Executed, Fault>>),
     Read(Value, Value, oneshot::Sender<Result<String, Fault>>),
-    PagesNeeded(Value, Value, Value, oneshot::Sender<Result<Value, Fault>>),
+    PagesNeeded(
+        Value,
+        Value,
+        Value,
+        Value,
+        oneshot::Sender<Result<Value, Fault>>,
+    ),
     Close(oneshot::Sender<Value>),
 }
 
@@ -188,10 +197,13 @@ impl RemoteRoom {
         batch: Value,
         actor: Value,
         approval: Value,
+        uploading: Value,
     ) -> Result<Value, Fault> {
         let (reply, answer) = oneshot::channel();
         self.commands
-            .send(Command::PagesNeeded(batch, actor, approval, reply))
+            .send(Command::PagesNeeded(
+                batch, actor, approval, uploading, reply,
+            ))
             .map_err(|_| Fault::Internal("the room is gone".to_owned()))?;
         answer
             .await
@@ -487,8 +499,8 @@ impl Room {
                         let answer = Box::pin(self.execute(input)).await;
                         let _ = reply.send(answer);
                     }
-                    Some(Command::PagesNeeded(batch, actor, approval, reply)) => {
-                        let answer = self.pages_needed(&batch, &actor, &approval).await;
+                    Some(Command::PagesNeeded(batch, actor, approval, uploading, reply)) => {
+                        let answer = self.pages_needed(&batch, &actor, &approval, &uploading).await;
                         let _ = reply.send(answer);
                     }
                     Some(Command::Read(view, actor, reply)) => {
@@ -1276,16 +1288,23 @@ impl Room {
         batch: &Value,
         actor: &Value,
         approval: &Value,
+        uploading: &Value,
     ) -> Result<Value, Fault> {
         if self.end.is_some() || self.read_only {
             return Ok(json!({ "count": 0 }));
         }
         let document = self.export().await?;
-        let input = self
+        let mut input = self
             .session_input(!self.read_only, &document, actor)
             .val("batch", batch)
-            .val("approval", approval)
-            .finish();
+            .val("approval", approval);
+        // `uploading`: { uploader, uploads } when the host has an uploader.
+        for key in ["uploader", "uploads"] {
+            if let Some(value) = uploading.get(key) {
+                input = input.val(key, value);
+            }
+        }
+        let input = input.finish();
         Ok(self.shared.bundle.call("agentPagesNeeded", &input).await?)
     }
 
@@ -1336,6 +1355,11 @@ impl Room {
         }
         if let Some(failure) = &input.create_failure {
             call = call.val("createFailure", failure);
+        }
+        if let Some(uploader) = &input.uploader {
+            call = call
+                .val("uploader", uploader)
+                .val("uploads", &json!(input.uploads));
         }
         if !input.page_writes.is_empty() {
             call = call.val("pageWrites", &json!(input.page_writes));

@@ -88,6 +88,7 @@ pub enum Session {
 
 pub struct Mcp {
     bundle: Arc<Bundle>,
+    uploads: Option<crate::uploads::Uploads>,
     calls: Arc<crate::inflight::InFlight>,
     pub surface: Surface,
     flags: Value,
@@ -272,7 +273,23 @@ impl Mcp {
         authorize: Option<Webhook>,
         rooms: Option<Arc<Executor>>,
     ) -> Result<Mcp, Fault> {
+        Mcp::with_uploads(bundle, options, authorize, rooms, None).await
+    }
+
+    /// `uploads`: the host's own uploader, as Node's programmatic `uploads`
+    /// option. It turns on `<kind>.uploadFile`, and `<tool>.setSource`
+    /// copies a linked file when the uploader takes URLs.
+    pub async fn with_uploads(
+        bundle: Arc<Bundle>,
+        options: &Value,
+        authorize: Option<Webhook>,
+        rooms: Option<Arc<Executor>>,
+        uploads: Option<crate::uploads::Uploads>,
+    ) -> Result<Mcp, Fault> {
         let mut flags = surface_flags(options);
+        if uploads.is_some() {
+            flags["uploads"] = Value::Bool(true);
+        }
         if rooms.is_some() {
             flags["sync"] = Value::Bool(true);
         }
@@ -349,6 +366,7 @@ impl Mcp {
             idle_ms,
             handles: Handles::new(idle, max),
             calls: Arc::default(),
+            uploads,
             source,
             authorize,
             live_shared,
@@ -1188,10 +1206,26 @@ impl Mcp {
                 }
                 let batch = call.get("batch").cloned().unwrap_or(Value::Null);
                 let mut work = HostWork::default();
-                if self.creates_pages() && is_batch_envelope(&batch) {
-                    let counted = room
-                        .pages_needed(batch.clone(), actor.clone(), asking.clone())
-                        .await?;
+                let mut uploaded = Vec::new();
+                if (self.creates_pages() || self.uploads.is_some()) && is_batch_envelope(&batch) {
+                    let mut read = None;
+                    let counted = loop {
+                        let uploading = match &self.uploads {
+                            Some(uploads) => {
+                                json!({ "uploader": uploads.spec(), "uploads": uploaded })
+                            }
+                            None => json!({}),
+                        };
+                        let counted = room
+                            .pages_needed(batch.clone(), actor.clone(), asking.clone(), uploading)
+                            .await?;
+                        match (counted.get("need"), &self.uploads) {
+                            (Some(need), Some(uploads)) if uploaded.len() < 4 => {
+                                uploaded.push(uploads.answer(need, &batch, &mut read).await);
+                            }
+                            _ => break counted,
+                        }
+                    };
                     work = self
                         .host_work(caller, actor, client_name, document_id, true, &counted)
                         .await?;
@@ -1205,6 +1239,8 @@ impl Mcp {
                         created_pages: work.created,
                         create_failure: work.create_failure,
                         page_writes: work.page_writes,
+                        uploader: self.uploads.as_ref().map(crate::uploads::Uploads::spec),
+                        uploads: uploaded,
                     })
                     .await?;
                 let (result, delivery) = match executed {
@@ -1549,14 +1585,35 @@ impl Mcp {
         }
         let batch = call.get("batch").unwrap_or(&Value::Null);
         let mut work = HostWork::default();
+        let mut uploaded = Vec::new();
         // A read-only handle or a malformed batch is refused before any page.
-        if self.creates_pages() && stored.write && is_batch_envelope(batch) {
-            let counting = self
-                .session_input("stored", stored.write, &stored.document, actor)
-                .val("batch", batch)
-                .val("approval", &asking)
-                .finish();
-            let counted = self.bundle.call("agentPagesNeeded", &counting).await?;
+        if (self.creates_pages() || self.uploads.is_some())
+            && stored.write
+            && is_batch_envelope(batch)
+        {
+            let mut read = None;
+            let counted = loop {
+                let mut counting = self
+                    .session_input("stored", stored.write, &stored.document, actor)
+                    .val("batch", batch)
+                    .val("approval", &asking);
+                if let Some(uploads) = &self.uploads {
+                    counting = counting
+                        .val("uploader", &uploads.spec())
+                        .val("uploads", &json!(uploaded));
+                }
+                let counted = self
+                    .bundle
+                    .call("agentPagesNeeded", &counting.finish())
+                    .await?;
+                match (counted.get("need"), &self.uploads) {
+                    // A read, then its upload: never more than a few turns.
+                    (Some(need), Some(uploads)) if uploaded.len() < 4 => {
+                        uploaded.push(uploads.answer(need, batch, &mut read).await);
+                    }
+                    _ => break counted,
+                }
+            };
             work = self
                 .host_work(caller, actor, client_name, document_id, false, &counted)
                 .await?;
@@ -1567,6 +1624,11 @@ impl Mcp {
             .val("batch", batch)
             .str("documentText", source.document_text_form())
             .val("approval", &asking);
+        if let Some(uploads) = &self.uploads {
+            input = input
+                .val("uploader", &uploads.spec())
+                .val("uploads", &json!(uploaded));
+        }
         if let Some(failure) = &work.create_failure {
             input = input.val("createFailure", failure);
         }

@@ -23,6 +23,7 @@ pub mod server;
 mod signal;
 pub mod sources;
 pub mod stdio;
+pub mod uploads;
 pub mod ws;
 
 use std::path::Path;
@@ -94,8 +95,19 @@ impl Embedded {
         authorize: Option<Webhook>,
         rooms: Option<Arc<blok_blokagent::Executor>>,
     ) -> Result<Embedded, String> {
+        Embedded::with_uploads(bundle, options, authorize, rooms, None).await
+    }
+
+    /// As `new`, with the host's own uploader (Node's `uploads` option).
+    pub async fn with_uploads(
+        bundle: Arc<Bundle>,
+        options: &Value,
+        authorize: Option<Webhook>,
+        rooms: Option<Arc<blok_blokagent::Executor>>,
+        uploads: Option<uploads::Uploads>,
+    ) -> Result<Embedded, String> {
         let version = bundle.call_text("version", "{}").await.map_err(|e| e.0)?;
-        let mcp = Mcp::new(bundle, options, authorize, rooms)
+        let mcp = Mcp::with_uploads(bundle, options, authorize, rooms, uploads)
             .await
             .map_err(|err| format!("{err:?}"))?;
         let mcp = Arc::new(mcp);

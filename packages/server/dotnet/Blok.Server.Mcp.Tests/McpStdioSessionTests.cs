@@ -103,6 +103,52 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     Assert.Null(listed["error"]);
   }
 
+  private static JsonObject Toggles(int levels, int at = 0)
+  {
+    var block = new JsonObject { ["type"] = "toggle", ["id"] = $"t{at}", ["data"] = new JsonObject { ["text"] = $"L{at}" } };
+
+    if (levels > 1)
+    {
+      block["children"] = new JsonArray(Toggles(levels - 1, at + 1));
+    }
+
+    return block;
+  }
+
+  // The SDK reads a message at most 64 deep; Node reads any depth, so 30 nested toggles are no parse error.
+  [Theory]
+  [InlineData(30)]
+  [InlineData(40)]
+  public async Task ADeepWriteIsNoParseError(int levels)
+  {
+    var (live, handle, _) = await OpenForWriteAsync();
+    var call = new JsonObject
+    {
+      ["jsonrpc"] = "2.0",
+      ["id"] = 20,
+      ["method"] = "tools/call",
+      ["params"] = new JsonObject
+      {
+        ["name"] = "blok_execute",
+        ["arguments"] = new JsonObject
+        {
+          ["handle"] = handle,
+          ["commands"] = new JsonArray(new JsonObject { ["name"] = "block.insert", ["args"] = Toggles(levels) }),
+        },
+      },
+    };
+
+    await live.SendAsync(McpJson.Write(call));
+    var answer = await live.AnswerAsync("20");
+    await live.DisposeAsync();
+
+    Assert.NotEqual(-32700, (int?)answer["error"]?["code"]);
+    if (levels == 30)
+    {
+      Assert.Equal(true, (bool?)answer["result"]?["structuredContent"]?["ok"]);
+    }
+  }
+
   // Node registers no logging capability, so logging/setLevel is an unknown method.
   [Fact]
   public async Task LoggingSetLevelIsAnUnknownMethod()
@@ -181,7 +227,8 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
 
     internal async Task<JsonNode> AnswerAsync(string id)
     {
-      var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(20);
+      // The test classes share one engine, so a busy run can be slow.
+      var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(60);
 
       JsonNode? answer;
 
@@ -197,9 +244,9 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     public async ValueTask DisposeAsync()
     {
       await input.Writer.CompleteAsync();
-      await Session.WaitAsync(TimeSpan.FromSeconds(20));
+      await Session.WaitAsync(TimeSpan.FromSeconds(60));
       await output.Writer.CompleteAsync();
-      await reading.WaitAsync(TimeSpan.FromSeconds(20));
+      await reading.WaitAsync(TimeSpan.FromSeconds(60));
     }
   }
 

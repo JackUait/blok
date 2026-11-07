@@ -109,6 +109,12 @@ internal static class McpSdkServer
         {
           core.ReleaseTag(mine);
         }
+        // Parked arguments a refused call never read back.
+        if (context.JsonRpcMessage is JsonRpcRequest { Params: JsonObject { } sent } && sent["arguments"] is JsonObject stand
+            && McpJson.String(stand[McpRequestShape.ParkedArguments]) is string key)
+        {
+          core.Unpark(key);
+        }
       }
     });
     options.Filters.Message.OutgoingFilters.Add(next => async (context, cancellationToken) =>
@@ -152,6 +158,11 @@ internal static class McpSdkServer
       throw new McpProtocolException($"Unknown tool: {name}", McpErrorCode.InvalidParams);
     }
     var raw = context.JsonRpcRequest.Params as JsonObject;
+
+    if (raw?["arguments"] is JsonObject stand && McpJson.String(stand[McpRequestShape.ParkedArguments]) is string key)
+    {
+      raw["arguments"] = core.Unpark(key);
+    }
 
     // Node hands the cancel signal (stdio cancel, HTTP disconnect) to opens only; any other call
     // runs to its end. The runtime's 60 s deadline and memory budget still bound it.

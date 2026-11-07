@@ -151,6 +151,24 @@ internal sealed class McpServerCore : IAsyncDisposable
     }
   }
 
+  private readonly System.Collections.Concurrent.ConcurrentDictionary<string, JsonNode> parked = new(StringComparer.Ordinal);
+
+  /// <summary>Keeps arguments too deep for the SDK's reader (64); the call reads them back by key.</summary>
+  internal string Park(JsonNode arguments)
+  {
+    var key = Guid.NewGuid().ToString("N");
+
+    parked[key] = arguments;
+
+    return key;
+  }
+
+  /// <summary>The parked arguments, once; null when taken or never parked.</summary>
+  internal JsonNode? Unpark(string key)
+  {
+    return parked.TryRemove(key, out var arguments) ? arguments : null;
+  }
+
   /// <summary>Where a repeated id's line carries its tag: params._meta, which tools never read.</summary>
   internal const string ArrivalTagMeta = "io.blok/arrival";
 

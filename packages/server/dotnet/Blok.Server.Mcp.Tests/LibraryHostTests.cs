@@ -162,6 +162,31 @@ public sealed class LibraryHostTests : IDisposable
     return (JsonObject)JsonNode.Parse(data)!["result"]!["structuredContent"]!;
   }
 
+  // The SDK reads a body at most 64 deep; Node reads any depth.
+  [Fact]
+  public async Task ADeepWriteOverHttpIsNoParseError()
+  {
+    var (app, client) = await StartAsync();
+
+    await using (app)
+    {
+      var handle = (string?)(await CallAsync(client, "blok_open", new JsonObject { ["documentId"] = "deep", ["write"] = true }))["handle"];
+      JsonObject block = new() { ["type"] = "toggle", ["data"] = new JsonObject { ["text"] = "L" } };
+
+      for (var level = 1; level < 30; level++)
+      {
+        block = new JsonObject { ["type"] = "toggle", ["data"] = new JsonObject { ["text"] = "L" }, ["children"] = new JsonArray(block) };
+      }
+      var ran = await CallAsync(client, "blok_execute", new JsonObject
+      {
+        ["handle"] = handle,
+        ["commands"] = new JsonArray(new JsonObject { ["name"] = "block.insert", ["args"] = block }),
+      });
+
+      Assert.Equal(true, (bool?)ran["ok"]);
+    }
+  }
+
   // Routing must not answer before the gate, which answers as Node's createMcpHandler.
   [Theory]
   [InlineData("POST", "text/plain", 415, "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Unsupported Media Type: Content-Type must be application/json\"},\"id\":null}")]

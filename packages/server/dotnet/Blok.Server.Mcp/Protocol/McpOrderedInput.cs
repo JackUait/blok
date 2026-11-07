@@ -191,7 +191,12 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
     }
     if (Reserve(text) is { } withTag)
     {
+      text = withTag;
       bytes = Encoding.UTF8.GetBytes(withTag);
+    }
+    if (McpRequestShape.ParkDeepArguments(text, core) is { } parked)
+    {
+      bytes = Encoding.UTF8.GetBytes(parked);
     }
 
     return bytes;

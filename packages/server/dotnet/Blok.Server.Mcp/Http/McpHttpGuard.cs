@@ -158,10 +158,15 @@ internal static class McpRequestGate
     // surrogate escape as U+FFFD, which the SDK can read.
     if (read.Value.Repeated || McpJson.HasLoneSurrogateEscape(sent))
     {
-      var normal = new MemoryStream(Encoding.UTF8.GetBytes(McpJson.Write(McpJson.Parse(sent))));
-
-      request.Body = normal;
-      request.ContentLength = normal.Length;
+      sent = McpJson.Write(McpJson.Parse(sent));
+      request.Body = new MemoryStream(Encoding.UTF8.GetBytes(sent));
+      request.ContentLength = request.Body.Length;
+    }
+    if (context.RequestServices?.GetService(typeof(McpServerCore)) is McpServerCore core
+        && McpRequestShape.ParkDeepArguments(sent, core) is { } parked)
+    {
+      request.Body = new MemoryStream(Encoding.UTF8.GetBytes(parked));
+      request.ContentLength = request.Body.Length;
     }
     // Stateless, as Node: a session id names nothing, so it is not checked.
     request.Headers.Remove("Mcp-Session-Id");

@@ -116,6 +116,56 @@ internal static class McpRequestShape
         && double.IsFinite(value) && Math.Floor(value) == value && Math.Abs(value) <= 9007199254740991;
   }
 
+  /// <summary>Where parked arguments leave their key, in the arguments the SDK reads.</summary>
+  internal const string ParkedArguments = "io.blok/parked";
+
+  // The C# SDK reads a message at most 64 deep (McpJsonUtilities.DefaultOptions, read-only).
+  private const int SdkDepth = 48;
+
+  /// <summary>
+  /// A tools/call whose message nests deeper than the SDK reads, with its arguments parked in the
+  /// core: the SDK gets only the handle and the key. Null when the text needs no change.
+  /// </summary>
+  internal static string? ParkDeepArguments(string text, McpServerCore core)
+  {
+    if (DepthOf(text) <= SdkDepth || McpJson.Parse(text) is not JsonObject message
+        || McpJson.String(message["method"]) != "tools/call" || message["params"] is not JsonObject call
+        || call["arguments"] is not JsonObject arguments)
+    {
+      return null;
+    }
+    var stand = new JsonObject { [ParkedArguments] = core.Park(arguments.DeepClone()) };
+
+    // The handle orders calls before the arguments are read back.
+    if (McpJson.String(arguments["handle"]) is string handle)
+    {
+      stand["handle"] = handle;
+    }
+    call["arguments"] = stand;
+
+    return McpJson.Write(message);
+  }
+
+  private static int DepthOf(string text)
+  {
+    var reader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(text), new JsonReaderOptions { MaxDepth = 1000 });
+    var deepest = 0;
+
+    try
+    {
+      while (reader.Read())
+      {
+        deepest = Math.Max(deepest, reader.CurrentDepth);
+      }
+    }
+    catch (JsonException)
+    {
+      return 0;
+    }
+
+    return deepest;
+  }
+
   /// <summary>The -32602 message Node gives a tools/call with no params, or a bad name or arguments; null when it passes.</summary>
   internal static string? ToolsCallRefusal(JsonNode? parameters)
   {

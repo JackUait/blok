@@ -85,7 +85,16 @@ describe('@bloklabs/mcp README', () => {
     expect(section).toMatch(/60 second limit per call/);
     expect(section).toMatch(/memory budget/);
     expect(section).toMatch(/Uploads work only through the library API/);
-    expect(section).toMatch(/C# library opens live handles only on the rooms of its own app/);
+    expect(section).toMatch(/The C# library checks the `Host` header only when you list `AllowedHosts`/);
+    expect(section).toMatch(/Rust library.*`hosts`.*other machines.*without OAuth/);
+    expect(section).toMatch(/`LiveRooms` in C#, `Options\.Rooms` in Go and `rooms` in Rust/);
+    expect(section).not.toMatch(/C# library opens live handles only/);
+  });
+
+  it('documents the nesting limit every build shares', () => {
+    const limits = readme.slice(readme.indexOf('## Limits'));
+
+    expect(limits).toMatch(/nest at most 48 levels of objects and arrays/);
   });
 });
 

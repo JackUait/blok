@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync/atomic"
 
@@ -59,7 +60,8 @@ func quoted(text string) json.RawMessage {
 // protocol: its _meta names the version.
 func isModern(req mcp.Request) bool {
 	params := req.GetParams()
-	if params == nil {
+	// A request sent with no params holds a typed nil pointer.
+	if params == nil || reflect.ValueOf(params).IsNil() {
 		return false
 	}
 	_, ok := params.GetMeta()[mcp.MetaKeyProtocolVersion]

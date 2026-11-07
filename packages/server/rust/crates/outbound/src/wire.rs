@@ -86,8 +86,9 @@ impl From<WireError> for io::Error {
 }
 
 /// The request head: the request line, then `headers` in order. A value
-/// with CR, LF or NUL, or a char above U+00FF, is refused, as Node's fetch
-/// refuses it: written raw it would end its line and start another header.
+/// with a control char other than tab (CR, LF, NUL, 0x7F...), or a char
+/// above U+00FF, is refused, as Node's fetch (undici) refuses it: written
+/// raw a CR or LF would end its line and start another header.
 /// U+0080..U+00FF go out as one Latin-1 byte each, as Node sends them.
 pub fn request_head(method: &str, target: &str, headers: &[(&str, &str)]) -> io::Result<Vec<u8>> {
     let mut head = format!("{method} {target} HTTP/1.1\r\n").into_bytes();
@@ -96,7 +97,7 @@ pub fn request_head(method: &str, target: &str, headers: &[(&str, &str)]) -> io:
         head.extend_from_slice(b": ");
         for c in value.chars() {
             match u8::try_from(u32::from(c)) {
-                Ok(b'\r' | b'\n' | 0) | Err(_) => {
+                Ok(0..=0x08 | 0x0a..=0x1f | 0x7f) | Err(_) => {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
                         format!("the {name} header value cannot be sent"),

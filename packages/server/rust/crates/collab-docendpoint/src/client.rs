@@ -210,6 +210,12 @@ impl Client {
             "application/json; charset=utf-8".to_owned(),
         )];
         if let Some(version) = version {
+            // The endpoint's own answer: a CR or LF in it would start a header of its own.
+            if !sendable(version) {
+                return Err(endpoint_error(
+                    "collab: the doc endpoint version cannot be sent as a header.",
+                ));
+            }
             headers.push((VERSION_HEADER.to_owned(), version.to_owned()));
         }
         if let Some(projection) = projection {
@@ -262,7 +268,7 @@ impl Client {
         // would otherwise send every request unauthenticated.
         let authorization = &self.options.authorization;
         if !authorization.is_empty() {
-            if authorization.contains(['\r', '\n']) {
+            if !sendable(authorization) {
                 return Err(endpoint_error(
                     "collab: the doc endpoint Authorization value cannot be sent as a header (a stray newline?).",
                 ));
@@ -601,4 +607,13 @@ fn append_net(dst: &mut Vec<u8>, value: &Value, depth: usize) -> Result<(), bool
         Value::Undefined | Value::Bytes(_) => return Err(false),
     }
     Ok(())
+}
+
+/// A header value undici would send: tab, printable ASCII and
+/// U+0080..U+00FF, which the outbound writer sends as one Latin-1 byte
+/// each. Any other char could end the line or has no byte.
+fn sendable(value: &str) -> bool {
+    value
+        .chars()
+        .all(|c| c == '\t' || (' '..='\u{7e}').contains(&c) || ('\u{80}'..='\u{ff}').contains(&c))
 }

@@ -126,17 +126,52 @@ async fn load_omits_the_authorization_header_when_none_is_configured() {
 
 #[tokio::test]
 async fn refuses_an_authorization_value_the_header_cannot_carry() {
-    for auth in ["Bearer secret\n", "Bearer\r\nsecret"] {
+    for auth in UNSENDABLE.map(|bad| format!("Bearer a{bad}")) {
         let r = Recorder::default();
         let setup = Setup {
-            authorization: auth,
+            // Setup holds 'static text; a test may leak it.
+            authorization: Box::leak(auth.clone().into_boxed_str()),
             ..Setup::default()
         };
         let err = client(&r, setup, json(r#"{"blocks":[]}"#))
             .load("doc")
             .await
             .unwrap_err();
-        assert!(endpoint_error(err).0.contains("Authorization"));
+        assert_eq!(
+            endpoint_error(err).0,
+            "collab: the doc endpoint Authorization value cannot be sent as a header (a stray newline?).",
+            "{auth:?}"
+        );
+        assert_eq!(r.count(), 0);
+    }
+}
+
+// undici's rule: tab, printable ASCII and U+0080..U+00FF only.
+const UNSENDABLE: [&str; 8] = [
+    "\n",
+    "\r\nX: 1",
+    "\0",
+    "\u{1}",
+    "\u{1f}",
+    "\u{7f}",
+    "\u{100}",
+    "\u{1F600}",
+];
+
+// The version comes from the endpoint's own answer.
+#[tokio::test]
+async fn refuses_a_save_version_the_header_cannot_carry() {
+    for version in UNSENDABLE.map(|bad| format!("v1{bad}")) {
+        let r = Recorder::default();
+        let err = client(&r, Setup::default(), json(""))
+            .save("doc", &node(r#"{"blocks":[]}"#), Some(&version), None)
+            .await
+            .unwrap_err();
+        assert_eq!(
+            endpoint_error(err).0,
+            "collab: the doc endpoint version cannot be sent as a header.",
+            "{version:?}"
+        );
         assert_eq!(r.count(), 0);
     }
 }

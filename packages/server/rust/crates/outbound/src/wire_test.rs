@@ -73,7 +73,17 @@ async fn caps_a_chunk_size_line_and_the_trailers() {
 #[test]
 fn a_header_value_cannot_end_its_line() {
     use crate::wire::request_head;
-    for bad in ["a\r\nX-Evil: 1", "a\nX", "a\rX", "a\0b", "a\u{100}", "a😀"] {
+    for bad in [
+        "a\r\nX-Evil: 1",
+        "a\nX",
+        "a\rX",
+        "a\0b",
+        "a\u{1}b",
+        "a\u{1f}b",
+        "a\u{7f}b",
+        "a\u{100}",
+        "a😀",
+    ] {
         assert!(
             request_head("GET", "/", &[("Authorization", bad)]).is_err(),
             "{bad:?}"

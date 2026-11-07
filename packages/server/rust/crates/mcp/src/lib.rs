@@ -194,7 +194,7 @@ async fn serve_http(mcp: Arc<Mcp>, version: String, options: &Value) -> i32 {
 
 async fn serve_stdio(mcp: Arc<Mcp>, version: String) -> i32 {
     let handler = Handler::new(mcp.clone(), version, false);
-    let pending = Arc::new(stdio::Pending::default());
+    let pending = Arc::new(stdio::Pending::with_requests(mcp.clone()));
     let served = stdio::proxy(
         tokio::io::stdin(),
         tokio::io::stdout(),

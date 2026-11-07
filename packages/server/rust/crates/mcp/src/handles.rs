@@ -1,5 +1,7 @@
 //! Open documents by handle, per principal (src/mcp/handles.ts). Calls on
-//! one handle run one at a time, in arrival order: tokio's Mutex is FIFO.
+//! one handle run one at a time, in arrival order: a call takes its turn
+//! before its first await (Handles::reserve), as Node's one event loop
+//! takes calls.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -29,6 +31,46 @@ pub struct Handles<S> {
     state: Mutex<State<S>>,
     idle: Duration,
     max_per_principal: usize,
+    /// Per handle: the next ticket to give and the one being served.
+    turns: Mutex<HashMap<String, (u64, u64)>>,
+    turned: tokio::sync::Notify,
+}
+
+/// A call's place in a handle's line. Its turn ends when it is dropped.
+pub struct Turn<S: Send + 'static> {
+    handles: Arc<Handles<S>>,
+    handle: String,
+    ticket: u64,
+}
+
+impl<S: Send + 'static> Turn<S> {
+    /// Waits until every call that came before on this handle is done.
+    pub async fn wait(&self) {
+        loop {
+            let turned = self.handles.turned.notified();
+            tokio::pin!(turned);
+            turned.as_mut().enable();
+            let serving = self.handles.turns_lock().get(&self.handle).map(|t| t.1);
+            if serving == Some(self.ticket) {
+                return;
+            }
+            turned.await;
+        }
+    }
+}
+
+impl<S: Send + 'static> Drop for Turn<S> {
+    fn drop(&mut self) {
+        let mut turns = self.handles.turns_lock();
+        if let Some(turn) = turns.get_mut(&self.handle) {
+            turn.1 += 1;
+            if turn.1 == turn.0 {
+                turns.remove(&self.handle);
+            }
+        }
+        drop(turns);
+        self.handles.turned.notify_waiters();
+    }
 }
 
 fn unknown_handle() -> HostError {
@@ -73,7 +115,27 @@ impl<S: Send + 'static> Handles<S> {
             }),
             idle,
             max_per_principal,
+            turns: Mutex::new(HashMap::new()),
+            turned: tokio::sync::Notify::new(),
         })
+    }
+
+    fn turns_lock(&self) -> std::sync::MutexGuard<'_, HashMap<String, (u64, u64)>> {
+        self.turns.lock().unwrap_or_else(|p| p.into_inner())
+    }
+
+    /// Takes the next place in `handle`'s line. Synchronous, so calls get
+    /// their places in the order they arrived.
+    pub fn reserve(self: &Arc<Self>, handle: &str) -> Turn<S> {
+        let mut turns = self.turns_lock();
+        let turn = turns.entry(handle.to_owned()).or_insert((0, 0));
+        let ticket = turn.0;
+        turn.0 += 1;
+        Turn {
+            handles: self.clone(),
+            handle: handle.to_owned(),
+            ticket,
+        }
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, State<S>> {
@@ -211,6 +273,32 @@ mod tests {
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         );
+    }
+
+    #[tokio::test]
+    async fn calls_on_one_handle_take_turns_in_the_order_they_came() {
+        let handles: Arc<Handles<()>> = Handles::new(Duration::from_secs(60), 8);
+        let first = handles.reserve("h");
+        let second = handles.reserve("h");
+        let order = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let waiting = {
+            let order = order.clone();
+            tokio::spawn(async move {
+                second.wait().await;
+                order.lock().unwrap().push("second");
+            })
+        };
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        first.wait().await;
+        order.lock().unwrap().push("first");
+        drop(first);
+        waiting.await.unwrap();
+        assert_eq!(*order.lock().unwrap(), vec!["first", "second"]);
+        // Another handle never waits for this one.
+        let other = handles.reserve("k");
+        tokio::time::timeout(Duration::from_millis(50), other.wait())
+            .await
+            .unwrap();
     }
 
     #[tokio::test]

@@ -34,13 +34,28 @@ pub fn own_answer(line: &str) -> Option<String> {
 /// Node's STOP_DRAIN_MS: shutdown waits this long for work in flight.
 pub const DRAIN_LIMIT: Duration = Duration::from_secs(45);
 
+/// Sees each request as it is read, in order, and each one's end.
+pub trait Requests: Send + Sync {
+    fn read(&self, message: &Value);
+    /// Answered or cancelled; `id` is the JSON text of its id.
+    fn ended(&self, id: &str);
+}
+
 /// The client requests sent to the server and not answered yet.
 #[derive(Default)]
 pub struct Pending {
     ids: std::sync::Mutex<HashSet<String>>,
+    requests: Option<Arc<dyn Requests>>,
 }
 
 impl Pending {
+    pub fn with_requests(requests: Arc<dyn Requests>) -> Pending {
+        Pending {
+            ids: std::sync::Mutex::default(),
+            requests: Some(requests),
+        }
+    }
+
     fn ids(&self) -> std::sync::MutexGuard<'_, HashSet<String>> {
         self.ids.lock().unwrap_or_else(|p| p.into_inner())
     }
@@ -54,11 +69,17 @@ impl Pending {
         if message.get("method").and_then(Value::as_str) == Some("notifications/cancelled") {
             if let Some(id) = message.pointer("/params/requestId") {
                 self.ids().remove(&id.to_string());
+                if let Some(requests) = &self.requests {
+                    requests.ended(&id.to_string());
+                }
             }
         } else if message.get("method").is_some()
             && let Some(id) = message.get("id")
         {
             self.ids().insert(id.to_string());
+            if let Some(requests) = &self.requests {
+                requests.read(&message);
+            }
         }
     }
 
@@ -69,6 +90,9 @@ impl Pending {
             && let Some(id) = message.get("id")
         {
             self.ids().remove(&id.to_string());
+            if let Some(requests) = &self.requests {
+                requests.ended(&id.to_string());
+            }
         }
     }
 

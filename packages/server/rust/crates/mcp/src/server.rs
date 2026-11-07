@@ -88,6 +88,8 @@ pub enum Session {
 
 pub struct Mcp {
     bundle: Arc<Bundle>,
+    /// Turns taken as stdio read each tools/call, by the JSON text of its id.
+    reserved: std::sync::Mutex<std::collections::HashMap<String, crate::handles::Turn<Session>>>,
     uploads: Option<crate::uploads::Uploads>,
     calls: Arc<crate::inflight::InFlight>,
     pub surface: Surface,
@@ -264,6 +266,36 @@ fn str_of<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value.get(key).and_then(Value::as_str)
 }
 
+/// stdio reads calls in order and the server runs each in its own task, so a
+/// call takes its place on its handle as it is read.
+impl crate::stdio::Requests for Mcp {
+    fn read(&self, message: &Value) {
+        if message.get("method").and_then(Value::as_str) != Some("tools/call") {
+            return;
+        }
+        let (Some(id), Some(handle)) = (
+            message.get("id"),
+            message
+                .pointer("/params/arguments/handle")
+                .and_then(Value::as_str),
+        ) else {
+            return;
+        };
+        let turn = self.handles.reserve(handle);
+        self.reserved
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .insert(id.to_string(), turn);
+    }
+
+    fn ended(&self, id: &str) {
+        self.reserved
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .remove(id);
+    }
+}
+
 impl Mcp {
     /// `rooms`: the embedding host's own collab rooms (`Server::agent_executor()`).
     /// Live handles then run in this process, with no ticket and no socket.
@@ -366,6 +398,7 @@ impl Mcp {
             idle_ms,
             handles: Handles::new(idle, max),
             calls: Arc::default(),
+            reserved: std::sync::Mutex::default(),
             uploads,
             source,
             authorize,
@@ -397,6 +430,17 @@ impl Mcp {
 
     pub fn close_all(&self) {
         self.handles.close_all();
+    }
+
+    /// The turn of the call with this id on its handle: the one stdio took
+    /// as it read the call, or a new one.
+    pub fn turn_for(&self, id: &str, args: &Value) -> Option<crate::handles::Turn<Session>> {
+        let reserved = self
+            .reserved
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .remove(id);
+        reserved.or_else(|| str_of(args, "handle").map(|handle| self.handles.reserve(handle)))
     }
 
     /// Waits for every tool call in flight, or `limit`.

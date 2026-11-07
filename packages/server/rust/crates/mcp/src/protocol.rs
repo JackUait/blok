@@ -340,6 +340,14 @@ impl ServerHandler for Handler {
         };
         let ct = context.ct.clone();
         let cancelled = move || ct.is_cancelled();
+        // Calls on one handle run in the order they came (handles.rs).
+        let id = serde_json::to_value(&context.id)
+            .map(|id| id.to_string())
+            .unwrap_or_default();
+        let turn = self.mcp.turn_for(&id, &args);
+        if let Some(turn) = &turn {
+            turn.wait().await;
+        }
         loop {
             let outcome = self
                 .mcp

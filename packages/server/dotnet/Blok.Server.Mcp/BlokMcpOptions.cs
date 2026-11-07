@@ -35,9 +35,30 @@ public sealed class BlokMcpOptions
 
   /// <summary>
   /// The per-document check (blok-mcp <c>--authorize</c>). When unset, a registered
-  /// <c>IBlokAuthorization</c> decides; with neither, every caller reaches every document.
+  /// <c>IBlokAuthorization</c> decides. With neither, <c>MapBlokMcp</c> refuses to start
+  /// unless <see cref="AllowEveryCallerEveryDocument"/> is set. OAuth alone is not enough:
+  /// it says who calls, not which documents they may open.
   /// </summary>
   public Func<BlokMcpAccessRequest, CancellationToken, ValueTask<bool>>? Authorize { get; set; }
+
+  /// <summary>
+  /// Lets every caller read and write every document, with no per-document check. Only for
+  /// an endpoint nothing untrusted can reach.
+  /// </summary>
+  public bool AllowEveryCallerEveryDocument { get; set; }
+
+  /// <summary>
+  /// The browser origins that may call the endpoint, such as <c>https://app.example</c>.
+  /// A request with no <c>Origin</c> header always passes. When unset, only loopback
+  /// pages (<c>http://localhost</c>, <c>127.0.0.1</c>, <c>[::1]</c>, any port) may, as blok-mcp --http.
+  /// </summary>
+  public IList<string>? AllowedOrigins { get; set; }
+
+  /// <summary>
+  /// The host names the <c>Host</c> header may carry (any port), against DNS rebinding.
+  /// When unset nothing is checked here; use ASP.NET Core's <c>AllowedHosts</c> host filtering.
+  /// </summary>
+  public IList<string>? AllowedHosts { get; set; }
 
   /// <summary>
   /// Serve live handles from this app's own Blok collab rooms (<c>AddBlokServer</c> with

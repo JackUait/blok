@@ -20,7 +20,7 @@ internal sealed partial class McpHttpGuard(McpConfig config, Func<int> boundPort
 
   // MCP clients are not browsers: only a loopback page may drive this server.
   [GeneratedRegex(@"^http://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$", RegexOptions.CultureInvariant)]
-  private static partial Regex LoopbackOrigin();
+  internal static partial Regex LoopbackOrigin();
 
   internal bool IsLoopbackHost(string? host)
   {
@@ -81,6 +81,13 @@ internal static class McpRequestGate
   internal static async Task InvokeAsync(HttpContext context, RequestDelegate next)
   {
     var request = context.Request;
+
+    if (context.RequestServices?.GetService(typeof(McpConfig)) is McpConfig { Gate: { } gate } && !Admits(gate, request))
+    {
+      context.Response.StatusCode = StatusCodes.Status403Forbidden;
+
+      return;
+    }
 
     if (!HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method))
     {
@@ -174,6 +181,16 @@ internal static class McpRequestGate
       context.Response.Body = original;
     }
     await WriteModernAsync(context.Response, answer);
+  }
+
+  private static bool Admits(McpCallerGate gate, HttpRequest request)
+  {
+    var origin = request.Headers.Origin;
+    var originOk = origin.Count == 0 || (gate.Origins is { } origins
+        ? origins.Contains(origin.ToString(), StringComparer.OrdinalIgnoreCase)
+        : McpHttpGuard.LoopbackOrigin().IsMatch(origin.ToString()));
+
+    return originOk && (gate.Hosts is not { } hosts || hosts.Contains(request.Host.Host, StringComparer.OrdinalIgnoreCase));
   }
 
   private static async Task WriteJsonAsync(HttpResponse response, string json)

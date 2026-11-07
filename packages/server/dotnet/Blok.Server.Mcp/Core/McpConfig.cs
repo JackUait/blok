@@ -18,6 +18,9 @@ internal abstract record McpSourceConfig
   internal sealed record Endpoint(string Url, string EndpointAuth, string? List) : McpSourceConfig;
 }
 
+/// <summary>Origins and host names a library endpoint takes; null origins means loopback pages only, null hosts no check.</summary>
+internal sealed record McpCallerGate(IReadOnlyList<string>? Origins, IReadOnlyList<string>? Hosts);
+
 internal sealed record McpOAuth(string Issuer, string Audience, string JwksUrl);
 
 /// <summary>The decides-who-may hook: (principal, documentId, write) → allowed.</summary>
@@ -67,6 +70,9 @@ internal sealed class McpConfig
   internal JsonNode? Overrides { get; init; }
 
   internal McpAuthorize? Authorize { get; init; }
+
+  /// <summary>The library's front door: <see cref="Blok.Server.Mcp.Http.McpRequestGate"/> checks Origin and Host. The CLI's guard does it instead.</summary>
+  internal McpCallerGate? Gate { get; init; }
 
   /// <summary>The library form: live handles run on this app's own collab rooms.</summary>
   internal Blok.Server.Agent.BlokAgentExecutor? Rooms { get; init; }

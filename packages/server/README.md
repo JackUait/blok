@@ -59,6 +59,36 @@ The switch covers all of Kestrel's HTTP/1 parsing. The request line and the head
 
 The Go and Rust hosts refuse bare LF line ends as well.
 
+### An MCP endpoint in your app
+
+`Blok.Server.Mcp` serves Blok's MCP tools from your own app, like `blok-mcp --http`:
+
+```csharp
+using Blok.Server.Mcp;
+
+builder.Services.AddBlokMcp(options =>
+{
+  options.FilesDirectory = "./documents";
+  options.Authorize = (request, _) => ValueTask.FromResult(CanOpen(request.Principal, request.DocumentId, request.Write));
+});
+
+var app = builder.Build();
+
+app.MapBlokMcp("/mcp");
+app.Run();
+```
+
+It needs a per-document check, as `blok-mcp --http` needs `--authorize`:
+
+- Set `Authorize`, or register `IBlokAuthorization`.
+- With neither, `MapBlokMcp` throws at startup. OAuth alone is not enough: it says who calls, not which documents they may open.
+- `AllowEveryCallerEveryDocument = true` turns the check off. Use it only where nothing untrusted can reach the endpoint.
+
+Browsers and DNS rebinding:
+
+- A request with a foreign `Origin` gets 403. By default only loopback pages (`http://localhost`, `127.0.0.1`, `[::1]`) may call. List your own in `AllowedOrigins`.
+- `AllowedHosts` limits the `Host` header to the names you list. Without it, set ASP.NET Core's own `AllowedHosts` host filtering.
+
 ## Convert documents
 
 `Blok.Server` embeds Blok's own serializer as a JavaScript bundle and runs it in this process. A document therefore converts through the editor's implementation, not a port of it. A port has to be taught every block Blok gains, and it silently drops the ones nobody remembered.

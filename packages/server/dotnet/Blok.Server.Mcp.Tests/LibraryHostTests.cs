@@ -46,7 +46,7 @@ public sealed class LibraryHostTests : IDisposable
     }
   }
 
-  private async Task<(WebApplication App, HttpClient Client)> StartAsync(Action<IServiceCollection>? services = null)
+  private async Task<(WebApplication App, HttpClient Client)> StartAsync(Action<IServiceCollection>? services = null, Action<BlokMcpOptions>? configure = null)
   {
     var builder = WebApplication.CreateSlimBuilder();
 
@@ -57,6 +57,11 @@ public sealed class LibraryHostTests : IDisposable
     {
       options.FilesDirectory = dir;
       options.Principal = "alice";
+      if (configure is null)
+      {
+        options.AllowEveryCallerEveryDocument = true;
+      }
+      configure?.Invoke(options);
     });
     var app = builder.Build();
 
@@ -64,6 +69,38 @@ public sealed class LibraryHostTests : IDisposable
     await app.StartAsync();
 
     return (app, app.GetTestClient());
+  }
+
+  private static HttpRequestMessage ListRequest(string? origin, string? host)
+  {
+    var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+    {
+      Content = new StringContent(
+          """{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_list_documents","arguments":{}}}""",
+          Encoding.UTF8,
+          "application/json"),
+    };
+
+    request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+    request.Headers.Add("MCP-Protocol-Version", "2025-11-25");
+    if (origin is not null)
+    {
+      request.Headers.TryAddWithoutValidation("Origin", origin);
+    }
+    if (host is not null)
+    {
+      request.Headers.Host = host;
+    }
+
+    return request;
+  }
+
+  private static async Task<int> StatusAsync(HttpClient client, string? origin, string? host = null)
+  {
+    using var request = ListRequest(origin, host);
+    using var response = await client.SendAsync(request);
+
+    return (int)response.StatusCode;
   }
 
   private static async Task<JsonObject> CallAsync(HttpClient client, string name, JsonObject arguments)
@@ -150,6 +187,86 @@ public sealed class LibraryHostTests : IDisposable
 
       Assert.Equal(405, (int)response.StatusCode);
       Assert.Equal("POST", response.Content.Headers.Allow.Single());
+    }
+  }
+
+  // Node's HTTP server needs a per-document check: OAuth names the caller, not what it may open.
+  [Fact]
+  public async Task RefusesToStartWithNoPerDocumentCheck()
+  {
+    var bare = await Assert.ThrowsAsync<InvalidOperationException>(() => StartAsync(configure: _ => { }));
+    var oauthOnly = await Assert.ThrowsAsync<InvalidOperationException>(() => StartAsync(configure: options =>
+        options.OAuth = new BlokMcpOAuthOptions { Issuer = "https://issuer.test", Audience = "https://mcp.test/mcp", JwksUri = new Uri("https://issuer.test/jwks") }));
+
+    Assert.Contains("AllowEveryCallerEveryDocument", bare.Message, StringComparison.Ordinal);
+    Assert.Equal(bare.Message, oauthOnly.Message);
+  }
+
+  [Fact]
+  public async Task StartsWithAnAuthorizeHookOrABlokAuthorizationRegisteredAfterIt()
+  {
+    var (hooked, _) = await StartAsync(configure: options => options.Authorize = (_, _) => ValueTask.FromResult(true));
+    await hooked.DisposeAsync();
+    var builder = WebApplication.CreateSlimBuilder();
+
+    builder.Logging.ClearProviders();
+    builder.WebHost.UseTestServer();
+    builder.Services.AddBlokMcp(options => options.FilesDirectory = dir);
+    builder.Services.AddSingleton<IBlokAuthorization>(new OnlyOpen());
+    await using var app = builder.Build();
+
+    app.MapBlokMcp();
+    await app.StartAsync();
+  }
+
+  [Fact]
+  public async Task RunsNodesUploadLimitChecks()
+  {
+    var error = await Assert.ThrowsAsync<InvalidOperationException>(() => StartAsync(configure: options =>
+    {
+      options.AllowEveryCallerEveryDocument = true;
+      options.Uploads = new BlokMcpUploads
+      {
+        Uploader = new BlokMcpUploader { UploadByFile = (_, _, _) => ValueTask.FromResult(new BlokMcpUploadedFile(new Uri("https://cdn.test/a"))) },
+        Limits = new Dictionary<string, BlokMcpUploadLimits> { ["pdf"] = new() },
+      };
+    }));
+
+    Assert.Equal("uploads.limits.pdf is not a kind: use image, video, audio or file", error.Message);
+  }
+
+  // A web page the user visits must not drive the agent's tools (Node: loopback pages only).
+  [Fact]
+  public async Task RefusesAForeignOriginAndTakesALoopbackOneOrNone()
+  {
+    var (app, client) = await StartAsync();
+
+    await using (app)
+    {
+      Assert.Equal(403, await StatusAsync(client, "https://evil.example"));
+      Assert.Equal(403, await StatusAsync(client, "http://localhost.evil.example:3000"));
+      Assert.Equal(200, await StatusAsync(client, "http://localhost:3000"));
+      Assert.Equal(200, await StatusAsync(client, "http://127.0.0.1"));
+      Assert.Equal(200, await StatusAsync(client, null));
+    }
+  }
+
+  [Fact]
+  public async Task TakesOnlyTheConfiguredOriginsAndHosts()
+  {
+    var (app, client) = await StartAsync(configure: options =>
+    {
+      options.AllowEveryCallerEveryDocument = true;
+      options.AllowedOrigins = ["https://app.example"];
+      options.AllowedHosts = ["mcp.example"];
+    });
+
+    await using (app)
+    {
+      Assert.Equal(200, await StatusAsync(client, "https://app.example", "mcp.example"));
+      Assert.Equal(200, await StatusAsync(client, null, "MCP.example:8443"));
+      Assert.Equal(403, await StatusAsync(client, "http://localhost:3000", "mcp.example"));
+      Assert.Equal(403, await StatusAsync(client, null, "attacker.example"));
     }
   }
 }

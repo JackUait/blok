@@ -132,8 +132,18 @@ public static class BlokMcpServiceCollectionExtensions
         ? async (principal, documentId, write, token) => await authorize(new BlokMcpAccessRequest(principal, documentId, write), token)
         : rules is not null ? (principal, documentId, write, token) => AllowedByRulesAsync(rules, principal, documentId, write, token) : null;
 
+    // Node's checkOptionSafety over HTTP: OAuth says who calls, not which documents they may open.
+    if (hook is null && !options.AllowEveryCallerEveryDocument)
+    {
+      throw new InvalidOperationException(
+          "Blok's MCP endpoint needs a per-document check: set BlokMcpOptions.Authorize or register IBlokAuthorization. "
+          + "To let every caller reach every document, set BlokMcpOptions.AllowEveryCallerEveryDocument.");
+    }
+    CheckOptions(provider.GetRequiredService<BlokMcpHost>(), options);
+
     return new McpConfig
     {
+      Gate = new McpCallerGate(options.AllowedOrigins?.ToArray(), options.AllowedHosts?.ToArray()),
       Source = options.FilesDirectory is string dir
           ? new McpSourceConfig.Files(dir)
           : options.DocumentEndpoint is Uri endpoint
@@ -153,6 +163,44 @@ public static class BlokMcpServiceCollectionExtensions
       Authorize = hook,
       Rooms = options.LiveRooms ? RoomsOf(provider) : null,
     };
+  }
+
+  // The rest of Node's checks (upload limits), run by the same bundle the CLI uses.
+  private static void CheckOptions(BlokMcpHost host, BlokMcpOptions options)
+  {
+    var check = new JsonObject
+    {
+      ["transport"] = new JsonObject { ["kind"] = "http", ["listen"] = "127.0.0.1:0" },
+      ["auth"] = new JsonObject { ["kind"] = options.OAuth is null ? "none" : "oauth" },
+      ["authorize"] = true,
+    };
+
+    if (options.Uploads is { } uploads)
+    {
+      var limits = new JsonObject();
+
+      foreach (var (kind, limit) in uploads.Limits ?? new Dictionary<string, BlokMcpUploadLimits>())
+      {
+        var entry = new JsonObject();
+
+        if (limit.Types is { } types)
+        {
+          entry["types"] = new JsonArray([.. types.Select(type => (JsonNode)type)]);
+        }
+        if (limit.MaxSize is long max)
+        {
+          entry["maxSize"] = max;
+        }
+        limits[kind] = entry;
+      }
+      check["uploads"] = new JsonObject { ["uploadByFile"] = true, ["limits"] = limits };
+    }
+    var safety = host.Bundle.CallAsync("mcpCheckOptions", new JsonObject { ["options"] = check }).GetAwaiter().GetResult();
+
+    if (McpJson.String(safety["error"]) is string refused)
+    {
+      throw new InvalidOperationException(refused);
+    }
   }
 
   private static Blok.Server.Agent.BlokAgentExecutor RoomsOf(IServiceProvider provider)

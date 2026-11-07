@@ -68,6 +68,7 @@ const overlayKeys = (): string[] => [
   ]),
   'server.mcpHeading',
   'server.mcpIntro',
+  'server.mcpDifferences',
   ...serverMcpBuilds.flatMap((build) => {
     const base = `server.mcp.${build.id}`;
 

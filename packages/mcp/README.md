@@ -152,7 +152,7 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
 - On an ASP.NET host, `IBlokAuthorization` sees the agent's actor id, not the human's. Map it back to the human for your document checks.
 - `--authorize <module|url>` decides who may open what:
   - A URL is a webhook. It gets `POST { "principal", "documentId", "write" }` and must answer `200 { "allowed": true | false }`. Any other answer means no.
-  - Anything else is a module path. Its default export is `(principal, documentId, write) => Promise<boolean>`.
+  - Anything else is a module path. Its default export is `(principal, documentId, write) => Promise<boolean>`. Node only: the C#, Go and Rust builds take only a webhook URL and refuse a module path at startup.
   - It runs before every open, and again on each later call.
   - `blok_list_documents` shows only the documents it allows the caller to read. Without it, the list is unfiltered.
 - `--page-titles page-map` lets agents rename other pages and set their icons. It shows up only if your host reads each page's title from that page document's title.
@@ -241,7 +241,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 | `--oauth-issuer <url>` | | none | Expected token issuer. |
 | `--oauth-audience <url>` | | none | This server's resource id. |
 | `--oauth-jwks <url>` | | none | Issuer's JWKS URL. |
-| `--authorize <module\|url>` | | none | Per-document access hook. |
+| `--authorize <module\|url>` | | none | Per-document access hook. A module path works in Node only. |
 | `--principal <name>` | | `local` | Who the caller is over stdio. |
 | `--manifest <file>` | | none | Custom block and inline tools. |
 | `--manifest-overrides <file>` | | none | Tool and action overrides. |
@@ -251,6 +251,26 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 | `--handle-idle-ms <ms>` | | `600000` | Idle time before a handle expires. |
 | `--max-handles <n>` | | `8` | Open handles per principal. |
 | `--no-comments` | | comments on | Turn off the database comment commands. A host that keeps comments in its own system (a `comments` hook) must pass it, or agent comments stay invisible to people. `--comments` is accepted and changes nothing. |
+
+## Other builds: C#, Go and Rust
+
+The same server is also written in C#, Go and Rust. They take the same flags and environment variables, and one shared conformance suite checks each against this package. No release has shipped them yet.
+
+| Build | Install | In your app | README |
+|---|---|---|---|
+| C# | `dotnet tool install -g Blok.Mcp`, or `dnx Blok.Mcp` | `builder.Services.AddBlokMcp(...)` and `app.MapBlokMcp("/mcp")`, from the `Blok.Server.Mcp` NuGet package | `packages/server/dotnet/Blok.Mcp`, `packages/server/dotnet/Blok.Server.Mcp` |
+| Go | `go install github.com/JackUait/blok/packages/server/go/v2/cmd/blok-mcp@latest` | `blokmcp.New(blokmcp.Options{...})`, then `Handler()` or `ServeStdio` | `packages/server/go/blokmcp` |
+| Rust | Build from source: `cargo build --release -p blok-mcp` in `packages/server/rust` | `blok_mcp::Embedded::new(...)` | `packages/server/rust/crates/mcp` |
+
+Each library's options change faster than this page. Its README lists them.
+
+Where they differ from this package, on purpose:
+
+- `--authorize` takes only an http(s) webhook URL. A module path is JavaScript, so they refuse it at startup.
+- Uploads work only through the library API, as here: give the library your uploader. There is no flag for them.
+- Each call runs in an embedded JavaScript engine, with a 60 second limit per call. Node has no such limit.
+- Each engine also has a memory budget. C# counts 2 GiB of allocations per call, Go stops a call whose heap grows by about 1 GiB, and Rust lets one call hold 256 MiB.
+- The C# library opens live handles only on the rooms of its own app (`LiveRooms`), in the same process, with no socket and no ticket. The `Blok.Mcp` tool joins a remote sync service with `--sync-url`, as here.
 
 ## Limits
 

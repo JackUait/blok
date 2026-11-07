@@ -69,4 +69,41 @@ describe('@bloklabs/mcp README', () => {
     expect(readme).toMatch(/@bloklabs\/core[\s\S]*@bloklabs\/server|@bloklabs\/server[\s\S]*@bloklabs\/core/);
     expect(readme).toMatch(/never.*Markdown/i);
   });
+
+  // The ports refuse a module hook (BlokMcpCli.cs, cli.go, cli.rs): only Node can load JavaScript.
+  it('says a module --authorize hook works in Node only', () => {
+    expect(readme).toMatch(/Anything else is a module path\. Its default export .* Node only: the C#, Go and Rust builds take only a webhook URL/);
+    expect(readme).toContain('Per-document access hook. A module path works in Node only.');
+  });
+
+  it('lists the C#, Go and Rust builds and where they differ on purpose', () => {
+    const section = readme.slice(readme.indexOf('## Other builds: C#, Go and Rust'), readme.indexOf('## Limits'));
+
+    for (const name of ['Blok.Mcp', 'AddBlokMcp', 'MapBlokMcp', 'blokmcp.New', 'blok_mcp::Embedded::new', 'cargo build --release -p blok-mcp']) {
+      expect(section, name).toContain(name);
+    }
+    expect(section).toMatch(/60 second limit per call/);
+    expect(section).toMatch(/memory budget/);
+    expect(section).toMatch(/Uploads work only through the library API/);
+    expect(section).toMatch(/C# library opens live handles only on the rooms of its own app/);
+  });
+});
+
+// Registries show these to whoever installs Blok.Mcp, so the list must follow the parser.
+describe('Blok.Mcp server.json', () => {
+  const config = readFileSync(resolve(ROOT, 'src/shared/mcp/config.ts'), 'utf-8');
+  const envs = [...new Set([...config.matchAll(/env(?:\.|\[')([A-Z][A-Z0-9_]*)/g)].map((match) => match[1]))].sort();
+  const server = JSON.parse(readFileSync(resolve(ROOT, 'packages/server/dotnet/Blok.Mcp/.mcp/server.json'), 'utf-8')) as {
+    packages: Array<{ environmentVariables: Array<{ name: string; isSecret: boolean }> }>;
+  };
+  const listed = server.packages[0].environmentVariables;
+
+  it('lists every environment variable the parser reads, and no other', () => {
+    expect(listed.map(({ name }) => name).sort()).toEqual(envs);
+  });
+
+  it('marks the secrets as secret', () => {
+    expect(listed.filter(({ isSecret }) => isSecret).map(({ name }) => name).sort())
+      .toEqual(['BLOK_DOC_ENDPOINT_AUTH', 'BLOK_MCP_HOST_TOKEN', 'BLOK_SECRET']);
+  });
 });

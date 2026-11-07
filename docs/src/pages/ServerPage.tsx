@@ -21,7 +21,7 @@ const ENGLISH_H1 = 'Uploads and link previews';
  */
 export const ServerContent: React.FC = () => {
   const { locale, t } = useI18n();
-  const { coverageNote, paths: serverPaths, limits: serverLimits, mcpIntro, mcpBuilds } = useServerTranslations();
+  const { coverageNote, paths: serverPaths, limits: serverLimits, mcpIntro, mcpBuilds, mcpDifferences } = useServerTranslations();
   // See PresetsContent: the descriptive H1 lives in route-metadata.ts, keyed off
   // the locale in the path, so a /ru/server reader gets the Russian heading
   // route-metadata.ru.ts already authors instead of a hardcoded English one.
@@ -147,6 +147,9 @@ export const ServerContent: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+        <div className="mt-10 max-w-2xl" data-blok-testid="server-mcp-differences">
+          <Prose text={mcpDifferences} className="text-base leading-relaxed text-muted-foreground" />
         </div>
       </section>
     </div>

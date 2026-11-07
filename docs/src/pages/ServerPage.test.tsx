@@ -146,11 +146,20 @@ describe('ServerPage', () => {
     }
   });
 
+  it('states where the C#, Go and Rust builds differ from Node', () => {
+    renderPage();
+
+    const differences = screen.getByTestId('server-mcp-differences');
+    expect(differences).toHaveTextContent('--authorize');
+    expect(differences).toHaveTextContent('60 second limit');
+  });
+
   it('localizes the MCP section on a ru page', () => {
     renderPage('ru', '/ru/server');
 
     const mcp = screen.getByTestId('server-mcp');
     expect(mcp).toHaveTextContent(/[\u0400-\u04FF]{4}/);
+    expect(screen.getByTestId('server-mcp-differences')).toHaveTextContent(/намеренно отличаются/);
     for (const build of serverMcpBuilds) {
       const card = within(mcp).getByTestId(`server-mcp-${build.id}`);
       expect(within(card).queryByText(build.description)).toBeNull();

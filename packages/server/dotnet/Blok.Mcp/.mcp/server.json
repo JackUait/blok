@@ -12,7 +12,64 @@
         "type": "stdio"
       },
       "packageArguments": [],
-      "environmentVariables": []
+      "environmentVariables": [
+        {
+          "name": "BLOK_DOC_ENDPOINT_AUTH",
+          "description": "Authorization header for the endpoint source.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "BLOK_SYNC_URL",
+          "description": "Sync service for live rooms, as --sync-url.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "BLOK_MCP_ORIGIN",
+          "description": "Origin sent to the sync service, as --origin.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "BLOK_SECRET",
+          "description": "Signs room tickets locally.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "BLOK_TICKET_URL",
+          "description": "Host route that mints room tickets, as --ticket-url.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "BLOK_MCP_HOST_TOKEN",
+          "description": "Bearer token for the ticket route. Required with it.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "BLOK_MCP_HTTP",
+          "description": "Serve Streamable HTTP on host:port, as --http.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "BLOK_RICH_TEXT_FIELDS",
+          "description": "Rich text fields for unknown block types, as --rich-text-fields.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
     }
   ],
   "repository": {

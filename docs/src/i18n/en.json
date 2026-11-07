@@ -3234,6 +3234,7 @@
           }
         }
       }
-    }
+    },
+    "mcpDifferences": "Where the C#, Go and Rust builds differ from Node, on purpose:\n\n- `--authorize` takes only an http(s) webhook URL. A module path is JavaScript, so they refuse it at startup.\n- Uploads work only through the library API, as in Node. There is no flag for them.\n- Each call runs in an embedded JavaScript engine, with a 60 second limit. Node has no such limit.\n- Each engine also has a memory budget per call: 2 GiB of allocations in C#, about 1 GiB of heap growth in Go, 256 MiB held in Rust.\n- The C# library opens live handles only on the rooms of its own app, in the same process. The `Blok.Mcp` tool joins a remote sync service with `--sync-url`, as Node does.\n\nEach library's options are listed in its README, next to its code in `packages/server`."
   }
 }

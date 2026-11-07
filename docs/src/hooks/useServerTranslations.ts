@@ -5,6 +5,7 @@ import {
   serverCoverageNote,
   serverLimits,
   serverMcpBuilds,
+  serverMcpDifferences,
   serverMcpIntro,
   serverPaths,
 } from '../components/server/server-data';
@@ -76,6 +77,7 @@ export const useServerTranslations = () => {
       limits,
       mcpIntro: translateOr('server.mcpIntro', serverMcpIntro),
       mcpBuilds,
+      mcpDifferences: translateOr('server.mcpDifferences', serverMcpDifferences),
     };
   }, [t, locale]);
 

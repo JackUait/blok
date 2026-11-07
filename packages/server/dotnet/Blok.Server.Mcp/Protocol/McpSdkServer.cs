@@ -153,7 +153,8 @@ internal static class McpSdkServer
     }
     var raw = context.JsonRpcRequest.Params as JsonObject;
 
-    // Node hands the cancel signal to opens only; any other call already read runs to its end.
+    // Node hands the cancel signal (stdio cancel, HTTP disconnect) to opens only; any other call
+    // runs to its end. The runtime's 60 s deadline and memory budget still bound it.
     if (name != "blok_open")
     {
       token = CancellationToken.None;

@@ -43,4 +43,43 @@ public sealed class McpBudgetTests : IDisposable
     Assert.Equal("INVALID_ARGS", (string?)answer["structuredContent"]?["error"]?["code"]);
     Assert.False((bool?)answer["structuredContent"]?["error"]?["retryable"]);
   }
+
+  private sealed class RecordingRuntime(IBlokRuntime inner) : IBlokRuntime
+  {
+    internal List<(string Operation, TimeSpan? Timeout, bool Cancellable)> Calls { get; } = [];
+
+    public ValueTask<string> InvokeAsync(string operation, string inputJson, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+      lock (Calls)
+      {
+        Calls.Add((operation, timeout, cancellationToken.CanBeCanceled));
+      }
+
+      return inner.InvokeAsync(operation, inputJson, timeout, cancellationToken);
+    }
+  }
+
+  // An execute ignores the client's cancel (as Node's does), so the runtime's own deadline is what
+  // ends a runaway one: every runtime call carries the 60 s budget, which ends even an uncancellable
+  // call (JintBlokRuntimeTests.TimesOutInsteadOfHanging).
+  [Fact]
+  public async Task AnExecuteTheClientCannotCancelStillRunsUnderTheCallDeadline()
+  {
+    var runtime = new RecordingRuntime(JintBlokRuntime.FromEmbeddedResource(1, TimeSpan.FromSeconds(60), 256L << 20));
+    await using var core = new McpServerCore(new McpBundle(runtime), new McpConfig { Source = new McpSourceConfig.Files(dir) }, new McpHttpCaller());
+    var caller = await core.CallerAsync("local", "test", null, CancellationToken.None);
+    var open = await core.CallToolAsync("blok_open", new JsonObject { ["documentId"] = "doc", ["write"] = true }, caller, null, CancellationToken.None);
+
+    await core.CallToolAsync("blok_execute", new JsonObject
+    {
+      ["handle"] = open.Answer!["structuredContent"]!["handle"]!.DeepClone(),
+      ["commands"] = new JsonArray(new JsonObject { ["name"] = "doc.setTitle", ["args"] = new JsonObject { ["title"] = "x" } }),
+    }, caller, null, CancellationToken.None);
+
+    var execute = runtime.Calls.Single(call => call.Operation == "agentExecute");
+
+    Assert.False(execute.Cancellable);
+    Assert.Equal(TimeSpan.FromSeconds(60), execute.Timeout);
+    Assert.All(runtime.Calls, call => Assert.NotNull(call.Timeout));
+  }
 }

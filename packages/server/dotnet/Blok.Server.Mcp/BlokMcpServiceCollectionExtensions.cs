@@ -34,6 +34,8 @@ public static class BlokMcpServiceCollectionExtensions
     var options = new BlokMcpOptions();
 
     configure(options);
+    // The host's rules see the signed-in user, not one made from the principal.
+    services.AddHttpContextAccessor();
     services.TryAddSingleton(_ => new McpHttpCaller());
     // Its own runtime, not the app's IBlokRuntime: MCP batches need a larger allocation budget.
     services.TryAddSingleton(provider => new BlokMcpHost(new McpBundle(BlokMcpHost.Runtime()), provider.GetRequiredService<McpHttpCaller>()));
@@ -106,11 +108,22 @@ public static class BlokMcpServiceCollectionExtensions
     {
       return new McpCallerIdentity(principal, scopes);
     }
-    var named = user.Identity?.IsAuthenticated == true
+
+    return new McpCallerIdentity(HostUserName(user) ?? config.PrincipalOrDefault, null);
+  }
+
+  /// <summary>The name of a user the host's own auth signed in; null for an anonymous or a Blok bearer caller.</summary>
+  internal static string? HostUserName(ClaimsPrincipal? user)
+  {
+    return user?.Identity?.IsAuthenticated == true && BlokMcpBearer.Identity(user) is null
         ? user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
         : null;
+  }
 
-    return new McpCallerIdentity(named ?? config.PrincipalOrDefault, null);
+  /// <summary>A user the host's auth signed in without a sub or NameIdentifier, who would share the anonymous principal's handles.</summary>
+  internal static bool IsUnnamedHostUser(ClaimsPrincipal? user)
+  {
+    return user?.Identity?.IsAuthenticated == true && BlokMcpBearer.Identity(user) is null && HostUserName(user) is null;
   }
 
   // The app's logging, so a hook failure the agent sees only in part is kept in full.
@@ -130,7 +143,7 @@ public static class BlokMcpServiceCollectionExtensions
     var rules = provider.GetService<IBlokAuthorization>();
     McpAuthorize? hook = authorize is not null
         ? async (principal, documentId, write, token) => await authorize(new BlokMcpAccessRequest(principal, documentId, write), token)
-        : rules is not null ? (principal, documentId, write, token) => AllowedByRulesAsync(rules, principal, documentId, write, token) : null;
+        : rules is not null ? (principal, documentId, write, token) => AllowedByRulesAsync(rules, provider.GetService<IHttpContextAccessor>(), principal, documentId, write, token) : null;
 
     // Node's checkOptionSafety over HTTP: OAuth says who calls, not which documents they may open.
     if (hook is null && !options.AllowEveryCallerEveryDocument)
@@ -211,9 +224,13 @@ public static class BlokMcpServiceCollectionExtensions
   }
 
   // IBlokAuthorization only narrows: a write also needs read.
-  private static async Task<bool> AllowedByRulesAsync(IBlokAuthorization rules, string principal, string documentId, bool write, CancellationToken cancellationToken)
+  private static async Task<bool> AllowedByRulesAsync(
+      IBlokAuthorization rules, IHttpContextAccessor? http, string principal, string documentId, bool write, CancellationToken cancellationToken)
   {
-    var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", principal), new Claim(ClaimTypes.NameIdentifier, principal)], "blok-mcp"));
+    var signedIn = http?.HttpContext?.User;
+    var user = HostUserName(signedIn) == principal
+        ? signedIn!
+        : new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", principal), new Claim(ClaimTypes.NameIdentifier, principal)], "blok-mcp"));
 
     return await rules.CanReadDocumentAsync(user, documentId, cancellationToken)
         && (!write || await rules.CanWriteDocumentAsync(user, documentId, cancellationToken));

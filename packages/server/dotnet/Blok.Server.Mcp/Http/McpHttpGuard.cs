@@ -88,6 +88,12 @@ internal static class McpRequestGate
 
       return;
     }
+    if (context.RequestServices?.GetService(typeof(McpConfig)) is McpConfig { Gate: not null } && BlokMcpServiceCollectionExtensions.IsUnnamedHostUser(context.User))
+    {
+      context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+
+      return;
+    }
 
     if (!HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method))
     {

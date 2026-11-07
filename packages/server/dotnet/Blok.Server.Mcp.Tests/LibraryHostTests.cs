@@ -27,6 +27,23 @@ public sealed class LibraryHostTests : IDisposable
     Directory.Delete(dir, recursive: true);
   }
 
+  private sealed class SeesRoles : IBlokAuthorization
+  {
+    public List<string> Seen { get; } = [];
+
+    public ValueTask<bool> CanReadDocumentAsync(ClaimsPrincipal user, string documentId, CancellationToken cancellationToken = default)
+    {
+      Seen.Add($"{user.FindFirst("sub")?.Value} {user.FindFirst("role")?.Value}");
+
+      return ValueTask.FromResult(true);
+    }
+
+    public ValueTask<bool> CanWriteDocumentAsync(ClaimsPrincipal user, string documentId, CancellationToken cancellationToken = default)
+    {
+      return ValueTask.FromResult(true);
+    }
+  }
+
   private sealed class OnlyOpen : IBlokAuthorization
   {
     public List<string> Asked { get; } = [];
@@ -46,7 +63,7 @@ public sealed class LibraryHostTests : IDisposable
     }
   }
 
-  private async Task<(WebApplication App, HttpClient Client)> StartAsync(Action<IServiceCollection>? services = null, Action<BlokMcpOptions>? configure = null)
+  private async Task<(WebApplication App, HttpClient Client)> StartAsync(Action<IServiceCollection>? services = null, Action<BlokMcpOptions>? configure = null, ClaimsPrincipal? user = null)
   {
     var builder = WebApplication.CreateSlimBuilder();
 
@@ -65,6 +82,15 @@ public sealed class LibraryHostTests : IDisposable
     });
     var app = builder.Build();
 
+    if (user is not null)
+    {
+      app.Use((context, next) =>
+      {
+        context.User = user;
+
+        return next(context);
+      });
+    }
     app.MapBlokMcp();
     await app.StartAsync();
 
@@ -267,6 +293,35 @@ public sealed class LibraryHostTests : IDisposable
       Assert.Equal(200, await StatusAsync(client, null, "MCP.example:8443"));
       Assert.Equal(403, await StatusAsync(client, "http://localhost:3000", "mcp.example"));
       Assert.Equal(403, await StatusAsync(client, null, "attacker.example"));
+    }
+  }
+
+  [Fact]
+  public async Task GivesTheHostsRulesTheSignedInUser()
+  {
+    var rules = new SeesRoles();
+    var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "bob"), new Claim("role", "editor")], "host"));
+    var (app, client) = await StartAsync(services => services.AddSingleton<IBlokAuthorization>(rules), _ => { }, user);
+
+    await using (app)
+    {
+      var opened = await CallAsync(client, "blok_open", new JsonObject { ["documentId"] = "open" });
+
+      Assert.Equal("stored", (string?)opened["mode"]);
+      Assert.Equal(["bob editor"], rules.Seen);
+    }
+  }
+
+  // Node never gives a signed-in caller the default principal: a token naming no one is refused.
+  [Fact]
+  public async Task RefusesASignedInUserWhoIsNotNamed()
+  {
+    var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim("role", "editor")], "host"));
+    var (app, client) = await StartAsync(user: user);
+
+    await using (app)
+    {
+      Assert.Equal(401, await StatusAsync(client, null));
     }
   }
 }

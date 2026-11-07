@@ -31,6 +31,8 @@ One crate per Go package, named after its Go path:
 | `cmd/blok-server` | `crates/blok-server` (the binary) |
 | `cmd/blok-mcp` | `crates/mcp` (`blok-mcp`, the MCP server) |
 
+A host that embeds `blok-mcp` with its own uploader (`blok_mcp::uploads::Uploader`) returns `UploadError::Failed` for its own errors: the full message goes to stderr, and the agent sees only "The upload failed.". Return `UploadError::Agent` for words meant for the agent, as Node's `agentMessage`.
+
 Each Go `foo_test.go` has a Rust twin: a `#[cfg(test)] mod` in `foo.rs`, or `tests/foo.rs`. Keep the Go test names in snake case, so the two lists can be compared.
 
 ## Rules

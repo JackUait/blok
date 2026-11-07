@@ -6,7 +6,9 @@ use std::sync::{Arc, Mutex};
 
 use blok_mcp::bundle::Bundle;
 use blok_mcp::server::{Approval, Caller, Mcp, Outcome};
-use blok_mcp::uploads::{BoxFuture, UploadContext, UploadFile, Uploaded, Uploader, Uploads};
+use blok_mcp::uploads::{
+    BoxFuture, UploadContext, UploadError, UploadFile, Uploaded, Uploader, Uploads,
+};
 use serde_json::{Value, json};
 
 const PNG: &str = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
@@ -21,13 +23,16 @@ impl Uploader for Memory {
         &self,
         file: UploadFile,
         ctx: UploadContext,
-    ) -> BoxFuture<'_, Result<Uploaded, String>> {
+    ) -> BoxFuture<'_, Result<Uploaded, UploadError>> {
         Box::pin(async move {
             let mut calls = self.calls.lock().unwrap();
             calls.push(json!({ "name": file.name, "type": file.mime_type, "size": file.bytes.len(), "kind": ctx.kind, "tool": ctx.tool }));
             let n = calls.len();
             if file.name.starts_with("boom") {
-                return Err("the uploader broke".to_owned());
+                return Err(UploadError::Failed("s3: secret-bucket denied".to_owned()));
+            }
+            if file.name.starts_with("full") {
+                return Err(UploadError::Agent("Your storage is full.".to_owned()));
             }
             Ok(Uploaded {
                 url: format!("https://cdn.test/{n}/{}", file.name),
@@ -46,7 +51,7 @@ impl Uploader for Memory {
         &self,
         url: String,
         ctx: UploadContext,
-    ) -> BoxFuture<'_, Result<Uploaded, String>> {
+    ) -> BoxFuture<'_, Result<Uploaded, UploadError>> {
         Box::pin(async move {
             let mut calls = self.calls.lock().unwrap();
             calls.push(json!({ "url": url, "kind": ctx.kind, "tool": ctx.tool }));
@@ -153,7 +158,13 @@ async fn uploads_go_through_the_hosts_uploader_as_node_answers_them() {
     let threw = execute(&mcp, &handle, upload("image", "boom.png")).await;
     assert_eq!(
         threw["error"],
-        json!({ "code": "TOOL_ACTION_FAILED", "message": "A prepare step failed: the uploader broke", "commandIndex": 0, "retryable": false })
+        json!({ "code": "TOOL_ACTION_FAILED", "message": "The upload failed.", "commandIndex": 0, "retryable": false })
+    );
+    // A host's own words for the agent pass as given.
+    let full = execute(&mcp, &handle, upload("image", "full.png")).await;
+    assert_eq!(
+        full["error"],
+        json!({ "code": "TOOL_ACTION_FAILED", "message": "Your storage is full.", "commandIndex": 0, "retryable": false })
     );
     let jpeg = execute(&mcp, &handle, upload("image", "a.jpg")).await;
     assert_eq!(
@@ -165,7 +176,7 @@ async fn uploads_go_through_the_hosts_uploader_as_node_answers_them() {
     let copied = execute(&mcp, &handle, json!([{ "name": "image.setSource", "args": { "id": "img", "url": "https://example.com/x.png" } }])).await;
     assert_eq!(
         copied["blocks"][0]["data"],
-        json!({ "url": "https://cdn.test/4/copied", "fileName": "copied.png" })
+        json!({ "url": "https://cdn.test/5/copied", "fileName": "copied.png" })
     );
     let read = execute(
         &mcp,
@@ -175,7 +186,7 @@ async fn uploads_go_through_the_hosts_uploader_as_node_answers_them() {
     .await;
     assert_eq!(
         read["blocks"][0]["data"],
-        json!({ "url": "https://cdn.test/5/a.png", "fileName": "a.png" })
+        json!({ "url": "https://cdn.test/6/a.png", "fileName": "a.png" })
     );
     let escaped = execute(
         &mcp,
@@ -189,14 +200,14 @@ async fn uploads_go_through_the_hosts_uploader_as_node_answers_them() {
     );
 
     let calls = memory.calls.lock().unwrap().clone();
-    assert_eq!(calls.len(), 5, "{calls:?}");
+    assert_eq!(calls.len(), 6, "{calls:?}");
     assert_eq!(
         calls[0],
         json!({ "name": "a.png", "type": "image/png", "size": 70, "kind": "image", "tool": "image" })
     );
-    assert_eq!(calls[4]["size"], 70);
+    assert_eq!(calls[5]["size"], 70);
     let saved = std::fs::read_to_string(docs.join("doc.json")).unwrap();
-    assert!(saved.contains("https://cdn.test/5/a.png"), "{saved}");
+    assert!(saved.contains("https://cdn.test/6/a.png"), "{saved}");
     let _ = std::fs::remove_dir_all(&work);
 }
 

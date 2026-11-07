@@ -32,13 +32,46 @@ pub struct Uploaded {
     pub mime_type: Option<String>,
 }
 
-/// The host's uploader. An `Err` is the message of what it threw.
+/// Why an upload failed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UploadError {
+    /// The host's own error. It goes to the server log (stderr) in full;
+    /// the agent sees only "The upload failed.", so storage details, keys
+    /// or paths never reach it.
+    Failed(String),
+    /// A message meant for the agent (Node's `agentMessage`), shown as given.
+    Agent(String),
+}
+
+impl From<String> for UploadError {
+    fn from(message: String) -> Self {
+        UploadError::Failed(message)
+    }
+}
+
+/// What the agent sees for an `UploadError::Failed`.
+const UPLOAD_FAILED: &str = "The upload failed.";
+
+/// The bundle's answer for a failed upload: the agent sees a plain line
+/// unless the host chose its words.
+fn upload_failure(error: UploadError) -> Value {
+    let message = match error {
+        UploadError::Failed(message) => {
+            eprintln!("blok-mcp: the host's uploader failed: {message}");
+            UPLOAD_FAILED.to_owned()
+        }
+        UploadError::Agent(message) => message,
+    };
+    json!({ "failure": { "code": "TOOL_ACTION_FAILED", "message": message, "retryable": false } })
+}
+
+/// The host's uploader. An `Err` says why; see `UploadError`.
 pub trait Uploader: Send + Sync {
     fn upload_by_file(
         &self,
         file: UploadFile,
         ctx: UploadContext,
-    ) -> BoxFuture<'_, Result<Uploaded, String>>;
+    ) -> BoxFuture<'_, Result<Uploaded, UploadError>>;
 
     /// True when upload_by_url is there: `<tool>.setSource` then copies a
     /// linked file to the host too.
@@ -50,9 +83,13 @@ pub trait Uploader: Send + Sync {
         &self,
         url: String,
         ctx: UploadContext,
-    ) -> BoxFuture<'_, Result<Uploaded, String>> {
+    ) -> BoxFuture<'_, Result<Uploaded, UploadError>> {
         let _ = (url, ctx);
-        Box::pin(async { Err("This uploader takes no URLs.".to_owned()) })
+        Box::pin(async {
+            Err(UploadError::Agent(
+                "This uploader takes no URLs.".to_owned(),
+            ))
+        })
     }
 }
 
@@ -177,12 +214,12 @@ impl Uploads {
                 };
                 match self.uploader.upload_by_file(file, ctx).await {
                     Ok(uploaded) => stored(uploaded, true),
-                    Err(message) => thrown(message),
+                    Err(error) => upload_failure(error),
                 }
             }
             Some("uploadByUrl") => match self.uploader.upload_by_url(text("url"), ctx).await {
                 Ok(uploaded) => stored(uploaded, false),
-                Err(message) => thrown(message),
+                Err(error) => upload_failure(error),
             },
             _ => thrown("The bundle asked for an unknown upload call.".to_owned()),
         }
@@ -352,7 +389,7 @@ mod tests {
             &self,
             _file: UploadFile,
             _ctx: UploadContext,
-        ) -> BoxFuture<'_, Result<Uploaded, String>> {
+        ) -> BoxFuture<'_, Result<Uploaded, UploadError>> {
             self.0.fetch_add(1, Ordering::SeqCst);
             Box::pin(async {
                 Ok(Uploaded {

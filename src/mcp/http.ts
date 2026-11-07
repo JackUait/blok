@@ -98,9 +98,15 @@ const send = async (res: ServerResponse, response: Response): Promise<void> => {
 
 /** The address cannot be listened on. The CLI prints it and exits with code 1, as a failed bind always did. */
 export class McpListenError extends Error {
-  constructor(message: string) {
-    super(message);
+  /** The bind error's code, such as EADDRINUSE; absent for a malformed address. */
+  public readonly code?: string;
+
+  constructor(message: string, cause?: Error & { code?: string }) {
+    super(message, cause === undefined ? undefined : { cause });
     this.name = 'McpListenError';
+    if (cause?.code !== undefined) {
+      this.code = cause.code;
+    }
   }
 }
 
@@ -226,7 +232,7 @@ export const startHttpServer = async (input: HttpServerInput): Promise<{ url: st
   const { host, port } = splitListen(input.listen);
 
   await new Promise<void>((done, fail) => {
-    const refused = (error: Error): void => fail(new McpListenError(`Cannot listen on ${input.listen}: ${error.message}`));
+    const refused = (error: Error): void => fail(new McpListenError(`Cannot listen on ${input.listen}: ${error.message}`, error));
 
     server.once('error', refused);
     server.listen(port, host, () => {

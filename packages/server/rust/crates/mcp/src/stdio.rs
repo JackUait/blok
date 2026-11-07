@@ -468,15 +468,8 @@ where
             let mut reader = BufReader::new(input);
             let mut era = Era::Unknown;
             while let Some(line) = next_message(&mut reader).await {
-                let line = match crate::lenient::mend(&line) {
-                    crate::lenient::Mended::Forward(line) => line,
-                    crate::lenient::Mended::Answer(answer) => {
-                        if write_line(&out, &answer).await.is_err() {
-                            break;
-                        }
-                        continue;
-                    }
-                };
+                let line =
+                    crate::lenient::mend(&crate::depth::clamp(&line, crate::depth::MESSAGE_LIMIT));
                 let line = match crate::shape::shape(&line) {
                     crate::shape::Shaped::Forward(line) => line,
                     // Node's SDK drops it without an answer.
@@ -747,9 +740,11 @@ mod tests {
         assert_eq!(written, "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n");
     }
 
-    // JSON.parse takes both; rmcp's serde_json drops them without a word.
+    // JSON.parse takes both; rmcp's serde_json would drop them without a
+    // word. A part past 51 levels reaches rmcp as [], so the bundle still
+    // sees it too deep and answers as Node does.
     #[tokio::test]
-    async fn a_lone_surrogate_is_mended_and_a_too_deep_request_answered() {
+    async fn a_lone_surrogate_is_mended_and_a_too_deep_request_clamped() {
         let deep = format!("{}{}", "[".repeat(200), "]".repeat(200));
         let input = format!(
             "{}\n{}\n",
@@ -772,15 +767,22 @@ mod tests {
             },
         )
         .await;
-        assert_eq!(
-            *got.lock().unwrap(),
-            vec![r#"{"jsonrpc":"2.0","method":"m","params":{"a":"\ufffd"}}"#]
+        // The message and params take two levels, so 49 arrays fit and the 50th is [].
+        let clamped = format!(
+            r#"{{"jsonrpc":"2.0","id":2,"method":"m","params":{{"x":{}{}}}}}"#,
+            "[".repeat(50),
+            "]".repeat(50)
         );
+        // Between them, the proxy's own initialize for a request sent before one.
+        let got = got.lock().unwrap();
+        assert_eq!(
+            got.first().map(String::as_str),
+            Some(r#"{"jsonrpc":"2.0","method":"m","params":{"a":"\ufffd"}}"#)
+        );
+        assert_eq!(got.last(), Some(&clamped));
         let mut written = String::new();
         client.read_to_string(&mut written).await.unwrap();
-        let answer: Value = serde_json::from_str(written.trim()).unwrap();
-        assert_eq!(answer["id"], 2);
-        assert_eq!(answer["error"]["code"], -32600);
+        assert_eq!(written, "");
     }
 
     // Node serves a request that comes before any initialize, without the

@@ -260,6 +260,13 @@ impl EndpointSource {
         // fetch().text() drops a BOM; JSON.parse takes what lenient mends.
         let text =
             crate::lenient::as_json_parse_reads(text.strip_prefix('\u{feff}').unwrap_or(&text));
+        if crate::depth::text_nests_deeper_than(&text, crate::depth::MAX_JSON_DEPTH) {
+            return Err(endpoint_unavailable(format!(
+                "answered JSON nested deeper than {} levels for {id}",
+                crate::depth::MAX_JSON_DEPTH
+            ))
+            .into());
+        }
         let body: Value = serde_json::from_str(&text)
             .map_err(|_| endpoint_unavailable(format!("answered non-JSON for {id}")))?;
         if body.is_null() {
@@ -328,7 +335,10 @@ impl EndpointSource {
         if answer.body.is_empty() {
             return Ok(fallback);
         }
-        let parsed: Option<Value> = serde_json::from_slice(&answer.body).ok();
+        // Node reads a save answer of any depth; serde_json stops at 128.
+        let reply = String::from_utf8_lossy(&answer.body);
+        let parsed: Option<Value> =
+            serde_json::from_str(&crate::depth::clamp(&reply, crate::depth::MESSAGE_LIMIT)).ok();
         Ok(parsed
             .as_ref()
             .and_then(|v| v.get("version"))
@@ -355,6 +365,16 @@ impl EndpointSource {
         let answer = self.send("GET", &url, Vec::new(), None).await?;
         if answer.status != 200 {
             return Err(endpoint_unavailable(format!("list answered {}", answer.status)).into());
+        }
+        if crate::depth::text_nests_deeper_than(
+            &String::from_utf8_lossy(&answer.body),
+            crate::depth::MAX_JSON_DEPTH,
+        ) {
+            return Err(endpoint_unavailable(format!(
+                "answered JSON nested deeper than {} levels for the list",
+                crate::depth::MAX_JSON_DEPTH
+            ))
+            .into());
         }
         let body: Value = serde_json::from_slice(&answer.body)
             .map_err(|_| endpoint_unavailable("answered non-JSON for the list".to_owned()))?;
@@ -485,6 +505,72 @@ mod tests {
             refused,
             "The document endpoint answered more than 64 MiB, more than this server opens."
         );
+    }
+
+    /// A document nesting `total` levels: object 1, blocks 2, block 3, data 4.
+    fn deep_doc(total: usize, tail: &str) -> Vec<u8> {
+        format!(
+            r#"{{"title":"T","blocks":[{{"id":"p","type":"paragraph","data":{{"text":"a","x":{}{tail}{}}}}}]}}"#,
+            "[".repeat(total - 4),
+            "]".repeat(total - 4)
+        )
+        .into_bytes()
+    }
+
+    // Node checks an endpoint answer's depth before it parses it.
+    #[tokio::test]
+    async fn an_answer_nested_past_48_is_refused_as_node_refuses_it() {
+        assert!(load("HTTP/1.1 200 OK", deep_doc(48, "")).await.is_ok());
+        let deep = "The document endpoint answered JSON nested deeper than 48 levels for a.";
+        for body in [deep_doc(49, ""), deep_doc(20_000, ""), deep_doc(60, "1,")] {
+            assert_eq!(
+                message(load("HTTP/1.1 200 OK", body).await.err().unwrap()),
+                deep
+            );
+        }
+        let (url, _) = raw_endpoint(
+            "HTTP/1.1 200 OK",
+            format!(
+                r#"{{"documents":[],"x":{}{}}}"#,
+                "[".repeat(48),
+                "]".repeat(48)
+            )
+            .into_bytes(),
+        )
+        .await;
+        let listed = EndpointSource::new(
+            url.clone(),
+            "Bearer t".to_owned(),
+            Some(url),
+            Outbound::new(),
+        )
+        .list(&ListRequest {
+            query: None,
+            cursor: None,
+            limit: 10.0,
+        })
+        .await
+        .unwrap();
+        assert_eq!(
+            message(listed.err().unwrap()),
+            "The document endpoint answered JSON nested deeper than 48 levels for the list."
+        );
+    }
+
+    // Node reads a save answer of any depth; its version still counts.
+    #[tokio::test]
+    async fn a_deep_save_answer_still_gives_its_version() {
+        let body = format!(
+            r#"{{"version":"v2","x":{}{}}}"#,
+            "[".repeat(20_000),
+            "]".repeat(20_000)
+        );
+        let (url, _) = raw_endpoint("HTTP/1.1 200 OK", body.into_bytes()).await;
+        let saved = EndpointSource::new(url, "Bearer t".to_owned(), None, Outbound::new())
+            .save("a", r#"{"blocks":[]}"#, Some("v1"))
+            .await
+            .unwrap();
+        assert_eq!(saved.as_deref(), Some("v2"));
     }
 
     #[test]

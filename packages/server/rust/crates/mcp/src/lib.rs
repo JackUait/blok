@@ -8,6 +8,7 @@ pub mod authorize;
 pub mod awareness;
 pub mod bundle;
 pub mod cli;
+mod depth;
 pub mod errors;
 pub mod files;
 pub mod handles;

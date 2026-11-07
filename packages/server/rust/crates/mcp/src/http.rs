@@ -432,10 +432,7 @@ impl Core {
             Err(bytes) => String::from_utf8_lossy(bytes.as_bytes()).into_owned(),
         };
         // JSON.parse takes a lone surrogate and any depth; serde_json does not.
-        let text = match crate::lenient::mend(&text) {
-            crate::lenient::Mended::Forward(text) => text,
-            crate::lenient::Mended::Answer(answer) => return json_answer(200, answer),
-        };
+        let text = crate::lenient::mend(&crate::depth::clamp(&text, crate::depth::MESSAGE_LIMIT));
         let header_version = header_of(headers, "mcp-protocol-version");
         let text = match crate::shape::shape(&text) {
             crate::shape::Shaped::Forward(text) => text,

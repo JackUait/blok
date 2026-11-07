@@ -389,3 +389,93 @@ async fn a_2026_header_without_an_envelope_is_refused_in_nodes_words() {
     .await;
     assert_eq!((note.status, note.body.as_str()), (202, ""));
 }
+
+/// A front with a files source, so blok_list_documents runs.
+async fn front_with_files() -> String {
+    let dir = std::env::temp_dir().join(format!("blok-mcp-depth-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let options = json!({
+        "transport": { "kind": "http", "listen": "127.0.0.1:0" }, "auth": { "kind": "none" },
+        "source": { "kind": "files", "dir": dir.to_string_lossy() },
+    });
+    let authorize = Webhook::new("http://127.0.0.1:9/authorize".to_owned(), Outbound::new());
+    let embedded = Embedded::new(
+        Arc::new(Bundle::new(1).unwrap()),
+        &options,
+        Some(authorize),
+        None,
+    )
+    .await
+    .unwrap();
+    let listening = blok_mcp::http::listen(
+        "127.0.0.1:0",
+        embedded.handler(true).unwrap(),
+        None,
+        "local".to_owned(),
+        false,
+    )
+    .await
+    .unwrap();
+    tokio::spawn(listening.serve);
+    std::mem::forget(embedded);
+    listening.url
+}
+
+/// A tools/call whose arguments nest `depth` levels (the arguments object is level 1).
+fn deep_call(depth: usize, tail: &str) -> String {
+    format!(
+        r#"{{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{{"name":"blok_list_documents","arguments":{{"zz":{}{tail}{}}}}}}}"#,
+        "[".repeat(depth - 1),
+        "]".repeat(depth - 1)
+    )
+}
+
+const TOO_DEEP: &str =
+    "The arguments nest deeper than 48 levels of objects and arrays. Send flatter data.";
+
+// Node answers INVALID_ARGS at every depth past 48, alone or in a batch.
+#[tokio::test(flavor = "multi_thread")]
+async fn deep_arguments_get_nodes_refusal_at_any_depth() {
+    let url = front_with_files().await;
+    for depth in [49, 64, 127, 129, 1001, 100_001] {
+        let reply = post(
+            &url,
+            &[JSON, ACCEPT, LEGACY],
+            deep_call(depth, "").as_bytes(),
+        )
+        .await;
+        assert!(
+            reply.status == 200 && reply.body.contains(TOO_DEEP),
+            "{depth}: {} {}",
+            reply.status,
+            &reply.body[..reply.body.len().min(300)]
+        );
+        let batch = format!("[{}]", deep_call(depth, ""));
+        let reply = post(
+            &url,
+            &[JSON, ACCEPT, ("MCP-Protocol-Version", "2025-03-26")],
+            batch.as_bytes(),
+        )
+        .await;
+        assert!(
+            reply.status == 200 && reply.body.contains(TOO_DEEP),
+            "batch {depth}: {} {}",
+            reply.status,
+            &reply.body[..reply.body.len().min(300)]
+        );
+    }
+    let reply = post(
+        &url,
+        &[JSON, ACCEPT, LEGACY],
+        deep_call(2000, "1,").as_bytes(),
+    )
+    .await;
+    assert_eq!(
+        (reply.status, reply.content_type.as_str()),
+        (400, "application/json")
+    );
+    assert_eq!(
+        reply.body,
+        r#"{"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error: Invalid JSON"},"id":null}"#
+    );
+}

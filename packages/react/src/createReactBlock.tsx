@@ -718,6 +718,8 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
     private hostEl: HTMLElement | null = null;
     /** True while a deferred dispatch is waiting for a pointer drag to end. */
     private pendingDispatch = false;
+    /** Frame of the deferred dispatch's next retry, if one is queued. */
+    private dispatchFrame: number | null = null;
     /** Element the component pointed `toolbarAnchorRef` at, if any. */
     private anchorEl: HTMLElement | null = null;
     /**
@@ -967,12 +969,14 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
       // under the SAME id) before it tears this one down, so an unqualified
       // unregister here would delete the live entry and blank the block.
       this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
+      this.cancelPendingDispatch();
       spec.onRemoved?.(this.blockApi, removal);
     }
 
     public destroy(): void {
       // Idempotent with removed(); unregister is safe when already absent.
       this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
+      this.cancelPendingDispatch();
     }
 
     /** The full entry props handed to the component on (re-)register. */
@@ -1053,16 +1057,26 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 
       const retry = (): void => {
         if (this.pointerDrag()) {
-          requestAnimationFrame(retry);
+          this.dispatchFrame = requestAnimationFrame(retry);
 
           return;
         }
 
+        this.dispatchFrame = null;
         this.pendingDispatch = false;
         this.blockApi.dispatchChange();
       };
 
-      requestAnimationFrame(retry);
+      this.dispatchFrame = requestAnimationFrame(retry);
+    }
+
+    /** A removed block must not dispatch a change deferred by a drag. */
+    private cancelPendingDispatch(): void {
+      if (this.dispatchFrame !== null) {
+        cancelAnimationFrame(this.dispatchFrame);
+        this.dispatchFrame = null;
+      }
+      this.pendingDispatch = false;
     }
   };
 

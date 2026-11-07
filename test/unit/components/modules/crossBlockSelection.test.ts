@@ -820,6 +820,7 @@ describe('CrossBlockSelection', () => {
       const event = {
         relatedTarget: blocks[0].holder,
         target: blocks[1].holder,
+        buttons: 1,
       } as unknown as MouseEvent;
 
       blocks[0].selected = false;
@@ -840,6 +841,7 @@ describe('CrossBlockSelection', () => {
       const event = {
         relatedTarget: blocks[1].holder,
         target: blocks[0].holder,
+        buttons: 1,
       } as unknown as MouseEvent;
 
       blocks[0].selected = true;
@@ -881,6 +883,7 @@ describe('CrossBlockSelection', () => {
       const event = {
         relatedTarget: blocks[3].holder,
         target: blocks[0].holder,
+        buttons: 1,
       } as unknown as MouseEvent;
 
       accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
@@ -897,6 +900,7 @@ describe('CrossBlockSelection', () => {
       const event = {
         relatedTarget: blocks[1].holder,
         target: blocks[2].holder,
+        buttons: 1,
       } as unknown as MouseEvent;
 
       accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
@@ -914,6 +918,7 @@ describe('CrossBlockSelection', () => {
       const event = {
         relatedTarget: blocks[0].holder,
         target: blocks[1].holder,
+        buttons: 1,
       } as unknown as MouseEvent;
 
       blocks[0].selected = false;
@@ -952,6 +957,7 @@ describe('CrossBlockSelection', () => {
         const event = {
           relatedTarget: blocks[0].holder,
           target: cell.holder,
+          buttons: 1,
         } as unknown as MouseEvent;
 
         accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
@@ -967,6 +973,7 @@ describe('CrossBlockSelection', () => {
         const event = {
           relatedTarget: cell.holder,
           target: blocks[3].holder,
+          buttons: 1,
         } as unknown as MouseEvent;
 
         accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
@@ -983,6 +990,7 @@ describe('CrossBlockSelection', () => {
         const event = {
           relatedTarget: blocks[0].holder,
           target: blocks[1].holder,
+          buttons: 1,
         } as unknown as MouseEvent;
 
         accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
@@ -1004,6 +1012,7 @@ describe('CrossBlockSelection', () => {
         const event = {
           relatedTarget: cell.holder,
           target: secondCell.holder,
+          buttons: 1,
         } as unknown as MouseEvent;
 
         accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);

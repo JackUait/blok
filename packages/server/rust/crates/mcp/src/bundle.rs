@@ -59,6 +59,16 @@ impl Bundle {
     }
 
     pub async fn call_text(&self, op: &str, input: &str) -> Result<String, BundleError> {
+        // A client's number past f64 crosses rmcp as a stand-in (lenient.rs);
+        // the engine reads it back as Infinity. mcpCheckCall keeps it: the
+        // step it gives back would carry Infinity as null.
+        let restored;
+        let input = if op != "mcpCheckCall" && input.contains(crate::lenient::INFINITY_STAND_IN) {
+            restored = crate::lenient::restore_infinities(input);
+            restored.as_str()
+        } else {
+            input
+        };
         self.pool
             .invoke(op, input, None)
             .await

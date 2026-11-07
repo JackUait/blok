@@ -616,6 +616,16 @@ describe('attachWaveform seeking', () => {
     expect(media.currentTime).toBe(DURATION);
   });
 
+  it('stops seeking after the browser cancels the pointer', () => {
+    const { media, canvas } = attach({ duration: DURATION, currentTime: CURRENT });
+
+    canvas.dispatchEvent(pointer('pointerdown', LEFT + WIDTH / 2));
+    globalThis.dispatchEvent(pointer('pointercancel', 0));
+    globalThis.dispatchEvent(pointer('pointermove', LEFT));
+
+    expect(media.currentTime).toBe(DURATION / 2);
+  });
+
   it('a pointermove with no pointer down does not seek', () => {
     const { media } = attach({ duration: DURATION, currentTime: CURRENT });
 
@@ -1012,8 +1022,8 @@ describe('attachWaveform destroy', () => {
     const { handle } = attach({ duration: DURATION, currentTime: CURRENT });
     handle.destroy();
 
-    expect(added.map((entry) => entry.type)).toEqual(['pointermove', 'pointerup']);
-    expect(removed.map((entry) => entry.type)).toEqual(['pointermove', 'pointerup']);
+    expect(added.map((entry) => entry.type)).toEqual(['pointermove', 'pointerup', 'pointercancel']);
+    expect(removed.map((entry) => entry.type)).toEqual(['pointermove', 'pointerup', 'pointercancel']);
     expect(removed.map((entry) => entry.fn)).toEqual(added.map((entry) => entry.fn));
   });
 

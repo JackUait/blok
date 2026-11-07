@@ -1366,6 +1366,44 @@ describe('VideoTool — an upload belongs to the pick that started it', () => {
     expect(tool.save().url).toBe('');
   });
 
+  it('stays empty when a cancelled upload fails', async () => {
+    const gate: { reject: (err: Error) => void } = { reject: () => undefined };
+    const uploadByFile = (): Promise<{ url: string }> => new Promise((_, reject) => {
+      gate.reject = reject;
+    });
+    const tool = new VideoTool(createOptions({}, { uploader: { uploadByFile } }));
+    const root = tool.render();
+    pasteClip(tool);
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    gate.reject(new Error('boom'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.getAttribute('data-state')).toBe('empty');
+  });
+
+  it('stays empty when a cancelled link upload fails', async () => {
+    const gate: { reject: (err: Error) => void } = { reject: () => undefined };
+    const uploadByUrl = (): Promise<{ url: string }> => new Promise((_, reject) => {
+      gate.reject = reject;
+    });
+    const tool = new VideoTool(createOptions({}, { uploader: { uploadByUrl } }));
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = 'https://x/y.mp4';
+    root.querySelector<HTMLButtonElement>('[data-action="submit-url"]')?.click();
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    gate.reject(new Error('boom'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.getAttribute('data-state')).toBe('empty');
+  });
+
   it('keeps a pasted video link a tracked edit', () => {
     const block = createMockBlock();
     const tool = new VideoTool(createOptions({}, {}, block));
@@ -1675,6 +1713,23 @@ describe('VideoTool — background formats', () => {
         vi.useRealTimers();
         handle.go();
       }
+    });
+
+    it('cancels the conversion when the user replaces the video', async () => {
+      const handle = blocking();
+      const tool = toolWith({ formats: { video: ['webm', 'av1'] }, mediabunny: loader });
+      const root = tool.render();
+
+      pasteFile(tool);
+      await vi.waitFor(() => expect(handle.calls).toHaveLength(1));
+      const items = tool.renderSettings() as unknown as Array<{ name?: string; onActivate?: () => void }>;
+      items.find((item) => item.name === 'video-replace')?.onActivate?.();
+      expect(root.getAttribute('data-state')).toBe('empty');
+
+      await vi.waitFor(() => expect(handle.calls[0].signal?.aborted).toBe(true));
+      handle.go();
+      await idle();
+      expect(handle.calls).toHaveLength(1);
     });
 
     it('cancels when the tool is destroyed with the editor', async () => {

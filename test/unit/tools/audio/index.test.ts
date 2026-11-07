@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../types';
+import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
 import type { AudioConfig, AudioData } from '../../../../types/tools/audio';
 import type * as CoverPickerModule from '../../../../src/tools/audio/cover-picker';
 import { AudioTool } from '../../../../src/tools/audio';
+import { leakedListeners } from '../../../helpers/listener-leaks';
 
 const toMenuArray = (config: MenuConfig): Array<Record<string, unknown>> => {
   return (Array.isArray(config) ? config : [config]) as Array<Record<string, unknown>>;
@@ -902,5 +903,64 @@ describe('AudioTool — an upload belongs to the pick that started it', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(tool.save().url).toBe('');
+  });
+
+  it('ignores a file upload that fails after it was cancelled', async () => {
+    const onUploadError = vi.fn();
+    const tool = new AudioTool(opts({ url: '' }, { onUploadError }));
+    const root = tool.render();
+    let reject: (err: Error) => void = () => undefined;
+
+    uploaderInstances[0].handleFile.mockReturnValueOnce(new Promise((_r, rej) => {
+      reject = rej;
+    }));
+    pasteTrack(tool);
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    reject(new Error('network down'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.querySelector('[data-role="audio-error"]')).toBeNull();
+    expect(onUploadError).not.toHaveBeenCalled();
+  });
+
+  it('ignores a link upload that fails after it was cancelled', async () => {
+    const onUploadError = vi.fn();
+    const tool = new AudioTool(opts({ url: '' }, { onUploadError }));
+    const root = tool.render();
+    let reject: (err: Error) => void = () => undefined;
+
+    uploaderInstances[0].handleUrl.mockReturnValueOnce(new Promise((_r, rej) => {
+      reject = rej;
+    }));
+    tool.onPaste({ type: 'pattern', detail: { data: 'https://example.com/song.mp3' } } as never);
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    reject(new Error('network down'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.querySelector('[data-role="audio-error"]')).toBeNull();
+    expect(onUploadError).not.toHaveBeenCalled();
+  });
+});
+
+describe('AudioTool — editor teardown', () => {
+  it('leaves no player listener behind when the editor is destroyed', async () => {
+    const { attachWaveform } = await import('../../../../src/tools/audio/waveform');
+    const added = vi.spyOn(window, 'addEventListener');
+    const removed = vi.spyOn(window, 'removeEventListener');
+    const tool: BlockTool = new AudioTool(opts({ url: 'https://cdn/track.mp3', peaks: [0.1, 0.5, 1] }));
+
+    await tool.render();
+    const waveform = vi.mocked(attachWaveform).mock.results[0]?.value as { destroy: ReturnType<typeof vi.fn> } | undefined;
+
+    expect(added).toHaveBeenCalled();
+    expect(waveform).toBeDefined();
+
+    // editor.destroy() reaches the tool only through destroy(), never removed().
+    tool.destroy?.();
+
+    expect(leakedListeners(added, removed)).toEqual([]);
+    expect(waveform?.destroy).toHaveBeenCalled();
   });
 });

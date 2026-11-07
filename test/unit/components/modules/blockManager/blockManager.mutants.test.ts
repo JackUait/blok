@@ -346,6 +346,15 @@ const createHarness = (options: HarnessOptions): Harness => {
       moveCurrentBlockDown: vi.fn(),
       insertInsideParent: vi.fn(() => createBlockStub({ id: 'inside-inserted' })),
       splitBlockWithData: vi.fn(() => createBlockStub({ id: 'split-data' })),
+      holdStopCapturing(this: { suppressStopCapturing: boolean }): () => void {
+        const before = this.suppressStopCapturing;
+
+        this.suppressStopCapturing = true;
+
+        return (): void => {
+          this.suppressStopCapturing = before;
+        };
+      },
       ...options.operations,
     };
   }

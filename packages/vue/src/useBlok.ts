@@ -163,6 +163,9 @@ export function useBlok(
     // into render(), which refuses under collaboration and rejects with
     // nothing surfaced anywhere.
     constructedCollaboration: UseBlokConfig['collaboration'];
+    // The `data` the live editor was built with. The seed check compares
+    // against it, so data that changed before `isReady` still renders.
+    constructedData: UseBlokConfig['data'];
     appliedHandlerPresence: HandlerPresence;
   } = {
     current: null,
@@ -173,6 +176,7 @@ export function useBlok(
     renderChain: Promise.resolve(),
     collaborationWarnedFor: null,
     constructedCollaboration: undefined,
+    constructedData: undefined,
     appliedHandlerPresence: {
       onChange: false,
       onSave: false,
@@ -321,6 +325,7 @@ export function useBlok(
 
     state.current = blok;
     state.constructedCollaboration = snapshot.collaboration as UseBlokConfig['collaboration'];
+    state.constructedData = snapshot.data as UseBlokConfig['data'];
     setHolder(blok, holder);
     setRegistry(blok, registry);
     // The out-of-band content channel: `<BlokEditor>`'s exposed `render()`
@@ -593,18 +598,22 @@ export function useBlok(
         return;
       }
 
-      // A freshly created editor was already seeded with `data` at construction;
-      // record it as the baseline without re-rendering.
+      // A freshly created editor was already seeded at construction. When
+      // `data` still matches that seed, record it as the baseline without
+      // re-rendering; when it changed before the editor was ready, render it.
       if (state.seededEditor !== ed) {
         state.seededEditor = ed;
-        state.lastRenderedData = data;
         // A render still pending on a PRIOR editor is moot for this fresh
         // instance; clear it so its content can't dedupe a needed render here.
         state.pendingData = undefined;
         // Payloads emitted by a PRIOR editor are likewise moot for this one.
         emittedEcho.clear();
 
-        return;
+        if (deepEqual(data, state.constructedData)) {
+          state.lastRenderedData = data;
+
+          return;
+        }
       }
 
       // Skipped when the editor already reflects this content (the last
@@ -672,10 +681,21 @@ export function useBlok(
       // the chain can no longer reject, no leading catch is needed to keep the
       // next queued render running.
       state.renderChain = state.renderChain
-        .then(() => ed.render(toRenderableData(toRaw(data))))
+        // A render queued behind a slow one may run after this editor was
+        // torn down or replaced; it must not reach the dead editor.
+        .then(async () => {
+          if (state.current !== ed) {
+            return false;
+          }
+          await ed.render(toRenderableData(toRaw(data)));
+
+          return true;
+        })
         .then(
-          () => {
-            state.lastRenderedData = data;
+          (rendered) => {
+            if (rendered) {
+              state.lastRenderedData = data;
+            }
           },
           () => undefined
         )

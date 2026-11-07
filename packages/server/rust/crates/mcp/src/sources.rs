@@ -236,7 +236,16 @@ impl EndpointSource {
         self.outbound
             .send(method, url, headers, body, ENDPOINT_TIMEOUT)
             .await
-            .map_err(|_| endpoint_unavailable("could not be reached".to_owned()))
+            .map_err(|failed| {
+                endpoint_unavailable(if failed.too_large {
+                    format!(
+                        "answered more than {} MiB, more than this server opens",
+                        crate::outbound::MAX_ANSWER >> 20
+                    )
+                } else {
+                    "could not be reached".to_owned()
+                })
+            })
     }
 
     pub async fn load(&self, id: &str) -> Result<Loaded, Fault> {
@@ -248,6 +257,9 @@ impl EndpointSource {
             );
         }
         let text = String::from_utf8_lossy(&answer.body);
+        // fetch().text() drops a BOM; JSON.parse takes what lenient mends.
+        let text =
+            crate::lenient::as_json_parse_reads(text.strip_prefix('\u{feff}').unwrap_or(&text));
         let body: Value = serde_json::from_str(&text)
             .map_err(|_| endpoint_unavailable(format!("answered non-JSON for {id}")))?;
         if body.is_null() {
@@ -383,6 +395,97 @@ pub fn js_number(n: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// One raw answer per connection; returns the endpoint and the heads seen.
+    async fn raw_endpoint(
+        head: &'static str,
+        body: Vec<u8>,
+    ) -> (String, std::sync::Arc<std::sync::Mutex<Vec<String>>>) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let heads = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = heads.clone();
+        tokio::spawn(async move {
+            while let Ok((mut tcp, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = tcp.read(&mut buf).await.unwrap_or(0);
+                seen.lock()
+                    .unwrap()
+                    .push(String::from_utf8_lossy(&buf[..n]).into_owned());
+                let answer = format!(
+                    "{head}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = tcp.write_all(answer.as_bytes()).await;
+                let _ = tcp.write_all(&body).await;
+            }
+        });
+        (format!("http://{address}/docs"), heads)
+    }
+
+    async fn load(head: &'static str, body: Vec<u8>) -> Result<Loaded, Fault> {
+        let (url, _) = raw_endpoint(head, body).await;
+        EndpointSource::new(url, "Bearer t".to_owned(), None, Outbound::new())
+            .load("a")
+            .await
+    }
+
+    fn message(fault: Fault) -> String {
+        match fault {
+            Fault::Host(error) => error.error["message"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
+            Fault::Internal(message) => message,
+        }
+    }
+
+    // Node's fetch().text() drops a leading BOM, asks for gzip and deflate
+    // and decodes them, and JSON.parse takes a lone surrogate and 1e400.
+    #[tokio::test]
+    async fn an_endpoint_answer_is_read_as_node_reads_it() {
+        let bom = load("HTTP/1.1 200 OK", "\u{feff}{\"blocks\":[]}".into()).await;
+        assert!(bom.is_ok(), "{:?}", bom.err().map(message));
+        let mut gzip = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        std::io::Write::write_all(&mut gzip, br#"{"blocks":[]}"#).unwrap();
+        let zipped = load(
+            "HTTP/1.1 200 OK\r\nContent-Encoding: gzip",
+            gzip.finish().unwrap(),
+        )
+        .await;
+        assert!(zipped.is_ok(), "{:?}", zipped.err().map(message));
+        let odd = load(
+            "HTTP/1.1 200 OK",
+            br#"{"blocks":[],"s":"\ud800","n":1e400}"#.to_vec(),
+        )
+        .await;
+        assert!(odd.is_ok(), "{:?}", odd.err().map(message));
+        let (url, heads) = raw_endpoint("HTTP/1.1 200 OK", br#"{"blocks":[]}"#.to_vec()).await;
+        EndpointSource::new(url, "Bearer t".to_owned(), None, Outbound::new())
+            .load("a")
+            .await
+            .unwrap();
+        let head = heads.lock().unwrap()[0].to_ascii_lowercase();
+        assert!(
+            head.contains("\r\naccept-encoding: gzip, deflate\r\n"),
+            "{head}"
+        );
+    }
+
+    // The answer is read whole, and a document past 64 MiB is past the
+    // memory budget anyway: it is refused with words that say so.
+    #[tokio::test]
+    async fn an_answer_past_the_cap_says_it_is_too_large() {
+        let mut body = br#"{"blocks":[],"x":""#.to_vec();
+        body.resize(body.len() + (64 << 20), b'a');
+        body.extend_from_slice(br#""}"#);
+        let refused = message(load("HTTP/1.1 200 OK", body).await.err().unwrap());
+        assert_eq!(
+            refused,
+            "The document endpoint answered more than 64 MiB, more than this server opens."
+        );
+    }
 
     #[test]
     fn encodes_ids_as_encode_uri_component() {

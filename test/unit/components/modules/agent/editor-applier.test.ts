@@ -604,6 +604,8 @@ describe('EditorApplier', () => {
     expect(applier.snapshot().title).toBe('Original');
     gate.release();
     await applying;
+    // The conversion keeps its window open through the next frame.
+    await settle(applier);
 
     expect(modules.BlockManager.suppressStopCapturing).toBe(false);
     expect(applier.snapshot().get('r')).toMatchObject({

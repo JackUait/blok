@@ -1,6 +1,6 @@
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, SystemTime};
 
 use blok_collab::{BoxFuture, JoinStatus};
 use blok_collab_journal::Context;
@@ -241,6 +241,57 @@ async fn every_door_checks_purging_then_draining_then_the_cooldown() {
             "Purged",
             "{door:?} purged and draining"
         );
+    }
+}
+
+// A drain that begins after a door's draining check but before the door
+// makes the room must still win: a room made then is never flushed.
+#[tokio::test]
+async fn a_drain_that_begins_past_the_draining_check_still_refuses_the_room() {
+    for door in [Call::Join, Call::Edit, Call::State] {
+        let shared: Arc<std::sync::Mutex<std::sync::Weak<crate::manager::Shared>>> = Arc::default();
+        let armed = Arc::new(AtomicBool::new(false));
+        let (hook_shared, hook_armed) = (shared.clone(), armed.clone());
+        // The cooldown check reads the clock after the draining check and
+        // before the room is made: the drain begins there, past the cooldown.
+        let now: Clock = Arc::new(move || {
+            if hook_armed.swap(false, Ordering::SeqCst) {
+                if let Some(manager) = hook_shared.lock().unwrap().upgrade() {
+                    Manager(manager).begin_drain();
+                }
+                return SystemTime::now() + Duration::from_secs(3600);
+            }
+            SystemTime::now()
+        });
+        let (journal, _dir) = open_journal();
+        let (manager, _, _) = test_manager(
+            Options {
+                now: Some(now),
+                ..Options::default()
+            },
+            Some(Arc::new(FailingAppends(journal))),
+        );
+        *shared.lock().unwrap() = Arc::downgrade(&manager.0);
+        let membership = join(&manager, "doc", &FakeMember::v1(true)).await;
+        let _ = membership
+            .receive(sync_frame(Message::SyncUpdate {
+                update: client_update(9, "k"),
+            }))
+            .await;
+        wait_until("the room to close on the failed append", || {
+            manager.live_room_count() == 0
+        })
+        .await;
+
+        armed.store(true, Ordering::SeqCst);
+        let answered = call(&manager, door).await;
+
+        assert_eq!(
+            manager.live_room_count(),
+            0,
+            "{door:?} made a room after the drain began"
+        );
+        assert_eq!(answered, "Draining", "{door:?}");
     }
 }
 

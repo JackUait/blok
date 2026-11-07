@@ -206,7 +206,7 @@ func (r *roomSession) execute(ctx context.Context, call *callContext, batch json
 				sequence = number
 			}
 		}
-		input["delivery"] = map[string]any{"durable": true, "pending": false, "serverSequence": sequence, "savedVersion": nil}
+		input["delivery"] = delivery{Durable: true, Pending: false, ServerSequence: sequence, SavedVersion: nil}
 	}
 	answer, err := r.server.executeAnswer(ctx, input)
 	return &executed{answer: answer}, err

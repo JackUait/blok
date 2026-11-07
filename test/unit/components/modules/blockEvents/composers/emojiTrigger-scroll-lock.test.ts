@@ -352,6 +352,31 @@ describe('EmojiTrigger — page scroll lock', () => {
 
       expect(document.body).not.toHaveAttribute(SCROLL_LOCK_ATTR);
     });
+
+    it('the composer being destroyed while the menu is still opening', async () => {
+      let finishOpen: () => void = () => undefined;
+
+      mockPickerOpen.mockReturnValueOnce(new Promise<void>((resolve) => {
+        finishOpen = resolve;
+      }));
+
+      const block = createBlock(':fi');
+
+      document.body.appendChild(block.holder);
+      setCaret(block, 3);
+
+      const trigger = new EmojiTrigger(createBlokModules(block));
+      const typing = trigger.handleInput(createInputEvent());
+
+      await vi.waitFor(() => expect(mockPickerOpen).toHaveBeenCalled());
+      trigger.destroy();
+      finishOpen();
+      await typing;
+
+      expect(document.body).not.toHaveAttribute(SCROLL_LOCK_ATTR);
+      expect(trigger.opened).toBe(false);
+      expect(block.holder.querySelector('[role="combobox"]')).toBeNull();
+    });
   });
 
   describe('pairing — the lock count returns to exactly zero', () => {

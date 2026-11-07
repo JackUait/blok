@@ -39,6 +39,8 @@ export class TableResize {
   private lastClickTime = 0;
   private lastClickCol = -1;
   private dragColElements: HTMLElement[] | null = null;
+  /** The width styles before the drag, put back if the resizer is torn down mid-drag. */
+  private dragStartStyles: { width: string; minWidth: string; cols: string[] } | null = null;
   private handles: HTMLElement[] = [];
   private needsInitialApply: boolean;
   private bodyObserver: MutationObserver | null = null;
@@ -93,6 +95,13 @@ export class TableResize {
   }
 
   public destroy(): void {
+    // Torn down mid-drag (a paste, an undo, a remote change): put the old widths
+    // back and do not commit. The caller may have just set new model widths,
+    // and committing would overwrite them with the dragged ones.
+    if (this.isDragging) {
+      this.isDragging = false;
+      this.restoreDragStartStyles();
+    }
     this.bodyObserver?.disconnect();
     this.bodyObserver = null;
     this.rowObserver?.disconnect();
@@ -407,8 +416,15 @@ export class TableResize {
 
     e.preventDefault();
 
+    const colElements = this.resolveColElements();
+    const stylesBefore = {
+      width: this.gridEl.style.width,
+      minWidth: this.gridEl.style.minWidth,
+      cols: colElements.map(col => col.style.width),
+    };
+
     if (this.needsInitialApply) {
-      this.applyWidths();
+      this.applyWidths(colElements);
       this.updateHandlePositions();
       this.needsInitialApply = false;
     }
@@ -446,10 +462,11 @@ export class TableResize {
     this.dragColIndex = colIndex;
     this.didDrag = false;
     this.isDragging = true;
+    this.dragStartStyles = stylesBefore;
     this.dragStartX = e.clientX;
     this.dragDirection = getElementDirection(this.gridEl);
     this.startColWidth = this.colWidths[this.dragColIndex];
-    this.dragColElements = this.resolveColElements();
+    this.dragColElements = colElements;
 
     this.onDragStart?.();
     // Not user-select on the grid: Blink inherits it, so writing it restyles every cell.
@@ -531,6 +548,23 @@ export class TableResize {
     this.dragColElements = null;
 
     this.onChange([...this.colWidths]);
+  }
+
+  private restoreDragStartStyles(): void {
+    const before = this.dragStartStyles;
+
+    if (before === null) {
+      return;
+    }
+    this.gridEl.style.width = before.width;
+    this.gridEl.style.minWidth = before.minWidth;
+    (this.dragColElements ?? this.resolveColElements()).forEach((col, i) => {
+      if (i < before.cols.length) {
+        const el: HTMLElement = col;
+
+        el.style.width = before.cols[i];
+      }
+    });
   }
 
   private resolveColElements(): HTMLElement[] {

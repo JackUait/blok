@@ -346,6 +346,16 @@ impl Room {
                 self.doc_id
             ));
             self.update_eviction_locked(st, Some(self.options.backoff(st.export_failures)));
+            // A member who joins stops the eviction timer, so the export
+            // keeps its own retry, as a failed save does.
+            if st.dirty_since.is_none() {
+                st.dirty_since = Some(self.options.now());
+            }
+            st.export_retry_at = Some(later(
+                self.options.now(),
+                self.options.backoff(st.export_failures),
+            ));
+            self.schedule_export_locked(st);
             return Ok(());
         }
         self.close_room_locked(st, None).await;

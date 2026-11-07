@@ -17,8 +17,19 @@ internal sealed class ManualTimeProvider : TimeProvider
   private readonly List<ManualTimer> timers = [];
   private DateTimeOffset now = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
+  /// <summary>Runs once, on the next clock read, before it answers.</summary>
+  internal Action? BeforeNextRead
+  {
+    get => beforeNextRead;
+    set => beforeNextRead = value;
+  }
+
+  private Action? beforeNextRead;
+
   public override DateTimeOffset GetUtcNow()
   {
+    Interlocked.Exchange(ref beforeNextRead, null)?.Invoke();
+
     lock (timers)
     {
       return now;
@@ -491,6 +502,9 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
 
   internal Exception? NextSaveFailure { get; set; }
 
+  /// <summary>How many saves after the next one fail the same way.</summary>
+  internal int MoreSaveFailures { get; set; }
+
   internal string? NextSaveVersion { get; set; }
 
   /// <summary>When set, LoadAsync waits for it before answering.</summary>
@@ -575,7 +589,15 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
     if (NextSaveFailure is not null)
     {
       var failure = NextSaveFailure;
-      NextSaveFailure = null;
+
+      if (MoreSaveFailures > 0)
+      {
+        MoreSaveFailures--;
+      }
+      else
+      {
+        NextSaveFailure = null;
+      }
 
       throw failure;
     }

@@ -115,13 +115,36 @@ const createMockBlock = (overrides: Partial<MockBlock> = {}): MockBlock => {
   };
 };
 
+interface StopCapturingHolds {
+  readonly suppressStopCapturing: boolean;
+  holdStopCapturing(): () => void;
+}
+
+/** Counts holds the way BlockOperations does. */
+const createStopCapturingHolds = (): StopCapturingHolds => {
+  const state = { holds: 0 };
+
+  return {
+    get suppressStopCapturing(): boolean {
+      return state.holds > 0;
+    },
+    holdStopCapturing: (): (() => void) => {
+      state.holds++;
+
+      return (): void => {
+        state.holds--;
+      };
+    },
+  };
+};
+
 interface HarnessConfig {
   currentBlock?: MockBlock;
   /** Drop the undo group API from the mock to exercise the legacy fallback. */
   withToolTransaction?: boolean;
   /** Drop update() to exercise the "no list restamp available" path. */
   withUpdate?: boolean;
-  /** Drop the undo-suppression bridge entirely. */
+  /** Drop the operations module, so nothing tracks undo suppression. */
   withOperations?: boolean;
   /** parentId every freshly pasted block reports. */
   pastedBlockParentId?: string | null;
@@ -135,7 +158,7 @@ const createHarness = (config: HarnessConfig = {}): {
   setToBlockCalls: SetToBlockRecord[];
   pastedBlocks: MockBlock[];
   updatedBlocks: MockBlock[];
-  operations: { suppressStopCapturing: boolean } | undefined;
+  operations: StopCapturingHolds | undefined;
   beginToolTransaction: ReturnType<typeof vi.fn>;
   endToolTransaction: ReturnType<typeof vi.fn>;
   /** Paste calls made so far each time the undo group opened or closed. */
@@ -155,7 +178,7 @@ const createHarness = (config: HarnessConfig = {}): {
 
   const operations = config.withOperations === false
     ? undefined
-    : { suppressStopCapturing: false };
+    : createStopCapturingHolds();
 
   const paste = vi.fn(async (
     tool: string,
@@ -170,11 +193,9 @@ const createHarness = (config: HarnessConfig = {}): {
       suppressed: operations?.suppressStopCapturing,
     });
 
-    // endToolTransaction's close-boundary microtask flips this back; modelling it
-    // is what makes a later `true` proof that suppression was re-asserted.
-    if (operations !== undefined) {
-      operations.suppressStopCapturing = false;
-    }
+    // A nested window opens and closes inside paste(); it must not end the
+    // suppression the paste's own group holds.
+    operations?.holdStopCapturing()();
 
     const block = createMockBlock({
       id: `pasted-${pastedBlocks.length + 1}`,
@@ -210,11 +231,17 @@ const createHarness = (config: HarnessConfig = {}): {
   });
 
   const groupEvents: string[] = [];
+  // Like BlockManager: the group holds stopCapturing until it closes.
+  const groupHolds: Array<() => void> = [];
   const beginToolTransaction = vi.fn((): void => {
     groupEvents.push(`begin after ${pasteCalls.length} pastes`);
+    if (operations !== undefined) {
+      groupHolds.push(operations.holdStopCapturing());
+    }
   });
   const endToolTransaction = vi.fn((): void => {
     groupEvents.push(`end after ${pasteCalls.length} pastes`);
+    groupHolds.pop()?.();
   });
 
   const setCurrentBlockByChildNode = vi.fn();
@@ -616,7 +643,7 @@ describe('BasePasteHandler — insertPasteData dispatch', () => {
     expect(pasteCalls).toHaveLength(2);
   });
 
-  it('keeps undo suppression asserted on every loop iteration', async () => {
+  it('keeps undo suppression held through every paste of the group', async () => {
     const currentBlock = createMockBlock();
     const { handler, pasteCalls, operations } = createHarness({ currentBlock });
 
@@ -627,7 +654,7 @@ describe('BasePasteHandler — insertPasteData dispatch', () => {
     expect(pasteCalls.map((call) => call.suppressed)).toEqual([true, true]);
   });
 
-  it('inserts blocks even when BlockManager exposes no operations bridge', async () => {
+  it('inserts blocks even when BlockManager exposes no operations module', async () => {
     const currentBlock = createMockBlock();
     const { handler, pasteCalls } = createHarness({ currentBlock, withOperations: false });
 
@@ -836,7 +863,7 @@ describe('BasePasteHandler — inherited list style on pasted blocks', () => {
     expect(updateCalls).toHaveLength(0);
   });
 
-  it('asserts undo suppression again before restamping', async () => {
+  it('restamps while the group still holds undo suppression', async () => {
     const currentBlock = createMockBlock();
     const { handler, updateCalls } = createHarness({ currentBlock });
 
@@ -851,7 +878,7 @@ describe('BasePasteHandler — inherited list style on pasted blocks', () => {
     expect(updateCalls.map((call) => call.suppressed)).toEqual([true, true]);
   });
 
-  it('restamps without an operations bridge present', async () => {
+  it('restamps without an operations module present', async () => {
     const currentBlock = createMockBlock();
     const { handler, updateCalls } = createHarness({ currentBlock, withOperations: false });
 

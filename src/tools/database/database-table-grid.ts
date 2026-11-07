@@ -264,6 +264,7 @@ export class DatabaseTableGrid {
     window.addEventListener('keydown', this.recordKey, true);
 
     const reminder = row.reminders?.[property.id]?.remind;
+    const closed = { done: false };
     const onDateDisplayChange = property.type === 'date' ? this.callbacks.dateDisplayChanger?.(property.id) : undefined;
     const handle = openCellEditor(property, readPropertyValue(row, property), anchor, {
       ...this.cellContext,
@@ -283,10 +284,18 @@ export class DatabaseTableGrid {
         : {}),
       ...(this.callbacks.editProperty !== undefined ? { onEditProperty: () => this.callbacks.editProperty?.(ref.propertyId) } : {}),
       onCommit: (value) => this.commit(ref, value),
-      onClose: () => this.editorClosed(ref),
+      onClose: () => {
+        closed.done = true;
+        this.editorClosed(ref);
+      },
     });
 
     this.editor = handle.isOpen ? handle : null;
+    // No editor opened and none closed (no people source, a type this client lacks): nothing will call onClose.
+    if (!handle.isOpen && !closed.done) {
+      this.state.editing = false;
+      window.removeEventListener('keydown', this.recordKey, true);
+    }
   }
 
   private commit(ref: CellRef, value: PropertyValue): void {
@@ -765,6 +774,26 @@ export class DatabaseTableGrid {
     this.fillDrag = { start: bounds, reach: bounds.r1 };
     document.addEventListener('pointermove', this.handleFillMove);
     document.addEventListener('pointerup', this.handleFillEnd);
+    document.addEventListener('pointercancel', this.handleFillCancel);
+  };
+
+  /** Ends a fill drag without filling, and puts back the selection it started from. */
+  private readonly handleFillCancel = (): void => {
+    const drag = this.fillDrag;
+
+    this.stopFill();
+    if (drag === null) {
+      return;
+    }
+    const rows = this.rowIds();
+    const cols = this.columnIds();
+
+    this.state.selection = {
+      kind: 'cell',
+      anchor: { rowId: rows[drag.start.r0], propertyId: cols[drag.start.c0] },
+      focus: { rowId: rows[drag.start.r1], propertyId: cols[drag.start.c1] },
+    };
+    this.paint();
   };
 
   private readonly handleFillMove = (event: PointerEvent): void => {
@@ -815,6 +844,7 @@ export class DatabaseTableGrid {
     this.fillDrag = null;
     document.removeEventListener('pointermove', this.handleFillMove);
     document.removeEventListener('pointerup', this.handleFillEnd);
+    document.removeEventListener('pointercancel', this.handleFillCancel);
   }
 
   // ─── Keys ───
@@ -824,6 +854,12 @@ export class DatabaseTableGrid {
       return;
     }
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    if (event.key === 'Escape' && this.fillDrag !== null) {
+      event.preventDefault();
+      this.handleFillCancel();
+
       return;
     }
     if (event.target instanceof HTMLButtonElement && (event.key === 'Enter' || event.key === ' ')) {

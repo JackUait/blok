@@ -28,6 +28,8 @@ const (
 type identity struct {
 	principal string
 	scopes    []string
+	// client is the stdio client; nil over HTTP.
+	client *stdioPeer
 }
 
 // rawResult is a result written from raw JSON members. The SDK adds _meta.
@@ -180,8 +182,20 @@ func (s *Server) getPrompt(ctx context.Context, req mcp.Request) (mcp.Result, er
 	return completeResult(req, out.Result)
 }
 
+// initializeParams is the initialize that names the caller: stdio's
+// latest, else the session's.
+func initializeParams(req *mcp.CallToolRequest, who identity) *mcp.InitializeParams {
+	if who.client != nil {
+		return who.client.initializeParams()
+	}
+	if req.Session != nil {
+		return req.Session.InitializeParams()
+	}
+	return nil
+}
+
 // rawClientName is the envelope's clientInfo.name, else initialize's.
-func rawClientName(req *mcp.CallToolRequest) *string {
+func rawClientName(req *mcp.CallToolRequest, who identity) *string {
 	if req.Params != nil {
 		if info, ok := req.Params.GetMeta()[mcp.MetaKeyClientInfo].(map[string]any); ok {
 			if name, ok := info["name"].(string); ok {
@@ -190,29 +204,25 @@ func rawClientName(req *mcp.CallToolRequest) *string {
 			return nil
 		}
 	}
-	if req.Session != nil {
-		if init := req.Session.InitializeParams(); init != nil && init.ClientInfo != nil {
-			name := init.ClientInfo.Name
-			return &name
-		}
+	if init := initializeParams(req, who); init != nil && init.ClientInfo != nil {
+		name := init.ClientInfo.Name
+		return &name
 	}
 	return nil
 }
 
 // clientCapabilities is the envelope's clientCapabilities, else
 // initialize's, as JSON; null when there are none.
-func clientCapabilities(req *mcp.CallToolRequest) json.RawMessage {
+func clientCapabilities(req *mcp.CallToolRequest, who identity) json.RawMessage {
 	if req.Params != nil {
 		if declared, ok := req.Params.GetMeta()[mcp.MetaKeyClientCapabilities]; ok {
 			written, _ := marshal(declared)
 			return written
 		}
 	}
-	if req.Session != nil {
-		if init := req.Session.InitializeParams(); init != nil && init.Capabilities != nil {
-			written, _ := marshal(init.Capabilities)
-			return written
-		}
+	if init := initializeParams(req, who); init != nil && init.Capabilities != nil {
+		written, _ := marshal(init.Capabilities)
+		return written
 	}
 	return json.RawMessage("null")
 }
@@ -222,6 +232,15 @@ func (s *Server) callTool(ctx context.Context, req mcp.Request, who identity, as
 	if !ok || call.Params == nil {
 		return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "Invalid params"}
 	}
+	// Node passes the client's cancel only to its signal, which only an open
+	// reads: the work goes on (see dispatch).
+	signal := ctx
+	if token, ok := call.Params.GetMeta()[signalKey].(string); ok {
+		if own := who.client.signal(token); own != nil {
+			signal = own
+		}
+	}
+	ctx = context.WithoutCancel(ctx)
 	// A stdio call waits, once it holds its handle, for the calls read
 	// before it on that handle (handleRegistry.use).
 	if token, ok := call.Params.GetMeta()[turnKey].(string); ok {
@@ -230,19 +249,19 @@ func (s *Server) callTool(ctx context.Context, req mcp.Request, who identity, as
 			defer turn.release()
 		}
 	}
-	caller, err := s.actorFor(ctx, who.principal, rawClientName(call))
+	caller, err := s.actorFor(ctx, who.principal, rawClientName(call, who))
 	if err != nil {
 		return nil, err
 	}
 	caller.scopes = who.scopes
-	approval := map[string]any{"capabilities": clientCapabilities(call), "clientName": caller.clientName}
+	approval := map[string]any{"capabilities": clientCapabilities(call, who), "clientName": caller.clientName}
 	if replies, sent := call.Params.GetMeta()[rawResponsesKey]; sent {
 		raw, _ := marshal(replies)
 		approval["replies"] = acceptedReplies(raw)
 	}
 	modern := isModern(req)
 	for round := 0; ; round++ {
-		result, err := s.dispatch(ctx, &toolCall{name: call.Params.Name, arguments: call.Params.Arguments, caller: caller, approval: approval})
+		result, err := s.dispatch(ctx, &toolCall{name: call.Params.Name, arguments: call.Params.Arguments, caller: caller, approval: approval, signal: signal})
 		if err != nil {
 			if unknown, ok := err.(*errUnknownToolName); ok {
 				return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: unknown.message}

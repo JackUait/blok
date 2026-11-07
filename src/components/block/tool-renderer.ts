@@ -201,6 +201,13 @@ export class ToolRenderer {
   ): void {
     pluginsContent
       .then((resolvedElement) => {
+        /** Awaiters of `ready` must still be released. */
+        if (this.destroyed) {
+          this.readyResolver?.();
+
+          return;
+        }
+
         this.toolRenderedElementInternal = resolvedElement;
         this.addToolDataAttributes(resolvedElement, wrapper);
         contentNode.appendChild(resolvedElement);

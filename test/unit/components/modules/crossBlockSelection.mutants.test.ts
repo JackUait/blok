@@ -187,9 +187,10 @@ describe('CrossBlockSelection — mutation coverage', () => {
     return event;
   };
 
-  const mouseOverOn = (block: BlockStub, from: BlockStub): void => {
+  const mouseOverOn = (block: BlockStub, from: BlockStub, buttons = 1): void => {
     inputOf(block).dispatchEvent(new MouseEvent('mouseover', {
       bubbles: true,
+      buttons,
       relatedTarget: inputOf(from),
     }));
   };
@@ -610,6 +611,20 @@ describe('CrossBlockSelection — mutation coverage', () => {
 
       expect(selectedIds()).toEqual([]);
     });
+
+    it('ends the gesture when the button was released outside the window', () => {
+      module.watchSelection(mouseDownOn(p[1]));
+      mouseOverOn(p[3], p[1]);
+      toolbarOpenMultiple.mockClear();
+
+      /** No mouseup reaches the page; the next hover reports no button held. */
+      mouseOverOn(p[0], p[3], 0);
+      /** A later held hover belongs to a press the page never saw. */
+      mouseOverOn(p[0], p[3]);
+
+      expect(selectedIds()).toEqual(['p1', 'p2', 'p3']);
+      expect(toolbarOpenMultiple).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('nested (same-container) drag', () => {
@@ -959,6 +974,18 @@ describe('CrossBlockSelection — mutation coverage', () => {
       expect(selectionRange).toBeNull();
     });
 
+    it('stays ended when the pointer comes back with a button held after a release outside the window', () => {
+      startDrag();
+      atPoint(20, 50, p[2], 2);
+      atPoint(30, 90, p[3], 1);
+      mouseMove(20, 50, p[2]);
+
+      mouseMove(20, 50, p[2], 0);
+      mouseMove(30, 90, p[3]);
+
+      expect(selectionRange?.endContainer).toBe(textNodeOf(p[2]));
+    });
+
     it('snaps the focus to the hovered block edge when no character is under the pointer', () => {
       startDrag();
 
@@ -1270,7 +1297,8 @@ describe('CrossBlockSelection — mutation coverage', () => {
 
   /** A mouseover with no relatedTarget — the pointer entering the window. */
   const mouseOverFromOutside = (block: BlockStub): void => {
-    inputOf(block).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    inputOf(block).dispatchEvent(new MouseEvent('mouseover', { bubbles: true,
+      buttons: 1 }));
   };
 
   /** A mousedown on the redactor itself — inside the editor, in no block. */
@@ -1431,6 +1459,30 @@ describe('CrossBlockSelection — mutation coverage', () => {
       mouseOverOn(p[3], p[2]);
 
       expect(selectedIds()).toEqual(['p2']);
+    });
+
+    it('ends the drag when the button was released outside the window', () => {
+      blockManagerState.currentBlock = p[2];
+      mouseDownOn(p[2], { shiftKey: true });
+      mouseOverOn(p[3], p[2]);
+      toolbarOpenMultiple.mockClear();
+
+      mouseOverOn(p[0], p[3], 0);
+      mouseOverOn(p[0], p[3]);
+
+      expect(selectedIds()).toEqual(['p2', 'p3']);
+      expect(toolbarOpenMultiple).toHaveBeenCalledTimes(1);
+    });
+
+    it('ends the drag on a buttonless move after a release outside the window', () => {
+      blockManagerState.currentBlock = p[2];
+      mouseDownOn(p[2], { shiftKey: true });
+      mouseMove(5, 5, p[3]);
+
+      mouseMove(5, 5, p[0], 0);
+      mouseOverOn(p[0], p[3]);
+
+      expect(selectedIds()).toEqual(['p2', 'p3']);
     });
   });
 

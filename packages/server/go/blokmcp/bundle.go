@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -36,7 +37,41 @@ func marshal(value any) ([]byte, error) {
 	if err := encoder.Encode(value); err != nil {
 		return nil, err
 	}
-	return bytes.TrimRight(buffer.Bytes(), "\n"), nil
+	return rawLineSeparators(bytes.TrimRight(buffer.Bytes(), "\n")), nil
+}
+
+// rawLineSeparators turns the \u2028 and \u2029 escapes Go's encoder
+// always writes back into the characters, as JSON.stringify writes them. An
+// escape whose backslash is itself escaped is text and stays.
+func rawLineSeparators(written []byte) []byte {
+	if !bytes.Contains(written, []byte(`\u202`)) {
+		return written
+	}
+	out := make([]byte, 0, len(written))
+	for i := 0; i < len(written); i++ {
+		if written[i] != '\\' {
+			out = append(out, written[i])
+			continue
+		}
+		if i+5 < len(written) && string(written[i+1:i+5]) == "u202" && (written[i+5] == '8' || written[i+5] == '9') {
+			if written[i+5] == '8' {
+				out = append(out, "\u2028"...)
+			} else {
+				out = append(out, "\u2029"...)
+			}
+			i += 5
+			continue
+		}
+		// Any other escape is two bytes or \uXXXX; copy its backslash and
+		// the next byte together so an escaped backslash is never read as
+		// the start of an escape.
+		out = append(out, written[i])
+		if i+1 < len(written) {
+			out = append(out, written[i+1])
+			i++
+		}
+	}
+	return out
 }
 
 // call runs op on input and decodes the answer into out (a pointer), unless
@@ -46,8 +81,18 @@ func (b bundle) call(ctx context.Context, op string, input any, out any) (json.R
 	if err != nil {
 		return nil, err
 	}
-	answer, err := b.runtime.Invoke(ctx, op, string(written), nil)
+	answer, err := b.runtime.Invoke(ctx, op, string(finiteJSON(written)), nil)
 	if err != nil {
+		// The engine's stack means nothing to a caller: a limit is named.
+		var failure *jsruntime.Failure
+		if errors.As(err, &failure) {
+			switch failure.Kind {
+			case jsruntime.KindTimedOut:
+				return nil, fmt.Errorf("blok-mcp: the document took longer than %d s to process; it may be too large.", int(callTimeout.Seconds()))
+			case jsruntime.KindDocumentTooLarge:
+				return nil, errors.New("blok-mcp: the document is too large to process.")
+			}
+		}
 		return nil, fmt.Errorf("blok-mcp: bundle operation %s failed: %w", op, err)
 	}
 	raw := json.RawMessage(answer)

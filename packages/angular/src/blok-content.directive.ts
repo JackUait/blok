@@ -47,6 +47,18 @@ export function getConstructedCollaboration(editor: WeakKey): BlokAngularConfig[
   return constructedCollaborations.get(editor);
 }
 
+/** The `data` each live editor was constructed with, keyed by the editor. */
+const constructedData = new WeakMap<WeakKey, BlokAngularConfig['data']>();
+
+/**
+ * The `data` the given editor was constructed with.
+ * @param editor - a Blok instance built by `BlokContentDirective`
+ * @returns the mount-time data, `undefined` when there was none
+ */
+export function getConstructedData(editor: WeakKey): BlokAngularConfig['data'] {
+  return constructedData.get(editor);
+}
+
 /**
  * Escape-hatch directive and lifecycle engine for Blok (mirrors React's
  * `useBlok` + `BlokContent`). Constructs a Blok instance into its own host
@@ -177,6 +189,7 @@ export class BlokContentDirective implements OnDestroy {
     // rather than re-read later from `this.config`, which the host may have
     // rebuilt by then. See `constructedCollaborations`.
     constructedCollaborations.set(blok, merged.collaboration);
+    constructedData.set(blok, merged.data);
     setRegistry(blok, registry);
 
     void blok.isReady.then(() =>
@@ -190,7 +203,23 @@ export class BlokContentDirective implements OnDestroy {
         this.instance.set(blok); // assign FIRST…
         this.ready.emit(blok); // …THEN emit, so consumers see a populated instance.
       })
-    );
+    ).catch(() => {
+      // A failed boot: tear the editor down, as React and Vue do.
+      if (this.current !== blok || this.destroyed) {
+        return;
+      }
+
+      this.registry?.destroyAll();
+      removeRegistry(blok);
+      try {
+        blok.destroy();
+      } catch {
+        // destroy may throw too; the state below is still reset
+      }
+      this.current = null;
+      this.registry = undefined;
+      this.instance.set(null);
+    });
   }
 
   ngOnDestroy(): void {

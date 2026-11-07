@@ -133,7 +133,10 @@ func (m *Manager) Join(ctx context.Context, docID string, member collab.Member) 
 		if m.inCommitCooldown(docID) {
 			return collab.JoinResult{Status: collab.JoinUnavailable}, nil
 		}
-		r := m.roomFor(docID)
+		r, draining := m.roomUnlessDraining(docID)
+		if draining {
+			return collab.JoinResult{Status: collab.JoinDraining}, nil
+		}
 		if r == nil {
 			return collab.JoinResult{Status: collab.JoinPurged}, nil
 		}
@@ -226,7 +229,10 @@ func (m *Manager) editInRoom(docID string, edit func(*Room) (*EditResult, error)
 		if m.inCommitCooldown(docID) {
 			return EditResult{Status: EditUnavailable}, nil
 		}
-		r := m.roomFor(docID)
+		r, draining := m.roomUnlessDraining(docID)
+		if draining {
+			return EditResult{Status: EditDraining}, nil
+		}
 		if r == nil {
 			return EditResult{Status: EditPurged}, nil
 		}
@@ -258,7 +264,10 @@ func (m *Manager) State(ctx context.Context, docID string) (StateResult, error) 
 		if m.inCommitCooldown(docID) {
 			return StateResult{Status: StateUnavailable}, nil
 		}
-		r := m.roomFor(docID)
+		r, draining := m.roomUnlessDraining(docID)
+		if draining {
+			return StateResult{Status: StateDraining}, nil
+		}
 		if r == nil {
 			return StateResult{Status: StatePurged}, nil
 		}
@@ -461,10 +470,25 @@ func (m *Manager) isPurging(docID string) bool {
 }
 
 func (m *Manager) roomFor(docID string) *Room {
+	r, _ := m.roomForDoor(docID, false)
+	return r
+}
+
+// roomUnlessDraining is roomFor, but true once a drain has begun. Checked
+// under the lock Drain's sweep takes, so no room is made after its last
+// empty sweep.
+func (m *Manager) roomUnlessDraining(docID string) (*Room, bool) {
+	return m.roomForDoor(docID, true)
+}
+
+func (m *Manager) roomForDoor(docID string, refuseDraining bool) (*Room, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, purging := m.purgeLanes[docID]; purging {
-		return nil
+		return nil, false
+	}
+	if refuseDraining && m.draining.Load() {
+		return nil, true
 	}
 	r := m.rooms[docID]
 	if r == nil {
@@ -472,7 +496,7 @@ func (m *Manager) roomFor(docID string) *Room {
 		r.onClosed = m.onRoomClosed
 		m.rooms[docID] = r
 	}
-	return r
+	return r, false
 }
 
 // inCommitCooldown: a document whose commit failed, or whose load repeats

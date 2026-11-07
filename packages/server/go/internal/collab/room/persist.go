@@ -270,6 +270,15 @@ func (r *Room) evictLocked() error {
 		r.exportFailures++
 		r.logf(`collab: room "` + r.docID + `" is staying loaded until its export lands`)
 		r.updateEvictionLocked(r.options.Backoff(r.exportFailures))
+		// A member who joins stops the eviction timer, so the export keeps
+		// its own retry, as a failed save does.
+		if r.dirtySince == nil {
+			now := r.options.Now()
+			r.dirtySince = &now
+		}
+		retry := r.options.Now().Add(r.options.Backoff(r.exportFailures))
+		r.exportRetryAt = &retry
+		r.scheduleExportLocked()
 		return nil
 	}
 	r.closeRoomLocked(nil)

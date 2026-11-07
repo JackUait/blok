@@ -43,6 +43,9 @@ pub const SYNC_TIMEOUT: Duration = Duration::from_secs(15);
 const RESTORE_ECHO_WAIT: Duration = Duration::from_secs(2);
 const HISTORY_STEPS: usize = 100;
 const V2: &str = "blok-sync.v2";
+const CLOSE_MESSAGE_TOO_BIG: u16 = 1009;
+/// The state vector of a document with no history.
+const EMPTY_STATE_VECTOR: [u8; 1] = [0];
 const V1: &str = "blok-sync.v1";
 
 /// What the processes share: the engines and the converter.
@@ -391,7 +394,15 @@ struct Room {
     awareness_clients: BTreeSet<u64>,
     awareness_check_at: Instant,
     rows: Vec<Row>,
+    /// The room refused a write for good: no local row is queued until the
+    /// next sync, which rebuilds the copy (Node's store drops its session).
     poisoned: bool,
+    /// The copy holds a refused write: the next connection asks for the
+    /// whole room and replaces the copy with it, so the write is never sent.
+    rebuild: bool,
+    /// This connection asked for the whole room; its first SyncStep2 is it.
+    whole_room_owed: bool,
+    sizes: SizeMemory,
     batches: Vec<Batch>,
     batch_number: u64,
     read_only: bool,
@@ -401,6 +412,45 @@ struct Room {
     /// The executor's history marks, one per write batch.
     marks_past: Vec<Mark>,
     marks_future: Vec<Mark>,
+}
+
+/// What a close 1009 taught: it names no frame, so the largest one this
+/// connection wrote is the estimate (provider.ts).
+#[derive(Debug, Default)]
+struct SizeMemory {
+    largest_sent: usize,
+    refused: Option<usize>,
+    oversized_since_sync: u32,
+}
+
+impl SizeMemory {
+    fn sent(&mut self, bytes: usize) {
+        self.largest_sent = self.largest_sent.max(bytes);
+    }
+
+    /// A close 1009; true when it is the second since an answer shipped.
+    fn too_big(&mut self) -> bool {
+        self.oversized_since_sync += 1;
+        // A 1009 on a connection we never wrote to says nothing of our frames.
+        if self.largest_sent > 0 {
+            self.refused = Some(
+                self.refused
+                    .map_or(self.largest_sent, |r| r.min(self.largest_sent)),
+            );
+        }
+        self.oversized_since_sync > 1
+    }
+
+    fn may_answer(&self, bytes: usize, announced: Option<i64>) -> bool {
+        !(announced.is_some_and(|max| bytes as i64 > max)
+            || self.refused.is_some_and(|refused| bytes >= refused))
+    }
+
+    /// An answer shipped: the stranded bytes went out, the memory did its job.
+    fn answered(&mut self) {
+        self.refused = None;
+        self.oversized_since_sync = 0;
+    }
 }
 
 /// The executor's HistoryMark.
@@ -489,6 +539,9 @@ impl Room {
             awareness_check_at: Instant::now() + awareness::CHECK_EVERY,
             rows: Vec::new(),
             poisoned: false,
+            rebuild: false,
+            whole_room_owed: false,
+            sizes: SizeMemory::default(),
             batches: Vec::new(),
             batch_number: 0,
             read_only,
@@ -625,6 +678,11 @@ impl Room {
         if let Some(tickets) = &self.spec.tickets {
             match tickets.get(fresh).await {
                 Ok(ticket) => protocols.push(ticket),
+                // Node's revocable(): a FORBIDDEN mint ends the room, never retried.
+                Err(_) if tickets.refused() => {
+                    self.phase = Phase::Offline;
+                    return self.terminate("forbidden").await;
+                }
                 Err(_) => {
                     self.phase = Phase::Offline;
                     self.schedule_reconnect(None);
@@ -652,9 +710,19 @@ impl Room {
                 self.phase = Phase::AwaitingControl;
                 self.buffered.clear();
                 self.announced_max = None;
-                let sv = self.doc.encode_state_vector();
+                self.sizes.largest_sent = 0;
+                // An empty vector after a refusal: the answer is then the whole room.
+                self.whole_room_owed = self.rebuild;
+                let sv = if self.rebuild {
+                    EMPTY_STATE_VECTOR.to_vec()
+                } else {
+                    self.doc.encode_state_vector()
+                };
                 let sent = match encode(&Message::SyncStep1 { state_vector: sv }) {
-                    Ok(bytes) => socket.send(&bytes).await,
+                    Ok(bytes) => {
+                        self.sizes.sent(bytes.len());
+                        socket.send(&bytes).await
+                    }
                     Err(_) => Ok(()),
                 };
                 self.socket = Some(socket);
@@ -705,6 +773,7 @@ impl Room {
         self.in_flight = None;
         self.resync_owed = false;
         self.residual = Residual::None;
+        self.whole_room_owed = false;
         self.awareness_clients.clear();
         self.awareness_full = false;
         let events = self.events.take();
@@ -792,6 +861,7 @@ impl Room {
             socket.close(code, None).await;
         }
         self.teardown(false).await;
+        let oversized = code == CLOSE_MESSAGE_TOO_BIG && self.sizes.too_big();
         if code == 4401 {
             self.unauthorized_since_sync += 1;
         }
@@ -802,6 +872,8 @@ impl Room {
             4401 if self.unauthorized_since_sync > 1 => {
                 return self.terminate("unauthorized").await;
             }
+            // The second 1009 since an answer shipped: the same bytes again.
+            _ if oversized => return self.terminate("oversized-update").await,
             4401 => self.force_ticket_refresh = true,
             _ => {}
         }
@@ -837,7 +909,10 @@ impl Room {
     async fn send(&mut self, message: &Message) {
         let Ok(bytes) = encode(message) else { return };
         let failed = match self.socket.as_mut() {
-            Some(socket) => socket.send(&bytes).await.is_err(),
+            Some(socket) => {
+                self.sizes.sent(bytes.len());
+                socket.send(&bytes).await.is_err()
+            }
             None => false,
         };
         if failed {
@@ -923,6 +998,9 @@ impl Room {
     async fn on_frame(&mut self, message: Message) {
         match message {
             Message::SyncStep2 { update } => {
+                if self.whole_room_owed {
+                    self.rebuild_from_room();
+                }
                 if self.apply_remote(&update).await {
                     self.mark_synced().await;
                 }
@@ -932,11 +1010,7 @@ impl Room {
             }
             Message::SyncStep1 { state_vector } => match self.protocol {
                 Protocol::V2 => self.on_resync(&state_vector).await,
-                Protocol::V1 => {
-                    if let Ok(update) = self.doc.encode_state_as_update(&state_vector) {
-                        self.send(&Message::SyncStep2 { update }).await;
-                    }
-                }
+                Protocol::V1 => self.answer_resync(&state_vector).await,
             },
             Message::Awareness { update } => self.awareness.apply(&update),
             Message::QueryAwareness => self.schedule_awareness(true),
@@ -973,6 +1047,8 @@ impl Room {
             return;
         }
         self.synced = true;
+        // Node records the session again here: writes may queue once more.
+        self.poisoned = false;
         self.first_sync_deadline = None;
         self.attempt = 0;
         self.unauthorized_since_sync = 0;
@@ -1073,6 +1149,8 @@ impl Room {
         {
             let lineage = self.lineage.clone().unwrap_or_default();
             self.quarantine(&lineage, "oversized-update");
+            // Same verdict as the room's own rejection.
+            self.refused_for_good();
             return;
         }
         self.in_flight = Some(operation_id);
@@ -1119,10 +1197,46 @@ impl Room {
             final_code => {
                 let lineage = lineage.to_owned();
                 self.quarantine(&lineage, final_code);
-                // The store refuses further rows of a quarantined lineage.
-                self.poisoned = true;
+                self.refused_for_good();
             }
         }
+    }
+
+    /// A write the room will never take: later local edits depend on it, so
+    /// none is queued until the copy is rebuilt from the room.
+    fn refused_for_good(&mut self) {
+        self.poisoned = true;
+        self.rebuild = true;
+    }
+
+    /// Drops the copy that holds a refused write, just before the room's
+    /// whole copy is applied. The session goes on: the lineage is still ours.
+    fn rebuild_from_room(&mut self) {
+        self.rebuild = false;
+        self.whole_room_owed = false;
+        let doc = Doc::new(DocOptions::default());
+        doc.enable_undo();
+        watch(&doc, &self.local, &self.count);
+        self.doc = doc;
+        // Their steps lived in the old copy.
+        self.done.clear();
+        self.undone.clear();
+        self.take_local();
+    }
+
+    /// Answers a v1 SyncStep1, unless the answer is over the announced cap
+    /// or as big as a frame the room already refused (provider.ts answerResync).
+    async fn answer_resync(&mut self, state_vector: &[u8]) {
+        let Ok(update) = self.doc.encode_state_as_update(state_vector) else {
+            return;
+        };
+        let message = Message::SyncStep2 { update };
+        let Ok(bytes) = encode(&message) else { return };
+        if !self.sizes.may_answer(bytes.len(), self.announced_max) {
+            return self.terminate("oversized-update").await;
+        }
+        self.send(&message).await;
+        self.sizes.answered();
     }
 
     fn quarantine(&mut self, lineage: &str, reason: &str) {
@@ -1450,10 +1564,13 @@ impl Room {
         // A restore the bundle checked goes to the sync server's history route.
         if let Some(Value::String(version)) = out.value("restore") {
             let before = self.count.load(Ordering::SeqCst);
-            if let Err(failed) = self.restore(&version).await {
+            let previous = result
+                .pointer("/results/0/previous")
+                .and_then(Value::as_str);
+            if let Err(failed) = self.restore(&version, previous).await {
                 return Ok(Executed::Done {
-                    result: result_text,
-                    delivery: Delivery::Failed(failed),
+                    result: restore_failure(&result, &failed),
+                    delivery: Delivery::None,
                 });
             }
             // The restore comes back as a peer's update, and the result's
@@ -1483,10 +1600,17 @@ impl Room {
         // v1: the seam sends each local update at once, before presence.
         if self.protocol == Protocol::V1 {
             for update in &updates {
-                self.send(&Message::SyncUpdate {
+                let message = Message::SyncUpdate {
                     update: update.clone(),
-                })
-                .await;
+                };
+                // Refused before the write: a bigger frame buys only a 1009.
+                if let (Some(max), Ok(bytes)) = (self.announced_max, encode(&message))
+                    && bytes.len() as i64 > max
+                {
+                    self.terminate("oversized-update").await;
+                    break;
+                }
+                self.send(&message).await;
             }
         }
         self.after_batch(result).await;
@@ -2050,33 +2174,113 @@ impl Room {
         out
     }
 
-    async fn restore(&self, version: &str) -> Result<(), HostError> {
-        let fail = |message: String| {
-            HostError::surface(
-                "TOOL_ACTION_FAILED",
-                format!("The version history failed: {message}"),
-            )
-        };
+    /// POSTs the restore, pinned to `previous`, the head the checks saw.
+    async fn restore(&self, version: &str, previous: Option<&str>) -> Result<(), RestoreFailure> {
         let Some(path) = point_path(version) else {
-            return Ok(());
+            return Err(RestoreFailure::NotFound(version.to_owned()));
         };
         let mut key = [0u8; 16];
         let _ = self.random.fill(&mut key);
+        let Some(headers) = restore_headers(&uuid(&key), previous) else {
+            return Err(RestoreFailure::Stale);
+        };
         let url = format!("{}/{path}/restore", self.history_base());
-        let headers = vec![("Blok-Idempotency-Key".to_owned(), uuid(&key))];
         let answer = self
             .history_send("POST", &url, headers)
             .await
-            .map_err(fail)?;
-        if (200..=299).contains(&answer.status) || answer.status == 404 || answer.status == 412 {
-            return Ok(());
+            .map_err(|message| RestoreFailure::Host(message, None))?;
+        match restore_verdict(answer.status) {
+            Ok(Restored::Done) => Ok(()),
+            Ok(Restored::NotFound) => Err(RestoreFailure::NotFound(version.to_owned())),
+            Ok(Restored::Stale) => Err(RestoreFailure::Stale),
+            Err(status) => Err(RestoreFailure::Host(
+                format!(
+                    "The sync server answered {}: {}",
+                    answer.status,
+                    String::from_utf8_lossy(&answer.body).trim()
+                ),
+                status,
+            )),
         }
-        Err(fail(format!(
-            "The sync server answered {}: {}",
-            answer.status,
-            String::from_utf8_lossy(&answer.body).trim()
-        )))
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Restored {
+    Done,
+    NotFound,
+    Stale,
+}
+
+/// Why nothing was restored, as Node's runRestore reports it.
+#[derive(Debug)]
+enum RestoreFailure {
+    NotFound(String),
+    Stale,
+    /// The host failed: its message, and its status when it answered.
+    Host(String, Option<u16>),
+}
+
+/// The restore route's status, as Node's live version history reads it.
+fn restore_verdict(status: u16) -> Result<Restored, Option<u16>> {
+    match status {
+        200..=299 => Ok(Restored::Done),
+        404 => Ok(Restored::NotFound),
+        412 => Ok(Restored::Stale),
+        other => Err(Some(other)),
+    }
+}
+
+/// The restore's headers; None when `previous` is a tag the server cannot
+/// read, which would restore unpinned.
+fn restore_headers(key: &str, previous: Option<&str>) -> Option<Vec<(String, String)>> {
+    let mut headers = vec![("Blok-Idempotency-Key".to_owned(), key.to_owned())];
+    if let Some(previous) = previous {
+        point_path(previous)?;
+        headers.push(("If-Match".to_owned(), format!("\"{previous}\"")));
+    }
+    Some(headers)
+}
+
+/// The failed batch result Node's executor gives, key order included: its
+/// runRestore throws these at command 0, after the plan's own revision.
+fn restore_failure(result: &Value, failure: &RestoreFailure) -> String {
+    let error = match failure {
+        RestoreFailure::NotFound(version) => json!({
+            "code": "VERSION_NOT_FOUND",
+            "message": format!("There is no version \"{version}\". history.versions lists them."),
+            "path": "/commands/0/args/version",
+            "retryable": false,
+            "commandIndex": 0,
+        }),
+        RestoreFailure::Stale => json!({
+            "code": "STALE",
+            "message": "The document changed since the version history was read, so nothing was restored. Read it again, then retry.",
+            "commandIndex": 0,
+            "retryable": true,
+        }),
+        RestoreFailure::Host(message, status) => {
+            // Node's ask(): no answer, a 429 or a 5xx other than a plain 500 or a 501 may pass on a retry.
+            let retryable = match status {
+                None => true,
+                Some(status) => *status == 429 || ((502..=599).contains(status) && *status != 501),
+            };
+            json!({
+                "code": "TOOL_ACTION_FAILED",
+                "message": format!("The version history failed: {message}"),
+                "retryable": retryable,
+                "commandIndex": 0,
+                "path": "/commands/0/args",
+            })
+        }
+    };
+    json!({
+        "ok": false,
+        "revision": result.get("revision").cloned().unwrap_or(Value::Null),
+        "error": error,
+        "warnings": result.get("warnings").cloned().unwrap_or_else(|| json!([])),
+    })
+    .to_string()
 }
 
 /// Node's words when fetch got no answer ("fetch failed" is undici's).
@@ -2319,6 +2523,85 @@ mod tests {
         assert_eq!(point_path(":3"), None);
         assert_eq!(point_path("..:3"), None);
         assert_eq!(point_path("a:x"), None);
+    }
+
+    // Node's live version history: 404 is no such version, 412 is a head
+    // that moved past the one the checks saw; nothing was restored.
+    #[test]
+    fn a_restore_404_or_412_is_not_a_success() {
+        assert_eq!(restore_verdict(204), Ok(Restored::Done));
+        assert_eq!(restore_verdict(404), Ok(Restored::NotFound));
+        assert_eq!(restore_verdict(412), Ok(Restored::Stale));
+        assert_eq!(restore_verdict(503), Err(Some(503)));
+    }
+
+    // The restore pins the head the checks saw, as Node and C# do.
+    #[test]
+    fn a_restore_sends_if_match_with_the_version_current_before() {
+        assert_eq!(
+            restore_headers("k", Some("abc:2")),
+            Some(vec![
+                ("Blok-Idempotency-Key".to_owned(), "k".to_owned()),
+                ("If-Match".to_owned(), "\"abc:2\"".to_owned()),
+            ])
+        );
+        assert_eq!(
+            restore_headers("k", None),
+            Some(vec![("Blok-Idempotency-Key".to_owned(), "k".to_owned())])
+        );
+        // A tag the server cannot read would restore unpinned: stale, never sent.
+        assert_eq!(restore_headers("k", Some("nope")), None);
+    }
+
+    // Node's bytes (verify-live restore404/412/500 logs).
+    #[test]
+    fn a_failed_restore_answers_like_node() {
+        let base = json!({ "ok": true, "revision": "l0", "results": [], "warnings": [] });
+        assert_eq!(
+            restore_failure(&base, &RestoreFailure::NotFound("a:1".to_owned())),
+            r#"{"ok":false,"revision":"l0","error":{"code":"VERSION_NOT_FOUND","message":"There is no version \"a:1\". history.versions lists them.","path":"/commands/0/args/version","retryable":false,"commandIndex":0},"warnings":[]}"#
+        );
+        assert_eq!(
+            restore_failure(&base, &RestoreFailure::Stale),
+            r#"{"ok":false,"revision":"l0","error":{"code":"STALE","message":"The document changed since the version history was read, so nothing was restored. Read it again, then retry.","commandIndex":0,"retryable":true},"warnings":[]}"#
+        );
+        let host = |message: &str, status| {
+            restore_failure(&base, &RestoreFailure::Host(message.to_owned(), status))
+        };
+        assert_eq!(
+            host("The sync server answered 503: {\"error\":\"x\"}", Some(503)),
+            r#"{"ok":false,"revision":"l0","error":{"code":"TOOL_ACTION_FAILED","message":"The version history failed: The sync server answered 503: {\"error\":\"x\"}","retryable":true,"commandIndex":0,"path":"/commands/0/args"},"warnings":[]}"#
+        );
+        // A plain 500, a 501 or a refusal never passes on a retry.
+        for status in [500, 501, 403] {
+            assert!(
+                host("x", Some(status)).contains(r#""retryable":false"#),
+                "{status}"
+            );
+        }
+        assert!(host("x", Some(429)).contains(r#""retryable":true"#));
+        // No answer at all: the network may come back.
+        assert!(host(HISTORY_UNREACHABLE, None).contains(r#""retryable":true"#));
+    }
+
+    // provider.ts: the second 1009 since an answer shipped is terminal, and
+    // a resync answer as big as a refused frame is never written.
+    #[test]
+    fn a_second_close_1009_ends_the_room() {
+        let mut sizes = SizeMemory::default();
+        sizes.sent(500);
+        assert!(!sizes.too_big());
+        assert!(!sizes.may_answer(500, None));
+        assert!(sizes.may_answer(499, None));
+        assert!(!sizes.may_answer(10, Some(9)));
+        sizes.largest_sent = 0;
+        assert!(sizes.too_big());
+        sizes.answered();
+        assert!(!sizes.too_big());
+        // A 1009 before any write leaves no bound.
+        let mut fresh = SizeMemory::default();
+        fresh.too_big();
+        assert!(fresh.may_answer(1 << 20, None));
     }
 
     #[test]

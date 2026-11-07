@@ -84,10 +84,11 @@ export interface OperationsContext {
   /** Ends the open undo step when the current block's index moved off `previousIndex`. */
   endUndoStepIfCurrentIndexChanged(previousIndex: number): void;
 
-  /**
-   * Flag to suppress stopCapturing during atomic operations (like split).
-   */
-  suppressStopCapturing: boolean;
+  /** Whether an atomic operation holds the undo step open. */
+  readonly suppressStopCapturing: boolean;
+
+  /** Hold the undo step open until the returned release runs. */
+  holdStopCapturing(): () => void;
 
   /** Current block (undefined when no block is selected) */
   readonly currentBlock: Block | undefined;

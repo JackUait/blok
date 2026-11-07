@@ -23,6 +23,8 @@ type toolCall struct {
 	caller    *caller
 	// approval is agentExecute's approval input.
 	approval map[string]any
+	// signal is the client's cancel; nil reads ctx.
+	signal context.Context
 }
 
 // outcome is a tools/call answer, or the question to ask first.
@@ -91,6 +93,9 @@ func (s *Server) dispatch(ctx context.Context, call *toolCall) (*outcome, error)
 	// Node checks the client's cancel only before an open hands out its
 	// handle; a batch that runs is saved even if the client hung up.
 	signal := ctx
+	if call.signal != nil {
+		signal = call.signal
+	}
 	ctx = context.WithoutCancel(ctx)
 	result, err := s.dispatchStep(ctx, call, signal)
 	if err == nil {

@@ -73,11 +73,19 @@ func urlFor(base, documentID string) (string, error) {
 }
 
 func (s *endpointSource) call(ctx context.Context, method, url string, header http.Header, body []byte) (*fetched, error) {
-	answer, err := fetch(ctx, s.timeout, method, url, header, body)
+	answer, err := fetchAnswer(ctx, s.timeout, method, url, header, body)
 	if err != nil {
 		return nil, endpointUnavailable("could not be reached")
 	}
 	return answer, nil
+}
+
+// text is Node's textOf: the body, or the error of one that broke off.
+func (answer *fetched) text() ([]byte, error) {
+	if answer.bodyErr != nil {
+		return nil, endpointUnavailable("dropped the connection while answering")
+	}
+	return answer.body, nil
 }
 
 // isRecordJSON reads raw as a JSON object, keeping each member raw.
@@ -119,7 +127,11 @@ func (s *endpointSource) load(ctx context.Context, documentID string) (*loaded, 
 	if answer.status != http.StatusOK {
 		return nil, endpointUnavailable(fmt.Sprintf("answered %d for %s", answer.status, documentID))
 	}
-	body := json.RawMessage(decodeUTF8(answer.body))
+	text, err := answer.text()
+	if err != nil {
+		return nil, err
+	}
+	body := json.RawMessage(finiteJSON([]byte(decodeUTF8(text))))
 	if !json.Valid(body) {
 		return nil, endpointUnavailable("answered non-JSON for " + documentID)
 	}
@@ -172,10 +184,14 @@ func (s *endpointSource) save(ctx context.Context, documentID string, text []byt
 	if answer.status < 200 || answer.status > 299 {
 		return nil, endpointUnavailable(fmt.Sprintf("refused the save with %d", answer.status))
 	}
-	if len(answer.body) == 0 {
+	reply, err := answer.text()
+	if err != nil {
+		return nil, err
+	}
+	if len(reply) == 0 {
 		return ifVersion, nil
 	}
-	if record, ok := isRecordJSON(json.RawMessage(decodeUTF8(answer.body))); ok && isStringJSON(record["version"]) {
+	if record, ok := isRecordJSON(json.RawMessage(decodeUTF8(reply))); ok && isStringJSON(record["version"]) {
 		var version string
 		if json.Unmarshal(record["version"], &version) == nil {
 			return &version, nil
@@ -200,7 +216,11 @@ func (s *endpointSource) list(ctx context.Context, request listRequest) (*source
 	if answer.status != http.StatusOK {
 		return nil, endpointUnavailable(fmt.Sprintf("list answered %d", answer.status))
 	}
-	body := json.RawMessage(decodeUTF8(answer.body))
+	text, err := answer.text()
+	if err != nil {
+		return nil, err
+	}
+	body := json.RawMessage(decodeUTF8(text))
 	if !json.Valid(body) {
 		return nil, endpointUnavailable("answered non-JSON for the list")
 	}

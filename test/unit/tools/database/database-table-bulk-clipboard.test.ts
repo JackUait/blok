@@ -625,6 +625,62 @@ describe('table bulk actions and clipboard', () => {
 
       expect(cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-table-fill-handle]')).not.toBeNull();
     });
+
+    // A touch scroll cancels the press; the next release anywhere must not fill.
+    it('a cancelled fill-handle drag fills nothing', () => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r1', 'p-notes');
+      cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-table-fill-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => cell(root, 'r3', 'p-notes') });
+      try {
+        document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      } finally {
+        Reflect.deleteProperty(document, 'elementFromPoint');
+      }
+
+      expect(commitsOf(handlers)).toEqual([]);
+      expect([...root.querySelectorAll('[role="gridcell"][aria-selected="true"]')]).toEqual([cell(root, 'r1', 'p-notes')]);
+    });
+
+    it('Escape during a fill-handle drag fills nothing on release', () => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r1', 'p-notes');
+      cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-table-fill-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => cell(root, 'r3', 'p-notes') });
+      try {
+        document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        press(grid(root), 'Escape');
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      } finally {
+        Reflect.deleteProperty(document, 'elementFromPoint');
+      }
+
+      expect(commitsOf(handlers)).toEqual([]);
+      expect([...root.querySelectorAll('[role="gridcell"][aria-selected="true"]')]).toEqual([cell(root, 'r1', 'p-notes')]);
+    });
+
+    it('a fill-handle drag released after the move fills the rows it reached', () => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r1', 'p-notes');
+      cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-table-fill-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => cell(root, 'r3', 'p-notes') });
+      try {
+        document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      } finally {
+        Reflect.deleteProperty(document, 'elementFromPoint');
+      }
+
+      expect(commitsOf(handlers)).toHaveLength(1);
+    });
   });
 
   describe('undo', () => {
@@ -654,6 +710,20 @@ describe('table bulk actions and clipboard', () => {
       box('r3')?.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
 
       expect(state.selection).toEqual({ kind: 'rows', rowIds: ['r1', 'r2', 'r3'] });
+    });
+
+    // Nothing calls onClose when no picker opens, so the table must free itself.
+    it('a Person bulk edit with no people source opens nothing and leaves the table free to redraw', () => {
+      const { root, view } = mount({ schema: [schema[0], { id: 'p-who', name: 'Who', type: 'person', position: 'a5' }] });
+
+      selectRows(root, 'r1', 'r2');
+      const button = root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-who"]');
+
+      expect(button).not.toBeNull();
+      button?.click();
+
+      expect(view.interacting).toBe(false);
+      expect(document.querySelector('[data-blok-database-cell-editor]')).toBeNull();
     });
 
     it('offers one button per visible editable property, and its edit lands on every selected row', () => {

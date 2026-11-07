@@ -373,6 +373,9 @@ impl Mcp {
             rooms,
         } = hooks;
         check_options(&bundle, options, authorize.is_some(), uploads.as_ref()).await?;
+        if let Some(root) = uploads.as_ref().and_then(|u| u.root.as_ref()) {
+            crate::uploads::check_root(root).map_err(Fault::Internal)?;
+        }
         let mut flags = surface_flags(options);
         if uploads.is_some() {
             flags["uploads"] = Value::Bool(true);

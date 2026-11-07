@@ -408,6 +408,12 @@ export class CrossBlockSelection extends Module {
   private onShiftDragOver = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
 
+    if ((mouseEvent.buttons & 1) === 0) {
+      this.endShiftDragReleasedOutside(mouseEvent);
+
+      return;
+    }
+
     this.updateShiftDrag(mouseEvent.clientY, mouseEvent.target);
   };
 
@@ -418,9 +424,8 @@ export class CrossBlockSelection extends Module {
   private onShiftDragMove = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
 
-    /** Released outside the window: no mouseup came, the gesture is over. */
     if ((mouseEvent.buttons & 1) === 0) {
-      this.shiftDragPointer = null;
+      this.endShiftDragReleasedOutside(mouseEvent);
 
       return;
     }
@@ -429,6 +434,17 @@ export class CrossBlockSelection extends Module {
       y: mouseEvent.clientY };
     this.updateShiftDrag(mouseEvent.clientY, mouseEvent.target);
   };
+
+  /**
+   * The button came up outside the window, so no mouseup reached us. The
+   * pointer is dropped first: the mouseup handler would otherwise read this
+   * event's position as the release point and extend the range to it.
+   * @param event - the first move/over seen with no button held
+   */
+  private endShiftDragReleasedOutside(event: MouseEvent): void {
+    this.shiftDragPointer = null;
+    this.onShiftDragUp(event);
+  }
 
   /**
    * Content scrolled under a held Shift+drag. No mouse event fires for that, so
@@ -981,12 +997,8 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
-    /**
-     * The button was released outside the window: mouseup never arrived, so the
-     * gesture is over even though the listeners are still attached.
-     */
     if ((mouseEvent.buttons & 1) === 0) {
-      this.textDragPointer = null;
+      this.endDragReleasedOutside(mouseEvent);
 
       return;
     }
@@ -995,6 +1007,17 @@ export class CrossBlockSelection extends Module {
       y: mouseEvent.clientY };
     this.updateTextDrag(mouseEvent.clientX, mouseEvent.clientY, mouseEvent.target, true);
   };
+
+  /**
+   * The button came up outside the window, so no mouseup reached us. The
+   * pointer is dropped first: the mouseup handler would otherwise read this
+   * event's position as the release point and extend the range to it.
+   * @param event - the first move/over seen with no button held
+   */
+  private endDragReleasedOutside(event: MouseEvent): void {
+    this.textDragPointer = null;
+    this.onMouseUp(event);
+  }
 
   /**
    * Content scrolled under a held pointer (native autoscroll at an edge, the
@@ -1420,6 +1443,12 @@ export class CrossBlockSelection extends Module {
   private onMouseOver = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
     const { BlockManager, DragManager } = this.Blok;
+
+    if ((mouseEvent.buttons & 1) === 0) {
+      this.endDragReleasedOutside(mouseEvent);
+
+      return;
+    }
 
     /**
      * The gesture is already reading as a cross-block TEXT selection; the

@@ -225,6 +225,8 @@ type mgrEndpoint struct {
 	loadFailure     error
 	gate            chan struct{}
 	nextSaveFailure error
+	// moreSaveFailures is how many saves after the next one fail the same way.
+	moreSaveFailures int
 }
 
 func (e *mgrEndpoint) setLoadFailure(err error) {
@@ -270,7 +272,11 @@ func (e *mgrEndpoint) Save(ctx context.Context, doc string, outputData any, vers
 	}
 	e.mu.Lock()
 	failure := e.nextSaveFailure
-	e.nextSaveFailure = nil
+	if e.moreSaveFailures > 0 {
+		e.moreSaveFailures--
+	} else {
+		e.nextSaveFailure = nil
+	}
 	e.mu.Unlock()
 	if failure != nil {
 		return nil, failure
@@ -1723,6 +1729,42 @@ func TestAnEndpointOutageAtEvictionKeepsTheRoomLoadedUntilTheExportLands(t *test
 	saves := b.endpoint.Saves()
 	if len(saves) != 2 || saves[1].data != textJSON(t, "hello!") {
 		t.Fatalf("saves = %+v, want two ending hello!", saves)
+	}
+}
+
+// The eviction's flush finds the debounced save failing and fails its own;
+// a member who comes back stops the eviction retry, so the export needs its
+// own timer, or the consumer's copy waits for the next edit.
+func TestAFailedEvictionExportRetriesAfterAMemberRejoins(t *testing.T) {
+	b := newMgrBench()
+	b.endpoint.Holds(t, mgrDoc, "hello", nil)
+	gate := make(chan struct{})
+	b.endpoint.setGate(gate)
+	b.endpoint.mu.Lock()
+	b.endpoint.nextSaveFailure = &docendpoint.Error{Message: "collab: the doc endpoint PUT returned 502.", StatusCode: 502}
+	b.endpoint.moreSaveFailures = 1
+	b.endpoint.mu.Unlock()
+	o := mgrFast()
+	o.RetryBackoff, o.RetryBackoffCap = 300*time.Millisecond, 300*time.Millisecond
+	manager := b.manager(t, o)
+	peer := newMgrPeer("", true)
+	membership := mgrEnter(t, manager, mgrDoc, peer)
+	client := mgrSynced(t, membership, peer.fakeMember)
+	mgrSend(t, membership, client, "!")
+	mgrWait(t, "the debounced export to start", func() bool { return len(b.endpoint.Saves()) == 1 })
+	membership.Leave()
+	// Past the linger: the eviction waits on the gated save.
+	time.Sleep(400 * time.Millisecond)
+
+	b.endpoint.setGate(nil)
+	close(gate)
+	mgrWait(t, "the flush's own export", func() bool { return len(b.endpoint.Saves()) == 2 })
+	back := mgrEnter(t, manager, mgrDoc, newMgrPeer("", true))
+	defer back.Leave()
+
+	mgrWait(t, "the export retry", func() bool { return len(b.endpoint.Saves()) == 3 })
+	if saves := b.endpoint.Saves(); saves[2].data != textJSON(t, "hello!") {
+		t.Fatalf("saves = %+v, want the retry to carry hello!", saves)
 	}
 }
 

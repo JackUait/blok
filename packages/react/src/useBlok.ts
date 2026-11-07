@@ -881,10 +881,23 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       .catch(() => undefined)
       // `data` may be null here (a controlled "clear to empty"); render() throws
       // on null, so normalize null → { blocks: [] } at the boundary.
-      .then(() => editor.render(toRenderableData(data)))
+      // A render queued behind a slow one may run after this editor was
+      // destroyed or replaced; it must not reach the dead editor.
+      .then(async () => {
+        const live = stateRef.current;
+
+        if (live.editor !== editor || live.isDestroyed) {
+          return false;
+        }
+        await editor.render(toRenderableData(data));
+
+        return true;
+      })
       .then(
-        () => {
-          lastRenderedDataRef.current = data;
+        (rendered) => {
+          if (rendered) {
+            lastRenderedDataRef.current = data;
+          }
         },
         () => {
           // render failed: keep the last successful baseline so a later identical

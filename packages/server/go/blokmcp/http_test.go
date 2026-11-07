@@ -92,7 +92,7 @@ func TestRefusesABodyOverFourMiBWith413(t *testing.T) {
 	if response.StatusCode != http.StatusRequestEntityTooLarge || body != "" {
 		t.Fatalf("%d %q", response.StatusCode, body)
 	}
-	response, _ = send(t, http.MethodPost, front.URL+"/mcp", nil, strings.Repeat("a", maxBodyBytes))
+	response, _ = send(t, http.MethodPost, front.URL+"/mcp", map[string]string{"Content-Type": "application/json", "Accept": acceptBoth}, strings.Repeat("a", maxBodyBytes))
 	if response.StatusCode != http.StatusBadRequest {
 		t.Fatalf("exactly 4 MiB: %d", response.StatusCode)
 	}

@@ -104,14 +104,9 @@ func (s *Server) handler() http.Handler {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if r.Method != http.MethodPost {
-			w.Header()["Allow"] = []string{"POST"}
-			writeRPCError(w, http.StatusMethodNotAllowed, -32000, "Method not allowed.")
-			return
-		}
 		who := identity{principal: s.options.principal()}
 		// The bearer gate reads only the header, so a refused caller never
-		// gets a body read.
+		// gets a body read. Node runs it before the method check.
 		if verifier != nil {
 			info, ok := verifier.gate(w, r, metadataURL)
 			if !ok {
@@ -119,6 +114,12 @@ func (s *Server) handler() http.Handler {
 			}
 			who = identity{principal: info.principal, scopes: info.scopes}
 		}
+		if r.Method != http.MethodPost {
+			w.Header()["Allow"] = []string{"POST"}
+			writeRPCError(w, http.StatusMethodNotAllowed, -32000, "Method not allowed.")
+			return
+		}
+		modern := r.Header.Get("Mcp-Protocol-Version") >= modernVersion
 		body, err := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes+1))
 		if err != nil {
 			return
@@ -127,13 +128,25 @@ func (s *Server) handler() http.Handler {
 			w.WriteHeader(http.StatusRequestEntityTooLarge)
 			return
 		}
-		if !json.Valid(body) {
-			writeRPCError(w, http.StatusBadRequest, -32700, "Parse error: Invalid JSON")
+		// Node reads the body before its handler checks the type.
+		if !isJSONContentType(r.Header.Get("Content-Type")) {
+			rpcError(http.StatusUnsupportedMediaType, -32000, "Unsupported Media Type: Content-Type must be application/json", nil).send(w, modern)
+			return
+		}
+		body = withoutBOM(body)
+		refused, batch := nodeGate(r, body)
+		if refused != nil {
+			refused.send(w, modern)
 			return
 		}
 		if answer := refusedBody(body); answer != nil {
-			answer.send(w, r.Header.Get("Mcp-Protocol-Version") >= modernVersion)
+			answer.send(w, modern)
 			return
+		}
+		// The Go SDK takes a batch only below 2025-06-18; Node takes it at
+		// any legacy version, checked above.
+		if batch {
+			r.Header.Set("Mcp-Protocol-Version", "2025-03-26")
 		}
 		body = liftBody(body)
 		r.Body = io.NopCloser(bytes.NewReader(body))
@@ -298,6 +311,17 @@ func (s *Server) ListenAndServe(ctx context.Context, onListening func(url string
 		return &ConfigError{Message: "Refusing to bind " + listen + ": a non-loopback address needs --public"}
 	}
 	host := strings.TrimSuffix(strings.TrimPrefix(listen[:at], "["), "]")
+	// Node listens on the first address the resolver gives for a name;
+	// Go's own listen would prefer IPv4.
+	if host != "" && net.ParseIP(host) == nil {
+		addresses, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		if err != nil {
+			return err
+		}
+		if len(addresses) > 0 {
+			host = addresses[0].IP.String()
+		}
+	}
 	listener, err := net.Listen("tcp", net.JoinHostPort(host, listen[at+1:]))
 	if err != nil {
 		return err

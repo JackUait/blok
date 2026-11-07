@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FileTool } from '../../../../src/tools/file';
 import type { FileData, FileConfig } from '../../../../types/tools/file';
-import type { API, BlockAPI, BlockToolConstructorOptions, FilePasteEvent } from '../../../../types';
+import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, FilePasteEvent } from '../../../../types';
 
 const createMockApi = (overrides: Partial<API> = {}): API => ({
   styles: { block: 'blok-block' },
@@ -590,6 +590,19 @@ describe('FileTool — preview', () => {
     tool.removed();
     expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
+
+  it('closes an open preview when the editor is destroyed', () => {
+    const tool: BlockTool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', mimeType: 'application/pdf' }));
+    const root = tool.render();
+    if (!(root instanceof HTMLElement)) throw new Error('render() must return an element');
+    root.querySelector<HTMLElement>('[data-role="file-card"]')?.click();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+
+    // editor.destroy() reaches the tool only through destroy(), never removed().
+    tool.destroy?.();
+
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
 });
 
 describe('FileTool — an upload belongs to the pick that started it', () => {
@@ -647,6 +660,49 @@ describe('FileTool — an upload belongs to the pick that started it', () => {
     await flush();
 
     expect(tool.save().url).toBe('');
+  });
+
+  it('ignores a file upload that fails after it was cancelled', async () => {
+    const onUploadError = vi.fn();
+    let reject: (err: Error) => void = () => undefined;
+    const uploadByFile = (): Promise<{ url: string }> => new Promise((_r, rej) => {
+      reject = rej;
+    });
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile }, onUploadError }));
+    const root = tool.render();
+    tool.onPaste(filePasteEvent(pdf()));
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    reject(new Error('network down'));
+    await flush();
+
+    expect(root.querySelector('[data-role="file-error"]')).toBeNull();
+    expect(onUploadError).not.toHaveBeenCalled();
+  });
+
+  it('ignores a link upload that fails after it was cancelled', async () => {
+    const onUploadError = vi.fn();
+    let reject: (err: Error) => void = () => undefined;
+    const uploadByUrl = (): Promise<{ url: string }> => new Promise((_r, rej) => {
+      reject = rej;
+    });
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByUrl }, onUploadError }));
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const urlInput = root.querySelector<HTMLInputElement>('.blok-media-empty__embed-input');
+    const submit = root.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
+    if (!urlInput || !submit) throw new Error('embed url field missing');
+    urlInput.value = 'https://cdn/a.pdf';
+    submit.click();
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    reject(new Error('network down'));
+    await flush();
+
+    expect(root.querySelector('[data-role="file-error"]')).toBeNull();
+    expect(onUploadError).not.toHaveBeenCalled();
   });
 
   it('turns the file preview into the upload progress', async () => {

@@ -23,10 +23,7 @@ const LOOPBACK_HOST_NAMES: [&str; 3] = ["localhost", "127.0.0.1", "[::1]"];
 type Service = StreamableHttpService<Handler, NeverSessionManager>;
 
 pub struct Front {
-    json: Service,
-    sse: Service,
-    oauth: Option<OAuth>,
-    principal: String,
+    core: Core,
     /// --public: a proxy in front sets Host, so only a loopback bind checks it.
     public: bool,
     port: u16,
@@ -63,17 +60,16 @@ pub fn loopback_host(host: Option<&str>, port: u16) -> bool {
 
 /// blok-mcp behind an embedding host's own HTTP server, with the checks
 /// Node's front door makes: a browser Origin must be a loopback page, and
-/// the Host a loopback name (any port) or one of the app's own names.
+/// the Host a loopback name with the port the request came in on, or one of
+/// the app's own names. Past them it answers as the CLI's front door does.
 ///
 /// With neither OAuth nor the app's own host names, only a loopback peer is
 /// served, as Node binds loopback itself: a Host header proves nothing about
 /// the caller. A host behind a proxy (the peer is the proxy) must set OAuth
-/// or name its hosts.
+/// or name its hosts. Naming hosts admits remote callers without OAuth.
 pub struct EmbeddedHttp {
-    service: Service,
+    core: Core,
     hosts: Option<Vec<String>>,
-    oauth: Option<OAuth>,
-    principal: String,
 }
 
 impl EmbeddedHttp {
@@ -85,23 +81,16 @@ impl EmbeddedHttp {
         oauth: Option<OAuth>,
         principal: String,
     ) -> EmbeddedHttp {
-        let mut config = StreamableHttpServerConfig::default();
-        config.legacy_session_mode = false;
-        // Checked here, Node's way.
-        config.allowed_hosts.clear();
         EmbeddedHttp {
-            service: StreamableHttpService::new(
-                move || Ok(handler.clone()),
-                Arc::new(NeverSessionManager::default()),
-                config,
-            ),
+            core: Core::new(&handler, oauth, principal),
             hosts: hosts.map(|hosts| hosts.iter().map(|h| h.to_lowercase()).collect()),
-            oauth,
-            principal,
         }
     }
 
-    fn host_allowed(&self, host: Option<&str>) -> bool {
+    fn host_allowed(&self, host: Option<&str>, port: u16) -> bool {
+        let Some(hosts) = &self.hosts else {
+            return loopback_host(host, port);
+        };
         let Some(host) = host.map(str::to_lowercase) else {
             return false;
         };
@@ -109,67 +98,55 @@ impl EmbeddedHttp {
             Some(at) if !host.ends_with(']') => &host[..at],
             _ => host.as_str(),
         };
-        match &self.hosts {
-            None => LOOPBACK_HOST_NAMES.contains(&name),
-            Some(hosts) => hosts.iter().any(|h| *h == host || *h == name),
-        }
+        hosts.iter().any(|h| *h == host || *h == name)
     }
 
-    /// One request from `peer`, the socket address that sent it: 403 for a
-    /// foreign Origin or Host, or a remote peer with no opt-in; else rmcp's answer.
+    /// One request from `peer`, the socket address that sent it, taken on
+    /// `local`, the address the host's server accepted it on: 403 for a
+    /// foreign Origin or Host, or a remote peer with no opt-in; else the
+    /// answer the CLI's front door gives.
     pub async fn handle(
         &self,
         peer: SocketAddr,
+        local: SocketAddr,
         request: http::Request<Full<Bytes>>,
-    ) -> http::Response<http_body_util::combinators::BoxBody<Bytes, std::convert::Infallible>> {
+    ) -> Answer {
         let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok());
-        let opted_in = self.oauth.is_some() || self.hosts.is_some();
+        let opted_in = self.core.oauth.is_some() || self.hosts.is_some();
         if (!opted_in && !is_loopback(peer.ip()))
             || header("origin").is_some_and(|o| !loopback_origin(o))
-            || !self.host_allowed(header("host"))
+            || !self.host_allowed(header("host"), local.port())
         {
-            let mut refused = http::Response::new(
-                Full::new(Bytes::new())
-                    .map_err(|never| match never {})
-                    .boxed(),
-            );
-            *refused.status_mut() = http::StatusCode::FORBIDDEN;
-            return refused;
+            return answer(403, None, Bytes::new(), &[]);
         }
-        // The SDK's bearer gate, as the front door runs it.
-        let identity = match &self.oauth {
-            None => HttpIdentity {
-                principal: self.principal.clone(),
-                scopes: None,
-            },
-            Some(oauth) => match oauth.authenticate(header("authorization")).await {
-                Ok(verified) => HttpIdentity {
-                    principal: verified.principal,
-                    scopes: Some(verified.scopes),
-                },
-                Err(refusal) => {
-                    let mut refused = http::Response::new(
-                        Full::new(Bytes::from(refusal.body))
-                            .map_err(|never| match never {})
-                            .boxed(),
-                    );
-                    *refused.status_mut() = http::StatusCode::from_u16(refusal.status)
-                        .unwrap_or(http::StatusCode::UNAUTHORIZED);
-                    let headers = refused.headers_mut();
-                    headers.insert(
-                        "content-type",
-                        http::HeaderValue::from_static("application/json"),
-                    );
-                    if let Ok(challenge) = http::HeaderValue::from_str(&refusal.challenge) {
-                        headers.insert("www-authenticate", challenge);
-                    }
-                    return refused;
-                }
-            },
+        let target = request
+            .uri()
+            .path_and_query()
+            .map_or("/", |p| p.as_str())
+            .to_owned();
+        let method = request.method().as_str().to_owned();
+        let headers: Vec<(String, String)> = request
+            .headers()
+            .iter()
+            .map(|(n, v)| {
+                (
+                    n.as_str().to_owned(),
+                    String::from_utf8_lossy(v.as_bytes()).into_owned(),
+                )
+            })
+            .collect();
+        let identity = match self.core.gate(&method, &target, &headers).await {
+            Ok(identity) => identity,
+            Err(refused) => return *refused,
         };
-        let mut request = request;
-        request.extensions_mut().insert(identity);
-        self.service.handle(request).await
+        let Ok(body) = request.into_body().collect().await;
+        let body = body.to_bytes();
+        if body.len() > MAX_BODY {
+            return answer(413, None, Bytes::new(), &[]);
+        }
+        self.core
+            .post(identity, &method, &target, &headers, body.to_vec())
+            .await
     }
 }
 
@@ -183,20 +160,466 @@ fn is_loopback(ip: std::net::IpAddr) -> bool {
     }
 }
 
-fn empty(resp: &mut ResponseWriter, status: u16) {
-    resp.set_status(status);
-    resp.headers_mut().set("Content-Length", "0");
+type Body = http_body_util::combinators::BoxBody<Bytes, std::convert::Infallible>;
+pub type Answer = http::Response<Body>;
+
+fn answer(
+    status: u16,
+    content_type: Option<&str>,
+    body: impl Into<Bytes>,
+    extra: &[(&str, &str)],
+) -> Answer {
+    let mut out = http::Response::new(
+        Full::new(body.into())
+            .map_err(|never| match never {})
+            .boxed(),
+    );
+    *out.status_mut() =
+        http::StatusCode::from_u16(status).unwrap_or(http::StatusCode::INTERNAL_SERVER_ERROR);
+    let headers = out.headers_mut();
+    if let Some(kind) = content_type {
+        headers.insert(
+            "content-type",
+            http::HeaderValue::from_str(kind)
+                .unwrap_or(http::HeaderValue::from_static("application/json")),
+        );
+    }
+    for (name, value) in extra {
+        if let (Ok(name), Ok(value)) = (
+            http::HeaderName::from_bytes(name.as_bytes()),
+            http::HeaderValue::from_str(value),
+        ) {
+            headers.insert(name, value);
+        }
+    }
+    out
 }
 
-async fn json(resp: &mut ResponseWriter, status: u16, body: &str, extra: &[(&str, &str)]) {
-    resp.set_status(status);
-    resp.headers_mut().set("Content-Type", "application/json");
-    for (name, value) in extra {
-        resp.headers_mut().set(*name, *value);
+fn json_answer(status: u16, body: String) -> Answer {
+    answer(status, Some("application/json"), body, &[])
+}
+
+/// The JSON-RPC error answer Node's SDK builds at its entry.
+fn rpc_error(status: u16, code: i64, message: &str, id: Value) -> Answer {
+    json_answer(
+        status,
+        serde_json::json!({ "jsonrpc": "2.0", "error": { "code": code, "message": message }, "id": id })
+            .to_string(),
+    )
+}
+
+/// The SDK's echoableRequestId: a single request's string or number id.
+fn echoable_id(message: &Value) -> Value {
+    match (message.get("method"), message.get("id")) {
+        (Some(Value::String(_)), Some(id @ (Value::String(_) | Value::Number(_)))) => {
+            js_number_id(id)
+        }
+        _ => Value::Null,
     }
-    resp.headers_mut()
-        .set("Content-Length", body.len().to_string());
-    let _ = resp.write(body.as_bytes()).await;
+}
+
+/// An id as JSON.stringify writes the number JSON.parse read.
+fn js_number_id(id: &Value) -> Value {
+    let Value::Number(number) = id else {
+        return id.clone();
+    };
+    blok_jsjson::parse(number.to_string().as_bytes())
+        .ok()
+        .and_then(|v| blok_jsjson::stringify(&v).ok())
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_else(|| id.clone())
+}
+
+/// What a JSON-RPC body is, by the SDK's strict zod schemas.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Kind {
+    Request,
+    Notification,
+    Response,
+    Invalid,
+}
+
+const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+
+fn kind_of(message: &Value) -> Kind {
+    let Value::Object(fields) = message else {
+        return Kind::Invalid;
+    };
+    if fields.get("jsonrpc") != Some(&Value::String("2.0".to_owned())) {
+        return Kind::Invalid;
+    }
+    // zod's int(): a safe integer, so 1.0 is one and 1.5 is not.
+    let id_ok = |id: &Value| match id {
+        Value::String(_) => true,
+        Value::Number(n) => n
+            .as_f64()
+            .is_some_and(|f| f.fract() == 0.0 && f.abs() <= MAX_SAFE_INTEGER),
+        _ => false,
+    };
+    let only = |allowed: &[&str]| fields.keys().all(|k| allowed.contains(&k.as_str()));
+    let params_ok = fields.get("params").is_none_or(Value::is_object);
+    let method_ok = fields.get("method").is_some_and(Value::is_string);
+    if method_ok && params_ok {
+        if let Some(id) = fields.get("id") {
+            if id_ok(id) && only(&["jsonrpc", "id", "method", "params"]) {
+                return Kind::Request;
+            }
+        } else if only(&["jsonrpc", "method", "params"]) {
+            return Kind::Notification;
+        }
+        return Kind::Invalid;
+    }
+    if fields.get("id").is_some_and(id_ok)
+        && fields.get("result").is_some_and(Value::is_object)
+        && only(&["jsonrpc", "id", "result"])
+    {
+        return Kind::Response;
+    }
+    let error_ok = fields.get("error").is_some_and(|e| {
+        e.get("code").is_some_and(|c| {
+            c.as_f64()
+                .is_some_and(|f| f.fract() == 0.0 && f.abs() <= MAX_SAFE_INTEGER)
+        }) && e.get("message").is_some_and(Value::is_string)
+    });
+    if error_ok && fields.get("id").is_none_or(id_ok) && only(&["jsonrpc", "id", "error"]) {
+        return Kind::Response;
+    }
+    Kind::Invalid
+}
+
+/// The versions the SDK takes in MCP-Protocol-Version, newest first.
+const LEGACY_VERSIONS: [&str; 5] = [
+    "2025-11-25",
+    "2025-06-18",
+    "2025-03-26",
+    "2024-11-05",
+    "2024-10-07",
+];
+
+/// The SDK's refusal of an MCP-Protocol-Version it does not serve; None when it does.
+fn unsupported_version(header: Option<&str>) -> Option<Answer> {
+    // The SDK strips HTTP whitespace first.
+    let version = header?.trim_matches([' ', '\t']);
+    if version == MODERN || LEGACY_VERSIONS.contains(&version) {
+        return None;
+    }
+    let message = format!(
+        "Bad Request: Unsupported protocol version: {version} (supported versions: {})",
+        LEGACY_VERSIONS.join(", ")
+    );
+    Some(rpc_error(400, -32000, &message, Value::Null))
+}
+
+fn header_of<'a>(headers: &'a [(String, String)], name: &str) -> Option<&'a str> {
+    headers
+        .iter()
+        .find(|(n, _)| n.eq_ignore_ascii_case(name))
+        .map(|(_, v)| v.as_str())
+}
+
+/// What both front doors share past their own Origin and Host checks:
+/// rmcp's services, the OAuth gate and Node's request shaping.
+struct Core {
+    json: Service,
+    sse: Service,
+    oauth: Option<OAuth>,
+    principal: String,
+}
+
+impl Core {
+    fn new(handler: &Handler, oauth: Option<OAuth>, principal: String) -> Core {
+        let service = |json_response: bool| {
+            let mut config = StreamableHttpServerConfig::default();
+            config.legacy_session_mode = false;
+            config.json_response = json_response;
+            // The front door already checked Host and Origin, Node's way.
+            config.allowed_hosts.clear();
+            let handler = handler.clone();
+            StreamableHttpService::new(
+                move || Ok(handler.clone()),
+                Arc::new(NeverSessionManager::default()),
+                config,
+            )
+        };
+        Core {
+            json: service(true),
+            sse: service(false),
+            oauth,
+            principal,
+        }
+    }
+
+    /// Before the body is read: the metadata route, the path, the bearer
+    /// gate (it reads only the header, so a refused caller never gets a
+    /// body read) and the method.
+    async fn gate(
+        &self,
+        method: &str,
+        target: &str,
+        headers: &[(String, String)],
+    ) -> Result<HttpIdentity, Box<Answer>> {
+        let path = target.split('?').next().unwrap_or_default();
+        if let Some(oauth) = &self.oauth
+            && method == "GET"
+            && path == METADATA_PATH
+        {
+            return Err(Box::new(json_answer(200, oauth.metadata())));
+        }
+        if path != MCP_PATH {
+            return Err(Box::new(answer(404, None, Bytes::new(), &[])));
+        }
+        let identity = match &self.oauth {
+            None => HttpIdentity {
+                principal: self.principal.clone(),
+                scopes: None,
+            },
+            Some(oauth) => match oauth
+                .authenticate(header_of(headers, "authorization"))
+                .await
+            {
+                Ok(verified) => HttpIdentity {
+                    principal: verified.principal,
+                    scopes: Some(verified.scopes),
+                },
+                Err(refusal) => {
+                    return Err(Box::new(answer(
+                        refusal.status,
+                        Some("application/json"),
+                        refusal.body,
+                        &[("www-authenticate", &refusal.challenge)],
+                    )));
+                }
+            },
+        };
+        if method != "POST" {
+            return Err(Box::new(answer(
+                405,
+                Some("application/json"),
+                r#"{"jsonrpc":"2.0","error":{"code":-32000,"message":"Method not allowed."},"id":null}"#,
+                &[("allow", "POST")],
+            )));
+        }
+        Ok(identity)
+    }
+
+    /// Node's shaping of a POST body, then rmcp's answer.
+    async fn post(
+        &self,
+        identity: HttpIdentity,
+        method: &str,
+        target: &str,
+        headers: &[(String, String)],
+        body: Vec<u8>,
+    ) -> Answer {
+        // The SDK reads the body as UTF-8 with replacement.
+        let text = match String::from_utf8(body) {
+            Ok(text) => text,
+            Err(bytes) => String::from_utf8_lossy(bytes.as_bytes()).into_owned(),
+        };
+        // JSON.parse takes a lone surrogate and any depth; serde_json does not.
+        let text = match crate::lenient::mend(&text) {
+            crate::lenient::Mended::Forward(text) => text,
+            crate::lenient::Mended::Answer(answer) => return json_answer(200, answer),
+        };
+        let header_version = header_of(headers, "mcp-protocol-version");
+        let text = match crate::shape::shape(&text) {
+            crate::shape::Shaped::Forward(text) => text,
+            crate::shape::Shaped::NotAMessage(id) => {
+                return rpc_error(400, -32600, crate::shape::NOT_A_MESSAGE, id);
+            }
+            crate::shape::Shaped::Refused(refusal) => {
+                let modern = serde_json::from_str::<Value>(&text)
+                    .is_ok_and(|m| is_modern(&m, header_version));
+                if modern {
+                    return json_answer(200, refusal);
+                }
+                // 2025 answers are SSE, as Node's SDK sends them.
+                return answer(
+                    200,
+                    Some("text/event-stream"),
+                    format!("event: message\ndata: {refusal}\n\n"),
+                    &[("cache-control", "no-cache")],
+                );
+            }
+        };
+        let Ok(message) = serde_json::from_str::<Value>(&text) else {
+            return rpc_error(400, -32700, "Parse error: Invalid JSON", Value::Null);
+        };
+        if let Value::Array(items) = &message {
+            return self.batch(identity, method, target, headers, items).await;
+        }
+        match kind_of(&message) {
+            Kind::Invalid => {
+                return rpc_error(
+                    400,
+                    -32600,
+                    crate::shape::NOT_A_MESSAGE,
+                    echoable_id(&message),
+                );
+            }
+            // Node takes a posted response and drops it.
+            Kind::Response => return answer(202, None, Bytes::new(), &[]),
+            Kind::Request
+                if message.get("method").and_then(Value::as_str) != Some("initialize") =>
+            {
+                if let Some(refused) = unsupported_version(header_version) {
+                    return refused;
+                }
+            }
+            _ => {}
+        }
+        let modern = is_modern(&message, header_version);
+        // initialize names its version in the body, and Node's SDK serves it
+        // whatever older version the header names; rmcp refuses a mismatch.
+        let initialize = message.get("method").and_then(Value::as_str) == Some("initialize");
+        let headers: Vec<(String, String)> = headers
+            .iter()
+            .filter(|(name, value)| {
+                !(initialize
+                    && name.eq_ignore_ascii_case("mcp-protocol-version")
+                    && value.trim_matches([' ', '\t']) < MODERN)
+            })
+            .cloned()
+            .collect();
+        self.forward(identity, method, target, &headers, text, modern)
+            .await
+    }
+
+    /// A legacy batch, as Node's SDK serves it: each request answered as
+    /// one SSE event, notifications and responses taken without one.
+    async fn batch(
+        &self,
+        identity: HttpIdentity,
+        method: &str,
+        target: &str,
+        headers: &[(String, String)],
+        items: &[Value],
+    ) -> Answer {
+        if items.is_empty() {
+            return rpc_error(
+                400,
+                -32600,
+                "Bad Request: empty JSON-RPC batch",
+                Value::Null,
+            );
+        }
+        let claims = |item: &Value| {
+            item.pointer("/params/_meta")
+                .and_then(Value::as_object)
+                .is_some_and(|meta| meta.contains_key("io.modelcontextprotocol/protocolVersion"))
+        };
+        if items.iter().any(claims) {
+            return rpc_error(
+                400,
+                -32600,
+                "Bad Request: JSON-RPC batches may not contain requests for protocol revision 2026-07-28 or later",
+                Value::Null,
+            );
+        }
+        if items.iter().any(|item| kind_of(item) == Kind::Invalid) {
+            return rpc_error(
+                400,
+                -32600,
+                "Bad Request: JSON-RPC batch contains an invalid message",
+                Value::Null,
+            );
+        }
+        let mut events = String::new();
+        for item in items {
+            if kind_of(item) == Kind::Response {
+                continue;
+            }
+            let reply = self
+                .forward(
+                    identity.clone(),
+                    method,
+                    target,
+                    headers,
+                    item.to_string(),
+                    false,
+                )
+                .await;
+            let Ok(collected) = reply.into_body().collect().await;
+            let bytes = collected.to_bytes();
+            let text = String::from_utf8_lossy(&bytes);
+            if text.trim_start().starts_with('{') {
+                events.push_str(&format!("event: message\ndata: {}\n\n", text.trim()));
+                continue;
+            }
+            for data in text.lines().filter_map(|line| line.strip_prefix("data: ")) {
+                events.push_str(&format!("event: message\ndata: {data}\n\n"));
+            }
+        }
+        if events.is_empty() {
+            return answer(202, None, Bytes::new(), &[]);
+        }
+        answer(
+            200,
+            Some("text/event-stream"),
+            events,
+            &[("cache-control", "no-cache")],
+        )
+    }
+
+    /// One message through rmcp: 2026-07-28 answers are JSON and earlier
+    /// ones SSE, as Node's SDK sends them.
+    async fn forward(
+        &self,
+        identity: HttpIdentity,
+        method: &str,
+        target: &str,
+        headers: &[(String, String)],
+        text: String,
+        modern: bool,
+    ) -> Answer {
+        let mut builder = http::Request::builder().method(method).uri(target);
+        for (name, value) in headers {
+            // The body may have changed: rmcp reads its own length.
+            if name.eq_ignore_ascii_case("content-length") {
+                continue;
+            }
+            // Node's SDK still takes this draft revision; rmcp refuses it with 400.
+            let value = if name.eq_ignore_ascii_case("mcp-protocol-version") && value == DRAFT_2024
+            {
+                LEGACY_2024
+            } else {
+                value.as_str()
+            };
+            builder = builder.header(name.as_str(), value);
+        }
+        let Ok(mut request) = builder.body(Full::new(Bytes::from(text))) else {
+            return answer(400, None, Bytes::new(), &[]);
+        };
+        request.extensions_mut().insert(identity);
+        let service = if modern { &self.json } else { &self.sse };
+        let reply = service.handle(request).await;
+        let (mut parts, body) = reply.into_parts();
+        let kind = parts
+            .headers
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default()
+            .to_owned();
+        if kind.starts_with("application/json") {
+            let Ok(collected) = body.collect().await;
+            let (status, text) = node_error_shape(parts.status.as_u16(), &collected.to_bytes());
+            parts.status = http::StatusCode::from_u16(status).unwrap_or(parts.status);
+            parts.headers.remove("content-length");
+            let body = Full::new(Bytes::from(text))
+                .map_err(|never| match never {})
+                .boxed();
+            return http::Response::from_parts(parts, body);
+        }
+        // rmcp's plain-text refusals (406, 415, 400): Node's carry a JSON-RPC body.
+        if parts.status.as_u16() >= 400 && !kind.starts_with("text/event-stream") {
+            let Ok(collected) = body.collect().await;
+            let message = String::from_utf8_lossy(&collected.to_bytes())
+                .trim()
+                .to_owned();
+            return rpc_error(parts.status.as_u16(), -32000, &message, Value::Null);
+        }
+        http::Response::from_parts(parts, body)
+    }
 }
 
 enum Read {
@@ -225,6 +648,41 @@ async fn read_body(req: &mut Request) -> Read {
     }
 }
 
+/// Writes `reply` out: SSE streams frame by frame as it comes; anything
+/// else goes out whole, with its length.
+async fn write(resp: &mut ResponseWriter, reply: Answer) {
+    let (parts, mut body) = reply.into_parts();
+    resp.set_status(parts.status.as_u16());
+    for (name, value) in &parts.headers {
+        if name.as_str().eq_ignore_ascii_case("content-length") {
+            continue;
+        }
+        resp.headers_mut()
+            .add(name.as_str(), value.to_str().unwrap_or_default());
+    }
+    let streams = parts
+        .headers
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.starts_with("text/event-stream"));
+    if !streams {
+        let Ok(collected) = body.collect().await;
+        let bytes = collected.to_bytes();
+        resp.headers_mut()
+            .set("Content-Length", bytes.len().to_string());
+        let _ = resp.write(&bytes).await;
+        return;
+    }
+    while let Some(Ok(frame)) = body.frame().await {
+        if let Ok(data) = frame.into_data() {
+            if resp.write(&data).await.is_err() {
+                return;
+            }
+            let _ = resp.flush().await;
+        }
+    }
+}
+
 impl Front {
     async fn serve(self: Arc<Self>, mut req: Request, mut resp: ResponseWriter) {
         let origin = req.headers().get("origin").map(str::to_owned);
@@ -232,159 +690,31 @@ impl Front {
         if origin.as_deref().is_some_and(|o| !loopback_origin(o))
             || (!self.public && !loopback_host(host.as_deref(), self.port))
         {
-            return empty(&mut resp, 403);
+            return write(&mut resp, answer(403, None, Bytes::new(), &[])).await;
         }
-        let path = req
-            .target()
-            .split('?')
-            .next()
-            .unwrap_or_default()
-            .to_owned();
-        if let Some(oauth) = &self.oauth
-            && req.method() == "GET"
-            && path == METADATA_PATH
-        {
-            return json(&mut resp, 200, &oauth.metadata(), &[]).await;
-        }
-        if path != MCP_PATH {
-            return empty(&mut resp, 404);
-        }
-        // The bearer gate reads only the header, so a refused caller never gets a body read.
-        let identity = match &self.oauth {
-            None => HttpIdentity {
-                principal: self.principal.clone(),
-                scopes: None,
-            },
-            Some(oauth) => match oauth.authenticate(req.headers().get("authorization")).await {
-                Ok(verified) => HttpIdentity {
-                    principal: verified.principal,
-                    scopes: Some(verified.scopes),
-                },
-                Err(refusal) => {
-                    return json(
-                        &mut resp,
-                        refusal.status,
-                        &refusal.body,
-                        &[("WWW-Authenticate", &refusal.challenge)],
-                    )
-                    .await;
-                }
-            },
+        let method = req.method().to_owned();
+        let target = req.target().to_owned();
+        let headers: Vec<(String, String)> = req
+            .headers()
+            .iter()
+            .map(|(n, v)| (n.to_owned(), v.to_owned()))
+            .collect();
+        let identity = match self.core.gate(&method, &target, &headers).await {
+            Ok(identity) => identity,
+            Err(refused) => return write(&mut resp, *refused).await,
         };
-        if req.method() != "POST" {
-            return json(
-                &mut resp,
-                405,
-                r#"{"jsonrpc":"2.0","error":{"code":-32000,"message":"Method not allowed."},"id":null}"#,
-                &[("Allow", "POST")],
-            )
-            .await;
-        }
         let body = match read_body(&mut req).await {
             Read::Body(body) => body,
-            Read::TooLarge => return empty(&mut resp, 413),
-            Read::Failed => return empty(&mut resp, 400),
-        };
-        // JSON.parse takes a lone surrogate and any depth; serde_json does not.
-        let body = match std::str::from_utf8(&body).map(crate::lenient::mend) {
-            Ok(crate::lenient::Mended::Forward(text)) => text.into_bytes(),
-            Ok(crate::lenient::Mended::Answer(answer)) => {
-                return json(&mut resp, 200, &answer, &[]).await;
+            Read::TooLarge => {
+                return write(&mut resp, answer(413, None, Bytes::new(), &[])).await;
             }
-            Err(_) => body,
+            Read::Failed => return write(&mut resp, answer(400, None, Bytes::new(), &[])).await,
         };
-        let body = match std::str::from_utf8(&body).map(crate::shape::shape) {
-            Ok(crate::shape::Shaped::Forward(text)) => text.into_bytes(),
-            Ok(crate::shape::Shaped::NotAMessage(id)) => {
-                let answer = serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "error": { "code": -32600, "message": crate::shape::NOT_A_MESSAGE },
-                    "id": id,
-                });
-                return json(&mut resp, 400, &answer.to_string(), &[]).await;
-            }
-            Ok(crate::shape::Shaped::Refused(answer)) => {
-                let header_version = req.headers().get("mcp-protocol-version").map(str::to_owned);
-                let modern = serde_json::from_slice::<Value>(&body)
-                    .is_ok_and(|m| is_modern(&m, header_version.as_deref()));
-                if modern {
-                    return json(&mut resp, 200, &answer, &[]).await;
-                }
-                // 2025 answers are SSE, as Node's SDK sends them.
-                resp.set_status(200);
-                resp.headers_mut().set("Content-Type", "text/event-stream");
-                resp.headers_mut().set("Cache-Control", "no-cache");
-                let event = format!("event: message\ndata: {answer}\n\n");
-                resp.headers_mut()
-                    .set("Content-Length", event.len().to_string());
-                let _ = resp.write(event.as_bytes()).await;
-                return;
-            }
-            Err(_) => body,
-        };
-        let Ok(message) = serde_json::from_slice::<Value>(&body) else {
-            return json(
-                &mut resp,
-                400,
-                r#"{"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error: Invalid JSON"},"id":null}"#,
-                &[],
-            )
+        let reply = self
+            .core
+            .post(identity, &method, &target, &headers, body)
             .await;
-        };
-        let header_version = req.headers().get("mcp-protocol-version").map(str::to_owned);
-        let modern = is_modern(&message, header_version.as_deref());
-        let mut builder = http::Request::builder()
-            .method(req.method())
-            .uri(req.target());
-        for (name, value) in req.headers().iter() {
-            // Node's SDK still takes this draft revision; rmcp refuses it with 400.
-            let value = if name.eq_ignore_ascii_case("mcp-protocol-version") && value == DRAFT_2024
-            {
-                LEGACY_2024
-            } else {
-                value
-            };
-            builder = builder.header(name, value);
-        }
-        let Ok(mut request) = builder.body(Full::new(Bytes::from(body))) else {
-            return empty(&mut resp, 400);
-        };
-        request.extensions_mut().insert(identity);
-        // 2026-07-28 answers are JSON and earlier ones SSE, as Node's SDK sends them.
-        let service = if modern { &self.json } else { &self.sse };
-        let answer = service.handle(request).await;
-        let (parts, mut answer_body) = answer.into_parts();
-        let json_answer = parts
-            .headers
-            .get("content-type")
-            .and_then(|v| v.to_str().ok())
-            .is_some_and(|v| v.starts_with("application/json"));
-        resp.set_status(parts.status.as_u16());
-        for (name, value) in &parts.headers {
-            if json_answer && name.as_str().eq_ignore_ascii_case("content-length") {
-                continue;
-            }
-            resp.headers_mut()
-                .add(name.as_str(), value.to_str().unwrap_or_default());
-        }
-        if json_answer {
-            let Ok(collected) = answer_body.collect().await;
-            let bytes = collected.to_bytes();
-            let (status, text) = node_error_shape(parts.status.as_u16(), &bytes);
-            resp.set_status(status);
-            resp.headers_mut()
-                .set("Content-Length", text.len().to_string());
-            let _ = resp.write(text.as_bytes()).await;
-            return;
-        }
-        while let Some(Ok(frame)) = answer_body.frame().await {
-            if let Ok(data) = frame.into_data() {
-                if resp.write(&data).await.is_err() {
-                    return;
-                }
-                let _ = resp.flush().await;
-            }
-        }
+        write(&mut resp, reply).await;
     }
 }
 
@@ -448,17 +778,50 @@ pub struct Listening {
     pub server: Arc<Server>,
 }
 
-fn split_listen(listen: &str) -> (String, u16) {
+fn split_listen(listen: &str) -> std::io::Result<(String, u16)> {
     let at = listen.rfind(':').unwrap_or(listen.len());
     let host = listen[..at]
         .trim_start_matches('[')
         .trim_end_matches(']')
         .to_owned();
-    let port = listen
-        .get(at + 1..)
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(0);
-    (host, port)
+    let text = listen.get(at + 1..).unwrap_or_default();
+    let port = js_number(text)
+        .filter(|n| n.fract() == 0.0 && (0.0..=65535.0).contains(n))
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("the port in --http {listen} must be a whole number from 0 to 65535"),
+            )
+        })?;
+    Ok((host, port as u16))
+}
+
+/// JS Number(text) for a port: an empty text is 0, 0x/0o/0b prefixes count.
+fn js_number(text: &str) -> Option<f64> {
+    let text = text.trim();
+    if text.is_empty() {
+        return Some(0.0);
+    }
+    for (prefix, radix) in [
+        ("0x", 16),
+        ("0X", 16),
+        ("0o", 8),
+        ("0O", 8),
+        ("0b", 2),
+        ("0B", 2),
+    ] {
+        if let Some(digits) = text.strip_prefix(prefix) {
+            return u64::from_str_radix(digits, radix).ok().map(|n| n as f64);
+        }
+    }
+    // Rust also reads "inf" and "nan"; Number() reads neither as a port.
+    if !text
+        .bytes()
+        .all(|b| b.is_ascii_digit() || matches!(b, b'.' | b'e' | b'E' | b'+' | b'-'))
+    {
+        return None;
+    }
+    text.parse::<f64>().ok()
 }
 
 pub async fn listen(
@@ -468,28 +831,12 @@ pub async fn listen(
     principal: String,
     public: bool,
 ) -> std::io::Result<Listening> {
-    let (host, port) = split_listen(listen);
+    let (host, port) = split_listen(listen)?;
     let listener = tokio::net::TcpListener::bind((host.as_str(), port)).await?;
     let address: SocketAddr = listener.local_addr()?;
     let port = address.port();
-    let service = |json_response: bool| {
-        let mut config = StreamableHttpServerConfig::default();
-        config.legacy_session_mode = false;
-        config.json_response = json_response;
-        // The front door already checked Host and Origin, Node's way.
-        config.allowed_hosts.clear();
-        let handler = handler.clone();
-        StreamableHttpService::new(
-            move || Ok(handler.clone()),
-            Arc::new(NeverSessionManager::default()),
-            config,
-        )
-    };
     let front = Arc::new(Front {
-        json: service(true),
-        sse: service(false),
-        oauth,
-        principal,
+        core: Core::new(&handler, oauth, principal),
         public,
         port,
     });
@@ -518,6 +865,24 @@ pub async fn listen(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Node reads the port with Number() and listen() refuses any that is
+    // not an integer 0..65535; an empty port is 0, a free one.
+    #[test]
+    fn a_port_node_cannot_listen_on_is_refused() {
+        assert_eq!(
+            split_listen("127.0.0.1:").unwrap(),
+            ("127.0.0.1".to_owned(), 0)
+        );
+        assert_eq!(split_listen("[::1]:80").unwrap(), ("::1".to_owned(), 80));
+        assert_eq!(split_listen("h:8080.0").unwrap().1, 8080);
+        assert_eq!(split_listen("h:0x10").unwrap().1, 16);
+        for bad in [
+            "h:abc", "h:99999", "h:-1", "h:65535x", "h:1.5", "h:NaN", "h:inf",
+        ] {
+            assert!(split_listen(bad).is_err(), "{bad}");
+        }
+    }
 
     #[test]
     fn the_era_comes_from_the_body_then_the_header() {

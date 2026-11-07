@@ -1663,7 +1663,10 @@ export class UI extends Module<UINodes> {
 
     const card = this.ensureLinkHoverCard();
 
+    /** Back on the shown link before the grace hide fired: keep the card. */
     if (card.anchor === anchor) {
+      card.cancelHide();
+
       return;
     }
 

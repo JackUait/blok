@@ -280,7 +280,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
         return new CollabJoinResult(CollabJoinStatus.Unavailable, null, null);
       }
 
-      var room = RoomFor(docId);
+      var room = RoomUnlessDraining(docId, out var refused);
+
+      if (refused)
+      {
+        return new CollabJoinResult(CollabJoinStatus.Draining, null, null);
+      }
 
       if (room is null)
       {
@@ -448,7 +453,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
         return new CollabEditResult(CollabEditStatus.Unavailable, null);
       }
 
-      var room = RoomFor(docId);
+      var room = RoomUnlessDraining(docId, out var refused);
+
+      if (refused)
+      {
+        return new CollabEditResult(CollabEditStatus.Draining, null);
+      }
 
       if (room is null)
       {
@@ -960,7 +970,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
         return new CollabStateResult(CollabStateStatus.Unavailable, []);
       }
 
-      var room = RoomFor(docId);
+      var room = RoomUnlessDraining(docId, out var refused);
+
+      if (refused)
+      {
+        return new CollabStateResult(CollabStateStatus.Draining, []);
+      }
 
       if (room is null)
       {
@@ -1195,10 +1210,33 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
   private CollabRoom? RoomFor(string docId)
   {
+    return RoomForDoor(docId, refuseDraining: false, out _);
+  }
+
+  /// <summary>
+  /// RoomFor, but refused once a drain has begun. Checked under the lock
+  /// DrainAsync's sweep takes, so no room is made after its last empty sweep.
+  /// </summary>
+  private CollabRoom? RoomUnlessDraining(string docId, out bool refused)
+  {
+    return RoomForDoor(docId, refuseDraining: true, out refused);
+  }
+
+  private CollabRoom? RoomForDoor(string docId, bool refuseDraining, out bool refused)
+  {
+    refused = false;
+
     lock (rooms)
     {
       if (purgeLanes.ContainsKey(docId))
       {
+        return null;
+      }
+
+      if (refuseDraining && draining)
+      {
+        refused = true;
+
         return null;
       }
 

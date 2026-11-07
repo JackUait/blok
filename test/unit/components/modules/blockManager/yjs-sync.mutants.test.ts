@@ -253,10 +253,33 @@ interface Harness {
   flushFrames: () => void;
 }
 
+interface StopCapturingHolds {
+  readonly suppressStopCapturing: boolean;
+  holdStopCapturing(): () => void;
+}
+
+/** Counts holds the way BlockOperations does. */
+const createStopCapturingHolds = (): StopCapturingHolds => {
+  const state = { holds: 0 };
+
+  return {
+    get suppressStopCapturing(): boolean {
+      return state.holds > 0;
+    },
+    holdStopCapturing: (): (() => void) => {
+      state.holds++;
+
+      return (): void => {
+        state.holds--;
+      };
+    },
+  };
+};
+
 interface HarnessOptions {
   blocks: Block[];
   tools?: Record<string, Partial<BlockToolAdapter>>;
-  operations?: { suppressStopCapturing: boolean };
+  operations?: StopCapturingHolds;
   sanitizer?: BlockYjsSyncDependencies['sanitizer'];
 }
 
@@ -388,7 +411,7 @@ describe('BlockYjsSync — mutation kills', () => {
 
   describe('atomic operation window', () => {
     it('holds stopCapturing suppressed for the whole window and clears it only at the outermost exit', () => {
-      const operations = { suppressStopCapturing: false };
+      const operations = createStopCapturingHolds();
       const harness = createHarness({ blocks: [createBlock({ id: 'b1' })], operations });
       const seen: boolean[] = [];
 
@@ -429,7 +452,7 @@ describe('BlockYjsSync — mutation kills', () => {
     });
 
     it('rethrows and closes the window when the body throws', () => {
-      const operations = { suppressStopCapturing: false };
+      const operations = createStopCapturingHolds();
       const harness = createHarness({ blocks: [createBlock({ id: 'b1' })], operations });
 
       expect(() =>

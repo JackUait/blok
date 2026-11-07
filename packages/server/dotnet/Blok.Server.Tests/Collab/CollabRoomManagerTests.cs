@@ -335,6 +335,49 @@ public sealed class CollabRoomManagerTests
     Assert.Equal("ab", YDocs.Text(replica));
   }
 
+  /// <summary>
+  /// The eviction's flush finds the debounced save failing and fails its
+  /// own. A member who comes back stops the eviction retry, so the export
+  /// needs its own timer, or the consumer's copy waits for the next edit.
+  /// </summary>
+  [Fact]
+  public async Task AFailedEvictionExportRetriesAfterAMemberRejoins()
+  {
+    endpoint.Holds(DocId, "hello");
+    endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    endpoint.NextSaveFailure = new DocEndpointException("collab: the doc endpoint PUT returned 502.", 502);
+    endpoint.MoreSaveFailures = 1;
+    var manager = CreateManager();
+    var member = new FakeMember();
+    var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
+    var client = await SyncedAsync(membership, member);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await Waits.UntilAsync(() => store.FramesOf(DocId).Count == 2, "the working set to catch up");
+    await membership.LeaveAsync();
+
+    time.Advance(TimeSpan.FromSeconds(2));
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the debounced export to start");
+    // Past the linger: the eviction waits on the gated save.
+    time.Advance(TimeSpan.FromSeconds(28));
+    var gate = endpoint.SaveGate;
+    endpoint.SaveGate = null;
+    gate.SetResult();
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 2, "the flush's own export");
+    await manager.SettleAsync();
+    var back = (await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None)).Membership!;
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(1),
+        () => endpoint.Saves.Count == 3,
+        "the export retry");
+
+    Assert.Equal("hello!", endpoint.Saves[^1].Data["text"]?.GetValue<string>());
+    await back.LeaveAsync();
+  }
+
   [Fact]
   public async Task MembershipCallsStaySafeAfterLeavingAndAfterTheRoomClosed()
   {

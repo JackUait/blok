@@ -1175,7 +1175,8 @@ export class BlockMutation {
       // Replayed before anything moves: the slots read the parents as they were.
       const steps = movesFlat ? this.replaySubtreeMove(members, fromIndex < slot ? slot - 1 : slot) : [];
 
-      this.ctx.suppressStopCapturing = true;
+      const release = this.ctx.holdStopCapturing();
+
       try {
         this.hierarchy.placeBlock(block, target, { reindent: false });
 
@@ -1194,7 +1195,7 @@ export class BlockMutation {
 
         this.dependencies.YjsManager.moveBlockTo(block.id, target);
       } finally {
-        this.ctx.suppressStopCapturing = false;
+        release();
       }
 
       if (oldParentId !== target.parentId) {
@@ -1263,7 +1264,8 @@ export class BlockMutation {
     const rendered = options.atRoot && !options.skipDOM;
 
     // Suppress stopCapturing to keep DOM + Yjs move as single undo entry
-    this.ctx.suppressStopCapturing = true;
+    const release = this.ctx.holdStopCapturing();
+
     try {
       // Re-indented below only where it can change, as setBlockParent did.
       this.hierarchy.placeBlock(block, placement, { dom: !options.skipDOM, reindent: false });
@@ -1302,7 +1304,7 @@ export class BlockMutation {
 
       this.ctx.assertHierarchyInvariantInDev('move');
     } finally {
-      this.ctx.suppressStopCapturing = false;
+      release();
     }
   }
 
@@ -1437,7 +1439,8 @@ export class BlockMutation {
   ): void {
     const { toIndex, fromIndex, block, slotParentId } = move;
 
-    this.ctx.suppressStopCapturing = true;
+    const release = this.ctx.holdStopCapturing();
+
     try {
       blocksStore.move(toIndex, fromIndex, skipDOM, skipMovedHook);
 
@@ -1462,7 +1465,7 @@ export class BlockMutation {
       ));
       this.ctx.assertHierarchyInvariantInDev('move');
     } finally {
-      this.ctx.suppressStopCapturing = false;
+      release();
     }
   }
 
@@ -1843,9 +1846,7 @@ export class BlockMutation {
     }
 
     this.dependencies.YjsManager.stopCapturing();
-    const prevSuppress = this.ctx.suppressStopCapturing;
-
-    this.ctx.suppressStopCapturing = true;
+    const release = this.ctx.holdStopCapturing();
 
     try {
       const firstLineBlock = firstLine === null ? undefined : this.repository.getBlockById(firstLine.block.id);
@@ -1867,7 +1868,7 @@ export class BlockMutation {
       // so DOM MutationObserver-triggered Yjs writes settle inside the same
       // entry.
       queueMicrotask(() => {
-        this.ctx.suppressStopCapturing = prevSuppress;
+        release();
         this.dependencies.YjsManager.stopCapturing();
       });
     }

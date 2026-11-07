@@ -39,7 +39,8 @@ pub enum UploadError {
     /// the agent sees only "The upload failed.", so storage details, keys
     /// or paths never reach it.
     Failed(String),
-    /// A message meant for the agent (Node's `agentMessage`), shown as given.
+    /// A message meant for the agent (Node's `agentMessage`), shown as
+    /// given unless it is blank.
     Agent(String),
 }
 
@@ -60,9 +61,31 @@ fn upload_failure(error: UploadError) -> Value {
             eprintln!("blok-mcp: the host's uploader failed: {message}");
             UPLOAD_FAILED.to_owned()
         }
-        UploadError::Agent(message) => message,
+        UploadError::Agent(message) if !js_trim(&message).is_empty() => message,
+        UploadError::Agent(_) => UPLOAD_FAILED.to_owned(),
     };
     json!({ "failure": { "code": "TOOL_ACTION_FAILED", "message": message, "retryable": false } })
+}
+
+/// JS String.prototype.trim: it also takes U+FEFF, and leaves U+0085.
+fn js_trim(text: &str) -> &str {
+    text.trim_matches(|c: char| c == '\u{feff}' || (c.is_whitespace() && c != '\u{85}'))
+}
+
+/// Node checks the path length in UTF-16 units.
+fn path_too_long(path: &str) -> bool {
+    path.encode_utf16().count() > MAX_PATH
+}
+
+/// Node's createLocalFileReader refuses, at start, a root that is not a folder.
+pub fn check_root(root: &Path) -> Result<(), String> {
+    match std::fs::canonicalize(root).and_then(std::fs::metadata) {
+        Ok(meta) if meta.is_dir() => Ok(()),
+        _ => Err(format!(
+            "The upload root \"{}\" is not a folder",
+            root.display()
+        )),
+    }
 }
 
 /// The host's uploader. An `Err` says why; see `UploadError`.
@@ -271,7 +294,7 @@ fn too_large(size: u64, max: u64) -> Value {
 /// (windows_by_handle).
 #[cfg(not(unix))]
 pub fn read_local(_root: &Path, path: &str, _max_bytes: u64) -> Result<(Vec<u8>, String), Value> {
-    if path.is_empty() || path.chars().count() > MAX_PATH || path.contains('\0') {
+    if path.is_empty() || path_too_long(path) || path.contains('\0') {
         return Err(refusal(
             "INVALID_ARGS",
             format!("path must be 1 to {MAX_PATH} characters with no NUL byte."),
@@ -290,7 +313,7 @@ pub fn read_local(root: &Path, path: &str, max_bytes: u64) -> Result<(Vec<u8>, S
     use std::io::Read;
     use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
     use std::path::Component;
-    if path.is_empty() || path.chars().count() > MAX_PATH || path.contains('\0') {
+    if path.is_empty() || path_too_long(path) || path.contains('\0') {
         return Err(refusal(
             "INVALID_ARGS",
             format!("path must be 1 to {MAX_PATH} characters with no NUL byte."),

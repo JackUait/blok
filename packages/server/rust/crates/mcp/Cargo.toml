@@ -30,6 +30,7 @@ blok-jsruntime = { path = "../jsruntime" }
 blok-yjs = { path = "../yjs" }
 blok-outbound = { path = "../outbound" }
 bytes = "1"
+flate2 = "1"
 http = "1"
 http-body-util = "0.1"
 ring = "0.17"
@@ -45,6 +46,7 @@ sha2 = "0.10"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net", "io-util", "io-std", "fs"] }
 
 [dev-dependencies]
+blok-blokserver = { path = "../blokserver" }
 blok-collab = { path = "../collab" }
 blok-collab-journal = { path = "../collab-journal" }
 blok-collab-room = { path = "../collab-room" }

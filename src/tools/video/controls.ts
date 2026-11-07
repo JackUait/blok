@@ -560,6 +560,8 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     // nor engage press-and-hold. Flag the trailing click for suppression, skip the
     // hold timer, and let the outside-click handler do the closing.
     if (!menu.hidden) { hold.suppressClick = true; return; }
+    // A second press (another finger) would orphan the first timer, and it would engage 2× later.
+    if (hold.timer) clearTimeout(hold.timer);
     hold.timer = window.setTimeout(engageHold, HOLD_MS);
   };
   const onPointerUp = (): void => {
@@ -1447,6 +1449,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   video.addEventListener('pause', stopSeekLoop);
   seek.addEventListener('pointerdown', onSeekScrubStart);
   document.addEventListener('pointerup', onSeekScrubEnd);
+  document.addEventListener('pointercancel', onSeekScrubEnd);
   video.addEventListener('play', startAmbient);
   video.addEventListener('play', updateCenter);
   video.addEventListener('play', scheduleHide);
@@ -1481,6 +1484,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     video.removeEventListener('pause', stopSeekLoop);
     seek.removeEventListener('pointerdown', onSeekScrubStart);
     document.removeEventListener('pointerup', onSeekScrubEnd);
+    document.removeEventListener('pointercancel', onSeekScrubEnd);
     stopAmbient();
     video.removeEventListener('play', startAmbient);
     video.removeEventListener('play', updateCenter);

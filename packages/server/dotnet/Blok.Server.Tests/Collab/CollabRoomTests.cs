@@ -2715,6 +2715,44 @@ public sealed class CollabRoomTests
     Assert.Equal(loads, endpoint.Loads);
   }
 
+  /// <summary>
+  /// A drain that begins after a door's draining check but before the door
+  /// makes the room must still win: a room made then is never flushed.
+  /// </summary>
+  [Theory]
+  [InlineData("join")]
+  [InlineData("edit")]
+  [InlineData("state")]
+  public async Task ADrainThatBeginsPastTheDrainingCheckStillRefusesTheRoom(string door)
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+    operations.FailAppends = _ => new IOException("the journal is down");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    operations.FailAppends = null;
+    Assert.Equal(0, manager.LiveRoomCount);
+    // Past the cooldown, whose entry stays: its check reads the clock after
+    // the draining check and before the room is made. The drain begins there.
+    time.Advance(TimeSpan.FromSeconds(2));
+    ValueTask drain = default;
+    time.BeforeNextRead = () => drain = manager.DrainAsync(CancellationToken.None);
+
+    var draining = door switch
+    {
+      "join" => (await manager.JoinAsync(DocId, V2Member(), CancellationToken.None)).Status == CollabJoinStatus.Draining,
+      "edit" => (await HttpEdit(manager, OpTwo, "?")).Status == CollabEditStatus.Draining,
+      _ => (await manager.StateAsync(DocId, CancellationToken.None)).Status == CollabStateStatus.Draining,
+    };
+
+    Assert.True(drain.IsCompleted, "the drain did not run inside the door");
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.True(draining, "the door did not answer Draining");
+  }
+
   [Fact]
   public async Task StateIsRefusedWhileDraining()
   {

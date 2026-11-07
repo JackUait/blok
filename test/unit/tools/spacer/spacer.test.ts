@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { API, BlockToolConstructorOptions } from '../../../../types';
+import type { API, BlockTool, BlockToolConstructorOptions } from '../../../../types';
 import type { SpacerData } from '../../../../src/tools/spacer/types';
+import { leakedListeners } from '../../../helpers/listener-leaks';
 
 const createMockAPI = (): API =>
   ({
@@ -355,6 +356,21 @@ describe('SpacerTool', () => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
 
       expect(el.hasAttribute('data-blok-spacer-fresh')).toBe(false);
+    });
+
+    it('leaves no document listener behind when the editor is destroyed', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const added = vi.spyOn(document, 'addEventListener');
+      const removed = vi.spyOn(document, 'removeEventListener');
+      const tool: BlockTool = new SpacerTool(createOptions());
+
+      await tool.render();
+      expect(added).toHaveBeenCalled();
+
+      // editor.destroy() reaches the tool only through destroy(), never removed().
+      tool.destroy?.();
+
+      expect(leakedListeners(added, removed)).toEqual([]);
     });
 
     it('read-only spacers are never revealed', async () => {

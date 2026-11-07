@@ -37,9 +37,15 @@ type callTracker struct {
 	// ended, their answers are dropped, as Node's transport closes there.
 	calls     map[jsonrpc.ID]bool
 	stdinDone bool
-	inUse     map[jsonrpc.ID]int
-	aliases   map[jsonrpc.ID]jsonrpc.ID
-	latest    map[jsonrpc.ID]jsonrpc.ID
+	// signals are the tools/call cancel signals, by the token in their
+	// _meta. Node passes a cancel only to the handler's signal, which only
+	// an open reads, so the SDK never gets one for a tools/call.
+	signals     map[string]context.Context
+	cancels     map[jsonrpc.ID]context.CancelFunc
+	callSignals map[jsonrpc.ID]string
+	inUse       map[jsonrpc.ID]int
+	aliases     map[jsonrpc.ID]jsonrpc.ID
+	latest      map[jsonrpc.ID]jsonrpc.ID
 }
 
 // closeTransport drops every later message, as Node's closed transport
@@ -109,21 +115,23 @@ func (t *callTracker) endedLocked(id jsonrpc.ID) {
 func newCallTracker() *callTracker {
 	tracker := &callTracker{running: map[jsonrpc.ID]bool{}, cancelled: map[jsonrpc.ID]bool{},
 		lines: newHandleLines(), booked: map[jsonrpc.ID][]string{}, open: map[jsonrpc.ID]int{},
-		calls: map[jsonrpc.ID]bool{}, inUse: map[jsonrpc.ID]int{}, aliases: map[jsonrpc.ID]jsonrpc.ID{}, latest: map[jsonrpc.ID]jsonrpc.ID{}}
+		calls: map[jsonrpc.ID]bool{}, signals: map[string]context.Context{}, cancels: map[jsonrpc.ID]context.CancelFunc{}, callSignals: map[jsonrpc.ID]string{}, inUse: map[jsonrpc.ID]int{}, aliases: map[jsonrpc.ID]jsonrpc.ID{}, latest: map[jsonrpc.ID]jsonrpc.ID{}}
 	tracker.idle = sync.NewCond(&tracker.mu)
 	return tracker
 }
 
-func (t *callTracker) read(message jsonrpc.Message) {
+// read follows a message the SDK is about to get; false keeps it from
+// the SDK.
+func (t *callTracker) read(message jsonrpc.Message) bool {
 	request, ok := message.(*jsonrpc.Request)
 	if !ok {
-		return
+		return true
 	}
 	if request.IsCall() {
 		t.alias(request)
 	}
 	if request.IsCall() && request.Method == "tools/call" {
-		request.Params = t.withTurn(request.ID, request.Params)
+		request.Params = t.withSignal(request.ID, t.withTurn(request.ID, request.Params))
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -132,16 +140,16 @@ func (t *callTracker) read(message jsonrpc.Message) {
 		if request.Method == "tools/call" {
 			t.calls[request.ID] = true
 		}
-		return
+		return true
 	}
 	if request.Method != "notifications/cancelled" {
-		return
+		return true
 	}
 	var params struct {
 		RequestID any `json:"requestId"`
 	}
 	if json.Unmarshal(request.Params, &params) != nil {
-		return
+		return true
 	}
 	id, err := jsonrpc.MakeID(params.RequestID)
 	if newest, ok := t.latest[id]; ok {
@@ -150,7 +158,49 @@ func (t *callTracker) read(message jsonrpc.Message) {
 	// Only a request still running can be cancelled, as in Node's SDK.
 	if err == nil && t.running[id] {
 		t.cancelled[id] = true
+		if cancel, ok := t.cancels[id]; ok {
+			cancel()
+			return false
+		}
 	}
+	return true
+}
+
+// signalKey carries a tools/call's cancel signal token in its _meta.
+const signalKey = "blok/signal"
+
+// withSignal gives a tools/call its cancel signal; the SDK's own context
+// for it is cut off (see Server.callTool).
+func (t *callTracker) withSignal(id jsonrpc.ID, params json.RawMessage) json.RawMessage {
+	members, ok := isRecordJSON(params)
+	if !ok {
+		return params
+	}
+	meta := map[string]json.RawMessage{}
+	if raw, has := members["_meta"]; has && json.Unmarshal(raw, &meta) != nil {
+		return params
+	}
+	token := newHandleID()
+	meta[signalKey] = quoted(token)
+	members["_meta"], _ = json.Marshal(meta)
+	written, err := json.Marshal(members)
+	if err != nil {
+		return params
+	}
+	signal, cancel := context.WithCancel(context.Background())
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.signals[token] = signal
+	t.cancels[id] = cancel
+	t.callSignals[id] = token
+	return written
+}
+
+// signal is the cancel signal of the call holding token; nil when none.
+func (t *callTracker) signal(token string) context.Context {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.signals[token]
 }
 
 // alias gives a request whose id is still in use an id of its own.
@@ -228,9 +278,10 @@ func (t *callTracker) answer(message jsonrpc.Message) bool {
 	return !t.closed && !t.cancelled[response.ID] && !(t.stdinDone && t.calls[response.ID])
 }
 
-// stdinEnded waits, up to the deadline, for the answers of the requests
-// already read that are not tools/call: Node answers those before it sees
-// stdin end, and its tools/call answers come after and are dropped.
+// stdinEnded waits, up to the deadline, for the requests already read:
+// Node answers those that are not tools/call before it sees stdin end. Its
+// tools/call run on, their signals aborted, and their answers are
+// dropped. Until this returns the SDK still delivers calls it queued.
 func (t *callTracker) stdinEnded(deadline time.Time) {
 	timer := time.AfterFunc(time.Until(deadline), func() {
 		t.mu.Lock()
@@ -241,7 +292,10 @@ func (t *callTracker) stdinEnded(deadline time.Time) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.stdinDone = true
-	for len(t.running) > len(t.calls) && time.Now().Before(deadline) {
+	for _, cancel := range t.cancels {
+		cancel()
+	}
+	for len(t.running) > 0 && time.Now().Before(deadline) {
 		t.idle.Wait()
 	}
 }
@@ -257,6 +311,12 @@ func (t *callTracker) answered(message jsonrpc.Message) {
 	delete(t.running, response.ID)
 	delete(t.cancelled, response.ID)
 	delete(t.calls, response.ID)
+	if cancel, ok := t.cancels[response.ID]; ok {
+		cancel()
+		delete(t.signals, t.callSignals[response.ID])
+		delete(t.cancels, response.ID)
+		delete(t.callSignals, response.ID)
+	}
 	t.endedLocked(response.ID)
 	client, aliased := t.aliases[response.ID]
 	if !aliased {
@@ -290,6 +350,7 @@ func (t *callTracker) waitIdle(deadline time.Time) {
 type trackedTransport struct {
 	inner   mcp.Transport
 	tracker *callTracker
+	client  *stdioPeer
 }
 
 func (t trackedTransport) Connect(ctx context.Context) (mcp.Connection, error) {
@@ -297,22 +358,45 @@ func (t trackedTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	return trackedConnection{connection, t.tracker}, nil
+	return trackedConnection{connection, t.tracker, t.client}, nil
 }
 
 type trackedConnection struct {
 	mcp.Connection
 	tracker *callTracker
+	client  *stdioPeer
 }
 
 func (c trackedConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
+	if pending := c.client.takePending(); pending != nil {
+		c.tracker.read(pending)
+		return pending, nil
+	}
+	for {
+		message, err := c.readOne(ctx)
+		if request, ok := message.(*jsonrpc.Request); ok && request.ID.Raw() == ownInitialize {
+			return message, err
+		}
+		if err != nil || c.tracker.read(message) {
+			return message, err
+		}
+	}
+}
+
+func (c trackedConnection) readOne(ctx context.Context) (jsonrpc.Message, error) {
 	for {
 		message, err := c.Connection.Read(ctx)
 		if err == nil {
-			if request, ok := message.(*jsonrpc.Request); ok && c.refused(ctx, request) {
-				continue
+			if request, ok := message.(*jsonrpc.Request); ok {
+				if c.refused(ctx, request) {
+					continue
+				}
+				request = c.client.read(ctx, c.Connection, request)
+				if request == nil {
+					continue
+				}
+				message = request
 			}
-			c.tracker.read(message)
 		} else if errors.Is(err, io.EOF) {
 			c.tracker.stdinEnded(time.Now().Add(stopDrain))
 		}
@@ -340,6 +424,9 @@ func (c trackedConnection) refused(ctx context.Context, request *jsonrpc.Request
 
 func (c trackedConnection) Write(ctx context.Context, message jsonrpc.Message) error {
 	response, isResponse := message.(*jsonrpc.Response)
+	if isResponse && !c.client.answered(response) {
+		return nil
+	}
 	var own jsonrpc.ID
 	if isResponse {
 		own = response.ID

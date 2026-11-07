@@ -244,7 +244,7 @@ impl OperatorClient {
             headers.push(("Content-Length", &length));
         }
         stream
-            .write_all(&request_head(request.method, target, &headers))
+            .write_all(&request_head(request.method, target, &headers)?)
             .await?;
         match &mut request.body {
             RequestBody::None => {}
@@ -636,7 +636,7 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
     if let Some(value) = &auth.authorization {
         headers.push(("Proxy-Authorization", value));
     }
-    tcp.write_all(&request_head("CONNECT", authority, &headers))
+    tcp.write_all(&request_head("CONNECT", authority, &headers)?)
         .await?;
     let mut reader = BufReader::new(&mut *tcp);
     let head = read_head(&mut reader, MAX_HEAD).await?;

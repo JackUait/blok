@@ -184,7 +184,7 @@ func (s *filesSource) load(ctx context.Context, documentID string) (*loaded, err
 	if err := s.assertExactName(documentID); err != nil {
 		return nil, err
 	}
-	raw, err := s.bundle.call(ctx, "mcpParseDocument", map[string]string{"id": documentID, "text": decodeUTF8(bytes)}, nil)
+	raw, err := s.bundle.call(ctx, "mcpParseDocument", map[string]string{"id": documentID, "text": string(finiteJSON([]byte(decodeUTF8(bytes))))}, nil)
 	if err != nil {
 		return nil, err
 	}

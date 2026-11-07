@@ -249,29 +249,53 @@ func stringsOf(raw json.RawMessage) []string {
 	return out
 }
 
-// restoreVersion posts a restore the bundle checked: "ok", "missing" or
-// "stale", or an error. Call without mu.
-func (r *liveRoom) restoreVersion(ctx context.Context, version string) (string, error) {
+// restoreOutcome is a restore's answer: "ok", "missing", "stale", or a
+// refusal of the given status (0: no answer came).
+type restoreOutcome struct {
+	kind   string
+	status int
+	err    error
+}
+
+// restoreVersion posts a restore the bundle checked, pinned with If-Match
+// to the newest version the agent saw, as Node's does. Call without mu.
+func (r *liveRoom) restoreVersion(ctx context.Context, version string, previous *string) restoreOutcome {
 	path := pointPath(version)
 	if path == "" {
-		return "missing", nil
+		return restoreOutcome{kind: "missing"}
+	}
+	header := http.Header{}
+	if previous != nil {
+		// A tag the server cannot read would restore unpinned.
+		if pointPath(*previous) == "" {
+			return restoreOutcome{kind: "stale"}
+		}
+		header["If-Match"] = []string{`"` + *previous + `"`}
 	}
 	key := make([]byte, 16)
 	_, _ = rand.Read(key)
 	key[6] = key[6]&0x0f | 0x40
 	key[8] = key[8]&0x3f | 0x80
-	idempotency := fmt.Sprintf("%x-%x-%x-%x-%x", key[0:4], key[4:6], key[6:8], key[8:10], key[10:16])
-	answer, err := r.historySend(ctx, http.MethodPost, r.historyBase()+"/"+path+"/restore", http.Header{"Blok-Idempotency-Key": {idempotency}})
+	header["Blok-Idempotency-Key"] = []string{fmt.Sprintf("%x-%x-%x-%x-%x", key[0:4], key[4:6], key[6:8], key[8:10], key[10:16])}
+	answer, err := r.historySend(ctx, http.MethodPost, r.historyBase()+"/"+path+"/restore", header)
 	if err != nil {
-		return "", err
+		return restoreOutcome{err: err}
 	}
 	switch {
 	case answer.status == http.StatusNotFound:
-		return "missing", nil
+		return restoreOutcome{kind: "missing"}
 	case answer.status == http.StatusPreconditionFailed:
-		return "stale", nil
+		return restoreOutcome{kind: "stale"}
 	case answer.status < 200 || answer.status > 299:
-		return "", fmt.Errorf("The sync server answered %d: %s", answer.status, strings.TrimSpace(decodeUTF8(answer.body)))
+		return restoreOutcome{status: answer.status, err: fmt.Errorf("The sync server answered %d: %s", answer.status, strings.TrimSpace(decodeUTF8(answer.body)))}
 	}
-	return "ok", nil
+	return restoreOutcome{kind: "ok"}
+}
+
+// retryable is Node's isTransient for a restore, which is never asked
+// twice: no answer, a 429 or a 5xx other than 500 and 501. Any other
+// error, a failed ticket too, is plain and not retryable.
+func (o restoreOutcome) retryable() bool {
+	var unreachable *unreachableError
+	return errors.As(o.err, &unreachable) || o.status == 429 || (o.status >= 502 && o.status <= 599)
 }

@@ -1518,7 +1518,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     });
 
     this.bulkEditor = handle.isOpen ? handle : null;
-    if (!handle.isOpen) closeKey.stop();
+    if (!handle.isOpen) {
+      closeKey.stop();
+      // No picker opened (no people source, a type this client lacks): nothing will call onClose.
+      if (generation === this.bulkGeneration) this.bulkEditing = false;
+    }
   }
 
   /** Cmd/Ctrl+/: the properties to edit on every selected row. */

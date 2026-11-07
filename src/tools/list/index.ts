@@ -96,14 +96,30 @@ export class ListItem implements BlockTool {
     this.depthValidator = new ListDepthValidator(api.blocks);
     this.markerCalculator = new ListMarkerCalculator(api.blocks);
 
-    this.markerManager = this._data.style === 'ordered' ? new OrderedMarkerManager(api.blocks) : null;
+    this.markerManager = null;
+    this.syncMarkerManager();
 
     if (block) {
       this.blockId = block.id;
     }
+  }
 
-    if (this._data.style === 'ordered') {
+  /**
+   * Only an ordered item renumbers its siblings, so only it listens for adds
+   * and removes. Call after every style change.
+   */
+  private syncMarkerManager(): void {
+    const ordered = this._data.style === 'ordered';
+
+    if (ordered === (this.markerManager !== null)) {
+      return;
+    }
+    if (ordered) {
+      this.markerManager = new OrderedMarkerManager(this.api.blocks);
       this.api.events.on('block changed', this.handleBlockChanged);
+    } else {
+      this.markerManager = null;
+      this.api.events.off('block changed', this.handleBlockChanged);
     }
   }
 
@@ -401,7 +417,7 @@ export class ListItem implements BlockTool {
   }
 
   public removed(): void {
-    if (this._data.style !== 'ordered') {
+    if (this.markerManager === null) {
       return;
     }
 
@@ -672,6 +688,9 @@ export class ListItem implements BlockTool {
     this.rerender();
 
     if (previousStyle !== style) {
+      // Before the sync: an item leaving ordered still renumbers the rest.
+      this.markerManager?.scheduleUpdateAll();
+      this.syncMarkerManager();
       this.markerManager?.scheduleUpdateAll();
     }
   }
@@ -787,6 +806,7 @@ export class ListItem implements BlockTool {
       depth,
     };
 
+    this.syncMarkerManager();
     this.rerender();
   }
 

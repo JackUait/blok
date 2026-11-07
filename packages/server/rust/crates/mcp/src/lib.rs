@@ -94,6 +94,15 @@ pub struct Embedded {
     pub version: String,
     /// The options' `auth`, which `http` enforces.
     auth: Value,
+    /// The options say http: only then were the HTTP rules checked.
+    http_transport: bool,
+}
+
+const NOT_HTTP: &str =
+    r#"serving over HTTP needs transport kind "http", so that the HTTP rules are checked"#;
+
+fn is_http(options: &Value) -> bool {
+    options.pointer("/transport/kind").and_then(Value::as_str) == Some("http")
 }
 
 /// The OAuth verifier `auth` names, if it names one.
@@ -141,8 +150,13 @@ impl Embedded {
             })?;
         let mcp = Arc::new(mcp);
         mcp.spawn_sweeper();
-        let auth = options.to_value()["auth"].clone();
-        Ok(Embedded { mcp, version, auth })
+        let value = options.to_value();
+        Ok(Embedded {
+            mcp,
+            version,
+            auth: value["auth"].clone(),
+            http_transport: is_http(&value),
+        })
     }
 
     /// As `new`, with the host's own uploader (Node's `uploads` option).
@@ -156,30 +170,43 @@ impl Embedded {
         let version = bundle.call_text("version", "{}").await.map_err(|e| e.0)?;
         let mcp = Mcp::with_uploads(bundle, options, authorize, rooms, uploads)
             .await
-            .map_err(|err| format!("{err:?}"))?;
+            .map_err(|err| match err {
+                errors::Fault::Internal(message) => message,
+                errors::Fault::Host(error) => error.error.to_string(),
+            })?;
         let mcp = Arc::new(mcp);
         mcp.spawn_sweeper();
         let auth = options.get("auth").cloned().unwrap_or(Value::Null);
-        Ok(Embedded { mcp, version, auth })
+        Ok(Embedded {
+            mcp,
+            version,
+            auth,
+            http_transport: is_http(options),
+        })
     }
 
     /// blok-mcp for the host's own HTTP server, with Node's Origin and Host
     /// checks. `hosts`: the app's own host names; None takes loopback only.
     /// Without OAuth or `hosts`, only loopback peers are served; behind a
-    /// proxy, set OAuth or name the hosts.
-    pub fn http(&self, hosts: Option<Vec<String>>) -> http::EmbeddedHttp {
-        http::EmbeddedHttp::new(
-            self.handler(true),
+    /// proxy, set OAuth or name the hosts. Refused unless the options say
+    /// http, as Go's Handler: the HTTP rules are checked only then.
+    pub fn http(&self, hosts: Option<Vec<String>>) -> Result<http::EmbeddedHttp, String> {
+        Ok(http::EmbeddedHttp::new(
+            self.handler(true)?,
             hosts,
             oauth_of(&self.auth),
             self.mcp.principal.clone(),
-        )
+        ))
     }
 
     /// The rmcp handler, to serve on a transport the host picks. Over HTTP,
-    /// serve `http` instead: it checks Origin and Host first.
-    pub fn handler(&self, http: bool) -> Handler {
-        Handler::new(self.mcp.clone(), self.version.clone(), http)
+    /// serve `http` instead: it checks Origin and Host first. `http` is
+    /// refused unless the options say http.
+    pub fn handler(&self, http: bool) -> Result<Handler, String> {
+        if http && !self.http_transport {
+            return Err(NOT_HTTP.to_owned());
+        }
+        Ok(Handler::new(self.mcp.clone(), self.version.clone(), http))
     }
 
     /// Serves `options.transport` until stdin ends (stdio) or a signal.

@@ -386,8 +386,9 @@ export class VideoTool implements BlockTool {
 
       return;
     }
+    if (this.lastSource !== source) return;
     this.applyError(err, { file: source.file });
-    if (this.lastSource !== source || this.data.fileName !== source.file.name) return;
+    if (this.data.fileName !== source.file.name) return;
     this.data = { ...this.data, fileName: before };
     this.block.dispatchChange({ derived: true, from: ['fileName'] });
   }
@@ -424,8 +425,9 @@ export class VideoTool implements BlockTool {
 
       return;
     }
+    if (this.lastSource !== source) return;
     this.applyError(err, { url: source.url });
-    if (this.lastSource !== source || this.data.url !== source.url) return;
+    if (this.data.url !== source.url) return;
     this.data = { ...this.data, url: before, variants: variantsBefore };
     this.block.dispatchChange({ derived: true, from: ['url'] });
   }
@@ -931,6 +933,7 @@ export class VideoTool implements BlockTool {
   }
 
   private transitionToEmpty(): void {
+    this.conversion?.abort();
     this.data = { ...this.data, url: '', variants: undefined };
     this.state = 'EMPTY';
     this.lastSource = null;

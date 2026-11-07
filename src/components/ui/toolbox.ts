@@ -543,6 +543,15 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * popover gap is calculated from that rect and must not predate the class
      * application.
      */
+    /**
+     * A second open while open (the toolbar is hidden, so nothing closed us
+     * first) must undo the first one's pill and ARIA, or close() can only
+     * undo the last one.
+     */
+    if (this.opened) {
+      this.stopListeningToBlockInput();
+    }
+
     this.startListeningToBlockInput(withSlash);
 
     if (this.popover instanceof PopoverDesktop) {

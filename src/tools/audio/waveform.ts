@@ -322,6 +322,7 @@ export function attachWaveform(opts: {
   canvas.addEventListener('pointerdown', onDown);
   globalThis.addEventListener('pointermove', onMove);
   globalThis.addEventListener('pointerup', onUp);
+  globalThis.addEventListener('pointercancel', onUp);
   media.addEventListener('play', onPlay);
   media.addEventListener('pause', onStop);
   media.addEventListener('ended', onStop);
@@ -350,6 +351,7 @@ export function attachWaveform(opts: {
       canvas.removeEventListener('pointerdown', onDown);
       globalThis.removeEventListener('pointermove', onMove);
       globalThis.removeEventListener('pointerup', onUp);
+      globalThis.removeEventListener('pointercancel', onUp);
       media.removeEventListener('play', onPlay);
       media.removeEventListener('pause', onStop);
       media.removeEventListener('ended', onStop);

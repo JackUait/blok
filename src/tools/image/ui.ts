@@ -507,7 +507,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.appendChild(toolbar);
 
   function navigate(delta: number, source: 'click' | 'keyboard' = 'click'): void {
-    if (!hasNav) return;
+    if (!hasNav || animState.closing) return;
     const next = navState.index + delta;
     if (next < 0 || next >= navItems.length) return;
     navState.index = next;
@@ -811,7 +811,17 @@ export function openLightbox(opts: LightboxOptions): () => void {
     event.stopPropagation();
   });
 
+  // Eats the click that ends a drag, so the drag does not close the lightbox.
+  const swallowState: { listener: ((e: MouseEvent) => void) | null } = { listener: null };
+  const stopSwallowing = (): void => {
+    if (swallowState.listener === null) return;
+    dialog.removeEventListener('click', swallowState.listener, true);
+    swallowState.listener = null;
+  };
+
   dialog.addEventListener('pointerdown', (event: PointerEvent) => {
+    // A drag that ended with no click must not eat this new press's click.
+    stopSwallowing();
     if (isChromeTarget(event.target)) return;
     dragState.pointerDown = true;
     dragState.dragging = false;
@@ -837,7 +847,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     applyTransform();
   });
 
-  const endDrag = (): void => {
+  const endDrag = (event: PointerEvent): void => {
     if (!dragState.pointerDown) return;
     dragState.pointerDown = false;
     dialog.classList.remove('is-dragging');
@@ -849,11 +859,14 @@ export function openLightbox(opts: LightboxOptions): () => void {
       panState.x = settled.x;
       panState.y = settled.y;
       applyTransform();
+      // A cancelled pointer is never followed by a click.
+      if (event.type !== 'pointerup') return;
       const swallow = (e: MouseEvent): void => {
         if (isChromeTarget(e.target)) return;
         e.stopPropagation();
-        dialog.removeEventListener('click', swallow, true);
+        stopSwallowing();
       };
+      swallowState.listener = swallow;
       dialog.addEventListener('click', swallow, true);
     }
   };

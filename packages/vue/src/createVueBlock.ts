@@ -439,6 +439,8 @@ export function createVueBlock<Data = BlockToolData>(
     private hostEl: HTMLElement | null = null;
     /** Latest patch queued while a pointer drag suppresses dispatchChange. */
     private pendingDispatch = false;
+    /** Frame of the deferred dispatch's next retry, if one is queued. */
+    private dispatchFrame: number | null = null;
     /** Element the block pointed `toolbarAnchorRef` at, if any. */
     private anchorEl: HTMLElement | null = null;
     /**
@@ -680,12 +682,14 @@ export function createVueBlock<Data = BlockToolData>(
       // under the SAME id) before it tears this one down, so an unqualified
       // unregister here would delete the live entry and blank the block.
       this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
+      this.cancelPendingDispatch();
       spec.onRemoved?.(this.blockApi, removal);
     }
 
     public destroy(): void {
       // Idempotent with removed(); unregister is safe when already absent.
       this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
+      this.cancelPendingDispatch();
     }
 
     /**
@@ -731,16 +735,26 @@ export function createVueBlock<Data = BlockToolData>(
 
       const retry = (): void => {
         if (this.pointerDrag()) {
-          requestAnimationFrame(retry);
+          this.dispatchFrame = requestAnimationFrame(retry);
 
           return;
         }
 
+        this.dispatchFrame = null;
         this.pendingDispatch = false;
         this.blockApi.dispatchChange();
       };
 
-      requestAnimationFrame(retry);
+      this.dispatchFrame = requestAnimationFrame(retry);
+    }
+
+    /** A removed block must not dispatch a change deferred by a drag. */
+    private cancelPendingDispatch(): void {
+      if (this.dispatchFrame !== null) {
+        cancelAnimationFrame(this.dispatchFrame);
+        this.dispatchFrame = null;
+      }
+      this.pendingDispatch = false;
     }
   };
 

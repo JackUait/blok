@@ -101,6 +101,7 @@ impl Handler {
     fn caller(&self, context: &RequestContext<RoleServer>) -> Caller {
         let from_meta = Self::meta(context, CLIENT_INFO_KEY)
             .and_then(|info| info.get("name").and_then(Value::as_str).map(str::to_owned));
+        // The stdio proxy's stand-in initialize names no client (stdio.rs).
         // Over stateless HTTP rmcp invents a placeholder peer; only _meta is real.
         let client_name = from_meta.or_else(|| {
             (!self.http)
@@ -111,6 +112,7 @@ impl Handler {
                         .map(|info| info.client_info.name.clone())
                 })
                 .flatten()
+                .filter(|name| !name.is_empty())
         });
         let identity = context
             .extensions

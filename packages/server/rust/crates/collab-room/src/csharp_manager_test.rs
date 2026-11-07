@@ -195,6 +195,8 @@ impl WorkingSetStore for Store {
 struct Consumer {
     inner: Arc<FakeEndpoint>,
     next_save_failure: Mutex<Option<Error>>,
+    /// Each becomes the next save failure in turn, once one is thrown.
+    more_save_failures: Mutex<Vec<Error>>,
     /// Armed, a save panics: the room's drain throws.
     panics: Mutex<bool>,
 }
@@ -216,7 +218,9 @@ impl Endpoint for Consumer {
                 .inner
                 .save(doc_id, output_data, version, projection)
                 .await?;
-            if let Some(err) = lock(&self.next_save_failure).take() {
+            let failure = lock(&self.next_save_failure).take();
+            if let Some(err) = failure {
+                *lock(&self.next_save_failure) = lock(&self.more_save_failures).pop();
                 return Err(err);
             }
             Ok(answer)
@@ -393,6 +397,7 @@ impl Bench {
             consumer: Arc::new(Consumer {
                 inner: endpoint.clone(),
                 next_save_failure: Mutex::new(None),
+                more_save_failures: Mutex::new(Vec::new()),
                 panics: Mutex::new(false),
             }),
             endpoint,
@@ -1905,6 +1910,43 @@ async fn an_endpoint_outage_at_eviction_keeps_the_room_loaded_until_the_export_l
     let saves = saved_texts(&b.endpoint);
     assert_eq!(saves.len(), 2);
     assert_eq!(saves[1], text_json("hello!"));
+}
+
+/// The eviction's flush finds the debounced save failing and fails its own.
+/// A member who comes back stops the eviction retry, so the export needs its
+/// own timer, or the consumer's copy waits for the next edit.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_failed_eviction_export_retries_after_a_member_rejoins() {
+    let b = Bench::new();
+    b.endpoint.holds(DOC, "hello", None);
+    let gate = Gate::new();
+    b.endpoint.set_save_gate(Some(gate.clone()));
+    *lock(&b.consumer.next_save_failure) =
+        Some(Error::message("collab: the doc endpoint PUT returned 502."));
+    lock(&b.consumer.more_save_failures)
+        .push(Error::message("collab: the doc endpoint PUT returned 502."));
+    let manager = b.manager(Options {
+        retry_backoff: ms(300),
+        retry_backoff_cap: ms(300),
+        ..fast()
+    });
+    let peer = Peer::new();
+    let membership = enter(&manager, DOC, &peer).await;
+    let client = synced(&membership, &peer).await;
+    send_update(&membership, &client, "!").await;
+    wait_until("the debounced export to start", || b.endpoint.saved() == 1).await;
+    membership.leave();
+    // Past the linger: the eviction waits on the gated save.
+    tokio::time::sleep(ms(400)).await;
+
+    b.endpoint.set_save_gate(None);
+    gate.open();
+    wait_until("the flush's own export", || b.endpoint.saved() == 2).await;
+    let back = enter(&manager, DOC, &Peer::new()).await;
+
+    wait_until("the export retry", || b.endpoint.saved() == 3).await;
+    assert_eq!(saved_texts(&b.endpoint)[2], text_json("hello!"));
+    back.leave();
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

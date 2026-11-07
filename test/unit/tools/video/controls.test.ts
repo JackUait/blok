@@ -331,6 +331,17 @@ describe('video controls — press-and-hold 2x', () => {
     expect(h.video.play).toHaveBeenCalledTimes(1);
   });
 
+  it('a second press before the first is released leaves no stray 2x timer behind', () => {
+    vi.useFakeTimers();
+    h.video.dispatchEvent(new Event('pointerdown'));
+    h.video.dispatchEvent(new Event('pointerdown'));
+    h.video.dispatchEvent(new Event('pointerup'));
+
+    vi.advanceTimersByTime(300);
+
+    expect(h.video.playbackRate).toBe(1);
+  });
+
   it('leaving the video mid-hold restores 1x without eating the next click', () => {
     vi.useFakeTimers();
     h.video.dispatchEvent(new Event('pointerdown'));
@@ -659,6 +670,18 @@ describe('video controls — smooth scrubber', () => {
     setProp(h.video, 'currentTime', 20);
     frame();
     expect(h.controls.style.getPropertyValue('--blok-seek-pct')).toBe('20%');
+  });
+
+  it('follows playback again after a scrub the browser cancelled', () => {
+    const seek = q<HTMLInputElement>(h.controls, '[data-role="seek"]');
+    h.video.dispatchEvent(new Event('play'));
+    seek.dispatchEvent(new Event('pointerdown'));
+    document.dispatchEvent(new Event('pointercancel'));
+
+    setProp(h.video, 'currentTime', 50);
+    frame();
+
+    expect(seek.value).toBe('50');
   });
 
   it('stops driving the scrubber once paused', () => {

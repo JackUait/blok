@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { API, BlockToolConstructorOptions } from '../../../../types';
+import type { API, BlockTool, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
 import { simulateInput, simulateKeydown } from '../../../helpers/simulate';
+import { leakedListeners } from '../../../helpers/listener-leaks';
 
 vi.mock('../../../../src/shared/katex', () => ({
   renderLatex: vi.fn().mockResolvedValue('<span class="katex">rendered</span>'),
@@ -92,6 +93,50 @@ describe('CodeTool', () => {
 
     // Clean up any popover elements left in document.body
     document.querySelectorAll('[data-blok-popover-opened]').forEach((el) => el.remove());
+  });
+
+  describe('editor teardown', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('leaves no listener, observer or timer behind when the editor is destroyed', async () => {
+      const disconnect = vi.fn();
+
+      vi.stubGlobal('ResizeObserver', class {
+        public observe = vi.fn();
+        public disconnect = disconnect;
+      });
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const added = vi.spyOn(document, 'addEventListener');
+      const removed = vi.spyOn(document, 'removeEventListener');
+      const tool: BlockTool = new CodeTool(createOptions({ code: 'let a = 1' }));
+      const el = tool.render();
+      if (!(el instanceof HTMLElement)) throw new Error('render() must return an element');
+      document.body.appendChild(el);
+      tool.rendered?.();
+      const codeEl = el.querySelector<HTMLElement>('[data-blok-testid="code-content"]');
+      if (!codeEl) throw new Error('code element missing');
+
+      codeEl.dispatchEvent(new FocusEvent('focus'));
+      codeEl.dispatchEvent(new Event('paste', { bubbles: true }));
+      expect(added).toHaveBeenCalledWith('selectionchange', expect.any(Function));
+
+      // editor.destroy() reaches the tool only through destroy(), never removed().
+      tool.destroy?.();
+
+      expect(leakedListeners(added, removed)).toEqual([]);
+      expect(disconnect).toHaveBeenCalled();
+
+      // The paste refresh must not wake up and start a language detection.
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+      await new Promise((resolve) => setTimeout(resolve, 650));
+      expect(mockDetectLanguage).not.toHaveBeenCalled();
+
+      el.remove();
+    });
   });
 
   describe('render()', () => {

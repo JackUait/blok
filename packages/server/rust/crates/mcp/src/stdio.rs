@@ -15,6 +15,72 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWrite
 use tokio::sync::Mutex;
 
 const MODERN: &str = "2026-07-28";
+/// The id of the initialize the proxy sends for a client that sent none.
+const STAND_IN_INITIALIZE: &str = "blok-mcp stand-in initialize";
+
+/// The era the first request set, as Node's SDK locks it.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Era {
+    Unknown,
+    Legacy,
+    Modern,
+}
+
+/// `line` as the session's era reads it: in a 2025 session, a request's
+/// 2026 claim is dropped, so rmcp answers it as 2025, as Node's SDK does.
+fn in_era(line: &str, era: &mut Era) -> String {
+    if *era != Era::Legacy || !line.contains("io.modelcontextprotocol/protocolVersion") {
+        return line.to_owned();
+    }
+    let Ok(mut message) = serde_json::from_str::<Value>(line) else {
+        return line.to_owned();
+    };
+    let dropped = message
+        .pointer_mut("/params/_meta")
+        .and_then(Value::as_object_mut)
+        .and_then(|meta| meta.shift_remove("io.modelcontextprotocol/protocolVersion"));
+    match dropped {
+        Some(_) => message.to_string(),
+        None => line.to_owned(),
+    }
+}
+
+/// The initialize and initialized lines for a client that skipped them, if
+/// `line` is its first request and a 2025 one. Node serves it as one.
+fn stand_in_initialize(line: &str, era: &mut Era) -> Option<String> {
+    if *era != Era::Unknown {
+        return None;
+    }
+    let message: Value = serde_json::from_str(line).ok()?;
+    let method = message.get("method").and_then(Value::as_str)?;
+    message.get("id")?;
+    let claim = message
+        .pointer("/params/_meta/io.modelcontextprotocol~1protocolVersion")
+        .and_then(Value::as_str);
+    if claim.is_some_and(|v| v >= MODERN) {
+        *era = Era::Modern;
+        return None;
+    }
+    *era = Era::Legacy;
+    if method == "initialize" {
+        return None;
+    }
+    // No clientInfo in Node: an empty name reads the same (safeClientName).
+    let initialize = json!({
+        "jsonrpc": "2.0",
+        "id": STAND_IN_INITIALIZE,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": { "name": "", "version": "" },
+        },
+    });
+    Some(format!(
+        "{initialize}\n{}\n",
+        json!({ "jsonrpc": "2.0", "method": "notifications/initialized" })
+    ))
+}
 
 /// The answer this proxy gives itself, if the line is one it owns.
 pub fn own_answer(line: &str) -> Option<String> {
@@ -225,7 +291,10 @@ impl Pending {
     /// carries the id the client sent. None for an abandoned request's answer.
     fn outgoing(&self, line: &str) -> Option<String> {
         // Most lines need neither: skip the parse.
-        if self.state().abandoned.is_empty() && !line.contains("blok-mcp reused id ") {
+        if self.state().abandoned.is_empty()
+            && !line.contains("blok-mcp reused id ")
+            && !line.contains(STAND_IN_INITIALIZE)
+        {
             return Some(line.to_owned());
         }
         let Ok(message) = serde_json::from_str::<Value>(line) else {
@@ -237,6 +306,9 @@ impl Pending {
         else {
             return Some(line.to_owned());
         };
+        if id.as_str() == Some(STAND_IN_INITIALIZE) {
+            return None;
+        }
         let id = id.to_string();
         let state = self.state();
         if state.abandoned.contains(&id) {
@@ -341,6 +413,7 @@ where
         let pending = pending.clone();
         tokio::spawn(async move {
             let mut reader = BufReader::new(input);
+            let mut era = Era::Unknown;
             while let Some(line) = next_message(&mut reader).await {
                 let line = match crate::lenient::mend(&line) {
                     crate::lenient::Mended::Forward(line) => line,
@@ -365,8 +438,12 @@ where
                 let sent = match own_answer(&line) {
                     Some(answer) => write_line(&out, &answer).await,
                     None => {
-                        let line = pending.sent(&line);
+                        let first = stand_in_initialize(&line, &mut era);
+                        let line = pending.sent(&in_era(&line, &mut era));
                         async {
+                            if let Some(first) = first {
+                                to_server.write_all(first.as_bytes()).await?;
+                            }
                             to_server.write_all(line.as_bytes()).await?;
                             to_server.write_all(b"\n").await
                         }
@@ -423,7 +500,13 @@ mod tests {
             tokio::spawn(async move {
                 let mut lines = BufReader::new(read).lines();
                 while let Ok(Some(line)) = lines.next_line().await {
-                    let id = serde_json::from_str::<Value>(&line).unwrap()["id"].clone();
+                    let message = serde_json::from_str::<Value>(&line).unwrap();
+                    // Only requests are answered; the stand-in initialize is
+                    // the proxy's own, and rmcp answers it at once.
+                    if message.get("id").is_none() || message["method"] == "initialize" {
+                        continue;
+                    }
+                    let id = message["id"].clone();
                     let tx = tx.clone();
                     tokio::spawn(async move {
                         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -643,6 +726,71 @@ mod tests {
         let answer: Value = serde_json::from_str(written.trim()).unwrap();
         assert_eq!(answer["id"], 2);
         assert_eq!(answer["error"]["code"], -32600);
+    }
+
+    // Node serves a request that comes before any initialize, without the
+    // 2026 envelope, as a 2025 one. rmcp would refuse it for its missing
+    // _meta, so the proxy initializes rmcp first and hides that answer.
+    #[tokio::test]
+    async fn a_request_before_initialize_is_served_as_a_2025_one() {
+        let input = concat!(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#,
+            "\n",
+            r#"{"jsonrpc":"2.0","id":2,"method":"ping"}"#,
+            "\n",
+        );
+        let got = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = got.clone();
+        let (out, mut client) = tokio::io::duplex(1 << 16);
+        proxy(
+            std::io::Cursor::new(input.as_bytes().to_vec()),
+            out,
+            Arc::default(),
+            move |read, mut write| async move {
+                let mut lines = BufReader::new(read).lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    let message: Value = serde_json::from_str(&line).unwrap();
+                    if let Some(id) = message.get("id") {
+                        let answer = json!({ "jsonrpc": "2.0", "id": id, "result": {} });
+                        write
+                            .write_all(format!("{answer}\n").as_bytes())
+                            .await
+                            .unwrap();
+                    }
+                    seen.lock().unwrap().push(message["method"].clone());
+                }
+            },
+        )
+        .await;
+        assert_eq!(
+            *got.lock().unwrap(),
+            vec![
+                json!("initialize"),
+                json!("notifications/initialized"),
+                json!("tools/list"),
+                json!("ping"),
+            ]
+        );
+        let mut written = String::new();
+        client.read_to_string(&mut written).await.unwrap();
+        assert_eq!(
+            written,
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}\n"
+        );
+    }
+
+    // Node keeps the era its first request set: a 2026 claim in a 2025
+    // session is answered as 2025.
+    #[test]
+    fn a_2026_claim_in_a_2025_session_is_dropped() {
+        let modern = r#"{"jsonrpc":"2.0","id":3,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","x":1}}}"#;
+        let mut era = Era::Legacy;
+        assert_eq!(
+            in_era(modern, &mut era),
+            r#"{"jsonrpc":"2.0","id":3,"method":"tools/list","params":{"_meta":{"x":1}}}"#
+        );
+        let mut era = Era::Modern;
+        assert_eq!(in_era(modern, &mut era), modern);
     }
 
     // Node runs and answers both requests with one id; rmcp keys calls by

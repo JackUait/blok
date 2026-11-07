@@ -12,12 +12,17 @@ import (
 // idle sweep, and one call at a time per handle. Times are milliseconds as
 // float64, because --handle-idle-ms takes any JS number.
 type handleRegistry[S any] struct {
-	mu      sync.Mutex
+	mu sync.Mutex
+	// settled is told each time a call leaves a handle.
+	settled *sync.Cond
 	entries map[string]*handleEntry[S]
 	closed  bool
-	idleMs  float64
-	max     int
-	now     func() float64
+	// lines, when set, are the stdio lines: a stop lets the calls already
+	// in a handle's line finish, as Node's call chain does.
+	lines  *handleLines
+	idleMs float64
+	max    int
+	now    func() float64
 }
 
 type handleEntry[S any] struct {
@@ -28,16 +33,25 @@ type handleEntry[S any] struct {
 	busy       int
 	// lane holds one token; a call takes it for its whole run.
 	lane chan struct{}
+	// closing: closeAll took the handle. Only calls whose turn came before
+	// cutoff may still use it.
+	closing bool
+	cutoff  uint64
 }
 
 func newHandleRegistry[S any](idleMs float64, max int) *handleRegistry[S] {
-	return &handleRegistry[S]{
+	registry := &handleRegistry[S]{
 		entries: map[string]*handleEntry[S]{},
 		idleMs:  idleMs,
 		max:     max,
 		now:     func() float64 { return float64(time.Now().UnixNano()) / 1e6 },
 	}
+	registry.settled = sync.NewCond(&registry.mu)
+	return registry
 }
+
+// turnContextKey carries a stdio call's *handleTurn.
+type turnContextKey struct{}
 
 func newHandleID() string {
 	bytes := make([]byte, 16)
@@ -92,7 +106,9 @@ func (r *handleRegistry[S]) has(handle string) bool {
 func (r *handleRegistry[S]) use(ctx context.Context, handle, principal string, fn func(S, string) error) error {
 	r.mu.Lock()
 	entry, ok := r.entries[handle]
-	if !ok || entry.principal != principal {
+	turn, hasTurn := ctx.Value(turnContextKey{}).(*handleTurn)
+	hasTurn = hasTurn && turn.handle == handle
+	if !ok || entry.principal != principal || (entry.closing && (!hasTurn || turn.ticket >= entry.cutoff)) {
 		r.mu.Unlock()
 		return unknownHandle()
 	}
@@ -104,8 +120,13 @@ func (r *handleRegistry[S]) use(ctx context.Context, handle, principal string, f
 		r.mu.Lock()
 		entry.busy--
 		entry.lastUsed = r.now()
+		r.settled.Broadcast()
 		r.mu.Unlock()
 	}()
+	// The call waits for those read before it on this handle.
+	if hasTurn {
+		turn.wait()
+	}
 	<-entry.lane
 	defer func() { entry.lane <- struct{}{} }()
 	return fn(entry.session, entry.documentID)
@@ -151,18 +172,37 @@ func (r *handleRegistry[S]) sweep(onExpire func(S)) int {
 func (r *handleRegistry[S]) closeAll(closeSession func(S)) {
 	r.mu.Lock()
 	r.closed = true
-	all := make([]*handleEntry[S], 0, len(r.entries))
-	for _, entry := range r.entries {
-		all = append(all, entry)
+	all := map[string]*handleEntry[S]{}
+	for handle, entry := range r.entries {
+		entry.closing = true
+		if r.lines != nil {
+			entry.cutoff = r.lines.issuedSoFar()
+		}
+		all[handle] = entry
 	}
-	clear(r.entries)
 	r.mu.Unlock()
 	var group sync.WaitGroup
-	for _, entry := range all {
+	for handle, entry := range all {
 		group.Go(func() {
+			// The calls already in line run first, then the running one.
+			if r.lines != nil {
+				r.lines.waitPast(handle, entry.cutoff)
+			}
+			r.mu.Lock()
+			for entry.busy > 0 {
+				r.settled.Wait()
+			}
+			mine := r.entries[handle] == entry
+			if mine {
+				delete(r.entries, handle)
+			}
+			r.mu.Unlock()
 			<-entry.lane
 			entry.lane <- struct{}{}
-			closeSession(entry.session)
+			// A blok_close in line may have closed it already.
+			if mine {
+				closeSession(entry.session)
+			}
 		})
 	}
 	group.Wait()
@@ -178,12 +218,15 @@ type handleLines struct {
 	lines  map[string]*handleLine
 	// booked are the turns stdio took, by token, until their call claims one.
 	booked map[string]*handleTurn
+	// issued counts tickets for all lines, so a ticket tells which calls
+	// came before a stop.
+	issued uint64
 }
 
+// handleLine holds the tickets of a handle's calls not ended yet, oldest
+// first; the oldest one runs.
 type handleLine struct {
-	next, serving uint64
-	// finished are later tickets that ended before their turn.
-	finished map[uint64]bool
+	pending []uint64
 }
 
 // handleTurn is one call's place in its handle's line.
@@ -205,12 +248,33 @@ func (l *handleLines) reserve(handle string) *handleTurn {
 	defer l.mu.Unlock()
 	line, ok := l.lines[handle]
 	if !ok {
-		line = &handleLine{finished: map[uint64]bool{}}
+		line = &handleLine{}
 		l.lines[handle] = line
 	}
-	turn := &handleTurn{lines: l, handle: handle, ticket: line.next}
-	line.next++
+	turn := &handleTurn{lines: l, handle: handle, ticket: l.issued}
+	l.issued++
+	line.pending = append(line.pending, turn.ticket)
 	return turn
+}
+
+// issuedSoFar is the ticket the next call will get.
+func (l *handleLines) issuedSoFar() uint64 {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.issued
+}
+
+// waitPast waits until no ticket before cutoff is left on handle.
+func (l *handleLines) waitPast(handle string, cutoff uint64) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for {
+		line := l.lines[handle]
+		if line == nil || line.pending[0] >= cutoff {
+			return
+		}
+		l.turned.Wait()
+	}
 }
 
 // book reserves a turn and keeps it under a fresh token for its call.
@@ -244,14 +308,13 @@ func (l *handleLines) drop(token string) {
 func (t *handleTurn) wait() {
 	t.lines.mu.Lock()
 	defer t.lines.mu.Unlock()
-	for !t.released && t.lines.lines[t.handle] != nil && t.lines.lines[t.handle].serving != t.ticket {
+	for !t.released && t.lines.lines[t.handle].pending[0] != t.ticket {
 		t.lines.turned.Wait()
 	}
 }
 
-// release ends the turn, once. Only the served ticket moves the line, past
-// every later one that already ended; an early one only marks itself done,
-// so the next call never runs beside the one still running.
+// release ends the turn, once. A turn that ends before it ran only leaves
+// the line, so the next call never runs beside the one still running.
 func (t *handleTurn) release() {
 	t.lines.mu.Lock()
 	defer t.lines.mu.Unlock()
@@ -260,19 +323,13 @@ func (t *handleTurn) release() {
 	}
 	t.released = true
 	line := t.lines.lines[t.handle]
-	if line == nil {
-		return
-	}
-	if t.ticket == line.serving {
-		line.serving++
-		for line.finished[line.serving] {
-			delete(line.finished, line.serving)
-			line.serving++
+	for i, ticket := range line.pending {
+		if ticket == t.ticket {
+			line.pending = append(line.pending[:i], line.pending[i+1:]...)
+			break
 		}
-	} else {
-		line.finished[t.ticket] = true
 	}
-	if line.serving == line.next {
+	if len(line.pending) == 0 {
 		delete(t.lines.lines, t.handle)
 	}
 	t.lines.turned.Broadcast()

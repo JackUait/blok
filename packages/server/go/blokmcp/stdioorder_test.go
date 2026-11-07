@@ -4,9 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -217,5 +222,56 @@ func TestAReusedRequestIDIsAnsweredEachTime(t *testing.T) {
 	saved, _ := os.ReadFile(filepath.Join(dir, "doc.json"))
 	if !regexp.MustCompile(`"title":\s*"B"`).Match(saved) {
 		t.Fatalf("the two calls did not run in order: %s", saved)
+	}
+}
+
+// A stop waits for a call still waiting its turn on a handle, as Node's
+// does for every call it took.
+func TestAStopWaitsForACallQueuedOnItsHandle(t *testing.T) {
+	var mu sync.Mutex
+	var titles []string
+	host := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodPut {
+			body, _ := io.ReadAll(r.Body)
+			time.Sleep(300 * time.Millisecond)
+			mu.Lock()
+			titles = append(titles, regexp.MustCompile(`"title":\s*"(\w+)"`).FindStringSubmatch(string(body))[1])
+			mu.Unlock()
+			_, _ = io.WriteString(w, `{"version":"v2"}`)
+			return
+		}
+		_, _ = io.WriteString(w, `{"data":{"blocks":[]},"version":"v1"}`)
+	}))
+	t.Cleanup(host.Close)
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"},
+		Source: &Source{Kind: "endpoint", URL: host.URL + "/docs", EndpointAuth: "Token t"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx, stop := context.WithCancel(context.Background())
+	send, reader, done := stdioClient(t, server, ctx)
+	send(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"doc","write":true}}}`)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatal(err)
+	}
+	handle := regexp.MustCompile(`\\"handle\\":\\"([^\\"]+)`).FindStringSubmatch(line)[1]
+	for _, title := range []string{"First", "Second"} {
+		send(fmt.Sprintf(`{"jsonrpc":"2.0","id":%q,"method":"tools/call","params":{"name":"blok_execute","arguments":{"handle":%q,"commands":[{"name":"doc.setTitle","args":{"title":%q}}]}}}`, title, handle, title))
+	}
+	time.Sleep(100 * time.Millisecond)
+	stop()
+	go func() { _, _ = io.Copy(io.Discard, reader) }()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("ServeStdio did not return")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if strings.Join(titles, ",") != "First,Second" {
+		t.Fatalf("saved %v before the stop ended", titles)
 	}
 }

@@ -222,10 +222,11 @@ func (s *Server) callTool(ctx context.Context, req mcp.Request, who identity, as
 	if !ok || call.Params == nil {
 		return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "Invalid params"}
 	}
-	// A stdio call waits for the calls read before it on its handle.
+	// A stdio call waits, once it holds its handle, for the calls read
+	// before it on that handle (handleRegistry.use).
 	if token, ok := call.Params.GetMeta()[turnKey].(string); ok {
 		if turn := s.turns.claim(token); turn != nil {
-			turn.wait()
+			ctx = context.WithValue(ctx, turnContextKey{}, turn)
 			defer turn.release()
 		}
 	}

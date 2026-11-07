@@ -142,6 +142,7 @@ func newServer(options Options, runtime invoker) (*Server, error) {
 	s.idleMs = numberOr(options.HandleIdleMs, defaultHandleIdleMs)
 	s.handles = newHandleRegistry[session](s.idleMs, int(numberOr(options.MaxHandlesPerPrincipal, defaultMaxHandlesPerPrincipal)))
 	s.turns = newHandleLines()
+	s.handles.lines = s.turns
 	go s.sweepLoop()
 	return s, nil
 }

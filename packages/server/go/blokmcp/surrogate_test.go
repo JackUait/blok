@@ -40,3 +40,18 @@ func TestALoneSurrogateBecomesTheReplacementCharacter(t *testing.T) {
 		t.Fatalf("saved: %s", text)
 	}
 }
+
+// An id with a lone surrogate is answered under U+FFFD, written as UTF-8.
+func TestAnIdWithALoneSurrogateIsAnsweredAsTheReplacementCharacter(t *testing.T) {
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: t.TempDir()}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	send, answer, end := rawStdio(t, server)
+	defer end()
+	send(`{"jsonrpc":"2.0","id":"x\udc00","method":"ping"}`)
+	if got := answer("\"x�\""); got["result"] == nil {
+		t.Fatalf("ping: %v", got)
+	}
+}

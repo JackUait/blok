@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0](https://github.com/JackUait/blok/compare/v2.0.0...v2.1.0) (2026-11-07)
+
+### Breaking Changes
+
+- **MCP uploader errors** — When the host uploader throws, `@bloklabs/mcp` no longer shows the agent the error's own text.
+  - Old: the agent saw "A prepare step failed: <error.message>". New: it sees "The upload failed." with code `TOOL_ACTION_FAILED`, and the full error goes to stderr.
+  - To show the agent a message, throw an error with a string `agentMessage` property.
+  - Blok's own size and type refusals keep their messages.
+
+### Features
+
+- **MCP server for C# and Go** — Blok's MCP server now ships as .NET and Go builds, with the same six tools, flags and environment variables as `@bloklabs/mcp`.
+  - C#: `dotnet tool install -g Blok.Mcp`, or add `Blok.Server.Mcp` and call `builder.Services.AddBlokMcp(...)` and `app.MapBlokMcp("/mcp")`.
+  - Go: `go install github.com/JackUait/blok/packages/server/go/v2/cmd/blok-mcp@latest`, embed it with `blokmcp.New`, or take a `blok-mcp-go_<os>_<arch>` archive.
+  - Both join live sync rooms, undo the agent's own steps and take an uploader hook. A shared conformance suite checks them against Node.
+- **Close all notifications** — With three or more notification cards stacked, a "+N Close all" pill above the deck closes every card at once.
+  - Set its label with `dismissAllText` on `NotifierOptions`. The `notifier.dismissAll` string is translated in every locale.
+
+### Bug Fixes
+
+- **Tab sync join** — A tab that joins while another tab is still taking the lead no longer stays solo and saves over the others.
+- **Image failure cards** — Image failure cards close when the editor is destroyed, so they no longer stay up after a single-page app leaves the page.
+- **Collaboration resend** — An operation still in flight is no longer sent a second time inside the residual diff.
+- **Non-ASCII MCP tickets** — `@bloklabs/mcp` accepts host-minted tickets whose document id or agent name is outside ASCII.
+- **MCP shutdown** — A tool call in flight at SIGTERM or SIGINT now gets its answer before `blok-mcp` exits.
+- **MCP handles** — `blok_close` frees the handle even when access was revoked.
+- **MCP page writes** — A page write whose acknowledgement is lost now succeeds with `durable: false` and `pending: true`, instead of "It was not saved".
+- **Agent undo** — A comment batch no longer adds an undo step, and an undo or redo with nothing to replay no longer asks about locked databases.
+
+### Maintenance
+
+- **Server runtime** — The runtime bundled in `Blok.Server` and the Go server now runs MCP calls, page writes and uploads, and takes base64 uploads past 3 MiB.
+
 ## [2.0.0](https://github.com/JackUait/blok/compare/v1.16.1...v2.0.0) (2026-11-06)
 
 ### Breaking Changes

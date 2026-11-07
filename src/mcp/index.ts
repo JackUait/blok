@@ -6,7 +6,7 @@ import { getBlokVersion } from '../components/utils/version';
 import { loadAuthorizeHook } from './auth/authorize';
 import { checkOptionSafety, McpConfigError, parseMcpArgs } from './config';
 import { readManifestFiles } from './contract-flags';
-import { startHttpServer } from './http';
+import { McpListenError, startHttpServer } from './http';
 import { DEFAULTS } from './options';
 import type { BlokMcpOptions } from './options';
 import { buildSdkServer } from './sdk-server';
@@ -145,6 +145,10 @@ export const runCli = async (argv: string[], env: NodeJS.ProcessEnv): Promise<vo
     if (thrown instanceof McpConfigError) {
       console.error(`blok-mcp: ${thrown.message}`);
       process.exit(2);
+    }
+    if (thrown instanceof McpListenError) {
+      console.error(`blok-mcp: ${thrown.message}`);
+      process.exit(1);
     }
     throw thrown;
   }

@@ -64,14 +64,50 @@ public sealed class McpHttpTests
     return new StreamReader(context.Response.Body).ReadToEnd();
   }
 
-  // Node's splitListen: Number(text after the last colon), so an empty port is 0, a free one.
+  // Node's splitListen: up to five digits after the last colon; an empty port is 0, a free one.
   [Theory]
   [InlineData("127.0.0.1:", "127.0.0.1", 0)]
-  [InlineData("127.0.0.1: 0", "127.0.0.1", 0)]
   [InlineData("[::1]:4321", "::1", 4321)]
+  [InlineData("localhost:65535", "localhost", 65535)]
   public void SplitsListenAsNodeDoes(string listen, string host, int port)
   {
     Assert.Equal((host, port), McpHttpListen.Split(listen));
+  }
+
+  [Theory]
+  [InlineData("127.0.0.1: 0")]
+  [InlineData("127.0.0.1:abc")]
+  [InlineData("127.0.0.1:0x10")]
+  [InlineData("127.0.0.1:1.5")]
+  [InlineData("127.0.0.1:65536")]
+  [InlineData("127.0.0.1:000001")]
+  [InlineData("localhost")]
+  public void RefusesAPortNodeRefuses(string listen)
+  {
+    var error = Assert.Throws<McpListenException>(() => McpHttpListen.Split(listen));
+
+    Assert.Equal($"--http needs a port from 0 to 65535 after the last \":\", got \"{listen}\"", error.Message);
+  }
+
+  // Node prints libuv's words: "listen <code>: <text> <address>", with ":<port>" when it is not 0.
+  [Theory]
+  [InlineData(System.Net.Sockets.SocketError.AddressAlreadyInUse, "127.0.0.1", 4321, "Cannot listen on h:4321: listen EADDRINUSE: address already in use 127.0.0.1:4321")]
+  [InlineData(System.Net.Sockets.SocketError.AddressAlreadyInUse, "::1", 4321, "Cannot listen on h:4321: listen EADDRINUSE: address already in use ::1:4321")]
+  [InlineData(System.Net.Sockets.SocketError.AddressNotAvailable, "203.0.113.9", 0, "Cannot listen on h:4321: listen EADDRNOTAVAIL: address not available 203.0.113.9")]
+  [InlineData(System.Net.Sockets.SocketError.AccessDenied, "127.0.0.1", 80, "Cannot listen on h:4321: listen EACCES: permission denied 127.0.0.1:80")]
+  public void WordsAFailedBindAsNodeDoes(System.Net.Sockets.SocketError code, string address, int port, string message)
+  {
+    var thrown = new IOException("Failed to bind", new System.Net.Sockets.SocketException((int)code));
+
+    Assert.Equal(message, McpHttpListen.BindError("h:4321", System.Net.IPAddress.Parse(address), port, thrown).Message);
+  }
+
+  [Fact]
+  public void WordsAnUnknownHostAsNodeDoes()
+  {
+    var thrown = new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.HostNotFound);
+
+    Assert.Equal("Cannot listen on nope.invalid:0: getaddrinfo ENOTFOUND nope.invalid", McpHttpListen.LookupError("nope.invalid:0", "nope.invalid", thrown).Message);
   }
 
   [Theory]

@@ -509,16 +509,66 @@ internal static class McpRequestGate
   }
 }
 
-/// <summary>--http's host:port, as Node's splitListen reads it.</summary>
+/// <summary>--http cannot be listened on: the CLI prints it after "blok-mcp: " and exits 1, as Node's McpListenError.</summary>
+internal sealed class McpListenException(string message, Exception? inner = null) : Exception(message, inner);
+
+/// <summary>--http's host:port, as Node's splitListen reads it, and Node's words when it cannot be listened on.</summary>
 internal static class McpHttpListen
 {
-  /// <summary>The host without brackets and the port; an empty port is 0, as Number("") is.</summary>
+  /// <summary>The host without brackets and the port: up to five digits, 0 to 65535; an empty port is 0.</summary>
   internal static (string Host, int Port) Split(string listen)
   {
     var at = listen.LastIndexOf(':');
-    var host = (at < 0 ? listen : listen[..at]).TrimStart('[').TrimEnd(']');
-    var port = at < 0 ? string.Empty : listen[(at + 1)..].Trim();
+    var port = at < 0 ? string.Empty : listen[(at + 1)..];
+
+    if (at < 0 || port.Length > 5 || !port.All(char.IsAsciiDigit) || (port.Length > 0 && int.Parse(port, System.Globalization.CultureInfo.InvariantCulture) > 65_535))
+    {
+      throw new McpListenException($"--http needs a port from 0 to 65535 after the last \":\", got \"{listen}\"");
+    }
+    var host = listen[..at];
+
+    host = host.StartsWith('[') ? host[1..] : host;
+    host = host.EndsWith(']') ? host[..^1] : host;
 
     return (host, port.Length == 0 ? 0 : int.Parse(port, System.Globalization.CultureInfo.InvariantCulture));
+  }
+
+  /// <summary>A bind that failed, in libuv's words as Node prints them.</summary>
+  internal static McpListenException BindError(string listen, System.Net.IPAddress address, int port, Exception thrown)
+  {
+    var socket = Find(thrown);
+    var words = socket?.SocketErrorCode switch
+    {
+      System.Net.Sockets.SocketError.AddressAlreadyInUse => "EADDRINUSE: address already in use",
+      System.Net.Sockets.SocketError.AddressNotAvailable => "EADDRNOTAVAIL: address not available",
+      System.Net.Sockets.SocketError.AccessDenied => "EACCES: permission denied",
+      _ => null,
+    };
+    var detail = words is null ? (socket ?? thrown).Message : $"listen {words} {address}{(port > 0 ? $":{port}" : string.Empty)}";
+
+    return new McpListenException($"Cannot listen on {listen}: {detail}", thrown);
+  }
+
+  /// <summary>A host name that did not resolve, as Node's getaddrinfo error reads.</summary>
+  internal static McpListenException LookupError(string listen, string host, Exception thrown)
+  {
+    var detail = Find(thrown)?.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
+      ? $"getaddrinfo ENOTFOUND {host}"
+      : thrown.Message;
+
+    return new McpListenException($"Cannot listen on {listen}: {detail}", thrown);
+  }
+
+  private static System.Net.Sockets.SocketException? Find(Exception? error)
+  {
+    for (; error is not null; error = error.InnerException)
+    {
+      if (error is System.Net.Sockets.SocketException socket)
+      {
+        return socket;
+      }
+    }
+
+    return null;
   }
 }

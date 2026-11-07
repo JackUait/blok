@@ -49,7 +49,15 @@ internal static class BlokMcpHttp
 
     // Runs before Kestrel stops, so it keeps serving while calls in flight finish, as Node's stop does.
     app.Lifetime.ApplicationStopping.Register(() => core.StopAsync().GetAwaiter().GetResult());
-    await app.StartAsync();
+    try
+    {
+      await app.StartAsync();
+    }
+    // Kestrel wraps EADDRINUSE in an IOException and throws EADDRNOTAVAIL bare.
+    catch (Exception error) when (error is IOException or System.Net.Sockets.SocketException)
+    {
+      throw McpHttpListen.BindError(config.HttpListen!, address, port, error);
+    }
     var url = new Uri(app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First());
 
     bound = url.Port;
@@ -68,8 +76,13 @@ internal static class BlokMcpHttp
     {
       return (address, port);
     }
-    var resolved = await Dns.GetHostAddressesAsync(name);
-
-    return (resolved.First(), port);
+    try
+    {
+      return ((await Dns.GetHostAddressesAsync(name)).First(), port);
+    }
+    catch (System.Net.Sockets.SocketException error)
+    {
+      throw McpHttpListen.LookupError(listen, name, error);
+    }
   }
 }

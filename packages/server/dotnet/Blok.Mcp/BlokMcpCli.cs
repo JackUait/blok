@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Blok.Server.Mcp;
 using Blok.Server.Mcp.Auth;
 using Blok.Server.Mcp.Core;
+using Blok.Server.Mcp.Http;
 
 namespace Blok.Mcp;
 
@@ -30,6 +31,12 @@ internal static partial class BlokMcpCli
       await Console.Error.WriteLineAsync($"blok-mcp: {error.Message}");
 
       return 2;
+    }
+    catch (McpListenException error)
+    {
+      await Console.Error.WriteLineAsync($"blok-mcp: {error.Message}");
+
+      return 1;
     }
     // Node's top-level await: any other startup failure prints and exits 1.
     catch (Exception error)

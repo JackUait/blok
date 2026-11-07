@@ -61,6 +61,7 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
   {
     var ids = await AnsweredIdsAsync(core => core.InputEnded = true);
 
-    Assert.Equal(["0", "2"], ids);
+    // The SDK answers at once, so their order is not fixed.
+    Assert.Equal(["0", "2"], ids.Order(StringComparer.Ordinal));
   }
 }

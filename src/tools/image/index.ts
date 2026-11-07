@@ -169,6 +169,8 @@ export class ImageTool implements BlockTool {
   private mending = false;
   private reloadAttempts = 0;
   private converting = false;
+  /** Counts GIF conversions; a conversion whose number is no longer current was cancelled. */
+  private conversionJob = 0;
   /** Set by `removed()`: this instance is no longer the document's block. */
   private detached = false;
   /** Object URL of the picked file shown in the failure notice; freed when the failure ends. */
@@ -400,10 +402,12 @@ export class ImageTool implements BlockTool {
   }
 
   /**
-   * Try to convert a GIF to a looping WebM video block. Returns true only when
-   * the block was swapped; false means the caller should keep the GIF (image).
+   * Try to convert a GIF to a looping WebM video block. Returns true when the
+   * block was swapped or the user cancelled; false means the caller should keep the GIF (image).
    */
   private async convertGifToVideoBlock(file: File): Promise<boolean> {
+    const job = ++this.conversionJob;
+
     this.converting = true;
     this.state = 'LOADING';
     this.errorMessage = null;
@@ -412,13 +416,16 @@ export class ImageTool implements BlockTool {
     this.renderState();
     try {
       const blob = await convertGifToWebm(await file.arrayBuffer(), { onProgress: this.reportProgress });
+      if (this.conversionJob !== job) return true;
       if (!blob) { this.converting = false; return false; }
       const webm = new File([blob], file.name.replace(/\.gif$/i, '.webm'), { type: 'video/webm' });
       const url = await this.uploadConverted(webm);
+      if (this.conversionJob !== job) return true;
       if (url === null) { this.converting = false; return false; }
       this.converting = false;
       return this.swapToVideoBlock(url, webm.name, ['fileName']);
     } catch {
+      if (this.conversionJob !== job) return true;
       this.converting = false;
       return false;
     }
@@ -526,8 +533,11 @@ export class ImageTool implements BlockTool {
     return this.config.convertGifToVideo !== false && /\.gif(\?|#|$)/i.test(url) && this.isVideoToolRegistered();
   }
 
+  /** Like {@link convertGifToVideoBlock}, for a link. */
   private async convertGifUrlToVideoBlock(url: string): Promise<boolean> {
+    const job = ++this.conversionJob;
     const bytes = await this.fetchGifBytes(url);
+    if (this.conversionJob !== job) return true;
     if (!bytes) return false;
     this.converting = true;
     this.state = 'LOADING';
@@ -535,13 +545,16 @@ export class ImageTool implements BlockTool {
     this.renderState();
     try {
       const blob = await convertGifToWebm(bytes, { onProgress: this.reportProgress });
+      if (this.conversionJob !== job) return true;
       if (!blob) { this.converting = false; return false; }
       const webm = new File([blob], 'animation.webm', { type: 'video/webm' });
       const uploadedUrl = await this.uploadConverted(webm);
+      if (this.conversionJob !== job) return true;
       if (uploadedUrl === null) { this.converting = false; return false; }
       this.converting = false;
       return this.swapToVideoBlock(uploadedUrl, webm.name, ['url']);
     } catch {
+      if (this.conversionJob !== job) return true;
       this.converting = false;
       return false;
     }
@@ -1556,6 +1569,12 @@ export class ImageTool implements BlockTool {
     this.brokenImage = false;
     this.lastSource = null;
     this.lastFileName = null;
+    this.conversionJob++;
+    this.converting = false;
+    this.retrying = false;
+    if (this.heldFailure !== null) clearTimeout(this.heldFailure);
+    this.heldFailure = null;
+    this.endSend();
     this.clearFailure();
     this.swapToEmptyAnimated(outgoing);
     this.block.dispatchChange();

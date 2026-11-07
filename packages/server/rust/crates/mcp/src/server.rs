@@ -653,7 +653,7 @@ impl Mcp {
             match self.create_page(caller, actor, client_name).await {
                 Ok(page_id) => work.created.push(page_id),
                 Err(Fault::Host(error)) => {
-                    work.create_failure = Some(error.error.clone());
+                    work.create_failure = Some(error.failed_input());
                     break;
                 }
                 Err(other) => return Err(other),
@@ -1206,43 +1206,42 @@ impl Mcp {
                 }
                 let batch = call.get("batch").cloned().unwrap_or(Value::Null);
                 let mut work = HostWork::default();
-                let mut uploaded = Vec::new();
-                if (self.creates_pages() || self.uploads.is_some()) && is_batch_envelope(&batch) {
-                    let mut read = None;
-                    let counted = loop {
-                        let uploading = match &self.uploads {
-                            Some(uploads) => {
-                                json!({ "uploader": uploads.spec(), "uploads": uploaded })
-                            }
-                            None => json!({}),
-                        };
-                        let counted = room
-                            .pages_needed(batch.clone(), actor.clone(), asking.clone(), uploading)
-                            .await?;
-                        match (counted.get("need"), &self.uploads) {
-                            (Some(need), Some(uploads)) if uploaded.len() < 4 => {
-                                uploaded.push(uploads.answer(need, &batch, &mut read).await);
-                            }
-                            _ => break counted,
-                        }
-                    };
+                if self.creates_pages() && is_batch_envelope(&batch) {
+                    let counted = room
+                        .pages_needed(batch.clone(), actor.clone(), asking.clone())
+                        .await?;
                     work = self
                         .host_work(caller, actor, client_name, document_id, true, &counted)
                         .await?;
                 }
                 let unconfirmed = work.unconfirmed;
-                let executed = room
-                    .execute(ExecuteInput {
-                        batch,
-                        actor: actor.clone(),
-                        approval: asking,
-                        created_pages: work.created,
-                        create_failure: work.create_failure,
-                        page_writes: work.page_writes,
-                        uploader: self.uploads.as_ref().map(crate::uploads::Uploads::spec),
-                        uploads: uploaded,
-                    })
-                    .await?;
+                let mut input = ExecuteInput {
+                    batch: batch.clone(),
+                    actor: actor.clone(),
+                    approval: asking,
+                    created_pages: work.created,
+                    create_failure: work.create_failure,
+                    page_writes: work.page_writes,
+                    uploads: None,
+                };
+                // Uploads run by replay, as on a stored handle.
+                let mut answers = Vec::new();
+                let mut reads = Vec::new();
+                let executed = loop {
+                    input.uploads = self.uploads.as_ref().map(|uploads| uploads.input(&answers));
+                    let executed = room.execute(input.clone()).await?;
+                    match (executed, &self.uploads) {
+                        (Executed::Upload(upload), Some(uploads)) if answers.len() < 4 => {
+                            answers.push(uploads.answer(&upload, &batch, &mut reads).await);
+                        }
+                        (Executed::Upload(_), _) => {
+                            return Err(Fault::Internal(
+                                "an upload the host cannot answer".to_owned(),
+                            ));
+                        }
+                        (executed, _) => break executed,
+                    }
+                };
                 let (result, delivery) = match executed {
                     Executed::Ask(ask) => {
                         return Ok(Outcome::Ask(Ask {
@@ -1255,6 +1254,7 @@ impl Mcp {
                         }));
                     }
                     Executed::Done { result, delivery } => (result, delivery),
+                    Executed::Upload(_) => unreachable!("the loop answers every upload"),
                 };
                 let mut answer = Obj::new().raw("result", &result);
                 let mut delivered = None;
@@ -1585,35 +1585,14 @@ impl Mcp {
         }
         let batch = call.get("batch").unwrap_or(&Value::Null);
         let mut work = HostWork::default();
-        let mut uploaded = Vec::new();
         // A read-only handle or a malformed batch is refused before any page.
-        if (self.creates_pages() || self.uploads.is_some())
-            && stored.write
-            && is_batch_envelope(batch)
-        {
-            let mut read = None;
-            let counted = loop {
-                let mut counting = self
-                    .session_input("stored", stored.write, &stored.document, actor)
-                    .val("batch", batch)
-                    .val("approval", &asking);
-                if let Some(uploads) = &self.uploads {
-                    counting = counting
-                        .val("uploader", &uploads.spec())
-                        .val("uploads", &json!(uploaded));
-                }
-                let counted = self
-                    .bundle
-                    .call("agentPagesNeeded", &counting.finish())
-                    .await?;
-                match (counted.get("need"), &self.uploads) {
-                    // A read, then its upload: never more than a few turns.
-                    (Some(need), Some(uploads)) if uploaded.len() < 4 => {
-                        uploaded.push(uploads.answer(need, batch, &mut read).await);
-                    }
-                    _ => break counted,
-                }
-            };
+        if self.creates_pages() && stored.write && is_batch_envelope(batch) {
+            let counting = self
+                .session_input("stored", stored.write, &stored.document, actor)
+                .val("batch", batch)
+                .val("approval", &asking)
+                .finish();
+            let counted = self.bundle.call("agentPagesNeeded", &counting).await?;
             work = self
                 .host_work(caller, actor, client_name, document_id, false, &counted)
                 .await?;
@@ -1624,13 +1603,8 @@ impl Mcp {
             .val("batch", batch)
             .str("documentText", source.document_text_form())
             .val("approval", &asking);
-        if let Some(uploads) = &self.uploads {
-            input = input
-                .val("uploader", &uploads.spec())
-                .val("uploads", &json!(uploaded));
-        }
         if let Some(failure) = &work.create_failure {
-            input = input.val("createFailure", failure);
+            input = input.val("createPageFailure", failure);
         }
         if !work.page_writes.is_empty() {
             input = input.val("pageWrites", &json!(work.page_writes));
@@ -1638,10 +1612,24 @@ impl Mcp {
         if !work.created.is_empty() {
             input = input.val("createdPages", &json!(work.created));
         }
-        let out = self
-            .bundle
-            .call_raw("agentExecute", &input.finish())
-            .await?;
+        // Uploads run by replay: the bundle stops at each uploader call, the
+        // host makes it, and the batch runs again with one more answer.
+        let mut answers = Vec::new();
+        let mut reads = Vec::new();
+        let out = loop {
+            let mut call = input.clone();
+            if let Some(uploads) = &self.uploads {
+                call = call.val("uploads", &uploads.input(&answers));
+            }
+            let out = self.bundle.call_raw("agentExecute", &call.finish()).await?;
+            match (out.value("upload"), &self.uploads) {
+                // A read, then its upload: never more than a few turns.
+                (Some(upload), Some(uploads)) if answers.len() < 4 => {
+                    answers.push(uploads.answer(&upload, batch, &mut reads).await);
+                }
+                _ => break out,
+            }
+        };
         if let Some(ask) = out.value("ask") {
             return Ok(Outcome::Ask(Ask {
                 key: str_of(&ask, "key").unwrap_or_default().to_owned(),

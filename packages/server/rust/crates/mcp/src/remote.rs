@@ -137,7 +137,12 @@ pub enum Fate {
 /// A batch's answer, before its delivery wait.
 pub enum Executed {
     Ask(Value),
-    Done { result: String, delivery: Delivery },
+    /// The uploader call the batch stopped at; nothing was written.
+    Upload(Value),
+    Done {
+        result: String,
+        delivery: Delivery,
+    },
 }
 
 pub enum Delivery {
@@ -147,6 +152,7 @@ pub enum Delivery {
     Failed(HostError),
 }
 
+#[derive(Clone)]
 pub struct ExecuteInput {
     pub batch: Value,
     pub actor: Value,
@@ -156,21 +162,14 @@ pub struct ExecuteInput {
     pub create_failure: Option<Value>,
     /// What each page write the host made gave, in batch order.
     pub page_writes: Vec<Value>,
-    /// The host's uploader (its `uploader` input) and what each call gave.
-    pub uploader: Option<Value>,
-    pub uploads: Vec<Value>,
+    /// The `uploads` input: the host's uploader and the answers so far.
+    pub uploads: Option<Value>,
 }
 
 enum Command {
     Execute(ExecuteInput, oneshot::Sender<Result<Executed, Fault>>),
     Read(Value, Value, oneshot::Sender<Result<String, Fault>>),
-    PagesNeeded(
-        Value,
-        Value,
-        Value,
-        Value,
-        oneshot::Sender<Result<Value, Fault>>,
-    ),
+    PagesNeeded(Value, Value, Value, oneshot::Sender<Result<Value, Fault>>),
     Close(oneshot::Sender<Value>),
 }
 
@@ -197,13 +196,10 @@ impl RemoteRoom {
         batch: Value,
         actor: Value,
         approval: Value,
-        uploading: Value,
     ) -> Result<Value, Fault> {
         let (reply, answer) = oneshot::channel();
         self.commands
-            .send(Command::PagesNeeded(
-                batch, actor, approval, uploading, reply,
-            ))
+            .send(Command::PagesNeeded(batch, actor, approval, reply))
             .map_err(|_| Fault::Internal("the room is gone".to_owned()))?;
         answer
             .await
@@ -499,8 +495,8 @@ impl Room {
                         let answer = Box::pin(self.execute(input)).await;
                         let _ = reply.send(answer);
                     }
-                    Some(Command::PagesNeeded(batch, actor, approval, uploading, reply)) => {
-                        let answer = self.pages_needed(&batch, &actor, &approval, &uploading).await;
+                    Some(Command::PagesNeeded(batch, actor, approval, reply)) => {
+                        let answer = self.pages_needed(&batch, &actor, &approval).await;
                         let _ = reply.send(answer);
                     }
                     Some(Command::Read(view, actor, reply)) => {
@@ -1288,22 +1284,15 @@ impl Room {
         batch: &Value,
         actor: &Value,
         approval: &Value,
-        uploading: &Value,
     ) -> Result<Value, Fault> {
         if self.end.is_some() || self.read_only {
             return Ok(json!({ "count": 0 }));
         }
         let document = self.export().await?;
-        let mut input = self
+        let input = self
             .session_input(!self.read_only, &document, actor)
             .val("batch", batch)
             .val("approval", approval);
-        // `uploading`: { uploader, uploads } when the host has an uploader.
-        for key in ["uploader", "uploads"] {
-            if let Some(value) = uploading.get(key) {
-                input = input.val(key, value);
-            }
-        }
         let input = input.finish();
         Ok(self.shared.bundle.call("agentPagesNeeded", &input).await?)
     }
@@ -1354,12 +1343,10 @@ impl Room {
             call = call.val("createdPages", &json!(input.created_pages));
         }
         if let Some(failure) = &input.create_failure {
-            call = call.val("createFailure", failure);
+            call = call.val("createPageFailure", failure);
         }
-        if let Some(uploader) = &input.uploader {
-            call = call
-                .val("uploader", uploader)
-                .val("uploads", &json!(input.uploads));
+        if let Some(uploads) = &input.uploads {
+            call = call.val("uploads", uploads);
         }
         if !input.page_writes.is_empty() {
             call = call.val("pageWrites", &json!(input.page_writes));
@@ -1371,6 +1358,9 @@ impl Room {
             .await?;
         if let Some(ask) = out.value("ask") {
             return Ok(Executed::Ask(ask));
+        }
+        if let Some(upload) = out.value("upload") {
+            return Ok(Executed::Upload(upload));
         }
         let result_text = out.text("result").unwrap_or("{}").to_owned();
         let result: Value =

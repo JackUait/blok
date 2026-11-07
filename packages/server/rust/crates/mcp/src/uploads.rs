@@ -68,23 +68,28 @@ pub struct Uploads {
 }
 
 impl Uploads {
-    /// The bundle's `uploader` input.
-    pub fn spec(&self) -> Value {
-        let mut spec = json!({ "limits": self.limits.clone() });
-        if self.uploader.takes_urls() {
-            spec["byUrl"] = json!(true);
-        }
-        if self.root.is_some() {
-            spec["local"] = json!(true);
-        }
-        spec
+    /// The bundle's `uploads` input, with the answers given so far.
+    pub fn input(&self, answers: &[Value]) -> Value {
+        json!({
+            "limits": self.limits.clone(),
+            "root": self.root.is_some(),
+            "byUrl": self.uploader.takes_urls(),
+            "answers": answers,
+        })
     }
 
-    /// Makes the call the bundle named in `need`, and answers its outcome.
-    /// `batch` is the upload's own batch: its data is the bytes to send.
-    pub async fn answer(&self, need: &Value, batch: &Value, read: &mut Option<Vec<u8>>) -> Value {
+    /// Makes the call agentExecute stopped at (`{ op, … }`) and answers it,
+    /// as the next of `uploads.answers`. `batch` is the batch that asked:
+    /// only its one upload command's data or path is used. `reads` keeps a
+    /// read file's bytes by the index of its answer.
+    pub async fn answer(
+        &self,
+        call: &Value,
+        batch: &Value,
+        reads: &mut Vec<Option<Vec<u8>>>,
+    ) -> Value {
         let text = |key: &str| {
-            need.get(key)
+            call.get(key)
                 .and_then(Value::as_str)
                 .unwrap_or_default()
                 .to_owned()
@@ -93,21 +98,25 @@ impl Uploads {
             kind: text("kind"),
             tool: text("tool"),
         };
-        let stored = |uploaded: Uploaded| {
+        let stored = |uploaded: Uploaded, with_file: bool| {
             let mut value = json!({ "url": uploaded.url });
             if let Some(name) = uploaded.file_name {
                 value["fileName"] = json!(name);
             }
-            if let Some(size) = uploaded.size {
-                value["size"] = json!(size);
+            if with_file {
+                if let Some(size) = uploaded.size {
+                    value["size"] = json!(size);
+                }
+                if let Some(mime) = uploaded.mime_type {
+                    value["mimeType"] = json!(mime);
+                }
             }
-            if let Some(mime) = uploaded.mime_type {
-                value["mimeType"] = json!(mime);
-            }
-            json!({ "value": value })
+            value
         };
-        let thrown = |message: String| json!({ "error": { "message": message } });
-        match need.get("call").and_then(Value::as_str) {
+        let thrown = |message: String| json!({ "error": message });
+        let at = reads.len();
+        reads.push(None);
+        match call.get("op").and_then(Value::as_str) {
             Some("readLocal") => {
                 let Some(root) = &self.root else {
                     return thrown("This host reads no local files.".to_owned());
@@ -123,59 +132,59 @@ impl Uploads {
                         );
                     }
                 }
-                let max = need.get("maxBytes").and_then(Value::as_u64).unwrap_or(0);
+                let max = call.get("maxBytes").and_then(Value::as_u64).unwrap_or(0);
                 match read_local(root, &text("path"), max) {
                     Ok((bytes, name)) => {
-                        *read = Some(bytes);
-                        json!({ "value": { "name": name } })
+                        let size = bytes.len();
+                        reads[at] = Some(bytes);
+                        json!({ "name": name, "size": size })
                     }
-                    Err(error) => json!({ "error": error }),
+                    Err(error) => json!({ "failure": error }),
                 }
             }
             Some("uploadByFile") => {
-                // A read file's bytes (the reader bounds them by maxBytes), or the
-                // data of the one upload command the bundle checked, at the size
-                // it checked.
-                let bytes = match read.take() {
-                    Some(bytes) => bytes,
-                    None => {
-                        let data = match upload_args(batch, Some(&ctx.tool)) {
-                            Ok(args) => {
-                                args.get("data").and_then(Value::as_str).unwrap_or_default()
-                            }
-                            Err(message) => return thrown(message),
-                        };
-                        let Ok(bytes) = base64::Engine::decode(
-                            &base64::engine::general_purpose::STANDARD,
-                            data,
-                        ) else {
-                            return thrown("The upload's data is not base64.".to_owned());
-                        };
-                        if need.get("size").and_then(Value::as_u64) != Some(bytes.len() as u64) {
-                            return thrown(
-                                "The upload's bytes are not the size the batch was checked at."
-                                    .to_owned(),
-                            );
+                let bytes = if let Some(local) = call.get("local").and_then(Value::as_u64) {
+                    // The reader bounded these by maxBytes.
+                    match reads.get_mut(local as usize).and_then(Option::take) {
+                        Some(bytes) => bytes,
+                        None => {
+                            return thrown("The upload names no file this host read.".to_owned());
                         }
-                        bytes
                     }
+                } else {
+                    // The data of the one upload command the bundle checked, at the size it checked.
+                    let data = match upload_args(batch, Some(&ctx.tool)) {
+                        Ok(args) => args.get("data").and_then(Value::as_str).unwrap_or_default(),
+                        Err(message) => return thrown(message),
+                    };
+                    if call.get("data").and_then(Value::as_str) != Some(data) {
+                        return thrown("The upload's data is not the batch's.".to_owned());
+                    }
+                    let Ok(bytes) =
+                        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, data)
+                    else {
+                        return thrown("The upload's data is not base64.".to_owned());
+                    };
+                    if call.get("size").and_then(Value::as_u64) != Some(bytes.len() as u64) {
+                        return thrown(
+                            "The upload's bytes are not the size the batch was checked at."
+                                .to_owned(),
+                        );
+                    }
+                    bytes
                 };
                 let file = UploadFile {
-                    name: text("name"),
+                    name: text("fileName"),
                     mime_type: text("type"),
                     bytes,
                 };
                 match self.uploader.upload_by_file(file, ctx).await {
-                    Ok(uploaded) => stored(uploaded),
+                    Ok(uploaded) => stored(uploaded, true),
                     Err(message) => thrown(message),
                 }
             }
             Some("uploadByUrl") => match self.uploader.upload_by_url(text("url"), ctx).await {
-                Ok(uploaded) => stored(Uploaded {
-                    size: None,
-                    mime_type: None,
-                    ..uploaded
-                }),
+                Ok(uploaded) => stored(uploaded, false),
                 Err(message) => thrown(message),
             },
             _ => thrown("The bundle asked for an unknown upload call.".to_owned()),
@@ -332,8 +341,8 @@ mod tests {
         )
     }
 
-    fn need(size: usize) -> Value {
-        json!({ "call": "uploadByFile", "name": "a.png", "type": "image/png", "size": size, "kind": "image", "tool": "image" })
+    fn call(data: &str, size: usize) -> Value {
+        json!({ "op": "uploadByFile", "fileName": "a.png", "type": "image/png", "size": size, "kind": "image", "tool": "image", "data": data })
     }
 
     #[tokio::test]
@@ -343,8 +352,15 @@ mod tests {
             { "name": "doc.setTitle", "args": { "title": "T", "data": "QUJD" } },
             { "name": "image.uploadFile", "args": { "data": "QUJD", "fileName": "a.png" } },
         ] });
-        let outcome = uploads.answer(&need(3), &two, &mut None).await;
+        let outcome = uploads
+            .answer(&call("QUJD", 3), &two, &mut Vec::new())
+            .await;
         assert!(outcome.get("error").is_some(), "{outcome}");
+        let one = json!({ "commands": [{ "name": "image.uploadFile", "args": { "data": "QUJD", "fileName": "a.png" } }] });
+        let other = uploads
+            .answer(&call("QUJE", 3), &one, &mut Vec::new())
+            .await;
+        assert!(other.get("error").is_some(), "{other}");
         assert_eq!(counting.0.load(Ordering::SeqCst), 0);
     }
 
@@ -354,20 +370,22 @@ mod tests {
         let batch = |data: &str| json!({ "commands": [{ "name": "image.uploadFile", "args": { "data": data, "fileName": "a.png" } }] });
         assert!(
             uploads
-                .answer(&need(3), &batch("Q!JD"), &mut None)
+                .answer(&call("Q!JD", 3), &batch("Q!JD"), &mut Vec::new())
                 .await
                 .get("error")
                 .is_some()
         );
         assert!(
             uploads
-                .answer(&need(9), &batch("QUJD"), &mut None)
+                .answer(&call("QUJD", 9), &batch("QUJD"), &mut Vec::new())
                 .await
                 .get("error")
                 .is_some()
         );
         assert_eq!(counting.0.load(Ordering::SeqCst), 0);
-        let fine = uploads.answer(&need(3), &batch("QUJD"), &mut None).await;
-        assert!(fine.get("value").is_some(), "{fine}");
+        let fine = uploads
+            .answer(&call("QUJD", 3), &batch("QUJD"), &mut Vec::new())
+            .await;
+        assert_eq!(fine, json!({ "url": "https://cdn.test/x" }));
     }
 }

@@ -138,7 +138,7 @@ mod members {
 }
 
 /// Builds a JSON object as text, so raw members are written as they came.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Obj {
     text: String,
 }

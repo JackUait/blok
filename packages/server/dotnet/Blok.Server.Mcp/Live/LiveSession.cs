@@ -69,6 +69,9 @@ internal sealed class LiveSession : IHandleSession
   /// <summary>Page documents under page-map; null when pages are not documents.</summary>
   internal PagePorts? Pages { get; init; }
 
+  /// <summary>Set with a host uploader: runs the batch's upload calls.</summary>
+  internal UploadPorts? Uploads { get; init; }
+
   /// <summary>Which fields hold rich text: the built-ins, the manifest's and --rich-text-fields.</summary>
   internal RichTextFields Fields { get; init; } = RichTextFields.BuiltIn;
 
@@ -206,7 +209,7 @@ internal sealed class LiveSession : IHandleSession
         {
           await Pages.AddCreatedPagesAsync(bundle, input, caller, cancellationToken);
         }
-        ran = await bundle.CallAsync("agentExecute", input, cancellationToken);
+        ran = Uploads is null ? await bundle.CallAsync("agentExecute", input, cancellationToken) : await Uploads.ExecuteAsync(bundle, input, cancellationToken);
       }
 
       if (ran["ask"] is JsonObject ask)

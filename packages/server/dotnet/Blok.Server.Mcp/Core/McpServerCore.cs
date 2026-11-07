@@ -23,6 +23,7 @@ internal sealed class McpServerCore : IAsyncDisposable
   private readonly Timer sweeper;
   private readonly SemaphoreSlim surfaceGate = new(1, 1);
   private readonly PagePorts? pages;
+  private readonly UploadPorts? uploads;
   // page.rename and page.setIcon close their page session without waiting; stop waits for those closes.
   private readonly HashSet<Task> pageCloses = [];
   // Every tools/call and sweep, so stop waits for it.
@@ -54,9 +55,11 @@ internal sealed class McpServerCore : IAsyncDisposable
       Open = (pageId, caller, cancellationToken) => OpenSessionAsync(pageId, "auto", true, caller, cancellationToken),
       TrackClose = TrackPageClose,
     };
+    uploads = config.Uploads is null ? null : new UploadPorts(config.Uploads);
     if (live is not null)
     {
       live.Pages = pages;
+      live.Uploads = uploads;
     }
     handles = new HandleRegistry<IHandleSession>(config.IdleMs, config.MaxHandles, session => session.CloseAsync("expired"));
     var period = TimeSpan.FromMilliseconds(Math.Min(config.IdleMs, 30_000));
@@ -560,7 +563,7 @@ internal sealed class McpServerCore : IAsyncDisposable
     }
     var revision = McpJson.String((await SurfaceAsync(cancellationToken))["contractRevision"]?["stored"]) ?? string.Empty;
 
-    return await StoredSession.OpenAsync(bundle, source, documentId, write, flags, caller.Actor, revision, pages, cancellationToken);
+    return await StoredSession.OpenAsync(bundle, source, documentId, write, flags, caller.Actor, revision, pages, uploads, cancellationToken);
   }
 
   private void TrackPageClose(Task closing)

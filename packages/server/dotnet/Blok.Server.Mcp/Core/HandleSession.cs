@@ -64,13 +64,16 @@ internal sealed class StoredSession : IHandleSession
   /// <summary>Set under page-map: page documents this batch makes or writes.</summary>
   private PagePorts? Pages { get; init; }
 
+  /// <summary>Set with a host uploader: runs the batch's upload calls.</summary>
+  private UploadPorts? Uploads { get; init; }
+
   internal static async Task<StoredSession> OpenAsync(
       McpBundle bundle, IDocumentSource source, string documentId, bool write, JsonObject flags, JsonObject actor, string contractRevision,
-      PagePorts? pages, CancellationToken cancellationToken)
+      PagePorts? pages, UploadPorts? uploads, CancellationToken cancellationToken)
   {
     var first = await source.LoadAsync(documentId, cancellationToken);
 
-    return new StoredSession(bundle, source, documentId, write, flags, actor, contractRevision, first) { Pages = pages };
+    return new StoredSession(bundle, source, documentId, write, flags, actor, contractRevision, first) { Pages = pages, Uploads = uploads };
   }
 
   public JsonObject Describe()
@@ -138,7 +141,7 @@ internal sealed class StoredSession : IHandleSession
       {
         await Pages.AddCreatedPagesAsync(bundle, input, caller, cancellationToken);
       }
-      ran = await bundle.CallAsync("agentExecute", input, cancellationToken);
+      ran = Uploads is null ? await bundle.CallAsync("agentExecute", input, cancellationToken) : await Uploads.ExecuteAsync(bundle, input, cancellationToken);
     }
 
     if (ran["ask"] is JsonObject ask)

@@ -58,6 +58,9 @@ internal sealed class McpConfig
 
   internal JsonNode? Manifest { get; init; }
 
+  /// <summary>The library's uploader hook; the CLI has none.</summary>
+  internal BlokMcpUploads? Uploads { get; init; }
+
   internal JsonNode? Overrides { get; init; }
 
   internal McpAuthorize? Authorize { get; init; }
@@ -131,7 +134,7 @@ internal sealed class McpConfig
     }
     flags["sync"] = Live;
     flags["source"] = Source is not null;
-    flags["uploads"] = false;
+    flags["uploads"] = Uploads is not null;
     if (Comments == false)
     {
       flags["comments"] = false;

@@ -134,6 +134,7 @@ public static class BlokMcpServiceCollectionExtensions
       HandleIdleMs = options.HandleIdleTimeout?.TotalMilliseconds,
       MaxHandlesPerPrincipal = options.MaxHandlesPerPrincipal,
       Comments = options.Comments ? null : false,
+      Uploads = options.Uploads,
       RichTextFields = options.RichTextFields is { } fields
           ? new JsonObject(fields.Select(pair => KeyValuePair.Create(pair.Key, (JsonNode?)new JsonArray([.. pair.Value.Select(name => (JsonNode)name)]))))
           : null,

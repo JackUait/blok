@@ -25,6 +25,9 @@ internal sealed class LiveOpener(McpConfig config, McpHttpCaller http, McpBundle
   /// <summary>Page documents under page-map; null when pages are not documents.</summary>
   internal PagePorts? Pages { get; set; }
 
+  /// <summary>The host uploader's port, when one is configured.</summary>
+  internal UploadPorts? Uploads { get; set; }
+
   /*
    * The rich-text fields the room converter uses (mcp-contracts.ts richTextFieldsOf): the
    * manifest's for each tool it lists, built-ins and --manifest ones; --rich-text-fields only
@@ -170,6 +173,7 @@ internal sealed class LiveOpener(McpConfig config, McpHttpCaller http, McpBundle
       var session = new LiveSession(room, bundle, flags, caller, write, revision, unavailable, history)
       {
         Pages = Pages,
+        Uploads = Uploads,
         DocumentId = documentId,
         Fields = fields,
       };

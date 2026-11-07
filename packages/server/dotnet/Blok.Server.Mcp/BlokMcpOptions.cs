@@ -46,6 +46,12 @@ public sealed class BlokMcpOptions
   /// </summary>
   public bool LiveRooms { get; set; }
 
+  /// <summary>
+  /// The host's uploader for <c>&lt;tool&gt;.uploadFile</c>, as blok-mcp's <c>uploads</c> option.
+  /// Without one the upload commands are unavailable.
+  /// </summary>
+  public BlokMcpUploads? Uploads { get; set; }
+
   /// <summary>Blok's OAuth rules for bearer tokens (blok-mcp <c>--auth oauth</c>).</summary>
   public BlokMcpOAuthOptions? OAuth { get; set; }
 }

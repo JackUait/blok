@@ -212,6 +212,18 @@ fn unconfirmed_delivery(unconfirmed: bool, result: &str, delivery: Option<Value>
     }
 }
 
+/// Holds the saved version's place in an answer built before the save.
+/// Random, so no batch text holds it by chance.
+fn saved_version_stand_in() -> String {
+    use std::hash::{BuildHasher, Hasher};
+    let random = |n: u64| {
+        let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
+        hasher.write_u64(n);
+        hasher.finish()
+    };
+    format!("blok-saved-version-{:016x}{:016x}", random(1), random(2))
+}
+
 /// A host error as Node's surface error carries it, with its retryable flag.
 fn agent_error_of(error: &HostError) -> Value {
     let mut agent = error.error.clone();
@@ -1771,21 +1783,49 @@ impl Mcp {
             stored.history = history.to_owned();
         }
         let mut answer = Obj::new().raw("result", &result);
-        let mut delivery = None;
         if out.value("save") == Some(Value::Bool(true)) {
             let text = out
                 .value("documentText")
                 .and_then(|v| v.as_str().map(str::to_owned))
                 .ok_or_else(|| Fault::Internal("agentExecute gave no documentText".to_owned()))?;
+            // As Node: the answer is built before the save, so nothing that can
+            // fail follows it, and a failed answer saved nothing a retry repeats.
+            let stand_in = saved_version_stand_in();
+            let durable = json!({ "durable": true, "pending": false, "serverSequence": null, "savedVersion": stand_in });
+            let delivery =
+                unconfirmed_delivery(work.unconfirmed, &result, Some(durable)).unwrap_or_default();
+            let built = match self
+                .bundle
+                .call_raw(
+                    "mcpExecuteAnswer",
+                    &answer.clone().val("delivery", &delivery).finish(),
+                )
+                .await
+                .map_err(Fault::from)
+                .and_then(|raw| answer_of(&raw))
+            {
+                Ok(built) => built,
+                Err(fault) => {
+                    stored.stale = true;
+                    return Err(fault);
+                }
+            };
             match source
                 .save(document_id, &text, stored.version.as_deref())
                 .await
             {
                 Ok(version) => {
-                    stored.version = version.clone();
-                    delivery = Some(
-                        json!({ "durable": true, "pending": false, "serverSequence": null, "savedVersion": version }),
-                    );
+                    let saved =
+                        serde_json::to_string(&version).unwrap_or_else(|_| "null".to_owned());
+                    stored.version = version;
+                    return Ok(Outcome::Answer(Answer {
+                        structured: built.structured.replacen(
+                            &format!("\"{stand_in}\""),
+                            &saved,
+                            1,
+                        ),
+                        is_error: built.is_error,
+                    }));
                 }
                 Err(fault) => {
                     // Memory must match the source: drop the refused work.
@@ -1798,7 +1838,7 @@ impl Mcp {
                 }
             }
         }
-        if let Some(delivery) = unconfirmed_delivery(work.unconfirmed, &result, delivery) {
+        if let Some(delivery) = unconfirmed_delivery(work.unconfirmed, &result, None) {
             answer = answer.val("delivery", &delivery);
         }
         let raw = self
@@ -1806,5 +1846,96 @@ impl Mcp {
             .call_raw("mcpExecuteAnswer", &answer.finish())
             .await?;
         Ok(Outcome::Answer(answer_of(&raw)?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn stored_write(bundle: Arc<Bundle>) -> (Mcp, std::path::PathBuf, String) {
+        let dir = std::env::temp_dir().join(format!(
+            "blok-mcp-answer-{}-{}",
+            std::process::id(),
+            Arc::as_ptr(&bundle) as usize
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("doc.json"), r#"{"blocks":[]}"#).unwrap();
+        let options = json!({
+            "transport": { "kind": "stdio" }, "auth": { "kind": "none" },
+            "source": { "kind": "files", "dir": dir.to_string_lossy() },
+        });
+        let mcp = Mcp::new(bundle, &options, None, None).await.unwrap();
+        let opened = execute(
+            &mcp,
+            "blok_open",
+            json!({ "documentId": "doc", "write": true }),
+        )
+        .await
+        .unwrap();
+        let handle = serde_json::from_str::<Value>(&opened.structured).unwrap()["handle"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        (mcp, dir, handle)
+    }
+
+    async fn execute(mcp: &Mcp, name: &str, args: Value) -> Result<Answer, String> {
+        let caller = Caller {
+            principal: "alice".to_owned(),
+            client_name: None,
+            scopes: None,
+        };
+        match mcp
+            .call(name, &args, &caller, &Approval::default(), &|| false)
+            .await?
+        {
+            Outcome::Answer(answer) => Ok(answer),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    fn set_title(handle: &str) -> Value {
+        json!({ "handle": handle, "commands": [{ "name": "doc.setTitle", "args": { "title": "Kept" } }] })
+    }
+
+    // Node builds the answer before it saves, so a call that fails to
+    // answer saved nothing a retry would repeat.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_batch_whose_answer_fails_is_not_saved() {
+        let bundle = Arc::new(Bundle::new(1).unwrap());
+        *bundle.fail.lock().unwrap() = Some(("mcpExecuteAnswer", r#""durable":true"#));
+        let (mcp, dir, handle) = stored_write(bundle).await;
+        assert!(
+            execute(&mcp, "blok_execute", set_title(&handle))
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("doc.json")).unwrap(),
+            r#"{"blocks":[]}"#
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_saved_batch_answers_with_its_saved_version() {
+        let (mcp, dir, handle) = stored_write(Arc::new(Bundle::new(1).unwrap())).await;
+        let answer = execute(&mcp, "blok_execute", set_title(&handle))
+            .await
+            .unwrap();
+        let delivery =
+            serde_json::from_str::<Value>(&answer.structured).unwrap()["delivery"].clone();
+        assert_eq!(delivery["durable"], true, "{delivery}");
+        assert!(delivery["savedVersion"].is_string(), "{delivery}");
+        assert!(
+            !answer.structured.contains("blok-saved-version"),
+            "{}",
+            answer.structured
+        );
+        assert!(
+            std::fs::read_to_string(dir.join("doc.json"))
+                .unwrap()
+                .contains("Kept")
+        );
     }
 }

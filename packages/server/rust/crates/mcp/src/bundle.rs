@@ -23,6 +23,9 @@ impl std::error::Error for BundleError {}
 
 pub struct Bundle {
     pool: Pool,
+    /// Tests only: a call to this op whose input holds this text fails.
+    #[cfg(test)]
+    pub(crate) fail: std::sync::Mutex<Option<(&'static str, &'static str)>>,
 }
 
 // A big batch can take seconds; the pool's own 10 s default would cut it.
@@ -50,7 +53,11 @@ impl Bundle {
         })
         .map_err(|e| BundleError(e.to_string()))?
         .charging_held();
-        Ok(Bundle { pool })
+        Ok(Bundle {
+            pool,
+            #[cfg(test)]
+            fail: std::sync::Mutex::default(),
+        })
     }
 
     /// The engines, for the collab converter's HTML reads.
@@ -69,6 +76,13 @@ impl Bundle {
         } else {
             input
         };
+        #[cfg(test)]
+        if let Some((failing, marker)) = *self.fail.lock().unwrap()
+            && op == failing
+            && input.contains(marker)
+        {
+            return Err(BundleError(format!("{op}: failed for a test")));
+        }
         self.pool
             .invoke(op, input, None)
             .await

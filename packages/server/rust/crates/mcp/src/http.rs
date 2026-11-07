@@ -109,6 +109,10 @@ impl EmbeddedHttp {
     /// `local`, the address the host's server accepted it on: 403 for a
     /// foreign Origin or Host, or a remote peer with no opt-in; else the
     /// answer the CLI's front door gives.
+    ///
+    /// The body is already read, so the 413 past 4 MiB bounds nothing: the
+    /// caller must cap the body at 4 MiB while reading it (for example with
+    /// `http_body_util::Limited`) and answer 413 itself, as Node does.
     pub async fn handle(
         &self,
         peer: SocketAddr,

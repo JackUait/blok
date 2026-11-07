@@ -75,6 +75,8 @@ Call `embedded.http(hosts)`, then pass each request to `handle(peer, local, requ
 
 Past those checks it answers exactly as the CLI's front door does: the same statuses, bodies and OAuth metadata route.
 
+`handle` takes a body your server has already read. Its 413 for a body over 4 MiB only refuses the request; it cannot stop your server from reading a bigger one into memory. Cap the body at 4 MiB yourself before you build the request, for example with `http_body_util::Limited`, and answer 413 when the cap is hit, as Node does.
+
 Naming your own `hosts` lets remote callers in without OAuth. This is on purpose, for an app that sits behind its own login or proxy. Node has no such option: its server binds loopback, and only `--public` with `--auth oauth` takes remote callers. Behind a proxy every caller looks like the proxy, so set OAuth or name your hosts.
 
 ### Uploads

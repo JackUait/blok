@@ -42,7 +42,7 @@ const createMockAPI = (): API => ({
   caret: { setToBlock: vi.fn() },
 } as unknown as API);
 
-const createTable = (): { subsystems: TableSubsystems; gridEl: HTMLElement } => {
+const createTable = (): { subsystems: TableSubsystems; gridEl: HTMLElement; model: TableModel } => {
   const model = new TableModel({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: [] }, { blocks: [] }]] });
   const grid = new TableGrid({ readOnly: false });
   const gridEl = grid.createGrid(1, 2, undefined);
@@ -76,7 +76,7 @@ const createTable = (): { subsystems: TableSubsystems; gridEl: HTMLElement } => 
 
   subsystems.initAll(gridEl);
 
-  return { subsystems, gridEl };
+  return { subsystems, gridEl, model };
 };
 
 describe('TableSubsystems.setSize scrolling', () => {
@@ -104,5 +104,40 @@ describe('TableSubsystems.setSize scrolling', () => {
     subsystems.setSize(gridEl, 5, 2);
 
     expect(scrolls.calls).toBe(0);
+  });
+});
+
+describe('TableSubsystems.setSize during a column resize drag', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  // The model keeps no widths, so the table must not stay pinned at the dragged ones.
+  it('leaves the table looking as it would with no drag', () => {
+    const widths = (gridEl: HTMLElement): string[] =>
+      [gridEl.style.width, ...[...gridEl.querySelectorAll<HTMLElement>('colgroup col')].map(col => col.style.width)];
+    const untouched = createTable();
+
+    untouched.subsystems.setSize(untouched.gridEl, 2, 2);
+    const expected = widths(untouched.gridEl);
+
+    document.body.innerHTML = '';
+
+    const { subsystems, gridEl, model } = createTable();
+    const handle = gridEl.querySelector<HTMLElement>('[data-blok-table-resize]');
+
+    expect(handle).not.toBeNull();
+    handle?.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 300 }));
+
+    subsystems.setSize(gridEl, 2, 2);
+
+    expect(widths(gridEl)).toEqual(expected);
+    expect(model.colWidths).toBeUndefined();
   });
 });

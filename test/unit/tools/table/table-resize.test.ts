@@ -645,6 +645,23 @@ describe('TableResize', () => {
       expect(grid.querySelectorAll('[data-blok-table-resize]')).toHaveLength(3);
     });
 
+    it('puts the percent widths back when torn down mid-drag', () => {
+      grid = createPercentGrid(3);
+      const onChange = vi.fn();
+      const resize = new TableResize(grid, [200, 200, 200], onChange, undefined, undefined, true);
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 300 }));
+      resize.destroy();
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(grid.style.width).toBe('');
+      grid.querySelectorAll<HTMLElement>('colgroup col').forEach(col => {
+        expect(col.style.width).toBe('33.33%');
+      });
+    });
+
     it('applies pixel widths on first pointer down', () => {
       grid = createPercentGrid(3);
 
@@ -712,6 +729,35 @@ describe('TableResize', () => {
 
       expect(newWidths[0]).toBe(400);
       expect(newWidths[1]).toBe(300);
+    });
+
+    // A paste, an undo or a remote change rebuilds the resizer while the user
+    // drags. The rebuild may have just set new widths, so the drag must not commit.
+    it('puts the widths back, without committing, when torn down mid-drag', () => {
+      grid = createGrid([300, 300]);
+      const onChange = vi.fn();
+      const resize = new TableResize(grid, [300, 300], onChange);
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+      const widthBefore = grid.style.width;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
+        bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+      resize.destroy();
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect((grid.querySelector('colgroup col') as HTMLElement).style.width).toBe('300px');
+      expect(grid.style.width).toBe(widthBefore);
+    });
+
+    it('commits nothing when torn down with no drag running', () => {
+      grid = createGrid([300, 300]);
+      const onChange = vi.fn();
+      const resize = new TableResize(grid, [300, 300], onChange);
+
+      resize.destroy();
+
+      expect(onChange).not.toHaveBeenCalled();
     });
 
     it('ends the drag on pointercancel — later pointermoves are ignored', () => {

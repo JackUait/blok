@@ -170,7 +170,10 @@ impl Embedded {
         let version = bundle.call_text("version", "{}").await.map_err(|e| e.0)?;
         let mcp = Mcp::with_uploads(bundle, options, authorize, rooms, uploads)
             .await
-            .map_err(|err| format!("{err:?}"))?;
+            .map_err(|err| match err {
+                errors::Fault::Internal(message) => message,
+                errors::Fault::Host(error) => error.error.to_string(),
+            })?;
         let mcp = Arc::new(mcp);
         mcp.spawn_sweeper();
         let auth = options.get("auth").cloned().unwrap_or(Value::Null);

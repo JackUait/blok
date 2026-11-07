@@ -34,6 +34,9 @@ impl Uploader for Memory {
             if file.name.starts_with("full") {
                 return Err(UploadError::Agent("Your storage is full.".to_owned()));
             }
+            if file.name.starts_with("blank") {
+                return Err(UploadError::Agent(" \n\t".to_owned()));
+            }
             Ok(Uploaded {
                 url: format!("https://cdn.test/{n}/{}", file.name),
                 file_name: None,
@@ -208,6 +211,20 @@ async fn uploads_go_through_the_hosts_uploader_as_node_answers_them() {
     assert_eq!(calls[5]["size"], 70);
     let saved = std::fs::read_to_string(docs.join("doc.json")).unwrap();
     assert!(saved.contains("https://cdn.test/6/a.png"), "{saved}");
+    // A blank message says nothing: Node shows its own line then.
+    let blank = execute(&mcp, &handle, upload("image", "blank.png")).await;
+    assert_eq!(blank["error"]["message"], "The upload failed.", "{blank}");
+    // Node counts the path limit in UTF-16 units: 2100 emoji are 4200.
+    let long = execute(
+        &mcp,
+        &handle,
+        json!([{ "name": "image.uploadFile", "args": { "path": "😀".repeat(2100) } }]),
+    )
+    .await;
+    assert_eq!(
+        long["error"]["message"], "path must be 1 to 4096 characters with no NUL byte.",
+        "{long}"
+    );
     let _ = std::fs::remove_dir_all(&work);
 }
 
@@ -315,5 +332,33 @@ async fn the_library_refuses_unsafe_options_as_nodes_does() {
         )
         .await
         .is_ok()
+    );
+}
+
+// Node's createLocalFileReader refuses a root that is not a folder when the
+// server is made, not on the first read.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_upload_root_that_is_not_a_folder_is_refused_at_start() {
+    let missing = std::env::temp_dir().join(format!("blok-mcp-no-root-{}", std::process::id()));
+    let uploads = Uploads {
+        uploader: Arc::new(Memory::default()),
+        root: Some(missing.clone()),
+        limits: json!({}),
+    };
+    let options = json!({ "transport": { "kind": "stdio" }, "auth": { "kind": "none" } });
+    let made = Mcp::with_uploads(
+        Arc::new(Bundle::new(1).unwrap()),
+        &options,
+        None,
+        None,
+        Some(uploads),
+    )
+    .await;
+    let Err(blok_mcp::errors::Fault::Internal(message)) = made else {
+        panic!("a missing upload root was taken");
+    };
+    assert_eq!(
+        message,
+        format!("The upload root \"{}\" is not a folder", missing.display())
     );
 }

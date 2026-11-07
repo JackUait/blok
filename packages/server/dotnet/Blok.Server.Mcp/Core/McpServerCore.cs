@@ -31,8 +31,10 @@ internal sealed class McpServerCore : IAsyncDisposable
   private Task? stopping;
   // Per handle, the last call to arrive: the next one starts after it.
   private readonly Dictionary<string, Task> arrivals = new(StringComparer.Ordinal);
-  // Request id -> the place its handle call took when it was read.
-  private readonly Dictionary<string, Place> reserved = new(StringComparer.Ordinal);
+  // Request id -> the places its handle calls took when read, in wire order (an id can repeat).
+  private readonly Dictionary<string, Queue<Place>> reserved = new(StringComparer.Ordinal);
+  // The request a place was handed to as the SDK took it in, while it has not run yet.
+  private readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, Place> claimed = [];
   private JsonObject? surface;
   private int stopped;
 
@@ -118,9 +120,9 @@ internal sealed class McpServerCore : IAsyncDisposable
   /// The SDK starts handlers in arrival order but runs them at once, and the bundle checks before
   /// the queue would reorder them. Each call waits until the one before it has joined the queue.
   /// </summary>
-  internal Task<T> InArrivalOrderAsync<T>(string? handle, string? requestId, Func<Task<T>> run)
+  internal Task<T> InArrivalOrderAsync<T>(string? handle, string? requestId, Func<Task<T>> run, object? request = null)
   {
-    var call = InOrderAsync(handle, requestId, run);
+    var call = InOrderAsync(handle, requestId, request, run);
 
     // Tracked from arrival, so stop also waits for a call still waiting its turn.
     Track(inFlight, call);
@@ -136,12 +138,43 @@ internal sealed class McpServerCore : IAsyncDisposable
   {
     lock (arrivals)
     {
-      // A repeated id keeps its first place, so no place is lost unfreed.
-      if (!reserved.ContainsKey(requestId))
+      if (!reserved.TryGetValue(requestId, out var places))
       {
-        reserved[requestId] = Join(handle);
+        reserved[requestId] = places = new Queue<Place>();
+      }
+      places.Enqueue(Join(handle));
+    }
+  }
+
+  /// <summary>
+  /// Hands the oldest place booked under this id to the request the SDK just took in. The SDK
+  /// takes messages in wire order, so two requests with one id get their own places in turn.
+  /// </summary>
+  internal void Claim(object request, string requestId)
+  {
+    lock (arrivals)
+    {
+      if (Take(requestId) is { } place)
+      {
+        claimed.AddOrUpdate(request, place);
       }
     }
+  }
+
+  /// <summary>A request the SDK finished without running its handler gives its place up.</summary>
+  internal void ReleaseClaim(object request)
+  {
+    Place? place;
+
+    lock (arrivals)
+    {
+      if (!claimed.TryGetValue(request, out place))
+      {
+        return;
+      }
+      claimed.Remove(request);
+    }
+    Leave(place);
   }
 
   /// <summary>A request answered or cancelled without running gives its place up.</summary>
@@ -151,7 +184,7 @@ internal sealed class McpServerCore : IAsyncDisposable
 
     lock (arrivals)
     {
-      reserved.Remove(requestId, out place);
+      place = Take(requestId);
     }
     if (place is not null)
     {
@@ -159,19 +192,40 @@ internal sealed class McpServerCore : IAsyncDisposable
     }
   }
 
-  private Task<T> InOrderAsync<T>(string? handle, string? requestId, Func<Task<T>> run)
+  // Under the arrivals lock.
+  private Place? Take(string requestId)
+  {
+    if (!reserved.TryGetValue(requestId, out var places))
+    {
+      return null;
+    }
+    var place = places.Dequeue();
+
+    if (places.Count == 0)
+    {
+      reserved.Remove(requestId);
+    }
+
+    return place;
+  }
+
+  private Task<T> InOrderAsync<T>(string? handle, string? requestId, object? request, Func<Task<T>> run)
   {
     if (handle is null)
     {
       return run();
     }
-    Place? place = null;
+    Place? place;
 
     lock (arrivals)
     {
-      if (requestId is null || !reserved.Remove(requestId, out place))
+      if (request is not null && claimed.TryGetValue(request, out place))
       {
-        place = Join(handle);
+        claimed.Remove(request);
+      }
+      else
+      {
+        place = (requestId is null ? null : Take(requestId)) ?? Join(handle);
       }
     }
 

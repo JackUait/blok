@@ -96,7 +96,22 @@ internal static class McpSdkServer
       {
         core.Unreserve(McpOrderedInput.IdOf(id));
       }
-      await next(context, cancellationToken);
+      // Before any await, so requests that share an id take their places in wire order.
+      if (context.JsonRpcMessage is not JsonRpcRequest { Method: RequestMethods.ToolsCall } call)
+      {
+        await next(context, cancellationToken);
+
+        return;
+      }
+      core.Claim(call, call.Id.ToString());
+      try
+      {
+        await next(context, cancellationToken);
+      }
+      finally
+      {
+        core.ReleaseClaim(call);
+      }
     });
     options.Filters.Message.OutgoingFilters.Add(next => async (context, cancellationToken) =>
     {
@@ -137,7 +152,7 @@ internal static class McpSdkServer
     // Before the first await: calls on one handle keep the order they arrived in, as Node's queue does.
     // Every call goes through here, so stop waits for each one.
     return await core.InArrivalOrderAsync(
-        McpJson.String(raw?["arguments"]?["handle"]), context.JsonRpcRequest.Id.ToString(), () => CallInOrderAsync(core, identity, name, raw, context, token));
+        McpJson.String(raw?["arguments"]?["handle"]), context.JsonRpcRequest.Id.ToString(), () => CallInOrderAsync(core, identity, name, raw, context, token), context.JsonRpcRequest);
   }
 
   private static async Task<CallToolResult> CallInOrderAsync(

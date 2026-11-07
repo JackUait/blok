@@ -271,4 +271,47 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
     Assert.Equal(7, await core.InArrivalOrderAsync("h", "101", () => Task.FromResult(7)).WaitAsync(TimeSpan.FromSeconds(10)));
     Assert.Equal(8, await core.InArrivalOrderAsync("h", "102", () => Task.FromResult(8)).WaitAsync(TimeSpan.FromSeconds(10)));
   }
+
+  // Node's queue runs both, in wire order, even when the second handler starts first.
+  [Fact]
+  public async Task TwoRequestsWithOneIdRunInTheOrderTheyArrived()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+    object first = new(), second = new();
+    var started = new List<string>();
+
+    core.Reserve("50", "h");
+    core.Reserve("50", "h");
+    core.Claim(first, "50");
+    core.Claim(second, "50");
+    var b = core.InArrivalOrderAsync("h", "50", () =>
+    {
+      started.Add("b");
+
+      return Task.FromResult(2);
+    }, second);
+    await Task.Delay(100);
+    var a = core.InArrivalOrderAsync("h", "50", () =>
+    {
+      started.Add("a");
+
+      return Task.FromResult(1);
+    }, first);
+
+    await Task.WhenAll(a, b).WaitAsync(TimeSpan.FromSeconds(10));
+    Assert.Equal(["a", "b"], started);
+  }
+
+  [Fact]
+  public async Task AClaimedRequestThatNeverRanFreesItsPlace()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+    var refused = new object();
+
+    core.Reserve("1", "h");
+    core.Claim(refused, "1");
+    core.ReleaseClaim(refused);
+
+    Assert.Equal(2, await core.InArrivalOrderAsync("h", null, () => Task.FromResult(2)).WaitAsync(TimeSpan.FromSeconds(10)));
+  }
 }

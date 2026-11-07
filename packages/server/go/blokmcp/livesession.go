@@ -459,6 +459,11 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		}
 		after, _, err := l.exportLocked(ctx)
 		if err != nil {
+			// The edits are in the doc, so they go to the room as C#'s
+			// write-time append sends them; a kept hold would buffer every
+			// later local write too.
+			room.holdAppends = false
+			room.flushAppendsLocked()
 			return nil, err
 		}
 		// A comment is no undo step, so it leaves the history marks alone,

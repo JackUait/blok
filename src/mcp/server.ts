@@ -5,6 +5,7 @@ import { createHeadlessPorts } from '../view/agent-runtime';
 import { mcpContractsFor } from '../view/mcp-contracts';
 
 import { agentPresenceName } from './actor';
+import { contractFlagsOf } from './contract-flags';
 import { createTicketProvider } from './auth/tickets';
 import { createToolDispatcher } from './dispatcher';
 import type { Caller, DispatcherDeps } from './dispatcher';
@@ -59,16 +60,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
   const pageMap = (options.pageTitles ?? DEFAULTS.pageTitles) === 'page-map';
   const source = createSource(options.source);
   const createsPages = pageMap && (options.sync !== undefined || source !== null);
-  const contracts = mcpContractsFor({
-    manifest: options.manifest,
-    overrides: options.overrides,
-    pageTitles: options.pageTitles ?? DEFAULTS.pageTitles,
-    richTextFields: options.richTextFields,
-    sync: options.sync !== undefined,
-    source: source !== null,
-    uploads: options.uploads !== undefined,
-    comments: options.comments,
-  });
+  const contracts = mcpContractsFor(contractFlagsOf(options));
   const uploader = options.uploads === undefined ? undefined : createUploaderService(options.uploads);
   // page.rename / page.setIcon close their page session without waiting, so stop waits for those closes.
   const pageCloses = new Set<Promise<unknown>>();

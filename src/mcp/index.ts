@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { setImmediate as afterAnswers } from 'node:timers/promises';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 
@@ -6,7 +5,7 @@ import { getBlokVersion } from '../components/utils/version';
 
 import { loadAuthorizeHook } from './auth/authorize';
 import { checkOptionSafety, McpConfigError, parseMcpArgs } from './config';
-import { parseCustomToolsFile, parseOverridesFile } from './custom-tools-file';
+import { readManifestFiles } from './contract-flags';
 import { startHttpServer } from './http';
 import { DEFAULTS } from './options';
 import type { BlokMcpOptions } from './options';
@@ -14,26 +13,6 @@ import { buildSdkServer } from './sdk-server';
 import { assembleMcp, STOP_DRAIN_MS } from './server';
 
 export type { BlokMcpOptions } from './options';
-
-const readJsonFile = async (path: string): Promise<unknown> => {
-  const text = await readFile(path, 'utf-8').catch((thrown: unknown) => {
-    if (thrown instanceof Error && 'code' in thrown && thrown.code === 'ENOENT') {
-      throw new McpConfigError(`Cannot read "${path}": no such file`);
-    }
-    throw thrown;
-  });
-
-  try {
-    const value: unknown = JSON.parse(text);
-
-    return value;
-  } catch (thrown) {
-    if (thrown instanceof SyntaxError) {
-      throw new McpConfigError(`Invalid JSON in "${path}": ${thrown.message}`);
-    }
-    throw thrown;
-  }
-};
 
 // A pipe on macOS takes writes later, so process.exit would cut off an answer the client reads slowly.
 const flushStdout = async (graceMs: number): Promise<void> => {
@@ -155,8 +134,7 @@ export const runCli = async (argv: string[], env: NodeJS.ProcessEnv): Promise<vo
     const server = createBlokMcpServer({
       ...options,
       ...(authorize !== undefined && { authorize }),
-      ...(files.manifest !== undefined && { manifest: parseCustomToolsFile(await readJsonFile(files.manifest)) }),
-      ...(files.overrides !== undefined && { overrides: parseOverridesFile(await readJsonFile(files.overrides)) }),
+      ...await readManifestFiles(files),
     });
 
     state.server = server;

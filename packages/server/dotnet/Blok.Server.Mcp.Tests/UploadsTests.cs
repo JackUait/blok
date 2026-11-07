@@ -108,20 +108,39 @@ public sealed class UploadsTests : IClassFixture<BundleFixture>, IDisposable
     Assert.Empty(sent);
   }
 
-  [Fact]
-  public async Task AHostThrowIsLoggedInFullAndAnsweredAsNodeAnswersIt()
+  private static Task<JsonObject> FailAsync(Exception thrown, List<Exception> logged)
   {
-    var logged = new List<Exception>();
     var failing = new BlokMcpUploads
     {
-      Uploader = new BlokMcpUploader { UploadByFile = (_, _, _) => throw new InvalidOperationException("db.internal refused") },
+      Uploader = new BlokMcpUploader { UploadByFile = (_, _, _) => throw thrown },
     };
     var ports = new UploadPorts(failing, (_, error) => logged.Add(error));
 
-    var answer = await ports.RunAsync(JsonNode.Parse("""{"op":"uploadByFile","fileName":"a.png","type":"image/png","size":3,"kind":"image","tool":"image","data":"AAAA"}""")!.AsObject(), CancellationToken.None);
+    return ports.RunAsync(JsonNode.Parse("""{"op":"uploadByFile","fileName":"a.png","type":"image/png","size":3,"kind":"image","tool":"image","data":"AAAA"}""")!.AsObject(), CancellationToken.None);
+  }
 
-    // Node's prepareAt forwards the throw's message (executor.ts), so this matches it.
-    Assert.Equal("db.internal refused", McpJson.String(answer["error"]));
-    Assert.IsType<InvalidOperationException>(Assert.Single(logged));
+  // A host's error can name its internals, so the agent gets Node's generic words; the log gets all of it.
+  [Fact]
+  public async Task AHostThrowIsLoggedInFullAndHiddenFromTheAgent()
+  {
+    var logged = new List<Exception>();
+    var thrown = new InvalidOperationException("db.internal refused");
+
+    var answer = await FailAsync(thrown, logged);
+
+    Assert.Equal("""{"error":"The upload failed."}""", answer.ToJsonString());
+    Assert.Same(thrown, Assert.Single(logged));
+  }
+
+  [Fact]
+  public async Task ABlokMcpUploadExceptionShowsTheAgentItsMessage()
+  {
+    var logged = new List<Exception>();
+    var thrown = new BlokMcpUploadException("This workspace is out of storage.", new IOException("disk /dev/sda1 full"));
+
+    var answer = await FailAsync(thrown, logged);
+
+    Assert.Equal("""{"failure":{"code":"TOOL_ACTION_FAILED","message":"This workspace is out of storage.","retryable":false}}""", answer.ToJsonString());
+    Assert.Same(thrown, Assert.Single(logged));
   }
 }

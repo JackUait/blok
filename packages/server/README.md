@@ -94,6 +94,8 @@ The other options follow `createBlokMcpServer` in `@bloklabs/mcp`: `PageTitles`,
 - `uploads.root` reads local files, and Node allows it over stdio only.
 - The stdio form: run the `blok-mcp` tool for that.
 
+When the `Uploads` uploader throws, the agent sees only "The upload failed." and the full exception goes to the app's log. To show the agent a message, throw `BlokMcpUploadException("…")`. Write that message for the agent: no paths, hosts or secrets.
+
 With `TicketUrl` and no document source, the host's ticket route decides who may open what, so no `Authorize` is needed.
 
 ## Convert documents

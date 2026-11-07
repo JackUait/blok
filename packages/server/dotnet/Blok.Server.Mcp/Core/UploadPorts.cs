@@ -72,12 +72,18 @@ internal sealed class UploadPorts(BlokMcpUploads uploads, Action<string, Excepti
     }
     catch (Exception error) when (error is not OperationCanceledException)
     {
-      // The agent sees the message, as Node's prepareAt forwards it; the host gets all of it.
+      // The host gets all of it. The agent sees only a message the host meant for it, as Node:
+      // any other text can name the host's internals.
       (log ?? LogToStderr)("blok-mcp: the host uploader failed", error);
 
-      return Thrown(error.Message);
+      return error is BlokMcpUploadException meant
+          ? new JsonObject { ["failure"] = new JsonObject { ["code"] = "TOOL_ACTION_FAILED", ["message"] = meant.AgentMessage, ["retryable"] = false } }
+          : Thrown(GenericFailure);
     }
   }
+
+  // Node's words for an upload the host refused without a message for the agent.
+  private const string GenericFailure = "The upload failed.";
 
   private static void LogToStderr(string message, Exception error)
   {

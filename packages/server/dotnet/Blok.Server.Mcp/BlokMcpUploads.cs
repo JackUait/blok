@@ -21,7 +21,10 @@ public sealed class BlokMcpUploads
 /// <summary>The host's uploader: <c>uploadByFile</c>, and <c>uploadByUrl</c> when it copies linked files.</summary>
 public sealed class BlokMcpUploader
 {
-  /// <summary>Stores one file. A file card keeps the size and type it returns.</summary>
+  /// <summary>
+  /// Stores one file. A file card keeps the size and type it returns. A throw is logged in full;
+  /// the agent sees "The upload failed.", or the message of a <see cref="BlokMcpUploadException"/>.
+  /// </summary>
   public required Func<BlokMcpUploadFile, BlokMcpUploadContext, CancellationToken, ValueTask<BlokMcpUploadedFile>> UploadByFile { get; init; }
 
   /// <summary>When set, <c>&lt;tool&gt;.setSource</c> copies a linked file to the host too.</summary>
@@ -61,4 +64,25 @@ public sealed class BlokMcpUploadLimits
 
   /// <summary>The largest file in bytes; absent keeps the tool's default.</summary>
   public long? MaxSize { get; init; }
+}
+
+/// <summary>
+/// Thrown by the host's uploader to show the agent a message. Any other exception reaches the
+/// agent only as "The upload failed.", since its text can name the host's internals; the full
+/// exception is always logged. The agent's command fails with TOOL_ACTION_FAILED, not retryable.
+/// </summary>
+public sealed class BlokMcpUploadException : Exception
+{
+  /// <summary>Creates the exception.</summary>
+  /// <param name="agentMessage">What the agent sees. Write it for the agent: no paths, hosts or secrets.</param>
+  /// <param name="innerException">The cause, for the server log only.</param>
+  public BlokMcpUploadException(string agentMessage, Exception? innerException = null)
+      : base(agentMessage, innerException)
+  {
+    ArgumentNullException.ThrowIfNull(agentMessage);
+    AgentMessage = agentMessage;
+  }
+
+  /// <summary>What the agent sees.</summary>
+  public string AgentMessage { get; }
 }

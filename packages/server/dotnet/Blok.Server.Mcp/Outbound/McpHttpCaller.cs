@@ -71,8 +71,10 @@ internal sealed class McpHttpCaller : IDisposable
       try
       {
         var bytes = await response.Content.ReadAsByteArrayAsync(deadline.Token);
+        // fetch's text() drops a leading BOM.
+        var body = bytes.AsSpan().StartsWith("\uFEFF"u8) ? bytes.AsSpan(3) : bytes;
 
-        return new McpHttpResponse((int)response.StatusCode, Encoding.UTF8.GetString(bytes));
+        return new McpHttpResponse((int)response.StatusCode, Encoding.UTF8.GetString(body));
       }
       catch (Exception error) when (error is HttpRequestException or OperationCanceledException or IOException)
       {
@@ -112,6 +114,8 @@ internal sealed class McpHttpCaller : IDisposable
       PooledConnectionLifetime = TimeSpan.FromMinutes(5),
       // undici writes U+0080..U+00FF as one byte each; .NET refuses non-ASCII without this.
       RequestHeaderEncodingSelector = (_, _) => Encoding.Latin1,
+      // undici sends Accept-Encoding: gzip, deflate and reads either.
+      AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
     };
   }
 }

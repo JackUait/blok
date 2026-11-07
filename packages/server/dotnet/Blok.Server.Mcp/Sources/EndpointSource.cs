@@ -159,7 +159,10 @@ internal sealed class EndpointSource(McpSourceConfig.Endpoint config, McpHttpCal
       throw McpHostError.Surface("INVALID_ARGS", $"\"{documentId}\" is not a document id.");
     }
 
-    return $"{config.Url.TrimEnd('/')}/{JsUri.EncodeComponent(documentId)}";
+    // Node drops one trailing slash, not all.
+    var url = config.Url.EndsWith('/') ? config.Url[..^1] : config.Url;
+
+    return $"{url}/{JsUri.EncodeComponent(documentId)}";
   }
 
   private async Task<McpHttpResponse> CallAsync(McpHttpRequest request, CancellationToken cancellationToken)

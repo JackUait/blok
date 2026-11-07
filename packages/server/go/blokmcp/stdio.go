@@ -23,6 +23,7 @@ func (s *Server) ServeStdio(ctx context.Context, in io.ReadCloser, out io.WriteC
 	}
 	server := s.newSDKServer(identity{principal: s.options.principal()})
 	tracker := newCallTracker()
+	tracker.lines = s.turns
 	// The session outlives ctx, so the calls in flight can answer.
 	// Node's own cap replaces the SDK's.
 	stdin := &cappedStdin{in: in, tracker: tracker}
@@ -49,6 +50,8 @@ func (s *Server) ServeStdio(ctx context.Context, in io.ReadCloser, out io.WriteC
 		case <-time.After(time.Until(deadline)):
 		}
 	}
+	// Calls never answered never run: their places go.
+	tracker.dropBooked()
 	// Past the cap, stdin's end cut the big message short: that is the end
 	// Node sees too.
 	if err == nil || errors.Is(err, io.EOF) || ctx.Err() != nil || stdin.over.Load() {

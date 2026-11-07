@@ -167,3 +167,113 @@ func (r *handleRegistry[S]) closeAll(closeSession func(S)) {
 	}
 	group.Wait()
 }
+
+// handleLines puts the calls on each handle in line, in the order stdio
+// read them: the SDK runs each call in its own goroutine, and Node's one
+// event loop takes them in order. A line is kept by handle text, so it
+// holds for a handle that does not exist yet or is unknown.
+type handleLines struct {
+	mu     sync.Mutex
+	turned *sync.Cond
+	lines  map[string]*handleLine
+	// booked are the turns stdio took, by token, until their call claims one.
+	booked map[string]*handleTurn
+}
+
+type handleLine struct {
+	next, serving uint64
+	// finished are later tickets that ended before their turn.
+	finished map[uint64]bool
+}
+
+// handleTurn is one call's place in its handle's line.
+type handleTurn struct {
+	lines    *handleLines
+	handle   string
+	ticket   uint64
+	released bool
+}
+
+func newHandleLines() *handleLines {
+	lines := &handleLines{lines: map[string]*handleLine{}, booked: map[string]*handleTurn{}}
+	lines.turned = sync.NewCond(&lines.mu)
+	return lines
+}
+
+func (l *handleLines) reserve(handle string) *handleTurn {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	line, ok := l.lines[handle]
+	if !ok {
+		line = &handleLine{finished: map[uint64]bool{}}
+		l.lines[handle] = line
+	}
+	turn := &handleTurn{lines: l, handle: handle, ticket: line.next}
+	line.next++
+	return turn
+}
+
+// book reserves a turn and keeps it under a fresh token for its call.
+func (l *handleLines) book(handle string) string {
+	turn := l.reserve(handle)
+	token := newHandleID()
+	l.mu.Lock()
+	l.booked[token] = turn
+	l.mu.Unlock()
+	return token
+}
+
+// claim hands a booked turn to its call; nil when there is none.
+func (l *handleLines) claim(token string) *handleTurn {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	turn := l.booked[token]
+	delete(l.booked, token)
+	return turn
+}
+
+// drop releases a booked turn no call claimed.
+func (l *handleLines) drop(token string) {
+	if turn := l.claim(token); turn != nil {
+		turn.release()
+	}
+}
+
+// wait blocks until it is this turn's go. It does not end on a cancel:
+// Node runs a queued call the client cancelled too.
+func (t *handleTurn) wait() {
+	t.lines.mu.Lock()
+	defer t.lines.mu.Unlock()
+	for !t.released && t.lines.lines[t.handle] != nil && t.lines.lines[t.handle].serving != t.ticket {
+		t.lines.turned.Wait()
+	}
+}
+
+// release ends the turn, once. Only the served ticket moves the line, past
+// every later one that already ended; an early one only marks itself done,
+// so the next call never runs beside the one still running.
+func (t *handleTurn) release() {
+	t.lines.mu.Lock()
+	defer t.lines.mu.Unlock()
+	if t.released {
+		return
+	}
+	t.released = true
+	line := t.lines.lines[t.handle]
+	if line == nil {
+		return
+	}
+	if t.ticket == line.serving {
+		line.serving++
+		for line.finished[line.serving] {
+			delete(line.finished, line.serving)
+			line.serving++
+		}
+	} else {
+		line.finished[t.ticket] = true
+	}
+	if line.serving == line.next {
+		delete(t.lines.lines, t.handle)
+	}
+	t.lines.turned.Broadcast()
+}

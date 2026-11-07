@@ -32,13 +32,15 @@ type surface struct {
 // bundle every MCP rule runs in. Serve it over stdio with ServeStdio or
 // over HTTP with Handler.
 type Server struct {
-	options  Options
-	version  string
-	bundle   bundle
-	surface  surface
-	flags    map[string]any
-	source   docSource
-	handles  *handleRegistry[session]
+	options Options
+	version string
+	bundle  bundle
+	surface surface
+	flags   map[string]any
+	source  docSource
+	handles *handleRegistry[session]
+	// turns orders stdio calls on each handle (see handleLines).
+	turns    *handleLines
 	idleMs   float64
 	idleJSON json.Number
 
@@ -139,6 +141,7 @@ func newServer(options Options, runtime invoker) (*Server, error) {
 	}
 	s.idleMs = numberOr(options.HandleIdleMs, defaultHandleIdleMs)
 	s.handles = newHandleRegistry[session](s.idleMs, int(numberOr(options.MaxHandlesPerPrincipal, defaultMaxHandlesPerPrincipal)))
+	s.turns = newHandleLines()
 	go s.sweepLoop()
 	return s, nil
 }

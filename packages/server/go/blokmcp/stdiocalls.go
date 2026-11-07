@@ -23,6 +23,11 @@ type callTracker struct {
 	cancelled map[jsonrpc.ID]bool
 	// closed: the transport is closed, so nothing more goes out.
 	closed bool
+	// lines orders the calls on each handle; booked are the turn tokens of
+	// each id's calls not answered yet, open how many of them are open.
+	lines  *handleLines
+	booked map[jsonrpc.ID][]string
+	open   map[jsonrpc.ID]int
 }
 
 // closeTransport drops every later message, as Node's closed transport
@@ -32,11 +37,66 @@ func (t *callTracker) closeTransport() {
 	defer t.mu.Unlock()
 	t.closed = true
 	clear(t.running)
+	t.dropBookedLocked()
 	t.idle.Broadcast()
 }
 
+func (t *callTracker) dropBooked() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.dropBookedLocked()
+}
+
+// dropBookedLocked lets go of every turn no call claimed: those calls
+// will never run.
+func (t *callTracker) dropBookedLocked() {
+	for _, tokens := range t.booked {
+		for _, token := range tokens {
+			t.lines.drop(token)
+		}
+	}
+	clear(t.booked)
+	clear(t.open)
+}
+
+// book takes a call's place on its handle as stdio reads it. One id can
+// come twice (Node runs both, in order), so each place has its own token.
+func (t *callTracker) book(id jsonrpc.ID, handle string) string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	token := t.lines.book(handle)
+	t.booked[id] = append(t.booked[id], token)
+	t.open[id]++
+	return token
+}
+
+// ended: one request with this id was answered. Its unclaimed places go
+// once every request with it has, so a call the SDK never ran cannot hold
+// the line.
+func (t *callTracker) ended(id jsonrpc.ID) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.endedLocked(id)
+}
+
+func (t *callTracker) endedLocked(id jsonrpc.ID) {
+	if t.open[id] == 0 {
+		return
+	}
+	t.open[id]--
+	if t.open[id] > 0 {
+		return
+	}
+	for _, token := range t.booked[id] {
+		t.lines.drop(token)
+	}
+	delete(t.booked, id)
+	delete(t.open, id)
+}
+
 func newCallTracker() *callTracker {
-	tracker := &callTracker{running: map[jsonrpc.ID]bool{}, cancelled: map[jsonrpc.ID]bool{}}
+	tracker := &callTracker{running: map[jsonrpc.ID]bool{}, cancelled: map[jsonrpc.ID]bool{},
+		lines: newHandleLines(), booked: map[jsonrpc.ID][]string{}, open: map[jsonrpc.ID]int{}}
 	tracker.idle = sync.NewCond(&tracker.mu)
 	return tracker
 }
@@ -45,6 +105,9 @@ func (t *callTracker) read(message jsonrpc.Message) {
 	request, ok := message.(*jsonrpc.Request)
 	if !ok {
 		return
+	}
+	if request.IsCall() && request.Method == "tools/call" {
+		request.Params = t.withTurn(request.ID, request.Params)
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -66,6 +129,43 @@ func (t *callTracker) read(message jsonrpc.Message) {
 	if err == nil && t.running[id] {
 		t.cancelled[id] = true
 	}
+}
+
+// turnKey carries a call's turn token in its _meta, to callTool. A
+// client's own value is removed.
+const turnKey = "blok/turn"
+
+// withTurn books a call's place when its arguments name a handle (exact
+// keys, as Node reads them) and puts the token in its _meta.
+func (t *callTracker) withTurn(id jsonrpc.ID, params json.RawMessage) json.RawMessage {
+	members, ok := isRecordJSON(params)
+	if !ok {
+		return params
+	}
+	var meta map[string]json.RawMessage
+	if raw, has := members["_meta"]; has && json.Unmarshal(raw, &meta) != nil {
+		return params
+	}
+	_, hadKey := meta[turnKey]
+	delete(meta, turnKey)
+	arguments, _ := isRecordJSON(members["arguments"])
+	var handle string
+	if json.Unmarshal(arguments["handle"], &handle) != nil || !isStringJSON(arguments["handle"]) {
+		if !hadKey {
+			return params
+		}
+	} else {
+		if meta == nil {
+			meta = map[string]json.RawMessage{}
+		}
+		meta[turnKey] = quoted(t.book(id, handle))
+	}
+	members["_meta"], _ = json.Marshal(meta)
+	written, err := json.Marshal(members)
+	if err != nil {
+		return params
+	}
+	return written
 }
 
 // answer says whether a message goes out: an answer to a cancelled request
@@ -90,6 +190,7 @@ func (t *callTracker) answered(message jsonrpc.Message) {
 	defer t.mu.Unlock()
 	delete(t.running, response.ID)
 	delete(t.cancelled, response.ID)
+	t.endedLocked(response.ID)
 	if len(t.running) == 0 {
 		t.idle.Broadcast()
 	}

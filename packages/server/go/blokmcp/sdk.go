@@ -220,6 +220,13 @@ func (s *Server) callTool(ctx context.Context, req mcp.Request, who identity, as
 	if !ok || call.Params == nil {
 		return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "Invalid params"}
 	}
+	// A stdio call waits for the calls read before it on its handle.
+	if token, ok := call.Params.GetMeta()[turnKey].(string); ok {
+		if turn := s.turns.claim(token); turn != nil {
+			turn.wait()
+			defer turn.release()
+		}
+	}
 	caller, err := s.actorFor(ctx, who.principal, rawClientName(call))
 	if err != nil {
 		return nil, err

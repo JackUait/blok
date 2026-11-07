@@ -445,6 +445,15 @@ internal sealed class RoomProvider
 
       return;
     }
+    // The server took this vector before it had the operation now in flight, so the diff
+    // would send that work a second time. Ask again once the outbox drains (provider.ts).
+    if (inFlight is not null)
+    {
+      residual = "none";
+      resyncOwed = true;
+
+      return;
+    }
     residual = "done";
     var rest = seam.EncodeStateAsUpdate(stateVector);
 

@@ -43,6 +43,26 @@ public sealed class LiveRoomTests
   }
 
   [Fact]
+  public async Task AResidualAnswerThatLandsWhileAnOperationIsInFlightIsAskedAgainNotSent()
+  {
+    var (room, host) = await OpenAsync();
+
+    // The server's own SyncStep1 owes a residual round; the empty outbox asks it at once.
+    await host.SendAsync(new SyncStep1Frame(new YDoc().EncodeStateVector()));
+    await host.NextAsync<SyncStep1Frame>();
+    await room.Loop.RunAsync(() => room.WriteLocal(new object(), tx => room.Doc.GetMap("m").Set(tx, "a", "one")));
+    var operation = await host.NextAsync<OperationFrame>();
+
+    // The server's vector predates the operation, so its diff would send that work again.
+    await host.SendAsync(new SyncStep1Frame(new YDoc().EncodeStateVector()));
+    await host.SendAsync(new AcknowledgementFrame(Lineage, operation.OperationId, 1));
+    var next = await host.NextAsync<SyncWireMessage>();
+
+    Assert.IsType<SyncStep1Frame>(next);
+    await room.CloseAsync();
+  }
+
+  [Fact]
   public async Task AWriteObserverStillReadsTheContentItDeleted()
   {
     var (room, _) = await OpenAsync();

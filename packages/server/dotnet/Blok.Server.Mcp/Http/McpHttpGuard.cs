@@ -433,3 +433,17 @@ internal static class McpRequestGate
     }
   }
 }
+
+/// <summary>--http's host:port, as Node's splitListen reads it.</summary>
+internal static class McpHttpListen
+{
+  /// <summary>The host without brackets and the port; an empty port is 0, as Number("") is.</summary>
+  internal static (string Host, int Port) Split(string listen)
+  {
+    var at = listen.LastIndexOf(':');
+    var host = (at < 0 ? listen : listen[..at]).TrimStart('[').TrimEnd(']');
+    var port = at < 0 ? string.Empty : listen[(at + 1)..].Trim();
+
+    return (host, port.Length == 0 ? 0 : int.Parse(port, System.Globalization.CultureInfo.InvariantCulture));
+  }
+}

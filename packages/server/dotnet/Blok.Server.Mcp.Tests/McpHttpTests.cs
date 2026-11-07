@@ -64,6 +64,16 @@ public sealed class McpHttpTests
     return new StreamReader(context.Response.Body).ReadToEnd();
   }
 
+  // Node's splitListen: Number(text after the last colon), so an empty port is 0, a free one.
+  [Theory]
+  [InlineData("127.0.0.1:", "127.0.0.1", 0)]
+  [InlineData("127.0.0.1: 0", "127.0.0.1", 0)]
+  [InlineData("[::1]:4321", "::1", 4321)]
+  public void SplitsListenAsNodeDoes(string listen, string host, int port)
+  {
+    Assert.Equal((host, port), McpHttpListen.Split(listen));
+  }
+
   [Theory]
   [InlineData("http://localhost:9", 0)]
   [InlineData("http://127.0.0.1", 0)]

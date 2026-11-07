@@ -62,9 +62,7 @@ internal static class BlokMcpHttp
   // host:port, as Node splits it; port 0 picks a free one.
   private static async Task<(IPAddress Address, int Port)> ListenAsync(string listen)
   {
-    var at = listen.LastIndexOf(':');
-    var name = (at < 0 ? listen : listen[..at]).TrimStart('[').TrimEnd(']');
-    var port = at < 0 ? 0 : int.Parse(listen[(at + 1)..], System.Globalization.CultureInfo.InvariantCulture);
+    var (name, port) = McpHttpListen.Split(listen);
 
     if (IPAddress.TryParse(name, out var address))
     {

@@ -63,7 +63,10 @@ impl Drop for SaveTurn {
         drop(self.queue.take());
         // Every clone is made under this lock, so the count cannot rise here.
         let mut queues = self.queues.lock().unwrap_or_else(|p| p.into_inner());
-        if queues.get(&self.key).is_some_and(|q| Arc::strong_count(q) == 1) {
+        if queues
+            .get(&self.key)
+            .is_some_and(|q| Arc::strong_count(q) == 1)
+        {
             queues.remove(&self.key);
         }
     }

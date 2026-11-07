@@ -302,8 +302,11 @@ impl OAuth {
                 None => {
                     let (tx, rx) = watch::channel(false);
                     cache.pending = Some(rx.clone());
-                    let (outbound, url, cache) =
-                        (self.outbound.clone(), self.jwks_url.clone(), self.cache.clone());
+                    let (outbound, url, cache) = (
+                        self.outbound.clone(),
+                        self.jwks_url.clone(),
+                        self.cache.clone(),
+                    );
                     tokio::spawn(async move {
                         let body = fetch(&outbound, &url).await;
                         let mut cache = cache.lock().unwrap_or_else(|p| p.into_inner());

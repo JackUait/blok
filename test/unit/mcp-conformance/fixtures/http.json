@@ -8265,6 +8265,120 @@
         }
       ],
       "expectHostRequests": []
+    },
+    {
+      "argv": [
+        "--source",
+        "endpoint:${host}/docs",
+        "--source-list",
+        "${host}/list",
+        "--http",
+        "127.0.0.1:0",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "a batch answers each request as it ends: a ping before a slower tools/call",
+      "env": {
+        "BLOK_DOC_ENDPOINT_AUTH": "Token t"
+      },
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /list": {
+          "status": 200,
+          "delayMs": 500,
+          "json": {
+            "documents": [
+              {
+                "id": "a",
+                "title": "Alpha"
+              }
+            ]
+          }
+        }
+      },
+      "steps": [
+        {
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream",
+              "mcp-protocol-version": "2025-03-26"
+            },
+            "bodyText": "[{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_list_documents\",\"arguments\":{}}},{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"ping\"}]"
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "sse": [
+              {
+                "result": {},
+                "jsonrpc": "2.0",
+                "id": 2
+              },
+              {
+                "result": {
+                  "content": [
+                    {
+                      "type": "text",
+                      "json": "<same as structuredContent>"
+                    }
+                  ],
+                  "structuredContent": {
+                    "documents": [
+                      {
+                        "id": "a",
+                        "title": "Alpha",
+                        "live": false
+                      }
+                    ],
+                    "nextCursor": null,
+                    "supported": true
+                  },
+                  "isError": false
+                },
+                "jsonrpc": "2.0",
+                "id": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/list?limit=25",
+          "headers": {
+            "authorization": "Token t"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "a",
+            "write": false
+          }
+        }
+      ]
     }
   ]
 }

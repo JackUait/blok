@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Blok.Server.Mcp.Core;
 using Blok.Server.Mcp.Protocol;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace Blok.Server.Mcp.Http;
 
@@ -379,58 +380,98 @@ internal static class McpRequestGate
     await response.WriteAsync(json);
   }
 
-  // The C# SDK takes one message per request; Node's legacy transport answers a batch's requests
-  // as one event stream, and 202 when it holds none.
+  // How long answers ending together are gathered, to keep the batch's order as Node's one thread does.
+  private static readonly TimeSpan BatchSettle = TimeSpan.FromMilliseconds(5);
+
+  // The C# SDK takes one message per request. Node's legacy transport runs a batch's requests
+  // together and writes each answer as an event as it ends; 202 when the batch holds no request.
   private static async Task ServeBatchAsync(HttpContext context, RequestDelegate next, JsonArray batch, McpServerCore? core)
   {
-    var original = context.Response.Body;
-    var events = new StringBuilder();
     var legacy = context.Request.Headers["MCP-Protocol-Version"].ToString() == "2024-10-07";
+    var running = batch.Select(message => AnswerOneAsync(context, next, message, legacy, core)).ToList();
+    var answered = new bool[running.Count];
+    var started = false;
 
-    foreach (var message in batch)
+    context.Response.Headers.Clear();
+    while (answered.Contains(false))
     {
-      // As for one message below: the SDK knows 2024-11-05, the same wire.
-      if (legacy)
+      await Task.WhenAny(running.Where((_, at) => !answered[at]));
+      await Task.Delay(BatchSettle);
+      for (var at = 0; at < running.Count; at++)
       {
-        context.Request.Headers["MCP-Protocol-Version"] = McpJson.String(message?["method"]) == "initialize" ? string.Empty : "2024-11-05";
-      }
-      var text = McpJson.Write(message);
-
-      text = core is not null && McpRequestShape.ParkDeepArguments(text, core) is { } parked ? parked : text;
-      context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(text));
-      context.Request.ContentLength = context.Request.Body.Length;
-      context.Response.StatusCode = StatusCodes.Status200OK;
-      context.Response.Headers.Clear();
-      using var answer = new MemoryStream();
-
-      context.Response.Body = answer;
-      try
-      {
-        await next(context);
-      }
-      finally
-      {
-        context.Response.Body = original;
-      }
-      var body = Encoding.UTF8.GetString(answer.ToArray());
-      var data = context.Response.ContentType?.StartsWith("text/event-stream", StringComparison.Ordinal) == true ? SingleEvent(body) : Parse(body);
-
-      if (data is not null)
-      {
-        events.Append("event: message\ndata: ").Append(McpJson.Write(data)).Append("\n\n");
+        if (answered[at] || !running[at].IsCompleted)
+        {
+          continue;
+        }
+        answered[at] = true;
+        if (await running[at] is not { } data)
+        {
+          continue;
+        }
+        if (!started)
+        {
+          started = true;
+          context.Response.StatusCode = StatusCodes.Status200OK;
+          context.Response.ContentType = "text/event-stream";
+          context.Response.Headers.CacheControl = "no-cache, no-transform";
+        }
+        await context.Response.WriteAsync("event: message\ndata: " + McpJson.Write(data) + "\n\n");
+        await context.Response.Body.FlushAsync();
       }
     }
-    context.Response.Headers.Clear();
-    if (events.Length == 0)
+    if (!started)
     {
       context.Response.StatusCode = StatusCodes.Status202Accepted;
-
-      return;
     }
-    context.Response.StatusCode = StatusCodes.Status200OK;
-    context.Response.ContentType = "text/event-stream";
-    context.Response.Headers.CacheControl = "no-cache, no-transform";
-    await context.Response.WriteAsync(events.ToString());
+  }
+
+  // One message of a batch, on a context of its own so the others run alongside; its answer, or null.
+  private static async Task<JsonNode?> AnswerOneAsync(HttpContext context, RequestDelegate next, JsonNode? message, bool legacy, McpServerCore? core)
+  {
+    // Off the caller's thread: the batch starts every message before it awaits one.
+    await Task.Yield();
+    var text = McpJson.Write(message);
+
+    text = core is not null && McpRequestShape.ParkDeepArguments(text, core) is { } parked ? parked : text;
+    var request = context.Request;
+    var headers = new HeaderDictionary();
+
+    foreach (var (name, value) in request.Headers)
+    {
+      headers[name] = value;
+    }
+    // As for one message below: the SDK knows 2024-11-05, the same wire.
+    if (legacy)
+    {
+      headers["MCP-Protocol-Version"] = McpJson.String(message?["method"]) == "initialize" ? string.Empty : "2024-11-05";
+    }
+    var body = Encoding.UTF8.GetBytes(text);
+    var features = new FeatureCollection(context.Features);
+    using var answer = new MemoryStream();
+
+    features.Set<IHttpRequestFeature>(new HttpRequestFeature
+    {
+      Protocol = request.Protocol,
+      Scheme = request.Scheme,
+      Method = request.Method,
+      PathBase = request.PathBase,
+      Path = request.Path,
+      QueryString = request.QueryString.Value ?? string.Empty,
+      Headers = headers,
+      Body = new MemoryStream(body),
+    });
+    features.Set<IHttpResponseFeature>(new HttpResponseFeature());
+    features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(answer));
+    features.Set<IItemsFeature>(new ItemsFeature());
+    var inner = new DefaultHttpContext(features);
+
+    // The caller's body reader would read the whole batch's body, already read.
+    features.Set<IRequestBodyPipeFeature>(new RequestBodyPipeFeature(inner));
+    inner.Request.ContentLength = body.Length;
+    await next(inner);
+    var written = Encoding.UTF8.GetString(answer.ToArray());
+
+    return inner.Response.ContentType?.StartsWith("text/event-stream", StringComparison.Ordinal) == true ? SingleEvent(written) : Parse(written);
   }
 
   private static bool IsInitialize(MemoryStream body)

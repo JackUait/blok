@@ -97,6 +97,45 @@ public sealed class McpHttpNodeParityTests
     Assert.Equal(Escaped, new StreamReader(sized.Response.Body).ReadToEnd());
   }
 
+  // Node runs a batch's requests together and writes each answer as it ends.
+  [Fact]
+  public async Task AnswersABatchInTheOrderItsRequestsEnd()
+  {
+    var context = Post("""[{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"slow"}},{"jsonrpc":"2.0","id":2,"method":"ping"},{"jsonrpc":"2.0","id":3,"method":"ping"}]""", version: "2025-03-26");
+    var pingWritten = new TaskCompletionSource();
+
+    await McpRequestGate.InvokeAsync(context, async inner =>
+    {
+      var message = System.Text.Json.Nodes.JsonNode.Parse(await new StreamReader(inner.Request.Body).ReadToEndAsync())!;
+
+      if (message["method"]!.GetValue<string>() == "tools/call")
+      {
+        // The call ends only once a ping's answer reached the response.
+        await pingWritten.Task.WaitAsync(TimeSpan.FromSeconds(10));
+      }
+      inner.Response.ContentType = "text/event-stream";
+      await inner.Response.WriteAsync($"event: message\ndata: {{\"result\":{{}},\"jsonrpc\":\"2.0\",\"id\":{message["id"]!.ToJsonString()}}}\n\n");
+      if (message["method"]!.GetValue<string>() == "ping")
+      {
+        _ = Task.Run(async () =>
+        {
+          while (context.Response.Body.Length == 0)
+          {
+            await Task.Delay(5);
+          }
+          pingWritten.TrySetResult();
+        });
+      }
+    });
+    context.Response.Body.Position = 0;
+    var ids = new StreamReader(context.Response.Body).ReadToEnd().Split('\n')
+        .Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
+        .Select(line => System.Text.Json.Nodes.JsonNode.Parse(line[6..])!["id"]!.ToJsonString());
+
+    Assert.Equal(200, context.Response.StatusCode);
+    Assert.Equal(["2", "3", "1"], ids);
+  }
+
   [Theory]
   [InlineData("PUT")]
   [InlineData("PATCH")]

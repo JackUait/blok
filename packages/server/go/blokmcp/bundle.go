@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -82,6 +83,16 @@ func (b bundle) call(ctx context.Context, op string, input any, out any) (json.R
 	}
 	answer, err := b.runtime.Invoke(ctx, op, string(finiteJSON(written)), nil)
 	if err != nil {
+		// The engine's stack means nothing to a caller: a limit is named.
+		var failure *jsruntime.Failure
+		if errors.As(err, &failure) {
+			switch failure.Kind {
+			case jsruntime.KindTimedOut:
+				return nil, fmt.Errorf("blok-mcp: the document took longer than %d s to process; it may be too large.", int(callTimeout.Seconds()))
+			case jsruntime.KindDocumentTooLarge:
+				return nil, errors.New("blok-mcp: the document is too large to process.")
+			}
+		}
 		return nil, fmt.Errorf("blok-mcp: bundle operation %s failed: %w", op, err)
 	}
 	raw := json.RawMessage(answer)

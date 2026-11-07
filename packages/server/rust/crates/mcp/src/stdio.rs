@@ -834,6 +834,39 @@ mod tests {
         );
     }
 
+    // The policy: an id with a lone surrogate reads as U+FFFD, and the
+    // answer carries that id.
+    #[tokio::test]
+    async fn an_id_with_a_lone_surrogate_is_answered_as_the_replacement_character() {
+        let input = concat!(r#"{"jsonrpc":"2.0","id":"x\udc00","method":"ping"}"#, "\n");
+        let (out, mut client) = tokio::io::duplex(1 << 16);
+        proxy(
+            std::io::Cursor::new(input.as_bytes().to_vec()),
+            out,
+            Arc::default(),
+            move |read, mut write| async move {
+                let mut lines = BufReader::new(read).lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    let message: Value = serde_json::from_str(&line).unwrap();
+                    if message["method"] == "ping" {
+                        let answer = json!({ "jsonrpc": "2.0", "id": message["id"], "result": {} });
+                        write
+                            .write_all(format!("{answer}\n").as_bytes())
+                            .await
+                            .unwrap();
+                    }
+                }
+            },
+        )
+        .await;
+        let mut written = String::new();
+        client.read_to_string(&mut written).await.unwrap();
+        assert_eq!(
+            written,
+            "{\"jsonrpc\":\"2.0\",\"id\":\"x\u{fffd}\",\"result\":{}}\n"
+        );
+    }
+
     // A 2026 session: a request with no envelope keys at all gets Node's
     // checkInboundEnvelope words, not rmcp's.
     #[tokio::test]

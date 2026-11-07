@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -18,9 +17,21 @@ internal sealed class FilesSource(string dir, McpBundle bundle) : IDocumentSourc
   private static readonly TimeSpan LockWait = TimeSpan.FromSeconds(2);
   private static readonly TimeSpan LockRetry = TimeSpan.FromMilliseconds(25);
 
-  private readonly ConcurrentDictionary<string, SemaphoreSlim> queues = new(StringComparer.Ordinal);
+  // A file's queue and how many saves hold it; the last one out removes it, as Node drops a settled chain.
+  private readonly Dictionary<string, (SemaphoreSlim Gate, int Users)> queues = new(StringComparer.Ordinal);
 
   public string DocumentTextForm => "file";
+
+  internal int QueuedFiles
+  {
+    get
+    {
+      lock (queues)
+      {
+        return queues.Count;
+      }
+    }
+  }
 
   public bool CanList => true;
 
@@ -60,9 +71,25 @@ internal sealed class FilesSource(string dir, McpBundle bundle) : IDocumentSourc
     var path = await PathOfAsync(documentId, cancellationToken);
     var target = WriteTargetOf(documentId, path);
     // Keyed on the file written, so a link and its target share one queue and one lock.
-    var queue = queues.GetOrAdd(SameFileKey(target), _ => new SemaphoreSlim(1, 1));
+    var key = SameFileKey(target);
+    SemaphoreSlim queue;
 
-    await queue.WaitAsync(cancellationToken);
+    lock (queues)
+    {
+      var (gate, users) = queues.TryGetValue(key, out var held) ? held : (new SemaphoreSlim(1, 1), 0);
+
+      queue = gate;
+      queues[key] = (gate, users + 1);
+    }
+    try
+    {
+      await queue.WaitAsync(cancellationToken);
+    }
+    catch
+    {
+      Leave(key);
+      throw;
+    }
     try
     {
       var held = await LockAsync(documentId, target, cancellationToken);
@@ -79,6 +106,25 @@ internal sealed class FilesSource(string dir, McpBundle bundle) : IDocumentSourc
     finally
     {
       queue.Release();
+      Leave(key);
+    }
+  }
+
+  private void Leave(string key)
+  {
+    lock (queues)
+    {
+      var (gate, users) = queues[key];
+
+      if (users == 1)
+      {
+        queues.Remove(key);
+        gate.Dispose();
+      }
+      else
+      {
+        queues[key] = (gate, users - 1);
+      }
     }
   }
 

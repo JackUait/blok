@@ -156,4 +156,15 @@ public sealed class FilesSourceTests : IClassFixture<BundleFixture>, IDisposable
     Assert.Equal("INVALID_ARGS", refused.Code);
     Assert.IsType<JsonObject>(refused.Prebuilt);
   }
+
+  // Node deletes a document's save chain once it settles, so ids seen once do not pile up.
+  [Fact]
+  public async Task KeepsNoSaveQueueOnceTheSavesSettle()
+  {
+    await Task.WhenAll(Enumerable.Range(0, 20).Select(i => source.SaveAsync($"doc{i}", "{\"blocks\":[]}", null, CancellationToken.None)));
+    // A refused save leaves too.
+    await Assert.ThrowsAsync<McpHostError>(() => source.SaveAsync("doc0", "{\"blocks\":[]}", null, CancellationToken.None));
+
+    Assert.Equal(0, source.QueuedFiles);
+  }
 }

@@ -78,7 +78,7 @@ func (c *stdioPeer) read(ctx context.Context, out mcp.Connection, request *jsonr
 		own, _ := jsonrpc.MakeID(ownInitialize)
 		c.asked, c.settled = &own, make(chan struct{})
 		c.pending = request
-		params, _ := json.Marshal(map[string]any{"protocolVersion": legacyVersions[0], "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "", "version": ""}})
+		params, _ := json.Marshal(map[string]any{"protocolVersion": legacyVersions[0], "capabilities": map[string]any{"elicitation": map[string]any{}}, "clientInfo": map[string]any{"name": "", "version": ""}})
 		return &jsonrpc.Request{ID: own, Method: "initialize", Params: params}
 	}
 	var params mcp.InitializeParams
@@ -100,7 +100,7 @@ func (c *stdioPeer) read(ctx context.Context, out mcp.Connection, request *jsonr
 	}
 	if !c.ready {
 		c.asked, c.askedBy, c.settled = &request.ID, &params, make(chan struct{})
-		return request
+		return withAnyElicitation(request)
 	}
 	members := make(map[string]json.RawMessage, len(c.first))
 	for key, value := range c.first {
@@ -118,6 +118,31 @@ func (c *stdioPeer) read(ctx context.Context, out mcp.Connection, request *jsonr
 	c.params = &params
 	_ = out.Write(ctx, &jsonrpc.Response{ID: request.ID, Result: result})
 	return nil
+}
+
+// withAnyElicitation is the initialize the SDK keeps, claiming form
+// elicitation. The SDK checks only the first initialize before it sends
+// elicitation/create; Node checks the latest, and so does the approval
+// (clientCapabilities reads c.params), so the SDK's check must pass.
+func withAnyElicitation(request *jsonrpc.Request) *jsonrpc.Request {
+	var params map[string]json.RawMessage
+	if json.Unmarshal(request.Params, &params) != nil || params == nil {
+		return request
+	}
+	var capabilities map[string]json.RawMessage
+	if raw, ok := params["capabilities"]; ok && json.Unmarshal(raw, &capabilities) != nil {
+		return request
+	}
+	if capabilities == nil {
+		capabilities = map[string]json.RawMessage{}
+	}
+	capabilities["elicitation"] = json.RawMessage("{}")
+	params["capabilities"], _ = json.Marshal(capabilities)
+	written, err := json.Marshal(params)
+	if err != nil {
+		return request
+	}
+	return &jsonrpc.Request{ID: request.ID, Method: request.Method, Params: written, Extra: request.Extra}
 }
 
 // answered keeps the SDK's answer to the initialize it took; it says

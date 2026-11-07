@@ -160,10 +160,13 @@ internal static class McpRequestGate
           return;
         }
       }
-      // A repeated key reaches the SDK with its last value, as JSON.parse reads it.
-      if (read.Value.Repeated)
+      // A repeated key reaches the SDK with its last value, as JSON.parse reads it, and a lone
+      // surrogate escape as U+FFFD, which the SDK can read.
+      var sent = System.Text.Encoding.UTF8.GetString(buffered.ToArray());
+
+      if (read.Value.Repeated || McpJson.HasLoneSurrogateEscape(sent))
       {
-        var normal = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(McpJson.Write(McpJson.Parse(System.Text.Encoding.UTF8.GetString(buffered.ToArray())))));
+        var normal = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(McpJson.Write(McpJson.Parse(sent))));
 
         request.Body = normal;
         request.ContentLength = normal.Length;

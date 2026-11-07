@@ -167,7 +167,8 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
         }
       }
       // JSON.parse reads 101.0 or 1.01e2 as 101, and Node answers with id 101; the SDK reads neither.
-      if (repeated || whole is not null)
+      // A lone surrogate escape is written out as U+FFFD, which the SDK can read.
+      if (repeated || whole is not null || McpJson.HasLoneSurrogateEscape(text))
       {
         var message = McpJson.Parse(text)!;
 

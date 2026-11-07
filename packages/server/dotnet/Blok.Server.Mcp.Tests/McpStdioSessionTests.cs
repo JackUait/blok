@@ -87,6 +87,22 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     Assert.Contains(lines, answer => JsonNode.Parse(answer)!["id"]!.ToJsonString() == id);
   }
 
+  // A lone surrogate in an argument reads as U+FFFD, never as -32603.
+  [Fact]
+  public async Task ALoneSurrogateInAnArgumentIsNoInternalError()
+  {
+    var (live, _, _) = await OpenForWriteAsync();
+
+    await live.SendAsync("""{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"a\ud800"}}}""");
+    await live.SendAsync("""{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"blok_list_documents","arguments":{"query":"\udc00"}}}""");
+    var opened = await live.AnswerAsync("7");
+    var listed = await live.AnswerAsync("8");
+    await live.DisposeAsync();
+
+    Assert.Null(opened["error"]);
+    Assert.Null(listed["error"]);
+  }
+
   // Node registers no logging capability, so logging/setLevel is an unknown method.
   [Fact]
   public async Task LoggingSetLevelIsAnUnknownMethod()

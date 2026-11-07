@@ -26,7 +26,7 @@ internal sealed class McpBundle(IBlokRuntime runtime)
   }
 }
 
-internal static class McpJson
+internal static partial class McpJson
 {
   // Raw UTF-8 like JSON.stringify; the default encoder escapes ', <, > and non-ASCII.
   internal static readonly JsonSerializerOptions Raw = new()
@@ -76,10 +76,87 @@ internal static class McpJson
         return list;
       case JsonValueKind.Null:
         return null;
+      case JsonValueKind.String when !TryString(element, out _):
+        return JsonValue.Create(Unescape(element.GetRawText()));
       default:
         // A clone outlives the document and keeps the number's text.
         return JsonValue.Create(element.Clone());
     }
+  }
+
+  /// <summary>Whether JSON text may hold a \\uD800-\\uDFFF escape (a pair also counts).</summary>
+  internal static bool HasLoneSurrogateEscape(string text)
+  {
+    return SurrogateEscape().IsMatch(text);
+  }
+
+  [System.Text.RegularExpressions.GeneratedRegex(@"\\[uU][dD][89a-fA-F]", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+  private static partial System.Text.RegularExpressions.Regex SurrogateEscape();
+
+  private static bool TryString(JsonElement element, out string? value)
+  {
+    try
+    {
+      value = element.GetString();
+
+      return true;
+    }
+    catch (InvalidOperationException)
+    {
+      // A lone surrogate escape, which System.Text.Json will not read.
+      value = null;
+
+      return false;
+    }
+  }
+
+  // A JSON string token as JSON.parse reads it, each lone surrogate as U+FFFD.
+  private static string Unescape(string token)
+  {
+    var units = new System.Text.StringBuilder(token.Length);
+
+    for (var at = 1; at < token.Length - 1; at++)
+    {
+      var c = token[at];
+
+      if (c != '\\')
+      {
+        units.Append(c);
+        continue;
+      }
+      var escape = token[++at];
+
+      units.Append(escape switch
+      {
+        'b' => '\b',
+        'f' => '\f',
+        'n' => '\n',
+        'r' => '\r',
+        't' => '\t',
+        'u' => (char)Convert.ToUInt16(token.Substring(at + 1, 4), 16),
+        _ => escape,
+      });
+      if (escape == 'u')
+      {
+        at += 4;
+      }
+    }
+    var text = units.ToString();
+    var clean = new System.Text.StringBuilder(text.Length);
+
+    for (var at = 0; at < text.Length; at++)
+    {
+      if (char.IsHighSurrogate(text[at]) && at + 1 < text.Length && char.IsLowSurrogate(text[at + 1]))
+      {
+        clean.Append(text[at]).Append(text[++at]);
+      }
+      else
+      {
+        clean.Append(char.IsSurrogate(text[at]) ? '\uFFFD' : text[at]);
+      }
+    }
+
+    return clean.ToString();
   }
 
   /// <summary>JSON text with JSON.stringify's bytes; a lone surrogate becomes U+FFFD.</summary>

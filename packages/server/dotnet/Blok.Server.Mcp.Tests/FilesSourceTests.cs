@@ -45,6 +45,22 @@ public sealed class FilesSourceTests : IClassFixture<BundleFixture>, IDisposable
     Assert.Equal(version, (await source.LoadAsync("doc", CancellationToken.None)).Version);
   }
 
+  // Decided for every port: a repeated key takes its last value, a lone surrogate becomes U+FFFD.
+  [Fact]
+  public async Task ReadsARepeatedKeyAsItsLastValueAndALoneSurrogateAsTheReplacementCharacter()
+  {
+    await File.WriteAllTextAsync(
+        Path.Combine(dir, "doc.json"),
+        """{"title":"First","title":"Last","blocks":[{"id":"p1","type":"paragraph","data":{"text":"x\ud800y \ud83d\ude00"}}]}""");
+
+    var loaded = await source.LoadAsync("doc", CancellationToken.None);
+    var listed = await source.ListAsync(10, null, null, CancellationToken.None);
+
+    Assert.Equal("Last", McpJson.String(loaded.Raw["title"]));
+    Assert.Contains("x\uFFFDy \U0001F600", McpJson.Write(loaded.Raw), StringComparison.Ordinal);
+    Assert.Equal("Last", McpJson.String(listed["documents"]?[0]?["title"]));
+  }
+
   [Fact]
   public async Task RefusesASaveWhenTheFileChangedSinceItWasRead()
   {

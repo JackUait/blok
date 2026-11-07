@@ -35,6 +35,13 @@ internal sealed class FilesSource(string dir, McpBundle bundle) : IDocumentSourc
 
   public bool CanList => true;
 
+  // The runtime's JSON.parse reads the file text, but the host's rewrite never sees inside a string
+  // field: a repeated key takes its last value and a lone surrogate becomes U+FFFD here, as in Go.
+  private static string AsJsonParseReads(byte[] bytes)
+  {
+    return Blok.Server.Runtime.JsonInputNormalizer.Normalize(Encoding.UTF8.GetString(bytes), long.MaxValue, static () => { });
+  }
+
   internal static string Hash(byte[] bytes)
   {
     return Convert.ToHexStringLower(SHA256.HashData(bytes));
@@ -55,7 +62,7 @@ internal sealed class FilesSource(string dir, McpBundle bundle) : IDocumentSourc
     AssertExactName(documentId, path);
     var parsed = await bundle.CallAsync(
         "mcpParseDocument",
-        new JsonObject { ["id"] = documentId, ["text"] = Encoding.UTF8.GetString(bytes) },
+        new JsonObject { ["id"] = documentId, ["text"] = AsJsonParseReads(bytes) },
         cancellationToken);
 
     if (parsed["error"] is JsonObject error)
@@ -149,7 +156,7 @@ internal sealed class FilesSource(string dir, McpBundle bundle) : IDocumentSourc
 
       try
       {
-        text = Encoding.UTF8.GetString(File.ReadAllBytes(Path.Combine(dir, $"{id}.json")));
+        text = AsJsonParseReads(File.ReadAllBytes(Path.Combine(dir, $"{id}.json")));
       }
       catch (Exception error) when (error is IOException or UnauthorizedAccessException)
       {

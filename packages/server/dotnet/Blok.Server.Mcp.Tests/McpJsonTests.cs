@@ -48,4 +48,14 @@ public sealed class McpJsonTests
   {
     Assert.Equal("[\"a\uFFFDb\",\"\uFFFD\"]", McpJson.Write(new JsonArray("a\uD800b", "\uDC00")));
   }
+
+  // System.Text.Json refuses to read "\ud800" as a string; JSON.parse keeps it, and the policy makes it U+FFFD.
+  [Fact]
+  public void ReadsALoneSurrogateEscapeAsTheReplacementCharacter()
+  {
+    var parsed = McpJson.Parse("""{"a":"x\ud800y\udc00","b":"\ud83d\ude00\n\u00e9\/"}""");
+
+    Assert.Equal("x\uFFFDy\uFFFD", McpJson.String(parsed!["a"]));
+    Assert.Equal("\U0001F600\n\u00e9/", McpJson.String(parsed["b"]));
+  }
 }

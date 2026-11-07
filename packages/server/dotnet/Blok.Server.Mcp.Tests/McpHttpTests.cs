@@ -157,6 +157,23 @@ public sealed class McpHttpTests
     Assert.Equal(string.Empty, seen);
   }
 
+  // The SDK cannot read a lone surrogate escape; the decided policy reads it as U+FFFD.
+  [Fact]
+  public async Task PassesALoneSurrogateOnAsTheReplacementCharacter()
+  {
+    var context = Request("POST", "/mcp", body: """{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"a\ud800"}}}""");
+    var seen = "unset";
+
+    await McpRequestGate.InvokeAsync(context, inner =>
+    {
+      seen = new StreamReader(inner.Request.Body).ReadToEnd();
+
+      return Task.CompletedTask;
+    });
+
+    Assert.Equal("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_open\",\"arguments\":{\"documentId\":\"a\uFFFD\"}}}", seen);
+  }
+
   [Fact]
   public async Task Serves20241007AsNodeDoes()
   {

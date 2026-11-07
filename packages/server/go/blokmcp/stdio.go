@@ -24,7 +24,10 @@ func (s *Server) ServeStdio(ctx context.Context, in io.ReadCloser, out io.WriteC
 	server := s.newSDKServer(identity{principal: s.options.principal()})
 	tracker := newCallTracker()
 	// The session outlives ctx, so the calls in flight can answer.
-	session, err := server.Connect(context.WithoutCancel(ctx), trackedTransport{fixedTransport{&mcp.IOTransport{Reader: in, Writer: out}}, tracker}, nil)
+	// Node's own cap replaces the SDK's.
+	stdin := &cappedStdin{in: in, tracker: tracker}
+	transport := &mcp.IOTransport{Reader: stdin, Writer: out, MaxLineLength: -1}
+	session, err := server.Connect(context.WithoutCancel(ctx), trackedTransport{fixedTransport{transport}, tracker}, nil)
 	if err != nil {
 		return err
 	}
@@ -46,7 +49,9 @@ func (s *Server) ServeStdio(ctx context.Context, in io.ReadCloser, out io.WriteC
 		case <-time.After(time.Until(deadline)):
 		}
 	}
-	if err == nil || errors.Is(err, io.EOF) || ctx.Err() != nil {
+	// Past the cap, stdin's end cut the big message short: that is the end
+	// Node sees too.
+	if err == nil || errors.Is(err, io.EOF) || ctx.Err() != nil || stdin.over.Load() {
 		return nil
 	}
 	return err

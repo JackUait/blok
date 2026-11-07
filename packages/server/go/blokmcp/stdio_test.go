@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -188,5 +189,80 @@ func TestAnOpenDuringTheStopIsRefused(t *testing.T) {
 	case <-done:
 	case <-time.After(3 * time.Second):
 		t.Fatal("ServeStdio did not return")
+	}
+}
+
+func pingLine(id int, size int) string {
+	head := fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"ping","params":{"x":"`, id)
+	tail := `"}}`
+	return head + strings.Repeat("a", size-len(head)-len(tail)) + tail
+}
+
+// Node's SDK holds at most 10 MiB of a message not yet ended: past that it
+// closes the transport. Nothing is answered after, the big message
+// included, and the process ends 0 when stdin closes. A line of 10 MiB less
+// one byte, with its newline, still fits.
+func TestStdioClosesPastTenMiBUnread(t *testing.T) {
+	for _, c := range []struct {
+		size     int
+		answered bool
+	}{{stdioMaxBuffer - 1, true}, {stdioMaxBuffer, false}} {
+		server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		clientIn, serverOut := io.Pipe()
+		serverIn, clientOut := io.Pipe()
+		done := make(chan error, 1)
+		go func() { done <- server.ServeStdio(context.Background(), serverIn, serverOut) }()
+		lines := make(chan string, 8)
+		go func() {
+			reader := bufio.NewReader(clientIn)
+			for {
+				line, err := reader.ReadString('\n')
+				if err != nil {
+					close(lines)
+					return
+				}
+				lines <- line
+			}
+		}()
+		write := func(line string) { _, _ = io.WriteString(clientOut, line+"\n") }
+		write(`{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}`)
+		<-lines
+		write(`{"jsonrpc":"2.0","method":"notifications/initialized"}`)
+		write(pingLine(1, c.size))
+		write(`{"jsonrpc":"2.0","id":2,"method":"ping"}`)
+		var got []string
+		// A refused message is never answered, so its wait is a fixed time.
+		timeout := time.After(time.Second)
+		if c.answered {
+			timeout = time.After(20 * time.Second)
+		}
+	collect:
+		for c.answered && len(got) < 2 || !c.answered {
+			select {
+			case line, ok := <-lines:
+				if !ok {
+					break collect
+				}
+				got = append(got, line)
+			case <-timeout:
+				break collect
+			}
+		}
+		if c.answered && len(got) != 2 || !c.answered && len(got) != 0 {
+			t.Fatalf("%d bytes: answers %q", c.size, got)
+		}
+		_ = clientOut.Close()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatalf("%d bytes: %v", c.size, err)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatalf("%d bytes: ServeStdio did not end with stdin", c.size)
+		}
+		server.Close()
 	}
 }

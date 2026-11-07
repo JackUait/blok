@@ -1,9 +1,12 @@
 package blokmcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
@@ -18,6 +21,18 @@ type callTracker struct {
 	idle      *sync.Cond
 	running   map[jsonrpc.ID]bool
 	cancelled map[jsonrpc.ID]bool
+	// closed: the transport is closed, so nothing more goes out.
+	closed bool
+}
+
+// closeTransport drops every later message, as Node's closed transport
+// refuses to send, and ends the wait for running requests.
+func (t *callTracker) closeTransport() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.closed = true
+	clear(t.running)
+	t.idle.Broadcast()
 }
 
 func newCallTracker() *callTracker {
@@ -62,7 +77,7 @@ func (t *callTracker) answer(message jsonrpc.Message) bool {
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return !t.cancelled[response.ID]
+	return !t.closed && !t.cancelled[response.ID]
 }
 
 // answered ends a request once its answer is written or dropped.
@@ -128,3 +143,47 @@ func (c trackedConnection) Write(ctx context.Context, message jsonrpc.Message) e
 	}
 	return c.Connection.Write(ctx, message)
 }
+
+// stdioMaxBuffer is Node's SDK STDIO_DEFAULT_MAX_BUFFER_SIZE: the bytes of a
+// message not yet ended that its ReadBuffer holds.
+const stdioMaxBuffer = 10 * 1024 * 1024
+
+// cappedStdin is Node's ReadBuffer check on stdin: when the unended bytes
+// plus a new chunk pass the cap, the transport closes. Nothing more is
+// read as a message and nothing more is answered; the rest of stdin is
+// read and dropped until it ends, which ends the session as Node's stdin
+// end does. Node logs nothing.
+type cappedStdin struct {
+	in      io.ReadCloser
+	tracker *callTracker
+	pending int
+	over    atomic.Bool
+}
+
+func (c *cappedStdin) Read(p []byte) (int, error) {
+	if c.over.Load() {
+		return 0, c.drain()
+	}
+	n, err := c.in.Read(p)
+	if c.pending+n > stdioMaxBuffer {
+		c.over.Store(true)
+		c.tracker.closeTransport()
+		return 0, c.drain()
+	}
+	if at := bytes.LastIndexByte(p[:n], '\n'); at >= 0 {
+		c.pending = n - at - 1
+	} else {
+		c.pending += n
+	}
+	return n, err
+}
+
+func (c *cappedStdin) drain() error {
+	_, err := io.Copy(io.Discard, c.in)
+	if err == nil {
+		err = io.EOF
+	}
+	return err
+}
+
+func (c *cappedStdin) Close() error { return c.in.Close() }

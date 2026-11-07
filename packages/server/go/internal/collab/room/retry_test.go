@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -220,6 +221,75 @@ func TestEveryDoorChecksPurgingThenDrainingThenTheCooldown(t *testing.T) {
 			}
 			if got := door.call(t, manager); got != "Purged" {
 				t.Fatalf("purged and draining: %q, want Purged", got)
+			}
+		})
+	}
+}
+
+// A drain that begins after a door's draining check but before the door
+// makes the room must still win: a room made then is never flushed.
+func TestADrainThatBeginsPastTheDrainingCheckStillRefusesTheRoom(t *testing.T) {
+	doors := []struct {
+		name string
+		call func(t *testing.T, m *Manager) string
+	}{
+		{"join", func(t *testing.T, m *Manager) string {
+			r, err := m.Join(context.Background(), "doc", &fakeMember{source: collab.SourceClientV1})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if r.Status == collab.JoinDraining {
+				return "Draining"
+			}
+			return fmt.Sprint(r.Status)
+		}},
+		{"edit", func(t *testing.T, m *Manager) string {
+			r, err := m.Edit(context.Background(), "doc", customInsert(t, "c"), "op", make([]byte, 32), "", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if r.Status == EditDraining {
+				return "Draining"
+			}
+			return fmt.Sprint(r.Status)
+		}},
+		{"state", func(t *testing.T, m *Manager) string {
+			r, err := m.State(context.Background(), "doc")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if r.Status == StateDraining {
+				return "Draining"
+			}
+			return fmt.Sprint(r.Status)
+		}},
+	}
+	for _, door := range doors {
+		t.Run(door.name, func(t *testing.T) {
+			var manager *Manager
+			var armed atomic.Bool
+			o := DefaultOptions()
+			// The cooldown check reads the clock after the draining check
+			// and before the room is made: the drain begins there.
+			o.Now = func() time.Time {
+				if armed.CompareAndSwap(true, false) {
+					manager.draining.Store(true)
+				}
+				return time.Now()
+			}
+			manager, _, _ = newTestManager(t, o, nil)
+			manager.mu.Lock()
+			manager.cooldowns["doc"] = cooldown{failures: 1}
+			manager.mu.Unlock()
+
+			armed.Store(true)
+			got := door.call(t, manager)
+
+			if rooms := manager.LiveRoomCount(); rooms != 0 {
+				t.Fatalf("%d rooms made after the drain began", rooms)
+			}
+			if got != "Draining" {
+				t.Fatalf("answered %q, want Draining", got)
 			}
 		})
 	}

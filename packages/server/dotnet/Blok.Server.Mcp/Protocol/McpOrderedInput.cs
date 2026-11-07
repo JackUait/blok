@@ -183,7 +183,10 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
         RequestIds.Enqueue(sdkId);
       }
     }
-    Reserve(text);
+    if (Reserve(text) is { } withTag)
+    {
+      bytes = Encoding.UTF8.GetBytes(withTag);
+    }
 
     return bytes;
   }
@@ -211,25 +214,34 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
     }
   }
 
-  private void Reserve(string text)
+  // The line rewritten with its arrival tag when its id was already waiting, else null.
+  private string? Reserve(string text)
   {
     // Only a tools/call names a handle; anything else, or a line the SDK will refuse, takes no place.
     if (!text.Contains("\"tools/call\"", StringComparison.Ordinal))
     {
-      return;
+      return null;
     }
     try
     {
       if (McpJson.Parse(text) is JsonObject message && McpJson.String(message["method"]) == RequestMethods.ToolsCall
           && message["id"] is JsonNode id && message["params"] is JsonObject call && call["arguments"] is JsonObject arguments
-          && McpJson.String(arguments["handle"]) is string handle)
+          && McpJson.String(arguments["handle"]) is string handle && core.Reserve(IdOf(id), handle) is long tag)
       {
-        core.Reserve(IdOf(id), handle);
+        // Read off the wire, so the second of two lines with one id never takes the first's place.
+        var meta = call["_meta"] as JsonObject ?? [];
+
+        meta[McpServerCore.ArrivalTagMeta] = tag;
+        call["_meta"] = meta;
+
+        return McpJson.Write(message);
       }
     }
     catch (Exception error) when (error is not OutOfMemoryException)
     {
       // A line it cannot read takes no place; the SDK answers it.
     }
+
+    return null;
   }
 }

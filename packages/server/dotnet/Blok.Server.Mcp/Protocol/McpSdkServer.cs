@@ -96,21 +96,19 @@ internal static class McpSdkServer
       {
         core.Unreserve(McpOrderedInput.IdOf(id));
       }
-      // Before any await, so requests that share an id take their places in wire order.
-      if (context.JsonRpcMessage is not JsonRpcRequest { Method: RequestMethods.ToolsCall } call)
-      {
-        await next(context, cancellationToken);
+      var tag = context.JsonRpcMessage is JsonRpcRequest { Method: RequestMethods.ToolsCall } call ? TagOf(call.Params) : null;
 
-        return;
-      }
-      core.Claim(call, call.Id.ToString());
       try
       {
         await next(context, cancellationToken);
       }
       finally
       {
-        core.ReleaseClaim(call);
+        // A no-op once the call took its place; frees it when the SDK refused the call.
+        if (tag is long mine)
+        {
+          core.ReleaseTag(mine);
+        }
       }
     });
     options.Filters.Message.OutgoingFilters.Add(next => async (context, cancellationToken) =>
@@ -121,6 +119,12 @@ internal static class McpSdkServer
       }
       await next(context, cancellationToken);
     });
+  }
+
+  private static long? TagOf(JsonNode? parameters)
+  {
+    return parameters is JsonObject call && call["_meta"] is JsonObject meta && meta[McpServerCore.ArrivalTagMeta] is JsonValue value
+        && value.TryGetValue<long>(out var tag) ? tag : null;
   }
 
   /// <summary>As Node: a throw that is not model-fixable is JSON-RPC -32603, not a tool error.</summary>
@@ -152,7 +156,7 @@ internal static class McpSdkServer
     // Before the first await: calls on one handle keep the order they arrived in, as Node's queue does.
     // Every call goes through here, so stop waits for each one.
     return await core.InArrivalOrderAsync(
-        McpJson.String(raw?["arguments"]?["handle"]), context.JsonRpcRequest.Id.ToString(), () => CallInOrderAsync(core, identity, name, raw, context, token), context.JsonRpcRequest);
+        McpJson.String(raw?["arguments"]?["handle"]), context.JsonRpcRequest.Id.ToString(), () => CallInOrderAsync(core, identity, name, raw, context, token), TagOf(raw));
   }
 
   private static async Task<CallToolResult> CallInOrderAsync(

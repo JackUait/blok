@@ -272,45 +272,50 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
     Assert.Equal(8, await core.InArrivalOrderAsync("h", "102", () => Task.FromResult(8)).WaitAsync(TimeSpan.FromSeconds(10)));
   }
 
-  // Node's queue runs both, in wire order, even when the second handler starts first.
+  // Node's queue runs both, in wire order, even when the second handler starts first: the
+  // reader tags the second line as it reads it, so nothing depends on the SDK's scheduling.
   [Fact]
-  public async Task TwoRequestsWithOneIdRunInTheOrderTheyArrived()
+  public async Task TwoLinesWithOneIdRunInWireOrderWhenTheSecondHandlerStartsFirst()
   {
     await using var core = Core((_, _, _, _) => Task.FromResult(true));
-    object first = new(), second = new();
-    var started = new List<string>();
+    var line = "{\"jsonrpc\":\"2.0\",\"id\":50,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_execute\",\"arguments\":{\"handle\":\"h\"}}}\n";
+    await using var input = new Blok.Server.Mcp.Protocol.McpOrderedInput(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(line + line)), core);
+    using var passed = new MemoryStream();
 
-    core.Reserve("50", "h");
-    core.Reserve("50", "h");
-    core.Claim(first, "50");
-    core.Claim(second, "50");
+    await input.CopyToAsync(passed);
+    var lines = System.Text.Encoding.UTF8.GetString(passed.ToArray()).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    var firstTag = JsonNode.Parse(lines[0])!["params"]!["_meta"]?[McpServerCore.ArrivalTagMeta];
+    var secondTag = (long)JsonNode.Parse(lines[1])!["params"]!["_meta"]![McpServerCore.ArrivalTagMeta]!;
+    var started = new List<string>();
     var b = core.InArrivalOrderAsync("h", "50", () =>
     {
       started.Add("b");
 
       return Task.FromResult(2);
-    }, second);
+    }, secondTag);
     await Task.Delay(100);
     var a = core.InArrivalOrderAsync("h", "50", () =>
     {
       started.Add("a");
 
       return Task.FromResult(1);
-    }, first);
+    });
 
     await Task.WhenAll(a, b).WaitAsync(TimeSpan.FromSeconds(10));
+    Assert.Null(firstTag);
     Assert.Equal(["a", "b"], started);
   }
 
   [Fact]
-  public async Task AClaimedRequestThatNeverRanFreesItsPlace()
+  public async Task ATaggedRequestThatNeverRanFreesItsPlace()
   {
     await using var core = Core((_, _, _, _) => Task.FromResult(true));
-    var refused = new object();
 
-    core.Reserve("1", "h");
-    core.Claim(refused, "1");
-    core.ReleaseClaim(refused);
+    Assert.Null(core.Reserve("1", "h"));
+    var tag = core.Reserve("1", "h");
+
+    core.Unreserve("1");
+    core.ReleaseTag(tag!.Value);
 
     Assert.Equal(2, await core.InArrivalOrderAsync("h", null, () => Task.FromResult(2)).WaitAsync(TimeSpan.FromSeconds(10)));
   }

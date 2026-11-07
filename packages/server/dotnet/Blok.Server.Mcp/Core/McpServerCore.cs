@@ -31,10 +31,11 @@ internal sealed class McpServerCore : IAsyncDisposable
   private Task? stopping;
   // Per handle, the last call to arrive: the next one starts after it.
   private readonly Dictionary<string, Task> arrivals = new(StringComparer.Ordinal);
-  // Request id -> the places its handle calls took when read, in wire order (an id can repeat).
-  private readonly Dictionary<string, Queue<Place>> reserved = new(StringComparer.Ordinal);
-  // The request a place was handed to as the SDK took it in, while it has not run yet.
-  private readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, Place> claimed = [];
+  // Request id -> the place its handle call took when it was read.
+  private readonly Dictionary<string, Place> reserved = new(StringComparer.Ordinal);
+  // A line whose id was already waiting gets a tag instead: tag -> its place.
+  private readonly Dictionary<long, Place> tagged = [];
+  private long tags;
   private JsonObject? surface;
   private int stopped;
 
@@ -120,9 +121,9 @@ internal sealed class McpServerCore : IAsyncDisposable
   /// The SDK starts handlers in arrival order but runs them at once, and the bundle checks before
   /// the queue would reorder them. Each call waits until the one before it has joined the queue.
   /// </summary>
-  internal Task<T> InArrivalOrderAsync<T>(string? handle, string? requestId, Func<Task<T>> run, object? request = null)
+  internal Task<T> InArrivalOrderAsync<T>(string? handle, string? requestId, Func<Task<T>> run, long? tag = null)
   {
-    var call = InOrderAsync(handle, requestId, request, run);
+    var call = InOrderAsync(handle, requestId, tag, run);
 
     // Tracked from arrival, so stop also waits for a call still waiting its turn.
     Track(inFlight, call);
@@ -132,50 +133,30 @@ internal sealed class McpServerCore : IAsyncDisposable
 
   /// <summary>
   /// Takes the request's place in its handle's order as it is read off the wire. The SDK's
-  /// handler can start after a later request's, so the place is taken here, before it.
+  /// handler can start after a later request's, so the place is taken here, before it. A line
+  /// whose id is already waiting gets its own place under the tag returned, which the reader
+  /// writes into the line (<see cref="ArrivalTagMeta"/>), so the two never take each other's.
   /// </summary>
-  internal void Reserve(string requestId, string handle)
+  internal long? Reserve(string requestId, string handle)
   {
     lock (arrivals)
     {
-      if (!reserved.TryGetValue(requestId, out var places))
+      if (!reserved.ContainsKey(requestId))
       {
-        reserved[requestId] = places = new Queue<Place>();
+        reserved[requestId] = Join(handle);
+
+        return null;
       }
-      places.Enqueue(Join(handle));
+      var tag = ++tags;
+
+      tagged[tag] = Join(handle);
+
+      return tag;
     }
   }
 
-  /// <summary>
-  /// Hands the oldest place booked under this id to the request the SDK just took in. The SDK
-  /// takes messages in wire order, so two requests with one id get their own places in turn.
-  /// </summary>
-  internal void Claim(object request, string requestId)
-  {
-    lock (arrivals)
-    {
-      if (Take(requestId) is { } place)
-      {
-        claimed.AddOrUpdate(request, place);
-      }
-    }
-  }
-
-  /// <summary>A request the SDK finished without running its handler gives its place up.</summary>
-  internal void ReleaseClaim(object request)
-  {
-    Place? place;
-
-    lock (arrivals)
-    {
-      if (!claimed.TryGetValue(request, out place))
-      {
-        return;
-      }
-      claimed.Remove(request);
-    }
-    Leave(place);
-  }
+  /// <summary>Where a repeated id's line carries its tag: params._meta, which tools never read.</summary>
+  internal const string ArrivalTagMeta = "io.blok/arrival";
 
   /// <summary>A request answered or cancelled without running gives its place up.</summary>
   internal void Unreserve(string requestId)
@@ -184,7 +165,7 @@ internal sealed class McpServerCore : IAsyncDisposable
 
     lock (arrivals)
     {
-      place = Take(requestId);
+      reserved.Remove(requestId, out place);
     }
     if (place is not null)
     {
@@ -192,44 +173,38 @@ internal sealed class McpServerCore : IAsyncDisposable
     }
   }
 
-  // Under the arrivals lock.
-  private Place? Take(string requestId)
+  /// <summary>A tagged request the SDK finished without running gives its place up.</summary>
+  internal void ReleaseTag(long tag)
   {
-    if (!reserved.TryGetValue(requestId, out var places))
-    {
-      return null;
-    }
-    var place = places.Dequeue();
+    Place? place;
 
-    if (places.Count == 0)
+    lock (arrivals)
     {
-      reserved.Remove(requestId);
+      tagged.Remove(tag, out place);
     }
-
-    return place;
+    if (place is not null)
+    {
+      Leave(place);
+    }
   }
 
-  private Task<T> InOrderAsync<T>(string? handle, string? requestId, object? request, Func<Task<T>> run)
+  private Task<T> InOrderAsync<T>(string? handle, string? requestId, long? tag, Func<Task<T>> run)
   {
     if (handle is null)
     {
       return run();
     }
-    Place? place;
+    Place? place = null;
 
     lock (arrivals)
     {
-      if (request is not null && claimed.TryGetValue(request, out place))
+      if (!(tag is long mine && tagged.Remove(mine, out place)) && (requestId is null || !reserved.Remove(requestId, out place)))
       {
-        claimed.Remove(request);
-      }
-      else
-      {
-        place = (requestId is null ? null : Take(requestId)) ?? Join(handle);
+        place = Join(handle);
       }
     }
 
-    return AfterAsync(place, run);
+    return AfterAsync(place!, run);
   }
 
   // Under the arrivals lock.

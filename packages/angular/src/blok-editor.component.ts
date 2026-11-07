@@ -980,10 +980,21 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, OnDestroy, C
       // one, which the runtime reports as an unhandled rejection. Swallowing it
       // here also leaves the chain resolved, so the next queued render still runs.
       this.renderChain = this.renderChain
-        .then(() => editor.render(toRenderableData(data)))
+        // A render queued behind a slow one may run after this editor was
+        // destroyed or replaced; it must not reach the dead editor.
+        .then(async () => {
+          if (this.instance() !== editor) {
+            return false;
+          }
+          await editor.render(toRenderableData(data));
+
+          return true;
+        })
         .then(
-          () => {
-            this.lastRenderedData = data;
+          (rendered) => {
+            if (rendered) {
+              this.lastRenderedData = data;
+            }
           },
           () => undefined
         )

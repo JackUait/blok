@@ -202,4 +202,33 @@ describe('useBlok reactive data — render resilience', () => {
     // The new editor was constructed with `updated`, so it is already seeded.
     expect(instances[1].render).not.toHaveBeenCalled();
   });
+
+  it('does not run a queued render on an editor destroyed while an earlier render was in flight', async () => {
+    deferredRenderControls = [];
+    const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 's' } }] };
+    const first = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'first' } }] };
+    const second = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'second' } }] };
+
+    const { rerender, unmount } = render(<Harness config={{ data: seed }} />);
+    await act(async () => { await flush(); });
+    rerender(<Harness config={{ data: first }} />);
+    await act(async () => { await flush(); });
+    rerender(<Harness config={{ data: second }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances[0].render).toHaveBeenCalledTimes(1);
+
+    unmount();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(instances[0].destroy).toHaveBeenCalled();
+
+    await act(async () => {
+      deferredRenderControls?.shift()?.resolve();
+      await flush();
+    });
+
+    expect(instances[0].render).toHaveBeenCalledTimes(1);
+  });
 });

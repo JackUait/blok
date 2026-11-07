@@ -681,10 +681,21 @@ export function useBlok(
       // the chain can no longer reject, no leading catch is needed to keep the
       // next queued render running.
       state.renderChain = state.renderChain
-        .then(() => ed.render(toRenderableData(toRaw(data))))
+        // A render queued behind a slow one may run after this editor was
+        // torn down or replaced; it must not reach the dead editor.
+        .then(async () => {
+          if (state.current !== ed) {
+            return false;
+          }
+          await ed.render(toRenderableData(toRaw(data)));
+
+          return true;
+        })
         .then(
-          () => {
-            state.lastRenderedData = data;
+          (rendered) => {
+            if (rendered) {
+              state.lastRenderedData = data;
+            }
           },
           () => undefined
         )

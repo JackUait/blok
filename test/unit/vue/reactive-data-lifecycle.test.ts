@@ -69,4 +69,32 @@ describe('useBlok data changes around the editor lifecycle', () => {
 
     expect(instance.render).not.toHaveBeenCalled();
   });
+
+  it('does not run a queued render on an editor destroyed while an earlier render was in flight', async () => {
+    const { config, unmount } = mountHarness({ data: doc('seed') });
+    const instance = lastInstance();
+
+    instance.resolveReady();
+    await flushPromises();
+
+    const finishFirst: Array<() => void> = [];
+
+    instance.render.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      finishFirst.push(resolve);
+    }));
+
+    config.data = doc('first');
+    await flushPromises();
+    config.data = doc('second');
+    await flushPromises();
+
+    expect(instance.render).toHaveBeenCalledTimes(1);
+
+    unmount();
+    finishFirst.forEach((resolve) => resolve());
+    await flushPromises();
+
+    expect(instance.destroy).toHaveBeenCalled();
+    expect(instance.render).toHaveBeenCalledTimes(1);
+  });
 });

@@ -75,4 +75,33 @@ describe('BlokEditorComponent data around the editor lifecycle', () => {
     expect(editor.destroy).toHaveBeenCalledTimes(1);
     expect(fixture.componentInstance.instance()).toBeNull();
   });
+
+  it('does not run a queued render on an editor destroyed while an earlier render was in flight', async () => {
+    const fixture = await construct(doc('seed'));
+    const editor = blokRegistry.last;
+
+    editor.resolveReady();
+    await settle(fixture);
+
+    const finishFirst: Array<() => void> = [];
+
+    editor.render.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      finishFirst.push(resolve);
+    }));
+
+    fixture.componentRef.setInput('data', doc('first'));
+    await settle(fixture);
+    fixture.componentRef.setInput('data', doc('second'));
+    fixture.detectChanges();
+
+    expect(editor.render).toHaveBeenCalledTimes(1);
+
+    fixture.destroy();
+    finishFirst.forEach((resolve) => resolve());
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(editor.destroy).toHaveBeenCalled();
+    expect(editor.render).toHaveBeenCalledTimes(1);
+  });
 });

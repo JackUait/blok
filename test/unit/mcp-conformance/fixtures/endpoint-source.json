@@ -3991,6 +3991,80 @@
       ]
     },
     {
+      "name": "an answer whose connection drops mid-body",
+      "hosts": {
+        "GET /docs/doc": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "text": "{\"data\":{\"blocks\":[",
+          "dropMidBody": true
+        },
+        "PUT /docs/doc": {
+          "status": 200,
+          "json": {
+            "version": "v2"
+          }
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "mask": [
+            "/result/structuredContent/handle"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The document endpoint dropped the connection while answering.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "authorization": "Token secret-1"
+          }
+        }
+      ]
+    },
+    {
       "name": "a lone surrogate in an answer reads and saves as U+FFFD",
       "hosts": {
         "GET /docs/doc": {

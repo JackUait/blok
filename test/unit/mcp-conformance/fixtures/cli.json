@@ -1315,6 +1315,142 @@
       "expectExit": {
         "code": 0
       }
+    },
+    {
+      "name": "--http 127.0.0.1:abc is not a port and exits 1",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:abc",
+        "--authorize",
+        "http://127.0.0.1:9/authorize"
+      ],
+      "expectExit": {
+        "code": 1,
+        "signal": null,
+        "stderr": "blok-mcp: --http needs a port from 0 to 65535 after the last \":\", got \"127.0.0.1:abc\"\n"
+      }
+    },
+    {
+      "name": "--http 127.0.0.1:99999 is not a port and exits 1",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:99999",
+        "--authorize",
+        "http://127.0.0.1:9/authorize"
+      ],
+      "expectExit": {
+        "code": 1,
+        "signal": null,
+        "stderr": "blok-mcp: --http needs a port from 0 to 65535 after the last \":\", got \"127.0.0.1:99999\"\n"
+      }
+    },
+    {
+      "name": "--http 127.0.0.1:-1 is not a port and exits 1",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:-1",
+        "--authorize",
+        "http://127.0.0.1:9/authorize"
+      ],
+      "expectExit": {
+        "code": 1,
+        "signal": null,
+        "stderr": "blok-mcp: --http needs a port from 0 to 65535 after the last \":\", got \"127.0.0.1:-1\"\n"
+      }
+    },
+    {
+      "name": "--http 127.0.0.1:0x10 is not a port and exits 1",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:0x10",
+        "--authorize",
+        "http://127.0.0.1:9/authorize"
+      ],
+      "expectExit": {
+        "code": 1,
+        "signal": null,
+        "stderr": "blok-mcp: --http needs a port from 0 to 65535 after the last \":\", got \"127.0.0.1:0x10\"\n"
+      }
+    },
+    {
+      "name": "--http 127.0.0.1:65536 is not a port and exits 1",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:65536",
+        "--authorize",
+        "http://127.0.0.1:9/authorize"
+      ],
+      "expectExit": {
+        "code": 1,
+        "signal": null,
+        "stderr": "blok-mcp: --http needs a port from 0 to 65535 after the last \":\", got \"127.0.0.1:65536\"\n"
+      }
+    },
+    {
+      "name": "--http 127.0.0.1:1e3 is not a port and exits 1",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:1e3",
+        "--authorize",
+        "http://127.0.0.1:9/authorize"
+      ],
+      "expectExit": {
+        "code": 1,
+        "signal": null,
+        "stderr": "blok-mcp: --http needs a port from 0 to 65535 after the last \":\", got \"127.0.0.1:1e3\"\n"
+      }
+    },
+    {
+      "name": "--http 127.0.0.1: 80 is not a port and exits 1",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1: 80",
+        "--authorize",
+        "http://127.0.0.1:9/authorize"
+      ],
+      "expectExit": {
+        "code": 1,
+        "signal": null,
+        "stderr": "blok-mcp: --http needs a port from 0 to 65535 after the last \":\", got \"127.0.0.1: 80\"\n"
+      }
+    },
+    {
+      "name": "--http 127.0.0.1:0x2710 is not a port and exits 1",
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--http",
+        "127.0.0.1:0x2710",
+        "--authorize",
+        "http://127.0.0.1:9/authorize"
+      ],
+      "expectExit": {
+        "code": 1,
+        "signal": null,
+        "stderr": "blok-mcp: --http needs a port from 0 to 65535 after the last \":\", got \"127.0.0.1:0x2710\"\n"
+      }
     }
   ]
 }

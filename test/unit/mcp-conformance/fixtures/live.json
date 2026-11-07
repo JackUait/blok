@@ -17719,6 +17719,329 @@
       }
     },
     {
+      "argv": [
+        "--sync-url",
+        "${roomWs}",
+        "--origin",
+        "https://app.example.com",
+        "--principal",
+        "alice",
+        "--ticket-url",
+        "${host}/tickets"
+      ],
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token-1"
+      },
+      "name": "tickets: a ticket URL that answers 403 when the agent mints again is FORBIDDEN, and is not asked again and again",
+      "hosts": {
+        "POST /tickets": {
+          "status": 200,
+          "sequence": [
+            {
+              "status": 200,
+              "json": {
+                "ticket": {
+                  "$ticket": {
+                    "claims": {
+                      "user": "agent:alice:claude-code",
+                      "doc": "live-doc",
+                      "write": true
+                    },
+                    "expiresIn": 20,
+                    "secret": "mcp-live-conformance-secret-0123456789"
+                  }
+                }
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "ticket": {
+                  "$ticket": {
+                    "claims": {
+                      "user": "agent:alice:claude-code",
+                      "doc": "live-doc",
+                      "write": true
+                    },
+                    "expiresIn": 20,
+                    "secret": "mcp-live-conformance-secret-0123456789"
+                  }
+                }
+              }
+            },
+            {
+              "status": 403,
+              "text": "no"
+            }
+          ]
+        }
+      },
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${liveContractRevision}"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.versions",
+                    "args": {}
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "l0",
+                "error": {
+                  "code": "TOOL_ACTION_FAILED",
+                  "message": "The version history failed: The host did not grant this document to this agent.",
+                  "retryable": false,
+                  "commandIndex": 0,
+                  "path": "/commands/0/args"
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p1",
+                      "data": {
+                        "text": "x"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The room refused this agent. Its ticket may not grant this document.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "sleepMs": 3000
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p2",
+                      "data": {
+                        "text": "y"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The room refused this agent. Its ticket may not grant this document.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "read": true
+          },
+          "expect": []
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "live-doc",
+            "write": true,
+            "principal": "alice",
+            "clientName": "claude-code",
+            "actorId": "agent:alice:claude-code"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "live-doc",
+            "write": true,
+            "principal": "alice",
+            "clientName": "claude-code",
+            "actorId": "agent:alice:claude-code"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/tickets",
+          "headers": {
+            "authorization": "Bearer host-token-1",
+            "content-type": "application/json"
+          },
+          "body": {
+            "doc": "live-doc",
+            "write": true,
+            "principal": "alice",
+            "clientName": "claude-code",
+            "actorId": "agent:alice:claude-code"
+          }
+        }
+      ]
+    },
+    {
       "name": "limits v2: an update past the announced limit is refused before it is sent",
       "steps": [
         {

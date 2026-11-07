@@ -7922,6 +7922,51 @@
       "expectHostRequests": []
     },
     {
+      "name": "matrix: a body that starts with a UTF-8 BOM is read",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "note": "a body that starts with a UTF-8 BOM",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream"
+            },
+            "bodyText": "﻿{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}"
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "sse": [
+              {
+                "result": {},
+                "jsonrpc": "2.0",
+                "id": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expectHostRequests": []
+    },
+    {
       "name": "matrix: invalid UTF-8 inside a body string reads as U+FFFD",
       "hosts": {
         "POST /authorize": {

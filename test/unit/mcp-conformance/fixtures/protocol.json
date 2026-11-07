@@ -26337,6 +26337,34 @@
       }
     },
     {
+      "name": "stdio malformed line: a line that starts with a UTF-8 BOM gets no answer, and the server keeps serving",
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "sendText": "﻿{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\"}",
+          "noAnswer": true
+        },
+        {
+          "sleepMs": 300
+        },
+        {
+          "send": {
+            "method": "ping"
+          },
+          "expect": {
+            "result": {},
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
       "name": "stdio malformed line: a batch array gets no answer, and the server keeps serving",
       "session": {
         "protocolVersion": "2025-11-25"
@@ -26372,6 +26400,34 @@
       "steps": [
         {
           "sendText": "{\"jsonrpc\":\"2.0\",\"id\":1.5,\"method\":\"ping\"}",
+          "noAnswer": true
+        },
+        {
+          "sleepMs": 300
+        },
+        {
+          "send": {
+            "method": "ping"
+          },
+          "expect": {
+            "result": {},
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "stdio malformed line: an id past 2^53 gets no answer, and the server keeps serving",
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":9007199254740993,\"method\":\"ping\"}",
           "noAnswer": true
         },
         {

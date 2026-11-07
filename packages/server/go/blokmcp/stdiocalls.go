@@ -28,6 +28,13 @@ type callTracker struct {
 	lines  *handleLines
 	booked map[jsonrpc.ID][]string
 	open   map[jsonrpc.ID]int
+	// The Go SDK refuses an id still in use; Node's answers it again. A
+	// reused id runs under an alias (alias to the client's id), and
+	// latest is the id a cancel of the client's id reaches, as Node's
+	// SDK keeps only the newest request per id.
+	inUse   map[jsonrpc.ID]int
+	aliases map[jsonrpc.ID]jsonrpc.ID
+	latest  map[jsonrpc.ID]jsonrpc.ID
 }
 
 // closeTransport drops every later message, as Node's closed transport
@@ -96,7 +103,8 @@ func (t *callTracker) endedLocked(id jsonrpc.ID) {
 
 func newCallTracker() *callTracker {
 	tracker := &callTracker{running: map[jsonrpc.ID]bool{}, cancelled: map[jsonrpc.ID]bool{},
-		lines: newHandleLines(), booked: map[jsonrpc.ID][]string{}, open: map[jsonrpc.ID]int{}}
+		lines: newHandleLines(), booked: map[jsonrpc.ID][]string{}, open: map[jsonrpc.ID]int{},
+		inUse: map[jsonrpc.ID]int{}, aliases: map[jsonrpc.ID]jsonrpc.ID{}, latest: map[jsonrpc.ID]jsonrpc.ID{}}
 	tracker.idle = sync.NewCond(&tracker.mu)
 	return tracker
 }
@@ -105,6 +113,9 @@ func (t *callTracker) read(message jsonrpc.Message) {
 	request, ok := message.(*jsonrpc.Request)
 	if !ok {
 		return
+	}
+	if request.IsCall() {
+		t.alias(request)
 	}
 	if request.IsCall() && request.Method == "tools/call" {
 		request.Params = t.withTurn(request.ID, request.Params)
@@ -125,10 +136,39 @@ func (t *callTracker) read(message jsonrpc.Message) {
 		return
 	}
 	id, err := jsonrpc.MakeID(params.RequestID)
+	if newest, ok := t.latest[id]; ok {
+		id = newest
+	}
 	// Only a request still running can be cancelled, as in Node's SDK.
 	if err == nil && t.running[id] {
 		t.cancelled[id] = true
 	}
+}
+
+// alias gives a request whose id is still in use an id of its own.
+func (t *callTracker) alias(request *jsonrpc.Request) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	client := request.ID
+	if t.inUse[client] > 0 {
+		own, err := jsonrpc.MakeID("blok-mcp/reused/" + newHandleID())
+		if err == nil {
+			t.aliases[own] = client
+			request.ID = own
+		}
+	}
+	t.inUse[client]++
+	t.latest[client] = request.ID
+}
+
+// clientID is the id the client sent for a request.
+func (t *callTracker) clientID(id jsonrpc.ID) jsonrpc.ID {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if client, ok := t.aliases[id]; ok {
+		return client
+	}
+	return id
 }
 
 // turnKey carries a call's turn token in its _meta, to callTool. A
@@ -191,6 +231,17 @@ func (t *callTracker) answered(message jsonrpc.Message) {
 	delete(t.running, response.ID)
 	delete(t.cancelled, response.ID)
 	t.endedLocked(response.ID)
+	client, aliased := t.aliases[response.ID]
+	if !aliased {
+		client = response.ID
+	}
+	delete(t.aliases, response.ID)
+	if t.inUse[client] > 0 {
+		if t.inUse[client]--; t.inUse[client] == 0 {
+			delete(t.inUse, client)
+			delete(t.latest, client)
+		}
+	}
 	if len(t.running) == 0 {
 		t.idle.Broadcast()
 	}
@@ -238,9 +289,22 @@ func (c trackedConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
 }
 
 func (c trackedConnection) Write(ctx context.Context, message jsonrpc.Message) error {
-	defer c.tracker.answered(message)
+	response, isResponse := message.(*jsonrpc.Response)
+	var own jsonrpc.ID
+	if isResponse {
+		own = response.ID
+	}
+	defer func() {
+		if isResponse {
+			response.ID = own
+		}
+		c.tracker.answered(message)
+	}()
 	if !c.tracker.answer(message) {
 		return nil
+	}
+	if isResponse {
+		response.ID = c.tracker.clientID(own)
 	}
 	return c.Connection.Write(ctx, message)
 }

@@ -145,3 +145,77 @@ func TestAReusedIDKeepsBothPlaces(t *testing.T) {
 		t.Fatal("the line stayed held")
 	}
 }
+
+// Node's SDK answers a request id that is still in use as it answers any
+// other; the Go SDK refuses it. Both get answered, in order.
+func TestAReusedRequestIDIsAnsweredEachTime(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "doc.json"), []byte(`{"blocks":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: dir}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	send, reader, _ := stdioClient(t, server, ctx)
+	send(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"doc","write":true}}}`)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatal(err)
+	}
+	var opened struct {
+		Result struct {
+			StructuredContent map[string]any `json:"structuredContent"`
+		} `json:"result"`
+	}
+	_ = json.Unmarshal([]byte(line), &opened)
+	handle, _ := opened.Result.StructuredContent["handle"].(string)
+	send(`{"jsonrpc":"2.0","id":7,"method":"ping"}`)
+	send(`{"jsonrpc":"2.0","id":7,"method":"ping"}`)
+	for _, title := range []string{"A", "B"} {
+		send(fmt.Sprintf(`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"blok_execute","arguments":{"handle":%q,"commands":[{"name":"doc.setTitle","args":{"title":%q}}]}}}`, handle, title))
+	}
+	send(`{"jsonrpc":"2.0","id":"7","method":"ping"}`)
+	lines := make(chan string, 8)
+	go func() {
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				return
+			}
+			lines <- line
+		}
+	}()
+	var ids []string
+	for range 5 {
+		var line string
+		select {
+		case line = <-lines:
+		case <-time.After(10 * time.Second):
+			t.Fatalf("answered only ids %v", ids)
+		}
+		var answer struct {
+			ID    json.RawMessage `json:"id"`
+			Error json.RawMessage `json:"error"`
+		}
+		_ = json.Unmarshal([]byte(line), &answer)
+		if answer.Error != nil {
+			t.Fatalf("an error: %s", line)
+		}
+		ids = append(ids, string(answer.ID))
+	}
+	counts := map[string]int{}
+	for _, id := range ids {
+		counts[id]++
+	}
+	if counts["7"] != 2 || counts["9"] != 2 || counts[`"7"`] != 1 {
+		t.Fatalf("answered ids %v", ids)
+	}
+	saved, _ := os.ReadFile(filepath.Join(dir, "doc.json"))
+	if !regexp.MustCompile(`"title":\s*"B"`).Match(saved) {
+		t.Fatalf("the two calls did not run in order: %s", saved)
+	}
+}

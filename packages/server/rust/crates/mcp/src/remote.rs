@@ -296,6 +296,22 @@ enum Approved {
     Refused(String),
 }
 
+/// A batch whose command acts on another document (effects: 'host'):
+/// with no edits of its own, the executor marks it 'other'.
+fn writes_another_document(batch: &Value) -> bool {
+    batch
+        .get("commands")
+        .and_then(Value::as_array)
+        .is_some_and(|commands| {
+            commands.iter().any(|c| {
+                matches!(
+                    c.get("name").and_then(Value::as_str),
+                    Some("page.rename" | "page.setIcon")
+                )
+            })
+        })
+}
+
 /// The database comment actions (COMMENT_COMMANDS); the planner refuses a
 /// batch that mixes them with other writes.
 fn comments_only(batch: &Value) -> bool {
@@ -370,10 +386,20 @@ struct Room {
     end: Option<End>,
     done: Vec<Step>,
     undone: Vec<Step>,
-    /// The executor's history marks, one per write batch: None for a write,
-    /// Some(previous version) for a restore, which undo cannot cross.
-    marks_past: Vec<Option<String>>,
-    marks_future: Vec<Option<String>>,
+    /// The executor's history marks, one per write batch.
+    marks_past: Vec<Mark>,
+    marks_future: Vec<Mark>,
+}
+
+/// The executor's HistoryMark.
+#[derive(Clone, Debug, PartialEq)]
+enum Mark {
+    /// The session's own step.
+    Own,
+    /// A restore, naming the version current before; undo cannot cross it.
+    Restored(String),
+    /// A batch that wrote only another document (page.rename, page.setIcon).
+    Other,
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -1386,9 +1412,13 @@ impl Room {
                 comments_only(&input.batch),
             )
             .await?;
-            // A comment batch is marked too, as Node's executor does.
-            self.marks_past.push(None);
-            self.marks_future.clear();
+            // A comment batch leaves the undo history alone, as Node's executor does.
+            if !comments_only(&input.batch) {
+                self.marks_past.push(Mark::Own);
+                self.marks_future.clear();
+            }
+        } else if writes_another_document(&input.batch) {
+            self.marks_past.push(Mark::Other);
         }
         let mut result_text = result_text;
         // A restore the bundle checked goes to the sync server's history route.
@@ -1410,7 +1440,7 @@ impl Room {
                 .pointer("/results/0/previous")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
-            self.marks_past.push(Some(previous.to_owned()));
+            self.marks_past.push(Mark::Restored(previous.to_owned()));
             self.marks_future.clear();
         }
         self.finish_batch(result_text, &result, writes).await
@@ -1659,11 +1689,11 @@ impl Room {
         step.shape = shape(&step, &blocks_of(&target));
         if undo {
             self.undone.push(step);
-            let mark = self.marks_past.pop().flatten();
+            let mark = self.marks_past.pop().unwrap_or(Mark::Own);
             self.marks_future.push(mark);
         } else {
             self.done.push(step);
-            let mark = self.marks_future.pop().flatten();
+            let mark = self.marks_future.pop().unwrap_or(Mark::Own);
             self.marks_past.push(mark);
         }
         let result = json!({
@@ -1680,8 +1710,28 @@ impl Room {
     /// The executor's historyStep check: a restore cannot be undone, and
     /// nothing is redone after one.
     fn mark_refusal(&self, undo: bool) -> Option<String> {
-        let previous = self.marks_past.last()?.as_ref()?;
-        let (code, message) = if undo {
+        let (code, message) = match self.marks_past.last()? {
+            Mark::Own => return None,
+            Mark::Other if !undo => return None,
+            Mark::Other => (
+                "UNDO_OTHER_DOCUMENT",
+                "The last batch wrote another document (a sub-page title or icon). history.undo cannot undo it. To revert it, run that command again with the old value.".to_owned(),
+            ),
+            Mark::Restored(previous) => Self::restore_refusal(previous, undo),
+        };
+        Some(
+            json!({
+                "ok": false,
+                "revision": self.revision(),
+                "error": { "code": code, "message": message, "commandIndex": 0, "retryable": false },
+                "warnings": [],
+            })
+            .to_string(),
+        )
+    }
+
+    fn restore_refusal(previous: &str, undo: bool) -> (&'static str, String) {
+        if undo {
             let mut message =
                 "The last batch restored a version. history.undo cannot undo a restore.".to_owned();
             if !previous.is_empty() {
@@ -1695,16 +1745,7 @@ impl Room {
                 "NOTHING_TO_REDO",
                 "The last batch restored a version. There is nothing to redo after it.".to_owned(),
             )
-        };
-        Some(
-            json!({
-                "ok": false,
-                "revision": self.revision(),
-                "error": { "code": code, "message": message, "commandIndex": 0, "retryable": false },
-                "warnings": [],
-            })
-            .to_string(),
-        )
+        }
     }
 
     /// The executor's approval gate, run in the bundle: the live document,

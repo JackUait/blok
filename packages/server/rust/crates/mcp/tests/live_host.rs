@@ -239,3 +239,44 @@ async fn a_v1_update_over_the_announced_cap_ends_the_room() {
         "{next}"
     );
 }
+
+async fn history(mcp: &Mcp, handle: &str, name: &str) -> Value {
+    call(
+        mcp,
+        "blok_execute",
+        json!({ "handle": handle, "commands": [{ "name": name, "args": {} }] }),
+    )
+    .await
+}
+
+// After the copy is rebuilt from the room, history knows only steps on the
+// live copy: nothing to undo or redo, and a later step undoes in the room.
+#[tokio::test(flavor = "multi_thread")]
+async fn after_the_rebuild_history_acts_on_the_live_copy() {
+    let host = host(true).await;
+    let mcp = mcp(&host).await;
+    let handle = open(&mcp).await;
+    let kept = insert(&mcp, &handle, "p1", "before").await;
+    assert_eq!(kept["ok"], true, "{kept}");
+    let refused = insert(&mcp, &handle, "big", &big()).await;
+    assert_eq!(refused["error"]["code"], "REJECTED", "{refused}");
+    host.proxy.drop_all();
+    tokio::time::sleep(Duration::from_secs(3)).await;
+    let undo = history(&mcp, &handle, "history.undo").await;
+    assert_eq!(undo["error"]["code"], "NOTHING_TO_UNDO", "{undo}");
+    let redo = history(&mcp, &handle, "history.redo").await;
+    assert_eq!(redo["error"]["code"], "NOTHING_TO_REDO", "{redo}");
+    let later = insert(&mcp, &handle, "p2", "later").await;
+    assert_eq!(later["ok"], true, "{later}");
+    let undone = history(&mcp, &handle, "history.undo").await;
+    assert_eq!(undone["ok"], true, "{undone}");
+    assert_eq!(room_ids(&host).await, vec!["p1".to_owned()]);
+    let read = call(&mcp, "blok_read", json!({ "handle": handle })).await;
+    let ids: Vec<&str> = read["blocks"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|b| b["id"].as_str())
+        .collect();
+    assert_eq!(ids, vec!["p1"], "{read}");
+}

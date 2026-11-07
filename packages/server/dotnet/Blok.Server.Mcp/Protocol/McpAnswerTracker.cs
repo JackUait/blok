@@ -15,9 +15,13 @@ internal sealed class McpAnswerTracker
   // Every request id the SDK took or answered; it answers some (ping on 2026-07-28) before any filter.
   private readonly ConcurrentDictionary<string, bool> reached = new(StringComparer.Ordinal);
 
+  // The tools/call ids seen, whose answers stdin's end silences.
+  private readonly ConcurrentDictionary<string, bool> toolCalls = new(StringComparer.Ordinal);
+
   /// <summary>
   /// First in the list, so it is the outermost filter and sees every request. With a core, a
-  /// tools/call that comes after stdin ended never runs, as Node's stop gets there first.
+  /// tools/call answer due after stdin ended is not written: Node closes its transport at the
+  /// end, though the calls it read still run.
   /// </summary>
   internal void Install(McpServerOptions options, McpServerCore? core = null)
   {
@@ -26,9 +30,9 @@ internal sealed class McpAnswerTracker
       if (context.JsonRpcMessage is JsonRpcRequest request)
       {
         reached[request.Id.ToString()] = true;
-        if (core?.InputEnded == true && request.Method == RequestMethods.ToolsCall)
+        if (request.Method == RequestMethods.ToolsCall)
         {
-          return;
+          toolCalls[request.Id.ToString()] = true;
         }
         open.TryAdd(request.Id.ToString(), new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
       }
@@ -42,14 +46,20 @@ internal sealed class McpAnswerTracker
     });
     options.Filters.Message.OutgoingFilters.Add(next => async (context, cancellationToken) =>
     {
-      await next(context, cancellationToken);
-      if (context.JsonRpcMessage is JsonRpcResponse or JsonRpcError)
+      if (context.JsonRpcMessage is not (JsonRpcResponse or JsonRpcError))
       {
-        var id = ((JsonRpcMessageWithId)context.JsonRpcMessage).Id.ToString();
+        await next(context, cancellationToken);
 
-        reached[id] = true;
-        Done(id);
+        return;
       }
+      var id = ((JsonRpcMessageWithId)context.JsonRpcMessage).Id.ToString();
+
+      if (!(core?.InputEnded == true && toolCalls.ContainsKey(id)))
+      {
+        await next(context, cancellationToken);
+      }
+      reached[id] = true;
+      Done(id);
     });
   }
 

@@ -1,3 +1,4 @@
+using System.IO.Pipelines;
 using System.Text;
 using System.Text.Json.Nodes;
 using Blok.Server.Mcp.Core;
@@ -107,13 +108,131 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     Assert.Contains("2", ids);
   }
 
-  // As Node's stop: a call not yet dispatched when stdin ends never runs.
+  // Node's transport is closed at stdin's end: a tools/call answer due after it is never written.
   [Fact]
-  public async Task NeverRunsAToolCallThatArrivesAfterStdinEnded()
+  public async Task NeverAnswersAToolCallTakenAfterStdinEnded()
   {
     var ids = await AnsweredIdsAsync(core => core.InputEnded = true);
 
     // The SDK answers at once, so their order is not fixed.
     Assert.Equal(["0", "2"], ids.Order(StringComparer.Ordinal));
+  }
+
+  // A session over pipes, so a test can read answers before stdin ends.
+  private sealed class Live : IAsyncDisposable
+  {
+    private readonly Pipe input = new();
+    private readonly Pipe output = new();
+    private readonly List<JsonNode> answers = [];
+    private readonly Task reading;
+
+    internal Task Session { get; }
+
+    internal Live(McpServerCore core, ModelContextProtocol.Server.McpServerOptions options, Task stop)
+    {
+      Session = McpStdioSession.RunAsync(core, options, input.Reader.AsStream(), output.Writer.AsStream(), stop);
+      reading = Task.Run(async () =>
+      {
+        using var lines = new StreamReader(output.Reader.AsStream());
+
+        while (await lines.ReadLineAsync() is string line)
+        {
+          lock (answers)
+          {
+            answers.Add(JsonNode.Parse(line)!);
+          }
+        }
+      });
+    }
+
+    internal async Task SendAsync(string json)
+    {
+      await input.Writer.WriteAsync(Encoding.UTF8.GetBytes(json + "\n"));
+    }
+
+    internal async Task EndAsync()
+    {
+      await input.Writer.CompleteAsync();
+    }
+
+    internal JsonNode? Answer(string id)
+    {
+      lock (answers)
+      {
+        return answers.FirstOrDefault(answer => answer["id"]?.ToJsonString() == id);
+      }
+    }
+
+    internal async Task<JsonNode> AnswerAsync(string id)
+    {
+      var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(20);
+
+      JsonNode? answer;
+
+      while ((answer = Answer(id)) is null)
+      {
+        Assert.True(DateTime.UtcNow < deadline, $"no answer for {id}");
+        await Task.Delay(10);
+      }
+
+      return answer;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+      await input.Writer.CompleteAsync();
+      await Session.WaitAsync(TimeSpan.FromSeconds(20));
+      await output.Writer.CompleteAsync();
+      await reading.WaitAsync(TimeSpan.FromSeconds(20));
+    }
+  }
+
+  private async Task<(Live Live, string Handle, McpServerCore Core)> OpenForWriteAsync(TaskCompletionSource? stop = null)
+  {
+    var core = new McpServerCore(fixture.Host.Bundle, new McpConfig { Source = new McpSourceConfig.Files(dir) }, new McpHttpCaller());
+    var options = await McpSdkServer.OptionsAsync(core, _ => new McpCallerIdentity("local", null), CancellationToken.None);
+    var live = new Live(core, options, (stop ?? new TaskCompletionSource()).Task);
+
+    await live.SendAsync(Init.TrimEnd('\n').Split('\n')[0]);
+    await live.SendAsync(Init.TrimEnd('\n').Split('\n')[1]);
+    await live.SendAsync("""{"jsonrpc":"2.0","id":"open","method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"doc","write":true}}}""");
+
+    return (live, McpJson.String((await live.AnswerAsync("\"open\""))["result"]!["structuredContent"]!["handle"])!, core);
+  }
+
+  private static string SetTitle(string id, string handle) =>
+      $$$$"""{"jsonrpc":"2.0","id":{{{{id}}}},"method":"tools/call","params":{"name":"blok_execute","arguments":{"handle":"{{{{handle}}}}","commands":[{"name":"doc.setTitle","args":{"title":"Changed"}}]}}}""";
+
+  // Node closes its transport at stdin's end but still runs what it read: the write is saved, unanswered.
+  // Here the SDK can take the line after the reader saw the end, which InputEnded stands for.
+  [Fact]
+  public async Task SavesAWriteSentRightBeforeStdinEnds()
+  {
+    var (live, handle, core) = await OpenForWriteAsync();
+
+    core.InputEnded = true;
+    await live.SendAsync(SetTitle("10", handle));
+    await live.EndAsync();
+    await live.DisposeAsync();
+
+    Assert.Contains("Changed", File.ReadAllText(Path.Combine(dir, "doc.json")));
+    Assert.Null(live.Answer("10"));
+  }
+
+  // Node passes the cancel signal to opens only: an execute already read still runs, with no answer.
+  [Fact]
+  public async Task ACancelledExecuteStillRunsAndIsNotAnswered()
+  {
+    var (live, handle, _) = await OpenForWriteAsync();
+
+    await live.SendAsync(SetTitle("10", handle));
+    await live.SendAsync("""{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":10}}""");
+    await live.SendAsync("""{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"blok_read","arguments":{"handle":"HANDLE"}}}""".Replace("HANDLE", handle, StringComparison.Ordinal));
+    await live.AnswerAsync("11");
+    await Task.Delay(300);
+
+    Assert.Null(live.Answer("10"));
+    await live.DisposeAsync();
+    Assert.Contains("Changed", File.ReadAllText(Path.Combine(dir, "doc.json")));
   }
 }

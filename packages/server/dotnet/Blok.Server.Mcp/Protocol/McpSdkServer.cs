@@ -153,6 +153,12 @@ internal static class McpSdkServer
     }
     var raw = context.JsonRpcRequest.Params as JsonObject;
 
+    // Node hands the cancel signal to opens only; any other call already read runs to its end.
+    if (name != "blok_open")
+    {
+      token = CancellationToken.None;
+    }
+
     // Before the first await: calls on one handle keep the order they arrived in, as Node's queue does.
     // Every call goes through here, so stop waits for each one.
     return await core.InArrivalOrderAsync(

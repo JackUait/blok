@@ -94,7 +94,7 @@ internal sealed class McpServerCore : IAsyncDisposable
 
   internal McpConfig Config => config;
 
-  /// <summary>Stdin ended: a tools/call not yet dispatched never runs, as Node's stop gets there first.</summary>
+  /// <summary>Stdin ended: tools/call answers are no longer written, as Node's transport is closed.</summary>
   internal volatile bool InputEnded;
 
   internal async Task<JsonObject> SurfaceAsync(CancellationToken cancellationToken = default)

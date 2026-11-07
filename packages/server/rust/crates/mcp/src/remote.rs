@@ -1886,7 +1886,7 @@ impl Room {
                 .outbound
                 .send(method, url, headers, None, Duration::from_secs(60))
                 .await
-                .map_err(|_| "The sync server could not be reached.".to_owned())?;
+                .map_err(|_| HISTORY_UNREACHABLE.to_owned())?;
             if answer.status == 401 && !fresh && self.spec.tickets.is_some() {
                 fresh = true;
                 continue;
@@ -2011,6 +2011,10 @@ impl Room {
             if let Some(status) = status {
                 out["status"] = json!(status);
             }
+            // No answer came: Node's fetch error says a retry can help.
+            if message == HISTORY_UNREACHABLE {
+                out["retryable"] = json!(true);
+            }
             out
         };
         let mut out = json!({});
@@ -2074,6 +2078,9 @@ impl Room {
         )))
     }
 }
+
+/// Node's words when fetch got no answer ("fetch failed" is undici's).
+const HISTORY_UNREACHABLE: &str = "The sync server could not be reached: fetch failed";
 
 /// Counts the doc's updates for l<n> and keeps its local ones to send.
 fn watch(doc: &Doc, local: &Arc<Mutex<Vec<Vec<u8>>>>, count: &Arc<AtomicU64>) {

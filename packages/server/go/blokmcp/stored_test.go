@@ -157,3 +157,42 @@ func TestUndoAfterAPageRenameIsRefused(t *testing.T) {
 		t.Fatalf("the parent's own step was undone: %s", written)
 	}
 }
+
+// A host's own agentActor names the session's actor, as in Node: blocks
+// carry its ids and presence shows its name as given.
+func TestAHostsAgentActorNamesTheSession(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "doc.json")
+	_ = os.WriteFile(path, []byte(`{"blocks":[]}`), 0o644)
+	person := "person-alice"
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: dir},
+		AgentActor: func(principal, clientName string) Actor {
+			return Actor{ID: "bot:" + principal + ":" + clientName, Name: "Bot", OnBehalfOf: &person}
+		}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx := context.Background()
+	client := "my client"
+	who, err := server.actorFor(ctx, "alice", &client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if who.presenceName != "Bot" || string(who.actor) != `{"id":"bot:alice:my-client","name":"Bot","kind":"agent","onBehalfOf":"person-alice"}` {
+		t.Fatalf("actor %s, presence %q", who.actor, who.presenceName)
+	}
+	opened, err := server.dispatch(ctx, &toolCall{name: "blok_open", arguments: json.RawMessage(`{"documentId":"doc","write":true}`), caller: who})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handle, _ := json.Marshal(structured(t, opened.answer)["handle"])
+	if _, err := server.dispatch(ctx, &toolCall{name: "blok_execute", caller: who,
+		arguments: json.RawMessage(`{"handle":` + string(handle) + `,"commands":[{"name":"block.insert","args":{"type":"paragraph","data":{"text":"Hi"}}}]}`)}); err != nil {
+		t.Fatal(err)
+	}
+	written, _ := os.ReadFile(path)
+	if !strings.Contains(string(written), `"bot:alice:my-client"`) || !strings.Contains(string(written), `"person-alice"`) {
+		t.Fatalf("file %s", written)
+	}
+}

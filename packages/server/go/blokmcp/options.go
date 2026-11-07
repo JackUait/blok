@@ -36,6 +36,14 @@ type Options struct {
 	// filters listings (write false). An error denies.
 	Authorize AuthorizeFunc `json:"-"`
 
+	// AgentActor, when set, builds the session's actor from the principal
+	// and the cleaned client name. The ticket "user" must equal its ID.
+	// Blocks the agent writes name OnBehalfOf in createdBy/lastEditedBy and
+	// ID in createdWith/lastEditedWith; without OnBehalfOf the ID is named
+	// alone. Presence shows Name as given. Nil uses the default actor,
+	// whose OnBehalfOf is the principal.
+	AgentActor func(principal, clientName string) Actor `json:"-"`
+
 	// Uploads, when set, lets the agent upload files through the host's
 	// own uploader.
 	Uploads *Uploads `json:"-"`
@@ -44,6 +52,14 @@ type Options struct {
 	// pass blokserver.Server.AgentExecutor() of a server with collaboration
 	// on. Live handles then need no Sync, ticket or socket.
 	Rooms *blokagent.Executor `json:"-"`
+}
+
+// Actor is an agent actor (kind "agent").
+type Actor struct {
+	ID         string  `json:"id"`
+	Name       string  `json:"name"`
+	OnBehalfOf *string `json:"onBehalfOf,omitempty"`
+	Color      *string `json:"color,omitempty"`
 }
 
 // AuthorizeFunc answers whether principal may use documentID, for writing

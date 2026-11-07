@@ -67,6 +67,20 @@ func (s *Server) actorFor(ctx context.Context, principal string, rawClientName *
 	if _, err := s.bundle.call(ctx, "mcpActor", input, &out); err != nil {
 		return nil, err
 	}
+	if s.options.AgentActor != nil {
+		actor := s.options.AgentActor(principal, out.ClientName)
+		written, err := marshal(struct {
+			ID         string  `json:"id"`
+			Name       string  `json:"name"`
+			Kind       string  `json:"kind"`
+			OnBehalfOf *string `json:"onBehalfOf,omitempty"`
+			Color      *string `json:"color,omitempty"`
+		}{actor.ID, actor.Name, "agent", actor.OnBehalfOf, actor.Color})
+		if err != nil {
+			return nil, err
+		}
+		out.Actor, out.PresenceName = written, actor.Name
+	}
 	return &caller{principal: principal, clientName: out.ClientName, actor: out.Actor, presenceName: out.PresenceName}, nil
 }
 

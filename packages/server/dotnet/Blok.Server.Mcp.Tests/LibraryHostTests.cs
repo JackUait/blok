@@ -187,6 +187,34 @@ public sealed class LibraryHostTests : IDisposable
     }
   }
 
+  // Node's legacy transport answers each message of a batch, as one event stream.
+  [Fact]
+  public async Task AnswersEachMessageOfABatch()
+  {
+    var (app, client) = await StartAsync();
+
+    await using (app)
+    {
+      using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+      {
+        Content = new StringContent(
+            """[{"jsonrpc":"2.0","id":7,"method":"ping"},{"jsonrpc":"2.0","method":"notifications/initialized"},{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"blok_list_documents","arguments":{}}}]""",
+            Encoding.UTF8,
+            "application/json"),
+      };
+      request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+      using var response = await client.SendAsync(request);
+      var events = (await response.Content.ReadAsStringAsync()).Split("\n\n", StringSplitOptions.RemoveEmptyEntries);
+
+      Assert.Equal(200, (int)response.StatusCode);
+      Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
+      Assert.Equal(2, events.Length);
+      Assert.StartsWith("event: message\ndata: ", events[0], StringComparison.Ordinal);
+      Assert.Equal(7, (int?)JsonNode.Parse(events[0]["event: message\ndata: ".Length..])!["id"]);
+      Assert.NotNull(JsonNode.Parse(events[1]["event: message\ndata: ".Length..])!["result"]?["structuredContent"]?["documents"]);
+    }
+  }
+
   // Routing must not answer before the gate, which answers as Node's createMcpHandler.
   [Theory]
   [InlineData("POST", "text/plain", 415, "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Unsupported Media Type: Content-Type must be application/json\"},\"id\":null}")]

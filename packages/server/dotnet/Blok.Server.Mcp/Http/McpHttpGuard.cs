@@ -162,8 +162,16 @@ internal static class McpRequestGate
       request.Body = new MemoryStream(Encoding.UTF8.GetBytes(sent));
       request.ContentLength = request.Body.Length;
     }
-    if (context.RequestServices?.GetService(typeof(McpServerCore)) is McpServerCore core
-        && McpRequestShape.ParkDeepArguments(sent, core) is { } parked)
+    var core = context.RequestServices?.GetService(typeof(McpServerCore)) as McpServerCore;
+
+    if (McpJson.Parse(sent) is JsonArray batch)
+    {
+      request.Headers.Remove("Mcp-Session-Id");
+      await ServeBatchAsync(context, next, batch, core);
+
+      return;
+    }
+    if (core is not null && McpRequestShape.ParkDeepArguments(sent, core) is { } parked)
     {
       request.Body = new MemoryStream(Encoding.UTF8.GetBytes(parked));
       request.ContentLength = request.Body.Length;
@@ -223,9 +231,12 @@ internal static class McpRequestGate
       if (refusal is not null)
       {
         await RefuseAsync(response, 400, -32600, refusal);
+
+        return true;
       }
 
-      return refusal is not null;
+      return await LegacyTransportRefusalAsync(
+          context, root.EnumerateArray().Any(element => element.TryGetProperty("method", out var name) && element.TryGetProperty("id", out _) && name.GetString() == "initialize"));
     }
     if (!McpRequestShape.IsNodeMessage(root))
     {
@@ -260,6 +271,16 @@ internal static class McpRequestGate
     {
       return false;
     }
+
+    return await LegacyTransportRefusalAsync(context, isInitialize);
+  }
+
+  // The checks of Node's legacy transport (handlePostRequest), for a message or a batch.
+  private static async Task<bool> LegacyTransportRefusalAsync(HttpContext context, bool isInitialize)
+  {
+    var response = context.Response;
+    var header = context.Request.Headers["MCP-Protocol-Version"];
+    var version = header.Count > 0 ? header.ToString().Trim(' ', '\t') : null;
     var accept = context.Request.Headers.Accept.ToString();
 
     if (!accept.Contains("application/json", StringComparison.Ordinal) || !accept.Contains("text/event-stream", StringComparison.Ordinal))
@@ -343,6 +364,60 @@ internal static class McpRequestGate
   {
     response.ContentType = "application/json";
     await response.WriteAsync(json);
+  }
+
+  // The C# SDK takes one message per request; Node's legacy transport answers a batch's requests
+  // as one event stream, and 202 when it holds none.
+  private static async Task ServeBatchAsync(HttpContext context, RequestDelegate next, JsonArray batch, McpServerCore? core)
+  {
+    var original = context.Response.Body;
+    var events = new StringBuilder();
+    var legacy = context.Request.Headers["MCP-Protocol-Version"].ToString() == "2024-10-07";
+
+    foreach (var message in batch)
+    {
+      // As for one message below: the SDK knows 2024-11-05, the same wire.
+      if (legacy)
+      {
+        context.Request.Headers["MCP-Protocol-Version"] = McpJson.String(message?["method"]) == "initialize" ? string.Empty : "2024-11-05";
+      }
+      var text = McpJson.Write(message);
+
+      text = core is not null && McpRequestShape.ParkDeepArguments(text, core) is { } parked ? parked : text;
+      context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(text));
+      context.Request.ContentLength = context.Request.Body.Length;
+      context.Response.StatusCode = StatusCodes.Status200OK;
+      context.Response.Headers.Clear();
+      using var answer = new MemoryStream();
+
+      context.Response.Body = answer;
+      try
+      {
+        await next(context);
+      }
+      finally
+      {
+        context.Response.Body = original;
+      }
+      var body = Encoding.UTF8.GetString(answer.ToArray());
+      var data = context.Response.ContentType?.StartsWith("text/event-stream", StringComparison.Ordinal) == true ? SingleEvent(body) : Parse(body);
+
+      if (data is not null)
+      {
+        events.Append("event: message\ndata: ").Append(McpJson.Write(data)).Append("\n\n");
+      }
+    }
+    context.Response.Headers.Clear();
+    if (events.Length == 0)
+    {
+      context.Response.StatusCode = StatusCodes.Status202Accepted;
+
+      return;
+    }
+    context.Response.StatusCode = StatusCodes.Status200OK;
+    context.Response.ContentType = "text/event-stream";
+    context.Response.Headers.CacheControl = "no-cache, no-transform";
+    await context.Response.WriteAsync(events.ToString());
   }
 
   private static bool IsInitialize(MemoryStream body)

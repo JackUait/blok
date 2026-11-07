@@ -592,6 +592,25 @@ describe('StoreApplier', () => {
     await expect(applier.undo()).rejects.toMatchObject({ error: { code: 'NOTHING_TO_UNDO' } });
   });
 
+  it('previews each undo and redo as it then runs, and writes nothing while previewing', async () => {
+    const store = createStore(nested());
+    const applier = createApplier(store);
+
+    expect(applier.previewHistory('history.undo')).toBeUndefined();
+    await apply(applier, [{ op: 'remove', id: 'tg', withChildren: true }], ['tg', 'a', 'b', 'deep']);
+    await apply(applier, [{ op: 'setData', id: 'tail', patch: { keep: 9 } }], ['tail']);
+    store.updateBlockData('before', 'host', { wrote: [1] });
+
+    for (const name of ['history.undo', 'history.undo', 'history.redo', 'history.redo', 'history.undo', 'history.undo', 'history.redo'] as const) {
+      const origins = localOrigins(store);
+      const preview = applier.previewHistory(name)?.toOutput();
+
+      expect(origins, `${name}: the preview wrote to the document`).toEqual([]);
+      await (name === 'history.undo' ? applier.undo() : applier.redo());
+      expect(preview, name).toEqual(applier.snapshot().toOutput());
+    }
+  });
+
   describe('after the store swaps in the room\'s copy', () => {
     /** The room's own copy: the fixture as it was before any agent step. */
     const swapToRoom = (store: DocumentStore): void => {

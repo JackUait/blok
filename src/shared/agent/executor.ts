@@ -39,6 +39,8 @@ export interface AgentApplier {
   historyStepId?(name: 'history.undo' | 'history.redo'): unknown;
   /** The document a history step would leave, when the applier keeps whole snapshots. */
   historyTarget?(name: 'history.undo' | 'history.redo'): DocSnapshot | undefined;
+  /** The document a history step would leave, replayed on a copy. Read only for checkDraft. */
+  previewHistory?(name: 'history.undo' | 'history.redo'): DocSnapshot | undefined;
   /** Keeps, on the step this batch just made, what that step unlocks when redone and when undone. */
   recordUnlocks?(unlocks: StepUnlocks): void;
   /**
@@ -340,6 +342,13 @@ const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo
   };
 };
 
+/** checkDraft on the document the history step would leave; null when it may run. */
+const historyRefusal = (input: BatchInput, name: 'history.undo' | 'history.redo'): AgentError | null => {
+  const target = input.checkDraft === undefined ? undefined : input.applier.previewHistory?.(name);
+
+  return target === undefined ? null : input.checkDraft?.(target) ?? null;
+};
+
 const failureRevision = (applier: AgentApplier): string | undefined => {
   try {
     return applier.revision();
@@ -629,15 +638,18 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       const step = historyStep(input.applier, first.name, expected);
 
       checkCancel(input.signal, orphaned);
-      await step();
-      const revision = input.applier.revision();
+      const refused = historyRefusal(input, first.name);
+      // As a write's checkDraft refusal: nothing ran, so no revision.
+      const result: AgentResult = refused !== null
+        ? { ok: false, error: refused, warnings }
+        : await step().then(() => ({
+          ok: true, revision: input.applier.revision(), results: [{}], refs: {},
+          changed: { created: [], updated: [], moved: [], removed: [] }, warnings,
+        }));
 
-      record([{}], null);
+      record(refused === null ? [{}] : null, refused);
 
-      return {
-        ok: true, revision, results: [{}], refs: {},
-        changed: { created: [], updated: [], moved: [], removed: [] }, warnings,
-      };
+      return result;
     }
 
     const atCommand = (error: unknown): never => {

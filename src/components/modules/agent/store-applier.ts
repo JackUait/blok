@@ -93,7 +93,11 @@ export class StoreApplier implements AgentApplier {
   }
 
   public snapshot(): DocSnapshot {
-    const blocks = this.store.toJSON().map(block => {
+    return this.snapshotOf(this.store.toJSON(), readPageFields(this.store.page));
+  }
+
+  private snapshotOf(stored: ReturnType<DocumentStore['toJSON']>, page: ReturnType<typeof readPageFields>): DocSnapshot {
+    const blocks = stored.map(block => {
       const fields = this.options.richTextFieldsFor(block.type);
 
       return {
@@ -105,7 +109,7 @@ export class StoreApplier implements AgentApplier {
       };
     });
 
-    return DocSnapshot.fromOutput({ ...readPageFields(this.store.page), blocks });
+    return DocSnapshot.fromOutput({ ...page, blocks });
   }
 
   public apply(plan: Plan, _draft: DocSnapshot): Promise<void> {
@@ -220,6 +224,17 @@ export class StoreApplier implements AgentApplier {
     const shares = this.unlocks.get(step)?.shares;
 
     return name === 'history.undo' ? shares?.backward : shares?.forward;
+  }
+
+  public previewHistory(name: 'history.undo' | 'history.redo'): DocSnapshot | undefined {
+    const item = (name === 'history.undo' ? this.done.at(-1) : this.undone.at(-1))?.item ?? null;
+
+    if (item === null) {
+      return undefined;
+    }
+    const preview = this.store.previewReplay(item, name === 'history.undo' ? 'undo' : 'redo');
+
+    return this.snapshotOf(preview.blocks, preview.page);
   }
 
   public historyStepId(name: 'history.undo' | 'history.redo'): unknown {

@@ -5,7 +5,7 @@ import { getUnixTime } from './clock';
 import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isListSlotMapKey, isOrderedIdArrayKey, stripNul, toSerializableValue, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
 import { writeRichText } from './rich-text-write';
 import { diffText } from './text-diff';
-import { writePageField, type PageFields } from './page-fields';
+import { readPageFields, writePageField, type PageFields } from './page-fields';
 import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 // The narrow module, not the utils barrel: the collab fixture generator
 // bundles this file for node.
@@ -2627,6 +2627,36 @@ export class DocumentStore {
   /**
    * Encode this document's state vector (for requesting a diff from a peer).
    */
+  /**
+   * The blocks and page fields `item` would leave when undone (or redone), replayed on a
+   * copy; this doc is untouched.
+   */
+  public previewReplay(item: Y.UndoManager['undoStack'][number], direction: 'undo' | 'redo'): { blocks: YjsOutputBlockData[]; page: PageFields } {
+    const copy = new DocumentStore(this.serializer);
+
+    // No gc: the step's removed items must keep their content to come back.
+    copy.ydoc = new Y.Doc({ gc: false });
+    copy.yBlocksMap = copy.ydoc.getMap('blocks');
+    copy.yRootOrder = copy.ydoc.getArray('root');
+    copy.yValues = copy.ydoc.getMap('values');
+    copy.yPage = copy.ydoc.getMap('page');
+    Y.applyUpdate(copy.ydoc, Y.encodeStateAsUpdate(this.ydoc));
+    const manager = new Y.UndoManager(copy.undoScope, { captureTimeout: 0 });
+
+    (direction === 'undo' ? manager.undoStack : manager.redoStack).push(item);
+    if (direction === 'undo') {
+      manager.undo();
+    } else {
+      manager.redo();
+    }
+    manager.destroy();
+    const preview = { blocks: copy.toJSON(), page: readPageFields(copy.yPage) };
+
+    copy.ydoc.destroy();
+
+    return preview;
+  }
+
   public getStateVector(): Uint8Array {
     return Y.encodeStateVector(this.ydoc);
   }

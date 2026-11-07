@@ -19187,6 +19187,417 @@
           }
         }
       ]
+    },
+    {
+      "maskKeys": [
+        "activeAt",
+        "lastEditedAt",
+        "createdAt",
+        "savedAt",
+        "startedAt"
+      ],
+      "name": "undo that would bring back a block nested deeper than 48 levels is refused, and nothing is sent",
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "edit": [
+              {
+                "insert": {
+                  "id": "a",
+                  "type": "paragraph",
+                  "data": {
+                    "text": "x"
+                  }
+                }
+              }
+            ]
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${liveContractRevision}"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "edit": [
+              {
+                "set": {
+                  "id": "a",
+                  "key": "deep",
+                  "value": {
+                    "a": {
+                      "a": {
+                        "a": {
+                          "a": {
+                            "a": {
+                              "a": {
+                                "a": {
+                                  "a": {
+                                    "a": {
+                                      "a": {
+                                        "a": {
+                                          "a": {
+                                            "a": {
+                                              "a": {
+                                                "a": {
+                                                  "a": {
+                                                    "a": {
+                                                      "a": {
+                                                        "a": {
+                                                          "a": {
+                                                            "a": {
+                                                              "a": {
+                                                                "a": {
+                                                                  "a": {
+                                                                    "a": {
+                                                                      "a": {
+                                                                        "a": {
+                                                                          "a": {
+                                                                            "a": {
+                                                                              "a": {
+                                                                                "a": {
+                                                                                  "a": {
+                                                                                    "a": {
+                                                                                      "a": {
+                                                                                        "a": {
+                                                                                          "a": {
+                                                                                            "a": {
+                                                                                              "a": {
+                                                                                                "a": {
+                                                                                                  "a": {
+                                                                                                    "a": {
+                                                                                                      "a": {
+                                                                                                        "a": {
+                                                                                                          "a": {
+                                                                                                            "a": "end"
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.delete",
+                    "args": {
+                      "id": "a"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "mask": [
+            "/result/structuredContent/revision"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "removedIds": [
+                      "a"
+                    ],
+                    "liftedIds": []
+                  }
+                ],
+                "changed": {
+                  "removed": [
+                    "a"
+                  ]
+                },
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": "3",
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.undo",
+                    "args": {}
+                  }
+                ]
+              }
+            }
+          },
+          "mask": [
+            "/result/structuredContent/revision"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "INVALID_ARGS",
+                  "message": "This batch would nest the document deeper than 48 levels of objects and arrays, so nothing was saved. Send flatter data.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "read": true
+          },
+          "expect": []
+        },
+        {
+          "room": {
+            "frames": true
+          },
+          "expect": {
+            "agent live-doc #1": {
+              "out": [
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "agent",
+                        "user"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "operation",
+                  "lineage": "L1",
+                  "operationId": "op1"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "activeAt",
+                        "agent",
+                        "user"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "in": [
+                {
+                  "type": "control",
+                  "format": 2,
+                  "epoch": "number",
+                  "lineage": "L1"
+                },
+                {
+                  "type": "limits",
+                  "maxMessageBytes": "number"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "update"
+                },
+                {
+                  "type": "update"
+                },
+                {
+                  "type": "acknowledgement",
+                  "lineage": "L1",
+                  "operationId": "op1",
+                  "serverSequence": "3"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
     }
   ]
 }

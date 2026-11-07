@@ -185,6 +185,12 @@ impl<S: Send + 'static> Handles<S> {
         before - state.entries.len()
     }
 
+    /// From a stop's first signal: no new handle opens, and the open ones
+    /// keep serving the calls the stop waits for (Node closes them first).
+    pub fn stop_opening(&self) {
+        self.lock().closed = true;
+    }
+
     pub fn close_all(&self) {
         let mut state = self.lock();
         state.closed = true;
@@ -205,6 +211,16 @@ mod tests {
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         );
+    }
+
+    #[tokio::test]
+    async fn a_stopping_server_opens_nothing_but_keeps_serving_its_handles() {
+        let handles = Handles::new(Duration::from_secs(60), 8);
+        let handle = handles.add("a", "doc", ()).unwrap();
+        handles.stop_opening();
+        let refused = handles.add("a", "other", ()).unwrap_err();
+        assert_eq!(refused.error["message"], "The server is shutting down.");
+        assert!(handles.use_handle(&handle, "a").await.is_ok());
     }
 
     #[tokio::test]

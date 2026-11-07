@@ -12,6 +12,7 @@ pub mod errors;
 pub mod files;
 pub mod handles;
 pub mod http;
+pub mod inflight;
 pub mod live;
 pub mod oauth;
 pub mod outbound;
@@ -151,12 +152,26 @@ async fn serve_http(mcp: Arc<Mcp>, version: String, options: &Value) -> i32 {
         }
     };
     eprintln!("blok-mcp: listening on {}/mcp", listening.url);
+    let mut serving = std::pin::pin!(listening.serve);
     tokio::select! {
-        _ = listening.serve => {}
+        _ = &mut serving => {}
         // As Node's stop: requests in flight finish first, within the drain limit.
         _ = shutdown_signal() => {
+            mcp.stop_opening();
+            // As Node's stop: every call finishes first, while new connections
+            // are still taken, then the answers in flight are written.
+            let started = std::time::Instant::now();
+            let drain = async {
+                mcp.calls_drained(stdio::DRAIN_LIMIT).await;
+                let left = stdio::DRAIN_LIMIT.saturating_sub(started.elapsed());
+                listening.server.shutdown(left).await;
+            };
+            // The accept loop keeps running until the shutdown stops it.
+            let stop = async {
+                let _ = tokio::join!(drain, &mut serving);
+            };
             tokio::select! {
-                _ = listening.server.shutdown(stdio::DRAIN_LIMIT) => {}
+                () = stop => {}
                 again = shutdown_signal() => signal::die_by(again),
             }
         }
@@ -184,6 +199,7 @@ async fn serve_stdio(mcp: Arc<Mcp>, version: String) -> i32 {
         () = &mut served => {}
         // As Node's stop: the calls in flight finish first, within the drain limit.
         _ = shutdown_signal() => {
+            mcp.stop_opening();
             tokio::select! {
                 () = &mut served => {}
                 () = pending.drained(stdio::DRAIN_LIMIT) => {}

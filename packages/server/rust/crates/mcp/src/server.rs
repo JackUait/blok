@@ -88,6 +88,7 @@ pub enum Session {
 
 pub struct Mcp {
     bundle: Arc<Bundle>,
+    calls: Arc<crate::inflight::InFlight>,
     pub surface: Surface,
     flags: Value,
     pub principal: String,
@@ -347,6 +348,7 @@ impl Mcp {
             principal: str_of(options, "principal").unwrap_or("local").to_owned(),
             idle_ms,
             handles: Handles::new(idle, max),
+            calls: Arc::default(),
             source,
             authorize,
             live_shared,
@@ -379,6 +381,16 @@ impl Mcp {
         self.handles.close_all();
     }
 
+    /// Waits for every tool call in flight, or `limit`.
+    pub async fn calls_drained(&self, limit: std::time::Duration) -> bool {
+        self.calls.drained(limit).await
+    }
+
+    /// A stop began: an open now answers "The server is shutting down.".
+    pub fn stop_opening(&self) {
+        self.handles.stop_opening();
+    }
+
     pub async fn prompt(&self, name: &str, arguments: &Value) -> Result<Value, Fault> {
         Ok(self
             .bundle
@@ -406,6 +418,7 @@ impl Mcp {
         approval: &Approval,
         cancelled: &(dyn Fn() -> bool + Send + Sync),
     ) -> Result<Outcome, String> {
+        let _call = self.calls.enter();
         match self.dispatch(name, args, caller, approval, cancelled).await {
             Ok(outcome) => Ok(outcome),
             Err(Fault::Host(error)) => self

@@ -140,7 +140,12 @@ func (c *Client) Save(ctx context.Context, docID string, outputData any, version
 	}
 	request.Header["Content-Type"] = []string{"application/json; charset=utf-8"}
 	if version != nil {
-		request.Header[VersionHeader] = []string{*version}
+		// The endpoint's own answer: a CR or LF in it would start a header of its own.
+		value, ok := latin1HeaderValue(*version)
+		if !ok {
+			return nil, &Error{Message: "collab: the doc endpoint version cannot be sent as a header."}
+		}
+		request.Header[VersionHeader] = []string{value}
 	}
 	if projection != nil {
 		request.Header[LineageHeader] = []string{projection.Lineage}
@@ -197,16 +202,32 @@ func seconds(d time.Duration) string {
 	return strings.TrimSuffix(text, ".")
 }
 
+// latin1HeaderValue is a header value as undici and the C# client send it:
+// tab, printable ASCII and U+0080..U+00FF only, the last as one Latin-1
+// byte each (net/http writes a string's bytes, so it is rewritten here).
+// Any other char is refused.
+func latin1HeaderValue(value string) (string, bool) {
+	out := make([]byte, 0, len(value))
+	for _, r := range value {
+		if r != '\t' && (r < 0x20 || r == 0x7f || r > 0xff) {
+			return "", false
+		}
+		out = append(out, byte(r))
+	}
+	return string(out), true
+}
+
 func (c *Client) send(ctx context.Context, request *http.Request) ([]byte, error) {
 	// An empty value makes net/http send no User-Agent, as C# sends none.
 	request.Header["User-Agent"] = []string{""}
 	// Refused, not dropped: a stray newline from a shell-quoted secret would
 	// otherwise send every request unauthenticated.
 	if auth := c.options.Authorization; auth != "" {
-		if strings.ContainsAny(auth, "\r\n") {
+		value, ok := latin1HeaderValue(auth)
+		if !ok {
 			return nil, &Error{Message: "collab: the doc endpoint Authorization value cannot be sent as a header (a stray newline?)."}
 		}
-		request.Header["Authorization"] = []string{auth}
+		request.Header["Authorization"] = []string{value}
 	}
 	timeout := ctx
 	if c.options.RequestTimeout > 0 {

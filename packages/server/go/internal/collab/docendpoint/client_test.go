@@ -1,9 +1,11 @@
 package docendpoint
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -123,13 +125,65 @@ func TestLoadOmitsTheAuthorizationHeaderWhenNoneIsConfigured(t *testing.T) {
 	}
 }
 
+// undici's rule: tab, printable ASCII and U+0080..U+00FF only.
+var unsendable = []string{"\n", "\r\nX: 1", "\x00", "\x01", "\x1f", "\x7f", "\u0100", "\U0001F600"}
+
 func TestRefusesAnAuthorizationValueTheHeaderCannotCarry(t *testing.T) {
-	for _, auth := range []string{"Bearer secret\n", "Bearer\r\nsecret"} {
+	for _, bad := range unsendable {
 		r := &recorder{respond: jsonAnswer(`{"blocks":[]}`)}
-		_, err := client(t, r, setup{authorization: auth}).Load(bg, "doc")
-		if !strings.Contains(endpointError(t, err).Message, "Authorization") || len(r.requests) != 0 {
-			t.Fatal(err)
+		_, err := client(t, r, setup{authorization: "Bearer a" + bad}).Load(bg, "doc")
+		if endpointError(t, err).Message != "collab: the doc endpoint Authorization value cannot be sent as a header (a stray newline?)." || len(r.requests) != 0 {
+			t.Fatalf("%q: %v", bad, err)
 		}
+	}
+}
+
+// The version comes from the endpoint's own answer.
+func TestRefusesASaveVersionTheHeaderCannotCarry(t *testing.T) {
+	for _, bad := range unsendable {
+		r := &recorder{respond: func(*http.Request) (*http.Response, error) { return answer(204, "", true), nil }}
+		_, err := client(t, r, setup{}).Save(bg, "doc", node(t, `{"blocks":[]}`), ptr("v1"+bad), nil)
+		if endpointError(t, err).Message != "collab: the doc endpoint version cannot be sent as a header." || len(r.requests) != 0 {
+			t.Fatalf("%q: %v", bad, err)
+		}
+	}
+}
+
+// U+0080..U+00FF go out as one Latin-1 byte each, as undici and .NET's
+// Latin-1 encoder send them; net/http would send the UTF-8 bytes.
+func TestSendsLatin1HeaderValuesAsOneByteEach(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	heads := make(chan []byte, 1)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		var head []byte
+		buf := make([]byte, 4096)
+		for !bytes.Contains(head, []byte("\r\n\r\n")) {
+			n, err := conn.Read(buf)
+			if err != nil {
+				break
+			}
+			head = append(head, buf[:n]...)
+		}
+		heads <- head
+		_, _ = conn.Write([]byte("HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n"))
+	}()
+	endpoint, _ := dotnet.ParseAbsoluteURI("http://" + listener.Addr().String() + "/docs")
+	c := New(Options{Endpoint: endpoint, Authorization: "Bearer caf\u00e9", RequestTimeout: 10 * time.Second}, nil)
+	if _, err := c.Save(bg, "doc", node(t, `{"blocks":[]}`), ptr("v\u00ff"), nil); err != nil {
+		t.Fatal(err)
+	}
+	head := <-heads
+	if !bytes.Contains(head, []byte("Authorization: Bearer caf\xe9\r\n")) || !bytes.Contains(head, []byte(VersionHeader+": v\xff\r\n")) {
+		t.Fatalf("%q", head)
 	}
 }
 

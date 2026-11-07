@@ -936,6 +936,14 @@ impl Room {
             self.drain().await;
             return;
         }
+        // The server took this vector before it had the operation now in
+        // flight, so the diff would send that work twice. Ask again once the
+        // outbox drains (provider.ts).
+        if self.in_flight.is_some() {
+            self.residual = Residual::None;
+            self.resync_owed = true;
+            return;
+        }
         self.residual = Residual::Done;
         let Ok(residual) = self.doc.encode_state_as_update(state_vector) else {
             return;

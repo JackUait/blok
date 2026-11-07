@@ -17,8 +17,19 @@ internal sealed class ManualTimeProvider : TimeProvider
   private readonly List<ManualTimer> timers = [];
   private DateTimeOffset now = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
+  /// <summary>Runs once, on the next clock read, before it answers.</summary>
+  internal Action? BeforeNextRead
+  {
+    get => beforeNextRead;
+    set => beforeNextRead = value;
+  }
+
+  private Action? beforeNextRead;
+
   public override DateTimeOffset GetUtcNow()
   {
+    Interlocked.Exchange(ref beforeNextRead, null)?.Invoke();
+
     lock (timers)
     {
       return now;

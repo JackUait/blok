@@ -345,4 +345,33 @@ public sealed class LibraryHostTests : IDisposable
           await response.Content.ReadAsStringAsync());
     }
   }
+
+  // As blok-mcp's stop: the app's shutdown waits for a call in flight, so its answer goes out.
+  [Fact]
+  public async Task ShutdownWaitsForACallInFlight()
+  {
+    var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var asked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var (app, client) = await StartAsync(configure: options => options.Authorize = async (_, _) =>
+    {
+      asked.TrySetResult();
+
+      return await release.Task;
+    });
+
+    await using (app)
+    {
+      var call = CallAsync(client, "blok_open", new JsonObject { ["documentId"] = "open" });
+
+      await asked.Task.WaitAsync(TimeSpan.FromSeconds(10));
+      var stop = app.StopAsync();
+
+      await Task.Delay(500);
+      Assert.False(stop.IsCompleted);
+      release.SetResult(true);
+      await stop.WaitAsync(TimeSpan.FromSeconds(10));
+      // Its answer still goes out: an open that lands after stop is refused, as Node's handles do.
+      Assert.Equal("The server is shutting down.", (string?)(await call)["error"]?["message"]);
+    }
+  }
 }

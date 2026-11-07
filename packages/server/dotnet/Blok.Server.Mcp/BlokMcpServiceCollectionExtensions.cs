@@ -40,6 +40,8 @@ public static class BlokMcpServiceCollectionExtensions
     // Its own runtime, not the app's IBlokRuntime: MCP batches need a larger allocation budget.
     services.TryAddSingleton(provider => new BlokMcpHost(new McpBundle(BlokMcpHost.Runtime()), provider.GetRequiredService<McpHttpCaller>()));
     services.TryAddSingleton(provider => ConfigOf(options, provider));
+    // The CLI stops the core on ApplicationStopping itself.
+    services.AddHostedService<McpDrain>();
 
     return services.AddBlokMcpServer(options.OAuth is not null);
   }
@@ -309,5 +311,22 @@ internal sealed class McpSurfaceCache(McpServerCore core) : IDisposable
   public void Dispose()
   {
     gate.Dispose();
+  }
+}
+
+/// <summary>
+/// Stops the core when the app stops, before the server does: calls in flight finish and
+/// answer, and handles close, as blok-mcp's stop drains them.
+/// </summary>
+internal sealed class McpDrain(IServiceProvider services) : Microsoft.Extensions.Hosting.IHostedService
+{
+  public Task StartAsync(CancellationToken cancellationToken)
+  {
+    return Task.CompletedTask;
+  }
+
+  public Task StopAsync(CancellationToken cancellationToken)
+  {
+    return services.GetRequiredService<McpServerCore>().StopAsync().WaitAsync(cancellationToken);
   }
 }

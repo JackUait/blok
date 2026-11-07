@@ -56,6 +56,9 @@ const isBase64 = (data: string): boolean => !/[^A-Za-z0-9+/]/.test(data.slice(0,
 
 const PLACEHOLDER = 'blok-upload-pending';
 
+/** What the agent sees when a host uploader throws. Its own message may name host internals. */
+export const UPLOAD_FAILED = 'The upload failed.';
+
 const isFileUploader = (value: unknown): value is FileUploaderService =>
   typeof value === 'object' && value !== null && 'uploadByFile' in value && typeof value.uploadByFile === 'function';
 

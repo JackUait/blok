@@ -92,11 +92,12 @@ describe('agentExecute uploads through a host that runs each upload between call
     expect(output.save).toBe(false);
   });
 
-  it('fails a thrown upload as Node\'s prepare step does', async () => {
+  it('fails a thrown upload with Node\'s generic message, never the host\'s', async () => {
     const batch: AgentBatch = { commands: [{ name: 'file.uploadFile', args: { data: btoa('x'), fileName: 'a.txt' } }] };
     const { output } = await replay(batch, {}, () => ({ error: 'the CDN is down' }));
 
-    expect(output.result).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', message: 'A prepare step failed: the CDN is down', commandIndex: 0 } });
+    expect(JSON.stringify(output)).not.toContain('the CDN is down');
+    expect(output.result).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', message: 'The upload failed.', commandIndex: 0 } });
   });
 
   it('checks the host\'s limits on the read before any upload', async () => {

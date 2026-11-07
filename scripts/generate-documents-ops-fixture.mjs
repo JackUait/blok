@@ -367,6 +367,8 @@ const buildCases = async (invoke) => {
   const uploadBatch = { commands: [{ name: 'image.uploadFile', args: { path: 'cat.png' } }] };
   add('mcp.execute.upload.read', 'agentExecute', J({ mcp: { ...mcpStored, uploads: true }, document: mcpDoc, actor: mcpActor, batch: uploadBatch, uploads: { root: true, answers: [] } }));
   add('mcp.execute.upload.send', 'agentExecute', J({ mcp: { ...mcpStored, uploads: true }, document: mcpDoc, actor: mcpActor, batch: uploadBatch, uploads: { root: true, answers: [{ name: 'cat.png', size: 9 }] } }));
+  // A thrown upload: the host's own text never reaches the agent.
+  add('mcp.execute.upload.thrown', 'agentExecute', J({ mcp: { ...mcpStored, uploads: true }, document: mcpDoc, actor: mcpActor, batch: uploadBatch, uploads: { root: true, answers: [{ name: 'cat.png', size: 9 }, { error: 'connect ECONNREFUSED db.internal:5432 (password=hunter2)' }] } }));
 
   const pageMapStored = { ...mcpStored, pageTitles: 'page-map' };
   const withPageBlock = { blocks: [{ id: 'pb', type: 'page', data: { pageId: 'child é' } }] };

@@ -2508,6 +2508,12 @@
     "output": "{\"upload\":{\"op\":\"uploadByFile\",\"fileName\":\"cat.png\",\"type\":\"image/png\",\"size\":9,\"kind\":\"image\",\"tool\":\"image\",\"local\":0}}"
   },
   {
+    "name": "mcp.execute.upload.thrown",
+    "op": "agentExecute",
+    "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true,\"uploads\":true},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello & <b>world</b>\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{\"commands\":[{\"name\":\"image.uploadFile\",\"args\":{\"path\":\"cat.png\"}}]},\"uploads\":{\"root\":true,\"answers\":[{\"name\":\"cat.png\",\"size\":9},{\"error\":\"connect ECONNREFUSED db.internal:5432 (password=hunter2)\"}]}}",
+    "output": "{\"result\":{\"ok\":false,\"revision\":\"h329376fbdd2ad\",\"error\":{\"code\":\"TOOL_ACTION_FAILED\",\"message\":\"The upload failed.\",\"retryable\":false,\"commandIndex\":0},\"warnings\":[]},\"document\":{\"title\":\"Notes <é>   😀\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello & \"},{\"text\":\"world\",\"marks\":{\"bold\":true}}]}}]},\"edits\":[],\"writes\":true,\"save\":false}"
+  },
+  {
     "name": "mcp.pagesNeeded.write",
     "op": "agentPagesNeeded",
     "input": "{\"mcp\":{\"source\":true,\"mode\":\"stored\",\"write\":true,\"pageTitles\":\"page-map\"},\"document\":{\"blocks\":[{\"id\":\"pb\",\"type\":\"page\",\"data\":{\"pageId\":\"child é\"}}]},\"actor\":{\"id\":\"agent:alice:Desk\",\"name\":\"Desk (for alice)\",\"kind\":\"agent\",\"onBehalfOf\":\"alice\"},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pb\",\"title\":\"New <name>\"}}]}}",

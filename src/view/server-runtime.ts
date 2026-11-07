@@ -20,6 +20,7 @@ import { isWriteBatch, surfaceError } from '../shared/mcp/errors';
 import { errorOutcome, modelFixable } from '../shared/mcp/calls';
 import { savedFileText } from '../shared/mcp/files';
 import { buildAgentContract, buildToolManifest } from '../shared/tool-manifest';
+import { UPLOAD_FAILED } from '../shared/tool-actions/upload';
 import { createHeadlessAgentSetup, createHeadlessPorts, loadStoredDocument } from './agent-runtime';
 import { blocksToHtml } from './blocks-to-html';
 import { htmlToBlocksWithReport } from './html-to-blocks';
@@ -701,8 +702,9 @@ const replayUploader = (uploads: Record<string, unknown>): { service: Record<str
     if (isRecord(answer) && isAgentErrorRecord(answer.failure)) {
       throw new AgentFailure(answer.failure);
     }
+    // The host logs its own error: the text may name its internals.
     if (isRecord(answer) && typeof answer.error === 'string') {
-      throw new Error(answer.error);
+      throw failure('TOOL_ACTION_FAILED', UPLOAD_FAILED);
     }
 
     return isRecord(answer) ? answer : {};

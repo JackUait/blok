@@ -179,14 +179,14 @@ func TestWithoutAnUploaderUploadIsUnavailable(t *testing.T) {
 	}
 }
 
-// Node's prepare step words an uploader's throw as TOOL_ACTION_FAILED.
+// As in Node, the agent sees a generic TOOL_ACTION_FAILED, never the uploader's own text.
 func TestAFailedUploadFailsTheBatch(t *testing.T) {
 	f := newUploadFixture(t)
 	f.uploader.err = errors.New("the CDN is down")
 	server := f.start(t, &Uploads{Uploader: f.uploader})
 	answer := f.execute(t, server, true, `[{"name":"file.uploadFile","args":{"data":"eA==","fileName":"a.txt"}}]`)
 	failure, _ := answer["error"].(map[string]any)
-	if errorCode(answer) != "TOOL_ACTION_FAILED" || failure["message"] != "A prepare step failed: the CDN is down" || len(f.saved(t)) != 0 {
+	if errorCode(answer) != "TOOL_ACTION_FAILED" || failure["message"] != "The upload failed." || len(f.saved(t)) != 0 {
 		t.Fatalf("answer %v", answer)
 	}
 }

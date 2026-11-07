@@ -29,4 +29,23 @@ public sealed class McpJsonTests
     Assert.Null(McpJson.Parse("null"));
     Assert.ThrowsAny<JsonException>(() => McpJson.Parse("{"));
   }
+
+  // JSON.stringify's bytes: only " \ and controls are escaped, everything else stays raw.
+  [Fact]
+  public void WritesStringsAsJsonStringifyDoes()
+  {
+    var text = "A\U0001F600 \u2028\u2029\u007F\u00A0\uFEFF\u00E9<>&'+ \" \\ \b\f\n\r\t\u0001\u001F";
+    var node = new JsonObject { ["k\u2028\"" ] = text };
+
+    Assert.Equal(
+        "{\"k\u2028\\\"\":\"A\U0001F600 \u2028\u2029\u007F\u00A0\uFEFF\u00E9<>&'+ \\\" \\\\ \\b\\f\\n\\r\\t\\u0001\\u001f\"}",
+        McpJson.Write(node));
+  }
+
+  // The decided policy for a lone UTF-16 surrogate: it becomes U+FFFD.
+  [Fact]
+  public void WritesALoneSurrogateAsTheReplacementCharacter()
+  {
+    Assert.Equal("[\"a\uFFFDb\",\"\uFFFD\"]", McpJson.Write(new JsonArray("a\uD800b", "\uDC00")));
+  }
 }

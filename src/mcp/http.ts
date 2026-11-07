@@ -7,6 +7,7 @@ import type { BlokMcpOptions } from './options';
 import type { Dispatch } from './sdk-server';
 import { buildSdkServer } from './sdk-server';
 import type { McpTool } from './tools';
+import { wellFormedIdsInBody } from './wire-ids';
 
 export interface HttpServerInput {
   /** host:port; port 0 picks a free one. */
@@ -71,7 +72,7 @@ const toRequest = async (req: IncomingMessage, url: URL, headers: Headers, signa
   const hasBody = method !== 'GET' && method !== 'HEAD';
 
   // Uint8Array.from copies into a plain ArrayBuffer, which BodyInit accepts and Buffer is not typed as.
-  return new Request(url, { method, headers, signal, ...(hasBody && { body: Uint8Array.from(await readBody(req)) }) });
+  return new Request(url, { method, headers, signal, ...(hasBody && { body: Uint8Array.from(wellFormedIdsInBody(await readBody(req))) }) });
 };
 
 const send = async (res: ServerResponse, response: Response): Promise<void> => {

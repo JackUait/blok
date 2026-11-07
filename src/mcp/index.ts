@@ -11,6 +11,7 @@ import { DEFAULTS } from './options';
 import type { BlokMcpOptions } from './options';
 import { buildSdkServer } from './sdk-server';
 import { assembleMcp, STOP_DRAIN_MS } from './server';
+import { wellFormedIdsStdio } from './wire-ids';
 
 export type { BlokMcpOptions } from './options';
 
@@ -78,7 +79,7 @@ export const createBlokMcpServer = (options: BlokMcpOptions): { start(): Promise
         dispatch: assembled.dispatch,
         caller: clientName => ({ principal, clientName, scopes: null }),
         version: getBlokVersion(),
-      }));
+      }), { transport: wellFormedIdsStdio() });
 
       state.serving = {
         close: async (graceMs) => {

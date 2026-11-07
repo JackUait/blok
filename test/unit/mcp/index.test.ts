@@ -386,6 +386,27 @@ describe('runCli', () => {
     expect(process.exit).not.toHaveBeenCalled();
   });
 
+  it('reads a stdio request id or cancel id that holds a lone surrogate as U+FFFD', async () => {
+    await within(runCli([], {}));
+    const transport = vi.mocked(serveStdio).mock.calls[0]?.[1]?.transport;
+
+    if (transport === undefined) {
+      throw new Error('serveStdio got no transport');
+    }
+    const delivered = vi.fn();
+
+    transport.onmessage = delivered;
+    transport.onmessage?.({ jsonrpc: '2.0', id: 'x\udc00', method: 'ping' });
+    transport.onmessage?.({ jsonrpc: '2.0', method: 'notifications/cancelled', params: { requestId: 'y\ud800' } });
+    transport.onmessage?.({ jsonrpc: '2.0', id: 'z\ud83d\ude00', method: 'ping', params: { text: 'a\ud800' } });
+
+    expect(delivered.mock.calls.map(([message]: unknown[]) => message)).toEqual([
+      { jsonrpc: '2.0', id: 'x\uFFFD', method: 'ping' },
+      { jsonrpc: '2.0', method: 'notifications/cancelled', params: { requestId: 'y\uFFFD' } },
+      { jsonrpc: '2.0', id: 'z\ud83d\ude00', method: 'ping', params: { text: 'a\ud800' } },
+    ]);
+  });
+
   it('serves with the configured local principal and cleaned SDK client name', async () => {
     await within(runCli(['--principal', 'host-user'], {}));
     const invocation = vi.mocked(serveStdio).mock.calls[0];

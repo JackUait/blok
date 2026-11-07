@@ -44,6 +44,19 @@ describe('startHttpServer', () => {
     return server.url;
   };
 
+  it('echoes a request id that holds a lone surrogate with U+FFFD, as the ports do', async () => {
+    const url = await start({ auth: { kind: 'none' }, principal: 'local' });
+    const response = await fetch(`${url}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-11-25' },
+      body: '{"jsonrpc":"2.0","id":"x\\udc00","method":"ping"}',
+    });
+    const text = await response.text();
+
+    expect(text).toContain('"id":"x\uFFFD"');
+    expect(text).not.toMatch(/\\ud[89a-f]/i);
+  });
+
   it('keeps the bind error\'s code and cause, so a library host can retry on another port', async () => {
     const taken = createRawServer();
 

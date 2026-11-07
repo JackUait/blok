@@ -165,7 +165,7 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
     if (version is not null)
     {
       // The endpoint's own answer: TryAddWithoutValidation would send a CR or LF in it.
-      if (version.AsSpan().IndexOfAny('\r', '\n', '\0') >= 0)
+      if (!Sendable(version))
       {
         throw new DocEndpointException(
             "collab: the doc endpoint version cannot be sent as a header.");
@@ -207,10 +207,29 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
     }
   }
 
+  /// <summary>
+  /// A header value undici would send: tab, printable ASCII and U+0080..U+00FF, which the
+  /// handler writes as one Latin-1 byte each. Any other char could end the line or has no byte.
+  /// </summary>
+  private static bool Sendable(string value)
+  {
+    foreach (var c in value)
+    {
+      if (c != '\t' && (c < ' ' || c == '\u007F' || c > '\u00FF'))
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   private static SocketsHttpHandler CreateHandler()
   {
     return new SocketsHttpHandler
     {
+      // .NET refuses a non-ASCII header value without it; undici, Go and Rust send Latin-1.
+      RequestHeaderEncodingSelector = (_, _) => Encoding.Latin1,
       AllowAutoRedirect = false,
       ConnectTimeout = TimeSpan.FromSeconds(10),
       // A pooled connection outliving a DNS change at the endpoint would
@@ -345,7 +364,7 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
     // stray newline from a shell-quoted secret) and .NET 10 sends it as is,
     // which splits it into a second header line.
     if (options.Authorization != "" &&
-        (options.Authorization.AsSpan().IndexOfAny('\r', '\n') >= 0 ||
+        (!Sendable(options.Authorization) ||
             !request.Headers.TryAddWithoutValidation("Authorization", options.Authorization)))
     {
       throw new DocEndpointException(

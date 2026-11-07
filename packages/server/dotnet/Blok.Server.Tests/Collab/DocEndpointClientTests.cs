@@ -53,6 +53,11 @@ public sealed class DocEndpointClientTests
   [Theory]
   [InlineData("Bearer secret\n")]
   [InlineData("Bearer\r\nsecret")]
+  [InlineData("Bearer a\u0000b")]
+  [InlineData("Bearer a\u0001b")]
+  [InlineData("Bearer a\u007fb")]
+  [InlineData("Bearer \u0100")]
+  [InlineData("Bearer \U0001F600")]
   public async Task RefusesAnAuthorizationValueTheHeaderCannotCarry(string authorization)
   {
     var recorder = new RequestRecorder(_ => Json("""{"blocks":[]}"""));
@@ -61,8 +66,48 @@ public sealed class DocEndpointClientTests
     var error = await Assert.ThrowsAsync<DocEndpointException>(
         () => client.LoadAsync("doc", CancellationToken.None));
 
-    Assert.Contains("Authorization", error.Message, StringComparison.Ordinal);
+    Assert.Equal("collab: the doc endpoint Authorization value cannot be sent as a header (a stray newline?).", error.Message);
     Assert.Empty(recorder.Requests);
+  }
+
+  /// <summary>
+  /// U+0080..U+00FF go out as one Latin-1 byte each, as undici, Go and Rust
+  /// send them; .NET's default refuses any non-ASCII header value.
+  /// </summary>
+  [Fact]
+  public async Task SendsLatin1HeaderValuesAsOneByteEach()
+  {
+    using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+    listener.Start();
+    var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+    var heard = Task.Run(async () =>
+    {
+      using var socket = await listener.AcceptSocketAsync();
+      var head = new List<byte>();
+      var buffer = new byte[4096];
+
+      while (!Encoding.Latin1.GetString([.. head]).Contains("\r\n\r\n", StringComparison.Ordinal))
+      {
+        var read = await socket.ReceiveAsync(buffer);
+        if (read == 0)
+        {
+          break;
+        }
+        head.AddRange(buffer.AsSpan(0, read).ToArray());
+      }
+      await socket.SendAsync(Encoding.ASCII.GetBytes("HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n"));
+
+      return head.ToArray();
+    });
+    using var client = new DocEndpointClient(new DocEndpointOptions(new Uri($"http://127.0.0.1:{port}/docs"), "Bearer caf\u00e9", Deadline));
+
+    await client.SaveAsync("doc", JsonNode.Parse("""{"blocks":[]}""")!, "v\u00ff", null, CancellationToken.None);
+    var head = await heard.WaitAsync(Deadline);
+
+    var text = Encoding.Latin1.GetString(head);
+
+    Assert.Contains("Authorization: Bearer caf\u00e9\r\n", text, StringComparison.Ordinal);
+    Assert.Contains("Blok-Doc-Version: v\u00ff\r\n", text, StringComparison.Ordinal);
   }
 
   /// <summary>
@@ -73,14 +118,18 @@ public sealed class DocEndpointClientTests
   [InlineData("v1\r\nX-Injected: 1")]
   [InlineData("v1\nX-Injected: 1")]
   [InlineData("v1\0")]
+  [InlineData("v1\u0001")]
+  [InlineData("v1\u007f")]
+  [InlineData("v\u0100")]
   public async Task RefusesASaveVersionTheHeaderCannotCarry(string version)
   {
     var recorder = new RequestRecorder(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
     using var client = CreateClient(recorder);
 
-    await Assert.ThrowsAsync<DocEndpointException>(
+    var error = await Assert.ThrowsAsync<DocEndpointException>(
         () => client.SaveAsync("doc", JsonNode.Parse("""{"blocks":[]}""")!, version, null, CancellationToken.None));
 
+    Assert.Equal("collab: the doc endpoint version cannot be sent as a header.", error.Message);
     Assert.Empty(recorder.Requests);
   }
 

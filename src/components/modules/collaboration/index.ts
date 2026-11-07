@@ -503,6 +503,13 @@ export class Collaboration extends Module {
           this.quarantineRejected = reason !== RELINEAGE_REASON
             && reason !== STALE_LINEAGE_REASON
             && reason !== STALE_FORMAT_REASON;
+
+          // The copy holds the refused write, and a reload that adopted it
+          // would send it again. The quarantine keeps its own snapshot.
+          if (this.quarantineRejected) {
+            this.cacheSeeded = false;
+            this.captured(store.clearAdoptable());
+          }
           void this.refreshSave();
 
           return moved;

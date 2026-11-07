@@ -11269,6 +11269,356 @@
       }
     },
     {
+      "name": "fault: a refused batch is not saved by the next connection, and the handle reads the room's copy",
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ea1f64bb"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "inject": {
+              "reject": "invalid-update"
+            }
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p1",
+                      "data": {
+                        "text": "refused"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "REJECTED",
+                  "message": "The room refused this batch. It was not saved.",
+                  "retryable": false,
+                  "details": {
+                    "rejectionCode": "invalid-update"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "inject": {
+              "close": 1001
+            }
+          },
+          "expect": null
+        },
+        {
+          "note": "the reconnect backoff is at most 1 s",
+          "room": {
+            "wait": 2500
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "frames": true
+          },
+          "expect": {
+            "agent live-doc #1": {
+              "out": [
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "agent",
+                        "user"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "activity"
+                },
+                {
+                  "type": "operation",
+                  "lineage": "L1",
+                  "operationId": "op1"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "activeAt",
+                        "agent",
+                        "agentCursor",
+                        "blockId",
+                        "user"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "in": [
+                {
+                  "type": "control",
+                  "format": 2,
+                  "epoch": "number",
+                  "lineage": "L1"
+                },
+                {
+                  "type": "limits",
+                  "maxMessageBytes": "number"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "rejection",
+                  "lineage": "L1",
+                  "operationId": "op1",
+                  "code": "invalid-update",
+                  "fault": "injected"
+                },
+                {
+                  "type": "close",
+                  "code": 1001,
+                  "fault": "injected"
+                }
+              ]
+            },
+            "agent live-doc #2": {
+              "out": [
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "awareness",
+                  "states": [
+                    {
+                      "client": "agent",
+                      "keys": [
+                        "activeAt",
+                        "agent",
+                        "agentCursor",
+                        "blockId",
+                        "user"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "in": [
+                {
+                  "type": "control",
+                  "format": 2,
+                  "epoch": "number",
+                  "lineage": "L1"
+                },
+                {
+                  "type": "limits",
+                  "maxMessageBytes": "number"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                },
+                {
+                  "type": "syncStep2"
+                },
+                {
+                  "type": "syncStep1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "read": true
+          },
+          "expect": []
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${h}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "l1",
+                "rootId": null,
+                "blocks": []
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_close",
+              "arguments": {
+                "handle": "${h}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "closed": true,
+                "unsavedBatches": 0,
+                "hostRecordLags": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
       "name": "fault: a not-synced rejection reconnects and resends the same operation",
       "steps": [
         {

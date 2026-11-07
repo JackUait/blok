@@ -136,6 +136,9 @@ class Room {
   /** Operations committed on the current lineage: id → its sequence. */
   public committed = new Map<string, number>();
 
+  /** While set, every operation is refused with this final code and not applied. */
+  public refuse: string | null = null;
+
   private sequence = 0;
 
   /**
@@ -294,6 +297,17 @@ class Room {
         lineage: frame.lineage,
         operationId: frame.operationId,
         code: 'lineage-mismatch',
+      });
+
+      return;
+    }
+
+    if (this.refuse !== null) {
+      member.outbound.push({
+        type: 'rejection',
+        lineage: frame.lineage,
+        operationId: frame.operationId,
+        code: this.refuse,
       });
 
       return;
@@ -1187,5 +1201,105 @@ describe('collaboration transport — losing work between two peers', () => {
       docTexts(bob.core),
       'a dropped broadcast left the peer stalled on a dependency nothing resends'
     ).toEqual(['alice one', 'alice two']);
+  }, 30_000);
+});
+
+describe('collaboration transport — a write the room refused', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('indexedDB', new IDBFactory());
+  });
+
+  afterEach(() => {
+    booted.splice(0).forEach(destroyCore);
+    holders.splice(0).forEach((holder) => holder.remove());
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  /**
+   * Boots bob, has the room refuse his next edit with `code`, then grants
+   * writes again. The refusal is settled before this returns.
+   * @param offline - whether bob keeps a local copy
+   * @param code - the final rejection code
+   */
+  const refuseOneEdit = async (offline: boolean, code = 'read-only'): Promise<{ room: Room; bob: Peer }> => {
+    const room = new Room();
+
+    room.seed([{ id: 'b1', type: 'paragraph', data: { text: 'shared' } }]);
+
+    const bob = await bootPeer(room, 'bob', offline);
+
+    await waitConnected(room, bob);
+    await settle(room, 10);
+
+    room.refuse = code;
+    bob.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'refused edit');
+    await waitFor(async () => {
+      await room.pump();
+
+      return bob.socket().sent.some((frame) => frame.type === 'operation');
+    }, 'the refused operation to leave');
+    await settle(room, 10);
+    room.refuse = null;
+
+    return { room, bob };
+  };
+
+  /**
+   * Cuts bob's link and waits until his next connection has synced.
+   * @param room - the wire
+   * @param bob - the editor
+   */
+  const reconnect = async (room: Room, bob: Peer): Promise<void> => {
+    const before = bob.sockets.length;
+
+    bob.socket().serverClose(1006);
+    await waitFor(async () => {
+      await room.pump();
+
+      return bob.sockets.length > before && collabAttr(bob.core) === 'connected';
+    }, 'bob to reconnect', 8000);
+    await settle(room, 10);
+  };
+
+  for (const offline of [false, true]) {
+    it(`never saves a refused edit on a later connection (offline: ${String(offline)})`, async () => {
+      const { room, bob } = await refuseOneEdit(offline);
+
+      expect(room.texts()).toEqual(['shared']);
+
+      await reconnect(room, bob);
+
+      expect(room.texts(), 'the reconnect sent the refused edit again, and the room saved it').toEqual(['shared']);
+      expect(docTexts(bob.core), 'the editor still shows an edit the room never took').toEqual(['shared']);
+    }, 30_000);
+  }
+
+  it('sends an edit made after the refusal once the room is reloaded', async () => {
+    const { room, bob } = await refuseOneEdit(false);
+
+    await reconnect(room, bob);
+    bob.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed after the reload');
+    await converge(room, () => room.texts()[0] === 'typed after the reload', 'the new edit to reach the room');
+
+    expect(room.texts(), 'an edit made on the reloaded document never reached the room').toEqual(['typed after the reload']);
+  }, 30_000);
+
+  it('does not save a refused edit from the offline copy after a reload', async () => {
+    const { room, bob } = await refuseOneEdit(true);
+
+    room.accepting = false;
+    destroyCore(booted.splice(booted.indexOf(bob.core), 1)[0]);
+    await tick(50);
+
+    const reopened = await bootPeer(room, 'bob');
+
+    room.heal();
+    await waitConnected(room, reopened);
+    await settle(room, 10);
+
+    expect(room.texts(), 'the offline copy carried the refused edit back to the room').toEqual(['shared']);
+    expect(docTexts(reopened.core)).toEqual(['shared']);
   }, 30_000);
 });

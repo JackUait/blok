@@ -11306,7 +11306,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "ea1f64bb"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },

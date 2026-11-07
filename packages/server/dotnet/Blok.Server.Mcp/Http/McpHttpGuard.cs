@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text;
 using System.Text.RegularExpressions;
 using Blok.Server.Mcp.Core;
 using Blok.Server.Mcp.Protocol;
@@ -61,7 +62,8 @@ internal sealed partial class McpHttpGuard(McpConfig config, Func<int> boundPort
 
       return;
     }
-    if (context.Request.Path != path)
+    // Node's router compares the path as written; PathString compares ignoring case.
+    if (!string.Equals(context.Request.Path.Value, path, StringComparison.Ordinal))
     {
       context.Response.StatusCode = StatusCodes.Status404NotFound;
 
@@ -81,8 +83,6 @@ internal static class McpRequestGate
 {
   // Node's own cap, which matches its SDK's default body bound.
   internal const int MaxBodyBytes = 4 * 1024 * 1024;
-
-  private const string Modern = "2026-07-28";
 
   internal static async Task InvokeAsync(HttpContext context, RequestDelegate next)
   {
@@ -111,66 +111,57 @@ internal static class McpRequestGate
       return;
     }
 
-    if (!HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method))
-    {
-      if (request.ContentLength > MaxBodyBytes || await BufferAsync(request, context.RequestAborted) is not MemoryStream body)
-      {
-        context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
-
-        return;
-      }
-      request.Body = body;
-      request.ContentLength = body.Length;
-    }
-    if (HttpMethods.IsGet(request.Method) || HttpMethods.IsDelete(request.Method))
+    // Node's createMcpHandler: 405 for every method but POST, then 415, before it reads a body.
+    if (!HttpMethods.IsPost(request.Method))
     {
       context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
       context.Response.Headers.Allow = "POST";
-      await WriteJsonAsync(context.Response, """{"jsonrpc":"2.0","error":{"code":-32000,"message":"Method not allowed."},"id":null}""");
+      context.Response.ContentType = "application/json";
+      if (!HttpMethods.IsHead(request.Method))
+      {
+        await context.Response.WriteAsync(Refusal(-32000, "Method not allowed."));
+      }
 
       return;
     }
-    if (request.Body is MemoryStream buffered)
+    if (!IsJsonContentType(request.ContentType))
     {
-      var read = McpRequestShape.Read(buffered.ToArray());
+      await RefuseAsync(context.Response, 415, -32000, "Unsupported Media Type: Content-Type must be application/json");
 
-      if (read is null)
+      return;
+    }
+    if (request.ContentLength > MaxBodyBytes || await BufferAsync(request, context.RequestAborted) is not MemoryStream buffered)
+    {
+      context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+
+      return;
+    }
+    var sent = AsTextDecoderReads(buffered.ToArray());
+    var read = McpRequestShape.Read(Encoding.UTF8.GetBytes(sent));
+
+    request.Body = new MemoryStream(Encoding.UTF8.GetBytes(sent));
+    request.ContentLength = request.Body.Length;
+    if (read is null)
+    {
+      await RefuseAsync(context.Response, 400, -32700, "Parse error: Invalid JSON");
+
+      return;
+    }
+    using (read.Value.Document)
+    {
+      if (await LegacyRefusalAsync(context, read.Value.Document.RootElement))
       {
-        context.Response.StatusCode = StatusCodes.Status400BadRequest;
-        await WriteJsonAsync(context.Response, """{"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error: Invalid JSON"},"id":null}""");
-
         return;
       }
-      using (read.Value.Document)
-      {
-        var root = read.Value.Document.RootElement;
+    }
+    // A repeated key reaches the SDK with its last value, as JSON.parse reads it, and a lone
+    // surrogate escape as U+FFFD, which the SDK can read.
+    if (read.Value.Repeated || McpJson.HasLoneSurrogateEscape(sent))
+    {
+      var normal = new MemoryStream(Encoding.UTF8.GetBytes(McpJson.Write(McpJson.Parse(sent))));
 
-        if (!McpRequestShape.IsMessage(root))
-        {
-          var id = root.TryGetProperty("id", out var given) && given.ValueKind is JsonValueKind.String or JsonValueKind.Number ? JsonNode.Parse(given.GetRawText()) : null;
-
-          context.Response.StatusCode = StatusCodes.Status400BadRequest;
-          await WriteJsonAsync(context.Response, McpJson.Write(new JsonObject
-          {
-            ["jsonrpc"] = "2.0",
-            ["error"] = new JsonObject { ["code"] = -32600, ["message"] = McpRequestShape.NotAMessage },
-            ["id"] = id,
-          }));
-
-          return;
-        }
-      }
-      // A repeated key reaches the SDK with its last value, as JSON.parse reads it, and a lone
-      // surrogate escape as U+FFFD, which the SDK can read.
-      var sent = System.Text.Encoding.UTF8.GetString(buffered.ToArray());
-
-      if (read.Value.Repeated || McpJson.HasLoneSurrogateEscape(sent))
-      {
-        var normal = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(McpJson.Write(McpJson.Parse(sent))));
-
-        request.Body = normal;
-        request.ContentLength = normal.Length;
-      }
+      request.Body = normal;
+      request.ContentLength = normal.Length;
     }
     // Stateless, as Node: a session id names nothing, so it is not checked.
     request.Headers.Remove("Mcp-Session-Id");
@@ -178,7 +169,7 @@ internal static class McpRequestGate
     // An initialize names its version in the body, which the wire filter answers, so its header goes.
     if (request.Headers["MCP-Protocol-Version"].ToString() == "2024-10-07")
     {
-      if (request.Body is MemoryStream sent && IsInitialize(sent))
+      if (request.Body is MemoryStream body && IsInitialize(body))
       {
         request.Headers.Remove("MCP-Protocol-Version");
       }
@@ -206,6 +197,131 @@ internal static class McpRequestGate
       context.Response.Body = original;
     }
     await WriteModernAsync(context.Response, answer);
+  }
+
+  private const string Modern = "2026-07-28";
+  private const string ProtocolVersionMeta = "io.modelcontextprotocol/protocolVersion";
+  private const string LegacyVersions = "2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05, 2024-10-07";
+
+  // Node's classifyInboundRequest and its legacy transport's checks, in their order; true when it answered.
+  private static async Task<bool> LegacyRefusalAsync(HttpContext context, JsonElement root)
+  {
+    var response = context.Response;
+
+    if (root.ValueKind == JsonValueKind.Array)
+    {
+      var refusal = root.GetArrayLength() == 0 ? "Bad Request: empty JSON-RPC batch"
+          : root.EnumerateArray().Any(element => ClaimOf(element) is not null) ? "Bad Request: JSON-RPC batches may not contain requests for protocol revision 2026-07-28 or later"
+          : root.EnumerateArray().Any(element => !McpRequestShape.IsNodeMessage(element)) ? "Bad Request: JSON-RPC batch contains an invalid message"
+          : null;
+
+      if (refusal is not null)
+      {
+        await RefuseAsync(response, 400, -32600, refusal);
+      }
+
+      return refusal is not null;
+    }
+    if (!McpRequestShape.IsNodeMessage(root))
+    {
+      await RefuseAsync(response, 400, -32600, McpRequestShape.NotAMessage, EchoableId(root));
+
+      return true;
+    }
+    var header = context.Request.Headers["MCP-Protocol-Version"];
+    var version = header.Count > 0 ? header.ToString().Trim(' ', '\t') : null;
+    var headerModern = version is not null && string.CompareOrdinal(version, Modern) >= 0;
+    var isRequest = root.TryGetProperty("method", out var method) && root.TryGetProperty("id", out _);
+    var isInitialize = isRequest && method.GetString() == "initialize";
+    var claimed = ClaimOf(root) is not null;
+
+    // A modern header on a request with no _meta at all; other modern shapes are the SDK's.
+    if (isRequest && !isInitialize && !claimed && headerModern)
+    {
+      if (root.TryGetProperty("params", out var parameters) && parameters.ValueKind == JsonValueKind.Object && parameters.TryGetProperty("_meta", out _))
+      {
+        return false;
+      }
+      var missing = new JsonObject { ["envelope"] = new JsonObject { ["missing"] = new JsonArray("_meta") } };
+
+      await RefuseAsync(
+          response, 400, -32602,
+          $"Invalid params: the MCP-Protocol-Version header names protocol revision {version}, but the request is missing the required per-request envelope key(s): _meta",
+          EchoableId(root), missing);
+
+      return true;
+    }
+    if (claimed || (headerModern && !isInitialize))
+    {
+      return false;
+    }
+    var accept = context.Request.Headers.Accept.ToString();
+
+    if (!accept.Contains("application/json", StringComparison.Ordinal) || !accept.Contains("text/event-stream", StringComparison.Ordinal))
+    {
+      await RefuseAsync(response, 406, -32000, "Not Acceptable: Client must accept both application/json and text/event-stream");
+
+      return true;
+    }
+    if (!isInitialize && version is not null && !LegacyVersions.Split(", ").Contains(version, StringComparer.Ordinal))
+    {
+      await RefuseAsync(response, 400, -32000, $"Bad Request: Unsupported protocol version: {version} (supported versions: {LegacyVersions})");
+
+      return true;
+    }
+
+    return false;
+  }
+
+  // params._meta's protocol-version claim, when the key is there.
+  private static JsonElement? ClaimOf(JsonElement message)
+  {
+    return message.ValueKind == JsonValueKind.Object && message.TryGetProperty("params", out var parameters) && parameters.ValueKind == JsonValueKind.Object
+        && parameters.TryGetProperty("_meta", out var meta) && meta.ValueKind == JsonValueKind.Object && meta.TryGetProperty(ProtocolVersionMeta, out var claim)
+        ? claim
+        : null;
+  }
+
+  // Node's echoableRequestId: a string or number id of an object with a string method.
+  private static JsonNode? EchoableId(JsonElement root)
+  {
+    return root.ValueKind == JsonValueKind.Object && root.TryGetProperty("method", out var method) && method.ValueKind == JsonValueKind.String
+        && root.TryGetProperty("id", out var id) && id.ValueKind is JsonValueKind.String or JsonValueKind.Number
+        ? JsonNode.Parse(id.GetRawText())
+        : null;
+  }
+
+  // Node's isJsonContentType: the media type's essence, case-insensitive.
+  private static bool IsJsonContentType(string? contentType)
+  {
+    return contentType is not null
+        && string.Equals(contentType.Split(';', 2)[0].Trim(), "application/json", StringComparison.OrdinalIgnoreCase);
+  }
+
+  // TextDecoder's read: a leading BOM goes, invalid UTF-8 becomes U+FFFD.
+  private static string AsTextDecoderReads(byte[] bytes)
+  {
+    var text = Encoding.UTF8.GetString(bytes);
+
+    return text.StartsWith('\uFEFF') ? text[1..] : text;
+  }
+
+  private static string Refusal(int code, string message, JsonNode? id = null, JsonNode? data = null)
+  {
+    var error = new JsonObject { ["code"] = code, ["message"] = message };
+
+    if (data is not null)
+    {
+      error["data"] = data;
+    }
+
+    return McpJson.Write(new JsonObject { ["jsonrpc"] = "2.0", ["error"] = error, ["id"] = id });
+  }
+
+  private static async Task RefuseAsync(HttpResponse response, int status, int code, string message, JsonNode? id = null, JsonNode? data = null)
+  {
+    response.StatusCode = status;
+    await WriteJsonAsync(response, Refusal(code, message, id, data));
   }
 
   private static bool Admits(McpCallerGate gate, HttpRequest request)

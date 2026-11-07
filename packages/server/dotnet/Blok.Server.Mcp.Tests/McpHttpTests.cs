@@ -10,6 +10,10 @@ public sealed class McpHttpTests
 {
   private const int Port = 4321;
 
+  private const string ModernPing = """{"jsonrpc":"2.0","id":7,"method":"ping","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}""";
+
+  internal const string Ping = """{"jsonrpc":"2.0","id":7,"method":"ping"}""";
+
   private static DefaultHttpContext Request(string method, string path, string? host = "127.0.0.1:4321", string? origin = null, string? body = null)
   {
     var context = new DefaultHttpContext();
@@ -27,6 +31,11 @@ public sealed class McpHttpTests
     if (body is not null)
     {
       context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+    }
+    if (method == "POST")
+    {
+      context.Request.ContentType = "application/json";
+      context.Request.Headers.Accept = "application/json, text/event-stream";
     }
     context.Response.Body = new MemoryStream();
 
@@ -98,6 +107,13 @@ public sealed class McpHttpTests
     Assert.Equal(404, await GuardAsync(Request("POST", path)));
   }
 
+  // Node's router compares the path as written.
+  [Fact]
+  public async Task AnswersAnUpperCasePath404()
+  {
+    Assert.Equal(404, await GuardAsync(Request("POST", "/MCP")));
+  }
+
   [Fact]
   public async Task ChecksOriginBeforeThePath()
   {
@@ -143,7 +159,7 @@ public sealed class McpHttpTests
   [Fact]
   public async Task IgnoresASessionIdAsAStatelessServer()
   {
-    var context = Request("POST", "/mcp", body: "{}");
+    var context = Request("POST", "/mcp", body: Ping);
     var seen = "unset";
 
     context.Request.Headers["Mcp-Session-Id"] = "made-up";
@@ -177,7 +193,7 @@ public sealed class McpHttpTests
   [Fact]
   public async Task Serves20241007AsNodeDoes()
   {
-    var context = Request("POST", "/mcp", body: "{}");
+    var context = Request("POST", "/mcp", body: Ping);
     var seen = "unset";
 
     context.Request.Headers["MCP-Protocol-Version"] = "2024-10-07";
@@ -211,7 +227,7 @@ public sealed class McpHttpTests
   [Fact]
   public async Task Answers20260728WithOneJsonBody()
   {
-    var context = Request("POST", "/mcp", body: "{}");
+    var context = Request("POST", "/mcp", body: ModernPing);
 
     context.Request.Headers["MCP-Protocol-Version"] = "2026-07-28";
     await McpRequestGate.InvokeAsync(context, async inner =>
@@ -227,7 +243,7 @@ public sealed class McpHttpTests
   [Fact]
   public async Task NamesAMissingMethodAndGivesAnEnvelopeRefusalDataOn20260728()
   {
-    var context = Request("POST", "/mcp", body: "{}");
+    var context = Request("POST", "/mcp", body: ModernPing);
 
     context.Request.Headers["MCP-Protocol-Version"] = "2026-07-28";
     await McpRequestGate.InvokeAsync(context, async inner =>

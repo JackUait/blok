@@ -315,8 +315,8 @@ public static class BlokMcpServiceCollectionExtensions
 public static class BlokMcpEndpointRouteBuilderExtensions
 {
   /// <summary>
-  /// Maps the MCP endpoint at <paramref name="pattern"/>: POST serves MCP, GET and DELETE
-  /// answer 405, and a body over 4 MiB answers 413. With OAuth configured, every request
+  /// Maps the MCP endpoint at <paramref name="pattern"/>: POST serves MCP, every other method
+  /// answers 405, and a body over 4 MiB answers 413. With OAuth configured, every request
   /// needs a Blok bearer token with the blok.read scope; add UseAuthentication and
   /// UseAuthorization to the pipeline. OAuth also maps GET /.well-known/oauth-protected-resource,
   /// which the 401's WWW-Authenticate names.
@@ -330,8 +330,11 @@ public static class BlokMcpEndpointRouteBuilderExtensions
     var mapped = endpoints.MapGroup(pattern);
 
     mapped.MapMcp(string.Empty);
-    // Node's SDK answers these itself; the C# SDK maps no GET or DELETE when stateless.
-    mapped.MapMethods(string.Empty, [HttpMethods.Get, HttpMethods.Delete], _ => Task.CompletedTask);
+    // Node's SDK answers every other method 405 itself; the C# SDK maps only POST when stateless.
+    mapped.MapMethods(
+        string.Empty,
+        [HttpMethods.Get, HttpMethods.Delete, HttpMethods.Put, HttpMethods.Patch, HttpMethods.Head, HttpMethods.Options, HttpMethods.Trace],
+        _ => Task.CompletedTask);
     ((IEndpointConventionBuilder)mapped).Add(endpoint =>
     {
       var inner = endpoint.RequestDelegate;
@@ -339,6 +342,15 @@ public static class BlokMcpEndpointRouteBuilderExtensions
       if (inner is not null)
       {
         endpoint.RequestDelegate = context => McpRequestGate.InvokeAsync(context, inner);
+      }
+    });
+    // Routing would answer a wrong Content-Type 415 with no body; the gate answers it as Node.
+    // Finally: the SDK's own Accepts metadata is added by a later convention.
+    ((IEndpointConventionBuilder)mapped).Finally(endpoint =>
+    {
+      foreach (var accepts in endpoint.Metadata.OfType<Microsoft.AspNetCore.Http.Metadata.IAcceptsMetadata>().ToList())
+      {
+        endpoint.Metadata.Remove(accepts);
       }
     });
     var config = endpoints.ServiceProvider.GetRequiredService<McpConfig>();

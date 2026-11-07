@@ -162,6 +162,30 @@ public sealed class LibraryHostTests : IDisposable
     return (JsonObject)JsonNode.Parse(data)!["result"]!["structuredContent"]!;
   }
 
+  // Routing must not answer before the gate, which answers as Node's createMcpHandler.
+  [Theory]
+  [InlineData("POST", "text/plain", 415, "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Unsupported Media Type: Content-Type must be application/json\"},\"id\":null}")]
+  [InlineData("PUT", "application/json", 405, "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Method not allowed.\"},\"id\":null}")]
+  [InlineData("PATCH", "application/json", 405, "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Method not allowed.\"},\"id\":null}")]
+  [InlineData("OPTIONS", "application/json", 405, "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Method not allowed.\"},\"id\":null}")]
+  public async Task AnswersAWrongMethodOrContentTypeAsNode(string method, string contentType, int status, string body)
+  {
+    var (app, client) = await StartAsync();
+
+    await using (app)
+    {
+      using var request = new HttpRequestMessage(new HttpMethod(method), "/mcp")
+      {
+        Content = new StringContent("""{"jsonrpc":"2.0","id":7,"method":"ping"}""", Encoding.UTF8, contentType),
+      };
+      request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(status, (int)response.StatusCode);
+      Assert.Equal(body, await response.Content.ReadAsStringAsync());
+    }
+  }
+
   [Fact]
   public async Task ServesTheToolsOverTheMappedEndpoint()
   {

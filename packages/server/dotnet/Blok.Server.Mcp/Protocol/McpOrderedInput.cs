@@ -149,6 +149,9 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
 
     if (McpRequestShape.Read(bytes) is var (document, repeated))
     {
+      long? whole = null;
+      string? rawId = null;
+
       using (document)
       {
         var root = document.RootElement;
@@ -157,21 +160,55 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
         {
           return null;
         }
-        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("id", out var id) && root.TryGetProperty("method", out _)
-            && id.ValueKind is JsonValueKind.String or JsonValueKind.Number)
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("id", out var id) && root.TryGetProperty("method", out _))
         {
-          RequestIds.Enqueue(IdOf(JsonNode.Parse(id.GetRawText())!));
+          rawId = id.GetRawText();
+          whole = WholeNumberWrittenOtherwise(id);
         }
       }
-      if (repeated)
+      // JSON.parse reads 101.0 or 1.01e2 as 101, and Node answers with id 101; the SDK reads neither.
+      if (repeated || whole is not null)
       {
-        text = McpJson.Write(McpJson.Parse(text));
+        var message = McpJson.Parse(text)!;
+
+        if (whole is long number)
+        {
+          message["id"] = number;
+        }
+        text = McpJson.Write(message);
         bytes = Encoding.UTF8.GetBytes(text);
+      }
+      if (rawId is not null && SdkIdOf(whole?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? rawId) is string sdkId)
+      {
+        RequestIds.Enqueue(sdkId);
       }
     }
     Reserve(text);
 
     return bytes;
+  }
+
+  private static long? WholeNumberWrittenOtherwise(JsonElement id)
+  {
+    const double MaxSafe = 9007199254740991;
+
+    return id.ValueKind == JsonValueKind.Number && !id.TryGetInt64(out _) && id.TryGetDouble(out var value)
+        && Math.Floor(value) == value && Math.Abs(value) <= MaxSafe
+        ? (long)value
+        : null;
+  }
+
+  // The id as the SDK prints it, or null for one it cannot read (it answers that line itself).
+  private static string? SdkIdOf(string rawId)
+  {
+    try
+    {
+      return JsonNode.Parse(rawId) is JsonNode id ? IdOf(id) : null;
+    }
+    catch (Exception error) when (error is not OutOfMemoryException)
+    {
+      return null;
+    }
   }
 
   private void Reserve(string text)

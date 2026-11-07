@@ -253,4 +253,22 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
     await Task.WhenAll(second, third).WaitAsync(TimeSpan.FromSeconds(10));
     Assert.Equal(["2", "3"], started);
   }
+
+  // JSON.parse reads 101.0 as 101, and Node answers id 101; the SDK here cannot read 101.0 at all.
+  [Fact]
+  public async Task StdinWritesAnIdOf101Point0As101AndBooksItsTurnUnderIt()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+    var wire = "{\"jsonrpc\":\"2.0\",\"id\":101.0,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":{\"handle\":\"h\"}}}\n";
+    await using var input = new Blok.Server.Mcp.Protocol.McpOrderedInput(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(wire)), core);
+    using var passed = new MemoryStream();
+
+    await input.CopyToAsync(passed);
+    Assert.Equal(
+        "{\"jsonrpc\":\"2.0\",\"id\":101,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":{\"handle\":\"h\"}}}\n",
+        System.Text.Encoding.UTF8.GetString(passed.ToArray()));
+    // The turn booked under "101" is the one the call takes, so the handle is not held.
+    Assert.Equal(7, await core.InArrivalOrderAsync("h", "101", () => Task.FromResult(7)).WaitAsync(TimeSpan.FromSeconds(10)));
+    Assert.Equal(8, await core.InArrivalOrderAsync("h", "102", () => Task.FromResult(8)).WaitAsync(TimeSpan.FromSeconds(10)));
+  }
 }

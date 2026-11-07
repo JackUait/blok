@@ -88,6 +88,12 @@ describe('a lone UTF-16 surrogate becomes U+FFFD', () => {
       .toMatchObject({ documentId: '\uFFFD\uFFFD\ud800\udc00x\uFFFD' });
   });
 
+  it('in the title a file listing shows', async () => {
+    const answer: unknown = JSON.parse(await invoke('mcpFilesList', JSON.stringify({ entries: [{ id: 'doc', text: LONE_TEXT }], limit: 5 })));
+
+    expect(answer).toEqual({ documents: [{ id: 'doc', title: 't\uFFFD' }], nextCursor: null });
+  });
+
   it('for every host that reads a file through the bundle', async () => {
     const answer: unknown = JSON.parse(await invoke('mcpParseDocument', JSON.stringify({ id: 'doc', text: LONE_TEXT })));
 

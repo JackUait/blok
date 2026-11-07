@@ -98,6 +98,13 @@ describe('the JSON nesting limit', () => {
     });
   });
 
+  it('lists a file nested deeper than 48 levels without a title, for every host', async () => {
+    const text = documentText(49).replace('{"blocks"', '{"title":"Deep","blocks"');
+    const answer: unknown = JSON.parse(await invoke('mcpFilesList', JSON.stringify({ entries: [{ id: 'doc', text }], limit: 5 })));
+
+    expect(answer).toEqual({ documents: [{ id: 'doc', title: null }], nextCursor: null });
+  });
+
   it('refuses an endpoint answer nested deeper than 48 levels', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(documentText(49), { status: 200 }));
     const loading = createEndpointSource({ url: 'http://host/docs', endpointAuth: 'a' }, fetchImpl).load('doc');

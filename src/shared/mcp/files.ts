@@ -33,8 +33,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /** A file's listed title: its non-empty `title`, else null. Text that is not JSON has none. */
 export const titleOfText = (text: string): string | null => {
+  // The ports' JSON.parse fails past 64 levels, so Node must not find a title there either.
+  if (textNestsDeeperThan(text, MAX_JSON_DEPTH)) {
+    return null;
+  }
   try {
-    const parsed: unknown = JSON.parse(text);
+    const parsed: unknown = wellFormed(JSON.parse(text));
 
     return isRecord(parsed) && typeof parsed.title === 'string' && parsed.title !== '' ? parsed.title : null;
   } catch {

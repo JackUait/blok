@@ -105,6 +105,20 @@ describe('table resize from the size card', () => {
     vi.restoreAllMocks();
   });
 
+  it('draws − and + as centred icons, not font glyphs that sit on the baseline', async () => {
+    await bootTable(2, 2);
+    click('[data-blok-table-fullscreen-toggle]');
+    click('[data-blok-table-fullscreen-size]');
+
+    const steps = [...document.querySelectorAll<HTMLButtonElement>('[data-blok-table-fullscreen-step]')];
+
+    expect(steps).toHaveLength(4);
+    steps.forEach((step) => {
+      expect(step.textContent?.trim()).toBe('');
+      expect(step.querySelector('svg')).not.toBeNull();
+    });
+  });
+
   it('writes new cells into the table\'s child order once per run, however many columns it adds', async () => {
     const writesFor = async (cols: number): Promise<number> => {
       const editor = await bootTable(2, 2);

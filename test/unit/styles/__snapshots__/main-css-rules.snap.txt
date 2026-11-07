@@ -3532,29 +3532,42 @@
 }
 
 [data-blok-table-fullscreen-stepper] {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   height: 28px;
+  padding: var(--blok-space-0-5);
   border: 1px solid var(--blok-border-primary);
   border-radius: var(--blok-radius-field);
   border-color: var(--blok-popover-border);
 }
 
 [data-blok-table-fullscreen-step] {
-  width: 26px;
-  height: 100%;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: 0;
-  border-radius: var(--blok-radius-field);
+  border-radius: var(--blok-radius-control);
   background: transparent;
   color: var(--blok-text-primary);
-  font: inherit;
-  font-size: 15px;
   cursor: pointer;
   touch-action: manipulation;
   background-color: var(--blok-item-hover-bg);
   color: var(--blok-text-tertiary);
   cursor: default;
+}
+
+[data-blok-table-fullscreen-step] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-table-fullscreen-step]:active:not(:disabled) {
+  background-color: var(--blok-icon-active-bg);
 }
 
 [data-blok-table-fullscreen-stepper] input {

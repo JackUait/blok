@@ -1,4 +1,4 @@
-import { IconCross, IconExpandDiagonal, IconTable } from '../../components/icons';
+import { IconCross, IconExpandDiagonal, IconMinus, IconPlus, IconTable } from '../../components/icons';
 import { DATA_ATTR } from '../../components/constants';
 import { ScrollLocker } from '../../components/utils/scroll-locker';
 import { promoteToTopLayer, removeFromTopLayer, TOP_LAYER_MARKER_ATTR } from '../../components/utils/top-layer';
@@ -26,9 +26,9 @@ const REPEAT_MS = 70;
  */
 const stepperRow = (axis: 'cols' | 'rows'): string =>
   `<span ${SIZE_LABEL_ATTR}="${axis}"></span><span data-blok-table-fullscreen-stepper>`
-  + `<button type="button" ${STEP_ATTR}="-1" data-axis="${axis}" tabindex="-1" aria-hidden="true">−</button>`
+  + `<button type="button" ${STEP_ATTR}="-1" data-axis="${axis}" tabindex="-1" aria-hidden="true">${IconMinus}</button>`
   + '<input role="spinbutton" inputmode="numeric" autocomplete="off">'
-  + `<button type="button" ${STEP_ATTR}="1" data-axis="${axis}" tabindex="-1" aria-hidden="true">+</button></span>`;
+  + `<button type="button" ${STEP_ATTR}="1" data-axis="${axis}" tabindex="-1" aria-hidden="true">${IconPlus}</button></span>`;
 const NEAR_ATTR = 'data-blok-table-fullscreen-near';
 
 /** How far the button sits in from the table's inline-end edge. */

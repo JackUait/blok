@@ -78,7 +78,25 @@ public sealed class LibraryOptionsTests : IDisposable
     var pageTitles = await Assert.ThrowsAsync<InvalidOperationException>(() => StartAsync(options => options.PageTitles = "pages"));
 
     Assert.Equal("Invalid --manifest file: Not a Blok custom tools file: / missing required field \"formatVersion\"; / missing required field \"blocks\"", manifest.Message);
-    Assert.Contains("page-map", pageTitles.Message, StringComparison.Ordinal);
+    Assert.Equal("pageTitles must be one of off, page-map, got \"pages\"", pageTitles.Message);
+  }
+
+  // Node's createBlokMcpServer refuses these in the shared check, in these words.
+  [Fact]
+  public async Task RefusesBadSchemaAndHandleOptionsWithNodesWords()
+  {
+    var refusals = new (Action<BlokMcpOptions> Set, string Message)[]
+    {
+      (options => options.Schema = "bogus", "schema must be one of envelope, full, mixed, got \"bogus\""),
+      (options => options.HandleIdleTimeout = TimeSpan.Zero, "handleIdleMs must be a positive integer, got 0"),
+      (options => options.HandleIdleTimeout = TimeSpan.FromTicks(15_000), "handleIdleMs must be a positive integer, got 1.5"),
+      (options => options.MaxHandlesPerPrincipal = 0, "maxHandlesPerPrincipal must be a positive integer, got 0"),
+    };
+
+    foreach (var (set, message) in refusals)
+    {
+      Assert.Equal(message, (await Assert.ThrowsAsync<InvalidOperationException>(() => StartAsync(set))).Message);
+    }
   }
 
   // Measured on Node: hiding table changes tools/list.

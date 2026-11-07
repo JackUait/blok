@@ -177,10 +177,6 @@ public static class BlokMcpServiceCollectionExtensions
     {
       throw new InvalidOperationException("Set BlokMcpOptions.SyncUrl or LiveRooms, not both.");
     }
-    if (options.PageTitles is not null and not "off" and not "page-map")
-    {
-      throw new InvalidOperationException($"BlokMcpOptions.PageTitles must be \"off\" or \"page-map\", got \"{options.PageTitles}\"");
-    }
     // Node's checkOptionSafety over HTTP: OAuth says who calls, not which documents they may open.
     if (hook is null && !hostDecides && !options.AllowEveryCallerEveryDocument)
     {
@@ -277,6 +273,23 @@ public static class BlokMcpServiceCollectionExtensions
     if (options.SyncUrl is { } sync)
     {
       check["sync"] = new JsonObject { ["url"] = sync.OriginalString };
+    }
+    // Node's names: the shared check words its refusal with them.
+    if (options.Schema is { } schema)
+    {
+      check["schema"] = schema;
+    }
+    if (options.PageTitles is { } pageTitles)
+    {
+      check["pageTitles"] = pageTitles;
+    }
+    if (options.HandleIdleTimeout is { } idle)
+    {
+      check["handleIdleMs"] = idle.TotalMilliseconds;
+    }
+    if (options.MaxHandlesPerPrincipal is int maxHandles)
+    {
+      check["maxHandlesPerPrincipal"] = maxHandles;
     }
     if (TicketsOf(options) is { } tickets)
     {

@@ -2289,6 +2289,42 @@ describe('ImageTool — GIF auto-conversion', () => {
     expect(root.getAttribute('data-state')).toBe('empty');
   });
 
+  it('does not swap to a video when a newer image landed during the GIF conversion', async () => {
+    const conversion = heldConversion();
+    const insert = vi.fn();
+    const tool = new ImageTool({ ...createOptions(), api: videoApi(insert) });
+    const root = tool.render();
+    pasteGif(tool);
+    await vi.waitFor(() => expect(mockConvert).toHaveBeenCalledOnce());
+    const link = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/other.png' } }) as PatternPasteEvent;
+    Object.defineProperty(link, 'type', { value: 'pattern' });
+    tool.onPaste(link);
+
+    conversion.resolve(new Blob([new Uint8Array([1])], { type: 'video/webm' }));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(root.querySelector('img')?.getAttribute('src')).toBe('https://x/other.png');
+  });
+
+  it('does not upload the GIF when its block was deleted during the conversion', async () => {
+    const conversion = heldConversion();
+    const uploadByFile = vi.fn(async () => ({ url: 'https://cdn/cat.gif' }));
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => undefined, insert: vi.fn() };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
+    const tool = new ImageTool({ ...createOptions({}, { uploader: { uploadByFile } }), api });
+    tool.render();
+    pasteGif(tool);
+    await vi.waitFor(() => expect(mockConvert).toHaveBeenCalledOnce());
+    tool.removed();
+
+    conversion.resolve(new Blob([new Uint8Array([1])], { type: 'video/webm' }));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(uploadByFile).not.toHaveBeenCalled();
+  });
+
   it('labels a link upload as uploading after a GIF conversion was cancelled', async () => {
     heldConversion();
     const uploadByUrl = (): Promise<{ url: string }> => new Promise(() => undefined);

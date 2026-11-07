@@ -73,7 +73,7 @@ import { convertGifToWebm } from './gif-to-webm';
 import { downloadImage } from './download';
 import { resolveConvertedUploader } from './converted-uploader';
 import { tr } from './i18n';
-import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
+import { deliverToRebuiltBlock, isStillInDocument, putBackOnRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
 import { renderImagePreview } from './preview';
 import { figureInsets } from './figure-insets';
 import { overrideStatic } from '../../components/utils/override-static';
@@ -169,7 +169,7 @@ export class ImageTool implements BlockTool {
   private mending = false;
   private reloadAttempts = 0;
   private converting = false;
-  /** Counts GIF conversions; a conversion whose number is no longer current was cancelled. */
+  /** Counts GIF conversions; a conversion whose number is no longer current was cancelled or replaced. */
   private conversionJob = 0;
   /** Set by `removed()`: this instance is no longer the document's block. */
   private detached = false;
@@ -346,6 +346,7 @@ export class ImageTool implements BlockTool {
   private uploadImageFile(file: File, before: string | undefined): void {
     const source = { kind: 'file', file } as const;
 
+    this.conversionJob++;
     this.converting = false;
     this.lastFileName = file.name;
     this.lastSource = source;
@@ -416,19 +417,27 @@ export class ImageTool implements BlockTool {
     this.renderState();
     try {
       const blob = await convertGifToWebm(await file.arrayBuffer(), { onProgress: this.reportProgress });
-      if (this.conversionJob !== job) return true;
+      if (this.conversionGone(job)) return true;
       if (!blob) { this.converting = false; return false; }
       const webm = new File([blob], file.name.replace(/\.gif$/i, '.webm'), { type: 'video/webm' });
       const url = await this.uploadConverted(webm);
-      if (this.conversionJob !== job) return true;
+      if (this.conversionGone(job)) return true;
       if (url === null) { this.converting = false; return false; }
       this.converting = false;
       return this.swapToVideoBlock(url, webm.name, ['fileName']);
     } catch {
-      if (this.conversionJob !== job) return true;
+      if (this.conversionGone(job)) return true;
       this.converting = false;
       return false;
     }
+  }
+
+  /**
+   * @param job - the conversion's number
+   * @returns true when the user cancelled it, a newer image replaced it, or its block was deleted
+   */
+  private conversionGone(job: number): boolean {
+    return this.conversionJob !== job || (this.detached && !isStillInDocument(this.api, this.block.id));
   }
 
   private async uploadConverted(file: File): Promise<string | null> {
@@ -489,6 +498,7 @@ export class ImageTool implements BlockTool {
   private loadImageUrl(url: string, before: string): void {
     const source = { kind: 'url', url } as const;
 
+    this.conversionJob++;
     this.lastFileName = null;
     this.lastSource = source;
     this.state = 'LOADING';
@@ -537,7 +547,7 @@ export class ImageTool implements BlockTool {
   private async convertGifUrlToVideoBlock(url: string): Promise<boolean> {
     const job = ++this.conversionJob;
     const bytes = await this.fetchGifBytes(url);
-    if (this.conversionJob !== job) return true;
+    if (this.conversionGone(job)) return true;
     if (!bytes) return false;
     this.converting = true;
     this.state = 'LOADING';
@@ -545,16 +555,16 @@ export class ImageTool implements BlockTool {
     this.renderState();
     try {
       const blob = await convertGifToWebm(bytes, { onProgress: this.reportProgress });
-      if (this.conversionJob !== job) return true;
+      if (this.conversionGone(job)) return true;
       if (!blob) { this.converting = false; return false; }
       const webm = new File([blob], 'animation.webm', { type: 'video/webm' });
       const uploadedUrl = await this.uploadConverted(webm);
-      if (this.conversionJob !== job) return true;
+      if (this.conversionGone(job)) return true;
       if (uploadedUrl === null) { this.converting = false; return false; }
       this.converting = false;
       return this.swapToVideoBlock(uploadedUrl, webm.name, ['url']);
     } catch {
-      if (this.conversionJob !== job) return true;
+      if (this.conversionGone(job)) return true;
       this.converting = false;
       return false;
     }
@@ -595,6 +605,7 @@ export class ImageTool implements BlockTool {
   }
 
   private applyResult(result: UploadResult): void {
+    this.conversionJob++;
     if (this.detached) {
       deliverToRebuiltBlock(this.api, this.block, 'Image', this.resultDelta(result));
 

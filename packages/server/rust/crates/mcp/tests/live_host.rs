@@ -82,6 +82,8 @@ async fn host(journal: bool) -> Host {
         std::process::id(),
         rand_suffix()
     ));
+    // A folder left by an earlier run with the same process id.
+    let _ = std::fs::remove_dir_all(&dir);
     let server = blok_blokserver::Server::new(blok_blokserver::Options {
         auth: "ticket".into(),
         secret: SECRET.into(),
@@ -103,11 +105,10 @@ async fn host(journal: bool) -> Host {
     }
 }
 
-fn rand_suffix() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos() as u64
+/// Each host its own folders: tests run at once.
+fn rand_suffix() -> usize {
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
 }
 
 async fn mcp(host: &Host) -> Mcp {

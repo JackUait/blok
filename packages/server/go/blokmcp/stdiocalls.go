@@ -290,6 +290,7 @@ func (t *callTracker) waitIdle(deadline time.Time) {
 type trackedTransport struct {
 	inner   mcp.Transport
 	tracker *callTracker
+	client  *stdioPeer
 }
 
 func (t trackedTransport) Connect(ctx context.Context) (mcp.Connection, error) {
@@ -297,20 +298,35 @@ func (t trackedTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	return trackedConnection{connection, t.tracker}, nil
+	return trackedConnection{connection, t.tracker, t.client}, nil
 }
 
 type trackedConnection struct {
 	mcp.Connection
 	tracker *callTracker
+	client  *stdioPeer
 }
 
 func (c trackedConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
+	if pending := c.client.takePending(); pending != nil {
+		c.tracker.read(pending)
+		return pending, nil
+	}
 	for {
 		message, err := c.Connection.Read(ctx)
 		if err == nil {
-			if request, ok := message.(*jsonrpc.Request); ok && c.refused(ctx, request) {
-				continue
+			if request, ok := message.(*jsonrpc.Request); ok {
+				if c.refused(ctx, request) {
+					continue
+				}
+				request = c.client.read(ctx, c.Connection, request)
+				if request == nil {
+					continue
+				}
+				message = request
+				if request.ID.Raw() == ownInitialize {
+					return message, nil
+				}
 			}
 			c.tracker.read(message)
 		} else if errors.Is(err, io.EOF) {
@@ -340,6 +356,9 @@ func (c trackedConnection) refused(ctx context.Context, request *jsonrpc.Request
 
 func (c trackedConnection) Write(ctx context.Context, message jsonrpc.Message) error {
 	response, isResponse := message.(*jsonrpc.Response)
+	if isResponse && !c.client.answered(response) {
+		return nil
+	}
 	var own jsonrpc.ID
 	if isResponse {
 		own = response.ID

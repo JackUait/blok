@@ -59,11 +59,8 @@ export class BlockOperations implements OperationsContext {
    */
   private currentIndexHint = -1;
 
-  /**
-   * Flag to suppress stopCapturing during atomic operations (like split)
-   * This prevents breaking undo grouping when currentBlockIndex changes
-   */
-  public suppressStopCapturing = false;
+  /** Open {@link holdStopCapturing} holds. A count, so nested windows compose. */
+  private stopCapturingHolds = 0;
 
   /** How many operations are running now, nested ones included. */
   private operationDepth = 0;
@@ -178,6 +175,31 @@ export class BlockOperations implements OperationsContext {
     if (this.current?.id === block.id) {
       this.current = undefined;
     }
+  }
+
+  /**
+   * True while an atomic operation (split, move, convert, tool transaction)
+   * holds the undo step open: callers must not split it with stopCapturing.
+   */
+  public get suppressStopCapturing(): boolean {
+    return this.stopCapturingHolds > 0;
+  }
+
+  /**
+   * Keep stopCapturing from splitting the undo step until the returned
+   * release runs. Releasing twice is a no-op.
+   */
+  public holdStopCapturing(): () => void {
+    this.stopCapturingHolds++;
+
+    const hold = { released: false };
+
+    return (): void => {
+      if (!hold.released) {
+        hold.released = true;
+        this.stopCapturingHolds--;
+      }
+    };
   }
 
   /**

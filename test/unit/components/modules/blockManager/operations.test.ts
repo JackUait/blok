@@ -691,9 +691,11 @@ describe('BlockOperations', () => {
     });
 
     it('does not call stopCapturing when suppressStopCapturing is true', () => {
-      operations.suppressStopCapturing = true;
+      const release = operations.holdStopCapturing();
+
       operations.currentBlockIndexValue = 1;
       expect(dependencies.YjsManager.stopCapturing).not.toHaveBeenCalled();
+      release();
     });
   });
 
@@ -3923,11 +3925,26 @@ describe('BlockOperations', () => {
 
   describe('suppressStopCapturing flag', () => {
     it('prevents stopCapturing during atomic operations', () => {
-      operations.suppressStopCapturing = true;
+      const release = operations.holdStopCapturing();
+
       operations.currentBlockIndexValue = 1;
 
       expect(dependencies.YjsManager.stopCapturing).not.toHaveBeenCalled();
-      operations.suppressStopCapturing = false;
+      release();
+    });
+
+    it('stays on until every nested hold is released', () => {
+      const outer = operations.holdStopCapturing();
+      const inner = operations.holdStopCapturing();
+
+      inner();
+      expect(operations.suppressStopCapturing).toBe(true);
+
+      inner();
+      expect(operations.suppressStopCapturing).toBe(true);
+
+      outer();
+      expect(operations.suppressStopCapturing).toBe(false);
     });
   });
 

@@ -847,11 +847,7 @@ export class BlockYjsSync {
       this.remoteSyncCount++;
     }
     this.trackScope(blockId, 1);
-    const operations = this.dependencies.operations;
-
-    if (operations) {
-      operations.suppressStopCapturing = true;
-    }
+    const releaseHold = this.dependencies.operations?.holdStopCapturing();
 
     return (): void => {
       this.yjsSyncCount--;
@@ -862,9 +858,7 @@ export class BlockYjsSync {
       if (this.yjsSyncCount === 0) {
         this.addedLocallyDuringSync.clear();
       }
-      if (operations && this.yjsSyncCount === 0) {
-        operations.suppressStopCapturing = false;
-      }
+      releaseHold?.();
     };
   }
 

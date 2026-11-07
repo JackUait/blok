@@ -420,10 +420,8 @@ export class BlockManager extends Module {
    */
   private toolTransactionDepth = 0;
 
-  /**
-   * `suppressStopCapturing` as it was before the outermost tool transaction.
-   */
-  private suppressBeforeToolTransaction = false;
+  /** Releases the stopCapturing hold the open tool transaction took. */
+  private releaseToolTransactionHold: (() => void) | null = null;
 
   /**
    * Whether the open tool transaction holds the undo capture. An end with no
@@ -1306,11 +1304,10 @@ export class BlockManager extends Module {
       // own and split the group in two.
       this.Blok.YjsManager.holdCapture();
       this.toolTransactionHoldsCapture = true;
-      this.suppressBeforeToolTransaction = this.operations.suppressStopCapturing;
+      this.releaseToolTransactionHold = this.operations.holdStopCapturing();
     }
 
     this.toolTransactionDepth++;
-    this.operations.suppressStopCapturing = true;
   }
 
   /**
@@ -1354,7 +1351,8 @@ export class BlockManager extends Module {
         this.toolTransactionHoldsCapture = false;
         this.Blok.YjsManager.releaseCapture();
       }
-      this.operations.suppressStopCapturing = this.suppressBeforeToolTransaction;
+      this.releaseToolTransactionHold?.();
+      this.releaseToolTransactionHold = null;
 
       const callbacks = this.toolTransactionCallbacks;
 

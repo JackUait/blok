@@ -249,3 +249,67 @@ func TestHistoryAfterTheSwapActsOnTheLiveDoc(t *testing.T) {
 		t.Fatalf("the undo missed the live doc: %v", blocks)
 	}
 }
+
+// Node's revocable(): the ticket URL grants two short tickets, then answers
+// 403 when history mints again. The history command names that refusal,
+// the room ends for the handle, and no mint follows.
+func TestATicketRefusedForHistoryEndsTheRoomAsNode(t *testing.T) {
+	host := ticketHost(t)
+	var posts atomic.Int32
+	tickets := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request ticketRequest
+		_ = json.NewDecoder(r.Body).Decode(&request)
+		if posts.Add(1) > 2 {
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = io.WriteString(w, "no")
+			return
+		}
+		// Inside the 30 s refresh margin: each use mints again.
+		ttl := int64(20)
+		pass, err := ticket.Mint(rejectionSecret, ticket.Claims{User: request.ActorID, Doc: &request.Doc, Write: true, TTLSeconds: &ttl}, time.Now())
+		if err != nil {
+			t.Error(err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"ticket": pass})
+	}))
+	t.Cleanup(tickets.Close)
+	origin := rejectionOrigin
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"},
+		Sync:    &Sync{URL: "ws" + strings.TrimPrefix(host.URL, "http") + "/sync", Origin: &origin},
+		Tickets: &Tickets{Kind: "url", URL: tickets.URL, HostToken: "host-token-1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx := context.Background()
+	who, err := server.actorFor(ctx, "alice", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	call := func(name string, arguments map[string]any) map[string]any {
+		raw, _ := json.Marshal(arguments)
+		result, err := server.dispatch(ctx, &toolCall{name: name, arguments: raw, caller: who})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return structured(t, result.answer)
+	}
+	handle, _ := call("blok_open", map[string]any{"documentId": "live-doc", "write": true})["handle"].(string)
+	versions := call("blok_execute", map[string]any{"handle": handle, "commands": []any{map[string]any{"name": "history.versions", "args": map[string]any{}}}})
+	if failure, _ := versions["error"].(map[string]any); failure["code"] != "TOOL_ACTION_FAILED" ||
+		failure["message"] != "The version history failed: The host did not grant this document to this agent." || failure["retryable"] != false {
+		t.Fatalf("history.versions answered %v", versions)
+	}
+	for _, id := range []string{"p1", "p2"} {
+		write := call("blok_execute", map[string]any{"handle": handle, "commands": []any{map[string]any{"name": "block.insert",
+			"args": map[string]any{"type": "paragraph", "id": id, "data": map[string]any{"text": "x"}}}}})
+		if failure, _ := write["error"].(map[string]any); failure["code"] != "FORBIDDEN" ||
+			failure["message"] != "The room refused this agent. Its ticket may not grant this document." {
+			t.Fatalf("the write after the refusal answered %v", write)
+		}
+	}
+	if got := posts.Load(); got != 3 {
+		t.Fatalf("the ticket URL was asked %d times", got)
+	}
+}

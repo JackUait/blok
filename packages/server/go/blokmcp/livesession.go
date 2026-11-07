@@ -358,10 +358,18 @@ func (l *liveSession) failed(ctx context.Context, result json.RawMessage, failur
 
 func (l *liveSession) execute(ctx context.Context, call *callContext, batch json.RawMessage) (*executed, error) {
 	room := l.room
+	room.mu.Lock()
+	end := room.end
+	room.mu.Unlock()
+	if end != nil {
+		return l.failed(ctx, nil, l.endError(ctx, end))
+	}
+	// Node checks the end before the batch runs: a room that ends while
+	// history loads (a refused ticket) still answers the history command.
 	versions := room.loadVersions(ctx, batch)
 	room.mu.Lock()
 	defer room.mu.Unlock()
-	if room.end != nil {
+	if versions == nil && room.end != nil {
 		return l.failed(ctx, nil, l.endError(ctx, room.end))
 	}
 	if l.undoDoc != room.doc {

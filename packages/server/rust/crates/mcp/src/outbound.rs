@@ -72,6 +72,14 @@ impl Outbound {
         timeout: Duration,
     ) -> Result<Answer, Unreachable> {
         let uri = parse_absolute_uri(url).filter(Uri::is_http).ok_or(FAILED)?;
+        // fetch trims spaces, tabs, CR and LF around a value before it checks it.
+        let headers = headers
+            .into_iter()
+            .map(|(name, value)| {
+                let value = value.trim_matches([' ', '\t', '\r', '\n']).to_owned();
+                (name, value)
+            })
+            .collect();
         self.exchange(
             method,
             &uri,

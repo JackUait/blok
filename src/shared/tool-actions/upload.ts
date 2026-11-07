@@ -49,7 +49,10 @@ const MIME_BY_EXTENSION: Readonly<Record<string, string>> = {
   ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 };
 
-const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
+const padding = (data: string): number => (data.endsWith('==') ? 2 : Number(data.endsWith('=')));
+
+// Not one /^[…]*={0,2}$/: QuickJS backtracks it, and runs out of memory past about 3 MiB.
+const isBase64 = (data: string): boolean => !/[^A-Za-z0-9+/]/.test(data.slice(0, data.length - padding(data)));
 
 const PLACEHOLDER = 'blok-upload-pending';
 
@@ -95,7 +98,7 @@ const checkArgs = (args: UploadArgs): void => {
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const SEXTET = new Map(Array.from(ALPHABET, (char, index) => [char, index]));
 
-// The fallback where the host gives no decoder: Jint has no atob. `data` is already checked against BASE64.
+// The fallback where the host gives no decoder: Jint has no atob. `data` already passed isBase64.
 const fromBase64 = (data: string): Uint8Array<ArrayBuffer> => {
   const body = data.replace(/=+$/, '');
   const bytes = new Uint8Array(Math.floor(body.length * 3 / 4));
@@ -119,7 +122,7 @@ const decode = (data: string, maxSize: number, fast?: (data: string) => Uint8Arr
   if (data.length > Math.ceil(maxSize / 3) * 4) {
     refused(`The file is too large: this host takes at most ${maxSize} bytes.`);
   }
-  if (data.length % 4 !== 0 || !BASE64.test(data)) {
+  if (data.length % 4 !== 0 || !isBase64(data)) {
     invalid('data must be standard base64 (A-Z a-z 0-9 + /, padded with =).', '/data');
   }
   return fast?.(data) ?? fromBase64(data);

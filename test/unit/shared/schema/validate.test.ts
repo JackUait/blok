@@ -103,6 +103,9 @@ describe('validateAgainst', () => {
     ok({ minLength: 2, maxLength: 2 }, '😀😀');
     bad({ minLength: 2 }, '😀');
     bad({ maxLength: 1 }, '😀😀');
+    // A lone surrogate is one code point, as [...value] counts it.
+    ok({ maxLength: 2 }, '\uD800\uDC00\uD800');
+    bad({ maxLength: 1 }, '\uDC00\uD800');
     ok({ minLength: 1 }, 0);
   });
 

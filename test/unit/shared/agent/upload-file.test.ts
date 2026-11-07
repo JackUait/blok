@@ -202,6 +202,18 @@ describe('<tool>.uploadFile refuses what a person\'s upload refuses, before any 
     expect(host.uploadByFile).not.toHaveBeenCalled();
   });
 
+  it('takes = only as one or two padding characters at the end', async () => {
+    const host = fakeUploader();
+    const session = open(EMPTY, host);
+    const errorFor = async (data: string): Promise<unknown> => errorOf(await run(session, 'file.uploadFile', { data, fileName: 'a.txt', position: 'end' }));
+
+    expect(await errorFor('QR==')).toBeUndefined();
+    expect(await errorFor('QUI=')).toBeUndefined();
+    expect(await errorFor('Q===')).toMatchObject({ code: 'INVALID_ARGS' });
+    expect(await errorFor('Q=Q=')).toMatchObject({ code: 'INVALID_ARGS' });
+    expect(await errorFor('====')).toMatchObject({ code: 'INVALID_ARGS' });
+  });
+
   it('refuses a mimeType that disagrees with the file name', async () => {
     const host = fakeUploader();
     const session = open(EMPTY, host);

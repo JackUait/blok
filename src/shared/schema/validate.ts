@@ -247,9 +247,17 @@ const checkNumber = (schema: Schema, value: number, path: string, out: SchemaPro
   }
 };
 
+// JSON Schema counts code points, not UTF-16 units. Not [...value]: one string per character
+// runs a multi-MiB upload past the engines' memory budgets.
+const codePoints = (value: string): number => {
+  const pairs = value.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g)?.length ?? 0;
+
+  return value.length - pairs;
+};
+
 const checkString = (schema: Schema, value: string, path: string, out: SchemaProblem[]): void => {
-  // JSON Schema counts code points, not UTF-16 units.
-  const length = [...value].length;
+  const counted = typeof schema.minLength === 'number' || typeof schema.maxLength === 'number';
+  const length = counted ? codePoints(value) : 0;
 
   if (typeof schema.minLength === 'number' && length < schema.minLength) {
     out.push({ path, message: `must have at least ${schema.minLength} characters` });

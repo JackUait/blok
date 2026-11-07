@@ -199,3 +199,67 @@ async fn uploads_go_through_the_hosts_uploader_as_node_answers_them() {
     assert!(saved.contains("https://cdn.test/5/a.png"), "{saved}");
     let _ = std::fs::remove_dir_all(&work);
 }
+
+// Node takes base64 uploads up to its 30 MiB data limit; 7.4 MiB passes there.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_7_mib_base64_upload_reaches_the_uploader_as_in_node() {
+    let work = std::env::temp_dir().join(format!("blok-mcp-big-upload-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&work);
+    let docs = work.join("docs");
+    std::fs::create_dir_all(&docs).unwrap();
+    std::fs::write(docs.join("doc.json"), r#"{"blocks":[]}"#).unwrap();
+    let memory = Arc::new(Memory::default());
+    let uploads = Uploads {
+        uploader: memory.clone(),
+        root: None,
+        limits: json!({}),
+    };
+    let options = json!({
+        "transport": { "kind": "stdio" }, "auth": { "kind": "none" },
+        "source": { "kind": "files", "dir": docs.to_string_lossy() },
+    });
+    let mcp = Mcp::with_uploads(
+        Arc::new(Bundle::new(1).unwrap()),
+        &options,
+        None,
+        None,
+        Some(uploads),
+    )
+    .await
+    .unwrap();
+    let caller = Caller {
+        principal: "local".to_owned(),
+        client_name: None,
+        scopes: None,
+    };
+    let opened = match mcp
+        .call(
+            "blok_open",
+            &json!({ "documentId": "doc", "write": true }),
+            &caller,
+            &Approval::default(),
+            &|| false,
+        )
+        .await
+    {
+        Ok(Outcome::Answer(answer)) => serde_json::from_str::<Value>(&answer.structured).unwrap(),
+        other => panic!("{other:?}"),
+    };
+    let handle = opened["handle"].as_str().unwrap().to_owned();
+    let bytes = vec![7u8; 7_759_000];
+    let data = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+    let answer = execute(
+        &mcp,
+        &handle,
+        json!([{ "name": "file.uploadFile", "args": { "data": data, "fileName": "big.bin" } }]),
+    )
+    .await;
+    assert_eq!(
+        answer["ok"],
+        json!(true),
+        "{}",
+        answer.to_string().chars().take(600).collect::<String>()
+    );
+    assert_eq!(memory.calls.lock().unwrap()[0]["size"], json!(bytes.len()));
+    let _ = std::fs::remove_dir_all(&work);
+}

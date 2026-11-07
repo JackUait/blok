@@ -721,6 +721,8 @@ export class EmojiTrigger extends BlockEventComposer {
    * destroyed editor leaves a permanent, hidden, id-bearing orphan node.
    */
   public destroy(): void {
+    /** An open() still in flight must not lock the page once it settles. */
+    this.renderToken += 1;
     this.close();
     this.picker?.getElement().remove();
     this.picker = null;

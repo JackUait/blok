@@ -90,13 +90,16 @@ type liveRoom struct {
 	pendingLocal [][]byte
 	holdAppends  bool
 
-	generation        int
-	phase             string
-	conn              *wsConn
-	protocol          string
-	lineage           *string
-	buffered          []wire.Message
-	handshakeTimer    *time.Timer
+	generation     int
+	phase          string
+	conn           *wsConn
+	protocol       string
+	lineage        *string
+	buffered       []wire.Message
+	handshakeTimer *time.Timer
+	// cancelDial ends the upgrade in flight, so a server that never
+	// answers holds no goroutine or connection past the generation.
+	cancelDial        context.CancelFunc
 	firstSyncTimer    *time.Timer
 	reconnectTimer    *time.Timer
 	awarenessTimer    *time.Timer
@@ -365,6 +368,10 @@ func (r *liveRoom) sendActivityOnHandshake() {
 func (r *liveRoom) teardownGeneration(closeSocket bool) {
 	r.hooked = false
 	r.handshakeTimer = stopTimer(r.handshakeTimer)
+	if r.cancelDial != nil {
+		r.cancelDial()
+		r.cancelDial = nil
+	}
 	r.firstSyncTimer = stopTimer(r.firstSyncTimer)
 	r.awarenessTimer = stopTimer(r.awarenessTimer)
 	r.ackTimer = stopTimer(r.ackTimer)
@@ -533,8 +540,10 @@ func (r *liveRoom) openSocket(generation int, token string) {
 	}
 	protocols := []string{"blok-sync.v2", "blok-sync.v1", token}
 	url := r.url
+	dial, cancel := context.WithCancel(context.Background())
+	r.cancelDial = cancel
 	go func() {
-		conn, err := dialWebSocket(context.Background(), url, header, protocols)
+		conn, err := dialWebSocket(dial, url, header, protocols)
 		r.mu.Lock()
 		if r.isStale(generation) {
 			r.mu.Unlock()
@@ -543,7 +552,10 @@ func (r *liveRoom) openSocket(generation int, token string) {
 			}
 			return
 		}
+		// The upgraded connection outlives the dial: only a teardown cancels.
+		r.cancelDial = nil
 		if err != nil {
+			cancel()
 			// ws closes with 1006 after a failed handshake.
 			r.handleClose(1006)
 			r.mu.Unlock()

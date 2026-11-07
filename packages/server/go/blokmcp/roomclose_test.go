@@ -3,8 +3,13 @@ package blokmcp
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
+	"net"
+	"runtime"
+	"sync"
 	"testing"
+	"time"
 )
 
 func closingRoom(t *testing.T) (*liveRoom, *fakeWire) {
@@ -93,5 +98,55 @@ func TestAResidualAnswerDuringAnOperationIsAskedAgain(t *testing.T) {
 	room.handleResync(room.doc.EncodeStateVector())
 	if room.residual != "none" || !room.resyncOwed {
 		t.Fatalf("residual %q, owed %v", room.residual, room.resyncOwed)
+	}
+}
+
+// A sync server that takes the TCP connection and never answers the
+// upgrade must not keep a goroutine or a connection per closed room.
+func TestAClosedRoomEndsItsDialToASilentServer(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	var held []net.Conn
+	t.Cleanup(func() {
+		_ = listener.Close()
+		mu.Lock()
+		defer mu.Unlock()
+		for _, conn := range held {
+			_ = conn.Close()
+		}
+	})
+	accepted := make(chan struct{}, 16)
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			held = append(held, conn)
+			mu.Unlock()
+			accepted <- struct{}{}
+		}
+	}()
+	tickets := func(bool) (string, error) { return "t", nil }
+	before := runtime.NumGoroutine()
+	for range 3 {
+		room := newLiveRoom("http://"+listener.Addr().String()+"/doc", "doc", nil, tickets, nil)
+		if room.open(context.Background(), 300*time.Millisecond) == nil {
+			t.Fatal("a silent server opened")
+		}
+		<-accepted
+		room.close()
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for runtime.NumGoroutine() > before && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if after := runtime.NumGoroutine(); after > before {
+		stack := make([]byte, 1<<20)
+		t.Fatalf("goroutines %d -> %d:\n%s", before, after, stack[:runtime.Stack(stack, true)])
 	}
 }

@@ -2,13 +2,14 @@
 //! requireBearerAuth). rmcp has no server-side OAuth, so all of it is ours.
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use ring::signature::{
     ECDSA_P256_SHA256_FIXED, RSA_PKCS1_2048_8192_SHA256, RsaPublicKeyComponents, UnparsedPublicKey,
 };
 use serde_json::{Map, Value, json};
-use tokio::sync::Mutex;
+use tokio::sync::watch;
 
 use crate::outbound::Outbound;
 
@@ -44,6 +45,8 @@ struct Cache {
     fetched_at: Option<Instant>,
     failed_at: Option<Instant>,
     last_miss_refetch_at: Option<Instant>,
+    /// The fetch in flight; it says true when done. Callers share it.
+    pending: Option<watch::Receiver<bool>>,
 }
 
 pub struct OAuth {
@@ -52,7 +55,8 @@ pub struct OAuth {
     jwks_url: String,
     resource_metadata_url: String,
     outbound: Outbound,
-    cache: Mutex<Cache>,
+    /// Never held across an await, so a known key never waits on a fetch.
+    cache: Arc<Mutex<Cache>>,
 }
 
 /// A verified caller.
@@ -167,6 +171,45 @@ fn origin_of(url: &str) -> String {
     }
 }
 
+async fn fetch(outbound: &Outbound, url: &str) -> Result<Value, ()> {
+    let answer = outbound
+        .send("GET", url, Vec::new(), None, JWKS_TIMEOUT)
+        .await
+        .map_err(|_| ())?;
+    if !(200..=299).contains(&answer.status) {
+        return Err(());
+    }
+    serde_json::from_slice(&answer.body).map_err(|_| ())
+}
+
+/// Takes a fetched key set into the cache.
+fn load(cache: &mut Cache, body: Result<Value, ()>) {
+    let Ok(body) = body else {
+        cache.failed_at = Some(Instant::now());
+        return;
+    };
+    let entries: HashMap<String, SigningKey> = body
+        .get("keys")
+        .and_then(Value::as_array)
+        .map(|keys| {
+            keys.iter()
+                .filter_map(Value::as_object)
+                .filter_map(|jwk| {
+                    let kid = jwk.get("kid")?.as_str()?.to_owned();
+                    Some((kid, to_signing_key(jwk)?))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    // A set with no usable key would refuse every token: treat it as a failed fetch.
+    if entries.is_empty() {
+        cache.failed_at = Some(Instant::now());
+        return;
+    }
+    cache.keys = entries;
+    cache.fetched_at = Some(Instant::now());
+}
+
 impl OAuth {
     pub fn new(issuer: String, audience: String, jwks_url: String, outbound: Outbound) -> OAuth {
         let resource_metadata_url = format!("{}{METADATA_PATH}", origin_of(&audience));
@@ -176,12 +219,13 @@ impl OAuth {
             jwks_url,
             resource_metadata_url,
             outbound,
-            cache: Mutex::new(Cache {
+            cache: Arc::new(Mutex::new(Cache {
                 keys: HashMap::new(),
                 fetched_at: None,
                 failed_at: None,
                 last_miss_refetch_at: None,
-            }),
+                pending: None,
+            })),
         }
     }
 
@@ -244,67 +288,74 @@ impl OAuth {
         Ok(verified)
     }
 
-    async fn fetch(&self) -> Result<Value, ()> {
-        let answer = self
-            .outbound
-            .send("GET", &self.jwks_url, Vec::new(), None, JWKS_TIMEOUT)
-            .await
-            .map_err(|_| ())?;
-        if !(200..=299).contains(&answer.status) {
-            return Err(());
-        }
-        serde_json::from_slice(&answer.body).map_err(|_| ())
+    fn lock(&self) -> std::sync::MutexGuard<'_, Cache> {
+        self.cache.lock().unwrap_or_else(|p| p.into_inner())
     }
 
-    async fn refresh(&self, cache: &mut Cache) -> Result<(), ()> {
-        let Ok(body) = self.fetch().await else {
-            cache.failed_at = Some(Instant::now());
-            return Err(());
+    /// Joins the fetch in flight, or starts one. The fetch runs in its own
+    /// task, so a caller that goes away does not strand the others.
+    async fn refresh(&self) {
+        let mut done = {
+            let mut cache = self.lock();
+            match &cache.pending {
+                Some(pending) => pending.clone(),
+                None => {
+                    let (tx, rx) = watch::channel(false);
+                    cache.pending = Some(rx.clone());
+                    let (outbound, url, cache) =
+                        (self.outbound.clone(), self.jwks_url.clone(), self.cache.clone());
+                    tokio::spawn(async move {
+                        let body = fetch(&outbound, &url).await;
+                        let mut cache = cache.lock().unwrap_or_else(|p| p.into_inner());
+                        load(&mut cache, body);
+                        cache.pending = None;
+                        drop(cache);
+                        let _ = tx.send(true);
+                    });
+                    rx
+                }
+            }
         };
-        let entries: HashMap<String, SigningKey> = body
-            .get("keys")
-            .and_then(Value::as_array)
-            .map(|keys| {
-                keys.iter()
-                    .filter_map(Value::as_object)
-                    .filter_map(|jwk| {
-                        let kid = jwk.get("kid")?.as_str()?.to_owned();
-                        Some((kid, to_signing_key(jwk)?))
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-        // A set with no usable key would refuse every token: treat it as a failed fetch.
-        if entries.is_empty() {
-            cache.failed_at = Some(Instant::now());
-            return Err(());
-        }
-        cache.keys = entries;
-        cache.fetched_at = Some(Instant::now());
-        Ok(())
+        let _ = done.wait_for(|done| *done).await;
     }
 
     async fn key_for(&self, kid: &str) -> Result<SigningKey, String> {
-        // One lock: concurrent callers share one fetch, as Node shares its pending one.
-        let mut cache = self.cache.lock().await;
         let cooling = |cache: &Cache| {
             cache
                 .failed_at
                 .is_some_and(|t| t.elapsed() < MISS_REFETCH_COOLDOWN)
         };
-        if cache.fetched_at.is_none_or(|t| t.elapsed() > JWKS_TTL) && !cooling(&cache) {
-            let _ = self.refresh(&mut cache).await;
+        // A failed refresh keeps the keys we already trust.
+        let due = {
+            let cache = self.lock();
+            cache.fetched_at.is_none_or(|t| t.elapsed() > JWKS_TTL) && !cooling(&cache)
+        };
+        if due {
+            self.refresh().await;
         }
-        // A miss may mean the issuer rotated keys: refetch, at most once per cooldown.
-        if !cache.keys.contains_key(kid)
-            && !cooling(&cache)
-            && cache
-                .last_miss_refetch_at
-                .is_none_or(|t| t.elapsed() >= MISS_REFETCH_COOLDOWN)
-        {
-            cache.last_miss_refetch_at = Some(Instant::now());
-            let _ = self.refresh(&mut cache).await;
+        // A miss may mean the issuer rotated keys: join the fetch in flight,
+        // or refetch, at most once per cooldown.
+        let refetch = {
+            let mut cache = self.lock();
+            if cache.keys.contains_key(kid) {
+                false
+            } else if cache.pending.is_some() {
+                true
+            } else if !cooling(&cache)
+                && cache
+                    .last_miss_refetch_at
+                    .is_none_or(|t| t.elapsed() >= MISS_REFETCH_COOLDOWN)
+            {
+                cache.last_miss_refetch_at = Some(Instant::now());
+                true
+            } else {
+                false
+            }
+        };
+        if refetch {
+            self.refresh().await;
         }
+        let cache = self.lock();
         cache.keys.get(kid).cloned().ok_or_else(|| {
             if cache.keys.is_empty() {
                 "Signing keys unavailable".to_owned()
@@ -526,6 +577,86 @@ mod tests {
         assert_eq!(
             oauth.resource_metadata_url,
             "https://mcp.test/.well-known/oauth-protected-resource"
+        );
+    }
+
+    const TEST_N: &str = "sXchDaQebHnPiGvyDOAT4saGEUetSyo9MKLOoWFsueri23bOdgWp4Dy1WlUzewbgBHod5pcM9H95GQRV3JDXboIRROSBigeC5yjU1hGzHHyXss8UDprecbAYxknTcQkhslANGRUZmdTOQ5qTRsLAt6BTYuyvVRdhS8exSZEy_c4gs_7svlJJQ4H9_NxsiIoLwAEk7-Q3UXERGYw_75IDrGA84-lA_-Ct4eTlXHBIY2EaV7t7LjJaynVJCpkv4LKjTTAumiGUIuQhrNhZLuF_RJLqHpM2kgWFLU7-VTdL1VbC2tejvcI2BlMkEpk1BzBZI0KQB0GaDWFLN-aEAw3vRw";
+
+    /// A JWKS host with kid "k1": the first fetch answers at once, later ones after `slow`.
+    async fn jwks_host(slow: Duration) -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/jwks", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            let mut served = 0;
+            while let Ok((mut socket, _)) = listener.accept().await {
+                served += 1;
+                let wait = if served > 1 { slow } else { Duration::ZERO };
+                tokio::spawn(async move {
+                    let mut buffer = [0u8; 4096];
+                    let _ = socket.read(&mut buffer).await;
+                    tokio::time::sleep(wait).await;
+                    let body = format!(
+                        r#"{{"keys":[{{"kty":"RSA","kid":"k1","use":"sig","n":"{TEST_N}","e":"AQAB"}}]}}"#
+                    );
+                    let answer = format!(
+                        "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    let _ = socket.write_all(answer.as_bytes()).await;
+                });
+            }
+        });
+        url
+    }
+
+    // Node: a known kid never waits on the refetch a made-up kid started.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn a_known_kid_does_not_wait_on_an_unknown_kids_refetch() {
+        let url = jwks_host(Duration::from_secs(3)).await;
+        let oauth = std::sync::Arc::new(OAuth::new("i".into(), "a".into(), url, Outbound::new()));
+        oauth.key_for("k1").await.expect("warm");
+        let forged = {
+            let oauth = oauth.clone();
+            tokio::spawn(async move { oauth.key_for("made-up").await.map(drop) })
+        };
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let started = Instant::now();
+        oauth.key_for("k1").await.expect("known kid");
+        let waited = started.elapsed();
+        assert!(
+            waited < Duration::from_millis(500),
+            "a known-kid caller waited {waited:?} behind a made-up kid's refetch"
+        );
+        // A second made-up kid shares the refetch in flight instead of starting one.
+        let second = Instant::now();
+        assert_eq!(
+            oauth.key_for("other").await.err().as_deref(),
+            Some("Unknown signing key")
+        );
+        assert!(second.elapsed() < Duration::from_secs(3));
+        assert_eq!(
+            forged.await.unwrap().err().as_deref(),
+            Some("Unknown signing key")
+        );
+    }
+
+    // The fetch goes on when the caller that started it is dropped.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn a_dropped_caller_does_not_strand_the_shared_fetch() {
+        let url = jwks_host(Duration::from_millis(300)).await;
+        let oauth = std::sync::Arc::new(OAuth::new("i".into(), "a".into(), url, Outbound::new()));
+        oauth.key_for("k1").await.expect("warm");
+        let starter = {
+            let oauth = oauth.clone();
+            tokio::spawn(async move { oauth.key_for("made-up").await.map(drop) })
+        };
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        starter.abort();
+        let joined = tokio::time::timeout(Duration::from_secs(2), oauth.key_for("made-up-2")).await;
+        assert_eq!(
+            joined.expect("the follower hung").err().as_deref(),
+            Some("Unknown signing key")
         );
     }
 }

@@ -307,6 +307,8 @@ export function createAngularBlock<Data = BlockToolData>(
     private mountSignalled = false;
     /** True while a pointer drag suppresses dispatchChange. */
     private pendingDispatch = false;
+    /** Frame of the deferred dispatch's next retry, if one is queued. */
+    private dispatchFrame: number | null = null;
 
     public constructor(options: BlockToolConstructorOptions) {
       this.blockApi = options.block;
@@ -494,12 +496,14 @@ export function createAngularBlock<Data = BlockToolData>(
       // the SAME id) before it tears this one down, so an unqualified unregister
       // here would destroy the live componentRef and blank the block.
       this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
+      this.cancelPendingDispatch();
       spec.onRemoved?.(this.blockApi, removal);
     }
 
     public destroy(): void {
       // Idempotent with removed(); unregister is safe when already absent.
       this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
+      this.cancelPendingDispatch();
     }
 
     /**
@@ -579,16 +583,26 @@ export function createAngularBlock<Data = BlockToolData>(
 
       const retry = (): void => {
         if (this.pointerDrag()) {
-          requestAnimationFrame(retry);
+          this.dispatchFrame = requestAnimationFrame(retry);
 
           return;
         }
 
+        this.dispatchFrame = null;
         this.pendingDispatch = false;
         this.blockApi.dispatchChange();
       };
 
-      requestAnimationFrame(retry);
+      this.dispatchFrame = requestAnimationFrame(retry);
+    }
+
+    /** A removed block must not dispatch a change deferred by a drag. */
+    private cancelPendingDispatch(): void {
+      if (this.dispatchFrame !== null) {
+        cancelAnimationFrame(this.dispatchFrame);
+        this.dispatchFrame = null;
+      }
+      this.pendingDispatch = false;
     }
   };
 

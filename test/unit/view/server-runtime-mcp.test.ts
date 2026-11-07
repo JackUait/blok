@@ -552,6 +552,30 @@ describe('server runtime MCP sessions against blok-mcp over a files source', () 
     }
   });
 
+  it('refuses a batch that would nest the document past 48 levels, before the host saves it', async () => {
+    const created = await call('agentExecute', {
+      mcp: { ...mcpFlags, mode: 'stored', write: true }, document: { blocks: [] }, actor, history: {},
+      batch: { commands: [{ name: 'database.create', args: { title: 'D', view: 'table' } }] },
+    });
+    const db = (created.document as OutputData).blocks.find(block => block.type === 'database');
+    const data = db?.data as { views: Array<{ id: string }>; schema: Array<{ id: string }> } | undefined;
+    // 41 arrays: the arguments nest 48 levels, the saved view one level more.
+    const value = Array.from({ length: 41 }).reduce<unknown>(inner => [inner], 'z');
+    const ran = await call('agentExecute', {
+      mcp: { ...mcpFlags, mode: 'stored', write: true }, document: created.document, actor, history: created.history, documentText: 'file',
+      batch: { commands: [{ name: 'database.updateView', args: { id: db?.id, viewId: data?.views[0].id, changes: { filters: [{ propertyId: data?.schema[0].id, operator: 'equals', value }] } } }] },
+    });
+
+    expect(ran).toMatchObject({
+      save: false,
+      result: { ok: false, error: { code: 'INVALID_ARGS', message: 'This batch would nest the document deeper than 48 levels of objects and arrays, so nothing was saved. Send flatter data.' } },
+    });
+    expect(ran.documentText).toBeUndefined();
+    // The host keeps what it had: the old document and the old undo steps.
+    expect(ran.document).toEqual(created.document);
+    expect(ran.history).toEqual(created.history);
+  });
+
   it('reports the host revision in live mode and refuses a stale one', async () => {
     const live = { mcp: { ...mcpFlags, sync: true, mode: 'live', write: true }, document: docFixture, actor, revision: { now: 'l4', afterWrite: 'l5' } };
     const read = await call('mcpRead', { ...live, view: {} });

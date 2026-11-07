@@ -1,5 +1,5 @@
 import { surfaceError } from './errors';
-import { wellFormed } from './wire-json';
+import { MAX_JSON_DEPTH, textNestsDeeperThan, wellFormed } from './wire-json';
 
 /*
  * The files source's pure rules (src/mcp/sources/files.ts): which ids it accepts, how it lists,
@@ -67,6 +67,10 @@ export const assertDocumentShape = (value: unknown, where: string): void => {
 
 /** A stored file's document, from its UTF-8 text. */
 export const parseDocumentText = (id: string, text: string): unknown => {
+  // Before parsing: the ports' JSON.parse refuses past 64 levels as invalid JSON.
+  if (textNestsDeeperThan(text, MAX_JSON_DEPTH)) {
+    throw surfaceError('SOURCE_UNAVAILABLE', `${id}.json nests deeper than ${MAX_JSON_DEPTH} levels of objects and arrays.`);
+  }
   const raw: unknown = (() => {
     try {
       const parsed: unknown = JSON.parse(text);

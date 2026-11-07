@@ -19,6 +19,7 @@ import { approvalQuestion, canElicit, elicitationApprover, readInputResponse } f
 import { isWriteBatch, surfaceError } from '../shared/mcp/errors';
 import { errorOutcome, modelFixable } from '../shared/mcp/calls';
 import { savedFileText } from '../shared/mcp/files';
+import { tooDeepToSave } from '../shared/mcp/wire-json';
 import { buildAgentContract, buildToolManifest } from '../shared/tool-manifest';
 import { UPLOAD_FAILED } from '../shared/tool-actions/upload';
 import { createHeadlessAgentSetup, createHeadlessPorts, loadStoredDocument } from './agent-runtime';
@@ -938,9 +939,14 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
     if (hostUpload !== undefined) {
       return JSON.stringify({ upload: hostUpload });
     }
-    const result = withUnusedPages(ran, pages?.unused ?? []);
+    const unused = withUnusedPages(ran, pages?.unused ?? []);
+    // MCP only, as src/mcp/stored-session.ts: a file this deep is one no port could open again.
+    const tooDeep = mcp !== undefined && writes === true && unused.ok && session.contentRevision() !== before
+      ? tooDeepToSave(session.output())
+      : null;
+    const result: AgentResult = tooDeep === null ? unused : { ok: false, error: tooDeep.agentError, warnings: unused.warnings };
 
-    // A batch failed for an unused page wrote nothing C# keeps: answer as if it never ran.
+    // A batch failed for an unused page, or refused as too deep, wrote nothing C# keeps: answer as if it never ran.
     if (ran.ok && !result.ok) {
       return JSON.stringify({
         result, document, edits: [], ...('history' in input && { history: input.history }),

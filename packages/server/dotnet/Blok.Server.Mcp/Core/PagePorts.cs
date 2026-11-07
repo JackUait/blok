@@ -55,7 +55,8 @@ internal sealed class PagePorts
       }
       catch (McpHostError error)
       {
-        input["createPageFailure"] = await AgentErrorAsync(bundle, error, cancellationToken);
+        // As the error input mcpErrorAnswer takes: its helper decides retryable.
+        input["createPageFailure"] = error.ToInput("blok_execute");
         break;
       }
     }

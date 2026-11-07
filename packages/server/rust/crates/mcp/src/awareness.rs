@@ -165,10 +165,13 @@ impl Awareness {
             ) else {
                 return;
             };
-            let Some(bytes) = update.get(at..at + length as usize) else {
+            let Some(end) = usize::try_from(length).ok().and_then(|n| at.checked_add(n)) else {
                 return;
             };
-            at += length as usize;
+            let Some(bytes) = update.get(at..end) else {
+                return;
+            };
+            at = end;
             let Ok(state) = serde_json::from_slice::<Value>(bytes) else {
                 return;
             };
@@ -370,5 +373,17 @@ mod tests {
             entries(&awareness.encode(Some(&[9])))[0].2,
             json!({ "a": 2 })
         );
+    }
+
+    // A peer's entry with a length near u64::MAX is ignored, not a panic.
+    #[test]
+    fn a_huge_length_is_ignored() {
+        let mut update = vec![1u8, 1, 1];
+        update.extend([0xff; 9]);
+        update.push(0x01);
+        update.extend(b"{}");
+        let mut awareness = Awareness::new(7);
+        awareness.apply(&update);
+        assert!(!awareness.states.contains_key(&1));
     }
 }

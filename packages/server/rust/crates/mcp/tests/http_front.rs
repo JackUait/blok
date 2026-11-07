@@ -249,3 +249,143 @@ async fn edge_refusals_carry_nodes_json_body() {
     .await;
     assert_eq!(init.status, 200, "{}", init.body);
 }
+
+/// An authorize hook that allows everything, half a second late.
+async fn slow_hook() -> String {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        while let Ok((mut tcp, _)) = listener.accept().await {
+            tokio::spawn(async move {
+                let mut buf = vec![0u8; 64 << 10];
+                let _ = tcp.read(&mut buf).await;
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                let body = r#"{"allowed":true}"#;
+                let reply = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = tcp.write_all(reply.as_bytes()).await;
+            });
+        }
+    });
+    format!("http://{address}/authorize")
+}
+
+async fn front_with_docs(name: &str) -> String {
+    let dir = std::env::temp_dir().join(format!("blok-mcp-front-{name}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("doc.json"), r#"{"blocks":[]}"#).unwrap();
+    let options = json!({
+        "transport": { "kind": "http", "listen": "127.0.0.1:0" }, "auth": { "kind": "none" },
+        "source": { "kind": "files", "dir": dir.to_string_lossy() },
+    });
+    let authorize = Webhook::new(slow_hook().await, Outbound::new());
+    let embedded = Embedded::new(
+        Arc::new(Bundle::new(1).unwrap()),
+        &options,
+        Some(authorize),
+        None,
+    )
+    .await
+    .unwrap();
+    let listening = blok_mcp::http::listen(
+        "127.0.0.1:0",
+        embedded.handler(true).unwrap(),
+        None,
+        "local".to_owned(),
+        false,
+    )
+    .await
+    .unwrap();
+    tokio::spawn(listening.serve);
+    std::mem::forget(embedded);
+    listening.url
+}
+
+// Node's SDK names every SSE event: `event: message` before its data.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_2025_answer_is_an_sse_event_named_message() {
+    let url = front().await;
+    let reply = post(
+        &url,
+        &[JSON, ACCEPT, LEGACY],
+        br#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#,
+    )
+    .await;
+    assert_eq!(
+        (
+            reply.status,
+            reply.content_type.as_str(),
+            reply.body.as_str()
+        ),
+        (
+            200,
+            "text/event-stream",
+            "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n\n"
+        )
+    );
+}
+
+// Node runs a batch's requests together and writes each answer as it ends.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_batch_answers_in_the_order_its_requests_finish() {
+    let url = front_with_docs("batch").await;
+    let reply = post(
+        &url,
+        &[JSON, ACCEPT, LEGACY],
+        br#"[{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"blok_list_documents","arguments":{}}},{"jsonrpc":"2.0","id":3,"method":"ping"}]"#,
+    )
+    .await;
+    assert_eq!(reply.status, 200, "{}", reply.body);
+    let ids: Vec<serde_json::Value> = reply
+        .body
+        .lines()
+        .filter_map(|line| line.strip_prefix("data: "))
+        .map(|data| serde_json::from_str::<serde_json::Value>(data).unwrap()["id"].clone())
+        .collect();
+    assert_eq!(ids, vec![json!(3), json!(2)], "{}", reply.body);
+}
+
+// The SDK's envelope rung: a 2026 header on a request with no claim names
+// the keys it lacks. A notification has no envelope rule.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_2026_header_without_an_envelope_is_refused_in_nodes_words() {
+    let url = front().await;
+    let modern = ("MCP-Protocol-Version", "2026-07-28");
+    let method = ("Mcp-Method", "ping");
+    let refusal = |missing: &[&str]| {
+        json!({ "jsonrpc": "2.0", "error": { "code": -32602,
+            "message": format!("Invalid params: the MCP-Protocol-Version header names protocol revision 2026-07-28, but the request is missing the required per-request envelope key(s): {}", missing.join(", ")),
+            "data": { "envelope": { "missing": missing } } }, "id": 7 })
+        .to_string()
+    };
+    for (body, missing) in [
+        (r#"{"jsonrpc":"2.0","id":7,"method":"ping"}"#, vec!["_meta"]),
+        (
+            r#"{"jsonrpc":"2.0","id":7,"method":"ping","params":{"_meta":{"x":1}}}"#,
+            vec![
+                "io.modelcontextprotocol/protocolVersion",
+                "io.modelcontextprotocol/clientCapabilities",
+            ],
+        ),
+        (
+            r#"{"jsonrpc":"2.0","id":7,"method":"ping","params":{"_meta":{"io.modelcontextprotocol/clientCapabilities":{}}}}"#,
+            vec!["io.modelcontextprotocol/protocolVersion"],
+        ),
+    ] {
+        let reply = post(&url, &[JSON, ACCEPT, modern, method], body.as_bytes()).await;
+        assert_eq!(
+            (reply.status, reply.content_type.as_str(), reply.body),
+            (400, "application/json", refusal(&missing)),
+            "{body}"
+        );
+    }
+    let note = post(
+        &url,
+        &[JSON, ACCEPT, modern],
+        br#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
+    )
+    .await;
+    assert_eq!((note.status, note.body.as_str()), (202, ""));
+}

@@ -32,7 +32,7 @@ blok-outbound = { path = "../outbound" }
 bytes = "1"
 flate2 = "1"
 http = "1"
-http-body-util = "0.1"
+http-body-util = { version = "0.1", features = ["channel"] }
 ring = "0.17"
 serde = "1"
 # Pinned: rmcp ships a minor release about every week, and the MCP

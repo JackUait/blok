@@ -2,7 +2,9 @@
 //! then rmcp's StreamableHttpService behind an adapter. The front door does
 //! everything Node does before its SDK sees the request.
 
+use std::future::Future;
 use std::net::SocketAddr;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use blok_http::{Config, Request, ResponseWriter, Server};
@@ -18,6 +20,8 @@ use crate::protocol::{Handler, HttpIdentity};
 // Node's cap, the SDK's own default body bound.
 const MAX_BODY: usize = 4 * 1024 * 1024;
 const MCP_PATH: &str = "/mcp";
+/// How long answers ending together are gathered to keep the batch's order.
+const BATCH_SETTLE: std::time::Duration = std::time::Duration::from_millis(5);
 const LOOPBACK_HOST_NAMES: [&str; 3] = ["localhost", "127.0.0.1", "[::1]"];
 
 type Service = StreamableHttpService<Handler, NeverSessionManager>;
@@ -320,10 +324,15 @@ fn header_of<'a>(headers: &'a [(String, String)], name: &str) -> Option<&'a str>
 /// What both front doors share past their own Origin and Host checks:
 /// rmcp's services, the OAuth gate and Node's request shaping.
 struct Core {
-    json: Service,
-    sse: Service,
+    services: Services,
     oauth: Option<OAuth>,
     principal: String,
+}
+
+/// rmcp's two services: JSON answers for 2026-07-28, SSE for earlier eras.
+struct Services {
+    json: Service,
+    sse: Service,
 }
 
 impl Core {
@@ -342,8 +351,10 @@ impl Core {
             )
         };
         Core {
-            json: service(true),
-            sse: service(false),
+            services: Services {
+                json: service(true),
+                sse: service(false),
+            },
             oauth,
             principal,
         }
@@ -448,7 +459,8 @@ impl Core {
         if let Value::Array(items) = &message {
             return self.batch(identity, method, target, headers, items).await;
         }
-        match kind_of(&message) {
+        let kind = kind_of(&message);
+        match kind {
             Kind::Invalid => {
                 return rpc_error(
                     400,
@@ -468,11 +480,17 @@ impl Core {
             }
             _ => {}
         }
+        let initialize = message.get("method").and_then(Value::as_str) == Some("initialize");
+        if kind == Kind::Request
+            && !initialize
+            && let Some(refused) = missing_envelope(&message, header_version)
+        {
+            return refused;
+        }
         let modern = is_modern(&message, header_version);
         // initialize names its version in the body, and Node's SDK serves it
         // whatever older version the header names; rmcp refuses a mismatch.
-        let initialize = message.get("method").and_then(Value::as_str) == Some("initialize");
-        let headers: Vec<(String, String)> = headers
+        let mut headers: Vec<(String, String)> = headers
             .iter()
             .filter(|(name, value)| {
                 !(initialize
@@ -481,7 +499,16 @@ impl Core {
             })
             .cloned()
             .collect();
-        self.forward(identity, method, target, &headers, text, modern)
+        // Node's SDK asks no Mcp-Method of a notification; rmcp refuses one without it.
+        if kind == Kind::Notification
+            && modern
+            && header_of(&headers, "mcp-method").is_none()
+            && let Some(name) = message.get("method").and_then(Value::as_str)
+        {
+            headers.push(("mcp-method".to_owned(), name.to_owned()));
+        }
+        self.services
+            .forward(identity, method, target, &headers, text, modern)
             .await
     }
 
@@ -524,30 +551,73 @@ impl Core {
                 Value::Null,
             );
         }
-        let mut events = String::new();
-        for item in items {
-            if kind_of(item) == Kind::Response {
-                continue;
-            }
-            let reply = self
-                .forward(
+        // Node runs the requests together and writes each answer as it ends.
+        let mut running: Vec<Option<Pin<Box<dyn Future<Output = Bytes> + Send + '_>>>> = items
+            .iter()
+            .filter(|item| kind_of(item) != Kind::Response)
+            .map(|item| {
+                let reply = self.services.forward(
                     identity.clone(),
                     method,
                     target,
                     headers,
                     item.to_string(),
                     false,
-                )
-                .await;
-            let Ok(collected) = reply.into_body().collect().await;
-            let bytes = collected.to_bytes();
-            let text = String::from_utf8_lossy(&bytes);
-            if text.trim_start().starts_with('{') {
-                events.push_str(&format!("event: message\ndata: {}\n\n", text.trim()));
-                continue;
+                );
+                Some(Box::pin(async move {
+                    let Ok(collected) = reply.await.into_body().collect().await;
+                    collected.to_bytes()
+                })
+                    as Pin<Box<dyn Future<Output = Bytes> + Send + '_>>)
+            })
+            .collect();
+        let mut finished: Vec<Option<Bytes>> = vec![None; running.len()];
+        type Running<'a> = Vec<Option<Pin<Box<dyn Future<Output = Bytes> + Send + 'a>>>>;
+        fn poll_all(
+            running: &mut Running<'_>,
+            finished: &mut [Option<Bytes>],
+            cx: &mut std::task::Context<'_>,
+        ) -> bool {
+            let mut any = false;
+            for (slot, out) in running.iter_mut().zip(finished.iter_mut()) {
+                if let Some(reply) = slot
+                    && let std::task::Poll::Ready(bytes) = reply.as_mut().poll(cx)
+                {
+                    *out = Some(bytes);
+                    *slot = None;
+                    any = true;
+                }
             }
-            for data in text.lines().filter_map(|line| line.strip_prefix("data: ")) {
-                events.push_str(&format!("event: message\ndata: {data}\n\n"));
+            any
+        }
+        let mut events = String::new();
+        let mut left = finished.len();
+        while left > 0 {
+            std::future::poll_fn(|cx| {
+                if poll_all(&mut running, &mut finished, cx) {
+                    std::task::Poll::Ready(())
+                } else {
+                    std::task::Poll::Pending
+                }
+            })
+            .await;
+            // rmcp runs each request on its own task, so two instant ones can
+            // end in either order; Node's single thread ends them in batch order.
+            tokio::time::sleep(BATCH_SETTLE).await;
+            std::future::poll_fn(|cx| {
+                std::task::Poll::Ready(poll_all(&mut running, &mut finished, cx))
+            })
+            .await;
+            for bytes in finished.iter_mut().filter_map(Option::take) {
+                left -= 1;
+                let text = String::from_utf8_lossy(&bytes);
+                if text.trim_start().starts_with('{') {
+                    events.push_str(&format!("event: message\ndata: {}\n\n", text.trim()));
+                    continue;
+                }
+                for data in text.lines().filter_map(|line| line.strip_prefix("data: ")) {
+                    events.push_str(&format!("event: message\ndata: {data}\n\n"));
+                }
             }
         }
         if events.is_empty() {
@@ -560,7 +630,9 @@ impl Core {
             &[("cache-control", "no-cache")],
         )
     }
+}
 
+impl Services {
     /// One message through rmcp: 2026-07-28 answers are JSON and earlier
     /// ones SSE, as Node's SDK sends them.
     async fn forward(
@@ -617,6 +689,9 @@ impl Core {
                 .trim()
                 .to_owned();
             return rpc_error(parts.status.as_u16(), -32000, &message, Value::Null);
+        }
+        if kind.starts_with("text/event-stream") {
+            return http::Response::from_parts(parts, node_events(body));
         }
         http::Response::from_parts(parts, body)
     }
@@ -732,6 +807,85 @@ fn is_modern(message: &Value, header: Option<&str>) -> bool {
         .pointer("/params/_meta/io.modelcontextprotocol~1protocolVersion")
         .and_then(Value::as_str);
     claim.or(header).is_some_and(|v| v >= MODERN)
+}
+
+const PROTOCOL_VERSION_KEY: &str = "io.modelcontextprotocol/protocolVersion";
+const CAPABILITIES_KEY: &str = "io.modelcontextprotocol/clientCapabilities";
+
+/// The SDK's envelope rung: a request whose header names 2026-07-28 while
+/// its _meta makes no claim is refused, naming the keys it lacks.
+fn missing_envelope(message: &Value, header: Option<&str>) -> Option<Answer> {
+    let version = header?.trim_matches([' ', '\t']);
+    if version != MODERN {
+        return None;
+    }
+    let meta = message.pointer("/params/_meta").and_then(Value::as_object);
+    if meta.is_some_and(|meta| meta.contains_key(PROTOCOL_VERSION_KEY)) {
+        return None;
+    }
+    let missing: Vec<&str> = match meta {
+        None => vec!["_meta"],
+        Some(meta) => [PROTOCOL_VERSION_KEY, CAPABILITIES_KEY]
+            .into_iter()
+            .filter(|key| !meta.contains_key(*key))
+            .collect(),
+    };
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "error": {
+            "code": -32602,
+            "message": format!("Invalid params: the MCP-Protocol-Version header names protocol revision {version}, but the request is missing the required per-request envelope key(s): {}", missing.join(", ")),
+            "data": { "envelope": { "missing": missing } },
+        },
+        "id": echoable_id(message),
+    });
+    Some(json_answer(400, body.to_string()))
+}
+
+/// rmcp's SSE events as Node's SDK writes them: `event: message` before the
+/// data, and a comment-only event as Node's keep-alive. rmcp's empty
+/// priming event has no Node twin.
+fn node_events(mut body: Body) -> Body {
+    let (mut sender, channel) = http_body_util::Channel::<Bytes, std::convert::Infallible>::new(4);
+    tokio::spawn(async move {
+        let mut pending: Vec<u8> = Vec::new();
+        while let Some(Ok(frame)) = body.frame().await {
+            let Ok(data) = frame.into_data() else {
+                continue;
+            };
+            pending.extend_from_slice(&data);
+            while let Some(end) = pending.windows(2).position(|w| w == b"\n\n") {
+                let event: Vec<u8> = pending.drain(..end + 2).collect();
+                let Some(out) = node_event(&String::from_utf8_lossy(&event)) else {
+                    continue;
+                };
+                // The client went away: dropping rmcp's body cancels the work.
+                if sender.send_data(Bytes::from(out)).await.is_err() {
+                    return;
+                }
+            }
+        }
+    });
+    channel.boxed()
+}
+
+fn node_event(event: &str) -> Option<String> {
+    let data: Vec<&str> = event
+        .lines()
+        .filter_map(|line| line.strip_prefix("data:"))
+        .map(|data| data.strip_prefix(' ').unwrap_or(data))
+        .collect();
+    if data.is_empty() {
+        return event
+            .lines()
+            .any(|line| line.starts_with(':'))
+            .then(|| ": keepalive\n\n".to_owned());
+    }
+    if data.iter().all(|line| line.is_empty()) {
+        return None;
+    }
+    let lines: Vec<String> = data.iter().map(|line| format!("data: {line}")).collect();
+    Some(format!("event: message\n{}\n\n", lines.join("\n")))
 }
 
 /// Where rmcp's JSON errors differ from Node's: Node names every missing
@@ -893,6 +1047,18 @@ mod tests {
         let bare = serde_json::json!({ "method": "tools/list" });
         assert!(is_modern(&bare, Some("2026-07-28")));
         assert!(!is_modern(&bare, None));
+    }
+
+    // Node: `event: message` before data, `: keepalive` comments, and no
+    // empty priming event.
+    #[test]
+    fn sse_events_are_written_as_nodes_sdk_writes_them() {
+        assert_eq!(
+            node_event("data: {}\nid: 0\n\n").as_deref(),
+            Some("event: message\ndata: {}\n\n")
+        );
+        assert_eq!(node_event(":\n\n").as_deref(), Some(": keepalive\n\n"));
+        assert_eq!(node_event("data:\nretry: 3000\n\n"), None);
     }
 
     #[test]

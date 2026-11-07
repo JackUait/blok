@@ -158,7 +158,11 @@ const coreStep = (name: AgentToolName, args: Record<string, unknown>, scopes: re
  * Throws an AgentFailure or McpSurfaceError for a model-fixable refusal, UnknownToolError otherwise.
  */
 export const checkCall = (name: string, raw: Record<string, unknown>, scopes: readonly string[] | null): CallStep => {
-  // First: every later step walks the arguments, and a deep enough value overflows the stack.
+  // Node's SDK refuses an unknown tool before this runs, so a port must too, whatever the arguments.
+  if (!isCoreTool(name) && !Object.hasOwn(LIFECYCLE_ARGUMENTS, name)) {
+    throw new UnknownToolError(name);
+  }
+  // Next: every later step walks the arguments, and a deep enough value overflows the stack.
   if (nestsDeeperThan(raw, MAX_JSON_DEPTH)) {
     throw surfaceError('INVALID_ARGS', `The arguments nest deeper than ${MAX_JSON_DEPTH} levels of objects and arrays. Send flatter data.`);
   }

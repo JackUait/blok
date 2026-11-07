@@ -64,6 +64,14 @@ describe('the JSON nesting limit', () => {
       expect(codeOf(() => checkCall('blok_execute', execute(100_000), null))).toBe('INVALID_ARGS');
     });
 
+    // Node's SDK refuses an unknown tool before checkCall runs, whatever its arguments.
+    it('names an unknown tool before it looks at the depth', async () => {
+      expect(() => checkCall('nope', execute(60), null)).toThrow('Unknown tool: nope');
+      const answer: unknown = JSON.parse(await invoke('mcpCheckCall', JSON.stringify({ name: 'nope', arguments: execute(60) })));
+
+      expect(answer).toStrictEqual({ unknownTool: 'Unknown tool: nope' });
+    });
+
     it('answers every host the same refusal through the bundle', async () => {
       const answer: unknown = JSON.parse(await invoke('mcpCheckCall', JSON.stringify({ name: 'blok_execute', arguments: execute(49) })));
 

@@ -4,7 +4,7 @@ import { describeContract } from '../../../shared/agent/describe';
 import { buildDocumentView } from '../../../shared/agent/document-view';
 import { createPageMapBackend, pagePrepareInsert } from '../../../shared/agent/document-session';
 import { checkEnvelope } from '../../../shared/agent/envelope';
-import { runBatch } from '../../../shared/agent/executor';
+import { runBatch, type BatchInput } from '../../../shared/agent/executor';
 import { validateAgainst } from '../../../shared/schema/validate';
 import { StoreApplier } from './store-applier';
 
@@ -25,6 +25,7 @@ export const createStoreAgentSession = (input: {
   services?: Partial<Record<string, unknown>>;
   pageTitles?: 'page-map';
   richTextFieldsFor(type: string): string[];
+  checkDraft?: BatchInput['checkDraft'];
 }): AgentSession => {
   const id = `store-session-${++storeSessions.count}`;
   const createPage = input.pageTitles === 'page-map' ? input.ports.createPageDocument : undefined;
@@ -54,6 +55,7 @@ export const createStoreAgentSession = (input: {
     describe: query => describeContract(input.contract, query),
     execute: (batch, options = {}) => runBatch({
       batch, ctx, applier, actor: input.actor, signal: options.signal, approve: options.approve, log, batchNo: ++state.batchNo,
+      checkDraft: input.checkDraft,
     }),
     log: () => [...log],
     close: () => applier.dispose(),

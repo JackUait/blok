@@ -9,7 +9,9 @@ import type { CollabSocketFactory, CollabTicketSource } from '../../components/m
 import { createStoreAgentSession } from '../../components/modules/agent/store-session';
 import { YBlockSerializer } from '../../components/modules/yjs/serializer';
 import type { AgentActor } from '../../../types/agent';
+import { AgentFailure } from '../../shared/agent/errors';
 import type { AgentPorts } from '../../shared/agent/types';
+import { tooDeepToSave } from '../../shared/mcp/wire-json';
 import { htmlToSegmentsNode } from '../../view/rich-text-node';
 import type { McpContracts } from '../contract';
 import type { Caller, OpenRequest } from '../dispatcher';
@@ -156,6 +158,14 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
       // A room id has no aliases, so only the same id is the open document.
       ports: deps.portsFor(caller, actor, async (pageId) => pageId === request.documentId, pages.unconfirmed),
       richTextFieldsFor: deps.contracts.richTextFieldsFor,
+      // As the ports' agentExecute: a room this deep is one no port could open.
+      checkDraft: (draft) => {
+        const tooDeep = tooDeepToSave(draft.toOutput());
+
+        if (tooDeep !== null) {
+          throw new AgentFailure(tooDeep.agentError);
+        }
+      },
       ...(deps.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
       services: {
         versionHistory: createHttpVersionHistory({ roomUrl: url, origin: deps.sync.origin, tickets: ticketSource }),

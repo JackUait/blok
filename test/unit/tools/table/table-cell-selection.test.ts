@@ -2143,6 +2143,66 @@ describe('TableCellSelection', () => {
       });
     });
 
+    // A touch scroll cancels the press: no cell may end up selected.
+    it('a cancelled press selects nothing', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+      const dragActive = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+        onPointerDragActiveChange: dragActive,
+      });
+
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[1]?.querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+      const rect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: rect.left + 5,
+        clientY: rect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+
+      document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+
+      expect(rangeCallback).not.toHaveBeenCalled();
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).toBeNull();
+      expect(dragActive).toHaveBeenLastCalledWith(false);
+    });
+
+    it('a press cancelled mid-drag leaves no rectangle and reports the selection gone', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+      const activeChange = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+        onSelectionActiveChange: activeChange,
+      });
+
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const start = rows[0]?.querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+
+      elementFromPointTarget = rows[1]?.querySelectorAll(`[${CELL_ATTR}]`)[1] ?? null;
+      start.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+
+      expect(rangeCallback).not.toHaveBeenCalled();
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+      expect(grid.style.userSelect).toBe('');
+      expect(activeChange).toHaveBeenLastCalledWith(false, false);
+    });
+
     it('fires with range for programmatic selectRow', () => {
       selection.destroy();
 

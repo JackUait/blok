@@ -256,6 +256,34 @@ describe('TableCellSelection — keyboard cell selection', () => {
       expect(selectedCoords(grid)).toEqual(['0:0', '0:1']);
     });
 
+    it('leaves a pointer drag in progress alone when Shift+Arrow is pressed mid-drag', () => {
+      grid = createGrid({ rows: 2, cols: 3 });
+      selection = new TableCellSelection({ grid, i18n });
+
+      const cellAt = (row: number, col: number): HTMLElement | null =>
+        grid.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`);
+      const pointerTarget = { cell: cellAt(1, 1) };
+
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => pointerTarget.cell });
+      try {
+        getEditable(grid, 0, 0).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+        document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+
+        const editable = getEditable(grid, 0, 0);
+
+        placeCaret(editable, 'end');
+        pressArrow(editable, 'ArrowRight');
+
+        pointerTarget.cell = cellAt(1, 2);
+        document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      } finally {
+        Reflect.deleteProperty(document, 'elementFromPoint');
+      }
+
+      expect(selectedCoords(grid)).toEqual(['0:0', '0:1', '0:2', '1:0', '1:1', '1:2']);
+    });
+
     it('does not let Shift+Arrow reach the core cross-block selection handlers', () => {
       grid = createGrid({ rows: 2, cols: 3 });
       selection = new TableCellSelection({ grid, i18n });

@@ -170,6 +170,17 @@ fn is_id_less_error(line: &str) -> bool {
     })
 }
 
+/// A number id zod's int() refuses: not a safe integer. Node's SDK drops
+/// the line; rmcp would run it (an id past 2^53 fits its u64).
+fn has_unsafe_id(line: &str) -> bool {
+    serde_json::from_str::<Value>(line).is_ok_and(|m| {
+        m.get("id").and_then(Value::as_number).is_some_and(|n| {
+            !n.as_f64()
+                .is_some_and(|f| f.fract() == 0.0 && f.abs() <= 9_007_199_254_740_991.0)
+        })
+    })
+}
+
 /// Node's STOP_DRAIN_MS: shutdown waits this long for work in flight.
 pub const DRAIN_LIMIT: Duration = Duration::from_secs(45);
 
@@ -468,6 +479,10 @@ where
             let mut reader = BufReader::new(input);
             let mut era = Era::Unknown;
             while let Some(line) = next_message(&mut reader).await {
+                // JSON.parse fails on a BOM; Node's SDK drops the line.
+                if line.starts_with('\u{feff}') {
+                    continue;
+                }
                 let line =
                     crate::lenient::mend(&crate::depth::clamp(&line, crate::depth::MESSAGE_LIMIT));
                 let line = match crate::shape::shape(&line) {
@@ -481,6 +496,9 @@ where
                         continue;
                     }
                 };
+                if has_unsafe_id(&line) {
+                    continue;
+                }
                 let sent = match own_answer(&line) {
                     Some(answer) => write_line(&out, &answer).await,
                     None => {
@@ -783,6 +801,39 @@ mod tests {
         let mut written = String::new();
         client.read_to_string(&mut written).await.unwrap();
         assert_eq!(written, "");
+    }
+
+    // JSON.parse fails on a BOM, and zod's int() refuses an id past 2^53:
+    // Node's SDK drops both lines without an answer.
+    #[tokio::test]
+    async fn a_bom_line_and_an_unsafe_id_never_reach_the_server() {
+        let input = concat!(
+            "\u{feff}{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\"}\n",
+            "{\"jsonrpc\":\"2.0\",\"id\":9007199254740993,\"method\":\"ping\"}\n",
+            "{\"jsonrpc\":\"2.0\",\"id\":-9007199254740993,\"method\":\"ping\"}\n",
+            "{\"jsonrpc\":\"2.0\",\"id\":9007199254740991,\"method\":\"ping\"}\n",
+        );
+        let got = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = got.clone();
+        let (out, _client) = tokio::io::duplex(1 << 16);
+        proxy(
+            std::io::Cursor::new(input.as_bytes().to_vec()),
+            out,
+            Arc::default(),
+            move |read, _write| async move {
+                let mut lines = BufReader::new(read).lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    // rmcp strips a BOM itself, so the raw line is kept.
+                    let id = serde_json::from_str::<Value>(line.trim_start_matches('\u{feff}'))
+                        .map_or(Value::Null, |m| m["id"].clone());
+                    if line.contains("ping") {
+                        seen.lock().unwrap().push(id.to_string());
+                    }
+                }
+            },
+        )
+        .await;
+        assert_eq!(*got.lock().unwrap(), vec!["9007199254740991"]);
     }
 
     // Node serves a request that comes before any initialize, without the

@@ -63,7 +63,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -410,7 +410,7 @@
                 "write": true,
                 "durability": "best-effort",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -695,7 +695,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -1747,7 +1747,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -2418,7 +2418,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -2813,7 +2813,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -3593,7 +3593,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -3705,7 +3705,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -4176,7 +4176,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -4644,7 +4644,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -5139,7 +5139,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -5857,7 +5857,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -6412,7 +6412,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -7005,7 +7005,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -7420,7 +7420,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -7944,7 +7944,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -8293,7 +8293,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -8858,7 +8858,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -9156,7 +9156,7 @@
                 "write": false,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -9467,7 +9467,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "8dfbc24a"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -9970,7 +9970,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -10566,7 +10566,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -10986,7 +10986,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -11306,7 +11306,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -11641,7 +11641,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -12034,7 +12034,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -12514,7 +12514,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -13051,7 +13051,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -13497,7 +13497,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -14047,7 +14047,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -14564,7 +14564,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -15091,7 +15091,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "8dfbc24a"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -15268,7 +15268,7 @@
                 "write": false,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "8dfbc24a"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -15448,7 +15448,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "8dfbc24a"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -15668,7 +15668,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "8dfbc24a"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -15854,7 +15854,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "8dfbc24a"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -15966,7 +15966,7 @@
                 "write": false,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "8dfbc24a"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -16165,7 +16165,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "fd81294d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },
@@ -16428,7 +16428,7 @@
                 "write": true,
                 "durability": "acknowledged",
                 "expiresAfterIdleMs": 600000,
-                "contractRevision": "dbccd32d"
+                "contractRevision": "${liveContractRevision}"
               },
               "isError": false
             },

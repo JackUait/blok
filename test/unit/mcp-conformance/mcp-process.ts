@@ -89,6 +89,8 @@ export interface JsonMessage { [key: string]: unknown }
 
 export interface StdioServer {
   send(message: JsonMessage): void;
+  /** Writes one line as it is. */
+  sendText(line: string): void;
   /** The next JSON-RPC message the server wrote, in order. */
   next(timeoutMs?: number): Promise<JsonMessage>;
   /** Sends a signal; waitExit then waits for the process to end. */
@@ -159,6 +161,9 @@ export const startStdio = (command: string[], argv: string[], env: NodeJS.Proces
   return {
     send: (message) => {
       child.stdin?.write(`${JSON.stringify(message)}\n`);
+    },
+    sendText: (line) => {
+      child.stdin?.write(`${line}\n`);
     },
     next: (timeoutMs = READ_TIMEOUT_MS) => {
       if (failure !== undefined) {

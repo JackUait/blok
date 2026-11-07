@@ -82,6 +82,8 @@ import {
  *   awaitExit   alone: wait for an exit already under way and record it, as a lone signal does.
  *   afterHost   stdio send/notify: wait until the fake host saw this "METHOD /path" once first.
  *   noAnswer    stdio send: write the request and go on without reading an answer.
+ *   sendText    stdio only, in place of send: this exact line goes on stdin (JSON cannot
+ *               write a repeated key). The answer is the one with the line's id.
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
@@ -99,6 +101,7 @@ export interface Step {
   note?: string;
   room?: RoomAction;
   send?: JsonMessage;
+  sendText?: string;
   notify?: JsonMessage;
   http?: { method: string; path: string; headers?: Record<string, unknown>; body?: unknown; bodyText?: string; bodyRepeat?: { text: string; count: number } };
   raw?: boolean;
@@ -580,7 +583,7 @@ class CaseRun {
 
   /** A step with no request: a pause, or a signal and the exit it causes. Returns false for other steps. */
   public async bareStep(server: Signalled, step: Step, holder: Holder, label: string): Promise<boolean> {
-    if (step.send !== undefined || step.notify !== undefined || step.http !== undefined) {
+    if (step.send !== undefined || step.sendText !== undefined || step.notify !== undefined || step.http !== undefined) {
       return false;
     }
     if (step.sleepMs !== undefined) {
@@ -642,7 +645,7 @@ class CaseRun {
 
       return;
     }
-    const message = materialize(step.send, this.vars) as JsonMessage;
+    const message = step.sendText === undefined ? materialize(step.send, this.vars) as JsonMessage : JSON.parse(step.sendText) as JsonMessage;
     const id = message.id ?? this.nextId++;
     const wanted = step.serverRequests ?? [];
     const seen: ServerRequestSpec[] = [];
@@ -650,7 +653,11 @@ class CaseRun {
 
     const sentAt = Date.now();
 
-    server.send(withMeta({ jsonrpc: '2.0', ...message, id }, this.c.session, raw));
+    if (step.sendText === undefined) {
+      server.send(withMeta({ jsonrpc: '2.0', ...message, id }, this.c.session, raw));
+    } else {
+      server.sendText(step.sendText);
+    }
     if (step.noAnswer === true) {
       return;
     }

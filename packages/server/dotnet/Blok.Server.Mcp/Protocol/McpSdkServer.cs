@@ -73,6 +73,16 @@ internal static class McpSdkServer
 
     new McpWireFilters().Install(options);
     InstallArrivalOrder(options, core);
+    // Before the SDK reads params as CallToolRequestParams, which fails a bad shape with -32603.
+    options.Filters.Message.IncomingFilters.Add(next => async (context, cancellationToken) =>
+    {
+      if (context.JsonRpcMessage is JsonRpcRequest { Method: RequestMethods.ToolsCall } request
+          && McpRequestShape.ToolsCallRefusal(request.Params) is string refusal)
+      {
+        throw new McpProtocolException(refusal, McpErrorCode.InvalidParams);
+      }
+      await next(context, cancellationToken);
+    });
   }
 
   // The SDK runs incoming messages at once, so places are taken by the transport's reader

@@ -7050,6 +7050,218 @@
           "headers": {}
         }
       ]
+    },
+    {
+      "name": "tools/call bodies Node's SDK refuses: params or _meta not an object, bad arguments, a repeated key",
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "steps": [
+        {
+          "note": "params not an object",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream",
+              "mcp-protocol-version": "2025-11-25"
+            },
+            "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":\"x\"}"
+          },
+          "expectHttp": {
+            "status": 400,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32600,
+                "message": "Bad Request: the request body is not a valid JSON-RPC message"
+              },
+              "id": 1
+            }
+          }
+        },
+        {
+          "note": "_meta not an object",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream",
+              "mcp-protocol-version": "2025-11-25"
+            },
+            "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":{},\"_meta\":\"x\"}}"
+          },
+          "expectHttp": {
+            "status": 400,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32600,
+                "message": "Bad Request: the request body is not a valid JSON-RPC message"
+              },
+              "id": 2
+            }
+          }
+        },
+        {
+          "note": "a notification with params not an object",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream",
+              "mcp-protocol-version": "2025-11-25"
+            },
+            "bodyText": "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":\"x\"}"
+          },
+          "expectHttp": {
+            "status": 400,
+            "contentType": "application/json",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "json": {
+              "jsonrpc": "2.0",
+              "error": {
+                "code": -32600,
+                "message": "Bad Request: the request body is not a valid JSON-RPC message"
+              },
+              "id": null
+            }
+          }
+        },
+        {
+          "note": "arguments not an object",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream",
+              "mcp-protocol-version": "2025-11-25"
+            },
+            "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":\"x\"}}"
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "sse": [
+              {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "error": {
+                  "code": -32602,
+                  "message": "Invalid tools/call request: [\n  {\n    \"expected\": \"record\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\",\n      \"arguments\"\n    ],\n    \"message\": \"Invalid input: expected record, received string\"\n  }\n]"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "note": "a repeated key keeps its last value",
+          "http": {
+            "method": "POST",
+            "path": "/mcp",
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json, text/event-stream",
+              "mcp-protocol-version": "2025-11-25"
+            },
+            "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_nope\",\"name\":\"blok_list_documents\",\"arguments\":{}}}"
+          },
+          "expectHttp": {
+            "status": 200,
+            "contentType": "text/event-stream",
+            "headers": {
+              "allow": null,
+              "www-authenticate": null,
+              "mcp-session-id": null,
+              "access-control-allow-origin": null
+            }
+          },
+          "expect": {
+            "sse": [
+              {
+                "result": {
+                  "content": [
+                    {
+                      "type": "text",
+                      "json": "<same as structuredContent>"
+                    }
+                  ],
+                  "structuredContent": {
+                    "documents": [
+                      {
+                        "id": "doc",
+                        "title": null,
+                        "live": false
+                      }
+                    ],
+                    "nextCursor": null,
+                    "supported": true
+                  },
+                  "isError": false
+                },
+                "jsonrpc": "2.0",
+                "id": 4
+              }
+            ]
+          }
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
     }
   ]
 }

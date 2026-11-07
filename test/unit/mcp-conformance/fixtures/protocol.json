@@ -25962,6 +25962,193 @@
       }
     },
     {
+      "name": "stdio: a tools/call line with params or arguments not an object, or a repeated key, leaves the server serving",
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "note": "params not an object: no answer",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":101,\"method\":\"tools/call\",\"params\":\"x\"}",
+          "noAnswer": true
+        },
+        {
+          "sleepMs": 500
+        },
+        {
+          "note": "arguments not an object",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":102,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":\"x\"}}",
+          "expect": {
+            "jsonrpc": "2.0",
+            "id": 102,
+            "error": {
+              "code": -32602,
+              "message": "Invalid tools/call request: [\n  {\n    \"expected\": \"record\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\",\n      \"arguments\"\n    ],\n    \"message\": \"Invalid input: expected record, received string\"\n  }\n]"
+            }
+          }
+        },
+        {
+          "note": "a repeated key keeps its last value",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":103,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_nope\",\"name\":\"blok_list_documents\",\"arguments\":{}}}",
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "documents": [
+                  {
+                    "id": "doc",
+                    "title": null,
+                    "live": false
+                  }
+                ],
+                "nextCursor": null,
+                "supported": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 103
+          }
+        },
+        {
+          "send": {
+            "method": "ping"
+          },
+          "expect": {
+            "result": {},
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "name": "stdio: tools/call params Node's SDK refuses: a bad _meta gets no answer, a bad name or arguments its words",
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "note": "_meta not an object: no answer",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":201,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":{},\"_meta\":\"x\"}}",
+          "noAnswer": true
+        },
+        {
+          "note": "params null: no answer",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":202,\"method\":\"tools/call\",\"params\":null}",
+          "noAnswer": true
+        },
+        {
+          "sleepMs": 500
+        },
+        {
+          "note": "no params",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":203,\"method\":\"tools/call\"}",
+          "expect": {
+            "jsonrpc": "2.0",
+            "id": 203,
+            "error": {
+              "code": -32602,
+              "message": "Invalid tools/call request: [\n  {\n    \"expected\": \"object\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\"\n    ],\n    \"message\": \"Invalid input: expected object, received undefined\"\n  }\n]"
+            }
+          }
+        },
+        {
+          "note": "no name",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":204,\"method\":\"tools/call\",\"params\":{\"arguments\":{}}}",
+          "expect": {
+            "jsonrpc": "2.0",
+            "id": 204,
+            "error": {
+              "code": -32602,
+              "message": "Invalid tools/call request: [\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\",\n      \"name\"\n    ],\n    \"message\": \"Invalid input: expected string, received undefined\"\n  }\n]"
+            }
+          }
+        },
+        {
+          "note": "name a number, arguments a string",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":205,\"method\":\"tools/call\",\"params\":{\"name\":5,\"arguments\":\"x\"}}",
+          "expect": {
+            "jsonrpc": "2.0",
+            "id": 205,
+            "error": {
+              "code": -32602,
+              "message": "Invalid tools/call request: [\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\",\n      \"name\"\n    ],\n    \"message\": \"Invalid input: expected string, received number\"\n  },\n  {\n    \"expected\": \"record\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\",\n      \"arguments\"\n    ],\n    \"message\": \"Invalid input: expected record, received string\"\n  }\n]"
+            }
+          }
+        },
+        {
+          "note": "arguments null",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":206,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":null}}",
+          "expect": {
+            "jsonrpc": "2.0",
+            "id": 206,
+            "error": {
+              "code": -32602,
+              "message": "Invalid tools/call request: [\n  {\n    \"expected\": \"record\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\",\n      \"arguments\"\n    ],\n    \"message\": \"Invalid input: expected record, received null\"\n  }\n]"
+            }
+          }
+        },
+        {
+          "note": "arguments an array",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":207,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":[1]}}",
+          "expect": {
+            "jsonrpc": "2.0",
+            "id": 207,
+            "error": {
+              "code": -32602,
+              "message": "Invalid tools/call request: [\n  {\n    \"expected\": \"record\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\",\n      \"arguments\"\n    ],\n    \"message\": \"Invalid input: expected record, received array\"\n  }\n]"
+            }
+          }
+        },
+        {
+          "note": "a repeated key inside arguments",
+          "sendText": "{\"jsonrpc\":\"2.0\",\"id\":208,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_list_documents\",\"arguments\":{\"cursor\":1,\"cursor\":null}}}",
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "INVALID_ARGS",
+                  "message": "limit must be a number; query and cursor must be strings.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 208
+          }
+        },
+        {
+          "send": {
+            "method": "ping"
+          },
+          "expect": {
+            "result": {},
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
       "name": "tools/call unknown tool",
       "session": {
         "protocolVersion": "2025-11-25"

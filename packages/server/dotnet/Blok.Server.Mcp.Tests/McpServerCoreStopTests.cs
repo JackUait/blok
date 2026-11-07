@@ -216,4 +216,41 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
 
     Assert.Equal(line.Length + 1, passed.Length);
   }
+
+  [Fact]
+  public async Task StdinDropsAParamsThatIsNotAnObjectAndReadsARepeatedKeyAsItsLastValue()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+    var wire = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":\"x\"}\n"
+        + "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":\"x\"}}\n"
+        + "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_execute\",\"arguments\":{\"handle\":\"other\",\"handle\":\"h\"}}}\n"
+        + "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_execute\",\"arguments\":{\"handle\":\"h\"}}}\n";
+    await using var input = new Blok.Server.Mcp.Protocol.McpOrderedInput(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(wire)), core);
+    using var passed = new MemoryStream();
+
+    await input.CopyToAsync(passed);
+    // Node's SDK never answers the first line, so the SDK here never gets it.
+    Assert.Equal(
+        "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\",\"arguments\":\"x\"}}\n"
+        + "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_execute\",\"arguments\":{\"handle\":\"h\"}}}\n"
+        + "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_execute\",\"arguments\":{\"handle\":\"h\"}}}\n",
+        System.Text.Encoding.UTF8.GetString(passed.ToArray()));
+    var started = new List<string>();
+    var third = core.InArrivalOrderAsync("h", "3", () =>
+    {
+      started.Add("3");
+
+      return Task.FromResult(3);
+    });
+    await Task.Delay(100);
+    var second = core.InArrivalOrderAsync("h", "2", () =>
+    {
+      started.Add("2");
+
+      return Task.FromResult(2);
+    });
+
+    await Task.WhenAll(second, third).WaitAsync(TimeSpan.FromSeconds(10));
+    Assert.Equal(["2", "3"], started);
+  }
 }

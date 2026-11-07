@@ -1,6 +1,8 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Blok.Server.Mcp.Core;
+using Blok.Server.Mcp.Protocol;
 using Microsoft.AspNetCore.Http;
 
 namespace Blok.Server.Mcp.Http;
@@ -99,12 +101,44 @@ internal static class McpRequestGate
 
       return;
     }
-    if (request.Body is MemoryStream buffered && !IsJson(buffered))
+    if (request.Body is MemoryStream buffered)
     {
-      context.Response.StatusCode = StatusCodes.Status400BadRequest;
-      await WriteJsonAsync(context.Response, """{"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error: Invalid JSON"},"id":null}""");
+      var read = McpRequestShape.Read(buffered.ToArray());
 
-      return;
+      if (read is null)
+      {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await WriteJsonAsync(context.Response, """{"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error: Invalid JSON"},"id":null}""");
+
+        return;
+      }
+      using (read.Value.Document)
+      {
+        var root = read.Value.Document.RootElement;
+
+        if (!McpRequestShape.IsMessage(root))
+        {
+          var id = root.TryGetProperty("id", out var given) && given.ValueKind is JsonValueKind.String or JsonValueKind.Number ? JsonNode.Parse(given.GetRawText()) : null;
+
+          context.Response.StatusCode = StatusCodes.Status400BadRequest;
+          await WriteJsonAsync(context.Response, McpJson.Write(new JsonObject
+          {
+            ["jsonrpc"] = "2.0",
+            ["error"] = new JsonObject { ["code"] = -32600, ["message"] = McpRequestShape.NotAMessage },
+            ["id"] = id,
+          }));
+
+          return;
+        }
+      }
+      // A repeated key reaches the SDK with its last value, as JSON.parse reads it.
+      if (read.Value.Repeated)
+      {
+        var normal = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(McpJson.Write(McpJson.Parse(System.Text.Encoding.UTF8.GetString(buffered.ToArray())))));
+
+        request.Body = normal;
+        request.ContentLength = normal.Length;
+      }
     }
     // Stateless, as Node: a session id names nothing, so it is not checked.
     request.Headers.Remove("Mcp-Session-Id");
@@ -158,24 +192,6 @@ internal static class McpRequestGate
     catch (System.Text.Json.JsonException)
     {
       return false;
-    }
-  }
-
-  private static bool IsJson(MemoryStream body)
-  {
-    try
-    {
-      using var parsed = System.Text.Json.JsonDocument.Parse(body.ToArray(), new System.Text.Json.JsonDocumentOptions { MaxDepth = 1000 });
-
-      return true;
-    }
-    catch (System.Text.Json.JsonException)
-    {
-      return false;
-    }
-    finally
-    {
-      body.Position = 0;
     }
   }
 

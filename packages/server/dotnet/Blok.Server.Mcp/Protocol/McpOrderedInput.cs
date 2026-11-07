@@ -115,16 +115,42 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core) : Stream
       {
         break;
       }
-      var text = line.GetBuffer().AsSpan(0, (int)line.Length);
-
-      Reserve(Encoding.UTF8.GetString(text));
-      whole.Write(text);
-      whole.WriteByte((byte)'\n');
+      if (Pass(line.GetBuffer().AsMemory(0, (int)line.Length)) is { } passed)
+      {
+        whole.Write(passed.Span);
+        whole.WriteByte((byte)'\n');
+      }
       line.SetLength(0);
       bytes = bytes[(end + 1)..];
     }
     ready = whole.ToArray();
     readyAt = 0;
+  }
+
+  // The line as the SDK should get it: null drops it (Node's SDK never answers it), and a
+  // repeated key is written out with its last value, as JSON.parse reads it.
+  private ReadOnlyMemory<byte>? Pass(ReadOnlyMemory<byte> bytes)
+  {
+    var text = Encoding.UTF8.GetString(bytes.Span);
+
+    if (McpRequestShape.Read(bytes) is var (document, repeated))
+    {
+      using (document)
+      {
+        if (!McpRequestShape.IsMessage(document.RootElement))
+        {
+          return null;
+        }
+      }
+      if (repeated)
+      {
+        text = McpJson.Write(McpJson.Parse(text));
+        bytes = Encoding.UTF8.GetBytes(text);
+      }
+    }
+    Reserve(text);
+
+    return bytes;
   }
 
   private void Reserve(string text)
@@ -136,15 +162,16 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core) : Stream
     }
     try
     {
-      if (JsonNode.Parse(text) is JsonObject { } message && McpJson.String(message["method"]) == RequestMethods.ToolsCall
-          && message["id"] is JsonNode id && McpJson.String(message["params"]?["arguments"]?["handle"]) is string handle)
+      if (McpJson.Parse(text) is JsonObject message && McpJson.String(message["method"]) == RequestMethods.ToolsCall
+          && message["id"] is JsonNode id && message["params"] is JsonObject call && call["arguments"] is JsonObject arguments
+          && McpJson.String(arguments["handle"]) is string handle)
       {
         core.Reserve(IdOf(id), handle);
       }
     }
-    catch (JsonException)
+    catch (Exception error) when (error is not OutOfMemoryException)
     {
-      // Not JSON: the SDK answers it.
+      // A line it cannot read takes no place; the SDK answers it.
     }
   }
 }

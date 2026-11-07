@@ -903,4 +903,42 @@ describe('AudioTool — an upload belongs to the pick that started it', () => {
 
     expect(tool.save().url).toBe('');
   });
+
+  it('ignores a file upload that fails after it was cancelled', async () => {
+    const onUploadError = vi.fn();
+    const tool = new AudioTool(opts({ url: '' }, { onUploadError }));
+    const root = tool.render();
+    let reject: (err: Error) => void = () => undefined;
+
+    uploaderInstances[0].handleFile.mockReturnValueOnce(new Promise((_r, rej) => {
+      reject = rej;
+    }));
+    pasteTrack(tool);
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    reject(new Error('network down'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.querySelector('[data-role="audio-error"]')).toBeNull();
+    expect(onUploadError).not.toHaveBeenCalled();
+  });
+
+  it('ignores a link upload that fails after it was cancelled', async () => {
+    const onUploadError = vi.fn();
+    const tool = new AudioTool(opts({ url: '' }, { onUploadError }));
+    const root = tool.render();
+    let reject: (err: Error) => void = () => undefined;
+
+    uploaderInstances[0].handleUrl.mockReturnValueOnce(new Promise((_r, rej) => {
+      reject = rej;
+    }));
+    tool.onPaste({ type: 'pattern', detail: { data: 'https://example.com/song.mp3' } } as never);
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    reject(new Error('network down'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.querySelector('[data-role="audio-error"]')).toBeNull();
+    expect(onUploadError).not.toHaveBeenCalled();
+  });
 });

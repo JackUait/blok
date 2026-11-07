@@ -24,6 +24,8 @@ export interface RouteResponse {
   encoding?: 'gzip' | 'deflate';
   /** Answer this many ms late. */
   delayMs?: number;
+  /** Send the head and the body, promise more bytes, then drop the connection. */
+  dropMidBody?: boolean;
   /** Never answer; the socket closes with the host. */
   stall?: boolean;
 }
@@ -263,6 +265,11 @@ export const startFakeHost = async (routes: RouteTable, options: { secret?: stri
         await new Promise((resolve) => setTimeout(resolve, response.delayMs));
       }
       const send = (headers: Record<string, string>, body: string): void => {
+        if (response.dropMidBody === true) {
+          res.writeHead(response.status, { ...headers, 'content-length': String(Buffer.byteLength(body) + 1000) });
+          res.write(body, () => res.socket?.destroy());
+          return;
+        }
         if (response.encoding === undefined) {
           res.writeHead(response.status, headers).end(body);
           return;

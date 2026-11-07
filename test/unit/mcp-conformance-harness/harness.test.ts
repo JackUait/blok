@@ -146,6 +146,29 @@ describe('MCP conformance fake host', () => {
     }
   });
 
+  it('a route with dropMidBody sends part of its body, then drops the connection', async () => {
+    const host = await startFakeHost({ 'GET /doc': { status: 200, text: '{"blocks":[', dropMidBody: true } });
+
+    try {
+      const outcome = await new Promise<{ partial: string; aborted: boolean }>((resolve, reject) => {
+        request(`${host.url}/doc`, (res) => {
+          let partial = '';
+
+          res.setEncoding('utf8');
+          res.on('data', (chunk: string) => {
+            partial += chunk;
+          });
+          res.on('aborted', () => resolve({ partial, aborted: true }));
+          res.on('end', () => resolve({ partial, aborted: false }));
+        }).on('error', reject).end();
+      });
+
+      expect(outcome).toEqual({ partial: '{"blocks":[', aborted: true });
+    } finally {
+      await host.close();
+    }
+  });
+
   it('records request header bytes as Latin-1, so a UTF-8 é shows as two characters', async () => {
     const host = await startFakeHost({ 'GET /doc': { status: 200, text: '' } });
 

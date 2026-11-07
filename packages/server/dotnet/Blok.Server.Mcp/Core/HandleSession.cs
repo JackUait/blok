@@ -163,14 +163,13 @@ internal sealed class StoredSession : IHandleSession
 
       return new McpExecuteOutcome(await AnswerAsync(answerInput, cancellationToken), null);
     }
+    // As Node: the answer is built before the save, so nothing that can fail follows it,
+    // and a failed answer saved nothing a retry would repeat.
+    JsonObject answer;
+
     try
     {
-      var text = McpJson.String(ran["documentText"]) ?? throw new InvalidOperationException("agentExecute did not return documentText.");
-      var saved = await source.SaveAsync(documentId, text, version, cancellationToken);
-
-      version = saved;
-
-      return new McpExecuteOutcome(await AnswerAsync(new JsonObject
+      answer = await AnswerAsync(new JsonObject
       {
         ["result"] = result.DeepClone(),
         ["delivery"] = new JsonObject
@@ -178,9 +177,27 @@ internal sealed class StoredSession : IHandleSession
           ["durable"] = true,
           ["pending"] = false,
           ["serverSequence"] = null,
-          ["savedVersion"] = saved,
+          ["savedVersion"] = null,
         },
-      }, cancellationToken), null);
+      }, cancellationToken);
+    }
+    catch
+    {
+      stale = true;
+      throw;
+    }
+    try
+    {
+      var text = McpJson.String(ran["documentText"]) ?? throw new InvalidOperationException("agentExecute did not return documentText.");
+      var saved = await source.SaveAsync(documentId, text, version, cancellationToken);
+
+      version = saved;
+      if (answer["structuredContent"]?["delivery"] is JsonObject delivery)
+      {
+        delivery["savedVersion"] = saved;
+      }
+
+      return new McpExecuteOutcome(answer, null);
     }
     catch (McpHostError error)
     {

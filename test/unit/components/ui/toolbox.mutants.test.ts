@@ -1619,6 +1619,35 @@ describe('Toolbox — surviving-mutant coverage', () => {
 
       expect(editable.getAttribute('aria-label')).toBe('Paragraph body');
     });
+
+    /** Reached when the toolbar is hidden (config.hideToolbar): "/" opens the menu without closing it first. */
+    it('restores the block label when the menu is opened twice', () => {
+      const { block, editable } = createBlock({ text: 'a/',
+        isEmpty: false });
+      const { toolbox } = buildToolbox({ block });
+
+      editable.setAttribute('aria-label', 'Paragraph body');
+      placeCaret(editable.firstChild ?? editable, 2);
+      toolbox.open();
+      toolbox.open();
+      toolbox.close();
+
+      expect(editable.getAttribute('aria-label')).toBe('Paragraph body');
+    });
+
+    it('leaves no pill span in the block when the menu is opened twice', () => {
+      const { block, editable } = createBlock({ text: 'a/',
+        isEmpty: false });
+      const { toolbox } = buildToolbox({ block });
+
+      placeCaret(editable.firstChild ?? editable, 2);
+      toolbox.open();
+      toolbox.open();
+      toolbox.close();
+
+      expect(editable.querySelector('span')).toBeNull();
+      expect(editable.textContent).toBe('a/');
+    });
   });
 
   describe('picking a tool', () => {

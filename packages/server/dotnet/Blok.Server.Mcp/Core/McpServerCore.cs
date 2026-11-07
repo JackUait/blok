@@ -348,6 +348,15 @@ internal sealed class McpServerCore : IAsyncDisposable
     await sweeper.DisposeAsync();
     var work = Task.Run(async () =>
     {
+      // A call read before stop holds a place on its handle but may not be in the handle's queue
+      // yet; Node's closeAll would find it there, so the handles close only after those places.
+      Task[] places;
+
+      lock (arrivals)
+      {
+        places = [.. arrivals.Values];
+      }
+      await Task.WhenAll(places);
       await Task.WhenAll(handles.CloseAllAsync(session => session.CloseAsync("closed")), DrainAsync());
       // An execute that closeAll waited for may have closed a page session after the first drain.
       await DrainAsync();

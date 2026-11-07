@@ -65,6 +65,28 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
     Assert.True(open.IsCompleted);
   }
 
+  // As Node's closeAll waits for the handle's queue: a call read before stop runs, then the handle closes.
+  [Fact]
+  public async Task StopRunsACallReadBeforeItOnItsHandle()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = McpJson.String((await OpenAsync(core, caller)).Answer?["structuredContent"]?["handle"])!;
+
+    core.Reserve("10", handle);
+    var stop = core.StopAsync();
+    await Task.Delay(200);
+    var execute = await core.InArrivalOrderAsync(handle, "10", () => core.CallToolAsync("blok_execute", new JsonObject
+    {
+      ["handle"] = handle,
+      ["commands"] = new JsonArray(new JsonObject { ["name"] = "doc.setTitle", ["args"] = new JsonObject { ["title"] = "Changed" } }),
+    }, caller, null, CancellationToken.None)).WaitAsync(TimeSpan.FromSeconds(20));
+    await stop.WaitAsync(TimeSpan.FromSeconds(20));
+
+    Assert.Equal(true, McpJson.Bool(execute.Answer?["structuredContent"]?["ok"]));
+    Assert.Contains("Changed", File.ReadAllText(Path.Combine(dir, "doc.json")));
+  }
+
   // Jint answers at once when its thread ends before the await looks. The call then reaches
   // Authorize before CallToolAsync returns, and a stop started there must still wait for it.
   [Fact]

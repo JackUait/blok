@@ -50,7 +50,7 @@ func (c *lineConn) readLines() {
 			c.readErr = err
 			return
 		}
-		line = bytes.TrimSuffix(line[:len(line)-1], []byte("\r"))
+		line = clampDepth(bytes.TrimSuffix(line[:len(line)-1], []byte("\r")), messageDepthLimit)
 		if !nodeMessage(line) {
 			continue
 		}

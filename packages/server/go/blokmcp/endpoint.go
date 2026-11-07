@@ -131,6 +131,9 @@ func (s *endpointSource) load(ctx context.Context, documentID string) (*loaded, 
 	if err != nil {
 		return nil, err
 	}
+	if textNestsDeeperThan(decodeUTF8(text), maxJSONDepth) {
+		return nil, endpointUnavailable(fmt.Sprintf("answered JSON nested deeper than %d levels for %s", maxJSONDepth, documentID))
+	}
 	body := json.RawMessage(finiteJSON([]byte(decodeUTF8(text))))
 	if !json.Valid(body) {
 		return nil, endpointUnavailable("answered non-JSON for " + documentID)
@@ -191,7 +194,7 @@ func (s *endpointSource) save(ctx context.Context, documentID string, text []byt
 	if len(reply) == 0 {
 		return ifVersion, nil
 	}
-	if record, ok := isRecordJSON(json.RawMessage(decodeUTF8(reply))); ok && isStringJSON(record["version"]) {
+	if record, ok := isRecordJSON(clampDepth([]byte(decodeUTF8(reply)), messageDepthLimit)); ok && isStringJSON(record["version"]) {
 		var version string
 		if json.Unmarshal(record["version"], &version) == nil {
 			return &version, nil
@@ -219,6 +222,9 @@ func (s *endpointSource) list(ctx context.Context, request listRequest) (*source
 	text, err := answer.text()
 	if err != nil {
 		return nil, err
+	}
+	if textNestsDeeperThan(decodeUTF8(text), maxJSONDepth) {
+		return nil, endpointUnavailable(fmt.Sprintf("answered JSON nested deeper than %d levels for the list", maxJSONDepth))
 	}
 	body := json.RawMessage(decodeUTF8(text))
 	if !json.Valid(body) {

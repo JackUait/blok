@@ -134,7 +134,7 @@ func (s *Server) handler() http.Handler {
 			rpcError(http.StatusUnsupportedMediaType, -32000, "Unsupported Media Type: Content-Type must be application/json", nil).send(w, modern)
 			return
 		}
-		body = withoutBOM(body)
+		body = clampDepth(withoutBOM(body), messageDepthLimit)
 		refused, batch := nodeGate(r, body)
 		if refused != nil {
 			refused.send(w, modern)

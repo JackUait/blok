@@ -1,0 +1,204 @@
+{
+  "about": "Vectors for the MCP hosts' depth clamp: every object or array that opens deeper than `limit` becomes [] when it is valid JSON; the first invalid one cuts the text there and appends \"!\", so the host parser fails shallow. Read by the Go, C# and Rust MCP tests.",
+  "hostLimit": 51,
+  "cases": [
+    {
+      "name": "fits: unchanged",
+      "input": "{\"a\":[1]}",
+      "limit": 2,
+      "output": "{\"a\":[1]}"
+    },
+    {
+      "name": "one level past: inner container becomes []",
+      "input": "{\"a\":[[1]]}",
+      "limit": 2,
+      "output": "{\"a\":[[]]}"
+    },
+    {
+      "name": "brackets in strings do not count",
+      "input": "{\"a\":\"[[[[\",\"b\":\"\\\"[[[\",\"c\":\"\\\\\"}",
+      "limit": 1,
+      "output": "{\"a\":\"[[[[\",\"b\":\"\\\"[[[\",\"c\":\"\\\\\"}"
+    },
+    {
+      "name": "several deep parts, text after each kept",
+      "input": "{\"a\":[[{\"x\":[1,2]}],3],\"b\":[[[]]],\"c\":\"é\"}",
+      "limit": 2,
+      "output": "{\"a\":[[],3],\"b\":[[]],\"c\":\"é\"}"
+    },
+    {
+      "name": "strings and escapes inside a dropped part",
+      "input": "{\"a\":[[\"\\u00e9\\\"]\\\\\",{\"k\":\"v\",\"w\":\"\\/\\b\\f\\n\\r\\t\"}]]}",
+      "limit": 2,
+      "output": "{\"a\":[[]]}"
+    },
+    {
+      "name": "whitespace inside a dropped part",
+      "input": "[[ 1 ,\n\t2\r ]]",
+      "limit": 1,
+      "output": "[[]]"
+    },
+    {
+      "name": "numbers inside a dropped part",
+      "input": "[[-0.5e+10,0,12,1E-2,-0]]",
+      "limit": 1,
+      "output": "[[]]"
+    },
+    {
+      "name": "literals inside a dropped part",
+      "input": "[[true,false,null]]",
+      "limit": 1,
+      "output": "[[]]"
+    },
+    {
+      "name": "objects inside a dropped part",
+      "input": "[{\"a\":{\"b\":[]},\"c\":{}}]",
+      "limit": 0,
+      "output": "[]"
+    },
+    {
+      "name": "top level past the limit",
+      "input": "[[]]",
+      "limit": 0,
+      "output": "[]"
+    },
+    {
+      "name": "invalid: trailing comma",
+      "input": "{\"a\":[[1,]]}",
+      "limit": 2,
+      "output": "{\"a\":[!"
+    },
+    {
+      "name": "invalid: bad escape",
+      "input": "[[\"\\x\"]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: short unicode escape",
+      "input": "[[\"\\u12\"]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: raw control char in a string",
+      "input": "[[\"a\tb\"]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: leading zero",
+      "input": "[[01]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: no digit after point",
+      "input": "[[1.]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: bare minus",
+      "input": "[[-]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: no exponent digit",
+      "input": "[[1e]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: leading point",
+      "input": "[[.5]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: plus sign",
+      "input": "[[+1]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: short literal",
+      "input": "[[tru]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: unclosed",
+      "input": "{\"a\":[[[",
+      "limit": 2,
+      "output": "{\"a\":[!"
+    },
+    {
+      "name": "invalid: unclosed string",
+      "input": "[[\"abc]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: wrong close",
+      "input": "[[}]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: key not a string",
+      "input": "{\"a\":[{1:2}]}",
+      "limit": 1,
+      "output": "{\"a\":!"
+    },
+    {
+      "name": "invalid: missing colon",
+      "input": "[[{\"a\" 1}]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: trailing comma in object",
+      "input": "[[{\"a\":1,}]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: missing comma",
+      "input": "[[1 2]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: empty slot",
+      "input": "[[,1]]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid: single quotes",
+      "input": "[['a']]",
+      "limit": 1,
+      "output": "[!"
+    },
+    {
+      "name": "invalid JSON outside a dropped part is left for the parser",
+      "input": "{\"a\":[[1]] x",
+      "limit": 2,
+      "output": "{\"a\":[[]] x"
+    },
+    {
+      "name": "a stray close counts down, as Node's scan does",
+      "input": "]][[[[1]]]]",
+      "limit": 1,
+      "output": "]][[[[]]]]"
+    },
+    {
+      "name": "a later part is not checked after an invalid one",
+      "input": "[[1,],[[[[[[",
+      "limit": 1,
+      "output": "[!"
+    }
+  ]
+}

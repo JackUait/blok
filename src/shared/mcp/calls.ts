@@ -5,6 +5,7 @@ import { parseToolCall, toolErrorAnswer, unknownArgument, type AgentToolName, ty
 
 import { isMcpSurfaceError, NO_DELIVERY, surfaceError } from './errors';
 import type { McpExecuteResult, UnavailableCommand } from './session';
+import { wellFormed } from './wire-json';
 
 /*
  * The pure half of one MCP tool call: every argument check in the order the Node
@@ -156,7 +157,9 @@ const coreStep = (name: AgentToolName, args: Record<string, unknown>, scopes: re
  * Every check of one call that needs no IO, in the Node dispatcher's order.
  * Throws an AgentFailure or McpSurfaceError for a model-fixable refusal, UnknownToolError otherwise.
  */
-export const checkCall = (name: string, args: Record<string, unknown>, scopes: readonly string[] | null): CallStep => {
+export const checkCall = (name: string, raw: Record<string, unknown>, scopes: readonly string[] | null): CallStep => {
+  const args = wellFormed(raw);
+
   refuseUnknownArguments(name, args);
   if (isCoreTool(name)) {
     return coreStep(name, args, scopes);

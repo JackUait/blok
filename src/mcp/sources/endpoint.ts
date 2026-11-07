@@ -1,3 +1,4 @@
+import { wellFormed } from '../../shared/mcp/wire-json';
 import { surfaceError } from '../errors';
 
 import type { DocumentSource, SourceListing } from './types';
@@ -12,7 +13,7 @@ const parseJson = (text: string, what: string): unknown => {
   try {
     const parsed: unknown = JSON.parse(text);
 
-    return parsed;
+    return wellFormed(parsed);
   } catch {
     throw unavailable(`answered non-JSON ${what}`);
   }

@@ -1,4 +1,5 @@
 import { surfaceError } from './errors';
+import { wellFormed } from './wire-json';
 
 /*
  * The files source's pure rules (src/mcp/sources/files.ts): which ids it accepts, how it lists,
@@ -70,7 +71,7 @@ export const parseDocumentText = (id: string, text: string): unknown => {
     try {
       const parsed: unknown = JSON.parse(text);
 
-      return parsed;
+      return wellFormed(parsed);
     } catch {
       throw surfaceError('SOURCE_UNAVAILABLE', `${id}.json is not valid JSON.`);
     }

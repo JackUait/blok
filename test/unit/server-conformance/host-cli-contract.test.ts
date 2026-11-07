@@ -363,6 +363,8 @@ it.each([
   { name: 'the flag over the environment', flag: 'Bearer from-flag', variable: 'Bearer from-env', sent: 'Bearer from-flag' },
   { name: 'an empty variable', flag: undefined, variable: '', sent: undefined },
   { name: 'neither', flag: undefined, variable: undefined, sent: undefined },
+  // Node's parser reads header bytes as Latin-1: UTF-8 C3 A9 would read as "Ã©".
+  { name: 'a Latin-1 value', flag: undefined, variable: 'Bearer caf\u00e9', sent: 'Bearer caf\u00e9' },
 ])('sends the doc endpoint credential from $name', async ({ flag, variable, sent }) => {
   const endpoint = await startDocEndpoint();
   const directory = await mkdtemp(join(tmpdir(), 'blok-doc-auth-'));
@@ -403,6 +405,52 @@ it.each([
     } else {
       expect(server.stderr).toContain(AUTH_WARNING);
     }
+  } finally {
+    await server.stop();
+    await endpoint.stop();
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 30_000);
+
+// A value the header cannot carry is refused, as undici refuses it: a control
+// char other than tab, or a char past U+00FF. A line break is refused at start.
+// Nothing is sent, and the room says why.
+it.each([
+  { name: 'a control char', variable: 'Bearer a\u0001b' },
+  { name: 'a delete char', variable: 'Bearer a\u007fb' },
+  { name: 'a char past U+00FF', variable: 'Bearer \u0100' },
+])('refuses a doc endpoint credential with $name', async ({ variable }) => {
+  const endpoint = await startDocEndpoint();
+  const directory = await mkdtemp(join(tmpdir(), 'blok-doc-auth-'));
+  const port = await allocateLoopbackPort();
+  const env: NodeJS.ProcessEnv = { ...process.env, BLOK_DOC_ENDPOINT_AUTH: variable };
+
+  const server = await startServerProcess({
+    command: process.env.BLOK_CONFORMANCE_SERVER ?? '',
+    args: [
+      '--listen', `127.0.0.1:${port}`,
+      '--auth', 'none',
+      '--storage-dir', '',
+      '--rate-limit', '0',
+      '--collab',
+      '--collab-dir', directory,
+      '--doc-endpoint', endpoint.url,
+    ],
+    baseUrl: `http://127.0.0.1:${port}`,
+    env,
+  });
+
+  try {
+    await sendRequest('POST', new URL(`http://127.0.0.1:${port}/sync/d/edit`), {
+      headers: { 'Content-Type': 'application/json', 'Blok-Idempotency-Key': 'k1' },
+      body: JSON.stringify({ ops: [{ op: 'insert', id: 'a', block: { type: 'paragraph', data: { text: 'x' } } }] }),
+    });
+    await expect.poll(() => server.stderr, { timeout: 10_000 }).toContain('could not load');
+
+    expect(server.stderr).toContain(
+      'warning: collab: room "d" could not load: collab: the doc endpoint Authorization value cannot be sent as a header (a stray newline?).',
+    );
+    expect(endpoint.gets).toEqual([]);
   } finally {
     await server.stop();
     await endpoint.stop();

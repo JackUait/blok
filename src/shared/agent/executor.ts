@@ -69,8 +69,8 @@ export interface BatchInput {
   log: CommandLogEntry[];
   batchNo: number;
   now?: () => number;
-  /** Throws an AgentFailure to refuse a write before any of it is applied. */
-  checkDraft?: (draft: DocSnapshot) => void;
+  /** A refusal for a write, given before any of it is applied; null lets it apply. */
+  checkDraft?: (draft: DocSnapshot) => AgentError | null;
 }
 
 type Preparation = () => Promise<unknown>;
@@ -746,8 +746,15 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     if (hostEffects.length > 0 && input.applier.runHostEffects === undefined) {
       throw failure('COMMAND_UNAVAILABLE', 'This command runs host hooks, which only the editor runs.', { details: { reason: 'runtime' } });
     }
+    const refused = plan.edits.length > 0 ? input.checkDraft?.(draft) ?? null : null;
+
+    // As agentExecute answers its own refusal: nothing ran, so no revision.
+    if (refused !== null) {
+      record(null, refused);
+
+      return { ok: false, error: refused, warnings };
+    }
     if (plan.edits.length > 0) {
-      input.checkDraft?.(draft);
       await input.applier.apply(plan, draft);
     }
     // A comment is no undo step: the applier keeps none for it, so a mark or an unlock record here

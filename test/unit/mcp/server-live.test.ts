@@ -389,10 +389,15 @@ describe('assembleMcp with a sync URL: history.undo on a live handle', () => {
       args: { id: db.id, viewId: db.data.views[0].id, changes: { filters: [{ propertyId: db.data.schema[0].id, operator: 'equals', value: nested(levels) }] } },
     }];
 
-    expect(await run(opened.handle, filter(41))).toMatchObject({
+    // The ports' refusal, key for key: no revision.
+    expect(await run(opened.handle, filter(41))).toStrictEqual({
       ok: false,
-      error: { code: 'INVALID_ARGS', message: 'This batch would nest the document deeper than 48 levels of objects and arrays, so nothing was saved. Send flatter data.' },
-      delivery: { durable: false },
+      error: {
+        code: 'INVALID_ARGS',
+        message: 'This batch would nest the document deeper than 48 levels of objects and arrays, so nothing was saved. Send flatter data.',
+        retryable: false,
+      },
+      delivery: { durable: false, pending: false, serverSequence: null, savedVersion: null },
     });
     expect(JSON.stringify(room.toJSON())).not.toContain('['.repeat(41));
     expect(await run(opened.handle, filter(40))).toMatchObject({ ok: true, delivery: { durable: true } });

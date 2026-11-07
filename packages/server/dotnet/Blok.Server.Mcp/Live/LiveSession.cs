@@ -25,7 +25,7 @@ internal sealed class LiveSession : IHandleSession
 
   private readonly LiveRoom room;
   private readonly McpBundle bundle;
-  private readonly CollabDocConverter converter;
+  private CollabDocConverter? converter;
   private readonly JsonObject flags;
   private readonly JsonObject actor;
   private readonly bool write;
@@ -55,8 +55,7 @@ internal sealed class LiveSession : IHandleSession
     this.history = history;
     this.ackTimeout = ackTimeout ?? TimeSpan.FromSeconds(10);
     readOnly = !write;
-    converter = new CollabDocConverter(TimeProvider.System, new RuntimeRichTextHtmlReader(bundle.Runtime));
-    steps = new LiveAgentHistory(room, AgentOrigin);
+    steps = new LiveAgentHistory(room, AgentOrigin, () => Fields);
     presence = new LivePresence(room.SetAwarenessField, room.Provider.SendActivity, actor, caller.PresenceName);
   }
 
@@ -69,6 +68,12 @@ internal sealed class LiveSession : IHandleSession
 
   /// <summary>Page documents under page-map; null when pages are not documents.</summary>
   internal PagePorts? Pages { get; init; }
+
+  /// <summary>Which fields hold rich text: the built-ins, the manifest's and --rich-text-fields.</summary>
+  internal RichTextFields Fields { get; init; } = RichTextFields.BuiltIn;
+
+  // Built on first use: Fields is set after the constructor.
+  private CollabDocConverter Converter => converter ??= new CollabDocConverter(TimeProvider.System, new RuntimeRichTextHtmlReader(bundle.Runtime), Fields);
 
   /// <summary>The room's document id: a page block pointing here is refused.</summary>
   internal string DocumentId { get; init; } = string.Empty;
@@ -115,7 +120,7 @@ internal sealed class LiveSession : IHandleSession
     {
       await ThrowIfEndedAsync(CancellationToken.None);
 
-      return YDocConverter.Export(room.Doc, RichTextFields.BuiltIn, null, out _).Count == 0 && YDocConverter.ExportPage(room.Doc).Count == 0;
+      return YDocConverter.Export(room.Doc, Fields, null, out _).Count == 0 && YDocConverter.ExportPage(room.Doc).Count == 0;
     });
   }
 
@@ -263,7 +268,7 @@ internal sealed class LiveSession : IHandleSession
       {
         var ops = RoomEditTranslator.Translate(edits, after, result);
 
-        var html = ops.Count > 0 ? await converter.ReadOpsHtmlAsync(room.Doc, ops, cancellationToken) : null;
+        var html = ops.Count > 0 ? await Converter.ReadOpsHtmlAsync(room.Doc, ops, cancellationToken) : null;
 
         if (comments)
         {
@@ -439,7 +444,7 @@ internal sealed class LiveSession : IHandleSession
     return new JsonObject
     {
       ["mcp"] = mcp,
-      ["document"] = await converter.ExportAsync(room.Doc, cancellationToken),
+      ["document"] = await Converter.ExportAsync(room.Doc, cancellationToken),
       ["actor"] = actor.DeepClone(),
       ["revision"] = new JsonObject { ["now"] = room.Revision, ["afterWrite"] = $"l{room.UpdateCount + 1}" },
     };

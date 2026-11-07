@@ -20,16 +20,18 @@ internal sealed class LiveAgentHistory
 
   private readonly LiveRoom room;
   private readonly object origin;
+  private readonly Func<RichTextFields> fields;
   private readonly LiveUndoManager undoManager;
   private readonly List<Step> done = [];
   private readonly List<Step> undone = [];
   private readonly List<Mark> past = [];
   private readonly List<Mark> future = [];
 
-  internal LiveAgentHistory(LiveRoom room, object origin)
+  internal LiveAgentHistory(LiveRoom room, object origin, Func<RichTextFields>? fields = null)
   {
     this.room = room;
     this.origin = origin;
+    this.fields = fields ?? (() => RichTextFields.BuiltIn);
     var doc = room.Doc;
 
     undoManager = new LiveUndoManager(
@@ -361,7 +363,7 @@ internal sealed class LiveAgentHistory
   }
 
   private List<JsonObject> Blocks() =>
-      [.. YDocConverter.Export(room.Doc, RichTextFields.BuiltIn, null, out _).OfType<JsonObject>()];
+      [.. YDocConverter.Export(room.Doc, fields(), null, out _).OfType<JsonObject>()];
 
   private static string? Id(JsonObject block) => block["id"] is JsonValue id && id.TryGetValue<string>(out var text) ? text : null;
 

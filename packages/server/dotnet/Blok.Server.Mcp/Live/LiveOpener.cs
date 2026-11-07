@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Blok.Server.Collab;
 using Blok.Server.Mcp.Core;
 using Blok.Server.Mcp.Outbound;
 using Blok.Server.Tickets;
@@ -18,9 +19,65 @@ internal sealed class LiveOpener(McpConfig config, McpHttpCaller http, McpBundle
   private static readonly TimeSpan TicketFetchTimeout = TimeSpan.FromSeconds(10);
   private static readonly TimeSpan SyncTimeout = TimeSpan.FromSeconds(15);
 
-  /// <summary>Handed to each live session for page inserts; null when pages are not documents.</summary>
-  /// <summary>Page documents under page-map.</summary>
+  private readonly Lock fieldsLock = new();
+  private Task<RichTextFields>? fieldsTask;
+
+  /// <summary>Page documents under page-map; null when pages are not documents.</summary>
   internal PagePorts? Pages { get; set; }
+
+  /*
+   * The rich-text fields the room converter uses (mcp-contracts.ts richTextFieldsOf): the
+   * manifest's for each tool it lists, built-ins and --manifest ones; --rich-text-fields only
+   * for types the manifest does not list. Built once; a failed build is tried again.
+   */
+  internal Task<RichTextFields> RichTextFieldsAsync()
+  {
+    lock (fieldsLock)
+    {
+      if (fieldsTask is null || fieldsTask.IsFaulted || fieldsTask.IsCanceled)
+      {
+        fieldsTask = BuildRichTextFieldsAsync();
+      }
+
+      return fieldsTask;
+    }
+  }
+
+  private async Task<RichTextFields> BuildRichTextFieldsAsync()
+  {
+    var input = new JsonObject();
+
+    if (config.Manifest is not null)
+    {
+      input["customTools"] = config.Manifest.DeepClone();
+    }
+    if (config.Overrides is not null)
+    {
+      input["overrides"] = config.Overrides.DeepClone();
+    }
+    var built = await bundle.CallAsync("manifest", input);
+    var listed = new HashSet<string>(StringComparer.Ordinal);
+    var table = new List<KeyValuePair<string, IList<string>>>();
+
+    foreach (var block in (built["manifest"]?["blocks"] as JsonArray ?? []).OfType<JsonObject>())
+    {
+      if (McpJson.String(block["name"]) is not { } name)
+      {
+        continue;
+      }
+      listed.Add(name);
+      table.Add(new(name, [.. (block["richTextFields"] as JsonArray ?? []).Select(field => McpJson.String(field)).OfType<string>()]));
+    }
+    foreach (var (type, list) in config.RichTextFields ?? [])
+    {
+      if (!listed.Contains(type))
+      {
+        table.Add(new(type, [.. (list as JsonArray ?? []).Select(field => McpJson.String(field)).OfType<string>()]));
+      }
+    }
+
+    return RichTextFields.With(table);
+  }
 
   internal static string SyncUrlFor(string baseUrl, string documentId)
   {
@@ -57,6 +114,8 @@ internal sealed class LiveOpener(McpConfig config, McpHttpCaller http, McpBundle
 
   internal async Task<IHandleSession> OpenAsync(string documentId, bool write, McpCaller caller, CancellationToken cancellationToken)
   {
+    // Before the join: a wait between the join and the session's start lets the room answer awareness first.
+    var fields = await RichTextFieldsAsync();
     var sync = config.Sync!;
     var url = SyncUrlFor(sync.Url, documentId);
     var source = await TicketSourceAsync(documentId, write, caller, cancellationToken);
@@ -108,7 +167,12 @@ internal sealed class LiveOpener(McpConfig config, McpHttpCaller http, McpBundle
       var revision = McpJson.String(surface["contractRevision"]?["live"]) ?? string.Empty;
       var unavailable = surface["liveUnavailableCommands"] as JsonArray;
       var history = new LiveVersionHistory(http, url, sync.Origin, guard is null ? null : guard.NextAsync);
-      var session = new LiveSession(room, bundle, flags, caller, write, revision, unavailable, history) { Pages = Pages, DocumentId = documentId };
+      var session = new LiveSession(room, bundle, flags, caller, write, revision, unavailable, history)
+      {
+        Pages = Pages,
+        DocumentId = documentId,
+        Fields = fields,
+      };
 
       await room.Loop.RunAsync(session.Start);
 

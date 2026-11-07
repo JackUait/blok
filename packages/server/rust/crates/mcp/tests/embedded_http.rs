@@ -73,7 +73,7 @@ async fn status_from(
 #[tokio::test(flavor = "multi_thread")]
 async fn a_foreign_origin_or_host_is_refused_and_loopback_is_served() {
     let embedded = embedded().await;
-    let http = embedded.http(None);
+    let http = embedded.http(None).unwrap();
     assert_eq!(status(&http, list_tools("localhost:4000", None)).await, 200);
     assert_eq!(
         status(
@@ -97,7 +97,9 @@ async fn a_foreign_origin_or_host_is_refused_and_loopback_is_served() {
 #[tokio::test(flavor = "multi_thread")]
 async fn an_app_names_its_own_host_names() {
     let embedded = embedded().await;
-    let http = embedded.http(Some(vec!["app.example.com".to_owned()]));
+    let http = embedded
+        .http(Some(vec!["app.example.com".to_owned()]))
+        .unwrap();
     assert_eq!(
         status(&http, list_tools("app.example.com", None)).await,
         200
@@ -134,7 +136,7 @@ async fn oauth_options_refuse_a_caller_with_no_token() {
     )
     .await
     .unwrap();
-    let http = embedded.http(None);
+    let http = embedded.http(None).unwrap();
     // OAuth is the opt-in for remote callers: they get the bearer gate.
     let answer = http
         .handle(REMOTE.parse().unwrap(), list_tools("localhost:4000", None))
@@ -156,7 +158,7 @@ async fn oauth_options_refuse_a_caller_with_no_token() {
 #[tokio::test(flavor = "multi_thread")]
 async fn a_remote_caller_naming_localhost_is_refused_without_an_opt_in() {
     let embedded = embedded().await;
-    let http = embedded.http(None);
+    let http = embedded.http(None).unwrap();
     assert_eq!(
         status_from(&http, REMOTE, list_tools("localhost:4000", None)).await,
         403
@@ -166,9 +168,33 @@ async fn a_remote_caller_naming_localhost_is_refused_without_an_opt_in() {
         200
     );
     // An app that names its own hosts serves remote callers.
-    let public = embedded.http(Some(vec!["app.example.com".to_owned()]));
+    let public = embedded
+        .http(Some(vec!["app.example.com".to_owned()]))
+        .unwrap();
     assert_eq!(
         status_from(&public, REMOTE, list_tools("app.example.com", None)).await,
         200
     );
+}
+
+// Go's Handler() refuses this too: the HTTP rules (a per-document check,
+// no uploads.root) are checked only for http options.
+#[tokio::test(flavor = "multi_thread")]
+async fn stdio_options_are_never_served_over_http() {
+    let options = json!({ "transport": { "kind": "stdio" }, "auth": { "kind": "none" } });
+    let embedded = Embedded::new(Arc::new(Bundle::new(1).unwrap()), &options, None, None)
+        .await
+        .unwrap();
+    let refused = embedded.http(None).err().unwrap_or_default();
+    assert!(refused.contains(r#"transport kind "http""#), "{refused}");
+    assert!(embedded.handler(true).is_err());
+    assert!(embedded.handler(false).is_ok());
+    let typed = Embedded::start(
+        Arc::new(Bundle::new(1).unwrap()),
+        &blok_mcp::options::McpOptions::default(),
+        blok_mcp::options::Hooks::default(),
+    )
+    .await
+    .unwrap();
+    assert!(typed.http(None).is_err());
 }

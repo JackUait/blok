@@ -163,6 +163,14 @@ impl Front {
             Read::TooLarge => return empty(&mut resp, 413),
             Read::Failed => return empty(&mut resp, 400),
         };
+        // JSON.parse takes a lone surrogate and any depth; serde_json does not.
+        let body = match std::str::from_utf8(&body).map(crate::lenient::mend) {
+            Ok(crate::lenient::Mended::Forward(text)) => text.into_bytes(),
+            Ok(crate::lenient::Mended::Answer(answer)) => {
+                return json(&mut resp, 200, &answer, &[]).await;
+            }
+            Err(_) => body,
+        };
         let Ok(message) = serde_json::from_slice::<Value>(&body) else {
             return json(
                 &mut resp,

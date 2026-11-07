@@ -226,6 +226,15 @@ where
         tokio::spawn(async move {
             let mut reader = BufReader::new(input);
             while let Some(line) = next_message(&mut reader).await {
+                let line = match crate::lenient::mend(&line) {
+                    crate::lenient::Mended::Forward(line) => line,
+                    crate::lenient::Mended::Answer(answer) => {
+                        if write_line(&out, &answer).await.is_err() {
+                            break;
+                        }
+                        continue;
+                    }
+                };
                 let sent = match own_answer(&line) {
                     Some(answer) => write_line(&out, &answer).await,
                     None => {
@@ -440,6 +449,42 @@ mod tests {
         let mut written = String::new();
         client.read_to_string(&mut written).await.unwrap();
         assert_eq!(written, "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n");
+    }
+
+    // JSON.parse takes both; rmcp's serde_json drops them without a word.
+    #[tokio::test]
+    async fn a_lone_surrogate_is_mended_and_a_too_deep_request_answered() {
+        let deep = format!("{}{}", "[".repeat(200), "]".repeat(200));
+        let input = format!(
+            "{}\n{}\n",
+            // A notification: nothing waits for its answer.
+            r#"{"jsonrpc":"2.0","method":"m","params":{"a":"\ud800"}}"#,
+            format_args!(r#"{{"jsonrpc":"2.0","id":2,"method":"m","params":{{"x":{deep}}}}}"#),
+        );
+        let got = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = got.clone();
+        let (out, mut client) = tokio::io::duplex(1 << 16);
+        proxy(
+            std::io::Cursor::new(input.into_bytes()),
+            out,
+            Arc::default(),
+            move |read, _write| async move {
+                let mut lines = BufReader::new(read).lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    seen.lock().unwrap().push(line);
+                }
+            },
+        )
+        .await;
+        assert_eq!(
+            *got.lock().unwrap(),
+            vec![r#"{"jsonrpc":"2.0","method":"m","params":{"a":"\ufffd"}}"#]
+        );
+        let mut written = String::new();
+        client.read_to_string(&mut written).await.unwrap();
+        let answer: Value = serde_json::from_str(written.trim()).unwrap();
+        assert_eq!(answer["id"], 2);
+        assert_eq!(answer["error"]["code"], -32600);
     }
 
     #[test]

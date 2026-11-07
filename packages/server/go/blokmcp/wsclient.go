@@ -25,6 +25,16 @@ type wsConn struct {
 	protocol string
 	writeMu  sync.Mutex
 	closed   bool
+	// ended closes when the room's read loop for this connection returns,
+	// the closing handshake included. Nil: no read loop runs.
+	ended   chan struct{}
+	endOnce sync.Once
+}
+
+func (c *wsConn) markEnded() {
+	if c.ended != nil {
+		c.endOnce.Do(func() { close(c.ended) })
+	}
 }
 
 const (
@@ -93,7 +103,7 @@ func dialWebSocket(ctx context.Context, url string, header http.Header, protocol
 		_ = rw.Close()
 		return nil, errors.New("the server selected no offered subprotocol")
 	}
-	return &wsConn{rw: rw, reader: bufio.NewReader(rw), protocol: selected}, nil
+	return &wsConn{rw: rw, reader: bufio.NewReader(rw), protocol: selected, ended: make(chan struct{})}, nil
 }
 
 func (c *wsConn) writeFrame(opcode byte, payload []byte) error {

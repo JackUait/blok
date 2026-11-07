@@ -570,6 +570,7 @@ func (r *liveRoom) openSocket(generation int, token string) {
 }
 
 func (r *liveRoom) readLoop(generation int, conn *wsConn) {
+	defer conn.markEnded()
 	for {
 		message, code, err := conn.readMessage()
 		r.mu.Lock()
@@ -919,17 +920,29 @@ var errRoomSyncTimeout = errors.New("the room did not finish its first sync in t
 // close announces the departure, closes with 1000 and stops every timer.
 func (r *liveRoom) close() {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	if r.destroyed {
+		r.mu.Unlock()
 		return
 	}
 	r.announceDeparture()
 	r.destroyed = true
+	conn := r.conn
 	r.teardownGeneration(true)
 	r.reconnectTimer = stopTimer(r.reconnectTimer)
 	r.sweepTimer = stopTimer(r.sweepTimer)
 	r.phase = phaseTerminal
 	r.changed.Broadcast()
+	r.mu.Unlock()
+	// Node's close waits for the server's close frame, so a stop that exits
+	// next never cuts the handshake short. A server that never answers is
+	// dropped after closeWait, as ws's close timer drops it.
+	if conn != nil && conn.ended != nil {
+		select {
+		case <-conn.ended:
+		case <-time.After(closeWait):
+			conn.abort()
+		}
+	}
 }
 
 // delivery waits until every id is acked, one is quarantined, the room

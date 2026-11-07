@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net"
 	"runtime"
 	"sync"
@@ -148,5 +149,74 @@ func TestAClosedRoomEndsItsDialToASilentServer(t *testing.T) {
 	if after := runtime.NumGoroutine(); after > before {
 		stack := make([]byte, 1<<20)
 		t.Fatalf("goroutines %d -> %d:\n%s", before, after, stack[:runtime.Stack(stack, true)])
+	}
+}
+
+// Node's close waits for the server's answering close frame before the
+// process may exit; a slow server must still get the whole handshake.
+func TestAClosedRoomWaitsForTheServersCloseFrame(t *testing.T) {
+	client, server := net.Pipe()
+	t.Cleanup(func() { _ = client.Close(); _ = server.Close() })
+	room := newLiveRoom("ws://127.0.0.1:1/sync", "doc", nil, func(bool) (string, error) { return "t", nil }, nil)
+	conn := &wsConn{rw: client, reader: bufio.NewReader(client), ended: make(chan struct{})}
+	room.mu.Lock()
+	room.conn = conn
+	generation := room.generation
+	room.mu.Unlock()
+	go room.readLoop(generation, conn)
+	echoed := make(chan struct{})
+	go func() {
+		reader := bufio.NewReader(server)
+		for {
+			head := make([]byte, 2)
+			if _, err := io.ReadFull(reader, head); err != nil {
+				return
+			}
+			length := int(head[1] & 0x7F)
+			if _, err := io.ReadFull(reader, make([]byte, 4+length)); err != nil {
+				return
+			}
+			if head[0]&0x0F == opClose {
+				time.Sleep(300 * time.Millisecond)
+				close(echoed)
+				_, _ = server.Write([]byte{0x88, 0x02, 0x03, 0xE8})
+				return
+			}
+		}
+	}()
+	room.close()
+	select {
+	case <-echoed:
+	default:
+		t.Fatal("close returned before the server answered the close")
+	}
+	select {
+	case <-conn.ended:
+	default:
+		t.Fatal("close returned before the closing handshake ended")
+	}
+}
+
+// A server that never answers the close is dropped after closeWait.
+func TestAClosedRoomDropsAServerThatNeverAnswersTheClose(t *testing.T) {
+	client, server := net.Pipe()
+	t.Cleanup(func() { _ = client.Close(); _ = server.Close() })
+	go func() { _, _ = io.Copy(io.Discard, server) }()
+	room := newLiveRoom("ws://127.0.0.1:1/sync", "doc", nil, func(bool) (string, error) { return "t", nil }, nil)
+	conn := &wsConn{rw: client, reader: bufio.NewReader(client), ended: make(chan struct{})}
+	room.mu.Lock()
+	room.conn = conn
+	generation := room.generation
+	room.mu.Unlock()
+	go room.readLoop(generation, conn)
+	started := time.Now()
+	room.close()
+	if waited := time.Since(started); waited < closeWait-time.Second || waited > closeWait+2*time.Second {
+		t.Fatalf("close waited %v", waited)
+	}
+	select {
+	case <-conn.ended:
+	case <-time.After(time.Second):
+		t.Fatal("the read loop kept running")
 	}
 }

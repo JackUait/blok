@@ -109,39 +109,125 @@ pub trait Requests: Send + Sync {
 /// The client requests sent to the server and not answered yet.
 #[derive(Default)]
 pub struct Pending {
-    ids: std::sync::Mutex<HashSet<String>>,
+    state: std::sync::Mutex<Sent>,
     requests: Option<Arc<dyn Requests>>,
+}
+
+#[derive(Default)]
+struct Sent {
+    /// By the JSON text of the id rmcp sees.
+    ids: HashSet<String>,
+    /// A request whose id was already in flight runs under its own id
+    /// (rmcp keys calls by id): that id's text, and the id the client sent.
+    aliases: Vec<(String, Value)>,
+    next_alias: u64,
+}
+
+/// Puts `id` in place of the message's id, or of a cancel's requestId.
+fn with_id(line: &str, pointer: &str, id: Value) -> String {
+    let Ok(mut message) = serde_json::from_str::<Value>(line) else {
+        return line.to_owned();
+    };
+    if let Some(slot) = message.pointer_mut(pointer) {
+        *slot = id;
+    }
+    message.to_string()
 }
 
 impl Pending {
     pub fn with_requests(requests: Arc<dyn Requests>) -> Pending {
         Pending {
-            ids: std::sync::Mutex::default(),
+            state: std::sync::Mutex::default(),
             requests: Some(requests),
         }
     }
 
-    fn ids(&self) -> std::sync::MutexGuard<'_, HashSet<String>> {
-        self.ids.lock().unwrap_or_else(|p| p.into_inner())
+    fn state(&self) -> std::sync::MutexGuard<'_, Sent> {
+        self.state.lock().unwrap_or_else(|p| p.into_inner())
     }
 
-    /// Notes a line going to the server, if it is a request rmcp will run.
-    /// A cancelled request is never answered, so it stops counting.
-    fn sent(&self, line: &str) {
+    /// Notes a line going to the server, if it is a request rmcp will run,
+    /// and gives the line to send. A cancelled request is never answered,
+    /// so it stops counting.
+    fn sent(&self, line: &str) -> String {
         match rmcp_reads(line) {
             Read::Request { id, call } => {
-                self.ids().insert(id.clone());
+                let (id, line) = {
+                    let mut state = self.state();
+                    if state.ids.contains(&id) {
+                        state.next_alias += 1;
+                        let alias =
+                            Value::String(format!("blok-mcp reused id {}", state.next_alias));
+                        let original = serde_json::from_str(&id).unwrap_or(Value::Null);
+                        let alias_text = alias.to_string();
+                        state.aliases.push((alias_text.clone(), original));
+                        state.ids.insert(alias_text.clone());
+                        (alias_text, with_id(line, "/id", alias))
+                    } else {
+                        state.ids.insert(id.clone());
+                        (id, line.to_owned())
+                    }
+                };
                 if let (Some(requests), Some(arguments)) = (&self.requests, call) {
                     requests.read(&id, &arguments);
                 }
+                line
             }
             Read::Cancelled { id } => {
-                self.ids().remove(&id);
+                let (id, line) = {
+                    let mut state = self.state();
+                    let latest = state
+                        .aliases
+                        .iter()
+                        .rposition(|(_, original)| original.to_string() == id);
+                    match latest {
+                        Some(at) => {
+                            let (alias, _) = state.aliases.remove(at);
+                            let value = serde_json::from_str(&alias).unwrap_or(Value::Null);
+                            state.ids.remove(&alias);
+                            let line = with_id(line, "/params/requestId", value);
+                            (alias, line)
+                        }
+                        None => {
+                            state.ids.remove(&id);
+                            (id, line.to_owned())
+                        }
+                    }
+                };
                 if let Some(requests) = &self.requests {
                     requests.ended(&id);
                 }
+                line
             }
-            Read::Other => {}
+            Read::Other => line.to_owned(),
+        }
+    }
+
+    /// A server line as the client must see it: an answer under an alias
+    /// carries the id the client sent.
+    fn outgoing(&self, line: &str) -> String {
+        if !line.contains("blok-mcp reused id ") {
+            return line.to_owned();
+        }
+        let Ok(message) = serde_json::from_str::<Value>(line) else {
+            return line.to_owned();
+        };
+        let Some(id) = message
+            .get("id")
+            .filter(|_| message.get("method").is_none())
+        else {
+            return line.to_owned();
+        };
+        let id = id.to_string();
+        let original = self
+            .state()
+            .aliases
+            .iter()
+            .find(|(alias, _)| *alias == id)
+            .map(|(_, original)| original.clone());
+        match original {
+            Some(original) => with_id(line, "/id", original),
+            None => line.to_owned(),
         }
     }
 
@@ -151,9 +237,14 @@ impl Pending {
             && message.get("method").is_none()
             && let Some(id) = message.get("id")
         {
-            self.ids().remove(&id.to_string());
+            let id = id.to_string();
+            {
+                let mut state = self.state();
+                state.ids.remove(&id);
+                state.aliases.retain(|(alias, _)| *alias != id);
+            }
             if let Some(requests) = &self.requests {
-                requests.ended(&id.to_string());
+                requests.ended(&id);
             }
         }
     }
@@ -161,7 +252,7 @@ impl Pending {
     /// Waits until every request is answered, or `limit` passes.
     pub async fn drained(&self, limit: Duration) {
         let _ = tokio::time::timeout(limit, async {
-            while !self.ids().is_empty() {
+            while !self.state().ids.is_empty() {
                 tokio::time::sleep(Duration::from_millis(10)).await;
             }
         })
@@ -238,7 +329,7 @@ where
                 let sent = match own_answer(&line) {
                     Some(answer) => write_line(&out, &answer).await,
                     None => {
-                        pending.sent(&line);
+                        let line = pending.sent(&line);
                         async {
                             to_server.write_all(line.as_bytes()).await?;
                             to_server.write_all(b"\n").await
@@ -263,7 +354,7 @@ where
                 if is_id_less_error(&line) {
                     continue;
                 }
-                let written = write_line(&out, &line).await;
+                let written = write_line(&out, &pending.outgoing(&line)).await;
                 pending.answered(&line);
                 if written.is_err() {
                     break;
@@ -485,6 +576,53 @@ mod tests {
         let answer: Value = serde_json::from_str(written.trim()).unwrap();
         assert_eq!(answer["id"], 2);
         assert_eq!(answer["error"]["code"], -32600);
+    }
+
+    // Node runs and answers both requests with one id; rmcp keys calls by
+    // id, so the first answer would cancel the second.
+    #[tokio::test]
+    async fn a_reused_id_runs_under_its_own_id_and_is_answered_as_sent() {
+        let seen = Arc::new(Seen::default());
+        let pending = Pending::with_requests(seen.clone());
+        let first = r#"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"blok_read","arguments":{"handle":"h"}}}"#;
+        assert_eq!(pending.sent(first), first);
+        let inner = |line: &str| -> Value { serde_json::from_str(line).unwrap() };
+        let second = inner(&pending.sent(first));
+        assert_ne!(second["id"], json!(7));
+        assert_eq!(
+            second["params"],
+            json!({"name":"blok_read","arguments":{"handle":"h"}})
+        );
+        let second_id = second["id"].to_string();
+        let answer = format!(r#"{{"jsonrpc":"2.0","id":{second_id},"result":{{}}}}"#);
+        assert_eq!(
+            pending.outgoing(&answer),
+            r#"{"jsonrpc":"2.0","id":7,"result":{}}"#
+        );
+        pending.answered(&answer);
+        // A cancel names the latest request with the id, as Node's SDK keeps it.
+        let third_id = inner(&pending.sent(first))["id"].to_string();
+        let cancel = inner(&pending.sent(
+            r#"{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":7}}"#,
+        ));
+        assert_eq!(cancel["params"]["requestId"].to_string(), third_id);
+        pending.answered(r#"{"jsonrpc":"2.0","id":7,"result":{}}"#);
+        assert_eq!(
+            *seen.0.lock().unwrap(),
+            vec![
+                "read 7".to_owned(),
+                format!("read {second_id}"),
+                format!("ended {second_id}"),
+                format!("read {third_id}"),
+                format!("ended {third_id}"),
+                "ended 7".to_owned(),
+            ]
+        );
+        let started = std::time::Instant::now();
+        pending.drained(DRAIN_LIMIT).await;
+        assert!(started.elapsed() < Duration::from_secs(1));
+        // The id is free again: it goes through as sent.
+        assert_eq!(pending.sent(first), first);
     }
 
     #[test]

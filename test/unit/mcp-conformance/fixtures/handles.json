@@ -1363,6 +1363,255 @@
       "expectExit": {
         "code": 0
       }
+    },
+    {
+      "name": "two writes with one id both run, in order, and both are answered",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "other",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "ace641df",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "id": 50,
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "a",
+                      "data": {
+                        "text": "a"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "noAnswer": true
+        },
+        {
+          "send": {
+            "id": 50,
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "b",
+                      "data": {
+                        "text": "b"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "id": "a",
+                    "childIds": []
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "a"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "a",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "a",
+                    "data": {
+                      "text": [
+                        {
+                          "text": "a"
+                        }
+                      ]
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 50
+          }
+        },
+        {
+          "note": "The second answer to id 50 comes before this one.",
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "notifications": [
+            {
+              "result": {
+                "content": [
+                  {
+                    "type": "text",
+                    "json": "<same as structuredContent>"
+                  }
+                ],
+                "structuredContent": {
+                  "ok": true,
+                  "revision": "<masked>",
+                  "results": [
+                    {
+                      "id": "b",
+                      "childIds": []
+                    }
+                  ],
+                  "changed": {
+                    "created": [
+                      "b"
+                    ]
+                  },
+                  "blocks": [
+                    {
+                      "id": "b",
+                      "type": "paragraph",
+                      "depth": 0,
+                      "text": "b",
+                      "data": {
+                        "text": [
+                          {
+                            "text": "b"
+                          }
+                        ]
+                      },
+                      "meta": {
+                        "lastEditedAt": "<masked>",
+                        "lastEditedBy": {
+                          "id": "local"
+                        }
+                      }
+                    }
+                  ],
+                  "delivery": {
+                    "durable": true,
+                    "pending": false,
+                    "serverSequence": null,
+                    "savedVersion": "<masked>"
+                  }
+                },
+                "isError": false
+              },
+              "jsonrpc": "2.0",
+              "id": 50
+            }
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "a",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "a"
+                  },
+                  {
+                    "id": "b",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "b"
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
     }
   ]
 }

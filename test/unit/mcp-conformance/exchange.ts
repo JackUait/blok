@@ -690,7 +690,7 @@ class CaseRun {
       Reflect.set(holder, 'serverRequests', seen);
     }
     if (notifications.length > 0 || 'notifications' in step) {
-      this.check(holder, 'notifications', notifications, `${label} notifications`);
+      this.check(holder, 'notifications', maskKeys(notifications, new Set(this.c.maskKeys ?? [])), `${label} notifications`);
     }
     this.finishStep(step, holder, normalize(incoming, label), label);
   }

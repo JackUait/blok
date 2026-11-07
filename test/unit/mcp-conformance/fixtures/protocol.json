@@ -600,6 +600,54 @@
       }
     },
     {
+      "name": "stdio: two pings with one id are both answered",
+      "session": {
+        "protocolVersion": "2025-11-25"
+      },
+      "steps": [
+        {
+          "send": {
+            "id": 7,
+            "method": "ping"
+          },
+          "noAnswer": true
+        },
+        {
+          "send": {
+            "id": 7,
+            "method": "ping"
+          },
+          "expect": {
+            "result": {},
+            "jsonrpc": "2.0",
+            "id": 7
+          }
+        },
+        {
+          "note": "The second answer to id 7 comes before this one.",
+          "send": {
+            "id": 8,
+            "method": "ping"
+          },
+          "notifications": [
+            {
+              "result": {},
+              "jsonrpc": "2.0",
+              "id": 7
+            }
+          ],
+          "expect": {
+            "result": {},
+            "jsonrpc": "2.0",
+            "id": 8
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
       "name": "stdio: a message past 10 MiB closes the transport, and nothing more is answered",
       "session": {
         "protocolVersion": "2025-11-25"

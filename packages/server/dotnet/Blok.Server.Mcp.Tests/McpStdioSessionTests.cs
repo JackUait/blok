@@ -103,6 +103,20 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     Assert.Null(listed["error"]);
   }
 
+  // The policy: a lone surrogate in an id reads as U+FFFD, and the answer carries that id.
+  [Fact]
+  public async Task EchoesAnIdWithALoneSurrogateAsTheReplacementCharacter()
+  {
+    var (live, _, _) = await OpenForWriteAsync();
+
+    await live.SendAsync("""{"jsonrpc":"2.0","id":"x\udc00","method":"ping"}""");
+    var answer = await live.AnswerAsync("\"x\\uFFFD\"");
+    await live.DisposeAsync();
+
+    Assert.Equal("x\uFFFD", answer["id"]!.GetValue<string>());
+    Assert.NotNull(answer["result"]);
+  }
+
   private static JsonObject Toggles(int levels, int at = 0)
   {
     var block = new JsonObject { ["type"] = "toggle", ["id"] = $"t{at}", ["data"] = new JsonObject { ["text"] = $"L{at}" } };

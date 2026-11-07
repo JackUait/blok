@@ -19,7 +19,7 @@ internal abstract record McpSourceConfig
 }
 
 /// <summary>Origins and host names a library endpoint takes; null origins means loopback pages only, null hosts no check.</summary>
-internal sealed record McpCallerGate(IReadOnlyList<string>? Origins, IReadOnlyList<string>? Hosts);
+internal sealed record McpCallerGate(IReadOnlyList<string>? Origins, IReadOnlyList<string>? Hosts, bool TrustRemote = false);
 
 internal sealed record McpOAuth(string Issuer, string Audience, string JwksUrl);
 

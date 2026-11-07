@@ -63,7 +63,7 @@ public sealed class LibraryHostTests : IDisposable
     }
   }
 
-  private async Task<(WebApplication App, HttpClient Client)> StartAsync(Action<IServiceCollection>? services = null, Action<BlokMcpOptions>? configure = null, ClaimsPrincipal? user = null)
+  private async Task<(WebApplication App, HttpClient Client)> StartAsync(Action<IServiceCollection>? services = null, Action<BlokMcpOptions>? configure = null, ClaimsPrincipal? user = null, string? remote = null)
   {
     var builder = WebApplication.CreateSlimBuilder();
 
@@ -82,11 +82,18 @@ public sealed class LibraryHostTests : IDisposable
     });
     var app = builder.Build();
 
-    if (user is not null)
+    if (user is not null || remote is not null)
     {
       app.Use((context, next) =>
       {
-        context.User = user;
+        if (user is not null)
+        {
+          context.User = user;
+        }
+        if (remote is not null)
+        {
+          context.Connection.RemoteIpAddress = System.Net.IPAddress.Parse(remote);
+        }
 
         return next(context);
       });
@@ -372,6 +379,42 @@ public sealed class LibraryHostTests : IDisposable
       await stop.WaitAsync(TimeSpan.FromSeconds(10));
       // Its answer still goes out: an open that lands after stop is refused, as Node's handles do.
       Assert.Equal("The server is shutting down.", (string?)(await call)["error"]?["message"]);
+    }
+  }
+
+  // Without OAuth an anonymous caller is the default principal, so a Host header naming
+  // localhost must not let a remote peer in.
+  [Theory]
+  [InlineData("203.0.113.9", 403)]
+  [InlineData("127.0.0.1", 200)]
+  [InlineData("::1", 200)]
+  [InlineData("::ffff:127.0.0.1", 200)]
+  public async Task WithoutOAuthOnlyThisMachineIsTheDefaultPrincipal(string remote, int status)
+  {
+    var (app, client) = await StartAsync(remote: remote);
+
+    await using (app)
+    {
+      Assert.Equal(status, await StatusAsync(client, null, "localhost"));
+    }
+  }
+
+  [Fact]
+  public async Task ARemoteCallerIsLetThroughWhenSignedInOrTrusted()
+  {
+    var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "bob")], "host"));
+    var (signedIn, signedInClient) = await StartAsync(user: user, remote: "203.0.113.9");
+    var (trusted, trustedClient) = await StartAsync(configure: options =>
+    {
+      options.AllowEveryCallerEveryDocument = true;
+      options.TrustRemoteCallers = true;
+    }, remote: "203.0.113.9");
+
+    await using (signedIn)
+    await using (trusted)
+    {
+      Assert.Equal(200, await StatusAsync(signedInClient, null));
+      Assert.Equal(200, await StatusAsync(trustedClient, null));
     }
   }
 }

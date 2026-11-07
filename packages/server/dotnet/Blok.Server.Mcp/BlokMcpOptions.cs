@@ -61,6 +61,14 @@ public sealed class BlokMcpOptions
   public IList<string>? AllowedHosts { get; set; }
 
   /// <summary>
+  /// Without <see cref="OAuth"/>, a caller nothing has signed in is named by <see cref="Principal"/>,
+  /// so only this machine may call: a request from a non-loopback address gets 403. A user your
+  /// own ASP.NET Core auth signed in is always let through. Set this when a proxy in front of the
+  /// app, or the network, already decides who may connect.
+  /// </summary>
+  public bool TrustRemoteCallers { get; set; }
+
+  /// <summary>
   /// Serve live handles from this app's own Blok collab rooms (<c>AddBlokServer</c> with
   /// <c>CollabEnabled</c>), in process: no socket and no ticket. A live handle's revision
   /// is the room's journal head.

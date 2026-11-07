@@ -100,6 +100,16 @@ internal static class McpRequestGate
 
       return;
     }
+    // No OAuth: an anonymous caller becomes the default principal, so it must be on this machine.
+    // The Host header proves nothing; the peer address does. No address means no network peer.
+    if (context.RequestServices?.GetService(typeof(McpConfig)) is McpConfig { Gate: { TrustRemote: false }, OAuth: null }
+        && context.User?.Identity?.IsAuthenticated != true
+        && context.Connection.RemoteIpAddress is { } remote && !System.Net.IPAddress.IsLoopback(remote.IsIPv4MappedToIPv6 ? remote.MapToIPv4() : remote))
+    {
+      context.Response.StatusCode = StatusCodes.Status403Forbidden;
+
+      return;
+    }
 
     if (!HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method))
     {

@@ -88,6 +88,7 @@ Browsers and DNS rebinding:
 
 - A request with a foreign `Origin` gets 403. By default only loopback pages (`http://localhost`, `127.0.0.1`, `[::1]`) may call. List your own in `AllowedOrigins`.
 - `AllowedHosts` limits the `Host` header to the names you list. Without it, set ASP.NET Core's own `AllowedHosts` host filtering.
+- Without OAuth, a caller your own auth did not sign in is the default `Principal`. So only this machine may call: a request from a non-loopback address gets 403, whatever its `Host` header says. Set `TrustRemoteCallers` when a proxy or the network already decides who may connect.
 
 The other options follow `createBlokMcpServer` in `@bloklabs/mcp`: `PageTitles`, `Manifest`, `Overrides`, `SyncUrl` with `TicketSecret` or `TicketUrl`, `AgentActor`, `Uploads` and the rest. They are checked at startup with the same rules. Two of Node's options are not here:
 

@@ -178,7 +178,7 @@ public static class BlokMcpServiceCollectionExtensions
       Sync = options.SyncUrl is { } sync ? new McpSync(sync.OriginalString, options.SyncOrigin) : null,
       Tickets = TicketsOf(options),
       AgentActor = options.AgentActor is { } actor ? (principal, clientName) => ActorJson(actor(principal, clientName)) : null,
-      Gate = new McpCallerGate(options.AllowedOrigins?.ToArray(), options.AllowedHosts?.ToArray()),
+      Gate = new McpCallerGate(options.AllowedOrigins?.ToArray(), options.AllowedHosts?.ToArray(), options.TrustRemoteCallers),
       Source = options.FilesDirectory is string dir
           ? new McpSourceConfig.Files(dir)
           : options.DocumentEndpoint is Uri endpoint

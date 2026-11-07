@@ -7,11 +7,12 @@ use std::time::Duration;
 use blok_blokagent::Executor;
 use serde_json::{Map, Value, json};
 
-use crate::authorize::Webhook;
+use crate::authorize::{Authorize, Webhook};
 use crate::bundle::{Bundle, Obj, RawObject};
 use crate::errors::{Fault, HostError};
 use crate::handles::Handles;
 use crate::live::{Live, TicketRequest};
+use crate::options::{AgentActorFn, Hooks};
 use crate::outbound::Outbound;
 use crate::remote::{
     Delivery, ExecuteInput, Executed, Fate, LiveShared, Presence, Protocol, RemoteRoom,
@@ -98,7 +99,8 @@ pub struct Mcp {
     idle_ms: Value,
     handles: Arc<Handles<Session>>,
     source: Option<Source>,
-    authorize: Option<Webhook>,
+    authorize: Option<Arc<dyn Authorize>>,
+    agent_actor: Option<AgentActorFn>,
     live: Option<Live>,
     live_shared: Option<Arc<LiveShared>>,
     rooms: Option<Rooms>,
@@ -262,6 +264,13 @@ fn room_answer(text: &str) -> Result<Answer, Fault> {
     })
 }
 
+/// Node's isPresenceColor: #rgb, #rgba, #rrggbb or #rrggbbaa.
+fn is_presence_color(value: &str) -> bool {
+    value.strip_prefix('#').is_some_and(|hex| {
+        matches!(hex.len(), 3 | 4 | 6 | 8) && hex.bytes().all(|b| b.is_ascii_hexdigit())
+    })
+}
+
 fn str_of<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value.get(key).and_then(Value::as_str)
 }
@@ -341,6 +350,28 @@ impl Mcp {
         rooms: Option<Arc<Executor>>,
         uploads: Option<crate::uploads::Uploads>,
     ) -> Result<Mcp, Fault> {
+        let hooks = Hooks {
+            authorize: authorize.map(|hook| Arc::new(hook) as Arc<dyn Authorize>),
+            agent_actor: None,
+            uploads,
+            rooms,
+        };
+        Mcp::with_hooks(bundle, options, hooks).await
+    }
+
+    /// `options` as mcpParseArgs gives them (see `McpOptions::to_value`),
+    /// and the options that are functions in Node.
+    pub async fn with_hooks(
+        bundle: Arc<Bundle>,
+        options: &Value,
+        hooks: Hooks,
+    ) -> Result<Mcp, Fault> {
+        let Hooks {
+            authorize,
+            agent_actor,
+            uploads,
+            rooms,
+        } = hooks;
         check_options(&bundle, options, authorize.is_some(), uploads.as_ref()).await?;
         let mut flags = surface_flags(options);
         if uploads.is_some() {
@@ -426,6 +457,7 @@ impl Mcp {
             uploads,
             source,
             authorize,
+            agent_actor,
             live_shared,
             live,
             rooms: rooms.map(|executor| Rooms::new(executor, &flags)),
@@ -649,13 +681,8 @@ impl Mcp {
                 .into());
             }
             if let (Some(live), Some(shared)) = (&self.live, &self.live_shared) {
-                let actor_id = str_of(actor, "id").unwrap_or_default().to_owned();
-                let presence = Presence {
-                    color: presence_color(&actor_id),
-                    name: client_name.to_owned(),
-                    on_behalf_of: str_of(actor, "onBehalfOf").unwrap_or(&actor_id).to_owned(),
-                    actor_id: actor_id.clone(),
-                };
+                let presence = self.presence(actor, client_name);
+                let actor_id = presence.actor_id.clone();
                 let request = TicketRequest {
                     document_id: page_id.clone(),
                     write: true,
@@ -817,13 +844,8 @@ impl Mcp {
                     )
                     .into());
                 };
-                let actor_id = str_of(actor, "id").unwrap_or_default().to_owned();
-                let presence = Presence {
-                    color: presence_color(&actor_id),
-                    name: client_name.to_owned(),
-                    on_behalf_of: str_of(actor, "onBehalfOf").unwrap_or(&actor_id).to_owned(),
-                    actor_id: actor_id.clone(),
-                };
+                let presence = self.presence(actor, client_name);
+                let actor_id = presence.actor_id.clone();
                 let request = TicketRequest {
                     document_id: page_id.to_owned(),
                     write: true,
@@ -902,7 +924,10 @@ impl Mcp {
     async fn allowed(&self, principal: &str, document_id: &str, write: bool) -> bool {
         match &self.authorize {
             None => true,
-            Some(hook) => hook.allows(principal, document_id, write).await,
+            Some(hook) => {
+                hook.allows(principal.to_owned(), document_id.to_owned(), write)
+                    .await
+            }
         }
     }
 
@@ -976,10 +1001,32 @@ impl Mcp {
             input["clientName"] = Value::String(name.clone());
         }
         let out = self.bundle.call("mcpActor", &input.to_string()).await?;
-        Ok((
-            out.get("actor").cloned().unwrap_or(Value::Null),
-            str_of(&out, "clientName").unwrap_or_default().to_owned(),
-        ))
+        let client_name = str_of(&out, "clientName").unwrap_or_default().to_owned();
+        let actor = match &self.agent_actor {
+            Some(hook) => hook(&caller.principal, &client_name).to_value(),
+            None => out.get("actor").cloned().unwrap_or(Value::Null),
+        };
+        Ok((actor, client_name))
+    }
+
+    /// The agent's presence, as Node's: a host's own actor shows its name and
+    /// colour; the default one the client's name.
+    fn presence(&self, actor: &Value, client_name: &str) -> Presence {
+        let actor_id = str_of(actor, "id").unwrap_or_default().to_owned();
+        let custom = self.agent_actor.is_some();
+        let color = str_of(actor, "color")
+            .filter(|c| custom && is_presence_color(c))
+            .map_or_else(|| presence_color(&actor_id), str::to_owned);
+        Presence {
+            color,
+            name: if custom {
+                str_of(actor, "name").unwrap_or_default().to_owned()
+            } else {
+                client_name.to_owned()
+            },
+            on_behalf_of: str_of(actor, "onBehalfOf").unwrap_or(&actor_id).to_owned(),
+            actor_id,
+        }
     }
 
     fn session_input(&self, mode: &str, write: bool, document: &str, actor: &Value) -> Obj {
@@ -1175,13 +1222,8 @@ impl Mcp {
             .live_shared
             .clone()
             .ok_or_else(|| Fault::Internal("live mode without its engines".to_owned()))?;
-        let actor_id = str_of(actor, "id").unwrap_or_default().to_owned();
-        let presence = Presence {
-            color: presence_color(&actor_id),
-            name: client_name.to_owned(),
-            on_behalf_of: str_of(actor, "onBehalfOf").unwrap_or(&actor_id).to_owned(),
-            actor_id: actor_id.clone(),
-        };
+        let presence = self.presence(actor, client_name);
+        let actor_id = presence.actor_id.clone();
         let request = TicketRequest {
             document_id: document_id.to_owned(),
             write,

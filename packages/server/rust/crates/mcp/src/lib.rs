@@ -16,6 +16,7 @@ pub mod inflight;
 mod lenient;
 pub mod live;
 pub mod oauth;
+pub mod options;
 pub mod outbound;
 pub mod protocol;
 pub mod remote;
@@ -101,6 +102,25 @@ impl Embedded {
         rooms: Option<Arc<blok_blokagent::Executor>>,
     ) -> Result<Embedded, String> {
         Embedded::with_uploads(bundle, options, authorize, rooms, None).await
+    }
+
+    /// From typed options and the hooks that are functions in Node, as a
+    /// Node host calls createBlokMcpServer.
+    pub async fn start(
+        bundle: Arc<Bundle>,
+        options: &options::McpOptions,
+        hooks: options::Hooks,
+    ) -> Result<Embedded, String> {
+        let version = bundle.call_text("version", "{}").await.map_err(|e| e.0)?;
+        let mcp = Mcp::with_hooks(bundle, &options.to_value(), hooks)
+            .await
+            .map_err(|err| match err {
+                errors::Fault::Internal(message) => message,
+                errors::Fault::Host(error) => error.error.to_string(),
+            })?;
+        let mcp = Arc::new(mcp);
+        mcp.spawn_sweeper();
+        Ok(Embedded { mcp, version })
     }
 
     /// As `new`, with the host's own uploader (Node's `uploads` option).

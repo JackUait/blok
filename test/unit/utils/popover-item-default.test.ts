@@ -238,6 +238,23 @@ describe('PopoverItemDefault', () => {
     expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemNoFocus);
   });
 
+  it('leaves confirmation mode when the confirmed action throws', () => {
+    const confirmation = {
+      title: 'Confirm',
+      onActivate: vi.fn(() => {
+        throw new Error('confirmed action failed');
+      }),
+    };
+    const { item, element } = createItem({ confirmation });
+
+    item.handleClick();
+    item.handleClick();
+
+    expect(item.isConfirmationStateEnabled).toBe(false);
+    expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemConfirmation);
+    expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemNoHover);
+  });
+
   it('resets confirmation state via reset()', () => {
     const confirmation = {
       title: 'Confirm',

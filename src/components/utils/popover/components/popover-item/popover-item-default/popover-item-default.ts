@@ -955,10 +955,10 @@ export class PopoverItemDefault extends PopoverItem {
     if (!('confirmation' in item) || item.confirmation === undefined) {
       try {
         item.onActivate?.(item);
-        this.disableConfirmationMode();
       } catch (error) {
         log('Popover item onActivate handler threw an error', 'error', error);
       }
+      this.disableConfirmationMode();
     } else {
       this.enableConfirmationMode(item.confirmation);
     }

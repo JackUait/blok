@@ -46,7 +46,8 @@ internal sealed class McpHttpCaller : IDisposable
 
     foreach (var (name, value) in request.Headers)
     {
-      message.Headers.TryAddWithoutValidation(name, value);
+      // TryAddWithoutValidation puts CR and LF on the wire, so a value is checked here.
+      message.Headers.TryAddWithoutValidation(name, HeaderValue(request, value));
     }
     if (request.Body is not null)
     {
@@ -80,6 +81,22 @@ internal sealed class McpHttpCaller : IDisposable
     }
   }
 
+  /// <summary>
+  /// A header value as undici (Node's fetch) takes it: leading and trailing tabs, spaces, CR and
+  /// LF go; a CR, LF or NUL left inside, or a char past U+00FF, refuses the call before it is sent.
+  /// </summary>
+  private static string HeaderValue(McpHttpRequest request, string value)
+  {
+    var trimmed = value.Trim([' ', '\t', '\r', '\n']);
+
+    if (trimmed.AsSpan().IndexOfAny('\r', '\n', '\0') >= 0 || trimmed.Any(c => c > '\u00FF'))
+    {
+      throw new McpUnreachableException($"{request.Method} {request.Url} could not be reached.");
+    }
+
+    return trimmed;
+  }
+
   public void Dispose()
   {
     client.Dispose();
@@ -93,6 +110,8 @@ internal sealed class McpHttpCaller : IDisposable
       UseCookies = false,
       UseProxy = false,
       PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+      // undici writes U+0080..U+00FF as one byte each; .NET refuses non-ASCII without this.
+      RequestHeaderEncodingSelector = (_, _) => Encoding.Latin1,
     };
   }
 }

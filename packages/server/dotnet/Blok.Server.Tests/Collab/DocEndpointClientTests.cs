@@ -65,6 +65,25 @@ public sealed class DocEndpointClientTests
     Assert.Empty(recorder.Requests);
   }
 
+  /// <summary>
+  /// The version comes from the endpoint's own answer. On .NET 10
+  /// TryAddWithoutValidation sends a CR or LF in it as a new header line.
+  /// </summary>
+  [Theory]
+  [InlineData("v1\r\nX-Injected: 1")]
+  [InlineData("v1\nX-Injected: 1")]
+  [InlineData("v1\0")]
+  public async Task RefusesASaveVersionTheHeaderCannotCarry(string version)
+  {
+    var recorder = new RequestRecorder(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+    using var client = CreateClient(recorder);
+
+    await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.SaveAsync("doc", JsonNode.Parse("""{"blocks":[]}""")!, version, null, CancellationToken.None));
+
+    Assert.Empty(recorder.Requests);
+  }
+
   [Fact]
   public async Task LoadReadsABareOutputDataDocument()
   {

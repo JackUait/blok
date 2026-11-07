@@ -164,6 +164,12 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
 
     if (version is not null)
     {
+      // The endpoint's own answer: TryAddWithoutValidation would send a CR or LF in it.
+      if (version.AsSpan().IndexOfAny('\r', '\n', '\0') >= 0)
+      {
+        throw new DocEndpointException(
+            "collab: the doc endpoint version cannot be sent as a header.");
+      }
       request.Headers.TryAddWithoutValidation(VersionHeader, version);
     }
 
@@ -335,10 +341,9 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
       HttpRequestMessage request,
       CancellationToken cancellationToken)
   {
-    // Refused, not dropped: TryAddWithoutValidation accepts a value with a
-    // CR or LF (a stray newline from a shell-quoted secret) and HttpHeaders
-    // then discards it when the header is read, so every request used to go
-    // out unauthenticated with the endpoint's 401 as the only clue.
+    // Refused: TryAddWithoutValidation accepts a value with a CR or LF (a
+    // stray newline from a shell-quoted secret) and .NET 10 sends it as is,
+    // which splits it into a second header line.
     if (options.Authorization != "" &&
         (options.Authorization.AsSpan().IndexOfAny('\r', '\n') >= 0 ||
             !request.Headers.TryAddWithoutValidation("Authorization", options.Authorization)))

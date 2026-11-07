@@ -351,6 +351,17 @@ where
                         continue;
                     }
                 };
+                let line = match crate::shape::shape(&line) {
+                    crate::shape::Shaped::Forward(line) => line,
+                    // Node's SDK drops it without an answer.
+                    crate::shape::Shaped::NotAMessage(_) => continue,
+                    crate::shape::Shaped::Refused(answer) => {
+                        if write_line(&out, &answer).await.is_err() {
+                            break;
+                        }
+                        continue;
+                    }
+                };
                 let sent = match own_answer(&line) {
                     Some(answer) => write_line(&out, &answer).await,
                     None => {

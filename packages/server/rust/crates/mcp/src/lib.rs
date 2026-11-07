@@ -22,6 +22,7 @@ pub mod protocol;
 pub mod remote;
 pub mod rooms;
 pub mod server;
+mod shape;
 mod signal;
 pub mod sources;
 pub mod stdio;

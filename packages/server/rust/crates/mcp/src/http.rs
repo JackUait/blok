@@ -274,6 +274,35 @@ impl Front {
             }
             Err(_) => body,
         };
+        let body = match std::str::from_utf8(&body).map(crate::shape::shape) {
+            Ok(crate::shape::Shaped::Forward(text)) => text.into_bytes(),
+            Ok(crate::shape::Shaped::NotAMessage(id)) => {
+                let answer = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "error": { "code": -32600, "message": crate::shape::NOT_A_MESSAGE },
+                    "id": id,
+                });
+                return json(&mut resp, 400, &answer.to_string(), &[]).await;
+            }
+            Ok(crate::shape::Shaped::Refused(answer)) => {
+                let header_version = req.headers().get("mcp-protocol-version").map(str::to_owned);
+                let modern = serde_json::from_slice::<Value>(&body)
+                    .is_ok_and(|m| is_modern(&m, header_version.as_deref()));
+                if modern {
+                    return json(&mut resp, 200, &answer, &[]).await;
+                }
+                // 2025 answers are SSE, as Node's SDK sends them.
+                resp.set_status(200);
+                resp.headers_mut().set("Content-Type", "text/event-stream");
+                resp.headers_mut().set("Cache-Control", "no-cache");
+                let event = format!("event: message\ndata: {answer}\n\n");
+                resp.headers_mut()
+                    .set("Content-Length", event.len().to_string());
+                let _ = resp.write(event.as_bytes()).await;
+                return;
+            }
+            Err(_) => body,
+        };
         let Ok(message) = serde_json::from_slice::<Value>(&body) else {
             return json(
                 &mut resp,

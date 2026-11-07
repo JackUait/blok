@@ -15,6 +15,15 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWrite
 use tokio::sync::Mutex;
 
 const MODERN: &str = "2026-07-28";
+/// The per-request envelope keys the SDK lifts off _meta (RESERVED_ENVELOPE_META_KEYS).
+const ENVELOPE_KEYS: [&str; 4] = [
+    "io.modelcontextprotocol/protocolVersion",
+    "io.modelcontextprotocol/clientInfo",
+    "io.modelcontextprotocol/clientCapabilities",
+    "io.modelcontextprotocol/logLevel",
+];
+const RMCP_ENVELOPE: &str = "request _meta is missing or has malformed required fields";
+const NODE_ENVELOPE: &str = "Request is missing the required _meta envelope for protocol revision 2026-07-28 (io.modelcontextprotocol/protocolVersion, io.modelcontextprotocol/clientCapabilities)";
 /// The id of the initialize the proxy sends for a client that sent none.
 const STAND_IN_INITIALIZE: &str = "blok-mcp stand-in initialize";
 
@@ -192,6 +201,8 @@ struct Sent {
     calls: HashSet<String>,
     /// Calls in flight when stdin ended: their answers are not written.
     abandoned: HashSet<String>,
+    /// Requests in a 2026 session with no envelope key at all.
+    bare: HashSet<String>,
 }
 
 /// Puts `id` in place of the message's id, or of a cancel's requestId.
@@ -279,6 +290,47 @@ impl Pending {
         }
     }
 
+    /// Notes a request sent in a 2026 session with no envelope key: rmcp
+    /// refuses it in its own words.
+    fn note_bare(&self, line: &str, era: Era) {
+        if era != Era::Modern {
+            return;
+        }
+        let Ok(message) = serde_json::from_str::<Value>(line) else {
+            return;
+        };
+        let (Some(id), Some(_)) = (message.get("id"), message.get("method")) else {
+            return;
+        };
+        let keyed = message
+            .pointer("/params/_meta")
+            .and_then(Value::as_object)
+            .is_some_and(|meta| ENVELOPE_KEYS.iter().any(|key| meta.contains_key(*key)));
+        if !keyed {
+            self.state().bare.insert(id.to_string());
+        }
+    }
+
+    /// rmcp's refusal of a bare request, in Node's checkInboundEnvelope words.
+    fn node_words(&self, line: &str) -> String {
+        if self.state().bare.is_empty() || !line.contains(RMCP_ENVELOPE) {
+            return line.to_owned();
+        }
+        let Ok(mut message) = serde_json::from_str::<Value>(line) else {
+            return line.to_owned();
+        };
+        let bare = message
+            .get("id")
+            .is_some_and(|id| self.state().bare.contains(&id.to_string()));
+        match message.pointer_mut("/error/message") {
+            Some(slot) if bare && slot.as_str().is_some_and(|m| m.starts_with(RMCP_ENVELOPE)) => {
+                *slot = Value::String(NODE_ENVELOPE.to_owned());
+                message.to_string()
+            }
+            _ => line.to_owned(),
+        }
+    }
+
     /// Stdin ended: the tool calls in flight still run, but go unanswered.
     /// Node's SDK aborts every request in flight then; only its tool calls
     /// do real async work, so the rest are already answered there.
@@ -338,6 +390,7 @@ impl Pending {
                 state.ids.remove(&id);
                 state.calls.remove(&id);
                 state.abandoned.remove(&id);
+                state.bare.remove(&id);
                 state.aliases.retain(|(alias, _)| *alias != id);
             }
             if let Some(requests) = &self.requests {
@@ -440,6 +493,7 @@ where
                     None => {
                         let first = stand_in_initialize(&line, &mut era);
                         let line = pending.sent(&in_era(&line, &mut era));
+                        pending.note_bare(&line, era);
                         async {
                             if let Some(first) = first {
                                 to_server.write_all(first.as_bytes()).await?;
@@ -468,6 +522,7 @@ where
                 if is_id_less_error(&line) {
                     continue;
                 }
+                let line = pending.node_words(&line);
                 let written = match pending.outgoing(&line) {
                     Some(line) => write_line(&out, &line).await,
                     None => Ok(()),
@@ -777,6 +832,53 @@ mod tests {
             written,
             "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}\n"
         );
+    }
+
+    // A 2026 session: a request with no envelope keys at all gets Node's
+    // checkInboundEnvelope words, not rmcp's.
+    #[tokio::test]
+    async fn a_request_without_an_envelope_in_a_2026_session_is_refused_in_nodes_words() {
+        let meta = r#"{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}"#;
+        let input = format!(
+            "{}\n{}\n{}\n",
+            format_args!(
+                r#"{{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{{"_meta":{meta}}}}}"#
+            ),
+            r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#,
+            r#"{"jsonrpc":"2.0","id":3,"method":"tools/list","params":{"_meta":{"x":1}}}"#,
+        );
+        let (out, mut client) = tokio::io::duplex(1 << 16);
+        proxy(
+            std::io::Cursor::new(input.into_bytes()),
+            out,
+            Arc::default(),
+            move |read, mut write| async move {
+                let mut lines = BufReader::new(read).lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    let message: Value = serde_json::from_str(&line).unwrap();
+                    let answer = if message["id"] == 1 {
+                        json!({ "jsonrpc": "2.0", "id": 1, "result": {} })
+                    } else {
+                        json!({ "jsonrpc": "2.0", "id": message["id"], "error": { "code": -32602, "message": "request _meta is missing or has malformed required fields: io.modelcontextprotocol/protocolVersion, io.modelcontextprotocol/clientCapabilities" } })
+                    };
+                    write
+                        .write_all(format!("{answer}\n").as_bytes())
+                        .await
+                        .unwrap();
+                }
+            },
+        )
+        .await;
+        let mut written = String::new();
+        client.read_to_string(&mut written).await.unwrap();
+        let node = "Request is missing the required _meta envelope for protocol revision 2026-07-28 (io.modelcontextprotocol/protocolVersion, io.modelcontextprotocol/clientCapabilities)";
+        let messages: Vec<Value> = written
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        assert_eq!(messages.len(), 3, "{written}");
+        assert_eq!(messages[1]["error"]["message"], node, "{written}");
+        assert_eq!(messages[2]["error"]["message"], node, "{written}");
     }
 
     // Node keeps the era its first request set: a 2026 claim in a 2025

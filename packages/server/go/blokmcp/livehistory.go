@@ -70,23 +70,17 @@ func historyCommands(batch json.RawMessage) []struct {
 	Name string
 	Args map[string]json.RawMessage
 } {
-	var envelope struct {
-		Commands []struct {
-			Name string                     `json:"name"`
-			Args map[string]json.RawMessage `json:"args"`
-		} `json:"commands"`
-	}
-	_ = json.Unmarshal(batch, &envelope)
+	commands, _ := batchCommands(batch)
 	var found []struct {
 		Name string
 		Args map[string]json.RawMessage
 	}
-	for _, command := range envelope.Commands {
-		if strings.HasPrefix(command.Name, "history.") && command.Name != "history.undo" && command.Name != "history.redo" {
+	for _, command := range commands {
+		if strings.HasPrefix(command.name, "history.") && command.name != "history.undo" && command.name != "history.redo" {
 			found = append(found, struct {
 				Name string
 				Args map[string]json.RawMessage
-			}{command.Name, command.Args})
+			}{command.name, command.args})
 		}
 	}
 	return found

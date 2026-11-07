@@ -113,7 +113,7 @@ type roomResult struct {
 }
 
 func (r *roomSession) run(ctx context.Context, call *callContext, batch json.RawMessage) (string, roomResult, *askedQuestion, error) {
-	flags, _ := marshal(r.server.mcpFlags("live", true))
+	flags, _ := marshal(r.server.mcpFlags("live", r.write))
 	mcp := string(flags)
 	var approval *string
 	if call.approval != nil {
@@ -160,14 +160,9 @@ func (r *roomSession) describe(ctx context.Context, call *callContext, query jso
 
 // writes is Node's isWriteBatch: a known command whose readOnly is false.
 func (r *roomSession) writes(batch json.RawMessage) bool {
-	var envelope struct {
-		Commands []struct {
-			Name string `json:"name"`
-		} `json:"commands"`
-	}
-	_ = json.Unmarshal(batch, &envelope)
-	for _, command := range envelope.Commands {
-		if readOnly, known := r.readOnly[command.Name]; known && !readOnly {
+	commands, _ := batchCommands(batch)
+	for _, command := range commands {
+		if readOnly, known := r.readOnly[command.name]; known && !readOnly {
 			return true
 		}
 	}

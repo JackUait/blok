@@ -201,16 +201,9 @@ func (s *Server) pageMap() bool { return s.options.PageTitles == "page-map" }
 // hasPageAction says whether a batch holds page.rename or page.setIcon. The
 // envelope check refuses one that is not alone, as Node's does.
 func hasPageAction(batch json.RawMessage) bool {
-	var envelope struct {
-		Commands []struct {
-			Name string `json:"name"`
-		} `json:"commands"`
-	}
-	if json.Unmarshal(batch, &envelope) != nil {
-		return false
-	}
-	for _, command := range envelope.Commands {
-		if command.Name == "page.rename" || command.Name == "page.setIcon" {
+	commands, _ := batchCommands(batch)
+	for _, command := range commands {
+		if command.name == "page.rename" || command.name == "page.setIcon" {
 			return true
 		}
 	}

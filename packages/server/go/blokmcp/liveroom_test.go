@@ -127,3 +127,75 @@ func TestACancelledFirstContractLoadIsNotKept(t *testing.T) {
 		t.Fatalf("the second load answered %v (%d commands)", err, len(readOnly))
 	}
 }
+
+// A read-only handle must not write, whatever case its command keys use.
+func TestAReadOnlyRoomHandleCannotWrite(t *testing.T) {
+	server, call := roomServer(t, roomHost(t, `{"blocks":[{"id":"a","type":"paragraph","data":{"text":"Hello"}}]}`))
+	handle, _ := structured(t, call("blok_open", map[string]any{"documentId": "doc", "write": false}, nil).answer)["handle"].(string)
+	who, err := server.actorFor(context.Background(), "alice", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Raw text: a Go map would sort "NAME" before "name".
+	for _, command := range []string{
+		`{"name":"doc.setTitle","args":{"title":"Plain"}}`,
+		`{"name":"doc.setTitle","args":{"title":"Folded"},"NAME":"doc.read"}`,
+		`{"name":"doc.setTitle","args":{"title":"Mixed"},"nAme":"doc.read"}`,
+	} {
+		arguments := json.RawMessage(`{"handle":"` + handle + `","commands":[` + command + `]}`)
+		result, err := server.dispatch(context.Background(), &toolCall{name: "blok_execute", arguments: arguments, caller: who})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ran := structured(t, result.answer)
+		failure, _ := ran["error"].(map[string]any)
+		if ran["ok"] != false || failure["code"] != "READ_ONLY" {
+			t.Fatalf("%s answered %v", command, ran)
+		}
+	}
+	page, _ := structured(t, call("blok_read", map[string]any{"handle": handle}, nil).answer)["page"].(map[string]any)
+	if title, _ := page["title"].(string); title != "" {
+		t.Fatalf("a read-only handle set the title to %q", title)
+	}
+}
+
+// The room itself is told the handle is read-only, so its own guard holds
+// even if this one misreads a batch.
+func TestARoomRunCarriesTheHandlesWriteFlag(t *testing.T) {
+	server, _ := roomServer(t, roomHost(t, `{"blocks":[{"id":"a","type":"paragraph","data":{"text":"Hello"}}]}`))
+	readOnly, err := server.roomReadOnly(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	who, err := server.actorFor(context.Background(), "alice", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := &roomSession{server: server, documentID: "doc", write: false, readOnly: readOnly}
+	_, result, _, err := session.run(context.Background(), &callContext{who: who, principal: "alice", actor: who.actor}, json.RawMessage(`{"commands":[{"name":"doc.setTitle","args":{"title":"X"}}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var failure struct {
+		Code string `json:"code"`
+	}
+	_ = json.Unmarshal(result.Error, &failure)
+	if result.OK || failure.Code != "READ_ONLY" {
+		t.Fatalf("the room ran a write for a read-only handle: %+v", result)
+	}
+}
+
+func TestWritesReadsCommandNamesWithExactKeys(t *testing.T) {
+	session := &roomSession{readOnly: map[string]bool{"doc.read": true, "doc.setTitle": false}}
+	for batch, want := range map[string]bool{
+		`{"commands":[{"name":"doc.setTitle","NAME":"doc.read"}]}`:                true,
+		`{"commands":[{"NAME":"doc.setTitle","name":"doc.read"}]}`:                false,
+		`{"commands":[{"name":"doc.read"}],"Commands":[{"name":"doc.setTitle"}]}`: false,
+		`{"Commands":[{"name":"doc.setTitle"}]}`:                                  false,
+		`{"commands":[{"name":"doc.read"},{"name":"doc.setTitle"}]}`:              true,
+	} {
+		if got := session.writes(json.RawMessage(batch)); got != want {
+			t.Errorf("writes(%s) = %v, want %v", batch, got, want)
+		}
+	}
+}

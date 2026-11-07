@@ -599,14 +599,9 @@ var commentCommands = map[string]bool{
 }
 
 func commentsOnly(batch json.RawMessage) bool {
-	var envelope struct {
-		Commands []struct {
-			Name string `json:"name"`
-		} `json:"commands"`
-	}
-	_ = json.Unmarshal(batch, &envelope)
-	for _, command := range envelope.Commands {
-		if commentCommands[command.Name] {
+	commands, _ := batchCommands(batch)
+	for _, command := range commands {
+		if commentCommands[command.name] {
 			return true
 		}
 	}

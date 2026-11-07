@@ -107,3 +107,36 @@ func acceptedReplies(raw json.RawMessage) map[string]json.RawMessage {
 	}
 	return accepted
 }
+
+// batchCommand is one command of a batch, read with exact keys.
+type batchCommand struct {
+	name string
+	args map[string]json.RawMessage
+}
+
+// batchCommands reads a batch's commands with exact keys, as JSON.parse
+// does. A struct decode also takes "NAME" for name (last wins), so a batch
+// could name one command to Go and another to the bundle. ok is false when
+// the batch is not an object or commands is not an array of objects.
+func batchCommands(batch json.RawMessage) ([]batchCommand, bool) {
+	var envelope map[string]json.RawMessage
+	if json.Unmarshal(batch, &envelope) != nil {
+		return nil, false
+	}
+	var raws []json.RawMessage
+	if raw, has := envelope["commands"]; has && json.Unmarshal(raw, &raws) != nil {
+		return nil, false
+	}
+	commands := make([]batchCommand, 0, len(raws))
+	for _, raw := range raws {
+		var members map[string]json.RawMessage
+		if json.Unmarshal(raw, &members) != nil {
+			return nil, false
+		}
+		var command batchCommand
+		_ = json.Unmarshal(members["name"], &command.name)
+		_ = json.Unmarshal(members["args"], &command.args)
+		commands = append(commands, command)
+	}
+	return commands, true
+}

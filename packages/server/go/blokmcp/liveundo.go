@@ -270,15 +270,11 @@ func (l *liveSession) replay(ctx context.Context, name string, gate json.RawMess
 
 // historyReplay names a batch that is one history.undo or history.redo.
 func historyReplay(batch json.RawMessage) string {
-	var envelope struct {
-		Commands []struct {
-			Name string `json:"name"`
-		} `json:"commands"`
-	}
-	if json.Unmarshal(batch, &envelope) != nil || len(envelope.Commands) != 1 {
+	commands, ok := batchCommands(batch)
+	if !ok || len(commands) != 1 {
 		return ""
 	}
-	if name := envelope.Commands[0].Name; name == "history.undo" || name == "history.redo" {
+	if name := commands[0].name; name == "history.undo" || name == "history.redo" {
 		return name
 	}
 	return ""

@@ -625,6 +625,11 @@ impl Room {
         if let Some(tickets) = &self.spec.tickets {
             match tickets.get(fresh).await {
                 Ok(ticket) => protocols.push(ticket),
+                // Node's revocable(): a FORBIDDEN mint ends the room, never retried.
+                Err(_) if tickets.refused() => {
+                    self.phase = Phase::Offline;
+                    return self.terminate("forbidden").await;
+                }
                 Err(_) => {
                     self.phase = Phase::Offline;
                     self.schedule_reconnect(None);

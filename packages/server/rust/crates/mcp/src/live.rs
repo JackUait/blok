@@ -44,6 +44,8 @@ pub struct Tickets {
     request: TicketRequest,
     outbound: Outbound,
     cached: Mutex<Option<(String, i64)>>,
+    /// The ticket URL's FORBIDDEN: it ends the room, and no mint follows.
+    refused: Mutex<Option<HostError>>,
 }
 
 fn unavailable(message: &str) -> HostError {
@@ -129,6 +131,14 @@ impl Tickets {
                 mint(secret, &claims, SystemTime::now()).map_err(|e| Fault::Internal(e.to_string()))
             }
             Mode::Url { url, host_token } => {
+                if let Some(refused) = self
+                    .refused
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone()
+                {
+                    return Err(refused.into());
+                }
                 let cached = self
                     .cached
                     .lock()
@@ -140,11 +150,24 @@ impl Tickets {
                 {
                     return Ok(ticket);
                 }
-                let fetched = self.fetch(url, host_token).await?;
+                let fetched = self.fetch(url, host_token).await.inspect_err(|error| {
+                    if error.code() == "FORBIDDEN" {
+                        *self.refused.lock().unwrap_or_else(|p| p.into_inner()) =
+                            Some(error.clone());
+                    }
+                })?;
                 *self.cached.lock().unwrap_or_else(|p| p.into_inner()) = Some(fetched.clone());
                 Ok(fetched.0)
             }
         }
+    }
+
+    /// The ticket URL refused this agent: the room ends for the session.
+    pub fn refused(&self) -> bool {
+        self.refused
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .is_some()
     }
 
     async fn fetch(&self, url: &str, host_token: &str) -> Result<(String, i64), HostError> {
@@ -274,6 +297,7 @@ impl Live {
                     request: request.clone(),
                     outbound: self.outbound.clone(),
                     cached: Mutex::new(None),
+                    refused: Mutex::new(None),
                 });
                 tickets.get(false).await?;
                 Some(tickets)
@@ -314,6 +338,54 @@ mod tests {
         assert!(ticket_claims("abc").is_none());
         assert!(ticket_claims("a.!!!.c").is_none());
         assert!(ticket_claims("a.e30.c").is_some());
+    }
+
+    // Node's revocable(): one FORBIDDEN from the ticket URL ends the room's
+    // tickets; later mints are not attempted, even for an expired ticket.
+    #[tokio::test]
+    async fn a_refused_mint_is_never_tried_again() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let posts = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let seen = posts.clone();
+        tokio::spawn(async move {
+            while let Ok((mut tcp, _)) = listener.accept().await {
+                seen.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let mut buf = [0u8; 4096];
+                let _ = tcp.read(&mut buf).await;
+                let _ = tcp
+                    .write_all(
+                        b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                    )
+                    .await;
+            }
+        });
+        let tickets = Tickets {
+            mode: Mode::Url {
+                url: format!("http://{address}/tickets"),
+                host_token: "t".to_owned(),
+            },
+            request: TicketRequest {
+                document_id: "d".to_owned(),
+                write: true,
+                principal: "p".to_owned(),
+                client_name: "c".to_owned(),
+                actor_id: "agent:p:c".to_owned(),
+            },
+            outbound: Outbound::new(),
+            // Expired: the next get fetches again.
+            cached: Mutex::new(Some(("old".to_owned(), 0))),
+            refused: Mutex::new(None),
+        };
+        for fresh in [false, true, false] {
+            let Err(Fault::Host(error)) = tickets.get(fresh).await else {
+                panic!("a refused ticket was served");
+            };
+            assert_eq!(error.code(), "FORBIDDEN");
+        }
+        assert_eq!(posts.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert!(tickets.refused());
     }
 
     // A ticket's exp of -1e300 saturates to i64::MIN; that must read as expired.

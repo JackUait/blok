@@ -3,7 +3,6 @@ package blokmcp
 import (
 	"context"
 	"io"
-	"net"
 	"net/http"
 	"time"
 
@@ -64,12 +63,12 @@ func fetch(ctx context.Context, timeout time.Duration, method, url string, heade
 // upgradeTransport carries the sync WebSocket upgrade. The sockets
 // transport's wrapped connections hand back no writable body on a 101, so
 // the upgrade runs on net/http's own, with the environment proxy.
-// The dial, TLS and answer timeouts end an upgrade the server never
-// answers, as the handshake timer does for the room.
+// The TLS and answer timeouts end an upgrade the server never answers; a
+// dial is ended by the room's teardown, which cancels its context. No
+// net.Dialer here: the outbound law allows this file none.
 var upgradeTransport = &http.Transport{
 	Proxy:                 http.ProxyFromEnvironment,
 	DisableCompression:    true,
-	DialContext:           (&net.Dialer{Timeout: handshakeTimeout}).DialContext,
 	TLSHandshakeTimeout:   handshakeTimeout,
 	ResponseHeaderTimeout: handshakeTimeout,
 }

@@ -34,10 +34,16 @@ import { startServer, type RunningServer } from '../server-conformance/run-again
  *   {"inject": Injection}                 a fault: drop the agent's next ack, reject its next
  *                                         operation, refuse every upgrade from now on, close it now,
  *                                         send it a QueryAwareness now, or cut every history request
- *                                         from now on before it is answered
+ *                                         from now on before it is answered, or answer every history
+ *                                         request whose path holds `match` with `status` from now on
+ *                                         (the newest such injection wins)
  *   {"settle": true}                      wait for quiet
  *   {"wait": ms}                          sleep, then wait for quiet
  *   {"history": true}                     the host's GET /sync/<doc>/history, normalized
+ *   {"httpRequests": true}                the agent's plain HTTP requests (history routes) since the
+ *                                         last call: method, path, If-Match, whether it sent an
+ *                                         idempotency key, and the status an injection answered;
+ *                                         a lineage in a path is named L1, L2… as in frames
  *
  * Writing cases: settle after every batch. The agent sends at most one awareness
  * frame per 100 ms, so two batches closer than that merge their frames. After a
@@ -66,7 +72,8 @@ export type Injection =
   | { close: number }
   | { refuseUpgrades: number }
   | { queryAwareness: true }
-  | { cutHistory: true };
+  | { cutHistory: true }
+  | { answerHttp: { match: string; status: number } };
 
 export interface RoomAction {
   peer?: string;
@@ -86,6 +93,7 @@ export interface RoomAction {
   /** Milliseconds to sleep, for a timer the case waits out (the 15 s redrive). */
   wait?: number;
   history?: boolean;
+  httpRequests?: boolean;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -211,8 +219,11 @@ interface Connection {
   held: Buffer[];
 }
 
-class FrameProxy {
+export interface ProxiedHttpRequest { method: string; path: string; ifMatch: string | null; idempotencyKey: boolean; answered: number | null }
+
+export class FrameProxy {
   public readonly log: Logged[] = [];
+  public readonly httpRequests: ProxiedHttpRequest[] = [];
   public readonly upgrades: Array<{ label: string; status: number }> = [];
   public lastActivity = Date.now();
   public readonly connections: Connection[] = [];
@@ -292,6 +303,25 @@ class FrameProxy {
     }));
     const path = requestLine.split(' ')[1] ?? '';
     const isUpgrade = (headers.get('upgrade') ?? '').toLowerCase() === 'websocket';
+
+    if (!isUpgrade) {
+      // The newest matching injection wins, so a case can change the status mid-way.
+      const answer = [...this.injections].reverse().find((injection) => 'answerHttp' in injection && path.includes(injection.answerHttp.match));
+      const status = answer !== undefined && 'answerHttp' in answer ? answer.answerHttp.status : null;
+
+      this.httpRequests.push({
+        method: requestLine.split(' ')[0] ?? '',
+        path,
+        ifMatch: headers.get('if-match') ?? null,
+        idempotencyKey: headers.has('blok-idempotency-key'),
+        answered: status,
+      });
+      if (status !== null) {
+        client.end(`HTTP/1.1 ${status} Injected\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+
+        return;
+      }
+    }
     const upstream = createConnection(this.target);
 
     this.track(upstream);
@@ -303,8 +333,11 @@ class FrameProxy {
       return;
     }
     if (!isUpgrade) {
-      // Plain HTTP (the history routes): pass it through untouched.
-      upstream.write(Buffer.concat([head, rest]));
+      // Plain HTTP (the history routes). Connection: close makes the client open a new
+      // connection per request, so route() sees every request head, not only the first.
+      const closing = [requestLine, ...lines.filter((line) => line !== '' && !/^connection\s*:/i.test(line)), 'Connection: close', '', ''].join('\r\n');
+
+      upstream.write(Buffer.concat([Buffer.from(closing, 'latin1'), rest]));
       client.pipe(upstream);
       upstream.pipe(client);
       client.on('data', () => this.touch());
@@ -863,6 +896,15 @@ const roomApi = (wsUrl: string, server: RunningServer, proxy: FrameProxy, cleanu
       await settle();
 
       return history();
+    }
+    if (action.httpRequests === true) {
+      await settle();
+
+      // A lineage in a path is random per run: named as the frames name it.
+      return proxy.httpRequests.splice(0).map((request) => ({
+        ...request,
+        path: request.path.replace(/\b[0-9a-f]{32}\b/g, (lineage) => nameOf(names.lineage, 'L', lineage)),
+      }));
     }
     if (action.connect === true) {
       return connectPeer(action.peer ?? 'alice', action.doc);

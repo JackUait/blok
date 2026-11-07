@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { request } from 'node:http';
+import { Agent, createServer, request } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync, inflateSync } from 'node:zlib';
@@ -9,6 +10,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type FixtureCase, runCase } from '../mcp-conformance/exchange';
 import { startFakeHost } from '../mcp-conformance/fake-host';
+import { FrameProxy } from '../mcp-conformance/live-room';
 
 // Stand-in "binaries" for the harness's own steps; no MCP server is built.
 const scratch = mkdtempSync(join(tmpdir(), 'mcp-harness-test-'));
@@ -186,6 +188,66 @@ describe('MCP conformance fake host', () => {
       expect(host.requests[0].headers.authorization).toBe('Bearer Ã©');
     } finally {
       await host.close();
+    }
+  });
+});
+
+const httpThrough = (port: number, path: string, headers: Record<string, string>, agent?: Agent): Promise<{ status: number; body: string }> => new Promise((resolve, reject) => {
+  request({ host: '127.0.0.1', port, path, method: 'POST', headers, ...(agent !== undefined && { agent }) }, (res) => {
+    let body = '';
+
+    res.setEncoding('utf8');
+    res.on('data', (chunk: string) => {
+      body += chunk;
+    });
+    res.on('end', () => resolve({ status: res.statusCode ?? 0, body }));
+  }).on('error', reject).end();
+});
+
+describe('MCP conformance live-room proxy', () => {
+  it('records plain HTTP requests, and answers the ones an answerHttp injection names', async () => {
+    const upstream = createServer((req, res) => {
+      res.writeHead(200).end('from upstream');
+    });
+
+    await new Promise<void>((resolve) => upstream.listen(0, '127.0.0.1', resolve));
+    const proxy = new FrameProxy({ host: '127.0.0.1', port: (upstream.address() as AddressInfo).port });
+    const port = await proxy.start();
+
+    try {
+      proxy.injections.push({ answerHttp: { match: '/restore', status: 412 } });
+
+      expect(await httpThrough(port, '/sync/d/history/v1/restore', { 'if-match': '"v1"', 'blok-idempotency-key': 'k' })).toEqual({ status: 412, body: '' });
+      expect(await httpThrough(port, '/sync/d/history', {})).toEqual({ status: 200, body: 'from upstream' });
+      expect(proxy.httpRequests).toEqual([
+        { method: 'POST', path: '/sync/d/history/v1/restore', ifMatch: '"v1"', idempotencyKey: true, answered: 412 },
+        { method: 'POST', path: '/sync/d/history', ifMatch: null, idempotencyKey: false, answered: null },
+      ]);
+    } finally {
+      await proxy.close();
+      await new Promise<void>((resolve) => upstream.close(() => resolve()));
+    }
+  });
+
+  it('sees every request of a keep-alive client, not just the first on a connection', async () => {
+    const upstream = createServer((req, res) => {
+      res.writeHead(200).end('ok');
+    });
+
+    await new Promise<void>((resolve) => upstream.listen(0, '127.0.0.1', resolve));
+    const proxy = new FrameProxy({ host: '127.0.0.1', port: (upstream.address() as AddressInfo).port });
+    const port = await proxy.start();
+    const agent = new Agent({ keepAlive: true, maxSockets: 1 });
+
+    try {
+      await httpThrough(port, '/sync/d/history', {}, agent);
+      await httpThrough(port, '/sync/d/history/v1/restore', {}, agent);
+
+      expect(proxy.httpRequests.map((r) => r.path)).toEqual(['/sync/d/history', '/sync/d/history/v1/restore']);
+    } finally {
+      agent.destroy();
+      await proxy.close();
+      await new Promise<void>((resolve) => upstream.close(() => resolve()));
     }
   });
 });

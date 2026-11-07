@@ -499,6 +499,7 @@ export class ImageTool implements BlockTool {
     const source = { kind: 'url', url } as const;
 
     this.conversionJob++;
+    this.converting = false;
     this.lastFileName = null;
     this.lastSource = source;
     this.state = 'LOADING';

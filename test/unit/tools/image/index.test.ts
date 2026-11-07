@@ -2307,6 +2307,27 @@ describe('ImageTool — GIF auto-conversion', () => {
     expect(root.querySelector('img')?.getAttribute('src')).toBe('https://x/other.png');
   });
 
+  it('labels a later link upload as uploading after a newer image replaced the GIF conversion', async () => {
+    heldConversion();
+    const uploadByUrl = (): Promise<{ url: string }> => new Promise(() => undefined);
+    const tool = new ImageTool({ ...createOptions({}, { uploader: { uploadByUrl } }), api: videoApi(vi.fn()) });
+    const root = tool.render();
+    pasteGif(tool);
+    await vi.waitFor(() => expect(mockConvert).toHaveBeenCalledOnce());
+    const link = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/other.png' } }) as PatternPasteEvent;
+    Object.defineProperty(link, 'type', { value: 'pattern' });
+    tool.onPaste(link);
+
+    const img = document.createElement('img');
+    img.setAttribute('src', 'https://x/p.png');
+    const tag = new CustomEvent('paste', { detail: { data: img } }) as HTMLPasteEvent;
+    Object.defineProperty(tag, 'type', { value: 'tag' });
+    tool.onPaste(tag);
+    await Promise.resolve();
+
+    expect(root.querySelector('.blok-image-uploading__label')?.textContent).toBe('tools.image.uploading');
+  });
+
   it('does not upload the GIF when its block was deleted during the conversion', async () => {
     const conversion = heldConversion();
     const uploadByFile = vi.fn(async () => ({ url: 'https://cdn/cat.gif' }));

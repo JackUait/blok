@@ -94,10 +94,9 @@ fn replace_lone_surrogates(text: &str) -> Option<String> {
                 at += 1;
             }
             b'\\' if in_string => match unit(at) {
-                Some(high @ 0xD800..=0xDBFF)
+                Some(0xD800..=0xDBFF)
                     if unit(at + 6).is_some_and(|low| (0xDC00..=0xDFFF).contains(&low)) =>
                 {
-                    let _ = high;
                     at += 12;
                 }
                 Some(0xD800..=0xDFFF) => {

@@ -1015,7 +1015,7 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 405, clientY: 60, pointerId: 1 }));
     });
 
-    it('grows faster the further past the edge the pointer is held', () => {
+    it('adds at the same pace however far past the edge the pointer is held', () => {
       const runHold = (pointerX: number): number => {
         const options = createDefaultOptions(wrapper, grid);
         const geo = overflowing();
@@ -1048,7 +1048,8 @@ describe('TableCornerDrag', () => {
       const justOutside = runHold(410);
       const farOutside = runHold(800);
 
-      expect(farOutside).toBeGreaterThan(justOutside);
+      expect(justOutside).toBeGreaterThan(0);
+      expect(farOutside).toBe(justOutside);
     });
 
     /** Guard: growing on top of a corner that can already reach the pointer runs away from it. */

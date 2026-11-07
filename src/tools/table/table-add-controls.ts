@@ -8,7 +8,7 @@ import { getElementDirection } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
 
 import { inlineAxis, measureLastColumnWidth, measureLastRowHeight, scrollToInlineEnd } from './table-direction';
-import { AUTO_SCROLL_GAIN_PER_SECOND, AUTO_SCROLL_VIEWPORT_BAND, revealBottom, verticalPort } from './table-scroll-port';
+import { AUTO_SCROLL_GAIN_PER_SECOND, AUTO_SCROLL_VIEWPORT_BAND, COLUMN_HOLD_FIRST_STEP_MS, COLUMN_HOLD_STEP_MS, revealBottom, verticalPort } from './table-scroll-port';
 
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
 const ADD_COL_ATTR = 'data-blok-table-add-col';
@@ -62,8 +62,10 @@ interface DragState {
   autoScrollFrame: number | null;
   /** Timestamp of the previous auto-scroll frame; 0 before the first one. */
   autoScrollAt: number;
-  /** Growth earned from holding the pointer at the edge, not yet spent on a whole row/column. */
+  /** Growth earned from holding the pointer at the edge, not yet spent on a whole row. */
   pending: number;
+  /** When a held column drag takes its next step; 0 while not held. */
+  nextColumnAt: number;
 }
 
 /**
@@ -413,6 +415,7 @@ export class TableAddControls {
       autoScrollFrame: null,
       autoScrollAt: 0,
       pending: 0,
+      nextColumnAt: 0,
     };
 
     target.addEventListener('pointermove', this.boundPointerMove);
@@ -534,11 +537,12 @@ export class TableAddControls {
     }
     state.autoScrollAt = 0;
     state.pending = 0;
+    state.nextColumnAt = 0;
   }
 
   /**
-   * Same feel as the corner drag: growth follows how far past the edge the
-   * pointer is held and is spent in whole rows/columns, then the drag
+   * Same feel as the corner drag: rows grow with how far past the edge the
+   * pointer is held, columns at one fixed pace both ways. Then the drag
    * re-anchors so pulling back from the edge shrinks from where the table is.
    */
   private autoScrollTick(timestamp: number): void {
@@ -557,16 +561,8 @@ export class TableAddControls {
       return;
     }
 
-    // The first frame only starts the clock: a drag released just past the edge adds nothing.
-    const elapsed = state.autoScrollAt === 0 ? 0 : (timestamp - state.autoScrollAt) / 1000;
-    const isShrinking = overshoot < 0;
-    const unit = isShrinking ? this.measureLastUnit(state.axis, state.direction) : this.measureAddUnit(state.axis);
-
-    state.autoScrollAt = timestamp;
-    state.pending += Math.abs(overshoot) * AUTO_SCROLL_GAIN_PER_SECOND * elapsed;
-
-    if (unit > 0 && state.pending >= unit) {
-      state.pending -= unit;
+    if (this.isStepDue(timestamp, overshoot)) {
+      const isShrinking = overshoot < 0;
       const add = state.axis === 'row' ? this.onDragAddRow : this.onDragAddCol;
 
       (isShrinking ? this.onDragRemoveCol : add)();
@@ -577,6 +573,46 @@ export class TableAddControls {
 
     this.reveal(state.axis);
     state.autoScrollFrame = requestAnimationFrame(next => this.autoScrollTick(next));
+  }
+
+  /** Whether this frame of a held drag adds or removes a row/column. */
+  private isStepDue(timestamp: number, overshoot: number): boolean {
+    const state = this.dragState;
+
+    if (state === null) {
+      return false;
+    }
+
+    if (state.axis === 'col') {
+      // The wait before the first step keeps a drag released just past the edge from adding.
+      if (state.nextColumnAt === 0) {
+        state.nextColumnAt = timestamp + COLUMN_HOLD_FIRST_STEP_MS;
+      }
+      if (timestamp < state.nextColumnAt) {
+        return false;
+      }
+      // From the due time, so frame lag does not slow the pace; after a stall, from now, so it does not burst.
+      state.nextColumnAt += COLUMN_HOLD_STEP_MS;
+      if (state.nextColumnAt <= timestamp) {
+        state.nextColumnAt = timestamp + COLUMN_HOLD_STEP_MS;
+      }
+
+      return true;
+    }
+
+    // The first frame only starts the clock: a drag released just past the edge adds nothing.
+    const elapsed = state.autoScrollAt === 0 ? 0 : (timestamp - state.autoScrollAt) / 1000;
+    const unit = this.measureAddUnit('row');
+
+    state.autoScrollAt = timestamp;
+    state.pending += Math.abs(overshoot) * AUTO_SCROLL_GAIN_PER_SECOND * elapsed;
+
+    if (unit <= 0 || state.pending < unit) {
+      return false;
+    }
+    state.pending -= unit;
+
+    return true;
   }
 
   /**

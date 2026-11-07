@@ -15,6 +15,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
 import { TableCornerDrag } from '../../../../src/tools/table/table-corner-drag';
 import type { TableCornerDragOptions } from '../../../../src/tools/table/table-corner-drag';
+import { COLUMN_HOLD_FIRST_STEP_MS, COLUMN_HOLD_STEP_MS } from '../../../../src/tools/table/table-scroll-port';
 import type { I18n } from '../../../../types/api';
 
 const mockShowTooltip = vi.fn();
@@ -1575,21 +1576,16 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
     });
   });
 
-  describe('spending the horizontal auto-scroll budget', () => {
-    /*
-     * A 64px trailing column with the pointer held exactly 64px past the edge,
-     * measured over exactly 125ms: budget = 64 * 8 * 0.125 = 64, which is the
-     * step to the pixel. Every quantity here is a power of two, so the two
-     * comparison mutants split on a value floating point can represent.
-     */
-    const meteredFixture = (): {
+  describe('holding a column drag at an edge', () => {
+    /** The pointer is held 64px past the container edge; how far does not matter. */
+    const heldFixture = (colWidths = [180, 180, 64]): {
       options: Options;
       hitZone: HTMLElement;
       geo: Geometry;
       view: ScrollView;
       pointerX: number;
     } => {
-      const geo = geometry({ colWidths: [180, 180, 64] });
+      const geo = geometry({ colWidths });
 
       grid = createGrid(geo);
       wrapper.appendChild(grid);
@@ -1616,91 +1612,87 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
         pointerX: geo.left + view.width + 64 };
     };
 
-    it('the first frame only starts the clock', () => {
+    const holdPastEnd = (): { options: Options; frames: Frames; added: number } => {
       const frames = captureFrames();
-      const { options, hitZone, geo, pointerX } = meteredFixture();
+      const { options, hitZone, geo, pointerX } = heldFixture();
 
       down(hitZone, gridRight(geo), gridBottom(geo));
       move(hitZone, pointerX, gridBottom(geo));
 
-      const added = options.onAddColumn.mock.calls.length;
+      return { options,
+        frames,
+        added: options.onAddColumn.mock.calls.length };
+    };
+
+    it('adds nothing before the first wait is over, so a drag released just past the edge adds nothing', () => {
+      const { options, frames, added } = holdPastEnd();
 
       frames.step(1000);
+      frames.step(1000 + COLUMN_HOLD_FIRST_STEP_MS - 1);
 
       expect(options.onAddColumn).toHaveBeenCalledTimes(added);
     });
 
-    it('appends the column the moment the budget reaches its width', () => {
-      const frames = captureFrames();
-      const { options, hitZone, geo, pointerX } = meteredFixture();
-
-      down(hitZone, gridRight(geo), gridBottom(geo));
-      move(hitZone, pointerX, gridBottom(geo));
-
-      const added = options.onAddColumn.mock.calls.length;
+    it('adds the first held column the moment the first wait is over', () => {
+      const { options, frames, added } = holdPastEnd();
 
       frames.step(1000);
-      frames.step(1125);
+      frames.step(1000 + COLUMN_HOLD_FIRST_STEP_MS);
 
       expect(options.onAddColumn).toHaveBeenCalledTimes(added + 1);
     });
 
-    it('carries the leftover budget forward instead of doubling it', () => {
-      const frames = captureFrames();
-      const { options, hitZone, geo, pointerX } = meteredFixture();
-
-      down(hitZone, gridRight(geo), gridBottom(geo));
-      move(hitZone, pointerX, gridBottom(geo));
-
-      const added = options.onAddColumn.mock.calls.length;
+    it('then adds one column per step, counted from when each was due', () => {
+      const { options, frames, added } = holdPastEnd();
+      const first = 1000 + COLUMN_HOLD_FIRST_STEP_MS;
 
       frames.step(1000);
-      frames.step(1125);
-      // A budget that grew instead of shrinking clears the 128px column at once.
-      frames.step(1250);
+      // A frame a little late does not push the next column back.
+      frames.step(first + 10);
+      frames.step(first + COLUMN_HOLD_STEP_MS - 1);
 
       expect(options.onAddColumn).toHaveBeenCalledTimes(added + 1);
+
+      frames.step(first + COLUMN_HOLD_STEP_MS);
+
+      expect(options.onAddColumn).toHaveBeenCalledTimes(added + 2);
     });
 
-    it('spends nothing while the trailing column cannot be measured', () => {
-      const geo = geometry({ colWidths: [180, 180, 180],
-        gridPad: 10 });
-
-      grid = createGrid(geo);
-      wrapper.appendChild(grid);
-
-      const options = createOptions(wrapper, grid);
-      const view = createScrollContainer(400, () => sum(geo.colWidths));
-
-      wireOps(options, grid, geo);
-      installGeometry(wrapper, grid, geo, view);
-
-      corner = new TableCornerDrag(options);
-      corner.attachScrollContainer(view.el);
-
-      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`);
-
-      if (!(hitZone instanceof HTMLElement)) {
-        throw new Error('hit zone not rendered');
-      }
-
-      const frames = captureFrames();
-
-      down(hitZone, gridRight(geo), gridBottom(geo));
-      move(hitZone, geo.left + view.width + 200, gridBottom(geo));
-
-      const added = options.onAddColumn.mock.calls.length;
+    it('does not add a burst of columns after a stalled frame', () => {
+      const { options, frames, added } = holdPastEnd();
 
       frames.step(1000);
-      frames.step(2000);
-      frames.step(3000);
+      frames.step(1000 + COLUMN_HOLD_FIRST_STEP_MS);
+      frames.step(5000);
+      frames.step(5016);
 
-      expect(options.onAddColumn).toHaveBeenCalledTimes(added);
+      expect(options.onAddColumn).toHaveBeenCalledTimes(added + 2);
+    });
+
+    it('removes held columns at the start edge at the same pace', () => {
+      const frames = captureFrames();
+      // More columns than the pull back to the start edge can remove by travel.
+      const { options, hitZone, geo } = heldFixture(Array.from({ length: 30 }, () => 64));
+
+      down(hitZone, gridRight(geo), gridBottom(geo));
+      move(hitZone, 2, gridBottom(geo));
+
+      const removed = options.onRemoveLastColumn.mock.calls.length;
+
+      frames.step(1000);
+      frames.step(1000 + COLUMN_HOLD_FIRST_STEP_MS - 1);
+
+      expect(options.onRemoveLastColumn).toHaveBeenCalledTimes(removed);
+
+      frames.step(1000 + COLUMN_HOLD_FIRST_STEP_MS);
+      frames.step(1000 + COLUMN_HOLD_FIRST_STEP_MS + COLUMN_HOLD_STEP_MS);
+
+      expect(options.onRemoveLastColumn).toHaveBeenCalledTimes(removed + 2);
     });
 
     it('keeps the corner and the readout up to date across frames', () => {
       const frames = captureFrames();
-      const { options, hitZone, geo, pointerX } = meteredFixture();
+      const { options, hitZone, geo, pointerX } = heldFixture();
 
       down(hitZone, gridRight(geo), gridBottom(geo));
       move(hitZone, pointerX, gridBottom(geo));
@@ -1709,7 +1701,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const left = hitZone.style.left;
 
       mockShowReadout.mockClear();
-      frames.step(1125);
+      frames.step(1000 + COLUMN_HOLD_FIRST_STEP_MS);
 
       expect(options.onAddColumn).toHaveBeenCalled();
       expect(hitZone.style.left).not.toBe(left);

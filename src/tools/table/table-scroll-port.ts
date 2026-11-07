@@ -17,6 +17,16 @@
 export const AUTO_SCROLL_GAIN_PER_SECOND = 8;
 
 /**
+ * Holding a column drag at an edge adds or removes columns at one fixed pace,
+ * the same both ways. A distance-based pace let adding (room to push far past
+ * the right edge) outrun removing (the window often touches the screen's left
+ * edge). Columns vary in width, so a pace in pixels also varied per column.
+ */
+export const COLUMN_HOLD_FIRST_STEP_MS = 120;
+/** About six columns a second. */
+export const COLUMN_HOLD_STEP_MS = 167;
+
+/**
  * How close to the scroller's lower edge counts as having run out of screen.
  * Rows are never clipped the way columns are, so the vertical trigger is the
  * pointer running out of room to drag with rather than the edge being hidden.

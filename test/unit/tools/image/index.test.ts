@@ -2302,6 +2302,50 @@ describe('ImageTool — an upload belongs to the pick that started it', () => {
     expect(root.getAttribute('data-state')).toBe('empty');
   });
 
+  it('stays empty and reports nothing when a cancelled upload fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const gate: { reject: (err: Error) => void } = { reject: () => undefined };
+    const uploadByFile = (): Promise<{ url: string }> => new Promise((_, reject) => {
+      gate.reject = reject;
+    });
+    const options = createOptions({}, { uploader: { uploadByFile } });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+    pasteFile(tool);
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    gate.reject(new Error('boom'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.getAttribute('data-state')).toBe('empty');
+    expect(options.api.media.reportFailure).not.toHaveBeenCalled();
+  });
+
+  it('stays empty and reports nothing when a cancelled link upload fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const gate: { reject: (err: Error) => void } = { reject: () => undefined };
+    const uploadByUrl = (): Promise<{ url: string }> => new Promise((_, reject) => {
+      gate.reject = reject;
+    });
+    const options = createOptions({}, { uploader: { uploadByUrl } });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+    const img = document.createElement('img');
+    img.setAttribute('src', 'https://x/p.png');
+    const event = new CustomEvent('paste', { detail: { data: img } }) as HTMLPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'tag' });
+    tool.onPaste(event);
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    gate.reject(new Error('boom'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.getAttribute('data-state')).toBe('empty');
+    expect(options.api.media.reportFailure).not.toHaveBeenCalled();
+  });
+
   it('keeps a pasted image link a tracked edit', () => {
     const block = createMockBlock();
     const tool = new ImageTool(createOptions({}, {}, block));

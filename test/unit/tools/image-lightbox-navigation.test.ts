@@ -237,6 +237,27 @@ describe('openLightbox navigation', () => {
       document.querySelectorAll('div').forEach((el) => el.remove());
     });
 
+    it('keeps the closing image when an arrow key lands during the close animation', () => {
+      const fakeAnim = { onfinish: null, oncancel: null, cancel: () => {} } as unknown as Animation;
+      Reflect.set(HTMLElement.prototype, 'animate', () => fakeAnim);
+      const close = openLightbox({
+        url: 'https://x/a.png',
+        navigation: {
+          items: [
+            { url: 'https://x/a.png', alt: 'a' },
+            { url: 'https://x/b.png', alt: 'b' },
+          ],
+          startIndex: 0,
+        },
+      });
+
+      close();
+      simulateKeydown(document, 'ArrowRight');
+
+      const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+      expect(img?.getAttribute('src')).toBe('https://x/a.png');
+    });
+
     it('morphs back into the navigated image thumbnail, not the one opened on', () => {
       // Web Animations API is absent in jsdom; stub a no-op so canAnimate() is true,
       // the FLIP close path (closeWithFlip) runs, and the dialog is not removed

@@ -84,6 +84,36 @@ describe('openLightbox drag-to-pan', () => {
     close();
   });
 
+  it('closes on a backdrop click after a drag the browser cancelled', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 150, 140));
+    d.dispatchEvent(pointer('pointercancel', 150, 140));
+
+    d.dispatchEvent(pointer('pointerdown', 10, 10));
+    d.dispatchEvent(pointer('pointerup', 10, 10));
+    d.click();
+
+    expect(document.body.querySelector('.blok-image-lightbox')).toBeNull();
+    close();
+  });
+
+  it('closes on a backdrop click after a drag released with no click', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 150, 140));
+    d.dispatchEvent(pointer('pointerup', 150, 140));
+
+    d.dispatchEvent(pointer('pointerdown', 10, 10));
+    d.dispatchEvent(pointer('pointerup', 10, 10));
+    d.click();
+
+    expect(document.body.querySelector('.blok-image-lightbox')).toBeNull();
+    close();
+  });
+
   it('springs back to the center on release when the image fits the screen', () => {
     const close = openWithCapture({ width: 800, height: 600 }, { width: 1200, height: 900 });
     const d = dialog();

@@ -515,6 +515,11 @@ export class FileTool implements BlockTool {
 
   public removed(): void {
     this.detached = true;
+    this.destroy();
+  }
+
+  /** Editor teardown: `editor.destroy()` calls this, never `removed()`. */
+  public destroy(): void {
     this.previewTeardown?.();
     this.previewTeardown = null;
   }

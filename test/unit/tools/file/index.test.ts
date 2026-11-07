@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FileTool } from '../../../../src/tools/file';
 import type { FileData, FileConfig } from '../../../../types/tools/file';
-import type { API, BlockAPI, BlockToolConstructorOptions, FilePasteEvent } from '../../../../types';
+import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, FilePasteEvent } from '../../../../types';
 
 const createMockApi = (overrides: Partial<API> = {}): API => ({
   styles: { block: 'blok-block' },
@@ -588,6 +588,19 @@ describe('FileTool — preview', () => {
     root.querySelector<HTMLElement>('[data-role="file-card"]')?.click();
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     tool.removed();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('closes an open preview when the editor is destroyed', () => {
+    const tool: BlockTool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', mimeType: 'application/pdf' }));
+    const root = tool.render();
+    if (!(root instanceof HTMLElement)) throw new Error('render() must return an element');
+    root.querySelector<HTMLElement>('[data-role="file-card"]')?.click();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+
+    // editor.destroy() reaches the tool only through destroy(), never removed().
+    tool.destroy?.();
+
     expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
 });

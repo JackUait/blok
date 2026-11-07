@@ -297,14 +297,22 @@ export class AudioTool implements BlockTool {
 
   public removed(): void {
     this.destroyed = true;
+    this.destroy();
+    releaseObjectUrl(this.api, this.block.id, this.data.url);
+    releaseObjectUrl(this.api, this.block.id, this.data.coverUrl);
+  }
+
+  /**
+   * Editor teardown: `editor.destroy()` calls this, never `removed()`.
+   * It leaves `destroyed` alone: that flag routes a late upload to a rebuilt block.
+   */
+  public destroy(): void {
     this.stopNearWatch();
     if (this.captionExitTimer) { clearTimeout(this.captionExitTimer); this.captionExitTimer = null; }
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
     this.waveformHandle?.destroy();
     this.waveformHandle = null;
-    releaseObjectUrl(this.api, this.block.id, this.data.url);
-    releaseObjectUrl(this.api, this.block.id, this.data.coverUrl);
     this.coverPicker?.close();
     this.coverPicker = null;
   }

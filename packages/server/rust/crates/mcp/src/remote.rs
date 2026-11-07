@@ -1573,6 +1573,10 @@ impl Room {
                 .pointer("/results/0/previous")
                 .and_then(Value::as_str);
             if let Err(failed) = self.restore(&version, previous).await {
+                // Node's revocable(): a FORBIDDEN mint for the POST ends the room too.
+                if self.spec.tickets.as_ref().is_some_and(|t| t.refused()) {
+                    self.terminate("forbidden").await;
+                }
                 return Ok(Executed::Done {
                     result: restore_failure(&result, &failed),
                     delivery: Delivery::None,
@@ -2273,8 +2277,9 @@ fn restore_failure(result: &Value, failure: &RestoreFailure) -> String {
         }),
         RestoreFailure::Host(message, status) => {
             // Node's ask(): no answer, a 429 or a 5xx other than a plain 500 or a 501 may pass on a retry.
+            // A failed ticket is a plain error: only no answer at all may pass.
             let retryable = match status {
-                None => true,
+                None => message == HISTORY_UNREACHABLE,
                 Some(status) => *status == 429 || ((502..=599).contains(status) && *status != 501),
             };
             json!({

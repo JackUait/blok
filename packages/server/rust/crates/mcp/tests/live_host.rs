@@ -384,3 +384,51 @@ async fn a_refused_mint_for_version_history_ends_the_room() {
     }
     assert_eq!(posts.load(std::sync::atomic::Ordering::SeqCst), 3);
 }
+
+// The same refusal on the restore's own POST: a ticket error is a plain
+// error to Node's restore, so it is not retryable, and the room ends.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_refused_mint_for_a_restore_ends_the_room() {
+    let host = host(true).await;
+    // open, connect, versions, then the restore's list and read; its POST is refused.
+    let (tickets, posts) = ticket_url(5).await;
+    let options = json!({
+        "transport": { "kind": "stdio" },
+        "auth": { "kind": "none" },
+        "sync": { "url": format!("ws://{}/sync", host.proxy.address), "origin": ORIGIN },
+        "tickets": { "kind": "url", "url": tickets, "hostToken": "t" },
+    });
+    let mcp = Mcp::new(Arc::new(Bundle::new(1).unwrap()), &options, None, None)
+        .await
+        .unwrap();
+    let handle = open(&mcp).await;
+    let kept = insert(&mcp, &handle, "p1", "x").await;
+    assert_eq!(kept["ok"], true, "{kept}");
+    let versions = history(&mcp, &handle, "history.versions").await;
+    let version = versions["results"][0]["versions"]
+        .as_array()
+        .and_then(|v| v.last())
+        .and_then(|v| v["version"].as_str())
+        .unwrap_or_else(|| panic!("{versions}"))
+        .to_owned();
+    let restore = call(
+        &mcp,
+        "blok_execute",
+        json!({ "handle": handle, "commands": [{ "name": "history.restore", "args": { "version": version } }] }),
+    )
+    .await;
+    assert_eq!(
+        restore["error"],
+        json!({
+            "code": "TOOL_ACTION_FAILED",
+            "message": "The version history failed: The host did not grant this document to this agent.",
+            "retryable": false,
+            "commandIndex": 0,
+            "path": "/commands/0/args",
+        }),
+        "{restore}"
+    );
+    let write = insert(&mcp, &handle, "p2", "y").await;
+    assert_eq!(write["error"]["code"], "FORBIDDEN", "{write}");
+    assert_eq!(posts.load(std::sync::atomic::Ordering::SeqCst), 6);
+}

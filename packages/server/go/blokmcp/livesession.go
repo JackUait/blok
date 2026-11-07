@@ -47,8 +47,11 @@ type liveSession struct {
 	unacked    map[int][]string
 	batchOrder []int
 	undo       *yjs.UndoManager
-	done       []*liveStep
-	undone     []*liveStep
+	// undoDoc is the doc undo tracks. The room swaps its doc after a refused
+	// write; every step was on the old one, so history starts over.
+	undoDoc *yjs.Doc
+	done    []*liveStep
+	undone  []*liveStep
 	// marksPast and marksFuture are the executor's history marks: a write,
 	// or a restore that undo cannot cross.
 	marksPast   []historyMark
@@ -139,7 +142,7 @@ func (s *Server) openLive(ctx context.Context, documentID string, write bool, wh
 	}
 	live := &liveSession{server: s, room: room, documentID: documentID, write: write, readOnly: !write,
 		actorID: actor.ID, name: who.presenceName, color: presenceColor(actor.ID), onBehalfOf: onBehalfOf,
-		unacked: map[int][]string{}, undo: yjs.NewUndoManager(room.doc)}
+		unacked: map[int][]string{}, undo: yjs.NewUndoManager(room.doc), undoDoc: room.doc}
 	room.mu.Lock()
 	// l<n> counts updates from the session's start, not the first sync.
 	room.count = 0
@@ -359,6 +362,11 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 	defer room.mu.Unlock()
 	if room.end != nil {
 		return l.failed(ctx, nil, l.endError(ctx, room.end))
+	}
+	if l.undoDoc != room.doc {
+		l.undo.Destroy()
+		l.undo, l.undoDoc = yjs.NewUndoManager(room.doc), room.doc
+		l.done, l.undone = nil, nil
 	}
 	mark := len(room.order)
 	document, revision, err := l.exportLocked(ctx)

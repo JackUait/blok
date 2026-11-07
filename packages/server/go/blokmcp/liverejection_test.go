@@ -168,3 +168,84 @@ func TestARefusedBatchIsNotSavedByTheNextConnection(t *testing.T) {
 		t.Fatalf("the handle still reads the refused batch: %v", blocks)
 	}
 }
+
+// After the swap, history.undo and history.redo know nothing of the
+// discarded doc, and undo a later step on the live one.
+func TestHistoryAfterTheSwapActsOnTheLiveDoc(t *testing.T) {
+	host := ticketHost(t)
+	tickets := downgradedTickets(t)
+	origin := rejectionOrigin
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"},
+		Sync:    &Sync{URL: "ws" + strings.TrimPrefix(host.URL, "http") + "/sync", Origin: &origin},
+		Tickets: &Tickets{Kind: "url", URL: tickets.URL, HostToken: "host-token-1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx := context.Background()
+	who, err := server.actorFor(ctx, "alice", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	call := func(name string, arguments map[string]any) map[string]any {
+		raw, _ := json.Marshal(arguments)
+		result, err := server.dispatch(ctx, &toolCall{name: name, arguments: raw, caller: who})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return structured(t, result.answer)
+	}
+	execute := func(handle string, command map[string]any) map[string]any {
+		return call("blok_execute", map[string]any{"handle": handle, "commands": []any{command}})
+	}
+	code := func(answer map[string]any) any {
+		failure, _ := answer["error"].(map[string]any)
+		return failure["code"]
+	}
+
+	handle, _ := call("blok_open", map[string]any{"documentId": "live-doc", "write": true})["handle"].(string)
+	execute(handle, map[string]any{"name": "block.insert", "args": map[string]any{"type": "paragraph", "id": "p1", "data": map[string]any{"text": "REFUSED"}}})
+	server.handles.mu.Lock()
+	live := server.handles.entries[handle].session.(*liveSession)
+	server.handles.mu.Unlock()
+	room := live.room
+	time.Sleep(1100 * time.Millisecond)
+	room.mu.Lock()
+	generation := room.generation
+	room.conn.abort()
+	room.mu.Unlock()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		room.mu.Lock()
+		synced := room.synced && room.generation > generation+1
+		room.mu.Unlock()
+		if synced {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the room did not reconnect")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	time.Sleep(300 * time.Millisecond)
+	// A read-only refusal latches the handle read-only; lift it so history is
+	// reached, as after a refusal with another code.
+	live.readOnly = false
+
+	if got := code(execute(handle, map[string]any{"name": "history.undo", "args": map[string]any{}})); got != "NOTHING_TO_UNDO" {
+		t.Fatalf("history.undo after the swap answered %v", got)
+	}
+	if got := code(execute(handle, map[string]any{"name": "history.redo", "args": map[string]any{}})); got != "NOTHING_TO_REDO" {
+		t.Fatalf("history.redo after the swap answered %v", got)
+	}
+	if wrote := execute(handle, map[string]any{"name": "block.insert", "args": map[string]any{"type": "paragraph", "id": "p2", "data": map[string]any{"text": "later"}}}); wrote["ok"] != true {
+		t.Fatalf("the later write answered %v", wrote)
+	}
+	if undone := execute(handle, map[string]any{"name": "history.undo", "args": map[string]any{}}); undone["ok"] != true {
+		t.Fatalf("the undo of the later write answered %v", undone)
+	}
+	read := call("blok_read", map[string]any{"handle": handle})
+	if blocks, _ := read["blocks"].([]any); len(blocks) != 0 {
+		t.Fatalf("the undo missed the live doc: %v", blocks)
+	}
+}

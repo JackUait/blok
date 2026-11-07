@@ -40,11 +40,12 @@ func marshal(value any) ([]byte, error) {
 	return rawLineSeparators(bytes.TrimRight(buffer.Bytes(), "\n")), nil
 }
 
-// rawLineSeparators turns the \u2028 and \u2029 escapes Go's encoder
-// always writes back into the characters, as JSON.stringify writes them. An
-// escape whose backslash is itself escaped is text and stays.
+// rawLineSeparators turns the escapes Go's encoder writes and
+// JSON.stringify does not (\u2028, \u2029, \ufffd, and with HTML escaping
+// \u0026, \u003c, \u003e) back into the characters. An escape whose
+// backslash is itself escaped is text and stays.
 func rawLineSeparators(written []byte) []byte {
-	if !bytes.Contains(written, []byte(`\u202`)) {
+	if !bytes.Contains(written, []byte(`\u`)) {
 		return written
 	}
 	out := make([]byte, 0, len(written))
@@ -53,14 +54,12 @@ func rawLineSeparators(written []byte) []byte {
 			out = append(out, written[i])
 			continue
 		}
-		if i+5 < len(written) && string(written[i+1:i+5]) == "u202" && (written[i+5] == '8' || written[i+5] == '9') {
-			if written[i+5] == '8' {
-				out = append(out, "\u2028"...)
-			} else {
-				out = append(out, "\u2029"...)
+		if i+5 < len(written) {
+			if char, ok := rawEscapes[string(written[i+1:i+6])]; ok {
+				out = append(out, char...)
+				i += 5
+				continue
 			}
-			i += 5
-			continue
 		}
 		// Any other escape is two bytes or \uXXXX; copy its backslash and
 		// the next byte together so an escaped backslash is never read as
@@ -72,6 +71,11 @@ func rawLineSeparators(written []byte) []byte {
 		}
 	}
 	return out
+}
+
+var rawEscapes = map[string]string{
+	"u2028": "\u2028", "u2029": "\u2029", "ufffd": "\ufffd",
+	"u0026": "&", "u003c": "<", "u003e": ">",
 }
 
 // call runs op on input and decodes the answer into out (a pointer), unless

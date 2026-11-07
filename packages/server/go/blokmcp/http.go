@@ -290,6 +290,10 @@ func (r *recorder) send(w http.ResponseWriter, modern bool) {
 	case strings.HasPrefix(contentType, "application/json"):
 		body = fixMessage(body, refused)
 	}
+	if strings.HasPrefix(contentType, "text/event-stream") || strings.HasPrefix(contentType, "application/json") {
+		// The SDK's encoder escapes what JSON.stringify writes raw.
+		body = rawLineSeparators(body)
+	}
 	for name, values := range r.header {
 		w.Header()[name] = values
 	}

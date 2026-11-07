@@ -95,6 +95,8 @@ func (c *lineConn) Write(ctx context.Context, message jsonrpc.Message) error {
 	if err != nil {
 		return err
 	}
+	// The SDK's encoder escapes what JSON.stringify writes raw.
+	data = rawLineSeparators(data)
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
 	_, err = c.out.Write(append(data, '\n'))

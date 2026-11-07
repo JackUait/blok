@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
+	"sort"
 	"strings"
 	"sync/atomic"
 
@@ -36,6 +38,8 @@ type identity struct {
 type rawResult struct {
 	mcp.ResultBase
 	members map[string]json.RawMessage
+	// order, when set, is Node's key order; other keys follow sorted, then _meta.
+	order []string
 }
 
 func (r *rawResult) MarshalJSON() ([]byte, error) {
@@ -50,7 +54,44 @@ func (r *rawResult) MarshalJSON() ([]byte, error) {
 			members[key] = value
 		}
 	}
-	return json.Marshal(members)
+	if r.order == nil {
+		return json.Marshal(members)
+	}
+	keys := make([]string, 0, len(members))
+	for _, key := range r.order {
+		if _, ok := members[key]; ok {
+			keys = append(keys, key)
+		}
+	}
+	rest := make([]string, 0, len(members))
+	for key := range members {
+		if key != "_meta" && !slices.Contains(r.order, key) {
+			rest = append(rest, key)
+		}
+	}
+	sort.Strings(rest)
+	keys = append(keys, rest...)
+	if _, ok := members["_meta"]; ok {
+		keys = append(keys, "_meta")
+	}
+	buffer := []byte{'{'}
+	for at, key := range keys {
+		if at > 0 {
+			buffer = append(buffer, ',')
+		}
+		name, _ := marshal(key)
+		buffer = append(append(append(buffer, name...), ':'), members[key]...)
+	}
+	return append(buffer, '}'), nil
+}
+
+// toolResultOrder is the key order of Node's tools/call result.
+var toolResultOrder = []string{"content", "structuredContent", "isError", "resultType"}
+
+// textContent is a content item, its keys in Node's order.
+type textContent struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
 }
 
 func quoted(text string) json.RawMessage {
@@ -288,8 +329,8 @@ func (s *Server) callTool(ctx context.Context, req mcp.Request, who identity, as
 			RequestedSchema: result.ask.RequestedSchema,
 		})
 		if elicitErr != nil {
-			text, _ := marshal([]map[string]string{{"type": "text", "text": elicitErr.Error()}})
-			return &rawResult{members: map[string]json.RawMessage{"content": text, "isError": json.RawMessage("true")}}, nil
+			text, _ := marshal([]textContent{{Type: "text", Text: elicitErr.Error()}})
+			return &rawResult{members: map[string]json.RawMessage{"content": text, "isError": json.RawMessage("true")}, order: toolResultOrder}, nil
 		}
 		reply, _ := marshal(answer)
 		approval["replies"] = map[string]json.RawMessage{result.ask.Key: reply}
@@ -306,11 +347,11 @@ func toolResult(req mcp.Request, answer json.RawMessage) (*rawResult, error) {
 	if err := json.Unmarshal(answer, &parts); err != nil {
 		return nil, err
 	}
-	content, _ := marshal([]map[string]string{{"type": "text", "text": string(parts.StructuredContent)}})
+	content, _ := marshal([]textContent{{Type: "text", Text: string(parts.StructuredContent)}})
 	isError, _ := marshal(parts.IsError)
 	members := map[string]json.RawMessage{"content": content, "structuredContent": parts.StructuredContent, "isError": isError}
 	if isModern(req) {
 		members["resultType"] = quoted("complete")
 	}
-	return &rawResult{members: members}, nil
+	return &rawResult{members: members, order: toolResultOrder}, nil
 }

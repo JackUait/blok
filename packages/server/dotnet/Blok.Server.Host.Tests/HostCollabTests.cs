@@ -33,6 +33,14 @@ public sealed class HostCollabTests
 
   private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(10);
 
+  /*
+   * A sync upgrade joins the room before it answers 101, so the first one opens the room:
+   * it fetches the doc and starts the JS engine. Measured: 1.2 s idle, 3.5-5 s with every
+   * core busy, and past 10 s when the other test assemblies share the machine (CI runs
+   * them all at once). Later joins take milliseconds, so this only bounds the cold start.
+   */
+  private static readonly TimeSpan ConnectDeadline = TimeSpan.FromSeconds(60);
+
   /// <summary>HostOptions.ShutdownTimeout is 30s; a drain that misses it is a failure worth seeing.</summary>
   private static readonly TimeSpan ExitDeadline = TimeSpan.FromSeconds(35);
 
@@ -853,7 +861,7 @@ public sealed class HostCollabTests
   private static async Task<ClientWebSocket> ConnectAsync(string listen)
   {
     var socket = new ClientWebSocket();
-    using var deadline = new CancellationTokenSource(Deadline);
+    using var deadline = new CancellationTokenSource(ConnectDeadline);
 
     try
     {

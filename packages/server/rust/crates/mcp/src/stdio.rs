@@ -2,8 +2,9 @@
 //! see that a 2026-07-28 ping (which Node answers -32601) is one; this proxy
 //! answers that ping itself and passes every other line through. It also
 //! holds rmcp's input open after stdin ends until the calls in flight are
-//! answered: rmcp drops a running call when its input ends, and Node lets
-//! the work finish first.
+//! done: rmcp drops a running call when its input ends, and Node lets the
+//! work finish first. Their answers are not written, as Node's SDK aborts
+//! a request in flight when stdin ends.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -121,6 +122,10 @@ struct Sent {
     /// (rmcp keys calls by id): that id's text, and the id the client sent.
     aliases: Vec<(String, Value)>,
     next_alias: u64,
+    /// The tools/call ones among `ids`.
+    calls: HashSet<String>,
+    /// Calls in flight when stdin ended: their answers are not written.
+    abandoned: HashSet<String>,
 }
 
 /// Puts `id` in place of the message's id, or of a cancel's requestId.
@@ -154,7 +159,7 @@ impl Pending {
             Read::Request { id, call } => {
                 let (id, line) = {
                     let mut state = self.state();
-                    if state.ids.contains(&id) {
+                    let (id, line) = if state.ids.contains(&id) {
                         state.next_alias += 1;
                         let alias =
                             Value::String(format!("blok-mcp reused id {}", state.next_alias));
@@ -166,7 +171,11 @@ impl Pending {
                     } else {
                         state.ids.insert(id.clone());
                         (id, line.to_owned())
+                    };
+                    if call.is_some() {
+                        state.calls.insert(id.clone());
                     }
+                    (id, line)
                 };
                 if let (Some(requests), Some(arguments)) = (&self.requests, call) {
                     requests.read(&id, &arguments);
@@ -176,20 +185,21 @@ impl Pending {
             Read::Cancelled { id } => {
                 let (id, line) = {
                     let mut state = self.state();
-                    let latest = state
-                        .aliases
-                        .iter()
-                        .rposition(|(_, original)| original.to_string() == id);
+                    let latest = state.aliases.iter().rposition(|(_, original)| {
+                        *original == serde_json::from_str::<Value>(&id).unwrap_or(Value::Null)
+                    });
                     match latest {
                         Some(at) => {
                             let (alias, _) = state.aliases.remove(at);
                             let value = serde_json::from_str(&alias).unwrap_or(Value::Null);
                             state.ids.remove(&alias);
+                            state.calls.remove(&alias);
                             let line = with_id(line, "/params/requestId", value);
                             (alias, line)
                         }
                         None => {
                             state.ids.remove(&id);
+                            state.calls.remove(&id);
                             (id, line.to_owned())
                         }
                     }
@@ -203,32 +213,45 @@ impl Pending {
         }
     }
 
+    /// Stdin ended: the tool calls in flight still run, but go unanswered.
+    /// Node's SDK aborts every request in flight then; only its tool calls
+    /// do real async work, so the rest are already answered there.
+    fn abandon_in_flight(&self) {
+        let mut state = self.state();
+        state.abandoned = state.calls.clone();
+    }
+
     /// A server line as the client must see it: an answer under an alias
-    /// carries the id the client sent.
-    fn outgoing(&self, line: &str) -> String {
-        if !line.contains("blok-mcp reused id ") {
-            return line.to_owned();
+    /// carries the id the client sent. None for an abandoned request's answer.
+    fn outgoing(&self, line: &str) -> Option<String> {
+        // Most lines need neither: skip the parse.
+        if self.state().abandoned.is_empty() && !line.contains("blok-mcp reused id ") {
+            return Some(line.to_owned());
         }
         let Ok(message) = serde_json::from_str::<Value>(line) else {
-            return line.to_owned();
+            return Some(line.to_owned());
         };
         let Some(id) = message
             .get("id")
             .filter(|_| message.get("method").is_none())
         else {
-            return line.to_owned();
+            return Some(line.to_owned());
         };
         let id = id.to_string();
-        let original = self
-            .state()
+        let state = self.state();
+        if state.abandoned.contains(&id) {
+            return None;
+        }
+        let original = state
             .aliases
             .iter()
             .find(|(alias, _)| *alias == id)
             .map(|(_, original)| original.clone());
-        match original {
+        drop(state);
+        Some(match original {
             Some(original) => with_id(line, "/id", original),
             None => line.to_owned(),
-        }
+        })
     }
 
     /// Notes a line from the server, if it is a response.
@@ -241,6 +264,8 @@ impl Pending {
             {
                 let mut state = self.state();
                 state.ids.remove(&id);
+                state.calls.remove(&id);
+                state.abandoned.remove(&id);
                 state.aliases.retain(|(alias, _)| *alias != id);
             }
             if let Some(requests) = &self.requests {
@@ -341,6 +366,7 @@ where
                     break;
                 }
             }
+            pending.abandon_in_flight();
             pending.drained(DRAIN_LIMIT).await;
             let _ = to_server.shutdown().await;
         })
@@ -354,7 +380,10 @@ where
                 if is_id_less_error(&line) {
                     continue;
                 }
-                let written = write_line(&out, &pending.outgoing(&line)).await;
+                let written = match pending.outgoing(&line) {
+                    Some(line) => write_line(&out, &line).await,
+                    None => Ok(()),
+                };
                 pending.answered(&line);
                 if written.is_err() {
                     break;
@@ -411,12 +440,14 @@ mod tests {
         let _ = reader.await;
     }
 
+    // Node's SDK: a request in flight when stdin ends is not answered, and
+    // stop still waits for its work.
     #[tokio::test]
-    async fn stdin_ending_waits_for_the_calls_in_flight() {
-        let input = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\"}\n".to_vec();
+    async fn stdin_ending_lets_the_calls_in_flight_finish_but_writes_no_answer() {
+        let input = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_read\"}}\n".to_vec();
         let log = Arc::new(std::sync::Mutex::new(Vec::new()));
         let seen = log.clone();
-        let (out, _keep) = tokio::io::duplex(1 << 16);
+        let (out, mut client) = tokio::io::duplex(1 << 16);
         proxy(
             std::io::Cursor::new(input),
             out,
@@ -425,6 +456,31 @@ mod tests {
         )
         .await;
         assert_eq!(*log.lock().unwrap(), vec!["answered", "input ended"]);
+        let mut written = String::new();
+        client.read_to_string(&mut written).await.unwrap();
+        assert_eq!(
+            written, "",
+            "an answer to a call in flight at the end was written"
+        );
+    }
+
+    // initialize, tools/list and the like answer at once in Node, so before its end.
+    #[tokio::test]
+    async fn stdin_ending_still_writes_answers_to_requests_that_are_not_calls() {
+        let input = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}\n".to_vec();
+        let log = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = log.clone();
+        let (out, mut client) = tokio::io::duplex(1 << 16);
+        proxy(
+            std::io::Cursor::new(input),
+            out,
+            Arc::default(),
+            move |read, write| slow_server(read, write, seen),
+        )
+        .await;
+        let mut written = String::new();
+        client.read_to_string(&mut written).await.unwrap();
+        assert_eq!(written, "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n");
     }
 
     #[tokio::test]
@@ -596,8 +652,8 @@ mod tests {
         let second_id = second["id"].to_string();
         let answer = format!(r#"{{"jsonrpc":"2.0","id":{second_id},"result":{{}}}}"#);
         assert_eq!(
-            pending.outgoing(&answer),
-            r#"{"jsonrpc":"2.0","id":7,"result":{}}"#
+            pending.outgoing(&answer).as_deref(),
+            Some(r#"{"jsonrpc":"2.0","id":7,"result":{}}"#)
         );
         pending.answered(&answer);
         // A cancel names the latest request with the id, as Node's SDK keeps it.

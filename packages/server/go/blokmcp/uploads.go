@@ -98,6 +98,7 @@ type hostUpload struct {
 	Type     string  `json:"type"`
 	Kind     string  `json:"kind"`
 	Tool     string  `json:"tool"`
+	Size     int64   `json:"size"`
 	Data     *string `json:"data"`
 	Local    *int    `json:"local"`
 	URL      string  `json:"url"`
@@ -177,7 +178,17 @@ func (s *Server) runUpload(ctx context.Context, call *hostUpload, run *uploadRun
 			}
 			bytes = decoded
 		case call.Local != nil:
-			bytes = run.reads[*call.Local]
+			read, ok := run.reads[*call.Local]
+			if !ok {
+				return thrown(fmt.Errorf("blok-mcp: the upload names no read of this batch"))
+			}
+			bytes = read
+		default:
+			return thrown(fmt.Errorf("blok-mcp: the upload names no bytes"))
+		}
+		// The bundle checked a stand-in of this size; other bytes were not checked.
+		if int64(len(bytes)) != call.Size {
+			return thrown(fmt.Errorf("blok-mcp: the upload is %d bytes, not the %d the batch checked", len(bytes), call.Size))
 		}
 		asset, err := s.options.Uploads.Uploader.UploadByFile(ctx, UploadFile{Name: call.FileName, Type: call.Type, Bytes: bytes}, upload)
 		if err != nil {

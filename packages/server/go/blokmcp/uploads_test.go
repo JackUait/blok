@@ -220,3 +220,47 @@ func TestUploadOptionsAreCheckedAsNodeChecksThem(t *testing.T) {
 		server.Close()
 	}
 }
+
+// An upload must be alone in its batch, so one behind another command never
+// reaches the uploader, and bad base64 is refused before any upload.
+func TestUploadBytesAreOnlyTheCheckedCommands(t *testing.T) {
+	f := newUploadFixture(t)
+	server := f.start(t, &Uploads{Uploader: f.uploader})
+	answer := f.execute(t, server, true, `[{"name":"doc.setTitle","args":{"title":"T"}},{"name":"file.uploadFile","args":{"data":"aGVsbG8=","fileName":"a.txt"}}]`)
+	if errorCode(answer) != "INVALID_ARGS" || f.uploader.calls() != 0 {
+		t.Fatalf("two commands: %v, %d uploads", answer, f.uploader.calls())
+	}
+	answer = f.execute(t, server, true, `[{"name":"file.uploadFile","args":{"data":"a$bc","fileName":"a.txt"}}]`)
+	if errorCode(answer) != "INVALID_ARGS" || f.uploader.calls() != 0 {
+		t.Fatalf("bad base64: %v, %d uploads", answer, f.uploader.calls())
+	}
+}
+
+// The host decodes the data the bundle named, and refuses bytes that are
+// not the size the bundle checked or base64 that does not decode.
+func TestRunUploadRefusesBytesTheBatchDidNotCheck(t *testing.T) {
+	f := newUploadFixture(t)
+	server := f.start(t, &Uploads{Uploader: f.uploader})
+	data := base64.StdEncoding.EncodeToString([]byte("hello"))
+	for name, call := range map[string]*hostUpload{
+		"wrong size": {Op: "uploadByFile", FileName: "a.txt", Size: 4, Data: &data},
+		"bad base64": {Op: "uploadByFile", FileName: "a.txt", Size: 3, Data: new(string)},
+		"no bytes":   {Op: "uploadByFile", FileName: "a.txt", Size: 5},
+		"no read":    {Op: "uploadByFile", FileName: "a.txt", Size: 5, Local: new(int)},
+	} {
+		if name == "bad base64" {
+			*call.Data = "a$bc"
+		}
+		answer, _ := server.runUpload(context.Background(), call, &uploadRun{reads: map[int][]byte{}}).(map[string]any)
+		if _, failed := answer["error"]; !failed {
+			t.Fatalf("%s: %v", name, answer)
+		}
+	}
+	if f.uploader.calls() != 0 {
+		t.Fatalf("%d uploads", f.uploader.calls())
+	}
+	ok := server.runUpload(context.Background(), &hostUpload{Op: "uploadByFile", FileName: "a.txt", Size: 5, Data: &data}, &uploadRun{reads: map[int][]byte{}})
+	if answer, _ := ok.(map[string]any); answer["url"] != "https://cdn.test/a.txt" || string(f.uploader.files[0].Bytes) != "hello" {
+		t.Fatalf("%v", ok)
+	}
+}

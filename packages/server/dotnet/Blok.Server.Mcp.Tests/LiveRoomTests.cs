@@ -56,7 +56,7 @@ public sealed class LiveRoomTests
     // The server's vector predates the operation, so its diff would send that work again.
     await host.SendAsync(new SyncStep1Frame(new YDoc().EncodeStateVector()));
     await host.SendAsync(new AcknowledgementFrame(Lineage, operation.OperationId, 1));
-    var next = await host.NextAsync<SyncWireMessage>();
+    var next = await host.NextDocFrameAsync();
 
     Assert.IsType<SyncStep1Frame>(next);
     await room.CloseAsync();
@@ -169,6 +169,20 @@ public sealed class LiveRoomTests
     internal async Task SendAsync(SyncWireMessage frame)
     {
       await server!.SendAsync(SyncWire.Encode(frame), WebSocketMessageType.Binary, true, CancellationToken.None);
+    }
+
+    /// <summary>The next frame about the document. Presence frames can come between at any time.</summary>
+    internal async Task<SyncWireMessage> NextDocFrameAsync()
+    {
+      while (true)
+      {
+        var frame = await NextAsync<SyncWireMessage>();
+
+        if (frame is not AwarenessFrame and not QueryAwarenessFrame)
+        {
+          return frame;
+        }
+      }
     }
 
     internal async Task<T> NextAsync<T>()

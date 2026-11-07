@@ -53,6 +53,69 @@ internal static class McpRequestShape
         && (!parameters.TryGetProperty("_meta", out var meta) || meta.ValueKind == JsonValueKind.Object);
   }
 
+  /// <summary>
+  /// Node's JSONRPCMessageSchema (core schemas.ts): a request, notification, result or error, each
+  /// with no other top-level key. Node's stdio reader drops any other line without an answer.
+  /// </summary>
+  internal static bool IsNodeMessage(JsonElement message)
+  {
+    if (message.ValueKind != JsonValueKind.Object
+        || !message.TryGetProperty("jsonrpc", out var version) || version.ValueKind != JsonValueKind.String || version.GetString() != "2.0")
+    {
+      return false;
+    }
+    var keys = message.EnumerateObject().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+    var hasId = message.TryGetProperty("id", out var id);
+
+    if (message.TryGetProperty("method", out var method))
+    {
+      return method.ValueKind == JsonValueKind.String
+          && keys.IsSubsetOf(["jsonrpc", "id", "method", "params"])
+          && (!hasId || IsId(id))
+          && (!message.TryGetProperty("params", out var parameters) || IsParams(parameters));
+    }
+    if (message.TryGetProperty("result", out var result))
+    {
+      return hasId && IsId(id) && keys.SetEquals(["jsonrpc", "id", "result"]) && result.ValueKind == JsonValueKind.Object
+          && (!result.TryGetProperty("_meta", out var meta) || meta.ValueKind == JsonValueKind.Object);
+    }
+
+    return message.TryGetProperty("error", out var error) && keys.IsSubsetOf(["jsonrpc", "id", "error"]) && (!hasId || IsId(id))
+        && error.ValueKind == JsonValueKind.Object
+        && error.TryGetProperty("code", out var code) && IsSafeInteger(code)
+        && error.TryGetProperty("message", out var text) && text.ValueKind == JsonValueKind.String;
+  }
+
+  private static bool IsParams(JsonElement parameters)
+  {
+    if (parameters.ValueKind != JsonValueKind.Object)
+    {
+      return false;
+    }
+    if (!parameters.TryGetProperty("_meta", out var meta))
+    {
+      return true;
+    }
+
+    return meta.ValueKind == JsonValueKind.Object
+        && (!meta.TryGetProperty("progressToken", out var token) || IsId(token))
+        && (!meta.TryGetProperty("io.modelcontextprotocol/related-task", out var task)
+            || (task.ValueKind == JsonValueKind.Object && task.TryGetProperty("taskId", out var taskId) && taskId.ValueKind == JsonValueKind.String));
+  }
+
+  // zod's z.union([z.string(), z.number().int()]).
+  private static bool IsId(JsonElement id)
+  {
+    return id.ValueKind == JsonValueKind.String || IsSafeInteger(id);
+  }
+
+  // zod 4's .int() takes safe integers only, written any way (7e0 and 1.0 pass).
+  private static bool IsSafeInteger(JsonElement number)
+  {
+    return number.ValueKind == JsonValueKind.Number && number.TryGetDouble(out var value)
+        && double.IsFinite(value) && Math.Floor(value) == value && Math.Abs(value) <= 9007199254740991;
+  }
+
   /// <summary>The -32602 message Node gives a tools/call with no params, or a bad name or arguments; null when it passes.</summary>
   internal static string? ToolsCallRefusal(JsonNode? parameters)
   {

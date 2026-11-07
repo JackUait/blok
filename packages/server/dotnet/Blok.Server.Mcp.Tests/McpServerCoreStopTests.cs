@@ -33,6 +33,8 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
     }, new McpHttpCaller());
   }
 
+  private static string Ping(int id) => $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"method\":\"ping\"}}";
+
   private static Task<McpCallResult> OpenAsync(McpServerCore core, McpCaller caller)
   {
     return core.CallToolAsync("blok_open", new JsonObject { ["documentId"] = "doc", ["write"] = true }, caller, null, CancellationToken.None);
@@ -242,20 +244,21 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
   {
     await using var core = Core((_, _, _, _) => Task.FromResult(true));
     var big = new string('x', Blok.Server.Mcp.Protocol.McpOrderedInput.MaxMessageBytes + 1);
-    var wire = System.Text.Encoding.UTF8.GetBytes($"{{\"id\":1}}\n{big}\n{{\"id\":2}}\n");
+    var wire = System.Text.Encoding.UTF8.GetBytes($"{Ping(1)}\n{big}\n{Ping(2)}\n");
     await using var input = new Blok.Server.Mcp.Protocol.McpOrderedInput(new MemoryStream(wire), core);
     using var passed = new MemoryStream();
 
     await input.CopyToAsync(passed);
 
-    Assert.Equal("{\"id\":1}\n", System.Text.Encoding.UTF8.GetString(passed.ToArray()));
+    Assert.Equal($"{Ping(1)}\n", System.Text.Encoding.UTF8.GetString(passed.ToArray()));
   }
 
   [Fact]
   public async Task AStdinMessageOfTenMebibytesIsPassedOnWhole()
   {
     await using var core = Core((_, _, _, _) => Task.FromResult(true));
-    var line = new string('x', Blok.Server.Mcp.Protocol.McpOrderedInput.MaxMessageBytes);
+    const string Head = "{\"jsonrpc\":\"2.0\",\"method\":\"x\",\"params\":{\"p\":\"";
+    var line = Head + new string('x', Blok.Server.Mcp.Protocol.McpOrderedInput.MaxMessageBytes - Head.Length - 3) + "\"}}";
     await using var input = new Blok.Server.Mcp.Protocol.McpOrderedInput(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(line + "\n")), core);
     using var passed = new MemoryStream();
 

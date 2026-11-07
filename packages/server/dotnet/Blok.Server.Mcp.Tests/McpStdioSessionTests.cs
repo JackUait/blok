@@ -32,16 +32,69 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
 
   private async Task<List<string>> AnsweredIdsAsync(Action<McpServerCore>? before = null)
   {
+    return [.. (await RunWireAsync(Wire, before)).Select(line => JsonNode.Parse(line)!["id"]!.ToJsonString())];
+  }
+
+  // The lines blok-mcp wrote for this stdin, which ends after the wire.
+  private async Task<List<string>> RunWireAsync(string wire, Action<McpServerCore>? before = null)
+  {
     var core = new McpServerCore(fixture.Host.Bundle, new McpConfig { Source = new McpSourceConfig.Files(dir) }, new McpHttpCaller());
     var options = await McpSdkServer.OptionsAsync(core, _ => new McpCallerIdentity("local", null), CancellationToken.None);
     using var output = new MemoryStream();
 
     before?.Invoke(core);
-    await McpStdioSession.RunAsync(core, options, new MemoryStream(Encoding.UTF8.GetBytes(Wire)), output, new TaskCompletionSource().Task)
+    await McpStdioSession.RunAsync(core, options, new MemoryStream(Encoding.UTF8.GetBytes(wire)), output, new TaskCompletionSource().Task)
         .WaitAsync(TimeSpan.FromSeconds(60));
 
-    return [.. Encoding.UTF8.GetString(output.ToArray()).Split('\n', StringSplitOptions.RemoveEmptyEntries)
-        .Select(line => JsonNode.Parse(line)!["id"]!.ToJsonString())];
+    return [.. Encoding.UTF8.GetString(output.ToArray()).Split('\n', StringSplitOptions.RemoveEmptyEntries)];
+  }
+
+  private static string Init => Wire.Split('\n')[0] + "\n" + Wire.Split('\n')[1] + "\n";
+
+  // Node's ReadBuffer drops a line that fails JSONRPCMessageSchema: no answer, and stdin's end stops at once.
+  [Theory]
+  [InlineData("""{"id":13,"method":"ping"}""")]
+  [InlineData("""{"jsonrpc":"1.0","id":14,"method":"ping"}""")]
+  [InlineData("""{"jsonrpc":2,"id":15,"method":"ping"}""")]
+  [InlineData("""{"jsonrpc":"2.0","id":25,"method":5}""")]
+  [InlineData("""{"jsonrpc":"2.0","id":26}""")]
+  [InlineData("""{"jsonrpc":"2.0","id":1.5,"method":"ping"}""")]
+  [InlineData("""{"jsonrpc":"2.0","id":9007199254740993,"method":"ping"}""")]
+  [InlineData("""{"jsonrpc":"2.0","id":3,"method":"ping","extra":1}""")]
+  [InlineData("""{"jsonrpc":"2.0","id":10,"method":"ping","params":{"_meta":{"progressToken":1.5}}}""")]
+  [InlineData("""{"jsonrpc":"2.0","id":11,"method":"ping","params":null}""")]
+  [InlineData("""{"jsonrpc":"2.0","id":12,"method":"ping","result":{}}""")]
+  [InlineData("""{"jsonrpc":"2.0","id":16,"error":{"code":1.5,"message":"x"}}""")]
+  public async Task DropsALineNodesSchemaRefuses(string line)
+  {
+    var started = DateTime.UtcNow;
+    var lines = await RunWireAsync(Init + line + "\n");
+
+    Assert.Single(lines);
+    Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(10));
+  }
+
+  [Theory]
+  [InlineData("""{"jsonrpc":"2.0","id":9007199254740991,"method":"ping"}""", "9007199254740991")]
+  [InlineData("""{"jsonrpc":"2.0","id":7e0,"method":"ping"}""", "7")]
+  [InlineData("{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"ping\"}\r", "4")]
+  public async Task AnswersALineNodesSchemaTakes(string line, string id)
+  {
+    var lines = await RunWireAsync(Init + line + "\n");
+
+    Assert.Equal(2, lines.Count);
+    Assert.Contains(lines, answer => JsonNode.Parse(answer)!["id"]!.ToJsonString() == id);
+  }
+
+  // Node registers no logging capability, so logging/setLevel is an unknown method.
+  [Fact]
+  public async Task LoggingSetLevelIsAnUnknownMethod()
+  {
+    var lines = await RunWireAsync(Init + """{"jsonrpc":"2.0","id":5,"method":"logging/setLevel","params":{"level":"info"}}""" + "\n");
+
+    var answer = lines.Select(line => JsonNode.Parse(line)!).Single(line => line["id"]!.ToJsonString() == "5");
+
+    Assert.Equal("""{"code":-32601,"message":"Method not found"}""", answer["error"]!.ToJsonString());
   }
 
   [Fact]

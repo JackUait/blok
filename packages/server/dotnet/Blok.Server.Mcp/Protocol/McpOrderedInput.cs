@@ -156,7 +156,7 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
       {
         var root = document.RootElement;
 
-        if (!McpRequestShape.IsMessage(root))
+        if (!McpRequestShape.IsNodeMessage(root))
         {
           return null;
         }
@@ -182,6 +182,11 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
       {
         RequestIds.Enqueue(sdkId);
       }
+    }
+    else
+    {
+      // Not JSON: Node's reader skips it.
+      return null;
     }
     if (Reserve(text) is { } withTag)
     {

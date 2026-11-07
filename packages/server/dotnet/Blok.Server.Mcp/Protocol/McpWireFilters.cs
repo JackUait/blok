@@ -28,6 +28,11 @@ internal sealed class McpWireFilters
   {
     options.Filters.Message.IncomingFilters.Add(next => async (context, cancellationToken) =>
     {
+      // Node registers no logging capability; the SDK answers logging/setLevel itself.
+      if (context.JsonRpcMessage is JsonRpcRequest { Method: "logging/setLevel" })
+      {
+        throw new ModelContextProtocol.McpProtocolException("Method not found", ModelContextProtocol.McpErrorCode.MethodNotFound);
+      }
       Incoming(context.JsonRpcMessage);
       await next(context, cancellationToken);
     });

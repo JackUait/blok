@@ -649,6 +649,49 @@ describe('FileTool — an upload belongs to the pick that started it', () => {
     expect(tool.save().url).toBe('');
   });
 
+  it('ignores a file upload that fails after it was cancelled', async () => {
+    const onUploadError = vi.fn();
+    let reject: (err: Error) => void = () => undefined;
+    const uploadByFile = (): Promise<{ url: string }> => new Promise((_r, rej) => {
+      reject = rej;
+    });
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile }, onUploadError }));
+    const root = tool.render();
+    tool.onPaste(filePasteEvent(pdf()));
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    reject(new Error('network down'));
+    await flush();
+
+    expect(root.querySelector('[data-role="file-error"]')).toBeNull();
+    expect(onUploadError).not.toHaveBeenCalled();
+  });
+
+  it('ignores a link upload that fails after it was cancelled', async () => {
+    const onUploadError = vi.fn();
+    let reject: (err: Error) => void = () => undefined;
+    const uploadByUrl = (): Promise<{ url: string }> => new Promise((_r, rej) => {
+      reject = rej;
+    });
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByUrl }, onUploadError }));
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const urlInput = root.querySelector<HTMLInputElement>('.blok-media-empty__embed-input');
+    const submit = root.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
+    if (!urlInput || !submit) throw new Error('embed url field missing');
+    urlInput.value = 'https://cdn/a.pdf';
+    submit.click();
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    reject(new Error('network down'));
+    await flush();
+
+    expect(root.querySelector('[data-role="file-error"]')).toBeNull();
+    expect(onUploadError).not.toHaveBeenCalled();
+  });
+
   it('turns the file preview into the upload progress', async () => {
     const upload = heldUpload();
     const tool = new FileTool(createOptions({}, { uploader: { uploadByFile: upload.uploadByFile } }));

@@ -262,8 +262,9 @@ export class FileTool implements BlockTool {
 
       return;
     }
+    if (this.uploading !== file) return;
     this.applyError(err, { file });
-    if (this.uploading !== file || this.data.fileName !== file.name) return;
+    if (this.data.fileName !== file.name) return;
     this.data = { ...this.data, fileName: before };
     this.block.dispatchChange({ derived: true, from: ['fileName'] });
   }
@@ -299,8 +300,9 @@ export class FileTool implements BlockTool {
 
       return;
     }
+    if (this.uploading !== url) return;
     this.applyError(err, { url });
-    if (this.uploading !== url || this.data.url !== url) return;
+    if (this.data.url !== url) return;
     this.data = { ...this.data, url: before };
     this.block.dispatchChange({ derived: true, from: ['url'] });
   }

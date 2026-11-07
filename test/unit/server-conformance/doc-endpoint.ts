@@ -19,6 +19,8 @@ export interface FixtureDocEndpoint {
   readonly gets: readonly string[];
   /** The headers of every GET, in the same order as `gets`. */
   readonly getHeaders: readonly Record<string, string>[];
+  /** Every header line as sent, before Node's parser trims the values. */
+  readonly rawHeaderLines: readonly string[];
   /** Answer GETs for `docId` with `document` (bare OutputData or a `{data, version}` envelope). */
   serve(docId: string, document: unknown): void;
   stop(): Promise<void>;
@@ -72,6 +74,7 @@ export async function startDocEndpoint(): Promise<FixtureDocEndpoint> {
   const puts: RecordedPut[] = [];
   const gets: string[] = [];
   const getHeaders: Record<string, string>[] = [];
+  const rawHeaderLines: string[] = [];
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
 
@@ -102,6 +105,16 @@ export async function startDocEndpoint(): Promise<FixtureDocEndpoint> {
     }
   });
 
+  // The parser hands out trimmed values; the bytes on the socket keep what was sent.
+  server.on('connection', (socket) => {
+    socket.on('data', (chunk: Buffer) => {
+      const text = chunk.toString('latin1');
+      const head = text.indexOf('\r\n\r\n');
+
+      rawHeaderLines.push(...(head < 0 ? text : text.slice(0, head)).split('\r\n').filter((line) => /^[!-9;-~]+:/.test(line)));
+    });
+  });
+
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
     server.listen(0, '127.0.0.1', () => {
@@ -122,6 +135,7 @@ export async function startDocEndpoint(): Promise<FixtureDocEndpoint> {
     puts,
     gets,
     getHeaders,
+    rawHeaderLines,
     serve: (docId, document) => {
       documents.set(docId, document);
     },

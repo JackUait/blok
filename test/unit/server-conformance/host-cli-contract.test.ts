@@ -412,6 +412,49 @@ it.each([
   }
 }, 30_000);
 
+// Spaces and tabs around a header value are not part of it (RFC 9110 5.5), and Node's
+// fetch drops them: the credential and the endpoint's own version go out without them.
+it('sends the doc endpoint credential and version without outer spaces and tabs', async () => {
+  const endpoint = await startDocEndpoint();
+  const directory = await mkdtemp(join(tmpdir(), 'blok-doc-auth-'));
+  const port = await allocateLoopbackPort();
+
+  endpoint.serve('d', { data: { blocks: [] }, version: '\tv1 ' });
+  const server = await startServerProcess({
+    command: process.env.BLOK_CONFORMANCE_SERVER ?? '',
+    args: [
+      '--listen', `127.0.0.1:${port}`,
+      '--auth', 'none',
+      '--storage-dir', '',
+      '--rate-limit', '0',
+      '--collab',
+      '--collab-dir', directory,
+      '--doc-endpoint', endpoint.url,
+    ],
+    baseUrl: `http://127.0.0.1:${port}`,
+    env: { ...process.env, BLOK_DOC_ENDPOINT_AUTH: ' Bearer  x\t' },
+  });
+
+  try {
+    await sendRequest('POST', new URL(`http://127.0.0.1:${port}/sync/d/edit`), {
+      headers: { 'Content-Type': 'application/json', 'Blok-Idempotency-Key': 'k1' },
+      body: JSON.stringify({ ops: [{ op: 'insert', id: 'a', block: { type: 'paragraph', data: { text: 'x' } } }] }),
+    });
+    await expect.poll(() => endpoint.puts.length, { timeout: 10_000 }).toBeGreaterThan(0);
+
+    const sent = (name: string): string[] => endpoint.rawHeaderLines
+      .filter((line) => line.toLowerCase().startsWith(`${name}:`))
+      .map((line) => line.slice(name.length + 1));
+
+    expect(sent('authorization')).toEqual(Array(endpoint.gets.length + endpoint.puts.length).fill(' Bearer  x'));
+    expect(sent('blok-doc-version')).toEqual([' v1']);
+  } finally {
+    await server.stop();
+    await endpoint.stop();
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 30_000);
+
 // A value the header cannot carry is refused, as undici refuses it: a control
 // char other than tab, or a char past U+00FF. A line break is refused at start.
 // Nothing is sent, and the room says why.

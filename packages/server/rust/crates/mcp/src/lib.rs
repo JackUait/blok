@@ -91,6 +91,26 @@ pub struct Embedded {
     pub mcp: Arc<Mcp>,
     /// What serverInfo.version reports: the version Blok stamps.
     pub version: String,
+    /// The options' `auth`, which `http` enforces.
+    auth: Value,
+}
+
+/// The OAuth verifier `auth` names, if it names one.
+fn oauth_of(auth: &Value) -> Option<OAuth> {
+    let text = |key: &str| {
+        auth.get(key)
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned()
+    };
+    (text("kind") == "oauth").then(|| {
+        OAuth::new(
+            text("issuer"),
+            text("audience"),
+            text("jwksUrl"),
+            Outbound::new(),
+        )
+    })
 }
 
 impl Embedded {
@@ -120,7 +140,8 @@ impl Embedded {
             })?;
         let mcp = Arc::new(mcp);
         mcp.spawn_sweeper();
-        Ok(Embedded { mcp, version })
+        let auth = options.to_value()["auth"].clone();
+        Ok(Embedded { mcp, version, auth })
     }
 
     /// As `new`, with the host's own uploader (Node's `uploads` option).
@@ -137,13 +158,19 @@ impl Embedded {
             .map_err(|err| format!("{err:?}"))?;
         let mcp = Arc::new(mcp);
         mcp.spawn_sweeper();
-        Ok(Embedded { mcp, version })
+        let auth = options.get("auth").cloned().unwrap_or(Value::Null);
+        Ok(Embedded { mcp, version, auth })
     }
 
     /// blok-mcp for the host's own HTTP server, with Node's Origin and Host
     /// checks. `hosts`: the app's own host names; None takes loopback only.
     pub fn http(&self, hosts: Option<Vec<String>>) -> http::EmbeddedHttp {
-        http::EmbeddedHttp::new(self.handler(true), hosts)
+        http::EmbeddedHttp::new(
+            self.handler(true),
+            hosts,
+            oauth_of(&self.auth),
+            self.mcp.principal.clone(),
+        )
     }
 
     /// The rmcp handler, to serve on a transport the host picks. Over HTTP,
@@ -170,14 +197,7 @@ async fn serve_http(mcp: Arc<Mcp>, version: String, options: &Value) -> i32 {
             .unwrap_or_default()
             .to_owned()
     };
-    let oauth = (text("/auth/kind") == "oauth").then(|| {
-        OAuth::new(
-            text("/auth/issuer"),
-            text("/auth/audience"),
-            text("/auth/jwksUrl"),
-            Outbound::new(),
-        )
-    });
+    let oauth = oauth_of(options.get("auth").unwrap_or(&Value::Null));
     let public = options.pointer("/transport/public") == Some(&Value::Bool(true));
     let handler = Handler::new(mcp.clone(), version, true);
     let listening = match http::listen(

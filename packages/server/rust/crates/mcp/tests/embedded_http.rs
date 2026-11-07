@@ -106,3 +106,34 @@ async fn an_app_names_its_own_host_names() {
         403
     );
 }
+
+// Node's createBlokMcpServer with OAuth refuses a caller with no bearer token.
+#[tokio::test(flavor = "multi_thread")]
+async fn oauth_options_refuse_a_caller_with_no_token() {
+    let options = json!({
+        "transport": { "kind": "http", "listen": "127.0.0.1:0" },
+        "auth": { "kind": "oauth", "issuer": "https://issuer.test", "audience": "https://mcp.test/mcp", "jwksUrl": "http://127.0.0.1:9/jwks" },
+    });
+    let authorize = Webhook::new("http://127.0.0.1:9/authorize".to_owned(), Outbound::new());
+    let embedded = Embedded::new(
+        Arc::new(Bundle::new(1).unwrap()),
+        &options,
+        Some(authorize),
+        None,
+    )
+    .await
+    .unwrap();
+    let http = embedded.http(None);
+    let answer = http.handle(list_tools("localhost:4000", None)).await;
+    assert_eq!(answer.status().as_u16(), 401);
+    let challenge = answer
+        .headers()
+        .get("www-authenticate")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_owned();
+    assert!(
+        challenge.starts_with("Bearer error=\"invalid_token\""),
+        "{challenge}"
+    );
+}

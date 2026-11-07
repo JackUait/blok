@@ -67,12 +67,19 @@ pub fn loopback_host(host: Option<&str>, port: u16) -> bool {
 pub struct EmbeddedHttp {
     service: Service,
     hosts: Option<Vec<String>>,
+    oauth: Option<OAuth>,
+    principal: String,
 }
 
 impl EmbeddedHttp {
     /// `hosts`: the app's own host names, any case, with or without a port.
     /// None takes loopback names only.
-    pub fn new(handler: Handler, hosts: Option<Vec<String>>) -> EmbeddedHttp {
+    pub fn new(
+        handler: Handler,
+        hosts: Option<Vec<String>>,
+        oauth: Option<OAuth>,
+        principal: String,
+    ) -> EmbeddedHttp {
         let mut config = StreamableHttpServerConfig::default();
         config.legacy_session_mode = false;
         // Checked here, Node's way.
@@ -84,6 +91,8 @@ impl EmbeddedHttp {
                 config,
             ),
             hosts: hosts.map(|hosts| hosts.iter().map(|h| h.to_lowercase()).collect()),
+            oauth,
+            principal,
         }
     }
 
@@ -118,6 +127,39 @@ impl EmbeddedHttp {
             *refused.status_mut() = http::StatusCode::FORBIDDEN;
             return refused;
         }
+        // The SDK's bearer gate, as the front door runs it.
+        let identity = match &self.oauth {
+            None => HttpIdentity {
+                principal: self.principal.clone(),
+                scopes: None,
+            },
+            Some(oauth) => match oauth.authenticate(header("authorization")).await {
+                Ok(verified) => HttpIdentity {
+                    principal: verified.principal,
+                    scopes: Some(verified.scopes),
+                },
+                Err(refusal) => {
+                    let mut refused = http::Response::new(
+                        Full::new(Bytes::from(refusal.body))
+                            .map_err(|never| match never {})
+                            .boxed(),
+                    );
+                    *refused.status_mut() = http::StatusCode::from_u16(refusal.status)
+                        .unwrap_or(http::StatusCode::UNAUTHORIZED);
+                    let headers = refused.headers_mut();
+                    headers.insert(
+                        "content-type",
+                        http::HeaderValue::from_static("application/json"),
+                    );
+                    if let Ok(challenge) = http::HeaderValue::from_str(&refusal.challenge) {
+                        headers.insert("www-authenticate", challenge);
+                    }
+                    return refused;
+                }
+            },
+        };
+        let mut request = request;
+        request.extensions_mut().insert(identity);
         self.service.handle(request).await
     }
 }

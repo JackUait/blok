@@ -210,7 +210,7 @@ describe('createBlokMcpServer', () => {
       executing.release();
       await finish;
 
-      return { ok: true, results: [], warnings: [], revision: 'r2', delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v2' } };
+      return { ok: true, results: [], refs: {}, changed: { created: [], updated: [], moved: [], removed: [] }, warnings: [], revision: 'r2', delivery: { durable: true, pending: false, serverSequence: null, savedVersion: 'v2' } };
     },
     close: async () => ({ unsavedBatches: 0, hostRecordLags: false }),
   });

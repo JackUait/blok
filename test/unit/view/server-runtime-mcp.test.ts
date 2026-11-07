@@ -924,7 +924,7 @@ describe('server runtime mcpRichTextFields', () => {
     };
     const manifest = { formatVersion: 1, blocks: [{ name: 'note_x', description: { summary: 'A note.', data: { type: 'object' } }, statics }] };
     const flags = { manifest, richTextFields: { widget: ['caption'], paragraph: ['nope'] }, source: true };
-    const contracts = buildMcpContracts({ manifest: parseCustomToolsFile(manifest), richTextFields: flags.richTextFields, sync: false, source: true });
+    const contracts = buildMcpContracts({ manifest: parseCustomToolsFile(manifest), richTextFields: flags.richTextFields, pageTitles: 'off' });
     const { fields } = await call('mcpRichTextFields', flags) as { fields: Record<string, string[]> };
 
     expect(fields.note_x).toEqual(['body']);

@@ -717,6 +717,14 @@ func (r *liveRoom) handleResync(stateVector []byte) {
 		r.drain()
 		return
 	}
+	// The server took this vector before it had the operation now in
+	// flight, so the diff would send that work a second time. Ask again
+	// once the outbox drains.
+	if r.inFlight != nil {
+		r.residual = "none"
+		r.resyncOwed = true
+		return
+	}
 	r.residual = "done"
 	residual, err := r.doc.EncodeStateAsUpdate(stateVector)
 	if err != nil || len(residual) <= emptyUpdateBytes || r.lineage == nil {

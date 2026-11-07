@@ -80,3 +80,18 @@ func TestAShippedResyncAnswerClearsThe1009Count(t *testing.T) {
 		t.Fatal("a 1009 after a shipped answer ended the room")
 	}
 }
+
+// Node's provider drops a residual answer that lands while an operation is
+// in flight: the server's vector predates it, so the diff would send the
+// same work again. The round is asked again once the outbox drains.
+func TestAResidualAnswerDuringAnOperationIsAskedAgain(t *testing.T) {
+	room, _ := closingRoom(t)
+	room.mu.Lock()
+	defer room.mu.Unlock()
+	lineage, operation := "l1", "op-1"
+	room.lineage, room.inFlight, room.residual = &lineage, &operation, "requested"
+	room.handleResync(room.doc.EncodeStateVector())
+	if room.residual != "none" || !room.resyncOwed {
+		t.Fatalf("residual %q, owed %v", room.residual, room.resyncOwed)
+	}
+}

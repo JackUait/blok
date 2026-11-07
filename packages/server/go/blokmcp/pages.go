@@ -217,11 +217,18 @@ func hasPageAction(batch json.RawMessage) bool {
 	return false
 }
 
+// pageWrite is how a page action ended: written, and whether its room had
+// not acknowledged the write yet.
+type pageWrite struct {
+	wrote   bool
+	pending bool
+}
+
 // runPageAction is Node's page-map pageBackend: the bundle checks the batch
 // on the open document (agentPlanHost), then a doc.setTitle or doc.setIcon
 // batch runs on the page's own document, opened as blok_open opens one.
-// It answers the agent result, and whether the page was written.
-func (s *Server) runPageAction(ctx context.Context, call *callContext, input map[string]any, isOpen func(pageID string) bool) (json.RawMessage, bool, error) {
+// It answers the agent result and how the page write ended.
+func (s *Server) runPageAction(ctx context.Context, call *callContext, input map[string]any, isOpen func(pageID string) bool) (json.RawMessage, pageWrite, error) {
 	var planned struct {
 		Result json.RawMessage `json:"result"`
 		Plan   json.RawMessage `json:"plan"`
@@ -238,22 +245,22 @@ func (s *Server) runPageAction(ctx context.Context, call *callContext, input map
 		} `json:"view"`
 	}
 	if _, err := s.bundle.call(ctx, "agentPlanHost", input, &planned); err != nil {
-		return nil, false, err
+		return nil, pageWrite{}, err
 	}
 	if len(planned.Plan) == 0 || len(planned.Batch.Commands) == 0 {
-		return planned.Result, false, nil
+		return planned.Result, pageWrite{}, nil
 	}
 	var source map[string]json.RawMessage
 	if err := json.Unmarshal(planned.Result, &source); err != nil {
-		return nil, false, err
+		return nil, pageWrite{}, err
 	}
 	// The executor's prepare step fails at the action's index.
-	fail := func(agentError map[string]any) (json.RawMessage, bool, error) {
+	fail := func(agentError map[string]any) (json.RawMessage, pageWrite, error) {
 		if _, ok := agentError["commandIndex"]; !ok {
 			agentError["commandIndex"] = 0
 		}
 		result, err := marshal(map[string]any{"ok": false, "revision": source["revision"], "error": agentError, "warnings": source["warnings"]})
-		return result, false, err
+		return result, pageWrite{}, err
 	}
 	withPage := func(agentError map[string]any, pageID string) map[string]any {
 		details, _ := agentError["details"].(map[string]any)
@@ -288,7 +295,7 @@ func (s *Server) runPageAction(ctx context.Context, call *callContext, input map
 	if err != nil {
 		agentError, err := s.agentErrorOf(ctx, err)
 		if err != nil {
-			return nil, false, err
+			return nil, pageWrite{}, err
 		}
 		return fail(withPage(agentError, pageID))
 	}
@@ -303,15 +310,15 @@ func (s *Server) runPageAction(ctx context.Context, call *callContext, input map
 	}
 	inner, err := marshal(map[string]any{"commands": []any{map[string]any{"name": name, "args": map[string]any{field: value}}}})
 	if err != nil {
-		return nil, false, err
+		return nil, pageWrite{}, err
 	}
 	// The target batch runs with no approval, as Node's pageBackend calls it.
 	done, err := target.execute(ctx, &callContext{who: call.who, principal: call.principal, actor: call.actor}, inner)
 	if err != nil {
-		return nil, false, err
+		return nil, pageWrite{}, err
 	}
 	if done.answer == nil {
-		return nil, false, fmt.Errorf("blok-mcp: the page write asked a question")
+		return nil, pageWrite{}, fmt.Errorf("blok-mcp: the page write asked a question")
 	}
 	var answer struct {
 		StructuredContent struct {
@@ -323,28 +330,19 @@ func (s *Server) runPageAction(ctx context.Context, call *callContext, input map
 		} `json:"structuredContent"`
 	}
 	if err := json.Unmarshal(done.answer, &answer); err != nil {
-		return nil, false, err
+		return nil, pageWrite{}, err
 	}
 	written := answer.StructuredContent
-	if written.OK && written.Delivery.Pending {
-		// close follows at once and drops unacked rows, so a pending write is a failed one.
-		pending := surfaceError("SOURCE_UNAVAILABLE", "The room did not confirm the page write in time. It was not saved; try again.")
-		pending.Details = map[string]any{"pending": true}
-		agentError, err := s.agentErrorOf(ctx, pending)
-		if err != nil {
-			return nil, false, err
-		}
-		return fail(withPage(agentError, pageID))
-	}
 	if !written.OK {
 		if written.Error == nil {
-			return nil, false, fmt.Errorf("blok-mcp: the page write failed with no error")
+			return nil, pageWrite{}, fmt.Errorf("blok-mcp: the page write failed with no error")
 		}
 		return fail(withPage(written.Error, pageID))
 	}
 	source["results"], _ = marshal([]any{map[string]any{"pageId": pageID, "applied": true}})
 	result, err := marshal(source)
-	return result, true, err
+	// An unacknowledged page write still went out: the batch is not durable.
+	return result, pageWrite{wrote: true, pending: written.Delivery.Pending}, err
 }
 
 // agentErrorOf is the agent error a host refusal makes, retryable set by its

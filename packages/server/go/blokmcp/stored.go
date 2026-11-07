@@ -180,20 +180,24 @@ func (st *storedSession) pageAction(ctx context.Context, call *callContext, inpu
 	same, _ := st.source.(interface {
 		sameDocument(ctx context.Context, first, second string) bool
 	})
-	result, wrote, err := st.server.runPageAction(ctx, call, input, func(pageID string) bool {
+	result, page, err := st.server.runPageAction(ctx, call, input, func(pageID string) bool {
 		return pageID == st.documentID || (same != nil && same.sameDocument(ctx, pageID, st.documentID))
 	})
 	if err != nil {
 		return nil, err
 	}
-	if wrote {
+	answerInput := map[string]any{"result": result}
+	if page.wrote {
 		var parsed struct {
 			Revision json.RawMessage `json:"revision"`
 		}
 		_ = json.Unmarshal(result, &parsed)
 		st.history = withOtherStep(st.history, parsed.Revision)
 	}
-	answer, err := st.server.executeAnswer(ctx, map[string]any{"result": result})
+	if page.pending {
+		answerInput["delivery"] = map[string]any{"durable": false, "pending": true, "serverSequence": nil, "savedVersion": nil}
+	}
+	answer, err := st.server.executeAnswer(ctx, answerInput)
 	return &executed{answer: answer}, err
 }
 

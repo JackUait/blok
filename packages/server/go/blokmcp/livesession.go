@@ -453,12 +453,13 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		if err != nil {
 			return nil, err
 		}
+		// A comment is no undo step, so it leaves the history marks alone,
+		// as Node's executor does.
 		if !comments {
 			l.recordStep(stepFor(out.Edits, document), document, after, stacked)
+			l.marksPast = append(l.marksPast, historyMark{})
+			l.marksFuture = nil
 		}
-		// The executor marks a comment batch too, as Node's does.
-		l.marksPast = append(l.marksPast, historyMark{})
-		l.marksFuture = nil
 	}
 	if out.Restore != "" {
 		l.marksPast = append(l.marksPast, historyMark{restored: restoredPrevious(out.Result)})
@@ -473,16 +474,24 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 func (l *liveSession) pageAction(ctx context.Context, call *callContext, input map[string]any, mark int) (*executed, error) {
 	room := l.room
 	room.mu.Unlock()
-	result, wrote, err := l.server.runPageAction(ctx, call, input, func(pageID string) bool { return pageID == l.documentID })
+	result, page, err := l.server.runPageAction(ctx, call, input, func(pageID string) bool { return pageID == l.documentID })
 	room.mu.Lock()
 	if err != nil {
 		return nil, err
 	}
-	if !wrote {
+	if !page.wrote {
 		answer, err := l.server.executeAnswer(ctx, map[string]any{"result": result})
 		return &executed{answer: answer}, err
 	}
 	l.marksPast = append(l.marksPast, historyMark{other: true})
+	if page.pending {
+		// This room has nothing of the batch to wait for; the page's room
+		// had not acknowledged it.
+		l.afterBatch(result)
+		answer, err := l.server.executeAnswer(ctx, map[string]any{"result": result,
+			"delivery": map[string]any{"durable": false, "pending": true, "serverSequence": nil, "savedVersion": nil}})
+		return &executed{answer: answer}, err
+	}
 	return l.deliver(ctx, liveExecuteOutput{Result: result, Writes: true}, mark)
 }
 

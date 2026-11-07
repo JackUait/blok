@@ -13308,6 +13308,551 @@
         "activeAt",
         "lastEditedAt",
         "createdAt",
+        "savedAt",
+        "startedAt"
+      ],
+      "name": "a comment after a restore leaves undo refused",
+      "steps": [
+        {
+          "room": {
+            "peer": "alice",
+            "connect": true
+          },
+          "expect": null
+        },
+        {
+          "room": {
+            "peer": "alice",
+            "edit": [
+              {
+                "insert": {
+                  "id": "db",
+                  "type": "database",
+                  "data": {
+                    "title": "Payroll",
+                    "schema": [
+                      {
+                        "id": "t",
+                        "name": "Name",
+                        "type": "title",
+                        "position": "a0"
+                      }
+                    ],
+                    "views": [
+                      {
+                        "id": "v",
+                        "name": "Table",
+                        "type": "table",
+                        "position": "a0",
+                        "sorts": [],
+                        "filters": [],
+                        "visibleProperties": []
+                      }
+                    ],
+                    "activeViewId": "v"
+                  }
+                }
+              }
+            ]
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "live-doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "h": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${h}",
+                "mode": "live",
+                "write": true,
+                "durability": "acknowledged",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "dbccd32d"
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "database.addRow",
+                    "args": {
+                      "id": "db"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "row": {
+              "pointer": "/result/structuredContent/changed/created/0",
+              "optional": true
+            }
+          },
+          "mask": [
+            "/result/structuredContent/blocks/0/data/position"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "l1",
+                "results": [
+                  {
+                    "rowId": "${row}"
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "${row}"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "${row}",
+                    "type": "database-row",
+                    "depth": 1,
+                    "parentId": "db",
+                    "attrs": {
+                      "title": ""
+                    },
+                    "data": {
+                      "properties": {
+                        "t": ""
+                      },
+                      "position": "<masked>",
+                      "title": ""
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "alice"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": "2",
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "paragraph",
+                      "id": "p1",
+                      "data": {
+                        "text": "one"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "l2",
+                "results": [
+                  {
+                    "id": "p1",
+                    "childIds": []
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "p1"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "one",
+                    "data": {
+                      "text": [
+                        {
+                          "text": "one"
+                        }
+                      ]
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "alice"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": "3",
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.versions",
+                    "args": {}
+                  }
+                ]
+              }
+            }
+          },
+          "capture": {
+            "vNow": "/result/structuredContent/results/0/versions/0/version",
+            "vBase": "/result/structuredContent/results/0/versions/1/version"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "l2",
+                "results": [
+                  {
+                    "versions": [
+                      {
+                        "version": "${vNow}",
+                        "savedAt": "<masked>",
+                        "startedAt": "<masked>",
+                        "actors": [
+                          "alice",
+                          "agent:alice:claude-code"
+                        ]
+                      },
+                      {
+                        "version": "${vBase}",
+                        "savedAt": "<masked>",
+                        "startedAt": "<masked>",
+                        "actors": []
+                      }
+                    ]
+                  }
+                ],
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "note": "the revision races the restore's room update against the HTTP answer, as in the restore case above",
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.restore",
+                    "args": {
+                      "version": "${vNow}"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "mask": [
+            "/result/structuredContent/revision"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "version": "${vNow}",
+                    "previous": "${vNow}"
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 5
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "database.addComment",
+                    "args": {
+                      "id": "db",
+                      "rowId": "${row}",
+                      "text": "a note"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "mask": [
+            "/result/structuredContent/changed/created/0",
+            "/result/structuredContent/results/0/commentId"
+          ],
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "l3",
+                "results": [
+                  {
+                    "commentId": "<masked>"
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "<masked>"
+                  ]
+                },
+                "blocks": [],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": "4",
+                  "savedVersion": null
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 6
+          }
+        },
+        {
+          "room": {
+            "settle": true
+          },
+          "expect": null
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${h}",
+                "commands": [
+                  {
+                    "name": "history.undo",
+                    "args": {}
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "l3",
+                "error": {
+                  "code": "UNDO_RESTORED",
+                  "message": "The last batch restored a version. history.undo cannot undo a restore. To go back, history.restore \"${vNow}\", the version that was current before.",
+                  "commandIndex": 0,
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 7
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_close",
+              "arguments": {
+                "handle": "${h}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "closed": true,
+                "unsavedBatches": 0,
+                "hostRecordLags": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 8
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      }
+    },
+    {
+      "maskKeys": [
+        "activeAt",
+        "lastEditedAt",
+        "createdAt",
         "at",
         "updatedAt",
         "id",

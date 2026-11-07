@@ -45,6 +45,10 @@ internal static class BlokMcpHttp
       app.UseAuthorization();
     }
     app.MapBlokMcp(Path);
+    var core = app.Services.GetRequiredService<McpServerCore>();
+
+    // Runs before Kestrel stops, so it keeps serving while calls in flight finish, as Node's stop does.
+    app.Lifetime.ApplicationStopping.Register(() => core.StopAsync().GetAwaiter().GetResult());
     await app.StartAsync();
     var url = new Uri(app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First());
 

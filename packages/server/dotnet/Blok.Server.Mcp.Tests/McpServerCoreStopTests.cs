@@ -96,7 +96,7 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
     await using var core = Core((_, _, _, _) => Task.FromResult(true));
     var started = new List<int>();
     var joined = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-    var first = core.InArrivalOrderAsync("h", async () =>
+    var first = core.InArrivalOrderAsync("h", null, async () =>
     {
       started.Add(1);
       await joined.Task;
@@ -105,7 +105,7 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
 
       return 1;
     });
-    var second = core.InArrivalOrderAsync("h", () =>
+    var second = core.InArrivalOrderAsync("h", null, () =>
     {
       started.Add(2);
 
@@ -118,5 +118,75 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
     await second.WaitAsync(TimeSpan.FromSeconds(10));
     Assert.False(first.IsCompleted);
     Assert.Equal([1, 2], started);
+  }
+
+  [Fact]
+  public async Task APlaceTakenWhenTheRequestWasReadComesBeforeALaterOne()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+    var started = new List<string>();
+
+    core.Reserve("1", "h");
+    core.Reserve("2", "h");
+    var second = core.InArrivalOrderAsync("h", "2", () =>
+    {
+      started.Add("2");
+
+      return Task.FromResult(2);
+    });
+    await Task.Delay(100);
+    Assert.Empty(started);
+
+    var first = core.InArrivalOrderAsync("h", "1", () =>
+    {
+      started.Add("1");
+
+      return Task.FromResult(1);
+    });
+
+    await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(10));
+    Assert.Equal(["1", "2"], started);
+  }
+
+  [Fact]
+  public async Task AnAnsweredRequestThatNeverRanGivesItsPlaceUp()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+
+    core.Reserve("1", "h");
+    core.Unreserve("1");
+
+    Assert.Equal(2, await core.InArrivalOrderAsync("h", null, () => Task.FromResult(2)).WaitAsync(TimeSpan.FromSeconds(10)));
+  }
+
+  [Fact]
+  public async Task StdinTakesHandlePlacesInTheOrderTheLinesArrive()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+    var wire = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_execute\",\"arguments\":{\"handle\":\"h\"}}}\n"
+        + "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"blok_execute\",\"arguments\":{\"handle\":\"h\"}}}\n";
+    await using var input = new Blok.Server.Mcp.Protocol.McpOrderedInput(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(wire)), core);
+    var buffer = new byte[7];
+
+    while (await input.ReadAsync(buffer) > 0)
+    {
+    }
+    var started = new List<string>();
+    var third = core.InArrivalOrderAsync("h", "3", () =>
+    {
+      started.Add("3");
+
+      return Task.FromResult(3);
+    });
+    await Task.Delay(100);
+    var second = core.InArrivalOrderAsync("h", "2", () =>
+    {
+      started.Add("2");
+
+      return Task.FromResult(2);
+    });
+
+    await Task.WhenAll(second, third).WaitAsync(TimeSpan.FromSeconds(10));
+    Assert.Equal(["2", "3"], started);
   }
 }

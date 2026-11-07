@@ -30,6 +30,8 @@ internal sealed class McpServerCore : IAsyncDisposable
   private Task? stopping;
   // Per handle, the last call to arrive: the next one starts after it.
   private readonly Dictionary<string, Task> arrivals = new(StringComparer.Ordinal);
+  // Request id -> the place its handle call took when it was read.
+  private readonly Dictionary<string, Place> reserved = new(StringComparer.Ordinal);
   private JsonObject? surface;
   private int stopped;
 
@@ -110,43 +112,100 @@ internal sealed class McpServerCore : IAsyncDisposable
   /// The SDK starts handlers in arrival order but runs them at once, and the bundle checks before
   /// the queue would reorder them. Each call waits until the one before it has joined the queue.
   /// </summary>
-  internal Task<T> InArrivalOrderAsync<T>(string? handle, Func<Task<T>> run)
+  internal Task<T> InArrivalOrderAsync<T>(string? handle, string? requestId, Func<Task<T>> run)
+  {
+    var call = InOrderAsync(handle, requestId, run);
+
+    // Tracked from arrival, so stop also waits for a call still waiting its turn.
+    Track(inFlight, call);
+
+    return call;
+  }
+
+  /// <summary>
+  /// Takes the request's place in its handle's order as it is read off the wire. The SDK's
+  /// handler can start after a later request's, so the place is taken here, before it.
+  /// </summary>
+  internal void Reserve(string requestId, string handle)
+  {
+    lock (arrivals)
+    {
+      // A repeated id keeps its first place, so no place is lost unfreed.
+      if (!reserved.ContainsKey(requestId))
+      {
+        reserved[requestId] = Join(handle);
+      }
+    }
+  }
+
+  /// <summary>A request answered or cancelled without running gives its place up.</summary>
+  internal void Unreserve(string requestId)
+  {
+    Place? place;
+
+    lock (arrivals)
+    {
+      reserved.Remove(requestId, out place);
+    }
+    if (place is not null)
+    {
+      Leave(place);
+    }
+  }
+
+  private Task<T> InOrderAsync<T>(string? handle, string? requestId, Func<Task<T>> run)
   {
     if (handle is null)
     {
       return run();
     }
-    var mine = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-    Task previous;
+    Place? place = null;
 
     lock (arrivals)
     {
-      previous = arrivals.GetValueOrDefault(handle) ?? Task.CompletedTask;
-      arrivals[handle] = mine.Task;
+      if (requestId is null || !reserved.Remove(requestId, out place))
+      {
+        place = Join(handle);
+      }
     }
 
-    return AfterAsync(handle, previous, mine, run);
+    return AfterAsync(place, run);
   }
 
-  private async Task<T> AfterAsync<T>(string handle, Task previous, TaskCompletionSource mine, Func<Task<T>> run)
+  // Under the arrivals lock.
+  private Place Join(string handle)
+  {
+    var place = new Place(handle, arrivals.GetValueOrDefault(handle) ?? Task.CompletedTask, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
+
+    arrivals[handle] = place.Mine.Task;
+
+    return place;
+  }
+
+  private void Leave(Place place)
+  {
+    lock (arrivals)
+    {
+      if (arrivals.GetValueOrDefault(place.Handle) == place.Mine.Task)
+      {
+        arrivals.Remove(place.Handle);
+      }
+    }
+    place.Mine.TrySetResult();
+  }
+
+  private async Task<T> AfterAsync<T>(Place place, Func<Task<T>> run)
   {
     try
     {
-      await previous;
-      HandleArrival.Current.Value = mine;
+      await place.Previous;
+      HandleArrival.Current.Value = place.Mine;
 
       return await run();
     }
     finally
     {
-      lock (arrivals)
-      {
-        if (arrivals.GetValueOrDefault(handle) == mine.Task)
-        {
-          arrivals.Remove(handle);
-        }
-      }
-      mine.TrySetResult();
+      Leave(place);
     }
   }
 
@@ -648,3 +707,6 @@ internal sealed class McpServerCore : IAsyncDisposable
     });
   }
 }
+
+/// <summary>A call's place in its handle's order: the call before it, and its own turn.</summary>
+internal sealed record Place(string Handle, Task Previous, TaskCompletionSource Mine);

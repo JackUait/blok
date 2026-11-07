@@ -72,6 +72,30 @@ internal static class McpSdkServer
     };
 
     new McpWireFilters().Install(options);
+    InstallArrivalOrder(options, core);
+  }
+
+  // The SDK runs incoming messages at once, so places are taken by the transport's reader
+  // (McpOrderedInput); an answer or a cancel frees one its call never used.
+  private static void InstallArrivalOrder(McpServerOptions options, McpServerCore core)
+  {
+    options.Filters.Message.IncomingFilters.Add(next => async (context, cancellationToken) =>
+    {
+      if (context.JsonRpcMessage is JsonRpcNotification { Method: NotificationMethods.CancelledNotification } cancelled
+          && cancelled.Params?["requestId"] is JsonNode id)
+      {
+        core.Unreserve(McpOrderedInput.IdOf(id));
+      }
+      await next(context, cancellationToken);
+    });
+    options.Filters.Message.OutgoingFilters.Add(next => async (context, cancellationToken) =>
+    {
+      if (context.JsonRpcMessage is JsonRpcResponse or JsonRpcError)
+      {
+        core.Unreserve(((JsonRpcMessageWithId)context.JsonRpcMessage).Id.ToString());
+      }
+      await next(context, cancellationToken);
+    });
   }
 
   /// <summary>As Node: a throw that is not model-fixable is JSON-RPC -32603, not a tool error.</summary>
@@ -101,7 +125,9 @@ internal static class McpSdkServer
     var raw = context.JsonRpcRequest.Params as JsonObject;
 
     // Before the first await: calls on one handle keep the order they arrived in, as Node's queue does.
-    return await core.InArrivalOrderAsync(McpJson.String(raw?["arguments"]?["handle"]), () => CallInOrderAsync(core, identity, name, raw, context, token));
+    // Every call goes through here, so stop waits for each one.
+    return await core.InArrivalOrderAsync(
+        McpJson.String(raw?["arguments"]?["handle"]), context.JsonRpcRequest.Id.ToString(), () => CallInOrderAsync(core, identity, name, raw, context, token));
   }
 
   private static async Task<CallToolResult> CallInOrderAsync(

@@ -19,7 +19,8 @@ internal static class BlokMcpStdio
 
     answers.Install(options);
     ILoggerFactory logs = NullLoggerFactory.Instance;
-    var transport = new StdioServerTransport("blok-mcp", logs);
+    // Wire order is known only while the transport reads, so calls take their handle places there.
+    var transport = new StreamServerTransport(new McpOrderedInput(Console.OpenStandardInput(), core), Console.OpenStandardOutput(), "blok-mcp", logs);
     var server = McpServer.Create(transport, options, logs);
     using var stop = new CancellationTokenSource();
     var stopping = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

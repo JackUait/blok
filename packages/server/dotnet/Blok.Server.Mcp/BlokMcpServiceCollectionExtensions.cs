@@ -8,6 +8,8 @@ using Blok.Server.Mcp.Outbound;
 using Blok.Server.Mcp.Protocol;
 using Blok.Server.Runtime;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -92,8 +94,28 @@ public static class BlokMcpServiceCollectionExtensions
     services.AddAuthorizationBuilder().AddPolicy(BlokMcpBearer.ReadPolicy, policy => policy
         .AddAuthenticationSchemes(BlokMcpBearer.Scheme)
         .RequireClaim(BlokMcpBearer.ScopeClaim, "blok.read"));
+    DecorateAuthorizationResults(services);
 
     return services;
+  }
+
+  // The app's own result handler, if it registered one first, stays the inner one.
+  private static void DecorateAuthorizationResults(IServiceCollection services)
+  {
+    var existing = services.LastOrDefault(service => service.ServiceType == typeof(IAuthorizationMiddlewareResultHandler));
+    Func<IServiceProvider, IAuthorizationMiddlewareResultHandler> inner = existing switch
+    {
+      { ImplementationInstance: IAuthorizationMiddlewareResultHandler instance } => _ => instance,
+      { ImplementationFactory: { } factory } => provider => (IAuthorizationMiddlewareResultHandler)factory(provider),
+      { ImplementationType: { } type } => provider => (IAuthorizationMiddlewareResultHandler)ActivatorUtilities.CreateInstance(provider, type),
+      _ => _ => new AuthorizationMiddlewareResultHandler(),
+    };
+
+    if (existing is not null)
+    {
+      services.Remove(existing);
+    }
+    services.AddSingleton<IAuthorizationMiddlewareResultHandler>(provider => new McpOriginFirst(inner(provider)));
   }
 
   private static async Task<string?> FetchJwksAsync(McpHttpCaller http, string url, CancellationToken cancellationToken)
@@ -311,6 +333,29 @@ public static class BlokMcpServiceCollectionExtensions
   }
 }
 
+/// <summary>Marks the endpoints MapBlokMcp maps.</summary>
+internal sealed class McpEndpointMarker;
+
+/// <summary>
+/// Node checks Origin and Host before the token, so a refused page gets 403 even with no
+/// token. ASP.NET's authorization runs before the endpoint's gate; this runs the check first.
+/// </summary>
+internal sealed class McpOriginFirst(IAuthorizationMiddlewareResultHandler inner) : IAuthorizationMiddlewareResultHandler
+{
+  public Task HandleAsync(RequestDelegate next, HttpContext context, AuthorizationPolicy policy, PolicyAuthorizationResult authorizeResult)
+  {
+    if (!authorizeResult.Succeeded && context.GetEndpoint()?.Metadata.GetMetadata<McpEndpointMarker>() is not null
+        && context.RequestServices.GetService<McpConfig>() is { Gate: { } gate } && !McpRequestGate.Admits(gate, context.Request))
+    {
+      context.Response.StatusCode = StatusCodes.Status403Forbidden;
+
+      return Task.CompletedTask;
+    }
+
+    return inner.HandleAsync(next, context, policy, authorizeResult);
+  }
+}
+
 /// <summary>Maps Blok's MCP endpoint.</summary>
 public static class BlokMcpEndpointRouteBuilderExtensions
 {
@@ -330,6 +375,7 @@ public static class BlokMcpEndpointRouteBuilderExtensions
     var mapped = endpoints.MapGroup(pattern);
 
     mapped.MapMcp(string.Empty);
+    mapped.WithMetadata(new McpEndpointMarker());
     // Node's SDK answers every other method 405 itself; the C# SDK maps only POST when stateless.
     mapped.MapMethods(
         string.Empty,

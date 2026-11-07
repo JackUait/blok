@@ -356,6 +356,23 @@ public sealed class LibraryHostTests : IDisposable
     }
   }
 
+  // Node checks Origin and Host before the token: a foreign page gets 403, not a 401 to retry with.
+  [Fact]
+  public async Task RefusesAForeignOriginBeforeAskingForAToken()
+  {
+    var (app, client) = await StartAsync(configure: options =>
+    {
+      options.Authorize = (_, _) => ValueTask.FromResult(true);
+      options.OAuth = new BlokMcpOAuthOptions { Issuer = "https://issuer.test", Audience = "https://mcp.test/mcp", JwksUri = new Uri("https://issuer.test/jwks") };
+    });
+
+    await using (app)
+    {
+      Assert.Equal(403, await StatusAsync(client, "https://evil.example"));
+      Assert.Equal(401, await StatusAsync(client, null));
+    }
+  }
+
   // The 401's WWW-Authenticate names this URL, so the app must serve it.
   [Fact]
   public async Task ServesTheProtectedResourceMetadataWithOAuth()

@@ -324,7 +324,7 @@ internal static class McpRequestGate
     await WriteJsonAsync(response, Refusal(code, message, id, data));
   }
 
-  private static bool Admits(McpCallerGate gate, HttpRequest request)
+  internal static bool Admits(McpCallerGate gate, HttpRequest request)
   {
     var origin = request.Headers.Origin;
     var originOk = origin.Count == 0 || (gate.Origins is { } origins

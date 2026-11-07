@@ -143,4 +143,26 @@ public sealed class UploadsTests : IClassFixture<BundleFixture>, IDisposable
     Assert.Equal("""{"failure":{"code":"TOOL_ACTION_FAILED","message":"This workspace is out of storage.","retryable":false}}""", answer.ToJsonString());
     Assert.Same(thrown, Assert.Single(logged));
   }
+
+  // Node shows agentMessage only when it is not blank after String.prototype.trim.
+  [Theory]
+  [InlineData("")]
+  [InlineData("   ")]
+  [InlineData("\n\t\u00A0\uFEFF\u2028")]
+  public async Task ABlankAgentMessageGivesNodesGenericWords(string message)
+  {
+    var answer = await FailAsync(new BlokMcpUploadException(message), []);
+
+    Assert.Equal("""{"failure":{"code":"TOOL_ACTION_FAILED","message":"The upload failed.","retryable":false}}""", answer.ToJsonString());
+  }
+
+  // Buffer.from(data, 'base64') ignores non-zero bits past the last byte.
+  [Fact]
+  public async Task Base64WithNonZeroTrailingBitsIsAcceptedAsNodeReadsIt()
+  {
+    var answer = await new UploadPorts(Uploads()).RunAsync(JsonNode.Parse("""{"op":"uploadByFile","fileName":"a.png","type":"image/png","size":1,"kind":"image","tool":"image","data":"QR=="}""")!.AsObject(), CancellationToken.None);
+
+    Assert.Null(answer["error"]);
+    Assert.Equal([0x41], Assert.Single(sent).File.Bytes.ToArray());
+  }
 }

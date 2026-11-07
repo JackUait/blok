@@ -77,13 +77,24 @@ internal sealed class UploadPorts(BlokMcpUploads uploads, Action<string, Excepti
       (log ?? LogToStderr)("blok-mcp: the host uploader failed", error);
 
       return error is BlokMcpUploadException meant
-          ? new JsonObject { ["failure"] = new JsonObject { ["code"] = "TOOL_ACTION_FAILED", ["message"] = meant.AgentMessage, ["retryable"] = false } }
+          ? new JsonObject
+          {
+            ["failure"] = new JsonObject
+            {
+              ["code"] = "TOOL_ACTION_FAILED",
+              ["message"] = meant.AgentMessage.All(IsJsWhiteSpace) ? GenericFailure : meant.AgentMessage,
+              ["retryable"] = false,
+            },
+          }
           : Thrown(GenericFailure);
     }
   }
 
   // Node's words for an upload the host refused without a message for the agent.
   private const string GenericFailure = "The upload failed.";
+
+  // What String.prototype.trim removes: .NET's white space, less U+0085, plus U+FEFF.
+  private static bool IsJsWhiteSpace(char c) => c == '\uFEFF' || (char.IsWhiteSpace(c) && c != '\u0085');
 
   private static void LogToStderr(string message, Exception error)
   {

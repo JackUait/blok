@@ -56,6 +56,11 @@ fn now_ms() -> i64 {
         .map_or(0, |d| d.as_millis() as i64)
 }
 
+/// The cached ticket still has the refresh margin left.
+fn lasts(expires: i64, now: i64) -> bool {
+    expires.saturating_sub(now) >= REFRESH_MARGIN_MS
+}
+
 /// atob, then UTF-8 with replacement: whitespace dropped, `=` padding
 /// optional, any other stray character refused.
 fn atob_utf8(text: &str) -> Option<String> {
@@ -131,7 +136,7 @@ impl Tickets {
                     .clone();
                 if let Some((ticket, expires)) = cached
                     && !fresh
-                    && expires - now_ms() >= REFRESH_MARGIN_MS
+                    && lasts(expires, now_ms())
                 {
                     return Ok(ticket);
                 }
@@ -309,5 +314,12 @@ mod tests {
         assert!(ticket_claims("abc").is_none());
         assert!(ticket_claims("a.!!!.c").is_none());
         assert!(ticket_claims("a.e30.c").is_some());
+    }
+
+    // A ticket's exp of -1e300 saturates to i64::MIN; that must read as expired.
+    #[test]
+    fn a_far_past_expiry_is_expired_not_an_overflow() {
+        assert!(!lasts(i64::MIN, now_ms()));
+        assert!(lasts(i64::MAX, now_ms()));
     }
 }

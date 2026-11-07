@@ -120,13 +120,27 @@ test.describe('Shift-click picks an item, never the database block', () => {
 });
 
 test.describe('a lasso from the page margin', () => {
-  /** Days around the real today, as the calendar reads them. */
-  const isoDays = async (page: Page, offsets: number[]): Promise<string[]> => page.evaluate((list) => list.map((offset) => {
-    const now = new Date();
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+  /**
+   * Today and a neighbour in the same rendered week row. The drag boxes below only reach
+   * both events when they share a row, and the row depends on the real date and the
+   * locale's week start, so read it from the grid instead of adding day offsets.
+   */
+  const sameRowDays = async (page: Page): Promise<[string, string]> => {
+    await mount(page, blocks({ type: 'calendar' }));
 
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }), offsets);
+    const days = await page.locator('[data-blok-database-calendar-week]').filter({ has: page.locator('[data-blok-database-calendar-day][data-today]') })
+      .locator('[data-blok-database-calendar-day]').evaluateAll((cells) => cells.map((cell) => ({
+        day: cell.getAttribute('data-day') ?? '',
+        today: cell.hasAttribute('data-today'),
+      })));
+    const at = days.findIndex((cell) => cell.today);
+
+    if (at === -1) {
+      throw new Error('no today cell');
+    }
+
+    return at === days.length - 1 ? [days[at - 1].day, days[at].day] : [days[at].day, days[at + 1].day];
+  };
 
   const lasso = async (page: Page, from: { x: number; y: number }, to: { x: number; y: number }): Promise<void> => {
     await page.mouse.move(from.x, from.y);
@@ -136,10 +150,7 @@ test.describe('a lasso from the page margin', () => {
   };
 
   test('across the calendar picks every event it touches, across days, and not the block', async ({ page }) => {
-    // Today and the day after stay in today's month view only when today is not the month's last day.
-    const today = new Date();
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate();
-    const [first, second] = await isoDays(page, lastDay ? [-1, 0] : [0, 1]);
+    const [first, second] = await sameRowDays(page);
 
     await mount(page, blocks({ type: 'calendar' }, [first, second]));
     const events = page.locator('[data-blok-database-calendar-event]');
@@ -165,9 +176,7 @@ test.describe('a lasso from the page margin', () => {
 
   // research/30 B11: one Escape cleared the picks; a second changed nothing.
   test('one Escape clears a drag box made inside the calendar grid; a second Escape changes nothing', async ({ page }) => {
-    const today = new Date();
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate();
-    const [first, second] = await isoDays(page, lastDay ? [-1, 0] : [0, 1]);
+    const [first, second] = await sameRowDays(page);
 
     await mount(page, blocks({ type: 'calendar' }, [first, second]));
     const events = page.locator('[data-blok-database-calendar-event]');
@@ -199,9 +208,7 @@ test.describe('a lasso from the page margin', () => {
   });
 
   test('started on empty space inside the calendar grid, picks every event it touches, creates none, selects no text (research/23 §2c)', async ({ page }) => {
-    const today = new Date();
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate();
-    const [first, second] = await isoDays(page, lastDay ? [-1, 0] : [0, 1]);
+    const [first, second] = await sameRowDays(page);
 
     await mount(page, blocks({ type: 'calendar' }, [first, second]));
     const events = page.locator('[data-blok-database-calendar-event]');
@@ -240,9 +247,7 @@ test.describe('a lasso from the page margin', () => {
   // research/31 §6: with events selected, one click on an empty day cleared them; a double-click cleared them and made a page.
   for (const [name, clicks] of [['a single click', 1], ['a double-click', 2]] as const) {
     test(`${name} on an empty day clears a drag box selection${clicks === 2 ? ' and adds a row there' : ', adds nothing'}`, async ({ page }) => {
-      const today = new Date();
-      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate();
-      const [first, second] = await isoDays(page, lastDay ? [-1, 0] : [0, 1]);
+      const [first, second] = await sameRowDays(page);
 
       await mount(page, blocks({ type: 'calendar' }, [first, second]));
       const events = page.locator('[data-blok-database-calendar-event]');

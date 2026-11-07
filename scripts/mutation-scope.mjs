@@ -347,6 +347,13 @@ export const buildScope = ({ changedPaths, sourceFiles, testFiles, importers }) 
  * `deadline` (seconds) sets Stryker's dry-run limit a minute past it, so the
  * run's deadline stops a slow dry run and parks the batch. Stryker's own limit
  * would fail the run and leave the same batch for the next one.
+ *
+ * @param {object} options
+ * @param {string} options.mode
+ * @param {string[]} options.mutate
+ * @param {string[]} options.testFiles
+ * @param {boolean} [options.allowFull]
+ * @param {number} [options.deadline]
  */
 export const buildStrykerArgs = ({ mode, mutate, testFiles, allowFull = false, deadline }) => {
   const limit = deadline === undefined ? [] : ['--dryRunTimeoutMinutes', String(Math.ceil(deadline / 60) + 1)];

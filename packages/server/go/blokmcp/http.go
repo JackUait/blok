@@ -157,6 +157,9 @@ func (s *Server) handler() http.Handler {
 			r.Header.Set("Mcp-Protocol-Version", "2024-11-05")
 		}
 		answer := &recorder{header: http.Header{}}
+		if r.Header.Get("Mcp-Protocol-Version") < modernVersion {
+			answer.stream = w
+		}
 		sdk.ServeHTTP(answer, r.WithContext(context.WithValue(r.Context(), identityKey{}, who)))
 		answer.send(w, r.Header.Get("Mcp-Protocol-Version") >= modernVersion)
 	})
@@ -193,11 +196,15 @@ func liftBody(body []byte) []byte {
 }
 
 // recorder holds the SDK's answer, so it can be fixed before it is sent.
-// Stateless requests answer once, so nothing streams.
+// A legacy event stream goes out event by event, as Node writes a batch's
+// answers as they end; anything else is sent once, whole.
 type recorder struct {
 	header http.Header
 	status int
 	body   bytes.Buffer
+	// stream, when set, takes each whole event of a 200 event stream at once.
+	stream  http.ResponseWriter
+	started bool
 }
 
 func (r *recorder) Header() http.Header { return r.header }
@@ -205,7 +212,41 @@ func (r *recorder) Write(b []byte) (int, error) {
 	if r.status == 0 {
 		r.status = http.StatusOK
 	}
-	return r.body.Write(b)
+	n, err := r.body.Write(b)
+	if r.stream != nil && r.status == http.StatusOK && strings.HasPrefix(r.header.Get("Content-Type"), "text/event-stream") {
+		r.streamEvents()
+	}
+	return n, err
+}
+
+// streamEvents sends every whole event held so far.
+func (r *recorder) streamEvents() {
+	held := r.body.Bytes()
+	end := bytes.LastIndex(held, []byte("\n\n"))
+	if end < 0 {
+		return
+	}
+	if !r.started {
+		r.started = true
+		for name, values := range r.header {
+			r.stream.Header()[name] = values
+		}
+		r.stream.WriteHeader(r.status)
+	}
+	_, _ = r.stream.Write(rawLineSeparators(legacyEvents(held[:end+2], false)))
+	_ = http.NewResponseController(r.stream).Flush()
+	r.body.Next(end + 2)
+}
+
+// legacyEvents rewrites an event stream's messages as Node's SDK words them.
+func legacyEvents(body []byte, refused bool) []byte {
+	var out bytes.Buffer
+	for _, message := range sseMessages(body) {
+		out.WriteString("event: message\ndata: ")
+		out.Write(fixMessage(message, refused))
+		out.WriteString("\n\n")
+	}
+	return out.Bytes()
 }
 func (r *recorder) WriteHeader(status int) {
 	if r.status == 0 {
@@ -269,6 +310,10 @@ func fixMessage(message []byte, refused bool) []byte {
 // send writes the recorded answer: a 2026 request gets plain JSON, as
 // Node's SDK answers it.
 func (r *recorder) send(w http.ResponseWriter, modern bool) {
+	if r.started {
+		_, _ = w.Write(rawLineSeparators(legacyEvents(r.body.Bytes(), false)))
+		return
+	}
 	body := r.body.Bytes()
 	contentType := r.header.Get("Content-Type")
 	refused := modern && r.status == http.StatusBadRequest
@@ -280,13 +325,7 @@ func (r *recorder) send(w http.ResponseWriter, modern bool) {
 			body = fixMessage(messages[0], refused)
 			break
 		}
-		var out bytes.Buffer
-		for _, message := range messages {
-			out.WriteString("event: message\ndata: ")
-			out.Write(fixMessage(message, refused))
-			out.WriteString("\n\n")
-		}
-		body = out.Bytes()
+		body = legacyEvents(body, refused)
 	case strings.HasPrefix(contentType, "application/json"):
 		body = fixMessage(body, refused)
 	}

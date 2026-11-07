@@ -933,6 +933,7 @@ export class VideoTool implements BlockTool {
   }
 
   private transitionToEmpty(): void {
+    this.conversion?.abort();
     this.data = { ...this.data, url: '', variants: undefined };
     this.state = 'EMPTY';
     this.lastSource = null;

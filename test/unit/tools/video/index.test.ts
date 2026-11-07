@@ -1715,6 +1715,23 @@ describe('VideoTool — background formats', () => {
       }
     });
 
+    it('cancels the conversion when the user replaces the video', async () => {
+      const handle = blocking();
+      const tool = toolWith({ formats: { video: ['webm', 'av1'] }, mediabunny: loader });
+      const root = tool.render();
+
+      pasteFile(tool);
+      await vi.waitFor(() => expect(handle.calls).toHaveLength(1));
+      const items = tool.renderSettings() as unknown as Array<{ name?: string; onActivate?: () => void }>;
+      items.find((item) => item.name === 'video-replace')?.onActivate?.();
+      expect(root.getAttribute('data-state')).toBe('empty');
+
+      await vi.waitFor(() => expect(handle.calls[0].signal?.aborted).toBe(true));
+      handle.go();
+      await idle();
+      expect(handle.calls).toHaveLength(1);
+    });
+
     it('cancels when the tool is destroyed with the editor', async () => {
       const handle = blocking();
       const tool = toolWith({ formats: { video: ['webm', 'av1'] }, mediabunny: loader });

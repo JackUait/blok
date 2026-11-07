@@ -270,7 +270,33 @@ const checkUploads = (options: BlokMcpOptions): void => {
   }
 };
 
+const shown = (value: unknown): string => typeof value === 'string' ? `"${value}"` : String(value);
+
+// A library host passes these unchecked; the CLI flags check them in parseMcpArgs.
+const checkValues = (options: BlokMcpOptions): void => {
+  const allowed: Array<[keyof BlokMcpOptions, readonly string[]]> = [
+    ['schema', ['envelope', 'full', 'mixed']],
+    ['pageTitles', ['off', 'page-map']],
+  ];
+
+  for (const [name, values] of allowed) {
+    const value: unknown = options[name];
+
+    if (value !== undefined && !values.some(item => item === value)) {
+      throw new McpConfigError(`${name} must be one of ${values.join(', ')}, got ${shown(value)}`);
+    }
+  }
+  for (const name of ['handleIdleMs', 'maxHandlesPerPrincipal'] as const) {
+    const value: unknown = options[name];
+
+    if (value !== undefined && !(typeof value === 'number' && Number.isSafeInteger(value) && value > 0)) {
+      throw new McpConfigError(`${name} must be a positive integer, got ${shown(value)}`);
+    }
+  }
+};
+
 export const checkOptionSafety = (options: BlokMcpOptions): void => {
+  checkValues(options);
   checkUploads(options);
   if (options.tickets?.kind === 'url'
     && (options.tickets.hostToken === undefined || options.tickets.hostToken === '')) {

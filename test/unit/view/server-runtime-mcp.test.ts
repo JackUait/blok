@@ -799,6 +799,15 @@ describe('server runtime CLI operations', () => {
     expect(await call('mcpCheckOptions', { options: { ...data, ...flags } })).toEqual(node);
   });
 
+  it.each<[Record<string, unknown>, string]>([
+    [{ schema: 'bogus' }, 'schema must be one of envelope, full, mixed, got "bogus"'],
+    [{ pageTitles: 'bogus' }, 'pageTitles must be one of off, page-map, got "bogus"'],
+    [{ handleIdleMs: 0 }, 'handleIdleMs must be a positive integer, got 0'],
+    [{ maxHandlesPerPrincipal: 0 }, 'maxHandlesPerPrincipal must be a positive integer, got 0'],
+  ])('refuses the library option %o for every host', async (extra, error) => {
+    expect(await call('mcpCheckOptions', { options: { ...base, ...extra } })).toEqual({ error });
+  });
+
   it.each<[string, 'manifest' | 'overrides', unknown]>([
     ['a good manifest', 'manifest', customTools],
     ['a bad manifest', 'manifest', { formatVersion: 2, blocks: [] }],

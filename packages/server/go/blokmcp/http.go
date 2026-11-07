@@ -311,6 +311,17 @@ func (s *Server) ListenAndServe(ctx context.Context, onListening func(url string
 		return &ConfigError{Message: "Refusing to bind " + listen + ": a non-loopback address needs --public"}
 	}
 	host := strings.TrimSuffix(strings.TrimPrefix(listen[:at], "["), "]")
+	// Node listens on the first address the resolver gives for a name;
+	// Go's own listen would prefer IPv4.
+	if host != "" && net.ParseIP(host) == nil {
+		addresses, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		if err != nil {
+			return err
+		}
+		if len(addresses) > 0 {
+			host = addresses[0].IP.String()
+		}
+	}
 	listener, err := net.Listen("tcp", net.JoinHostPort(host, listen[at+1:]))
 	if err != nil {
 		return err

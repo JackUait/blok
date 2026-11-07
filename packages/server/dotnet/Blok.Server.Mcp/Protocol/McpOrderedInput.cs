@@ -147,6 +147,11 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
   {
     var text = Encoding.UTF8.GetString(bytes.Span);
 
+    if (McpDepthClamp.Clamp(text) is var clamped && !ReferenceEquals(clamped, text))
+    {
+      text = clamped;
+      bytes = Encoding.UTF8.GetBytes(text);
+    }
     if (McpRequestShape.Read(bytes) is var (document, repeated))
     {
       long? whole = null;

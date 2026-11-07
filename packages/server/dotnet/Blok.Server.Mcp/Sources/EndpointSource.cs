@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Blok.Server.Mcp.Core;
 using Blok.Server.Mcp.Outbound;
+using Blok.Server.Mcp.Protocol;
 
 namespace Blok.Server.Mcp.Sources;
 
@@ -75,7 +76,8 @@ internal sealed class EndpointSource(McpSourceConfig.Endpoint config, McpHttpCal
     }
     try
     {
-      return McpJson.Parse(response.Body) is JsonObject answer && McpJson.String(answer["version"]) is string version
+      // Node reads a save answer of any depth; McpJson stops at 1000.
+      return McpJson.Parse(McpDepthClamp.Clamp(response.Body)) is JsonObject answer && McpJson.String(answer["version"]) is string version
           ? version
           : ifVersion;
     }
@@ -136,6 +138,10 @@ internal sealed class EndpointSource(McpSourceConfig.Endpoint config, McpHttpCal
 
   private static JsonNode? ParseJson(string text, string what)
   {
+    if (McpDepthClamp.TextNestsDeeperThan(text, McpDepthClamp.MaxJsonDepth))
+    {
+      throw Unavailable($"answered JSON nested deeper than {McpDepthClamp.MaxJsonDepth} levels {what}");
+    }
     try
     {
       return McpJson.Parse(text);

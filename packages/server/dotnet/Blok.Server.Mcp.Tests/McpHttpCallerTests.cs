@@ -168,4 +168,59 @@ public sealed class McpHttpCallerTests
 
     Assert.StartsWith("GET /docs//a HTTP/1.1", head, StringComparison.Ordinal);
   }
+
+  // A document nesting total levels: object 1, blocks 2, block 3, data 4.
+  private static byte[] DeepDoc(int total, string tail = "")
+  {
+    return Encoding.UTF8.GetBytes("{\"title\":\"T\",\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\",\"x\":"
+        + new string('[', total - 4) + tail + new string(']', total - 4) + "}}]}");
+  }
+
+  // Node checks an endpoint answer's depth before it parses it.
+  [Theory]
+  [InlineData(49, "")]
+  [InlineData(20000, "")]
+  [InlineData(60, "1,")]
+  public async Task RefusesAnEndpointAnswerNestedPast48AsNode(int total, string tail)
+  {
+    using var caller = new McpHttpCaller();
+    var (_, refused) = await ServeOnceAsync(Answer(DeepDoc(total, tail)), async port =>
+        await Assert.ThrowsAsync<McpHostError>(() => new EndpointSource(new McpSourceConfig.Endpoint($"http://127.0.0.1:{port}/docs", "Token x", null), caller).LoadAsync("a", CancellationToken.None)));
+
+    Assert.Equal("The document endpoint answered JSON nested deeper than 48 levels for a.", refused.Message);
+  }
+
+  [Fact]
+  public async Task OpensAnEndpointAnswerOf48Levels()
+  {
+    using var caller = new McpHttpCaller();
+    var (_, loaded) = await ServeOnceAsync(Answer(DeepDoc(48)), async port =>
+        await new EndpointSource(new McpSourceConfig.Endpoint($"http://127.0.0.1:{port}/docs", "Token x", null), caller).LoadAsync("a", CancellationToken.None));
+
+    Assert.NotNull(loaded);
+  }
+
+  [Fact]
+  public async Task RefusesAListAnswerNestedPast48AsNode()
+  {
+    using var caller = new McpHttpCaller();
+    var body = Encoding.UTF8.GetBytes("{\"documents\":[],\"x\":" + new string('[', 48) + new string(']', 48) + "}");
+    var (_, refused) = await ServeOnceAsync(Answer(body), async port =>
+        await Assert.ThrowsAsync<McpHostError>(() =>
+            new EndpointSource(new McpSourceConfig.Endpoint($"http://127.0.0.1:{port}/docs", "Token x", $"http://127.0.0.1:{port}/list"), caller).ListAsync(10, null, null, CancellationToken.None)));
+
+    Assert.Equal("The document endpoint answered JSON nested deeper than 48 levels for the list.", refused.Message);
+  }
+
+  // Node reads a save answer of any depth; its version still counts.
+  [Fact]
+  public async Task ADeepSaveAnswerStillGivesItsVersion()
+  {
+    using var caller = new McpHttpCaller();
+    var body = Encoding.UTF8.GetBytes("{\"version\":\"v2\",\"x\":" + new string('[', 20000) + new string(']', 20000) + "}");
+    var (_, version) = await ServeOnceAsync(Answer(body), async port =>
+        await new EndpointSource(new McpSourceConfig.Endpoint($"http://127.0.0.1:{port}/docs", "Token x", null), caller).SaveAsync("a", "{\"blocks\":[]}", "v1", CancellationToken.None));
+
+    Assert.Equal("v2", version);
+  }
 }

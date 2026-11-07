@@ -162,7 +162,7 @@ public sealed class LibraryHostTests : IDisposable
     return (JsonObject)JsonNode.Parse(data)!["result"]!["structuredContent"]!;
   }
 
-  // The SDK reads a body at most 64 deep; Node reads any depth.
+  // The SDK reads a body at most 64 deep. As in Node, 22 nested toggles fit in 48 levels.
   [Fact]
   public async Task ADeepWriteOverHttpIsNoParseError()
   {
@@ -173,7 +173,7 @@ public sealed class LibraryHostTests : IDisposable
       var handle = (string?)(await CallAsync(client, "blok_open", new JsonObject { ["documentId"] = "deep", ["write"] = true }))["handle"];
       JsonObject block = new() { ["type"] = "toggle", ["data"] = new JsonObject { ["text"] = "L" } };
 
-      for (var level = 1; level < 30; level++)
+      for (var level = 1; level < 22; level++)
       {
         block = new JsonObject { ["type"] = "toggle", ["data"] = new JsonObject { ["text"] = "L" }, ["children"] = new JsonArray(block) };
       }
@@ -184,6 +184,54 @@ public sealed class LibraryHostTests : IDisposable
       });
 
       Assert.Equal(true, (bool?)ran["ok"]);
+    }
+  }
+
+  // Node answers INVALID_ARGS at every depth past 48, alone or in a batch, where arguments sit one level deeper.
+  [Theory]
+  [InlineData(49, false)]
+  [InlineData(64, false)]
+  [InlineData(1001, false)]
+  [InlineData(100001, false)]
+  [InlineData(49, true)]
+  [InlineData(100001, true)]
+  public async Task DeepArgumentsOverHttpGetNodesRefusal(int depth, bool batch)
+  {
+    var (app, client) = await StartAsync();
+
+    await using (app)
+    {
+      var call = McpStdioSessionTests.DeepCall(5, depth);
+      using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+      {
+        Content = new StringContent(batch ? $"[{call}]" : call, Encoding.UTF8, "application/json"),
+      };
+      request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+      request.Headers.Add("MCP-Protocol-Version", batch ? "2025-03-26" : "2025-11-25");
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(200, (int)response.StatusCode);
+      Assert.Contains(McpStdioSessionTests.TooDeepArguments, await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+  }
+
+  [Fact]
+  public async Task RefusesDeepInvalidJsonAsAParseError()
+  {
+    var (app, client) = await StartAsync();
+
+    await using (app)
+    {
+      using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+      {
+        Content = new StringContent(McpStdioSessionTests.DeepCall(5, 2000, "1,"), Encoding.UTF8, "application/json"),
+      };
+      request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+      request.Headers.Add("MCP-Protocol-Version", "2025-11-25");
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(400, (int)response.StatusCode);
+      Assert.Equal("""{"jsonrpc":"2.0","error":{"code":-32700,"message":"Parse error: Invalid JSON"},"id":null}""", await response.Content.ReadAsStringAsync());
     }
   }
 

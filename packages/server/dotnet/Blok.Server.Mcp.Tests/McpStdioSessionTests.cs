@@ -129,8 +129,50 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     return block;
   }
 
-  // The SDK reads a message at most 64 deep; Node reads any depth, so 30 nested toggles are no parse error.
+  internal const string TooDeepArguments = "The arguments nest deeper than 48 levels of objects and arrays. Send flatter data.";
+
+  // A tools/call whose arguments nest depth levels (the arguments object is level 1).
+  internal static string DeepCall(int id, int depth, string tail = "")
+  {
+    return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"method\":\"tools/call\",\"params\":{\"name\":\"blok_list_documents\",\"arguments\":{\"zz\":"
+        + new string('[', depth - 1) + tail + new string(']', depth - 1) + "}}}";
+  }
+
+  // Node answers INVALID_ARGS at every depth past 48.
   [Theory]
+  [InlineData(49)]
+  [InlineData(64)]
+  [InlineData(129)]
+  [InlineData(1001)]
+  [InlineData(100001)]
+  public async Task DeepArgumentsGetNodesRefusal(int depth)
+  {
+    var (live, _, _) = await OpenForWriteAsync();
+
+    await live.SendAsync(DeepCall(5, depth));
+    var answer = await live.AnswerAsync("5");
+    await live.DisposeAsync();
+
+    Assert.Contains(TooDeepArguments, answer.ToJsonString(), StringComparison.Ordinal);
+  }
+
+  // Deep invalid JSON stays invalid: Node drops the line and answers the next.
+  [Fact]
+  public async Task DropsADeepInvalidLine()
+  {
+    var (live, _, _) = await OpenForWriteAsync();
+
+    await live.SendAsync(DeepCall(5, 2000, "1,"));
+    await live.SendAsync("""{"jsonrpc":"2.0","id":6,"method":"ping"}""");
+    var answer = await live.AnswerAsync("6");
+    await live.DisposeAsync();
+
+    Assert.Equal(6, (int?)answer["id"]);
+  }
+
+  // The SDK reads a message at most 64 deep. As in Node, 22 nested toggles fit in 48 levels and 23 do not.
+  [Theory]
+  [InlineData(22)]
   [InlineData(30)]
   [InlineData(40)]
   public async Task ADeepWriteIsNoParseError(int levels)
@@ -156,10 +198,14 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     var answer = await live.AnswerAsync("20");
     await live.DisposeAsync();
 
-    Assert.NotEqual(-32700, (int?)answer["error"]?["code"]);
-    if (levels == 30)
+    Assert.Null(answer["error"]);
+    if (levels == 22)
     {
       Assert.Equal(true, (bool?)answer["result"]?["structuredContent"]?["ok"]);
+    }
+    else
+    {
+      Assert.Equal(TooDeepArguments, (string?)answer["result"]?["structuredContent"]?["error"]?["message"]);
     }
   }
 

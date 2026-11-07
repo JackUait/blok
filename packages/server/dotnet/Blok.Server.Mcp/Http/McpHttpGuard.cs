@@ -136,7 +136,7 @@ internal static class McpRequestGate
 
       return;
     }
-    var sent = AsTextDecoderReads(buffered.ToArray());
+    var sent = McpDepthClamp.Clamp(AsTextDecoderReads(buffered.ToArray()));
     var read = McpRequestShape.Read(Encoding.UTF8.GetBytes(sent));
 
     request.Body = new MemoryStream(Encoding.UTF8.GetBytes(sent));

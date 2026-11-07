@@ -245,6 +245,32 @@ describe('code block header', () => {
       expect(tool.save(el)).not.toHaveProperty('filename');
     });
 
+    it('ends the edit and shows the typed filename as text when read-only turns on mid-edit', async () => {
+      const CodeTool = await loadTool();
+      const tool = new CodeTool(createOptions({ code: 'x', filename: 'a.ts' }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+      query<HTMLButtonElement>(el, 'code-filename')?.click();
+
+      const input = query<HTMLInputElement>(el, 'code-filename-input');
+
+      if (!input) throw new Error('no input');
+
+      input.value = 'b.ts';
+      tool.setReadOnly(true);
+
+      expect(query(el, 'code-filename-input')).toBeNull();
+      expect(query(el, 'code-filename')?.tagName).toBe('SPAN');
+      expect(query(el, 'code-filename')?.textContent).toBe('b.ts');
+
+      input.dispatchEvent(new FocusEvent('blur'));
+
+      expect(query(el, 'code-filename')?.tagName).toBe('SPAN');
+      expect(query(el, 'code-filename')?.textContent).toBe('b.ts');
+      expect(tool.save(el)).toMatchObject({ filename: 'b.ts' });
+    });
+
     it('applies a filename from setData (undo/redo)', async () => {
       const CodeTool = await loadTool();
       const tool = new CodeTool(createOptions({ code: 'x' }));

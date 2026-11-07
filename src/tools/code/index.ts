@@ -132,6 +132,7 @@ export class CodeTool implements BlockTool {
   private _paddingTop = 0;
   private _geometryRafId: number | null = null;
   private _pasteRafId: number | null = null;
+  private _endFilenameEdit: (() => void) | null = null;
   private _previewRequest = 0;
   private _resizeObserver: ResizeObserver | null = null;
   private _copiedTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -460,6 +461,8 @@ export class CodeTool implements BlockTool {
   }
 
   public setReadOnly(state: boolean): void {
+    // Before the swap below: it needs the display back in the DOM.
+    this._endFilenameEdit?.();
     this.readOnly = state;
 
     if (!this._dom) {
@@ -541,6 +544,7 @@ export class CodeTool implements BlockTool {
       }
 
       state.done = true;
+      this._endFilenameEdit = null;
 
       const next = commit ? input.value.trim() : previous;
 
@@ -583,6 +587,7 @@ export class CodeTool implements BlockTool {
       }
     });
     input.addEventListener('blur', () => finish(true, false));
+    this._endFilenameEdit = () => finish(true, false);
 
     display.replaceWith(input);
     input.focus();

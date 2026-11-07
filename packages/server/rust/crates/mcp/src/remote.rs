@@ -1450,10 +1450,13 @@ impl Room {
         // A restore the bundle checked goes to the sync server's history route.
         if let Some(Value::String(version)) = out.value("restore") {
             let before = self.count.load(Ordering::SeqCst);
-            if let Err(failed) = self.restore(&version).await {
+            let previous = result
+                .pointer("/results/0/previous")
+                .and_then(Value::as_str);
+            if let Err(failed) = self.restore(&version, previous).await {
                 return Ok(Executed::Done {
-                    result: result_text,
-                    delivery: Delivery::Failed(failed),
+                    result: restore_failure(&result, &failed),
+                    delivery: Delivery::None,
                 });
             }
             // The restore comes back as a peer's update, and the result's
@@ -2050,33 +2053,113 @@ impl Room {
         out
     }
 
-    async fn restore(&self, version: &str) -> Result<(), HostError> {
-        let fail = |message: String| {
-            HostError::surface(
-                "TOOL_ACTION_FAILED",
-                format!("The version history failed: {message}"),
-            )
-        };
+    /// POSTs the restore, pinned to `previous`, the head the checks saw.
+    async fn restore(&self, version: &str, previous: Option<&str>) -> Result<(), RestoreFailure> {
         let Some(path) = point_path(version) else {
-            return Ok(());
+            return Err(RestoreFailure::NotFound(version.to_owned()));
         };
         let mut key = [0u8; 16];
         let _ = self.random.fill(&mut key);
+        let Some(headers) = restore_headers(&uuid(&key), previous) else {
+            return Err(RestoreFailure::Stale);
+        };
         let url = format!("{}/{path}/restore", self.history_base());
-        let headers = vec![("Blok-Idempotency-Key".to_owned(), uuid(&key))];
         let answer = self
             .history_send("POST", &url, headers)
             .await
-            .map_err(fail)?;
-        if (200..=299).contains(&answer.status) || answer.status == 404 || answer.status == 412 {
-            return Ok(());
+            .map_err(|message| RestoreFailure::Host(message, None))?;
+        match restore_verdict(answer.status) {
+            Ok(Restored::Done) => Ok(()),
+            Ok(Restored::NotFound) => Err(RestoreFailure::NotFound(version.to_owned())),
+            Ok(Restored::Stale) => Err(RestoreFailure::Stale),
+            Err(status) => Err(RestoreFailure::Host(
+                format!(
+                    "The sync server answered {}: {}",
+                    answer.status,
+                    String::from_utf8_lossy(&answer.body).trim()
+                ),
+                status,
+            )),
         }
-        Err(fail(format!(
-            "The sync server answered {}: {}",
-            answer.status,
-            String::from_utf8_lossy(&answer.body).trim()
-        )))
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Restored {
+    Done,
+    NotFound,
+    Stale,
+}
+
+/// Why nothing was restored, as Node's runRestore reports it.
+#[derive(Debug)]
+enum RestoreFailure {
+    NotFound(String),
+    Stale,
+    /// The host failed: its message, and its status when it answered.
+    Host(String, Option<u16>),
+}
+
+/// The restore route's status, as Node's live version history reads it.
+fn restore_verdict(status: u16) -> Result<Restored, Option<u16>> {
+    match status {
+        200..=299 => Ok(Restored::Done),
+        404 => Ok(Restored::NotFound),
+        412 => Ok(Restored::Stale),
+        other => Err(Some(other)),
+    }
+}
+
+/// The restore's headers; None when `previous` is a tag the server cannot
+/// read, which would restore unpinned.
+fn restore_headers(key: &str, previous: Option<&str>) -> Option<Vec<(String, String)>> {
+    let mut headers = vec![("Blok-Idempotency-Key".to_owned(), key.to_owned())];
+    if let Some(previous) = previous {
+        point_path(previous)?;
+        headers.push(("If-Match".to_owned(), format!("\"{previous}\"")));
+    }
+    Some(headers)
+}
+
+/// The failed batch result Node's executor gives, key order included: its
+/// runRestore throws these at command 0, after the plan's own revision.
+fn restore_failure(result: &Value, failure: &RestoreFailure) -> String {
+    let error = match failure {
+        RestoreFailure::NotFound(version) => json!({
+            "code": "VERSION_NOT_FOUND",
+            "message": format!("There is no version \"{version}\". history.versions lists them."),
+            "path": "/commands/0/args/version",
+            "retryable": false,
+            "commandIndex": 0,
+        }),
+        RestoreFailure::Stale => json!({
+            "code": "STALE",
+            "message": "The document changed since the version history was read, so nothing was restored. Read it again, then retry.",
+            "commandIndex": 0,
+            "retryable": true,
+        }),
+        RestoreFailure::Host(message, status) => {
+            // Node's ask(): no answer, a 429 or a 5xx other than a plain 500 or a 501 may pass on a retry.
+            let retryable = match status {
+                None => true,
+                Some(status) => *status == 429 || ((502..=599).contains(status) && *status != 501),
+            };
+            json!({
+                "code": "TOOL_ACTION_FAILED",
+                "message": format!("The version history failed: {message}"),
+                "retryable": retryable,
+                "commandIndex": 0,
+                "path": "/commands/0/args",
+            })
+        }
+    };
+    json!({
+        "ok": false,
+        "revision": result.get("revision").cloned().unwrap_or(Value::Null),
+        "error": error,
+        "warnings": result.get("warnings").cloned().unwrap_or_else(|| json!([])),
+    })
+    .to_string()
 }
 
 /// Node's words when fetch got no answer ("fetch failed" is undici's).
@@ -2319,6 +2402,65 @@ mod tests {
         assert_eq!(point_path(":3"), None);
         assert_eq!(point_path("..:3"), None);
         assert_eq!(point_path("a:x"), None);
+    }
+
+    // Node's live version history: 404 is no such version, 412 is a head
+    // that moved past the one the checks saw; nothing was restored.
+    #[test]
+    fn a_restore_404_or_412_is_not_a_success() {
+        assert_eq!(restore_verdict(204), Ok(Restored::Done));
+        assert_eq!(restore_verdict(404), Ok(Restored::NotFound));
+        assert_eq!(restore_verdict(412), Ok(Restored::Stale));
+        assert_eq!(restore_verdict(503), Err(Some(503)));
+    }
+
+    // The restore pins the head the checks saw, as Node and C# do.
+    #[test]
+    fn a_restore_sends_if_match_with_the_version_current_before() {
+        assert_eq!(
+            restore_headers("k", Some("abc:2")),
+            Some(vec![
+                ("Blok-Idempotency-Key".to_owned(), "k".to_owned()),
+                ("If-Match".to_owned(), "\"abc:2\"".to_owned()),
+            ])
+        );
+        assert_eq!(
+            restore_headers("k", None),
+            Some(vec![("Blok-Idempotency-Key".to_owned(), "k".to_owned())])
+        );
+        // A tag the server cannot read would restore unpinned: stale, never sent.
+        assert_eq!(restore_headers("k", Some("nope")), None);
+    }
+
+    // Node's bytes (verify-live restore404/412/500 logs).
+    #[test]
+    fn a_failed_restore_answers_like_node() {
+        let base = json!({ "ok": true, "revision": "l0", "results": [], "warnings": [] });
+        assert_eq!(
+            restore_failure(&base, &RestoreFailure::NotFound("a:1".to_owned())),
+            r#"{"ok":false,"revision":"l0","error":{"code":"VERSION_NOT_FOUND","message":"There is no version \"a:1\". history.versions lists them.","path":"/commands/0/args/version","retryable":false,"commandIndex":0},"warnings":[]}"#
+        );
+        assert_eq!(
+            restore_failure(&base, &RestoreFailure::Stale),
+            r#"{"ok":false,"revision":"l0","error":{"code":"STALE","message":"The document changed since the version history was read, so nothing was restored. Read it again, then retry.","commandIndex":0,"retryable":true},"warnings":[]}"#
+        );
+        let host = |message: &str, status| {
+            restore_failure(&base, &RestoreFailure::Host(message.to_owned(), status))
+        };
+        assert_eq!(
+            host("The sync server answered 503: {\"error\":\"x\"}", Some(503)),
+            r#"{"ok":false,"revision":"l0","error":{"code":"TOOL_ACTION_FAILED","message":"The version history failed: The sync server answered 503: {\"error\":\"x\"}","retryable":true,"commandIndex":0,"path":"/commands/0/args"},"warnings":[]}"#
+        );
+        // A plain 500, a 501 or a refusal never passes on a retry.
+        for status in [500, 501, 403] {
+            assert!(
+                host("x", Some(status)).contains(r#""retryable":false"#),
+                "{status}"
+            );
+        }
+        assert!(host("x", Some(429)).contains(r#""retryable":true"#));
+        // No answer at all: the network may come back.
+        assert!(host(HISTORY_UNREACHABLE, None).contains(r#""retryable":true"#));
     }
 
     #[test]

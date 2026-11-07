@@ -40,6 +40,9 @@ log.Fatal(http.ListenAndServe("127.0.0.1:3001", handler))
 - `Options` mirror the flags. Their JSON form is what the CLI reads.
 - `Handler()` serves `/mcp`, so mount it at the root. It needs `Transport.Kind` set to `"http"`.
 - `ServeStdio` serves one client over stdin and stdout instead.
+- `Uploads` turns on `<tool>.uploadFile` through your own `Uploader`.
+  - When your uploader returns an error, the agent sees `TOOL_ACTION_FAILED` with "The upload failed." Your error's text never reaches the agent, because it may name hosts, paths or credentials. The server logs the full error to stderr.
+  - To tell the agent something, return a `*blokmcp.UploadError` (wrapped is fine). The agent sees its `AgentMessage`: `&blokmcp.UploadError{Err: err, AgentMessage: "The storage is full."}`.
 - Set `Rooms` to `AgentExecutor()` of a `blokserver.Server` with collaboration on. Live handles then open on that process's own rooms.
 
 ## Docs

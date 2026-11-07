@@ -78,9 +78,8 @@ Unverified: whether the Ask AI bar ever shows a tool result's message to the per
 
 The bundle cannot write to the host's log. So each host must log the error itself before it answers `{ error }`.
 
-- Go (`packages/server/go/blokmcp/uploads.go`, `runUpload`): `thrown(err)` sends `{ "error": err.Error() }`. It is used for uploader errors and for Go's own errors (base64 decode, "the upload names no bytes", size mismatch). Log `err` there. The answer can stay as it is: the bundle no longer forwards it.
-- Go, for a deliberate message: map an error that carries one (e.g. an `AgentMessage() string` method) to `{ "failure": { "code": "TOOL_ACTION_FAILED", "message": ..., "retryable": false } }`.
-- C# and Rust: no upload replay exists in this tree yet. When they add it, follow the same rule: log the exception, answer `{ error }`, and use `{ failure }` only for a message meant for the agent.
+- Go: done on branch `mcp/upload-redact`. `runUpload` logs every failed upload call to stderr ("blok-mcp: the host uploader failed: ..."), answers the bundle `{ error }`, and answers `{ failure: { code: "TOOL_ACTION_FAILED", message, retryable: false } }` for a `*blokmcp.UploadError` with a non-blank `AgentMessage` (found with `errors.As`).
+- C# and Rust: their lanes follow the same rule on their own branches: log the exception, answer `{ error }`, and use `{ failure }` only for a message meant for the agent.
 
 ## Tests
 

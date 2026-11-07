@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -179,14 +180,62 @@ func TestWithoutAnUploaderUploadIsUnavailable(t *testing.T) {
 	}
 }
 
-// As in Node, the agent sees a generic TOOL_ACTION_FAILED, never the uploader's own text.
+// captureLog swaps the package log for a buffer until the test ends.
+func captureLog(t *testing.T) *strings.Builder {
+	t.Helper()
+	logged := &strings.Builder{}
+	before := logOutput
+	logOutput = logged
+	t.Cleanup(func() { logOutput = before })
+	return logged
+}
+
+// As in Node, the agent sees a generic TOOL_ACTION_FAILED, never the uploader's
+// own text, and the full error goes to stderr.
 func TestAFailedUploadFailsTheBatch(t *testing.T) {
+	logged := captureLog(t)
 	f := newUploadFixture(t)
-	f.uploader.err = errors.New("the CDN is down")
+	f.uploader.err = errors.New("connect ECONNREFUSED db.internal:5432 (password=hunter2)")
+	server := f.start(t, &Uploads{Uploader: f.uploader})
+	answer := f.execute(t, server, true, `[{"name":"file.uploadFile","args":{"data":"eA==","fileName":"a.txt"}}]`)
+	raw, _ := json.Marshal(answer)
+	if strings.Contains(string(raw), "hunter2") {
+		t.Fatalf("the agent saw the host's text: %s", raw)
+	}
+	failure, _ := answer["error"].(map[string]any)
+	if errorCode(answer) != "TOOL_ACTION_FAILED" || failure["message"] != "The upload failed." || len(f.saved(t)) != 0 {
+		t.Fatalf("answer %v", answer)
+	}
+	if !strings.Contains(logged.String(), "blok-mcp: the host uploader failed: connect ECONNREFUSED db.internal:5432 (password=hunter2)") {
+		t.Fatalf("log %q", logged.String())
+	}
+}
+
+// Node's agentMessage: an UploadError's AgentMessage is the text the agent sees.
+func TestAnUploadErrorShowsTheAgentItsAgentMessage(t *testing.T) {
+	logged := captureLog(t)
+	f := newUploadFixture(t)
+	f.uploader.err = fmt.Errorf("wrapped: %w", &UploadError{Err: errors.New("quota exceeded for tenant 42"), AgentMessage: "Your storage quota is full."})
 	server := f.start(t, &Uploads{Uploader: f.uploader})
 	answer := f.execute(t, server, true, `[{"name":"file.uploadFile","args":{"data":"eA==","fileName":"a.txt"}}]`)
 	failure, _ := answer["error"].(map[string]any)
-	if errorCode(answer) != "TOOL_ACTION_FAILED" || failure["message"] != "The upload failed." || len(f.saved(t)) != 0 {
+	if errorCode(answer) != "TOOL_ACTION_FAILED" || failure["message"] != "Your storage quota is full." || failure["retryable"] != false {
+		t.Fatalf("answer %v", answer)
+	}
+	if !strings.Contains(logged.String(), "quota exceeded for tenant 42") {
+		t.Fatalf("log %q", logged.String())
+	}
+}
+
+// A blank AgentMessage says nothing, so the agent gets the generic text.
+func TestABlankAgentMessageKeepsTheGenericText(t *testing.T) {
+	captureLog(t)
+	f := newUploadFixture(t)
+	f.uploader.err = &UploadError{Err: errors.New("secret"), AgentMessage: "  "}
+	server := f.start(t, &Uploads{Uploader: f.uploader})
+	answer := f.execute(t, server, true, `[{"name":"file.uploadFile","args":{"data":"eA==","fileName":"a.txt"}}]`)
+	failure, _ := answer["error"].(map[string]any)
+	if failure["message"] != "The upload failed." {
 		t.Fatalf("answer %v", answer)
 	}
 }

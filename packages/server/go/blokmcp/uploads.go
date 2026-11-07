@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 )
 
 // Uploads turns on image.uploadFile, video.uploadFile, audio.uploadFile and
@@ -55,6 +57,24 @@ type UploadedAsset struct {
 type Uploader interface {
 	UploadByFile(ctx context.Context, file UploadFile, upload UploadContext) (UploadedAsset, error)
 }
+
+// UploadError lets an uploader tell the agent something on purpose, as
+// Node's agentMessage does. Any other error reaches the agent only as "The
+// upload failed.": its text may name hosts, paths or credentials. Err is
+// logged to stderr either way. Wrapped UploadErrors are found too.
+type UploadError struct {
+	Err          error
+	AgentMessage string
+}
+
+func (e *UploadError) Error() string {
+	if e.Err == nil {
+		return e.AgentMessage
+	}
+	return e.Err.Error()
+}
+
+func (e *UploadError) Unwrap() error { return e.Err }
 
 // URLUploader is an Uploader that also copies a linked file: then
 // <tool>.setSource copies a linked file to the host too.
@@ -150,9 +170,22 @@ func (s *Server) agentExecute(ctx context.Context, input map[string]any, out any
 }
 
 // runUpload answers one upload call: {failure} for a refusal the agent can
-// fix, {error} for an uploader's throw, else what the bundle reads.
+// fix or an UploadError's AgentMessage, {error} for any other failure, else
+// what the bundle reads.
 func (s *Server) runUpload(ctx context.Context, call *hostUpload, run *uploadRun) any {
-	thrown := func(err error) any { return map[string]any{"error": err.Error()} }
+	// The bundle answers the agent "The upload failed." for {error}, so the text is only logged.
+	thrown := func(err error) any {
+		logf("an upload call failed: %v", err)
+		return map[string]any{"error": "The upload failed."}
+	}
+	hostFailed := func(err error) any {
+		logf("the host uploader failed: %v", err)
+		var said *UploadError
+		if errors.As(err, &said) && strings.TrimSpace(said.AgentMessage) != "" {
+			return map[string]any{"failure": map[string]any{"code": "TOOL_ACTION_FAILED", "message": said.AgentMessage, "retryable": false}}
+		}
+		return map[string]any{"error": "The upload failed."}
+	}
 	upload := UploadContext{Kind: call.Kind, Tool: call.Tool}
 	switch call.Op {
 	case "readLocal":
@@ -192,7 +225,7 @@ func (s *Server) runUpload(ctx context.Context, call *hostUpload, run *uploadRun
 		}
 		asset, err := s.options.Uploads.Uploader.UploadByFile(ctx, UploadFile{Name: call.FileName, Type: call.Type, Bytes: bytes}, upload)
 		if err != nil {
-			return thrown(err)
+			return hostFailed(err)
 		}
 		return assetJSON(asset)
 	case "uploadByUrl":
@@ -202,7 +235,7 @@ func (s *Server) runUpload(ctx context.Context, call *hostUpload, run *uploadRun
 		}
 		asset, err := uploader.UploadByURL(ctx, call.URL, upload)
 		if err != nil {
-			return thrown(err)
+			return hostFailed(err)
 		}
 		return assetJSON(asset)
 	}

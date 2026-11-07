@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"maps"
 	"os"
 	"sync"
@@ -293,6 +294,9 @@ func (s *Server) errorAnswer(ctx context.Context, tool string, failure *surfaceE
 	return s.answerOf(ctx, "mcpErrorAnswer", map[string]any{"tool": tool, "helper": failure.Helper, "error": failure.errorJSON()})
 }
 
+// logOutput is stderr: stdout carries the protocol. Tests swap it.
+var logOutput io.Writer = os.Stderr
+
 func logf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "blok-mcp: "+format+"\n", args...)
+	fmt.Fprintf(logOutput, "blok-mcp: "+format+"\n", args...)
 }

@@ -189,4 +189,31 @@ public sealed class McpServerCoreStopTests : IClassFixture<BundleFixture>, IDisp
     await Task.WhenAll(second, third).WaitAsync(TimeSpan.FromSeconds(10));
     Assert.Equal(["2", "3"], started);
   }
+
+  [Fact]
+  public async Task AStdinMessageOverTenMebibytesEndsTheInputAndIsNeverPassedOn()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+    var big = new string('x', Blok.Server.Mcp.Protocol.McpOrderedInput.MaxMessageBytes + 1);
+    var wire = System.Text.Encoding.UTF8.GetBytes($"{{\"id\":1}}\n{big}\n{{\"id\":2}}\n");
+    await using var input = new Blok.Server.Mcp.Protocol.McpOrderedInput(new MemoryStream(wire), core);
+    using var passed = new MemoryStream();
+
+    await input.CopyToAsync(passed);
+
+    Assert.Equal("{\"id\":1}\n", System.Text.Encoding.UTF8.GetString(passed.ToArray()));
+  }
+
+  [Fact]
+  public async Task AStdinMessageOfTenMebibytesIsPassedOnWhole()
+  {
+    await using var core = Core((_, _, _, _) => Task.FromResult(true));
+    var line = new string('x', Blok.Server.Mcp.Protocol.McpOrderedInput.MaxMessageBytes);
+    await using var input = new Blok.Server.Mcp.Protocol.McpOrderedInput(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(line + "\n")), core);
+    using var passed = new MemoryStream();
+
+    await input.CopyToAsync(passed);
+
+    Assert.Equal(line.Length + 1, passed.Length);
+  }
 }

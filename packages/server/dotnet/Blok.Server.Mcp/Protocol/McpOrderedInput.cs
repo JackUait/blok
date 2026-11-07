@@ -13,7 +13,18 @@ namespace Blok.Server.Mcp.Protocol;
 /// </summary>
 internal sealed class McpOrderedInput(Stream inner, McpServerCore core) : Stream
 {
+  /*
+   * Node's SDK holds at most 10 MiB of unread stdin (STDIO_DEFAULT_MAX_BUFFER_SIZE) and closes the
+   * transport past it, so a longer message gets no answer and blok-mcp stops. Here a longer line ends
+   * the input, and only whole lines are passed on, so the SDK never parses a cut one.
+   */
+  internal const int MaxMessageBytes = 10 * 1024 * 1024;
+
   private readonly MemoryStream line = new();
+  private readonly byte[] chunk = new byte[64 * 1024];
+  private byte[] ready = [];
+  private int readyAt;
+  private bool ended;
 
   public override bool CanRead => true;
 
@@ -33,20 +44,29 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core) : Stream
 
   public override int Read(byte[] buffer, int offset, int count)
   {
-    var read = inner.Read(buffer, offset, count);
-
-    Seen(buffer.AsSpan(offset, read));
-
-    return read;
+    return ReadAsync(buffer.AsMemory(offset, count)).AsTask().GetAwaiter().GetResult();
   }
 
   public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
   {
-    var read = await inner.ReadAsync(buffer, cancellationToken);
+    while (readyAt == ready.Length && !ended)
+    {
+      var read = await inner.ReadAsync(chunk, cancellationToken);
 
-    Seen(buffer.Span[..read]);
+      if (read == 0)
+      {
+        // A last line with no newline is dropped, as Node's ReadBuffer drops it.
+        ended = true;
+        break;
+      }
+      Seen(chunk.AsSpan(0, read));
+    }
+    var taken = Math.Min(buffer.Length, ready.Length - readyAt);
 
-    return read;
+    ready.AsSpan(readyAt, taken).CopyTo(buffer.Span);
+    readyAt += taken;
+
+    return taken;
   }
 
   public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -76,21 +96,35 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core) : Stream
 
   private void Seen(ReadOnlySpan<byte> bytes)
   {
-    while (bytes.Length > 0)
+    using var whole = new MemoryStream();
+
+    whole.Write(ready.AsSpan(readyAt));
+    while (bytes.Length > 0 && !ended)
     {
       var end = bytes.IndexOf((byte)'\n');
+      var part = end < 0 ? bytes : bytes[..end];
 
+      if (line.Length + part.Length > MaxMessageBytes)
+      {
+        ended = true;
+        line.SetLength(0);
+        break;
+      }
+      line.Write(part);
       if (end < 0)
       {
-        line.Write(bytes);
-
-        return;
+        break;
       }
-      line.Write(bytes[..end]);
-      Reserve(Encoding.UTF8.GetString(line.GetBuffer(), 0, (int)line.Length));
+      var text = line.GetBuffer().AsSpan(0, (int)line.Length);
+
+      Reserve(Encoding.UTF8.GetString(text));
+      whole.Write(text);
+      whole.WriteByte((byte)'\n');
       line.SetLength(0);
       bytes = bytes[(end + 1)..];
     }
+    ready = whole.ToArray();
+    readyAt = 0;
   }
 
   private void Reserve(string text)

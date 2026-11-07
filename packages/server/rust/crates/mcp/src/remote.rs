@@ -43,6 +43,9 @@ pub const SYNC_TIMEOUT: Duration = Duration::from_secs(15);
 const RESTORE_ECHO_WAIT: Duration = Duration::from_secs(2);
 const HISTORY_STEPS: usize = 100;
 const V2: &str = "blok-sync.v2";
+const CLOSE_MESSAGE_TOO_BIG: u16 = 1009;
+/// The state vector of a document with no history.
+const EMPTY_STATE_VECTOR: [u8; 1] = [0];
 const V1: &str = "blok-sync.v1";
 
 /// What the processes share: the engines and the converter.
@@ -391,7 +394,15 @@ struct Room {
     awareness_clients: BTreeSet<u64>,
     awareness_check_at: Instant,
     rows: Vec<Row>,
+    /// The room refused a write for good: no local row is queued until the
+    /// next sync, which rebuilds the copy (Node's store drops its session).
     poisoned: bool,
+    /// The copy holds a refused write: the next connection asks for the
+    /// whole room and replaces the copy with it, so the write is never sent.
+    rebuild: bool,
+    /// This connection asked for the whole room; its first SyncStep2 is it.
+    whole_room_owed: bool,
+    sizes: SizeMemory,
     batches: Vec<Batch>,
     batch_number: u64,
     read_only: bool,
@@ -401,6 +412,45 @@ struct Room {
     /// The executor's history marks, one per write batch.
     marks_past: Vec<Mark>,
     marks_future: Vec<Mark>,
+}
+
+/// What a close 1009 taught: it names no frame, so the largest one this
+/// connection wrote is the estimate (provider.ts).
+#[derive(Debug, Default)]
+struct SizeMemory {
+    largest_sent: usize,
+    refused: Option<usize>,
+    oversized_since_sync: u32,
+}
+
+impl SizeMemory {
+    fn sent(&mut self, bytes: usize) {
+        self.largest_sent = self.largest_sent.max(bytes);
+    }
+
+    /// A close 1009; true when it is the second since an answer shipped.
+    fn too_big(&mut self) -> bool {
+        self.oversized_since_sync += 1;
+        // A 1009 on a connection we never wrote to says nothing of our frames.
+        if self.largest_sent > 0 {
+            self.refused = Some(
+                self.refused
+                    .map_or(self.largest_sent, |r| r.min(self.largest_sent)),
+            );
+        }
+        self.oversized_since_sync > 1
+    }
+
+    fn may_answer(&self, bytes: usize, announced: Option<i64>) -> bool {
+        !(announced.is_some_and(|max| bytes as i64 > max)
+            || self.refused.is_some_and(|refused| bytes >= refused))
+    }
+
+    /// An answer shipped: the stranded bytes went out, the memory did its job.
+    fn answered(&mut self) {
+        self.refused = None;
+        self.oversized_since_sync = 0;
+    }
 }
 
 /// The executor's HistoryMark.
@@ -489,6 +539,9 @@ impl Room {
             awareness_check_at: Instant::now() + awareness::CHECK_EVERY,
             rows: Vec::new(),
             poisoned: false,
+            rebuild: false,
+            whole_room_owed: false,
+            sizes: SizeMemory::default(),
             batches: Vec::new(),
             batch_number: 0,
             read_only,
@@ -657,9 +710,19 @@ impl Room {
                 self.phase = Phase::AwaitingControl;
                 self.buffered.clear();
                 self.announced_max = None;
-                let sv = self.doc.encode_state_vector();
+                self.sizes.largest_sent = 0;
+                // An empty vector after a refusal: the answer is then the whole room.
+                self.whole_room_owed = self.rebuild;
+                let sv = if self.rebuild {
+                    EMPTY_STATE_VECTOR.to_vec()
+                } else {
+                    self.doc.encode_state_vector()
+                };
                 let sent = match encode(&Message::SyncStep1 { state_vector: sv }) {
-                    Ok(bytes) => socket.send(&bytes).await,
+                    Ok(bytes) => {
+                        self.sizes.sent(bytes.len());
+                        socket.send(&bytes).await
+                    }
                     Err(_) => Ok(()),
                 };
                 self.socket = Some(socket);
@@ -710,6 +773,7 @@ impl Room {
         self.in_flight = None;
         self.resync_owed = false;
         self.residual = Residual::None;
+        self.whole_room_owed = false;
         self.awareness_clients.clear();
         self.awareness_full = false;
         let events = self.events.take();
@@ -797,6 +861,7 @@ impl Room {
             socket.close(code, None).await;
         }
         self.teardown(false).await;
+        let oversized = code == CLOSE_MESSAGE_TOO_BIG && self.sizes.too_big();
         if code == 4401 {
             self.unauthorized_since_sync += 1;
         }
@@ -807,6 +872,8 @@ impl Room {
             4401 if self.unauthorized_since_sync > 1 => {
                 return self.terminate("unauthorized").await;
             }
+            // The second 1009 since an answer shipped: the same bytes again.
+            _ if oversized => return self.terminate("oversized-update").await,
             4401 => self.force_ticket_refresh = true,
             _ => {}
         }
@@ -842,7 +909,10 @@ impl Room {
     async fn send(&mut self, message: &Message) {
         let Ok(bytes) = encode(message) else { return };
         let failed = match self.socket.as_mut() {
-            Some(socket) => socket.send(&bytes).await.is_err(),
+            Some(socket) => {
+                self.sizes.sent(bytes.len());
+                socket.send(&bytes).await.is_err()
+            }
             None => false,
         };
         if failed {
@@ -928,6 +998,9 @@ impl Room {
     async fn on_frame(&mut self, message: Message) {
         match message {
             Message::SyncStep2 { update } => {
+                if self.whole_room_owed {
+                    self.rebuild_from_room();
+                }
                 if self.apply_remote(&update).await {
                     self.mark_synced().await;
                 }
@@ -937,11 +1010,7 @@ impl Room {
             }
             Message::SyncStep1 { state_vector } => match self.protocol {
                 Protocol::V2 => self.on_resync(&state_vector).await,
-                Protocol::V1 => {
-                    if let Ok(update) = self.doc.encode_state_as_update(&state_vector) {
-                        self.send(&Message::SyncStep2 { update }).await;
-                    }
-                }
+                Protocol::V1 => self.answer_resync(&state_vector).await,
             },
             Message::Awareness { update } => self.awareness.apply(&update),
             Message::QueryAwareness => self.schedule_awareness(true),
@@ -978,6 +1047,8 @@ impl Room {
             return;
         }
         self.synced = true;
+        // Node records the session again here: writes may queue once more.
+        self.poisoned = false;
         self.first_sync_deadline = None;
         self.attempt = 0;
         self.unauthorized_since_sync = 0;
@@ -1078,6 +1149,8 @@ impl Room {
         {
             let lineage = self.lineage.clone().unwrap_or_default();
             self.quarantine(&lineage, "oversized-update");
+            // Same verdict as the room's own rejection.
+            self.refused_for_good();
             return;
         }
         self.in_flight = Some(operation_id);
@@ -1124,10 +1197,46 @@ impl Room {
             final_code => {
                 let lineage = lineage.to_owned();
                 self.quarantine(&lineage, final_code);
-                // The store refuses further rows of a quarantined lineage.
-                self.poisoned = true;
+                self.refused_for_good();
             }
         }
+    }
+
+    /// A write the room will never take: later local edits depend on it, so
+    /// none is queued until the copy is rebuilt from the room.
+    fn refused_for_good(&mut self) {
+        self.poisoned = true;
+        self.rebuild = true;
+    }
+
+    /// Drops the copy that holds a refused write, just before the room's
+    /// whole copy is applied. The session goes on: the lineage is still ours.
+    fn rebuild_from_room(&mut self) {
+        self.rebuild = false;
+        self.whole_room_owed = false;
+        let doc = Doc::new(DocOptions::default());
+        doc.enable_undo();
+        watch(&doc, &self.local, &self.count);
+        self.doc = doc;
+        // Their steps lived in the old copy.
+        self.done.clear();
+        self.undone.clear();
+        self.take_local();
+    }
+
+    /// Answers a v1 SyncStep1, unless the answer is over the announced cap
+    /// or as big as a frame the room already refused (provider.ts answerResync).
+    async fn answer_resync(&mut self, state_vector: &[u8]) {
+        let Ok(update) = self.doc.encode_state_as_update(state_vector) else {
+            return;
+        };
+        let message = Message::SyncStep2 { update };
+        let Ok(bytes) = encode(&message) else { return };
+        if !self.sizes.may_answer(bytes.len(), self.announced_max) {
+            return self.terminate("oversized-update").await;
+        }
+        self.send(&message).await;
+        self.sizes.answered();
     }
 
     fn quarantine(&mut self, lineage: &str, reason: &str) {
@@ -1491,10 +1600,17 @@ impl Room {
         // v1: the seam sends each local update at once, before presence.
         if self.protocol == Protocol::V1 {
             for update in &updates {
-                self.send(&Message::SyncUpdate {
+                let message = Message::SyncUpdate {
                     update: update.clone(),
-                })
-                .await;
+                };
+                // Refused before the write: a bigger frame buys only a 1009.
+                if let (Some(max), Ok(bytes)) = (self.announced_max, encode(&message))
+                    && bytes.len() as i64 > max
+                {
+                    self.terminate("oversized-update").await;
+                    break;
+                }
+                self.send(&message).await;
             }
         }
         self.after_batch(result).await;
@@ -2466,6 +2582,26 @@ mod tests {
         assert!(host("x", Some(429)).contains(r#""retryable":true"#));
         // No answer at all: the network may come back.
         assert!(host(HISTORY_UNREACHABLE, None).contains(r#""retryable":true"#));
+    }
+
+    // provider.ts: the second 1009 since an answer shipped is terminal, and
+    // a resync answer as big as a refused frame is never written.
+    #[test]
+    fn a_second_close_1009_ends_the_room() {
+        let mut sizes = SizeMemory::default();
+        sizes.sent(500);
+        assert!(!sizes.too_big());
+        assert!(!sizes.may_answer(500, None));
+        assert!(sizes.may_answer(499, None));
+        assert!(!sizes.may_answer(10, Some(9)));
+        sizes.largest_sent = 0;
+        assert!(sizes.too_big());
+        sizes.answered();
+        assert!(!sizes.too_big());
+        // A 1009 before any write leaves no bound.
+        let mut fresh = SizeMemory::default();
+        fresh.too_big();
+        assert!(fresh.may_answer(1 << 20, None));
     }
 
     #[test]

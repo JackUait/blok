@@ -388,6 +388,7 @@ version = "0.0.0"
 dependencies = [
  "base64 0.22.1",
  "blok-blokagent",
+ "blok-blokserver",
  "blok-blokserver-ticket",
  "blok-collab",
  "blok-collab-convert",

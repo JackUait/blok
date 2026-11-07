@@ -45,6 +45,7 @@ sha2 = "0.10"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net", "io-util", "io-std", "fs"] }
 
 [dev-dependencies]
+blok-blokserver = { path = "../blokserver" }
 blok-collab = { path = "../collab" }
 blok-collab-journal = { path = "../collab-journal" }
 blok-collab-room = { path = "../collab-room" }

@@ -95,3 +95,33 @@ func TestARestoreThatGetsNoAnswerIsRetryable(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 }
+
+// Node's revocable(): a FORBIDDEN mint for a history read ends the room,
+// as one on reconnect does, and no mint is tried after it.
+func TestARefusedHistoryTicketEndsTheRoom(t *testing.T) {
+	mints := 0
+	room := newLiveRoom("http://127.0.0.1:1/sync/doc", "doc", nil, func(bool) (string, error) {
+		mints++
+		return "", surfaceError("FORBIDDEN", "The host did not grant this document to this agent.")
+	}, nil)
+	t.Cleanup(room.close)
+	room.mu.Lock()
+	room.everSynced = true
+	room.mu.Unlock()
+	batch := json.RawMessage(`{"commands":[{"name":"history.versions","args":{}}]}`)
+	for range 2 {
+		loaded := room.loadVersions(context.Background(), batch)
+		if loaded["failed"] != "The host did not grant this document to this agent." || loaded["retryable"] != nil {
+			t.Fatalf("loaded %v", loaded)
+		}
+	}
+	room.mu.Lock()
+	end := room.end
+	room.mu.Unlock()
+	if end == nil || *end != (roomEnd{reason: "terminal", err: "forbidden"}) {
+		t.Fatalf("end %v", end)
+	}
+	if mints != 1 {
+		t.Fatalf("minted %d times", mints)
+	}
+}

@@ -24,7 +24,22 @@ func (r *liveRoom) historyBase() string { return r.url + "/history" }
 // fresh ticket. Call without mu.
 func (r *liveRoom) historySend(ctx context.Context, method, url string, header http.Header) (*fetched, error) {
 	for fresh := false; ; fresh = true {
+		r.mu.Lock()
+		refused := r.refusedBy
+		r.mu.Unlock()
+		if refused != nil {
+			return nil, refused
+		}
 		token, err := r.tickets(fresh)
+		if failure, ok := asSurface(err); ok && failure.Code == "FORBIDDEN" {
+			// Node's revocable(): a refusal here ends the room as on reconnect.
+			r.mu.Lock()
+			if r.refusedBy == nil {
+				r.refusedBy = err
+				r.terminate("forbidden")
+			}
+			r.mu.Unlock()
+		}
 		if err != nil {
 			return nil, err
 		}

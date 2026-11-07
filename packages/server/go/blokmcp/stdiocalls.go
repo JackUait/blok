@@ -62,13 +62,22 @@ func (t *callTracker) answer(message jsonrpc.Message) bool {
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	cancelled := t.cancelled[response.ID]
+	return !t.cancelled[response.ID]
+}
+
+// answered ends a request once its answer is written or dropped.
+func (t *callTracker) answered(message jsonrpc.Message) {
+	response, ok := message.(*jsonrpc.Response)
+	if !ok {
+		return
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	delete(t.running, response.ID)
 	delete(t.cancelled, response.ID)
 	if len(t.running) == 0 {
 		t.idle.Broadcast()
 	}
-	return !cancelled
 }
 
 // waitIdle waits until no request runs, or until the deadline.
@@ -113,6 +122,7 @@ func (c trackedConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
 }
 
 func (c trackedConnection) Write(ctx context.Context, message jsonrpc.Message) error {
+	defer c.tracker.answered(message)
 	if !c.tracker.answer(message) {
 		return nil
 	}

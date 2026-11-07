@@ -33,9 +33,18 @@ func (s *Server) ServeStdio(ctx context.Context, in io.ReadCloser, out io.WriteC
 	select {
 	case err = <-done:
 	case <-ctx.Done():
-		tracker.waitIdle(time.Now().Add(stopDrain))
-		_ = session.Close()
-		err = <-done
+		// Work first, then the transport: closing it first would drop the
+		// answers of calls in flight. A write returns once the pipe has it.
+		deadline := time.Now().Add(stopDrain)
+		s.drain(deadline)
+		tracker.waitIdle(deadline)
+		// Close waits for the calls still running. One past the deadline is
+		// left behind, as Node's process exit leaves it.
+		go func() { _ = session.Close() }()
+		select {
+		case err = <-done:
+		case <-time.After(time.Until(deadline)):
+		}
 	}
 	if err == nil || errors.Is(err, io.EOF) || ctx.Err() != nil {
 		return nil

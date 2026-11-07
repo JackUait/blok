@@ -45,6 +45,11 @@ type Server struct {
 	stopOnce sync.Once
 	stopped  chan struct{}
 
+	// calls counts the tool calls running, so a stop can wait for them.
+	callsMu   sync.Mutex
+	callsIdle *sync.Cond
+	calls     int
+
 	roomMu       sync.Mutex
 	roomCommands map[string]bool
 
@@ -66,6 +71,7 @@ func New(options Options) (*Server, error) {
 func newServer(options Options, runtime invoker) (*Server, error) {
 	b := bundle{runtime: runtime}
 	s := &Server{options: options, bundle: b, stopped: make(chan struct{})}
+	s.callsIdle = sync.NewCond(&s.callsMu)
 	ctx := context.Background()
 	if err := s.checkOptions(ctx); err != nil {
 		return nil, err
@@ -183,6 +189,48 @@ func (s *Server) sweepLoop() {
 		case <-ticker.C:
 			s.handles.sweep(func(sess session) { sess.close() })
 		}
+	}
+}
+
+// drain is Node's stop work: later opens are refused, every handle closes
+// after its running call, and every tool call ends, until the deadline.
+// The transport still serves meanwhile, so each answer goes out.
+func (s *Server) drain(deadline time.Time) {
+	closed := make(chan struct{})
+	go func() {
+		s.Close()
+		close(closed)
+	}()
+	timer := time.AfterFunc(time.Until(deadline), func() {
+		s.callsMu.Lock()
+		s.callsIdle.Broadcast()
+		s.callsMu.Unlock()
+	})
+	defer timer.Stop()
+	select {
+	case <-closed:
+	case <-time.After(time.Until(deadline)):
+		return
+	}
+	s.callsMu.Lock()
+	defer s.callsMu.Unlock()
+	for s.calls > 0 && time.Now().Before(deadline) {
+		s.callsIdle.Wait()
+	}
+}
+
+// track counts a tool call until done runs.
+func (s *Server) track() (done func()) {
+	s.callsMu.Lock()
+	s.calls++
+	s.callsMu.Unlock()
+	return func() {
+		s.callsMu.Lock()
+		s.calls--
+		if s.calls == 0 {
+			s.callsIdle.Broadcast()
+		}
+		s.callsMu.Unlock()
 	}
 }
 

@@ -66,11 +66,13 @@ func TestACancelledRequestGetsNoAnswer(t *testing.T) {
 	if tracker.answer(&jsonrpc.Response{ID: id(t, 77.0)}) {
 		t.Fatal("the cancelled request was answered")
 	}
+	tracker.answered(&jsonrpc.Response{ID: id(t, 77.0)})
 	other := &jsonrpc.Request{ID: id(t, "77"), Method: "tools/call"}
 	tracker.read(other)
 	if !tracker.answer(&jsonrpc.Response{ID: id(t, "77")}) {
 		t.Fatal("a request with another id was not answered")
 	}
+	tracker.answered(&jsonrpc.Response{ID: id(t, "77")})
 	// A cancel for a request that already ended changes nothing later.
 	tracker.read(&jsonrpc.Request{Method: "notifications/cancelled", Params: json.RawMessage(`{"requestId":5}`)})
 	tracker.read(&jsonrpc.Request{ID: id(t, 5.0), Method: "tools/call"})
@@ -79,13 +81,17 @@ func TestACancelledRequestGetsNoAnswer(t *testing.T) {
 	}
 }
 
-// A stop waits for a call in flight, and its answer still goes out.
+// A stop waits for a save in flight, and its answer still goes out.
 func TestStdioStopDeliversTheAnswerInFlight(t *testing.T) {
-	loading := make(chan struct{}, 1)
+	saving := make(chan struct{}, 1)
 	host := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		loading <- struct{}{}
-		time.Sleep(300 * time.Millisecond)
 		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodPut {
+			saving <- struct{}{}
+			time.Sleep(300 * time.Millisecond)
+			_, _ = io.WriteString(w, `{"version":"v2"}`)
+			return
+		}
 		_, _ = io.WriteString(w, `{"data":{"blocks":[]},"version":"v1"}`)
 	}))
 	t.Cleanup(host.Close)
@@ -97,11 +103,24 @@ func TestStdioStopDeliversTheAnswerInFlight(t *testing.T) {
 	t.Cleanup(server.Close)
 	ctx, stop := context.WithCancel(context.Background())
 	send, reader, done := stdioClient(t, server, ctx)
-	send(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"doc"}}}`)
-	<-loading
-	stop()
+	send(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"doc","write":true}}}`)
 	line, err := reader.ReadString('\n')
-	if err != nil || !strings.Contains(line, `"id":1`) || !strings.Contains(line, "handle") {
+	if err != nil {
+		t.Fatal(err)
+	}
+	var opened struct {
+		Result struct {
+			StructuredContent struct {
+				Handle string `json:"handle"`
+			} `json:"structuredContent"`
+		} `json:"result"`
+	}
+	_ = json.Unmarshal([]byte(line), &opened)
+	send(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"blok_execute","arguments":{"handle":"` + opened.Result.StructuredContent.Handle + `","commands":[{"name":"doc.setTitle","args":{"title":"Kept"}}]}}}`)
+	<-saving
+	stop()
+	line, err = reader.ReadString('\n')
+	if err != nil || !strings.Contains(line, `"id":2`) || !strings.Contains(line, `"durable":true`) {
 		t.Fatalf("answer %q, %v", line, err)
 	}
 	select {
@@ -118,4 +137,56 @@ func id(t *testing.T, value any) jsonrpc.ID {
 		t.Fatal(err)
 	}
 	return made
+}
+
+// A stop closes the handles first, so an open sent during the wait is
+// answered "The server is shutting down." while the call in flight ends.
+func TestAnOpenDuringTheStopIsRefused(t *testing.T) {
+	loading := make(chan struct{}, 4)
+	release := make(chan struct{})
+	host := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		loading <- struct{}{}
+		<-release
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"data":{"blocks":[]},"version":"v1"}`)
+	}))
+	t.Cleanup(host.Close)
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"},
+		Source: &Source{Kind: "endpoint", URL: host.URL + "/docs", EndpointAuth: "Token t"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx, stop := context.WithCancel(context.Background())
+	send, reader, done := stdioClient(t, server, ctx)
+	send(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"a"}}}`)
+	<-loading
+	stop()
+	time.Sleep(100 * time.Millisecond)
+	send(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"b"}}}`)
+	go func() {
+		<-loading
+	}()
+	time.Sleep(300 * time.Millisecond)
+	close(release)
+	answers := map[string]string{}
+	for range 2 {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(line, `"id":1`) {
+			answers["1"] = line
+		} else {
+			answers["2"] = line
+		}
+	}
+	if !strings.Contains(answers["2"], "The server is shutting down.") || !strings.Contains(answers["1"], "The server is shutting down.") {
+		t.Fatalf("answers %v", answers)
+	}
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("ServeStdio did not return")
+	}
 }

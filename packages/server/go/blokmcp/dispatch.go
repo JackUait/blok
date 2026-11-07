@@ -73,6 +73,7 @@ func (s *Server) actorFor(ctx context.Context, principal string, rawClientName *
 // dispatch is Node's createToolDispatcher. A model-fixable refusal is an
 // answer; any other error is a JSON-RPC internal error.
 func (s *Server) dispatch(ctx context.Context, call *toolCall) (*outcome, error) {
+	defer s.track()()
 	// Node checks the client's cancel only before an open hands out its
 	// handle; a batch that runs is saved even if the client hung up.
 	signal := ctx

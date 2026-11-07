@@ -300,10 +300,16 @@ func (s *Server) ListenAndServe(ctx context.Context, onListening func(url string
 	case err := <-done:
 		return err
 	case <-ctx.Done():
-		// Calls in flight finish and answer, within the stop's drain.
-		shutdown, cancel := context.WithTimeout(context.Background(), stopDrain)
+		// Work first, with new connections still taken, then the listener:
+		// requests in flight finish writing their answers, within the same
+		// deadline, and the rest are dropped.
+		deadline := time.Now().Add(stopDrain)
+		s.drain(deadline)
+		shutdown, cancel := context.WithDeadline(context.Background(), deadline)
 		defer cancel()
-		_ = server.Shutdown(shutdown)
+		if server.Shutdown(shutdown) != nil {
+			_ = server.Close()
+		}
 		if err := <-done; err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}

@@ -189,6 +189,21 @@ async fn batches_responses_and_odd_bytes_are_served_as_in_node() {
     )
     .await;
     assert_eq!(odd.status, 200, "{}", odd.body);
+    // The SDK decodes the body with TextDecoder, which drops a BOM.
+    let bom = post(
+        &url,
+        &[JSON, ACCEPT],
+        b"\xef\xbb\xbf{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}",
+    )
+    .await;
+    assert_eq!(
+        (bom.status, bom.content_type.as_str(), bom.body.as_str()),
+        (
+            200,
+            "text/event-stream",
+            "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n\n"
+        )
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]

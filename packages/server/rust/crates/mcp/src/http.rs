@@ -431,6 +431,11 @@ impl Core {
             Ok(text) => text,
             Err(bytes) => String::from_utf8_lossy(bytes.as_bytes()).into_owned(),
         };
+        // TextDecoder drops a leading BOM.
+        let text = match text.strip_prefix('\u{feff}') {
+            Some(rest) => rest.to_owned(),
+            None => text,
+        };
         // JSON.parse takes a lone surrogate and any depth; serde_json does not.
         let text = crate::lenient::mend(&crate::depth::clamp(&text, crate::depth::MESSAGE_LIMIT));
         let header_version = header_of(headers, "mcp-protocol-version");

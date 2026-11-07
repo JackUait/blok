@@ -129,6 +129,26 @@ describe('ToolRenderer', () => {
         expect(wrapper.querySelector('[data-blok-element-content]')?.contains(asyncElement)).toBe(true);
       });
 
+      it('leaves a block destroyed before its async render settles untouched, and still resolves ready', async () => {
+        const lateElement = document.createElement('div');
+        let finishRender: (element: HTMLElement) => void = () => undefined;
+
+        toolInstance.render = vi.fn(() => new Promise<HTMLElement>((resolve) => {
+          finishRender = resolve;
+        }));
+
+        const renderer = new ToolRenderer(toolInstance, 'paragraph', 'test-block-id', tunesManager, {});
+        const wrapper = renderer.compose();
+
+        renderer.destroy();
+        finishRender(lateElement);
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(wrapper.querySelector('[data-blok-element-content]')?.contains(lateElement)).toBe(false);
+        expect(renderer.toolRenderedElement).not.toBe(lateElement);
+        await expect(renderer.ready).resolves.toBeUndefined();
+      });
+
       it('handles render promise rejection', async () => {
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         toolInstance.render = vi.fn(() => Promise.reject(new Error('Render failed')));

@@ -160,9 +160,7 @@ impl Uploads {
                     if call.get("data").and_then(Value::as_str) != Some(data) {
                         return thrown("The upload's data is not the batch's.".to_owned());
                     }
-                    let Ok(bytes) =
-                        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, data)
-                    else {
+                    let Some(bytes) = decode_upload(data) else {
                         return thrown("The upload's data is not base64.".to_owned());
                     };
                     if call.get("size").and_then(Value::as_u64) != Some(bytes.len() as u64) {
@@ -303,9 +301,28 @@ pub fn read_local(root: &Path, path: &str, max_bytes: u64) -> Result<(Vec<u8>, S
     Ok((bytes, name))
 }
 
+/// The upload's base64, as Node's Buffer.from takes it once the bundle's
+/// BASE64 check passed.
+fn decode_upload(data: &str) -> Option<Vec<u8>> {
+    use base64::engine::{GeneralPurpose, general_purpose};
+    const LENIENT: GeneralPurpose = GeneralPurpose::new(
+        &base64::alphabet::STANDARD,
+        general_purpose::PAD.with_decode_allow_trailing_bits(true),
+    );
+    base64::Engine::decode(&LENIENT, data).ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // The bundle's BASE64 check and Node's Buffer.from both take "QR==".
+    #[test]
+    fn base64_with_stray_trailing_bits_decodes_as_node_does() {
+        assert_eq!(decode_upload("QR==").as_deref(), Some(&b"A"[..]));
+        assert_eq!(decode_upload("QQ==").as_deref(), Some(&b"A"[..]));
+        assert_eq!(decode_upload("Q==="), None);
+    }
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[derive(Default)]

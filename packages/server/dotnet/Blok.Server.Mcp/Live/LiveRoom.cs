@@ -229,6 +229,18 @@ internal sealed class LiveRoom : IRoomSeam
 
   public void ResetForRelineage()
   {
+    SwapDoc();
+    // The agent read the old doc; after the swap its view is gone.
+    Finish(new RoomEnd(true, null));
+  }
+
+  public void RebuildFromRoom()
+  {
+    SwapDoc();
+  }
+
+  private void SwapDoc()
+  {
     var local = Awareness.LocalState;
 
     held.Clear();
@@ -238,8 +250,6 @@ internal sealed class LiveRoom : IRoomSeam
     {
       Awareness.SetLocalState(local);
     }
-    // The agent read the old doc; after the swap its view is gone.
-    Finish(new RoomEnd(true, null));
   }
 
   private YDoc NewDoc()

@@ -124,6 +124,61 @@ public sealed class LiveRoomTests
     await room.CloseAsync();
   }
 
+  [Fact]
+  public async Task AWriteTheRoomRefusedIsNotSentByTheNextConnection()
+  {
+    var (room, host) = await OpenAsync();
+
+    await host.NextOpeningAsync();
+    await room.Loop.RunAsync(() => room.WriteLocal(new object(), tx => room.Doc.GetMap("m").Set(tx, "a", "refused")));
+    var operation = await host.NextAsync<OperationFrame>();
+
+    await host.SendAsync(new RejectionFrame(Lineage, operation.OperationId, "read-only"));
+    // A blank round trip: once it is answered, the rejection has been handled.
+    await host.SendAsync(new QueryAwarenessFrame());
+    await host.NextAsync<AwarenessFrame>();
+    await host.CloseAsync(1001);
+    var opening = await host.NextOpeningAsync();
+
+    Assert.Equal([0], opening.StateVector);
+    // The room has nothing; its SyncStep1 owes the residual round.
+    await host.SendAsync(new SyncStep1Frame(new YDoc().EncodeStateVector()));
+    await host.NextAsync<SyncStep1Frame>();
+    await host.SendAsync(new SyncStep1Frame(new YDoc().EncodeStateVector()));
+    await host.SendAsync(new QueryAwarenessFrame());
+    // Everything up to the awareness answer: an operation would come before it.
+    var sent = new List<SyncWireMessage>();
+
+    while (sent.LastOrDefault() is not AwarenessFrame)
+    {
+      sent.Add(await host.NextAsync<SyncWireMessage>());
+    }
+
+    Assert.DoesNotContain(sent, frame => frame is OperationFrame);
+    Assert.Equal(0, await room.Loop.RunAsync(() => Task.FromResult(room.Doc.GetMap("m").Count)));
+    Assert.Null(room.End);
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task AnUpgradeThatSelectedNoVersionIsClosedAtOnce()
+  {
+    var host = new Host { SubProtocol = null };
+    var opening = LiveRoom.OpenAsync((_, _) => host.AcceptAsync(), null, TimeSpan.FromSeconds(3), CancellationToken.None);
+
+    await host.Accepted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    var buffer = new byte[64];
+    var ended = await Record.ExceptionAsync(async () =>
+    {
+      var read = await host.Server!.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(2));
+
+      Assert.Equal(WebSocketMessageType.Close, read.MessageType);
+    });
+
+    Assert.True(ended is null or WebSocketException, $"the socket stayed open: {ended}");
+    await Assert.ThrowsAnyAsync<Exception>(() => opening);
+  }
+
   internal static async Task<(LiveRoom Room, Host Host)> OpenAsync()
   {
     var host = new Host();
@@ -141,6 +196,29 @@ public sealed class LiveRoomTests
   internal sealed class Host
   {
     private WebSocket? server;
+    private TaskCompletionSource<SyncStep1Frame> opening = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>What the host selects; null selects nothing.</summary>
+    internal string? SubProtocol { get; init; } = RoomProvider.SubprotocolV2;
+
+    internal WebSocket? Server => server;
+
+    internal TaskCompletionSource Accepted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>The SyncStep1 that opened the latest connection.</summary>
+    internal async Task<SyncStep1Frame> NextOpeningAsync()
+    {
+      var frame = await opening.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+      opening = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+      return frame;
+    }
+
+    internal async Task CloseAsync(int code)
+    {
+      await server!.CloseOutputAsync((WebSocketCloseStatus)code, null, CancellationToken.None);
+    }
 
     internal async Task<RoomConnection> AcceptAsync()
     {
@@ -154,11 +232,16 @@ public sealed class LiveRoomTests
       var accepted = await accept;
 
       server = WebSocket.CreateFromStream(accepted.GetStream(), new WebSocketCreationOptions { IsServer = true });
-      var client = WebSocket.CreateFromStream(connecting.GetStream(), new WebSocketCreationOptions { IsServer = false, SubProtocol = RoomProvider.SubprotocolV2 });
+      var client = WebSocket.CreateFromStream(connecting.GetStream(), new WebSocketCreationOptions { IsServer = false, SubProtocol = SubProtocol });
 
+      Accepted.TrySetResult();
+      if (SubProtocol is null)
+      {
+        return new RoomConnection(client);
+      }
       _ = Task.Run(async () =>
       {
-        await NextAsync<SyncStep1Frame>();
+        opening.TrySetResult(await NextAsync<SyncStep1Frame>());
         await SendAsync(new BlokControlFrame(new CollabWorkingSetTag(2, 1, Lineage)));
         await SendAsync(new SyncStep2Frame(new YDoc().EncodeStateAsUpdate()));
       });

@@ -16,6 +16,12 @@ internal interface IRoomSeam
 
   /// <summary>A new, empty doc and awareness that keep the local presence state.</summary>
   void ResetForRelineage();
+
+  /// <summary>
+  /// The same swap after the room refused a local write. The room's history is
+  /// still ours, so the handle goes on.
+  /// </summary>
+  void RebuildFromRoom();
 }
 
 /// <summary>Opens one room socket: the handshake, Origin and ticket subprotocol live in the owner.</summary>
@@ -101,6 +107,11 @@ internal sealed class RoomProvider
   private string? inFlight;
   private bool resyncOwed;
   private string residual = "none";
+  // The room refused a local write for good, and the doc still holds it. Nothing local is sent
+  // until the next connection's first SyncStep2 replaces the doc. Outlives the connection.
+  private bool rebuild;
+  // This connection opened with an empty state vector, so its first SyncStep2 is the whole room.
+  private bool wholeRoomOwed;
   private DateTimeOffset? lastActivitySentAt;
 
   internal RoomProvider(
@@ -327,6 +338,7 @@ internal sealed class RoomProvider
     inFlight = null;
     resyncOwed = false;
     residual = "none";
+    wholeRoomOwed = false;
     awarenessClients.Clear();
     awarenessFull = false;
     connecting?.Cancel();
@@ -411,6 +423,7 @@ internal sealed class RoomProvider
 
     if (announcedMaxBytes is { } announced && bytes.Length > announced)
     {
+      rebuild = true;
       QuarantineTail(row.Lineage, OversizedReason);
 
       return;
@@ -455,6 +468,11 @@ internal sealed class RoomProvider
       return;
     }
     residual = "done";
+    // The diff would carry the refused write back to the room.
+    if (rebuild)
+    {
+      return;
+    }
     var rest = seam.EncodeStateAsUpdate(stateVector);
 
     if (rest.Length <= EmptyUpdateBytes)
@@ -513,6 +531,7 @@ internal sealed class RoomProvider
 
       return;
     }
+    rebuild = true;
     QuarantineTail(lineage, frame.Code);
   }
 
@@ -551,6 +570,11 @@ internal sealed class RoomProvider
     switch (frame)
     {
       case SyncStep2Frame step2:
+        // Only the answer to an empty vector: any other one is a diff.
+        if (wholeRoomOwed)
+        {
+          RebuildFromRoom();
+        }
         seam.ApplyRemote(step2.Update);
         MarkSynced();
         break;
@@ -586,6 +610,16 @@ internal sealed class RoomProvider
         // Permission denied, identities: a headless member has no use for them.
         break;
     }
+  }
+
+  /// <summary>Swaps out the doc that holds a refused write; the awareness is new, so it is hooked again.</summary>
+  private void RebuildFromRoom()
+  {
+    rebuild = false;
+    wholeRoomOwed = false;
+    Unhook();
+    seam.RebuildFromRoom();
+    HookSeam();
   }
 
   private static void DropOnThrow(Action apply)
@@ -764,9 +798,10 @@ internal sealed class RoomProvider
     {
       connection = null;
     }
+    // Abort, not Close: the send lane that would write a close never started.
     if (IsStale(opened) || cancel.IsCancellationRequested)
     {
-      connection?.Close(CloseNormal);
+      connection?.Abort();
 
       return;
     }
@@ -775,14 +810,16 @@ internal sealed class RoomProvider
     // ws refuses an upgrade that selected no offered version, and the provider sees a 1006.
     if (connection is null || connection.Protocol is not (SubprotocolV2 or SubprotocolV1))
     {
-      connection?.Close(CloseNormal);
+      connection?.Abort();
       HandleClose(1006);
 
       return;
     }
     socket = connection;
     // Queued before the receive lane starts: a host that closes at once must still see it first, as with ws.
-    Send(connection, new SyncStep1Frame(seam.StateVector()));
+    // After a refusal: an empty vector, so the answer is the whole room.
+    wholeRoomOwed = rebuild;
+    Send(connection, new SyncStep1Frame(rebuild ? [0] : seam.StateVector()));
     connection.Start(
         bytes => loop.Post(() => OnMessage(opened, connection, bytes)),
         code => loop.Post(() =>

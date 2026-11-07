@@ -44,11 +44,57 @@ fn changed() -> HostError {
     )
 }
 
+/// Saves of one file, one at a time. An entry goes once no save holds or
+/// waits for it, as Node drops its tail.
+#[derive(Default)]
+struct SaveQueues(Arc<Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>>);
+
+struct SaveTurn {
+    queues: Arc<Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>>,
+    key: String,
+    queue: Option<Arc<tokio::sync::Mutex<()>>>,
+    guard: Option<tokio::sync::OwnedMutexGuard<()>>,
+}
+
+impl Drop for SaveTurn {
+    // Also runs for a save cancelled while it waited.
+    fn drop(&mut self) {
+        drop(self.guard.take());
+        drop(self.queue.take());
+        // Every clone is made under this lock, so the count cannot rise here.
+        let mut queues = self.queues.lock().unwrap_or_else(|p| p.into_inner());
+        if queues.get(&self.key).is_some_and(|q| Arc::strong_count(q) == 1) {
+            queues.remove(&self.key);
+        }
+    }
+}
+
+impl SaveQueues {
+    async fn turn(&self, key: &str) -> SaveTurn {
+        let queue = {
+            let mut queues = self.0.lock().unwrap_or_else(|p| p.into_inner());
+            queues.entry(key.to_owned()).or_default().clone()
+        };
+        let mut turn = SaveTurn {
+            queues: self.0.clone(),
+            key: key.to_owned(),
+            queue: Some(queue.clone()),
+            guard: None,
+        };
+        turn.guard = Some(queue.lock_owned().await);
+        turn
+    }
+
+    fn len(&self) -> usize {
+        self.0.lock().unwrap_or_else(|p| p.into_inner()).len()
+    }
+}
+
 pub struct FilesSource {
     dir: PathBuf,
     bundle: Arc<Bundle>,
     /// Saves of one file run one at a time in this process.
-    queues: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
+    queues: SaveQueues,
 }
 
 fn file_name(id: &str) -> String {
@@ -69,7 +115,7 @@ impl FilesSource {
         FilesSource {
             dir: PathBuf::from(dir),
             bundle,
-            queues: Mutex::new(HashMap::new()),
+            queues: SaveQueues::default(),
         }
     }
 
@@ -203,11 +249,6 @@ impl FilesSource {
         })
     }
 
-    fn queue(&self, key: &str) -> Arc<tokio::sync::Mutex<()>> {
-        let mut queues = self.queues.lock().unwrap_or_else(|p| p.into_inner());
-        queues.entry(key.to_owned()).or_default().clone()
-    }
-
     /// `text` is the exact file content; the new version is its SHA-256.
     pub async fn save(
         &self,
@@ -217,8 +258,7 @@ impl FilesSource {
     ) -> Result<Option<String>, Fault> {
         let path = self.path_of(id).await?;
         let target = self.write_target_of(id, &path)?;
-        let queue = self.queue(&same_file_key(&target));
-        let _turn = queue.lock().await;
+        let _turn = self.queues.turn(&same_file_key(&target)).await;
         let held = self.lock(id, &target).await?;
         let saved = self.save_locked(id, &path, &target, text, if_version).await;
         let _ = std::fs::remove_file(&held);
@@ -400,6 +440,38 @@ mod tests {
             sha256_hex(b"abc"),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
+    }
+
+    #[tokio::test]
+    async fn a_finished_save_leaves_no_queue_behind() {
+        let queues = SaveQueues::default();
+        let first = queues.turn("a").await;
+        let second = {
+            let queues = SaveQueues(queues.0.clone());
+            tokio::spawn(async move {
+                drop(queues.turn("a").await);
+            })
+        };
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        drop(first);
+        assert_eq!(queues.len(), 1, "a waiting save lost its queue");
+        second.await.unwrap();
+        assert_eq!(queues.len(), 0);
+        drop(queues.turn("b").await);
+        assert_eq!(queues.len(), 0);
+        // A save cancelled while it waited leaves nothing either.
+        let held = queues.turn("c").await;
+        let cancelled = {
+            let queues = SaveQueues(queues.0.clone());
+            tokio::spawn(async move {
+                drop(queues.turn("c").await);
+            })
+        };
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        cancelled.abort();
+        let _ = cancelled.await;
+        drop(held);
+        assert_eq!(queues.len(), 0);
     }
 
     #[test]

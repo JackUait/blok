@@ -203,7 +203,23 @@ export class BlokContentDirective implements OnDestroy {
         this.instance.set(blok); // assign FIRST…
         this.ready.emit(blok); // …THEN emit, so consumers see a populated instance.
       })
-    );
+    ).catch(() => {
+      // A failed boot: tear the editor down, as React and Vue do.
+      if (this.current !== blok || this.destroyed) {
+        return;
+      }
+
+      this.registry?.destroyAll();
+      removeRegistry(blok);
+      try {
+        blok.destroy();
+      } catch {
+        // destroy may throw too; the state below is still reset
+      }
+      this.current = null;
+      this.registry = undefined;
+      this.instance.set(null);
+    });
   }
 
   ngOnDestroy(): void {

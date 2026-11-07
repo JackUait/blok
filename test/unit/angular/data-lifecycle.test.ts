@@ -64,4 +64,15 @@ describe('BlokEditorComponent data around the editor lifecycle', () => {
 
     expect(editor.render).not.toHaveBeenCalled();
   });
+
+  it('destroys an editor whose boot failed', async () => {
+    const fixture = await construct(doc('seed'));
+    const editor = blokRegistry.last;
+
+    editor.rejectReady(new Error('boot failed'));
+    await settle(fixture);
+
+    expect(editor.destroy).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.instance()).toBeNull();
+  });
 });

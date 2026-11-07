@@ -31,13 +31,78 @@ pub fn own_answer(line: &str) -> Option<String> {
     })
 }
 
+/// A client line as rmcp will take it.
+enum Read {
+    /// A request rmcp runs; `call` holds a tools/call's arguments.
+    Request {
+        id: String,
+        call: Option<Value>,
+    },
+    Cancelled {
+        id: String,
+    },
+    Other,
+}
+
+/// The JSON text of an id as rmcp holds it: `3.0` is `3`.
+fn id_text(id: &rmcp::model::RequestId) -> String {
+    serde_json::to_value(id).map_or_else(|_| String::new(), |id| id.to_string())
+}
+
+/// Parses `line` with rmcp's own message type (its stdio reader strips a
+/// BOM first), so only a request rmcp will run is counted, under its id.
+fn rmcp_reads(line: &str) -> Read {
+    use rmcp::model::{ClientNotification, ClientRequest, JsonRpcMessage};
+    let line = line.strip_prefix('\u{feff}').unwrap_or(line);
+    let Ok(message) =
+        serde_json::from_str::<rmcp::service::RxJsonRpcMessage<rmcp::RoleServer>>(line)
+    else {
+        return Read::Other;
+    };
+    match message {
+        JsonRpcMessage::Request(request) => Read::Request {
+            id: id_text(&request.id),
+            call: match request.request {
+                ClientRequest::CallToolRequest(call) => Some(
+                    call.params
+                        .arguments
+                        .map_or_else(|| json!({}), Value::Object),
+                ),
+                _ => None,
+            },
+        },
+        JsonRpcMessage::Notification(note) => match note.notification {
+            ClientNotification::CancelledNotification(cancelled) => {
+                match cancelled.params.request_id {
+                    Some(id) => Read::Cancelled { id: id_text(&id) },
+                    None => Read::Other,
+                }
+            }
+            _ => Read::Other,
+        },
+        _ => Read::Other,
+    }
+}
+
+/// rmcp's answer to a line it could not take as a message: Node's SDK
+/// writes nothing for those.
+fn is_id_less_error(line: &str) -> bool {
+    serde_json::from_str::<Value>(line).is_ok_and(|m| {
+        m.get("error").is_some()
+            && m.get("method").is_none()
+            && m.get("id").is_none_or(Value::is_null)
+    })
+}
+
 /// Node's STOP_DRAIN_MS: shutdown waits this long for work in flight.
 pub const DRAIN_LIMIT: Duration = Duration::from_secs(45);
 
-/// Sees each request as it is read, in order, and each one's end.
+/// Sees each tools/call as it is read, in order, and each request's end.
+/// `id` is the JSON text of rmcp's request id.
 pub trait Requests: Send + Sync {
-    fn read(&self, message: &Value);
-    /// Answered or cancelled; `id` is the JSON text of its id.
+    /// `arguments` as the call's handler gets them.
+    fn read(&self, id: &str, arguments: &Value);
+    /// Answered or cancelled.
     fn ended(&self, id: &str);
 }
 
@@ -60,26 +125,23 @@ impl Pending {
         self.ids.lock().unwrap_or_else(|p| p.into_inner())
     }
 
-    /// Notes a line going to the server, if it is a request. A cancelled
-    /// request is never answered, so it stops counting.
+    /// Notes a line going to the server, if it is a request rmcp will run.
+    /// A cancelled request is never answered, so it stops counting.
     fn sent(&self, line: &str) {
-        let Ok(message) = serde_json::from_str::<Value>(line) else {
-            return;
-        };
-        if message.get("method").and_then(Value::as_str) == Some("notifications/cancelled") {
-            if let Some(id) = message.pointer("/params/requestId") {
-                self.ids().remove(&id.to_string());
-                if let Some(requests) = &self.requests {
-                    requests.ended(&id.to_string());
+        match rmcp_reads(line) {
+            Read::Request { id, call } => {
+                self.ids().insert(id.clone());
+                if let (Some(requests), Some(arguments)) = (&self.requests, call) {
+                    requests.read(&id, &arguments);
                 }
             }
-        } else if message.get("method").is_some()
-            && let Some(id) = message.get("id")
-        {
-            self.ids().insert(id.to_string());
-            if let Some(requests) = &self.requests {
-                requests.read(&message);
+            Read::Cancelled { id } => {
+                self.ids().remove(&id);
+                if let Some(requests) = &self.requests {
+                    requests.ended(&id);
+                }
             }
+            Read::Other => {}
         }
     }
 
@@ -189,6 +251,9 @@ where
         tokio::spawn(async move {
             let mut lines = BufReader::new(from_server).lines();
             while let Ok(Some(line)) = lines.next_line().await {
+                if is_id_less_error(&line) {
+                    continue;
+                }
                 let written = write_line(&out, &line).await;
                 pending.answered(&line);
                 if written.is_err() {
@@ -307,6 +372,74 @@ mod tests {
         let started = std::time::Instant::now();
         pending.drained(DRAIN_LIMIT).await;
         assert!(started.elapsed() < Duration::from_secs(1));
+    }
+
+    #[derive(Default)]
+    struct Seen(std::sync::Mutex<Vec<String>>);
+
+    impl Requests for Seen {
+        fn read(&self, id: &str, _arguments: &Value) {
+            self.0.lock().unwrap().push(format!("read {id}"));
+        }
+        fn ended(&self, id: &str) {
+            self.0.lock().unwrap().push(format!("ended {id}"));
+        }
+    }
+
+    // rmcp refuses these with an id-less -32600 and never runs them.
+    #[tokio::test]
+    async fn a_request_rmcp_refuses_books_nothing_and_holds_no_stop() {
+        let seen = Arc::new(Seen::default());
+        let pending = Pending::with_requests(seen.clone());
+        pending.sent(r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"blok_read","arguments":{"handle":"h"},"_meta":5}}"#);
+        pending.sent(r#"{"jsonrpc":"2.0","id":9.5,"method":"ping"}"#);
+        assert!(seen.0.lock().unwrap().is_empty());
+        let started = std::time::Instant::now();
+        pending.drained(DRAIN_LIMIT).await;
+        assert!(started.elapsed() < Duration::from_secs(1));
+    }
+
+    // rmcp reads id 3.0 as 3 and answers with 3.
+    #[tokio::test]
+    async fn a_float_id_is_keyed_as_rmcp_reads_it() {
+        let seen = Arc::new(Seen::default());
+        let pending = Pending::with_requests(seen.clone());
+        pending.sent(r#"{"jsonrpc":"2.0","id":3.0,"method":"tools/call","params":{"name":"blok_read","arguments":{"handle":"h"}}}"#);
+        pending.answered(r#"{"jsonrpc":"2.0","id":3,"result":{}}"#);
+        pending.sent(
+            r#"{"jsonrpc":"2.0","id":4.0,"method":"tools/call","params":{"name":"blok_read"}}"#,
+        );
+        pending.sent(
+            r#"{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":4.0}}"#,
+        );
+        assert_eq!(
+            *seen.0.lock().unwrap(),
+            vec!["read 3", "ended 3", "read 4", "ended 4"]
+        );
+        let started = std::time::Instant::now();
+        pending.drained(DRAIN_LIMIT).await;
+        assert!(started.elapsed() < Duration::from_secs(1));
+    }
+
+    // Node's SDK never answers a line its schema refuses; rmcp answers id-less.
+    #[tokio::test]
+    async fn an_id_less_error_from_rmcp_is_not_written() {
+        let (out, mut client) = tokio::io::duplex(1 << 16);
+        proxy(
+            std::io::Cursor::new(Vec::new()),
+            out,
+            Arc::default(),
+            move |_read, mut write| async move {
+                write
+                    .write_all(b"{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32600,\"message\":\"Invalid request\"}}\n{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n")
+                    .await
+                    .unwrap();
+            },
+        )
+        .await;
+        let mut written = String::new();
+        client.read_to_string(&mut written).await.unwrap();
+        assert_eq!(written, "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n");
     }
 
     #[test]

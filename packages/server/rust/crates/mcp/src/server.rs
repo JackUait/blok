@@ -269,27 +269,15 @@ fn str_of<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
 /// stdio reads calls in order and the server runs each in its own task, so a
 /// call takes its place on its handle as it is read.
 impl crate::stdio::Requests for Mcp {
-    fn read(&self, message: &Value) {
-        if message.get("method").and_then(Value::as_str) != Some("tools/call") {
-            return;
-        }
-        let (Some(id), Some(handle)) = (
-            message.get("id"),
-            message
-                .pointer("/params/arguments/handle")
-                .and_then(Value::as_str),
-        ) else {
+    fn read(&self, id: &str, arguments: &Value) {
+        let Some(handle) = str_of(arguments, "handle") else {
             return;
         };
-        let arguments = message
-            .pointer("/params/arguments")
-            .map(Value::to_string)
-            .unwrap_or_default();
         let turn = self.handles.reserve(handle, &self.principal);
         self.reserved
             .lock()
             .unwrap_or_else(|p| p.into_inner())
-            .read(&id.to_string(), &arguments, turn);
+            .read(id, &arguments.to_string(), turn);
     }
 
     fn ended(&self, id: &str) {

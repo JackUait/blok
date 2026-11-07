@@ -293,7 +293,9 @@ func (r *liveRoom) restoreVersion(ctx context.Context, version string, previous 
 }
 
 // retryable is Node's isTransient for a restore, which is never asked
-// twice: no answer, a 429 or a 5xx other than 500 and 501.
+// twice: no answer, a 429 or a 5xx other than 500 and 501. Any other
+// error, a failed ticket too, is plain and not retryable.
 func (o restoreOutcome) retryable() bool {
-	return o.status == 0 || o.status == 429 || (o.status >= 502 && o.status <= 599)
+	var unreachable *unreachableError
+	return errors.As(o.err, &unreachable) || o.status == 429 || (o.status >= 502 && o.status <= 599)
 }

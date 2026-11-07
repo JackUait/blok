@@ -62,3 +62,36 @@ func TestARestoreIsPinnedAndRefusedAsNode(t *testing.T) {
 		}
 	}
 }
+
+// A ticket that cannot be minted is a plain error to Node's restore: not
+// retryable, unlike a sync server that never answered.
+func TestARestoreWhoseTicketFailsIsNotRetryable(t *testing.T) {
+	previous := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:2"
+	room := newLiveRoom("http://127.0.0.1:1/sync/doc", "doc", nil, func(bool) (string, error) {
+		return "", surfaceError("SOURCE_UNAVAILABLE", "The ticket endpoint could not be reached.")
+	}, nil)
+	t.Cleanup(room.close)
+	got := (&liveSession{room: room}).restore(context.Background(), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:1", &previous)
+	want := `{"ok":false,"revision":"l0","error":{"code":"TOOL_ACTION_FAILED","message":"The version history failed: The ticket endpoint could not be reached.","retryable":false,"commandIndex":0,"path":"/commands/0/args"},"warnings":[]}`
+	if string(got) != want {
+		t.Fatalf("got %s", got)
+	}
+}
+
+// No answer from the sync server is worth a retry.
+func TestARestoreThatGetsNoAnswerIsRetryable(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := listener.Addr().String()
+	_ = listener.Close()
+	previous := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:2"
+	room := newLiveRoom("http://"+address+"/sync/doc", "doc", nil, func(bool) (string, error) { return "t", nil }, nil)
+	t.Cleanup(room.close)
+	got := (&liveSession{room: room}).restore(context.Background(), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:1", &previous)
+	want := `{"ok":false,"revision":"l0","error":{"code":"TOOL_ACTION_FAILED","message":"The version history failed: The sync server could not be reached: fetch failed","retryable":true,"commandIndex":0,"path":"/commands/0/args"},"warnings":[]}`
+	if string(got) != want {
+		t.Fatalf("got %s", got)
+	}
+}

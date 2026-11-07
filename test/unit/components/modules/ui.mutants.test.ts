@@ -2278,7 +2278,7 @@ describe('UI module — mutants', () => {
       expect(wrapper?.style.top).toBe('10px');
     });
 
-    it('hides on grace even when the pointer re-entered the same anchor', () => {
+    it('keeps the card when the pointer comes back to the same link before it hides', () => {
       vi.useFakeTimers();
 
       const { redactor } = createHoverUI();
@@ -2291,11 +2291,14 @@ describe('UI module — mutants', () => {
 
       expect(wrapper).toBeDefined();
 
-      // Leave, then re-enter the SAME anchor before the grace timer fires.
-      // The re-entry must NOT restart the show and must NOT cancel the armed
-      // hide: the card still leaves.
       anchor.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
       mouseMove(anchor, 1, 1);
+      vi.advanceTimersByTime(600);
+
+      expect(wrapper?.isConnected).toBe(true);
+      expect(cardWrappers()).toHaveLength(1);
+
+      anchor.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
       vi.advanceTimersByTime(600);
 
       expect(document.body.contains(wrapper)).toBe(false);

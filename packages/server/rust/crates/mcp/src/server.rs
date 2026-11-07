@@ -461,7 +461,9 @@ impl Mcp {
             Some("blok_open") => self.open(&step, caller, cancelled).await?,
             Some("blok_close") => {
                 let handle = str_of(&step, "handle").unwrap_or_default();
-                drop(self.on_handle(caller, handle, false).await?);
+                // A refused check still closes, so the handle does not keep its
+                // --max-handles slot; an unknown handle fails again in remove.
+                let refusal = self.on_handle(caller, handle, false).await.map(drop).err();
                 let session = self.handles.remove(handle, &caller.principal).await?;
                 let summary = match &*session {
                     Session::Remote(room) => room.close().await,
@@ -471,6 +473,9 @@ impl Mcp {
                     }
                     Session::Stored(_) => json!({ "unsavedBatches": 0, "hostRecordLags": false }),
                 };
+                if let Some(refusal) = refusal {
+                    return Err(refusal);
+                }
                 Answer {
                     structured: json!({
                         "closed": true,

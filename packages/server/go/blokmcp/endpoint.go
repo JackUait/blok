@@ -119,7 +119,7 @@ func (s *endpointSource) load(ctx context.Context, documentID string) (*loaded, 
 	if answer.status != http.StatusOK {
 		return nil, endpointUnavailable(fmt.Sprintf("answered %d for %s", answer.status, documentID))
 	}
-	body := json.RawMessage(decodeUTF8(answer.body))
+	body := json.RawMessage(finiteJSON([]byte(decodeUTF8(answer.body))))
 	if !json.Valid(body) {
 		return nil, endpointUnavailable("answered non-JSON for " + documentID)
 	}

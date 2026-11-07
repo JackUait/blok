@@ -80,7 +80,7 @@ func (b bundle) call(ctx context.Context, op string, input any, out any) (json.R
 	if err != nil {
 		return nil, err
 	}
-	answer, err := b.runtime.Invoke(ctx, op, string(written), nil)
+	answer, err := b.runtime.Invoke(ctx, op, string(finiteJSON(written)), nil)
 	if err != nil {
 		return nil, fmt.Errorf("blok-mcp: bundle operation %s failed: %w", op, err)
 	}

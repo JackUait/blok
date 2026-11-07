@@ -9,7 +9,10 @@ import (
 	"strings"
 )
 
-const protocolVersionMetaKey = "io.modelcontextprotocol/protocolVersion"
+const (
+	protocolVersionMetaKey    = "io.modelcontextprotocol/protocolVersion"
+	clientCapabilitiesMetaKey = "io.modelcontextprotocol/clientCapabilities"
+)
 
 // nodeMethods are the requests Node's server answers; any other gets
 // -32601. The Go SDK refuses an unknown name with a 400 instead.
@@ -117,6 +120,9 @@ func nodeGate(r *http.Request, body []byte) (answer *recorder, batch bool) {
 		if !nodeMessage(body) {
 			return rpcError(http.StatusBadRequest, -32600, notAMessage, echoID(body)), false
 		}
+		if refusal := missingEnvelope(body, version, modernHeader); refusal != nil {
+			return refusal, false
+		}
 		// 2026 requests keep their own rules (see recorder.send).
 		if hasEnvelopeClaim(body) || modernHeader {
 			return nil, false
@@ -155,6 +161,34 @@ func nodeGate(r *http.Request, body []byte) (answer *recorder, batch bool) {
 		}
 	}
 	return nil, false
+}
+
+// missingEnvelope is Node's answer to a request whose header names a 2026
+// revision while its _meta makes no claim: the keys it lacks, in order.
+func missingEnvelope(body []byte, version string, modernHeader bool) *recorder {
+	members, _ := isRecordJSON(body)
+	_, isCall := members["id"]
+	if !modernHeader || !isCall || hasEnvelopeClaim(body) || isExactString(members["method"], "initialize") {
+		return nil
+	}
+	params, _ := isRecordJSON(members["params"])
+	meta, hasMeta := isRecordJSON(params["_meta"])
+	missing := []string{"_meta"}
+	if hasMeta {
+		missing = []string{protocolVersionMetaKey}
+		if _, ok := meta[clientCapabilitiesMetaKey]; !ok {
+			missing = append(missing, clientCapabilitiesMetaKey)
+		}
+	}
+	written, _ := marshal(map[string]any{"jsonrpc": "2.0", "id": echoID(body), "error": map[string]any{
+		"code":    -32602,
+		"message": "Invalid params: the MCP-Protocol-Version header names protocol revision " + version + ", but the request is missing the required per-request envelope key(s): " + strings.Join(missing, ", "),
+		"data":    map[string]any{"envelope": map[string]any{"missing": missing}},
+	}})
+	answer := &recorder{header: http.Header{}, status: http.StatusBadRequest}
+	answer.header.Set("Content-Type", "application/json")
+	answer.body.Write(written)
+	return answer
 }
 
 func contains(list []string, value string) bool {

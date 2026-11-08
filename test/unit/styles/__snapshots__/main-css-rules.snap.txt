@@ -7148,7 +7148,7 @@ button[data-blok-database-column-count]:hover {
   display: flex;
   align-items: center;
   gap: var(--blok-space-2);
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 120px;
 }
 

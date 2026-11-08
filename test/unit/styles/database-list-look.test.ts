@@ -91,10 +91,12 @@ describe('list rows (research/07)', () => {
 
 describe('list row widths (findings-listgallery L01)', () => {
   // The title box holds the title and the Edit pencil right after its text (L04).
-  it('keeps the title box at least 120px wide and lets it grow; the title hugs its text', () => {
+  // listview.png: a long title gives way to the properties and stops at about 117px ("Beta is a very l…").
+  // A zero basis means the title box only takes what the properties leave, never under 120px.
+  it('keeps the title box at least 120px wide and gives the properties first claim on the row; the title hugs its text', () => {
     const box = ruleBody(database, '[data-blok-database-list-row-main]');
 
-    expect(box).toContain('flex: 1 1 auto');
+    expect(box).toContain('flex: 1 1 0');
     expect(box).toContain('min-width: 120px');
     expect(ruleBody(database, '[data-blok-database-list-row-title]')).toContain('flex: 0 1 auto');
     expect(ruleBody(database, '[data-blok-database-list-row-title]')).toContain('min-width: 0');

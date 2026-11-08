@@ -111,6 +111,31 @@ test.describe('list view', () => {
     expect((await slot(page, 'r1', 'p-stage').locator('[data-blok-database-option-pill]').boundingBox())?.height).toBeCloseTo(18, 0);
   });
 
+  // listview.png (side-by-side-v1, List): a long title is cut with "…" and every property stays in view.
+  test('a long title gives way to the properties, which all stay in view', async ({ page }) => {
+    const long = blocks({ type: 'list', name: 'List' });
+    const first = long.find((block) => block.id === 'r1');
+
+    if (first !== undefined) {
+      (first.data as { properties: Record<string, unknown> }).properties['p-title'] = 'Alpha is a very long row title that keeps going and going so it has to do something';
+    }
+    await mount(page, long);
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) holder.style.maxWidth = '640px';
+    });
+
+    const title = row(page, 'r1').locator('[data-blok-database-list-row-title]');
+    const properties = row(page, 'r1').locator('[data-blok-database-list-row-properties]');
+    const fit = await properties.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+
+    expect(fit.scroll).toBeLessThanOrEqual(fit.client);
+    expect(await title.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    await expect(title).toHaveCSS('text-overflow', 'ellipsis');
+    expect((await row(page, 'r1').locator('[data-blok-database-list-row-main]').boundingBox())?.width).toBeGreaterThanOrEqual(120);
+  });
+
   test('edits a property in place on click, and the page stays closed', async ({ page }) => {
     await mount(page, blocks({ type: 'list', name: 'List' }));
 

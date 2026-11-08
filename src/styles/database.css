@@ -3391,13 +3391,14 @@ button[data-blok-database-column-count]:hover {
 }
 
 /**
- * Row title — fills available space, truncates overflow.
+ * Row title — fills the space the properties leave, truncates overflow.
+ * A zero basis gives the properties first claim, as Notion does (listview.png: "Beta is a very l…").
  */
 [data-blok-database-list-row-main] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-2);
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 120px;
 }
 

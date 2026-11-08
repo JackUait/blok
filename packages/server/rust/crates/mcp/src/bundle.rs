@@ -29,6 +29,12 @@ pub struct Bundle {
     /// Tests only: this many matching calls pass before `fail` fails one.
     #[cfg(test)]
     pub(crate) fail_after: std::sync::atomic::AtomicUsize,
+    /// Tests only: a live room fails a batch right after writing it.
+    #[cfg(test)]
+    pub(crate) fail_after_room_write: std::sync::atomic::AtomicBool,
+    /// Tests only: a live room cannot give its document.
+    #[cfg(test)]
+    pub(crate) fail_room_read: std::sync::atomic::AtomicBool,
     /// Tests only: this op's answer loses this top-level member.
     #[cfg(test)]
     pub(crate) drop_member: std::sync::Mutex<Option<(&'static str, &'static str)>>,
@@ -66,6 +72,10 @@ impl Bundle {
             #[cfg(test)]
             fail_after: std::sync::atomic::AtomicUsize::new(0),
             #[cfg(test)]
+            fail_after_room_write: std::sync::atomic::AtomicBool::new(false),
+            #[cfg(test)]
+            fail_room_read: std::sync::atomic::AtomicBool::new(false),
+            #[cfg(test)]
             drop_member: std::sync::Mutex::default(),
         })
     }
@@ -87,9 +97,19 @@ impl Bundle {
             input
         };
         #[cfg(test)]
-        if let Some((failing, marker)) = *self.fail.lock().unwrap()
-            && op == failing
-            && input.contains(marker)
+        if self.fails(op, input) {
+            return Err(BundleError(format!("{op}: failed for a test")));
+        }
+        self.pool
+            .invoke(op, input, None)
+            .await
+            .map_err(|e| BundleError(format!("{op}: {e}")))
+    }
+
+    /// Tests only: whether `fail` fails this call.
+    #[cfg(test)]
+    fn fails(&self, op: &str, input: &str) -> bool {
+        matches!(*self.fail.lock().unwrap(), Some((failing, marker)) if op == failing && input.contains(marker))
             && self
                 .fail_after
                 .try_update(
@@ -98,13 +118,6 @@ impl Bundle {
                     |left| left.checked_sub(1),
                 )
                 .is_err()
-        {
-            return Err(BundleError(format!("{op}: failed for a test")));
-        }
-        self.pool
-            .invoke(op, input, None)
-            .await
-            .map_err(|e| BundleError(format!("{op}: {e}")))
     }
 
     pub async fn call(&self, op: &str, input: &str) -> Result<Value, BundleError> {
@@ -250,6 +263,20 @@ impl blok_collab_convert::Invoker for BundleInvoker {
     ) -> impl std::future::Future<Output = Result<String, blok_jsruntime::InvokeError>> + Send {
         let bundle = self.0.clone();
         let (op, input) = (op.to_owned(), input.to_owned());
-        async move { bundle.pool.invoke(&op, &input, timeout).await }
+        async move {
+            #[cfg(test)]
+            if bundle.fails(&op, &input) {
+                return Err(blok_jsruntime::InvokeError::Failure(
+                    blok_jsruntime::Failure {
+                        kind: blok_jsruntime::Kind::Unknown,
+                        err: blok_jsruntime::Error::Js(blok_jsruntime::JsError {
+                            name: "Error".to_owned(),
+                            message: format!("{op}: failed for a test"),
+                        }),
+                    },
+                ));
+            }
+            bundle.pool.invoke(&op, &input, timeout).await
+        }
     }
 }

@@ -236,13 +236,33 @@ fn agent_error_of(error: &HostError) -> Value {
     agent
 }
 
-/// Node's batchFailure for a throw that is no AgentError (executor.ts).
+/// A server error that stopped a batch after its pages were made. The cause
+/// is blokagent's (pagecreate.rs stopped_after_creating), as the C# and Go
+/// servers give it; the error itself goes only to stderr.
 fn runtime_failure(message: &str) -> HostError {
-    HostError::failure(
-        "APPLY_FAILED",
-        format!(
-            "The document runtime failed: {message}. The document may be partly changed; read it again."
-        ),
+    eprintln!("blok-mcp: a batch stopped after its pages were made: {message}");
+    HostError::as_is(json!({
+        "code": "APPLY_FAILED",
+        "message": "The batch stopped on a server error. Nothing was written.",
+        "retryable": true,
+    }))
+}
+
+/// The pages of `created` that `document` links from no page block; None
+/// when it is no document.
+fn unlinked_pages<'a>(document: &str, created: &'a [String]) -> Option<Vec<&'a String>> {
+    let document: Value = serde_json::from_str(document).ok()?;
+    let blocks = document.get("blocks")?.as_array()?;
+    let linked: std::collections::HashSet<&str> = blocks
+        .iter()
+        .filter(|block| str_of(block, "type") == Some("page"))
+        .filter_map(|block| block.pointer("/data/pageId").and_then(Value::as_str))
+        .collect();
+    Some(
+        created
+            .iter()
+            .filter(|page_id| !linked.contains(page_id.as_str()))
+            .collect(),
     )
 }
 
@@ -766,10 +786,17 @@ impl Mcp {
         }
     }
 
-    /// Pages were made but the parent was not written: the batch fails as
-    /// Node's withUnusedPages fails it, naming the pages, with `fault` as cause.
-    async fn orphaned(&self, created: &[String], fault: Fault) -> Fault {
-        if created.is_empty() {
+    /// A batch failed after its pages were made: it fails as Node's
+    /// withUnusedPages fails it, naming the pages `parent` (the parent as
+    /// saved, or the room read again) does not link, with `fault` as cause.
+    /// With no parent to read, or every page linked, `fault` passes on: a
+    /// host must never delete a page the parent may use (blokagent's
+    /// room_links_none).
+    async fn orphaned(&self, created: &[String], parent: Option<&str>, fault: Fault) -> Fault {
+        let Some(unused) = parent.and_then(|parent| unlinked_pages(parent, created)) else {
+            return fault;
+        };
+        if unused.is_empty() {
             return fault;
         }
         let cause = match &fault {
@@ -786,7 +813,7 @@ impl Mcp {
         let Some(cause) = cause else {
             return fault;
         };
-        let orphaned: Vec<Value> = created
+        let orphaned: Vec<Value> = unused
             .iter()
             .map(|page_id| json!({ "command": "block.insert", "type": "page", "prepared": { "pageId": page_id } }))
             .collect();
@@ -1407,7 +1434,7 @@ impl Mcp {
                     batch: batch.clone(),
                     actor: actor.clone(),
                     approval: asking,
-                    created_pages: work.created,
+                    created_pages: work.created.clone(),
                     create_failure: work.create_failure,
                     page_writes: work.page_writes,
                     uploads: None,
@@ -1417,7 +1444,16 @@ impl Mcp {
                 let mut reads = Vec::new();
                 let executed = loop {
                     input.uploads = self.uploads.as_ref().map(|uploads| uploads.input(&answers));
-                    let executed = room.execute(input.clone()).await?;
+                    let executed = match room.execute(input.clone()).await {
+                        Ok(executed) => executed,
+                        Err(fault) => {
+                            // The room may have written before the error.
+                            let parent = room.document().await.ok();
+                            return Err(self
+                                .orphaned(&work.created, parent.as_deref(), fault)
+                                .await);
+                        }
+                    };
                     match (executed, &self.uploads) {
                         (Executed::Upload(upload), Some(uploads)) if answers.len() < 4 => {
                             answers.push(uploads.answer(&upload, &batch, &mut reads).await);
@@ -1811,7 +1847,11 @@ impl Mcp {
             }
             let out = match self.bundle.call_raw("agentExecute", &call.finish()).await {
                 Ok(out) => out,
-                Err(err) => return Err(self.orphaned(&work.created, err.into()).await),
+                Err(err) => {
+                    return Err(self
+                        .orphaned(&work.created, Some(&stored.document), err.into())
+                        .await);
+                }
             };
             match (out.value("upload"), &self.uploads) {
                 // A read, then its upload: never more than a few turns.
@@ -1830,7 +1870,9 @@ impl Mcp {
         }
         let Some(result) = out.text("result").map(str::to_owned) else {
             let fault = Fault::Internal("agentExecute gave no result".to_owned());
-            return Err(self.orphaned(&work.created, fault).await);
+            return Err(self
+                .orphaned(&work.created, Some(&stored.document), fault)
+                .await);
         };
         // Memory takes a batch to save only once the source has it, so a
         // failed save leaves no edit and no undo step behind.
@@ -1851,7 +1893,9 @@ impl Mcp {
             else {
                 stored.stale = true;
                 let fault = Fault::Internal("agentExecute gave no documentText".to_owned());
-                return Err(self.orphaned(&work.created, fault).await);
+                return Err(self
+                    .orphaned(&work.created, Some(&stored.document), fault)
+                    .await);
             };
             // As Node: the answer is built before the save, so nothing that can
             // fail follows it, and a failed answer saved nothing a retry repeats.
@@ -1872,7 +1916,9 @@ impl Mcp {
                 Ok(built) => built,
                 Err(fault) => {
                     stored.stale = true;
-                    return Err(self.orphaned(&work.created, fault).await);
+                    return Err(self
+                        .orphaned(&work.created, Some(&stored.document), fault)
+                        .await);
                 }
             };
             match source
@@ -1920,13 +1966,15 @@ impl Mcp {
         match built {
             Ok(built) => Ok(Outcome::Answer(built)),
             Err(fault) if refused => Err(fault),
-            Err(fault) => Err(self.orphaned(&work.created, fault).await),
+            Err(fault) => Err(self
+                .orphaned(&work.created, Some(&stored.document), fault)
+                .await),
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     async fn stored_write(bundle: Arc<Bundle>) -> (Mcp, std::path::PathBuf, String) {
@@ -2061,6 +2109,20 @@ mod tests {
         (error, pages)
     }
 
+    /// blokagent's cause for a batch a server error stopped, as C# and Go
+    /// report it too (pagecreate.rs stopped_after_creating).
+    /// The bundle adds the failed insert's commandIndex when it fails one.
+    pub(crate) fn assert_server_stop(cause: &Value) {
+        let mut cause = cause.clone();
+        if let Some(cause) = cause.as_object_mut() {
+            cause.remove("commandIndex");
+        }
+        assert_eq!(
+            cause,
+            json!({ "code": "APPLY_FAILED", "message": "The batch stopped on a server error. Nothing was written.", "retryable": true })
+        );
+    }
+
     fn orphaned_ids(error: &Value) -> Vec<String> {
         assert_eq!(error["code"], "ORPHANED_SIDE_EFFECT", "{error}");
         assert_eq!(error["retryable"], false, "{error}");
@@ -2089,7 +2151,8 @@ mod tests {
         .await;
         assert_eq!(pages.len(), 1, "{pages:?}");
         assert_eq!(orphaned_ids(&error), pages);
-        assert_eq!(error["details"]["cause"]["code"], "APPLY_FAILED", "{error}");
+        assert_server_stop(&error["details"]["cause"]);
+        assert_eq!(error["details"]["cause"]["commandIndex"], 1, "{error}");
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -2100,7 +2163,7 @@ mod tests {
         .await;
         assert_eq!(pages.len(), 2, "{pages:?}");
         assert_eq!(orphaned_ids(&error), pages);
-        assert_eq!(error["details"]["cause"]["code"], "APPLY_FAILED", "{error}");
+        assert_server_stop(&error["details"]["cause"]);
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -2111,6 +2174,7 @@ mod tests {
         .await;
         assert_eq!(pages.len(), 2, "{pages:?}");
         assert_eq!(orphaned_ids(&error), pages);
+        assert_server_stop(&error["details"]["cause"]);
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -2121,6 +2185,7 @@ mod tests {
         .await;
         assert_eq!(pages.len(), 2, "{pages:?}");
         assert_eq!(orphaned_ids(&error), pages);
+        assert_server_stop(&error["details"]["cause"]);
     }
 
     // Node builds the answer before it saves, so a call that fails to

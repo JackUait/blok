@@ -1,9 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { createPageToolbar } from '../../desktop/src/page-toolbar';
+import { Blok } from '../blok';
+import { defaultTools } from './helpers';
 import '../../desktop/src/shell.css';
 
+let liveEditor: Blok | null = null;
+
 function page(fullWidth: boolean): HTMLElement {
+  try { liveEditor?.destroy(); } catch { /* A previous story may already have been removed. */ }
+  liveEditor = null;
   const root = document.createElement('div');
   root.setAttribute('data-desktop-shell', '');
   root.setAttribute('data-blok-theme', 'dark');
@@ -13,19 +19,29 @@ function page(fullWidth: boolean): HTMLElement {
   canvas.style.height = '100%';
   const article = document.createElement('article');
   article.setAttribute('data-desktop-document', '');
-  const title = document.createElement('h1');
-  title.textContent = 'Carnet de voyage';
-  const text = document.createElement('p');
-  text.textContent = 'Une page large garde des marges confortables tout en donnant plus de place aux tableaux et aux images.';
-  article.append(title, text);
+  const holder = document.createElement('div');
+  article.append(holder);
+  let editor: Blok | null = null;
   const apply = (enabled: boolean): void => {
     canvas.toggleAttribute('data-full-width', enabled);
     article.toggleAttribute('data-full-width', enabled);
+    editor?.width.set(enabled ? 'full' : 'narrow');
   };
   const toolbar = createPageToolbar('Carnet de voyage', '🌍', fullWidth, apply);
   canvas.append(toolbar.element, article);
   root.append(canvas);
+  editor = new Blok({
+    holder,
+    tools: defaultTools,
+    pageTitle: { placeholder: 'Nouvelle page' },
+    data: {
+      time: Date.now(), version: '2.1.0',
+      blocks: [{ id: 'example', type: 'paragraph', data: { text: 'Une page large donne plus de place aux blocs, aux tableaux et aux images.' } }],
+    },
+  });
+  liveEditor = editor;
   apply(fullWidth);
+  void editor.isReady.then(() => editor?.title.set('Carnet de voyage', { record: false })).catch(() => undefined);
   return root;
 }
 
@@ -43,9 +59,11 @@ export const Bascule: Story = {
   render: () => page(false),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await waitFor(() => expect(canvasElement.querySelector('[data-blok-element-content]')).toBeTruthy());
     await userEvent.click(canvas.getByRole('button', { name: 'Actions de la page' }));
     await userEvent.click(canvas.getByRole('switch', { name: 'Pleine largeur' }));
     expect(canvasElement.querySelector('[data-desktop-document]')?.hasAttribute('data-full-width')).toBe(true);
+    expect(canvasElement.querySelector('[data-blok-editor]')?.getAttribute('data-blok-width')).toBe('full');
     expect(canvas.getByRole('switch', { name: 'Pleine largeur' }).getAttribute('aria-checked')).toBe('true');
   },
 };

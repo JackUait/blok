@@ -93,6 +93,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       const enabled = page.fullWidth === true;
       pageCanvas.toggleAttribute('data-full-width', enabled);
       article.toggleAttribute('data-full-width', enabled);
+      editor?.width.set(enabled ? 'full' : 'narrow');
     };
     const toolbar = createPageToolbar(page.title, page.icon, page.fullWidth === true, (enabled) => {
       page.fullWidth = enabled;
@@ -179,6 +180,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       },
     });
     editor = instance;
+    instance.width.set(page.fullWidth === true ? 'full' : 'narrow');
     void instance.isReady.then(() => {
       if (generation !== turn) return;
       attachCoverAction();

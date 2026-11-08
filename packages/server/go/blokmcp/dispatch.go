@@ -144,6 +144,21 @@ func (s *Server) dispatchStep(ctx context.Context, call *toolCall, signal contex
 	case "blok_close":
 		// A refused check still closes, so the handle does not keep its
 		// --max-handles place. An unknown handle fails again in remove.
+		if s.shared != nil && !s.handles.has(step.Handle) {
+			refusal, err := s.shared.close(ctx, call.caller, step.Handle)
+			if err != nil {
+				return nil, err
+			}
+			if refusal != nil {
+				return nil, refusal
+			}
+			answer, _ := marshal(struct {
+				Closed         bool `json:"closed"`
+				UnsavedBatches int  `json:"unsavedBatches"`
+				HostRecordLags bool `json:"hostRecordLags"`
+			}{true, 0, false})
+			return s.plainAnswer(answer), nil
+		}
 		refusal := s.onHandle(ctx, call.caller, step.Handle, false, func(session) error { return nil })
 		sess, err := s.handles.remove(step.Handle, call.caller.principal)
 		if err != nil {
@@ -195,7 +210,11 @@ func (s *Server) plainAnswer(content json.RawMessage) *outcome {
 }
 
 func (s *Server) onHandle(ctx context.Context, who *caller, handle string, write bool, operation func(session) error) error {
-	return s.handles.use(ctx, handle, who.principal, func(sess session, documentID string) error {
+	use := s.handles.use
+	if s.shared != nil {
+		use = s.shared.use
+	}
+	return use(ctx, handle, who.principal, func(sess session, documentID string) error {
 		allowed, err := s.allowed(ctx, who.principal, documentID, write)
 		if err != nil {
 			return err
@@ -205,6 +224,15 @@ func (s *Server) onHandle(ctx context.Context, who *caller, handle string, write
 		}
 		return operation(sess)
 	})
+}
+
+// sourceFor is the source acting for who: a host's source binds the
+// caller, the others ignore who calls.
+func (s *Server) sourceFor(who *caller) docSource {
+	if custom, ok := s.source.(*customSource); ok && who != nil {
+		return custom.forCaller(who)
+	}
+	return s.source
 }
 
 // allowed asks the authorize hook; without one everything is allowed.
@@ -230,10 +258,11 @@ type listedEntry struct {
 // list is the opener's list: the source's page, filtered by the authorize
 // hook with write false.
 func (s *Server) list(ctx context.Context, request listRequest, who *caller) (*listResult, error) {
-	if s.source == nil || !s.source.lists() {
+	source := s.sourceFor(who)
+	if source == nil || !source.lists() {
 		return &listResult{Documents: []listedEntry{}, Supported: false}, nil
 	}
-	listing, err := s.source.list(ctx, request)
+	listing, err := source.list(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +352,7 @@ func (s *Server) openDocument(ctx context.Context, step *callStep, who *caller, 
 
 func (s *Server) openFound(ctx context.Context, step *callStep, documentID string, found map[string]any, who *caller, signal context.Context) (*outcome, error) {
 	// Opening can mint a ticket and join a room, so the cap is checked first.
-	if err := s.handles.assertRoom(who.principal); err != nil {
+	if err := s.assertRoom(ctx, who.principal); err != nil {
 		return nil, err
 	}
 	sess, err := s.open(ctx, documentID, step.Mode, step.Write, who)
@@ -352,7 +381,7 @@ func (s *Server) openFound(ctx context.Context, step *callStep, documentID strin
 		sess.close()
 		return nil, failureError("CANCELLED", "The request was cancelled before the document opened.")
 	}
-	handle, err := s.handles.add(who.principal, documentID, sess)
+	handle, err := s.addHandle(ctx, who.principal, documentID, sess)
 	if err != nil {
 		sess.close()
 		return nil, err
@@ -400,5 +429,19 @@ func (s *Server) open(ctx context.Context, documentID, requested string, write b
 	if s.source == nil {
 		return nil, surfaceError("SOURCE_UNAVAILABLE", "No document source is configured. Start blok-mcp with --source.")
 	}
-	return s.openStored(ctx, documentID, write)
+	return s.openStored(ctx, documentID, write, who)
+}
+
+func (s *Server) assertRoom(ctx context.Context, principal string) error {
+	if s.shared != nil {
+		return s.shared.assertRoom(ctx, principal)
+	}
+	return s.handles.assertRoom(principal)
+}
+
+func (s *Server) addHandle(ctx context.Context, principal, documentID string, sess session) (string, error) {
+	if s.shared != nil {
+		return s.shared.add(ctx, principal, documentID, sess)
+	}
+	return s.handles.add(principal, documentID, sess)
 }

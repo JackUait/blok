@@ -122,7 +122,7 @@ func (e *Executor) run(ctx context.Context, documentJSON, batchJSON string, acto
 		}
 	}
 
-	made, refusal, err := e.createPages(ctx, input, options, actor)
+	made, refusal, err := e.createPages(ctx, input, options, actor, "")
 	if err != nil || refusal != nil {
 		if refusal != nil {
 			return *refusal, history, nil

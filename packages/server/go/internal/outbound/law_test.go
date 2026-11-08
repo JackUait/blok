@@ -51,6 +51,9 @@ var pinned = map[string]map[string]int{
 	// ticket route, the OAuth JWKS and the sync upgrade. The upgrade needs
 	// net/http's own transport: the sockets one hands back no writable body.
 	"blokmcp/outbound.go": {"http.Client": 1, "dotnet.NewSocketsTransport": 1, "http.Transport": 1},
+	// The embed example's document store: a host's own code, not Blok's. It
+	// reaches only the --example-source URL the operator set at start.
+	"examples/mcp-embed/source.go": {"http.DefaultClient": 1},
 	// SocketsHttpHandler's rules, shared by those two operator clients only.
 	socketsOwner: {"http.Transport": 1, "net.Dialer": 1, "tls.Client": 1},
 }

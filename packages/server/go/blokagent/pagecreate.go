@@ -2,6 +2,7 @@ package blokagent
 
 import (
 	"context"
+	"crypto/rand"
 
 	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
@@ -10,7 +11,8 @@ import (
 // the bundle counts them on a copy (a refused batch makes none), the host
 // creates each one for the actor, and the ids go in as createdPages, which
 // the bundle hands out in batch order.
-func (e *Executor) createPages(ctx context.Context, input *jsjson.Node, options *Options, actor Actor) ([]*jsjson.Node, *Execution, error) {
+// parent is the document the pages go into, "" when not known.
+func (e *Executor) createPages(ctx context.Context, input *jsjson.Node, options *Options, actor Actor, parent string) ([]*jsjson.Node, *Execution, error) {
 	if options == nil || !options.PageTitles {
 		return nil, nil, nil
 	}
@@ -61,7 +63,7 @@ func (e *Executor) createPages(ctx context.Context, input *jsjson.Node, options 
 
 	var created []*jsjson.Node
 	for range count {
-		pageID, err := createOne(ctx, creator, actor)
+		pageID, err := createOne(ctx, creator, actor, parent)
 		if err != nil {
 			if len(created) > 0 {
 				stopped, err := stoppedAfterCreating(err, created)
@@ -84,11 +86,26 @@ func (e *Executor) createPages(ctx context.Context, input *jsjson.Node, options 
 	return created, nil, nil
 }
 
-func createOne(ctx context.Context, creator PageCreator, actor Actor) (string, error) {
+func createOne(ctx context.Context, creator PageCreator, actor Actor, parent string) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
+	if withParent, ok := creator.(PageCreatorFor); ok {
+		return withParent.CreateFor(ctx, PageCreateRequest{Actor: actor, ParentDocumentID: parent, SuggestedPageID: mintPageID()})
+	}
 	return creator.Create(ctx, actor)
+}
+
+// pageIDAlphabet is src/shared/mint-id.ts's, so ids look the same.
+const pageIDAlphabet = "57X6y3wQZNzYjJB2L_10pxbackgroundhimselfUTF-8DEMOGRAPHICSVqvt4KW9"
+
+func mintPageID() string {
+	bytes := make([]byte, 10)
+	_, _ = rand.Read(bytes)
+	for index, b := range bytes {
+		bytes[index] = pageIDAlphabet[b&63]
+	}
+	return string(bytes)
 }
 
 // stoppedAfterCreating answers a batch that stopped on a cancel or an

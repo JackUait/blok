@@ -75,6 +75,19 @@ func (r *handleRegistry[S]) assertRoomLocked(principal string) error {
 	return nil
 }
 
+// count is the principal's handles in this process.
+func (r *handleRegistry[S]) count(principal string) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	count := 0
+	for _, entry := range r.entries {
+		if entry.principal == principal {
+			count++
+		}
+	}
+	return count
+}
+
 // assertRoom refuses before anything is opened.
 func (r *handleRegistry[S]) assertRoom(principal string) error {
 	r.mu.Lock()

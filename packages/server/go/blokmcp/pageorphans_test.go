@@ -230,7 +230,14 @@ func TestAPageMadeBeforeABrokenCreateIsReported(t *testing.T) {
 	if len(pages) != 1 {
 		t.Fatalf("pages %v", pages)
 	}
-	wantOrphaned(t, structured(t, ran.answer), pages)
+	answer := structured(t, ran.answer)
+	wantOrphaned(t, answer, pages)
+	// The bundle answers it, so it names the command and the revision.
+	failure, _ := answer["error"].(map[string]any)
+	cause, _ := failure["details"].(map[string]any)["cause"].(map[string]any)
+	if failure["commandIndex"] != float64(1) || cause["commandIndex"] != float64(1) || answer["revision"] == nil {
+		t.Fatalf("answer %v", answer)
+	}
 	if written, _ := os.ReadFile(filepath.Join(stored.dir, "doc.json")); string(written) != `{"blocks":[]}` {
 		t.Fatalf("the parent changed: %s", written)
 	}

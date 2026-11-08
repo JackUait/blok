@@ -34,7 +34,8 @@ type Options struct {
 
 	// Authorize, when set, decides every open and every handle call, and
 	// filters listings (write false). An error fails the call with -32603
-	// and its text, as Node does.
+	// and its text, as Node does; on a host server (Embed) the text is
+	// logged and the client gets fixed words.
 	Authorize AuthorizeFunc `json:"-"`
 
 	// AgentActor, when set, builds the session's actor from the principal
@@ -44,6 +45,31 @@ type Options struct {
 	// alone. Presence shows Name as given. Nil uses the default actor,
 	// whose OnBehalfOf is the principal.
 	AgentActor func(principal, clientName string) Actor `json:"-"`
+
+	// DocumentSource, when set, loads and saves stored documents through
+	// the host's own store, acting for the caller that opened each handle.
+	// It cannot be combined with Source, and counts as a source in every
+	// safety check.
+	DocumentSource DocumentSource `json:"-"`
+
+	// CreatePage, when set, makes the document of each page block the
+	// agent inserts (stored mode with PageTitles "page-map" and a source;
+	// with Sync, Rooms or no source it is refused at start). It gets the
+	// open document, the handle's opener and a suggested id, and answers
+	// the new page id: 1-512 code points, valid UTF-8, no control
+	// characters, not "." or "..". Return ErrPageRefused to refuse (the
+	// insert fails with FORBIDDEN). Any other error, or an id that breaks
+	// those rules, is logged; the agent sees SOURCE_UNAVAILABLE, or, after
+	// earlier pages of the batch, ORPHANED_SIDE_EFFECT listing them. Blok
+	// asks no Authorize about the new id and saves nothing to it: the host
+	// owns it. Undo, redo and delete never call it.
+	CreatePage func(ctx context.Context, request blokagent.PageCreateRequest) (string, error) `json:"-"`
+
+	// HandleStore, when set, keeps stored-mode handles where every process
+	// sharing it can serve them (see HandleStore). Nil keeps them in this
+	// process's memory, as before. Live handles always stay in this
+	// process; the per-principal cap counts both.
+	HandleStore HandleStore `json:"-"`
 
 	// Uploads, when set, lets the agent upload files through the host's
 	// own uploader.
@@ -128,6 +154,10 @@ func numberOr(n json.Number, fallback float64) float64 {
 	}
 	return value
 }
+
+// hasSource says whether stored documents have a source: Source or a
+// host's DocumentSource.
+func (o *Options) hasSource() bool { return o.Source != nil || o.DocumentSource != nil }
 
 // live says whether documents live in rooms: a remote sync service, or
 // this process's own rooms.

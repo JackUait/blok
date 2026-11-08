@@ -48,6 +48,9 @@ type storedSession struct {
 	write      bool
 	source     docSource
 	exists     bool
+	// opener is who opened the handle: the page documents a batch opens or
+	// makes go through the source as that caller, as the handle's own do.
+	opener *caller
 
 	mu       sync.Mutex
 	document json.RawMessage
@@ -58,13 +61,14 @@ type storedSession struct {
 
 var emptyHistory = json.RawMessage(`{}`)
 
-func (s *Server) openStored(ctx context.Context, documentID string, write bool) (*storedSession, error) {
-	first, err := s.source.load(ctx, documentID)
+func (s *Server) openStored(ctx context.Context, documentID string, write bool, who *caller) (*storedSession, error) {
+	source := s.sourceFor(who)
+	first, err := source.load(ctx, documentID)
 	if err != nil {
 		return nil, err
 	}
 	return &storedSession{
-		server: s, documentID: documentID, write: write, source: s.source, exists: !first.missing,
+		server: s, documentID: documentID, write: write, source: source, exists: !first.missing, opener: who,
 		document: first.document, history: emptyHistory, version: first.version,
 	}, nil
 }
@@ -96,11 +100,43 @@ func (st *storedSession) reload(ctx context.Context) error {
 }
 
 func (st *storedSession) sessionInput(call *callContext) map[string]any {
+	actor := call.actor
+	// The handle works for its opener, as Node binds the agent at open.
+	if st.opener != nil && len(st.opener.actor) > 0 {
+		actor = st.opener.actor
+	}
 	return map[string]any{
 		"mcp":      st.server.mcpFlags("stored", st.write),
 		"document": st.document,
-		"actor":    call.actor,
+		"actor":    actor,
 		"history":  st.history,
+	}
+}
+
+// snapshot is the handle as a HandleStore keeps it.
+func (st *storedSession) snapshot() HandleRecord {
+	record := HandleRecord{
+		V: 1, ContractRevision: st.server.surface.ContractRevision.Stored, DocumentID: st.documentID, Write: st.write,
+		Version: st.version, Stale: st.stale, Document: st.document, History: st.history,
+	}
+	if st.opener != nil {
+		record.Principal, record.ClientName, record.Scopes, record.Actor = st.opener.principal, st.opener.clientName, st.opener.scopes, st.opener.actor
+	}
+	return record
+}
+
+// restoreStored rebuilds a stored handle from its record, with no load:
+// the record carries the document. Its undo steps hold only while their
+// revision is the document's, as the bundle checks on every call.
+func (s *Server) restoreStored(record HandleRecord) *storedSession {
+	opener := &caller{principal: record.Principal, clientName: record.ClientName, scopes: record.Scopes, actor: record.Actor}
+	history := record.History
+	if len(history) == 0 {
+		history = emptyHistory
+	}
+	return &storedSession{
+		server: s, documentID: record.DocumentID, write: record.Write, source: s.sourceFor(opener), exists: true, opener: opener,
+		document: record.Document, history: history, version: record.Version, stale: record.Stale,
 	}
 }
 
@@ -144,19 +180,27 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	if call.approval != nil {
 		input["approval"] = call.approval
 	}
+	var made *madePages
 	if st.write && st.server.createsPages() && isBatchEnvelope(batch) {
-		if err := st.server.createPages(ctx, input, call.who); err != nil {
-			return st.server.reportStopped(ctx, stoppedPages(err), st.document, nil, err)
+		var err error
+		if made, err = st.server.createPages(ctx, input, st.openerOr(call.who), st.source, st.documentID); err != nil {
+			return nil, err
+		}
+		if made.cancelled {
+			// The batch still gets its answer.
+			ctx = context.WithoutCancel(ctx)
 		}
 	}
 	input["documentText"] = st.source.documentForm()
 	var out executeOutput
 	if err := st.server.agentExecute(ctx, input, &out, func(run func()) { run() }); err != nil {
-		return st.server.reportStopped(ctx, createdPagesOf(input), st.document, nil, err)
+		return st.server.reportStopped(ctx, createdOf(made), st.document, nil, err)
 	}
 	if out.Ask != nil {
 		return &executed{ask: out.Ask}, nil
 	}
+	// A failed batch wrote nothing, so memory is the parent as saved.
+	out.Result = finishPages(out.Result, made, st.document)
 	if !out.Save || out.DocumentText == nil {
 		st.keep(out)
 		answer, err := st.server.executeAnswer(ctx, map[string]any{"result": out.Result})
@@ -171,7 +215,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	})
 	if err != nil {
 		st.stale = true
-		return st.server.reportStopped(ctx, createdPagesOf(input), st.reloaded(ctx), out.Result, err)
+		return st.server.reportStopped(ctx, createdOf(made), st.reloaded(ctx), out.Result, err)
 	}
 	saved, err := st.source.save(ctx, st.documentID, []byte(*out.DocumentText), st.version)
 	if err != nil {
@@ -183,7 +227,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		if !ok {
 			// A save can store the parent before it breaks: the reload
 			// shows which pages it names.
-			return st.server.reportStopped(ctx, createdPagesOf(input), parent, out.Result, err)
+			return st.server.reportStopped(ctx, createdOf(made), parent, out.Result, err)
 		}
 		answer, answerErr := st.server.executeAnswer(ctx, map[string]any{
 			"result": out.Result, "failed": map[string]any{"helper": failure.Helper, "error": failure.errorJSON()},
@@ -202,7 +246,9 @@ func (st *storedSession) pageAction(ctx context.Context, call *callContext, inpu
 	same, _ := st.source.(interface {
 		sameDocument(ctx context.Context, first, second string) bool
 	})
-	result, page, err := st.server.runPageAction(ctx, call, input, func(pageID string) bool {
+	pageCall := *call
+	pageCall.who = st.openerOr(call.who)
+	result, page, err := st.server.runPageAction(ctx, &pageCall, input, func(pageID string) bool {
 		return pageID == st.documentID || (same != nil && same.sameDocument(ctx, pageID, st.documentID))
 	})
 	if err != nil {
@@ -221,6 +267,13 @@ func (st *storedSession) pageAction(ctx context.Context, call *callContext, inpu
 	}
 	answer, err := st.server.executeAnswer(ctx, answerInput)
 	return &executed{answer: answer}, err
+}
+
+func (st *storedSession) openerOr(who *caller) *caller {
+	if st.opener != nil {
+		return st.opener
+	}
+	return who
 }
 
 func (st *storedSession) keep(out executeOutput) {

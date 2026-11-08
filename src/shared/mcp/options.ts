@@ -28,11 +28,70 @@ export interface BlokMcpOptions {
    */
   createPage?: (request: BlokPageCreateRequest) => Promise<string | null>;
   /**
+   * Where stored-mode handles live (src/mcp/shared-handles.ts). Absent: this process's memory, as
+   * before. Live handles always stay in this process.
+   */
+  handleStore?: BlokMcpHandleStore;
+  /**
    * False: the editors keep comments in the host's own system (a `comments` hook). Agent
    * comments would be invisible to people there, so the comment commands are unavailable.
    * On by default.
    */
   comments?: boolean;
+}
+
+/**
+ * One stored-mode handle as a handle store keeps it: plain JSON, written by Blok. Live handles hold
+ * sockets and are never stored. The server checks `principal` and `contractRevision`, never the store.
+ */
+export interface BlokMcpHandleRecord {
+  /** The record format. A store keeps the record as it is given. */
+  v: 1;
+  /** The tool contract of the server that opened the handle. Another one answers VERSION_SKEW. */
+  contractRevision: string;
+  /** The opener. A call from another principal answers UNKNOWN_HANDLE. */
+  principal: string;
+  clientName: string;
+  scopes: readonly string[] | null;
+  actor: AgentActor;
+  documentId: string;
+  write: boolean;
+  /** The source version the next save sends as `ifVersion`. */
+  version: string | null;
+  /** The last save or reload failed: the next call reloads from the source first. */
+  stale: boolean;
+  /** The document as the handle holds it: `blocks` and the page fields (`title`, `icon`, ...). */
+  document: { blocks: unknown[] };
+  /**
+   * Undo and redo steps, `{ past, future, lost?, revision }`, each step a whole document. Not
+   * bounded in bytes: the newest step is always kept, so a store must take large values.
+   */
+  history: Record<string, unknown>;
+}
+
+/** One call's hold on a handle. No other lease on it exists until release, in any process. */
+export interface BlokMcpHandleLease {
+  readonly record: BlokMcpHandleRecord;
+  /** Replaces the record. Blok calls it after the source save, before release. */
+  save(record: BlokMcpHandleRecord): Promise<void>;
+  /** Ends the lease and restarts the handle's idle time. */
+  release(): Promise<void>;
+}
+
+/**
+ * Where stored-mode handles live, so any process sharing the store can serve a call. A handle
+ * expires after `idleMs` without a lease; a leased handle never expires. Any throw is logged and
+ * the agent sees SOURCE_UNAVAILABLE.
+ */
+export interface BlokMcpHandleStore {
+  /** The principal's handles that have not expired. */
+  count(principal: string, idleMs: number): Promise<number>;
+  /** Counts and adds as one step: false, and nothing added, when the principal already holds maxPerPrincipal. */
+  tryAdd(handle: string, record: BlokMcpHandleRecord, maxPerPrincipal: number, idleMs: number): Promise<boolean>;
+  /** Waits up to timeoutMs for the lease. 'unknown': no such handle, or it expired. 'busy': still leased at the timeout. */
+  acquire(handle: string, idleMs: number, timeoutMs: number): Promise<BlokMcpHandleLease | 'unknown' | 'busy'>;
+  /** Forgets the handle. Blok calls it while it holds the handle's lease. */
+  remove(handle: string): Promise<void>;
 }
 
 /** What the host gets when an agent inserts a page block. */

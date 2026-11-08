@@ -823,6 +823,12 @@ describe('server runtime CLI operations', () => {
     expect(await call('mcpCheckOptions', { options: { ...data, ...flags } })).toEqual(node);
   });
 
+  it('takes handleStore: true as a host store, and refuses any other value', async () => {
+    expect(await call('mcpCheckOptions', { options: { ...base, handleStore: true } })).toEqual({});
+    expect(await call('mcpCheckOptions', { options: { ...base, handleStore: 'files:/x' } }))
+      .toEqual({ error: 'handleStore needs count, tryAdd, acquire and remove functions' });
+  });
+
   it.each<[Record<string, unknown>, string]>([
     [{ schema: 'bogus' }, 'schema must be one of envelope, full, mixed, got "bogus"'],
     [{ pageTitles: 'bogus' }, 'pageTitles must be one of off, page-map, got "bogus"'],

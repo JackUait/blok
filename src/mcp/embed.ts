@@ -51,6 +51,20 @@ export interface BlokMcp {
 }
 
 const ANONYMOUS = 'Blok needs a signed-in caller.';
+const FAILED = 'Blok could not run this call.';
+
+/**
+ * On a host's server an unexpected throw (the host's caller hook, a host store or source bug, Blok's
+ * own) must not reach the client: it is logged in full and answered -32603 with fixed words.
+ * Blok's protocol errors pass as they are. The standalone server keeps the SDK's own answer.
+ */
+const hidden = (thrown: unknown): never => {
+  if (thrown instanceof ProtocolError) {
+    throw thrown;
+  }
+  console.error('blok-mcp: a tool call failed', thrown);
+  throw new ProtocolError(ProtocolErrorCode.InternalError, FAILED);
+};
 const UNNAMED = 'Blok needs a named caller (sub or NameIdentifier).';
 
 const fromAuthInfo = (ctx: ServerContext): BlokCallerIdentity | undefined => {
@@ -111,7 +125,11 @@ export const createBlok = (options: BlokEmbedOptions, hooks: CreateBlokHooks = {
 
     return { principal: who.principal, clientName, scopes: who.scopes ?? null };
   };
-  const handlersFor = (server: SdkServer | McpServer): BlokHandlers => blokHandlers({ tools: assembled.tools, dispatch: assembled.dispatch, resolveCaller }, lowLevel(server));
+  const handlersFor = (server: SdkServer | McpServer): BlokHandlers => {
+    const made = blokHandlers({ tools: assembled.tools, dispatch: assembled.dispatch, resolveCaller }, lowLevel(server));
+
+    return { ...made, callTool: (request, ctx) => made.callTool(request, ctx).catch(hidden) };
+  };
   const handlers = (server: SdkServer | McpServer, host: HostNames = {}): BlokHandlers => {
     const made = handlersFor(server);
 

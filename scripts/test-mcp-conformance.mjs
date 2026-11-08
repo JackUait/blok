@@ -67,6 +67,7 @@ const SUITES = [
   'tickets',
   'pages',
   'handles',
+  'handles-shared',
   'shutdown',
   'timeouts',
   'live',

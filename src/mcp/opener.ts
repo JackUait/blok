@@ -13,13 +13,13 @@ import type { Caller, DispatcherDeps, ListResult, OpenRequest } from './dispatch
 import { isMcpSurfaceError, surfaceError } from './errors';
 import { resolveMode } from './mode';
 import { createPageDeliveryTracker } from './page-titles';
-import type { BlokMcpOptions } from './options';
+import type { BlokMcpHandleRecord, BlokMcpOptions } from './options';
 import type { HandleSession } from './session';
 import { createCustomSource } from './sources/custom';
 import { createEndpointSource } from './sources/endpoint';
 import { createFilesSource } from './sources/files';
 import type { DocumentSource } from './sources/types';
-import { openStoredSession } from './stored-session';
+import { openStoredSession, restoreStoredSession, type StoredSessionInput } from './stored-session';
 
 export const createSource = (source: BlokMcpOptions['source']): DocumentSource | null => {
   if (source === undefined) {
@@ -60,6 +60,7 @@ export const createOpener = (
   list: DispatcherDeps['list'];
   actorFor(caller: Caller): AgentActor;
   createPage(caller: Caller, parentDocumentId: string): Promise<{ pageId: string }>;
+  restore(record: BlokMcpHandleRecord): Promise<HandleSession>;
 } => {
   const syncConfigured = deps.options.sync !== undefined;
   const actorFor = (caller: Caller): AgentActor =>
@@ -84,6 +85,21 @@ export const createOpener = (
 
       return deps.openLive(request, caller, actor);
     }
+
+    return storedSession(request.documentId, request.write, caller, actor, (input) => openStoredSession(input));
+  };
+
+  /**
+   * One stored session's wiring. The caller and actor are the opener's: a restored handle works
+   * for them, whichever caller sends the call.
+   */
+  const storedSession = async (
+    documentId: string,
+    write: boolean,
+    caller: Caller,
+    actor: AgentActor,
+    make: (input: StoredSessionInput) => HandleSession | Promise<HandleSession>,
+  ): Promise<HandleSession> => {
     const source = sourceFor(caller, actor);
 
     if (source === null) {
@@ -94,7 +110,7 @@ export const createOpener = (
     const madePages: string[] = [];
     const portsOf = (): AgentPorts => {
       const ports = deps.portsFor(caller, actor, async (pageId) =>
-        pageId === request.documentId || (await source.sameDocument?.(pageId, request.documentId) ?? false), pages.unconfirmed, request.documentId);
+        pageId === documentId || (await source.sameDocument?.(pageId, documentId) ?? false), pages.unconfirmed, documentId);
       const create = ports.createPageDocument;
 
       return create === undefined ? ports : {
@@ -109,14 +125,14 @@ export const createOpener = (
       };
     };
 
-    return pages.wrap(await openStoredSession({
-      documentId: request.documentId,
-      write: request.write,
+    return pages.wrap(await make({
+      documentId,
+      write,
       source,
       contract: deps.contracts.stored,
       // Every source runs assertDocumentShape before returning raw, so `blocks` is an array here.
       loadDocument: (raw) => loadStoredDocument(raw as OutputData, deps.contracts.richTextFieldsFor),
-      createAgentSession: (document) => createDocumentAgentSession({
+      createAgentSession: (document, history) => createDocumentAgentSession({
         document,
         tools: deps.contracts.runtimes,
         contract: deps.contracts.stored,
@@ -125,10 +141,23 @@ export const createOpener = (
         // 01 builds the Node pageBackend only with this flag and the openPageDocument port (Task 26).
         ...(deps.options.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
         ...(deps.uploader !== undefined && { services: { uploader: deps.uploader } }),
+        ...(history !== undefined && { history }),
       }),
       madePages,
+      ...(deps.options.handleStore !== undefined && {
+        owner: { principal: caller.principal, clientName: caller.clientName, scopes: caller.scopes, actor },
+      }),
     }));
   };
+
+  /** A stored handle a shared store kept, rebuilt for its opener. */
+  const restore = (record: BlokMcpHandleRecord): Promise<HandleSession> => storedSession(
+    record.documentId,
+    record.write,
+    { principal: record.principal, clientName: record.clientName, scopes: record.scopes },
+    record.actor,
+    (input) => restoreStoredSession(input, record),
+  );
 
   const list: DispatcherDeps['list'] = async (request, caller): Promise<ListResult> => {
     const source = sourceFor(caller, actorFor(caller));
@@ -211,5 +240,5 @@ export const createOpener = (
     }
   };
 
-  return { open, list, actorFor, createPage };
+  return { open, list, actorFor, createPage, restore };
 };

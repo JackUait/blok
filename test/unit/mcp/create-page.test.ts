@@ -103,6 +103,7 @@ describe('a host page creator', () => {
       ['a number', () => Promise.resolve(7 as unknown as string)],
       ['the id "."', () => Promise.resolve('.')],
       ['the id ".."', () => Promise.resolve('..')],
+      ['an id with a lone surrogate', () => Promise.resolve('page\ud800')],
     ];
 
     it.each(failures)('answers SOURCE_UNAVAILABLE for %s, logs it, and saves nothing', async (_label, createPage) => {
@@ -188,6 +189,22 @@ describe('a host page creator', () => {
     const result = await execute(server, handle, insertPages(2));
 
     expect(result.error).toEqual({ ...SERVER_STOP, commandIndex: 1 });
+  });
+
+  it('still lists a page whose id only appears as text in a non-page block', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    writeFileSync(join(dir, 'parent.json'), JSON.stringify({ blocks: [{ id: 'old', type: 'paragraph', data: { text: 'linked' } }] }));
+    const createPage = vi.fn<(request: BlokPageCreateRequest) => Promise<string | null>>()
+      .mockResolvedValueOnce('linked')
+      .mockRejectedValueOnce(new Error('database down'));
+    const server = start(createPage);
+    const handle = await openParent(server);
+    const result = await execute(server, handle, insertPages(2));
+
+    expect(result.error).toMatchObject({
+      code: 'ORPHANED_SIDE_EFFECT',
+      details: { orphaned: [{ command: 'block.insert', type: 'page', prepared: { pageId: 'linked' } }], cause: { ...SERVER_STOP, commandIndex: 1 } },
+    });
   });
 
   it('never asks the host for a batch of 26 page inserts', async () => {

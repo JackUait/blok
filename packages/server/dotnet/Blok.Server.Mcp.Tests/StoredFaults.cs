@@ -12,6 +12,9 @@ internal sealed class FaultySource(IDocumentSource real) : IDocumentSource
 
   internal Exception? NextLoad { get; set; }
 
+  /// <summary>Thrown by the next save after it stored the text, as a timeout after the write.</summary>
+  internal Exception? NextSaveAfterWrite { get; set; }
+
   internal int Saves { get; private set; }
 
   public string DocumentTextForm => real.DocumentTextForm;
@@ -38,7 +41,19 @@ internal sealed class FaultySource(IDocumentSource real) : IDocumentSource
       throw error;
     }
 
+    if (NextSaveAfterWrite is { } late)
+    {
+      NextSaveAfterWrite = null;
+      return SaveThenThrowAsync(documentId, text, ifVersion, late, cancellationToken);
+    }
+
     return real.SaveAsync(documentId, text, ifVersion, cancellationToken);
+  }
+
+  private async Task<string?> SaveThenThrowAsync(string documentId, string text, string? ifVersion, Exception error, CancellationToken cancellationToken)
+  {
+    await real.SaveAsync(documentId, text, ifVersion, cancellationToken);
+    throw error;
   }
 
   public Task<JsonObject> ListAsync(int limit, string? query, string? cursor, CancellationToken cancellationToken)

@@ -105,6 +105,29 @@ public sealed class StoredOrphanedPagesTests : IClassFixture<BundleFixture>, IDi
   }
 
   [Fact]
+  public async Task ASaveThatStoredTheParentBeforeItFailedReportsNoPageTheParentNames()
+  {
+    var session = await OpenAsync(fixture.Host.Bundle, source, Pages(Make));
+
+    source.NextSaveAfterWrite = new TimeoutException("no answer after the write");
+
+    await Assert.ThrowsAsync<TimeoutException>(() => session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None));
+    Assert.Contains("page-1", File.ReadAllText(Path.Combine(dir, "doc.json")), StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task ASaveFailureWhoseReloadAlsoFailsReportsNothing()
+  {
+    var session = await OpenAsync(fixture.Host.Bundle, source, Pages(Make));
+
+    source.NextSave = new IOException("disk full");
+    source.NextLoad = new IOException("source down");
+
+    await Assert.ThrowsAsync<IOException>(() => session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None));
+    Assert.Equal(["page-1"], made);
+  }
+
+  [Fact]
   public async Task AnUnexpectedCreateFailureAfterAPageWasMadeReportsTheMadeOne()
   {
     var session = await OpenAsync(fixture.Host.Bundle, source, Pages((caller, cancellationToken) =>

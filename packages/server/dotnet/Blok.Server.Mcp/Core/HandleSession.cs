@@ -222,6 +222,18 @@ internal sealed class StoredSession : IHandleSession
         ["failed"] = error.ToInput("blok_execute"),
       }, cancellationToken), null);
     }
+    catch (Exception) when (created.Count > 0)
+    {
+      // The save may have stored the parent before it failed: only pages the stored parent does not
+      // name are orphans. With no parent to read, none are reported, so the host never deletes a used page.
+      stale = true;
+      var stored = await TryReloadAsync(cancellationToken);
+      var unused = stored is null ? [] : created.Where(pageId => !stored.Contains($"\"{McpJson.String(pageId)}\"", StringComparison.Ordinal)).Select(pageId => pageId!.DeepClone()).ToList();
+
+      created.Clear();
+      unused.ForEach(created.Add);
+      throw;
+    }
     catch
     {
       // The save may have landed before it failed, so the next call reloads.
@@ -269,6 +281,21 @@ internal sealed class StoredSession : IHandleSession
       ["document"] = document.DeepClone(),
       ["actor"] = actor.DeepClone(),
     };
+  }
+
+  // The reloaded document as text, or null when it could not be read.
+  private async Task<string?> TryReloadAsync(CancellationToken cancellationToken)
+  {
+    try
+    {
+      await ReloadAsync(cancellationToken);
+
+      return document.ToJsonString();
+    }
+    catch (Exception)
+    {
+      return null;
+    }
   }
 
   private async Task ReloadIfStaleAsync(CancellationToken cancellationToken)

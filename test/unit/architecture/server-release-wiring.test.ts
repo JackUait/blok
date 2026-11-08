@@ -19,6 +19,7 @@ const SETUP_DOTNET_ACTION = 'actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271
 const BUILDX_ACTION = 'docker/setup-buildx-action@';
 const QEMU_ACTION = 'docker/setup-qemu-action@';
 const LOGIN_ACTION = 'docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6';
+const NUGET_LOGIN_ACTION = 'NuGet/login@8d196754b4036150537f80ac539e15c2f1028841';
 const SETUP_NODE_ACTION_SHA = 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1';
 const PUBLIC_PUBLISH_STEP = 'Publish NuGet packages';
 const MIRROR_STEP = 'Mirror NuGet packages to the dodopizza feed';
@@ -51,6 +52,7 @@ type FamilyEntry = {
 
 type WorkflowStep = {
   if?: string;
+  id?: string;
   env?: Record<string, string>;
   name?: string;
   run?: string;
@@ -391,7 +393,18 @@ describe('server release wiring', () => {
     expect(runs).toContain('Blok.Server."$BLOK_SERVER_VERSION".nupkg');
     expect(runs).toContain('Blok.Server.AspNetCore."$BLOK_SERVER_VERSION".nupkg');
     expect(runs).toContain('dotnet nuget push');
-    expect(source).toContain('NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}');
+    // nuget.org Trusted Publishing: a short-lived key minted from the job's
+    // OIDC token, so no long-lived key can expire under a tag. The policy on
+    // nuget.org names this workflow file and owner JackUait.
+    const login = steps.find((step) => step.uses === NUGET_LOGIN_ACTION);
+    const publish = steps.find((step) => step.name === PUBLIC_PUBLISH_STEP);
+
+    expect(job?.permissions).toMatchObject({ 'id-token': 'write' });
+    expect(login?.id).toBe('nuget-login');
+    expect(login?.with).toEqual({ user: 'JackUait' });
+    expect(steps.indexOf(login ?? {})).toBe(steps.indexOf(publish ?? {}) - 1);
+    expect(publish?.env?.NUGET_API_KEY).toBe('${{ steps.nuget-login.outputs.NUGET_API_KEY }}');
+    expect(source).not.toContain('secrets.NUGET_API_KEY');
     expect(source).not.toContain('BLOK_NUGET');
 
     expect(runs).toContain(

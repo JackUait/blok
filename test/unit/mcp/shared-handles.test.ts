@@ -8,7 +8,7 @@ import type { Caller } from '../../../src/mcp/dispatcher';
 import { createFilesHandleStore } from '../../../src/mcp/handle-store-files';
 import { createMemoryHandleStore } from '../../../src/mcp/handle-store';
 import { HandleRegistry } from '../../../src/mcp/handles';
-import type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpHandleStore, BlokMcpOptions } from '../../../src/mcp/options';
+import type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore, BlokMcpOptions } from '../../../src/mcp/options';
 import { assembleMcp, type AssembledMcp } from '../../../src/mcp/server';
 import type { HandleSession } from '../../../src/mcp/session';
 import { SharedHandles } from '../../../src/mcp/shared-handles';
@@ -270,7 +270,7 @@ describe('stored handles in a shared handle store', () => {
         return { version: 'v1' };
       },
     };
-    const options = { leaseStaleMs: 200, heartbeatMs: 60_000 };
+    const options = { leaseStaleMs: 200 };
     const a = start({ source: { kind: 'custom', source } }, createFilesHandleStore(stores, options));
     const b = start({ source: { kind: 'custom', source } }, createFilesHandleStore(stores, options));
     const handle = await open(a);
@@ -365,6 +365,49 @@ describe('SharedHandles with live handles', () => {
     await expect(table.assertRoom('alice')).rejects.toMatchObject({ agentError: { code: 'HANDLE_LIMIT' } });
     await expect(table.add('alice', 'doc', liveSession())).rejects.toMatchObject({ agentError: { code: 'HANDLE_LIMIT' } });
     expect(await table.use(live, 'alice', (session) => session.read({}))).toEqual({ blocks: [] });
+  });
+
+  const storedRecord: BlokMcpHandleRecord = {
+    v: 1, contractRevision: 'c1', principal: 'alice', clientName: 'c', scopes: null, actor: { id: 'a', name: 'a', kind: 'agent' },
+    documentId: 'doc', write: true, version: null, stale: false, document: { blocks: [] }, history: {},
+  };
+  const renewing = (store: BlokMcpHandleStore): SharedHandles => new SharedHandles({
+    local: registry(), store, idleMs: 600_000, maxPerPrincipal: 2, contractRevision: 'c1',
+    restore: () => Promise.resolve(liveSession()), renewMs: 20,
+  });
+  const withRenew = (inner: BlokMcpHandleStore, renew: (lease: BlokMcpHandleLease) => Promise<void>): BlokMcpHandleStore => ({
+    ...inner,
+    acquire: async (...args) => {
+      const lease = await inner.acquire(...args);
+
+      return typeof lease === 'string' ? lease : { ...lease, renew: () => renew(lease) };
+    },
+  });
+
+  it('renews the lease while a call runs, and stops at release', async () => {
+    const inner = createMemoryHandleStore();
+    const renewed = vi.fn((lease: BlokMcpHandleLease) => lease.renew());
+    const table = renewing(withRenew(inner, renewed));
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    await table.use('h1', 'alice', () => new Promise((resolve) => setTimeout(resolve, 150)));
+    const during = renewed.mock.calls.length;
+
+    expect(during).toBeGreaterThanOrEqual(2);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(renewed).toHaveBeenCalledTimes(during);
+    await table.closeAll(() => Promise.resolve());
+  });
+
+  it('logs a failed renew, and the call goes on', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const inner = createMemoryHandleStore();
+    const table = renewing(withRenew(inner, () => Promise.reject(new Error('store down'))));
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    expect(await table.use('h1', 'alice', () => new Promise((resolve) => setTimeout(() => resolve('done'), 100)))).toBe('done');
+    expect(logged.mock.calls.some((call) => String(call[0]).includes('renewing'))).toBe(true);
+    await table.closeAll(() => Promise.resolve());
   });
 
   it('sweeps the store on a timer with the idle time, and stops at shutdown', async () => {

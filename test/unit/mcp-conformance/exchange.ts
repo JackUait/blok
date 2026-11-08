@@ -724,7 +724,8 @@ class CaseRun {
   }
 
   private finishStep(step: Step, holder: Holder, answer: unknown, label: string): void {
-    const masked = maskKeys(this.owned(answer, step.send?.method), new Set(this.c.maskKeys ?? []));
+    const method = step.send?.method;
+    const masked = maskKeys(this.owned(answer, typeof method === 'string' ? method : undefined), new Set(this.c.maskKeys ?? []));
 
     (step.mask ?? []).forEach((pointer) => maskAt(masked, pointer));
     for (const [name, source] of Object.entries(step.capture ?? {})) {

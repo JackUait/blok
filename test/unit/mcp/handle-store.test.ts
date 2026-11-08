@@ -200,13 +200,15 @@ describe.each(flavours)('the $name handle store contract', (flavour) => {
     expect(await b.count('alice', 60_000)).toBe(0);
   });
 
-  it('refuses a save, and a remove, after the lease was released', async () => {
+  it('refuses a save, a renew and a remove after the lease was released', async () => {
     const { a, b } = flavour.make();
 
     await a.tryAdd('h1', record('alice'), 8, 60_000);
     const lease = await leaseOf(a, 'h1');
 
+    await lease.renew();
     await lease.release();
+    await expect(lease.renew()).rejects.toThrow(/lease/);
     await expect(lease.save(record('alice', { version: 'v2' }))).rejects.toThrow(/lease/);
     await expect(lease.remove()).rejects.toThrow(/lease/);
     const again = await leaseOf(b, 'h1');
@@ -316,9 +318,25 @@ describe('the files handle store', () => {
     expect(() => createFilesHandleStore(file)).toThrow(unsafe(file));
   });
 
+  it('refuses to start on Windows, before it makes the directory', () => {
+    const dir = join(tempDir(), 'handles');
+
+    expect(() => createFilesHandleStore(dir, { platform: 'win32' }))
+      .toThrow(new McpConfigError('--handle-store files: is not supported on Windows; use your own store'));
+    expect(existsSync(dir)).toBe(false);
+  });
+
+  it.skipIf(process.platform === 'win32')('refuses a directory another user owns, judged by the effective uid', () => {
+    const dir = tempDir();
+    const owner = statSync(dir).uid;
+
+    expect(() => createFilesHandleStore(dir, { effectiveUid: () => owner + 1 })).toThrow(unsafe(dir));
+    expect(() => createFilesHandleStore(dir, { effectiveUid: () => owner })).not.toThrow();
+  });
+
   it('takes over a lease whose holder stopped refreshing it, and the old holder can no longer save', async () => {
     const dir = tempDir();
-    const options = { leaseStaleMs: 200, heartbeatMs: 10_000 };
+    const options = { leaseStaleMs: 200 };
     const a = createFilesHandleStore(dir, options);
     const b = createFilesHandleStore(dir, options);
 
@@ -341,7 +359,7 @@ describe('the files handle store', () => {
 
   it('refuses a remove from a holder whose lease was taken over, so the new holder keeps the handle', async () => {
     const dir = tempDir();
-    const options = { leaseStaleMs: 200, heartbeatMs: 60_000 };
+    const options = { leaseStaleMs: 200 };
     const a = createFilesHandleStore(dir, options);
     const b = createFilesHandleStore(dir, options);
 
@@ -406,16 +424,28 @@ describe('the files handle store', () => {
     expect(() => createFilesHandleStore(`${link}/`)).toThrow(McpConfigError);
   });
 
-  it('keeps a long lease alive by refreshing it', async () => {
+  it('keeps a lease past the stale time while its holder renews it, and loses it without renewals', async () => {
     const dir = tempDir();
-    const options = { leaseStaleMs: 300, heartbeatMs: 50 };
+    const options = { leaseStaleMs: 300 };
     const a = createFilesHandleStore(dir, options);
     const b = createFilesHandleStore(dir, options);
 
     await a.tryAdd('h1', record('alice'), 8, 60_000);
     const held = await leaseOf(a, 'h1');
+    const renewing = setInterval(() => void held.renew(), 50);
 
-    expect(await b.acquire('h1', 60_000, 700)).toBe('busy');
+    try {
+      expect(await b.acquire('h1', 60_000, 700)).toBe('busy');
+    } finally {
+      clearInterval(renewing);
+    }
+    const taken = await b.acquire('h1', 60_000, 1_000);
+
+    expect(typeof taken).toBe('object');
+    await expect(held.renew()).rejects.toThrow(/lease/);
+    if (typeof taken === 'object') {
+      await taken.release();
+    }
     await held.release();
   });
 

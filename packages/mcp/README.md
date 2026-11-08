@@ -163,11 +163,11 @@ What a store must do (`BlokMcpHandleStore`):
 - `count(principal, idleMs)` answers the principal's handles that have not expired.
 - `tryAdd(handle, record, maxPerPrincipal, idleMs)` counts the principal's handles and adds the new one as one atomic step. A plain `COUNT` then `INSERT` is not atomic: hold a per-principal lock (SQL `SELECT … FOR UPDATE` on a principal row, or a Redis Lua script).
 - `acquire(handle, idleMs, timeoutMs)` gives one lease per handle across all processes. It waits up to the timeout, then answers `busy`; Blok answers `SOURCE_UNAVAILABLE` (retryable). `unknown` means no such handle, or it expired.
-- The lease has `save(record)`, `release()` and `remove()`. Each one checks that the lease still holds the handle (a lease token: SQL `UPDATE … WHERE lease_token = ?`, Redis compare in a Lua script). A lost lease must make `save` and `remove` throw and change nothing. `release` after the lease is gone does nothing.
+- The lease has `renew()`, `save(record)`, `release()` and `remove()`. Each one checks that the lease still holds the handle (a lease token: SQL `UPDATE … WHERE lease_token = ?`, Redis compare in a Lua script). A lost lease must make `renew`, `save` and `remove` throw and change nothing. `release` after the lease is gone does nothing.
 - There is no `remove` without a lease. `blok_close` and a record that could not be saved both remove through the lease.
 - `sweep(idleMs)` deletes every handle idle longer than `idleMs` that nobody leases, of every principal. Blok calls it every 60 seconds, and stops at shutdown. A store that expires records by itself (Redis `PEXPIRE` at release, `PERSIST` while leased) may do nothing. A SQL store needs it, or the records stay forever.
 - A handle expires after the idle time without a lease. A leased handle never expires; `release` restarts its idle time.
-- Leases need a time limit and renewal. A holder that dies must not hold a handle forever, so a lease ends unless it is renewed while the call runs. Renew it while held, or give it a TTL longer than the longest call (a 30 s load, a 60 s script run, plus the `--authorize` check).
+- Leases need a time limit. A holder that dies must not hold a handle forever, so a lease ends unless it is renewed. Blok calls `renew()` every 5 seconds while a call holds the lease, so the store needs no timer of its own: give the lease a TTL of 30 seconds and extend it on each `renew`. A failed `renew` is logged, and the call goes on; if the lease was lost, its `save` or `remove` is refused.
 - Blok passes only handles of 1–128 characters of `[A-Za-z0-9_-]`. Any other handle from a client answers `UNKNOWN_HANDLE` before the store is called.
 - Records can be large: the undo steps are whole documents, and the newest step is always kept, so a record has no fixed size limit. In MySQL use `LONGTEXT` or `JSON`, not `TEXT` (64 KiB).
 - Keep the record exactly as given. `scopes: null` and `scopes: []` mean different things, so a serializer must not drop nulls (no `omitempty` in Go, no `WhenWritingNull` in C#).
@@ -179,6 +179,9 @@ Records are trusted. Blok checks only the principal and the tool contract of a r
 Exclusivity is best effort. Leases are time-limited, so a paused holder (a frozen process, a suspended VM) can lose its lease while it still runs, and two processes can run one call each on the same handle. The lost holder's own `save` and `remove` then fail, and the batch it already saved still answers. What keeps a save from being lost is the source's version check: a stale save must answer `409` (`DOCUMENT_CHANGED`). A source that does not check versions can lose writes across processes.
 
 `--handle-store files:<dir>` is the reference store. It keeps each handle in `<dir>` and locks with lock files, so several processes on one machine can share it. Its files are not meant to be shared with the C#, Go or Rust servers.
+
+- It refuses to start on Windows, where its privacy checks cannot be made. Use your own store there.
+- The directory must be owned by the process's effective user, with no group or world access (`chmod 700`), and must not be a link. A server running as root refuses a directory another user owns.
 
 ## Host duties
 

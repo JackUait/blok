@@ -127,12 +127,17 @@ export interface BlokMcpHandleRecord {
 }
 
 /**
- * One call's hold on a handle. A lease is time-limited: the store ends it unless it is renewed
- * while the call runs, so a paused holder can lose it to another process. Every op checks that this
- * lease still holds the handle; once it does not, save and remove must throw and change nothing.
+ * One call's hold on a handle. A lease is time-limited: the store ends it unless it is renewed, so
+ * a paused holder can lose it to another process. Every op checks that this lease still holds the
+ * handle; once it does not, renew, save and remove must throw and change nothing.
  */
 export interface BlokMcpHandleLease {
   readonly record: BlokMcpHandleRecord;
+  /**
+   * Extends the lease. Blok calls it every 5 seconds while a call holds the lease, so a store needs
+   * no timer of its own; a lease not renewed for longer than the store's lease time (30 s) may be taken.
+   */
+  renew(): Promise<void>;
   /** Replaces the record. Blok calls it after the source save, before release. */
   save(record: BlokMcpHandleRecord): Promise<void>;
   /** Ends the lease and restarts the handle's idle time. Does nothing once the lease is gone. */

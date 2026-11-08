@@ -44,7 +44,40 @@ pub fn blok_env(vars: impl Iterator<Item = (String, String)>) -> Value {
     )
 }
 
+/// runCli's start: the flags (`parse`), then the standalone server's checks.
 pub async fn start(
+    bundle: &Bundle,
+    argv: &[String],
+    env: Value,
+    cwd: &Path,
+) -> Result<Started, StartError> {
+    let Started { options, authorize } = parse(bundle, argv, env, cwd).await?;
+    let mut checked_options = options.clone();
+    if authorize.is_some() {
+        checked_options["authorize"] = Value::Bool(true);
+    }
+    let checked = bundle
+        .call(
+            "mcpCheckOptions",
+            &json!({ "options": checked_options }).to_string(),
+        )
+        .await?;
+    if let Some(error) = checked.get("error").and_then(Value::as_str) {
+        return Err(StartError::Config(error.to_owned()));
+    }
+    let stdio = options.pointer("/transport/kind").and_then(Value::as_str) != Some("http");
+    if stdio && options.pointer("/auth/kind").and_then(Value::as_str) != Some("none") {
+        return Err(StartError::Config(
+            "OAuth authentication needs the HTTP transport (--http)".to_owned(),
+        ));
+    }
+    Ok(Started { options, authorize })
+}
+
+/// Node's parseBlokMcpArgs: the blok-mcp flags and env as options, with the
+/// manifest files read, and none of the standalone server's checks. A host
+/// that serves Blok's tools (`embed::BlokTools`) reads its flags this way.
+pub async fn parse(
     bundle: &Bundle,
     argv: &[String],
     env: Value,
@@ -82,25 +115,6 @@ pub async fn start(
             }
             options[key] = checked.get("value").cloned().unwrap_or(Value::Null);
         }
-    }
-    let mut checked_options = options.clone();
-    if authorize.is_some() {
-        checked_options["authorize"] = Value::Bool(true);
-    }
-    let checked = bundle
-        .call(
-            "mcpCheckOptions",
-            &json!({ "options": checked_options }).to_string(),
-        )
-        .await?;
-    if let Some(error) = checked.get("error").and_then(Value::as_str) {
-        return Err(StartError::Config(error.to_owned()));
-    }
-    let stdio = options.pointer("/transport/kind").and_then(Value::as_str) != Some("http");
-    if stdio && options.pointer("/auth/kind").and_then(Value::as_str) != Some("none") {
-        return Err(StartError::Config(
-            "OAuth authentication needs the HTTP transport (--http)".to_owned(),
-        ));
     }
     Ok(Started { options, authorize })
 }

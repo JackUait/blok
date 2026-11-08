@@ -9,6 +9,8 @@ pub mod awareness;
 pub mod bundle;
 pub mod cli;
 mod depth;
+pub mod document_source;
+pub mod embed;
 pub mod errors;
 pub mod files;
 pub mod handles;
@@ -31,6 +33,9 @@ pub mod sources;
 pub mod stdio;
 pub mod uploads;
 pub mod ws;
+
+/// The rmcp this crate is built on, so a host compiles against the same pinned version.
+pub use rmcp;
 
 use std::path::Path;
 use std::sync::Arc;

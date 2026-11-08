@@ -9,6 +9,7 @@ use serde_json::{Map, Value, json};
 
 use crate::authorize::{Authorize, Webhook};
 use crate::bundle::{Bundle, Obj, RawObject};
+use crate::document_source::{CustomSource, DocumentCaller, document_caller};
 use crate::errors::{Fault, HostError};
 use crate::handles::Handles;
 use crate::live::{Live, TicketRequest};
@@ -79,6 +80,8 @@ pub struct Stored {
     version: Option<String>,
     /// A save failed and the reload did too: reload before the next call.
     stale: bool,
+    /// Who opened the handle: a host's source acts for them (opener.ts sourceFor).
+    opener: Arc<DocumentCaller>,
 }
 
 pub enum Session {
@@ -340,16 +343,21 @@ impl crate::stdio::Requests for Mcp {
 }
 
 /// Node's checkOptionSafety, which createBlokMcpServer runs for every
-/// host: the CLI's checks hold for a library host too.
-async fn check_options(
+/// host: the CLI's checks hold for a library host too. Some: its refusal.
+pub(crate) async fn option_refusal(
     bundle: &Bundle,
     options: &Value,
     authorize: bool,
     uploads: Option<&crate::uploads::Uploads>,
-) -> Result<(), Fault> {
+    custom_source: bool,
+) -> Result<Option<String>, crate::bundle::BundleError> {
     let mut checked = options.clone();
     if authorize {
         checked["authorize"] = Value::Bool(true);
+    }
+    // A host's source is a source: with a ticket URL it still needs a per-document check.
+    if custom_source {
+        checked["source"] = json!({ "kind": "custom" });
     }
     if let Some(uploads) = uploads {
         let mut described = json!({ "uploadByFile": true, "limits": uploads.limits });
@@ -364,8 +372,21 @@ async fn check_options(
             &json!({ "options": checked }).to_string(),
         )
         .await?;
-    match answer.get("error").and_then(Value::as_str) {
-        Some(error) => Err(Fault::Internal(error.to_owned())),
+    Ok(answer
+        .get("error")
+        .and_then(Value::as_str)
+        .map(str::to_owned))
+}
+
+async fn check_options(
+    bundle: &Bundle,
+    options: &Value,
+    authorize: bool,
+    uploads: Option<&crate::uploads::Uploads>,
+    custom_source: bool,
+) -> Result<(), Fault> {
+    match option_refusal(bundle, options, authorize, uploads, custom_source).await? {
+        Some(error) => Err(Fault::Internal(error)),
         None => Ok(()),
     }
 }
@@ -394,9 +415,9 @@ impl Mcp {
     ) -> Result<Mcp, Fault> {
         let hooks = Hooks {
             authorize: authorize.map(|hook| Arc::new(hook) as Arc<dyn Authorize>),
-            agent_actor: None,
             uploads,
             rooms,
+            ..Hooks::default()
         };
         Mcp::with_hooks(bundle, options, hooks).await
     }
@@ -413,8 +434,21 @@ impl Mcp {
             agent_actor,
             uploads,
             rooms,
+            source: custom,
         } = hooks;
-        check_options(&bundle, options, authorize.is_some(), uploads.as_ref()).await?;
+        if custom.is_some() && opt(options, "source").is_some() {
+            return Err(Fault::Internal(
+                "hooks.source (the host's own document source) cannot be combined with options.source".to_owned(),
+            ));
+        }
+        check_options(
+            &bundle,
+            options,
+            authorize.is_some(),
+            uploads.as_ref(),
+            custom.is_some(),
+        )
+        .await?;
         if let Some(root) = uploads.as_ref().and_then(|u| u.root.as_ref()) {
             crate::uploads::check_root(root).map_err(Fault::Internal)?;
         }
@@ -424,6 +458,9 @@ impl Mcp {
         }
         if rooms.is_some() {
             flags["sync"] = Value::Bool(true);
+        }
+        if custom.is_some() {
+            flags["source"] = Value::Bool(true);
         }
         let surface = bundle.call("mcpSurface", &flags.to_string()).await?;
         let list = |key: &str| {
@@ -453,14 +490,21 @@ impl Mcp {
                 .unwrap_or(json!([])),
         };
         let outbound = Outbound::new();
-        let source = match opt(options, "source") {
-            Some(source) if str_of(source, "kind") == Some("files") => {
+        let source = match (custom, opt(options, "source")) {
+            (Some(custom), _) => Some(Source::Custom(CustomSource::new(custom))),
+            // A host's source is a trait object; options alone cannot carry one.
+            (None, Some(source)) if str_of(source, "kind") == Some("custom") => {
+                return Err(Fault::Internal(
+                    "source kind \"custom\" needs the host's source in hooks.source".to_owned(),
+                ));
+            }
+            (None, Some(source)) if str_of(source, "kind") == Some("files") => {
                 Some(Source::Files(crate::files::FilesSource::new(
                     str_of(source, "dir").unwrap_or("."),
                     bundle.clone(),
                 )))
             }
-            Some(source) => Some(Source::Endpoint(Box::new(EndpointSource::new(
+            (None, Some(source)) => Some(Source::Endpoint(Box::new(EndpointSource::new(
                 str_of(source, "url").unwrap_or_default().to_owned(),
                 str_of(source, "endpointAuth")
                     .unwrap_or_default()
@@ -468,7 +512,7 @@ impl Mcp {
                 str_of(source, "list").map(str::to_owned),
                 outbound.clone(),
             )))),
-            None => None,
+            (None, None) => None,
         };
         let idle_ms = opt(options, "handleIdleMs")
             .cloned()
@@ -703,6 +747,7 @@ impl Mcp {
         caller: &Caller,
         actor: &Value,
         client_name: &str,
+        opener: &DocumentCaller,
     ) -> Result<String, Fault> {
         let page_id = mint_page_id();
         let named = |fault: Fault| match fault {
@@ -754,7 +799,7 @@ impl Mcp {
                 )
                 .into());
             };
-            let loaded = source.load(&page_id).await?;
+            let loaded = source.load(&page_id, Some(opener)).await?;
             // The endpoint source saves without a version check, so this is its only guard.
             if !loaded.missing {
                 return Err(HostError::surface(
@@ -776,6 +821,7 @@ impl Mcp {
                     &page_id,
                     text.get("text").and_then(Value::as_str).unwrap_or_default(),
                     loaded.version.as_deref(),
+                    Some(opener),
                 )
                 .await?;
             Ok(())
@@ -834,18 +880,20 @@ impl Mcp {
     /// Makes the pages and does the page write a batch needs, in Node's
     /// order: a creation that fails stops there and goes to the bundle,
     /// which refuses that insert inside the batch.
+    #[allow(clippy::too_many_arguments)]
     async fn host_work(
         &self,
         caller: &Caller,
         actor: &Value,
         client_name: &str,
+        opener: &DocumentCaller,
         open_document: &str,
         live_parent: bool,
         counted: &Value,
     ) -> Result<HostWork, Fault> {
         let mut work = HostWork::default();
         for _ in 0..pages_to_make(counted) {
-            match self.create_page(caller, actor, client_name).await {
+            match self.create_page(caller, actor, client_name, opener).await {
                 Ok(page_id) => work.created.push(page_id),
                 Err(Fault::Host(error)) => {
                     work.create_failure = Some(error.failed_input());
@@ -864,6 +912,7 @@ impl Mcp {
                 caller,
                 actor,
                 client_name,
+                opener,
                 open_document,
                 live_parent,
                 &page_id,
@@ -893,6 +942,7 @@ impl Mcp {
         caller: &Caller,
         actor: &Value,
         client_name: &str,
+        opener: &DocumentCaller,
         open_document: &str,
         live_parent: bool,
         page_id: &str,
@@ -969,13 +1019,14 @@ impl Mcp {
                 )
                 .into());
             };
-            let loaded = source.load(page_id).await?;
+            let loaded = source.load(page_id, Some(opener)).await?;
             let mut stored = Stored {
                 write: true,
                 document: loaded.document,
                 history: "{}".to_owned(),
                 version: loaded.version,
                 stale: false,
+                opener: Arc::new(opener.clone()),
             };
             Box::pin(self.execute(
                 caller,
@@ -1052,7 +1103,17 @@ impl Mcp {
         let Some(source) = &self.source else {
             return Ok(unsupported);
         };
-        let Some(listing) = source.list(&ListRequest::from_value(request)).await else {
+        // A host's source lists for the current caller.
+        let lister = if source.acts_for_caller() {
+            let (actor, client_name) = self.actor(caller).await?;
+            Some(document_caller(caller, &actor, &client_name))
+        } else {
+            None
+        };
+        let Some(listing) = source
+            .list(&ListRequest::from_value(request), lister.as_ref())
+            .await
+        else {
             return Ok(unsupported);
         };
         let listing = listing?;
@@ -1238,13 +1299,15 @@ impl Mcp {
             )
             .into());
         };
-        let loaded = source.load(document_id).await?;
+        let opener = document_caller(caller, &actor, &client_name);
+        let loaded = source.load(document_id, Some(&opener)).await?;
         let stored = Stored {
             write,
             document: loaded.document,
             history: "{}".to_owned(),
             version: loaded.version,
             stale: false,
+            opener: Arc::new(opener),
         };
         let view = match step.get("view") {
             None => None,
@@ -1425,8 +1488,17 @@ impl Mcp {
                     let counted = room
                         .pages_needed(batch.clone(), actor.clone(), asking.clone())
                         .await?;
+                    let opener = document_caller(caller, actor, client_name);
                     work = self
-                        .host_work(caller, actor, client_name, document_id, true, &counted)
+                        .host_work(
+                            caller,
+                            actor,
+                            client_name,
+                            &opener,
+                            document_id,
+                            true,
+                            &counted,
+                        )
                         .await?;
                 }
                 let unconfirmed = work.unconfirmed;
@@ -1705,7 +1777,7 @@ impl Mcp {
             .source
             .as_ref()
             .ok_or_else(|| Fault::Internal("a stored handle without a source".to_owned()))?;
-        let loaded = source.load(document_id).await?;
+        let loaded = source.load(document_id, Some(&*stored.opener)).await?;
         stored.document = loaded.document;
         stored.version = loaded.version;
         // A reload starts a fresh agent in Node: its undo steps are gone.
@@ -1817,8 +1889,17 @@ impl Mcp {
                 .val("approval", &asking)
                 .finish();
             let counted = self.bundle.call("agentPagesNeeded", &counting).await?;
+            let opener = stored.opener.clone();
             work = self
-                .host_work(caller, actor, client_name, document_id, false, &counted)
+                .host_work(
+                    caller,
+                    actor,
+                    client_name,
+                    &opener,
+                    document_id,
+                    false,
+                    &counted,
+                )
                 .await?;
         }
         let mut input = self
@@ -1922,7 +2003,12 @@ impl Mcp {
                 }
             };
             match source
-                .save(document_id, &text, stored.version.as_deref())
+                .save(
+                    document_id,
+                    &text,
+                    stored.version.as_deref(),
+                    Some(&*stored.opener),
+                )
                 .await
             {
                 Ok(version) => {

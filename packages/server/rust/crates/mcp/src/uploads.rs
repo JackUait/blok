@@ -68,7 +68,7 @@ fn upload_failure(error: UploadError) -> Value {
 }
 
 /// JS String.prototype.trim: it also takes U+FEFF, and leaves U+0085.
-fn js_trim(text: &str) -> &str {
+pub(crate) fn js_trim(text: &str) -> &str {
     text.trim_matches(|c: char| c == '\u{feff}' || (c.is_whitespace() && c != '\u{85}'))
 }
 

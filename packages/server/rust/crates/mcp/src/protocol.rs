@@ -5,41 +5,31 @@ use std::sync::Arc;
 
 #[allow(deprecated)]
 use rmcp::model::{
-    CallToolRequestParams, CallToolResponse, CallToolResult, CompleteRequestParams, CompleteResult,
-    CustomRequest, CustomResult, DiscoverResult, ErrorCode, GetPromptRequestParams,
-    GetPromptResponse, GetPromptResult, InitializeRequestParams, InitializeResult,
-    InputRequiredResult, ListPromptsResult, ListResourceTemplatesResult, ListResourcesResult,
-    ListToolsResult, PaginatedRequestParams, ProtocolVersion, ReadResourceRequestParams,
-    ReadResourceResponse, ServerConfig, SetLevelRequestParams, SubscribeRequestParams,
-    UnsubscribeRequestParams,
+    CallToolRequestParams, CallToolResponse, CompleteRequestParams, CompleteResult, CustomRequest,
+    CustomResult, DiscoverResult, ErrorCode, GetPromptRequestParams, GetPromptResponse,
+    InitializeRequestParams, InitializeResult, ListPromptsResult, ListResourceTemplatesResult,
+    ListResourcesResult, ListToolsResult, PaginatedRequestParams, ProtocolVersion,
+    ReadResourceRequestParams, ReadResourceResponse, ServerConfig, SetLevelRequestParams,
+    SubscribeRequestParams, UnsubscribeRequestParams,
 };
 use rmcp::service::{RequestContext, RoleServer};
 use rmcp::{ErrorData, ServerHandler};
 use serde_json::{Value, json};
 
-use crate::server::{Approval, Caller, Mcp, Outcome};
+use crate::embed::BlokTools;
+use crate::server::Mcp;
 
 pub const SERVER_NAME: &str = "blok-mcp";
-const SERVER_INFO_KEY: &str = "io.modelcontextprotocol/serverInfo";
-const CLIENT_INFO_KEY: &str = "io.modelcontextprotocol/clientInfo";
-const CLIENT_CAPABILITIES_KEY: &str = "io.modelcontextprotocol/clientCapabilities";
-const MODERN: &str = "2026-07-28";
 // Node's SDK still accepts this draft revision as is; rmcp does not know it.
 const DRAFT_2024: &str = "2024-10-07";
 
-/// Who the HTTP layer says is calling, per request.
-#[derive(Debug, Clone)]
-pub struct HttpIdentity {
-    pub principal: String,
-    pub scopes: Option<Vec<String>>,
-}
+pub use crate::embed::{HttpIdentity, accepted_responses};
 
+/// The standalone server: a host of Blok's tools whose serverInfo is
+/// blok-mcp and whose instructions are Blok's own.
 #[derive(Clone)]
 pub struct Handler {
-    mcp: Arc<Mcp>,
-    version: String,
-    /// Stateless HTTP: no session, so nothing from `initialize` carries over.
-    http: bool,
+    blok: BlokTools,
 }
 
 /// Node's SDK answers every method it has no handler for this way.
@@ -55,114 +45,24 @@ fn from_json<T: serde::de::DeserializeOwned>(value: Value) -> Result<T, ErrorDat
     serde_json::from_value(value).map_err(|e| internal(e.to_string()))
 }
 
-/// Node's SDK partitionInputResponses: only bare result objects count as
-/// replies; an `{ method, result }` envelope or a non-object is dropped.
-pub fn accepted_responses<'a>(responses: impl Iterator<Item = (&'a String, &'a Value)>) -> Value {
-    Value::Object(
-        responses
-            .filter(|(_, entry)| {
-                entry
-                    .as_object()
-                    .is_some_and(|o| !o.contains_key("method") && !o.contains_key("result"))
-            })
-            .map(|(key, entry)| (key.clone(), entry.clone()))
-            .collect(),
-    )
-}
-
 impl Handler {
     pub fn new(mcp: Arc<Mcp>, version: String, http: bool) -> Handler {
-        Handler { mcp, version, http }
+        Handler {
+            blok: BlokTools::standalone(mcp, version, http),
+        }
+    }
+
+    fn mcp(&self) -> &Mcp {
+        self.blok.mcp()
     }
 
     fn server_info(&self) -> Value {
-        json!({ "name": SERVER_NAME, "version": self.version })
-    }
-
-    fn modern(context: &RequestContext<RoleServer>) -> bool {
-        context
-            .protocol_version()
-            .is_some_and(|v| v.as_str() >= MODERN)
+        json!({ "name": SERVER_NAME, "version": self.blok.version() })
     }
 
     /// 2026 results carry the server's identity in `_meta`, as Node's do.
-    fn finish(&self, mut result: Value, context: &RequestContext<RoleServer>) -> Value {
-        if Self::modern(context) {
-            result["resultType"] = Value::String("complete".to_owned());
-            result["_meta"] = json!({ SERVER_INFO_KEY: self.server_info() });
-        }
-        result
-    }
-
-    fn meta(context: &RequestContext<RoleServer>, key: &str) -> Option<Value> {
-        context.meta.0.0.get(key).cloned()
-    }
-
-    fn caller(&self, context: &RequestContext<RoleServer>) -> Caller {
-        let from_meta = Self::meta(context, CLIENT_INFO_KEY)
-            .and_then(|info| info.get("name").and_then(Value::as_str).map(str::to_owned));
-        // The stdio proxy's stand-in initialize names no client (stdio.rs).
-        // Over stateless HTTP rmcp invents a placeholder peer; only _meta is real.
-        let client_name = from_meta.or_else(|| {
-            (!self.http)
-                .then(|| {
-                    context
-                        .peer
-                        .peer_info()
-                        .map(|info| info.client_info.name.clone())
-                })
-                .flatten()
-                .filter(|name| !name.is_empty())
-        });
-        let identity = context
-            .extensions
-            .get::<http::request::Parts>()
-            .and_then(|parts| parts.extensions.get::<HttpIdentity>().cloned());
-        match identity {
-            Some(identity) => Caller {
-                principal: identity.principal,
-                client_name,
-                scopes: identity.scopes,
-            },
-            None => Caller {
-                principal: self.mcp.principal.clone(),
-                client_name,
-                scopes: None,
-            },
-        }
-    }
-
-    fn capabilities(&self, context: &RequestContext<RoleServer>) -> Value {
-        Self::meta(context, CLIENT_CAPABILITIES_KEY)
-            .or_else(|| {
-                (!self.http)
-                    .then(|| {
-                        context
-                            .peer
-                            .peer_info()
-                            .and_then(|info| serde_json::to_value(&info.capabilities).ok())
-                    })
-                    .flatten()
-            })
-            .unwrap_or_else(|| json!({}))
-    }
-
-    fn tool_result(
-        &self,
-        structured: &str,
-        is_error: bool,
-        context: &RequestContext<RoleServer>,
-    ) -> Result<CallToolResult, ErrorData> {
-        let parsed: Value =
-            serde_json::from_str(structured).map_err(|e| internal(e.to_string()))?;
-        from_json(self.finish(
-            json!({
-                "content": [{ "type": "text", "text": structured }],
-                "structuredContent": parsed,
-                "isError": is_error,
-            }),
-            context,
-        ))
+    fn finish(&self, result: Value, context: &RequestContext<RoleServer>) -> Value {
+        crate::embed::finish(result, context, Some(&self.server_info()))
     }
 }
 
@@ -172,7 +72,7 @@ impl ServerHandler for Handler {
         if context
             .meta
             .protocol_version()
-            .is_some_and(|v| v.as_str() >= MODERN)
+            .is_some_and(|v| v.as_str() >= crate::embed::MODERN)
         {
             return Err(not_found());
         }
@@ -249,7 +149,7 @@ impl ServerHandler for Handler {
             "protocolVersion": "2025-11-25",
             "capabilities": { "tools": {}, "prompts": {} },
             "serverInfo": self.server_info(),
-            "instructions": self.mcp.surface.instructions,
+            "instructions": self.mcp().surface.instructions,
         }))
         .expect("a valid server config")
     }
@@ -283,7 +183,7 @@ impl ServerHandler for Handler {
         _request: Option<PaginatedRequestParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<ListToolsResult, ErrorData> {
-        from_json(self.finish(json!({ "tools": self.mcp.surface.tools }), &context))
+        from_json(self.finish(json!({ "tools": self.mcp().surface.tools }), &context))
     }
 
     async fn list_prompts(
@@ -291,7 +191,7 @@ impl ServerHandler for Handler {
         _request: Option<PaginatedRequestParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<ListPromptsResult, ErrorData> {
-        from_json(self.finish(json!({ "prompts": self.mcp.surface.prompts }), &context))
+        from_json(self.finish(json!({ "prompts": self.mcp().surface.prompts }), &context))
     }
 
     async fn get_prompt(
@@ -299,28 +199,9 @@ impl ServerHandler for Handler {
         request: GetPromptRequestParams,
         context: RequestContext<RoleServer>,
     ) -> Result<GetPromptResponse, ErrorData> {
-        let arguments = serde_json::to_value(&request.arguments).unwrap_or(Value::Null);
-        let answer = self
-            .mcp
-            .prompt(&request.name, &arguments)
+        self.blok
+            .answer_prompt(request, &context, Some(&self.server_info()))
             .await
-            .map_err(|f| internal(format!("{f:?}")))?;
-        if let Some(error) = answer.get("error") {
-            return Err(ErrorData::new(
-                ErrorCode(error.get("code").and_then(Value::as_i64).unwrap_or(-32602) as i32),
-                error
-                    .get("message")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-                    .to_owned(),
-                None,
-            ));
-        }
-        let result: GetPromptResult = from_json(self.finish(
-            answer.get("result").cloned().unwrap_or(Value::Null),
-            &context,
-        ))?;
-        Ok(GetPromptResponse::Complete(result))
     }
 
     async fn call_tool(
@@ -328,78 +209,9 @@ impl ServerHandler for Handler {
         request: CallToolRequestParams,
         context: RequestContext<RoleServer>,
     ) -> Result<CallToolResponse, ErrorData> {
-        let caller = self.caller(&context);
-        let args = request
-            .arguments
-            .clone()
-            .map_or_else(|| json!({}), Value::Object);
-        let mut approval = Approval {
-            capabilities: self.capabilities(&context),
-            replies: request
-                .input_responses
-                .as_ref()
-                .map(|r| accepted_responses(r.iter())),
-        };
-        let ct = context.ct.clone();
-        let cancelled = move || ct.is_cancelled();
-        // Calls on one handle run in the order they came (handles.rs).
-        let id = serde_json::to_value(&context.id)
-            .map(|id| id.to_string())
-            .unwrap_or_default();
-        let turn = self.mcp.turn_for(&id, &args, &caller.principal);
-        if let Some(turn) = &turn {
-            turn.wait().await;
-        }
-        loop {
-            let outcome = self
-                .mcp
-                .call(&request.name, &args, &caller, &approval, &cancelled)
-                .await
-                .map_err(internal)?;
-            match outcome {
-                Outcome::UnknownTool(message) => {
-                    return Err(ErrorData::new(ErrorCode::INVALID_PARAMS, message, None));
-                }
-                Outcome::Answer(answer) => {
-                    return Ok(CallToolResponse::Complete(self.tool_result(
-                        &answer.structured,
-                        answer.is_error,
-                        &context,
-                    )?));
-                }
-                Outcome::Ask(ask) => {
-                    let params = json!({
-                        "message": ask.message,
-                        "requestedSchema": ask.requested_schema,
-                        "mode": "form",
-                    });
-                    if Self::modern(&context) {
-                        let mut result = json!({
-                            "resultType": "input_required",
-                            "inputRequests": { ask.key.clone(): { "method": "elicitation/create", "params": params } },
-                        });
-                        result["_meta"] = json!({ SERVER_INFO_KEY: self.server_info() });
-                        let result: InputRequiredResult = from_json(result)?;
-                        return Ok(CallToolResponse::InputRequired(result));
-                    }
-                    // rmcp has no 2025 fallback: ask over the session ourselves,
-                    // then run the call again with the reply, as Node's SDK does.
-                    let elicited = context.peer.create_elicitation(from_json(params)?).await;
-                    match elicited {
-                        Ok(reply) => {
-                            let reply = serde_json::to_value(reply).unwrap_or(Value::Null);
-                            approval.replies = Some(json!({ ask.key: reply }));
-                        }
-                        Err(err) => {
-                            return Ok(CallToolResponse::Complete(from_json(json!({
-                                "content": [{ "type": "text", "text": err.to_string() }],
-                                "isError": true,
-                            }))?));
-                        }
-                    }
-                }
-            }
-        }
+        let info = self.server_info();
+        // Boxed: the whole server future otherwise passes the compiler's layout depth.
+        Box::pin(self.blok.answer_call(request, context, Some(&info))).await
     }
 }
 

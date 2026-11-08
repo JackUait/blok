@@ -71,7 +71,8 @@ impl Outbound {
         body: Option<&[u8]>,
         timeout: Duration,
     ) -> Result<Answer, Unreachable> {
-        let uri = parse_absolute_uri(url).filter(Uri::is_http).ok_or(FAILED)?;
+        let mut uri = parse_absolute_uri(url).filter(Uri::is_http).ok_or(FAILED)?;
+        keep_escapes(&mut uri, url);
         // fetch trims spaces, tabs, CR and LF around a value before it checks it.
         let headers = headers
             .into_iter()
@@ -139,6 +140,56 @@ impl Outbound {
             body: decoded(encoding.as_deref(), out)?,
         })
     }
+}
+
+/// Node's fetch sends a URL's escapes as written; .NET's Uri decodes those
+/// of unreserved characters, so `%7E` would go out as `~`. When that is the
+/// only difference, the target goes out as written.
+fn keep_escapes(uri: &mut Uri, url: &str) {
+    let Some((_, rest)) = url.split_once("://") else {
+        return;
+    };
+    let Some(start) = rest.find(['/', '?', '#']) else {
+        return;
+    };
+    let target = rest[start..].split('#').next().unwrap_or_default();
+    let (path, query) = match target.find('?') {
+        Some(at) => (&target[..at], &target[at..]),
+        None => (target, ""),
+    };
+    let path = if path.is_empty() { "/" } else { path };
+    let parsed = format!("{}{}", uri.absolute_path, uri.query);
+    if parsed != format!("{}{}", decode_unreserved(path), decode_unreserved(query)) {
+        return;
+    }
+    uri.absolute_path = path.to_owned();
+    uri.query = query.to_owned();
+}
+
+/// `text` with each escape of an unreserved character (A-Z a-z 0-9 - . _ ~) decoded.
+fn decode_unreserved(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = String::with_capacity(text.len());
+    let mut at = 0;
+    while at < bytes.len() {
+        let decoded = (bytes[at] == b'%')
+            .then(|| text.get(at + 1..at + 3))
+            .flatten()
+            .and_then(|hex| u8::from_str_radix(hex, 16).ok())
+            .filter(|c| c.is_ascii_alphanumeric() || b"-._~".contains(c));
+        match decoded {
+            Some(c) => {
+                out.push(char::from(c));
+                at += 3;
+            }
+            None => {
+                let ch = text[at..].chars().next().unwrap_or_default();
+                out.push(ch);
+                at += ch.len_utf8().max(1);
+            }
+        }
+    }
+    out
 }
 
 /// An upgrade's answer: on 101 the stream carries the new protocol, with

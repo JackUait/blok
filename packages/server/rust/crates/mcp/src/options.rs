@@ -196,6 +196,8 @@ pub struct Hooks {
     pub uploads: Option<crate::uploads::Uploads>,
     /// The host's own collab rooms (`Server::agent_executor()`).
     pub rooms: Option<Arc<blok_blokagent::Executor>>,
+    /// The host's own document store, in place of `McpOptions::source`.
+    pub source: Option<Arc<dyn crate::document_source::DocumentSource>>,
 }
 
 #[cfg(test)]

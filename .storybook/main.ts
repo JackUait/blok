@@ -27,7 +27,8 @@ const config: StorybookConfig = {
   staticDirs: [{ from: './fonts', to: '/fonts' }],
   addons: [
     '@storybook/addon-a11y',
-    '@storybook/addon-vitest'
+    '@storybook/addon-vitest',
+    'storybook-addon-react-grab',
   ],
   framework: '@storybook/html-vite',
   viteFinal: async (viteConfig) => {

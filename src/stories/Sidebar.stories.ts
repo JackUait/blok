@@ -86,6 +86,49 @@ const render = (): HTMLElement => {
       frame.setPages(tree, activeId);
       show(editor, docs, id);
     },
+    onAction(action) {
+      if (action.type === 'rename') {
+        const page = tree.find((item) => item.id === action.id);
+        if (page) page.title = action.title;
+        frame.setPages(tree, activeId);
+        return;
+      }
+      if (action.type === 'duplicate') {
+        const page = tree.find((item) => item.id === action.id);
+        if (!page) return;
+        const id = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
+        const index = tree.findIndex((item) => item.id === page.id);
+        tree.splice(index + 1, 0, { ...page, id, title: `${page.title} copie` });
+        const source = docs.get(page.id);
+        docs.set(id, source
+          ? { ...source, blocks: source.blocks.map((block) => ({ ...block, id: `${id}-body` })) }
+          : { time: Date.now(), version: '2.1.0', blocks: [] });
+        activeId = id;
+        frame.setPages(tree, activeId);
+        show(editor, docs, id);
+        return;
+      }
+      const drop = new Set<string>();
+      const pending = [action.id];
+      while (pending.length > 0) {
+        const current = pending.pop();
+        if (!current || drop.has(current)) continue;
+        drop.add(current);
+        tree.filter((item) => item.parentId === current).forEach((item) => pending.push(item.id));
+      }
+      const parentId = tree.find((item) => item.id === action.id)?.parentId ?? null;
+      for (let index = tree.length - 1; index >= 0; index -= 1) {
+        if (drop.has(tree[index].id)) tree.splice(index, 1);
+      }
+      drop.forEach((id) => docs.delete(id));
+      if (drop.has(activeId)) {
+        activeId = parentId && tree.some((item) => item.id === parentId)
+          ? parentId
+          : tree[0]?.id ?? '';
+      }
+      frame.setPages(tree, activeId);
+      if (activeId) show(editor, docs, activeId);
+    },
   });
   editor.style.border = '0';
   editor.style.borderRadius = '0';

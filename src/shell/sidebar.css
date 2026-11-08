@@ -39,7 +39,8 @@
 
 [data-blok-sidebar-icon],
 [data-blok-sidebar-add],
-[data-blok-sidebar-twist] {
+[data-blok-sidebar-more],
+[data-blok-sidebar-toggle] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -55,16 +56,19 @@
 
 [data-blok-sidebar-icon]:hover,
 [data-blok-sidebar-add]:hover,
-[data-blok-sidebar-twist]:hover:not(:disabled) {
+[data-blok-sidebar-more]:hover,
+[data-blok-sidebar-toggle]:hover {
   background: var(--blok-item-hover-bg);
   color: var(--blok-text-primary);
 }
 
 [data-blok-sidebar-icon]:focus-visible,
 [data-blok-sidebar-add]:focus-visible,
-[data-blok-sidebar-twist]:focus-visible,
+[data-blok-sidebar-more]:focus-visible,
+[data-blok-sidebar-toggle]:focus-visible,
 [data-blok-sidebar-link]:focus-visible,
-[data-blok-sidebar-search] input:focus-visible {
+[data-blok-sidebar-search] input:focus-visible,
+[data-blok-sidebar-rename]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 1px;
 }
@@ -130,15 +134,46 @@
   background: var(--blok-icon-active-bg);
 }
 
-[data-blok-sidebar-twist][data-leaf] {
-  visibility: hidden;
+[data-blok-sidebar-toggle] {
+  display: grid;
+  flex: none;
+  place-items: center;
 }
 
-[data-blok-sidebar-twist] svg {
+[data-blok-sidebar-glyph],
+[data-blok-sidebar-chevron] {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+[data-blok-sidebar-chevron] {
+  display: none;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-sidebar-row]:hover [data-blok-sidebar-glyph],
+[data-blok-sidebar-row]:focus-within [data-blok-sidebar-glyph],
+[data-blok-sidebar-row]:has([data-blok-sidebar-menu]:popover-open) [data-blok-sidebar-glyph] {
+  display: none;
+}
+
+[data-blok-sidebar-row]:hover [data-blok-sidebar-chevron],
+[data-blok-sidebar-row]:focus-within [data-blok-sidebar-chevron],
+[data-blok-sidebar-row]:has([data-blok-sidebar-menu]:popover-open) [data-blok-sidebar-chevron] {
+  display: inline-flex;
+}
+
+[data-blok-sidebar-chevron] svg {
   transition: transform 120ms ease;
 }
 
-[data-blok-sidebar-twist][data-open] svg {
+[data-blok-sidebar-chevron][data-open] svg {
   transform: rotate(90deg);
 }
 
@@ -159,30 +194,82 @@
   cursor: pointer;
 }
 
-[data-blok-sidebar-link] span:last-child {
+[data-blok-sidebar-link] span,
+[data-blok-sidebar-rename] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 [data-blok-sidebar-glyph] {
-  flex: none;
-  width: 18px;
-  font-size: 15px;
-  line-height: 1;
   text-align: center;
 }
 
-[data-blok-sidebar-add] {
+[data-blok-sidebar-rename] {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  border: 0;
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--blok-popover-bg);
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 14px;
+}
+
+[data-blok-sidebar-add],
+[data-blok-sidebar-more] {
   flex: none;
-  margin-inline-end: var(--blok-space-1);
   opacity: 0;
 }
 
+[data-blok-sidebar-more] {
+  margin-inline-end: var(--blok-space-1);
+}
+
 [data-blok-sidebar-row]:hover [data-blok-sidebar-add],
+[data-blok-sidebar-row]:hover [data-blok-sidebar-more],
 [data-blok-sidebar-row]:focus-within [data-blok-sidebar-add],
-[data-blok-sidebar-row][data-active] [data-blok-sidebar-add] {
+[data-blok-sidebar-row]:focus-within [data-blok-sidebar-more],
+[data-blok-sidebar-row]:has([data-blok-sidebar-menu]:popover-open) [data-blok-sidebar-add],
+[data-blok-sidebar-row]:has([data-blok-sidebar-menu]:popover-open) [data-blok-sidebar-more] {
   opacity: 1;
+}
+
+[data-blok-sidebar-menu] {
+  position: fixed;
+  inset: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 168px;
+  margin: 0;
+  padding: var(--blok-space-1);
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: var(--blok-popover-bg);
+  color: var(--blok-text-primary);
+  box-shadow: var(--blok-popover-box-shadow);
+}
+
+[data-blok-sidebar-menu] button {
+  height: 32px;
+  padding: 0 var(--blok-space-2);
+  border: 0;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-sidebar-menu] button:hover {
+  background: var(--blok-item-hover-bg);
+}
+
+[data-blok-sidebar-menu] button[data-danger] {
+  color: var(--blok-item-destructive-text);
 }
 
 [data-blok-sidebar-resize] {

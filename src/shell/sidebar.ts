@@ -16,11 +16,17 @@ export interface PageFrame {
   setPages: (pages: ShellPage[], activeId: string) => void;
 }
 
+export type SidebarAction =
+  | { id: string; type: 'rename'; title: string }
+  | { id: string; type: 'duplicate' }
+  | { id: string; type: 'delete' };
+
 export interface PageFrameOptions {
   pages: ShellPage[];
   activeId: string;
   onOpen: (id: string) => void;
   onCreate: (parentId: string | null) => void;
+  onAction?: (action: SidebarAction) => void;
 }
 
 const minWidth = 220;
@@ -48,6 +54,23 @@ function svg(paths: string[]): SVGSVGElement {
 const chevron = () => svg(['M6 4.5 10 8 6 11.5']);
 const plus = () => svg(['M8 3.5v9', 'M3.5 8h9']);
 const search = () => svg(['M7 11.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z', 'M10.5 10.5 13 13']);
+
+function dots(): SVGSVGElement {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  node.setAttribute('viewBox', '0 0 16 16');
+  node.setAttribute('width', '16');
+  node.setAttribute('height', '16');
+  node.setAttribute('aria-hidden', 'true');
+  [3.5, 8, 12.5].forEach((cx) => {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', String(cx));
+    circle.setAttribute('cy', '8');
+    circle.setAttribute('r', '1.15');
+    circle.setAttribute('fill', 'currentColor');
+    node.append(circle);
+  });
+  return node;
+}
 
 function childrenOf(pages: ShellPage[], parentId: string | null): ShellPage[] {
   return pages.filter((page) => page.parentId === parentId);
@@ -145,24 +168,27 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     const visibleChildren = query === ''
       ? childrenOf(pages, page.id)
       : childrenOf(pages, page.id).filter((child) => matches(pages, child, query));
-    const open = forceOpen || !closed.has(page.id);
+    const expanded = visibleChildren.length > 0 && (forceOpen || !closed.has(page.id));
     const row = document.createElement('div');
     row.setAttribute('data-blok-sidebar-row', '');
     if (page.id === activeId) row.setAttribute('data-active', '');
     row.style.paddingInlineStart = `${8 + depth * 14}px`;
 
-    const twist = document.createElement('button');
-    twist.type = 'button';
-    twist.setAttribute('data-blok-sidebar-twist', '');
-    twist.setAttribute('aria-label', open ? 'Replier' : 'Déplier');
-    if (visibleChildren.length === 0) {
-      twist.setAttribute('data-leaf', '');
-      twist.disabled = true;
-    } else if (open) {
-      twist.setAttribute('data-open', '');
-    }
-    twist.append(chevron());
-    twist.addEventListener('click', () => {
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.setAttribute('data-blok-sidebar-toggle', '');
+    toggle.setAttribute('aria-label', expanded ? 'Replier' : 'Déplier');
+    const glyph = document.createElement('span');
+    glyph.setAttribute('data-blok-sidebar-glyph', '');
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.textContent = page.icon || '·';
+    const mark = document.createElement('span');
+    mark.setAttribute('data-blok-sidebar-chevron', '');
+    mark.setAttribute('aria-hidden', 'true');
+    if (expanded) mark.setAttribute('data-open', '');
+    mark.append(chevron());
+    toggle.append(glyph, mark);
+    toggle.addEventListener('click', () => {
       if (closed.has(page.id)) closed.delete(page.id);
       else closed.add(page.id);
       paint();
@@ -172,13 +198,9 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     link.type = 'button';
     link.setAttribute('data-blok-sidebar-link', '');
     if (page.id === activeId) link.setAttribute('aria-current', 'page');
-    const glyph = document.createElement('span');
-    glyph.setAttribute('data-blok-sidebar-glyph', '');
-    glyph.setAttribute('aria-hidden', 'true');
-    glyph.textContent = page.icon || '·';
     const label = document.createElement('span');
     label.textContent = page.title;
-    link.append(glyph, label);
+    link.append(label);
     link.addEventListener('click', () => options.onOpen(page.id));
 
     const add = document.createElement('button');
@@ -191,9 +213,84 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       options.onCreate(page.id);
     });
 
-    row.append(twist, link, add);
-    const nested = open ? visibleChildren.flatMap((child) => rows(child, depth + 1, forceOpen)) : [];
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.setAttribute('data-blok-sidebar-more', '');
+    more.setAttribute('aria-label', `Actions pour ${page.title}`);
+    more.setAttribute('aria-haspopup', 'menu');
+    more.append(dots());
+
+    const menu = document.createElement('div');
+    menu.setAttribute('popover', 'auto');
+    menu.setAttribute('data-blok-sidebar-menu', '');
+    menu.setAttribute('role', 'menu');
+    const items: Array<{ label: string; action: SidebarAction['type']; danger?: boolean }> = [
+      { label: 'Renommer', action: 'rename' },
+      { label: 'Dupliquer', action: 'duplicate' },
+      { label: 'Supprimer', action: 'delete', danger: true },
+    ];
+    items.forEach((item) => {
+      const command = document.createElement('button');
+      command.type = 'button';
+      command.setAttribute('role', 'menuitem');
+      if (item.danger) command.setAttribute('data-danger', '');
+      command.textContent = item.label;
+      command.addEventListener('click', () => {
+        menu.hidePopover();
+        if (item.action === 'rename') {
+          beginRename(link, page);
+          return;
+        }
+        options.onAction?.({ id: page.id, type: item.action });
+      });
+      menu.append(command);
+    });
+    more.addEventListener('click', () => {
+      if (menu.matches(':popover-open')) {
+        menu.hidePopover();
+        return;
+      }
+      const rect = more.getBoundingClientRect();
+      menu.style.top = `${rect.bottom + 4}px`;
+      menu.style.left = `${Math.max(8, rect.right - 180)}px`;
+      menu.showPopover();
+    });
+
+    row.append(toggle, link, add, more, menu);
+    const nested = expanded ? visibleChildren.flatMap((child) => rows(child, depth + 1, forceOpen)) : [];
     return [row, ...nested];
+  }
+
+  function beginRename(link: HTMLElement, page: ShellPage): void {
+    const input = document.createElement('input');
+    input.value = page.title;
+    input.setAttribute('aria-label', `Renommer ${page.title}`);
+    input.setAttribute('data-blok-sidebar-rename', '');
+    link.replaceWith(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const commit = (save: boolean) => {
+      if (done) return;
+      done = true;
+      const title = input.value.trim();
+      if (save && title && title !== page.title) {
+        options.onAction?.({ id: page.id, type: 'rename', title });
+        return;
+      }
+      paint();
+    };
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commit(true);
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        commit(false);
+      }
+    });
+    input.addEventListener('blur', () => commit(true));
   }
 
   paint();

@@ -6,6 +6,9 @@ import "../src/styles/main.css";
 import "../src/styles/fonts.css";
 
 const preview: Preview = {
+  initialGlobals: {
+    reactGrab: true,
+  },
   parameters: {
     controls: {
       matchers: {

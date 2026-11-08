@@ -144,8 +144,29 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - A `sub` that is not a non-empty string, or that starts with `client:`, is refused. So is a token that names no `sub`, `client_id` or `azp`.
 - A request with a non-loopback `Origin` header is refused.
 - Live handles hold sockets, so run it as a long-lived process.
-- To scale out, route on the `Mcp-Param-Blok-Handle` header, so every call for a handle reaches the process that holds it.
-- Some clients do not mirror `x-mcp-header` parameters into headers. To serve them, run a single instance.
+- To scale out stored mode, give every process one shared handle store (`handleStore`, or `--handle-store files:<dir>` for processes on one machine). Any process can then serve any call for a stored handle. See "Shared handle store" below.
+- Live handles hold sockets and never go into the store. To scale out live mode, route on the `Mcp-Param-Blok-Handle` header, so every call for a live handle reaches the process that holds it. Some clients do not mirror `x-mcp-header` parameters into headers; to serve them in live mode, run a single instance.
+
+## Shared handle store
+
+By default each process keeps its stored handles in memory. With a handle store, a stored handle lives in the store as a record (`BlokMcpHandleRecord`, JSON, `v: 1`): the opener (principal, client name, scopes, actor), the document id, write access, the source version, whether it must reload, the document itself and its undo steps.
+
+- Each call leases the handle, rebuilds the session from the record, runs, saves the batch to the source, saves the record, and releases the lease.
+- If the record cannot be saved after the source save, the batch still answers, the error goes to stderr, and the handle is closed: the next call answers `UNKNOWN_HANDLE`.
+- A record opened under another tool contract (a rolling deploy) answers `VERSION_SKEW`; open the document again.
+- A call from another principal answers `UNKNOWN_HANDLE`. Blok checks this, not the store.
+- A process that stops drops only its own leases. It never clears the store.
+- The per-principal cap (`--max-handles`) counts the stored handles plus this process's live handles.
+
+What a store must do (`BlokMcpHandleStore`):
+
+- `tryAdd` counts the principal's handles and adds the new one as one atomic step.
+- `acquire` gives one lease per handle across all processes. It waits up to the timeout Blok passes, then answers `busy`; Blok answers `SOURCE_UNAVAILABLE` (retryable).
+- A handle expires after the idle time without a lease. A leased handle never expires; `release` restarts its idle time.
+- Records can be large: the undo steps are whole documents, and the newest step is always kept, so a record has no fixed size limit.
+- Any error the store throws is logged, and the agent sees `SOURCE_UNAVAILABLE`.
+
+`--handle-store files:<dir>` is the reference store. It keeps each handle in `<dir>` and locks with lock files, so several processes on one machine can share it. Its files are not meant to be shared with the C#, Go or Rust servers.
 
 ## Host duties
 
@@ -260,6 +281,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 | `--schema mixed\|envelope\|full` | | `mixed` | How `blok_execute` describes its commands. `mixed` gives the full arguments of the common commands, so the model needs no `blok_describe` call for them. |
 | `--handle-idle-ms <ms>` | | `600000` | Idle time before a handle expires. |
 | `--max-handles <n>` | | `8` | Open handles per principal. |
+| `--handle-store memory\|files:<dir>` | | `memory` | Where stored handles live. `files:<dir>` shares them between processes on one machine. |
 | `--no-comments` | | comments on | Turn off the database comment commands. A host that keeps comments in its own system (a `comments` hook) must pass it, or agent comments stay invisible to people. `--comments` is accepted and changes nothing. |
 
 ## Other builds: C#, Go and Rust

@@ -195,6 +195,18 @@ describe('openStoredSession', () => {
       expect(logged).toHaveBeenCalled();
     });
 
+    it('lists a page whose id the reloaded parent names only as paragraph text', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      vi.mocked(source.save).mockRejectedValueOnce(new Error('disk exploded'));
+      vi.mocked(source.load)
+        .mockResolvedValueOnce({ raw: { blocks: [] }, version: 'v1' })
+        .mockResolvedValueOnce({ raw: { blocks: [{ id: 'b', type: 'page', data: { pageId: 'page-1' } }, { id: 'c', type: 'paragraph', data: { text: 'page-2' } }] }, version: 'v2' });
+      const session = await openMaking([]);
+      const result = await session.execute({ commands: [{ name: 'block.insert', args: {} }] });
+
+      expect(result).toMatchObject({ ok: false, error: { details: { orphaned: [{ prepared: { pageId: 'page-2' } }] } } });
+    });
+
     it('throws the error as before when the parent cannot be read again', async () => {
       const failure = new Error('disk exploded');
       vi.mocked(source.save).mockRejectedValueOnce(failure);

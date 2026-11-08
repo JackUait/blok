@@ -8,11 +8,10 @@ import { markdownToBlocksWithReport } from '../markdown';
 import { pagesInsert } from '../agent/guidance';
 import { approvalKey } from '../shared/agent/approval';
 import { COMMANDS } from '../shared/agent/commands';
-import { createDocumentAgentSession, type CarriedHistory } from '../shared/agent/document-session';
+import { createDocumentAgentSession } from '../shared/agent/document-session';
+import { carriedHistory } from '../shared/agent/carried-history';
 import { AgentFailure, failure } from '../shared/agent/errors';
-import { contentRevision } from '../shared/agent/revision';
 import type { AgentPorts } from '../shared/agent/types';
-import { DocSnapshot } from '../shared/agent/snapshot';
 import { buildBuiltInSnapshot } from '../shared/built-in-snapshot';
 import { readCustomToolsFile, snapshotWithCustomTools } from '../shared/custom-tools-file';
 import { approvalQuestion, canElicit, elicitationApprover, readInputResponse } from '../shared/mcp/approval';
@@ -516,33 +515,6 @@ const contractWhere = (input: Record<string, unknown>): { runtime: 'jint' | 'csh
   ...(input.comments === false && { comments: false as const }),
 });
 
-const isCarriedEntry = (value: unknown): value is OutputData | 'other' => value === 'other' || isStoredDocument(value);
-
-/**
- * The steps a C# session carries between calls. They hold only while the document is the one the
- * last call returned: a revision that differs means someone else saved it, so the steps are lost.
- */
-const carriedHistory = (
-  value: unknown,
-  document: OutputData,
-  load: (raw: OutputData) => OutputData
-): CarriedHistory | undefined => {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-  const past = Array.isArray(value.past) ? value.past.filter(isCarriedEntry) : [];
-  const future = Array.isArray(value.future) ? value.future.filter(isCarriedEntry) : [];
-
-  const lost = value.lost === true;
-
-  if (value.revision !== contentRevision(DocSnapshot.fromOutput(document).toOutput())) {
-    return { past: [], future: [], lost: lost || past.length + future.length > 0 };
-  }
-  const loaded = (entry: OutputData | 'other'): OutputData | 'other' => entry === 'other' ? entry : load(entry);
-
-  return { past: past.map(loaded), future: future.map(loaded), lost };
-};
-
 /**
  * Jint cannot wait on the host, so C# creates the pages first (agentPagesNeeded counts them)
  * and sends their ids as `createdPages`. Each page insert takes the next one, in batch order.
@@ -829,7 +801,7 @@ const createServerAgentSession = (
   const versionHistory = loadedVersionHistory(input.versionHistory, setup.restores ? onRestore : undefined);
   const load = (raw: OutputData): OutputData => loadStoredDocument(raw, setup.richTextFieldsFor);
   const loaded = load(document);
-  const history = carriedHistory(input.history, loaded, load);
+  const history = carriedHistory(input.history, loaded, load, isStoredDocument);
   const hostRevision = hostRevisionOf(input.revision);
 
   return createDocumentAgentSession({

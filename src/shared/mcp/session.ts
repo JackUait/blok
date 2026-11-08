@@ -1,6 +1,8 @@
 import type { AgentBatch, AgentExecuteOptions, AgentResult, ContractSlice, DocumentView, ViewArgs } from '../../../types/agent';
 import type { AgentContract } from '../../../types/tool-manifest';
 
+import type { BlokMcpHandleRecord } from './options';
+
 export type Durability = 'acknowledged' | 'best-effort' | 'saved-on-execute';
 
 export interface Delivery {
@@ -36,4 +38,6 @@ export interface HandleSession {
   describe(query: { tool?: string; command?: string }): AgentContract | ContractSlice;
   execute(batch: AgentBatch, options?: Pick<AgentExecuteOptions, 'approve'>): Promise<McpExecuteResult>;
   close(reason: 'closed' | 'expired'): Promise<CloseSummary>;
+  /** A stored session whose owner is known: the handle as a shared handle store keeps it. */
+  snapshot?(): BlokMcpHandleRecord;
 }

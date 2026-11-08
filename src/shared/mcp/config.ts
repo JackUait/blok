@@ -10,13 +10,13 @@ export class McpConfigError extends Error {
 export interface ParsedCli {
   options: Omit<BlokMcpOptions, 'authorize' | 'manifest' | 'overrides' | 'createPage'>;
   /** What the caller loads after parsing: files, and the hooks a URL or module names. */
-  files: { manifest?: string; overrides?: string; authorize?: string; createPage?: string };
+  files: { manifest?: string; overrides?: string; authorize?: string; createPage?: string; handleStore?: string };
 }
 
 const VALUE_FLAGS = new Set([
   '--http', '--auth', '--sync-url', '--origin', '--ticket-url', '--oauth-issuer', '--oauth-audience', '--oauth-jwks',
   '--source', '--source-list', '--page-titles', '--rich-text-fields', '--schema', '--handle-idle-ms', '--max-handles',
-  '--principal', '--manifest', '--manifest-overrides', '--authorize', '--create-page',
+  '--principal', '--manifest', '--manifest-overrides', '--authorize', '--create-page', '--handle-store',
 ]);
 // --comments stays a no-op: comments are on by default.
 const SWITCH_FLAGS = new Set(['--public', '--comments', '--no-comments']);
@@ -111,6 +111,18 @@ const parseSource = (
   }
 
   throw new McpConfigError(`--source must be files:<dir> or endpoint:<url>, got "${raw}"`);
+};
+
+/** The files store's directory; memory (the default) needs none. */
+const parseHandleStore = (raw: string | undefined): string | undefined => {
+  if (raw === undefined || raw === 'memory') {
+    return undefined;
+  }
+  if (raw.startsWith('files:') && raw.length > 'files:'.length) {
+    return raw.slice('files:'.length);
+  }
+
+  throw new McpConfigError(`--handle-store must be memory or files:<dir>, got "${raw}"`);
 };
 
 const isStringArray = (value: unknown): value is string[] =>
@@ -212,6 +224,7 @@ export const parseMcpArgs = (
   const overrides = flag(argv, '--manifest-overrides');
   const authorize = flag(argv, '--authorize');
   const createPage = flag(argv, '--create-page');
+  const handleStore = parseHandleStore(flag(argv, '--handle-store'));
 
   if (createPage !== undefined && !/^https?:\/\//.test(createPage)) {
     throw new McpConfigError(`--create-page must be an http(s) URL, got "${createPage}"`);
@@ -224,6 +237,7 @@ export const parseMcpArgs = (
       ...(overrides !== undefined && { overrides }),
       ...(authorize !== undefined && { authorize }),
       ...(createPage !== undefined && { createPage }),
+      ...(handleStore !== undefined && { handleStore }),
     },
   };
 };
@@ -316,8 +330,23 @@ const checkCreatePage = (options: BlokMcpOptions): void => {
   }
 };
 
+const HANDLE_STORE_OPS = ['count', 'tryAdd', 'acquire', 'remove'] as const;
+
+// A library host passes the store unchecked; a wrong one would fail only on the first open.
+const checkHandleStore = (options: BlokMcpOptions): void => {
+  const store: unknown = options.handleStore;
+
+  if (store === undefined) {
+    return;
+  }
+  if (typeof store !== 'object' || store === null || HANDLE_STORE_OPS.some(op => typeof Reflect.get(store, op) !== 'function')) {
+    throw new McpConfigError('handleStore needs count, tryAdd, acquire and remove functions');
+  }
+};
+
 export const checkOptionSafety = (options: BlokMcpOptions): void => {
   checkValues(options);
+  checkHandleStore(options);
   checkUploads(options);
   checkCreatePage(options);
   if (options.tickets?.kind === 'url'

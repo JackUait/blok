@@ -153,7 +153,7 @@ Per call, Blok:
 
 If the record cannot be saved after the source save, the answer stands, the error is logged, and the handle is removed: the next call answers `UNKNOWN_HANDLE`. Restored undo steps hold only while their revision is the record's document's (the engine checks it); otherwise undo answers `CONFLICT`. Any error from your store is logged in full, and the agent sees `SOURCE_UNAVAILABLE` "The handle store is unavailable. Retry shortly." (retryable).
 
-The cap (`max_handles_per_principal`) counts the store's handles of the principal plus this process's live ones. Blok calls `sweep(idle)` every 60 s. A stop waits for this process's calls and never touches the store.
+The cap (`max_handles_per_principal`) counts the store's handles of the principal plus this process's live ones. Blok calls `sweep(idle)` every 60 s; a stop waits for a sweep in flight and starts no more. A stop waits for this process's calls and never clears the store.
 
 Your store's duties:
 
@@ -164,7 +164,7 @@ Your store's duties:
 - Values can be large: a record holds the document and every undo step, with no byte limit. Use a type that takes them (for example `LONGTEXT` or `JSON`, not `TEXT`).
 - Keep `scopes` `None` and an empty list apart.
 
-The files store keeps one directory: `<handle>.record.json`, `<handle>.meta.json`, a `<handle>.lease` lock and a lock per principal. It makes the directory (0700) at start if missing, then refuses to start (exit 2) unless the directory is not a link, has no group or world access, and belongs to this user; a trailing slash cannot skip that check. Every file is created 0600. Its privacy checks are POSIX only. Sharing one directory with another language's store is not supported.
+The files store keeps one directory: `<handle>.record.json`, `<handle>.meta.json`, a `<handle>.lease` lock and a lock per principal. A lock not renewed for 30 s is broken by one waiter at a time (`<lock>.break`), and only if it still is the lock that waiter saw go stale. It makes the directory (0700) at start if missing, then refuses to start (exit 2) unless the directory is not a link, has no group or world access, and belongs to the effective user (root too refuses another user's directory); a trailing slash cannot skip that check. Every file is created 0600. On Windows it refuses to start: use your own store there. `sweep` also deletes crash leftovers older than 30 s. Sharing one directory with another language's store is not supported.
 
 ### Serving it on your own HTTP server
 

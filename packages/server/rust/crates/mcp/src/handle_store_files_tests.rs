@@ -275,3 +275,114 @@ async fn an_idle_handle_expires_and_sweep_deletes_idle_records_only() {
     assert!(names(&dir).contains(&"held.meta.json".to_owned()));
     let _ = std::fs::remove_dir_all(&base);
 }
+
+#[tokio::test]
+async fn a_lease_kept_by_renew_is_never_taken_over() {
+    let base = root("renewed");
+    let dir = base.join("hs").to_string_lossy().into_owned();
+    let stale = Duration::from_millis(200);
+    let a = FilesHandleStore::open(&dir)
+        .unwrap()
+        .with_lease_stale(stale);
+    let b = FilesHandleStore::open(&dir)
+        .unwrap()
+        .with_lease_stale(stale);
+    a.try_add("h".into(), record("a"), 8, IDLE).await.unwrap();
+    let held = lease(&a, "h").await;
+    let renewing = async {
+        for _ in 0..12 {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            held.renew().await.unwrap();
+        }
+    };
+    let (taken, ()) = tokio::join!(
+        b.acquire("h".into(), IDLE, Duration::from_millis(600)),
+        renewing
+    );
+    assert!(matches!(taken.unwrap(), Acquired::Busy));
+    held.save(record("a")).await.unwrap();
+    held.release().await.unwrap();
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+// One breaker at a time, and only the lock it saw go stale: a lock taken
+// since (new token) is never deleted.
+#[tokio::test]
+async fn a_breaker_deletes_only_the_stale_lock_it_saw() {
+    let base = root("breaker");
+    let dir = base.join("hs");
+    let store = FilesHandleStore::open(&dir.to_string_lossy())
+        .unwrap()
+        .with_lease_stale(Duration::from_millis(100));
+    let lock = dir.join("x.lease");
+    std::fs::write(&lock, "theirs").unwrap();
+    let old = std::time::SystemTime::now() - Duration::from_secs(60);
+    let set_old = || {
+        std::fs::File::options()
+            .write(true)
+            .open(&lock)
+            .unwrap()
+            .set_modified(old)
+            .unwrap();
+    };
+    set_old();
+    assert!(!store.break_stale(&lock, Some("someone-else")).unwrap());
+    assert!(lock.exists());
+    // Another breaker holds the guard: this one waits its turn.
+    let guard = dir.join("x.lease.break");
+    std::fs::write(&guard, "other").unwrap();
+    assert!(!store.break_stale(&lock, Some("theirs")).unwrap());
+    assert!(lock.exists());
+    std::fs::remove_file(&guard).unwrap();
+    assert!(store.break_stale(&lock, Some("theirs")).unwrap());
+    assert!(!lock.exists());
+    assert!(!guard.exists());
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+#[tokio::test]
+async fn sweep_deletes_old_crash_leftovers_only() {
+    let base = root("leftovers");
+    let dir = base.join("hs");
+    let store = FilesHandleStore::open(&dir.to_string_lossy())
+        .unwrap()
+        .with_lease_stale(Duration::from_millis(100));
+    store
+        .try_add("live".into(), record("a"), 8, IDLE)
+        .await
+        .unwrap();
+    for name in [
+        ".x.record.json.abc.tmp",
+        "gone.lease.break",
+        "gone.record.json",
+        "gone.lease",
+    ] {
+        std::fs::write(dir.join(name), "x").unwrap();
+    }
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    std::fs::write(dir.join("new.record.json"), "x").unwrap();
+    store.sweep(IDLE).await.unwrap();
+    assert_eq!(
+        names(&dir),
+        vec!["live.meta.json", "live.record.json", "new.record.json"]
+    );
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+#[tokio::test]
+async fn windows_and_a_directory_another_user_owns_are_refused() {
+    let base = root("owner");
+    let dir = base.join("hs").to_string_lossy().into_owned();
+    assert_eq!(
+        FilesHandleStore::open_with(&dir, true, None).err().unwrap(),
+        "--handle-store files: is not supported on Windows; use your own store"
+    );
+    let me = rustix::process::geteuid().as_raw();
+    assert!(FilesHandleStore::open_with(&dir, false, Some(me)).is_ok());
+    // Root (uid 0) must refuse a directory another user owns as well.
+    let refused = FilesHandleStore::open_with(&dir, false, Some(me + 1))
+        .err()
+        .unwrap();
+    assert!(refused.contains("owned by this user"), "{refused}");
+    let _ = std::fs::remove_dir_all(&base);
+}

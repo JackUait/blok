@@ -18,8 +18,10 @@
 //!
 //! Locks: create the file exclusively and write the token. When it exists
 //! and its mtime is older than the lease's stale time (30 s), its holder is
-//! taken to be gone: the file is renamed aside (one waiter's rename wins),
-//! then created again; a renamed file that turns out fresh is linked back.
+//! taken to be gone. One breaker at a time takes `<lock>.break` exclusively
+//! (a `.break` older than the stale time is removed), reads the lock again,
+//! and deletes it only if it still has the token seen before and is still
+//! stale; then the lock is created again.
 //! A holder keeps its lease by `renew` (Blok renews every 5 s while a call
 //! runs), and every lease operation checks the token first: a holder whose
 //! lease was taken over cannot save, renew or remove. Exclusivity is best
@@ -27,14 +29,17 @@
 //!
 //! Expiry: a handle expires when it is not leased and its last release is
 //! older than the idle time. acquire and count delete an expired handle under
-//! its lease; sweep deletes every one, and old temp, stale and orphan files.
+//! its lease; sweep deletes every one, and crash leftovers older than the
+//! stale time: temp and `.break` files, records and leases without meta.
 //!
-//! Privacy: records hold document text, undo steps and principals. At start,
-//! once: the directory is made (0700) if missing, then lstat-checked: it must
-//! be a directory, not a link, with no group or world bits, owned by this
-//! user. A trailing slash is dropped first, so it cannot follow a link.
-//! Nothing makes the directory again later. Every file is created 0600.
-//! The privacy checks are POSIX only.
+//! Privacy: records hold document text, undo steps and principals. On
+//! Windows the store refuses to start: these POSIX checks cannot be made
+//! there. Elsewhere, at start, once: the path is made absolute and a
+//! trailing slash dropped (lstat would follow a link), the directory is made
+//! (0700) if missing, then lstat-checked: it must be a directory, not a
+//! link, with no group or world bits, owned by the effective user id (so
+//! root refuses another user's directory too). Nothing makes the directory
+//! again later. Every file is created 0600.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -98,14 +103,24 @@ fn private_dir(path: &Path) -> std::io::Result<()> {
 }
 
 #[cfg(unix)]
-fn is_private(meta: &std::fs::Metadata) -> bool {
+fn is_private(meta: &std::fs::Metadata, owner: Option<u32>) -> bool {
     use std::os::unix::fs::MetadataExt;
-    meta.mode() & 0o077 == 0 && meta.uid() == rustix::process::getuid().as_raw()
+    meta.mode() & 0o077 == 0 && owner.is_none_or(|owner| meta.uid() == owner)
 }
 
 #[cfg(not(unix))]
-fn is_private(_: &std::fs::Metadata) -> bool {
-    true
+fn is_private(_: &std::fs::Metadata, _: Option<u32>) -> bool {
+    false
+}
+
+#[cfg(unix)]
+fn effective_uid() -> Option<u32> {
+    Some(rustix::process::geteuid().as_raw())
+}
+
+#[cfg(not(unix))]
+fn effective_uid() -> Option<u32> {
+    None
 }
 
 /// Creates `path` only if it does not exist, readable by this user only.
@@ -156,8 +171,23 @@ impl FilesHandleStore {
     /// Makes the directory if missing and checks it is private. The message
     /// is the start refusal (exit code 2).
     pub fn open(dir: &str) -> Result<FilesHandleStore, String> {
+        FilesHandleStore::open_with(dir, cfg!(windows), effective_uid())
+    }
+
+    /// `open` on a given platform and effective user id, for tests.
+    pub(crate) fn open_with(
+        dir: &str,
+        windows: bool,
+        owner: Option<u32>,
+    ) -> Result<FilesHandleStore, String> {
+        if windows {
+            return Err(
+                "--handle-store files: is not supported on Windows; use your own store".to_owned(),
+            );
+        }
         // Rebuilt from its parts, so a trailing slash cannot make lstat follow a link.
-        let path: PathBuf = Path::new(dir).components().collect();
+        let absolute = std::path::absolute(dir).unwrap_or_else(|_| PathBuf::from(dir));
+        let path: PathBuf = absolute.components().collect();
         if let Err(err) = private_dir(&path)
             && err.kind() != std::io::ErrorKind::AlreadyExists
         {
@@ -173,7 +203,7 @@ impl FilesHandleStore {
             )
         };
         let meta = std::fs::symlink_metadata(&path).map_err(|_| refused())?;
-        if meta.file_type().is_symlink() || !meta.is_dir() || !is_private(&meta) {
+        if meta.file_type().is_symlink() || !meta.is_dir() || !is_private(&meta, owner) {
             return Err(refused());
         }
         Ok(FilesHandleStore {
@@ -250,19 +280,31 @@ impl FilesHandleStore {
         )
     }
 
-    /// The holder is gone: move its lock aside. Only one waiter's rename finds it.
-    fn break_stale(&self, path: &Path) -> Result<(), StoreError> {
-        let aside = PathBuf::from(format!("{}.{}.stale", path.display(), random_hex(6)));
-        match std::fs::rename(path, &aside) {
-            Ok(()) => {}
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-            Err(err) => return Err(err.into()),
+    /// The holder is gone. One breaker at a time, and it deletes only the
+    /// lock it saw go stale (`seen`, its token), never one taken since. True
+    /// when the lock is gone.
+    pub(crate) fn break_stale(&self, path: &Path, seen: Option<&str>) -> Result<bool, StoreError> {
+        let guard = PathBuf::from(format!("{}.break", path.display()));
+        let mine = random_hex(16);
+        if !Self::try_create(&guard, &mine)? {
+            // A breaker that died leaves its guard: it goes once it is old.
+            if self.fresh(&guard) == Some(false) {
+                remove(&guard)?;
+            }
+            return Ok(false);
         }
-        // Between the check and the rename another waiter took it over: give it back.
-        if self.fresh(&aside) == Some(true) {
-            let _ = std::fs::hard_link(&aside, path);
-        }
-        remove(&aside)
+        let broken = (|| {
+            let Some(fresh) = self.fresh(path) else {
+                return Ok(true);
+            };
+            if fresh || read_text(path)?.as_deref() != seen {
+                return Ok(false);
+            }
+            remove(path)?;
+            Ok(true)
+        })();
+        Self::drop_lock(&guard, &mine)?;
+        broken
     }
 
     async fn take_lock(
@@ -279,8 +321,10 @@ impl FilesHandleStore {
                 if Self::try_create(&path_now, &token_now)? {
                     return Ok(true);
                 }
-                if store.fresh(&path_now) == Some(false) {
-                    store.break_stale(&path_now)?;
+                let seen = read_text(&path_now)?;
+                if store.fresh(&path_now) == Some(false)
+                    && store.break_stale(&path_now, seen.as_deref())?
+                {
                     return Self::try_create(&path_now, &token_now);
                 }
                 Ok(false)
@@ -604,17 +648,17 @@ impl HandleStore for FilesHandleStore {
                         found.push(handle);
                     }
                 }
-                // Crash leftovers: temp and stale files, and a record whose meta
-                // was never written. Only old ones: a fresh one is in use.
+                // Crash leftovers: temp and `.break` files, and a record or lease
+                // with no meta. Only old ones: a fresh one is in use.
                 for entry in std::fs::read_dir(&*store.dir)? {
                     let entry = entry?;
                     let name = entry.file_name().to_string_lossy().into_owned();
-                    let orphan = name.strip_suffix(RECORD).is_some_and(|handle| {
-                        is_store_handle(handle) && !store.meta_path(handle).exists()
+                    let orphan = [RECORD, ".lease"].iter().any(|suffix| {
+                        name.strip_suffix(suffix).is_some_and(|handle| {
+                            is_store_handle(handle) && !store.meta_path(handle).exists()
+                        })
                     });
-                    let leftover = (name.starts_with('.') && name.ends_with(".tmp"))
-                        || name.ends_with(".stale")
-                        || orphan;
+                    let leftover = name.ends_with(".tmp") || name.ends_with(".break") || orphan;
                     if leftover && store.fresh(&entry.path()) == Some(false) {
                         remove(&entry.path())?;
                     }

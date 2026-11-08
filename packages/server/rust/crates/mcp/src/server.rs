@@ -155,6 +155,9 @@ pub struct Mcp {
     store: Option<Arc<dyn HandleStore>>,
     max_handles: usize,
     idle: Duration,
+    store_sweep_every: Duration,
+    /// Held while the store is swept, so a stop can wait for a sweep.
+    sweeping: Arc<tokio::sync::Mutex<()>>,
     live: Option<Live>,
     live_shared: Option<Arc<LiveShared>>,
     rooms: Option<Rooms>,
@@ -175,14 +178,13 @@ fn store_failed(err: StoreError) -> Fault {
     HostError::surface("SOURCE_UNAVAILABLE", STORE_DOWN).into()
 }
 
-/// Keeps a lease while a call runs; never ends, and stops renewing once a
-/// renew fails (the lease is then lost, and the record save will say so).
+/// Keeps a lease while a call runs; never ends. A failed renew is logged
+/// and the call goes on: a lost lease shows when the call saves or removes.
 async fn keep_renewing(lease: &dyn HandleLease) {
     loop {
         tokio::time::sleep(LEASE_RENEW_EVERY).await;
         if let Err(err) = lease.renew().await {
             eprintln!("blok-mcp: renewing a handle lease failed: {err}");
-            return std::future::pending().await;
         }
     }
 }
@@ -474,9 +476,8 @@ pub(crate) async fn option_refusal(
     if hooks.page_creator.is_some() {
         checked["createPage"] = Value::Bool(true);
     }
-    if hooks.handle_store.is_some() {
-        checked["handleStore"] = Value::Bool(true);
-    }
+    // No handleStore here: its stand-in in the bundle's mcpCheckOptions lacks
+    // sweep, so it is always refused; the Rust trait already has every op.
     // A host's source is a source: with a ticket URL it still needs a per-document check.
     if custom_source {
         checked["source"] = json!({ "kind": "custom" });
@@ -690,6 +691,8 @@ impl Mcp {
             store,
             max_handles: max,
             idle,
+            store_sweep_every: STORE_SWEEP_EVERY,
+            sweeping: Arc::default(),
             calls: Arc::default(),
             reserved: std::sync::Mutex::default(),
             uploads,
@@ -725,15 +728,19 @@ impl Mcp {
             return;
         };
         let weak = Arc::downgrade(self);
+        let every = self.store_sweep_every;
         tokio::spawn(async move {
-            let mut ticks = tokio::time::interval(STORE_SWEEP_EVERY);
+            let mut ticks = tokio::time::interval(every);
             ticks.tick().await;
             loop {
                 ticks.tick().await;
-                let Some(idle) = weak.upgrade().map(|mcp| mcp.idle) else {
+                let Some(mcp) = weak.upgrade() else { return };
+                let _sweeping = mcp.sweeping.lock().await;
+                // Checked under the lock: a stop that took it first ends the sweeps.
+                if mcp.handles.is_closed() {
                     return;
-                };
-                if let Err(err) = store.sweep(idle).await {
+                }
+                if let Err(err) = store.sweep(mcp.idle).await {
                     eprintln!("blok-mcp: sweeping the handle store failed: {err}");
                 }
             }
@@ -742,9 +749,15 @@ impl Mcp {
 
     /// Node's stop: each handle closes once its calls are done, so a room
     /// gets its presence departure and close frame. Gives up after `limit`.
+    /// A sweep of the handle store in flight is waited for; none starts after.
     pub async fn close_all(&self, limit: Duration) {
         let mut closing = tokio::task::JoinSet::new();
-        for session in self.handles.take_all() {
+        let sessions = self.handles.take_all();
+        let sweeping = self.sweeping.clone();
+        closing.spawn(async move {
+            drop(sweeping.lock().await);
+        });
+        for session in sessions {
             closing.spawn(async move {
                 let session = session.lock_owned().await;
                 if let Session::Remote(room) = &*session {
@@ -2826,5 +2839,81 @@ pub(crate) mod tests {
                 .unwrap()
                 .contains("Kept")
         );
+    }
+
+    /// A store whose sweep is slow, and counts its runs.
+    struct SlowSweep {
+        inner: crate::handle_store::MemoryHandleStore,
+        started: std::sync::atomic::AtomicUsize,
+        finished: std::sync::atomic::AtomicUsize,
+    }
+
+    impl HandleStore for SlowSweep {
+        fn count(
+            &self,
+            principal: String,
+            idle: Duration,
+        ) -> crate::uploads::BoxFuture<'_, Result<usize, StoreError>> {
+            self.inner.count(principal, idle)
+        }
+        fn try_add(
+            &self,
+            handle: String,
+            record: HandleRecord,
+            max: usize,
+            idle: Duration,
+        ) -> crate::uploads::BoxFuture<'_, Result<bool, StoreError>> {
+            self.inner.try_add(handle, record, max, idle)
+        }
+        fn acquire(
+            &self,
+            handle: String,
+            idle: Duration,
+            timeout: Duration,
+        ) -> crate::uploads::BoxFuture<'_, Result<Acquired, StoreError>> {
+            self.inner.acquire(handle, idle, timeout)
+        }
+        fn sweep(&self, _: Duration) -> crate::uploads::BoxFuture<'_, Result<(), StoreError>> {
+            use std::sync::atomic::Ordering;
+            Box::pin(async move {
+                self.started.fetch_add(1, Ordering::SeqCst);
+                tokio::time::sleep(Duration::from_millis(300)).await;
+                self.finished.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            })
+        }
+    }
+
+    // Shutdown waits for a sweep in flight, and no sweep starts after it.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_stop_awaits_the_store_sweep_and_ends_it() {
+        use std::sync::atomic::Ordering;
+        let store = Arc::new(SlowSweep {
+            inner: crate::handle_store::MemoryHandleStore::new(),
+            started: Default::default(),
+            finished: Default::default(),
+        });
+        let options = json!({ "transport": { "kind": "stdio" }, "auth": { "kind": "none" } });
+        let hooks = Hooks {
+            handle_store: Some(store.clone()),
+            ..Hooks::default()
+        };
+        let mut mcp = Mcp::build(Arc::new(Bundle::new(1).unwrap()), &options, hooks)
+            .await
+            .unwrap();
+        mcp.store_sweep_every = Duration::from_millis(20);
+        let mcp = Arc::new(mcp);
+        mcp.spawn_sweeper();
+        while store.started.load(Ordering::SeqCst) == 0 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        mcp.close_all(Duration::from_secs(5)).await;
+        assert_eq!(
+            store.finished.load(Ordering::SeqCst),
+            store.started.load(Ordering::SeqCst)
+        );
+        let after = store.started.load(Ordering::SeqCst);
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert_eq!(store.started.load(Ordering::SeqCst), after);
     }
 }

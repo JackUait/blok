@@ -96,9 +96,8 @@ pub async fn start(
     if started.create_page.is_some() {
         checked_options["createPage"] = Value::Bool(true);
     }
-    if started.handle_store.is_some() {
-        checked_options["handleStore"] = Value::Bool(true);
-    }
+    // No handleStore here: its stand-in in the bundle's mcpCheckOptions lacks
+    // sweep, so it is always refused; the Rust trait already has every op.
     let checked = bundle
         .call(
             "mcpCheckOptions",

@@ -9892,12 +9892,18 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 0.1s ease-in-out;
 }
 
-/* Filter, Sort, Search and settings: 28px icon buttons, padding 6px, Notion icon gray (research/07:53). */
+/* Filter, Sort, Search and settings: 28px icon buttons in Notion icon gray (research/07:53).
+   The icons draw at their own 20px: Notion's glyphs are 12-13px wide (side-by-side-v1.md X3). */
 [data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] {
   width: 28px;
   height: 28px;
-  padding: var(--blok-space-1-5);
+  padding: var(--blok-space-1);
   color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-view-toolbar] > button:hover,

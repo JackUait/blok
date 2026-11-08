@@ -64,6 +64,15 @@ describe('toolbar Filter and Sort (research/07:53)', () => {
     expect(body).toContain('height: 28px');
     expect(body).toContain('color: var(--blok-database-table-header-icon)');
   });
+
+  // side-by-side-v1.md X3: Notion's glyphs are 12-13px wide (filter 13x8, sort 13x11); Blok's
+  // 20-unit icons drawn at 16px came out 10px wide. At their own 20px they match.
+  it('draw their icons at the icons\' own 20px, inside the same 28px button', () => {
+    const body = ruleBody('[data-blok-database-view-toolbar] [data-blok-database-toolbar-icon]');
+
+    expect(body).toContain('padding: var(--blok-space-1)');
+    expect(ruleBody('[data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] svg')).toMatch(/width: 20px;\s*height: 20px/);
+  });
 });
 
 describe('board card (research/07:132-135, 08:73, 317)', () => {

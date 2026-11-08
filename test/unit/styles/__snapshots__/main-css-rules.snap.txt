@@ -12953,8 +12953,13 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] {
   width: 28px;
   height: 28px;
-  padding: var(--blok-space-1-5);
+  padding: var(--blok-space-1);
   color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-view-toolbar] > button:hover, [data-blok-database-view-toolbar] > button[data-popover-open] {

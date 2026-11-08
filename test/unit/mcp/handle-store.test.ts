@@ -399,6 +399,13 @@ describe('the files handle store', () => {
     expect(readdirSync(dir).sort()).toEqual([...leftovers.map((name) => `young-${name}`), 'kept.meta.json', 'kept.record.json'].sort());
   });
 
+  it.skipIf(process.platform === 'win32')('refuses a link to a directory even when the path ends in a slash', () => {
+    const link = join(tempDir(), 'handles');
+
+    symlinkSync(tempDir(), link);
+    expect(() => createFilesHandleStore(`${link}/`)).toThrow(McpConfigError);
+  });
+
   it('keeps a long lease alive by refreshing it', async () => {
     const dir = tempDir();
     const options = { leaseStaleMs: 300, heartbeatMs: 50 };

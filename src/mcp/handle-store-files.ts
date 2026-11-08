@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { lstatSync, mkdirSync } from 'node:fs';
 import { open, readdir, readFile, rename, rm, stat, utimes } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import { McpConfigError } from './config';
 import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from './options';
@@ -127,7 +127,10 @@ const prepareDirectory = (dir: string): void => {
   }
 };
 
-export const createFilesHandleStore = (dir: string, options: FilesHandleStoreOptions = {}): BlokMcpHandleStore => {
+export const createFilesHandleStore = (given: string, options: FilesHandleStoreOptions = {}): BlokMcpHandleStore => {
+  // lstat on a path that ends in a slash follows a link, so the path is normalised first.
+  const dir = resolve(given);
+
   prepareDirectory(dir);
   const leaseStaleMs = options.leaseStaleMs ?? LEASE_STALE_MS;
   const heartbeatMs = options.heartbeatMs ?? HEARTBEAT_MS;

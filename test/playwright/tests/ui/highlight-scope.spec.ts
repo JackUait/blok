@@ -3,7 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
-import { countStyled } from '../helpers/style-trace';
+import { countStyled, STYLE_MARK_END, STYLE_MARK_START } from '../helpers/style-trace';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
@@ -57,14 +57,19 @@ const paints = async (target: Locator, name: string): Promise<boolean> => {
   return !before.equals(after);
 };
 
-/** Restyles every element in the table box, as a theme switch would. */
+/**
+ * Restyles every element in the table box, as a theme switch would. The marks
+ * keep a restyle the page runs on its own, like a lazy sheet landing, out of the count.
+ */
 const restyleTable = (page: Page): Promise<void> =>
-  page.locator(TABLE_SELECTOR).evaluate((table) => {
+  page.locator(TABLE_SELECTOR).evaluate((table, [start, end]) => {
     const box = table.closest<HTMLElement>('[data-blok-element-content]');
 
+    console.timeStamp(start);
     box?.style.setProperty('--blok-test-restyle', String(Math.random()));
     document.body.getBoundingClientRect();
-  });
+    console.timeStamp(end);
+  }, [STYLE_MARK_START, STYLE_MARK_END]);
 
 /** Turns the editor highlight rules off or back on, in place. */
 const toggleEditorHighlightRules = (page: Page, off: boolean): Promise<void> =>
@@ -145,10 +150,10 @@ test.describe('Highlight rules', () => {
     });
     const elements = await page.locator(TABLE_SELECTOR).evaluate(table => table.closest('[data-blok-element-content]')?.querySelectorAll('*').length ?? 0);
 
-    const withRules = await countStyled(page, () => restyleTable(page));
+    const withRules = await countStyled(page, () => restyleTable(page), { marked: true });
 
     await toggleEditorHighlightRules(page, true);
-    const withoutRules = await countStyled(page, () => restyleTable(page));
+    const withoutRules = await countStyled(page, () => restyleTable(page), { marked: true });
 
     await toggleEditorHighlightRules(page, false);
 

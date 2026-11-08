@@ -474,6 +474,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       this.rowDrag = new DatabaseTableRowDrag({
         grid: gridEl,
         state: this.state,
+        // Notion selects the pressed row at once; a row already in a selection keeps it.
+        onPress: (rowId) => {
+          const selection = this.state.selection;
+
+          if (selection?.kind !== 'rows' || !selection.rowIds.includes(rowId)) this.grid?.selectRows([rowId]);
+        },
         onDrop: (result) => {
           if (this.options.view.sorts.length > 0) {
             this.handlers?.sortedRowDrop(result);

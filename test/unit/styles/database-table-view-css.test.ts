@@ -96,6 +96,12 @@ describe('database table view styles', () => {
     expect(`${selected}${anchor}${row}`).not.toContain('focus-ring');
   });
 
+  // notion-motion.md "Table row drag": the ghost has no background, and the source row stays painted as normal.
+  it('draws the row drag ghost with no background, and fades the pressed row\'s selection fill out while it drags', () => {
+    expect(exactRule('[data-blok-database-table-row-ghost]')).toContain('background-color: transparent');
+    expect(exactRule('[data-blok-database-table-row][data-dragging]::after')).toContain('opacity: 0');
+  });
+
   it('marks a checked row checkbox with primary ink on a gray fill', () => {
     const checked = ruleBody('[data-blok-database-table-row-checkbox][aria-checked="true"]');
 

@@ -11904,6 +11904,10 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
+[data-blok-database-table-row][data-dragging]::after {
+  opacity: 0;
+}
+
 [data-blok-database-table-row]::before {
   content: '';
   position: absolute;
@@ -12781,6 +12785,10 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-table-cell-text);
   font-size: 14px;
   line-height: 21px;
+}
+
+[data-blok-database-table-row-ghost] {
+  background-color: transparent;
 }
 
 [data-blok-database-table-row-ghost] > [data-blok-database-table-gutter] {

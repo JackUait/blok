@@ -8653,6 +8653,11 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
+/* A press on ⋮⋮ selects the row, but the row being dragged stays painted as normal (notion-motion.md "Table row drag"). */
+[data-blok-database-table-row][data-dragging]::after {
+  opacity: 0;
+}
+
 /*
   The row open in the side peek: Notion's 1px ring (62-close-hover.png), in primary ink, not blue.
   Every row carries it at 0, so the ring fades in and out as the peek opens, closes and steps.
@@ -9630,6 +9635,11 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-table-cell-text);
   font-size: 14px;
   line-height: 21px;
+}
+
+/* Notion's row ghost has no background (notion-motion.md "Table row drag"). */
+[data-blok-database-table-row-ghost] {
+  background-color: transparent;
 }
 
 [data-blok-database-table-row-ghost] > [data-blok-database-table-gutter] {

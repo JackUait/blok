@@ -1581,6 +1581,31 @@ describe('DatabaseTableView', () => {
       expect(document.querySelector('[data-blok-database-table-row-ghost]')).toBeNull();
     });
 
+    // notion-motion.md "Table row drag": pressing ⋮⋮ selects the row, so the selection bar shows during the drag.
+    it('selects the row on a press of ⋮⋮, before it moves', () => {
+      const { root } = mount();
+
+      root.querySelector<HTMLElement>('[data-row-id="r2"] [data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 50, button: 0 }));
+
+      expect(root.querySelector('[data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('true');
+      expect(root.querySelector('[data-blok-database-table-selection-count]')?.textContent).toBe('tools.database.tableSelectedCount:1');
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 50 }));
+    });
+
+    it('keeps a selection of several rows when one of them is pressed', () => {
+      const { root } = mount();
+      const checkbox = (id: string): HTMLElement | null => root.querySelector<HTMLElement>(`[data-row-id="${id}"] [data-blok-database-table-row-checkbox]`);
+
+      checkbox('r1')?.click();
+      checkbox('r2')?.click();
+      root.querySelector<HTMLElement>('[data-row-id="r2"] [data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 50, button: 0 }));
+
+      expect(root.querySelector('[data-blok-database-table-selection-count]')?.textContent).toBe('tools.database.tableSelectedCount:2');
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 50 }));
+    });
+
     it('in a sorted view a drop goes to the sorted-drop hook instead', () => {
       const { root, handlers } = mount({ view: tableView({ sorts: [{ propertyId: 'p-amount', direction: 'asc' }] }) });
       const rowEls = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];

@@ -11,9 +11,11 @@ export interface TableColumnDragOptions {
 }
 
 /**
- * Column reorder by dragging a header left or right. A press that never moves
- * stays a click, which opens the header menu. Visuals reuse the row drag's
- * ghost and drop line; Notion's column drag look was not measured.
+ * Column reorder by dragging a header left or right, Notion's model
+ * (notion-motion.md "Column header drag"): a pressed-fill copy of the header
+ * follows the pointer, its slot stays empty, and the headers between it and
+ * the pointer slide aside. Body cells stay put until the drop. A press that
+ * never moves stays a click, which opens the header menu.
  */
 export class DatabaseTableColumnDrag {
   private readonly grid: HTMLElement;
@@ -21,7 +23,8 @@ export class DatabaseTableColumnDrag {
   private readonly onDrop: (propertyId: string, beforeId: string | null) => void;
   private press: { header: HTMLElement; x: number; y: number; offsetX: number } | null = null;
   private ghost: HTMLElement | null = null;
-  private line: HTMLElement | null = null;
+  /** Header boxes at the start: the slid headers' live boxes would move the target under the pointer. */
+  private slots: Array<{ el: HTMLElement; rect: DOMRect }> = [];
   private beforeId: string | null | undefined = undefined;
 
   constructor(options: TableColumnDragOptions) {
@@ -88,44 +91,32 @@ export class DatabaseTableColumnDrag {
     copyGhostContext(header, this.grid, ghost, { attributes: ['data-vertical-lines'] });
     mountGhost(header, ghost);
     this.ghost = ghost;
-
-    const line = document.createElement('div');
-
-    line.setAttribute('data-blok-database-table-column-drop-line', '');
-    line.setAttribute('aria-hidden', 'true');
-    this.grid.appendChild(line);
-    this.line = line;
+    this.slots = this.headers().map((el) => ({ el, rect: el.getBoundingClientRect() }));
+    header.setAttribute('data-dragging', '');
+    this.grid.setAttribute('data-column-dragging', '');
     this.state.busy = true;
   }
 
   private track(clientX: number): void {
     const source = this.press?.header;
-    const headers = this.headers().filter((el) => el !== source);
+    const sourceIndex = this.slots.findIndex((slot) => slot.el === source);
+    const others = this.slots.filter((slot) => slot.el !== source);
     const rtl = getComputedStyle(this.grid).direction === 'rtl';
-    const before = headers.find((el) => {
-      const rect = el.getBoundingClientRect();
+    const found = others.findIndex(({ rect }) => {
       const mid = rect.left + rect.width / 2;
 
       return rtl ? clientX > mid : clientX < mid;
-    }) ?? null;
+    });
+    const target = found === -1 ? others.length : found;
+    const width = this.slots[sourceIndex]?.rect.width ?? 0;
 
-    this.beforeId = before?.getAttribute('data-property-id') ?? null;
+    this.beforeId = others[target]?.el.getAttribute('data-property-id') ?? null;
+    others.forEach(({ el }, index) => {
+      // A header before the source moves one slot toward the end when the target is at or before it; one after moves back when the target is past it.
+      const shift = (index < sourceIndex && index >= target ? 1 : 0) - (index >= sourceIndex && index < target ? 1 : 0);
 
-    const line = this.line;
-    const last = headers[headers.length - 1];
-
-    if (line === null) {
-      return;
-    }
-    const gridRect = this.grid.getBoundingClientRect();
-    const beforeRect = before?.getBoundingClientRect();
-    const lastRect = last?.getBoundingClientRect();
-    const beforeEdge = rtl ? beforeRect?.right : beforeRect?.left;
-    const endEdge = rtl ? lastRect?.left : lastRect?.right;
-    const edge = beforeEdge ?? endEdge ?? gridRect.left;
-
-    line.style.left = `${edge - gridRect.left - 2}px`;
-    line.setAttribute('data-visible', '');
+      el.style.setProperty('transform', shift === 0 ? '' : `translateX(${shift * width * (rtl ? -1 : 1)}px)`);
+    });
   }
 
   private readonly handleUp = (): void => {
@@ -160,12 +151,15 @@ export class DatabaseTableColumnDrag {
     document.removeEventListener('pointerup', this.handleUp);
     document.removeEventListener('pointercancel', this.handleCancel);
     this.ghost?.remove();
-    this.line?.remove();
+    // The slide transition goes first, so the headers jump back instead of sliding.
+    this.grid.removeAttribute('data-column-dragging');
+    this.slots.forEach(({ el }) => el.style.removeProperty('transform'));
+    this.press?.header.removeAttribute('data-dragging');
     if (this.ghost !== null) {
       this.state.busy = false;
     }
     this.ghost = null;
-    this.line = null;
+    this.slots = [];
     this.press = null;
     this.beforeId = undefined;
   }

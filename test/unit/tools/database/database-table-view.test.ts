@@ -1449,6 +1449,50 @@ describe('DatabaseTableView', () => {
       expect(handlers.openPropertyMenu).not.toHaveBeenCalled();
     });
 
+    // notion-motion.md "Column header drag": only the header row moves, and the other headers slide aside.
+    describe('drag', () => {
+      const lay = (root: HTMLElement): HTMLElement[] => {
+        const headers = [...root.querySelectorAll<HTMLElement>('[role="columnheader"][data-property-id]')];
+
+        headers.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(i * 200, 0, 200, 36)));
+
+        return headers;
+      };
+
+      it('slides the headers between the start and the pointer aside by the dragged width, and leaves the body alone', () => {
+        const { root } = mount();
+        const headers = lay(root);
+
+        pointer(header(root, 'p-notes'), 'pointerdown', 250, 10);
+        pointer(document, 'pointermove', 560, 10);
+
+        expect(header(root, 'p-amount').style.transform).toBe('translateX(-200px)');
+        expect(header(root, 'p-title').style.transform).toBe('');
+        expect(headers.slice(3).every((el) => el.style.transform === '')).toBe(true);
+        expect(header(root, 'p-notes').hasAttribute('data-dragging')).toBe(true);
+        expect(cell(root, 'r1', 'p-amount').style.transform).toBe('');
+        expect(root.querySelector('[data-blok-database-table-column-drop-line]')).toBeNull();
+        expect(document.querySelector('[data-blok-database-table-column-ghost]')).not.toBeNull();
+        pointer(document, 'pointerup', 560, 10);
+      });
+
+      it('slides headers the other way when the drag goes left, and puts them back on release', () => {
+        const { root, handlers } = mount();
+
+        lay(root);
+        pointer(header(root, 'p-amount'), 'pointerdown', 450, 10);
+        pointer(document, 'pointermove', 250, 10);
+
+        expect(header(root, 'p-notes').style.transform).toBe('translateX(200px)');
+
+        pointer(document, 'pointerup', 250, 10);
+
+        expect(header(root, 'p-notes').style.transform).toBe('');
+        expect(header(root, 'p-amount').hasAttribute('data-dragging')).toBe(false);
+        expect(vi.mocked(handlers.updateView).mock.lastCall?.[0].properties?.map((p) => p.id).slice(0, 3)).toEqual(['p-title', 'p-amount', 'p-notes']);
+      });
+    });
+
     it('the + header button asks for a new property', () => {
       const { root, handlers } = mount();
       const add = root.querySelector<HTMLElement>('[data-blok-database-table-add-property]');

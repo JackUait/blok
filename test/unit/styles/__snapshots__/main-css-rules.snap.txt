@@ -12795,7 +12795,27 @@ textarea[data-blok-database-cell-input] {
   display: none;
 }
 
-[data-blok-database-table-drop-line], [data-blok-database-table-column-drop-line] {
+[data-blok-database-table-column-ghost] {
+  align-items: center;
+  opacity: 1;
+  color: var(--blok-database-table-header-text);
+  background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg));
+  box-shadow: none;
+}
+
+[data-blok-database-table-column-header][data-dragging] {
+  visibility: hidden;
+}
+
+[data-blok-database-table-grid][data-column-dragging] {
+  user-select: none;
+}
+
+[data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header] {
+  transition: background-color 20ms ease-in, transform 200ms ease;
+}
+
+[data-blok-database-table-drop-line] {
   position: absolute;
   z-index: 4;
   pointer-events: none;
@@ -12809,12 +12829,7 @@ textarea[data-blok-database-cell-input] {
   height: 4px;
 }
 
-[data-blok-database-table-column-drop-line] {
-  inset-block: 0;
-  width: 4px;
-}
-
-[data-blok-database-table-drop-line][data-visible], [data-blok-database-table-column-drop-line][data-visible] {
+[data-blok-database-table-drop-line][data-visible] {
   opacity: 1;
 }
 
@@ -12914,7 +12929,7 @@ textarea[data-blok-database-cell-input] {
   cursor: ns-resize;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-table-row]::before, [data-blok-database-table-row]::after, [data-blok-database-table-resize], [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all], [data-blok-database-table-row-add], [data-blok-database-table-row-handle], [data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg, [data-blok-database-table-drop-line], [data-blok-database-table-column-drop-line], [data-blok-database-table-calc], [data-blok-database-table-column-header], [data-blok-database-table-open], [data-blok-database-table-add-property] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-table-row]::before, [data-blok-database-table-row]::after, [data-blok-database-table-resize], [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all], [data-blok-database-table-row-add], [data-blok-database-table-row-handle], [data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg, [data-blok-database-table-drop-line], [data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header], [data-blok-database-table-calc], [data-blok-database-table-column-header], [data-blok-database-table-open], [data-blok-database-table-add-property] {
   transition: none;
 }
 

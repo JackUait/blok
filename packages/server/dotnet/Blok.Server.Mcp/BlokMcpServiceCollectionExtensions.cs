@@ -264,6 +264,7 @@ public static class BlokMcpServiceCollectionExtensions
           : null,
       Authorize = hook,
       PageCreator = options.PageCreator,
+      HandleStore = options.HandleStore,
       Rooms = options.LiveRooms ? RoomsOf(provider) : null,
     };
   }
@@ -332,6 +333,10 @@ public static class BlokMcpServiceCollectionExtensions
     if (options.PageCreator is not null)
     {
       check["createPage"] = true;
+    }
+    if (options.HandleStore is not null)
+    {
+      check["handleStore"] = true;
     }
     // Node's names: the shared check words its refusal with them.
     if (options.Schema is { } schema)

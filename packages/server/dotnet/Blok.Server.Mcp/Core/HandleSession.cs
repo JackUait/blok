@@ -45,6 +45,13 @@ internal sealed class StoredSession : IHandleSession
   private bool stale;
 
   private StoredSession(McpBundle bundle, IDocumentSource source, string documentId, bool write, JsonObject flags, JsonObject actor, string contractRevision, LoadedDocument first)
+      : this(bundle, source, documentId, write, flags, actor, contractRevision, first.Raw, first.Version, !first.Missing)
+  {
+  }
+
+  private StoredSession(
+      McpBundle bundle, IDocumentSource source, string documentId, bool write, JsonObject flags, JsonObject actor, string contractRevision,
+      JsonNode document, string? version, bool exists)
   {
     // Node creates a page's document mid-batch; Jint cannot wait on the host, so pages are made first.
     this.bundle = bundle;
@@ -56,9 +63,9 @@ internal sealed class StoredSession : IHandleSession
     mcp = (JsonObject)flags.DeepClone();
     mcp["mode"] = "stored";
     mcp["write"] = write;
-    document = first.Raw;
-    version = first.Version;
-    exists = !first.Missing;
+    this.document = document;
+    this.version = version;
+    this.exists = exists;
   }
 
   /// <summary>Set under page-map: page documents this batch makes or writes.</summary>
@@ -77,6 +84,45 @@ internal sealed class StoredSession : IHandleSession
     var first = await source.LoadAsync(documentId, cancellationToken);
 
     return new StoredSession(bundle, source, documentId, write, flags, actor, contractRevision, first) { Pages = pages, Uploads = uploads, Opener = opener };
+  }
+
+  /// <summary>
+  /// A handle a shared store kept, rebuilt without a load: the record carries the document. Its
+  /// steps hold only while their revision is the document's; the bundle checks that on each batch.
+  /// </summary>
+  internal static StoredSession Restore(
+      McpBundle bundle, IDocumentSource source, BlokMcpHandleRecord record, JsonObject flags, string contractRevision,
+      PagePorts? pages, UploadPorts? uploads, McpCaller opener)
+  {
+    return new StoredSession(bundle, source, record.DocumentId, record.Write, flags, (JsonObject)opener.Actor.DeepClone(), contractRevision, record.Document.DeepClone(), record.Version, true)
+    {
+      Pages = pages,
+      Uploads = uploads,
+      Opener = opener,
+      history = record.History.DeepClone(),
+      stale = record.Stale,
+    };
+  }
+
+  /// <summary>The handle as a shared store keeps it, for the caller that opened it.</summary>
+  internal BlokMcpHandleRecord Snapshot()
+  {
+    var opener = Opener ?? throw new InvalidOperationException("A stored session without its opener cannot go into a handle store.");
+
+    return new BlokMcpHandleRecord
+    {
+      ContractRevision = contractRevision,
+      Principal = opener.Principal,
+      ClientName = opener.ClientName,
+      Scopes = opener.Scopes,
+      Actor = (JsonObject)opener.Actor.DeepClone(),
+      DocumentId = documentId,
+      Write = write,
+      Version = version,
+      Stale = stale,
+      Document = document.DeepClone() as JsonObject ?? new JsonObject { ["blocks"] = new JsonArray() },
+      History = history.DeepClone() as JsonObject ?? [],
+    };
   }
 
   public JsonObject Describe()

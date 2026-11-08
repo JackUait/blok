@@ -117,6 +117,10 @@ public sealed class BlokMcpCommandLine
     {
       options.PageCreator = pageCreator;
     }
+    if (config.HandleStore is { } handleStore)
+    {
+      options.HandleStore = handleStore;
+    }
     options.CommandLineHost = host;
   }
 }

@@ -79,6 +79,45 @@ public sealed class CommandLineTests : IDisposable
   }
 
   [Fact]
+  public async Task HandleStoreFilesBecomesTheFilesStoreOnTheCliAndOnTheOptions()
+  {
+    var argv = new[] { "--source", "files:./docs", "--handle-store", $"files:{Path.Combine(dir, "handles")}" };
+    var cli = await McpCommandLine.ConfigureAsync(BlokMcpHost.CreateRuntime(1), argv, new Dictionary<string, string>());
+    var parsed = await BlokMcpCommandLine.ParseAsync(argv);
+    var options = new BlokMcpOptions();
+
+    parsed.ApplyTo(options);
+
+    Assert.IsType<FilesHandleStore>(cli.HandleStore);
+    Assert.IsType<FilesHandleStore>(options.HandleStore);
+    Assert.True(Directory.Exists(Path.Combine(dir, "handles")));
+  }
+
+  [Fact]
+  public async Task HandleStoreMemoryKeepsHandlesInTheProcess()
+  {
+    var cli = await McpCommandLine.ConfigureAsync(BlokMcpHost.CreateRuntime(1), ["--source", "files:./docs", "--handle-store", "memory"], new Dictionary<string, string>());
+
+    Assert.Null(cli.HandleStore);
+  }
+
+  [Fact]
+  public async Task AHandleStoreDirectoryOthersCanReachIsRefusedAtStart()
+  {
+    var open = Path.Combine(dir, "open");
+
+    Directory.CreateDirectory(open);
+    if (!OperatingSystem.IsWindows())
+    {
+      File.SetUnixFileMode(open, (UnixFileMode)0b111_111_111);
+    }
+
+    var refused = await Assert.ThrowsAsync<BlokMcpConfigException>(() => BlokMcpCommandLine.ParseAsync(["--source", "files:./docs", "--handle-store", $"files:{open}"]));
+
+    Assert.Equal($"--handle-store directory {open} must be a directory (not a link) owned by this user, with no group or world access (chmod 700)", refused.Message);
+  }
+
+  [Fact]
   public async Task RefusesABadFlagWithTheCliWords()
   {
     var refused = await Assert.ThrowsAsync<BlokMcpConfigException>(() => BlokMcpCommandLine.ParseAsync(["--nope"]));

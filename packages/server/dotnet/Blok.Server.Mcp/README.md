@@ -141,6 +141,30 @@ sealed class MyPages(MyDb db) : IBlokPageCreator
 - Undo, redo and `block.delete` never call it. An undone or failed insert leaves your page in place, with no parent pointing at it. Keep a new page hidden until a saved parent names its `pageId`.
 - The webhook gets `POST` with `Content-Type: application/json` and `{ "parentDocumentId", "principal", "actor": { "id", "name", "onBehalfOf" }, "suggestedPageId" }`. `200 { "pageId": "<id>" }` makes the page; `200 { "pageId": null }` refuses. Any other status (201 too), a redirect, a body without a string or null `pageId`, a network error or no answer within 10 seconds is a host error.
 
+## Handles on several replicas
+
+A handle lives in the process that opened it, so behind a load balancer the next call can land where it is unknown. Set `HandleStore` to keep stored-mode handles in a store every replica shares. `blok-mcp --handle-store files:<dir>` uses a directory, for several processes on one machine.
+
+```csharp
+options.HandleStore = new MyHandleStore(db); // IBlokMcpHandleStore, over SQL or Redis
+```
+
+- Each call takes the handle's lease, rebuilds the handle from its record (`BlokMcpHandleRecord`), runs, saves the document to your source, saves the record if it changed, and releases the lease. Calls on one handle run one at a time across replicas.
+- The record is JSON (`ToJson`, `FromJson`): the document, its undo steps, the source version and the caller that opened the handle, whose principal, client name, scopes and actor every later call works with.
+- Live handles hold sockets, so they stay in the process that opened them. The per-principal limit counts the store's handles and this process's live ones.
+- A handle from a server with another tool contract answers `VERSION_SKEW`: the agent opens the document again. Another principal, an unknown record format, or a handle that is not 1 to 128 characters of `A-Z a-z 0-9 _ -` answers `UNKNOWN_HANDLE`; Blok checks all of these, not your store.
+- A store that throws is logged in full, and the agent sees `SOURCE_UNAVAILABLE` "The handle store is unavailable. Retry shortly.". A lease still held after 30 seconds answers `SOURCE_UNAVAILABLE` "Another call is using this handle. Retry shortly.".
+- When the record cannot be saved after your source took the batch, the batch's answer stands, the error is logged, and the handle is removed (unless another call took the lease over): the next call answers `UNKNOWN_HANDLE`.
+- Blok calls `SweepAsync` every 60 seconds. Stopping a replica waits for its own calls and leaves the store as it is.
+- Your duties:
+  - `TryAddAsync` counts and adds as one atomic step per principal, for example under a row lock or in a Lua script.
+  - A lease is exclusive per handle across replicas, time-limited, and renewed while it is held. Exclusivity is best effort: a paused holder can lose its lease, and then only your source's version check (`DocumentChanged`) keeps a write from being lost. A source that does not check versions can lose writes across replicas.
+  - `SaveAsync` and `RemoveAsync` throw, and change nothing, once the lease no longer holds the handle.
+  - Records can be large, since every undo step is a whole document: store them as long text.
+  - Keep null scopes and empty scopes apart.
+  - Records are trusted. Whoever can write your store can forge a handle's actor, scopes and history.
+- The files store creates its directory with mode 0700 and every file with 0600. It refuses to start when the directory is a link, not a directory, not yours, or open to group or world.
+
 ## Docs
 
 [https://blokeditor.com/docs](https://blokeditor.com/docs) and [the server page](https://blokeditor.com/server#mcp).

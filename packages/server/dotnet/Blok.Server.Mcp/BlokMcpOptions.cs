@@ -136,6 +136,13 @@ public sealed class BlokMcpOptions
   /// </summary>
   public Blok.Server.Agent.IBlokPageCreator? PageCreator { get; set; }
 
+  /// <summary>
+  /// Where stored-mode handles live, so a call can land on any replica that shares the store
+  /// (blok-mcp <c>--handle-store files:&lt;dir&gt;</c>). Null (the default) keeps them in this
+  /// process, as before. Live handles always stay in the process that opened them.
+  /// </summary>
+  public IBlokMcpHandleStore? HandleStore { get; set; }
+
   /// <summary>The host's custom tool descriptions, as <c>--manifest &lt;file&gt;</c> holds them. Checked at startup.</summary>
   public System.Text.Json.Nodes.JsonObject? Manifest { get; set; }
 

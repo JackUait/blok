@@ -25,6 +25,27 @@ internal sealed class HandleRegistry<TSession>(
     return McpHostError.Surface("UNKNOWN_HANDLE", "No open document has this handle. It may have expired; call blok_open again.");
   }
 
+  internal static McpHostError ShuttingDown()
+  {
+    return McpHostError.Surface("SOURCE_UNAVAILABLE", "The server is shutting down.");
+  }
+
+  internal static McpHostError HandleLimit(double maxPerPrincipal)
+  {
+    return McpHostError.Surface(
+        "HANDLE_LIMIT",
+        $"You already have {McpNumbers.Format(maxPerPrincipal)} open documents. Close one with blok_close.");
+  }
+
+  /// <summary>Whether this process holds the handle.</summary>
+  internal bool Has(string handle)
+  {
+    lock (gate)
+    {
+      return entries.ContainsKey(handle);
+    }
+  }
+
   /// <summary>Throws when <see cref="Add"/> would refuse, so a caller refuses before opening.</summary>
   internal void AssertRoom(string principal)
   {
@@ -188,15 +209,15 @@ internal sealed class HandleRegistry<TSession>(
   {
     if (closed)
     {
-      throw McpHostError.Surface("SOURCE_UNAVAILABLE", "The server is shutting down.");
+      throw ShuttingDown();
     }
     if (entries.Values.Count(entry => entry.Principal == principal) >= maxPerPrincipal)
     {
-      throw McpHostError.Surface(
-          "HANDLE_LIMIT",
-          $"You already have {McpNumbers.Format(maxPerPrincipal)} open documents. Close one with blok_close.");
+      throw HandleLimit(maxPerPrincipal);
     }
   }
+
+  internal static string NewHandleId() => NewHandle();
 
   private static string NewHandle()
   {

@@ -1,0 +1,363 @@
+using System.Text.Json.Nodes;
+using Blok.Server.Mcp.Core;
+using Blok.Server.Mcp.Outbound;
+using Xunit;
+
+namespace Blok.Server.Mcp.Tests;
+
+/// <summary>BlokMcpOptions.HandleStore: stored handles shared by servers through a host's store.</summary>
+public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposable
+{
+  private readonly string dir = Directory.CreateTempSubdirectory("blok-mcp-shared-").FullName;
+  private readonly BundleFixture fixture;
+  private readonly List<(string Message, Exception Error)> logged = [];
+
+  public SharedHandlesTests(BundleFixture fixture)
+  {
+    this.fixture = fixture;
+    File.WriteAllText(Path.Combine(dir, "doc.json"), """{"blocks":[]}""");
+  }
+
+  public void Dispose()
+  {
+    Directory.Delete(dir, recursive: true);
+  }
+
+  private McpServerCore Core(IBlokMcpHandleStore store, string? pageTitles = null, double maxHandles = 8)
+  {
+    return new McpServerCore(fixture.Host.Bundle, new McpConfig
+    {
+      Source = new McpSourceConfig.Files(dir),
+      HandleStore = store,
+      PageTitles = pageTitles,
+      MaxHandlesPerPrincipal = maxHandles,
+      LogError = (message, error) => logged.Add((message, error)),
+    }, new McpHttpCaller());
+  }
+
+  private static async Task<JsonObject> CallAsync(McpServerCore core, McpCaller caller, string name, JsonObject arguments)
+  {
+    var outcome = await core.CallToolAsync(name, arguments, caller, null, CancellationToken.None);
+
+    return (JsonObject)outcome.Answer!["structuredContent"]!;
+  }
+
+  private static async Task<string> OpenAsync(McpServerCore core, McpCaller caller)
+  {
+    var opened = await CallAsync(core, caller, "blok_open", new JsonObject { ["documentId"] = "doc", ["write"] = true });
+
+    return McpJson.String(opened["handle"]) ?? throw new InvalidOperationException(opened.ToJsonString());
+  }
+
+  private static Task<JsonObject> ExecuteAsync(McpServerCore core, McpCaller caller, string handle, string name, JsonObject args)
+  {
+    return CallAsync(core, caller, "blok_execute", new JsonObject
+    {
+      ["handle"] = handle,
+      ["commands"] = new JsonArray(new JsonObject { ["name"] = name, ["args"] = args }),
+    });
+  }
+
+  private static Task<JsonObject> SetTitleAsync(McpServerCore core, McpCaller caller, string handle, string title) =>
+      ExecuteAsync(core, caller, handle, "doc.setTitle", new JsonObject { ["title"] = title });
+
+  private static Task<JsonObject> UndoAsync(McpServerCore core, McpCaller caller, string handle) =>
+      ExecuteAsync(core, caller, handle, "history.undo", new JsonObject());
+
+  private string Saved() => File.ReadAllText(Path.Combine(dir, "doc.json"));
+
+  private static string? Code(JsonObject answer) => McpJson.String(answer["error"]?["code"]);
+
+  [Fact]
+  public async Task AHandleOpenedOnOneServerIsUsedOnAnother()
+  {
+    var store = new MemoryStore();
+    await using var a = Core(store);
+    await using var b = Core(store);
+    var caller = await a.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(a, caller);
+
+    var ran = await SetTitleAsync(b, caller, handle, "From B");
+    var undone = await UndoAsync(a, caller, handle);
+
+    Assert.Equal(true, McpJson.Bool(ran["ok"]));
+    Assert.Equal(true, McpJson.Bool(undone["ok"]));
+    Assert.DoesNotContain("From B", Saved(), StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task TheOpenersCallerIsKeptInTheRecord()
+  {
+    var store = new MemoryStore();
+    await using var a = Core(store);
+    await using var b = Core(store);
+    var opener = await a.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var other = await b.CallerAsync("alice", "phone", null, CancellationToken.None);
+    var handle = await OpenAsync(a, opener);
+
+    await SetTitleAsync(b, other, handle, "Titled");
+
+    Assert.Equal(McpJson.String(opener.Actor["id"]), McpJson.String(store.Records[handle].Actor["id"]));
+    Assert.Equal("desk", store.Records[handle].ClientName);
+  }
+
+  [Fact]
+  public async Task AStoreWriteThatFailsAfterTheSourceSaveAnswersTheBatchAndDropsTheHandle()
+  {
+    var store = new MemoryStore();
+    await using var core = Core(store);
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(core, caller);
+
+    store.FailNextSave = true;
+    var ran = await SetTitleAsync(core, caller, handle, "Saved");
+    var next = await CallAsync(core, caller, "blok_read", new JsonObject { ["handle"] = handle });
+
+    Assert.Equal(true, McpJson.Bool(ran["ok"]));
+    Assert.Contains("Saved", Saved(), StringComparison.Ordinal);
+    Assert.Equal("UNKNOWN_HANDLE", Code(next));
+    Assert.Contains(logged, entry => entry.Message.Contains("handle store", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  public async Task RestoredStepsMadeOnOtherContentAreLost()
+  {
+    var store = new MemoryStore();
+    await using var core = Core(store);
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(core, caller);
+
+    await SetTitleAsync(core, caller, handle, "First");
+    // A record whose steps were made on other content: the bundle's revision check drops them.
+    var record = store.Records[handle];
+    var document = (JsonObject)record.Document.DeepClone();
+
+    document["title"] = "Someone else";
+    store.Records[handle] = new BlokMcpHandleRecord
+    {
+      ContractRevision = record.ContractRevision, Principal = record.Principal, ClientName = record.ClientName, Scopes = record.Scopes,
+      Actor = record.Actor, DocumentId = record.DocumentId, Write = record.Write, Version = record.Version, Stale = record.Stale,
+      Document = document, History = record.History,
+    };
+    var undone = await UndoAsync(core, caller, handle);
+
+    Assert.Equal("CONFLICT", Code(undone));
+  }
+
+  [Fact]
+  public async Task ARecordFromAnotherContractAnswersVersionSkew()
+  {
+    var store = new MemoryStore();
+    await using var a = Core(store);
+    await using var b = Core(store, pageTitles: "page-map");
+    var caller = await a.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(a, caller);
+
+    var read = await CallAsync(b, caller, "blok_read", new JsonObject { ["handle"] = handle });
+
+    Assert.Equal("VERSION_SKEW", Code(read));
+  }
+
+  [Fact]
+  public async Task AnotherPrincipalOrAnotherRecordFormatIsUnknown()
+  {
+    var store = new MemoryStore();
+    await using var core = Core(store);
+    var alice = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var bob = await core.CallerAsync("bob", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(core, alice);
+
+    Assert.Equal("UNKNOWN_HANDLE", Code(await CallAsync(core, bob, "blok_read", new JsonObject { ["handle"] = handle })));
+    var record = store.Records[handle];
+
+    store.Records[handle] = new BlokMcpHandleRecord
+    {
+      V = 2, ContractRevision = record.ContractRevision, Principal = record.Principal, ClientName = record.ClientName,
+      Actor = record.Actor, DocumentId = record.DocumentId, Document = record.Document, History = record.History,
+    };
+    Assert.Equal("UNKNOWN_HANDLE", Code(await CallAsync(core, alice, "blok_read", new JsonObject { ["handle"] = handle })));
+  }
+
+  [Fact]
+  public async Task AHandleThatCouldNotBeBlokMintedNeverReachesTheStore()
+  {
+    var store = new MemoryStore();
+    await using var core = Core(store);
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+
+    var read = await CallAsync(core, caller, "blok_read", new JsonObject { ["handle"] = "../etc" });
+
+    Assert.Equal("UNKNOWN_HANDLE", Code(read));
+    Assert.Equal(0, store.Acquires);
+  }
+
+  [Fact]
+  public async Task AStoreThatThrowsAnswersSourceUnavailableAndIsLogged()
+  {
+    var store = new MemoryStore();
+    await using var core = Core(store);
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(core, caller);
+
+    store.Down = true;
+    var read = await CallAsync(core, caller, "blok_read", new JsonObject { ["handle"] = handle });
+
+    Assert.Equal("""{"code":"SOURCE_UNAVAILABLE","message":"The handle store is unavailable. Retry shortly.","retryable":true}""", read["error"]?.ToJsonString());
+    Assert.Contains(logged, entry => entry.Error.Message == "store down");
+  }
+
+  [Fact]
+  public async Task TheCapCountsHandlesInTheStore()
+  {
+    var store = new MemoryStore();
+    await using var a = Core(store, maxHandles: 2);
+    await using var b = Core(store, maxHandles: 2);
+    var caller = await a.CallerAsync("alice", "desk", null, CancellationToken.None);
+
+    await OpenAsync(a, caller);
+    await OpenAsync(b, caller);
+    var third = await CallAsync(a, caller, "blok_open", new JsonObject { ["documentId"] = "doc" });
+
+    Assert.Equal("HANDLE_LIMIT", Code(third));
+  }
+
+  [Fact]
+  public async Task CloseRemovesTheHandleForEveryServer()
+  {
+    var store = new MemoryStore();
+    await using var a = Core(store);
+    await using var b = Core(store);
+    var caller = await a.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(a, caller);
+
+    var closed = await CallAsync(b, caller, "blok_close", new JsonObject { ["handle"] = handle });
+
+    Assert.Equal(true, McpJson.Bool(closed["closed"]));
+    Assert.Equal("UNKNOWN_HANDLE", Code(await CallAsync(a, caller, "blok_read", new JsonObject { ["handle"] = handle })));
+  }
+
+  [Fact]
+  public async Task StoppingAServerLeavesItsHandlesInTheStore()
+  {
+    var store = new MemoryStore();
+    var a = Core(store);
+    await using var b = Core(store);
+    var caller = await a.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(a, caller);
+
+    await a.DisposeAsync();
+    var read = await CallAsync(b, caller, "blok_read", new JsonObject { ["handle"] = handle });
+
+    Assert.Null(read["error"]);
+  }
+
+  /// <summary>The store contract in memory, with switches for faults.</summary>
+  internal sealed class MemoryStore : IBlokMcpHandleStore
+  {
+    private readonly HashSet<string> leased = [];
+
+    internal Dictionary<string, BlokMcpHandleRecord> Records { get; } = [];
+
+    internal bool FailNextSave { get; set; }
+
+    internal bool Down { get; set; }
+
+    internal int Acquires { get; private set; }
+
+    public ValueTask<int> CountAsync(string principal, TimeSpan idleTimeout, CancellationToken cancellationToken)
+    {
+      ThrowIfDown();
+
+      return ValueTask.FromResult(Records.Values.Count(record => record.Principal == principal));
+    }
+
+    public ValueTask<bool> TryAddAsync(string handle, BlokMcpHandleRecord record, int maxPerPrincipal, TimeSpan idleTimeout, CancellationToken cancellationToken)
+    {
+      ThrowIfDown();
+      lock (leased)
+      {
+        if (Records.Values.Count(entry => entry.Principal == record.Principal) >= maxPerPrincipal)
+        {
+          return ValueTask.FromResult(false);
+        }
+        Records[handle] = BlokMcpHandleRecord.FromJson(record.ToJson());
+
+        return ValueTask.FromResult(true);
+      }
+    }
+
+    public async ValueTask<BlokMcpHandleAcquisition> AcquireAsync(string handle, TimeSpan idleTimeout, TimeSpan wait, CancellationToken cancellationToken)
+    {
+      ThrowIfDown();
+      Acquires++;
+      var deadline = DateTime.UtcNow + wait;
+
+      while (true)
+      {
+        lock (leased)
+        {
+          if (!Records.TryGetValue(handle, out var record))
+          {
+            return BlokMcpHandleAcquisition.Unknown;
+          }
+          if (leased.Add(handle))
+          {
+            return BlokMcpHandleAcquisition.Leased(new Lease(this, handle, BlokMcpHandleRecord.FromJson(record.ToJson())));
+          }
+        }
+        if (DateTime.UtcNow >= deadline)
+        {
+          return BlokMcpHandleAcquisition.Busy;
+        }
+        await Task.Delay(10, cancellationToken);
+      }
+    }
+
+    public ValueTask SweepAsync(TimeSpan idleTimeout, CancellationToken cancellationToken)
+    {
+      return ValueTask.CompletedTask;
+    }
+
+    private void ThrowIfDown()
+    {
+      if (Down)
+      {
+        throw new IOException("store down");
+      }
+    }
+
+    private sealed class Lease(MemoryStore store, string handle, BlokMcpHandleRecord record) : IBlokMcpHandleLease
+    {
+      public BlokMcpHandleRecord Record { get; } = record;
+
+      public ValueTask SaveAsync(BlokMcpHandleRecord next, CancellationToken cancellationToken)
+      {
+        if (store.FailNextSave)
+        {
+          store.FailNextSave = false;
+          throw new IOException("store write failed");
+        }
+        store.Records[handle] = BlokMcpHandleRecord.FromJson(next.ToJson());
+
+        return ValueTask.CompletedTask;
+      }
+
+      public ValueTask ReleaseAsync(CancellationToken cancellationToken)
+      {
+        lock (store.leased)
+        {
+          store.leased.Remove(handle);
+        }
+
+        return ValueTask.CompletedTask;
+      }
+
+      public ValueTask RemoveAsync(CancellationToken cancellationToken)
+      {
+        store.Records.Remove(handle);
+
+        return ReleaseAsync(cancellationToken);
+      }
+    }
+  }
+}

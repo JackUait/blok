@@ -18,9 +18,11 @@ internal sealed class McpServerCore : IAsyncDisposable
   private readonly McpConfig config;
   private readonly IDocumentSource? source;
   private readonly LiveOpener? live;
-  private readonly HandleRegistry<IHandleSession> handles;
+  private readonly IHandleTable handles;
   private readonly JsonObject flags;
   private readonly Timer sweeper;
+  // Only with a handle store: its idle handles go on its own timer.
+  private readonly Timer? storeSweeper;
   private readonly SemaphoreSlim surfaceGate = new(1, 1);
   private readonly PagePorts? pages;
   private readonly UploadPorts? uploads;
@@ -67,7 +69,23 @@ internal sealed class McpServerCore : IAsyncDisposable
       live.Pages = pages;
       live.Uploads = uploads;
     }
-    handles = new HandleRegistry<IHandleSession>(config.IdleMs, config.MaxHandles, session => session.CloseAsync("expired"));
+    var local = new HandleRegistry<IHandleSession>(config.IdleMs, config.MaxHandles, session => session.CloseAsync("expired"));
+
+    if (config.HandleStore is { } store)
+    {
+      var shared = new SharedHandles(
+          local, store, TimeSpan.FromMilliseconds(config.IdleMs), config.MaxHandles,
+          async () => McpJson.String((await SurfaceAsync())["contractRevision"]?["stored"]) ?? string.Empty,
+          RestoreAsync,
+          (message, error) => _ = LogAsync(message, error));
+
+      handles = shared;
+      storeSweeper = new Timer(_ => Track(inFlight, shared.SweepStoreAsync()), null, SharedHandles.StoreSweep, SharedHandles.StoreSweep);
+    }
+    else
+    {
+      handles = new LocalHandles(local);
+    }
     var period = TimeSpan.FromMilliseconds(Math.Min(config.IdleMs, 30_000));
 
     sweeper = new Timer(_ => Track(inFlight, SweepAsync()), null, period, period);
@@ -367,6 +385,10 @@ internal sealed class McpServerCore : IAsyncDisposable
   private async Task StopOnceAsync()
   {
     await sweeper.DisposeAsync();
+    if (storeSweeper is not null)
+    {
+      await storeSweeper.DisposeAsync();
+    }
     var work = Task.Run(async () =>
     {
       // A call read before stop holds a place on its handle but may not be in the handle's queue
@@ -552,7 +574,7 @@ internal sealed class McpServerCore : IAsyncDisposable
     var write = McpJson.Bool(step["write"]) == true;
 
     // Opening can mint a ticket and join a room, so refuse at the cap first.
-    handles.AssertRoom(caller.Principal);
+    await handles.AssertRoomAsync(caller.Principal);
     var session = await OpenSessionAsync(documentId, McpJson.String(step["mode"]) ?? "auto", write, caller, cancellationToken);
 
     try
@@ -576,7 +598,7 @@ internal sealed class McpServerCore : IAsyncDisposable
       {
         throw new McpHostError("CANCELLED", "The request was cancelled before the document opened.", helper: "failure");
       }
-      var handle = handles.Add(caller.Principal, documentId, session);
+      var handle = await handles.AddAsync(caller.Principal, documentId, session);
       var input = new JsonObject
       {
         ["handle"] = handle,
@@ -727,6 +749,19 @@ internal sealed class McpServerCore : IAsyncDisposable
     await Console.Error.WriteLineAsync($"{message}: {error}");
   }
 
+  /// <summary>A stored handle a shared store kept, rebuilt for the caller that opened it.</summary>
+  private async Task<IHandleSession> RestoreAsync(BlokMcpHandleRecord record)
+  {
+    if (source is null)
+    {
+      throw McpHostError.Surface("SOURCE_UNAVAILABLE", "No document source is configured. Start blok-mcp with --source.");
+    }
+    var opener = new McpCaller(record.Principal, record.ClientName, record.Scopes, (JsonObject)record.Actor.DeepClone(), McpJson.String(record.Actor["name"]) ?? string.Empty);
+    var revision = McpJson.String((await SurfaceAsync())["contractRevision"]?["stored"]) ?? string.Empty;
+
+    return StoredSession.Restore(bundle, source.ForCaller(opener), record, flags, revision, pages, uploads, opener);
+  }
+
   // The opener's createPage for stored mode: a new id, authorized like a write open, saved empty.
   private async Task<string> CreatePageAsync(McpCaller caller, string parentDocumentId, CancellationToken cancellationToken)
   {
@@ -808,12 +843,7 @@ internal sealed class McpServerCore : IAsyncDisposable
 
     try
     {
-      await handles.UseAsync(handle, caller.Principal, async (_, documentId) =>
-      {
-        await StillAllowedAsync(caller, documentId, false, CancellationToken.None);
-
-        return true;
-      });
+      await handles.PeekAsync(handle, caller.Principal, documentId => StillAllowedAsync(caller, documentId, false, CancellationToken.None));
     }
     catch (Exception error)
     {

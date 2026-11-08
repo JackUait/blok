@@ -56,6 +56,25 @@ const coverPlacement = (anchor: HTMLElement, value: boolean, below: boolean): Pi
   };
 };
 
+/** The usual gap under a trigger (PopoverDesktop's default offset). */
+const PANEL_GAP = 8;
+
+/**
+ * Under the anchor, as a trigger menu opens, but through the cover clamp: a
+ * panel that would run past the window slides up to stay inside it, as view
+ * settings does (side-by-side-v1.md "Filter / Sort popovers").
+ */
+const fitPlacement = (anchor: HTMLElement): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+  const rect = anchor.getBoundingClientRect();
+
+  return {
+    cover: true,
+    viewportMargin: COVER_VIEWPORT_MARGIN,
+    position: new DOMRect(rect.x, rect.bottom + PANEL_GAP, rect.width, 0),
+    positionContext: anchor,
+  };
+};
+
 /**
  * An editor's min-width: the cell's width, never under `floor`. Over a row
  * page value the box starts 1px left and still ends on the value's right edge.
@@ -118,8 +137,8 @@ export class CellPopover {
       class: [CELL_EDITOR_CLASS, ...(docked === true ? [DOCKED_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
-    const coverOrNone = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : {};
-    const placement = docked === true ? dockPlacement(anchor) : coverOrNone;
+    const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fitPlacement(anchor);
+    const placement = docked === true ? dockPlacement(anchor) : coverOrFit;
     const popover = new PopoverDesktop({ ...base, ...placement });
 
     this.popover = popover;

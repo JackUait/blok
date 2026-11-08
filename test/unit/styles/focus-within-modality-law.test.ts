@@ -57,6 +57,14 @@ const STANDALONE_CSS_ENTRIES = [
     reason: 'Dev-page history edits list and Updates feed styles, imported by src/playground/history-changes.ts and updates-feed.ts alone — never reachable from main.css.',
   },
   {
+    file: 'src/shell/agent-assistant.css',
+    reason: 'Host assistant chrome, imported by src/shell/agent-assistant.ts alone — never reachable from main.css.',
+  },
+  {
+    file: 'src/shell/agent-settings.css',
+    reason: 'Host provider settings, imported by src/shell/agent-settings.ts alone — never reachable from main.css.',
+  },
+  {
     file: 'src/shell/sidebar.css',
     reason: 'Host page tree painted beside the editor in Storybook. The story imports it; main.css never does.',
   },

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { createAddCoverButton, createPageCover, type CoverId } from '../../desktop/src/cover';
 import '../../desktop/src/shell.css';
 
@@ -11,23 +11,31 @@ function page(initialCover?: CoverId): HTMLElement {
   let position = 50;
   const article = document.createElement('article');
   article.setAttribute('data-desktop-document', '');
-  const appearance = document.createElement('div');
-  appearance.setAttribute('data-desktop-page-appearance', '');
+  const header = document.createElement('div');
+  header.setAttribute('data-blok-page-header', '');
+  const iconRow = document.createElement('div');
+  iconRow.setAttribute('data-blok-page-icon-row', '');
+  const addIcon = document.createElement('button');
+  addIcon.type = 'button';
+  addIcon.setAttribute('data-blok-page-add-icon', '');
+  addIcon.textContent = 'Ajouter une icône';
+  iconRow.append(addIcon);
   const title = document.createElement('h1');
   title.textContent = 'Carnet de voyage';
   title.style.fontSize = '48px';
   title.style.margin = '0';
-  article.append(appearance, title);
+  header.append(iconRow, title);
+  article.append(header);
   canvas.append(article);
   const paint = (): void => {
     canvas.querySelector('[data-desktop-cover]')?.remove();
     article.toggleAttribute('data-has-cover', !!cover);
     if (cover) {
-      appearance.replaceChildren();
+      iconRow.querySelector('[data-desktop-add-cover]')?.remove();
       canvas.insertBefore(createPageCover(cover, position, (next) => { cover = next; paint(); },
         (next) => { position = next; paint(); }), article);
     } else {
-      appearance.replaceChildren(createAddCoverButton((next) => { cover = next; paint(); }));
+      iconRow.append(createAddCoverButton((next) => { cover = next; paint(); }));
     }
   };
   paint();
@@ -47,7 +55,29 @@ export const SansCouverture: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const add = canvas.getByRole('button', { name: 'Ajouter une couverture' });
-    expect(add).toBeTruthy();
+    expect(add.parentElement?.hasAttribute('data-blok-page-icon-row')).toBe(true);
+    expect(getComputedStyle(add).opacity).toBe('0');
+  },
+};
+
+export const ActionsAuSurvol: Story = {
+  render: () => page(),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const header = canvasElement.querySelector<HTMLElement>('[data-blok-page-header]')!;
+    const add = canvas.getByRole('button', { name: 'Ajouter une couverture' });
+    await userEvent.hover(header);
+    await waitFor(() => expect(getComputedStyle(add).opacity).toBe('1'));
+    expect(getComputedStyle(canvas.getByRole('button', { name: 'Ajouter une icône' })).opacity).toBe('1');
+  },
+};
+
+export const Ajout: Story = {
+  render: () => page(),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.hover(canvasElement.querySelector<HTMLElement>('[data-blok-page-header]')!);
+    const add = canvas.getByRole('button', { name: 'Ajouter une couverture' });
     await userEvent.click(add);
     expect(canvas.getByRole('img', { name: 'Couverture de la page' })).toBeTruthy();
   },

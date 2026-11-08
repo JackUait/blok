@@ -25,6 +25,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   let index: WorkspaceIndex | null = null;
   let editor: Blok | null = null;
   let frame: PageFrame;
+  let coverRowObserver: MutationObserver | null = null;
   let currentId = '';
   let generation = 0;
   let saveOrder = Promise.resolve();
@@ -64,6 +65,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (!index) return;
     const page = index.pages.find((item) => item.id === id);
     if (!page) return;
+    const selectedPage = page;
     index.activeId = id;
     saveManifest();
     frame.setPages(index.pages, id);
@@ -71,21 +73,41 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (currentId === id) return;
     currentId = id;
     const turn = ++generation;
+    coverRowObserver?.disconnect();
+    coverRowObserver = null;
     editor?.destroy();
     editor = null;
     status.textContent = 'Ouverture de la page…';
     status.removeAttribute('data-error');
     const article = document.createElement('article');
     article.setAttribute('data-desktop-document', '');
-    const appearance = document.createElement('div');
-    appearance.setAttribute('data-desktop-page-appearance', '');
     const holder = document.createElement('div');
-    article.append(appearance, holder);
+    article.append(holder);
     let coverNode: HTMLElement | null = null;
+    let coverButton: HTMLButtonElement | null = null;
+    function changeCover(cover: CoverId | undefined): void {
+      selectedPage.cover = cover;
+      if (cover === undefined) selectedPage.coverPosition = undefined;
+      renderCover();
+      saveManifest();
+    }
+    const attachCoverAction = (): void => {
+      if (isCoverId(page.cover)) return;
+      const row = holder.querySelector<HTMLElement>('[data-blok-page-icon-row]');
+      if (!row) return;
+      coverButton ??= createAddCoverButton(changeCover);
+      if (coverButton.parentElement !== row) row.append(coverButton);
+      if (coverRowObserver === null) {
+        coverRowObserver = new MutationObserver(() => {
+          if (generation === turn) attachCoverAction();
+        });
+        coverRowObserver.observe(row, { childList: true });
+      }
+    };
     const renderCover = (): void => {
       article.toggleAttribute('data-has-cover', isCoverId(page.cover));
       if (isCoverId(page.cover)) {
-        appearance.replaceChildren();
+        coverButton?.remove();
         const position = typeof page.coverPosition === 'number' && Number.isFinite(page.coverPosition)
           ? Math.max(0, Math.min(100, page.coverPosition)) : 50;
         const next = createPageCover(page.cover, position, changeCover, (value) => {
@@ -98,14 +120,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       } else {
         coverNode?.remove();
         coverNode = null;
-        appearance.replaceChildren(createAddCoverButton(changeCover));
+        attachCoverAction();
       }
-    };
-    const changeCover = (cover: CoverId | undefined): void => {
-      page.cover = cover;
-      if (cover === undefined) page.coverPosition = undefined;
-      renderCover();
-      saveManifest();
     };
     frame.canvas.replaceChildren(article);
     renderCover();
@@ -143,6 +159,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     editor = instance;
     void instance.isReady.then(() => {
       if (generation !== turn) return;
+      attachCoverAction();
       if (!instance.title.get()) instance.title.set(page.title, { record: false });
       syncPageIcon(page, instance.title.icon.get());
       document.title = page.title;

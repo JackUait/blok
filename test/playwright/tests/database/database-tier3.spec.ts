@@ -409,9 +409,10 @@ test.describe('map view', () => {
     // research/23 §5c: the list stays open under the page. One Escape = one layer.
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-blok-database-drawer]')).toBeHidden();
-    await expect(page.getByPlaceholder('Search for a page…')).toBeVisible();
+    // The list closed under the page may still be fading out, so look in the open popover only.
+    await expect(page.locator('[data-blok-popover-opened="true"]').getByPlaceholder('Search for a page…')).toBeFocused();
     await page.keyboard.press('Escape');
-    await expect(page.getByPlaceholder('Search for a page…')).toBeHidden();
+    await expect(page.getByPlaceholder('Search for a page…')).toHaveCount(0);
   });
 
   test('a Place cell shows the name and hovers into a card with the address and the host mini-map', async ({ page }) => {

@@ -1,0 +1,23 @@
+[package]
+name = "blok-desktop"
+version = "0.1.0"
+description = "Blok desktop shell"
+edition = "2024"
+rust-version = "1.85"
+
+[lib]
+name = "blok_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

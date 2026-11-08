@@ -1419,6 +1419,7 @@ export class DatabaseCardDrawer {
     heading.textContent = this.label('tools.database.backlinksTitle');
     const menu = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: 'auto',
       // Notion's list is 500 wide; a phone keeps a 16px gutter.
@@ -1855,6 +1856,7 @@ export class DatabaseCardDrawer {
     const menu = new PopoverDesktop({
       // Notion's 28px rows.
       class: DATABASE_HEADER_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: '220px',
       autoFocusFirstItem: false,
@@ -1900,6 +1902,7 @@ export class DatabaseCardDrawer {
     const copyLink = this.onCopyViewLink;
     const menu = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: 'auto',
       minWidth: '240px',
@@ -1947,6 +1950,7 @@ export class DatabaseCardDrawer {
     const menu = new PopoverDesktop({
       // Notion's 28px rows (feel/findings-rowpage R27).
       class: DATABASE_HEADER_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: 'auto',
       minWidth: '240px',

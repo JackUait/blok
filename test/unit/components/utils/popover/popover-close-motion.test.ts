@@ -179,6 +179,36 @@ describe('PopoverDesktop close motion (animateClose)', () => {
     expect(popover.getElement().hasAttribute('inert')).toBe(false);
   });
 
+  it('shrinks back toward the corner it opened from, and drops that corner once the motion ends', async () => {
+    const popover = open({ animateClose: true });
+    const motion = controllableAnimation();
+    const root = popover.getElement();
+
+    // A menu that opened up and to the left of its anchor, like the database's New ⌄.
+    root.setAttribute('data-blok-popover-open-left', 'true');
+    root.setAttribute('data-blok-popover-open-top', 'true');
+    stubAnimations(popover, [motion.animation]);
+    popover.hide();
+
+    expect(root.getAttribute('data-blok-popover-open-left')).toBe('true');
+    expect(root.getAttribute('data-blok-popover-open-top')).toBe('true');
+
+    await motion.end();
+
+    expect(root.hasAttribute('data-blok-popover-open-left')).toBe(false);
+    expect(root.hasAttribute('data-blok-popover-open-top')).toBe(false);
+  });
+
+  it('drops its open corner at once when it closes without motion', () => {
+    const popover = open();
+    const root = popover.getElement();
+
+    root.setAttribute('data-blok-popover-open-left', 'true');
+    popover.hide();
+
+    expect(root.hasAttribute('data-blok-popover-open-left')).toBe(false);
+  });
+
   it('leaves the top layer at once without the opt-in', () => {
     const popover = open();
 

@@ -69,6 +69,7 @@ export class BuiltInCommentsUi {
     const panel = this.panel(rowId, propertyId);
     const popover = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       items: [{ type: PopoverItemType.Html, element: panel.element, name: 'database-comments' }],
       width: 'auto',

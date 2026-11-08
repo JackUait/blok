@@ -334,8 +334,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     // Update DOM state
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpened);
-    this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
-    this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenLeft);
+    // The open corner sets transform-origin: a fading card keeps it until settle.
+    if (!animates && !alreadyClosing) {
+      this.clearOpenCorner();
+    }
     this.nodes.popover.setAttribute('data-state', 'closed');
     // Resetting the container collapses it (max-h-0), so a closing card keeps
     // its open classes; popover-animation.css fades it out instead.
@@ -394,6 +396,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
         popover.removeAttribute('inert');
         removeFromTopLayer(popover);
         container.className = css.popoverContainer;
+        this.clearOpenCorner();
         this.onCloseSettled();
 
         if (closing.removeWhenSettled) {
@@ -423,6 +426,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     // A reopen cancels the transitions; settle() then sees a stale token and stops.
     void Promise.all(animations.map(animation => animation.finished)).then(closing.settle, closing.settle);
+  }
+
+  private clearOpenCorner(): void {
+    this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
+    this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenLeft);
   }
 
   /**

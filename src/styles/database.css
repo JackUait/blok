@@ -2825,15 +2825,20 @@ button[data-blok-database-column-count]:hover {
   padding-block: 0;
 }
 
-[data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'] {
+/* Panels and pickers in a CellPopover (Filter, Sort…) move like the menus (notion-motion.md "Popovers").
+   Editors that open at once opt out further down, after these rules. */
+[data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'],
+[data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-cell-editor'] {
   transition: display 200ms allow-discrete, overlay 200ms allow-discrete;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container] {
   transition: opacity 200ms ease, transform 200ms ease;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-opened='true']) [data-blok-popover-container] {
   transform: scale(0.96);
 }
 
@@ -6322,11 +6327,13 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   [data-blok-database-column-reordering] [data-blok-database-column-header],
   [data-blok-database-tab],
   [data-blok-database-card-actions],
-  [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container] {
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container],
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container] {
     transition: none;
   }
 
-  [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container] {
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']:not([data-blok-popover-opened='true']) [data-blok-popover-container],
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-opened='true']) [data-blok-popover-container] {
     transform: none;
   }
 
@@ -7070,7 +7077,10 @@ textarea[data-blok-database-property-description][data-blok-field] {
   padding: 0;
 }
 
-/* research/08 Motion, notion-spec-2 §19.22: a table cell or peek value editor mounts at its final size and opacity. */
+/* research/08 Motion, notion-spec-2 §19.22: a table cell or peek value editor mounts at its final size and opacity.
+   View settings has no entrance either (notion-motion.md "View settings"). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-docked-panel'] > [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-docked-panel']:not([data-blok-popover-opened='true']) > [data-blok-popover-container],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-table-cell-editor'] > [data-blok-popover-container],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-table-cell-editor']:not([data-blok-popover-opened='true']) > [data-blok-popover-container],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-value-editor'] > [data-blok-popover-container],

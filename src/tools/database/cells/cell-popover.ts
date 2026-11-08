@@ -113,6 +113,8 @@ export class CellPopover {
       flippable: false,
       width: 'auto',
       autoFocusFirstItem: false,
+      // Fades out like the database menus; an editor with no motion (database.css) still goes at once.
+      animateClose: true,
       class: [CELL_EDITOR_CLASS, ...(docked === true ? [DOCKED_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };

@@ -11673,6 +11673,8 @@ export class DatabaseTool implements BlockTool {
   private openRelatedToPicker(propertyId: string, anchor: HTMLElement): void {
     if (!anchor.isConnected) return;
     const popover = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
+      animateClose: true,
       items: this.documentDatabases().map((database) => ({
         name: `relatedTo-${database.id}`,
         title: database.title === '' ? this.api.i18n.t('tools.database.relationUntitledDatabase') : database.title,

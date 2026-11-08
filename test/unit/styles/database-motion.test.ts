@@ -46,6 +46,47 @@ describe('database menus', () => {
   });
 });
 
+/* Filter, Sort and every other panel or editor that sits in a CellPopover (notion-motion.md "Popovers"). */
+const EDITOR = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor']";
+const EDITOR_CLOSED = `${EDITOR}:not([data-blok-popover-opened='true'])`;
+
+/** The rule that wins for `selector`: the last one in the file that names it. */
+const lastBody = (css: string, selector: string): string =>
+  rules(css).filter((rule) => rule.selectors.includes(selector)).map((rule) => rule.body).pop() ?? '';
+
+describe('database panels (Filter, Sort, pickers)', () => {
+  it('open and close like the database menus: 200ms ease, from and back to scale .96', () => {
+    expect(body(outsideReducedMotion, `${EDITOR} [data-blok-popover-container]`)).toContain('transition: opacity 200ms ease, transform 200ms ease');
+    expect(body(outsideReducedMotion, `${EDITOR_CLOSED} [data-blok-popover-container]`)).toContain('transform: scale(0.96)');
+    expect(body(outsideReducedMotion, "[data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-cell-editor']"))
+      .toContain('transition: display 200ms allow-discrete, overlay 200ms allow-discrete');
+  });
+
+  it('do not move under reduced motion', () => {
+    expect(body(reducedMotion, `${EDITOR} [data-blok-popover-container]`)).toContain('transition: none');
+    expect(body(reducedMotion, `${EDITOR_CLOSED} [data-blok-popover-container]`)).toContain('transform: none');
+  });
+
+  it.each([
+    ['view settings (notion-motion.md "View settings": no entrance)', 'blok-database-docked-panel'],
+    ['a table cell editor (notion-motion.md "Cell editors")', 'blok-database-table-cell-editor'],
+    ['a row page value editor', 'blok-database-value-editor'],
+  ])('%s still opens at its final size and opacity', (_, cls) => {
+    const at = `[data-blok-popover][data-blok-popover-custom-class~='${cls}']`;
+    const ownRule = lastBody(outsideReducedMotion, `${at} > [data-blok-popover-container]`);
+    const closedRule = lastBody(outsideReducedMotion, `${at}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`);
+
+    expect(ownRule).toContain('transition: none');
+    expect(closedRule).toContain('transform: none');
+    // The opt-out must come after the panel motion it overrides (same specificity).
+    const motionAt = outsideReducedMotion.indexOf(`${EDITOR} [data-blok-popover-container]`);
+    const optOutAt = outsideReducedMotion.lastIndexOf(`${at} > [data-blok-popover-container]`);
+
+    expect(motionAt).toBeGreaterThan(-1);
+    expect(optOutAt).toBeGreaterThan(motionAt);
+  });
+});
+
 describe('grouped list collapse', () => {
   it('turns only the caret, -90deg over 200ms ease-out', () => {
     expect(body(outsideReducedMotion, '[data-blok-database-list-group-toggle] svg')).toContain('transition: transform 200ms ease-out');

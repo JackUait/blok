@@ -47,7 +47,7 @@ import {
  *   steps       see Step.
  *   watchFiles  names under ${dir} whose exact bytes are recorded as expectFiles.
  *   watchModes  names under ${dir} whose permission bits are recorded as expectModes.
- *   stderrPattern  a regular expression the failed process's stderr must match,
+ *   stderrPattern  a regular expression stderr must match (a failed process's, or a clean one's),
  *               recorded instead of the exact text.
  *   fsVariants  true when the answer depends on whether the temp disk ignores letter
  *               case. Expectations then live in "variants": {"caseInsensitiveFs": …,
@@ -583,10 +583,15 @@ const requestBody = (spec: NonNullable<Step['http']>): Buffer | undefined => {
 
 /**
  * stderr is part of the contract only when the process failed. `pattern` stands in
- * for text a port cannot match byte for byte (a JSON parser's own message).
+ * for text a port cannot match byte for byte (a JSON parser's own message); after a
+ * clean exit it is still checked (a host error that must be logged), never recorded.
  */
 const exitRecord = (code: number | null, signal: string | null, stderr: string, pattern?: string): Record<string, unknown> => {
   if (code === 0) {
+    if (pattern !== undefined) {
+      expect(stderr, 'stderr').toMatch(new RegExp(pattern));
+    }
+
     return { code };
   }
   if (pattern === undefined) {

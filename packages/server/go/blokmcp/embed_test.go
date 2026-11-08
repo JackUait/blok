@@ -363,3 +363,25 @@ func (b bearer) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 var timeFar = time.Now().Add(time.Hour)
+
+// An unexpected error on a host server (here the host's own caller hook) is
+// logged in full and answered -32603 with fixed words, never its text.
+func TestAnUnexpectedErrorIsLoggedAndAnsweredWithFixedWords(t *testing.T) {
+	var log strings.Builder
+	previous := logOutput
+	logOutput = &log
+	t.Cleanup(func() { logOutput = previous })
+	_, session := attachedHost(t, EmbedOptions{Caller: func(context.Context, *mcp.CallToolRequest) (*CallerIdentity, error) {
+		return nil, errors.New("secret-host-failure")
+	}})
+	_, err := callBlok(t, session, "blok_open", map[string]any{"documentId": "doc"})
+	if wire := wireError(err); wire == nil || wire.Code != jsonrpc.CodeInternalError || wire.Message != "Blok could not run this call." {
+		t.Fatalf("err %v", err)
+	}
+	if !strings.Contains(log.String(), "secret-host-failure") {
+		t.Fatalf("log %q", log.String())
+	}
+	if _, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "host_echo", Arguments: map[string]any{"text": "x"}}); err != nil {
+		t.Fatalf("host_echo: %v", err)
+	}
+}

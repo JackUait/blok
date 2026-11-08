@@ -3,6 +3,7 @@ package blokmcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -40,6 +41,9 @@ type EmbedOptions struct {
 const (
 	anonymousCaller = "Blok needs a signed-in caller."
 	unnamedCaller   = "Blok needs a named caller (sub or NameIdentifier)."
+	// callFailed is all a host's client sees of an unexpected error: its
+	// text may name the host's internals.
+	callFailed = "Blok could not run this call."
 )
 
 // Attached is Blok's tools and prompts for a host's own MCP server. Build
@@ -239,7 +243,7 @@ func (a *Attached) middleware(next mcp.MethodHandler) mcp.MethodHandler {
 			return a.listPrompts(ctx, method, req, next)
 		case "tools/call":
 			if call, ok := req.(*mcp.CallToolRequest); ok && call.Params != nil && a.ownsTool(call.Params.Name) {
-				return internalError(a.callTool(ctx, call))
+				return hidden(a.callTool(ctx, call))
 			}
 		case "prompts/get":
 			if get, ok := req.(*mcp.GetPromptRequest); ok && get.Params != nil && a.ownsPrompt(get.Params.Name) {
@@ -346,6 +350,19 @@ func withEntries(host any, key string, blok []json.RawMessage) ([]byte, error) {
 		return nil, err
 	}
 	return marshal(members)
+}
+
+// hidden passes Blok's own protocol errors on. Any other error (the host's
+// caller hook, a host source, creator or store, Blok's own) is logged in
+// full and answered -32603 with fixed words. The standalone server keeps
+// internalError, which sends the text.
+func hidden(result mcp.Result, err error) (mcp.Result, error) {
+	var wire *jsonrpc.Error
+	if err == nil || errors.As(err, &wire) {
+		return result, err
+	}
+	logf("a tool call failed: %v", err)
+	return nil, &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: callFailed}
 }
 
 // callTool answers one Blok tools/call as the standalone server does.

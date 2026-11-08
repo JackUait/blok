@@ -27,6 +27,9 @@
 //	--example-source endpoint:<url>        your own document store, as
 //	                                       Options.DocumentSource (see source.go;
 //	                                       not with --source)
+//	--example-caller-error <text>          the caller hook fails with this text,
+//	                                       to show what a client sees of a host
+//	                                       bug: -32603 with fixed words
 //
 // The HTTP side keeps only what an example needs: no Origin/Host checks and
 // no body cap of its own. Those, like OAuth, belong to your server.
@@ -55,6 +58,7 @@ const name = "host-example"
 
 var exampleFlags = map[string]bool{
 	"--example-host-tool": true, "--example-host-prompt": true, "--example-allow-anonymous": true, "--example-source": true,
+	"--example-caller-error": true,
 }
 
 // startError stops the example at start with exit code 2.
@@ -212,6 +216,11 @@ func run() error {
 		// stdio has one local user; over HTTP the default reads the SDK's TokenInfo.
 		embed.Caller = func(context.Context, *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
 			return &blokmcp.CallerIdentity{Principal: "local"}, nil
+		}
+	}
+	if text, ok := example["caller-error"]; ok {
+		embed.Caller = func(context.Context, *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
+			return nil, errors.New(text)
 		}
 	}
 	blok, err := blokmcp.Embed(options, embed)

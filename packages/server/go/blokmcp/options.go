@@ -34,7 +34,8 @@ type Options struct {
 
 	// Authorize, when set, decides every open and every handle call, and
 	// filters listings (write false). An error fails the call with -32603
-	// and its text, as Node does.
+	// and its text, as Node does; on a host server (Embed) the text is
+	// logged and the client gets fixed words.
 	Authorize AuthorizeFunc `json:"-"`
 
 	// AgentActor, when set, builds the session's actor from the principal

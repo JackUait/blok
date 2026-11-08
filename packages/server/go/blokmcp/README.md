@@ -88,6 +88,7 @@ handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
   - A handle belongs to the principal that opened it. Anyone else gets `UNKNOWN_HANDLE`.
 - `Embed` refuses `Auth.Kind: "oauth"` and `Principal`: signing in is your server's job. It needs `Authorize`, unless it serves live rooms only, with a ticket URL and no source. Origin and Host checks, body limits and OAuth also belong to your server.
 - Approvals answer as the standalone server does. A 2026-07-28 client gets `resultType: "input_required"`, and Blok reads its reply from `inputResponses`. A 2025 client gets `elicitation/create` inside the call (tested over stdio). go-sdk decodes `inputResponses` itself, so a reply that is not an elicitation result may fail the whole request, where the standalone server asks again.
+- An unexpected error in a Blok call (your `Caller` hook, a bug in your source, page creator or handle store, or Blok's own) is logged in full to stderr. The client gets JSON-RPC `-32603` "Blok could not run this call.", never the error's text. The standalone server keeps sending the text.
 - Stateful HTTP servers are not a supported target. Stateless ones are.
 
 ## Your own document store

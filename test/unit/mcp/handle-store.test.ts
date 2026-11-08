@@ -1,9 +1,10 @@
 // @vitest-environment node
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { McpConfigError } from '../../../src/mcp/config';
 import { createFilesHandleStore } from '../../../src/mcp/handle-store-files';
 import { createMemoryHandleStore } from '../../../src/mcp/handle-store';
 import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from '../../../src/mcp/options';
@@ -218,6 +219,32 @@ describe('the files handle store', () => {
     expect(await store.count('alice', 60_000)).toBe(0);
     expect(await store.tryAdd('h1', record('alice'), 8, 60_000)).toBe(true);
     expect(existsSync(join(dir, 'h1.record.json'))).toBe(true);
+  });
+
+  it('keeps its files private: the directory it makes is 0700 and every file 0600', async () => {
+    const dir = join(tempDir(), 'handles');
+    const store = createFilesHandleStore(dir);
+
+    await store.tryAdd('h1', record('alice'), 8, 60_000);
+    const lease = await leaseOf(store, 'h1');
+
+    expect(statSync(dir).mode & 0o777).toBe(0o700);
+    for (const name of ['h1.record.json', 'h1.meta.json', 'h1.lease']) {
+      expect(statSync(join(dir, name)).mode & 0o777).toBe(0o600);
+    }
+    await lease.save(record('alice', { version: 'v2' }));
+    await lease.release();
+    expect(statSync(join(dir, 'h1.record.json')).mode & 0o777).toBe(0o600);
+    expect(statSync(join(dir, 'h1.meta.json')).mode & 0o777).toBe(0o600);
+  });
+
+  it.skipIf(process.platform === 'win32').each([['group', 0o770], ['world', 0o707]])('refuses to start on a %s-writable directory', (_who, mode) => {
+    const dir = tempDir();
+
+    chmodSync(dir, mode);
+    expect(() => createFilesHandleStore(dir)).toThrow(new McpConfigError(
+      `--handle-store directory ${dir} is writable by other users: make it owned by this user and not group- or world-writable (chmod 700)`,
+    ));
   });
 
   it('takes over a lease whose holder stopped refreshing it, and the old holder can no longer save', async () => {

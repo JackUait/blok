@@ -1,7 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { statSync } from 'node:fs';
 import { link, mkdir, open, readdir, readFile, rename, rm, stat, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { McpConfigError } from './config';
 import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from './options';
 
 /*
@@ -35,6 +37,11 @@ import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from
  * expired handle under its lease; count deletes one when its lease is free. release writes lastUsedMs.
  * tryAdd writes the record, then the meta file, so a crash leaves at most an unreferenced record.
  * remove deletes the meta file, then the record.
+ *
+ * Privacy: records hold document text, undo steps and principals. The store makes its directory
+ * with mode 0700 and opens every file (record, meta, lease, lock, temp) with mode 0600. At start it
+ * refuses a directory that already exists and is group- or world-writable, or (POSIX only) is not
+ * owned by the user running the server.
  */
 
 const HANDLE = /^[A-Za-z0-9_-]{1,128}$/;
@@ -88,7 +95,31 @@ const parseMeta = (text: string | null): Meta | null => {
   }
 };
 
+const PRIVATE_FILE = 0o600;
+const PRIVATE_DIR = 0o700;
+
+// Another user who can write here could plant a record and take over a handle.
+const checkDirectory = (dir: string): void => {
+  const found = ((): ReturnType<typeof statSync> | undefined => {
+    try {
+      return statSync(dir);
+    } catch {
+      return undefined;
+    }
+  })();
+
+  if (found === undefined) {
+    return;
+  }
+  const owner = process.getuid?.();
+
+  if ((found.mode & 0o022) !== 0 || (owner !== undefined && Number(found.uid) !== owner)) {
+    throw new McpConfigError(`--handle-store directory ${dir} is writable by other users: make it owned by this user and not group- or world-writable (chmod 700)`);
+  }
+};
+
 export const createFilesHandleStore = (dir: string, options: FilesHandleStoreOptions = {}): BlokMcpHandleStore => {
+  checkDirectory(dir);
   const leaseStaleMs = options.leaseStaleMs ?? LEASE_STALE_MS;
   const heartbeatMs = options.heartbeatMs ?? HEARTBEAT_MS;
   const paths = (handle: string): { record: string; meta: string; lease: string } => ({
@@ -103,7 +134,7 @@ export const createFilesHandleStore = (dir: string, options: FilesHandleStoreOpt
     const temp = join(dir, `.${path.slice(dir.length + 1)}.${randomBytes(6).toString('hex')}.tmp`);
 
     try {
-      const file = await open(temp, 'wx');
+      const file = await open(temp, 'wx', PRIVATE_FILE);
 
       try {
         await file.writeFile(text);
@@ -119,7 +150,7 @@ export const createFilesHandleStore = (dir: string, options: FilesHandleStoreOpt
 
   const tryCreate = async (path: string, mine: string): Promise<boolean> => {
     try {
-      const file = await open(path, 'wx');
+      const file = await open(path, 'wx', PRIVATE_FILE);
 
       try {
         await file.writeFile(mine);
@@ -322,7 +353,7 @@ export const createFilesHandleStore = (dir: string, options: FilesHandleStoreOpt
       if (!HANDLE.test(handle)) {
         throw new Error(`blok-mcp handle store: "${handle}" is not a handle`);
       }
-      await mkdir(dir, { recursive: true });
+      await mkdir(dir, { recursive: true, mode: PRIVATE_DIR });
       const lock = principalLock(record.principal);
       const mine = token();
 

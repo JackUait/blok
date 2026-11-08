@@ -15452,7 +15452,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-timeline-table] {
   flex: none;
-  inline-size: 244px;
+  inline-size: 280px;
   overflow: hidden;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
 }
@@ -15540,7 +15540,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] {
-  margin-inline-start: 220px;
+  margin-inline-start: 256px;
 }
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {

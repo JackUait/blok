@@ -138,12 +138,12 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip]')).toMatch(/position:\s*sticky/);
   });
 
-  // findings C14: a 244px panel, its « at the panel's end, beside the month.
-  it('draws the table panel 244px wide and turns the toggle into « at its end while it shows', () => {
-    expect(ruleBody('[data-blok-database-timeline-table]')).toMatch(/inline-size:\s*244px/);
+  // timeline.png (round V1): the panel runs x 360–640 with its border, 280px. Its « sits at the panel's end, beside the month.
+  it('draws the table panel 280px wide and turns the toggle into « at its end while it shows', () => {
+    expect(ruleBody('[data-blok-database-timeline-table]')).toMatch(/inline-size:\s*280px/);
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
-    expect(ruleBody(shown)).toMatch(/margin-inline-start:/);
+    expect(ruleBody(shown)).toMatch(/margin-inline-start:\s*256px/);
     expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
   });
 

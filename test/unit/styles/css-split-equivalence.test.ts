@@ -1484,8 +1484,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_VIEW_OFFSETS_BYTES = 502;
     // database.css: the calendar day "+" is Notion's white disc with its shadow; days shared with the last month fade their ink;
     // the timeline bar tint is a layer that fades in, and the hover pill runs past the bar's days;
-    // the table chevrons crossfade with a scale.
-    const DATABASE_VIEWS_TIME_BYTES = 2_588;
+    // the table chevrons crossfade with a scale; the table panel cites its 280px measurement.
+    const DATABASE_VIEWS_TIME_BYTES = 2_648;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

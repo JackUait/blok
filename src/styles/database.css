@@ -12509,9 +12509,10 @@ textarea[data-blok-database-cell-input] {
 }
 
 /* findings C14: 244px. */
+/* timeline.png (round V1): x 360–640 with the border. */
 [data-blok-database-timeline-table] {
   flex: none;
-  inline-size: 244px;
+  inline-size: 280px;
   overflow: hidden;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
 }
@@ -12605,8 +12606,8 @@ textarea[data-blok-database-cell-input] {
 
 /* findings C14: with the panel shown, the toggle is a « at the panel's end, and the month follows it. */
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] {
-  /* The 244px panel less this 24px button. */
-  margin-inline-start: 220px;
+  /* The 280px panel less this 24px button. */
+  margin-inline-start: 256px;
 }
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {

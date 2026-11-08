@@ -1486,6 +1486,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // the timeline bar tint is a layer that fades in, and the hover pill runs past the bar's days;
     // the table chevrons crossfade with a scale; the table panel cites its 280px measurement.
     const DATABASE_VIEWS_TIME_BYTES = 2_690;
+    // database.css: the side peek's open-row ring sits on every row at 0, so it fades in and out.
+    const DATABASE_PEEK_HALO_FADE_BYTES = 296;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1868,7 +1870,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_GALLERY_PREVIEW_BYTES
       + DATABASE_LIST_TITLE_BYTES
       + DATABASE_VIEW_OFFSETS_BYTES
-      + DATABASE_VIEWS_TIME_BYTES;
+      + DATABASE_VIEWS_TIME_BYTES
+      + DATABASE_PEEK_HALO_FADE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

@@ -179,13 +179,14 @@ describe('fill handle (D3)', () => {
 
 describe('the row open in the side peek (notion-live-8/62-close-hover.png)', () => {
   it('gets Notion\'s 1px ring round the whole row, from the table\'s start, without catching the pointer', () => {
-    const ring = ruleBody('[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked])::before');
+    const ring = ruleBody('[data-blok-database-table-row]::before');
 
     expect(ring).toContain("content: ''");
     expect(ring).toContain('position: absolute');
     expect(ring).toContain('inset: 0');
     expect(ring).toContain('pointer-events: none');
     expect(ring).toContain('box-shadow: inset 0 0 0 1px var(--blok-icon-active-text)');
+    expect(ruleBody('[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked])::before')).toContain('opacity: 1');
   });
 });
 

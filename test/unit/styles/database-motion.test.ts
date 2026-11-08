@@ -81,18 +81,19 @@ describe('view tab switch', () => {
 });
 
 describe('side peek', () => {
-  it('takes the width the drawer sets, 756px by default, and slides with translateX over 200ms ease', () => {
+  it('takes the width the drawer sets, 756px by default, and slides in from a window width away over 200ms ease', () => {
     const drawer = body(outsideReducedMotion, '[data-blok-database-drawer]');
 
     expect(drawer).toContain('width: min(var(--_blok-peek-width, 756px), 100vw)');
-    expect(drawer).toContain('transform: translateX(100%)');
+    // Notion starts at translateX(1512px) in a 1512px window (notion-motion.md "Side peek").
+    expect(drawer).toContain('transform: translateX(100vw)');
     expect(drawer).toContain('transition: transform 200ms ease');
     expect(drawer).not.toMatch(/transition: width/);
     expect(body(outsideReducedMotion, '[data-blok-database-drawer][data-open]')).toContain('transform: none');
   });
 
   it('slides in from the left in RTL', () => {
-    expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100%)');
+    expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100vw)');
   });
 
   it('narrows the page beside it over the same 200ms', () => {
@@ -119,6 +120,16 @@ describe('side peek', () => {
   it('has no pan scrollbar', () => {
     expect(database).not.toContain('data-blok-database-peek-scrollbar');
     expect(database).not.toContain('--_blok-peek-offset');
+  });
+
+  it('fades the open row\'s ring in and out over 200ms ease', () => {
+    const ring = body(outsideReducedMotion, '[data-blok-database-table-row]::before');
+    const peeked = body(outsideReducedMotion, '[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked])::before');
+
+    expect(ring).toContain('opacity: 0');
+    expect(ring).toContain('transition: opacity 200ms ease');
+    expect(peeked).toContain('opacity: 1');
+    expect(body(reducedMotion, '[data-blok-database-table-row]::before')).toContain('transition: none');
   });
 
   it('neither slides nor narrows gradually under reduced motion', () => {

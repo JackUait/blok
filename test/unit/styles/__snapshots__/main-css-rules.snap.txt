@@ -5614,12 +5614,12 @@ span[data-blok-slash-search] {
   flex-direction: column;
   background-color: var(--blok-database-peek-bg);
   box-shadow: var(--blok-database-peek-shadow);
-  transform: translateX(100%);
+  transform: translateX(100vw);
   transition: transform 200ms ease;
 }
 
 [dir="rtl"] [data-blok-database-drawer] {
-  transform: translateX(-100%);
+  transform: translateX(-100vw);
 }
 
 [data-blok-database-drawer][data-open] {
@@ -11904,13 +11904,19 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
-[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked])::before {
+[data-blok-database-table-row]::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
   box-shadow: inset 0 0 0 1px var(--blok-icon-active-text);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked])::before {
+  opacity: 1;
 }
 
 [data-blok-database-table-cell] {
@@ -12900,7 +12906,7 @@ textarea[data-blok-database-cell-input] {
   cursor: ns-resize;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-table-row]::after, [data-blok-database-table-resize], [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all], [data-blok-database-table-row-add], [data-blok-database-table-row-handle], [data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg, [data-blok-database-table-drop-line], [data-blok-database-table-column-drop-line], [data-blok-database-table-calc], [data-blok-database-table-column-header], [data-blok-database-table-open], [data-blok-database-table-add-property] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-table-row]::before, [data-blok-database-table-row]::after, [data-blok-database-table-resize], [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all], [data-blok-database-table-row-add], [data-blok-database-table-row-handle], [data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg, [data-blok-database-table-drop-line], [data-blok-database-table-column-drop-line], [data-blok-database-table-calc], [data-blok-database-table-column-header], [data-blok-database-table-open], [data-blok-database-table-add-property] {
   transition: none;
 }
 

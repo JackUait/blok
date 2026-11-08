@@ -113,7 +113,7 @@ import {
  *               error, tools and prompts keyed by name (order is the SDK's; a host_* entry
  *               counts by name only; a name listed twice is "<duplicate>"), serverInfo name,
  *               instructions, which of the tools and prompts capabilities exist, the host's own
- *               logging capability as is, and a server request's method, message and schema.
+ *               logging capability as is (initialize only), and a server request's method, message and schema.
  *               No expectHttp is recorded. --example-* flags are the example's own, so they
  *               are left out when working out ${contractRevision}.
  *
@@ -415,7 +415,7 @@ const byName = (list: unknown): unknown => (Array.isArray(list)
 const nameOnly = (value: unknown): unknown => (isRecord(value) ? { name: value.name } : value);
 
 /** The result keys Blok owns. Everything else (protocolVersion, cache hints, ...) is the host SDK's. */
-const blokOwnedResult = (result: Record<string, unknown>): Record<string, unknown> => {
+const blokOwnedResult = (result: Record<string, unknown>, method: string | undefined): Record<string, unknown> => {
   const kept = Object.fromEntries(Object.entries({
     serverInfo: nameOnly(result.serverInfo),
     instructions: result.instructions,
@@ -423,8 +423,9 @@ const blokOwnedResult = (result: Record<string, unknown>): Record<string, unknow
       ? {
         tools: 'tools' in result.capabilities,
         prompts: 'prompts' in result.capabilities,
-        // The example host declares logging itself; Blok must leave it as it is.
-        logging: result.capabilities.logging,
+        // The example host declares logging itself; Blok must leave it as it is. Only initialize
+        // counts: logging is deprecated in 2026, and some SDKs (C# 2.3.1) leave it out of discovery.
+        ...(method === 'initialize' && { logging: result.capabilities.logging }),
       }
       : undefined,
     tools: byName(result.tools),
@@ -445,7 +446,7 @@ const blokOwnedResult = (result: Record<string, unknown>): Record<string, unknow
 };
 
 /** What the embed suite compares of one message; see "compare" above. */
-const blokOwned = (message: unknown): unknown => {
+const blokOwned = (message: unknown, method?: string): unknown => {
   if (!isRecord(message)) {
     return message;
   }
@@ -463,7 +464,7 @@ const blokOwned = (message: unknown): unknown => {
     return { error: { code, message: text, ...(data !== undefined && { data }) } };
   }
 
-  return isRecord(message.result) ? { result: blokOwnedResult(message.result) } : message;
+  return isRecord(message.result) ? { result: blokOwnedResult(message.result, method) } : message;
 };
 
 /**
@@ -710,8 +711,9 @@ class CaseRun {
     this.check(this.recorded as unknown as Holder, key, actual, label);
   }
 
-  private owned(message: unknown): unknown {
-    return this.c.compare === 'blok-owned' ? blokOwned(message) : message;
+  /** method: the request this message answers, when it is an answer. */
+  private owned(message: unknown, method?: string): unknown {
+    return this.c.compare === 'blok-owned' ? blokOwned(message, method) : message;
   }
 
   /** expectHttp: the status line and headers are the host SDK's in the embed suite. */
@@ -722,7 +724,8 @@ class CaseRun {
   }
 
   private finishStep(step: Step, holder: Holder, answer: unknown, label: string): void {
-    const masked = maskKeys(this.owned(answer), new Set(this.c.maskKeys ?? []));
+    const method = step.send?.method;
+    const masked = maskKeys(this.owned(answer, typeof method === 'string' ? method : undefined), new Set(this.c.maskKeys ?? []));
 
     (step.mask ?? []).forEach((pointer) => maskAt(masked, pointer));
     for (const [name, source] of Object.entries(step.capture ?? {})) {

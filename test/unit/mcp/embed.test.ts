@@ -350,4 +350,12 @@ describe('parseBlokMcpArgs', () => {
   it('refuses an unknown flag with the CLI wording', async () => {
     await expect(parseBlokMcpArgs(['--nope'], {})).rejects.toThrow(new McpConfigError('Unknown flag --nope'));
   });
+
+  it('makes the files handle store for --handle-store files:<dir>, and none for memory', async () => {
+    const store = (await parseBlokMcpArgs(['--handle-store', 'files:/var/blok/handles'], {})).handleStore;
+
+    expect(store).toEqual({ count: expect.any(Function), tryAdd: expect.any(Function), acquire: expect.any(Function), remove: expect.any(Function) });
+    expect((await parseBlokMcpArgs(['--handle-store', 'memory'], {})).handleStore).toBeUndefined();
+    expect((await parseBlokMcpArgs([], {})).handleStore).toBeUndefined();
+  });
 });

@@ -114,7 +114,7 @@ const fixture = (session: HandleSession = fakeSession(), maxPerPrincipal = 8) =>
     },
   });
   registries.push(handles);
-  const deps: DispatcherDeps = {
+  const deps: Omit<DispatcherDeps, 'handles'> & { handles: typeof handles } = {
     handles,
     open: vi.fn<DispatcherDeps['open']>(async () => session),
     list: vi.fn<DispatcherDeps['list']>(async () => ({

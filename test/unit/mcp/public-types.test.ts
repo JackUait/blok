@@ -6,7 +6,9 @@ import type { CallToolRequest, Server, ServerContext } from '@modelcontextprotoc
 import type * as Public from '../../../packages/mcp/types/index';
 import { BlokMcpSourceError, parseBlokMcpArgs } from '../../../src/mcp/index';
 import type { createBlok } from '../../../src/mcp/index';
-import type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpOptions as InternalOptions, BlokPageCreateRequest } from '../../../src/mcp/options';
+import type {
+  BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore, BlokMcpOptions as InternalOptions, BlokPageCreateRequest,
+} from '../../../src/mcp/options';
 import type { AgentActor } from '../../../types/agent';
 import type { BlokCustomToolsFile, ManifestOverrides } from '../../../types/tool-manifest';
 
@@ -33,6 +35,10 @@ const sourceFromPublic = (value: Public.BlokMcpDocumentSource): BlokMcpDocumentS
 const sourceErrorToPublic: typeof Public.BlokMcpSourceError = BlokMcpSourceError;
 const pageRequestToPublic = (value: BlokPageCreateRequest): Public.BlokPageCreateRequest => value;
 const pageRequestFromPublic = (value: Public.BlokPageCreateRequest): BlokPageCreateRequest => value;
+const handleStoreToPublic = (value: BlokMcpHandleStore): Public.BlokMcpHandleStore => value;
+const handleStoreFromPublic = (value: Public.BlokMcpHandleStore): BlokMcpHandleStore => value;
+const handleRecordToPublic = (value: BlokMcpHandleRecord): Public.BlokMcpHandleRecord => value;
+const handleRecordFromPublic = (value: Public.BlokMcpHandleRecord): BlokMcpHandleRecord => value;
 
 // A TypeScript host wires the public handlers into the SDK without a cast.
 const wireHost = (server: Server, blok: Public.BlokMcp): void => {
@@ -57,7 +63,10 @@ const sameKeys: [
   SameKeys<BlokDocumentCaller, Public.BlokDocumentCaller>,
   SameKeys<BlokMcpDocumentSource, Public.BlokMcpDocumentSource>,
   SameKeys<BlokPageCreateRequest, Public.BlokPageCreateRequest>,
-] = [true, true, true, true, true, true, true, true];
+  SameKeys<BlokMcpHandleStore, Public.BlokMcpHandleStore>,
+  SameKeys<BlokMcpHandleLease, Public.BlokMcpHandleLease>,
+  SameKeys<BlokMcpHandleRecord, Public.BlokMcpHandleRecord>,
+] = [true, true, true, true, true, true, true, true, true, true, true];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -72,8 +81,8 @@ describe('@bloklabs/mcp public types', () => {
     expect([
       actorToPublic, actorFromPublic, overridesToPublic, overridesFromPublic, customToolsToPublic, optionsToPublic, optionsFromPublic,
       blokToPublic, hooksFromPublic, parseArgsToPublic, wireHost, sourceToPublic, sourceFromPublic, sourceErrorToPublic,
-      pageRequestToPublic, pageRequestFromPublic,
-    ]).toHaveLength(16);
+      pageRequestToPublic, pageRequestFromPublic, handleStoreToPublic, handleStoreFromPublic, handleRecordToPublic, handleRecordFromPublic,
+    ]).toHaveLength(20);
     expect(sameKeys.every(Boolean)).toBe(true);
   });
 

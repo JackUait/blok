@@ -3308,6 +3308,7 @@
   --_blok-table-pill-room: 8px;
   margin-inline-end: calc(-1 * var(--_blok-table-pill-room));
   padding-inline-end: var(--_blok-table-pill-room);
+  overscroll-behavior-x: none;
 }
 
 [data-blok-table-cell][data-blok-table-corner~="top-start"] {

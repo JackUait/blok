@@ -204,6 +204,10 @@
 
   margin-inline-end: calc(-1 * var(--_blok-table-pill-room));
   padding-inline-end: var(--_blok-table-pill-room);
+  /* No rubber-band at the scroll ends. The bounce moves the grid by a compositor
+     transform that no scroll event or rect reports, so the add bars and grips,
+     placed from those in JS, would stay behind while the table swings away. */
+  overscroll-behavior-x: none;
 }
 
 [data-blok-table-cell][data-blok-table-corner~="top-start"] {

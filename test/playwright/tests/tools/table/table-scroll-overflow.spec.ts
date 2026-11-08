@@ -192,6 +192,21 @@ test.describe('Table Scroll Overflow', () => {
     expect(hasOverflowAuto).toBe(true);
   });
 
+  test('a fast sideways scroll does not rubber-band past the table end, so the add bars and grips stay with the table', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [{ type: 'table', data: { withHeadings: false, content: [['A', 'B'], ['C', 'D']], colWidths: [900, 900] } }],
+      },
+    });
+
+    // The bounce is a compositor transform that scroll events and rects never see,
+    // so the controls placed from them cannot follow it. Only the CSS can stop it.
+    const scrollContainer = page.locator(`${TABLE_SELECTOR} [data-blok-table-scroll]`);
+
+    await expect(scrollContainer).toHaveCSS('overscroll-behavior-x', 'none');
+  });
+
   test('table wrapper gains overflow-x-auto after dragging resize handle', async ({ page }) => {
     // 1. Init editor with 2x2 table WITHOUT colWidths
     await createBlok(page, {

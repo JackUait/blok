@@ -284,6 +284,25 @@ describe('stored handles in a shared handle store', () => {
     expect(await answer(b, 'blok_read', { handle })).toMatchObject({ blocks: [] });
   });
 
+  it.each([['../x'], ['a/b'], ['x'.repeat(129)], ['h\u0000']])('answers UNKNOWN_HANDLE for the handle %j without asking the store', async (handle) => {
+    const store = createMemoryHandleStore();
+    const acquire = vi.spyOn(store, 'acquire');
+    const a = start({}, store);
+
+    expect(errorCode(await answer(a, 'blok_read', { handle }))).toBe('UNKNOWN_HANDLE');
+    expect(errorCode(await answer(a, 'blok_close', { handle }))).toBe('UNKNOWN_HANDLE');
+    expect(acquire).not.toHaveBeenCalled();
+  });
+
+  it('asks the store about a handle of the minted shape it does not know', async () => {
+    const store = createMemoryHandleStore();
+    const acquire = vi.spyOn(store, 'acquire');
+    const a = start({}, store);
+
+    expect(errorCode(await answer(a, 'blok_read', { handle: 'A-_'.repeat(42) + 'zz' }))).toBe('UNKNOWN_HANDLE');
+    expect(acquire).toHaveBeenCalledTimes(1);
+  });
+
   it('answers SOURCE_UNAVAILABLE to a close whose lease the store refuses, and logs it', async () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const inner = createMemoryHandleStore();

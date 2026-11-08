@@ -6,6 +6,8 @@ import type { HandleSession } from './session';
 // Above the slowest stored call (a 30 s endpoint load); a longer wait is better told to retry.
 export const LEASE_WAIT_MS = 30_000;
 export const STORE_SWEEP_MS = 60_000;
+// Handles reach the host's store as keys or file names, so only Blok's own shape gets that far.
+const HANDLE = /^[A-Za-z0-9_-]{1,128}$/;
 
 export interface SharedHandlesOptions {
   /** This process's live handles: they hold sockets, so they never go into the store. */
@@ -150,6 +152,9 @@ export class SharedHandles implements HandleTable {
 
   /** Runs fn under the handle's lease, after this process's earlier calls on it, for its owner only. */
   private leased<T>(handle: string, principal: string, fn: (lease: BlokMcpHandleLease) => Promise<T>): Promise<T> {
+    if (!HANDLE.test(handle)) {
+      return Promise.reject(unknownHandle());
+    }
     const run = (this.turns.get(handle) ?? Promise.resolve()).then(async () => {
       const lease = await viaStore(() => this.options.store.acquire(handle, this.options.idleMs, this.options.leaseWaitMs ?? LEASE_WAIT_MS));
 

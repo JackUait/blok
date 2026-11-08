@@ -125,11 +125,6 @@ const BLOK_METHODS = ['tools/list', 'tools/call', 'prompts/list', 'prompts/get']
 const clashes = (names: string[] | undefined, owns: (name: string) => boolean): string[] =>
   (names ?? []).filter(name => owns(name));
 
-/**
- * Serves Blok's tools and prompts on a host's low-level server, next to the host's own.
- * It never changes serverInfo, instructions or a handler the host set; it only adds the
- * tools and prompts capabilities when they are missing.
- */
 /** The host's tool and prompt names, checked against Blok's before anything is served. */
 export interface HostNames {
   tools?: ReadonlyArray<{ name: string }>;
@@ -147,6 +142,11 @@ export const assertNoClash = (blok: BlokHandlers, host: HostNames): void => {
   }
 };
 
+/**
+ * Serves Blok's tools and prompts on a host's low-level server, next to the host's own.
+ * It never changes serverInfo, instructions or a handler the host set; it only adds the
+ * tools and prompts capabilities when they are missing.
+ */
 export const attachBlok = (server: SdkServer, blok: BlokHandlers, host: HostSurface = {}): void => {
   assertNoClash(blok, host);
   for (const method of BLOK_METHODS) {

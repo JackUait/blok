@@ -1,5 +1,5 @@
 import type { AgentErrorCode } from '../../../types/agent';
-import { MAX_JSON_DEPTH, nestsDeeperThan, wellFormed } from '../../shared/mcp/wire-json';
+import { MAX_JSON_DEPTH, textNestsDeeperThan, wellFormed } from '../../shared/mcp/wire-json';
 import { McpConfigError } from '../config';
 import { surfaceError } from '../errors';
 import type { BlokDocumentCaller, BlokMcpDocumentSource } from '../options';
@@ -15,7 +15,7 @@ export class BlokMcpSourceError extends Error {
   /** Shown to the agent: no paths, hosts or secrets. Empty: Blok's own words. */
   public readonly agentMessage: string;
 
-  constructor(kind: BlokMcpSourceErrorKind, agentMessage: string, options?: { cause?: unknown }) {
+  constructor(kind: BlokMcpSourceErrorKind, agentMessage = '', options?: { cause?: unknown }) {
     super(agentMessage === '' ? kind : agentMessage, options);
     this.name = 'BlokMcpSourceError';
     this.kind = kind;
@@ -60,11 +60,23 @@ const sourceErrorOf = (thrown: unknown): { kind: BlokMcpSourceErrorKind; agentMe
     : null;
 };
 
-/** A host bug or a plain throw: the full error goes to stderr, the agent gets generic words. */
-const hostFailed = (op: Op, documentId: string | null, what: unknown): Error => {
+// The host may have written it: "nothing was saved" would make the agent repeat its batch.
+const SAVED_WITHOUT_VERSION = 'The host may have saved this document but did not say which version. Read it before you retry.';
+
+/** A host bug or a plain throw: the full error (or the bad answer) goes to stderr, the agent gets generic words. */
+const hostFailed = (op: Op, documentId: string | null, what: unknown, message = FAILED[op]): Error => {
   console.error(`blok-mcp: the host document source failed to ${op}${documentId === null ? '' : ` "${documentId}"`}`, what);
 
-  return surfaceError('SOURCE_UNAVAILABLE', FAILED[op]);
+  return surfaceError('SOURCE_UNAVAILABLE', message);
+};
+
+// The endpoint source's rule (endpoint.ts), so every host gets the same ids whatever it does with them.
+const checkedId = (documentId: string): string => {
+  if (documentId === '' || documentId === '.' || documentId === '..') {
+    throw surfaceError('INVALID_ARGS', `"${documentId}" is not a document id.`);
+  }
+
+  return documentId;
 };
 
 const guarded = async <T>(op: Op, documentId: string | null, call: () => Promise<T>): Promise<T> => {
@@ -84,19 +96,19 @@ const guarded = async <T>(op: Op, documentId: string | null, call: () => Promise
 
 const isVersion = (value: unknown): value is string => typeof value === 'string' && value !== '';
 
-/** The same checks a file or an endpoint answer gets: depth, JSON values only, lone surrogates, shape. */
-const checkedDocument = (documentId: string, document: unknown): unknown => {
+/**
+ * The endpoint source's text path: depth on the text, JSON.parse (a repeated key keeps its last
+ * value), lone surrogates, shape. Text, not a parsed tree, so every port runs the same parser.
+ */
+const checkedDocument = (documentId: string, text: string): unknown => {
   const where = `The host's document "${documentId}"`;
 
-  // Bounded walk first: it also stops a cyclic object before JSON.stringify sees it.
-  if (nestsDeeperThan(document, MAX_JSON_DEPTH)) {
+  if (textNestsDeeperThan(text, MAX_JSON_DEPTH)) {
     throw surfaceError('SOURCE_UNAVAILABLE', `${where} nests deeper than ${MAX_JSON_DEPTH} levels of objects and arrays.`);
   }
   const parsed: unknown = (() => {
     try {
-      // undefined (no document at all) stringifies to undefined; the shape check refuses it.
-      const text: string | undefined = JSON.stringify(document);
-      const value: unknown = text === undefined ? undefined : JSON.parse(text);
+      const value: unknown = JSON.parse(text);
 
       return value;
     } catch {
@@ -118,7 +130,7 @@ const checkedListing = (answer: unknown): SourceListing => {
   return {
     documents: answer.documents
       .filter((doc): doc is { id: string; title?: unknown } => isRecord(doc) && typeof doc.id === 'string')
-      .map(doc => ({ id: doc.id, title: typeof doc.title === 'string' ? doc.title : null })),
+      .map(doc => wellFormed({ id: doc.id, title: typeof doc.title === 'string' ? doc.title : null })),
     nextCursor: typeof answer.nextCursor === 'string' ? answer.nextCursor : null,
   };
 };
@@ -127,22 +139,24 @@ const forOne = (host: BlokMcpDocumentSource, caller: BlokDocumentCaller): Docume
   const bound: DocumentSource = {
     kind: 'custom',
     load: async (documentId): Promise<LoadedDocument> => {
-      const answer = await guarded('load', documentId, () => host.load(caller, documentId));
+      const id = checkedId(documentId);
+      const answer: unknown = await guarded('load', id, () => host.load(caller, id));
 
       if (answer === null) {
         return { raw: { blocks: [] }, version: null, missing: true };
       }
-      if (!isRecord(answer) || !isVersion(answer.version)) {
-        throw hostFailed('load', documentId, new Error('load answered an existing document without a non-empty version'));
+      if (!isRecord(answer) || !isVersion(answer.version) || typeof answer.documentText !== 'string') {
+        throw hostFailed('load', id, { expected: 'null or { documentText: string, version: non-empty string }', answer });
       }
 
-      return { raw: checkedDocument(documentId, answer.document), version: answer.version };
+      return { raw: checkedDocument(id, answer.documentText), version: answer.version };
     },
     save: async (documentId, document, { ifVersion }) => {
-      const answer: unknown = await guarded('save', documentId, () => host.save(caller, documentId, JSON.stringify(document), ifVersion));
+      const id = checkedId(documentId);
+      const answer: unknown = await guarded('save', id, () => host.save(caller, id, JSON.stringify(document), ifVersion));
 
       if (!isRecord(answer) || !isVersion(answer.version)) {
-        throw hostFailed('save', documentId, new Error('save answered without a non-empty version'));
+        throw hostFailed('save', id, { expected: '{ version: non-empty string }', answer }, SAVED_WITHOUT_VERSION);
       }
 
       return { version: answer.version };

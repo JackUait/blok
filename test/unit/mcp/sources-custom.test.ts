@@ -40,7 +40,7 @@ const hostSource = (overrides: Partial<BlokMcpDocumentSource> = {}): BlokMcpDocu
   load: ReturnType<typeof vi.fn<BlokMcpDocumentSource['load']>>;
   save: ReturnType<typeof vi.fn<BlokMcpDocumentSource['save']>>;
 } => ({
-  load: vi.fn<BlokMcpDocumentSource['load']>(async () => ({ document: STORED_DOC, version: 'v1' })),
+  load: vi.fn<BlokMcpDocumentSource['load']>(async () => ({ documentText: JSON.stringify(STORED_DOC), version: 'v1' })),
   save: vi.fn<BlokMcpDocumentSource['save']>(async () => ({ version: 'v2' })),
   ...overrides,
 } as never);
@@ -132,7 +132,7 @@ describe('custom document source', () => {
     const server = assemble(source);
     const handle = await openHandle(server);
 
-    source.load.mockResolvedValue({ document: { title: 'Theirs', blocks: [] }, version: 'v9' });
+    source.load.mockResolvedValue({ documentText: '{"title":"Theirs","blocks":[]}', version: 'v9' });
     await setTitle(server, handle, 'Mine');
     const read = structured(await server.dispatch('blok_read', { handle }, caller));
 
@@ -164,7 +164,7 @@ describe('custom document source', () => {
 
   it('a load or save without a version is a host bug: logged, SOURCE_UNAVAILABLE', async () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const noLoadVersion = assemble(hostSource({ load: vi.fn(async () => ({ document: STORED_DOC, version: '' })) }));
+    const noLoadVersion = assemble(hostSource({ load: vi.fn(async () => ({ documentText: JSON.stringify(STORED_DOC), version: '' })) }));
 
     expect(errorOf(await noLoadVersion.dispatch('blok_open', { documentId: 'doc', mode: 'stored' }, caller))).toEqual({
       code: 'SOURCE_UNAVAILABLE',
@@ -179,26 +179,112 @@ describe('custom document source', () => {
   });
 
   it('checks every load like a file: blocks array, depth, lone surrogates', async () => {
-    const deep = (levels: number): unknown => (levels === 0 ? 'x' : { a: deep(levels - 1) });
-    const shapeless = assemble(hostSource({ load: vi.fn(async () => ({ document: { title: 'no blocks' }, version: 'v1' })) }));
+    const deep = (levels: number): string => (levels === 0 ? '"x"' : `{"a":${deep(levels - 1)}}`);
+    const shapeless = assemble(hostSource({ load: vi.fn(async () => ({ documentText: '{"title":"no blocks"}', version: 'v1' })) }));
 
     expect(errorOf(await shapeless.dispatch('blok_open', { documentId: 'doc', mode: 'stored' }, caller))).toMatchObject({
       code: 'SOURCE_UNAVAILABLE',
       message: 'The host\'s document "doc" is not a Blok document: expected an object with a "blocks" array.',
     });
-    const tooDeep = assemble(hostSource({ load: vi.fn(async () => ({ document: { blocks: [], meta: deep(50) }, version: 'v1' })) }));
+    // The document itself 49 levels deep: 48 is the limit, as for a file.
+    const fits = assemble(hostSource({ load: vi.fn(async () => ({ documentText: `{"blocks":[],"meta":${deep(47)}}`, version: 'v1' })) }));
+
+    expect(structured(await fits.dispatch('blok_open', { documentId: 'doc', mode: 'stored' }, caller))).toMatchObject({ exists: true });
+    const tooDeep = assemble(hostSource({ load: vi.fn(async () => ({ documentText: `{"blocks":[],"meta":${deep(48)}}`, version: 'v1' })) }));
 
     expect(errorOf(await tooDeep.dispatch('blok_open', { documentId: 'doc', mode: 'stored' }, caller))).toMatchObject({
       code: 'SOURCE_UNAVAILABLE',
       message: 'The host\'s document "doc" nests deeper than 48 levels of objects and arrays.',
     });
-    const lone = hostSource({ load: vi.fn(async () => ({ document: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'a\uD800b' } }] }, version: 'v1' })) });
+    const lone = hostSource({ load: vi.fn(async () => ({ documentText: '{"blocks":[{"id":"p1","type":"paragraph","data":{"text":"a\\ud800b"}}]}', version: 'v1' })) });
     const surrogates = assemble(lone);
     const handle = await openHandle(surrogates);
     const read = JSON.stringify(structured(await surrogates.dispatch('blok_read', { handle }, caller)));
 
     expect(read).toContain('a�b');
     expect(read).not.toContain('\\ud800');
+  });
+
+  it('parses the document text as JSON.parse does: a repeated key keeps its last value', async () => {
+    const server = assemble(hostSource({ load: vi.fn(async () => ({ documentText: '{"title":"a","blocks":[],"title":"b"}', version: 'v1' })) }));
+    const handle = await openHandle(server);
+
+    expect(structured(await server.dispatch('blok_read', { handle }, caller))).toMatchObject({ page: { title: 'b' } });
+  });
+
+  it('refuses text that is not JSON, as the endpoint source does', async () => {
+    const server = assemble(hostSource({ load: vi.fn(async () => ({ documentText: '{"blocks":', version: 'v1' })) }));
+
+    expect(errorOf(await server.dispatch('blok_open', { documentId: 'doc', mode: 'stored' }, caller))).toEqual({
+      code: 'SOURCE_UNAVAILABLE', message: 'The host\'s document "doc" is not JSON.', retryable: true,
+    });
+  });
+
+  it('refuses a parsed document instead of text as a host bug: logged, SOURCE_UNAVAILABLE', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const server = assemble(hostSource({ load: vi.fn(async () => ({ documentText: STORED_DOC, version: 'v1' }) as never) }));
+
+    expect(errorOf(await server.dispatch('blok_open', { documentId: 'doc', mode: 'stored' }, caller))).toEqual({
+      code: 'SOURCE_UNAVAILABLE', message: 'The host could not load this document. Try again.', retryable: true,
+    });
+    expect(logged).toHaveBeenCalled();
+  });
+
+  it.each([['.'], ['..']])('refuses the id %s as INVALID_ARGS before the host sees it', async (documentId) => {
+    const source = hostSource();
+    const server = assemble(source);
+
+    expect(errorOf(await server.dispatch('blok_open', { documentId, mode: 'stored' }, caller))).toEqual({
+      code: 'INVALID_ARGS', message: `"${documentId}" is not a document id.`, retryable: false,
+    });
+    expect(source.load).not.toHaveBeenCalled();
+  });
+
+  it('a save answered without a version says the host may have saved, logs the answer, and reloads', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const source = hostSource({ save: vi.fn(async () => ({ version: 5 }) as never) });
+    const server = assemble(source);
+    const handle = await openHandle(server);
+
+    expect(errorOf(await setTitle(server, handle, 'x'))).toEqual({
+      code: 'SOURCE_UNAVAILABLE',
+      message: 'The host may have saved this document but did not say which version. Read it before you retry.',
+      retryable: true,
+    });
+    expect(logged.mock.calls.some(call => call.some(arg => isRecord(arg) && isRecord(arg.answer) && arg.answer.version === 5))).toBe(true);
+    expect(source.load).toHaveBeenCalledTimes(2);
+  });
+
+  it('saves with the opener\'s caller when a later call comes from another client of the same principal', async () => {
+    const source = hostSource();
+    const server = assemble(source);
+    const handle = await openHandle(server);
+
+    await server.dispatch('blok_execute', { handle, commands: [{ name: 'doc.setTitle', args: { title: 'x' } }] }, { ...caller, clientName: 'Other' });
+    expect(source.save.mock.calls[0][0]).toEqual(aliceCaller);
+  });
+
+  it('creates a page document through the host with Blok\'s id: load finds none, the save asks create-if-absent', async () => {
+    const source = hostSource();
+    const server = assemble(source, { pageTitles: 'page-map' });
+    const handle = await openHandle(server);
+
+    source.load.mockResolvedValue(null);
+    const inserted = structured(await server.dispatch('blok_execute', {
+      handle, commands: [{ name: 'block.insert', args: { type: 'page', id: 'np', position: 'end' } }],
+    }, caller));
+
+    expect(inserted).toMatchObject({ ok: true });
+    const pageSave = source.save.mock.calls.find(call => call[1] !== 'doc');
+
+    expect(pageSave).toEqual([aliceCaller, expect.any(String), '{"blocks":[]}', null]);
+  });
+
+  it('runs every listed id and title through the same text checks', async () => {
+    const list = vi.fn<NonNullable<BlokMcpDocumentSource['list']>>(async () => ({ documents: [{ id: 'mine', title: 'a\uD800b' }] }));
+    const server = assemble(hostSource({ list }));
+
+    expect(structured(await server.dispatch('blok_list_documents', {}, caller))).toMatchObject({ documents: [{ id: 'mine', title: 'a\uFFFDb' }] });
   });
 
   it('lists through the host with the caller, and still drops ids authorize refuses', async () => {

@@ -117,8 +117,12 @@ export interface BlokDocumentCaller {
  * logged to stderr and the agent sees SOURCE_UNAVAILABLE; a failed save drops the batch from memory.
  */
 export interface BlokMcpDocumentSource {
-  /** Null: never saved (opens empty, `exists: false`). An existing document needs a non-empty version. */
-  load(caller: BlokDocumentCaller, documentId: string): Promise<{ document: unknown; version: string } | null>;
+  /**
+   * Null: never saved (opens empty, `exists: false`). Else the document as JSON text, as you store it,
+   * with its non-empty version. Blok parses the text as `JSON.parse` does (a repeated key keeps its
+   * last value), so pass stored text through rather than a parsed object.
+   */
+  load(caller: BlokDocumentCaller, documentId: string): Promise<{ documentText: string; version: string } | null>;
   /**
    * `documentText` is compact JSON. `ifVersion` null means "must not exist yet"; otherwise it must
    * equal the stored version, or throw `changed`. Answer the new non-empty version.
@@ -138,7 +142,7 @@ export type BlokMcpSourceErrorKind = 'changed' | 'unavailable' | 'forbidden' | '
 export declare class BlokMcpSourceError extends Error {
   readonly kind: BlokMcpSourceErrorKind;
   readonly agentMessage: string;
-  constructor(kind: BlokMcpSourceErrorKind, agentMessage: string, options?: { cause?: unknown });
+  constructor(kind: BlokMcpSourceErrorKind, agentMessage?: string, options?: { cause?: unknown });
 }
 
 export type McpAssetKind = 'image' | 'video' | 'audio' | 'file';
@@ -257,13 +261,13 @@ export interface BlokMcpHandlers {
   getPrompt(request: BlokMcpPromptGet): BlokMcpPromptResult;
 }
 
-/** The host's own tools and prompts, served next to Blok's by `attach`. Other names reach these handlers. */
 /** Your own tool and prompt names, checked against Blok's. */
 export interface BlokMcpHostNames {
   tools?: ReadonlyArray<{ name: string }>;
   prompts?: ReadonlyArray<{ name: string }>;
 }
 
+/** The host's own tools and prompts, served next to Blok's by `attach`. Other names reach these handlers. */
 export interface BlokMcpHostSurface {
   tools?: BlokMcpToolEntry[];
   callTool?(request: BlokMcpToolCall, ctx: BlokMcpRequestContext): unknown;

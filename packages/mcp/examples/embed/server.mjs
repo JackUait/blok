@@ -101,7 +101,9 @@ const hostSurface = (example) => {
  * example speaks it byte for byte:
  *
  *   <base>  <url> with one trailing "/" removed.
- *   <id>    the document id, percent-encoded as JS encodeURIComponent does.
+ *   <id>    the document id, percent-encoded as JS encodeURIComponent does: every UTF-8 byte
+ *           is %XX (upper-case hex) except A-Z a-z 0-9 and - _ . ! ~ * ' ( ). Blok never passes
+ *           "", "." or "..": it refuses those ids before it calls the source.
  *   Every request carries the caller, values sent as given:
  *     Blok-Caller: <caller.principal>
  *     Blok-Caller-Client: <caller.clientName>
@@ -110,15 +112,18 @@ const hostSurface = (example) => {
  *
  *   load  GET <base>/<id>
  *         200 body exactly `null`  -> never saved: load answers null.
- *         200 any other JSON body  -> { document: body.data, version: body.version }, both passed on
- *                                     as given (absent = null); Blok checks them, not this code.
+ *         200 any other JSON body  -> { documentText: body.documentText, version: body.version }, both
+ *                                     passed on as given (absent = null). documentText is the stored
+ *                                     document as a JSON string; it is never parsed here, so Blok's own
+ *                                     parser reads it (repeated keys, lone surrogates, depth).
  *   save  PUT <base>/<id>
  *         Content-Type: application/json; the body is documentText, byte for byte.
  *         Blok-If-Version: <ifVersion>, left out when ifVersion is null.
  *         200 JSON body            -> { version: body.version } as given (absent = null).
  *   list  GET <base>?limit=<n>&query=<q>&cursor=<c>
- *         In that order; query and cursor left out when absent; values form-encoded
- *         (URLSearchParams). 200 JSON body -> passed on as given.
+ *         In that order; query and cursor left out when absent; values form-encoded as
+ *         URLSearchParams does: space is "+", every other UTF-8 byte is %XX except
+ *         A-Z a-z 0-9 and * - . _. 200 JSON body -> passed on as given.
  *
  *   Any other answer, on every route:
  *     409 -> BlokMcpSourceError('changed', m)       503 -> BlokMcpSourceError('unavailable', m)
@@ -167,7 +172,7 @@ const exampleSource = (url) => {
     load: async (caller, documentId) => {
       const body = await call(urlOf(documentId), { headers: callerHeaders(caller) });
 
-      return body === null ? null : { document: body?.data ?? null, version: body?.version ?? null };
+      return body === null ? null : { documentText: body?.documentText ?? null, version: body?.version ?? null };
     },
     save: async (caller, documentId, documentText, ifVersion) => {
       const body = await call(urlOf(documentId), {

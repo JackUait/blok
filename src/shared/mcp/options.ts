@@ -59,8 +59,11 @@ export interface BlokDocumentCaller {
  * refuse with a code; any other throw is logged and the agent sees SOURCE_UNAVAILABLE.
  */
 export interface BlokMcpDocumentSource {
-  /** Null: never saved. An existing document needs a non-empty version. */
-  load(caller: BlokDocumentCaller, documentId: string): Promise<{ document: unknown; version: string } | null>;
+  /**
+   * Null: never saved. Else the document as JSON text, as stored, with its non-empty version.
+   * Text, not a parsed object: Blok parses it as the endpoint source does (src/mcp/sources/custom.ts).
+   */
+  load(caller: BlokDocumentCaller, documentId: string): Promise<{ documentText: string; version: string } | null>;
   /**
    * documentText is compact JSON. ifVersion null means "must not exist yet"; any other value
    * must equal the stored version, else throw `changed`. Answer the new non-empty version.

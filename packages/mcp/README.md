@@ -337,15 +337,22 @@ Pass `source: { kind: 'custom', source }` to load and save stored documents thro
 import { BlokMcpSourceError } from '@bloklabs/mcp';
 
 const source = {
-  // Null: never saved. An existing document needs a non-empty version.
-  load: async (caller, documentId) => ({ document: await db.read(documentId), version: await db.version(documentId) }),
+  // One read for the text and its version, so they always match. Null: never saved.
+  load: async (caller, documentId) => {
+    const row = await db.read(documentId); // { text, version } or null
+
+    return row === null ? null : { documentText: row.text, version: row.version };
+  },
   // ifVersion null: the document must not exist yet. Otherwise it must equal the stored version.
+  // writeIf compares and writes in one step and answers the new version, or null on a mismatch.
   save: async (caller, documentId, documentText, ifVersion) => {
-    if (!(await db.writeIf(documentId, documentText, ifVersion, caller.actor))) {
-      throw new BlokMcpSourceError('changed', '');
+    const version = await db.writeIf(documentId, documentText, ifVersion, caller.actor);
+
+    if (version === null) {
+      throw new BlokMcpSourceError('changed');
     }
 
-    return { version: await db.version(documentId) };
+    return { version };
   },
   // Optional: turns on blok_list_documents.
   list: async (caller, { query, cursor, limit }) => ({ documents: [{ id: 'doc', title: 'Notes' }], nextCursor: null }),
@@ -353,8 +360,10 @@ const source = {
 ```
 
 - `caller` is the caller that opened the handle: `{ principal, clientName, scopes, actor }`. Blok still runs `authorize` before every open and on every listed id.
-- Blok checks each loaded document as it checks a file: a `blocks` array, at most 48 levels deep, lone surrogates read as U+FFFD.
-- Refuse with `new BlokMcpSourceError(kind, agentMessage)`: `changed` is `DOCUMENT_CHANGED`, `unavailable` is `SOURCE_UNAVAILABLE`, `forbidden` is `FORBIDDEN`, `invalidId` is `INVALID_ARGS`. The agent sees `agentMessage`, or Blok's own words when it is empty.
-- Any other throw, and a load or save answered without a version, goes to stderr in full. The agent sees `SOURCE_UNAVAILABLE` in generic words.
+- `load` answers the document as JSON text, as you store it. Blok parses it as it parses a file: a `blocks` array, at most 48 levels deep, a repeated key keeps its last value, lone surrogates read as U+FFFD.
+- Ids are any string `authorize` allows, except `""`, `.` and `..`, which Blok refuses with `INVALID_ARGS` before it calls you. With `pageTitles: 'page-map'` and no `createPage`, Blok makes up the ids of new pages, so your store must take ids it did not choose.
+- A save answered without a version is a host bug: the agent sees `SOURCE_UNAVAILABLE` "The host may have saved this document but did not say which version. Read it before you retry.", and the handle reloads.
+- Refuse with `new BlokMcpSourceError(kind, agentMessage?)`: `changed` is `DOCUMENT_CHANGED`, `unavailable` is `SOURCE_UNAVAILABLE`, `forbidden` is `FORBIDDEN`, `invalidId` is `INVALID_ARGS`. The agent sees `agentMessage`, or Blok's own words when it is empty.
+- Any other throw, and a bad load or save answer, goes to stderr in full. The agent sees `SOURCE_UNAVAILABLE` in generic words.
 - A failed save drops the batch: the handle reloads your document, and the batch's undo step is gone.
 - A custom source counts as a source everywhere: with `--ticket-url` it still needs `authorize`.

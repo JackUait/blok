@@ -712,6 +712,40 @@ describe('DatabaseTimelineView', () => {
       expect(el.scrollLeft).toBeLessThan(px('2026-10-13'));
     });
 
+    // notion-motion.md Timeline (tlcollapse.png, Gamma): a bar cut by the screen's end shows a "→" chip at that end.
+    it('marks a bar that runs past the screen\'s end, and its "→" chip jumps to it', () => {
+      const { root, view } = mount();
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 400, configurable: true });
+      el.scrollLeft = px('2026-10-04');
+      view.refreshOffscreen();
+
+      expect(bar(root, 'r2').hasAttribute('data-clipped-end')).toBe(true);
+      expect(bar(root, 'r1').hasAttribute('data-clipped-end')).toBe(false);
+      const chip = bar(root, 'r2').querySelector<HTMLElement>('[data-blok-database-timeline-bar-chip="end"]');
+
+      expect(chip?.innerHTML).toBe(markup(IconArrowRightSmall));
+      chip?.click();
+      expect(el.scrollLeft).toBeGreaterThan(px('2026-10-04'));
+    });
+
+    it('scrolls a bar cut at both ends forward from its "→" chip, to its end', () => {
+      const { root, view } = mount({ groups: single([row('r1', 'Long', '2026-10-01/2026-10-20')]) });
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 400, configurable: true });
+      el.scrollLeft = px('2026-10-05');
+      view.refreshOffscreen();
+
+      expect(bar(root, 'r1').hasAttribute('data-clipped-start')).toBe(true);
+      expect(bar(root, 'r1').hasAttribute('data-clipped-end')).toBe(true);
+      bar(root, 'r1').querySelector<HTMLElement>('[data-blok-database-timeline-bar-chip="end"]')?.click();
+
+      // The end day, with one day of room after it.
+      expect(el.scrollLeft).toBe(px('2026-10-22') - 400);
+    });
+
     // research/26 §4d: Notion draws a straight arrow in the chip, not a chevron.
     it('draws a straight arrow pointing to the side the bar is on', () => {
       const { root } = mount({ groups: single([row('r1', 'Early', '2026-09-02')]) });

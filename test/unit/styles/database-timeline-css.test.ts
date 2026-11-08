@@ -134,8 +134,19 @@ describe('database timeline styles', () => {
   // findings C17: the chip before a cut bar's title, the same 16px chip as the off-screen one.
   it('shows the cut-start chip only on a bar the view marks, and keeps it and the title at the screen\'s start', () => {
     expect(ruleBody('[data-blok-database-timeline-bar-chip]')).toMatch(/display:\s*none/);
-    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip]')).toMatch(/display:\s*inline-flex/);
-    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip]')).toMatch(/position:\s*sticky/);
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip="start"]')).toMatch(/display:\s*inline-flex/);
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip="start"]')).toMatch(/position:\s*sticky/);
+  });
+
+  // notion-motion.md Timeline (tlcollapse.png): the cut-end chip mirrors the cut-start one, held at the screen's end.
+  it('shows the cut-end chip only on a bar cut at the end, held at the screen\'s end', () => {
+    const end = ruleBody('[data-blok-database-timeline-bar][data-clipped-end] > [data-blok-database-timeline-bar-chip="end"]');
+
+    expect(end).toMatch(/display:\s*inline-flex/);
+    expect(end).toMatch(/position:\s*sticky/);
+    expect(end).toContain('inset-inline-end: var(--blok-space-2)');
+    expect(end).toMatch(/margin-inline-start:\s*auto/);
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip="start"]')).toMatch(/display:\s*inline-flex/);
   });
 
   // timeline.png (round V1): the panel runs x 360–640 with its border, 280px. Its « sits at the panel's end, beside the month.

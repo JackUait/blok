@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // brokenSource fails chosen loads and saves with a plain error, as a host
@@ -29,6 +31,10 @@ type brokenSource struct {
 	breakAfterSave string
 	// refuseSave refuses the next save of this id once, as a host does.
 	refuseSave string
+	// breakNewSave saves the n-th new page id (1-based), then fails as if
+	// it had not.
+	breakNewSave int
+	newSaves     int
 	// failNewLoad fails the load of the n-th new page id (1-based).
 	failNewLoad int
 	newLoads    int
@@ -63,6 +69,10 @@ func (b *brokenSource) save(ctx context.Context, documentID string, text []byte,
 	if breaks {
 		b.breakAfterSave = ""
 	}
+	if documentID != "doc" {
+		b.newSaves++
+		breaks = breaks || b.newSaves == b.breakNewSave
+	}
 	b.mu.Unlock()
 	saved, err := b.docSource.save(ctx, documentID, text, ifVersion)
 	if breaks && err == nil {
@@ -71,15 +81,25 @@ func (b *brokenSource) save(ctx context.Context, documentID string, text []byte,
 	return saved, err
 }
 
-// brokenRuntime fails the next call of one bundle operation once.
+// brokenRuntime fails the next call of one bundle operation once. before
+// runs once ahead of the next call of its operation.
 type brokenRuntime struct {
-	inner invoker
-	mu    sync.Mutex
-	fail  string
+	inner    invoker
+	mu       sync.Mutex
+	fail     string
+	beforeOp string
+	before   func()
 }
 
 func (b *brokenRuntime) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
 	b.mu.Lock()
+	if op == b.beforeOp && b.before != nil {
+		before := b.before
+		b.before = nil
+		b.mu.Unlock()
+		before()
+		b.mu.Lock()
+	}
 	if op == b.fail {
 		b.fail = ""
 		b.mu.Unlock()
@@ -304,12 +324,29 @@ func TestARefusedParentSaveStaysUnreported(t *testing.T) {
 	}
 }
 
-// Pages made in live mode for a batch the engine then failed are reported.
-func TestLivePagesMadeBeforeABrokenRunAreReported(t *testing.T) {
+type liveOrphans struct {
+	writer  *callContextWho
+	handle  string
+	runtime *brokenRuntime
+	live    *liveSession
+}
+
+// liveOrphanServer opens doc for writing in live mode with page-map. The
+// host serves parent for doc and page for any other id.
+func liveOrphanServer(t *testing.T, parent string, page ...string) *liveOrphans {
+	pageDoc := `{"blocks":[]}`
+	if len(page) > 0 {
+		pageDoc = page[0]
+	}
+	t.Helper()
 	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
-			_, _ = io.WriteString(w, `{"blocks":[]}`)
+			if strings.HasSuffix(r.URL.Path, "/doc") {
+				_, _ = io.WriteString(w, parent)
+			} else {
+				_, _ = io.WriteString(w, pageDoc)
+			}
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -349,25 +386,161 @@ func TestLivePagesMadeBeforeABrokenRunAreReported(t *testing.T) {
 		t.Fatal(err)
 	}
 	handle, _ := structured(t, opened.answer)["handle"].(string)
-	runtime.mu.Lock()
-	runtime.fail = "agentExecute"
-	runtime.mu.Unlock()
-	ran, err := writer.dispatch("blok_execute", map[string]any{"handle": handle,
-		"commands": []any{map[string]any{"name": "block.insert", "args": map[string]any{"type": "page"}}}})
+	server.handles.mu.Lock()
+	live, ok := server.handles.entries[handle].session.(*liveSession)
+	server.handles.mu.Unlock()
+	if !ok {
+		t.Fatal("the handle is not a live session")
+	}
+	return &liveOrphans{writer: writer, handle: handle, runtime: runtime, live: live}
+}
+
+func (l *liveOrphans) execute(t *testing.T, commands ...any) map[string]any {
+	t.Helper()
+	ran, err := l.writer.dispatch("blok_execute", map[string]any{"handle": l.handle, "commands": commands})
 	if err != nil {
 		t.Fatal(err)
 	}
-	answer := structured(t, ran.answer)
+	return structured(t, ran.answer)
+}
+
+// orphanedIDs are the page ids an answer reports.
+func orphanedIDs(answer map[string]any) []string {
 	failure, _ := answer["error"].(map[string]any)
 	details, _ := failure["details"].(map[string]any)
 	orphaned, _ := details["orphaned"].([]any)
-	if len(orphaned) != 1 {
+	ids := []string{}
+	for _, entry := range orphaned {
+		prepared, _ := entry.(map[string]any)["prepared"].(map[string]any)
+		id, _ := prepared["pageId"].(string)
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+var pageInsert = map[string]any{"name": "block.insert", "args": map[string]any{"type": "page"}}
+
+var clashingInsert = map[string]any{"name": "block.insert", "args": map[string]any{"type": "paragraph", "id": "clash"}}
+
+// clashBeforeTheRun puts a block "clash" in the room while the batch runs,
+// as a peer's edit landing then would: the batch's own "clash" insert then
+// cannot be applied. The room's lock is held by the batch, so the room is
+// written directly.
+func (l *liveOrphans) clashBeforeTheRun(t *testing.T) {
+	t.Helper()
+	block, err := jsjson.ParseNode([]byte(`{"id":"clash","type":"paragraph","data":{"text":""}}`), jsjson.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.runtime.mu.Lock()
+	l.runtime.beforeOp = "agentExecute"
+	l.runtime.before = func() {
+		if err := l.live.room.converter.ApplyOps(context.Background(), l.live.room.doc, []convert.EditOp{convert.Insert{ID: "clash", Block: block}}); err != nil {
+			t.Error(err)
+		}
+	}
+	l.runtime.mu.Unlock()
+}
+
+// failsSeededRead fails the n-th HTML read that holds SEEDED.
+type failsSeededRead struct {
+	inner convert.HTMLReader
+	mu    sync.Mutex
+	nth   int
+	reads int
+}
+
+func (r *failsSeededRead) Read(ctx context.Context, fields []convert.RichTextHTML, timeout *time.Duration) ([][]any, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, field := range fields {
+		if strings.Contains(field.HTML.String(), "SEEDED") {
+			r.reads++
+			if r.reads == r.nth {
+				return nil, errors.New("the export broke")
+			}
+			break
+		}
+	}
+	return r.inner.Read(ctx, fields, timeout)
+}
+
+// Pages made in live mode for a batch the engine then failed are reported.
+func TestLivePagesMadeBeforeABrokenRunAreReported(t *testing.T) {
+	live := liveOrphanServer(t, `{"blocks":[]}`)
+	live.runtime.mu.Lock()
+	live.runtime.fail = "agentExecute"
+	live.runtime.mu.Unlock()
+	answer := live.execute(t, pageInsert)
+	pages := orphanedIDs(answer)
+	if len(pages) != 1 || pages[0] == "" || pages[0] == "doc" {
 		t.Fatalf("answer %v", answer)
 	}
-	prepared, _ := orphaned[0].(map[string]any)["prepared"].(map[string]any)
-	page, _ := prepared["pageId"].(string)
-	if page == "" || page == "doc" {
-		t.Fatalf("orphaned %v", orphaned)
+	wantOrphaned(t, answer, pages)
+}
+
+// A batch the room could not apply reports its pages, the cause being the
+// room's refusal.
+func TestLivePagesOfABatchTheRoomRefusedAreReported(t *testing.T) {
+	live := liveOrphanServer(t, `{"blocks":[]}`)
+	live.clashBeforeTheRun(t)
+	answer := live.execute(t, pageInsert, clashingInsert)
+	failure, _ := answer["error"].(map[string]any)
+	details, _ := failure["details"].(map[string]any)
+	cause, _ := details["cause"].(map[string]any)
+	if failure["code"] != "ORPHANED_SIDE_EFFECT" || len(orphanedIDs(answer)) != 1 ||
+		cause["code"] != "APPLY_FAILED" || cause["message"] != "The batch could not be applied to the room." {
+		t.Fatalf("answer %v", answer)
 	}
-	wantOrphaned(t, answer, []string{page})
+}
+
+// When the room cannot be read after the refusal, nothing is reported: the
+// parent may name the page.
+func TestLivePagesAreNotReportedWhenTheRoomCannotBeRead(t *testing.T) {
+	live := liveOrphanServer(t, `{"blocks":[{"id":"r","type":"database-row","data":{"properties":{"body":{"blocks":[`+
+		`{"id":"n","type":"paragraph","data":{"text":"<b>SEEDED</b>"}}]}}}}]}`)
+	live.clashBeforeTheRun(t)
+	// Reads of SEEDED: the export before the batch, then the one after the refusal.
+	live.live.room.mu.Lock()
+	live.live.room.converter.HTML = &failsSeededRead{inner: live.live.room.converter.HTML, nth: 2}
+	live.live.room.mu.Unlock()
+	answer := live.execute(t, pageInsert, clashingInsert)
+	failure, _ := answer["error"].(map[string]any)
+	if failure["code"] != "APPLY_FAILED" {
+		t.Fatalf("answer %v", answer)
+	}
+}
+
+// A page whose own room broke after it was joined is reported by its id:
+// the room may hold it.
+func TestALiveHalfMadePageIsReported(t *testing.T) {
+	// The page's room comes up with rich text, so its check reads HTML, and
+	// that read breaks. The parent has none to read.
+	live := liveOrphanServer(t, `{"blocks":[]}`, `{"blocks":[{"id":"x","type":"database-row","data":{"properties":{"body":{"blocks":[`+
+		`{"id":"n","type":"paragraph","data":{"text":"<b>PAGE</b>"}}]}}}}]}`)
+	live.runtime.mu.Lock()
+	live.runtime.fail = "htmlFieldsToSegments"
+	live.runtime.mu.Unlock()
+	answer := live.execute(t, pageInsert)
+	pages := orphanedIDs(answer)
+	if len(pages) != 1 || pages[0] == "" || pages[0] == "doc" {
+		t.Fatalf("answer %v", answer)
+	}
+	wantOrphaned(t, answer, pages)
+}
+
+// A page whose save broke may still be stored, so it is reported by its id.
+func TestAStoredHalfMadePageIsReported(t *testing.T) {
+	stored := brokenStoredServer(t, `{"blocks":[]}`, "page-map")
+	stored.source.breakNewSave = 2
+	ran, err := stored.execute(twoPages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pages := newPageIDs(t, stored.dir)
+	got := orphanedIDs(structured(t, ran.answer))
+	if len(pages) != 2 || len(got) != 2 {
+		t.Fatalf("pages %v, orphaned %v", pages, got)
+	}
+	wantOrphaned(t, structured(t, ran.answer), got)
 }

@@ -76,6 +76,15 @@ func (st *storedSession) openInfo() map[string]any {
 	}
 }
 
+// reloaded reloads and gives the parent as stored, or nil when it could
+// not be read.
+func (st *storedSession) reloaded(ctx context.Context) json.RawMessage {
+	if err := st.reload(ctx); err != nil {
+		return nil
+	}
+	return st.document
+}
+
 // reload starts a fresh agent, as Node does after a refused save.
 func (st *storedSession) reload(ctx context.Context) error {
 	loaded, err := st.source.load(ctx, st.documentID)
@@ -137,13 +146,13 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	}
 	if st.write && st.server.createsPages() && isBatchEnvelope(batch) {
 		if err := st.server.createPages(ctx, input, call.who); err != nil {
-			return nil, err
+			return st.server.reportStopped(ctx, stoppedPages(err), st.document, nil, err)
 		}
 	}
 	input["documentText"] = st.source.documentForm()
 	var out executeOutput
 	if err := st.server.agentExecute(ctx, input, &out, func(run func()) { run() }); err != nil {
-		return st.server.orphanedAnswer(ctx, input, nil, err)
+		return st.server.reportStopped(ctx, createdPagesOf(input), st.document, nil, err)
 	}
 	if out.Ask != nil {
 		return &executed{ask: out.Ask}, nil
@@ -162,8 +171,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	})
 	if err != nil {
 		st.stale = true
-		_ = st.reload(ctx)
-		return st.server.orphanedAnswer(ctx, input, out.Result, err)
+		return st.server.reportStopped(ctx, createdPagesOf(input), st.reloaded(ctx), out.Result, err)
 	}
 	saved, err := st.source.save(ctx, st.documentID, []byte(*out.DocumentText), st.version)
 	if err != nil {
@@ -171,14 +179,11 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		// The work was refused, so memory must match the source again. A
 		// failed reload retries on the next call.
 		st.stale = true
-		reloadErr := st.reload(ctx)
+		parent := st.reloaded(ctx)
 		if !ok {
-			// A save can store the parent before it breaks: a page the
-			// parent links is in use, so it is not reported.
-			if reloadErr != nil || linksAny(st.document, createdPagesOf(input)) {
-				return nil, err
-			}
-			return st.server.orphanedAnswer(ctx, input, out.Result, err)
+			// A save can store the parent before it breaks: the reload
+			// shows which pages it names.
+			return st.server.reportStopped(ctx, createdPagesOf(input), parent, out.Result, err)
 		}
 		answer, answerErr := st.server.executeAnswer(ctx, map[string]any{
 			"result": out.Result, "failed": map[string]any{"helper": failure.Helper, "error": failure.errorJSON()},

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -78,15 +79,16 @@ func (s *Server) createPages(ctx context.Context, input map[string]any, who *cal
 		}
 		if err != nil {
 			failure, ok := asSurface(err)
-			if !ok && len(created) == 0 {
-				return err
-			}
 			if !ok {
-				// The pages made so far go to the batch, which fails at the
-				// next insert and reports them as orphaned.
-				logf("creating a page failed: %v", err)
-				input["createPageFailure"] = map[string]any{"helper": "as-is", "error": serverStop}
-				break
+				pages := created
+				var half *halfMadePage
+				if errors.As(err, &half) {
+					pages = append(pages, half.pageID)
+				}
+				if len(pages) == 0 {
+					return err
+				}
+				return &pagesStopped{pages: pages, err: err}
 			}
 			input["createPageFailure"] = map[string]any{"helper": failure.Helper, "error": failure.errorJSON()}
 			break
@@ -123,27 +125,56 @@ func createdPagesOf(input map[string]any) []string {
 	return pages
 }
 
-// linksAny says whether document names one of pages. Page ids are random,
-// so a match anywhere counts: a false match only leaves a page unreported.
-func linksAny(document json.RawMessage, pages []string) bool {
-	for _, page := range pages {
-		if bytes.Contains(document, []byte(`"`+page+`"`)) {
-			return true
-		}
-	}
-	return false
+// pagesStopped is createPages stopped by a server error after it made
+// pages: the batch does not run.
+type pagesStopped struct {
+	pages []string
+	err   error
 }
 
-// orphanedAnswer answers a batch that stopped on err after pages were made
-// for it and before its parent was written: the host is told which pages to
-// clean up, in the shape of the bundle's withUnusedPages. With no pages, err
-// passes on. result keeps the batch's warnings; nil has none.
-func (s *Server) orphanedAnswer(ctx context.Context, input map[string]any, result json.RawMessage, err error) (*executed, error) {
-	pages := createdPagesOf(input)
-	if len(pages) == 0 {
-		return nil, err
+func (p *pagesStopped) Error() string { return p.err.Error() }
+func (p *pagesStopped) Unwrap() error { return p.err }
+
+// stoppedPages is the pages a createPages error left behind.
+func stoppedPages(err error) []string {
+	var stopped *pagesStopped
+	if errors.As(err, &stopped) {
+		return stopped.pages
 	}
-	logf("a batch stopped after its pages were made: %v", err)
+	return nil
+}
+
+// halfMadePage is a page create that broke after the page may have been
+// stored: its id counts as made.
+type halfMadePage struct {
+	pageID string
+	err    error
+}
+
+func (h *halfMadePage) Error() string { return h.err.Error() }
+func (h *halfMadePage) Unwrap() error { return h.err }
+
+// unlinked is pages the parent does not name. Page ids are random, so a
+// match anywhere counts: a false match only leaves a page unreported. A
+// parent that could not be read (nil) gives none: the host must never be
+// told to delete a page the parent may use.
+func unlinked(pages []string, parent json.RawMessage) []string {
+	if parent == nil {
+		return nil
+	}
+	left := []string{}
+	for _, page := range pages {
+		if !bytes.Contains(parent, []byte(`"`+page+`"`)) {
+			left = append(left, page)
+		}
+	}
+	return left
+}
+
+// orphanedAnswer fails the batch with ORPHANED_SIDE_EFFECT for pages, in
+// the shape of the bundle's withUnusedPages. result keeps the batch's
+// warnings; nil has none.
+func (s *Server) orphanedAnswer(ctx context.Context, pages []string, result json.RawMessage, cause map[string]any) (json.RawMessage, error) {
 	orphaned := make([]pageReceipt, len(pages))
 	for index, page := range pages {
 		orphaned[index] = pageReceipt{Command: "block.insert", Type: "page"}
@@ -152,14 +183,29 @@ func (s *Server) orphanedAnswer(ctx context.Context, input map[string]any, resul
 	if result == nil {
 		result = json.RawMessage(`{"ok":false,"warnings":[]}`)
 	}
-	answer, answerErr := s.executeAnswer(ctx, map[string]any{"result": result, "failed": map[string]any{"helper": "as-is", "error": agentError{
+	message, _ := cause["message"].(string)
+	return s.executeAnswer(ctx, map[string]any{"result": result, "failed": map[string]any{"helper": "as-is", "error": agentError{
 		Code:    "ORPHANED_SIDE_EFFECT",
-		Message: "The batch failed after the host did work for it (" + serverStop.Message + "). Clean up the listed items.",
+		Message: "The batch failed after the host did work for it (" + message + "). Clean up the listed items.",
 		Details: struct {
 			Orphaned []pageReceipt `json:"orphaned"`
-			Cause    agentError    `json:"cause"`
-		}{orphaned, serverStop},
+			Cause    any           `json:"cause"`
+		}{orphaned, cause},
 	}}})
+}
+
+// reportStopped answers a batch a server error stopped after pages were
+// made for it: the pages the parent does not name are orphaned, with
+// serverStop as the cause. With none, err passes on.
+func (s *Server) reportStopped(ctx context.Context, pages []string, parent json.RawMessage, result json.RawMessage, err error) (*executed, error) {
+	orphans := unlinked(pages, parent)
+	if len(orphans) == 0 {
+		return nil, err
+	}
+	logf("a batch stopped after its pages were made: %v", err)
+	answer, answerErr := s.orphanedAnswer(ctx, orphans, result, map[string]any{
+		"code": serverStop.Code, "message": serverStop.Message, "retryable": serverStop.Retryable,
+	})
 	if answerErr != nil {
 		return nil, err
 	}
@@ -201,7 +247,9 @@ func (s *Server) createLivePage(ctx context.Context, who *caller) (string, error
 	document, _, err := page.exportLocked(ctx)
 	page.room.mu.Unlock()
 	if err != nil {
-		return "", err
+		// The room was joined, so the sync service may hold the page. A
+		// failed open is not counted: whether it made the room is unknown.
+		return "", &halfMadePage{pageID: pageID, err: err}
 	}
 	var view struct {
 		Blocks []json.RawMessage `json:"blocks"`
@@ -267,6 +315,11 @@ func (s *Server) createPage(ctx context.Context, principal string) (string, erro
 		return "", err
 	}
 	if _, err := s.source.save(ctx, pageID, []byte(text.Text), loaded.version); err != nil {
+		// A broken save may have stored the page. The steps before it
+		// wrote nothing.
+		if _, ok := asSurface(err); !ok {
+			return "", &halfMadePage{pageID: pageID, err: err}
+		}
 		return "", withPage(err)
 	}
 	return pageID, nil

@@ -356,6 +356,26 @@ func (l *liveSession) failed(ctx context.Context, result json.RawMessage, failur
 	return &executed{answer: answer}, err
 }
 
+// parentNow is the room's document, or nil when it cannot be read. mu is
+// held.
+func (l *liveSession) parentNow(ctx context.Context) json.RawMessage {
+	document, _, err := l.exportLocked(ctx)
+	if err != nil {
+		return nil
+	}
+	return document
+}
+
+// orphaned fails the batch for refused, reporting pages as orphaned.
+func (l *liveSession) orphaned(ctx context.Context, pages []string, result json.RawMessage, refused *surfaceErr) (*executed, error) {
+	cause, err := l.server.agentErrorOf(ctx, refused)
+	if err != nil {
+		return nil, err
+	}
+	answer, err := l.server.orphanedAnswer(ctx, pages, result, cause)
+	return &executed{answer: answer}, err
+}
+
 func (l *liveSession) execute(ctx context.Context, call *callContext, batch json.RawMessage) (*executed, error) {
 	room := l.room
 	room.mu.Lock()
@@ -396,7 +416,7 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 	}
 	if l.write && !l.readOnly && l.server.createsPages() && isBatchEnvelope(batch) && call.who != nil {
 		if err := l.server.createPages(ctx, input, call.who); err != nil {
-			return nil, err
+			return l.server.reportStopped(ctx, stoppedPages(err), l.parentNow(ctx), nil, err)
 		}
 	}
 	var out liveExecuteOutput
@@ -412,7 +432,7 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		}
 	}
 	if err := l.server.agentExecute(ctx, input, &out, unlocked); err != nil {
-		return l.server.orphanedAnswer(ctx, input, nil, err)
+		return l.server.reportStopped(ctx, createdPagesOf(input), l.parentNow(ctx), nil, err)
 	}
 	if out.Ask != nil {
 		return &executed{ask: out.Ask}, nil
@@ -467,7 +487,11 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 			room.holdAppends = false
 			room.pendingLocal = nil
 			l.readOnly = true
-			return l.failed(ctx, out.Result, surfaceError("APPLY_FAILED", "The batch could not be applied to the room."))
+			refused := surfaceError("APPLY_FAILED", "The batch could not be applied to the room.")
+			if orphans := unlinked(createdPagesOf(input), l.parentNow(ctx)); len(orphans) > 0 {
+				return l.orphaned(ctx, orphans, out.Result, refused)
+			}
+			return l.failed(ctx, out.Result, refused)
 		}
 		after, _, err := l.exportLocked(ctx)
 		if err != nil {

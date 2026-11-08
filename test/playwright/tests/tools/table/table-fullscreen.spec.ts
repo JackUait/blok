@@ -447,6 +447,79 @@ test.describe('Table full screen', () => {
     }
   });
 
+  const resizedData: OutputData = {
+    blocks: [
+      {
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: true, content: [['Feature', 'Status'], ['Grid rendering', 'Complete'], ['', ''], ['', ''], ['', '']] },
+      },
+      { id: 'after', type: 'paragraph', data: { text: 'After the table' } },
+    ],
+  };
+
+  for (const { name, rows, cols } of [
+    { name: 'grown', rows: '7', cols: '3' },
+    { name: 'shrunk', rows: '2', cols: '2' },
+  ]) {
+    test(`a table ${name} in full screen shrinks back into its new size, and the page below moves before it lands`, async ({ page }) => {
+      await page.setViewportSize({ width: 1400, height: 900 });
+      await createBlok(page, false, resizedData);
+      await openWithButton(page);
+      const modal = page.locator('[data-blok-table-fullscreen]');
+
+      await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+
+      await page.getByRole('button', { name: 'Change table size' }).click();
+      const card = page.getByRole('group', { name: 'Change table size' });
+
+      await card.getByRole('spinbutton', { name: 'Columns' }).fill(cols);
+      await card.getByRole('spinbutton', { name: 'Rows' }).fill(rows);
+      await card.getByRole('button', { name: 'Done' }).click();
+      await expect(page.locator('[data-blok-table-row]')).toHaveCount(Number(rows));
+
+      await page.getByRole('button', { name: CLOSE_LABEL }).click();
+      // The last frame of the close motion.
+      await page.evaluate(() => document.getAnimations().forEach((animation) => {
+        animation.pause();
+        Object.assign(animation, { currentTime: 419 });
+      }));
+
+      const measure = (): Promise<{ clipBottom: number; clipRight: number; gridBottom: number; gridRight: number; after: number }> => page.evaluate(() => {
+        const host = document.querySelector<HTMLElement>('[data-blok-table-root]')?.parentElement;
+        const grid = document.querySelector('[data-blok-table-row]')?.parentElement?.getBoundingClientRect();
+        const scroller = document.querySelector('[data-blok-table-scroll]')?.getBoundingClientRect();
+        const after = document.querySelector('[data-blok-id="after"]')?.getBoundingClientRect();
+
+        if (host == null || grid === undefined || scroller === undefined || after === undefined) {
+          throw new Error('not laid out');
+        }
+        const box = host.getBoundingClientRect();
+        const inset = /inset\(([-\d.]+)px ([-\d.]+)px ([-\d.]+)px/.exec(getComputedStyle(host).clipPath);
+
+        return {
+          clipBottom: inset === null ? box.bottom : box.bottom - Number(inset[3]),
+          clipRight: inset === null ? box.right : box.right - Number(inset[2]),
+          gridBottom: grid.bottom,
+          // A grid wider than the page shows only up to the scroller's end.
+          gridRight: Math.min(grid.right, scroller.right),
+          after: after.top,
+        };
+      });
+      const landing = await measure();
+
+      await page.evaluate(() => document.getAnimations().forEach(a => a.play()));
+      await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
+      const landed = await measure();
+
+      // The box closes onto the table as it rests now, not as it was when it opened.
+      expect(Math.abs(landing.clipBottom - landed.gridBottom)).toBeLessThanOrEqual(2);
+      expect(Math.abs(landing.clipRight - landed.gridRight)).toBeLessThanOrEqual(2);
+      // Nothing below the table jumps when the box lands.
+      expect(Math.abs(landed.after - landing.after)).toBeLessThanOrEqual(1);
+    });
+  }
+
   test('opening restyles only the table box, not every cell', async ({ page }) => {
     const tableElements = await createLargeTable(page);
     const styled = await countStyled(page, async () => {

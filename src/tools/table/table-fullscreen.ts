@@ -216,6 +216,8 @@ export class TableFullscreen {
   private anchor: DOMRect | null = null;
   /** The table's own visible box at open: the scroll container runs past a narrow grid. */
   private shape: DOMRect | null = null;
+  /** The scroller's box at open: what the page shows of a grid that has changed size since. */
+  private pageBox: DOMRect | null = null;
   /** The grid's room on the page. A fluid table takes it back the moment close starts. */
   private inlineGridWidth = 0;
   /** The holder, held at its inline height so the page under the modal does not reflow. */
@@ -455,6 +457,7 @@ export class TableFullscreen {
     this.host = host;
     this.anchor = anchor;
     this.shape = shape;
+    this.pageBox = origin;
     this.inlineGridWidth = inlineGridWidth;
     this.syncButton();
     this.animateOpen(host, backdrop, source, anchor, shape);
@@ -526,6 +529,7 @@ export class TableFullscreen {
     this.closing = null;
     this.anchor = null;
     this.shape = null;
+    this.pageBox = null;
     closing.animations.forEach(a => a.cancel());
     this.header.replaceChildren();
     removeFromTopLayer(closing.host);
@@ -595,9 +599,18 @@ export class TableFullscreen {
 
     this.options.onRelayout();
 
+    // Rows and columns may have changed since open, so the table lands at its
+    // size now. Measured after the width hold, which gives it its page layout.
+    const landing = source === null ? shape : this.landingShape(source, anchor, shape);
+
+    // The page below makes room for the new height now; the box still covers it.
+    if (this.holder !== null && this.holder.style.minHeight !== '') {
+      this.holder.style.minHeight = `${parseFloat(this.holder.style.minHeight) + landing.height - shape.height}px`;
+    }
+
     const animations = [
       ...(width === undefined ? [] : [width]),
-      host.animate([{ clipPath: SHEET_CLIP }, { clipPath: insetOf(host.getBoundingClientRect(), shape) }], timing),
+      host.animate([{ clipPath: SHEET_CLIP }, { clipPath: insetOf(host.getBoundingClientRect(), landing) }], timing),
     ];
 
     if (source?.parentElement) {
@@ -613,6 +626,22 @@ export class TableFullscreen {
     ));
 
     return animations;
+  }
+
+  /** Where the grid as it is now shows on the page: from its inline start, cut to the scroller's box at open. */
+  private landingShape(source: HTMLElement, anchor: DOMRect, shape: DOMRect): DOMRect {
+    const grid = source.firstElementChild;
+    const box = this.pageBox;
+
+    if (!(grid instanceof HTMLElement) || box === null) {
+      return shape;
+    }
+    const { width, height } = grid.getBoundingClientRect();
+    const start = getComputedStyle(source).direction === 'rtl' ? anchor.right - width : anchor.left;
+    const left = Math.max(start, box.left);
+    const right = Math.min(start + width, box.right);
+
+    return new DOMRect(left, shape.top, Math.max(right - left, 0), height);
   }
 
   /**

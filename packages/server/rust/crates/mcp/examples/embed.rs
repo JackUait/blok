@@ -22,6 +22,9 @@
 //!   --example-allow-anonymous <principal>  serve anonymous callers as this principal
 //!   --example-source endpoint:<url>        your own document store, as `Hooks::source`
 //!                                          (see ExampleSource; not with --source)
+//!   --example-caller-error <text>          the caller hook fails with this text, as a
+//!                                          host bug would; Blok logs it and answers
+//!                                          "Blok could not run this call."
 //!
 //! The HTTP side keeps only what an example needs: no Origin checks and no
 //! body cap of its own. Those, like OAuth, belong to your server.
@@ -60,11 +63,12 @@ use http_body_util::{BodyExt, Full};
 use serde_json::{Value, json};
 
 const NAME: &str = "host-example";
-const EXAMPLE_FLAGS: [&str; 4] = [
+const EXAMPLE_FLAGS: [&str; 5] = [
     "--example-host-tool",
     "--example-host-prompt",
     "--example-allow-anonymous",
     "--example-source",
+    "--example-caller-error",
 ];
 const MODERN: &str = "2026-07-28";
 // How long a stop waits for Blok's calls in flight.
@@ -493,6 +497,29 @@ fn source_of(
     Ok(Some(Arc::new(ExampleSource::new(url))))
 }
 
+/// The host's caller hook. --example-caller-error makes it fail, as a host
+/// bug would; stdio has one local user; over HTTP None takes the default,
+/// the SignedIn the host put on the request.
+fn caller_of(
+    example: &HashMap<String, String>,
+    stdio: bool,
+) -> Option<blok_mcp::embed::IdentifyFn> {
+    if let Some(text) = example.get("caller-error") {
+        let text = text.clone();
+        return Some(Arc::new(move |_: &RequestContext<RoleServer>| {
+            Err(text.clone())
+        }));
+    }
+    stdio.then(|| -> blok_mcp::embed::IdentifyFn {
+        Arc::new(|_: &RequestContext<RoleServer>| {
+            Ok(Some(CallerIdentity {
+                principal: Some("local".to_owned()),
+                scopes: None,
+            }))
+        })
+    })
+}
+
 /// The signed-in user from the fake headers, as the host's auth layer would put it.
 fn signed_in(headers: &[(String, String)]) -> Option<SignedIn> {
     let header = |name: &str| {
@@ -721,14 +748,7 @@ async fn run(argv: Vec<String>) -> Result<(), Stop> {
     };
     let embed = EmbedHooks {
         // stdio has one local user; over HTTP the default reads the SignedIn the host put on the request.
-        caller: stdio.then(|| -> blok_mcp::embed::IdentifyFn {
-            Arc::new(|_: &RequestContext<RoleServer>| {
-                Some(CallerIdentity {
-                    principal: Some("local".to_owned()),
-                    scopes: None,
-                })
-            })
-        }),
+        caller: caller_of(&example, stdio),
         anonymous_principal: example.get("allow-anonymous").cloned(),
     };
     let blok = BlokTools::new(bundle, &options, hooks, embed).await?;

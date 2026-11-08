@@ -27,6 +27,8 @@ pub(crate) const MODERN: &str = "2026-07-28";
 // Every port refuses with these exact words (shared conformance: embed.json).
 const ANONYMOUS: &str = "Blok needs a signed-in caller.";
 const UNNAMED: &str = "Blok needs a named caller (sub or NameIdentifier).";
+// E7f: what a client sees of an unexpected failure on a host's server.
+const FAILED: &str = "Blok could not run this call.";
 
 /// Who the HTTP layer says is calling, per request (the standalone front door).
 #[derive(Debug, Clone)]
@@ -56,9 +58,11 @@ pub struct CallerIdentity {
 }
 
 /// Node's `caller(ctx)` hook: the caller of one tools/call, or None for an
-/// anonymous one.
-pub type IdentifyFn =
-    Arc<dyn Fn(&RequestContext<RoleServer>) -> Option<CallerIdentity> + Send + Sync>;
+/// anonymous one. An Err is logged in full; the client sees only
+/// "Blok could not run this call.".
+pub type IdentifyFn = Arc<
+    dyn Fn(&RequestContext<RoleServer>) -> Result<Option<CallerIdentity>, String> + Send + Sync,
+>;
 
 /// Node's CreateBlokHooks.
 #[derive(Clone, Default)]
@@ -293,12 +297,27 @@ impl BlokTools {
 
     /// One tools/call for a Blok tool. A 2026 result says it is complete;
     /// stamp your own serverInfo `_meta` on it, as on your other results.
+    /// An unexpected failure (the caller hook's Err, a host source or store
+    /// bug, Blok's own) is logged to stderr and answered -32603 with fixed
+    /// words, never its text.
     pub async fn call_tool(
         &self,
         request: CallToolRequestParams,
         context: RequestContext<RoleServer>,
     ) -> Result<CallToolResponse, ErrorData> {
-        self.answer_call(request, context, None).await
+        self.answer_call(request, context, None)
+            .await
+            .map_err(|error| self.hidden(error))
+    }
+
+    /// E7f. Protocol errors pass as they are; the standalone server keeps
+    /// its own answer.
+    fn hidden(&self, error: ErrorData) -> ErrorData {
+        if !matches!(self.identity, Identity::Host(_)) || error.code != ErrorCode::INTERNAL_ERROR {
+            return error;
+        }
+        eprintln!("blok-mcp: a tool call failed: {}", error.message);
+        internal(FAILED.to_owned())
     }
 
     /// One prompts/get for a Blok prompt.
@@ -363,7 +382,7 @@ impl BlokTools {
             Identity::Host(hooks) => hooks,
         };
         let who = match &hooks.caller {
-            Some(identify) => identify(context),
+            Some(identify) => identify(context).map_err(internal)?,
             None => signed_in(context),
         };
         let Some(who) = who else {

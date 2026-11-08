@@ -168,13 +168,15 @@ impl ServerHandler for Host {
 fn test_caller() -> EmbedHooks {
     EmbedHooks {
         caller: Some(Arc::new(|context: &RequestContext<RoleServer>| {
-            let user = context.meta.0.0.get("test/user")?;
-            Some(CallerIdentity {
+            let Some(user) = context.meta.0.0.get("test/user") else {
+                return Ok(None);
+            };
+            Ok(Some(CallerIdentity {
                 principal: user.get("name").and_then(Value::as_str).map(str::to_owned),
                 scopes: user
                     .get("scopes")
                     .and_then(|s| serde_json::from_value(s.clone()).ok()),
-            })
+            }))
         })),
         ..EmbedHooks::default()
     }
@@ -373,4 +375,29 @@ impl blok_mcp::document_source::DocumentSource for NoSource {
     > {
         Box::pin(async { Ok(None) })
     }
+}
+
+// E7f: a throw on a host's server is logged and answered with fixed words.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_failing_caller_hook_answers_fixed_words_and_never_its_text() {
+    let dir = docs();
+    let embed = EmbedHooks {
+        caller: Some(Arc::new(|_: &RequestContext<RoleServer>| {
+            Err("secret-host-failure".to_owned())
+        })),
+        ..EmbedHooks::default()
+    };
+    let blok = BlokTools::start(bundle(), &files(&dir), allow_all(), embed)
+        .await
+        .unwrap();
+    let mut session = Session::new(blok).await;
+    let failed = session
+        .call(Value::Null, "blok_open", json!({ "documentId": "doc" }))
+        .await;
+    assert_eq!(
+        failed["error"],
+        json!({ "code": -32603, "message": "Blok could not run this call." })
+    );
+    let echo = session.call(Value::Null, "host_echo", json!({})).await;
+    assert_eq!(echo["result"]["content"][0]["text"], "echo", "{echo}");
 }

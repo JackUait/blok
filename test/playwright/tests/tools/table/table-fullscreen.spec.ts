@@ -762,6 +762,46 @@ test.describe('Table full screen', () => {
     await expect(size).toHaveText('3 × 3');
   });
 
+  test('a fluid table\'s add-row bar is as wide as the table in the modal and back on the page', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+
+    const ends = (): Promise<{ grid: number; bar: number }> => page.evaluate(() => {
+      const grid = document.querySelector('[data-blok-table-row]')?.parentElement?.getBoundingClientRect();
+      const bar = document.querySelector('[data-blok-table-add-row]')?.getBoundingClientRect();
+
+      if (grid === undefined || bar === undefined) {
+        throw new Error('table not laid out');
+      }
+
+      return { grid: grid.right, bar: bar.right };
+    });
+
+    const open = await ends();
+
+    expect(Math.abs(open.bar - open.grid)).toBeLessThanOrEqual(1);
+
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0);
+
+    const closed = await ends();
+
+    expect(Math.abs(closed.bar - closed.grid)).toBeLessThanOrEqual(1);
+
+    // The bar now has a pixel width, so it must follow a fluid grid that resizes.
+    const viewport = page.viewportSize();
+
+    await page.setViewportSize({ width: (viewport?.width ?? 1280) - 200, height: viewport?.height ?? 720 });
+    await expect.poll(async () => {
+      const resized = await ends();
+
+      return Math.abs(resized.bar - resized.grid);
+    }).toBeLessThanOrEqual(1);
+  });
+
   test('column resize handles sit on the column borders in the modal and back on the page', async ({ page }) => {
     await createBlok(page, false, {
       blocks: [{ id: 'tbl', type: 'table', data: { withHeadings: true, content: [['A', 'B', 'C'], ['1', '2', '3']] } }],

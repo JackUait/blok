@@ -214,9 +214,9 @@ export class TableAddControls {
    * Pixel mode (colWidths set): clamp to the scroll container's visible
    * width so the button never overflows the table boundary.
    *
-   * Percent mode (no colWidths): clear `width` and use `left`/`right`
-   * constraints so the browser auto-sizes the button to the wrapper's
-   * content area, avoiding the wrapper's right padding.
+   * Percent mode (no colWidths): once laid out, size it to the grid's
+   * visible end, since full screen moves the end room from the wrapper into
+   * the scroller. Before layout, use `left`/`right` from the wrapper padding.
    */
   public syncRowButtonWidth(): void {
     const gridWidth = this.grid.style.width;
@@ -249,8 +249,6 @@ export class TableAddControls {
       const wrapperStyle = getComputedStyle(this.wrapper);
       const paddingEnd = parseFloat(isRtl ? wrapperStyle.paddingLeft : wrapperStyle.paddingRight) || 0;
 
-      setInlineInsets(this.addRowBtn, isRtl, '0px', `${paddingEnd}px`);
-
       const scrollContainer = this.grid.parentElement;
       const isInsideScrollContainer = scrollContainer !== null && scrollContainer !== this.wrapper;
 
@@ -258,8 +256,11 @@ export class TableAddControls {
       if (isInsideScrollContainer && this.wrapper.getBoundingClientRect().width > 0) {
         const visibleWidth = this.computeVisibleWidth(this.grid.offsetWidth, true, scrollContainer, direction);
 
+        this.addRowBtn.style.width = `${visibleWidth}px`;
+        setInlineInsets(this.addRowBtn, isRtl, '0px', '');
         setInlineInsets(this.addColBtn, isRtl, `${visibleWidth + 4}px`, '');
       } else {
+        setInlineInsets(this.addRowBtn, isRtl, '0px', `${paddingEnd}px`);
         setInlineInsets(this.addColBtn, isRtl, '', `${paddingEnd - 36}px`);
       }
     }

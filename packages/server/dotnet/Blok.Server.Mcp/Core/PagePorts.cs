@@ -41,14 +41,16 @@ internal sealed class PagePorts
   /*
    * Makes the batch's pages first and passes their ids as createdPages. A page the host
    * could not make goes in as createPageFailure: the bundle fails that insert with it.
+   * Any other throw leaves the pages made so far in created, for StrandedAnswerAsync.
    */
-  internal async Task AddCreatedPagesAsync(McpBundle bundle, JsonObject input, McpCaller caller, CancellationToken cancellationToken)
+  internal async Task AddCreatedPagesAsync(McpBundle bundle, JsonObject input, McpCaller caller, JsonArray created, CancellationToken cancellationToken)
   {
     var needed = await bundle.CallAsync("agentPagesNeeded", input, cancellationToken);
-    var created = new JsonArray();
 
     for (var count = PageIds.ToMake(needed); count > 0; count--)
     {
+      // A host may ignore the token, so a cancel must also stop the loop here.
+      cancellationToken.ThrowIfCancellationRequested();
       try
       {
         created.Add(await Create!(caller, cancellationToken));
@@ -60,7 +62,46 @@ internal sealed class PagePorts
         break;
       }
     }
-    input["createdPages"] = created;
+    input["createdPages"] = created.DeepClone();
+  }
+
+  /*
+   * The host made pages, then the batch stopped on a cancel or a server error before the parent
+   * was written. The answer names the pages to clean up, in Blok.Server's shape
+   * (BlokAgentExecutor.StoppedAfterCreating). It is built without the token: a cancel would stop it too.
+   */
+  internal static async Task<JsonObject> StrandedAnswerAsync(McpBundle bundle, Exception error, JsonArray created)
+  {
+    var cancelled = error is OperationCanceledException;
+
+    if (!cancelled)
+    {
+      await Console.Error.WriteLineAsync($"blok-mcp: a batch failed after it made pages: {error}");
+    }
+    var cause = cancelled
+        ? new JsonObject { ["code"] = "CANCELLED", ["message"] = "The batch was cancelled. Nothing was written.", ["retryable"] = false }
+        : new JsonObject { ["code"] = "APPLY_FAILED", ["message"] = "The batch stopped on a server error. Nothing was written.", ["retryable"] = true };
+    var orphaned = new JsonArray([.. created.Select(pageId => (JsonNode)new JsonObject
+    {
+      ["command"] = "block.insert",
+      ["type"] = "page",
+      ["prepared"] = new JsonObject { ["pageId"] = pageId?.DeepClone() },
+    })]);
+    var result = new JsonObject
+    {
+      ["ok"] = false,
+      ["error"] = new JsonObject
+      {
+        ["code"] = "ORPHANED_SIDE_EFFECT",
+        ["message"] = $"The batch failed after the host did work for it ({McpJson.String(cause["message"])}). Clean up the listed items.",
+        ["retryable"] = false,
+        ["details"] = new JsonObject { ["orphaned"] = orphaned, ["cause"] = cause },
+      },
+      ["warnings"] = new JsonArray(),
+    };
+    var built = await bundle.CallAsync("mcpExecuteAnswer", new JsonObject { ["result"] = result }, CancellationToken.None);
+
+    return (JsonObject)built["answer"]!;
   }
 
   /*

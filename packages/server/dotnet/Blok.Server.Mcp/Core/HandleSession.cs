@@ -129,6 +129,23 @@ internal sealed class StoredSession : IHandleSession
       }
       input["approval"] = approvalInput;
     }
+    // Pages made for this batch: if it stops before the parent is saved, the answer names them.
+    var created = new JsonArray();
+
+    try
+    {
+      return await RunAsync(batch, caller, input, created, cancellationToken);
+    }
+    catch (Exception error) when (created.Count > 0)
+    {
+      return new McpExecuteOutcome(await PagePorts.StrandedAnswerAsync(bundle, error, created), null);
+    }
+  }
+
+  // Memory takes the batch's document and history only once the call has fully succeeded, so after
+  // any failure it still matches the source.
+  private async Task<McpExecuteOutcome> RunAsync(JsonNode? batch, McpCaller caller, JsonObject input, JsonArray created, CancellationToken cancellationToken)
+  {
     JsonObject ran;
 
     if (write && Pages is not null && IsBatchEnvelope(batch) && PagePorts.HasPageAction(batch))
@@ -139,7 +156,7 @@ internal sealed class StoredSession : IHandleSession
     {
       if (write && Pages?.Create is not null && IsBatchEnvelope(batch))
       {
-        await Pages.AddCreatedPagesAsync(bundle, input, caller, cancellationToken);
+        await Pages.AddCreatedPagesAsync(bundle, input, caller, created, cancellationToken);
       }
       ran = Uploads is null ? await bundle.CallAsync("agentExecute", input, cancellationToken) : await Uploads.ExecuteAsync(bundle, input, cancellationToken);
     }
@@ -149,23 +166,25 @@ internal sealed class StoredSession : IHandleSession
       return new McpExecuteOutcome(null, ask);
     }
     var result = ran["result"]!;
+    var nextDocument = ran["document"]!.DeepClone();
+    var nextHistory = ran["history"] is JsonNode carried ? carried.DeepClone() : history;
 
-    document = ran["document"]!.DeepClone();
-    if (ran["history"] is JsonNode carried)
-    {
-      history = carried.DeepClone();
-    }
     if (McpJson.Bool(ran["save"]) != true)
     {
       var answerInput = new JsonObject { ["result"] = result.DeepClone() };
 
       PagePorts.MarkUnconfirmed(ran, answerInput);
+      var unsaved = await AnswerAsync(answerInput, cancellationToken);
 
-      return new McpExecuteOutcome(await AnswerAsync(answerInput, cancellationToken), null);
+      document = nextDocument;
+      history = nextHistory;
+
+      return new McpExecuteOutcome(unsaved, null);
     }
     // As Node: the answer is built before the save, so nothing that can fail follows it,
     // and a failed answer saved nothing a retry would repeat.
     JsonObject answer;
+    string? saved;
 
     try
     {
@@ -180,36 +199,21 @@ internal sealed class StoredSession : IHandleSession
           ["savedVersion"] = null,
         },
       }, cancellationToken);
-    }
-    catch
-    {
-      stale = true;
-      throw;
-    }
-    try
-    {
       var text = McpJson.String(ran["documentText"]) ?? throw new InvalidOperationException("agentExecute did not return documentText.");
-      var saved = await source.SaveAsync(documentId, text, version, cancellationToken);
 
-      version = saved;
-      if (answer["structuredContent"]?["delivery"] is JsonObject delivery)
-      {
-        delivery["savedVersion"] = saved;
-      }
-
-      return new McpExecuteOutcome(answer, null);
+      saved = await source.SaveAsync(documentId, text, version, cancellationToken);
     }
     catch (McpHostError error)
     {
-      // Memory must match the source: drop the refused work. A failed reload retries on the next call.
+      // Drop the refused work. A failed reload retries on the next call.
       stale = true;
       try
       {
         await ReloadAsync(cancellationToken);
       }
-      catch (McpHostError)
+      catch (Exception)
       {
-        // Retried on the next call.
+        // stale is still set, so the next call reloads.
       }
 
       return new McpExecuteOutcome(await AnswerAsync(new JsonObject
@@ -218,6 +222,33 @@ internal sealed class StoredSession : IHandleSession
         ["failed"] = error.ToInput("blok_execute"),
       }, cancellationToken), null);
     }
+    catch (Exception) when (created.Count > 0)
+    {
+      // The save may have stored the parent before it failed: only pages the stored parent does not
+      // name are orphans. With no parent to read, none are reported, so the host never deletes a used page.
+      stale = true;
+      var stored = await TryReloadAsync(cancellationToken);
+      var unused = stored is null ? [] : created.Where(pageId => !stored.Contains($"\"{McpJson.String(pageId)}\"", StringComparison.Ordinal)).Select(pageId => pageId!.DeepClone()).ToList();
+
+      created.Clear();
+      unused.ForEach(created.Add);
+      throw;
+    }
+    catch
+    {
+      // The save may have landed before it failed, so the next call reloads.
+      stale = true;
+      throw;
+    }
+    version = saved;
+    document = nextDocument;
+    history = nextHistory;
+    if (answer["structuredContent"]?["delivery"] is JsonObject delivery)
+    {
+      delivery["savedVersion"] = saved;
+    }
+
+    return new McpExecuteOutcome(answer, null);
   }
 
   public Task<JsonObject> CloseAsync(string reason)
@@ -250,6 +281,21 @@ internal sealed class StoredSession : IHandleSession
       ["document"] = document.DeepClone(),
       ["actor"] = actor.DeepClone(),
     };
+  }
+
+  // The reloaded document as text, or null when it could not be read.
+  private async Task<string?> TryReloadAsync(CancellationToken cancellationToken)
+  {
+    try
+    {
+      await ReloadAsync(cancellationToken);
+
+      return document.ToJsonString();
+    }
+    catch (Exception)
+    {
+      return null;
+    }
   }
 
   private async Task ReloadIfStaleAsync(CancellationToken cancellationToken)

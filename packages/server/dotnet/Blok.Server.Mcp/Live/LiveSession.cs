@@ -165,6 +165,9 @@ internal sealed class LiveSession : IHandleSession
     JsonObject result;
     bool writing;
     JsonObject? pageRun = null;
+    // Pages made for this batch: if it stops before the room write, the answer names them.
+    var created = new JsonArray();
+    var wrote = false;
 
     // Single lane: the doc must stay as exported until the write is queued.
     room.HoldDocFrames();
@@ -207,7 +210,7 @@ internal sealed class LiveSession : IHandleSession
       {
         if (gate is null && !readOnly && Pages?.Create is not null && envelope)
         {
-          await Pages.AddCreatedPagesAsync(bundle, input, caller, cancellationToken);
+          await Pages.AddCreatedPagesAsync(bundle, input, caller, created, cancellationToken);
         }
         ran = Uploads is null ? await bundle.CallAsync("agentExecute", input, cancellationToken) : await Uploads.ExecuteAsync(bundle, input, cancellationToken);
       }
@@ -248,6 +251,7 @@ internal sealed class LiveSession : IHandleSession
       else if (McpJson.String(ran["restore"]) is { } version)
       {
         // The bundle checked the restore; the room's history route runs it, and the result arrives as a peer update.
+        wrote = true;
         var previous = McpJson.String(result["results"]?[0]?["previous"]);
 
         if (await history.RestoreAsync(version, previous, cancellationToken) is { } refused)
@@ -269,6 +273,7 @@ internal sealed class LiveSession : IHandleSession
 
         var html = ops.Count > 0 ? await Converter.ReadOpsHtmlAsync(room.Doc, ops, cancellationToken) : null;
 
+        wrote = true;
         if (comments)
         {
           if (html is not null)
@@ -292,6 +297,10 @@ internal sealed class LiveSession : IHandleSession
       {
         steps.MarkOther();
       }
+    }
+    catch (Exception error) when (created.Count > 0 && !wrote)
+    {
+      return new McpExecuteOutcome(await PagePorts.StrandedAnswerAsync(bundle, error, created), null);
     }
     finally
     {

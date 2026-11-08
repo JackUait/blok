@@ -237,6 +237,29 @@ public sealed class LiveAgentHistoryTests
     await room.CloseAsync();
   }
 
+  [Fact]
+  public async Task ARoomWriteThatThrowsLeavesNoUndoStep()
+  {
+    var (room, _) = await LiveRoomTests.OpenAsync();
+    var origin = new object();
+
+    await room.Loop.RunAsync(() =>
+    {
+      var history = new LiveAgentHistory(room, origin);
+
+      Insert(room, history, origin, "p1", "one");
+      Assert.Throws<InvalidOperationException>(() => history.Apply(
+          new JsonArray(),
+          () => room.WriteLocal(origin, _ => throw new InvalidOperationException("write failed")),
+          Pair));
+
+      Assert.Null(history.Replay(true, Pair));
+      Assert.Empty(Ids(room));
+      Assert.Equal("NOTHING_TO_UNDO", history.Replay(true, Pair)?["code"]?.GetValue<string>());
+    });
+    await room.CloseAsync();
+  }
+
   private static void Insert(LiveRoom room, LiveAgentHistory history, object origin, string id, string text, JsonObject? gate = null)
   {
     var edits = new JsonArray(new JsonObject

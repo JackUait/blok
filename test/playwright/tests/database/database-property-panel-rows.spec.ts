@@ -115,6 +115,31 @@ test('a peek panel list keeps the list look: 4px inset, 2 rows = 65 tall', async
   expect(Math.abs(box.right - box.rowRight)).toBeLessThan(1);
 });
 
+test('a list opened while its menu still eases in lands under its row once the menu settles', async ({ page }) => {
+  await openPeekLabelMenu(page, 'Status');
+  await item(page, 'editProperty').click();
+  // Hold the panel half way through its 0.98 to 1 scale, as a fast click on a slow machine finds it.
+  await page.evaluate(() => document.getAnimations().forEach((animation) => {
+    const held: Animation = animation;
+
+    held.pause();
+    held.currentTime = 60;
+  }));
+  await item(page, 'displayAs').click();
+  await expect(item(page, 'displayAs-checkbox')).toBeVisible();
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await page.evaluate(() => document.getAnimations().forEach((animation) => animation.finish()));
+  // The list re-places on the frame after the panel stops moving.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await settled(page);
+  const rowBox = await item(page, 'displayAs').boundingBox();
+  const list = await listOf(item(page, 'displayAs-checkbox')).boundingBox();
+
+  if (rowBox === null || list === null) throw new Error('nothing measured');
+  expect(list.x + list.width).toBeCloseTo(rowBox.x + rowBox.width, 0);
+  expect(list.y).toBeCloseTo(rowBox.y + rowBox.height, 0);
+});
+
 test('Property visibility opens on hover, 180 x 94, over the menu edge by 4px, centred on its row', async ({ page }) => {
   await openPeekLabelMenu(page, 'Status');
   const row = item(page, 'visibility');

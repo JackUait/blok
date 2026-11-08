@@ -1703,13 +1703,15 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     // A top-layer submenu is fixed to the viewport while its trigger scrolls
-    // with the page, so follow the trigger on scroll and resize.
+    // with the page, so follow the trigger on scroll and resize. The trigger
+    // row is the anchor: a submenu opened while this menu still scales in is
+    // placed off the scaled row, so it must follow until the menu stops.
     if (this.nestedInTopLayer) {
       this.nestedPositionTracker = createPositionTracker(nestedPopoverEl, () => {
         if (this.nestedPopover !== null && this.nestedPopover !== undefined) {
           this.applyNestedPopoverPositioning(nestedPopoverEl, item);
         }
-      });
+      }, item.getElement() ?? undefined);
       this.nestedPositionTracker.attach();
     }
 

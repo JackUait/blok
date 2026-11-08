@@ -473,12 +473,13 @@ describe('Accessibility Law', () => {
           .map(() => rel)
       );
 
-      // The spacer grip, the column resizer, the side peek's edge, and the assistant panel width handle.
+      // The spacer grip, column resizer, side peek, assistant handle, and sidebar edge.
       expect(new Set(focusable)).toEqual(new Set([
         'tools/spacer/index.ts',
         'tools/columns-shared.ts',
         'tools/database/database-card-drawer.ts',
         'shell/agent-assistant.ts',
+        'shell/sidebar.ts',
       ]));
     });
   });

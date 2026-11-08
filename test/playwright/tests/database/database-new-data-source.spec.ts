@@ -127,7 +127,8 @@ test.describe('database New data source', () => {
 
     // A row and a property on the new source.
     await grid(page).locator('[data-blok-database-table-add-row]').first().click();
-    await expect(page.locator('[data-blok-database-cell-editor]')).toBeVisible();
+    // The New data source panel may still be fading out, so look in the open popover only.
+    await expect(page.locator('[data-blok-popover-opened="true"] [data-blok-database-cell-editor]')).toBeVisible();
     await page.keyboard.type('Beta');
     await page.keyboard.press('Enter');
     await expect(grid(page)).toContainText('Beta');

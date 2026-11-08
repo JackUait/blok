@@ -389,7 +389,7 @@ describe('parseBlokMcpArgs', () => {
 
     await rm(dir, { recursive: true, force: true });
 
-    expect(store).toEqual({ count: expect.any(Function), tryAdd: expect.any(Function), acquire: expect.any(Function), remove: expect.any(Function) });
+    expect(store).toEqual({ count: expect.any(Function), tryAdd: expect.any(Function), acquire: expect.any(Function), sweep: expect.any(Function) });
     expect((await parseBlokMcpArgs(['--handle-store', 'memory'], {})).handleStore).toBeUndefined();
     expect((await parseBlokMcpArgs([], {})).handleStore).toBeUndefined();
   });

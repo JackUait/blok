@@ -187,16 +187,66 @@ describe.each(flavours)('the $name handle store contract', (flavour) => {
     await again.release();
   });
 
-  it('forgets a removed handle', async () => {
+  it('forgets a handle its lease removes, and the ended lease no longer saves', async () => {
     const { a, b } = flavour.make();
 
     await a.tryAdd('h1', record('alice'), 8, 60_000);
     const lease = await leaseOf(a, 'h1');
 
-    await a.remove('h1');
+    await lease.remove();
     await lease.release();
+    await expect(lease.save(record('alice', { version: 'v2' }))).rejects.toThrow(/lease/);
     expect(await b.acquire('h1', 60_000, 100)).toBe('unknown');
     expect(await b.count('alice', 60_000)).toBe(0);
+  });
+
+  it('refuses a save, and a remove, after the lease was released', async () => {
+    const { a, b } = flavour.make();
+
+    await a.tryAdd('h1', record('alice'), 8, 60_000);
+    const lease = await leaseOf(a, 'h1');
+
+    await lease.release();
+    await expect(lease.save(record('alice', { version: 'v2' }))).rejects.toThrow(/lease/);
+    await expect(lease.remove()).rejects.toThrow(/lease/);
+    const again = await leaseOf(b, 'h1');
+
+    expect(again.record.version).toBe('v1');
+    await again.release();
+  });
+
+  it('wakes a waiting acquire when the holder removes the handle', async () => {
+    const { a, b } = flavour.make();
+
+    await a.tryAdd('h1', record('alice'), 8, 60_000);
+    const lease = await leaseOf(a, 'h1');
+    const waiting = b.acquire('h1', 60_000, 5_000);
+    const started = Date.now();
+
+    await sleep(50);
+    await lease.remove();
+
+    expect(await waiting).toBe('unknown');
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
+  it('sweeps every idle handle that nobody leases, of every principal, and keeps the rest', async () => {
+    const { a, b } = flavour.make();
+
+    await a.tryAdd('idle', record('alice'), 8, 60_000);
+    await a.tryAdd('held', record('bob'), 8, 60_000);
+    const held = await leaseOf(a, 'held');
+
+    await sleep(200);
+    await a.tryAdd('fresh', record('carol'), 8, 60_000);
+    await b.sweep(100);
+
+    expect(await b.count('alice', 60_000)).toBe(0);
+    expect(await b.count('bob', 60_000)).toBe(1);
+    expect(await b.count('carol', 60_000)).toBe(1);
+    await held.release();
+    expect(await b.acquire('idle', 60_000, 100)).toBe('unknown');
+    await (await leaseOf(b, 'fresh')).release();
   });
 });
 
@@ -287,6 +337,66 @@ describe('the files handle store', () => {
 
     expect(after.record.version).toBe('v1');
     await after.release();
+  });
+
+  it('refuses a remove from a holder whose lease was taken over, so the new holder keeps the handle', async () => {
+    const dir = tempDir();
+    const options = { leaseStaleMs: 200, heartbeatMs: 60_000 };
+    const a = createFilesHandleStore(dir, options);
+    const b = createFilesHandleStore(dir, options);
+
+    await a.tryAdd('h1', record('alice'), 8, 60_000);
+    const paused = await leaseOf(a, 'h1');
+
+    await sleep(300);
+    const taken = await leaseOf(b, 'h1');
+
+    await expect(paused.save(record('alice', { version: 'lost' }))).rejects.toThrow(/lease/);
+    await expect(paused.remove()).rejects.toThrow(/lease/);
+    await taken.save(record('alice', { version: 'v2' }));
+    await taken.release();
+    const after = await leaseOf(a, 'h1');
+
+    expect(after.record.version).toBe('v2');
+    expect(await a.count('alice', 60_000)).toBe(1);
+    await after.release();
+  });
+
+  it('gives one lease, never two, when several processes find a dead holder\'s lock at once', async () => {
+    const dir = tempDir();
+    const stores = [0, 1, 2, 3].map(() => createFilesHandleStore(dir));
+    const lease = join(dir, 'h1.lease');
+
+    await stores[0].tryAdd('h1', record('alice'), 8, 60_000);
+    // Each round races four acquires on a fresh dead lock; one round alone may not interleave.
+    for (let round = 0; round < 15; round += 1) {
+      writeFileSync(lease, 'dead holder');
+      const past = new Date(Date.now() - 60_000);
+
+      utimesSync(lease, past, past);
+      const got = await Promise.all(stores.map((store) => store.acquire('h1', 60_000, 300)));
+      const leases = got.filter((one): one is BlokMcpHandleLease => typeof one === 'object');
+
+      expect(leases, `round ${round}`).toHaveLength(1);
+      await Promise.all(leases.map((one) => one.release()));
+    }
+  });
+
+  it('sweeps crash leftovers older than the stale time, and keeps young ones', async () => {
+    const dir = tempDir();
+    const store = createFilesHandleStore(dir, { leaseStaleMs: 1_000 });
+    const old = new Date(Date.now() - 60_000);
+    const leftovers = ['.h1.record.json.0123456789ab.tmp', 'h2.lease.break', 'h3.record.json', 'h4.lease'];
+
+    for (const name of leftovers) {
+      writeFileSync(join(dir, name), 'x');
+      utimesSync(join(dir, name), old, old);
+      writeFileSync(join(dir, `young-${name}`), 'x');
+    }
+    await store.tryAdd('kept', record('alice'), 8, 60_000);
+    await store.sweep(60_000);
+
+    expect(readdirSync(dir).sort()).toEqual([...leftovers.map((name) => `young-${name}`), 'kept.meta.json', 'kept.record.json'].sort());
   });
 
   it('keeps a long lease alive by refreshing it', async () => {

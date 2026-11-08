@@ -10,7 +10,7 @@ export interface Workspace {
   createPage(parentId?: string | null): void;
 }
 
-export function createWorkspace(onLayout: (width: number) => void): Workspace {
+export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (id: string, icon: string) => void): Workspace {
   let index: WorkspaceIndex | null = null;
   let editor: Blok | null = null;
   let frame: PageFrame;
@@ -39,6 +39,16 @@ export function createWorkspace(onLayout: (width: number) => void): Workspace {
     status.textContent = `Enregistrement impossible : ${String(error)}`;
     status.setAttribute('data-error', '');
   };
+  const syncPageIcon = (page: ShellPage, icon: ReturnType<Blok['title']['icon']['get']>): void => {
+    if (!index) return;
+    const next = icon?.type === 'emoji' ? icon.value : undefined;
+    if (page.icon !== next) {
+      page.icon = next;
+      frame.setPages(index.pages, index.activeId);
+      saveManifest();
+    }
+    onPageIcon(page.id, next ?? '');
+  };
   const select = (id: string): void => {
     if (!index) return;
     const page = index.pages.find((item) => item.id === id);
@@ -46,6 +56,7 @@ export function createWorkspace(onLayout: (width: number) => void): Workspace {
     index.activeId = id;
     saveManifest();
     frame.setPages(index.pages, id);
+    onPageIcon(id, page.icon ?? '');
     if (currentId === id) return;
     currentId = id;
     const turn = ++generation;
@@ -71,6 +82,10 @@ export function createWorkspace(onLayout: (width: number) => void): Workspace {
           frame.setPages(index.pages, id);
           saveManifest();
         },
+        onIconChange(icon) {
+          if (generation !== turn || !index) return;
+          syncPageIcon(page, icon);
+        },
       },
       documentId: id,
       persistence: {
@@ -88,6 +103,7 @@ export function createWorkspace(onLayout: (width: number) => void): Workspace {
     void instance.isReady.then(() => {
       if (generation !== turn) return;
       if (!instance.title.get()) instance.title.set(page.title, { record: false });
+      syncPageIcon(page, instance.title.icon.get());
       document.title = page.title;
       status.textContent = '';
     }).catch(showError);

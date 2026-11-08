@@ -24,17 +24,15 @@ const natives: { replace: History['replaceState'] } = {
   replace: History.prototype.replaceState,
 };
 
-const installed = { history: false, title: false, keys: false, icon: false, menu: false };
+const installed = { history: false, title: false, keys: false, menu: false };
 
 const slot: {
   record: (mode: 'push' | 'replace', href: string) => void;
   syncTitle: () => void;
-  syncIcon: () => void;
   onKey: (event: KeyboardEvent) => void;
 } = {
   record: () => undefined,
   syncTitle: () => undefined,
-  syncIcon: () => undefined,
   onKey: () => undefined,
 };
 
@@ -68,14 +66,12 @@ export function mountDesktop(root: HTMLElement): void {
   if (current && document.title !== current.title) document.title = current.title;
   box.workspace = createWorkspace((width) => {
     root.style.setProperty('--desktop-sidebar-width', `${Math.max(isTauri() ? 112 : 80, width)}px`);
-  });
+  }, syncPageIcon);
   root.replaceChildren(strip(), box.workspace.element);
   root.addEventListener('click', onClick);
   slot.record = record;
   slot.syncTitle = syncTitle;
-  slot.syncIcon = syncIcon;
   slot.onKey = onKey;
-  syncIcon();
   persist();
   paint();
   void box.workspace.start();
@@ -85,7 +81,6 @@ function install(): void {
   installHistory();
   installTitle();
   installKeys();
-  installIcon();
   installMenu();
 }
 
@@ -139,15 +134,6 @@ function installKeys(): void {
   });
 }
 
-function installIcon(): void {
-  if (installed.icon) return;
-  installed.icon = true;
-  const observer = new MutationObserver(() => {
-    slot.syncIcon();
-  });
-  observer.observe(document.documentElement, { subtree: true, childList: true, characterData: true });
-}
-
 function installMenu(): void {
   if (installed.menu) return;
   installed.menu = true;
@@ -174,7 +160,7 @@ function freshTab(href: string, title: string): Tab {
     id: crypto.randomUUID(),
     href,
     title,
-    icon: pageEmoji(),
+    icon: '',
     scrollY: 0,
     entries: [href],
     scrollPositions: [0],
@@ -391,21 +377,17 @@ function syncTitle(): void {
   paint();
 }
 
-function syncIcon(): void {
-  const tab = active();
-  if (!tab) return;
-  const icon = pageEmoji();
-  if (tab.icon === icon) return;
-  box.session = withTab(box.session, tab.id, { ...tab, icon });
+function syncPageIcon(pageId: string, icon: string): void {
+  let changed = false;
+  const tabs = box.session.tabs.map((tab) => {
+    if (new URL(tab.href).searchParams.get('page') !== pageId || tab.icon === icon) return tab;
+    changed = true;
+    return { ...tab, icon };
+  });
+  if (!changed) return;
+  box.session = { ...box.session, tabs };
   persist();
   paint();
-}
-
-function pageEmoji(): string {
-  const node = document.querySelector('[data-desktop-page-icon]');
-  const text = node?.textContent?.trim() ?? '';
-  if (text === '' || !/^\p{Extended_Pictographic}/u.test(text)) return '';
-  return [...text][0] ?? '';
 }
 
 function onPop(): void {

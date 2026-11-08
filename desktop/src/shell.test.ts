@@ -3,8 +3,11 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mountDesktop, setCanLeave } from './shell';
 
+let reportPageIcon: (id: string, icon: string) => void = () => undefined;
+
 vi.mock('./workspace', () => ({
-  createWorkspace(onLayout: (width: number) => void) {
+  createWorkspace(onLayout: (width: number) => void, onPageIcon: (id: string, icon: string) => void) {
+    reportPageIcon = onPageIcon;
     const element = document.createElement('div');
     const sidebar = document.createElement('aside');
     sidebar.setAttribute('data-blok-sidebar', '');
@@ -245,25 +248,22 @@ describe('desktop tab strip', () => {
     expect(positions?.[0]).toBe(80);
   });
 
-  it('follows document.title and shows a page emoji, otherwise a document glyph', async () => {
+  it('follows document.title and updates matching tabs from the page icon', async () => {
     const root = mount();
+    history.pushState(null, '', '/?page=alpha');
     document.title = 'Carnet';
     await new Promise((resolve) => {
       setTimeout(resolve, 0);
     });
     expect(tabLabels(root)).toEqual(['Carnet']);
-    const icon = document.createElement('span');
-    icon.setAttribute('data-desktop-page-icon', '');
-    icon.textContent = '📘 notes';
-    document.body.append(icon);
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    button(root, 'Nouvel onglet').click();
+    history.pushState(null, '', '/?page=beta');
+    reportPageIcon('alpha', '👩‍💻');
+    expect(root.querySelectorAll('[role="tab"]')[0]?.querySelector('[data-desktop-tab-icon]')?.textContent).toBe('👩‍💻');
+    expect(selected(root).querySelector('[data-desktop-tab-icon="document"]')).not.toBeNull();
+    reportPageIcon('beta', '📘');
     expect(selected(root).querySelector('[data-desktop-tab-icon]')?.textContent).toBe('📘');
-    icon.remove();
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    reportPageIcon('beta', '');
     expect(selected(root).querySelector('[data-desktop-tab-icon="document"]')).not.toBeNull();
   });
 

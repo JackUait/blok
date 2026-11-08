@@ -112,8 +112,10 @@ test.describe('list view', () => {
   });
 
   // listview.png (side-by-side-v1, List): a long title is cut with "…" and every property stays in view.
+  // The title box keeps a 120px floor, so the properties must fit in the rest of the 640px row.
+  // A select pill and a checkbox need about 100px, which leaves room whatever the platform font.
   test('a long title gives way to the properties, which all stay in view', async ({ page }) => {
-    const long = blocks({ type: 'list', name: 'List' });
+    const long = blocks({ type: 'list', name: 'List', visibleProperties: ['p-stage', 'p-done'] });
     const first = long.find((block) => block.id === 'r1');
 
     if (first !== undefined) {

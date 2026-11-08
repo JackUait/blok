@@ -27,7 +27,9 @@ project's NASA/Webb cover assets.
 
 ## AI assistant
 
-The footer's star button opens a simple assistant. **Assistant IA** in settings
+The round Blok button at the lower right of the page opens the shared shell
+assistant. It has a side panel, floating window and full canvas view, plus suggestions, a per-window
+conversation history and provider selection. **Assistant IA** in settings
 checks whether the Codex or Claude Code CLI is installed and logged in. The
 native Tauri bridge runs the selected CLI in a temporary directory with its
 read-only/no-tools mode. It sends the question and, when checked, up to 100 KB

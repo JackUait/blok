@@ -220,34 +220,39 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
 [data-desktop-settings-explanation] { margin-top: 22px; max-width: 550px; color: var(--desktop-muted); font-size: 13px; line-height: 1.5; }
 [data-desktop-settings-provider] { accent-color: #2e8cff; }
 [data-desktop-ai-button] {
-  display: grid; place-items: center; flex: none; width: 30px; height: 30px; border: 0; border-radius: 6px;
-  background: transparent; cursor: pointer;
+  position: fixed; right: 16px; bottom: 16px; z-index: 29;
+  display: grid; place-items: center; width: 40px; height: 40px; padding: 0;
+  overflow: hidden; border: 0; border-radius: 50%;
+  background: #303030; box-shadow: 0 4px 18px rgba(0, 0, 0, .28); cursor: pointer;
 }
-[data-desktop-ai-button] img { width: 22px; height: 22px; object-fit: contain; }
-[data-desktop-ai-button]:hover { background: var(--desktop-hover); }
+[data-desktop-ai-button] img { width: 34px; height: 34px; object-fit: contain; }
+[data-desktop-ai-button]:hover { transform: scale(1.08); }
+[data-desktop-workspace]:has([data-blok-agent-panel]:not([hidden])) [data-desktop-ai-button] { display: none; }
 [data-desktop-ai-button]:hover img, [data-desktop-ai-button][data-thinking] img { animation: blok-mascot-float 1.4s ease-in-out infinite alternate; }
 @keyframes blok-mascot-float { to { transform: translateY(-3px) rotate(4deg); } }
 @media (prefers-reduced-motion: reduce) { [data-desktop-ai-button] img { animation: none !important; } }
-[data-desktop-ai-overlay] { position: fixed; inset: 0; z-index: 101; display: grid; place-items: center; background: rgba(0, 0, 0, .55); }
-[data-desktop-ai-overlay][hidden] { display: none; }
-[data-desktop-ai-dialog] {
-  display: flex; flex-direction: column; gap: 16px; width: min(520px, calc(100vw - 32px)); max-height: min(680px, calc(100vh - 32px));
-  padding: 22px; border: 1px solid var(--desktop-border); border-radius: 12px;
-  background: var(--desktop-canvas); color: var(--desktop-ink); box-shadow: 0 20px 60px rgba(0, 0, 0, .4);
+[data-desktop-workspace] [data-blok-sidebar-canvas] { overflow: hidden; }
+[data-desktop-workspace] [data-blok-agent-shell] {
+  --blok-popover-bg: var(--desktop-canvas);
+  --blok-text-primary: var(--desktop-ink);
+  --blok-text-secondary: var(--desktop-muted);
+  --blok-popover-border: var(--desktop-border);
+  --blok-item-hover-bg: var(--desktop-hover);
+  --blok-bg-light: var(--desktop-hover);
+  --blok-icon-active-bg: var(--desktop-hover);
+  --blok-focus-ring: #2e8cff;
+  height: 100%; min-height: 0;
 }
-[data-desktop-ai-dialog] header { display: flex; align-items: center; gap: 8px; }
-[data-desktop-ai-dialog] h2 { flex: 1; margin: 0; font-size: 18px; }
-[data-desktop-ai-dialog] header button, [data-desktop-ai-dialog] form button {
-  padding: 6px 10px; border: 1px solid var(--desktop-border); border-radius: 6px;
-  background: var(--desktop-strip); color: var(--desktop-ink); font: inherit; font-size: 13px; cursor: pointer;
+[data-desktop-workspace] [data-blok-agent-bar] { display: none; }
+[data-desktop-workspace] [data-blok-agent-editor] { height: 100%; }
+[data-desktop-workspace] [data-blok-agent-header] h2::before {
+  content: ''; display: inline-block; width: 20px; height: 20px; margin-right: 8px;
+  vertical-align: -4px; background: url('../../docs/public/logo-no-sign.png') center / contain no-repeat;
 }
-[data-desktop-ai-dialog] [data-desktop-ai-note] { margin: 0; color: var(--desktop-muted); font-size: 12px; }
-[data-desktop-ai-dialog] form { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-[data-desktop-ai-dialog] textarea { width: 100%; resize: vertical; min-height: 82px; padding: 10px; border: 1px solid var(--desktop-border); border-radius: 6px; background: var(--desktop-strip); color: var(--desktop-ink); font: inherit; }
-[data-desktop-ai-dialog] label { color: var(--desktop-muted); font-size: 12px; }
-[data-desktop-ai-dialog] form button { align-self: flex-end; }
-[data-desktop-ai-dialog] form button:disabled { opacity: .5; cursor: default; }
-[data-desktop-ai-response] { overflow: auto; min-height: 1px; white-space: pre-wrap; font-size: 14px; line-height: 1.5; }
+[data-desktop-workspace] [data-blok-agent-empty-mark] {
+  background: url('../../docs/public/logo-no-sign.png') center / contain no-repeat;
+  color: transparent; font-size: 0;
+}
 [data-desktop-switcher]:focus-visible, [data-desktop-menu-item]:focus-visible,
 [data-desktop-settings-dialog] button:focus-visible, [data-desktop-settings-theme]:focus-visible {
   outline: 2px solid #2e8cff; outline-offset: 2px;

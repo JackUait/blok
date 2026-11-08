@@ -1,7 +1,7 @@
 import { dataDirectory } from './storage';
 import corePackage from '../../package.json';
 import appPackage from '../package.json';
-import { createAssistant, providerStatus, selectedProvider, setProvider, type Provider } from './assistant';
+import { providerStatus, selectedProvider, setProvider, type Provider } from './assistant';
 
 export type Appearance = 'dark' | 'light' | 'auto';
 
@@ -93,7 +93,7 @@ function actionButton(attribute: string, label: string, kind: MenuIcon): HTMLBut
   return button;
 }
 
-export function createDesktopFooter(onThemeChange: (mode: Appearance) => void, getPageText: () => string = () => ''): HTMLElement {
+export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): HTMLElement {
   const footer = el('div', 'data-desktop-footer');
   const switcher = el('button', 'data-desktop-switcher');
   switcher.type = 'button';
@@ -307,6 +307,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void, g
     dialog.focus();
     document.addEventListener('keydown', settingsKey);
   };
+  footer.addEventListener('blok:desktop-open-ai-settings', () => openSettings('ai'));
   preferences.addEventListener('click', () => {
     openSettings('preferences');
   });
@@ -323,7 +324,5 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void, g
     switcher.querySelector('[data-desktop-switcher-name]')!.textContent = profileName;
     account.querySelector('[data-desktop-menu-title]')!.textContent = profileName;
   }
-  const assistant = createAssistant(getPageText, () => openSettings('ai'));
-  footer.append(assistant.button);
   return footer;
 }

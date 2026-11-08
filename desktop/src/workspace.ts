@@ -4,6 +4,8 @@ import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } f
 import { loadIndex, readFile, writeFile, type DesktopPage, type WorkspaceIndex } from './storage';
 import { createDesktopFooter, readAppearance } from './settings';
 import { createAddCoverButton, createPageCover, isCoverId, type CoverId } from './cover';
+import { mountAgentAssistant, type AgentAssistantHandle } from '../../src/shell/agent-assistant';
+import { createAssistantButton, inspectNativeProvider, nativeAgentModel, selectedProvider } from './assistant';
 
 const desktopTools = {
   ...defaultTools,
@@ -26,6 +28,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   let editor: Blok | null = null;
   let frame: PageFrame;
   let coverRowObserver: MutationObserver | null = null;
+  let assistant: AgentAssistantHandle;
+  let pageCanvas: HTMLElement;
+  let footer: HTMLElement;
   let currentId = '';
   let generation = 0;
   let saveOrder = Promise.resolve();
@@ -115,7 +120,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           saveManifest();
         });
         if (coverNode) coverNode.replaceWith(next);
-        else frame.canvas.insertBefore(next, article);
+        else pageCanvas.insertBefore(next, article);
         coverNode = next;
       } else {
         coverNode?.remove();
@@ -123,7 +128,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         attachCoverAction();
       }
     };
-    frame.canvas.replaceChildren(article);
+    pageCanvas.replaceChildren(article);
     renderCover();
     const instance = new Blok({
       holder,
@@ -216,9 +221,24 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     onAction: action,
   });
   frame.element.append(status);
+  assistant = mountAgentAssistant({
+    getPageText: () => pageCanvas.querySelector('[data-desktop-document]')?.textContent?.slice(0, 100_000) ?? '',
+    openSettings: () => footer.dispatchEvent(new Event('blok:desktop-open-ai-settings')),
+    inspectProvider: inspectNativeProvider,
+    modelFor: nativeAgentModel,
+    preferredProvider: selectedProvider,
+  });
+  pageCanvas = assistant.editorSlot;
+  frame.canvas.append(assistant.element);
   const sidebar = frame.element.querySelector('[data-blok-sidebar]') as HTMLElement;
-  sidebar.insertBefore(createDesktopFooter((mode) => editor?.theme.set(mode), () =>
-    frame.canvas.querySelector('[data-desktop-document]')?.textContent?.slice(0, 100_000) ?? ''), sidebar.querySelector('[data-blok-sidebar-edge]'));
+  const assistantButton = createAssistantButton(() => {
+    const panel = assistant.element.querySelector('[data-blok-agent-panel]');
+    if (panel?.hasAttribute('hidden')) assistant.open();
+    else assistant.close();
+  });
+  frame.canvas.append(assistantButton);
+  footer = createDesktopFooter((mode) => editor?.theme.set(mode));
+  sidebar.insertBefore(footer, sidebar.querySelector('[data-blok-sidebar-edge]'));
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));
   observer.observe(sidebar);
   frame.element.setAttribute('data-desktop-workspace', '');

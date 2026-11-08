@@ -4,7 +4,7 @@
  * blok_* tools itself.
  */
 
-import type { AgentModelMessage, AgentModelResponse } from '../../types/api';
+import type { AgentModel, AgentModelMessage, AgentModelResponse } from '../../types/api';
 import { createCliAgentModel, inspectCli, providerLabel, type CliCommand, type CliStatus } from './agent-model';
 import { preferredCommand, readAgentSettings, subscribeAgentSettings } from './agent-settings';
 import './agent-assistant.css';
@@ -14,6 +14,12 @@ export interface AgentAssistantOptions {
   getPageText: () => string;
   /** Closes the panel, then the host opens provider settings. */
   openSettings: () => void;
+  /** Host-specific provider inspection, e.g. Tauri's native CLI bridge. */
+  inspectProvider?: (command: CliCommand, signal: AbortSignal) => Promise<CliStatus>;
+  /** Host-specific model, leaving the Node CLI adapter as the default. */
+  modelFor?: (command: CliCommand) => AgentModel;
+  /** Preferred connected provider when this panel opens. */
+  preferredProvider?: () => CliCommand | null;
 }
 
 export interface AgentAssistantHandle {
@@ -312,9 +318,10 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     session.inspect?.abort();
     session.inspect = gate;
 
+    const inspect = options.inspectProvider ?? ((command: CliCommand, signal: AbortSignal) => inspectCli(command, signal, true));
     const [codex, claude] = await Promise.all([
-      inspectCli('codex', gate.signal, true),
-      inspectCli('claude', gate.signal, true),
+      inspect('codex', gate.signal),
+      inspect('claude', gate.signal),
     ]);
 
     if (session.inspect !== gate) return;
@@ -329,7 +336,11 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     });
 
     if (session.picked !== null && !usable.includes(session.picked)) session.picked = null;
-    if (session.picked === null) session.picked = preferredCommand(session.statuses);
+    if (session.picked === null) {
+      const preferred = options.preferredProvider?.();
+      session.picked = preferred !== undefined && preferred !== null && usable.includes(preferred)
+        ? preferred : preferredCommand(session.statuses);
+    }
 
     paintProviders(usable);
   };
@@ -447,6 +458,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     else panel.setAttribute('hidden', '');
 
     panel.setAttribute('data-blok-agent-mode', session.mode);
+    panel.setAttribute('role', session.mode === 'full' ? 'region' : 'dialog');
     panel.style.setProperty('--blok-agent-width', `${session.width}px`);
     resize.setAttribute('aria-valuenow', String(session.width));
 
@@ -513,7 +525,8 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     field.value = '';
     render();
 
-    void createCliAgentModel({ command })({
+    const model = options.modelFor?.(command) ?? createCliAgentModel({ command });
+    void model({
       system: SYSTEM,
       messages: [...prior, { role: 'user', content: sent }],
       tools: [],
@@ -525,11 +538,11 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
       turn.pending = false;
       session.run = null;
       render();
-    }, () => {
+    }, (error: unknown) => {
       if (session.token !== token) return;
 
       turn.pending = false;
-      if (!controller.signal.aborted) turn.answer = 'The CLI is not available.';
+      if (!controller.signal.aborted) turn.answer = error instanceof Error ? error.message : String(error);
       session.run = null;
       render();
     });
@@ -537,6 +550,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
 
   const open = (): void => {
     session.open = true;
+    session.picked = null;
     render();
     void refreshProviders();
     field.focus();

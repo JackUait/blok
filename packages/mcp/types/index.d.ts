@@ -75,11 +75,30 @@ export interface BlokMcpOptions {
   /** Turns on `image.uploadFile`, `video.uploadFile`, `audio.uploadFile` and `file.uploadFile`. */
   uploads?: McpUploads;
   /**
+   * Makes each new page document yourself, for example as your own article. Runs only with
+   * `pageTitles: 'page-map'` and a `source`; with `sync`, or with no source, the server refuses to start.
+   * Answer the new page id (1-512 characters, no control characters), or null to refuse (FORBIDDEN).
+   * Blok then skips its own `authorize` of the new id and saves nothing for it. Undo, redo and delete
+   * never call it. A throw or a bad id is logged to stderr; the agent sees SOURCE_UNAVAILABLE, or,
+   * after pages were already made in that batch, ORPHANED_SIDE_EFFECT listing them.
+   */
+  createPage?: (request: BlokPageCreateRequest) => Promise<string | null>;
+  /**
    * False: the editors keep comments in the host's own system (a `comments` hook). Agent
    * comments would be invisible to people there, so the comment commands are unavailable.
    * On by default.
    */
   comments?: boolean;
+}
+
+/** What `createPage` gets when an agent inserts a page block. */
+export interface BlokPageCreateRequest {
+  /** The open document the page block goes into. */
+  parentDocumentId: string;
+  principal: string;
+  actor: AgentActor;
+  /** A fresh Blok id you may use or ignore. */
+  suggestedPageId: string;
 }
 
 /** Who works on a document: the caller that opened the handle, with the agent's actor. */
@@ -150,7 +169,7 @@ export interface McpUploads {
 
 export declare function createBlokMcpServer(options: BlokMcpOptions): { start(): Promise<void>; stop(): Promise<void> };
 
-/** The `blok-mcp` flags and env as options, with the `--authorize` hook and the manifest files loaded. */
+/** The `blok-mcp` flags and env as options, with the `--authorize` and `--create-page` hooks and the manifest files loaded. */
 export declare function parseBlokMcpArgs(argv: string[], env: Record<string, string | undefined>): Promise<BlokMcpOptions>;
 
 /** The same options as the standalone server. The host owns the transport and sign-in, so both are optional. */

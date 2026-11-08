@@ -264,17 +264,18 @@ const unused = (): Promise<never> => Promise.reject(new Error('Only checked, nev
 
 /**
  * Options as data: the functions blok-mcp checks only for presence are flags here.
- * `authorize: true` stands for a hook; `uploads.uploadByFile: true` for the uploader's function.
+ * `authorize: true` and `createPage: true` stand for hooks; `uploads.uploadByFile: true` for the uploader's function.
  */
 const checkOptions = (input: Input): string => configResult(() => {
   const options = isRecord(input.options) ? input.options : {};
-  const { authorize, uploads, ...rest } = options;
+  const { authorize, uploads, createPage, ...rest } = options;
   const upload = isRecord(uploads) ? uploads : undefined;
   const { uploadByFile, ...limits } = upload ?? {};
 
   checkOptionSafety({
     ...rest,
     ...(authorize === true && { authorize: unused }),
+    ...(createPage === true && { createPage: unused }),
     ...(upload !== undefined && { uploads: { ...limits, uploader: uploadByFile === true ? { uploadByFile: unused } : {} } }),
   } as unknown as BlokMcpOptions);
 });

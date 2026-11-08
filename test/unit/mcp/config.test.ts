@@ -456,6 +456,18 @@ describe('parseMcpArgs', () => {
     });
   });
 
+  describe('--create-page', () => {
+    it('keeps the webhook URL with the hooks the caller loads', () => {
+      const { files } = parseMcpArgs(['--create-page', 'https://app.example/pages'], {});
+
+      expect(files).toEqual({ createPage: 'https://app.example/pages' });
+    });
+
+    it.each([['./create-page.mjs'], ['ftp://app.example/pages'], ['app.example/pages']])('refuses %s, which is no http(s) URL', (value) => {
+      expect(() => parseMcpArgs(['--create-page', value], {})).toThrow(new McpConfigError(`--create-page must be an http(s) URL, got "${value}"`));
+    });
+  });
+
   describe('flags it does not know', () => {
     it.each([
       ['--auth=oauth'],
@@ -661,6 +673,29 @@ describe('checkOptionSafety', () => {
       authorize: async () => true,
       transport: { kind: 'http', listen: '0.0.0.0:4100', public: true },
     })).not.toThrow();
+  });
+
+  describe('a host page creator', () => {
+    const createPage = (): Promise<string | null> => Promise.resolve(null);
+    const files: Parameters<typeof checkOptionSafety>[0]['source'] = { kind: 'files', dir: './docs' };
+
+    it('starts with a stored source and page-map', () => {
+      expect(() => checkOptionSafety({ ...base, source: files, pageTitles: 'page-map', createPage })).not.toThrow();
+    });
+
+    it('starts without page-map, where it never runs', () => {
+      expect(() => checkOptionSafety({ ...base, source: files, createPage })).not.toThrow();
+    });
+
+    it('refuses to start without a source, since nothing could open the new page', () => {
+      expect(() => checkOptionSafety({ ...base, pageTitles: 'page-map', createPage }))
+        .toThrow(new McpConfigError('--create-page needs a document source (--source): the agent opens each new page through it'));
+    });
+
+    it('refuses to start with live rooms, before the ticket check', () => {
+      expect(() => checkOptionSafety({ ...base, source: files, pageTitles: 'page-map', sync: { url: 'wss://sync.example' }, createPage }))
+        .toThrow(new McpConfigError('--create-page works in stored mode only: it cannot be used with live rooms (--sync-url)'));
+    });
   });
 
   describe('library option values the CLI flags already check', () => {

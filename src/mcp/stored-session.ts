@@ -4,6 +4,7 @@ import type { AgentContract } from '../../types/tool-manifest';
 
 import { tooDeepToSave } from '../shared/mcp/wire-json';
 
+import { reportOrphanedPages } from './create-page';
 import { failedResult, isMcpSurfaceError, isWriteBatch, NO_DELIVERY, surfaceError } from './errors';
 import type { HandleSession, McpExecuteResult } from './session';
 import type { DocumentSource } from './sources/types';
@@ -70,7 +71,8 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
       }
       // result.revision is the session's own hash; equal means nothing changed here.
       const before = state.agent.revision();
-      const result = await state.agent.execute(batch, options);
+      // A failed batch wrote nothing, so memory is the parent as saved.
+      const result = await state.agent.execute(batch, options).then((ran) => reportOrphanedPages(ran, JSON.stringify(state.agent.output())));
 
       // An unchanged write (page.rename edits another document) has nothing to save.
       if (!result.ok || !writing || result.revision === before) {

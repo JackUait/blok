@@ -162,6 +162,13 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - With `--sync-url` the server joins the new page's room once and leaves. The sync service loads it empty and seeds it, so its ticket and `IBlokAuthorization` must let the agent open an id it has never seen, and your document endpoint must answer `null` for it. If the room is refused, the insert fails with `FORBIDDEN` or `SOURCE_UNAVAILABLE`.
   - In live mode your document endpoint gets no PUT for the new page yet. It gets one when someone writes in the page, or under a journal when the room is opened again.
   - The document stays, empty, if the batch fails after it was made or the insert is undone. When a later command in that batch fails, `error.details.orphaned` lists it. A save or a room that refuses the batch does not. Delete it yourself if you do not want it.
+  - To make each page yourself, for example as your own article, pass `createPage` (library) or `--create-page <url>` (webhook). It needs a stored `--source` and cannot be used with `--sync-url`: the server refuses to start. Without `page-map` it is never called.
+    - It gets `{ parentDocumentId, principal, actor, suggestedPageId }` and answers the new page id, or `null` to refuse. Use `suggestedPageId` or your own id: 1 to 512 characters, no control characters.
+    - Blok then does not run `--authorize` on the new id and saves nothing for it. You make the document your source loads for that id. A later `blok_open` of it runs `--authorize` as usual.
+    - `null` fails the insert with `FORBIDDEN` "You may not create a page document here.", and nothing is saved.
+    - A throw or a bad id is logged in full to stderr. The agent sees `SOURCE_UNAVAILABLE` "The host could not create the page.". When the batch already made pages, it sees `ORPHANED_SIDE_EFFECT` instead: `details.orphaned` lists them, and `details.cause` is `APPLY_FAILED` "The batch stopped on a server error. Nothing was written.". The parent is not saved.
+    - The webhook gets `POST` with `Content-Type: application/json` and the body `{ "parentDocumentId", "principal", "actor": { "id", "name", "onBehalfOf" }, "suggestedPageId" }`. `200 { "pageId": "<id>" }` makes the page; `200 { "pageId": null }` refuses. Any other status, a redirect, a body without `pageId`, a network error or no answer within 10 seconds is a host error, not a refusal.
+    - Undo, redo and `block.delete` never call it. An undone or failed insert leaves your page in place, with no parent pointing at it. Keep a new page hidden until a saved parent names its `pageId`.
   - Without `page-map`, a page insert fails with `COMMAND_UNAVAILABLE`, reason `host`. The page entry in `blok_describe` says the same: `insertUnavailableReason: "host"`.
   - One batch inserts at most 25 pages. A longer batch fails with `INVALID_ARGS` before any page is made.
   - Insert each page with its own `block.insert`. A page inside another block's `children` fails with `INVALID_ARGS`. A `block.update` that changes `data.pageId` fails with `FIELD_NOT_WRITABLE`.
@@ -244,6 +251,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 | `--oauth-audience <url>` | | none | This server's resource id. |
 | `--oauth-jwks <url>` | | none | Issuer's JWKS URL. |
 | `--authorize <module\|url>` | | none | Per-document access hook. A module path works in Node only. |
+| `--create-page <url>` | | none | Webhook that makes each new sub-page document. Needs `--page-titles page-map` to run, and `--source`; refused with `--sync-url`. |
 | `--principal <name>` | | `local` | Who the caller is over stdio. |
 | `--manifest <file>` | | none | Custom block and inline tools. |
 | `--manifest-overrides <file>` | | none | Tool and action overrides. |

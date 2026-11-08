@@ -6,7 +6,7 @@ import type { CallToolRequest, Server, ServerContext } from '@modelcontextprotoc
 import type * as Public from '../../../packages/mcp/types/index';
 import { BlokMcpSourceError, parseBlokMcpArgs } from '../../../src/mcp/index';
 import type { createBlok } from '../../../src/mcp/index';
-import type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpOptions as InternalOptions } from '../../../src/mcp/options';
+import type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpOptions as InternalOptions, BlokPageCreateRequest } from '../../../src/mcp/options';
 import type { AgentActor } from '../../../types/agent';
 import type { BlokCustomToolsFile, ManifestOverrides } from '../../../types/tool-manifest';
 
@@ -31,6 +31,8 @@ const parseArgsToPublic: typeof Public.parseBlokMcpArgs = parseBlokMcpArgs;
 const sourceToPublic = (value: BlokMcpDocumentSource): Public.BlokMcpDocumentSource => value;
 const sourceFromPublic = (value: Public.BlokMcpDocumentSource): BlokMcpDocumentSource => value;
 const sourceErrorToPublic: typeof Public.BlokMcpSourceError = BlokMcpSourceError;
+const pageRequestToPublic = (value: BlokPageCreateRequest): Public.BlokPageCreateRequest => value;
+const pageRequestFromPublic = (value: Public.BlokPageCreateRequest): BlokPageCreateRequest => value;
 
 // A TypeScript host wires the public handlers into the SDK without a cast.
 const wireHost = (server: Server, blok: Public.BlokMcp): void => {
@@ -54,7 +56,8 @@ const sameKeys: [
   SameKeys<InternalOptions, Public.BlokMcpOptions>,
   SameKeys<BlokDocumentCaller, Public.BlokDocumentCaller>,
   SameKeys<BlokMcpDocumentSource, Public.BlokMcpDocumentSource>,
-] = [true, true, true, true, true, true, true];
+  SameKeys<BlokPageCreateRequest, Public.BlokPageCreateRequest>,
+] = [true, true, true, true, true, true, true, true];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -69,7 +72,8 @@ describe('@bloklabs/mcp public types', () => {
     expect([
       actorToPublic, actorFromPublic, overridesToPublic, overridesFromPublic, customToolsToPublic, optionsToPublic, optionsFromPublic,
       blokToPublic, hooksFromPublic, parseArgsToPublic, wireHost, sourceToPublic, sourceFromPublic, sourceErrorToPublic,
-    ]).toHaveLength(14);
+      pageRequestToPublic, pageRequestFromPublic,
+    ]).toHaveLength(16);
     expect(sameKeys.every(Boolean)).toBe(true);
   });
 

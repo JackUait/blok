@@ -6,6 +6,7 @@ import { getBlokVersion } from '../components/utils/version';
 import { loadAuthorizeHook } from './auth/authorize';
 import { checkOptionSafety, McpConfigError, parseMcpArgs } from './config';
 import { readManifestFiles } from './contract-flags';
+import { createPageWebhook } from './create-page';
 import { McpListenError, startHttpServer } from './http';
 import { DEFAULTS } from './options';
 import type { BlokMcpOptions } from './options';
@@ -13,7 +14,7 @@ import { buildSdkServer } from './sdk-server';
 import { assembleMcp, STOP_DRAIN_MS } from './server';
 import { wellFormedIdsStdio } from './wire-ids';
 
-export type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpOptions } from './options';
+export type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpOptions, BlokPageCreateRequest } from './options';
 export { BlokMcpSourceError } from './sources/custom';
 export type { BlokMcpSourceErrorKind } from './sources/custom';
 export { createBlok } from './embed';
@@ -129,7 +130,7 @@ const stopOnShutdown = (server: { stop(): Promise<void> }, watchStdin: boolean):
   }
 };
 
-/** The blok-mcp flags and env as options, with the --authorize hook and manifest files loaded. */
+/** The blok-mcp flags and env as options, with the --authorize and --create-page hooks and manifest files loaded. */
 export const parseBlokMcpArgs = async (argv: string[], env: NodeJS.ProcessEnv): Promise<BlokMcpOptions> => {
   const { options, files } = parseMcpArgs(argv, env);
   const authorize = files.authorize === undefined ? undefined : await loadAuthorizeHook(files.authorize);
@@ -137,6 +138,7 @@ export const parseBlokMcpArgs = async (argv: string[], env: NodeJS.ProcessEnv): 
   return {
     ...options,
     ...(authorize !== undefined && { authorize }),
+    ...(files.createPage !== undefined && { createPage: createPageWebhook(files.createPage) }),
     ...await readManifestFiles(files),
   };
 };

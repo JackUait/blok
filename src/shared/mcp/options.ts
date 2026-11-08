@@ -23,11 +23,26 @@ export interface BlokMcpOptions {
   principal?: string;
   uploads?: McpUploads;
   /**
+   * The host makes each new page document (src/mcp/create-page.ts). Runs only with pageTitles
+   * 'page-map' and a stored source. Answers the new page id, or null to refuse (FORBIDDEN).
+   */
+  createPage?: (request: BlokPageCreateRequest) => Promise<string | null>;
+  /**
    * False: the editors keep comments in the host's own system (a `comments` hook). Agent
    * comments would be invisible to people there, so the comment commands are unavailable.
    * On by default.
    */
   comments?: boolean;
+}
+
+/** What the host gets when an agent inserts a page block. */
+export interface BlokPageCreateRequest {
+  /** The open document the page block goes into. */
+  parentDocumentId: string;
+  principal: string;
+  actor: AgentActor;
+  /** A fresh Blok id the host may use or ignore. */
+  suggestedPageId: string;
 }
 
 /** Who works on a document: the caller that opened the handle, with the agent's actor. */

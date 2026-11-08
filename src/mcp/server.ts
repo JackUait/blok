@@ -69,7 +69,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     void closing.catch(() => undefined).finally(() => pageCloses.delete(closing));
   };
   // portsFor needs the opener and the opener needs portsFor: bind the open late.
-  const late: { open: DispatcherDeps['open'] | null; createPage: ((caller: Caller) => Promise<{ pageId: string }>) | null } = {
+  const late: { open: DispatcherDeps['open'] | null; createPage: ((caller: Caller, parentDocumentId: string) => Promise<{ pageId: string }>) | null } = {
     open: null, createPage: null,
   };
   const portsFor = (
@@ -77,6 +77,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     _actor?: AgentActor,
     isOpenDocument?: (pageId: string) => Promise<boolean>,
     unconfirmed?: () => void,
+    documentId = '',
   ): AgentPorts => createHeadlessPorts({
     sanitizeFor: (type) => contracts.runtimes.get(type)?.sanitize,
     richTextFieldsFor: contracts.richTextFieldsFor,
@@ -101,7 +102,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
           throw new Error('blok-mcp: the opener is not ready');
         }
 
-        return late.createPage(caller);
+        return late.createPage(caller, documentId);
       },
     }),
   });

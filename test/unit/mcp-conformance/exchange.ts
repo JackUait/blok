@@ -32,6 +32,8 @@ import {
  *   hosts       a route table for the fake host (fake-host.ts) at ${host}, plus
  *               "$upgradeStatus" for the sync upgrade it refuses. Every request it
  *               gets is recorded in order, or by "hostRequestOrder": "sorted" | "distinct".
+ *               "maskHostKeys" masks those key names in the records after ordering, for
+ *               values a server makes up per run (a page creator's suggestedPageId).
  *   room        {"journal"?: false}: a real sync host (live-room.ts) at ${roomWs}; without
  *               a journal the host speaks blok-sync.v1 only. stdio only.
  *   session     {"protocolVersion", "capabilities"?, "clientName"?, "headers"?}: the
@@ -174,6 +176,7 @@ export interface FixtureCase {
   stderrPattern?: string;
   hostRequestOrder?: 'sorted' | 'distinct';
   maskKeys?: string[];
+  maskHostKeys?: string[];
   compare?: 'blok-owned';
   variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
@@ -948,7 +951,7 @@ const withHost = async (c: FixtureCase, run: CaseRun, body: () => Promise<void>)
     await body();
     const requests = orderedRequests(host.requests, c.hostRequestOrder);
 
-    run.checkCase('expectHostRequests', requests, `${c.name} host requests`);
+    run.checkCase('expectHostRequests', maskKeys(requests, new Set(c.maskHostKeys ?? [])), `${c.name} host requests`);
   } finally {
     await host.close();
   }

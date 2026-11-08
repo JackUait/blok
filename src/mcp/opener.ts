@@ -8,6 +8,7 @@ import { loadStoredDocument } from '../view/agent-runtime';
 
 import { defaultAgentActor } from './actor';
 import type { McpContracts } from './contract';
+import { createHostPage } from './create-page';
 import type { Caller, DispatcherDeps, ListResult, OpenRequest } from './dispatcher';
 import { isMcpSurfaceError, surfaceError } from './errors';
 import { resolveMode } from './mode';
@@ -41,7 +42,13 @@ export interface OpenerDeps {
   contracts: McpContracts;
   source: DocumentSource | null;
   openLive?: (request: OpenRequest, caller: Caller, actor: AgentActor) => Promise<HandleSession>;
-  portsFor(caller: Caller, actor: AgentActor, isOpenDocument?: (pageId: string) => Promise<boolean>, unconfirmed?: () => void): AgentPorts;
+  portsFor(
+    caller: Caller,
+    actor: AgentActor,
+    isOpenDocument?: (pageId: string) => Promise<boolean>,
+    unconfirmed?: () => void,
+    documentId?: string,
+  ): AgentPorts;
   /** The host's file uploader, for `<tool>.uploadFile`. */
   uploader?: unknown;
 }
@@ -52,7 +59,7 @@ export const createOpener = (
   open: DispatcherDeps['open'];
   list: DispatcherDeps['list'];
   actorFor(caller: Caller): AgentActor;
-  createPage(caller: Caller): Promise<{ pageId: string }>;
+  createPage(caller: Caller, parentDocumentId: string): Promise<{ pageId: string }>;
 } => {
   const syncConfigured = deps.options.sync !== undefined;
   const actorFor = (caller: Caller): AgentActor =>
@@ -98,7 +105,7 @@ export const createOpener = (
         contract: deps.contracts.stored,
         actor,
         ports: deps.portsFor(caller, actor, async (pageId) =>
-          pageId === request.documentId || (await source.sameDocument?.(pageId, request.documentId) ?? false), pages.unconfirmed),
+          pageId === request.documentId || (await source.sameDocument?.(pageId, request.documentId) ?? false), pages.unconfirmed, request.documentId),
         // 01 builds the Node pageBackend only with this flag and the openPageDocument port (Task 26).
         ...(deps.options.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
         ...(deps.uploader !== undefined && { services: { uploader: deps.uploader } }),
@@ -131,7 +138,13 @@ export const createOpener = (
    * document. Live mode joins the new room once: the sync service seeds it before the join syncs, and
    * the host's first PUT of it comes later, on an edit or a reopen.
    */
-  const createPage = async (caller: Caller): Promise<{ pageId: string }> => {
+  const createPage = async (caller: Caller, parentDocumentId: string): Promise<{ pageId: string }> => {
+    const hostCreate = deps.options.createPage;
+
+    // checkOptionSafety allows the hook only in stored mode with a source.
+    if (hostCreate !== undefined) {
+      return createHostPage(hostCreate, { parentDocumentId, principal: caller.principal, actor: actorFor(caller), suggestedPageId: mintId() });
+    }
     const source = sourceFor(caller, actorFor(caller));
     const pageId = mintId();
 

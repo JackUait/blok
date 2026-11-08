@@ -2281,6 +2281,1938 @@
           "text": "{\n  \"extra\": 2,\n  \"title\": \"last\",\n  \"icon\": {\n    \"type\": \"emoji\",\n    \"value\": \"x\"\n  },\n  \"blocks\": []\n}\n"
         }
       }
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "${host}/pages"
+      ],
+      "name": "stored: with --create-page, a page insert takes the host's id, and the host gets the parent and the principal",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /pages": {
+          "status": 200,
+          "json": {
+            "pageId": "host-page-1"
+          }
+        }
+      },
+      "maskHostKeys": [
+        "suggestedPageId"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np0",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "id": "np0",
+                    "childIds": []
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "np0"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "np0",
+                    "type": "page",
+                    "depth": 0,
+                    "attrs": {
+                      "pageId": "host-page-1"
+                    },
+                    "data": {
+                      "pageId": "host-page-1"
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/pages",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "parentDocumentId": "parent",
+            "principal": "local",
+            "actor": {
+              "id": "agent:local:conformance",
+              "name": "conformance (for local)",
+              "onBehalfOf": "local"
+            },
+            "suggestedPageId": "<masked>"
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "${host}/pages",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "stored: with --create-page, authorize is not asked about the new id, only when it is opened later",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /pages": {
+          "status": 200,
+          "json": {
+            "pageId": "host-page-1"
+          }
+        },
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        }
+      },
+      "maskHostKeys": [
+        "suggestedPageId"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np0",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "id": "np0",
+                    "childIds": []
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "np0"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "np0",
+                    "type": "page",
+                    "depth": 0,
+                    "attrs": {
+                      "pageId": "host-page-1"
+                    },
+                    "data": {
+                      "pageId": "host-page-1"
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "host-page-1",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "pageHandle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${pageHandle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": false
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        }
+      ],
+      "watchFiles": [
+        "host-page-1.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "host-page-1.json": null
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "parent",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "parent",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/pages",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "parentDocumentId": "parent",
+            "principal": "local",
+            "actor": {
+              "id": "agent:local:conformance",
+              "name": "conformance (for local)",
+              "onBehalfOf": "local"
+            },
+            "suggestedPageId": "<masked>"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "host-page-1",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "${host}/pages"
+      ],
+      "name": "stored: --create-page answering null fails the insert with FORBIDDEN, and nothing is saved",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /pages": {
+          "status": 200,
+          "json": {
+            "pageId": null
+          }
+        }
+      },
+      "maskHostKeys": [
+        "suggestedPageId"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Parent"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np0",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "You may not create a page document here.",
+                  "retryable": false,
+                  "commandIndex": 1
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[]}"
+        }
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/pages",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "parentDocumentId": "parent",
+            "principal": "local",
+            "actor": {
+              "id": "agent:local:conformance",
+              "name": "conformance (for local)",
+              "onBehalfOf": "local"
+            },
+            "suggestedPageId": "<masked>"
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "${host}/pages"
+      ],
+      "name": "stored: --create-page failing on the first page answers SOURCE_UNAVAILABLE, and nothing is saved",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /pages": {
+          "status": 500,
+          "json": {
+            "error": "database down"
+          }
+        }
+      },
+      "maskHostKeys": [
+        "suggestedPageId"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np0",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host could not create the page.",
+                  "retryable": true,
+                  "commandIndex": 0
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[]}"
+        }
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/pages",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "parentDocumentId": "parent",
+            "principal": "local",
+            "actor": {
+              "id": "agent:local:conformance",
+              "name": "conformance (for local)",
+              "onBehalfOf": "local"
+            },
+            "suggestedPageId": "<masked>"
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "${host}/pages"
+      ],
+      "name": "stored: --create-page failing on the second page lists the first as orphaned, and nothing is saved",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /pages": {
+          "sequence": [
+            {
+              "status": 200,
+              "json": {
+                "pageId": "host-1"
+              }
+            },
+            {
+              "status": 500,
+              "json": {
+                "error": "database down"
+              }
+            }
+          ]
+        }
+      },
+      "maskHostKeys": [
+        "suggestedPageId"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np0",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np1",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "ORPHANED_SIDE_EFFECT",
+                  "message": "The batch failed after the host did work for it (The batch stopped on a server error. Nothing was written.). Clean up the listed items.",
+                  "commandIndex": 1,
+                  "retryable": false,
+                  "details": {
+                    "orphaned": [
+                      {
+                        "command": "block.insert",
+                        "type": "page",
+                        "prepared": {
+                          "pageId": "host-1"
+                        }
+                      }
+                    ],
+                    "cause": {
+                      "code": "APPLY_FAILED",
+                      "message": "The batch stopped on a server error. Nothing was written.",
+                      "retryable": true,
+                      "commandIndex": 1
+                    }
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[]}"
+        }
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/pages",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "parentDocumentId": "parent",
+            "principal": "local",
+            "actor": {
+              "id": "agent:local:conformance",
+              "name": "conformance (for local)",
+              "onBehalfOf": "local"
+            },
+            "suggestedPageId": "<masked>"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/pages",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "parentDocumentId": "parent",
+            "principal": "local",
+            "actor": {
+              "id": "agent:local:conformance",
+              "name": "conformance (for local)",
+              "onBehalfOf": "local"
+            },
+            "suggestedPageId": "<masked>"
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "${host}/pages"
+      ],
+      "name": "stored: --create-page answering 200 without pageId is a host error, not a refusal",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /pages": {
+          "status": 200,
+          "json": {}
+        }
+      },
+      "maskHostKeys": [
+        "suggestedPageId"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np0",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host could not create the page.",
+                  "retryable": true,
+                  "commandIndex": 0
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[]}"
+        }
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/pages",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "parentDocumentId": "parent",
+            "principal": "local",
+            "actor": {
+              "id": "agent:local:conformance",
+              "name": "conformance (for local)",
+              "onBehalfOf": "local"
+            },
+            "suggestedPageId": "<masked>"
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "${host}/pages"
+      ],
+      "name": "stored: --create-page answering an empty id is a host error, not a refusal",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /pages": {
+          "status": 200,
+          "json": {
+            "pageId": ""
+          }
+        }
+      },
+      "maskHostKeys": [
+        "suggestedPageId"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np0",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host could not create the page.",
+                  "retryable": true,
+                  "commandIndex": 0
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[]}"
+        }
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/pages",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "parentDocumentId": "parent",
+            "principal": "local",
+            "actor": {
+              "id": "agent:local:conformance",
+              "name": "conformance (for local)",
+              "onBehalfOf": "local"
+            },
+            "suggestedPageId": "<masked>"
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "${host}/pages"
+      ],
+      "name": "stored: 26 page inserts never call --create-page",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /pages": {
+          "status": 200,
+          "json": {
+            "pageId": "never"
+          }
+        }
+      },
+      "maskHostKeys": [
+        "suggestedPageId"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np0",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np1",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np2",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np3",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np4",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np5",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np6",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np7",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np8",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np9",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np10",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np11",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np12",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np13",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np14",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np15",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np16",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np17",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np18",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np19",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np20",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np21",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np22",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np23",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np24",
+                      "position": "end"
+                    }
+                  },
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np25",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "<masked>",
+                "error": {
+                  "code": "INVALID_ARGS",
+                  "message": "One batch inserts at most 25 blocks the host prepares, such as pages. Send the rest in another batch.",
+                  "commandIndex": 25,
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        }
+      ],
+      "watchFiles": [
+        "parent.json"
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectFiles": {
+        "parent.json": {
+          "text": "{\"blocks\":[]}"
+        }
+      },
+      "expectHostRequests": []
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "${host}/pages"
+      ],
+      "name": "stored: undo and redo of a host-made page call --create-page once",
+      "files": {
+        "parent.json": {
+          "json": {
+            "blocks": []
+          }
+        }
+      },
+      "hosts": {
+        "POST /pages": {
+          "status": 200,
+          "json": {
+            "pageId": "host-page-1"
+          }
+        }
+      },
+      "maskHostKeys": [
+        "suggestedPageId"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 1
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "block.insert",
+                    "args": {
+                      "type": "page",
+                      "id": "np0",
+                      "position": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {
+                    "id": "np0",
+                    "childIds": []
+                  }
+                ],
+                "changed": {
+                  "created": [
+                    "np0"
+                  ]
+                },
+                "blocks": [
+                  {
+                    "id": "np0",
+                    "type": "page",
+                    "depth": 0,
+                    "attrs": {
+                      "pageId": "host-page-1"
+                    },
+                    "data": {
+                      "pageId": "host-page-1"
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  }
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 2
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "history.undo",
+                    "args": {}
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 3
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "history.redo",
+                    "args": {}
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 4
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "parent",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "readHandle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${readHandle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 5
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${readHandle}",
+                "detail": "full"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "np0",
+                    "type": "page",
+                    "depth": 0,
+                    "attrs": {
+                      "pageId": "host-page-1"
+                    },
+                    "data": {
+                      "pageId": "host-page-1"
+                    },
+                    "meta": {
+                      "lastEditedAt": "<masked>",
+                      "lastEditedBy": {
+                        "id": "local"
+                      }
+                    }
+                  }
+                ]
+              },
+              "isError": false
+            },
+            "jsonrpc": "2.0",
+            "id": 6
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/pages",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "parentDocumentId": "parent",
+            "principal": "local",
+            "actor": {
+              "id": "agent:local:conformance",
+              "name": "conformance (for local)",
+              "onBehalfOf": "local"
+            },
+            "suggestedPageId": "<masked>"
+          }
+        }
+      ]
+    },
+    {
+      "transport": "cli",
+      "argv": [
+        "--sync-url",
+        "ws://127.0.0.1:9/sync",
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "http://127.0.0.1:9/pages"
+      ],
+      "name": "--create-page with --sync-url is refused at startup",
+      "env": {
+        "BLOK_SECRET": "conformance-secret"
+      },
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --create-page works in stored mode only: it cannot be used with live rooms (--sync-url)\n"
+      }
+    },
+    {
+      "transport": "cli",
+      "argv": [
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "http://127.0.0.1:9/pages"
+      ],
+      "name": "--create-page without --source is refused at startup",
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --create-page needs a document source (--source): the agent opens each new page through it\n"
+      }
+    },
+    {
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--page-titles",
+        "page-map",
+        "--create-page",
+        "./create-page.mjs"
+      ],
+      "name": "--create-page that is not an http(s) URL is refused at startup",
+      "env": {},
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": "blok-mcp: --create-page must be an http(s) URL, got \"./create-page.mjs\"\n"
+      }
     }
   ]
 }

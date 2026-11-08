@@ -8,14 +8,15 @@ export class McpConfigError extends Error {
 }
 
 export interface ParsedCli {
-  options: Omit<BlokMcpOptions, 'authorize' | 'manifest' | 'overrides'>;
-  files: { manifest?: string; overrides?: string; authorize?: string };
+  options: Omit<BlokMcpOptions, 'authorize' | 'manifest' | 'overrides' | 'createPage'>;
+  /** What the caller loads after parsing: files, and the hooks a URL or module names. */
+  files: { manifest?: string; overrides?: string; authorize?: string; createPage?: string };
 }
 
 const VALUE_FLAGS = new Set([
   '--http', '--auth', '--sync-url', '--origin', '--ticket-url', '--oauth-issuer', '--oauth-audience', '--oauth-jwks',
   '--source', '--source-list', '--page-titles', '--rich-text-fields', '--schema', '--handle-idle-ms', '--max-handles',
-  '--principal', '--manifest', '--manifest-overrides', '--authorize',
+  '--principal', '--manifest', '--manifest-overrides', '--authorize', '--create-page',
 ]);
 // --comments stays a no-op: comments are on by default.
 const SWITCH_FLAGS = new Set(['--public', '--comments', '--no-comments']);
@@ -210,6 +211,11 @@ export const parseMcpArgs = (
   const manifest = flag(argv, '--manifest');
   const overrides = flag(argv, '--manifest-overrides');
   const authorize = flag(argv, '--authorize');
+  const createPage = flag(argv, '--create-page');
+
+  if (createPage !== undefined && !/^https?:\/\//.test(createPage)) {
+    throw new McpConfigError(`--create-page must be an http(s) URL, got "${createPage}"`);
+  }
 
   return {
     options,
@@ -217,6 +223,7 @@ export const parseMcpArgs = (
       ...(manifest !== undefined && { manifest }),
       ...(overrides !== undefined && { overrides }),
       ...(authorize !== undefined && { authorize }),
+      ...(createPage !== undefined && { createPage }),
     },
   };
 };
@@ -296,9 +303,23 @@ const checkValues = (options: BlokMcpOptions): void => {
   }
 };
 
+// The hook replaces only the stored create, so a live room would still make Blok's own pages.
+const checkCreatePage = (options: BlokMcpOptions): void => {
+  if (options.createPage === undefined) {
+    return;
+  }
+  if (options.sync !== undefined) {
+    throw new McpConfigError('--create-page works in stored mode only: it cannot be used with live rooms (--sync-url)');
+  }
+  if (options.source === undefined) {
+    throw new McpConfigError('--create-page needs a document source (--source): the agent opens each new page through it');
+  }
+};
+
 export const checkOptionSafety = (options: BlokMcpOptions): void => {
   checkValues(options);
   checkUploads(options);
+  checkCreatePage(options);
   if (options.tickets?.kind === 'url'
     && (options.tickets.hostToken === undefined || options.tickets.hostToken === '')) {
     throw new McpConfigError('--ticket-url needs BLOK_MCP_HOST_TOKEN');

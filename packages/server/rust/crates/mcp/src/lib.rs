@@ -14,6 +14,10 @@ pub mod document_source;
 pub mod embed;
 pub mod errors;
 pub mod files;
+pub mod handle_store;
+pub mod handle_store_files;
+#[cfg(all(test, unix))]
+mod handle_store_files_tests;
 pub mod handles;
 pub mod http;
 pub mod inflight;
@@ -48,7 +52,7 @@ use serde_json::Value;
 
 use crate::authorize::Webhook;
 use crate::bundle::Bundle;
-use crate::cli::{AuthorizeSpec, StartError};
+use crate::cli::StartError;
 use crate::oauth::OAuth;
 use crate::outbound::Outbound;
 use crate::protocol::Handler;
@@ -81,21 +85,17 @@ pub async fn run_cli(argv: Vec<String>, env: Value, cwd: &Path) -> i32 {
             return 1;
         }
     };
-    let hooks = options::Hooks {
-        authorize: started
-            .authorize
-            .as_ref()
-            .map(|AuthorizeSpec::Webhook(url)| {
-                Arc::new(Webhook::new(url.clone(), Outbound::new()))
-                    as Arc<dyn authorize::Authorize>
-            }),
-        page_creator: started.create_page.as_ref().map(|url| {
-            Arc::new(create_page::CreatePageWebhook::new(
-                url.clone(),
-                Outbound::new(),
-            )) as Arc<dyn blok_blokagent::PageCreator>
-        }),
-        ..options::Hooks::default()
+    let hooks = match cli::hooks_of(&started) {
+        Ok(hooks) => hooks,
+        // Only a refused --handle-store directory fails here.
+        Err(StartError::Config(message) | StartError::Failed(message)) => {
+            eprintln!("blok-mcp: {message}");
+            return 2;
+        }
+        Err(StartError::Bundle(err)) => {
+            eprintln!("blok-mcp: {err}");
+            return 1;
+        }
     };
     let embedded = match Embedded::build(bundle, &started.options, hooks).await {
         Ok(embedded) => embedded,

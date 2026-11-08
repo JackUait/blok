@@ -39,6 +39,38 @@ pub struct Started {
     pub handle_store: Option<String>,
 }
 
+/// The hooks the flags name: the `--authorize` and `--create-page`
+/// webhooks and the `--handle-store` files store, which is made and checked
+/// here, so a refused directory stops the start (exit code 2).
+pub fn hooks_of(started: &Started) -> Result<crate::options::Hooks, StartError> {
+    use std::sync::Arc;
+    let handle_store = match &started.handle_store {
+        None => None,
+        Some(dir) => Some(Arc::new(
+            crate::handle_store_files::FilesHandleStore::open(dir).map_err(StartError::Config)?,
+        ) as Arc<dyn crate::handle_store::HandleStore>),
+    };
+    Ok(crate::options::Hooks {
+        authorize: started
+            .authorize
+            .as_ref()
+            .map(|AuthorizeSpec::Webhook(url)| {
+                Arc::new(crate::authorize::Webhook::new(
+                    url.clone(),
+                    crate::outbound::Outbound::new(),
+                )) as Arc<dyn crate::authorize::Authorize>
+            }),
+        page_creator: started.create_page.as_ref().map(|url| {
+            Arc::new(crate::create_page::CreatePageWebhook::new(
+                url.clone(),
+                crate::outbound::Outbound::new(),
+            )) as Arc<dyn blok_blokagent::PageCreator>
+        }),
+        handle_store,
+        ..crate::options::Hooks::default()
+    })
+}
+
 /// The env vars the options read. Only BLOK_* names matter (src/shared/mcp/config.ts).
 pub fn blok_env(vars: impl Iterator<Item = (String, String)>) -> Value {
     Value::Object(

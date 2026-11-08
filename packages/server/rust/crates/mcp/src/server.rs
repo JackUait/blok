@@ -11,6 +11,7 @@ use crate::authorize::{Authorize, Webhook};
 use crate::bundle::{Bundle, Obj, RawObject};
 use crate::document_source::{CustomSource, DocumentCaller, document_caller};
 use crate::errors::{Fault, HostError};
+use crate::handle_store::{Acquired, HandleLease, HandleRecord, HandleStore, StoreError};
 use crate::handles::Handles;
 use crate::live::{Live, TicketRequest};
 use crate::options::{AgentActorFn, Hooks};
@@ -82,6 +83,51 @@ pub struct Stored {
     stale: bool,
     /// Who opened the handle: a host's source acts for them (opener.ts sourceFor).
     opener: Arc<DocumentCaller>,
+    /// The opener's agent actor, as a handle store keeps it.
+    actor: Value,
+}
+
+impl Stored {
+    /// A handle a shared store kept, rebuilt for its opener: the record
+    /// carries the document, so nothing is loaded.
+    fn from_record(record: &HandleRecord) -> Stored {
+        let text = |key: &str| {
+            record
+                .actor
+                .get(key)
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+        };
+        Stored {
+            write: record.write,
+            document: record.document.get().to_owned(),
+            history: record.history.get().to_owned(),
+            version: record.version.clone(),
+            stale: record.stale,
+            opener: Arc::new(DocumentCaller {
+                principal: record.principal.clone(),
+                client_name: record.client_name.clone(),
+                scopes: record.scopes.clone(),
+                actor: crate::options::AgentActor {
+                    id: text("id").unwrap_or_default(),
+                    name: text("name").unwrap_or_default(),
+                    on_behalf_of: text("onBehalfOf"),
+                    color: text("color"),
+                },
+            }),
+            actor: record.actor.clone(),
+        }
+    }
+
+    /// What changes between calls; a record is saved only when it did.
+    fn state(&self) -> (&str, &str, Option<&str>, bool) {
+        (
+            &self.document,
+            &self.history,
+            self.version.as_deref(),
+            self.stale,
+        )
+    }
 }
 
 pub enum Session {
@@ -105,12 +151,47 @@ pub struct Mcp {
     authorize: Option<Arc<dyn Authorize>>,
     agent_actor: Option<AgentActorFn>,
     page_creator: Option<Arc<dyn blok_blokagent::PageCreator>>,
+    /// Where stored handles live; None keeps them in `handles`.
+    store: Option<Arc<dyn HandleStore>>,
+    max_handles: usize,
+    idle: Duration,
     live: Option<Live>,
     live_shared: Option<Arc<LiveShared>>,
     rooms: Option<Rooms>,
 }
 
 const DEFAULT_IDLE_MS: u64 = 600_000;
+// Above the slowest stored call (a 30 s endpoint load); a longer wait is better told to retry.
+const LEASE_WAIT: Duration = Duration::from_secs(30);
+// Well inside the files store's 30 s lease, so a slow call keeps its lease.
+const LEASE_RENEW_EVERY: Duration = Duration::from_secs(5);
+const STORE_SWEEP_EVERY: Duration = Duration::from_secs(60);
+const STORE_DOWN: &str = "The handle store is unavailable. Retry shortly.";
+
+/// A store failure: logged in full, and retryable for the agent, since a
+/// store outage passes.
+fn store_failed(err: StoreError) -> Fault {
+    eprintln!("blok-mcp: the handle store failed: {err}");
+    HostError::surface("SOURCE_UNAVAILABLE", STORE_DOWN).into()
+}
+
+/// Keeps a lease while a call runs; never ends, and stops renewing once a
+/// renew fails (the lease is then lost, and the record save will say so).
+async fn keep_renewing(lease: &dyn HandleLease) {
+    loop {
+        tokio::time::sleep(LEASE_RENEW_EVERY).await;
+        if let Err(err) = lease.renew().await {
+            eprintln!("blok-mcp: renewing a handle lease failed: {err}");
+            return std::future::pending().await;
+        }
+    }
+}
+
+async fn release(lease: &dyn HandleLease) {
+    if let Err(err) = lease.release().await {
+        eprintln!("blok-mcp: releasing a handle lease failed: {err}");
+    }
+}
 
 fn opt<'a>(options: &'a Value, key: &str) -> Option<&'a Value> {
     options.get(key).filter(|v| !v.is_null())
@@ -367,6 +448,9 @@ pub(crate) async fn option_refusal(
     if hooks.page_creator.is_some() {
         checked["createPage"] = Value::Bool(true);
     }
+    if hooks.handle_store.is_some() {
+        checked["handleStore"] = Value::Bool(true);
+    }
     // A host's source is a source: with a ticket URL it still needs a per-document check.
     if custom_source {
         checked["source"] = json!({ "kind": "custom" });
@@ -486,6 +570,7 @@ impl Mcp {
             rooms,
             source: custom,
             page_creator,
+            handle_store: store,
         } = hooks;
         let mut flags = surface_flags(options);
         if uploads.is_some() {
@@ -576,6 +661,9 @@ impl Mcp {
             principal: str_of(options, "principal").unwrap_or("local").to_owned(),
             idle_ms,
             handles: Handles::new(idle, max),
+            store,
+            max_handles: max,
+            idle,
             calls: Arc::default(),
             reserved: std::sync::Mutex::default(),
             uploads,
@@ -605,6 +693,23 @@ impl Mcp {
                 ticks.tick().await;
                 let Some(mcp) = weak.upgrade() else { return };
                 mcp.handles.sweep();
+            }
+        });
+        let Some(store) = self.store.clone() else {
+            return;
+        };
+        let weak = Arc::downgrade(self);
+        tokio::spawn(async move {
+            let mut ticks = tokio::time::interval(STORE_SWEEP_EVERY);
+            ticks.tick().await;
+            loop {
+                ticks.tick().await;
+                let Some(idle) = weak.upgrade().map(|mcp| mcp.idle) else {
+                    return;
+                };
+                if let Err(err) = store.sweep(idle).await {
+                    eprintln!("blok-mcp: sweeping the handle store failed: {err}");
+                }
             }
         });
     }
@@ -735,6 +840,9 @@ impl Mcp {
             Some("blok_open") => self.open(&step, caller, cancelled).await?,
             Some("blok_close") => {
                 let handle = str_of(&step, "handle").unwrap_or_default();
+                if self.shared(handle) {
+                    return self.close_shared(handle, caller).await;
+                }
                 // A refused check still closes, so the handle does not keep its
                 // --max-handles slot; an unknown handle fails again in remove.
                 let refusal = self.on_handle(caller, handle, false).await.map(drop).err();
@@ -1135,6 +1243,7 @@ impl Mcp {
                 version: loaded.version,
                 stale: false,
                 opener: Arc::new(opener.clone()),
+                actor: actor.clone(),
             };
             Box::pin(self.execute(
                 caller,
@@ -1183,6 +1292,236 @@ impl Mcp {
                     .await
             }
         }
+    }
+
+    /// A handle this process does not hold lives in the shared store.
+    fn shared(&self, handle: &str) -> bool {
+        self.store.is_some() && !self.handles.has(handle)
+    }
+
+    /// The cap before an open: the store's handles of the principal and this
+    /// process's live ones.
+    async fn assert_room(&self, principal: &str) -> Result<(), Fault> {
+        let Some(store) = &self.store else {
+            return Ok(self.handles.assert_room(principal)?);
+        };
+        if self.handles.is_closed() {
+            return Err(crate::handles::shutting_down().into());
+        }
+        let stored = store
+            .count(principal.to_owned(), self.idle)
+            .await
+            .map_err(store_failed)?;
+        if stored + self.handles.count(principal) >= self.max_handles {
+            return Err(crate::handles::handle_limit(self.max_handles).into());
+        }
+        Ok(())
+    }
+
+    /// A live handle holds a socket, so it stays in this process.
+    async fn add_live(
+        &self,
+        principal: &str,
+        document_id: &str,
+        session: Session,
+    ) -> Result<String, Fault> {
+        if self.store.is_some() {
+            self.assert_room(principal).await?;
+        }
+        Ok(self.handles.add(principal, document_id, session)?)
+    }
+
+    /// A stored handle goes into the store when there is one: counted and
+    /// added as one step there, beside this process's live handles.
+    async fn add_stored(
+        &self,
+        principal: &str,
+        document_id: &str,
+        stored: Stored,
+    ) -> Result<String, Fault> {
+        let Some(store) = &self.store else {
+            return Ok(self
+                .handles
+                .add(principal, document_id, Session::Stored(stored))?);
+        };
+        if self.handles.is_closed() {
+            return Err(crate::handles::shutting_down().into());
+        }
+        let handle = crate::handles::new_handle();
+        let room = self
+            .max_handles
+            .saturating_sub(self.handles.count(principal));
+        let record = self.record_of(document_id, &stored)?;
+        let added = store
+            .try_add(handle.clone(), record, room, self.idle)
+            .await
+            .map_err(store_failed)?;
+        if !added {
+            return Err(crate::handles::handle_limit(self.max_handles).into());
+        }
+        Ok(handle)
+    }
+
+    fn record_of(&self, document_id: &str, stored: &Stored) -> Result<HandleRecord, Fault> {
+        let raw = |text: &str| {
+            serde_json::value::RawValue::from_string(text.to_owned())
+                .map_err(|err| Fault::Internal(format!("a handle record: {err}")))
+        };
+        Ok(HandleRecord {
+            v: 1,
+            contract_revision: self
+                .surface
+                .stored_revision
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
+            principal: stored.opener.principal.clone(),
+            client_name: stored.opener.client_name.clone(),
+            scopes: stored.opener.scopes.clone(),
+            actor: stored.actor.clone(),
+            document_id: document_id.to_owned(),
+            write: stored.write,
+            version: stored.version.clone(),
+            stale: stored.stale,
+            document: raw(&stored.document)?,
+            history: raw(&stored.history)?,
+        })
+    }
+
+    /// The store's lease on a handle of `principal`. A handle Blok never
+    /// minted is unknown before the store is asked.
+    async fn lease_of(&self, handle: &str, principal: &str) -> Result<Box<dyn HandleLease>, Fault> {
+        let store = self
+            .store
+            .as_ref()
+            .ok_or_else(|| Fault::Internal("no handle store".to_owned()))?;
+        if !crate::handle_store::is_store_handle(handle) {
+            return Err(crate::handles::unknown_handle().into());
+        }
+        let acquired = store
+            .acquire(handle.to_owned(), self.idle, LEASE_WAIT)
+            .await
+            .map_err(store_failed)?;
+        let lease = match acquired {
+            Acquired::Lease(lease) => lease,
+            Acquired::Unknown => return Err(crate::handles::unknown_handle().into()),
+            Acquired::Busy => {
+                return Err(HostError::surface(
+                    "SOURCE_UNAVAILABLE",
+                    "Another call is using this handle. Retry shortly.",
+                )
+                .into());
+            }
+        };
+        // Checked here, not by the store: a store bug must not hand one user's handle to another.
+        if lease.record().v != 1 || lease.record().principal != principal {
+            release(&*lease).await;
+            return Err(crate::handles::unknown_handle().into());
+        }
+        Ok(lease)
+    }
+
+    /// One call on a handle in the store: lease it, rebuild the session from
+    /// its record, run (the source save happens here), save the record if it
+    /// changed, release. A record that cannot be saved after the source save
+    /// is removed: the answer stands, and the next call answers UNKNOWN_HANDLE.
+    async fn on_shared(
+        &self,
+        handle: &str,
+        write: bool,
+        call: &Value,
+        caller: &Caller,
+        approval: &Approval,
+    ) -> Result<Outcome, Fault> {
+        let lease = self.lease_of(handle, &caller.principal).await?;
+        let ran = async {
+            let record = lease.record();
+            if Some(record.contract_revision.as_str()) != self.surface.stored_revision.as_str() {
+                return Err(HostError::surface(
+                    "VERSION_SKEW",
+                    "This handle was opened on a server with another tool contract. Call blok_open again.",
+                )
+                .into());
+            }
+            if !self
+                .allowed(&caller.principal, &record.document_id, write)
+                .await
+            {
+                return Err(HostError::surface(
+                    "FORBIDDEN",
+                    "You no longer have access to this document.",
+                )
+                .into());
+            }
+            let mut stored = Stored::from_record(record);
+            let outcome = self
+                .on_stored(
+                    caller,
+                    &record.document_id,
+                    &mut stored,
+                    call,
+                    &record.actor,
+                    &record.client_name,
+                    approval,
+                )
+                .await;
+            let before = (
+                record.document.get(),
+                record.history.get(),
+                record.version.as_deref(),
+                record.stale,
+            );
+            if stored.state() != before {
+                self.keep(&*lease, &record.document_id, &stored).await;
+            }
+            outcome
+        };
+        let ran = tokio::select! {
+            ran = ran => ran,
+            () = keep_renewing(&*lease) => unreachable!("renewing never ends"),
+        };
+        release(&*lease).await;
+        ran
+    }
+
+    async fn keep(&self, lease: &dyn HandleLease, document_id: &str, stored: &Stored) {
+        let saved = match self.record_of(document_id, stored) {
+            Ok(record) => lease.save(record).await,
+            Err(fault) => Err(StoreError(format!("{fault:?}"))),
+        };
+        if let Err(err) = saved {
+            // The source already has the work; a record left behind would save with an old version.
+            eprintln!(
+                "blok-mcp: saving a handle to the handle store failed, so the handle is closed: {err}"
+            );
+            if let Err(err) = lease.remove().await {
+                eprintln!("blok-mcp: removing a handle from the handle store failed: {err}");
+            }
+        }
+    }
+
+    /// blok_close on a handle in the store. A refused check still closes, so
+    /// the handle does not keep its place under the cap.
+    async fn close_shared(&self, handle: &str, caller: &Caller) -> Result<Outcome, Fault> {
+        let lease = self.lease_of(handle, &caller.principal).await?;
+        let allowed = self
+            .allowed(&caller.principal, &lease.record().document_id, false)
+            .await;
+        let removed = lease.remove().await;
+        release(&*lease).await;
+        removed.map_err(store_failed)?;
+        if !allowed {
+            return Err(HostError::surface(
+                "FORBIDDEN",
+                "You no longer have access to this document.",
+            )
+            .into());
+        }
+        Ok(Outcome::Answer(Answer {
+            structured: json!({ "closed": true, "unsavedBatches": 0, "hostRecordLags": false })
+                .to_string(),
+            is_error: false,
+        }))
     }
 
     async fn on_handle(
@@ -1343,7 +1682,7 @@ impl Mcp {
         cancelled: &(dyn Fn() -> bool + Send + Sync),
     ) -> Result<Answer, Fault> {
         // Opening can mint a ticket and join a room, so refuse at the cap first.
-        self.handles.assert_room(&caller.principal)?;
+        self.assert_room(&caller.principal).await?;
         let write = step.get("write") == Some(&Value::Bool(true));
         let requested = str_of(step, "mode").unwrap_or("auto");
         if !self.allowed(&caller.principal, document_id, write).await {
@@ -1416,6 +1755,7 @@ impl Mcp {
             version: loaded.version,
             stale: false,
             opener: Arc::new(opener),
+            actor: actor.clone(),
         };
         let view = match step.get("view") {
             None => None,
@@ -1452,8 +1792,8 @@ impl Mcp {
             "exists": !loaded.missing,
         });
         let handle = self
-            .handles
-            .add(&caller.principal, document_id, Session::Stored(stored))?;
+            .add_stored(&caller.principal, document_id, stored)
+            .await?;
         let mut input = Obj::new()
             .str("handle", &handle)
             .val("expiresAfterIdleMs", &self.idle_ms)
@@ -1532,8 +1872,8 @@ impl Mcp {
             session["unavailableCommands"] = self.surface.live_unavailable.clone();
         }
         let handle = self
-            .handles
-            .add(&caller.principal, document_id, Session::Remote(room))?;
+            .add_live(&caller.principal, document_id, Session::Remote(room))
+            .await?;
         let mut input = Obj::new()
             .str("handle", &handle)
             .val("expiresAfterIdleMs", &self.idle_ms)
@@ -1759,8 +2099,8 @@ impl Mcp {
             journaled,
         };
         let handle = self
-            .handles
-            .add(&caller.principal, document_id, Session::Room(room))?;
+            .add_live(&caller.principal, document_id, Session::Room(room))
+            .await?;
         let mut input = Obj::new()
             .str("handle", &handle)
             .val("expiresAfterIdleMs", &self.idle_ms)
@@ -1903,6 +2243,9 @@ impl Mcp {
         let handle = str_of(step, "handle").unwrap_or_default();
         let write = step.get("write") == Some(&Value::Bool(true));
         let call = step.get("call").cloned().unwrap_or(Value::Null);
+        if self.shared(handle) {
+            return self.on_shared(handle, write, &call, caller, approval).await;
+        }
         let mut lease = self.on_handle(caller, handle, write).await?;
         let document_id = lease.document_id.clone();
         let (actor, client_name) = self.actor(caller).await?;
@@ -1927,13 +2270,37 @@ impl Mcp {
                     .await;
             }
         };
-        match str_of(&call, "name") {
+        self.on_stored(
+            caller,
+            &document_id,
+            stored,
+            &call,
+            &actor,
+            &client_name,
+            approval,
+        )
+        .await
+    }
+
+    /// One call on a stored handle's document.
+    #[allow(clippy::too_many_arguments)]
+    async fn on_stored(
+        &self,
+        caller: &Caller,
+        document_id: &str,
+        stored: &mut Stored,
+        call: &Value,
+        actor: &Value,
+        client_name: &str,
+        approval: &Approval,
+    ) -> Result<Outcome, Fault> {
+        match str_of(call, "name") {
             Some("blok_read") => {
                 if stored.stale {
-                    self.reload(&document_id, stored).await?;
+                    self.reload(document_id, stored).await?;
                 }
                 let input = self
-                    .session_input("stored", stored.write, &stored.document, &actor)
+                    .session_input("stored", stored.write, &stored.document, actor)
                     .val("view", call.get("view").unwrap_or(&json!({})))
                     .finish();
                 Ok(Outcome::Answer(answer_of(
@@ -1942,7 +2309,7 @@ impl Mcp {
             }
             Some("blok_describe") => {
                 let input = self
-                    .session_input("stored", stored.write, &stored.document, &actor)
+                    .session_input("stored", stored.write, &stored.document, actor)
                     .val("query", call.get("query").unwrap_or(&json!({})))
                     .finish();
                 Ok(Outcome::Answer(answer_of(
@@ -1952,11 +2319,11 @@ impl Mcp {
             _ => {
                 self.execute(
                     caller,
-                    &document_id,
+                    document_id,
                     stored,
-                    &call,
-                    &actor,
-                    &client_name,
+                    call,
+                    actor,
+                    client_name,
                     approval,
                 )
                 .await

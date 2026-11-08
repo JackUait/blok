@@ -53,6 +53,7 @@ The crate's rules are the workspace's, in `packages/server/rust/README.md`. One 
 | `rooms` | Your own collab rooms (`blok_blokserver::Server::agent_executor()`). Live handles then run in this process, with no ticket and no socket. |
 | `source` | Your own document store, in place of `McpOptions::source`. See "Your own document store". |
 | `page_creator` | Creates each new sub-page's document as your own (`--create-page <url>` on the CLI). See "Your own page creator". |
+| `handle_store` | Where stored-mode handles live, so several processes serve one agent (`--handle-store files:<dir>` on the CLI). See "Sharing handles between processes". |
 
 The server refuses unsafe options when it is made, with Node's words. For example:
 
@@ -134,6 +135,36 @@ Answer `Ok(Some(id))` with the new page's id, `Ok(None)` to refuse, or `Err` for
 It works in stored mode with a source and `page_titles` "page-map" only. With `sync` or `rooms`, or without a source, the start is refused.
 
 The webhook speaks Node's wire: `POST <url>` with `Content-Type: application/json` and the body `{"parentDocumentId","principal","actor":{"id","name","onBehalfOf"},"suggestedPageId"}` (`onBehalfOf` null when there is none). `200 {"pageId":"<id>"}` is the id; `200 {"pageId":null}` refuses. Any other status (201 and 3xx too, since redirects are not followed), a timeout (10 s), a network error or another body is a host error, never a refusal.
+
+### Sharing handles between processes
+
+By default a handle lives in the memory of the process that opened it. With `Hooks::handle_store` (a `blok_mcp::handle_store::HandleStore`), stored-mode handles live in your store, so a call can land on any process that shares it. Live handles hold a socket, so they always stay in their own process.
+
+On the CLI, `--handle-store files:<dir>` is the reference store (`blok_mcp::handle_store_files::FilesHandleStore`), for tests and for several processes on one machine. `--handle-store memory` (the default) keeps today's in-process handles. `MemoryHandleStore` is the contract in one process's memory, for tests.
+
+Per call, Blok:
+
+1. answers `UNKNOWN_HANDLE` for a handle that is not 1-128 characters of `[A-Za-z0-9_-]`, before the store is asked;
+2. takes the handle's lease (`acquire`, waiting up to 30 s; still leased → `SOURCE_UNAVAILABLE` "Another call is using this handle. Retry shortly.");
+3. checks the record: another principal, or a record `v` that is not 1, answers `UNKNOWN_HANDLE`; another tool contract (a rolling deploy) answers `VERSION_SKEW`, and the agent opens again;
+4. rebuilds the session from the record, for its opener (principal, client name, scopes and actor from the record, not the current call);
+5. runs the call, renewing the lease every 5 s; the source save happens here;
+6. saves the record if it changed (`lease.save`), then releases the lease.
+
+If the record cannot be saved after the source save, the answer stands, the error is logged, and the handle is removed: the next call answers `UNKNOWN_HANDLE`. Restored undo steps hold only while their revision is the record's document's (the engine checks it); otherwise undo answers `CONFLICT`. Any error from your store is logged in full, and the agent sees `SOURCE_UNAVAILABLE` "The handle store is unavailable. Retry shortly." (retryable).
+
+The cap (`max_handles_per_principal`) counts the store's handles of the principal plus this process's live ones. Blok calls `sweep(idle)` every 60 s. A stop waits for this process's calls and never touches the store.
+
+Your store's duties:
+
+- `try_add` counts and adds as one step per principal (an SQL row lock, a Redis Lua script). A count, then an insert, can pass the cap.
+- A lease is exclusive and time-limited: `save`, `renew`, `remove` and `release` check it is still held, and fail (or, for `release`, do nothing) once it is lost. A holder that stops renewing loses it. So exclusivity is best effort: a paused process can lose its lease while it runs. Correctness then rests on your source's version check (`DOCUMENT_CHANGED` on a stale version). A source that does not check versions can lose writes across processes.
+- A handle not leased for longer than the idle time is gone: `acquire` answers `Unknown`, `count` leaves it out, and `sweep` deletes it. A leased handle never expires.
+- Records are trusted. Anyone who can write the store can forge one (its actor, scopes, document and history). Make it writable by Blok's processes only.
+- Values can be large: a record holds the document and every undo step, with no byte limit. Use a type that takes them (for example `LONGTEXT` or `JSON`, not `TEXT`).
+- Keep `scopes` `None` and an empty list apart.
+
+The files store keeps one directory: `<handle>.record.json`, `<handle>.meta.json`, a `<handle>.lease` lock and a lock per principal. It makes the directory (0700) at start if missing, then refuses to start (exit 2) unless the directory is not a link, has no group or world access, and belongs to this user; a trailing slash cannot skip that check. Every file is created 0600. Its privacy checks are POSIX only. Sharing one directory with another language's store is not supported.
 
 ### Serving it on your own HTTP server
 

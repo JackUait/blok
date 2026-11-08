@@ -36,11 +36,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use blok_mcp::authorize::{Authorize, Webhook};
-use blok_mcp::blok_blokagent::PageCreator;
 use blok_mcp::bundle::Bundle;
-use blok_mcp::cli::{self, AuthorizeSpec, StartError};
-use blok_mcp::create_page::CreatePageWebhook;
+use blok_mcp::cli::{self, StartError};
 use blok_mcp::document_source::{
     DocumentCaller, DocumentSource, ListedDocument, SourceError, SourceErrorKind, SourceList,
     SourceListing, StoredDocument,
@@ -736,21 +733,13 @@ async fn run(argv: Vec<String>) -> Result<(), Stop> {
     let env = cli::blok_env(std::env::vars());
     let cwd = std::env::current_dir().unwrap_or_default();
     let started = cli::parse(&bundle, &blok_args, env, &cwd).await?;
-    let options = started.options;
+    let options = started.options.clone();
     let stdio = options.pointer("/transport/kind").and_then(Value::as_str) != Some("http");
 
     let source = source_of(&example, &options)?;
-    let authorize = started.authorize.map(|AuthorizeSpec::Webhook(url)| {
-        Arc::new(Webhook::new(url, Outbound::new())) as Arc<dyn Authorize>
-    });
-    let page_creator = started
-        .create_page
-        .map(|url| Arc::new(CreatePageWebhook::new(url, Outbound::new())) as Arc<dyn PageCreator>);
     let hooks = Hooks {
-        authorize,
         source,
-        page_creator,
-        ..Hooks::default()
+        ..cli::hooks_of(&started)?
     };
     let embed = EmbedHooks {
         // stdio has one local user; over HTTP the default reads the SignedIn the host put on the request.

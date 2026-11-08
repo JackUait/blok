@@ -203,6 +203,10 @@ pub struct Hooks {
     /// only: with `sync` or `rooms`, or without a source, the start is
     /// refused. Blok then never authorizes, loads or saves the new page.
     pub page_creator: Option<Arc<dyn blok_blokagent::PageCreator>>,
+    /// Where stored-mode handles live, so several processes can serve one
+    /// agent (`--handle-store files:<dir>`). None: this process's memory.
+    /// Live handles always stay in this process.
+    pub handle_store: Option<Arc<dyn crate::handle_store::HandleStore>>,
 }
 
 #[cfg(test)]

@@ -141,7 +141,16 @@ internal sealed class StoredSession : IHandleSession
     }
     catch (Exception error) when (created.Count > 0)
     {
-      return new McpExecuteOutcome(await PagePorts.StrandedAnswerAsync(bundle, error, created), null);
+      // Memory is the parent as saved (or as reloaded after a broken save): a page it links is no orphan.
+      var linked = OrphanedPages.Linked(document);
+      var unlinked = new JsonArray([.. created.Where(pageId => !linked.Contains(McpJson.String(pageId) ?? string.Empty)).Select(pageId => pageId?.DeepClone())]);
+
+      if (unlinked.Count == 0)
+      {
+        throw;
+      }
+
+      return new McpExecuteOutcome(await PagePorts.StrandedAnswerAsync(bundle, error, unlinked), null);
     }
   }
 
@@ -159,7 +168,12 @@ internal sealed class StoredSession : IHandleSession
     {
       if (write && Pages?.Create is not null && IsBatchEnvelope(batch))
       {
-        await Pages.AddCreatedPagesAsync(bundle, input, Opener ?? caller, created, cancellationToken);
+        await Pages.AddCreatedPagesAsync(bundle, input, Opener ?? caller, documentId, created, cancellationToken);
+        // The batch fails on it and saves nothing; a cancel must not stop its answer.
+        if (input.ContainsKey("createPageFailure"))
+        {
+          cancellationToken = CancellationToken.None;
+        }
       }
       ran = Uploads is null ? await bundle.CallAsync("agentExecute", input, cancellationToken) : await Uploads.ExecuteAsync(bundle, input, cancellationToken);
     }
@@ -169,6 +183,16 @@ internal sealed class StoredSession : IHandleSession
       return new McpExecuteOutcome(null, ask);
     }
     var result = ran["result"]!;
+
+    // A failed batch wrote nothing, so memory is the parent as saved.
+    if (result is JsonObject outcome)
+    {
+      if (OrphanedPages.CancelledAfterPages(input))
+      {
+        OrphanedPages.WrapCancelled(outcome, created);
+      }
+      OrphanedPages.Filter(outcome, document);
+    }
     var nextDocument = ran["document"]!.DeepClone();
     var nextHistory = ran["history"] is JsonNode carried ? carried.DeepClone() : history;
 
@@ -230,8 +254,8 @@ internal sealed class StoredSession : IHandleSession
       // The save may have stored the parent before it failed: only pages the stored parent does not
       // name are orphans. With no parent to read, none are reported, so the host never deletes a used page.
       stale = true;
-      var stored = await TryReloadAsync(cancellationToken);
-      var unused = stored is null ? [] : created.Where(pageId => !stored.Contains($"\"{McpJson.String(pageId)}\"", StringComparison.Ordinal)).Select(pageId => pageId!.DeepClone()).ToList();
+      var linked = await TryReloadAsync(cancellationToken) ? OrphanedPages.Linked(document) : null;
+      var unused = linked is null ? [] : created.Where(pageId => !linked.Contains(McpJson.String(pageId) ?? string.Empty)).Select(pageId => pageId!.DeepClone()).ToList();
 
       created.Clear();
       unused.ForEach(created.Add);
@@ -286,18 +310,18 @@ internal sealed class StoredSession : IHandleSession
     };
   }
 
-  // The reloaded document as text, or null when it could not be read.
-  private async Task<string?> TryReloadAsync(CancellationToken cancellationToken)
+  // Whether the document could be read again.
+  private async Task<bool> TryReloadAsync(CancellationToken cancellationToken)
   {
     try
     {
       await ReloadAsync(cancellationToken);
 
-      return document.ToJsonString();
+      return true;
     }
     catch (Exception)
     {
-      return null;
+      return false;
     }
   }
 

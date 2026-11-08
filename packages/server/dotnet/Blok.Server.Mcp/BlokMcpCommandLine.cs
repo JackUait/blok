@@ -113,6 +113,10 @@ public sealed class BlokMcpCommandLine
     {
       options.Authorize = async (request, cancellationToken) => await authorize(request.Principal, request.DocumentId, request.Write, cancellationToken);
     }
+    if (config.PageCreator is { } pageCreator)
+    {
+      options.PageCreator = pageCreator;
+    }
     options.CommandLineHost = host;
   }
 }

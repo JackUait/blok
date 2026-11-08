@@ -58,6 +58,7 @@ internal static partial class McpCommandLine
     {
       authorize = LoadAuthorize(spec, host);
     }
+    var pageCreator = McpJson.String(files["createPage"]) is string createPage ? CreatePageWebhook.Create(createPage, host.Http) : null;
     JsonNode? manifest = null;
     JsonNode? overrides = null;
 
@@ -74,6 +75,10 @@ internal static partial class McpCommandLine
     if (authorize is not null)
     {
       check["authorize"] = true;
+    }
+    if (pageCreator is not null)
+    {
+      check["createPage"] = true;
     }
     var safety = await host.Bundle.CallAsync("mcpCheckOptions", new JsonObject { ["options"] = check });
 
@@ -106,6 +111,7 @@ internal static partial class McpCommandLine
       Manifest = manifest,
       Overrides = overrides,
       Authorize = authorize,
+      PageCreator = pageCreator,
     };
   }
 

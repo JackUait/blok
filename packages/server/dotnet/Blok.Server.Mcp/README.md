@@ -112,6 +112,35 @@ sealed class MyStore(MyDb db) : IBlokMcpDocumentSource, IBlokMcpDocumentLister
 - A failed save drops the batch: the handle reloads your document, and the batch's undo step is gone.
 - A custom store counts as a source everywhere: with `TicketUrl` it still needs the per-document check.
 
+## Your own page creator
+
+With `PageTitles = "page-map"`, an agent's page insert makes a new page document. Set `PageCreator` to make each one yourself, for example as your own article. `blok-mcp --create-page <url>` does the same through a webhook.
+
+```csharp
+sealed class MyPages(MyDb db) : IBlokPageCreator
+{
+  public async ValueTask<string?> CreateAsync(BlokPageCreateRequest request, CancellationToken cancellationToken) =>
+    await db.MayCreateUnderAsync(request.Principal!, request.ParentDocumentId!, cancellationToken)
+      ? await db.CreateArticleAsync(request.ParentDocumentId!, request.Actor, request.SuggestedPageId, cancellationToken)
+      : null;
+
+  // Blok's MCP server never calls these two: it asks through the request and opens pages through your source.
+  public ValueTask<string?> CreateAsync(BlokAgentActor actor, CancellationToken cancellationToken) => throw new NotSupportedException();
+  public ValueTask<BlokPageLocation?> ResolveAsync(string pageId, BlokAgentActor actor, CancellationToken cancellationToken) => throw new NotSupportedException();
+}
+```
+
+- It needs a document source and stored mode. With `SyncUrl`, `LiveRooms`, or no source, the server refuses to start. Without `page-map` it is never called.
+- Blok takes it from `BlokMcpOptions.PageCreator` only, never from the container, so an `IBlokPageCreator` you registered for Blok.Server's agent does not turn it on.
+- The request names the open document (`ParentDocumentId`), the principal that opened the handle, its agent actor, and a fresh Blok id you may use (`SuggestedPageId`).
+- Blok then does not run the per-document check on the new id, does not look at it, and saves nothing for it. Your source must load the new id. A later `blok_open` of it runs the check as usual.
+- Null or an empty string refuses: the insert fails with `FORBIDDEN` "You may not create a page document here.", and nothing is saved. This is `IBlokPageCreator`'s meaning everywhere. The webhook differs here: there only `{"pageId": null}` refuses, and `{"pageId": ""}` is a host error.
+- A throw, or an id that is not 1 to 512 code points, has a control character or a lone surrogate, or is `.` or `..`, is a host error. It is logged in full through your `ILogger`. The agent sees `SOURCE_UNAVAILABLE` "The host could not create the page.".
+- When the batch already made pages, a host error, a refusal or a cancel answers `ORPHANED_SIDE_EFFECT` instead: `details.orphaned` lists the pages to clean up, and `details.cause` is `APPLY_FAILED` "The batch stopped on a server error. Nothing was written.", `FORBIDDEN` or `CANCELLED`. A page the saved parent already links is never listed. The parent is not saved.
+- One batch makes at most 25 pages; a longer batch fails before any is made. Pages are made one after another, so a slow creator holds `blok_execute` for each.
+- Undo, redo and `block.delete` never call it. An undone or failed insert leaves your page in place, with no parent pointing at it. Keep a new page hidden until a saved parent names its `pageId`.
+- The webhook gets `POST` with `Content-Type: application/json` and `{ "parentDocumentId", "principal", "actor": { "id", "name", "onBehalfOf" }, "suggestedPageId" }`. `200 { "pageId": "<id>" }` makes the page; `200 { "pageId": null }` refuses. Any other status (201 too), a redirect, a body without a string or null `pageId`, a network error or no answer within 10 seconds is a host error.
+
 ## Docs
 
 [https://blokeditor.com/docs](https://blokeditor.com/docs) and [the server page](https://blokeditor.com/server#mcp).

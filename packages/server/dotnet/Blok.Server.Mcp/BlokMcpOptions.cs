@@ -123,6 +123,19 @@ public sealed class BlokMcpOptions
   /// <summary><c>page-map</c> turns on page.rename, page.setIcon and page creation (<c>--page-titles</c>). Default <c>off</c>.</summary>
   public string? PageTitles { get; set; }
 
+  /// <summary>
+  /// The host makes each new page document (blok-mcp <c>--create-page</c>). Used only with
+  /// <see cref="PageTitles"/> <c>page-map</c> and a document source, in stored mode: with
+  /// <see cref="SyncUrl"/> or <see cref="LiveRooms"/>, or with no source, the server refuses to start.
+  /// Blok calls only <c>CreateAsync(BlokPageCreateRequest, CancellationToken)</c>, never
+  /// <c>ResolveAsync</c>. A null or empty id refuses (FORBIDDEN); an id that is not 1-512 code
+  /// points, has a control character or a lone surrogate, or is <c>.</c> or <c>..</c>, and any
+  /// throw, is a host error: logged, and the agent sees SOURCE_UNAVAILABLE (or, after earlier
+  /// pages of the batch, ORPHANED_SIDE_EFFECT listing them). With it, Blok neither authorizes,
+  /// checks nor saves the new id: the host owns it. Not taken from the container: set it here.
+  /// </summary>
+  public Blok.Server.Agent.IBlokPageCreator? PageCreator { get; set; }
+
   /// <summary>The host's custom tool descriptions, as <c>--manifest &lt;file&gt;</c> holds them. Checked at startup.</summary>
   public System.Text.Json.Nodes.JsonObject? Manifest { get; set; }
 

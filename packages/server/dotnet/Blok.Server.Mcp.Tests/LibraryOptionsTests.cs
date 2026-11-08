@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -125,6 +126,68 @@ public sealed class LibraryOptionsTests : IDisposable
 
     Assert.Equal("--ticket-url needs BLOK_MCP_HOST_TOKEN", noToken.Message);
     Assert.StartsWith("--sync-url needs a ticket mode", noTickets.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task APageCreatorNeedsStoredModeWithASource()
+  {
+    var creator = new HostPageCreatorTests.FakeCreator("host-1");
+    var live = await Assert.ThrowsAsync<InvalidOperationException>(() => StartAsync(options =>
+    {
+      options.FilesDirectory = dir;
+      options.PageTitles = "page-map";
+      options.PageCreator = creator;
+      options.SyncUrl = new Uri("ws://127.0.0.1:1/sync");
+      options.TicketSecret = "secret";
+    }));
+    var noSource = await Assert.ThrowsAsync<InvalidOperationException>(() => StartAsync(options =>
+    {
+      options.PageTitles = "page-map";
+      options.PageCreator = creator;
+    }));
+    var rooms = await Assert.ThrowsAsync<InvalidOperationException>(() => StartAsync(options =>
+    {
+      options.FilesDirectory = dir;
+      options.PageTitles = "page-map";
+      options.PageCreator = creator;
+      options.LiveRooms = true;
+    }));
+
+    Assert.Equal("--create-page works in stored mode only: it cannot be used with live rooms (--sync-url)", live.Message);
+    Assert.Equal("--create-page needs a document source (--source): the agent opens each new page through it", noSource.Message);
+    Assert.Equal("BlokMcpOptions.PageCreator works in stored mode only: it cannot be used with LiveRooms.", rooms.Message);
+  }
+
+  [Fact]
+  public async Task APageCreatorRegisteredInTheContainerIsNotPickedUp()
+  {
+    var creator = new HostPageCreatorTests.FakeCreator("host-1");
+    var builder = WebApplication.CreateSlimBuilder();
+
+    builder.Logging.ClearProviders();
+    builder.WebHost.UseTestServer();
+    builder.Services.AddSingleton<Blok.Server.Agent.IBlokPageCreator>(creator);
+    builder.Services.AddBlokMcp(options =>
+    {
+      options.AllowEveryCallerEveryDocument = true;
+      options.FilesDirectory = dir;
+      options.PageTitles = "page-map";
+    });
+    await using var app = builder.Build();
+
+    app.MapBlokMcp();
+    await app.StartAsync();
+    var client = app.GetTestClient();
+    var opened = await RpcAsync(client, "tools/call", new JsonObject { ["name"] = "blok_open", ["arguments"] = new JsonObject { ["documentId"] = "doc", ["write"] = true } });
+    var handle = opened["structuredContent"]!["handle"]!.GetValue<string>();
+    var ran = await RpcAsync(client, "tools/call", new JsonObject
+    {
+      ["name"] = "blok_execute",
+      ["arguments"] = new JsonObject { ["handle"] = handle, ["commands"] = new JsonArray(new JsonObject { ["name"] = "block.insert", ["args"] = new JsonObject { ["type"] = "page" } }) },
+    });
+
+    Assert.True(ran["structuredContent"]!["ok"]!.GetValue<bool>());
+    Assert.Empty(creator.Requests);
   }
 
   // Node's hostDecides: with a ticket URL and no source, the host's ticket route is the per-document check.

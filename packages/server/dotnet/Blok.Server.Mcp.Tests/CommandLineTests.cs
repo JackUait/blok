@@ -55,6 +55,30 @@ public sealed class CommandLineTests : IDisposable
   }
 
   [Fact]
+  public async Task CreatePageBecomesTheWebhookCreatorOnTheCliAndOnTheOptions()
+  {
+    var argv = new[] { "--source", "files:./docs", "--page-titles", "page-map", "--create-page", "http://127.0.0.1:9/pages" };
+    var cli = await McpCommandLine.ConfigureAsync(BlokMcpHost.CreateRuntime(1), argv, new Dictionary<string, string>());
+    var parsed = await BlokMcpCommandLine.ParseAsync(argv);
+    var options = new BlokMcpOptions();
+
+    parsed.ApplyTo(options);
+
+    Assert.IsType<CreatePageWebhook>(cli.PageCreator);
+    Assert.IsType<CreatePageWebhook>(options.PageCreator);
+  }
+
+  [Theory]
+  [InlineData("--sync-url ws://127.0.0.1:9/sync --source files:./docs --page-titles page-map --create-page http://127.0.0.1:9/pages", "--create-page works in stored mode only: it cannot be used with live rooms (--sync-url)")]
+  [InlineData("--page-titles page-map --create-page http://127.0.0.1:9/pages", "--create-page needs a document source (--source): the agent opens each new page through it")]
+  public async Task CreatePageOutsideStoredModeWithASourceIsRefused(string line, string message)
+  {
+    var refused = await Assert.ThrowsAsync<BlokMcpConfigException>(() => BlokMcpCommandLine.ParseAsync(line.Split(' '), new Dictionary<string, string> { ["BLOK_SECRET"] = "s" }));
+
+    Assert.Equal(message, refused.Message);
+  }
+
+  [Fact]
   public async Task RefusesABadFlagWithTheCliWords()
   {
     var refused = await Assert.ThrowsAsync<BlokMcpConfigException>(() => BlokMcpCommandLine.ParseAsync(["--nope"]));

@@ -1,13 +1,9 @@
-using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 
 namespace Blok.Server.Mcp.Core;
 
 internal static class PageIds
 {
-  // src/shared/mint-id.ts's alphabet, so ids look the same.
-  private const string Alphabet = "57X6y3wQZNzYjJB2L_10pxbackgroundhimselfUTF-8DEMOGRAPHICSVqvt4KW9";
-
   /*
    * How many page documents to make for agentPagesNeeded's answer. A batch that would be
    * refused, or that waits on a person, makes none: Node plans it whole first. Only a batch
@@ -29,6 +25,43 @@ internal static class PageIds
 
   internal static string Mint()
   {
-    return string.Concat(RandomNumberGenerator.GetBytes(10).Select(b => Alphabet[b & 63]));
+    return Blok.Server.Agent.BlokPageIds.Mint();
+  }
+
+  // blok_open's documentId maxLength, which JSON Schema counts in code points.
+  private const int MaxPageId = 512;
+
+  /// <summary>
+  /// A host's page id: 1-512 code points, well-formed UTF-16 (no lone surrogate), no Unicode Cc
+  /// character, and not "." or "..", which name a directory in every source.
+  /// </summary>
+  internal static bool IsHostPageId(string id)
+  {
+    if (id is "" or "." or "..")
+    {
+      return false;
+    }
+    var codePoints = 0;
+
+    for (var index = 0; index < id.Length; index++)
+    {
+      var unit = id[index];
+
+      if (char.IsHighSurrogate(unit))
+      {
+        if (index + 1 >= id.Length || !char.IsLowSurrogate(id[index + 1]))
+        {
+          return false;
+        }
+        index++;
+      }
+      else if (char.IsLowSurrogate(unit) || char.IsControl(unit))
+      {
+        return false;
+      }
+      codePoints++;
+    }
+
+    return codePoints <= MaxPageId;
   }
 }

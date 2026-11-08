@@ -69,7 +69,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
           : WroteAnotherDocument(history));
     }
 
-    var (made, refusal) = await CreatePagesAsync(input, options, actor, cancellationToken);
+    var (made, refusal) = await CreatePagesAsync(input, options, actor, null, cancellationToken);
 
     if (refusal is not null)
     {
@@ -133,7 +133,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   /// <c>createdPages</c>, which Jint hands out in batch order.
   /// </summary>
   private async ValueTask<(JsonArray? Created, BlokAgentExecution? Refusal)> CreatePagesAsync(
-      JsonObject input, BlokAgentOptions? options, BlokAgentActor actor, CancellationToken cancellationToken)
+      JsonObject input, BlokAgentOptions? options, BlokAgentActor actor, string? parentDocumentId, CancellationToken cancellationToken)
   {
     if (options is not { PageTitles: true, PageTarget: IBlokPageCreator creator } || !HasInsert(input["batch"]))
     {
@@ -158,7 +158,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       try
       {
         cancellationToken.ThrowIfCancellationRequested();
-        pageId = await creator.CreateAsync(actor, cancellationToken);
+        pageId = await creator.CreateAsync(new BlokPageCreateRequest(actor) { ParentDocumentId = parentDocumentId, SuggestedPageId = BlokPageIds.Mint() }, cancellationToken);
       }
       catch (Exception error) when (created.Count > 0)
       {
@@ -483,7 +483,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
       // Made outside the room lane, so a slow host never holds the room. The lane run checks the count again.
       input["document"] = state;
-      var made = await CreatePagesAsync(input, options, actor, cancellationToken);
+      var made = await CreatePagesAsync(input, options, actor, docId, cancellationToken);
 
       input.Remove("document");
       if (made.Refusal is { } refusal)

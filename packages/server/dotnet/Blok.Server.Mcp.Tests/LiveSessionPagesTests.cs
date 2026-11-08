@@ -159,7 +159,7 @@ public sealed class LiveSessionPagesTests(BundleFixture fixture) : IClassFixture
       DocumentId = documentId,
       Pages = new PagePorts
       {
-        Create = (_, _) =>
+        Create = (_, _, _) =>
         {
           made.Add($"page-{made.Count + 1}");
 

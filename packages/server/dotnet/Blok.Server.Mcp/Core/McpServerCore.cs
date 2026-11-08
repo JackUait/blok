@@ -55,7 +55,9 @@ internal sealed class McpServerCore : IAsyncDisposable
     // Node's openPageDocument is there under page-map; createPageDocument only where a page can be made.
     pages = config.PageTitles != "page-map" ? null : new PagePorts
     {
-      Create = config.Sync is not null ? CreateLivePageAsync : config.Rooms is null && source is not null ? CreatePageAsync : null,
+      Create = config.Sync is not null ? CreateLivePageAsync
+          : config.Rooms is not null || source is null ? null
+          : config.PageCreator is not null ? CreateHostPageAsync : CreatePageAsync,
       Open = (pageId, caller, cancellationToken) => OpenSessionAsync(pageId, "auto", true, caller, cancellationToken),
       TrackClose = TrackPageClose,
     };
@@ -657,8 +659,76 @@ internal sealed class McpServerCore : IAsyncDisposable
     Track(pageCloses, closing);
   }
 
+  /*
+   * The host's create (create-page.ts createHostPage): null or empty refuses; a throw or an id
+   * that is no page id is logged in full while the agent sees only HostPageFailed. Nothing here
+   * authorizes, loads or saves the new id: the host owns it.
+   */
+  private async Task<string> CreateHostPageAsync(McpCaller caller, string parentDocumentId, CancellationToken cancellationToken)
+  {
+    var actor = new Blok.Server.Agent.BlokAgentActor(
+        McpJson.String(caller.Actor["id"]) ?? string.Empty,
+        McpJson.String(caller.Actor["name"]) ?? string.Empty,
+        McpJson.String(caller.Actor["onBehalfOf"]));
+    var request = new Blok.Server.Agent.BlokPageCreateRequest(actor)
+    {
+      ParentDocumentId = parentDocumentId,
+      Principal = caller.Principal,
+      SuggestedPageId = PageIds.Mint(),
+    };
+    string? pageId;
+
+    try
+    {
+      pageId = await config.PageCreator!.CreateAsync(request, cancellationToken);
+    }
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    {
+      throw;
+    }
+    catch (Exception error)
+    {
+      await LogAsync("blok-mcp: the host could not create a page", error);
+
+      throw HostPageFailed();
+    }
+    if (string.IsNullOrEmpty(pageId))
+    {
+      throw McpHostError.Surface("FORBIDDEN", "You may not create a page document here.");
+    }
+    if (!PageIds.IsHostPageId(pageId))
+    {
+      await LogAsync(
+          "blok-mcp: the host page creator answered no valid page id (1-512 code points, well-formed, no control characters, not \".\" or \"..\")",
+          new InvalidOperationException($"The page id was {McpJson.Write(JsonValue.Create(pageId))}."));
+
+      throw HostPageFailed();
+    }
+
+    return pageId;
+  }
+
+  internal const string HostPageFailedMessage = "The host could not create the page.";
+
+  private static McpHostError HostPageFailed()
+  {
+    return new McpHostError("SOURCE_UNAVAILABLE", HostPageFailedMessage) { HostStopped = true };
+  }
+
+  // A host hook's failure: the host's logger when it has one, else stderr (stdout carries the protocol).
+  private async Task LogAsync(string message, Exception error)
+  {
+    if (config.LogError is { } log)
+    {
+      log(message, error);
+
+      return;
+    }
+    await Console.Error.WriteLineAsync($"{message}: {error}");
+  }
+
   // The opener's createPage for stored mode: a new id, authorized like a write open, saved empty.
-  private async Task<string> CreatePageAsync(McpCaller caller, CancellationToken cancellationToken)
+  private async Task<string> CreatePageAsync(McpCaller caller, string parentDocumentId, CancellationToken cancellationToken)
   {
     var pageId = PageIds.Mint();
 
@@ -690,7 +760,7 @@ internal sealed class McpServerCore : IAsyncDisposable
   }
 
   // The opener's createLivePage: the join runs the ticket mint and the service's own authorization, and loads the room.
-  private async Task<string> CreateLivePageAsync(McpCaller caller, CancellationToken cancellationToken)
+  private async Task<string> CreateLivePageAsync(McpCaller caller, string parentDocumentId, CancellationToken cancellationToken)
   {
     var pageId = PageIds.Mint();
 

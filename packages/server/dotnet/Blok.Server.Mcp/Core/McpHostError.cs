@@ -33,6 +33,9 @@ internal sealed class McpHostError : Exception
 
   internal JsonObject? Prebuilt { get; }
 
+  /// <summary>A host page creator failed: after earlier pages of the batch, the cause is a server stop.</summary>
+  internal bool HostStopped { get; init; }
+
   internal JsonObject ToInput(string tool)
   {
     JsonObject error;

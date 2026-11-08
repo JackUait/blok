@@ -221,6 +221,11 @@ public static class BlokMcpServiceCollectionExtensions
     {
       throw new InvalidOperationException("Set BlokMcpOptions.SyncUrl or LiveRooms, not both.");
     }
+    // The creator replaces only the stored create, so a room would still make Blok's own pages.
+    if (options.PageCreator is not null && options.LiveRooms)
+    {
+      throw new InvalidOperationException("BlokMcpOptions.PageCreator works in stored mode only: it cannot be used with LiveRooms.");
+    }
     // Node's checkOptionSafety over HTTP: OAuth says who calls, not which documents they may open.
     if (hook is null && !hostDecides && !options.AllowEveryCallerEveryDocument)
     {
@@ -258,6 +263,7 @@ public static class BlokMcpServiceCollectionExtensions
           ? new JsonObject(fields.Select(pair => KeyValuePair.Create(pair.Key, (JsonNode?)new JsonArray([.. pair.Value.Select(name => (JsonNode)name)]))))
           : null,
       Authorize = hook,
+      PageCreator = options.PageCreator,
       Rooms = options.LiveRooms ? RoomsOf(provider) : null,
     };
   }
@@ -322,6 +328,10 @@ public static class BlokMcpServiceCollectionExtensions
     if (options.SyncUrl is { } sync)
     {
       check["sync"] = new JsonObject { ["url"] = sync.OriginalString };
+    }
+    if (options.PageCreator is not null)
+    {
+      check["createPage"] = true;
     }
     // Node's names: the shared check words its refusal with them.
     if (options.Schema is { } schema)

@@ -12156,37 +12156,39 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-calendar-day-today-text);
 }
 
-/* findings C11: 20px, 8px from the corner, a 20px glyph. */
+/* notion-motion.md Calendar: a 24px white disc 6px from the corner, shown at once. */
 [data-blok-database-calendar-add] {
   position: absolute;
-  inset-block-start: 8px;
-  inset-inline-start: 8px;
+  inset-block-start: 6px;
+  inset-inline-start: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 20px;
-  block-size: 20px;
+  inline-size: 24px;
+  block-size: 24px;
   padding: 0;
   border: none;
-  border-radius: var(--blok-radius-control);
-  background: transparent;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-calendar-event-bg);
+  /* Fitted to calhover.png: this shadow's tail matches Notion's within one step. */
+  box-shadow: var(--blok-database-popover-shadow);
   color: var(--blok-database-calendar-nav-icon);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.1s ease-out;
 }
 
 [data-blok-database-calendar-add] svg {
-  inline-size: 20px;
-  block-size: 20px;
+  inline-size: 24px;
+  block-size: 24px;
 }
 
 [data-blok-database-calendar-day]:hover [data-blok-database-calendar-add] {
   opacity: 1;
 }
 
+/* An image layer keeps the white fill under the tint. */
 [data-blok-database-calendar-add]:hover {
-  background-color: var(--blok-database-table-header-hover-bg);
+  background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
 
 [data-blok-database-calendar][data-dragging] [data-blok-database-calendar-add] {
@@ -12356,7 +12358,6 @@ textarea[data-blok-database-cell-input] {
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-calendar-nav] button,
   [data-blok-database-calendar-day-number],
-  [data-blok-database-calendar-add],
   [data-blok-database-calendar-event] {
     transition: none;
   }

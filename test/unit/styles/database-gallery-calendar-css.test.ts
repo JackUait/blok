@@ -211,14 +211,26 @@ describe('database gallery and calendar styles', () => {
     expect(css).toMatch(/--blok-database-calendar-number-row:\s*33px/);
   });
 
-  it('draws the day "+" 20px at 8px from the corner, with a 20px glyph (findings C11)', () => {
+  it('draws the day "+" as a 24px white disc 6px from the corner, shown at once (notion-motion.md, Calendar)', () => {
     const add = ruleBody('[data-blok-database-calendar-add]');
 
-    expect(add).toMatch(/inset-block-start:\s*8px/);
-    expect(add).toMatch(/inset-inline-start:\s*8px/);
-    expect(add).toMatch(/inline-size:\s*20px/);
-    expect(add).toMatch(/block-size:\s*20px/);
-    expect(ruleBody('[data-blok-database-calendar-add] svg')).toMatch(/inline-size:\s*20px/);
+    expect(add).toMatch(/inset-block-start:\s*6px/);
+    expect(add).toMatch(/inset-inline-start:\s*6px/);
+    expect(add).toMatch(/inline-size:\s*24px/);
+    expect(add).toMatch(/block-size:\s*24px/);
+    expect(add).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
+    expect(add).toMatch(/background-color:\s*var\(--blok-database-calendar-event-bg\)/);
+    // Fitted to calhover.png pixel by pixel: the popover shadow's tail matches within 1 step.
+    expect(add).toMatch(/box-shadow:\s*var\(--blok-database-popover-shadow\)/);
+    expect(add).not.toMatch(/transition/);
+    expect(ruleBody('[data-blok-database-calendar-add] svg')).toMatch(/inline-size:\s*24px/);
+  });
+
+  it('tints the day "+" on hover without losing its white fill', () => {
+    const hover = ruleBody('[data-blok-database-calendar-add]:hover');
+
+    expect(hover).not.toMatch(/background-color/);
+    expect(hover).toMatch(/background-image:\s*linear-gradient/);
   });
 
   it('draws ‹ and › as 24px squares (findings C12)', () => {

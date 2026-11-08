@@ -29,4 +29,14 @@ describe('workspace storage', () => {
     await writeFile('index', '{}');
     expect(invoke).toHaveBeenCalledWith('save_workspace_file', { name: 'index', data: '{}' });
   });
+
+  it('restores each page’s full-width setting independently', async () => {
+    const first = await loadIndex();
+    const wide = { ...first.pages[0]!, fullWidth: true };
+    const narrow = { id: crypto.randomUUID(), title: 'Notes', parentId: null, fullWidth: false };
+    await writeFile('index', JSON.stringify({ pages: [wide, narrow], activeId: wide.id, trash: [] }));
+    const restored = await loadIndex();
+    expect(restored.pages[0]?.fullWidth).toBe(true);
+    expect(restored.pages[1]?.fullWidth).toBe(false);
+  });
 });

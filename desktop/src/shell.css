@@ -89,9 +89,49 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
   [data-desktop-workspace] [data-blok-sidebar] { transition: none; }
 }
 [data-desktop-workspace] [data-blok-sidebar-canvas] { height: 100%; }
+[data-desktop-page-toolbar] {
+  position: sticky; top: 0; z-index: 12;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: 44px; min-width: 0; padding: 0 16px;
+  background: var(--desktop-canvas); color: var(--desktop-ink);
+}
+[data-desktop-page-identity] { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 14px; }
+[data-desktop-page-toolbar-icon] { display: grid; flex: none; place-items: center; width: 18px; height: 18px; font-size: 17px; line-height: 1; }
+[data-desktop-page-toolbar-icon] svg { color: var(--desktop-muted); }
+[data-desktop-page-toolbar-title] { overflow: hidden; max-width: 240px; text-overflow: ellipsis; white-space: nowrap; }
+[data-desktop-page-local] { display: inline-flex; align-items: center; gap: 5px; flex: none; margin-left: 8px; color: var(--desktop-muted); font-size: 12px; }
+[data-desktop-page-actions] { position: relative; flex: none; }
+[data-desktop-page-more] {
+  display: grid; place-items: center;
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--desktop-muted); font: inherit; cursor: pointer;
+}
+[data-desktop-page-more] svg { width: 17px; height: 17px; stroke-width: 2.5; }
+[data-desktop-page-more]:hover, [data-desktop-page-more][aria-expanded="true"] { background: var(--desktop-hover); color: var(--desktop-ink); }
+[data-desktop-page-more]:focus-visible, [data-desktop-page-full-width]:focus-visible { outline: 2px solid var(--desktop-ink); outline-offset: 2px; }
+[data-desktop-page-menu] {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 13;
+  width: 280px; padding: 8px; border: 1px solid var(--desktop-border); border-radius: 10px;
+  background: var(--desktop-strip); color: var(--desktop-ink);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .28);
+}
+[data-desktop-page-menu][hidden] { display: none; }
+[data-desktop-page-menu-heading] { padding: 6px 8px 10px; color: var(--desktop-muted); font-size: 12px; font-weight: 600; }
+[data-desktop-page-full-width] {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  min-height: 36px; padding: 4px 8px; border: 0; border-radius: 6px;
+  background: transparent; color: inherit; font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+[data-desktop-page-full-width]:hover { background: var(--desktop-hover); }
+[data-desktop-page-switch-track] { position: relative; width: 30px; height: 18px; border-radius: 9px; background: var(--desktop-muted); }
+[data-desktop-page-switch-track]::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 120ms ease; }
+[data-desktop-page-full-width][aria-checked="true"] [data-desktop-page-switch-track] { background: #2e8cff; }
+[data-desktop-page-full-width][aria-checked="true"] [data-desktop-page-switch-track]::after { transform: translateX(12px); }
+@media (max-width: 620px) { [data-desktop-page-local] { display: none; } }
 [data-desktop-document] {
   width: min(100%, 900px); min-height: 100%; margin-inline: auto; padding: 30px 64px 120px;
 }
+[data-desktop-document][data-full-width] { width: 100%; padding-inline: clamp(24px, 5vw, 96px); }
 [data-desktop-document][data-has-cover] { padding-top: 38px; }
 [data-desktop-add-cover] {
   display: inline-flex; align-items: center; align-self: flex-end; gap: 6px;
@@ -110,6 +150,7 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
   position: absolute; right: max(16px, calc((100% - 900px) / 2 + 64px)); bottom: 12px;
   z-index: 3; display: flex; gap: 6px; opacity: 0;
 }
+[data-blok-agent-editor][data-full-width] [data-desktop-cover-actions] { right: clamp(24px, 5vw, 96px); }
 [data-desktop-cover]:hover [data-desktop-cover-actions], [data-desktop-cover-actions]:focus-within,
 [data-desktop-cover-actions][data-open] { opacity: 1; }
 [data-desktop-cover-actions] > button {

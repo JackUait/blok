@@ -580,12 +580,14 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     const up = (): void => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
 
     event.preventDefault();
     resize.setPointerCapture(event.pointerId);
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   };
 
   resize.addEventListener('pointerdown', onPointerDown);

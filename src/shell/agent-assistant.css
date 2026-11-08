@@ -63,7 +63,7 @@
   width: min(420px, calc(100vw - 32px));
   height: min(720px, calc(100vh - 80px));
   border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
-  border-radius: 12px;
+  border-radius: var(--blok-radius-dialog);
   box-shadow: var(--blok-popover-box-shadow, var(--blok-popover-shadow));
 }
 
@@ -111,7 +111,7 @@
   gap: 6px;
   padding: 4px 8px;
   border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
-  border-radius: 8px;
+  border-radius: var(--blok-radius-control);
   background: transparent;
   color: var(--blok-text-primary, black);
   font: inherit;
@@ -146,7 +146,7 @@
   padding: 4px;
   background: var(--blok-popover-bg, #fff);
   border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
-  border-radius: 8px;
+  border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-popover-box-shadow, var(--blok-popover-shadow));
 }
 
@@ -237,7 +237,7 @@
   min-height: 72px;
   padding: 8px 10px;
   border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
-  border-radius: 8px;
+  border-radius: var(--blok-radius-field);
   background: transparent;
   color: var(--blok-text-primary, black);
   font: inherit;

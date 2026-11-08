@@ -24,7 +24,7 @@
   padding: 20px 22px 16px;
   background: var(--blok-popover-bg, #fff);
   border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
-  border-radius: 12px;
+  border-radius: var(--blok-radius-dialog);
   box-shadow: var(--blok-popover-box-shadow, var(--blok-popover-shadow));
 }
 
@@ -89,7 +89,7 @@
   gap: 6px;
   padding: 4px 10px;
   border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
-  border-radius: 8px;
+  border-radius: var(--blok-radius-control);
   background: transparent;
   color: var(--blok-text-primary, black);
   font: inherit;
@@ -117,7 +117,7 @@
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--blok-radius-pill);
   background: var(--blok-icon-active-bg, rgba(55, 53, 47, 0.1));
   color: var(--blok-text-primary, black);
   font-size: 12px;
@@ -141,7 +141,7 @@
   white-space: pre-wrap;
   background: var(--blok-code-bg, var(--blok-bg-light, #f6f5f4));
   color: var(--blok-text-primary, black);
-  border-radius: 8px;
+  border-radius: var(--blok-radius-field);
   font-size: 12px;
   line-height: 1.4;
 }

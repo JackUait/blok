@@ -92,7 +92,19 @@ public sealed class CustomSourceTests
 
   private sealed class Logged : ILoggerProvider, ILogger
   {
-    public List<string> Lines { get; } = [];
+    private readonly List<string> lines = [];
+
+    // A copy: the SDK and the test server log on other threads while a test reads.
+    public List<string> Lines
+    {
+      get
+      {
+        lock (lines)
+        {
+          return [.. lines];
+        }
+      }
+    }
 
     public ILogger CreateLogger(string categoryName)
     {
@@ -112,9 +124,9 @@ public sealed class CustomSourceTests
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
-      lock (Lines)
+      lock (lines)
       {
-        Lines.Add($"{formatter(state, exception)} {exception}");
+        lines.Add($"{formatter(state, exception)} {exception}");
       }
     }
 

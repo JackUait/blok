@@ -30,8 +30,12 @@ internal sealed record McpBlokFilters(
       var surface = await Internal(() => Surface(token));
 
       RefuseClash(listed.Tools.Select(tool => tool.Name), surface.ToolNames);
+      if (LaterPage(context.Params?.Cursor))
+      {
+        return listed;
+      }
 
-      // As Node: Blok's tools follow the host's on every page, in the bundle's order.
+      // After the host's, in the bundle's order.
       return new ListToolsResult
       {
         Tools = [.. listed.Tools, .. surface.Tools],
@@ -48,6 +52,10 @@ internal sealed record McpBlokFilters(
       var surface = await Internal(() => Surface(token));
 
       RefuseClash(listed.Prompts.Select(prompt => prompt.Name), surface.PromptNames);
+      if (LaterPage(context.Params?.Cursor))
+      {
+        return listed;
+      }
 
       return new ListPromptsResult
       {
@@ -78,6 +86,15 @@ internal sealed record McpBlokFilters(
       return await Internal(() => CallToolAsync(name, context, token));
     });
 #pragma warning restore MCPEXP002
+  }
+
+  /// <summary>
+  /// A host's list page after the first: Blok's entries went out on the first page, as the SDK
+  /// lists its own tool collection. blok-mcp's own server lists them on every call, as Node does.
+  /// </summary>
+  private bool LaterPage(string? cursor)
+  {
+    return !Standalone && cursor is not null;
   }
 
   /// <summary>A Blok prompt, or the bundle's protocol error for it.</summary>

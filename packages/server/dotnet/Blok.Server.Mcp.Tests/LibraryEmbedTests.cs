@@ -319,7 +319,19 @@ public sealed class LibraryEmbedTests : IDisposable
 
   private sealed class LinesLogged : ILoggerProvider, ILogger
   {
-    public List<string> Lines { get; } = [];
+    private readonly List<string> lines = [];
+
+    // A copy: the SDK and the test server log on other threads while a test reads.
+    public List<string> Lines
+    {
+      get
+      {
+        lock (lines)
+        {
+          return [.. lines];
+        }
+      }
+    }
 
     public ILogger CreateLogger(string categoryName)
     {
@@ -339,9 +351,9 @@ public sealed class LibraryEmbedTests : IDisposable
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
-      lock (Lines)
+      lock (lines)
       {
-        Lines.Add($"{formatter(state, exception)} {exception}");
+        lines.Add($"{formatter(state, exception)} {exception}");
       }
     }
 
@@ -463,6 +475,29 @@ public sealed class LibraryEmbedTests : IDisposable
       Assert.Contains(tools, tool => (string?)tool!["name"] == "blok_open");
       Assert.Equal("host ran host_add", (string?)hostRan["result"]?["content"]?[0]?["text"]);
       Assert.NotNull(opened["handle"]);
+    }
+  }
+
+  [Fact]
+  public async Task ListsBloksToolsAndPromptsOnTheFirstPageOnly()
+  {
+    var (app, client) = await StartAsync(host: mcp => mcp
+        .WithListToolsHandler((context, _) => ValueTask.FromResult(context.Params?.Cursor is null
+            ? new ListToolsResult { Tools = [new Tool { Name = "host_one", InputSchema = JsonDocumentOf("""{"type":"object"}""") }], NextCursor = "p2" }
+            : new ListToolsResult { Tools = [new Tool { Name = "host_two", InputSchema = JsonDocumentOf("""{"type":"object"}""") }] }))
+        .WithListPromptsHandler((context, _) => ValueTask.FromResult(context.Params?.Cursor is null
+            ? new ListPromptsResult { Prompts = [new Prompt { Name = "host_one" }], NextCursor = "p2" }
+            : new ListPromptsResult { Prompts = [new Prompt { Name = "host_two" }] })));
+
+    await using (app)
+    {
+      var first = (JsonArray)(await McpTestRpc.SendAsync(client, "tools/list", []))["result"]!["tools"]!;
+      var second = (JsonArray)(await McpTestRpc.SendAsync(client, "tools/list", new JsonObject { ["cursor"] = "p2" }))["result"]!["tools"]!;
+      var prompts = (JsonArray)(await McpTestRpc.SendAsync(client, "prompts/list", new JsonObject { ["cursor"] = "p2" }))["result"]!["prompts"]!;
+
+      Assert.Contains(first, tool => (string?)tool!["name"] == "blok_open");
+      Assert.Equal(["host_two"], second.Select(tool => (string?)tool!["name"]));
+      Assert.Equal(["host_two"], prompts.Select(prompt => (string?)prompt!["name"]));
     }
   }
 

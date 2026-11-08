@@ -12,9 +12,15 @@ const (
 	// leaseWait is above the slowest stored call (a 30 s endpoint load); a
 	// longer wait is better told to retry.
 	leaseWait = 30 * time.Second
+	storeDown = "The handle store is unavailable. Retry shortly."
+)
+
+var (
 	// storeSweepEvery is how often expired records leave the store.
 	storeSweepEvery = 60 * time.Second
-	storeDown       = "The handle store is unavailable. Retry shortly."
+	// leaseRenewEvery is well inside the 30 s a store may keep an
+	// unrenewed lease, so a few missed renewals do not lose it.
+	leaseRenewEvery = 5 * time.Second
 )
 
 // storeFailed logs a store error in full; the agent sees fixed words. A
@@ -36,6 +42,8 @@ type sharedHandles struct {
 	// here queue instead of polling the store's lease.
 	mu    sync.Mutex
 	lanes map[string]*sharedLane
+	// sweeps is the sweep in flight; shutdown waits for it.
+	sweeps sync.WaitGroup
 }
 
 type sharedLane struct {
@@ -119,8 +127,29 @@ func (h *sharedHandles) leased(ctx context.Context, handle, principal string, fn
 	case err != nil:
 		return storeFailed(err)
 	}
+	// Blok renews the lease while the call runs, and stops before release.
+	stopRenewing := make(chan struct{})
+	renewing := make(chan struct{})
+	go func() {
+		defer close(renewing)
+		ticker := time.NewTicker(leaseRenewEvery)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopRenewing:
+				return
+			case <-ticker.C:
+				// A lost lease shows again when the call saves or removes.
+				if err := lease.Renew(ctx); err != nil {
+					logf("renewing a handle lease failed: %v", err)
+				}
+			}
+		}
+	}()
 	released := false
 	defer func() {
+		close(stopRenewing)
+		<-renewing
 		if !released {
 			if err := lease.Release(ctx); err != nil {
 				logf("releasing a handle lease failed: %v", err)
@@ -220,8 +249,26 @@ func (h *sharedHandles) close(ctx context.Context, who *caller, handle string) (
 }
 
 // sweep deletes expired records on a timer; errors are only logged.
+// Shutdown waits for it (wait).
 func (h *sharedHandles) sweep() {
+	// Under mu, so no sweep starts once wait began.
+	h.mu.Lock()
+	if h.stopping() {
+		h.mu.Unlock()
+		return
+	}
+	h.sweeps.Add(1)
+	h.mu.Unlock()
+	defer h.sweeps.Done()
 	if err := h.store.Sweep(context.Background(), h.idle()); err != nil {
 		logf("sweeping the handle store failed: %v", err)
 	}
+}
+
+// wait waits for a sweep in flight.
+// Call it after stopped is closed.
+func (h *sharedHandles) wait() {
+	h.mu.Lock()
+	h.mu.Unlock() //nolint:staticcheck // a barrier: a sweep past its check has Added
+	h.sweeps.Wait()
 }

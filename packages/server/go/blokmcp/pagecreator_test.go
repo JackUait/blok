@@ -281,7 +281,7 @@ func TestACancelAfterAPageListsIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantHostOrphan(t, structured(t, ran.answer), "host-1", map[string]any{
-		"code": "CANCELLED", "message": "The batch was cancelled. Nothing was written.", "retryable": false, "commandIndex": float64(1),
+		"code": "CANCELLED", "message": "The batch was cancelled. Nothing was written.", "retryable": false,
 	})
 	if len(pages.requests) != 1 {
 		t.Fatalf("the host was asked after the cancel: %d", len(pages.requests))

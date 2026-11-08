@@ -45,15 +45,16 @@ var (
 	// ErrHandleBusy is Acquire's answer when the lease is still held at
 	// the timeout.
 	ErrHandleBusy = errors.New("blok-mcp: the handle is leased")
-	// ErrLeaseLost is what a lease's Save or Remove answers once
+	// ErrLeaseLost is what a lease's Save, Renew or Remove answers once
 	// another holder took the lease over.
 	ErrLeaseLost = errors.New("blok-mcp: the handle's lease was lost")
 )
 
-// HandleLease is one call's hold on a handle. It is time-limited: the store
-// renews it while it is held, and a holder that cannot renew (a paused
-// process) can lose it to another. Save and Remove check the lease still
-// holds and answer ErrLeaseLost, changing nothing, when it does not. So
+// HandleLease is one call's hold on a handle. It is time-limited: Blok
+// renews it while a call runs, and a holder that cannot renew (a paused
+// process) loses it to another after the store's lease time. Save, Renew
+// and Remove check the lease still holds and answer ErrLeaseLost, changing
+// nothing, when it does not. So
 // exclusivity is best effort: correctness then rests on the source's
 // version check.
 type HandleLease interface {
@@ -61,6 +62,10 @@ type HandleLease interface {
 	Record() HandleRecord
 	// Save replaces the record. Blok calls it after the source save.
 	Save(ctx context.Context, record HandleRecord) error
+	// Renew keeps the lease from expiring. Blok calls it every 5 s while
+	// a call holds the lease; a store keeps no timer of its own. A failed
+	// renewal is logged and the call goes on.
+	Renew(ctx context.Context) error
 	// Release ends the lease and restarts the handle's idle time. It does
 	// nothing once the lease is gone.
 	Release(ctx context.Context) error

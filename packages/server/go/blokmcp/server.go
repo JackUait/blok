@@ -185,9 +185,8 @@ func (s *Server) checkOptions(ctx context.Context, checked Options) error {
 	if checked.CreatePage != nil {
 		options["createPage"] = json.RawMessage("true")
 	}
-	if checked.HandleStore != nil {
-		options["handleStore"] = json.RawMessage("true")
-	}
+	// HandleStore is not sent: the bundle checks only that a store has its
+	// ops, which the Go interface type already guarantees.
 	if checked.Uploads != nil {
 		options["uploads"], _ = marshal(checked.Uploads.checkJSON())
 	}
@@ -300,6 +299,9 @@ func (s *Server) Close() {
 	s.stopOnce.Do(func() {
 		close(s.stopped)
 		s.handles.closeAll(func(sess session) { sess.close() })
+		if s.shared != nil {
+			s.shared.wait()
+		}
 	})
 }
 

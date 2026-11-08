@@ -168,13 +168,13 @@ By default each process keeps its open handles in memory, so a call must reach t
 Writing your own store (Redis, SQL):
 
 - `TryAdd` must count and add in one step per principal (a row lock, `SELECT … FOR UPDATE`, or a Lua script). A plain count, then insert, lets a principal past the cap.
-- Leases are time-limited: renew them while held, and let a dead holder's lease end on its own. `Save` and `Remove` must check the lease's token and answer `ErrLeaseLost` (changing nothing) when another holder took it over; `Release` then does nothing. So exclusivity is best effort: a paused process can lose its lease, and correctness then rests on your document source's version check (`DOCUMENT_CHANGED`). A source that does not check versions can lose writes across replicas.
+- Leases are time-limited: Blok calls `Renew` every 5 s while a call holds one, so keep no timer of your own, and let an unrenewed lease end on its own (the files store: 30 s). `Save`, `Renew` and `Remove` must check the lease's token and answer `ErrLeaseLost` (changing nothing) when another holder took it over; `Release` then does nothing. So exclusivity is best effort: a paused process can lose its lease, and correctness then rests on your document source's version check (`DOCUMENT_CHANGED`). A source that does not check versions can lose writes across replicas.
 - A handle expires after the idle time without a lease; a leased handle never expires. Delete expired records (`Sweep`, or your store's own expiry): they hold document text.
 - Records are trusted. Anyone who can write the store can forge an actor, scopes or history, so only Blok's processes may write it.
 - Values can be large: the history keeps whole documents and is not bounded in bytes. Use `LONGTEXT`/JSON columns, not `TEXT`.
 - Keep `scopes` null and `[]` distinct (no `omitempty`).
 
-The files store (`NewFilesHandleStore`) is for tests and several processes on one machine. It makes the directory with mode 0700 and refuses to start if the directory is a link, not a directory, reachable by group or world, or (POSIX) owned by another user. Every file in it is 0600. Its leases are renewed every 5 s and taken over after 30 s without renewal. On Windows the mode checks are skipped: Go cannot read the directory's ACL, so restricting it is your job.
+The files store (`NewFilesHandleStore`) is for tests and several processes on one machine. It makes the directory with mode 0700 and refuses to start if the directory is a link, not a directory, reachable by group or world, or (POSIX) owned by another user. Every file in it is 0600. Its owner must be the effective user (root too). A lease not renewed for 30 s is taken over, one breaker at a time. It refuses to start on Windows ("--handle-store files: is not supported on Windows; use your own store"): Go cannot check the directory's ACL there.
 
 ## Docs
 

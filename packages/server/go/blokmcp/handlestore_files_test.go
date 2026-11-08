@@ -118,7 +118,7 @@ func TestTheFilesStoreCapIsAtomic(t *testing.T) {
 func TestALostLeaseCannotWrite(t *testing.T) {
 	ctx := context.Background()
 	dir := filepath.Join(t.TempDir(), "handles")
-	store, err := newFilesHandleStore(dir, 200*time.Millisecond, time.Hour)
+	store, err := newFilesHandleStore(dir, 200*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,6 +137,9 @@ func TestALostLeaseCannotWrite(t *testing.T) {
 	if err := stale.Save(ctx, record("alice", `{"blocks":["lost"]}`)); !errors.Is(err, ErrLeaseLost) {
 		t.Fatalf("save: %v", err)
 	}
+	if err := stale.Renew(ctx); !errors.Is(err, ErrLeaseLost) {
+		t.Fatalf("renew: %v", err)
+	}
 	if err := stale.Remove(ctx); !errors.Is(err, ErrLeaseLost) {
 		t.Fatalf("remove: %v", err)
 	}
@@ -154,10 +157,11 @@ func TestALostLeaseCannotWrite(t *testing.T) {
 	}
 }
 
-// A lease that is renewed outlives the stale time.
-func TestARenewedLeaseIsKept(t *testing.T) {
+// A lease its holder renews outlives the stale time; the store itself
+// never renews, so an unrenewed one is taken over.
+func TestARenewedLeaseIsNotTakenOver(t *testing.T) {
 	ctx := context.Background()
-	store, err := newFilesHandleStore(filepath.Join(t.TempDir(), "handles"), 300*time.Millisecond, 50*time.Millisecond)
+	store, err := newFilesHandleStore(filepath.Join(t.TempDir(), "handles"), 300*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,13 +170,62 @@ func TestARenewedLeaseIsKept(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Acquire(ctx, "h1", minute, 700*time.Millisecond); !errors.Is(err, ErrHandleBusy) {
+	stop := make(chan struct{})
+	renewed := make(chan struct{})
+	go func() {
+		defer close(renewed)
+		for {
+			select {
+			case <-stop:
+				return
+			case <-time.After(50 * time.Millisecond):
+				if err := held.Renew(ctx); err != nil {
+					t.Error(err)
+				}
+			}
+		}
+	}()
+	_, err = store.Acquire(ctx, "h1", minute, 700*time.Millisecond)
+	close(stop)
+	<-renewed
+	if !errors.Is(err, ErrHandleBusy) {
 		t.Fatalf("taken over: %v", err)
 	}
 	if err := held.Save(ctx, record("alice", `{"blocks":[]}`)); err != nil {
 		t.Fatal(err)
 	}
-	_ = held.Release(ctx)
+	// Unrenewed now: the next acquire takes it over.
+	if _, err := store.Acquire(ctx, "h1", minute, 2*time.Second); err != nil {
+		t.Fatalf("not taken over: %v", err)
+	}
+}
+
+// One breaker at a time, and it deletes only the stale lock it saw: a lock
+// another waiter took since stays.
+func TestBreakingAStaleLockLeavesANewHolder(t *testing.T) {
+	store, dir := filesStore(t)
+	lock := filepath.Join(dir, "h1.lease")
+	_ = os.WriteFile(lock, []byte("newer"), 0o600)
+	old := time.Now().Add(-time.Hour)
+	_ = os.Chtimes(lock, old, old)
+	if store.breakStale(lock, "older") {
+		t.Fatal("broke a lock it did not see")
+	}
+	if text, _ := os.ReadFile(lock); string(text) != "newer" {
+		t.Fatalf("lock %q", text)
+	}
+	// Another breaker holds the guard: this one waits its turn.
+	_ = os.WriteFile(lock+".break", []byte("other"), 0o600)
+	if store.breakStale(lock, "newer") {
+		t.Fatal("two breakers")
+	}
+	_ = os.Remove(lock + ".break")
+	if !store.breakStale(lock, "newer") {
+		t.Fatal("the stale lock it saw stayed")
+	}
+	if _, err := os.Stat(lock); !os.IsNotExist(err) {
+		t.Fatalf("lock %v", err)
+	}
 }
 
 // Sweep deletes idle records and only those: not a fresh one, not a
@@ -180,10 +233,22 @@ func TestARenewedLeaseIsKept(t *testing.T) {
 func TestSweepDeletesIdleRecordsOnly(t *testing.T) {
 	ctx := context.Background()
 	store, dir := filesStore(t)
-	for _, handle := range []string{"idle", "fresh", "leased"} {
-		if _, err := store.TryAdd(ctx, handle, record("alice", `{"blocks":[]}`), 8, minute); err != nil {
+	for _, handle := range []string{"idle", "fresh", "leased", "bobs"} {
+		owner := "alice"
+		if handle == "bobs" {
+			owner = "bob"
+		}
+		if _, err := store.TryAdd(ctx, handle, record(owner, `{"blocks":[]}`), 8, minute); err != nil {
 			t.Fatal(err)
 		}
+	}
+	writeMetaUsed(t, dir, "bobs", time.Now().Add(-time.Hour))
+	// Crash leftovers older than a lease can be: a temp file, a guard, a
+	// lease and a record no meta names.
+	ancient := time.Now().Add(-time.Hour)
+	for _, name := range []string{".x.tmp", "gone.lease.break", "gone.lease", "gone.record.json"} {
+		_ = os.WriteFile(filepath.Join(dir, name), nil, 0o600)
+		_ = os.Chtimes(filepath.Join(dir, name), ancient, ancient)
 	}
 	held, err := store.Acquire(ctx, "leased", minute, time.Second)
 	if err != nil {
@@ -199,9 +264,15 @@ func TestSweepDeletesIdleRecordsOnly(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "idle.record.json")); !os.IsNotExist(err) {
 		t.Fatalf("idle record kept: %v", err)
 	}
+	// Bob's idle handle goes too: sweep is for every principal.
 	for _, handle := range []string{"fresh", "leased"} {
 		if _, err := os.Stat(filepath.Join(dir, handle+".record.json")); err != nil {
 			t.Fatalf("%s: %v", handle, err)
+		}
+	}
+	for _, name := range []string{"bobs.record.json", ".x.tmp", "gone.lease.break", "gone.lease", "gone.record.json"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); !os.IsNotExist(err) {
+			t.Fatalf("%s kept: %v", name, err)
 		}
 	}
 	_ = held.Release(ctx)
@@ -234,6 +305,18 @@ func TestTheFilesStoreRefusesHandlesThatAreNotNames(t *testing.T) {
 // The directory is made private; every file in it is 0600. A directory
 // another user could reach, a link (even written with a trailing slash) or
 // a file is refused.
+// The files store cannot check privacy on Windows, so it refuses to start.
+func TestTheFilesStoreIsRefusedOnWindows(t *testing.T) {
+	previous := storePlatform
+	storePlatform = "windows"
+	t.Cleanup(func() { storePlatform = previous })
+	var config *ConfigError
+	if _, err := NewFilesHandleStore(filepath.Join(t.TempDir(), "handles")); !errors.As(err, &config) ||
+		config.Message != "--handle-store files: is not supported on Windows; use your own store" {
+		t.Fatalf("%v", err)
+	}
+}
+
 func TestTheFilesStoreIsPrivate(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX modes")
@@ -270,6 +353,15 @@ func TestTheFilesStoreIsPrivate(t *testing.T) {
 		if _, err := NewFilesHandleStore(refused); !errors.As(err, &config) {
 			t.Fatalf("%s: %v", refused, err)
 		}
+	}
+	// The owner must be the effective user, root included.
+	previousUID := effectiveUID
+	effectiveUID = func() int { return os.Geteuid() + 1 }
+	_, err := NewFilesHandleStore(private)
+	effectiveUID = previousUID
+	var config *ConfigError
+	if !errors.As(err, &config) {
+		t.Fatalf("another owner: %v", err)
 	}
 	// Nothing makes the directory again later: a write fails.
 	_ = os.RemoveAll(dir)

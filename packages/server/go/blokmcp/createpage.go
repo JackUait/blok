@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -239,15 +240,19 @@ func finishPages(result json.RawMessage, made *madePages, parent json.RawMessage
 		extra = append(extra, made.stranded...)
 	}
 	if code != "ORPHANED_SIDE_EFFECT" && len(extra) > 0 {
-		cause := failure
-		failure = map[string]any{
+		cause := maps.Clone(failure)
+		if code == "CANCELLED" {
+			// Blok.Server's cancel cause has no index; the outer error keeps it.
+			delete(cause, "commandIndex")
+		}
+		wrapped := map[string]any{
 			"code": "ORPHANED_SIDE_EFFECT", "message": orphanedMessage(cause), "retryable": false,
 			"details": map[string]any{"orphaned": []any{}, "cause": cause},
 		}
-		if index, ok := cause["commandIndex"]; ok {
-			failure["commandIndex"] = index
+		if index, ok := failure["commandIndex"]; ok {
+			wrapped["commandIndex"] = index
 		}
-		code = "ORPHANED_SIDE_EFFECT"
+		failure, code = wrapped, "ORPHANED_SIDE_EFFECT"
 	}
 	if code != "ORPHANED_SIDE_EFFECT" {
 		return result

@@ -283,3 +283,94 @@ func TestRestoredHistoryForAnotherDocumentConflicts(t *testing.T) {
 		t.Fatalf("undo %v", undo)
 	}
 }
+
+// renewingStore counts renewals and can hold a call or a sweep.
+type renewingStore struct {
+	HandleStore
+	renewals  atomic.Int32
+	sweeping  chan struct{}
+	sweepDone atomic.Bool
+}
+
+func (r *renewingStore) Acquire(ctx context.Context, handle string, idle, wait time.Duration) (HandleLease, error) {
+	lease, err := r.HandleStore.Acquire(ctx, handle, idle, wait)
+	if err != nil {
+		return nil, err
+	}
+	return &renewingLease{HandleLease: lease, store: r}, nil
+}
+
+func (r *renewingStore) Sweep(ctx context.Context, idle time.Duration) error {
+	if r.sweeping != nil {
+		<-r.sweeping
+		r.sweepDone.Store(true)
+	}
+	return r.HandleStore.Sweep(ctx, idle)
+}
+
+type renewingLease struct {
+	HandleLease
+	store *renewingStore
+}
+
+func (l *renewingLease) Renew(ctx context.Context) error {
+	l.store.renewals.Add(1)
+	return l.HandleLease.Renew(ctx)
+}
+
+// Blok renews a held lease while a call runs, and stops at release.
+func TestBlokRenewsALeaseWhileACallRuns(t *testing.T) {
+	previous := leaseRenewEvery
+	leaseRenewEvery = 20 * time.Millisecond
+	t.Cleanup(func() { leaseRenewEvery = previous })
+	var renewing *renewingStore
+	pair := newSharedPair(t, func(inner HandleStore) HandleStore {
+		renewing = &renewingStore{HandleStore: inner}
+		return renewing
+	})
+	handle := openOn(t, pair.a, "alice")
+	pair.b.options.Authorize = func(context.Context, string, string, bool) (bool, error) {
+		time.Sleep(200 * time.Millisecond)
+		return true, nil
+	}
+	if read := call(t, pair.b, "alice", "Desktop", "blok_read", `{"handle":"`+handle+`"}`); read["ok"] == false {
+		t.Fatalf("read %v", read)
+	}
+	during := renewing.renewals.Load()
+	if during == 0 {
+		t.Fatal("no renewal during a slow call")
+	}
+	time.Sleep(100 * time.Millisecond)
+	if after := renewing.renewals.Load(); after != during {
+		t.Fatalf("renewed after release: %d then %d", during, after)
+	}
+}
+
+// Shutdown waits for a sweep in flight.
+func TestCloseWaitsForAStoreSweep(t *testing.T) {
+	previous := storeSweepEvery
+	storeSweepEvery = 20 * time.Millisecond
+	t.Cleanup(func() { storeSweepEvery = previous })
+	var renewing *renewingStore
+	pair := newSharedPair(t, func(inner HandleStore) HandleStore {
+		renewing = &renewingStore{HandleStore: inner, sweeping: make(chan struct{})}
+		return renewing
+	})
+	time.Sleep(100 * time.Millisecond)
+	closed := make(chan struct{})
+	go func() {
+		pair.a.Close()
+		pair.b.Close()
+		close(closed)
+	}()
+	select {
+	case <-closed:
+		t.Fatal("Close did not wait for the sweep")
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(renewing.sweeping)
+	<-closed
+	if !renewing.sweepDone.Load() {
+		t.Fatal("the sweep did not finish")
+	}
+}

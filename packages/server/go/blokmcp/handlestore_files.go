@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -30,38 +31,60 @@ import (
 //
 // Each JSON file is written to a temp file and renamed over the target.
 // A lock is created exclusively. One whose mtime is older than the stale
-// time (30 s) belonged to a holder that died or stopped renewing: it is
-// moved aside and taken. A lease holder renews its mtime every 5 s, and
-// every Save, Release and Remove first checks its token still holds the
-// lease (ErrLeaseLost otherwise).
+// time (30 s) belonged to a holder that died or stopped renewing. One
+// breaker at a time takes <lock>.break exclusively (a .break older than the
+// stale time is removed), reads the lock again, and deletes it only if it
+// still has the token and the old mtime it saw; then it creates the lock
+// again. Renew touches the lease's mtime; Blok calls it every 5 s, and the
+// store keeps no timer. Save, Renew and Remove check the token first
+// (ErrLeaseLost otherwise). The check and the write are two steps, so a
+// holder paused between them can still write once: the source's version
+// check keeps that from losing a save.
 //
-// Privacy: records hold documents, undo steps and principals. At start the
-// directory is made (0700) and checked once: not a link, a directory, no
-// group or world access, owned by this user (POSIX). Nothing makes it again
+// Sweep deletes idle unleased handles of every principal, and crash
+// leftovers older than the stale time: temp files, .break files, and
+// records or leases no meta names.
+//
+// Privacy: records hold documents, undo steps and principals. The store is
+// POSIX only: on Windows it refuses to start. At start the path is cleaned
+// (so a trailing slash cannot make lstat follow a link), the directory made
+// (0700) and checked once: a directory, not a link, no group or world
+// access, owned by the effective user (root too). Nothing makes it again
 // later. Every file is 0600.
 type FilesHandleStore struct {
-	dir       string
-	stale     time.Duration
-	heartbeat time.Duration
+	dir   string
+	stale time.Duration
 }
+
+// storePlatform and effectiveUID are what the start checks read; tests
+// swap them.
+var (
+	storePlatform = runtime.GOOS
+	effectiveUID  = os.Geteuid
+)
 
 var storeHandle = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
 
 const (
-	leaseStale     = 30 * time.Second
-	leaseHeartbeat = 5 * time.Second
-	lockPoll       = 25 * time.Millisecond
+	leaseStale = 30 * time.Second
+	lockPoll   = 25 * time.Millisecond
 	// principalWait bounds TryAdd's lock: one scan and two small writes.
 	principalWait = 10 * time.Second
 )
 
 // NewFilesHandleStore makes and checks dir. A refusal is a *ConfigError.
 func NewFilesHandleStore(dir string) (*FilesHandleStore, error) {
-	return newFilesHandleStore(dir, leaseStale, leaseHeartbeat)
+	return newFilesHandleStore(dir, leaseStale)
 }
 
-func newFilesHandleStore(dir string, stale, heartbeat time.Duration) (*FilesHandleStore, error) {
+func newFilesHandleStore(dir string, stale time.Duration) (*FilesHandleStore, error) {
+	if storePlatform == "windows" {
+		return nil, &ConfigError{Message: "--handle-store files: is not supported on Windows; use your own store"}
+	}
 	// Cleaned first: "link/" would lstat the link's target.
+	if absolute, err := filepath.Abs(dir); err == nil {
+		dir = absolute
+	}
 	dir = filepath.Clean(dir)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		if _, statErr := os.Lstat(dir); statErr != nil {
@@ -75,7 +98,7 @@ func newFilesHandleStore(dir string, stale, heartbeat time.Duration) (*FilesHand
 	if info.Mode()&fs.ModeSymlink != 0 || !info.IsDir() || !privateDirectory(info) {
 		return nil, &ConfigError{Message: fmt.Sprintf("--handle-store directory %s must be a directory (not a link) owned by this user, with no group or world access (chmod 700)", dir)}
 	}
-	return &FilesHandleStore{dir: dir, stale: stale, heartbeat: heartbeat}, nil
+	return &FilesHandleStore{dir: dir, stale: stale}, nil
 }
 
 func (f *FilesHandleStore) path(name string) string { return filepath.Join(f.dir, name) }
@@ -153,18 +176,30 @@ func (f *FilesHandleStore) tryCreate(path, token string) (bool, error) {
 
 func (f *FilesHandleStore) fresh(info fs.FileInfo) bool { return time.Since(info.ModTime()) <= f.stale }
 
-// breakStale moves a dead holder's lock aside; only one waiter's rename
-// finds it. A lock that turns out fresh (another waiter took it over in
-// between) is linked back.
-func (f *FilesHandleStore) breakStale(path string) {
-	aside := path + "." + randomHex(6) + ".stale"
-	if os.Rename(path, aside) != nil {
-		return
+// breakStale deletes the stale lock at path whose text was seen, one
+// breaker at a time, and never a lock taken since. It says whether the
+// lock is gone.
+func (f *FilesHandleStore) breakStale(path, seen string) bool {
+	guard := path + ".break"
+	mine := randomHex(16)
+	if taken, err := f.tryCreate(guard, mine); err != nil || !taken {
+		if held, err := os.Stat(guard); err == nil && !f.fresh(held) {
+			_ = os.Remove(guard)
+		}
+		return false
 	}
-	if moved, err := os.Stat(aside); err == nil && f.fresh(moved) {
-		_ = os.Link(aside, path)
+	defer f.dropLock(guard, mine)
+	now, err := os.Stat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return true
 	}
-	_ = os.Remove(aside)
+	if err != nil || f.fresh(now) {
+		return false
+	}
+	if text, ok, _ := readFile(path); !ok || string(text) != seen {
+		return false
+	}
+	return os.Remove(path) == nil
 }
 
 func (f *FilesHandleStore) takeLock(ctx context.Context, path, token string, wait time.Duration) (bool, error) {
@@ -174,8 +209,8 @@ func (f *FilesHandleStore) takeLock(ctx context.Context, path, token string, wai
 		if err != nil || taken {
 			return taken, err
 		}
-		if held, err := os.Stat(path); err == nil && !f.fresh(held) {
-			f.breakStale(path)
+		seen, _, _ := readFile(path)
+		if held, err := os.Stat(path); err == nil && !f.fresh(held) && f.breakStale(path, string(seen)) {
 			continue
 		}
 		if !time.Now().Before(deadline) {
@@ -354,9 +389,7 @@ func (f *FilesHandleStore) Acquire(ctx context.Context, handle string, idle, wai
 		f.dropLock(leasePath, token)
 		return nil, err
 	}
-	lease := &filesLease{store: f, handle: handle, path: leasePath, token: token, record: record, stop: make(chan struct{})}
-	go lease.renew()
-	return lease, nil
+	return &filesLease{store: f, handle: handle, path: leasePath, token: token, record: record}, nil
 }
 
 // Sweep implements HandleStore: expired handles whose lease is free, and
@@ -384,10 +417,12 @@ func (f *FilesHandleStore) Sweep(ctx context.Context, idle time.Duration) error 
 	}
 	for _, entry := range entries {
 		name := entry.Name()
-		left := strings.HasSuffix(name, ".tmp") || strings.HasSuffix(name, ".stale")
-		if handle, ok := strings.CutSuffix(name, ".record.json"); ok {
-			_, metaFound, _ := readFile(f.path(handle + ".meta.json"))
-			left = !metaFound
+		left := strings.HasSuffix(name, ".tmp") || strings.HasSuffix(name, ".break")
+		for _, suffix := range []string{".record.json", ".lease"} {
+			if handle, ok := strings.CutSuffix(name, suffix); ok {
+				_, metaFound, _ := readFile(f.path(handle + ".meta.json"))
+				left = !metaFound
+			}
 		}
 		if info, err := entry.Info(); err == nil && left && !f.fresh(info) {
 			_ = os.Remove(f.path(name))
@@ -404,42 +439,34 @@ type filesLease struct {
 	token  string
 	record HandleRecord
 
-	once sync.Once
-	stop chan struct{}
+	mu    sync.Mutex
+	ended bool
 }
-
-// renew touches the lease's mtime while it is held, so it outlives slow
-// calls.
-func (l *filesLease) renew() {
-	ticker := time.NewTicker(l.store.heartbeat)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-l.stop:
-			return
-		case <-ticker.C:
-			if l.store.owns(l.path, l.token) {
-				now := time.Now()
-				_ = os.Chtimes(l.path, now, now)
-			}
-		}
-	}
-}
-
-func (l *filesLease) end() { l.once.Do(func() { close(l.stop) }) }
 
 func (l *filesLease) Record() HandleRecord { return l.record }
 
 func (l *filesLease) held() error {
-	select {
-	case <-l.stop:
-		return ErrLeaseLost
-	default:
-	}
-	if !l.store.owns(l.path, l.token) {
+	l.mu.Lock()
+	ended := l.ended
+	l.mu.Unlock()
+	if ended || !l.store.owns(l.path, l.token) {
 		return ErrLeaseLost
 	}
 	return nil
+}
+
+func (l *filesLease) end() {
+	l.mu.Lock()
+	l.ended = true
+	l.mu.Unlock()
+}
+
+func (l *filesLease) Renew(context.Context) error {
+	if err := l.held(); err != nil {
+		return err
+	}
+	now := time.Now()
+	return os.Chtimes(l.path, now, now)
 }
 
 func (l *filesLease) Save(_ context.Context, record HandleRecord) error {

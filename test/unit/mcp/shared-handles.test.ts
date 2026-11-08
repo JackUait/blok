@@ -8,7 +8,7 @@ import type { Caller } from '../../../src/mcp/dispatcher';
 import { createFilesHandleStore } from '../../../src/mcp/handle-store-files';
 import { createMemoryHandleStore } from '../../../src/mcp/handle-store';
 import { HandleRegistry } from '../../../src/mcp/handles';
-import type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpHandleStore, BlokMcpOptions } from '../../../src/mcp/options';
+import type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore, BlokMcpOptions } from '../../../src/mcp/options';
 import { assembleMcp, type AssembledMcp } from '../../../src/mcp/server';
 import type { HandleSession } from '../../../src/mcp/session';
 import { SharedHandles } from '../../../src/mcp/shared-handles';
@@ -252,6 +252,76 @@ describe('stored handles in a shared handle store', () => {
     expect(errorCode(await execute(a, handle, [{ name: 'history.undo', args: {} }]))).toBe('CONFLICT');
   });
 
+  it('leaves the handle to the process that took over a paused call\'s lease', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const gate: { open?: () => void; reached?: () => void } = {};
+    const reached = new Promise<void>((resolve) => {
+      gate.reached = resolve;
+    });
+    const opened = new Promise<void>((resolve) => {
+      gate.open = resolve;
+    });
+    const source: BlokMcpDocumentSource = {
+      load: () => Promise.resolve(null),
+      save: async () => {
+        gate.reached?.();
+        await opened;
+
+        return { version: 'v1' };
+      },
+    };
+    const options = { leaseStaleMs: 200 };
+    const a = start({ source: { kind: 'custom', source } }, createFilesHandleStore(stores, options));
+    const b = start({ source: { kind: 'custom', source } }, createFilesHandleStore(stores, options));
+    const handle = await open(a);
+    const paused = execute(a, handle, [paragraph('p1', 'Hello')]);
+
+    await reached;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await answer(b, 'blok_read', { handle })).toMatchObject({ blocks: [] });
+    gate.open?.();
+    expect(await paused).toMatchObject({ ok: true });
+    expect(await answer(b, 'blok_read', { handle })).toMatchObject({ blocks: [] });
+  });
+
+  it.each([['../x'], ['a/b'], ['x'.repeat(129)], ['h\u0000']])('answers UNKNOWN_HANDLE for the handle %j without asking the store', async (handle) => {
+    const store = createMemoryHandleStore();
+    const acquire = vi.spyOn(store, 'acquire');
+    const a = start({}, store);
+
+    expect(errorCode(await answer(a, 'blok_read', { handle }))).toBe('UNKNOWN_HANDLE');
+    expect(errorCode(await answer(a, 'blok_close', { handle }))).toBe('UNKNOWN_HANDLE');
+    expect(acquire).not.toHaveBeenCalled();
+  });
+
+  it('asks the store about a handle of the minted shape it does not know', async () => {
+    const store = createMemoryHandleStore();
+    const acquire = vi.spyOn(store, 'acquire');
+    const a = start({}, store);
+
+    expect(errorCode(await answer(a, 'blok_read', { handle: 'A-_'.repeat(42) + 'zz' }))).toBe('UNKNOWN_HANDLE');
+    expect(acquire).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers SOURCE_UNAVAILABLE to a close whose lease the store refuses, and logs it', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const inner = createMemoryHandleStore();
+    const lost: BlokMcpHandleStore = {
+      ...inner,
+      acquire: async (...args) => {
+        const lease = await inner.acquire(...args);
+
+        return typeof lease === 'string' ? lease : { ...lease, remove: () => Promise.reject(new Error('the lease was lost')) };
+      },
+    };
+    const a = start({}, lost);
+    const handle = await open(a);
+
+    expect((await answer(a, 'blok_close', { handle })).error).toMatchObject({ code: 'SOURCE_UNAVAILABLE', retryable: true });
+    expect(logged).toHaveBeenCalled();
+    expect(await answer(a, 'blok_read', { handle })).toMatchObject({ blocks: [] });
+  });
+
   it('keeps live handles out of the store: a cap of one counts the stored handle', async () => {
     const store = createMemoryHandleStore();
     const a = start({ maxHandlesPerPrincipal: 1 }, store);
@@ -297,20 +367,93 @@ describe('SharedHandles with live handles', () => {
     expect(await table.use(live, 'alice', (session) => session.read({}))).toEqual({ blocks: [] });
   });
 
+  const storedRecord: BlokMcpHandleRecord = {
+    v: 1, contractRevision: 'c1', principal: 'alice', clientName: 'c', scopes: null, actor: { id: 'a', name: 'a', kind: 'agent' },
+    documentId: 'doc', write: true, version: null, stale: false, document: { blocks: [] }, history: {},
+  };
+  const renewing = (store: BlokMcpHandleStore): SharedHandles => new SharedHandles({
+    local: registry(), store, idleMs: 600_000, maxPerPrincipal: 2, contractRevision: 'c1',
+    restore: () => Promise.resolve(liveSession()), renewMs: 20,
+  });
+  const withRenew = (inner: BlokMcpHandleStore, renew: (lease: BlokMcpHandleLease) => Promise<void>): BlokMcpHandleStore => ({
+    ...inner,
+    acquire: async (...args) => {
+      const lease = await inner.acquire(...args);
+
+      return typeof lease === 'string' ? lease : { ...lease, renew: () => renew(lease) };
+    },
+  });
+
+  it('renews the lease while a call runs, and stops at release', async () => {
+    const inner = createMemoryHandleStore();
+    const renewed = vi.fn((lease: BlokMcpHandleLease) => lease.renew());
+    const table = renewing(withRenew(inner, renewed));
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    await table.use('h1', 'alice', () => new Promise((resolve) => setTimeout(resolve, 150)));
+    const during = renewed.mock.calls.length;
+
+    expect(during).toBeGreaterThanOrEqual(2);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(renewed).toHaveBeenCalledTimes(during);
+    await table.closeAll(() => Promise.resolve());
+  });
+
+  it('logs a failed renew, and the call goes on', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const inner = createMemoryHandleStore();
+    const table = renewing(withRenew(inner, () => Promise.reject(new Error('store down'))));
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    expect(await table.use('h1', 'alice', () => new Promise((resolve) => setTimeout(() => resolve('done'), 100)))).toBe('done');
+    expect(logged.mock.calls.some((call) => String(call[0]).includes('renewing'))).toBe(true);
+    await table.closeAll(() => Promise.resolve());
+  });
+
+  it('sweeps the store on a timer with the idle time, and stops at shutdown', async () => {
+    const store = createMemoryHandleStore();
+    const sweep = vi.spyOn(store, 'sweep');
+    const table = new SharedHandles({
+      local: registry(), store, idleMs: 600_000, maxPerPrincipal: 2, contractRevision: 'c1', restore: () => Promise.reject(new Error('unused')), sweepMs: 20,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 110));
+    expect(sweep).toHaveBeenCalledWith(600_000);
+    await table.closeAll(() => Promise.resolve());
+    const swept = sweep.mock.calls.length;
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(sweep).toHaveBeenCalledTimes(swept);
+  });
+
+  it('logs a failed sweep and keeps sweeping', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const store = createMemoryHandleStore();
+    const sweep = vi.spyOn(store, 'sweep').mockRejectedValue(new Error('store down'));
+    const table = new SharedHandles({
+      local: registry(), store, idleMs: 600_000, maxPerPrincipal: 2, contractRevision: 'c1', restore: () => Promise.reject(new Error('unused')), sweepMs: 20,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 110));
+    await table.closeAll(() => Promise.resolve());
+    expect(sweep.mock.calls.length).toBeGreaterThan(1);
+    expect(logged).toHaveBeenCalled();
+  });
+
   it('closes only this process\'s live handles at shutdown and leaves the store alone', async () => {
     const store = createMemoryHandleStore();
-    const remove = vi.spyOn(store, 'remove');
     const local = registry();
     const table = make(store, local);
     const session = liveSession();
     const closed: HandleSession[] = [];
 
     await table.add('alice', 'doc', session);
+    await store.tryAdd('stored', { v: 1, contractRevision: 'c1', principal: 'alice', clientName: 'c', scopes: null, actor: { id: 'a', name: 'a', kind: 'agent' }, documentId: 'doc', write: true, version: null, stale: false, document: { blocks: [] }, history: {} }, 2, 600_000);
     await table.closeAll(async (each) => {
       closed.push(each);
     });
     expect(closed).toEqual([session]);
-    expect(remove).not.toHaveBeenCalled();
+    expect(await store.count('alice', 600_000)).toBe(1);
     await expect(table.assertRoom('alice')).rejects.toMatchObject({ agentError: { code: 'SOURCE_UNAVAILABLE' } });
   });
 });

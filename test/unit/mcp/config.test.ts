@@ -718,13 +718,13 @@ describe('checkOptionSafety', () => {
   describe('handleStore', () => {
     const fn = (): Promise<never> => Promise.reject(new Error('unused'));
 
-    it('takes a store with count, tryAdd, acquire and remove', () => {
-      expect(() => checkOptionSafety({ ...base, handleStore: { count: fn, tryAdd: fn, acquire: fn, remove: fn } })).not.toThrow();
+    it('takes a store with count, tryAdd, acquire and sweep', () => {
+      expect(() => checkOptionSafety({ ...base, handleStore: { count: fn, tryAdd: fn, acquire: fn, sweep: fn } })).not.toThrow();
     });
 
-    it.each([['null', null], ['a string', 'files:/x'], ['a store without remove', { count: fn, tryAdd: fn, acquire: fn }]])('refuses %s', (_label, handleStore) => {
+    it.each([['null', null], ['a string', 'files:/x'], ['a store without sweep', { count: fn, tryAdd: fn, acquire: fn, remove: fn }]])('refuses %s', (_label, handleStore) => {
       expect(() => checkOptionSafety({ ...base, handleStore: handleStore as never }))
-        .toThrow(new McpConfigError('handleStore needs count, tryAdd, acquire and remove functions'));
+        .toThrow(new McpConfigError('handleStore needs count, tryAdd, acquire and sweep functions'));
     });
   });
 

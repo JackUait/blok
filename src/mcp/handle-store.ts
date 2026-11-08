@@ -3,18 +3,22 @@ import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from
 interface Entry {
   record: BlokMcpHandleRecord;
   lastUsed: number;
-  leased: boolean;
-  /** Resolved at release, so the next acquire can try. */
+  /** The holding lease's token, or null when free. */
+  holder: symbol | null;
+  /** Resolved at release or removal, so the next acquire can try. */
   released: Array<() => void>;
 }
 
+const lost = (handle: string): Error => new Error(`blok-mcp handle store: the lease on ${handle} was lost`);
+
 /**
  * The handle store contract in one process's memory, for tests and as the reference the files
- * store matches. A server without a handleStore keeps using HandleRegistry, not this.
+ * store matches. A server without a handleStore keeps using HandleRegistry, not this. One process
+ * cannot pause apart from itself, so its leases need no time limit.
  */
 export const createMemoryHandleStore = (now: () => number = Date.now): BlokMcpHandleStore => {
   const entries = new Map<string, Entry>();
-  const expired = (entry: Entry, idleMs: number): boolean => !entry.leased && now() - entry.lastUsed > idleMs;
+  const expired = (entry: Entry, idleMs: number): boolean => entry.holder === null && now() - entry.lastUsed > idleMs;
   const live = (handle: string, idleMs: number): Entry | undefined => {
     const entry = entries.get(handle);
 
@@ -28,32 +32,48 @@ export const createMemoryHandleStore = (now: () => number = Date.now): BlokMcpHa
   };
   const count = (principal: string, idleMs: number): number =>
     [...entries.keys()].filter((handle) => live(handle, idleMs)?.record.principal === principal).length;
+  const wake = (waiting: Array<() => void>): void => {
+    waiting.splice(0).forEach((resolve) => resolve());
+  };
 
+  // Takes the free lease on a live handle.
   const leaseOf = (handle: string): BlokMcpHandleLease => {
     const entry = entries.get(handle);
-    const held = { released: false };
+    const token = Symbol(handle);
+    const holds = (): boolean => entry !== undefined && entries.get(handle) === entry && entry.holder === token;
 
     if (entry === undefined) {
       throw new Error(`blok-mcp: handle ${handle} is gone`);
     }
+    entry.holder = token;
 
     return {
       record: structuredClone(entry.record),
+      renew: () => (holds() ? Promise.resolve() : Promise.reject(lost(handle))),
       save: (next) => {
-        if (held.released || entries.get(handle) !== entry) {
-          return Promise.resolve();
+        if (!holds()) {
+          return Promise.reject(lost(handle));
         }
         entry.record = structuredClone(next);
 
         return Promise.resolve();
       },
       release: () => {
-        if (!held.released) {
-          held.released = true;
-          entry.leased = false;
+        if (holds()) {
+          entry.holder = null;
           entry.lastUsed = now();
-          entry.released.splice(0).forEach((wake) => wake());
+          wake(entry.released);
         }
+
+        return Promise.resolve();
+      },
+      remove: () => {
+        if (!holds()) {
+          return Promise.reject(lost(handle));
+        }
+        entries.delete(handle);
+        entry.holder = null;
+        wake(entry.released);
 
         return Promise.resolve();
       },
@@ -69,9 +89,7 @@ export const createMemoryHandleStore = (now: () => number = Date.now): BlokMcpHa
       if (entry === undefined) {
         return 'unknown';
       }
-      if (!entry.leased) {
-        entry.leased = true;
-
+      if (entry.holder === null) {
         return leaseOf(handle);
       }
       const left = deadline - now();
@@ -98,13 +116,13 @@ export const createMemoryHandleStore = (now: () => number = Date.now): BlokMcpHa
       if (count(record.principal, idleMs) >= maxPerPrincipal) {
         return Promise.resolve(false);
       }
-      entries.set(handle, { record: structuredClone(record), lastUsed: now(), leased: false, released: [] });
+      entries.set(handle, { record: structuredClone(record), lastUsed: now(), holder: null, released: [] });
 
       return Promise.resolve(true);
     },
     acquire,
-    remove: (handle) => {
-      entries.delete(handle);
+    sweep: (idleMs) => {
+      [...entries.keys()].forEach((handle) => live(handle, idleMs));
 
       return Promise.resolve();
     },

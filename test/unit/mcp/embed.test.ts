@@ -10,6 +10,7 @@ import type { AuthInfo, CallToolRequest, ServerContext } from '@modelcontextprot
 import { getBlokVersion } from '../../../src/components/utils/version';
 import { McpConfigError } from '../../../src/mcp/config';
 import { createBlok } from '../../../src/mcp/embed';
+import { createMemoryHandleStore } from '../../../src/mcp/handle-store';
 import { parseBlokMcpArgs } from '../../../src/mcp/index';
 import { listMcpPrompts } from '../../../src/mcp/prompts';
 import { assembleMcp } from '../../../src/mcp/server';
@@ -247,6 +248,21 @@ describe('createBlok', () => {
       expect(answer.error).toEqual(HIDDEN);
       expect(JSON.stringify(answer)).not.toContain('secret');
       expect(logged).toHaveBeenCalled();
+    });
+
+    it('does not cover a handle store failure: that is a retryable SOURCE_UNAVAILABLE tool error, logged', async () => {
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const store = createMemoryHandleStore();
+      const { blok } = await embed({ handleStore: { ...store, acquire: () => Promise.reject(new Error('secret store text')) } });
+      const open = await call(() => hostServer(blok), 'tools/call', { name: 'blok_open', arguments: { documentId: 'doc' } }, alice);
+      const handle = (open.result?.structuredContent as { handle: string }).handle;
+      const read = await call(() => hostServer(blok), 'tools/call', { name: 'blok_read', arguments: { handle } }, alice);
+
+      expect(read.error).toBeUndefined();
+      expect(read.result?.isError).toBe(true);
+      expect(read.result?.structuredContent).toMatchObject({ error: { code: 'SOURCE_UNAVAILABLE', retryable: true } });
+      expect(JSON.stringify(read)).not.toContain('secret');
+      expect(logged.mock.calls.flat().some(item => item instanceof Error && item.message === 'secret store text')).toBe(true);
     });
 
     it('keeps Blok\'s own protocol errors', async () => {

@@ -6321,7 +6321,7 @@
           "rawBody": true
         }
       },
-      "name": "custom source: the store sees the opener's caller on load, save and list, even when another client of the principal saves, and listing drops ids authorize refuses",
+      "name": "custom source: the store sees the opener's caller on load and save, even when another client of the principal saves, the current caller on list, and listing drops ids authorize refuses",
       "session": {
         "protocolVersion": "2026-07-28",
         "clientName": "Desktop",
@@ -6472,6 +6472,56 @@
               "isError": false
             }
           }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_list_documents",
+              "arguments": {
+                "query": "other"
+              },
+              "_meta": {
+                "io.modelcontextprotocol/clientInfo": {
+                  "name": "Other",
+                  "version": "1"
+                }
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "documents": [
+                  {
+                    "id": "doc",
+                    "title": "Notes",
+                    "live": false
+                  },
+                  {
+                    "id": "plain",
+                    "title": null,
+                    "live": false
+                  }
+                ],
+                "nextCursor": "page-2",
+                "supported": true
+              },
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "host-example"
+                }
+              },
+              "isError": false
+            }
+          }
         }
       ],
       "expectHostRequests": [
@@ -6567,6 +6617,52 @@
             "blok-caller-on-behalf-of": "alice"
           },
           "bodyText": "{\"title\":\"Notes, alice\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello\"}]}}]}"
+        },
+        {
+          "method": "GET",
+          "path": "/docs?limit=25&query=other",
+          "headers": {
+            "blok-caller": "alice",
+            "blok-caller-client": "Other",
+            "blok-caller-actor": "agent:alice:Other",
+            "blok-caller-on-behalf-of": "alice"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "secret",
+            "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "plain",
+            "write": false
+          }
         }
       ]
     },

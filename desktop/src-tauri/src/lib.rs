@@ -2,6 +2,41 @@ use tauri::menu::{
     HELP_SUBMENU_ID, Menu, MenuItem, PredefinedMenuItem, Submenu, WINDOW_SUBMENU_ID,
 };
 use tauri::{Manager, Runtime};
+use std::path::PathBuf;
+
+fn workspace_file(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
+    if !name.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-') || name.is_empty() {
+        return Err("Invalid document id".into());
+    }
+    let dir = app.path().app_data_dir().map_err(|error| error.to_string())?.join("workspace");
+    std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    Ok(dir.join(format!("{name}.json")))
+}
+
+#[tauri::command]
+fn load_workspace_file(app: tauri::AppHandle, name: String) -> Result<Option<String>, String> {
+    let path = workspace_file(&app, &name)?;
+    match std::fs::read_to_string(path) {
+        Ok(data) => Ok(Some(data)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+#[tauri::command]
+fn save_workspace_file(app: tauri::AppHandle, name: String, data: String) -> Result<(), String> {
+    let path = workspace_file(&app, &name)?;
+    let temp = path.with_extension("json.tmp");
+    std::fs::write(&temp, data).map_err(|error| error.to_string())?;
+    std::fs::rename(temp, path).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn workspace_data_directory(app: tauri::AppHandle) -> Result<String, String> {
+    let dir = app.path().app_data_dir().map_err(|error| error.to_string())?.join("workspace");
+    std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    Ok(dir.to_string_lossy().into_owned())
+}
 
 #[tauri::command]
 fn close_editor_window(window: tauri::WebviewWindow) {
@@ -96,7 +131,7 @@ pub fn run() {
                 let _ = window.eval(script);
             }
         })
-        .invoke_handler(tauri::generate_handler![close_editor_window])
+        .invoke_handler(tauri::generate_handler![close_editor_window, load_workspace_file, save_workspace_file, workspace_data_directory])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

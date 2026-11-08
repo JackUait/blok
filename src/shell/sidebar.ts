@@ -19,6 +19,7 @@ export interface PageFrame {
   element: HTMLElement;
   canvas: HTMLElement;
   setPages: (pages: ShellPage[], activeId: string) => void;
+  toggleSidebar: () => void;
 }
 
 export type SidebarAction =
@@ -519,6 +520,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   return {
     element: shell,
     canvas,
+    toggleSidebar: () => setCollapsed(!sidebar.hasAttribute('data-collapsed')),
     setPages(next, nextActive) {
       view.pages = next;
       view.activeId = nextActive;

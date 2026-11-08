@@ -11,9 +11,11 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
     "@tauri-apps/cli": "^2",
     "@types/node": "26.6.6",
     "jsdom": "29.1.1",
+    "react-grab": "^0.2.0",
     "typescript": "6.0.3",
     "vite": "8.3.5",
     "vitest": "5.0.5"

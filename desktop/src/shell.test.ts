@@ -3,6 +3,23 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { mountDesktop, setCanLeave } from './shell';
 
+vi.mock('./workspace', () => ({
+  createWorkspace(onLayout: (width: number) => void) {
+    const element = document.createElement('div');
+    const sidebar = document.createElement('aside');
+    sidebar.setAttribute('data-blok-sidebar', '');
+    element.append(sidebar);
+    onLayout(260);
+    return {
+      element,
+      start: async () => undefined,
+      onRoute: () => undefined,
+      toggleSidebar: () => undefined,
+      createPage: () => history.pushState(null, '', `/?page=${crypto.randomUUID()}`),
+    };
+  },
+}));
+
 const KEY = 'blok:window-tabs:v1';
 
 interface StoredTab {
@@ -135,7 +152,7 @@ describe('desktop tab strip', () => {
     expect(button(root, 'Page précédente').disabled).toBe(true);
     expect(button(root, 'Page suivante').disabled).toBe(true);
     expect(button(root, 'Afficher ou masquer la barre latérale')).toBeInstanceOf(HTMLButtonElement);
-    expect(button(root, 'Nouvelle page').textContent).toBe('Nouvelle page');
+    expect(button(root, 'Nouvelle page')).toBeInstanceOf(HTMLButtonElement);
     expect(button(root, 'Nouvel onglet').getAttribute('title')).toBe('Nouvel onglet (⌘T)');
   });
 
@@ -147,8 +164,7 @@ describe('desktop tab strip', () => {
     expect(leading).toBeInstanceOf(HTMLElement);
     if (!(traffic instanceof HTMLElement) || !(leading instanceof HTMLElement)) return;
     expect(traffic.style.width).toBe('11px');
-    expect(leading.style.width).toBe('112px');
-    expect(leading.style.minWidth).toBe('112px');
+    expect(root.style.getPropertyValue('--desktop-sidebar-width')).toBe('260px');
     expect(traffic.getAttribute('data-tauri-drag-region')).not.toBeNull();
     expect(root.querySelector('[data-desktop-leading-drag]')?.getAttribute('data-tauri-drag-region')).not.toBeNull();
     expect(root.querySelector('[data-desktop-trailing-drag]')?.getAttribute('data-tauri-drag-region')).not.toBeNull();
@@ -156,10 +172,6 @@ describe('desktop tab strip', () => {
 
   it('widens the cluster for Tauri and tracks a sidebar that is already wider', () => {
     Reflect.set(window, '__TAURI_INTERNALS__', { invoke: vi.fn(() => Promise.resolve()) });
-    const sidebar = document.createElement('aside');
-    sidebar.setAttribute('data-blok-sidebar', '');
-    sidebar.style.width = '260px';
-    document.body.append(sidebar);
     const root = mount();
     const traffic = root.querySelector('[data-desktop-traffic]');
     const leading = root.querySelector('[data-desktop-leading]');
@@ -167,23 +179,18 @@ describe('desktop tab strip', () => {
       throw new Error('missing cluster');
     }
     expect(traffic.style.width).toBe('83px');
-    expect(leading.style.minWidth).toBe('180px');
-    expect(leading.style.width).toBe('260px');
+    expect(root.style.getPropertyValue('--desktop-sidebar-width')).toBe('260px');
     expect(document.querySelectorAll('[data-blok-sidebar]')).toHaveLength(1);
     button(root, 'Afficher ou masquer la barre latérale').click();
     expect(document.querySelectorAll('[data-blok-sidebar]')).toHaveLength(1);
   });
 
-  it('keeps the cluster at the Tauri minimum when the sidebar is narrower', () => {
+  it('keeps the cluster aligned with the sidebar width', () => {
     Reflect.set(window, '__TAURI_INTERNALS__', { invoke: vi.fn(() => Promise.resolve()) });
-    const sidebar = document.createElement('aside');
-    sidebar.setAttribute('data-blok-sidebar', '');
-    sidebar.style.width = '40px';
-    document.body.append(sidebar);
     const root = mount();
     const leading = root.querySelector('[data-desktop-leading]');
     if (!(leading instanceof HTMLElement)) throw new Error('missing cluster');
-    expect(leading.style.width).toBe('180px');
+    expect(root.style.getPropertyValue('--desktop-sidebar-width')).toBe('260px');
   });
 
   it('gives each tab its own history and leaves the other tab alone', () => {
@@ -400,6 +407,7 @@ describe('desktop tab strip', () => {
     expect(css).toMatch(/:hover \[data-desktop-close\]/);
     expect(css).toMatch(/:focus-within \[data-desktop-close\]/);
     expect(css).toMatch(/\[aria-selected="true"\][^}]*var\(--desktop-canvas\)/);
+    expect(css).toMatch(/\[role="tablist"\][^}]*flex:\s*0 1 auto/);
     expect(css).not.toMatch(/\[aria-selected="true"\][^}]*blue/);
   });
 

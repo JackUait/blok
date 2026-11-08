@@ -5,6 +5,9 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "allow-close-editor-window"
+    "allow-close-editor-window",
+    "allow-load-workspace-file",
+    "allow-save-workspace-file",
+    "allow-workspace-data-directory"
   ]
 }

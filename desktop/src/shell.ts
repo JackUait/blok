@@ -1,3 +1,5 @@
+import { createWorkspace, type Workspace } from './workspace';
+
 const KEY = 'blok:window-tabs:v1';
 const MAX_TABS = 20;
 const MAX_HISTORY = 100;
@@ -40,10 +42,12 @@ const box: {
   root: HTMLElement | null;
   session: Session;
   canLeave: () => boolean;
+  workspace: Workspace | null;
 } = {
   root: null,
   session: { tabs: [], activeId: '' },
   canLeave: () => true,
+  workspace: null,
 };
 
 export function setCanLeave(guard: () => boolean): void {
@@ -54,12 +58,16 @@ export function mountDesktop(root: HTMLElement): void {
   install();
   box.root = root;
   root.setAttribute('data-desktop-shell', '');
+  root.setAttribute('data-blok-theme', 'dark');
   if (isTauri()) root.setAttribute('data-tauri', '');
   box.session = boot();
   const current = active();
   if (current && current.href !== location.href) nativeReplace(current.href);
   if (current && document.title !== current.title) document.title = current.title;
-  root.replaceChildren(strip(), page());
+  box.workspace = createWorkspace((width) => {
+    root.style.setProperty('--desktop-sidebar-width', `${Math.max(isTauri() ? 112 : 80, width)}px`);
+  });
+  root.replaceChildren(strip(), box.workspace.element);
   root.addEventListener('click', onClick);
   slot.record = record;
   slot.syncTitle = syncTitle;
@@ -68,6 +76,7 @@ export function mountDesktop(root: HTMLElement): void {
   syncIcon();
   persist();
   paint();
+  void box.workspace.start();
 }
 
 function install(): void {
@@ -278,6 +287,7 @@ function record(mode: 'push' | 'replace', href: string): void {
   if (mode === 'push') window.scrollTo(0, 0);
   persist();
   paint();
+  box.workspace?.onRoute();
 }
 
 function step(delta: number): void {
@@ -295,6 +305,7 @@ function step(delta: number): void {
   window.scrollTo(0, scrollY);
   persist();
   paint();
+  box.workspace?.onRoute();
 }
 
 function moveTo(id: string, check: boolean): void {
@@ -312,6 +323,7 @@ function moveTo(id: string, check: boolean): void {
   if (document.title !== next.title) document.title = next.title;
   persist();
   paint();
+  box.workspace?.onRoute();
 }
 
 function createTab(): void {
@@ -328,6 +340,7 @@ function createTab(): void {
   if (document.title !== 'Nouvelle page') document.title = 'Nouvelle page';
   persist();
   paint();
+  box.workspace?.onRoute();
 }
 
 function closeActive(): void {
@@ -353,6 +366,7 @@ function closeTab(id: string): void {
   if (wasActive && next) reveal(next);
   persist();
   paint();
+  box.workspace?.onRoute();
 }
 
 function reveal(next: Tab): void {
@@ -362,8 +376,7 @@ function reveal(next: Tab): void {
 }
 
 function openPage(): void {
-  document.title = 'Nouvelle page';
-  history.pushState(null, '', `/?page=${crypto.randomUUID()}`);
+  box.workspace?.createPage();
 }
 
 function syncTitle(): void {
@@ -406,6 +419,7 @@ function onPop(): void {
   if (found >= 0) window.scrollTo(0, scrollY);
   persist();
   paint();
+  box.workspace?.onRoute();
 }
 
 function cycle(delta: number): void {
@@ -491,6 +505,7 @@ function onClick(event: Event): void {
   const tabId = action.dataset.desktopTab ?? '';
   if (name === 'new-tab') createTab();
   if (name === 'new-page') openPage();
+  if (name === 'sidebar') box.workspace?.toggleSidebar();
   if (name === 'back') step(-1);
   if (name === 'forward') step(1);
   if (name === 'close') closeTab(tabId);
@@ -506,14 +521,14 @@ function paint(): void {
   if (!root?.isConnected) return;
   const header = root.querySelector('[data-desktop-tabstrip]');
   if (!(header instanceof HTMLElement)) return;
-  header.replaceChildren(leading(), backButton(), forwardButton(), tablist(), newTabButton(), trailing());
+  const navigation = document.createElement('div');
+  navigation.setAttribute('data-desktop-navigation', '');
+  navigation.append(backButton(), forwardButton());
+  header.replaceChildren(leading(), navigation, tablist(), newTabButton(), trailing());
   const current = header.querySelector('[role="tab"][aria-selected="true"]');
   if (current instanceof HTMLElement && typeof current.scrollIntoView === 'function') {
     current.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
-  const heading = root.querySelector('[data-desktop-page-title]');
-  const tab = active();
-  if (heading && tab) heading.textContent = tab.title;
 }
 
 function strip(): HTMLElement {
@@ -522,26 +537,9 @@ function strip(): HTMLElement {
   return header;
 }
 
-function page(): HTMLElement {
-  const main = document.createElement('main');
-  main.setAttribute('data-desktop-page', '');
-  const heading = document.createElement('h1');
-  heading.setAttribute('data-desktop-page-title', '');
-  heading.textContent = active()?.title ?? 'Nouvelle page';
-  const note = document.createElement('p');
-  note.textContent = 'La barre latérale partagée de src/shell arrivera plus tard.';
-  main.append(heading, note);
-  return main;
-}
-
 function leading(): HTMLElement {
   const cluster = document.createElement('div');
   cluster.setAttribute('data-desktop-leading', '');
-  const min = isTauri() ? 180 : 112;
-  const measured = sidebarWidth();
-  const width = measured === null ? min : Math.max(min, measured);
-  cluster.style.width = `${width}px`;
-  cluster.style.minWidth = `${min}px`;
   const traffic = document.createElement('div');
   traffic.setAttribute('data-desktop-traffic', '');
   traffic.setAttribute('data-tauri-drag-region', '');
@@ -549,20 +547,8 @@ function leading(): HTMLElement {
   const drag = document.createElement('div');
   drag.setAttribute('data-desktop-leading-drag', '');
   drag.setAttribute('data-tauri-drag-region', '');
-  cluster.append(traffic, iconButton('sidebar', 'Afficher ou masquer la barre latérale', sidebarIcon()), drag, textButton('new-page', 'Nouvelle page'));
+  cluster.append(traffic, drag, iconButton('sidebar', 'Afficher ou masquer la barre latérale', sidebarIcon()), iconButton('new-page', 'Nouvelle page', plusIcon()));
   return cluster;
-}
-
-function sidebarWidth(): number | null {
-  const sidebar = document.querySelector('[data-blok-sidebar]');
-  if (!(sidebar instanceof HTMLElement)) return null;
-  if (sidebar.style.width.endsWith('px')) {
-    const value = Number.parseFloat(sidebar.style.width);
-    if (Number.isFinite(value)) return value;
-  }
-  const rect = sidebar.getBoundingClientRect().width;
-  if (rect > 0) return rect;
-  return null;
 }
 
 function trailing(): HTMLElement {
@@ -642,14 +628,6 @@ function closeButton(tab: Tab): HTMLButtonElement {
   button.dataset.desktopTab = tab.id;
   button.setAttribute('aria-label', `Fermer ${tab.title}`);
   button.append(crossIcon());
-  return button;
-}
-
-function textButton(action: string, text: string): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.dataset.desktopAction = action;
-  button.textContent = text;
   return button;
 }
 

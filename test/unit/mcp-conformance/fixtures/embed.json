@@ -5974,6 +5974,2344 @@
           }
         }
       ]
+    },
+    {
+      "argv": [
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /docs/new": {
+          "status": 200,
+          "json": null
+        },
+        "PUT /docs/new": {
+          "sequence": [
+            {
+              "status": 200,
+              "json": {
+                "version": "v1"
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "version": "v2"
+              }
+            }
+          ]
+        }
+      },
+      "name": "custom source: a missing document opens empty, the first save sends no Blok-If-Version, and savedVersion is the store's",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "new",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": false
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "First"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "hf6143aa2ffb30",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "v1"
+                }
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Second"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "h66eab2cd7b449",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "v2"
+                }
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_close",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "closed": true,
+                "unsavedBatches": 0,
+                "hostRecordLags": false
+              },
+              "isError": false
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "new",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/new",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "new",
+            "write": true
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/new",
+          "headers": {
+            "content-type": "application/json",
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          },
+          "body": {
+            "title": "First",
+            "blocks": []
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "new",
+            "write": true
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/new",
+          "headers": {
+            "content-type": "application/json",
+            "blok-if-version": "v1",
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          },
+          "body": {
+            "title": "Second",
+            "blocks": []
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "new",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "transport": "http",
+      "argv": [
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize",
+        "--http",
+        "127.0.0.1:0"
+      ],
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          },
+          "byBody": [
+            {
+              "when": {
+                "documentId": "secret"
+              },
+              "response": {
+                "status": 200,
+                "json": {
+                  "allowed": false
+                }
+              }
+            }
+          ]
+        },
+        "GET /docs": {
+          "status": 200,
+          "json": {
+            "documents": [
+              {
+                "id": "doc",
+                "title": "Notes"
+              },
+              {
+                "id": "secret",
+                "title": "Secret"
+              },
+              {
+                "id": "plain"
+              }
+            ],
+            "nextCursor": "page-2"
+          }
+        },
+        "GET /docs/doc": {
+          "status": 200,
+          "json": {
+            "data": {
+              "title": "Notes",
+              "blocks": [
+                {
+                  "id": "p1",
+                  "type": "paragraph",
+                  "data": {
+                    "text": "Hello"
+                  }
+                }
+              ]
+            },
+            "version": "v1"
+          }
+        },
+        "PUT /docs/doc": {
+          "status": 200,
+          "json": {
+            "version": "v2"
+          }
+        }
+      },
+      "name": "custom source: the store sees the opener's caller on load, save and list, and listing drops ids authorize refuses",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "headers": {
+          "X-Example-User": "alice"
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_list_documents",
+              "arguments": {
+                "query": "notes"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "documents": [
+                  {
+                    "id": "doc",
+                    "title": "Notes",
+                    "live": false
+                  },
+                  {
+                    "id": "plain",
+                    "title": null,
+                    "live": false
+                  }
+                ],
+                "nextCursor": "page-2",
+                "supported": true
+              },
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "host-example"
+                }
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "host-example"
+                }
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Notes, alice"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "hddb78d4dd407c",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "v2"
+                }
+              },
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "host-example"
+                }
+              },
+              "isError": false
+            }
+          }
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "GET",
+          "path": "/docs?limit=25&query=notes",
+          "headers": {
+            "blok-caller": "alice",
+            "blok-caller-client": "Desktop",
+            "blok-caller-actor": "agent:alice:Desktop",
+            "blok-caller-on-behalf-of": "alice"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "secret",
+            "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "plain",
+            "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "alice",
+            "blok-caller-client": "Desktop",
+            "blok-caller-actor": "agent:alice:Desktop",
+            "blok-caller-on-behalf-of": "alice"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "content-type": "application/json",
+            "blok-if-version": "v1",
+            "blok-caller": "alice",
+            "blok-caller-client": "Desktop",
+            "blok-caller-actor": "agent:alice:Desktop",
+            "blok-caller-on-behalf-of": "alice"
+          },
+          "body": {
+            "title": "Notes, alice",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "Hello"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /docs/doc": {
+          "sequence": [
+            {
+              "status": 200,
+              "json": {
+                "data": {
+                  "blocks": [
+                    {
+                      "id": "p1",
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Before"
+                      }
+                    }
+                  ]
+                },
+                "version": "v1"
+              }
+            },
+            {
+              "status": 200,
+              "json": {
+                "data": {
+                  "title": "Theirs",
+                  "blocks": [
+                    {
+                      "id": "p1",
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Theirs"
+                      }
+                    }
+                  ]
+                },
+                "version": "v2"
+              }
+            }
+          ]
+        },
+        "PUT /docs/doc": {
+          "status": 409,
+          "json": {}
+        }
+      },
+      "name": "custom source: a 409 on save is DOCUMENT_CHANGED, and the handle reloads the store's document",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Mine"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "DOCUMENT_CHANGED",
+                  "message": "Someone saved this document since you opened it. Read it again, then retry.",
+                  "retryable": true
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "h17c3011c5385df",
+                "rootId": null,
+                "page": {
+                  "title": "Theirs"
+                },
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "Theirs"
+                  }
+                ]
+              },
+              "isError": false
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "content-type": "application/json",
+            "blok-if-version": "v1",
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          },
+          "body": {
+            "title": "Mine",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "Before"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /docs/doc": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": [
+                {
+                  "id": "p1",
+                  "type": "paragraph",
+                  "data": {
+                    "text": "Stored"
+                  }
+                }
+              ]
+            },
+            "version": "v1"
+          }
+        },
+        "PUT /docs/doc": {
+          "status": 500,
+          "text": "db password=hunter2 at 10.0.0.5"
+        }
+      },
+      "name": "custom source: a 500 on save is SOURCE_UNAVAILABLE in generic words; memory reloads and the undo step is gone",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Lost"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host could not save this document, so nothing was saved. Try again.",
+                  "retryable": true
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "h1658c4f1714cde",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "Stored"
+                  }
+                ]
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "history.undo",
+                    "args": {}
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "revision": "h1658c4f1714cde",
+                "error": {
+                  "code": "NOTHING_TO_UNDO",
+                  "message": "This session has no step to undo.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "content-type": "application/json",
+            "blok-if-version": "v1",
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          },
+          "body": {
+            "title": "Lost",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "Stored"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /docs/down": {
+          "status": 503,
+          "json": {}
+        },
+        "GET /docs/bad-id": {
+          "status": 422,
+          "json": {
+            "message": "Ids here are numbers."
+          }
+        },
+        "GET /docs/locked": {
+          "status": 403,
+          "json": {}
+        },
+        "GET /docs/doc": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": [
+                {
+                  "id": "p1",
+                  "type": "paragraph",
+                  "data": {
+                    "text": "Stored"
+                  }
+                }
+              ]
+            },
+            "version": "v1"
+          }
+        },
+        "PUT /docs/doc": {
+          "status": 403,
+          "json": {
+            "message": "You may not edit this page."
+          }
+        }
+      },
+      "name": "custom source: refusals map to codes, with the store's message or Blok's words",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "down",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host could not load this document. Try again.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "bad-id",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "INVALID_ARGS",
+                  "message": "Ids here are numbers.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "locked",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "The host does not allow this.",
+                  "retryable": false
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Nope"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "You may not edit this page.",
+                  "retryable": false
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "down",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/down",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "bad-id",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/bad-id",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "locked",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/locked",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "content-type": "application/json",
+            "blok-if-version": "v1",
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          },
+          "body": {
+            "title": "Nope",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "Stored"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /docs/shapeless": {
+          "status": 200,
+          "json": {
+            "data": {
+              "title": "No blocks"
+            },
+            "version": "v1"
+          }
+        },
+        "GET /docs/missing-data": {
+          "status": 200,
+          "json": {
+            "version": "v1"
+          }
+        },
+        "GET /docs/deep": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": [],
+              "meta": {
+                "a": {
+                  "a": {
+                    "a": {
+                      "a": {
+                        "a": {
+                          "a": {
+                            "a": {
+                              "a": {
+                                "a": {
+                                  "a": {
+                                    "a": {
+                                      "a": {
+                                        "a": {
+                                          "a": {
+                                            "a": {
+                                              "a": {
+                                                "a": {
+                                                  "a": {
+                                                    "a": {
+                                                      "a": {
+                                                        "a": {
+                                                          "a": {
+                                                            "a": {
+                                                              "a": {
+                                                                "a": {
+                                                                  "a": {
+                                                                    "a": {
+                                                                      "a": {
+                                                                        "a": {
+                                                                          "a": {
+                                                                            "a": {
+                                                                              "a": {
+                                                                                "a": {
+                                                                                  "a": {
+                                                                                    "a": {
+                                                                                      "a": {
+                                                                                        "a": {
+                                                                                          "a": {
+                                                                                            "a": {
+                                                                                              "a": {
+                                                                                                "a": {
+                                                                                                  "a": {
+                                                                                                    "a": {
+                                                                                                      "a": {
+                                                                                                        "a": {
+                                                                                                          "a": {
+                                                                                                            "a": {
+                                                                                                              "a": {
+                                                                                                                "a": "x"
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "version": "v1"
+          }
+        },
+        "GET /docs/lone": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": [
+                {
+                  "id": "p1",
+                  "type": "paragraph",
+                  "data": {
+                    "text": "a\ud800b"
+                  }
+                }
+              ]
+            },
+            "version": "v1"
+          }
+        }
+      },
+      "name": "custom source: a document without blocks or nested too deep is SOURCE_UNAVAILABLE, and a lone surrogate reads as U+FFFD",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "shapeless",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host's document \"shapeless\" is not a Blok document: expected an object with a \"blocks\" array.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "missing-data",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host's document \"missing-data\" is not a Blok document: expected an object with a \"blocks\" array.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "deep",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host's document \"deep\" nests deeper than 48 levels of objects and arrays.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "lone",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "h1f106db5004df0",
+                "rootId": null,
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "a�b"
+                  }
+                ]
+              },
+              "isError": false
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "shapeless",
+            "write": false
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/shapeless",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "missing-data",
+            "write": false
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/missing-data",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "deep",
+            "write": false
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/deep",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "lone",
+            "write": false
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/lone",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "lone",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /docs/empty-version": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": [
+                {
+                  "id": "p1",
+                  "type": "paragraph",
+                  "data": {
+                    "text": "x"
+                  }
+                }
+              ]
+            },
+            "version": ""
+          }
+        },
+        "GET /docs/doc": {
+          "status": 200,
+          "json": {
+            "data": {
+              "blocks": [
+                {
+                  "id": "p1",
+                  "type": "paragraph",
+                  "data": {
+                    "text": "x"
+                  }
+                }
+              ]
+            },
+            "version": "v1"
+          }
+        },
+        "PUT /docs/doc": {
+          "status": 200,
+          "json": {}
+        }
+      },
+      "name": "custom source: a load or save answered without a version is SOURCE_UNAVAILABLE",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "empty-version",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host could not load this document. Try again.",
+                  "retryable": true
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": {
+              "pointer": "/result/structuredContent/handle",
+              "optional": true
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "x"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "SOURCE_UNAVAILABLE",
+                  "message": "The host could not save this document, so nothing was saved. Try again.",
+                  "retryable": true
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "empty-version",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/empty-version",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "content-type": "application/json",
+            "blok-if-version": "v1",
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          },
+          "body": {
+            "title": "x",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "x"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "local",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:local:mcp-client",
+            "blok-caller-on-behalf-of": "local"
+          }
+        }
+      ]
+    },
+    {
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize"
+      ],
+      "name": "custom source: --example-source with --source stops the example at start",
+      "stderrPattern": "--example-source cannot be combined with --source",
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": {
+          "pattern": "--example-source cannot be combined with --source"
+        }
+      },
+      "expectHostRequests": []
+    },
+    {
+      "transport": "cli",
+      "argv": [
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--ticket-url",
+        "${host}/tickets",
+        "--sync-url",
+        "ws://127.0.0.1:9/sync"
+      ],
+      "name": "custom source: counts as a source, so --ticket-url without --authorize stops the example at start",
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token"
+      },
+      "stderrPattern": "needs a per-document check",
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": {
+          "pattern": "needs a per-document check"
+        }
+      },
+      "expectHostRequests": []
     }
   ]
 }

@@ -407,9 +407,21 @@ const blokOwned = (message: unknown): unknown => {
   return isRecord(message.result) ? { result: blokOwnedResult(message.result) } : message;
 };
 
-/** The argv without the embed example's own --example-* flags, each with its value. */
+/**
+ * The argv without the embed example's own --example-* flags, each with its value.
+ * --example-source stays as --source: a host's source counts as one in the contract flags.
+ */
 const blokArgv = (argv: string[]): string[] =>
-  argv.filter((arg, index) => !arg.startsWith('--example-') && !(argv[index - 1] ?? '').startsWith('--example-'));
+  argv.flatMap((arg, index) => {
+    if (arg === '--example-source') {
+      return ['--source'];
+    }
+    if (argv[index - 1] === '--example-source') {
+      return [arg];
+    }
+
+    return arg.startsWith('--example-') || (argv[index - 1] ?? '').startsWith('--example-') ? [] : [arg];
+  });
 
 const sha256 = (bytes: Buffer): string => createHash('sha256').update(bytes).digest('hex');
 

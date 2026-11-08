@@ -47,7 +47,11 @@ export interface RecordedRequest {
 }
 
 // Header names a request record keeps; everything else varies by client library.
-const RECORDED_HEADERS = ['authorization', 'content-type', 'blok-doc-version', 'origin', 'sec-websocket-protocol'];
+const RECORDED_HEADERS = [
+  'authorization', 'content-type', 'blok-doc-version', 'origin', 'sec-websocket-protocol',
+  // The embed example's custom document source (packages/mcp/examples/embed/server.mjs).
+  'blok-if-version', 'blok-caller', 'blok-caller-client', 'blok-caller-actor', 'blok-caller-on-behalf-of',
+];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);

@@ -27,9 +27,7 @@
 //! body cap of its own. Those, like OAuth, belong to your server.
 //!
 //! rmcp stamps no serverInfo on 2026-07-28 results, so this host stamps its
-//! own on every one (`stamp`), Blok's included. And rmcp refuses a 2025
-//! request that comes before initialize, which Node's SDK serves, so stdio
-//! starts a session for such a client first (`stdio_session`).
+//! own on every one (`stamp`), Blok's included.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -663,105 +661,13 @@ async fn serve_http(listen: &str, host: Host) -> Result<(), Stop> {
     Ok(())
 }
 
-// The id of the initialize `stdio_session` sends for a client that sent none.
-const STAND_IN: &str = "host-example stand-in initialize";
-
-/// The initialize and initialized lines for a client whose first request
-/// is a 2025 one with no initialize before it, as Node's SDK serves it.
-/// rmcp refuses such a request until a session starts; this starts one.
-fn stand_in(first: &str) -> Option<String> {
-    let message: Value = serde_json::from_str(first).ok()?;
-    message.get("id")?;
-    if message.get("method").and_then(Value::as_str)? == "initialize" {
-        return None;
-    }
-    let claim = message
-        .pointer("/params/_meta/io.modelcontextprotocol~1protocolVersion")
-        .and_then(Value::as_str);
-    if claim.is_some_and(|v| v >= MODERN) {
-        return None;
-    }
-    // An empty client name reads as no name, as Node's SDK has none.
-    let initialize = json!({
-        "jsonrpc": "2.0",
-        "id": STAND_IN,
-        "method": "initialize",
-        "params": { "protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": { "name": "", "version": "" } },
-    });
-    Some(format!(
-        "{initialize}\n{}\n",
-        json!({ "jsonrpc": "2.0", "method": "notifications/initialized" })
-    ))
-}
-
-/// stdin and stdout for rmcp, unchanged but for the stand-in session start:
-/// its answer is the only line kept from stdout.
-/// The task that writes stdout ends after rmcp's last answer.
-type StdioSession = (
-    (
-        tokio::io::ReadHalf<tokio::io::DuplexStream>,
-        tokio::io::WriteHalf<tokio::io::DuplexStream>,
-    ),
-    tokio::task::JoinHandle<()>,
-);
-
-fn stdio_session() -> StdioSession {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    let (ours, theirs) = tokio::io::duplex(1 << 16);
-    let (from_rmcp, mut to_rmcp) = tokio::io::split(ours);
-    tokio::spawn(async move {
-        let mut lines = BufReader::new(tokio::io::stdin()).lines();
-        let mut first = true;
-        while let Ok(Some(line)) = lines.next_line().await {
-            if std::mem::take(&mut first)
-                && let Some(start) = stand_in(&line)
-                && to_rmcp.write_all(start.as_bytes()).await.is_err()
-            {
-                break;
-            }
-            if to_rmcp
-                .write_all(format!("{line}\n").as_bytes())
-                .await
-                .is_err()
-            {
-                break;
-            }
-        }
-        // stdin ended: so does the session.
-        let _ = to_rmcp.shutdown().await;
-    });
-    let written = tokio::spawn(async move {
-        let mut lines = BufReader::new(from_rmcp).lines();
-        let mut stdout = tokio::io::stdout();
-        while let Ok(Some(line)) = lines.next_line().await {
-            let own = serde_json::from_str::<Value>(&line)
-                .is_ok_and(|message| message.get("id") == Some(&json!(STAND_IN)));
-            if own {
-                continue;
-            }
-            if stdout
-                .write_all(format!("{line}\n").as_bytes())
-                .await
-                .is_err()
-            {
-                break;
-            }
-            let _ = stdout.flush().await;
-        }
-    });
-    (tokio::io::split(theirs), written)
-}
-
 async fn serve_stdio(host: Host) {
     let blok = host.blok.clone();
-    let (transport, written) = stdio_session();
     let mut serving = std::pin::pin!(async {
         // A client that leaves before initialize ends the session; that is a clean exit.
-        if let Ok(running) = host.serve(transport).await {
+        if let Ok(running) = host.serve((tokio::io::stdin(), tokio::io::stdout())).await {
             let _ = running.waiting().await;
         }
-        // The answers rmcp wrote last are still on their way to stdout.
-        let _ = tokio::time::timeout(DRAIN_LIMIT, written).await;
     });
     tokio::select! {
         () = &mut serving => {}

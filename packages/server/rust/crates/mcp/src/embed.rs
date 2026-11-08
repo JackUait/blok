@@ -187,9 +187,12 @@ impl BlokTools {
             return Err(StartError::Config(refusal));
         }
         let version = bundle.call_text("version", "{}").await?;
-        let mcp = Mcp::with_hooks(bundle, &checked, hooks)
+        let mcp = Mcp::build(bundle, &checked, hooks)
             .await
-            .map_err(|fault| StartError::Failed(fault_text(fault)))?;
+            .map_err(|err| match err {
+                crate::server::BuildError::Config(message) => StartError::Config(message),
+                crate::server::BuildError::Failed(message) => StartError::Failed(message),
+            })?;
         let mcp = Arc::new(mcp);
         mcp.spawn_sweeper();
         Ok(BlokTools {
@@ -555,13 +558,6 @@ fn names(entries: &[Value]) -> Vec<String> {
         .filter_map(name_of)
         .map(str::to_owned)
         .collect()
-}
-
-fn fault_text(fault: crate::errors::Fault) -> String {
-    match fault {
-        crate::errors::Fault::Internal(message) => message,
-        crate::errors::Fault::Host(error) => error.error.to_string(),
-    }
 }
 
 /// Node's checkEmbedOptions, in its order.

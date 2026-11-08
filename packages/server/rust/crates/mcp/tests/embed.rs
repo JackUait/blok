@@ -328,3 +328,49 @@ async fn parse_reads_the_flags_that_start_refuses() {
         other => panic!("{other:?}"),
     }
 }
+
+// Node's createBlok throws McpConfigError for every bad option or hook, so a
+// host's start fails as a refusal (exit 2), never as a crash (exit 1).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_hook_that_clashes_with_an_option_is_a_config_refusal() {
+    let dir = docs();
+    let hooks = Hooks {
+        source: Some(Arc::new(NoSource)),
+        ..allow_all()
+    };
+    assert_eq!(
+        refusal(files(&dir), hooks, EmbedHooks::default()).await,
+        "hooks.source (the host's own document source) cannot be combined with options.source"
+    );
+}
+
+struct NoSource;
+
+impl blok_mcp::document_source::DocumentSource for NoSource {
+    fn load(
+        &self,
+        _: blok_mcp::document_source::DocumentCaller,
+        _: String,
+    ) -> blok_mcp::uploads::BoxFuture<
+        '_,
+        Result<
+            Option<blok_mcp::document_source::StoredDocument>,
+            blok_mcp::document_source::SourceError,
+        >,
+    > {
+        Box::pin(async { Ok(None) })
+    }
+
+    fn save(
+        &self,
+        _: blok_mcp::document_source::DocumentCaller,
+        _: String,
+        _: String,
+        _: Option<String>,
+    ) -> blok_mcp::uploads::BoxFuture<
+        '_,
+        Result<Option<String>, blok_mcp::document_source::SourceError>,
+    > {
+        Box::pin(async { Ok(None) })
+    }
+}

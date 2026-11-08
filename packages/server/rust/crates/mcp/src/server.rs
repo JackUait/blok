@@ -378,16 +378,26 @@ pub(crate) async fn option_refusal(
         .map(str::to_owned))
 }
 
-async fn check_options(
-    bundle: &Bundle,
-    options: &Value,
-    authorize: bool,
-    uploads: Option<&crate::uploads::Uploads>,
-    custom_source: bool,
-) -> Result<(), Fault> {
-    match option_refusal(bundle, options, authorize, uploads, custom_source).await? {
-        Some(error) => Err(Fault::Internal(error)),
-        None => Ok(()),
+/// Why `Mcp::build` made no server.
+#[derive(Debug)]
+pub enum BuildError {
+    /// The options or hooks are refused (Node's McpConfigError): exit code 2.
+    Config(String),
+    /// Anything else, such as an engine failure: exit code 1.
+    Failed(String),
+}
+
+impl BuildError {
+    pub fn message(&self) -> &str {
+        match self {
+            BuildError::Config(message) | BuildError::Failed(message) => message,
+        }
+    }
+}
+
+impl From<crate::bundle::BundleError> for BuildError {
+    fn from(err: crate::bundle::BundleError) -> Self {
+        BuildError::Failed(err.0)
     }
 }
 
@@ -429,6 +439,17 @@ impl Mcp {
         options: &Value,
         hooks: Hooks,
     ) -> Result<Mcp, Fault> {
+        Mcp::build(bundle, options, hooks)
+            .await
+            .map_err(|err| Fault::Internal(err.message().to_owned()))
+    }
+
+    /// As `with_hooks`, telling a refused option from a failure.
+    pub async fn build(
+        bundle: Arc<Bundle>,
+        options: &Value,
+        hooks: Hooks,
+    ) -> Result<Mcp, BuildError> {
         let Hooks {
             authorize,
             agent_actor,
@@ -437,20 +458,23 @@ impl Mcp {
             source: custom,
         } = hooks;
         if custom.is_some() && opt(options, "source").is_some() {
-            return Err(Fault::Internal(
+            return Err(BuildError::Config(
                 "hooks.source (the host's own document source) cannot be combined with options.source".to_owned(),
             ));
         }
-        check_options(
+        if let Some(refusal) = option_refusal(
             &bundle,
             options,
             authorize.is_some(),
             uploads.as_ref(),
             custom.is_some(),
         )
-        .await?;
+        .await?
+        {
+            return Err(BuildError::Config(refusal));
+        }
         if let Some(root) = uploads.as_ref().and_then(|u| u.root.as_ref()) {
-            crate::uploads::check_root(root).map_err(Fault::Internal)?;
+            crate::uploads::check_root(root).map_err(BuildError::Config)?;
         }
         let mut flags = surface_flags(options);
         if uploads.is_some() {
@@ -494,7 +518,7 @@ impl Mcp {
             (Some(custom), _) => Some(Source::Custom(CustomSource::new(custom))),
             // A host's source is a trait object; options alone cannot carry one.
             (None, Some(source)) if str_of(source, "kind") == Some("custom") => {
-                return Err(Fault::Internal(
+                return Err(BuildError::Config(
                     "source kind \"custom\" needs the host's source in hooks.source".to_owned(),
                 ));
             }

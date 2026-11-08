@@ -167,6 +167,8 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   editorSlot.setAttribute('data-blok-agent-editor', '');
   panel.id = panelId;
   panel.setAttribute('data-blok-agent-panel', '');
+  // Non-modal: the page editor stays reachable beside the panel, Escape closes
+  // only the panel, and typing in the page is the point of "Cette page".
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-labelledby', titleId);
   panel.setAttribute('hidden', '');

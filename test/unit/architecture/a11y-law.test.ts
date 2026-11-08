@@ -151,6 +151,10 @@ const EXEMPT_NON_MODAL_DIALOGS: Record<string, string> = {
   'tools/video/controls.ts » menu':
     'DELIBERATE — the player settings card is anchored to the gear and non-modal: the video ' +
     'and page stay reachable and an outside press closes it, so aria-modal would be a lie',
+  'shell/agent-assistant.ts » panel':
+    'DELIBERATE — "Non-modal: the page editor stays reachable beside the panel, Escape closes ' +
+    'only the panel, and typing in the page is the point of "Cette page"." Declaring ' +
+    'aria-modal would lie about a background that stays reachable',
 };
 
 interface ScannedFile {
@@ -469,8 +473,13 @@ describe('Accessibility Law', () => {
           .map(() => rel)
       );
 
-      // The spacer grip, the column resizer and the side peek's edge — drag handles with keyboard nudging.
-      expect(new Set(focusable)).toEqual(new Set(['tools/spacer/index.ts', 'tools/columns-shared.ts', 'tools/database/database-card-drawer.ts']));
+      // The spacer grip, the column resizer, the side peek's edge, and the assistant panel width handle.
+      expect(new Set(focusable)).toEqual(new Set([
+        'tools/spacer/index.ts',
+        'tools/columns-shared.ts',
+        'tools/database/database-card-drawer.ts',
+        'shell/agent-assistant.ts',
+      ]));
     });
   });
 

@@ -1,9 +1,12 @@
 import type { ShellPage } from '@blok/sidebar';
+import type { CoverId } from './cover';
+
+export type DesktopPage = ShellPage & { cover?: CoverId };
 
 export interface WorkspaceIndex {
-  pages: ShellPage[];
+  pages: DesktopPage[];
   activeId: string;
-  trash?: ShellPage[];
+  trash?: DesktopPage[];
 }
 
 type TauriWindow = Window & {

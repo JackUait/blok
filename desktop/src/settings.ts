@@ -1,6 +1,7 @@
 import { dataDirectory } from './storage';
 import corePackage from '../../package.json';
 import appPackage from '../package.json';
+import { createAssistant, providerStatus, selectedProvider, setProvider, type Provider } from './assistant';
 
 export type Appearance = 'dark' | 'light' | 'auto';
 
@@ -86,7 +87,7 @@ function actionButton(attribute: string, label: string, kind: 'settings' | 'stor
   return button;
 }
 
-export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): HTMLElement {
+export function createDesktopFooter(onThemeChange: (mode: Appearance) => void, getPageText: () => string = () => ''): HTMLElement {
   const footer = el('div', 'data-desktop-footer');
   const switcher = el('button', 'data-desktop-switcher');
   switcher.type = 'button';
@@ -99,7 +100,9 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const menu = el('div', 'data-desktop-footer-menu');
   menu.setAttribute('role', 'menu');
   menu.hidden = true;
-  const account = el('div', 'data-desktop-menu-account');
+  const account = el('button', 'data-desktop-menu-account');
+  account.type = 'button';
+  account.setAttribute('role', 'menuitem');
   account.append(el('span', 'data-desktop-menu-avatar', 'B'));
   const accountText = el('span', 'data-desktop-menu-account-text');
   accountText.append(el('strong', 'data-desktop-menu-title', 'Espace local'), el('small', 'data-desktop-menu-subtitle', 'Données sur cet appareil'));
@@ -119,10 +122,13 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   dialog.setAttribute('aria-label', 'Réglages');
   dialog.tabIndex = -1;
   const nav = el('aside', 'data-desktop-settings-nav');
-  nav.append(el('div', 'data-desktop-settings-nav-heading', 'Application'));
+  nav.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
+  const accountTab = actionButton('data-desktop-settings-nav-item', 'Profil local', 'settings');
+  nav.append(accountTab, el('div', 'data-desktop-settings-nav-heading', 'Application'));
   const prefsTab = actionButton('data-desktop-settings-nav-item', 'Préférences', 'settings');
+  const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'settings');
   const dataTab = actionButton('data-desktop-settings-nav-item', 'Données locales', 'storage');
-  nav.append(prefsTab, dataTab);
+  nav.append(prefsTab, aiTab, dataTab);
   const main = el('main', 'data-desktop-settings-main');
   const close = el('button', 'data-desktop-settings-close', '×');
   close.type = 'button';
@@ -176,7 +182,7 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   const settingsKey = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') { closeSettings(); return; }
     if (event.key !== 'Tab') return;
-    const controls = [...dialog.querySelectorAll<HTMLButtonElement | HTMLSelectElement>('button, select')];
+    const controls = [...dialog.querySelectorAll<HTMLButtonElement | HTMLSelectElement | HTMLInputElement>('button, select, input:not(:disabled)')];
     const first = controls[0];
     const last = controls[controls.length - 1];
     if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
@@ -190,12 +196,34 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
   close.addEventListener('click', closeSettings);
   overlay.addEventListener('pointerdown', (event) => { if (event.target === overlay) closeSettings(); });
 
-  const showPanel = (panel: 'preferences' | 'data'): void => {
+  const showPanel = (panel: 'account' | 'preferences' | 'ai' | 'data'): void => {
+    accountTab.setAttribute('aria-current', panel === 'account' ? 'page' : 'false');
     prefsTab.setAttribute('aria-current', panel === 'preferences' ? 'page' : 'false');
+    aiTab.setAttribute('aria-current', panel === 'ai' ? 'page' : 'false');
     dataTab.setAttribute('aria-current', panel === 'data' ? 'page' : 'false');
     main.querySelector('[data-desktop-settings-content]')?.remove();
     const content = el('div', 'data-desktop-settings-content');
-    if (panel === 'preferences') {
+    if (panel === 'account') {
+      content.append(el('h1', 'data-desktop-settings-title', 'Profil local'));
+      content.append(el('p', 'data-desktop-settings-intro', 'Cet espace appartient à cet appareil. Aucun compte en ligne n’est connecté.'));
+      content.append(el('h2', 'data-desktop-settings-section', 'Identité affichée'));
+      const row = el('div', 'data-desktop-settings-row');
+      const labels = el('div', 'data-desktop-settings-row-labels');
+      labels.append(el('strong', 'data-desktop-settings-row-title', 'Nom'), el('span', 'data-desktop-settings-row-help', 'Nom local, sans connexion ni partage.'));
+      const name = el('input', 'data-desktop-settings-name');
+      name.type = 'text';
+      name.maxLength = 48;
+      name.value = localStorage.getItem('blok:desktop:profile-name') || 'Espace local';
+      name.setAttribute('aria-label', 'Nom du profil local');
+      name.addEventListener('change', () => {
+        const next = name.value.trim() || 'Espace local';
+        localStorage.setItem('blok:desktop:profile-name', next);
+        switcher.querySelector('[data-desktop-switcher-name]')!.textContent = next;
+        account.querySelector('[data-desktop-menu-title]')!.textContent = next;
+      });
+      row.append(labels, name);
+      content.append(row, el('p', 'data-desktop-settings-explanation', 'Pour partager et modifier des pages à plusieurs via Internet, il faudra connecter l’app à un service avec comptes et droits d’accès. Cette connexion n’est pas encore disponible.'));
+    } else if (panel === 'preferences') {
       content.append(el('h1', 'data-desktop-settings-title', 'Préférences'));
       content.append(el('p', 'data-desktop-settings-intro', 'Personnalisez l’apparence de Blok sur cet appareil.'));
       content.append(el('h2', 'data-desktop-settings-section', 'Apparence'));
@@ -220,6 +248,35 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       });
       row.append(labels, select);
       content.append(row);
+    } else if (panel === 'ai') {
+      content.append(el('h1', 'data-desktop-settings-title', 'Assistant IA'));
+      content.append(el('p', 'data-desktop-settings-intro', 'Utilise les agents installés et connectés sur ce Mac. Les identifiants restent dans leurs outils.'));
+      content.append(el('h2', 'data-desktop-settings-section', 'Fournisseur'));
+      for (const provider of ['codex', 'claude'] as const) {
+        const row = el('div', 'data-desktop-settings-row');
+        const labels = el('div', 'data-desktop-settings-row-labels');
+        labels.append(el('strong', 'data-desktop-settings-row-title', provider === 'codex' ? 'Codex' : 'Claude Code'));
+        const status = el('span', 'data-desktop-settings-row-help', 'Vérification…');
+        labels.append(status);
+        const radio = el('input', 'data-desktop-settings-provider');
+        radio.type = 'radio';
+        radio.name = 'desktop-ai-provider';
+        radio.value = provider;
+        radio.checked = selectedProvider() === provider;
+        radio.setAttribute('aria-label', `Utiliser ${provider === 'codex' ? 'Codex' : 'Claude Code'}`);
+        radio.addEventListener('change', () => { if (radio.checked) setProvider(provider as Provider); });
+        row.append(labels, radio);
+        content.append(row);
+        void providerStatus(provider).then((result) => {
+          status.textContent = !result.installed ? 'Non installé' : result.connected ? `Connecté · ${result.version}` : `Non connecté · ${result.version}`;
+          radio.disabled = !result.connected;
+          if (!result.connected && radio.checked) {
+            const fallback = content.querySelector<HTMLInputElement>('[data-desktop-settings-provider][value="codex"]');
+            if (fallback && !fallback.disabled) { fallback.checked = true; setProvider('codex'); }
+          }
+        }).catch((error: unknown) => { status.textContent = `État indisponible : ${String(error)}`; radio.disabled = true; });
+      }
+      content.append(el('p', 'data-desktop-settings-explanation', 'La demande et, si tu le choisis, le texte de la page sont envoyés à l’agent sélectionné. La connexion de Codex ou Claude Code se fait dans leur CLI.'));
     } else {
       content.append(el('h1', 'data-desktop-settings-title', 'Données locales'));
       content.append(el('p', 'data-desktop-settings-intro', 'Les pages sont enregistrées sur cet appareil.'));
@@ -233,15 +290,21 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
     }
     main.append(content);
   };
+  accountTab.addEventListener('click', () => showPanel('account'));
   prefsTab.addEventListener('click', () => showPanel('preferences'));
+  aiTab.addEventListener('click', () => showPanel('ai'));
   dataTab.addEventListener('click', () => showPanel('data'));
-  preferences.addEventListener('click', () => {
+  const openSettings = (panel: 'account' | 'preferences' | 'ai' | 'data'): void => {
     closeMenu();
-    showPanel('preferences');
+    showPanel(panel);
     overlay.hidden = false;
     dialog.focus();
     document.addEventListener('keydown', settingsKey);
+  };
+  preferences.addEventListener('click', () => {
+    openSettings('preferences');
   });
+  account.addEventListener('click', () => openSettings('account'));
   storage.addEventListener('click', () => {
     closeMenu();
     void navigator.clipboard.writeText(directory).then(() => {
@@ -249,5 +312,12 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void): 
       window.setTimeout(() => { storage.replaceChildren(menuIcon('storage'), document.createTextNode('Copier le chemin des données')); }, 1800);
     });
   });
+  const profileName = localStorage.getItem('blok:desktop:profile-name');
+  if (profileName) {
+    switcher.querySelector('[data-desktop-switcher-name]')!.textContent = profileName;
+    account.querySelector('[data-desktop-menu-title]')!.textContent = profileName;
+  }
+  const assistant = createAssistant(getPageText, () => openSettings('ai'));
+  footer.append(assistant.button);
   return footer;
 }

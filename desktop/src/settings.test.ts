@@ -23,7 +23,8 @@ describe('desktop sidebar footer', () => {
     expect(switcher.getAttribute('aria-expanded')).toBe('true');
     expect(footer.querySelector('[role="menu"]')?.hasAttribute('hidden')).toBe(false);
 
-    const preferences = footer.querySelector('[role="menuitem"]') as HTMLButtonElement;
+    const preferences = [...footer.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+      .find((item) => item.textContent?.includes('Préférences'))!;
     preferences.click();
     const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
     expect(dialog.parentElement?.hasAttribute('hidden')).toBe(false);
@@ -37,5 +38,25 @@ describe('desktop sidebar footer', () => {
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(dialog.parentElement?.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('shows a local profile and AI provider settings', async () => {
+    const root = document.createElement('div');
+    root.setAttribute('data-desktop-shell', '');
+    document.body.append(root);
+    const footer = createDesktopFooter(() => undefined);
+    root.append(footer);
+    footer.querySelector<HTMLButtonElement>('[data-desktop-switcher]')!.click();
+    footer.querySelector<HTMLButtonElement>('[data-desktop-menu-account]')!.click();
+    const dialog = document.querySelector<HTMLElement>('[data-desktop-settings-dialog]')!;
+    expect(dialog.querySelector('[data-desktop-settings-title]')?.textContent).toBe('Profil local');
+    const name = dialog.querySelector<HTMLInputElement>('[data-desktop-settings-name]')!;
+    name.value = 'Mes notes';
+    name.dispatchEvent(new Event('change'));
+    expect(footer.querySelector('[data-desktop-switcher-name]')?.textContent).toBe('Mes notes');
+    [...dialog.querySelectorAll<HTMLButtonElement>('[data-desktop-settings-nav-item]')]
+      .find((item) => item.textContent?.includes('Assistant IA'))!.click();
+    expect(dialog.querySelectorAll('[data-desktop-settings-provider]')).toHaveLength(2);
+    expect(dialog.querySelector('[data-desktop-settings-title]')?.textContent).toBe('Assistant IA');
   });
 });

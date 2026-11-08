@@ -1,8 +1,9 @@
 import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
 import { Database, DatabaseComment, DatabaseRow, Table } from '@bloklabs/core/tools';
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
-import { loadIndex, readFile, writeFile, type WorkspaceIndex } from './storage';
+import { loadIndex, readFile, writeFile, type DesktopPage, type WorkspaceIndex } from './storage';
 import { createDesktopFooter, readAppearance } from './settings';
+import { createPageCover, isCoverId, type CoverId } from './cover';
 
 const desktopTools = {
   ...defaultTools,
@@ -78,7 +79,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     article.setAttribute('data-desktop-document', '');
     const holder = document.createElement('div');
     article.append(holder);
-    frame.canvas.replaceChildren(article);
+    const changeCover = (cover: CoverId | undefined): void => {
+      page.cover = cover;
+      frame.canvas.querySelector('[data-desktop-cover]')?.replaceWith(createPageCover(cover, changeCover));
+      saveManifest();
+    };
+    frame.canvas.replaceChildren(createPageCover(isCoverId(page.cover) ? page.cover : undefined, changeCover), article);
     const instance = new Blok({
       holder,
       tools: desktopTools,
@@ -128,7 +134,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       page.title = command.title;
       if (currentId === page.id) editor?.title.set(command.title);
     } else if (command.type === 'duplicate') {
-      const copy: ShellPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)` };
+      const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)` };
       index.pages.push(copy);
       saveManifest();
       void readFile(page.id).then(async (raw) => {
@@ -170,7 +176,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   });
   frame.element.append(status);
   const sidebar = frame.element.querySelector('[data-blok-sidebar]') as HTMLElement;
-  sidebar.insertBefore(createDesktopFooter((mode) => editor?.theme.set(mode)), sidebar.querySelector('[data-blok-sidebar-edge]'));
+  sidebar.insertBefore(createDesktopFooter((mode) => editor?.theme.set(mode), () =>
+    frame.canvas.querySelector('[data-desktop-document]')?.textContent?.slice(0, 100_000) ?? ''), sidebar.querySelector('[data-blok-sidebar-edge]'));
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));
   observer.observe(sidebar);
   frame.element.setAttribute('data-desktop-workspace', '');

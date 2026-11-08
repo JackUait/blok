@@ -8,6 +8,8 @@
     "allow-close-editor-window",
     "allow-load-workspace-file",
     "allow-save-workspace-file",
-    "allow-workspace-data-directory"
+    "allow-workspace-data-directory",
+    "allow-agent-provider-status",
+    "allow-agent-ask"
   ]
 }

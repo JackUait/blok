@@ -1480,6 +1480,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GALLERY_PREVIEW_BYTES = 662;
     // database.css: a list title gives way to the properties.
     const DATABASE_LIST_TITLE_BYTES = 116;
+    // database.css: the title row keeps 40px with tabs, the tab bar, list and board match Notion's offsets.
+    const DATABASE_VIEW_OFFSETS_BYTES = 502;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1860,7 +1862,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CARD_MOTION_BYTES
       + DATABASE_GROUP_DRAG_BYTES
       + DATABASE_GALLERY_PREVIEW_BYTES
-      + DATABASE_LIST_TITLE_BYTES;
+      + DATABASE_LIST_TITLE_BYTES
+      + DATABASE_VIEW_OFFSETS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

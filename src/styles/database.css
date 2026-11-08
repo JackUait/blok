@@ -1105,6 +1105,8 @@
  * column at the content-area left edge.
  */
 [data-blok-database-board] {
+  /* board.png: Notion's columns start 8px under the 40px title row. */
+  padding-top: var(--blok-space-2);
   padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 
@@ -2608,14 +2610,17 @@ button[data-blok-database-column-count]:hover {
   display: flex;
   align-items: center;
   gap: var(--blok-border-width-hairline);
-  padding: var(--blok-space-1) 0 var(--blok-space-2);
+  /* listview.png: 10px from the pill to row 1, which the list's 4px padding and the row margin make up; gallery cards start 20px under. */
+  padding: var(--blok-space-1) 0 var(--blok-space-1);
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
+/* Notion's title stays put when tabs appear (side-by-side-v1 X2): the row keeps 40px, and the pills start 9px under it. */
 [data-blok-database-title-row] {
   display: flex;
   align-items: center;
-  margin-bottom: var(--blok-space-1);
+  min-height: 40px;
+  margin-bottom: var(--blok-space-1-25);
 }
 
 /* Single-view mode: move centering offset to the row, strip it from the title
@@ -3306,9 +3311,11 @@ button[data-blok-database-column-count]:hover {
  * List wrapper — starts at the text column like the tab bar and runs to the
  * view toolbar's end, as Notion's rows do (notion-spec-2 §21.8).
  */
+/* research/07 "List": the collection is padded 4px on top. */
 [data-blok-database-list] {
   display: flex;
   flex-direction: column;
+  padding-block-start: var(--blok-space-1);
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   padding-inline-end: 0;
 }

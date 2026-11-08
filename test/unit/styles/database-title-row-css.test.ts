@@ -104,6 +104,26 @@ describe('tab row sizes (V26, V32, V33)', () => {
   });
 });
 
+// side-by-side-v1 X2 and Board: pixels of listview.png, listgallery.png, caltimeline.png, board.png.
+describe('vertical offsets match Notion', () => {
+  it('keeps the title row 40px with tabs too, so the title does not move up', () => {
+    const body = rule('[data-blok-database-title-row]');
+
+    expect(body).toMatch(/min-height: 40px/);
+    // With the tab bar's 4px top padding, tab pills start 9px under the title row (Notion: pill drawn at 270, title baseline 248).
+    expect(body).toMatch(/margin-bottom: var\(--blok-space-1-25\)/);
+  });
+
+  it('leaves 4px under the tab pills; the list adds Notion\'s 4px inner padding (research/07 "List")', () => {
+    expect(rule('[data-blok-database-tab-bar]')).toMatch(/padding: var\(--blok-space-1\) 0 var\(--blok-space-1\);/);
+    expect(rule('[data-blok-database-list]')).toMatch(/padding-block-start: var\(--blok-space-1\)/);
+  });
+
+  it('starts the board 8px under the title row (Notion columns at 269, title baseline 248)', () => {
+    expect(rule('[data-blok-database-board]')).toMatch(/padding-top: var\(--blok-space-2\)/);
+  });
+});
+
 describe('dragging a tab (V27)', () => {
   it('the source tab leaves the row, so the others reflow live', () => {
     expect(rule('[data-blok-database-tab][data-blok-database-tab-drag-source]')).toMatch(/display: none/);

@@ -20,8 +20,10 @@ The sidebar footer opens an **Espace local** menu. **Profil local** changes the
 display name on this device; it is not an online account. **Préférences** offers
 a saved light, dark or system appearance; **Données locales** displays the path
 and the Blok and app versions. The footer menu can copy the path directly.
-Each page can have one of six bundled gradient covers. The choice is saved in
-`index.json`, and adding or removing a cover does not change the editor body.
+Each page can have a bundled gradient or image cover. The choice and vertical
+position are saved in `index.json`; adding, changing or removing a cover does
+not change the editor body. The image presets come from the reference desktop
+project's NASA/Webb cover assets.
 
 ## AI assistant
 

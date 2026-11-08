@@ -62,16 +62,22 @@ function chevron(): SVGSVGElement {
   return svg;
 }
 
-function menuIcon(kind: 'settings' | 'storage'): SVGSVGElement {
+type MenuIcon = 'profile' | 'settings' | 'ai' | 'storage';
+
+function menuIcon(kind: MenuIcon): SVGSVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 20 20');
   svg.setAttribute('width', '18');
   svg.setAttribute('height', '18');
   svg.setAttribute('aria-hidden', 'true');
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', kind === 'settings'
-    ? 'M8.7 2.2h2.6l.4 1.8 1.4.8 1.8-.6 1.3 2.2-1.4 1.3v1.6l1.4 1.3-1.3 2.2-1.8-.6-1.4.8-.4 1.8H8.7l-.4-1.8-1.4-.8-1.8.6-1.3-2.2 1.4-1.3V7.7L3.8 6.4l1.3-2.2 1.8.6 1.4-.8.4-1.8ZM10 6.9a3.1 3.1 0 1 0 0 6.2 3.1 3.1 0 0 0 0-6.2Z'
-    : 'M3 5.2h5l1.3 1.5H17v8.1H3V5.2Z');
+  const paths: Record<MenuIcon, string> = {
+    profile: 'M10 10.2a3.1 3.1 0 1 0 0-6.2 3.1 3.1 0 0 0 0 6.2ZM3.7 16.5c.3-2.8 2.7-4.6 6.3-4.6s6 1.8 6.3 4.6H3.7Z',
+    settings: 'M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M8 13v4',
+    ai: 'M10 2.5l1.6 5.1L17 9.2l-5.4 1.6L10 16l-1.6-5.2L3 9.2l5.4-1.6L10 2.5ZM16.5 14.3l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5.5-1.2Z',
+    storage: 'M3 5.2h5l1.3 1.5H17v8.1H3V5.2Z',
+  };
+  path.setAttribute('d', paths[kind]);
   path.setAttribute('fill', 'none');
   path.setAttribute('stroke', 'currentColor');
   path.setAttribute('stroke-width', '1.4');
@@ -80,7 +86,7 @@ function menuIcon(kind: 'settings' | 'storage'): SVGSVGElement {
   return svg;
 }
 
-function actionButton(attribute: string, label: string, kind: 'settings' | 'storage'): HTMLButtonElement {
+function actionButton(attribute: string, label: string, kind: MenuIcon): HTMLButtonElement {
   const button = el('button', attribute);
   button.type = 'button';
   button.append(menuIcon(kind), document.createTextNode(label));
@@ -123,10 +129,10 @@ export function createDesktopFooter(onThemeChange: (mode: Appearance) => void, g
   dialog.tabIndex = -1;
   const nav = el('aside', 'data-desktop-settings-nav');
   nav.append(el('div', 'data-desktop-settings-nav-heading', 'Compte'));
-  const accountTab = actionButton('data-desktop-settings-nav-item', 'Profil local', 'settings');
+  const accountTab = actionButton('data-desktop-settings-nav-item', 'Profil local', 'profile');
   nav.append(accountTab, el('div', 'data-desktop-settings-nav-heading', 'Application'));
   const prefsTab = actionButton('data-desktop-settings-nav-item', 'Préférences', 'settings');
-  const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'settings');
+  const aiTab = actionButton('data-desktop-settings-nav-item', 'Assistant IA', 'ai');
   const dataTab = actionButton('data-desktop-settings-nav-item', 'Données locales', 'storage');
   nav.append(prefsTab, aiTab, dataTab);
   const main = el('main', 'data-desktop-settings-main');

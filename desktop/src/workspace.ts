@@ -3,7 +3,7 @@ import { Database, DatabaseComment, DatabaseRow, Table } from '@bloklabs/core/to
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
 import { loadIndex, readFile, writeFile, type DesktopPage, type WorkspaceIndex } from './storage';
 import { createDesktopFooter, readAppearance } from './settings';
-import { createPageCover, isCoverId, type CoverId } from './cover';
+import { createAddCoverButton, createPageCover, isCoverId, type CoverId } from './cover';
 
 const desktopTools = {
   ...defaultTools,
@@ -77,14 +77,38 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     status.removeAttribute('data-error');
     const article = document.createElement('article');
     article.setAttribute('data-desktop-document', '');
+    const appearance = document.createElement('div');
+    appearance.setAttribute('data-desktop-page-appearance', '');
     const holder = document.createElement('div');
-    article.append(holder);
+    article.append(appearance, holder);
+    let coverNode: HTMLElement | null = null;
+    const renderCover = (): void => {
+      article.toggleAttribute('data-has-cover', isCoverId(page.cover));
+      if (isCoverId(page.cover)) {
+        appearance.replaceChildren();
+        const position = typeof page.coverPosition === 'number' && Number.isFinite(page.coverPosition)
+          ? Math.max(0, Math.min(100, page.coverPosition)) : 50;
+        const next = createPageCover(page.cover, position, changeCover, (value) => {
+          page.coverPosition = value;
+          saveManifest();
+        });
+        if (coverNode) coverNode.replaceWith(next);
+        else frame.canvas.insertBefore(next, article);
+        coverNode = next;
+      } else {
+        coverNode?.remove();
+        coverNode = null;
+        appearance.replaceChildren(createAddCoverButton(changeCover));
+      }
+    };
     const changeCover = (cover: CoverId | undefined): void => {
       page.cover = cover;
-      frame.canvas.querySelector('[data-desktop-cover]')?.replaceWith(createPageCover(cover, changeCover));
+      if (cover === undefined) page.coverPosition = undefined;
+      renderCover();
       saveManifest();
     };
-    frame.canvas.replaceChildren(createPageCover(isCoverId(page.cover) ? page.cover : undefined, changeCover), article);
+    frame.canvas.replaceChildren(article);
+    renderCover();
     const instance = new Blok({
       holder,
       tools: desktopTools,

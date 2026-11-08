@@ -1,17 +1,25 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createPageCover } from './cover';
+import { createAddCoverButton, createPageCover } from './cover';
 
 describe('desktop page cover', () => {
   it('offers a cover, allows replacing it, and allows removing it', () => {
     const change = vi.fn();
-    const empty = createPageCover(undefined, change);
-    expect(empty.hasAttribute('data-has-cover')).toBe(false);
-    empty.querySelector<HTMLButtonElement>('[data-desktop-cover-toggle]')!.click();
-    empty.querySelector<HTMLButtonElement>('[data-cover-id="ocean"]')!.click();
+    const position = vi.fn();
+    createAddCoverButton(change).click();
+    expect(change).toHaveBeenCalledWith('dusk');
+    const covered = createPageCover('dusk', 50, change, position);
+    [...covered.querySelectorAll<HTMLButtonElement>('[data-desktop-cover-actions] > button')]
+      .find((button) => button.textContent === 'Changer la couverture')!.click();
+    covered.querySelector<HTMLButtonElement>('[data-cover-id="ocean"]')!.click();
     expect(change).toHaveBeenCalledWith('ocean');
-    const covered = createPageCover('ocean', change);
-    expect(covered.hasAttribute('data-has-cover')).toBe(true);
-    covered.querySelector<HTMLButtonElement>('[data-desktop-cover-remove]')!.click();
+    covered.querySelector<HTMLButtonElement>('[data-desktop-cover-gallery-head] button')!.click();
     expect(change).toHaveBeenCalledWith(undefined);
+    [...covered.querySelectorAll<HTMLButtonElement>('[data-desktop-cover-actions] > button')]
+      .find((button) => button.textContent === 'Repositionner')!.click();
+    covered.querySelector<HTMLElement>('[data-desktop-cover-drag]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    [...covered.querySelectorAll<HTMLButtonElement>('[data-desktop-cover-actions] > button')]
+      .find((button) => button.textContent === 'Enregistrer la position')!.click();
+    expect(position).toHaveBeenCalledWith(55);
   });
 });

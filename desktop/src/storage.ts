@@ -1,7 +1,7 @@
 import type { ShellPage } from '@blok/sidebar';
 import type { CoverId } from './cover';
 
-export type DesktopPage = ShellPage & { cover?: CoverId };
+export type DesktopPage = ShellPage & { cover?: CoverId; coverPosition?: number };
 
 export interface WorkspaceIndex {
   pages: DesktopPage[];

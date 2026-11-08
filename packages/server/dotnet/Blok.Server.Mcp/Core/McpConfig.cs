@@ -16,6 +16,9 @@ internal abstract record McpSourceConfig
   internal sealed record Files(string Dir) : McpSourceConfig;
 
   internal sealed record Endpoint(string Url, string EndpointAuth, string? List) : McpSourceConfig;
+
+  /// <summary>The host's own store, called in code (BlokMcpOptions.DocumentSource).</summary>
+  internal sealed record Custom(IBlokMcpDocumentSource Source) : McpSourceConfig;
 }
 
 /// <summary>Origins and host names a library endpoint takes; null origins means loopback pages only, null hosts no check.</summary>

@@ -47,6 +47,7 @@ internal sealed class McpServerCore : IAsyncDisposable
     {
       McpSourceConfig.Files files => new FilesSource(files.Dir, bundle),
       McpSourceConfig.Endpoint endpoint => new EndpointSource(endpoint, http),
+      McpSourceConfig.Custom custom => new HostDocumentSource(custom.Source, config.LogError),
       _ => null,
     };
     flags = config.SurfaceFlags();
@@ -469,7 +470,7 @@ internal sealed class McpServerCore : IAsyncDisposable
     {
       return new JsonObject { ["documents"] = new JsonArray(), ["nextCursor"] = null, ["supported"] = false };
     }
-    var listing = await source.ListAsync(limit, query, cursor, cancellationToken);
+    var listing = await source.ForCaller(caller).ListAsync(limit, query, cursor, cancellationToken);
     var documents = (listing["documents"] as JsonArray ?? []).OfType<JsonObject>().ToArray();
     // A listed id is a read; without a hook (stdio) every document is visible.
     var allowed = await Task.WhenAll(documents.Select(doc => AllowedAsync(caller, McpJson.String(doc["id"]) ?? string.Empty, false, cancellationToken)));
@@ -647,7 +648,8 @@ internal sealed class McpServerCore : IAsyncDisposable
     }
     var revision = McpJson.String((await SurfaceAsync(cancellationToken))["contractRevision"]?["stored"]) ?? string.Empty;
 
-    return await StoredSession.OpenAsync(bundle, source, documentId, write, flags, caller.Actor, revision, pages, uploads, cancellationToken);
+    // A host's store acts for the caller that opened the handle, on every load and save.
+    return await StoredSession.OpenAsync(bundle, source.ForCaller(caller), documentId, write, flags, caller.Actor, revision, pages, uploads, cancellationToken, caller);
   }
 
   private void TrackPageClose(Task closing)
@@ -666,16 +668,17 @@ internal sealed class McpServerCore : IAsyncDisposable
       {
         throw McpHostError.Surface("FORBIDDEN", "You may not create a page document here.");
       }
-      var loaded = await source!.LoadAsync(pageId, cancellationToken);
+      var pageSource = source!.ForCaller(caller);
+      var loaded = await pageSource.LoadAsync(pageId, cancellationToken);
 
       // The endpoint source saves without a version check, so this is its only guard against an overwrite.
       if (!loaded.Missing)
       {
         throw McpHostError.Surface("SOURCE_UNAVAILABLE", "The new page id is taken. Try again.");
       }
-      var text = await bundle.CallAsync("mcpDocumentText", new JsonObject { ["document"] = new JsonObject { ["blocks"] = new JsonArray() }, ["form"] = source.DocumentTextForm }, cancellationToken);
+      var text = await bundle.CallAsync("mcpDocumentText", new JsonObject { ["document"] = new JsonObject { ["blocks"] = new JsonArray() }, ["form"] = pageSource.DocumentTextForm }, cancellationToken);
 
-      await source.SaveAsync(pageId, McpJson.String(text["text"])!, loaded.Version, cancellationToken);
+      await pageSource.SaveAsync(pageId, McpJson.String(text["text"])!, loaded.Version, cancellationToken);
 
       return pageId;
     }

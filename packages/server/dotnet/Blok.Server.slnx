@@ -8,4 +8,5 @@
   <Project Path="Blok.Mcp/Blok.Mcp.csproj" />
   <Project Path="Blok.Server.Tests/Blok.Server.Tests.csproj" />
   <Project Path="Blok.Server/Blok.Server.csproj" />
+  <Project Path="examples/Blok.Mcp.EmbedExample/Blok.Mcp.EmbedExample.csproj" />
 </Solution>

@@ -67,13 +67,16 @@ internal sealed class StoredSession : IHandleSession
   /// <summary>Set with a host uploader: runs the batch's upload calls.</summary>
   private UploadPorts? Uploads { get; init; }
 
+  /// <summary>Who opened the handle: page documents its batches make or open act for them, as Node's portsFor(caller).</summary>
+  private McpCaller? Opener { get; init; }
+
   internal static async Task<StoredSession> OpenAsync(
       McpBundle bundle, IDocumentSource source, string documentId, bool write, JsonObject flags, JsonObject actor, string contractRevision,
-      PagePorts? pages, UploadPorts? uploads, CancellationToken cancellationToken)
+      PagePorts? pages, UploadPorts? uploads, CancellationToken cancellationToken, McpCaller? opener = null)
   {
     var first = await source.LoadAsync(documentId, cancellationToken);
 
-    return new StoredSession(bundle, source, documentId, write, flags, actor, contractRevision, first) { Pages = pages, Uploads = uploads };
+    return new StoredSession(bundle, source, documentId, write, flags, actor, contractRevision, first) { Pages = pages, Uploads = uploads, Opener = opener };
   }
 
   public JsonObject Describe()
@@ -150,13 +153,13 @@ internal sealed class StoredSession : IHandleSession
 
     if (write && Pages is not null && IsBatchEnvelope(batch) && PagePorts.HasPageAction(batch))
     {
-      ran = await Pages.RunActionAsync(bundle, input, caller, IsOpenDocumentAsync, cancellationToken);
+      ran = await Pages.RunActionAsync(bundle, input, Opener ?? caller, IsOpenDocumentAsync, cancellationToken);
     }
     else
     {
       if (write && Pages?.Create is not null && IsBatchEnvelope(batch))
       {
-        await Pages.AddCreatedPagesAsync(bundle, input, caller, created, cancellationToken);
+        await Pages.AddCreatedPagesAsync(bundle, input, Opener ?? caller, created, cancellationToken);
       }
       ran = Uploads is null ? await bundle.CallAsync("agentExecute", input, cancellationToken) : await Uploads.ExecuteAsync(bundle, input, cancellationToken);
     }

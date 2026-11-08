@@ -1,3 +1,6 @@
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+
 namespace Blok.Server.Mcp;
 
 /// <summary>What the MCP server serves and who may use it. The same choices as blok-mcp's flags.</summary>
@@ -5,6 +8,12 @@ public sealed class BlokMcpOptions
 {
   /// <summary>A folder of <c>&lt;id&gt;.json</c> documents (blok-mcp <c>--source files:</c>).</summary>
   public string? FilesDirectory { get; set; }
+
+  /// <summary>
+  /// The host's own document store, called in code with the caller that opened each handle.
+  /// Set it, <see cref="FilesDirectory"/> or <see cref="DocumentEndpoint"/>, not two of them.
+  /// </summary>
+  public IBlokMcpDocumentSource? DocumentSource { get; set; }
 
   /// <summary>The host's document route (blok-mcp <c>--source endpoint:</c>). Ignored when <see cref="FilesDirectory"/> is set.</summary>
   public Uri? DocumentEndpoint { get; set; }
@@ -15,8 +24,35 @@ public sealed class BlokMcpOptions
   /// <summary>The optional list route for <see cref="DocumentEndpoint"/> (<c>--source-list</c>).</summary>
   public Uri? DocumentListEndpoint { get; set; }
 
-  /// <summary>The principal of a caller no Blok bearer token names. Defaults to <c>local</c>.</summary>
-  public string Principal { get; set; } = "local";
+  /// <summary>
+  /// The principal of a caller no Blok bearer token names. Defaults to <c>local</c>.
+  /// <c>AddBlokMcp</c> only: on a host's server (<c>WithBlok</c>) use <see cref="Caller"/> or <see cref="AnonymousPrincipal"/>.
+  /// </summary>
+  public string Principal
+  {
+    get => principal ?? "local";
+    set => principal = value;
+  }
+
+  private string? principal;
+
+  /// <summary>The runtime <see cref="BlokMcpCommandLine"/> started, reused rather than started twice.</summary>
+  internal Core.BlokMcpHost? CommandLineHost { get; set; }
+
+  /// <summary>Whether <see cref="Principal"/> was set, which <c>WithBlok</c> refuses.</summary>
+  internal bool PrincipalSet => principal is not null;
+
+  /// <summary>
+  /// <c>WithBlok</c> only: who calls one tools/call, or null for an anonymous caller. The default
+  /// reads the user the host's auth signed in: its <c>sub</c>, else its <c>NameIdentifier</c>, with no scopes.
+  /// </summary>
+  public Func<RequestContext<CallToolRequestParams>, CancellationToken, ValueTask<BlokMcpCallerIdentity?>>? Caller { get; set; }
+
+  /// <summary>
+  /// <c>WithBlok</c> only: serve anonymous callers as this principal. Unset, they are refused.
+  /// Every anonymous caller shares it, and its handle limit: pick a name no real user has.
+  /// </summary>
+  public string? AnonymousPrincipal { get; set; }
 
   /// <summary>How tool schemas are written: <c>envelope</c>, <c>full</c> or <c>mixed</c> (the default).</summary>
   public string? Schema { get; set; }
@@ -148,4 +184,15 @@ public sealed class BlokMcpOAuthOptions
 
   /// <summary>Where the issuer publishes its signing keys.</summary>
   public required Uri JwksUri { get; set; }
+}
+
+/// <summary>Who calls Blok on a host's server, as the host's <see cref="BlokMcpOptions.Caller"/> says.</summary>
+/// <param name="Principal">The caller's stable name. Null or empty: signed in without a name, which Blok refuses.</param>
+public sealed record BlokMcpCallerIdentity(string? Principal)
+{
+  /// <summary>
+  /// OAuth-style scopes. Null (the default) skips Blok's blok.read and blok.write checks, since
+  /// the host owns auth; a list makes Blok enforce them as the standalone server does.
+  /// </summary>
+  public IReadOnlyList<string>? Scopes { get; init; }
 }

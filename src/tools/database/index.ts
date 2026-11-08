@@ -2338,7 +2338,7 @@ export class DatabaseTool implements BlockTool {
    * (research-live-notion.md §4); it needs a host that stores the new page's document.
    */
   public renderSettings(): MenuConfigItem[] {
-    if (this.readOnly || this.linked || this.fullPage || databasePageHost(this.api) === null) return [];
+    if (this.readOnly || this.linked || this.fullPage || this.insideDatabase() || databasePageHost(this.api) === null) return [];
 
     return [{
       icon: IconReplace,
@@ -2347,6 +2347,13 @@ export class DatabaseTool implements BlockTool {
       closeOnActivate: true,
       onActivate: (): void => void this.turnIntoPage(),
     }];
+  }
+
+  /** A database's children are rows, sources and tabs: a page link put there would be turned into a row. */
+  private insideDatabase(): boolean {
+    const parentId = this.block.parentId;
+
+    return parentId !== null && parentId !== undefined && this.api.blocks.getById(parentId)?.name === this.block.name;
   }
 
   /**
@@ -2372,12 +2379,14 @@ export class DatabaseTool implements BlockTool {
     if (pageId === null) return;
     // The save and the host were async: the database may be gone or locked by now.
     if (this.destroyed || this.readOnly || this.api.blocks.getById(id) === null) return;
-    this.movingOut = true;
     this.inOneStep(() => {
       this.api.blocks.insertAt(host.name, { pageId, kind: 'database' }, { position: { before: id } });
       const index = this.api.blocks.getBlockIndex(id);
 
-      if (index !== undefined) void this.api.blocks.delete(index, false);
+      if (index === undefined) return;
+      // Set only once the link is in: a failed insert keeps this database and its backend deletes.
+      this.movingOut = true;
+      void this.api.blocks.delete(index, false);
     });
   }
 

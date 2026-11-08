@@ -327,9 +327,9 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:embed/embed-replace': cmd('embed.setUrl'),
   'menu:embed/embed-copy-url': exempt('clipboard', COPY_URL),
   'menu:paste-menu/paste-menu-*': exempt('gesture-alias', 'Each paste-as menu item is one choice of paste:menu/embed, paste:menu/bookmark, paste:menu/mention or paste:menu/plain.'),
-  // No one-step agent command moves a database between documents. These rebuild it with new ids, as separate undo steps.
-  'menu:page/page-turn-into-inline-database': cmds(['block.insert', 'block.delete'], 'Read the page with the page field, insert its database with its rows as children here, then delete the link.'),
-  'menu:database/database-turn-into-page': cmds(['block.insert', 'block.delete'], 'Insert a page with data { kind: "database" }, in that page (page field) replace the seeded database with this one and its rows, then delete this one.'),
+  // No agent command moves a database between documents. These rebuild it with new ids, in several undo steps.
+  'menu:page/page-turn-into-inline-database': cmds(['database.create', 'database.addProperty', 'database.addRow', 'block.delete'], 'Read the page (page field: needs the host\'s loadDocument and saveDocument), rebuild its database here with database.create, addProperty and addRow, then delete the link.'),
+  'menu:database/database-turn-into-page': cmds(['block.insert', 'block.delete'], 'Editor only: insert a page with data { kind: "database" }, rebuild this database in it (page field: needs loadDocument and saveDocument), then delete this one. Headless hosts cannot insert a page: see KNOWN_GAPS.'),
   'menu:page/page-open-new-tab': exempt('view-only', 'Opens the linked page in a new tab; this document does not change.'),
   'menu:page/page-open-side-peek': exempt('view-only', 'Opens another page in a panel; this document does not change.'),
   'menu:table/table-heading-row': fld('table.withHeadings'),

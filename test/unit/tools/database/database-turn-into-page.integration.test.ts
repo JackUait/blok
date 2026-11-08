@@ -245,6 +245,16 @@ describe('Turn into page on an inline database', () => {
     expect(adapter.deleteRow).not.toHaveBeenCalled();
   }, 30_000);
 
+  it('is not offered on a database inside a database, which refuses a page', async () => {
+    const instance = await boot({ databasePages: true, create: vi.fn() }, {}, [
+      { ...BLOCKS[1], id: 'outer', content: ['db'], data: { ...BLOCKS[1].data, title: 'Outer' } },
+      { ...BLOCKS[1], parent: 'outer', content: [] },
+    ]);
+
+    expect(instance.module.blockManager.blocks.find(block => block.id === 'db')?.parentId).toBe('outer');
+    expect(turnIntoPage(instance)).toBeUndefined();
+  }, 30_000);
+
   it('is not offered unless the host opts into database pages', async () => {
     const instance = await boot({ create: vi.fn() });
 

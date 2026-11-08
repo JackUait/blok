@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { statSync } from 'node:fs';
-import { link, mkdir, open, readdir, readFile, rename, rm, stat, utimes } from 'node:fs/promises';
+import { lstatSync, mkdirSync } from 'node:fs';
+import { link, open, readdir, readFile, rename, rm, stat, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { McpConfigError } from './config';
@@ -38,10 +38,11 @@ import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from
  * tryAdd writes the record, then the meta file, so a crash leaves at most an unreferenced record.
  * remove deletes the meta file, then the record.
  *
- * Privacy: records hold document text, undo steps and principals. The store makes its directory
- * with mode 0700 and opens every file (record, meta, lease, lock, temp) with mode 0600. At start it
- * refuses a directory that already exists and is group- or world-writable, or (POSIX only) is not
- * owned by the user running the server.
+ * Privacy: records hold document text, undo steps and principals. At start, once: create the
+ * directory if missing (recursive, mode 0700), then lstat it and refuse to start (exit 2) unless it
+ * is a directory, not a symlink, has no group or world bits (mode & 0o077 == 0), and, on POSIX, is
+ * owned by the user running the server. Nothing creates it again later: a store whose directory
+ * went away fails each write. Every file (record, meta, lease, lock, temp) is opened with mode 0600.
  */
 
 const HANDLE = /^[A-Za-z0-9_-]{1,128}$/;
@@ -98,28 +99,26 @@ const parseMeta = (text: string | null): Meta | null => {
 const PRIVATE_FILE = 0o600;
 const PRIVATE_DIR = 0o700;
 
-// Another user who can write here could plant a record and take over a handle.
-const checkDirectory = (dir: string): void => {
-  const found = ((): ReturnType<typeof statSync> | undefined => {
-    try {
-      return statSync(dir);
-    } catch {
-      return undefined;
+// Another user who can read here sees documents; one who can write here could plant a record and take over a handle.
+const prepareDirectory = (dir: string): void => {
+  try {
+    mkdirSync(dir, { recursive: true, mode: PRIVATE_DIR });
+  } catch (thrown) {
+    // A file in the way is refused below; anything else means the directory cannot be made.
+    if (code(thrown) !== 'EEXIST') {
+      throw new McpConfigError(`--handle-store cannot create ${dir}: ${thrown instanceof Error ? thrown.message : String(thrown)}`);
     }
-  })();
-
-  if (found === undefined) {
-    return;
   }
+  const found = lstatSync(dir);
   const owner = process.getuid?.();
 
-  if ((found.mode & 0o022) !== 0 || (owner !== undefined && Number(found.uid) !== owner)) {
-    throw new McpConfigError(`--handle-store directory ${dir} is writable by other users: make it owned by this user and not group- or world-writable (chmod 700)`);
+  if (found.isSymbolicLink() || !found.isDirectory() || (found.mode & 0o077) !== 0 || (owner !== undefined && found.uid !== owner)) {
+    throw new McpConfigError(`--handle-store directory ${dir} must be a directory (not a link) owned by this user, with no group or world access (chmod 700)`);
   }
 };
 
 export const createFilesHandleStore = (dir: string, options: FilesHandleStoreOptions = {}): BlokMcpHandleStore => {
-  checkDirectory(dir);
+  prepareDirectory(dir);
   const leaseStaleMs = options.leaseStaleMs ?? LEASE_STALE_MS;
   const heartbeatMs = options.heartbeatMs ?? HEARTBEAT_MS;
   const paths = (handle: string): { record: string; meta: string; lease: string } => ({
@@ -353,7 +352,6 @@ export const createFilesHandleStore = (dir: string, options: FilesHandleStoreOpt
       if (!HANDLE.test(handle)) {
         throw new Error(`blok-mcp handle store: "${handle}" is not a handle`);
       }
-      await mkdir(dir, { recursive: true, mode: PRIVATE_DIR });
       const lock = principalLock(record.principal);
       const mine = token();
 

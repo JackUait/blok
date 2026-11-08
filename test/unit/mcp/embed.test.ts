@@ -352,7 +352,10 @@ describe('parseBlokMcpArgs', () => {
   });
 
   it('makes the files handle store for --handle-store files:<dir>, and none for memory', async () => {
-    const store = (await parseBlokMcpArgs(['--handle-store', 'files:/var/blok/handles'], {})).handleStore;
+    const dir = await mkdtemp(join(tmpdir(), 'blok-embed-handles-'));
+    const store = (await parseBlokMcpArgs(['--handle-store', `files:${dir}`], {})).handleStore;
+
+    await rm(dir, { recursive: true, force: true });
 
     expect(store).toEqual({ count: expect.any(Function), tryAdd: expect.any(Function), acquire: expect.any(Function), remove: expect.any(Function) });
     expect((await parseBlokMcpArgs(['--handle-store', 'memory'], {})).handleStore).toBeUndefined();

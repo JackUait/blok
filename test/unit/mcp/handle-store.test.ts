@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -212,13 +212,16 @@ describe('the files handle store', () => {
     expect(readdirSync(dir).filter((name) => name.endsWith('.tmp'))).toEqual([]);
   });
 
-  it('makes the directory on the first add', async () => {
+  it('makes the directory at start, and does not make it again once it is gone', async () => {
     const dir = join(tempDir(), 'nested', 'handles');
     const store = createFilesHandleStore(dir);
 
-    expect(await store.count('alice', 60_000)).toBe(0);
+    expect(statSync(dir).isDirectory()).toBe(true);
     expect(await store.tryAdd('h1', record('alice'), 8, 60_000)).toBe(true);
     expect(existsSync(join(dir, 'h1.record.json'))).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+    await expect(store.tryAdd('h2', record('alice'), 8, 60_000)).rejects.toThrow();
+    expect(existsSync(dir)).toBe(false);
   });
 
   it('keeps its files private: the directory it makes is 0700 and every file 0600', async () => {
@@ -238,13 +241,29 @@ describe('the files handle store', () => {
     expect(statSync(join(dir, 'h1.meta.json')).mode & 0o777).toBe(0o600);
   });
 
-  it.skipIf(process.platform === 'win32').each([['group', 0o770], ['world', 0o707]])('refuses to start on a %s-writable directory', (_who, mode) => {
-    const dir = tempDir();
+  const unsafe = (dir: string): McpConfigError => new McpConfigError(
+    `--handle-store directory ${dir} must be a directory (not a link) owned by this user, with no group or world access (chmod 700)`,
+  );
 
-    chmodSync(dir, mode);
-    expect(() => createFilesHandleStore(dir)).toThrow(new McpConfigError(
-      `--handle-store directory ${dir} is writable by other users: make it owned by this user and not group- or world-writable (chmod 700)`,
-    ));
+  it.skipIf(process.platform === 'win32').each([['group-writable', 0o770], ['world-writable', 0o707], ['group-readable', 0o750], ['world-readable', 0o705]])(
+    'refuses to start on a %s directory',
+    (_who, mode) => {
+      const dir = tempDir();
+
+      chmodSync(dir, mode);
+      expect(() => createFilesHandleStore(dir)).toThrow(unsafe(dir));
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')('refuses to start on a link to a directory, and on a file', () => {
+    const target = tempDir();
+    const link = join(tempDir(), 'handles');
+    const file = join(tempDir(), 'file');
+
+    symlinkSync(target, link);
+    writeFileSync(file, '');
+    expect(() => createFilesHandleStore(link)).toThrow(unsafe(link));
+    expect(() => createFilesHandleStore(file)).toThrow(unsafe(file));
   });
 
   it('takes over a lease whose holder stopped refreshing it, and the old holder can no longer save', async () => {

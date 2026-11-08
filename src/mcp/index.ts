@@ -14,6 +14,8 @@ import { assembleMcp, STOP_DRAIN_MS } from './server';
 import { wellFormedIdsStdio } from './wire-ids';
 
 export type { BlokMcpOptions } from './options';
+export { createBlok } from './embed';
+export type { BlokCallerIdentity, BlokEmbedOptions, BlokMcp, BlokMcpHandlers, BlokMcpHostSurface, CreateBlokHooks } from './embed';
 
 // A pipe on macOS takes writes later, so process.exit would cut off an answer the client reads slowly.
 const flushStdout = async (graceMs: number): Promise<void> => {
@@ -125,18 +127,24 @@ const stopOnShutdown = (server: { stop(): Promise<void> }, watchStdin: boolean):
   }
 };
 
+/** The blok-mcp flags and env as options, with the --authorize hook and manifest files loaded. */
+export const parseBlokMcpArgs = async (argv: string[], env: NodeJS.ProcessEnv): Promise<BlokMcpOptions> => {
+  const { options, files } = parseMcpArgs(argv, env);
+  const authorize = files.authorize === undefined ? undefined : await loadAuthorizeHook(files.authorize);
+
+  return {
+    ...options,
+    ...(authorize !== undefined && { authorize }),
+    ...await readManifestFiles(files),
+  };
+};
+
 export const runCli = async (argv: string[], env: NodeJS.ProcessEnv): Promise<void> => {
   const state: { server?: { stop(): Promise<void> } } = {};
 
   try {
-    const { options, files } = parseMcpArgs(argv, env);
-
-    const authorize = files.authorize === undefined ? undefined : await loadAuthorizeHook(files.authorize);
-    const server = createBlokMcpServer({
-      ...options,
-      ...(authorize !== undefined && { authorize }),
-      ...await readManifestFiles(files),
-    });
+    const options = await parseBlokMcpArgs(argv, env);
+    const server = createBlokMcpServer(options);
 
     state.server = server;
     await server.start();

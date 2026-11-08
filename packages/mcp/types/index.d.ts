@@ -105,3 +105,123 @@ export interface McpUploads {
 }
 
 export declare function createBlokMcpServer(options: BlokMcpOptions): { start(): Promise<void>; stop(): Promise<void> };
+
+/** The `blok-mcp` flags and env as options, with the `--authorize` hook and the manifest files loaded. */
+export declare function parseBlokMcpArgs(argv: string[], env: Record<string, string | undefined>): Promise<BlokMcpOptions>;
+
+/** The same options as the standalone server. The host owns the transport and sign-in, so both are optional. */
+export type BlokEmbedOptions = Omit<BlokMcpOptions, 'transport' | 'auth'> & Partial<Pick<BlokMcpOptions, 'transport' | 'auth'>>;
+
+/** The parts of an `@modelcontextprotocol/server` request context Blok reads. The SDK's `ServerContext` fits it. */
+export interface BlokMcpRequestContext {
+  mcpReq: { signal: AbortSignal; envelope?: unknown; inputResponses?: unknown };
+  http?: { authInfo?: { extra?: Record<string, unknown> } };
+}
+
+/** Who the host says calls. No principal (or an empty one) means signed in without a name. */
+export interface BlokCallerIdentity {
+  principal?: string | null;
+  /** OAuth-style scopes; null or absent skips Blok's `blok.read` / `blok.write` checks. */
+  scopes?: readonly string[] | null;
+}
+
+export interface CreateBlokHooks {
+  /**
+   * The signed-in caller of one `tools/call`, or null/undefined for an anonymous one.
+   * Default: `ctx.http.authInfo`, named by its `extra.sub`. An anonymous caller gets the
+   * protocol error "Blok needs a signed-in caller."; an unnamed one "Blok needs a named caller (sub or NameIdentifier).".
+   */
+  caller?(ctx: BlokMcpRequestContext): BlokCallerIdentity | null | undefined | Promise<BlokCallerIdentity | null | undefined>;
+  /** Serve anonymous callers as this principal. Absent: they are refused. */
+  anonymousPrincipal?: string;
+}
+
+/** An `@modelcontextprotocol/server` low-level `Server`, or an `McpServer` (its `.server` is used). */
+export type BlokMcpSdkServer = { setRequestHandler: unknown } | { server: { setRequestHandler: unknown } };
+
+export interface BlokMcpToolEntry {
+  name: string;
+  description?: string;
+  inputSchema: { type: 'object'; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+export interface BlokMcpPromptEntry {
+  name: string;
+  [key: string]: unknown;
+}
+
+export interface BlokMcpToolCall {
+  params: { name: string; arguments?: Record<string, unknown> };
+}
+
+export interface BlokMcpPromptGet {
+  params: { name: string; arguments?: Record<string, string> };
+}
+
+/** The one question Blok asks the client's person: approve a change a person guarded (a locked database). */
+export interface BlokMcpApprovalRequest {
+  method: 'elicitation/create';
+  params: {
+    mode: 'form';
+    message: string;
+    requestedSchema: {
+      type: 'object';
+      properties: Record<string, { type: 'boolean'; title?: string; description?: string; default?: boolean }>;
+      required?: string[];
+    };
+  };
+}
+
+/** A `tools/call` result, or an `input_required` result asking for approval (the SDK turns it into elicitation for 2025 clients). */
+export type BlokMcpCallResult = { content: Array<{ type: 'text'; text: string }>; structuredContent?: Record<string, unknown>; isError?: boolean; [key: string]: unknown }
+  | { resultType: 'input_required'; inputRequests: Record<string, BlokMcpApprovalRequest>; [key: string]: unknown };
+
+export interface BlokMcpPromptResult {
+  description?: string;
+  messages: Array<{ role: 'user' | 'assistant'; content: { type: 'text'; text: string } }>;
+  [key: string]: unknown;
+}
+
+/** Blok's answers for one server, for a host that installs the four handlers itself. */
+export interface BlokMcpHandlers {
+  ownsTool(name: string): boolean;
+  ownsPrompt(name: string): boolean;
+  listTools(): { tools: BlokMcpToolEntry[] };
+  listPrompts(): { prompts: BlokMcpPromptEntry[] };
+  /** Throws Blok's protocol errors (-32602, -32603, -32600 for the caller) for the SDK to send. */
+  callTool(request: BlokMcpToolCall, ctx: BlokMcpRequestContext): Promise<BlokMcpCallResult>;
+  getPrompt(request: BlokMcpPromptGet): BlokMcpPromptResult;
+}
+
+/** The host's own tools and prompts, served next to Blok's by `attach`. Other names reach these handlers. */
+export interface BlokMcpHostSurface {
+  tools?: BlokMcpToolEntry[];
+  callTool?(request: BlokMcpToolCall, ctx: BlokMcpRequestContext): unknown;
+  prompts?: BlokMcpPromptEntry[];
+  getPrompt?(request: BlokMcpPromptGet, ctx: BlokMcpRequestContext): unknown;
+}
+
+export interface BlokMcp {
+  /** Blok's primer. Put it into your own server's instructions; Blok never sets them. */
+  readonly instructions: string;
+  readonly toolNames: readonly string[];
+  readonly promptNames: readonly string[];
+  readonly version: string;
+  /**
+   * Serves Blok's tools and prompts on your server, next to `host`'s. It adds the tools and
+   * prompts capabilities when missing and changes nothing else. It throws when a host name
+   * is a Blok name, or when the server already answers tools/list, tools/call, prompts/list or prompts/get.
+   */
+  attach(server: BlokMcpSdkServer, host?: BlokMcpHostSurface): void;
+  handlers(server: BlokMcpSdkServer): BlokMcpHandlers;
+  /** Waits for calls in flight and closes every handle. */
+  close(): Promise<void>;
+}
+
+/**
+ * Blok's tools and prompts for your own MCP server. Build it once and attach it to every
+ * server you make (one per request over stateless HTTP). It needs `authorize`, as HTTP does,
+ * and refuses `auth: oauth` and `principal`: your server signs callers in.
+ */
+export declare function createBlok(options: BlokEmbedOptions, hooks?: CreateBlokHooks): BlokMcp;

@@ -166,6 +166,32 @@ internal sealed class SyncSocketMember : ICollabMember
       {
         socket.Abort();
       }
+
+      await AwaitPeerAfterFaultAsync(socket, requestAborted);
+    }
+  }
+
+  /// <summary>
+  /// A frame RFC 6455 refuses (1002, 1007) is closed by the runtime's socket,
+  /// which then marks itself Aborted without tearing down. Disposing it in that
+  /// state aborts the HTTP connection (ASP.NET's AbortStream), and Kestrel drops
+  /// the close frame its transport has not written yet. So the peer gets the
+  /// grace to end its side first. Every abort of our own already aborted the
+  /// request, so it does not wait here.
+  /// </summary>
+  private async Task AwaitPeerAfterFaultAsync(WebSocket socket, CancellationToken requestAborted)
+  {
+    if (socket.State != WebSocketState.Aborted || requestAborted.IsCancellationRequested)
+    {
+      return;
+    }
+
+    try
+    {
+      await Task.Delay(closeGrace, requestAborted);
+    }
+    catch (OperationCanceledException)
+    {
     }
   }
 

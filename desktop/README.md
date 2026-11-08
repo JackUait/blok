@@ -26,6 +26,10 @@ browser's `localStorage` instead of native files.
 The shared sidebar is imported from `src/shell/sidebar.ts` and editor code from
 `src/full.ts`. Install the repository dependencies before building the desktop
 package; Vite resolves those sources and their dependencies from the repository.
+The desktop currently bundles the repository's Blok 2.1.0 source; its own Tauri
+app version is 0.1.0. `defaultTools` contains only paragraphs, headings and
+lists, so the desktop also registers Table, Database, DatabaseRow and
+DatabaseComment explicitly for the slash menu and saved documents.
 `src/editor.css` explicitly includes the root `src/` in Tailwind's source scan;
 without it, editor controls and popovers lose their utility styles in desktop.
 React Grab loads only in Vite/Tauri development, as in the reference desktop

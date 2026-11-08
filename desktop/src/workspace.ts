@@ -1,6 +1,15 @@
 import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
+import { Database, DatabaseComment, DatabaseRow, Table } from '@bloklabs/core/tools';
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
 import { dataDirectory, loadIndex, readFile, writeFile, type WorkspaceIndex } from './storage';
+
+const desktopTools = {
+  ...defaultTools,
+  table: { class: Table },
+  database: { class: Database },
+  'database-row': { class: DatabaseRow },
+  'database-comment': { class: DatabaseComment },
+};
 
 export interface Workspace {
   element: HTMLElement;
@@ -71,7 +80,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     frame.canvas.replaceChildren(article);
     const instance = new Blok({
       holder,
-      tools: defaultTools,
+      tools: desktopTools,
       pageTitle: {
         placeholder: 'Nouvelle page',
         onChange(title) {

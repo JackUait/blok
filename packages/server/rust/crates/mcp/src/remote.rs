@@ -173,6 +173,7 @@ enum Command {
     Execute(ExecuteInput, oneshot::Sender<Result<Executed, Fault>>),
     Read(Value, Value, oneshot::Sender<Result<String, Fault>>),
     IsEmpty(oneshot::Sender<Result<bool, Fault>>),
+    Document(oneshot::Sender<Result<String, Fault>>),
     PagesNeeded(Value, Value, Value, oneshot::Sender<Result<Value, Fault>>),
     Close(oneshot::Sender<Value>),
 }
@@ -188,6 +189,17 @@ impl RemoteRoom {
         let (reply, answer) = oneshot::channel();
         self.commands
             .send(Command::Execute(input, reply))
+            .map_err(|_| Fault::Internal("the room is gone".to_owned()))?;
+        answer
+            .await
+            .map_err(|_| Fault::Internal("the room is gone".to_owned()))?
+    }
+
+    /// The room's document as this copy holds it now.
+    pub async fn document(&self) -> Result<String, Fault> {
+        let (reply, answer) = oneshot::channel();
+        self.commands
+            .send(Command::Document(reply))
             .map_err(|_| Fault::Internal("the room is gone".to_owned()))?;
         answer
             .await
@@ -585,6 +597,16 @@ impl Room {
                     Some(Command::Execute(input, reply)) => {
                         let answer = Box::pin(self.execute(input)).await;
                         let _ = reply.send(answer);
+                    }
+                    Some(Command::Document(reply)) => {
+                        let document = self.export().await;
+                        #[cfg(test)]
+                        let document = if self.shared.bundle.fail_room_read.load(Ordering::SeqCst) {
+                            Err(Fault::Internal("failed for a test".to_owned()))
+                        } else {
+                            document
+                        };
+                        let _ = reply.send(document);
                     }
                     Some(Command::PagesNeeded(batch, actor, approval, reply)) => {
                         let answer = self.pages_needed(&batch, &actor, &approval).await;
@@ -1700,6 +1722,17 @@ impl Room {
         if let Err(err) = applied {
             self.read_only = true;
             return Err(Fault::Internal(err.to_string()));
+        }
+        #[cfg(test)]
+        if self
+            .shared
+            .bundle
+            .fail_after_room_write
+            .load(Ordering::SeqCst)
+        {
+            return Err(Fault::Internal(
+                "failed for a test after the room write".to_owned(),
+            ));
         }
         let after_blocks = blocks_of(&self.export().await?);
         for block in before_blocks.iter().chain(after_blocks.iter()) {

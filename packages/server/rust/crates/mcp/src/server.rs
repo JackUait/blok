@@ -236,6 +236,36 @@ fn agent_error_of(error: &HostError) -> Value {
     agent
 }
 
+/// A server error that stopped a batch after its pages were made. The cause
+/// is blokagent's (pagecreate.rs stopped_after_creating), as the C# and Go
+/// servers give it; the error itself goes only to stderr.
+fn runtime_failure(message: &str) -> HostError {
+    eprintln!("blok-mcp: a batch stopped after its pages were made: {message}");
+    HostError::as_is(json!({
+        "code": "APPLY_FAILED",
+        "message": "The batch stopped on a server error. Nothing was written.",
+        "retryable": true,
+    }))
+}
+
+/// The pages of `created` that `document` links from no page block; None
+/// when it is no document.
+fn unlinked_pages<'a>(document: &str, created: &'a [String]) -> Option<Vec<&'a String>> {
+    let document: Value = serde_json::from_str(document).ok()?;
+    let blocks = document.get("blocks")?.as_array()?;
+    let linked: std::collections::HashSet<&str> = blocks
+        .iter()
+        .filter(|block| str_of(block, "type") == Some("page"))
+        .filter_map(|block| block.pointer("/data/pageId").and_then(Value::as_str))
+        .collect();
+    Some(
+        created
+            .iter()
+            .filter(|page_id| !linked.contains(page_id.as_str()))
+            .collect(),
+    )
+}
+
 /// The bundle's isBatchEnvelope: commands of {name, args, ref?}.
 pub fn is_batch_envelope(batch: &Value) -> bool {
     batch
@@ -756,6 +786,51 @@ impl Mcp {
         }
     }
 
+    /// A batch failed after its pages were made: it fails as Node's
+    /// withUnusedPages fails it, naming the pages `parent` (the parent as
+    /// saved, or the room read again) does not link, with `fault` as cause.
+    /// With no parent to read, or every page linked, `fault` passes on: a
+    /// host must never delete a page the parent may use (blokagent's
+    /// room_links_none).
+    async fn orphaned(&self, created: &[String], parent: Option<&str>, fault: Fault) -> Fault {
+        let Some(unused) = parent.and_then(|parent| unlinked_pages(parent, created)) else {
+            return fault;
+        };
+        if unused.is_empty() {
+            return fault;
+        }
+        let cause = match &fault {
+            Fault::Host(error) => error.clone(),
+            Fault::Internal(message) => runtime_failure(message),
+        };
+        // The bundle sets the cause's retryable by the helper that built it.
+        let cause = match self.error_answer("blok_read", &cause).await {
+            Ok(answer) => serde_json::from_str::<Value>(&answer.structured)
+                .ok()
+                .and_then(|answer| answer.get("error").cloned()),
+            Err(_) => None,
+        };
+        let Some(cause) = cause else {
+            return fault;
+        };
+        let orphaned: Vec<Value> = unused
+            .iter()
+            .map(|page_id| json!({ "command": "block.insert", "type": "page", "prepared": { "pageId": page_id } }))
+            .collect();
+        let message = format!(
+            "The batch failed after the host did work for it ({}). Clean up the listed items.",
+            str_of(&cause, "message").unwrap_or_default()
+        );
+        Fault::Host(HostError {
+            helper: crate::errors::Helper::Failure,
+            error: json!({
+                "code": "ORPHANED_SIDE_EFFECT",
+                "message": message,
+                "details": { "orphaned": orphaned, "cause": cause },
+            }),
+        })
+    }
+
     /// Makes the pages and does the page write a batch needs, in Node's
     /// order: a creation that fails stops there and goes to the bundle,
     /// which refuses that insert inside the batch.
@@ -774,6 +849,11 @@ impl Mcp {
                 Ok(page_id) => work.created.push(page_id),
                 Err(Fault::Host(error)) => {
                     work.create_failure = Some(error.failed_input());
+                    break;
+                }
+                // The bundle refuses the insert and names the pages made so far.
+                Err(Fault::Internal(message)) if !work.created.is_empty() => {
+                    work.create_failure = Some(runtime_failure(&message).failed_input());
                     break;
                 }
                 Err(other) => return Err(other),
@@ -1354,7 +1434,7 @@ impl Mcp {
                     batch: batch.clone(),
                     actor: actor.clone(),
                     approval: asking,
-                    created_pages: work.created,
+                    created_pages: work.created.clone(),
                     create_failure: work.create_failure,
                     page_writes: work.page_writes,
                     uploads: None,
@@ -1364,7 +1444,16 @@ impl Mcp {
                 let mut reads = Vec::new();
                 let executed = loop {
                     input.uploads = self.uploads.as_ref().map(|uploads| uploads.input(&answers));
-                    let executed = room.execute(input.clone()).await?;
+                    let executed = match room.execute(input.clone()).await {
+                        Ok(executed) => executed,
+                        Err(fault) => {
+                            // The room may have written before the error.
+                            let parent = room.document().await.ok();
+                            return Err(self
+                                .orphaned(&work.created, parent.as_deref(), fault)
+                                .await);
+                        }
+                    };
                     match (executed, &self.uploads) {
                         (Executed::Upload(upload), Some(uploads)) if answers.len() < 4 => {
                             answers.push(uploads.answer(&upload, &batch, &mut reads).await);
@@ -1756,7 +1845,14 @@ impl Mcp {
             if let Some(uploads) = &self.uploads {
                 call = call.val("uploads", &uploads.input(&answers));
             }
-            let out = self.bundle.call_raw("agentExecute", &call.finish()).await?;
+            let out = match self.bundle.call_raw("agentExecute", &call.finish()).await {
+                Ok(out) => out,
+                Err(err) => {
+                    return Err(self
+                        .orphaned(&work.created, Some(&stored.document), err.into())
+                        .await);
+                }
+            };
             match (out.value("upload"), &self.uploads) {
                 // A read, then its upload: never more than a few turns.
                 (Some(upload), Some(uploads)) if answers.len() < 4 => {
@@ -1772,22 +1868,35 @@ impl Mcp {
                 requested_schema: ask.get("requestedSchema").cloned().unwrap_or(Value::Null),
             }));
         }
-        let result = out
-            .text("result")
-            .ok_or_else(|| Fault::Internal("agentExecute gave no result".to_owned()))?
-            .to_owned();
-        if let Some(document) = out.text("document") {
-            stored.document = document.to_owned();
-        }
-        if let Some(history) = out.text("history") {
-            stored.history = history.to_owned();
-        }
+        let Some(result) = out.text("result").map(str::to_owned) else {
+            let fault = Fault::Internal("agentExecute gave no result".to_owned());
+            return Err(self
+                .orphaned(&work.created, Some(&stored.document), fault)
+                .await);
+        };
+        // Memory takes a batch to save only once the source has it, so a
+        // failed save leaves no edit and no undo step behind.
+        let keep = |stored: &mut Stored| {
+            if let Some(document) = out.text("document") {
+                stored.document = document.to_owned();
+            }
+            if let Some(history) = out.text("history") {
+                stored.history = history.to_owned();
+            }
+        };
         let mut answer = Obj::new().raw("result", &result);
+        let mut refused = false;
         if out.value("save") == Some(Value::Bool(true)) {
-            let text = out
+            let Some(text) = out
                 .value("documentText")
                 .and_then(|v| v.as_str().map(str::to_owned))
-                .ok_or_else(|| Fault::Internal("agentExecute gave no documentText".to_owned()))?;
+            else {
+                stored.stale = true;
+                let fault = Fault::Internal("agentExecute gave no documentText".to_owned());
+                return Err(self
+                    .orphaned(&work.created, Some(&stored.document), fault)
+                    .await);
+            };
             // As Node: the answer is built before the save, so nothing that can
             // fail follows it, and a failed answer saved nothing a retry repeats.
             let stand_in = saved_version_stand_in();
@@ -1807,7 +1916,9 @@ impl Mcp {
                 Ok(built) => built,
                 Err(fault) => {
                     stored.stale = true;
-                    return Err(fault);
+                    return Err(self
+                        .orphaned(&work.created, Some(&stored.document), fault)
+                        .await);
                 }
             };
             match source
@@ -1815,6 +1926,7 @@ impl Mcp {
                 .await
             {
                 Ok(version) => {
+                    keep(stored);
                     let saved =
                         serde_json::to_string(&version).unwrap_or_else(|_| "null".to_owned());
                     stored.version = version;
@@ -1831,40 +1943,63 @@ impl Mcp {
                     // Memory must match the source: drop the refused work.
                     stored.stale = true;
                     let _ = self.reload(document_id, stored).await;
+                    // A refused save stays unreported (packages/mcp/README.md).
+                    refused = true;
                     match fault {
                         Fault::Host(error) => answer = answer.val("failed", &error.failed_input()),
                         Fault::Internal(message) => return Err(Fault::Internal(message)),
                     }
                 }
             }
+        } else {
+            keep(stored);
         }
         if let Some(delivery) = unconfirmed_delivery(work.unconfirmed, &result, None) {
             answer = answer.val("delivery", &delivery);
         }
-        let raw = self
+        let built = self
             .bundle
             .call_raw("mcpExecuteAnswer", &answer.finish())
-            .await?;
-        Ok(Outcome::Answer(answer_of(&raw)?))
+            .await
+            .map_err(Fault::from)
+            .and_then(|raw| answer_of(&raw));
+        match built {
+            Ok(built) => Ok(Outcome::Answer(built)),
+            Err(fault) if refused => Err(fault),
+            Err(fault) => Err(self
+                .orphaned(&work.created, Some(&stored.document), fault)
+                .await),
+        }
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     async fn stored_write(bundle: Arc<Bundle>) -> (Mcp, std::path::PathBuf, String) {
+        stored_write_with(bundle, json!({})).await
+    }
+
+    async fn stored_write_with(
+        bundle: Arc<Bundle>,
+        extra: Value,
+    ) -> (Mcp, std::path::PathBuf, String) {
         let dir = std::env::temp_dir().join(format!(
             "blok-mcp-answer-{}-{}",
             std::process::id(),
             Arc::as_ptr(&bundle) as usize
         ));
+        let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("doc.json"), r#"{"blocks":[]}"#).unwrap();
-        let options = json!({
+        let mut options = json!({
             "transport": { "kind": "stdio" }, "auth": { "kind": "none" },
             "source": { "kind": "files", "dir": dir.to_string_lossy() },
         });
+        for (key, value) in extra.as_object().unwrap() {
+            options[key] = value.clone();
+        }
         let mcp = Mcp::new(bundle, &options, None, None).await.unwrap();
         let opened = execute(
             &mcp,
@@ -1896,7 +2031,161 @@ mod tests {
     }
 
     fn set_title(handle: &str) -> Value {
-        json!({ "handle": handle, "commands": [{ "name": "doc.setTitle", "args": { "title": "Kept" } }] })
+        titled(handle, "Kept")
+    }
+
+    fn titled(handle: &str, title: &str) -> Value {
+        json!({ "handle": handle, "commands": [{ "name": "doc.setTitle", "args": { "title": title } }] })
+    }
+
+    fn one(handle: &str, name: &str) -> Value {
+        json!({ "handle": handle, "commands": [{ "name": name, "args": {} }] })
+    }
+
+    // A save that never happened must leave memory as the source holds it,
+    // with no undo step that could bring the lost batch back.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_batch_that_fails_before_its_save_leaves_memory_as_the_source() {
+        let bundle = Arc::new(Bundle::new(1).unwrap());
+        let (mcp, dir, handle) = stored_write(bundle.clone()).await;
+        let first = execute(&mcp, "blok_execute", titled(&handle, "First"))
+            .await
+            .unwrap();
+        assert!(!first.is_error, "{}", first.structured);
+        *bundle.drop_member.lock().unwrap() = Some(("agentExecute", "documentText"));
+        let _ = execute(&mcp, "blok_execute", set_title(&handle)).await;
+        *bundle.drop_member.lock().unwrap() = None;
+        let file = || std::fs::read_to_string(dir.join("doc.json")).unwrap();
+        assert!(
+            file().contains("First") && !file().contains("Kept"),
+            "{}",
+            file()
+        );
+        let read = execute(&mcp, "blok_read", json!({ "handle": handle }))
+            .await
+            .unwrap();
+        assert!(
+            read.structured.contains("First") && !read.structured.contains("Kept"),
+            "{}",
+            read.structured
+        );
+        let _ = execute(&mcp, "blok_execute", one(&handle, "history.undo")).await;
+        let _ = execute(&mcp, "blok_execute", one(&handle, "history.redo")).await;
+        assert!(!file().contains("Kept"), "{}", file());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn two_pages(handle: &str) -> Value {
+        json!({ "handle": handle, "commands": [
+            { "name": "block.insert", "args": { "type": "page", "id": "pg1", "data": {} } },
+            { "name": "block.insert", "args": { "type": "page", "id": "pg2", "data": {} } },
+        ] })
+    }
+
+    /// Runs a two-page batch with `break_it` set on the bundle; answers the
+    /// batch's error and the page files on disk.
+    async fn pages_then_failure(break_it: impl FnOnce(&Bundle)) -> (Value, Vec<String>) {
+        let bundle = Arc::new(Bundle::new(1).unwrap());
+        let (mcp, dir, handle) =
+            stored_write_with(bundle.clone(), json!({ "pageTitles": "page-map" })).await;
+        break_it(&bundle);
+        let answer = execute(&mcp, "blok_execute", two_pages(&handle))
+            .await
+            .expect("the made pages are reported, not a JSON-RPC error");
+        assert!(answer.is_error, "{}", answer.structured);
+        assert_eq!(
+            std::fs::read_to_string(dir.join("doc.json")).unwrap(),
+            r#"{"blocks":[]}"#
+        );
+        let mut pages: Vec<String> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .filter_map(|name| name.strip_suffix(".json").map(str::to_owned))
+            .filter(|name| name != "doc")
+            .collect();
+        pages.sort();
+        let _ = std::fs::remove_dir_all(&dir);
+        let error = serde_json::from_str::<Value>(&answer.structured).unwrap()["error"].clone();
+        (error, pages)
+    }
+
+    /// blokagent's cause for a batch a server error stopped, as C# and Go
+    /// report it too (pagecreate.rs stopped_after_creating).
+    /// The bundle adds the failed insert's commandIndex when it fails one.
+    pub(crate) fn assert_server_stop(cause: &Value) {
+        let mut cause = cause.clone();
+        if let Some(cause) = cause.as_object_mut() {
+            cause.remove("commandIndex");
+        }
+        assert_eq!(
+            cause,
+            json!({ "code": "APPLY_FAILED", "message": "The batch stopped on a server error. Nothing was written.", "retryable": true })
+        );
+    }
+
+    fn orphaned_ids(error: &Value) -> Vec<String> {
+        assert_eq!(error["code"], "ORPHANED_SIDE_EFFECT", "{error}");
+        assert_eq!(error["retryable"], false, "{error}");
+        let mut ids: Vec<String> = error["details"]["orphaned"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|entry| {
+                assert_eq!(entry["command"], "block.insert", "{entry}");
+                assert_eq!(entry["type"], "page", "{entry}");
+                entry["prepared"]["pageId"].as_str().unwrap().to_owned()
+            })
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_page_creation_that_breaks_reports_the_pages_already_made() {
+        let (error, pages) = pages_then_failure(|bundle| {
+            *bundle.fail.lock().unwrap() = Some(("mcpDocumentText", "blocks"));
+            bundle
+                .fail_after
+                .store(1, std::sync::atomic::Ordering::SeqCst);
+        })
+        .await;
+        assert_eq!(pages.len(), 1, "{pages:?}");
+        assert_eq!(orphaned_ids(&error), pages);
+        assert_server_stop(&error["details"]["cause"]);
+        assert_eq!(error["details"]["cause"]["commandIndex"], 1, "{error}");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_batch_run_that_breaks_after_its_pages_reports_them() {
+        let (error, pages) = pages_then_failure(|bundle| {
+            *bundle.fail.lock().unwrap() = Some(("agentExecute", "createdPages"));
+        })
+        .await;
+        assert_eq!(pages.len(), 2, "{pages:?}");
+        assert_eq!(orphaned_ids(&error), pages);
+        assert_server_stop(&error["details"]["cause"]);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn an_answer_that_breaks_after_its_pages_reports_them() {
+        let (error, pages) = pages_then_failure(|bundle| {
+            *bundle.fail.lock().unwrap() = Some(("mcpExecuteAnswer", r#""durable":true"#));
+        })
+        .await;
+        assert_eq!(pages.len(), 2, "{pages:?}");
+        assert_eq!(orphaned_ids(&error), pages);
+        assert_server_stop(&error["details"]["cause"]);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_save_text_that_is_missing_after_its_pages_reports_them() {
+        let (error, pages) = pages_then_failure(|bundle| {
+            *bundle.drop_member.lock().unwrap() = Some(("agentExecute", "documentText"));
+        })
+        .await;
+        assert_eq!(pages.len(), 2, "{pages:?}");
+        assert_eq!(orphaned_ids(&error), pages);
+        assert_server_stop(&error["details"]["cause"]);
     }
 
     // Node builds the answer before it saves, so a call that fails to

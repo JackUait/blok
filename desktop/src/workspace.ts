@@ -231,12 +231,18 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   pageCanvas = assistant.editorSlot;
   frame.canvas.append(assistant.element);
   const sidebar = frame.element.querySelector('[data-blok-sidebar]') as HTMLElement;
+  const panel = assistant.element.querySelector<HTMLElement>('[data-blok-agent-panel]')!;
   const assistantButton = createAssistantButton(() => {
-    const panel = assistant.element.querySelector('[data-blok-agent-panel]');
-    if (panel?.hasAttribute('hidden')) assistant.open();
+    if (panel.hidden) assistant.open();
     else assistant.close();
   });
   frame.canvas.append(assistantButton);
+  const syncAssistantButton = (): void => {
+    assistantButton.hidden = !panel.hidden;
+    assistantButton.setAttribute('aria-expanded', String(!panel.hidden));
+  };
+  new MutationObserver(syncAssistantButton).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
+  syncAssistantButton();
   footer = createDesktopFooter((mode) => editor?.theme.set(mode));
   sidebar.insertBefore(footer, sidebar.querySelector('[data-blok-sidebar-edge]'));
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));

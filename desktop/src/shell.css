@@ -227,7 +227,7 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
 }
 [data-desktop-ai-button] img { width: 34px; height: 34px; object-fit: contain; }
 [data-desktop-ai-button]:hover { transform: scale(1.08); }
-[data-desktop-workspace]:has([data-blok-agent-panel]:not([hidden])) [data-desktop-ai-button] { display: none; }
+[data-desktop-ai-button][hidden] { display: none; }
 [data-desktop-ai-button]:hover img, [data-desktop-ai-button][data-thinking] img { animation: blok-mascot-float 1.4s ease-in-out infinite alternate; }
 @keyframes blok-mascot-float { to { transform: translateY(-3px) rotate(4deg); } }
 @media (prefers-reduced-motion: reduce) { [data-desktop-ai-button] img { animation: none !important; } }

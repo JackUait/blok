@@ -145,7 +145,11 @@ export const Floating: Story = {
     const canvas = within(canvasElement);
     await waitFor(() => expect(canvasElement.querySelector('[data-blok-editor]')).toBeTruthy());
     await userEvent.click(canvas.getByRole('button', { name: 'Ouvrir l\'assistant IA' }));
-    expect(canvas.getByRole('dialog', { name: 'Assistant IA' }).getAttribute('data-blok-agent-mode')).toBe('floating');
+    const panel = canvas.getByRole('dialog', { name: 'Assistant IA' });
+    const composer = panel.querySelector('[data-blok-agent-composer]')!;
+    expect(panel.getAttribute('data-blok-agent-mode')).toBe('floating');
+    expect(composer.getBoundingClientRect().right).toBeLessThanOrEqual(panel.getBoundingClientRect().right);
+    expect(composer.getBoundingClientRect().bottom).toBeLessThanOrEqual(panel.getBoundingClientRect().bottom);
   },
 };
 

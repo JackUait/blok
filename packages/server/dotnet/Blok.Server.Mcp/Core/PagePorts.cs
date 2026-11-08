@@ -15,8 +15,8 @@ internal sealed class PagePorts
 
   private const string OpenDocumentMessage = "This page block points at the document you have open. Use doc.setTitle or doc.setIcon instead.";
 
-  /// <summary>Makes one page document and returns its id; null when blok-mcp makes none.</summary>
-  internal Func<McpCaller, CancellationToken, Task<string>>? Create { get; init; }
+  /// <summary>Makes one page document under the parent document id and returns its id; null when blok-mcp makes none.</summary>
+  internal Func<McpCaller, string, CancellationToken, Task<string>>? Create { get; init; }
 
   /// <summary>Opens a page's own document with write access, as blok_open does.</summary>
   internal required Func<string, McpCaller, CancellationToken, Task<IHandleSession>> Open { get; init; }
@@ -40,29 +40,51 @@ internal sealed class PagePorts
 
   /*
    * Makes the batch's pages first and passes their ids as createdPages. A page the host
-   * could not make goes in as createPageFailure: the bundle fails that insert with it.
-   * Any other throw leaves the pages made so far in created, for StrandedAnswerAsync.
+   * could not make goes in as createPageFailure: the bundle fails that insert with it, and
+   * after earlier pages names them as orphans (with commandIndex and revision). A cancel after
+   * a page was made goes in the same way, as CANCELLED. Any other throw leaves the pages made
+   * so far in created, for StrandedAnswerAsync.
    */
-  internal async Task AddCreatedPagesAsync(McpBundle bundle, JsonObject input, McpCaller caller, JsonArray created, CancellationToken cancellationToken)
+  internal async Task AddCreatedPagesAsync(McpBundle bundle, JsonObject input, McpCaller caller, string parentDocumentId, JsonArray created, CancellationToken cancellationToken)
   {
     var needed = await bundle.CallAsync("agentPagesNeeded", input, cancellationToken);
 
     for (var count = PageIds.ToMake(needed); count > 0; count--)
     {
       // A host may ignore the token, so a cancel must also stop the loop here.
+      if (cancellationToken.IsCancellationRequested && created.Count > 0)
+      {
+        input["createPageFailure"] = AsIs(Cancelled);
+        break;
+      }
       cancellationToken.ThrowIfCancellationRequested();
       try
       {
-        created.Add(await Create!(caller, cancellationToken));
+        created.Add(await Create!(caller, parentDocumentId, cancellationToken));
+      }
+      catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested && created.Count > 0)
+      {
+        input["createPageFailure"] = AsIs(Cancelled);
+        break;
       }
       catch (McpHostError error)
       {
         // As the error input mcpErrorAnswer takes: its helper decides retryable.
-        input["createPageFailure"] = error.ToInput("blok_execute");
+        input["createPageFailure"] = error.HostStopped && created.Count > 0 ? AsIs(ServerStop) : error.ToInput("blok_execute");
         break;
       }
     }
     input["createdPages"] = created.DeepClone();
+  }
+
+  /// <summary>Blok.Server's cause for a batch a host failure stopped after it made pages.</summary>
+  internal static JsonObject ServerStop => new() { ["code"] = "APPLY_FAILED", ["message"] = "The batch stopped on a server error. Nothing was written.", ["retryable"] = true };
+
+  private static JsonObject Cancelled => new() { ["code"] = "CANCELLED", ["message"] = "The batch was cancelled. Nothing was written.", ["retryable"] = false };
+
+  private static JsonObject AsIs(JsonObject error)
+  {
+    return new JsonObject { ["tool"] = "blok_execute", ["helper"] = "as-is", ["error"] = error };
   }
 
   /*
@@ -78,9 +100,7 @@ internal sealed class PagePorts
     {
       await Console.Error.WriteLineAsync($"blok-mcp: a batch failed after it made pages: {error}");
     }
-    var cause = cancelled
-        ? new JsonObject { ["code"] = "CANCELLED", ["message"] = "The batch was cancelled. Nothing was written.", ["retryable"] = false }
-        : new JsonObject { ["code"] = "APPLY_FAILED", ["message"] = "The batch stopped on a server error. Nothing was written.", ["retryable"] = true };
+    var cause = cancelled ? Cancelled : ServerStop;
     var orphaned = new JsonArray([.. created.Select(pageId => (JsonNode)new JsonObject
     {
       ["command"] = "block.insert",

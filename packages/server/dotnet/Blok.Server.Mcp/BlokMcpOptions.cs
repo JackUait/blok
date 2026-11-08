@@ -1,3 +1,6 @@
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+
 namespace Blok.Server.Mcp;
 
 /// <summary>What the MCP server serves and who may use it. The same choices as blok-mcp's flags.</summary>
@@ -5,6 +8,12 @@ public sealed class BlokMcpOptions
 {
   /// <summary>A folder of <c>&lt;id&gt;.json</c> documents (blok-mcp <c>--source files:</c>).</summary>
   public string? FilesDirectory { get; set; }
+
+  /// <summary>
+  /// The host's own document store, called in code with the caller that opened each handle.
+  /// Set it, <see cref="FilesDirectory"/> or <see cref="DocumentEndpoint"/>, not two of them.
+  /// </summary>
+  public IBlokMcpDocumentSource? DocumentSource { get; set; }
 
   /// <summary>The host's document route (blok-mcp <c>--source endpoint:</c>). Ignored when <see cref="FilesDirectory"/> is set.</summary>
   public Uri? DocumentEndpoint { get; set; }
@@ -15,8 +24,35 @@ public sealed class BlokMcpOptions
   /// <summary>The optional list route for <see cref="DocumentEndpoint"/> (<c>--source-list</c>).</summary>
   public Uri? DocumentListEndpoint { get; set; }
 
-  /// <summary>The principal of a caller no Blok bearer token names. Defaults to <c>local</c>.</summary>
-  public string Principal { get; set; } = "local";
+  /// <summary>
+  /// The principal of a caller no Blok bearer token names. Defaults to <c>local</c>.
+  /// <c>AddBlokMcp</c> only: on a host's server (<c>WithBlok</c>) use <see cref="Caller"/> or <see cref="AnonymousPrincipal"/>.
+  /// </summary>
+  public string Principal
+  {
+    get => principal ?? "local";
+    set => principal = value;
+  }
+
+  private string? principal;
+
+  /// <summary>The runtime <see cref="BlokMcpCommandLine"/> started, reused rather than started twice.</summary>
+  internal Core.BlokMcpHost? CommandLineHost { get; set; }
+
+  /// <summary>Whether <see cref="Principal"/> was set, which <c>WithBlok</c> refuses.</summary>
+  internal bool PrincipalSet => principal is not null;
+
+  /// <summary>
+  /// <c>WithBlok</c> only: who calls one tools/call, or null for an anonymous caller. The default
+  /// reads the user the host's auth signed in: its <c>sub</c>, else its <c>NameIdentifier</c>, with no scopes.
+  /// </summary>
+  public Func<RequestContext<CallToolRequestParams>, CancellationToken, ValueTask<BlokMcpCallerIdentity?>>? Caller { get; set; }
+
+  /// <summary>
+  /// <c>WithBlok</c> only: serve anonymous callers as this principal. Unset, they are refused.
+  /// Every anonymous caller shares it, and its handle limit: pick a name no real user has.
+  /// </summary>
+  public string? AnonymousPrincipal { get; set; }
 
   /// <summary>How tool schemas are written: <c>envelope</c>, <c>full</c> or <c>mixed</c> (the default).</summary>
   public string? Schema { get; set; }
@@ -87,6 +123,26 @@ public sealed class BlokMcpOptions
   /// <summary><c>page-map</c> turns on page.rename, page.setIcon and page creation (<c>--page-titles</c>). Default <c>off</c>.</summary>
   public string? PageTitles { get; set; }
 
+  /// <summary>
+  /// The host makes each new page document (blok-mcp <c>--create-page</c>). Used only with
+  /// <see cref="PageTitles"/> <c>page-map</c> and a document source, in stored mode: with
+  /// <see cref="SyncUrl"/> or <see cref="LiveRooms"/>, or with no source, the server refuses to start.
+  /// Blok calls only <c>CreateAsync(BlokPageCreateRequest, CancellationToken)</c>, never
+  /// <c>ResolveAsync</c>. A null or empty id refuses (FORBIDDEN); an id that is not 1-512 code
+  /// points, has a control character or a lone surrogate, or is <c>.</c> or <c>..</c>, and any
+  /// throw, is a host error: logged, and the agent sees SOURCE_UNAVAILABLE (or, after earlier
+  /// pages of the batch, ORPHANED_SIDE_EFFECT listing them). With it, Blok neither authorizes,
+  /// checks nor saves the new id: the host owns it. Not taken from the container: set it here.
+  /// </summary>
+  public Blok.Server.Agent.IBlokPageCreator? PageCreator { get; set; }
+
+  /// <summary>
+  /// Where stored-mode handles live, so a call can land on any replica that shares the store
+  /// (blok-mcp <c>--handle-store files:&lt;dir&gt;</c>). Null (the default) keeps them in this
+  /// process, as before. Live handles always stay in the process that opened them.
+  /// </summary>
+  public IBlokMcpHandleStore? HandleStore { get; set; }
+
   /// <summary>The host's custom tool descriptions, as <c>--manifest &lt;file&gt;</c> holds them. Checked at startup.</summary>
   public System.Text.Json.Nodes.JsonObject? Manifest { get; set; }
 
@@ -148,4 +204,15 @@ public sealed class BlokMcpOAuthOptions
 
   /// <summary>Where the issuer publishes its signing keys.</summary>
   public required Uri JwksUri { get; set; }
+}
+
+/// <summary>Who calls Blok on a host's server, as the host's <see cref="BlokMcpOptions.Caller"/> says.</summary>
+/// <param name="Principal">The caller's stable name. Null or empty: signed in without a name, which Blok refuses.</param>
+public sealed record BlokMcpCallerIdentity(string? Principal)
+{
+  /// <summary>
+  /// OAuth-style scopes. Null (the default) skips Blok's blok.read and blok.write checks, since
+  /// the host owns auth; a list makes Blok enforce them as the standalone server does.
+  /// </summary>
+  public IReadOnlyList<string>? Scopes { get; init; }
 }

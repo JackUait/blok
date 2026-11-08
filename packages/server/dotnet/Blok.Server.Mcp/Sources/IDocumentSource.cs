@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Blok.Server.Mcp.Core;
 
 namespace Blok.Server.Mcp.Sources;
 
@@ -22,6 +23,12 @@ internal interface IDocumentSource
   Task<bool> SameDocumentAsync(string first, string second)
   {
     return Task.FromResult(false);
+  }
+
+  /// <summary>The same source acting for one caller. Only a host's source needs one; the others ignore who calls.</summary>
+  IDocumentSource ForCaller(McpCaller caller)
+  {
+    return this;
   }
 
   /// <returns><c>{ documents: [{ id, title }], nextCursor }</c>.</returns>

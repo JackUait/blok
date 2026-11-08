@@ -45,6 +45,12 @@ public sealed class OutboundClientArchitectureTests
   private static readonly string RoomSocketOwner =
       Normalize("Blok.Server.Mcp/Outbound/McpRoomSocket.cs");
 
+  // The embed example's own document store (ExampleStore): documentation code standing in for a
+  // host's store client. It reaches only the URL given in --example-source, so it may hold an
+  // HttpClient, and nothing else on this list.
+  private static readonly string ExampleStoreOwner =
+      Normalize("examples/Blok.Mcp.EmbedExample/ExampleStore.cs");
+
   // Every owner outside the guard is pinned to ONE client field, ONE client
   // creation and ONE SocketsHttpHandler factory named CreateHandler.
   private static readonly HashSet<string> PinnedOwners =
@@ -506,6 +512,17 @@ public sealed class OutboundClientArchitectureTests
     Assert.Contains("HttpClient", violation, StringComparison.Ordinal);
   }
 
+  [Fact]
+  public void LetsOnlyTheEmbedExamplesStoreOwnAnHttpClient()
+  {
+    const string Client = "class Store { private static readonly System.Net.Http.HttpClient Http = new(); }";
+    const string Socket = "class Store { private readonly System.Net.Sockets.Socket socket = new(System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp); }";
+
+    Assert.Empty(FindViolations([new SourceFile(ExampleStoreOwner, Client)]));
+    Assert.Single(FindViolations([new SourceFile(ExampleStoreOwner, Socket)]));
+    Assert.Single(FindViolations([new SourceFile("examples/Blok.Mcp.EmbedExample/Program.cs", Client)]));
+  }
+
   private static List<string> FindViolations(
       IReadOnlyList<SourceFile> sources)
   {
@@ -557,6 +574,7 @@ public sealed class OutboundClientArchitectureTests
           .Where(use =>
               source.Path != RoomSocketOwner ||
               !IsAllowedRoomSocketUse(use, uses))
+          .Where(use => source.Path != ExampleStoreOwner || use.Identifier != "HttpClient")
           .Select(use => use.Identifier)
           .ToHashSet(StringComparer.Ordinal);
 

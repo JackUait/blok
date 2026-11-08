@@ -180,6 +180,27 @@ internal static partial class McpJson
   // A JSON string token as JSON.parse reads it, each lone surrogate as U+FFFD.
   private static string Unescape(string token)
   {
+    var text = UnescapeExact(token);
+    var clean = new System.Text.StringBuilder(text.Length);
+
+    for (var at = 0; at < text.Length; at++)
+    {
+      if (char.IsHighSurrogate(text[at]) && at + 1 < text.Length && char.IsLowSurrogate(text[at + 1]))
+      {
+        clean.Append(text[at]).Append(text[++at]);
+      }
+      else
+      {
+        clean.Append(char.IsSurrogate(text[at]) ? '\uFFFD' : text[at]);
+      }
+    }
+
+    return clean.ToString();
+  }
+
+  /// <summary>A JSON string token exactly as JSON.parse reads it: a lone surrogate escape stays a lone surrogate.</summary>
+  internal static string UnescapeExact(string token)
+  {
     var units = new System.Text.StringBuilder(token.Length);
 
     for (var at = 1; at < token.Length - 1; at++)
@@ -208,22 +229,8 @@ internal static partial class McpJson
         at += 4;
       }
     }
-    var text = units.ToString();
-    var clean = new System.Text.StringBuilder(text.Length);
 
-    for (var at = 0; at < text.Length; at++)
-    {
-      if (char.IsHighSurrogate(text[at]) && at + 1 < text.Length && char.IsLowSurrogate(text[at + 1]))
-      {
-        clean.Append(text[at]).Append(text[++at]);
-      }
-      else
-      {
-        clean.Append(char.IsSurrogate(text[at]) ? '\uFFFD' : text[at]);
-      }
-    }
-
-    return clean.ToString();
+    return units.ToString();
   }
 
   /// <summary>JSON text with JSON.stringify's bytes; a lone surrogate becomes U+FFFD.</summary>

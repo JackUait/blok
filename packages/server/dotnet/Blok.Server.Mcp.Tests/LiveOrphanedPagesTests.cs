@@ -10,7 +10,7 @@ namespace Blok.Server.Mcp.Tests;
 /// <summary>A live batch that made pages and then wrote nothing to the room names them in error.details.orphaned.</summary>
 public sealed class LiveOrphanedPagesTests(BundleFixture fixture) : IClassFixture<BundleFixture>
 {
-  private static async Task<(LiveSession Session, List<string> Made, LiveRoom Room)> OpenAsync(McpBundle bundle, Action? afterCreate = null)
+  private static async Task<(LiveSession Session, List<string> Made, LiveRoom Room)> OpenAsync(McpBundle bundle, Action? afterCreate = null, Func<int, string>? pageIds = null)
   {
     var (room, _) = await LiveRoomTests.OpenAsync();
     var flags = new McpConfig { PageTitles = "page-map", Sync = new McpSync("ws://127.0.0.1:1/sync", null) }.SurfaceFlags();
@@ -22,7 +22,7 @@ public sealed class LiveOrphanedPagesTests(BundleFixture fixture) : IClassFixtur
       DocumentId = "doc",
       Pages = Pages((_, _) =>
       {
-        made.Add($"page-{made.Count + 1}");
+        made.Add(pageIds?.Invoke(made.Count) ?? $"page-{made.Count + 1}");
         afterCreate?.Invoke();
 
         return Task.FromResult(made[^1]);
@@ -48,6 +48,37 @@ public sealed class LiveOrphanedPagesTests(BundleFixture fixture) : IClassFixtur
   }
 
   [Fact]
+  public async Task AFailureAfterThePagesWereMadeLeavesOutAPageTheRoomLinks()
+  {
+    var runtime = new FaultyRuntime(fixture.Host.Bundle.Runtime);
+    string[] ids = ["linked", "linked", "fresh"];
+    var (session, made, room) = await OpenAsync(new McpBundle(runtime), pageIds: index => ids[index]);
+    var first = Answer(await session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None));
+
+    runtime.Throws = (operation, _) => operation == "agentExecute";
+    var answer = Answer(await session.ExecuteAsync(Batch(InsertPage("b"), InsertPage("c")), Caller, null, CancellationToken.None));
+
+    Assert.Equal(true, McpJson.Bool(first?["ok"]));
+    Assert.Equal(["linked", "linked", "fresh"], made);
+    Assert.Equal(StoredOrphanedPagesTests.Orphaned("APPLY_FAILED", true, "fresh"), answer?["error"]?.ToJsonString());
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task AFailureWhoseEveryPageTheRoomLinksReportsNothing()
+  {
+    var runtime = new FaultyRuntime(fixture.Host.Bundle.Runtime);
+    var (session, made, room) = await OpenAsync(new McpBundle(runtime), pageIds: _ => "linked");
+
+    await session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None);
+    runtime.Throws = (operation, _) => operation == "agentExecute";
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => session.ExecuteAsync(Batch(InsertPage("b")), Caller, null, CancellationToken.None));
+    Assert.Equal(["linked", "linked"], made);
+    await room.CloseAsync();
+  }
+
+  [Fact]
   public async Task ACancelAfterOnePageStopsBeforeTheNextAndReportsIt()
   {
     using var cancel = new CancellationTokenSource();
@@ -56,7 +87,7 @@ public sealed class LiveOrphanedPagesTests(BundleFixture fixture) : IClassFixtur
     var answer = Answer(await session.ExecuteAsync(Batch(InsertPage("a"), InsertPage("b")), Caller, null, cancel.Token));
 
     Assert.Equal(["page-1"], made);
-    Assert.Equal(StoredOrphanedPagesTests.Orphaned("CANCELLED", false, "page-1"), answer?["error"]?.ToJsonString());
+    Assert.Equal(HostPageCreatorTests.Cancelled("page-1"), answer?["error"]?.ToJsonString());
     await room.CloseAsync();
   }
 }

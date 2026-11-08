@@ -142,6 +142,38 @@ public interface IBlokPageCreator : IBlokPageTarget
   /// <param name="cancellationToken">Cancels the create.</param>
   /// <returns>The new page ID, or null when this actor may not create a page; the batch then fails with FORBIDDEN.</returns>
   ValueTask<string?> CreateAsync(BlokAgentActor actor, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Creates an empty page document for a new page block, with what the caller knows about it:
+  /// the parent document, the MCP principal and a suggested id. By default it calls
+  /// <see cref="CreateAsync(BlokAgentActor, CancellationToken)"/>, so existing creators keep working.
+  /// </summary>
+  /// <param name="request">The page to create and who asks for it.</param>
+  /// <param name="cancellationToken">Cancels the create.</param>
+  /// <returns>The new page ID, or null (or empty) when this actor may not create a page; the batch then fails with FORBIDDEN.</returns>
+  ValueTask<string?> CreateAsync(BlokPageCreateRequest request, CancellationToken cancellationToken = default)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+
+    return CreateAsync(request.Actor, cancellationToken);
+  }
+}
+
+/// <summary>What a page creator is told about a new page block.</summary>
+/// <param name="Actor">The agent asking, with the person it acts for.</param>
+public sealed record BlokPageCreateRequest(BlokAgentActor Actor)
+{
+  /// <summary>
+  /// The document the page block goes into. Null only on the executor's stored path
+  /// (<see cref="IBlokAgentExecutor.ExecuteAsync"/>), which is given document JSON, not an id.
+  /// </summary>
+  public string? ParentDocumentId { get; init; }
+
+  /// <summary>The MCP caller's principal; null outside Blok's MCP server.</summary>
+  public string? Principal { get; init; }
+
+  /// <summary>A fresh Blok page id the host may use or ignore.</summary>
+  public string SuggestedPageId { get; init; } = string.Empty;
 }
 
 /// <summary>A target page's stored document or live room.</summary>

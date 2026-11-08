@@ -104,7 +104,7 @@ internal static class StoredFaults
   /// <summary>A page-map pages port whose create runs <paramref name="create"/>.</summary>
   internal static PagePorts Pages(Func<McpCaller, CancellationToken, Task<string>> create) => new()
   {
-    Create = create,
+    Create = (caller, _, cancellationToken) => create(caller, cancellationToken),
     Open = (_, _, _) => throw new InvalidOperationException("No page target."),
     TrackClose = _ => { },
   };

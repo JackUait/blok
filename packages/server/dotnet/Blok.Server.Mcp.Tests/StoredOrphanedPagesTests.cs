@@ -78,6 +78,17 @@ public sealed class StoredOrphanedPagesTests : IClassFixture<BundleFixture>, IDi
   }
 
   [Fact]
+  public async Task AnEngineFailureReportsNoPageTheParentAlreadyLinks()
+  {
+    File.WriteAllText(Path.Combine(dir, "doc.json"), """{"blocks":[{"id":"old","type":"page","data":{"pageId":"page-1"}}]}""");
+    var runtime = new FaultyRuntime(fixture.Host.Bundle.Runtime) { Throws = (operation, _) => operation == "agentExecute" };
+    var session = await OpenAsync(new McpBundle(runtime), source, Pages(Make));
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None));
+    Assert.Equal(["page-1"], made);
+  }
+
+  [Fact]
   public async Task AFailedAnswerAfterAPageWasMadeReportsThePageAndSavesNothing()
   {
     var runtime = new FaultyRuntime(fixture.Host.Bundle.Runtime)
@@ -113,6 +124,18 @@ public sealed class StoredOrphanedPagesTests : IClassFixture<BundleFixture>, IDi
 
     await Assert.ThrowsAsync<TimeoutException>(() => session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None));
     Assert.Contains("page-1", File.ReadAllText(Path.Combine(dir, "doc.json")), StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task APlainSaveFailureListsAPageEvenWhenAParagraphsTextIsItsId()
+  {
+    File.WriteAllText(Path.Combine(dir, "doc.json"), """{"blocks":[{"id":"t","type":"paragraph","data":{"text":"page-1"}}]}""");
+    var session = await OpenAsync(fixture.Host.Bundle, source, Pages(Make));
+
+    source.NextSave = new IOException("disk full");
+    var answer = Answer(await session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None));
+
+    Assert.Equal(Orphaned("APPLY_FAILED", true, "page-1"), answer?["error"]?.ToJsonString());
   }
 
   [Fact]
@@ -157,7 +180,9 @@ public sealed class StoredOrphanedPagesTests : IClassFixture<BundleFixture>, IDi
     var answer = Answer(await session.ExecuteAsync(Batch(InsertPage("a"), InsertPage("b")), Caller, null, cancel.Token));
 
     Assert.Equal(["page-1"], made);
-    Assert.Equal(Orphaned("CANCELLED", false, "page-1"), answer?["error"]?.ToJsonString());
+    // Through the bundle's createPageFailure, so it has the recorded shape: commandIndex and revision.
+    Assert.Equal(HostPageCreatorTests.Cancelled("page-1"), answer?["error"]?.ToJsonString());
+    Assert.NotNull(answer?["revision"]);
     Assert.Equal(0, source.Saves);
   }
 

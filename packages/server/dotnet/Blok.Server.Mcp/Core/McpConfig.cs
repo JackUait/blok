@@ -16,6 +16,9 @@ internal abstract record McpSourceConfig
   internal sealed record Files(string Dir) : McpSourceConfig;
 
   internal sealed record Endpoint(string Url, string EndpointAuth, string? List) : McpSourceConfig;
+
+  /// <summary>The host's own store, called in code (BlokMcpOptions.DocumentSource).</summary>
+  internal sealed record Custom(IBlokMcpDocumentSource Source) : McpSourceConfig;
 }
 
 /// <summary>Origins and host names a library endpoint takes; null origins means loopback pages only, null hosts no check.</summary>
@@ -63,6 +66,12 @@ internal sealed class McpConfig
 
   /// <summary>The library's uploader hook; the CLI has none.</summary>
   internal BlokMcpUploads? Uploads { get; init; }
+
+  /// <summary>The host's page creator (BlokMcpOptions.PageCreator, --create-page): stored mode only.</summary>
+  internal Blok.Server.Agent.IBlokPageCreator? PageCreator { get; init; }
+
+  /// <summary>Where stored handles live (BlokMcpOptions.HandleStore, --handle-store); null keeps them in this process.</summary>
+  internal IBlokMcpHandleStore? HandleStore { get; init; }
 
   /// <summary>Where a host hook's failure is logged in full; stderr when unset.</summary>
   internal Action<string, Exception>? LogError { get; init; }

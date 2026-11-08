@@ -793,12 +793,14 @@ mod tests {
             "]".repeat(50)
         );
         // Between them, the proxy's own initialize for a request sent before one.
-        let got = got.lock().unwrap();
-        assert_eq!(
-            got.first().map(String::as_str),
-            Some(r#"{"jsonrpc":"2.0","method":"m","params":{"a":"\ufffd"}}"#)
-        );
-        assert_eq!(got.last(), Some(&clamped));
+        {
+            let got = got.lock().unwrap();
+            assert_eq!(
+                got.first().map(String::as_str),
+                Some(r#"{"jsonrpc":"2.0","method":"m","params":{"a":"\ufffd"}}"#)
+            );
+            assert_eq!(got.last(), Some(&clamped));
+        }
         let mut written = String::new();
         client.read_to_string(&mut written).await.unwrap();
         assert_eq!(written, "");

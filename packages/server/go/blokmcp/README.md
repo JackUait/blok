@@ -168,7 +168,7 @@ By default each process keeps its open handles in memory, so a call must reach t
 Writing your own store (Redis, SQL):
 
 - `TryAdd` must count and add in one step per principal (a row lock, `SELECT … FOR UPDATE`, or a Lua script). A plain count, then insert, lets a principal past the cap.
-- Leases are time-limited: renew them while held, and let a dead holder's lease end on its own. `Save`, `Release` and `Remove` must check the lease's token and answer `ErrLeaseLost` when another holder took it over. So exclusivity is best effort: a paused process can lose its lease, and correctness then rests on your document source's version check (`DOCUMENT_CHANGED`). A source that does not check versions can lose writes across replicas.
+- Leases are time-limited: renew them while held, and let a dead holder's lease end on its own. `Save` and `Remove` must check the lease's token and answer `ErrLeaseLost` (changing nothing) when another holder took it over; `Release` then does nothing. So exclusivity is best effort: a paused process can lose its lease, and correctness then rests on your document source's version check (`DOCUMENT_CHANGED`). A source that does not check versions can lose writes across replicas.
 - A handle expires after the idle time without a lease; a leased handle never expires. Delete expired records (`Sweep`, or your store's own expiry): they hold document text.
 - Records are trusted. Anyone who can write the store can forge an actor, scopes or history, so only Blok's processes may write it.
 - Values can be large: the history keeps whole documents and is not bounded in bytes. Use `LONGTEXT`/JSON columns, not `TEXT`.

@@ -453,10 +453,11 @@ func (l *filesLease) Save(_ context.Context, record HandleRecord) error {
 	return l.store.writeAtomic(l.store.path(l.handle+".record.json"), text)
 }
 
+// Release does nothing once the lease is gone: it is the new holder's.
 func (l *filesLease) Release(context.Context) error {
-	if err := l.held(); err != nil {
+	if l.held() != nil {
 		l.end()
-		return err
+		return nil
 	}
 	l.end()
 	meta, err := l.store.meta(l.handle)

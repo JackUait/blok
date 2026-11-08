@@ -140,7 +140,10 @@ func TestALostLeaseCannotWrite(t *testing.T) {
 	if err := stale.Remove(ctx); !errors.Is(err, ErrLeaseLost) {
 		t.Fatalf("remove: %v", err)
 	}
-	_ = stale.Release(ctx)
+	// Release of a lost lease does nothing, and leaves the new holder's lease.
+	if err := stale.Release(ctx); err != nil {
+		t.Fatalf("release: %v", err)
+	}
 	if err := fresh.Save(ctx, record("alice", `{"blocks":["kept"]}`)); err != nil {
 		t.Fatal(err)
 	}

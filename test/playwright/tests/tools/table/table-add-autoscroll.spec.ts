@@ -353,7 +353,9 @@ test.describe('Adding rows and columns keeps them in view', () => {
       await page.mouse.down();
       await watchColumns(page);
       await page.mouse.move((page.viewportSize()?.width ?? 1280) - 2, y, { steps: 2 });
-      await expect.poll(() => columns.count(), { timeout: 10_000 }).toBeGreaterThan(14);
+      // The trip back across the window removes about 11 columns on its own; the
+      // the hold needs enough left over to show its pace.
+      await expect.poll(() => columns.count(), { timeout: 10_000 }).toBeGreaterThan(20);
       const adding = await heldIntervals(page);
 
       await page.mouse.move(2, y, { steps: 2 });

@@ -123,6 +123,9 @@ internal sealed partial class SharedHandles : IHandleTable
 
   internal TimeSpan Wait { get; init; } = LeaseWait;
 
+  // Well inside the 30 s a store may keep an unrenewed lease, so a few missed renewals do not lose it.
+  internal TimeSpan RenewEvery { get; init; } = TimeSpan.FromSeconds(5);
+
   public async Task AssertRoomAsync(string principal)
   {
     if (closed)
@@ -300,6 +303,9 @@ internal sealed partial class SharedHandles : IHandleTable
             ? McpHostError.Surface("SOURCE_UNAVAILABLE", "Another call is using this handle. Retry shortly.")
             : HandleRegistry<IHandleSession>.UnknownHandle();
       }
+      // A lost lease shows again when the call saves or removes: the store refuses those.
+      var renewer = new Timer(_ => _ = RenewAsync(lease), null, RenewEvery, RenewEvery);
+
       try
       {
         // Checked here, not by the store: a store bug must not hand one user's handle to another.
@@ -312,6 +318,7 @@ internal sealed partial class SharedHandles : IHandleTable
       }
       finally
       {
+        await renewer.DisposeAsync();
         try
         {
           await lease.ReleaseAsync(CancellationToken.None);
@@ -336,6 +343,18 @@ internal sealed partial class SharedHandles : IHandleTable
       {
         inFlight.Remove(mine.Task);
       }
+    }
+  }
+
+  private async Task RenewAsync(IBlokMcpHandleLease lease)
+  {
+    try
+    {
+      await lease.RenewAsync(CancellationToken.None);
+    }
+    catch (Exception error)
+    {
+      log("blok-mcp: renewing a handle lease failed", error);
     }
   }
 

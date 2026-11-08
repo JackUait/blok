@@ -18,8 +18,8 @@ namespace Blok.Server.Mcp.Core;
  *
  * Writes go to `.<name>.<12 hex>.tmp` and are renamed over the target. A lock is a file created
  * exclusively. One older than leaseStale (30 s) belongs to a dead holder: one breaker at a time
- * (`<lock>.break`) deletes it, and only if it still has the token and age seen. A holder touches its
- * lease every heartbeat (5 s) and checks its token before every save, release and remove. The check
+ * (`<lock>.break`) deletes it, and only if it still has the token and age seen. Blok renews a held
+ * lease (touches it) every 5 s; the store has no timer. Renew, save, release and remove check the token first. The check
  * and the write are two steps, so a holder paused between them can still write once; the source's
  * version check is what keeps that from losing a save. Sweep also deletes crash leftovers.
  *
@@ -39,13 +39,11 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
 
   private readonly string dir;
   private readonly TimeSpan leaseStale;
-  private readonly TimeSpan heartbeat;
 
-  private FilesHandleStore(string dir, TimeSpan leaseStale, TimeSpan heartbeat)
+  private FilesHandleStore(string dir, TimeSpan leaseStale)
   {
     this.dir = dir;
     this.leaseStale = leaseStale;
-    this.heartbeat = heartbeat;
   }
 
   private static Regex HandlePattern() => SharedHandles.HandlePattern();
@@ -57,7 +55,7 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
   }
 
   /// <summary>Makes and checks the directory now; refuses with blok-mcp's words (exit 2).</summary>
-  internal static FilesHandleStore Open(string dir, TimeSpan? leaseStale = null, TimeSpan? heartbeat = null, Probe? probe = null)
+  internal static FilesHandleStore Open(string dir, TimeSpan? leaseStale = null, Probe? probe = null)
   {
     probe ??= Probe.System;
     // No owner or mode bits to check there, so records would be open to whoever can read the folder.
@@ -70,7 +68,7 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
 
     Prepare(dir, path, probe);
 
-    return new FilesHandleStore(path, leaseStale ?? TimeSpan.FromSeconds(30), heartbeat ?? TimeSpan.FromSeconds(5));
+    return new FilesHandleStore(path, leaseStale ?? TimeSpan.FromSeconds(30));
   }
 
   // Another user who can read here sees documents; one who can write here could plant a record and take over a handle.
@@ -440,26 +438,19 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
     }
   }
 
-  private sealed class Lease : IBlokMcpHandleLease, IDisposable
+  private sealed class Lease(FilesHandleStore store, string handle, string mine, BlokMcpHandleRecord record) : IBlokMcpHandleLease
   {
-    private readonly FilesHandleStore store;
-    private readonly string handle;
-    private readonly string mine;
-    private readonly Timer beat;
     private bool ended;
 
-    internal Lease(FilesHandleStore store, string handle, string mine, BlokMcpHandleRecord record)
-    {
-      this.store = store;
-      this.handle = handle;
-      this.mine = mine;
-      Record = record;
-      beat = new Timer(_ => _ = TouchAsync(), null, store.heartbeat, store.heartbeat);
-    }
-
-    public BlokMcpHandleRecord Record { get; }
+    public BlokMcpHandleRecord Record { get; } = record;
 
     private string LeasePath => store.LeasePath(handle);
+
+    public async ValueTask RenewAsync(CancellationToken cancellationToken)
+    {
+      await ThrowIfLostAsync();
+      File.SetLastWriteTimeUtc(LeasePath, DateTime.UtcNow);
+    }
 
     public async ValueTask SaveAsync(BlokMcpHandleRecord record, CancellationToken cancellationToken)
     {
@@ -470,7 +461,12 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
 
     public async ValueTask ReleaseAsync(CancellationToken cancellationToken)
     {
-      if (End() || !await OwnsAsync(LeasePath, mine))
+      if (ended)
+      {
+        return;
+      }
+      ended = true;
+      if (!await OwnsAsync(LeasePath, mine))
       {
         return;
       }
@@ -484,27 +480,9 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
     public async ValueTask RemoveAsync(CancellationToken cancellationToken)
     {
       await ThrowIfLostAsync();
-      End();
+      ended = true;
       store.Forget(handle);
       File.Delete(LeasePath);
-    }
-
-    public void Dispose()
-    {
-      beat.Dispose();
-    }
-
-    // True when it had already ended.
-    private bool End()
-    {
-      if (ended)
-      {
-        return true;
-      }
-      ended = true;
-      beat.Dispose();
-
-      return false;
     }
 
     private async Task ThrowIfLostAsync()
@@ -512,21 +490,6 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
       if (ended || !await OwnsAsync(LeasePath, mine))
       {
         throw new IOException($"blok-mcp handle store: the lease on {handle} was lost");
-      }
-    }
-
-    private async Task TouchAsync()
-    {
-      try
-      {
-        if (!ended && await OwnsAsync(LeasePath, mine))
-        {
-          File.SetLastWriteTimeUtc(LeasePath, DateTime.UtcNow);
-        }
-      }
-      catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-      {
-        // The next save or release finds out whether the lease still holds.
       }
     }
   }

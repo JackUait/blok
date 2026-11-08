@@ -87,7 +87,7 @@ public sealed class LiveOrphanedPagesTests(BundleFixture fixture) : IClassFixtur
     var answer = Answer(await session.ExecuteAsync(Batch(InsertPage("a"), InsertPage("b")), Caller, null, cancel.Token));
 
     Assert.Equal(["page-1"], made);
-    Assert.Equal(HostPageCreatorTests.Orphaned("The batch was cancelled. Nothing was written.", "CANCELLED", false, "page-1"), answer?["error"]?.ToJsonString());
+    Assert.Equal(HostPageCreatorTests.Cancelled("page-1"), answer?["error"]?.ToJsonString());
     await room.CloseAsync();
   }
 }

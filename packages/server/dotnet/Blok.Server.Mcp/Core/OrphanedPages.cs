@@ -90,7 +90,8 @@ internal static class OrphanedPages
       {
         ["command"] = "block.insert", ["type"] = "page", ["prepared"] = new JsonObject { ["pageId"] = pageId?.DeepClone() },
       })]),
-      ["cause"] = cause.DeepClone(),
+      // The cause is the cancel alone; the commandIndex stays on the outer error (Node's shape).
+      ["cause"] = new JsonObject { ["code"] = "CANCELLED", ["message"] = cause["message"]?.DeepClone(), ["retryable"] = false },
     };
     result["error"] = wrapped;
   }

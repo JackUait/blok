@@ -156,7 +156,7 @@ public sealed class HostPageCreatorTests : IClassFixture<BundleFixture>, IDispos
     var ran = await ExecuteAsync(core, caller, handle, cancel.Token, InsertPage("np0"), InsertPage("np1"));
 
     Assert.Single(creator.Requests);
-    Assert.Equal(Orphaned("The batch was cancelled. Nothing was written.", "CANCELLED", false, "host-1"), ran["error"]?.ToJsonString());
+    Assert.Equal(Cancelled("host-1"), ran["error"]?.ToJsonString());
     Assert.Equal("""{"blocks":[]}""", Parent());
   }
 
@@ -267,8 +267,22 @@ public sealed class HostPageCreatorTests : IClassFixture<BundleFixture>, IDispos
     Assert.Empty(creator.Requests);
   }
 
-  internal static string Orphaned(string causeMessage, string cause, bool retryable, params string[] pageIds)
+  internal static string Orphaned(string causeMessage, string cause, bool retryable, params string[] pageIds) =>
+      Orphaned(causeMessage, cause, retryable, true, pageIds);
+
+  /// <summary>A cancel's cause carries no commandIndex; only the outer error does.</summary>
+  internal static string Cancelled(params string[] pageIds) =>
+      Orphaned("The batch was cancelled. Nothing was written.", "CANCELLED", false, false, pageIds);
+
+  private static string Orphaned(string causeMessage, string cause, bool retryable, bool causeIndex, string[] pageIds)
   {
+    var causeJson = new JsonObject { ["code"] = cause, ["message"] = causeMessage, ["retryable"] = retryable };
+
+    if (causeIndex)
+    {
+      causeJson["commandIndex"] = 1;
+    }
+
     return new JsonObject
     {
       ["code"] = "ORPHANED_SIDE_EFFECT",
@@ -281,7 +295,7 @@ public sealed class HostPageCreatorTests : IClassFixture<BundleFixture>, IDispos
         {
           ["command"] = "block.insert", ["type"] = "page", ["prepared"] = new JsonObject { ["pageId"] = pageId },
         })]),
-        ["cause"] = new JsonObject { ["code"] = cause, ["message"] = causeMessage, ["retryable"] = retryable, ["commandIndex"] = 1 },
+        ["cause"] = causeJson,
       },
     }.ToJsonString();
   }

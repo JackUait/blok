@@ -53,9 +53,10 @@ public interface IBlokMcpHandleStore
 }
 
 /// <summary>
-/// One call's hold on a handle. It is time-limited: the store ends it unless it is renewed while
-/// the call runs, so a paused holder can lose it. Each operation checks that this lease still
-/// holds the handle; once it does not, save and remove throw and change nothing.
+/// One call's hold on a handle. It is time-limited: the store may hand it to another holder once it
+/// went unrenewed for its lease time (30 s), so a paused holder can lose it. Blok renews it every
+/// 5 s while a call runs; the store needs no timer of its own. Each operation checks that this lease
+/// still holds the handle; once it does not, renew, save and remove throw and change nothing.
 /// </summary>
 public interface IBlokMcpHandleLease
 {
@@ -67,6 +68,11 @@ public interface IBlokMcpHandleLease
   /// <param name="cancellationToken">Cancels the write.</param>
   /// <returns>When written.</returns>
   ValueTask SaveAsync(BlokMcpHandleRecord record, CancellationToken cancellationToken);
+
+  /// <summary>Restarts the lease time. Blok calls it every 5 s while a call holds the lease.</summary>
+  /// <param name="cancellationToken">Cancels the renewal.</param>
+  /// <returns>When renewed.</returns>
+  ValueTask RenewAsync(CancellationToken cancellationToken);
 
   /// <summary>Ends the lease and restarts the handle's idle time. Does nothing once the lease is gone.</summary>
   /// <param name="cancellationToken">Cancels the release.</param>

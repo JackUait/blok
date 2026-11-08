@@ -251,6 +251,35 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
     Assert.Null(read["error"]);
   }
 
+  [Fact]
+  public async Task BlokRenewsTheLeaseWhileACallHoldsItAndStopsBeforeRelease()
+  {
+    var store = new MemoryStore();
+    var shared = new SharedHandles(
+        new HandleRegistry<IHandleSession>(600_000, 8, _ => Task.CompletedTask), store, TimeSpan.FromMinutes(10), 8,
+        () => Task.FromResult("rev"), _ => throw new InvalidOperationException("not restored"), (message, error) => logged.Add((message, error)))
+    {
+      RenewEvery = TimeSpan.FromMilliseconds(40),
+    };
+
+    var record = new BlokMcpHandleRecord
+    {
+      ContractRevision = "rev", Principal = "alice", ClientName = "desk", Actor = new JsonObject { ["id"] = "agent:alice:desk" },
+      DocumentId = "doc", Document = new JsonObject { ["blocks"] = new JsonArray() }, History = new JsonObject(),
+    };
+
+    await store.TryAddAsync("handle-1", record, 8, TimeSpan.FromMinutes(10), CancellationToken.None);
+    store.FailRenews = true;
+    await shared.PeekAsync("handle-1", "alice", _ => Task.Delay(300));
+    var renewsAtRelease = store.RenewsAtRelease;
+
+    await Task.Delay(200);
+
+    Assert.True(renewsAtRelease >= 3, $"renewed {renewsAtRelease} times");
+    Assert.Equal(renewsAtRelease, store.Renews);
+    Assert.Contains(logged, entry => entry.Message.Contains("renew", StringComparison.Ordinal));
+  }
+
   /// <summary>The store contract in memory, with switches for faults.</summary>
   internal sealed class MemoryStore : IBlokMcpHandleStore
   {
@@ -259,6 +288,12 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
     internal Dictionary<string, BlokMcpHandleRecord> Records { get; } = [];
 
     internal bool FailNextSave { get; set; }
+
+    internal bool FailRenews { get; set; }
+
+    internal int Renews { get; private set; }
+
+    internal int RenewsAtRelease { get; private set; }
 
     internal bool Down { get; set; }
 
@@ -342,8 +377,16 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
         return ValueTask.CompletedTask;
       }
 
+      public ValueTask RenewAsync(CancellationToken cancellationToken)
+      {
+        store.Renews++;
+
+        return store.FailRenews ? throw new IOException("renew refused") : ValueTask.CompletedTask;
+      }
+
       public ValueTask ReleaseAsync(CancellationToken cancellationToken)
       {
+        store.RenewsAtRelease = store.Renews;
         lock (store.leased)
         {
           store.leased.Remove(handle);

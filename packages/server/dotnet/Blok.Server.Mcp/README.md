@@ -136,7 +136,7 @@ sealed class MyPages(MyDb db) : IBlokPageCreator
 - Blok then does not run the per-document check on the new id, does not look at it, and saves nothing for it. Your source must load the new id. A later `blok_open` of it runs the check as usual.
 - Null or an empty string refuses: the insert fails with `FORBIDDEN` "You may not create a page document here.", and nothing is saved. This is `IBlokPageCreator`'s meaning everywhere. The webhook differs here: there only `{"pageId": null}` refuses, and `{"pageId": ""}` is a host error.
 - A throw, or an id that is not 1 to 512 code points, has a control character or a lone surrogate, or is `.` or `..`, is a host error. It is logged in full through your `ILogger`. The agent sees `SOURCE_UNAVAILABLE` "The host could not create the page.".
-- When the batch already made pages, a host error, a refusal or a cancel answers `ORPHANED_SIDE_EFFECT` instead: `details.orphaned` lists the pages to clean up, and `details.cause` is `APPLY_FAILED` "The batch stopped on a server error. Nothing was written.", `FORBIDDEN` or `CANCELLED`. A page the saved parent already links is never listed. The parent is not saved.
+- When the batch already made pages, a host error, a refusal or a cancel answers `ORPHANED_SIDE_EFFECT` instead: `details.orphaned` lists the pages to clean up, and `details.cause` is `APPLY_FAILED` "The batch stopped on a server error. Nothing was written.", `FORBIDDEN`, or `CANCELLED` "The batch was cancelled. Nothing was written.". A page the saved parent already links is never listed. The parent is not saved.
 - One batch makes at most 25 pages; a longer batch fails before any is made. Pages are made one after another, so a slow creator holds `blok_execute` for each.
 - Undo, redo and `block.delete` never call it. An undone or failed insert leaves your page in place, with no parent pointing at it. Keep a new page hidden until a saved parent names its `pageId`.
 - The webhook gets `POST` with `Content-Type: application/json` and `{ "parentDocumentId", "principal", "actor": { "id", "name", "onBehalfOf" }, "suggestedPageId" }`. `200 { "pageId": "<id>" }` makes the page; `200 { "pageId": null }` refuses. Any other status (201 too), a redirect, a body without a string or null `pageId`, a network error or no answer within 10 seconds is a host error.
@@ -158,8 +158,8 @@ options.HandleStore = new MyHandleStore(db); // IBlokMcpHandleStore, over SQL or
 - Blok calls `SweepAsync` every 60 seconds. Stopping a replica waits for its own calls and leaves the store as it is.
 - Your duties:
   - `TryAddAsync` counts and adds as one atomic step per principal, for example under a row lock or in a Lua script.
-  - A lease is exclusive per handle across replicas, time-limited, and renewed while it is held. Exclusivity is best effort: a paused holder can lose its lease, and then only your source's version check (`DocumentChanged`) keeps a write from being lost. A source that does not check versions can lose writes across replicas.
-  - `SaveAsync` and `RemoveAsync` throw, and change nothing, once the lease no longer holds the handle.
+  - A lease is exclusive per handle across replicas and time-limited: hand it to another holder only after 30 seconds without `RenewAsync`. Blok renews it every 5 seconds while a call holds it, so your store needs no timer. Exclusivity is best effort: a paused holder can lose its lease, and then only your source's version check (`DocumentChanged`) keeps a write from being lost. A source that does not check versions can lose writes across replicas.
+  - `RenewAsync`, `SaveAsync` and `RemoveAsync` throw, and change nothing, once the lease no longer holds the handle. `ReleaseAsync` of a lost lease does nothing.
   - Records can be large, since every undo step is a whole document: store them as long text.
   - Keep null scopes and empty scopes apart.
   - Records are trusted. Whoever can write your store can forge a handle's actor, scopes and history.

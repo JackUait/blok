@@ -181,7 +181,7 @@ public sealed class StoredOrphanedPagesTests : IClassFixture<BundleFixture>, IDi
 
     Assert.Equal(["page-1"], made);
     // Through the bundle's createPageFailure, so it has the recorded shape: commandIndex and revision.
-    Assert.Equal(HostPageCreatorTests.Orphaned("The batch was cancelled. Nothing was written.", "CANCELLED", false, "page-1"), answer?["error"]?.ToJsonString());
+    Assert.Equal(HostPageCreatorTests.Cancelled("page-1"), answer?["error"]?.ToJsonString());
     Assert.NotNull(answer?["revision"]);
     Assert.Equal(0, source.Saves);
   }

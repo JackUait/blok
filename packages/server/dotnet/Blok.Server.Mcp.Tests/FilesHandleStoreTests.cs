@@ -174,7 +174,7 @@ public sealed class FilesHandleStoreTests : IDisposable
   [Fact]
   public async Task ALostLeaseCannotSaveOrRemove()
   {
-    var store = FilesHandleStore.Open(Dir, leaseStale: TimeSpan.FromMilliseconds(200), heartbeat: TimeSpan.FromHours(1));
+    var store = FilesHandleStore.Open(Dir, leaseStale: TimeSpan.FromMilliseconds(200));
 
     await store.TryAddAsync("h1", Record(), 8, Idle, CancellationToken.None);
     var first = await LeaseAsync(store, "h1");
@@ -185,6 +185,7 @@ public sealed class FilesHandleStoreTests : IDisposable
 
     await Assert.ThrowsAsync<IOException>(async () => await first.SaveAsync(Record(documentId: "changed"), CancellationToken.None));
     await Assert.ThrowsAsync<IOException>(async () => await first.RemoveAsync(CancellationToken.None));
+    await Assert.ThrowsAsync<IOException>(async () => await first.RenewAsync(CancellationToken.None));
     await first.ReleaseAsync(CancellationToken.None);
     Assert.Equal("doc", second.Record.DocumentId);
     await second.ReleaseAsync(CancellationToken.None);
@@ -192,17 +193,36 @@ public sealed class FilesHandleStoreTests : IDisposable
   }
 
   [Fact]
-  public async Task AHeartbeatKeepsALeaseFromGoingStale()
+  public async Task ARenewedLeaseIsNotTakenOverPastTheStaleTime()
   {
-    var store = FilesHandleStore.Open(Dir, leaseStale: TimeSpan.FromMilliseconds(400), heartbeat: TimeSpan.FromMilliseconds(50));
+    var store = FilesHandleStore.Open(Dir, leaseStale: TimeSpan.FromMilliseconds(400));
 
     await store.TryAddAsync("h1", Record(), 8, Idle, CancellationToken.None);
     var first = await LeaseAsync(store, "h1");
 
-    await Task.Delay(800);
+    for (var step = 0; step < 8; step++)
+    {
+      await Task.Delay(100);
+      await first.RenewAsync(CancellationToken.None);
+    }
 
     Assert.True((await store.AcquireAsync("h1", Idle, TimeSpan.FromMilliseconds(100), CancellationToken.None)).IsBusy);
     await first.SaveAsync(Record(documentId: "saved"), CancellationToken.None);
+    await first.ReleaseAsync(CancellationToken.None);
+  }
+
+  [Fact]
+  public async Task AnUnrenewedLeaseGoesStaleOnItsOwn()
+  {
+    var store = FilesHandleStore.Open(Dir, leaseStale: TimeSpan.FromMilliseconds(200));
+
+    await store.TryAddAsync("h1", Record(), 8, Idle, CancellationToken.None);
+    var first = await LeaseAsync(store, "h1");
+
+    await Task.Delay(400);
+
+    // The store has no timer of its own: without Blok's renew the lease is taken over.
+    Assert.NotNull((await store.AcquireAsync("h1", Idle, TimeSpan.FromMilliseconds(100), CancellationToken.None)).Lease);
     await first.ReleaseAsync(CancellationToken.None);
   }
 

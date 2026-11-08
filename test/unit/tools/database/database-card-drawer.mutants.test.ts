@@ -337,7 +337,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
 
   describe('transition listeners', () => {
     /** The listener goes away once the panel's own slide ends. */
-    const expectOneShot = (el: HTMLElement, addListener: { mock: { calls: unknown[][] } }): void => {
+    const expectOneShot = (el: Element, addListener: { mock: { calls: unknown[][] } }): void => {
       const removeListener = vi.spyOn(el, 'removeEventListener');
       const listener = addListener.mock.calls.find((call) => call[0] === 'transitionend')?.[1];
 

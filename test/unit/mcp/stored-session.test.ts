@@ -156,6 +156,84 @@ describe('openStoredSession', () => {
     expect(vi.mocked(source.save).mock.calls.at(-1)?.[2]).toEqual({ ifVersion: 'v7' });
   });
 
+  describe('a save that breaks with an unexpected error after the batch made pages', () => {
+    const SERVER_STOP = { code: 'APPLY_FAILED', message: 'The batch stopped on a server error. Nothing was written.', retryable: true };
+    const openMaking = (made: string[]) => openStoredSession({
+      documentId: 'doc', write: true, source, contract, madePages: made,
+      loadDocument: (raw) => raw as never,
+      createAgentSession: (document) => ({
+        ...agent(document),
+        output: () => document,
+        execute: vi.fn(async () => {
+          made.push('page-1', 'page-2');
+
+          return okResult;
+        }),
+      }),
+    });
+
+    it('lists the pages the reloaded parent does not name as orphaned, and logs the error', async () => {
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      vi.mocked(source.save).mockRejectedValueOnce(new Error('disk exploded'));
+      vi.mocked(source.load)
+        .mockResolvedValueOnce({ raw: { blocks: [] }, version: 'v1' })
+        .mockResolvedValueOnce({ raw: { blocks: [{ id: 'b', type: 'page', data: { pageId: 'page-1' } }] }, version: 'v2' });
+      const session = await openMaking([]);
+      const result = await session.execute({ commands: [{ name: 'block.insert', args: {} }] });
+
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: 'ORPHANED_SIDE_EFFECT',
+          message: `The batch failed after the host did work for it (${SERVER_STOP.message}). Clean up the listed items.`,
+          retryable: false,
+          details: { orphaned: [{ command: 'block.insert', type: 'page', prepared: { pageId: 'page-2' } }], cause: SERVER_STOP },
+        },
+        warnings: [],
+        delivery: { durable: false, pending: false, serverSequence: null, savedVersion: null },
+      });
+      expect(logged).toHaveBeenCalled();
+    });
+
+    it('throws the error as before when the parent cannot be read again', async () => {
+      const failure = new Error('disk exploded');
+      vi.mocked(source.save).mockRejectedValueOnce(failure);
+      vi.mocked(source.load)
+        .mockResolvedValueOnce({ raw: { blocks: [] }, version: 'v1' })
+        .mockRejectedValueOnce(surfaceError('SOURCE_UNAVAILABLE', 'gone'));
+      const session = await openMaking([]);
+
+      await expect(session.execute({ commands: [{ name: 'block.insert', args: {} }] })).rejects.toBe(failure);
+    });
+
+    it('throws the error as before when the reloaded parent names every page', async () => {
+      const failure = new Error('disk exploded');
+      vi.mocked(source.save).mockRejectedValueOnce(failure);
+      vi.mocked(source.load)
+        .mockResolvedValueOnce({ raw: { blocks: [] }, version: 'v1' })
+        .mockResolvedValueOnce({ raw: { blocks: [{ id: 'a', type: 'page', data: { pageId: 'page-1' } }, { id: 'b', type: 'page', data: { pageId: 'page-2' } }] }, version: 'v2' });
+      const session = await openMaking([]);
+
+      await expect(session.execute({ commands: [{ name: 'block.insert', args: {} }] })).rejects.toBe(failure);
+    });
+
+    it('does not report pages an earlier batch made', async () => {
+      const failure = new Error('disk exploded');
+      const made: string[] = [];
+      const session = await openMaking(made);
+
+      await session.execute({ commands: [{ name: 'block.insert', args: {} }] });
+      vi.mocked(source.save).mockRejectedValueOnce(failure);
+      const second = await openStoredSession({
+        documentId: 'doc', write: true, source, contract, madePages: made,
+        loadDocument: (raw) => raw as never,
+        createAgentSession: (document) => ({ ...agent(document), output: () => document }),
+      });
+
+      await expect(second.execute({ commands: [{ name: 'block.insert', args: {} }] })).rejects.toBe(failure);
+    });
+  });
+
   it('saves an undo like any batch', async () => {
     const session = await open();
 

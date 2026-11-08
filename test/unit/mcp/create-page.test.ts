@@ -101,6 +101,8 @@ describe('a host page creator', () => {
       ['an id with a control character', () => Promise.resolve('page\u0007')],
       ['an id with a C1 control character', () => Promise.resolve('page\u0085')],
       ['a number', () => Promise.resolve(7 as unknown as string)],
+      ['the id "."', () => Promise.resolve('.')],
+      ['the id ".."', () => Promise.resolve('..')],
     ];
 
     it.each(failures)('answers SOURCE_UNAVAILABLE for %s, logs it, and saves nothing', async (_label, createPage) => {

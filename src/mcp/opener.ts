@@ -91,6 +91,23 @@ export const createOpener = (
     }
 
     const pages = createPageDeliveryTracker();
+    const madePages: string[] = [];
+    const portsOf = (): AgentPorts => {
+      const ports = deps.portsFor(caller, actor, async (pageId) =>
+        pageId === request.documentId || (await source.sameDocument?.(pageId, request.documentId) ?? false), pages.unconfirmed, request.documentId);
+      const create = ports.createPageDocument;
+
+      return create === undefined ? ports : {
+        ...ports,
+        createPageDocument: async (pageActor) => {
+          const made = await create.call(ports, pageActor);
+
+          madePages.push(made.pageId);
+
+          return made;
+        },
+      };
+    };
 
     return pages.wrap(await openStoredSession({
       documentId: request.documentId,
@@ -104,12 +121,12 @@ export const createOpener = (
         tools: deps.contracts.runtimes,
         contract: deps.contracts.stored,
         actor,
-        ports: deps.portsFor(caller, actor, async (pageId) =>
-          pageId === request.documentId || (await source.sameDocument?.(pageId, request.documentId) ?? false), pages.unconfirmed, request.documentId),
+        ports: portsOf(),
         // 01 builds the Node pageBackend only with this flag and the openPageDocument port (Task 26).
         ...(deps.options.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
         ...(deps.uploader !== undefined && { services: { uploader: deps.uploader } }),
       }),
+      madePages,
     }));
   };
 

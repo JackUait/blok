@@ -4,7 +4,7 @@ import type { AgentContract } from '../../types/tool-manifest';
 
 import { tooDeepToSave } from '../shared/mcp/wire-json';
 
-import { reportOrphanedPages } from './create-page';
+import { orphanedBySave, reportOrphanedPages } from './create-page';
 import { failedResult, isMcpSurfaceError, isWriteBatch, NO_DELIVERY, surfaceError } from './errors';
 import type { HandleSession, McpExecuteResult } from './session';
 import type { DocumentSource } from './sources/types';
@@ -20,6 +20,8 @@ export interface StoredSessionInput {
   loadDocument(raw: unknown): OutputData;
   /** 01's createDocumentAgentSession, bound to tools, contract, actor and ports. */
   createAgentSession(document: OutputData): StoredAgent;
+  /** The page ids the agent's page port made; filled by the port, emptied here before each batch. */
+  madePages?: string[];
 }
 
 export const openStoredSession = async (input: StoredSessionInput): Promise<HandleSession> => {
@@ -46,6 +48,19 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
     state.stale = false;
   };
 
+  // A save can store the parent before it breaks, so the reload shows which pages it names. Unread: report none.
+  const brokenSave = (thrown: unknown, reloaded: boolean, warnings: McpExecuteResult['warnings']): McpExecuteResult => {
+    const orphaned = reloaded ? orphanedBySave(input.madePages ?? [], JSON.stringify(state.agent.output()), warnings) : null;
+
+    if (orphaned === null) {
+      throw thrown;
+    }
+    // stdout carries the protocol, so the log goes to stderr.
+    console.error('blok-mcp: a save broke after the batch made pages', thrown);
+
+    return { ...orphaned, delivery: NO_DELIVERY };
+  };
+
   return {
     mode: 'stored',
     write: input.write,
@@ -69,6 +84,7 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
       if (writing && !input.write) {
         return failedResult(surfaceError('READ_ONLY', 'This handle is read-only. Open the document with write: true.').agentError);
       }
+      input.madePages?.splice(0);
       // result.revision is the session's own hash; equal means nothing changed here.
       const before = state.agent.revision();
       // A failed batch wrote nothing, so memory is the parent as saved.
@@ -96,9 +112,10 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
       } catch (thrown) {
         // Memory must match the source: drop the refused work. A failed reload retries on the next call.
         state.stale = true;
-        await reload().catch(() => undefined);
+        const reloaded = await reload().then(() => true, () => false);
+
         if (!isMcpSurfaceError(thrown)) {
-          throw thrown;
+          return brokenSave(thrown, reloaded, result.warnings);
         }
 
         return failedResult(thrown.agentError, result.warnings);

@@ -62,8 +62,9 @@ export const createPageWebhook = (url: string, deps: { fetchImpl?: typeof fetch 
   };
 };
 
+// "." and ".." name a directory, never a document, in every source.
 const isPageId = (value: unknown): value is string =>
-  typeof value === 'string' && value !== '' && [...value].length <= MAX_PAGE_ID && !CONTROL.test(value);
+  typeof value === 'string' && value !== '' && value !== '.' && value !== '..' && [...value].length <= MAX_PAGE_ID && !CONTROL.test(value);
 
 /**
  * The host's create, as the executor's page port: null refuses, and every other failure is
@@ -94,7 +95,7 @@ export const createHostPage = async (createPage: CreatePage, request: BlokPageCr
     throw new AgentFailure(surfaceError('FORBIDDEN', 'You may not create a page document here.').agentError);
   }
   if (!isPageId(answer)) {
-    console.error('blok-mcp: the host page creator answered no valid page id (1-512 characters, no control characters)', answer);
+    console.error('blok-mcp: the host page creator answered no valid page id (1-512 characters, no control characters, not "." or "..")', answer);
     throw hostFailed();
   }
 
@@ -107,6 +108,32 @@ const pageIdOf = (receipt: unknown): string | undefined => {
   }
 
   return typeof receipt.prepared.pageId === 'string' ? receipt.prepared.pageId : undefined;
+};
+
+/**
+ * A batch whose parent save broke with a plain error after it made pages. Only pages the parent,
+ * as stored after the failure, does not name are listed; null when none is left, so the caller
+ * passes the error on.
+ */
+export const orphanedBySave = (made: readonly string[], parentText: string, warnings: AgentResult['warnings']): AgentResult | null => {
+  const orphaned = made
+    .filter((pageId) => !parentText.includes(JSON.stringify(pageId)))
+    .map((pageId) => ({ command: 'block.insert', type: 'page', prepared: { pageId } }));
+
+  if (orphaned.length === 0) {
+    return null;
+  }
+
+  return {
+    ok: false,
+    error: {
+      code: 'ORPHANED_SIDE_EFFECT',
+      message: `The batch failed after the host did work for it (${SERVER_STOP.message}). Clean up the listed items.`,
+      retryable: false,
+      details: { orphaned, cause: SERVER_STOP },
+    },
+    warnings,
+  };
 };
 
 /**

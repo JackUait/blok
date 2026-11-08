@@ -826,7 +826,7 @@ describe('server runtime CLI operations', () => {
   it('takes handleStore: true as a host store, and refuses any other value', async () => {
     expect(await call('mcpCheckOptions', { options: { ...base, handleStore: true } })).toEqual({});
     expect(await call('mcpCheckOptions', { options: { ...base, handleStore: 'files:/x' } }))
-      .toEqual({ error: 'handleStore needs count, tryAdd, acquire and remove functions' });
+      .toEqual({ error: 'handleStore needs count, tryAdd, acquire and sweep functions' });
   });
 
   it.each<[Record<string, unknown>, string]>([

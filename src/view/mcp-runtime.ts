@@ -277,7 +277,7 @@ const checkOptions = (input: Input): string => configResult(() => {
     ...rest,
     ...(authorize === true && { authorize: unused }),
     ...(createPage === true && { createPage: unused }),
-    ...(handleStore !== undefined && { handleStore: handleStore === true ? { count: unused, tryAdd: unused, acquire: unused, remove: unused } : handleStore }),
+    ...(handleStore !== undefined && { handleStore: handleStore === true ? { count: unused, tryAdd: unused, acquire: unused, sweep: unused } : handleStore }),
     ...(upload !== undefined && { uploads: { ...limits, uploader: uploadByFile === true ? { uploadByFile: unused } : {} } }),
   } as unknown as BlokMcpOptions);
 });

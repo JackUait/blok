@@ -69,19 +69,30 @@ export interface BlokMcpHandleRecord {
   history: Record<string, unknown>;
 }
 
-/** One call's hold on a handle. No other lease on it exists until release, in any process. */
+/**
+ * One call's hold on a handle. A lease is time-limited: the store ends it unless it is renewed, so
+ * a paused holder can lose it to another process. Every op checks that this lease still holds the
+ * handle; once it does not, renew, save and remove must throw and change nothing.
+ */
 export interface BlokMcpHandleLease {
   readonly record: BlokMcpHandleRecord;
+  /**
+   * Extends the lease. Blok calls it every 5 seconds while a call holds the lease, so a store needs
+   * no timer of its own; a lease not renewed for longer than the store's lease time (30 s) may be taken.
+   */
+  renew(): Promise<void>;
   /** Replaces the record. Blok calls it after the source save, before release. */
   save(record: BlokMcpHandleRecord): Promise<void>;
-  /** Ends the lease and restarts the handle's idle time. */
+  /** Ends the lease and restarts the handle's idle time. Does nothing once the lease is gone. */
   release(): Promise<void>;
+  /** Deletes the handle (blok_close, or a record that could not be saved). The lease ends with it. */
+  remove(): Promise<void>;
 }
 
 /**
  * Where stored-mode handles live, so any process sharing the store can serve a call. A handle
- * expires after `idleMs` without a lease; a leased handle never expires. Any throw is logged and
- * the agent sees SOURCE_UNAVAILABLE.
+ * expires after `idleMs` without a lease; a leased handle never expires. Blok passes only handles
+ * of 1-128 characters of [A-Za-z0-9_-]. Any throw is logged and the agent sees SOURCE_UNAVAILABLE.
  */
 export interface BlokMcpHandleStore {
   /** The principal's handles that have not expired. */
@@ -90,8 +101,11 @@ export interface BlokMcpHandleStore {
   tryAdd(handle: string, record: BlokMcpHandleRecord, maxPerPrincipal: number, idleMs: number): Promise<boolean>;
   /** Waits up to timeoutMs for the lease. 'unknown': no such handle, or it expired. 'busy': still leased at the timeout. */
   acquire(handle: string, idleMs: number, timeoutMs: number): Promise<BlokMcpHandleLease | 'unknown' | 'busy'>;
-  /** Forgets the handle. Blok calls it while it holds the handle's lease. */
-  remove(handle: string): Promise<void>;
+  /**
+   * Deletes every handle idle longer than idleMs that nobody leases, of every principal. Blok calls
+   * it on a timer. A store that expires records by itself (a TTL) may do nothing here.
+   */
+  sweep(idleMs: number): Promise<void>;
 }
 
 /** What the host gets when an agent inserts a page block. */

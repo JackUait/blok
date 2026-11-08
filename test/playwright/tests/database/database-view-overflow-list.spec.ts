@@ -53,12 +53,18 @@ const mount = async (page: Page, activeViewId = 'v0'): Promise<void> => {
   await expect(page.getByRole('grid')).toBeVisible();
 };
 
+/**
+ * Resolves two frames after the resize. Until the bar's ResizeObserver runs,
+ * the bar still shows the old fold, and a poll read then passes on it.
+ */
 const setWidth = (page: Page, width: number): Promise<void> => page.evaluate((w) => {
   const holder = document.getElementById('blok');
 
   if (holder !== null) {
     holder.style.maxWidth = `${w}px`;
   }
+
+  return new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 }, width);
 
 const savedViewNames = (page: Page): Promise<string[]> => page.evaluate(async () => {
@@ -94,7 +100,7 @@ test.describe('database view overflow list', () => {
     await setWidth(page, 700);
     const shownTabs = page.locator('[data-blok-database-tab]:visible');
 
-    // The 700px holder holds a few tabs, never all eight. Polled: the bar refolds after the resize.
+    // The 700px holder holds a few tabs, never all eight.
     await expect.poll(async () => {
       const count = await shownTabs.count();
 
@@ -118,8 +124,6 @@ test.describe('database view overflow list', () => {
 
     for (let width = 360; width <= 900; width += 15) {
       await setWidth(page, width);
-      // Two frames: the bar's ResizeObserver runs, then layout settles.
-      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const problem = await page.evaluate(() => {
         const bar = document.querySelector<HTMLElement>('[data-blok-database-tab-bar]');
         const more = bar?.querySelector<HTMLElement>('[data-blok-database-tab-more]');
@@ -161,7 +165,7 @@ test.describe('database view overflow list', () => {
     const visibleNames = async (): Promise<string[]> =>
       (await page.locator('[data-blok-database-tab]:visible').allTextContents()).map((name) => name.trim());
 
-    // Polled: the bar refolds after the resize; wait for a shown tab left of Seventh with some folded.
+    // A shown tab left of Seventh, with some folded.
     await expect.poll(async () => {
       const names = await visibleNames();
 

@@ -103,6 +103,8 @@ import {
  *               (and env) once the first is up, at ${mcpUrlB} / ${mcpPortB}. It gets the same
  *               opening exchange. The two share ${dir}, so a --source or --handle-store there is
  *               shared too. Steps without it go to the first process.
+ *   instanceB   (case) {"argv"?, "session"?}: what instance b runs with instead of the case's argv
+ *               and session, e.g. another contract flag (VERSION_SKEW) or another client name.
  *   together    http only: a list of send steps sent at once, each recorded under its own
  *               "expect"; the step ends when all are answered. Each may name its instance.
  *
@@ -111,7 +113,7 @@ import {
  *               error, tools and prompts keyed by name (order is the SDK's; a host_* entry
  *               counts by name only; a name listed twice is "<duplicate>"), serverInfo name,
  *               instructions, which of the tools and prompts capabilities exist, the host's own
- *               logging capability as is, and a server request's method, message and schema.
+ *               logging capability as is (initialize only), and a server request's method, message and schema.
  *               No expectHttp is recorded. --example-* flags are the example's own, so they
  *               are left out when working out ${contractRevision}.
  *
@@ -180,6 +182,7 @@ export interface FixtureCase {
   hosts?: RouteTable & { $upgradeStatus?: number };
   room?: RoomSpec;
   session?: Session;
+  instanceB?: { argv?: string[]; session?: Session };
   steps?: Step[];
   watchFiles?: string[];
   watchModes?: string[];
@@ -412,7 +415,7 @@ const byName = (list: unknown): unknown => (Array.isArray(list)
 const nameOnly = (value: unknown): unknown => (isRecord(value) ? { name: value.name } : value);
 
 /** The result keys Blok owns. Everything else (protocolVersion, cache hints, ...) is the host SDK's. */
-const blokOwnedResult = (result: Record<string, unknown>): Record<string, unknown> => {
+const blokOwnedResult = (result: Record<string, unknown>, method: string | undefined): Record<string, unknown> => {
   const kept = Object.fromEntries(Object.entries({
     serverInfo: nameOnly(result.serverInfo),
     instructions: result.instructions,
@@ -420,8 +423,9 @@ const blokOwnedResult = (result: Record<string, unknown>): Record<string, unknow
       ? {
         tools: 'tools' in result.capabilities,
         prompts: 'prompts' in result.capabilities,
-        // The example host declares logging itself; Blok must leave it as it is.
-        logging: result.capabilities.logging,
+        // The example host declares logging itself; Blok must leave it as it is. Only initialize
+        // counts: logging is deprecated in 2026, and some SDKs (C# 2.3.1) leave it out of discovery.
+        ...(method === 'initialize' && { logging: result.capabilities.logging }),
       }
       : undefined,
     tools: byName(result.tools),
@@ -442,7 +446,7 @@ const blokOwnedResult = (result: Record<string, unknown>): Record<string, unknow
 };
 
 /** What the embed suite compares of one message; see "compare" above. */
-const blokOwned = (message: unknown): unknown => {
+const blokOwned = (message: unknown, method?: string): unknown => {
   if (!isRecord(message)) {
     return message;
   }
@@ -460,7 +464,7 @@ const blokOwned = (message: unknown): unknown => {
     return { error: { code, message: text, ...(data !== undefined && { data }) } };
   }
 
-  return isRecord(message.result) ? { result: blokOwnedResult(message.result) } : message;
+  return isRecord(message.result) ? { result: blokOwnedResult(message.result, method) } : message;
 };
 
 /**
@@ -707,8 +711,9 @@ class CaseRun {
     this.check(this.recorded as unknown as Holder, key, actual, label);
   }
 
-  private owned(message: unknown): unknown {
-    return this.c.compare === 'blok-owned' ? blokOwned(message) : message;
+  /** method: the request this message answers, when it is an answer. */
+  private owned(message: unknown, method?: string): unknown {
+    return this.c.compare === 'blok-owned' ? blokOwned(message, method) : message;
   }
 
   /** expectHttp: the status line and headers are the host SDK's in the embed suite. */
@@ -719,7 +724,7 @@ class CaseRun {
   }
 
   private finishStep(step: Step, holder: Holder, answer: unknown, label: string): void {
-    const masked = maskKeys(this.owned(answer), new Set(this.c.maskKeys ?? []));
+    const masked = maskKeys(this.owned(answer, step.send?.method), new Set(this.c.maskKeys ?? []));
 
     (step.mask ?? []).forEach((pointer) => maskAt(masked, pointer));
     for (const [name, source] of Object.entries(step.capture ?? {})) {
@@ -887,7 +892,7 @@ class CaseRun {
     }
   }
 
-  public async httpStep(server: HttpServer, step: Step, holder: Holder, label: string): Promise<void> {
+  public async httpStep(server: HttpServer, step: Step, holder: Holder, label: string, session: Session | undefined = this.c.session): Promise<void> {
     if (await this.bareStep(server, step, holder, label)) {
       return;
     }
@@ -904,8 +909,8 @@ class CaseRun {
     const isNotify = step.notify !== undefined;
     const base = materialize(isNotify ? step.notify : step.send, this.vars) as JsonMessage;
     const id = isNotify ? undefined : base.id ?? this.nextId++;
-    const message = withMeta({ jsonrpc: '2.0', ...base, ...(id !== undefined && { id }) }, this.c.session, raw);
-    const headers = mergeHeaders(mergeHeaders(sessionHeaders(this.c.session, message, raw), this.c.session?.headers, this.vars), step.headers, this.vars);
+    const message = withMeta({ jsonrpc: '2.0', ...base, ...(id !== undefined && { id }) }, session, raw);
+    const headers = mergeHeaders(mergeHeaders(sessionHeaders(session, message, raw), session?.headers, this.vars), step.headers, this.vars);
     const sentAt = Date.now();
     const sending = sendHttp(server.url, {
       method: 'POST', path: new URL(server.url).pathname, headers, body: Buffer.from(JSON.stringify(message)), timeoutMs: step.readTimeoutMs,
@@ -933,9 +938,7 @@ class CaseRun {
   }
 
   /** The SDK client's opening exchange for a 2025 session; 2026 has none. */
-  public async handshake(send: (message: JsonMessage) => Promise<JsonMessage | undefined>): Promise<void> {
-    const session = this.c.session;
-
+  public async handshake(send: (message: JsonMessage) => Promise<JsonMessage | undefined>, session: Session | undefined = this.c.session): Promise<void> {
     if (session === undefined || session.protocolVersion === MODERN) {
       return;
     }
@@ -1033,45 +1036,50 @@ const usesInstanceB = (steps: Step[]): boolean =>
 const runHttp = async (run: CaseRun, c: FixtureCase, launch: Launch): Promise<void> => {
   const server = await startHttp(launch.command, launch.argv, launch.env, launch.cwd);
   const servers: { a: HttpServer; b?: HttpServer } = { a: server };
-  const opened = async (target: HttpServer): Promise<void> => {
+  const sessionB = c.instanceB?.session ?? c.session;
+  const opened = async (target: HttpServer, session: Session | undefined): Promise<void> => {
     await run.handshake(async (message) => {
-      const headers = message.id === undefined ? sessionHeaders(c.session, message, false) : { ...BASE_HEADERS };
+      const headers = message.id === undefined ? sessionHeaders(session, message, false) : { ...BASE_HEADERS };
       const answer = await sendHttp(target.url, {
         method: 'POST',
         path: new URL(target.url).pathname,
-        headers: mergeHeaders(headers, c.session?.headers, run.vars),
+        headers: mergeHeaders(headers, session?.headers, run.vars),
         body: Buffer.from(JSON.stringify(message)),
       });
 
       return parseHttpMessages(answer)[0];
-    });
+    }, session);
   };
 
   run.vars.set('mcpUrl', server.url);
   run.vars.set('mcpPort', server.port);
   try {
-    await opened(server);
+    await opened(server, c.session);
     if (usesInstanceB(c.steps ?? [])) {
-      servers.b = await startHttp(launch.command, launch.argv, launch.env, launch.cwd);
+      const argvB = c.instanceB?.argv?.map((arg) => substituteString(arg, run.vars)) ?? launch.argv;
+
+      servers.b = await startHttp(launch.command, argvB, launch.env, launch.cwd);
       run.vars.set('mcpUrlB', servers.b.url);
       run.vars.set('mcpPortB', servers.b.port);
-      await opened(servers.b);
+      await opened(servers.b, sessionB);
     }
-    const target = (step: Step): HttpServer => (step.instance === 'b' && servers.b !== undefined ? servers.b : server);
+    const onB = (step: Step): boolean => step.instance === 'b' && servers.b !== undefined;
+    const target = (step: Step): HttpServer => (onB(step) && servers.b !== undefined ? servers.b : server);
+    const sessionOf = (step: Step): Session | undefined => (onB(step) ? sessionB : c.session);
     const together = async (steps: Step[], holder: Holder, label: string): Promise<void> => {
       const held = holder.together;
 
       if (!Array.isArray(held)) {
         throw new Error(`${label}: "together" must be a list of steps`);
       }
-      await Promise.all(steps.map((inner, at) => run.httpStep(target(inner), inner, held[at] as Holder, `${label}.${at}`)));
+      await Promise.all(steps.map((inner, at) => run.httpStep(target(inner), inner, held[at] as Holder, `${label}.${at}`, sessionOf(inner))));
     };
 
     for (const [index, step] of (c.steps ?? []).entries()) {
       const label = `${c.name} step ${index}`;
 
       await (step.together === undefined
-        ? run.httpStep(target(step), step, run.stepHolder(index), label)
+        ? run.httpStep(target(step), step, run.stepHolder(index), label, sessionOf(step))
         : together(step.together, run.stepHolder(index), label));
     }
   } finally {

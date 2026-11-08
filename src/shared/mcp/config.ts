@@ -330,7 +330,7 @@ const checkCreatePage = (options: BlokMcpOptions): void => {
   }
 };
 
-const HANDLE_STORE_OPS = ['count', 'tryAdd', 'acquire', 'remove'] as const;
+const HANDLE_STORE_OPS = ['count', 'tryAdd', 'acquire', 'sweep'] as const;
 
 // A library host passes the store unchecked; a wrong one would fail only on the first open.
 const checkHandleStore = (options: BlokMcpOptions): void => {
@@ -340,7 +340,7 @@ const checkHandleStore = (options: BlokMcpOptions): void => {
     return;
   }
   if (typeof store !== 'object' || store === null || HANDLE_STORE_OPS.some(op => typeof Reflect.get(store, op) !== 'function')) {
-    throw new McpConfigError('handleStore needs count, tryAdd, acquire and remove functions');
+    throw new McpConfigError('handleStore needs count, tryAdd, acquire and sweep functions');
   }
 };
 

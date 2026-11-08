@@ -160,11 +160,23 @@ By default each process keeps its stored handles in memory. With a handle store,
 
 What a store must do (`BlokMcpHandleStore`):
 
-- `tryAdd` counts the principal's handles and adds the new one as one atomic step.
-- `acquire` gives one lease per handle across all processes. It waits up to the timeout Blok passes, then answers `busy`; Blok answers `SOURCE_UNAVAILABLE` (retryable).
+- `count(principal, idleMs)` answers the principal's handles that have not expired.
+- `tryAdd(handle, record, maxPerPrincipal, idleMs)` counts the principal's handles and adds the new one as one atomic step. A plain `COUNT` then `INSERT` is not atomic: hold a per-principal lock (SQL `SELECT … FOR UPDATE` on a principal row, or a Redis Lua script).
+- `acquire(handle, idleMs, timeoutMs)` gives one lease per handle across all processes. It waits up to the timeout, then answers `busy`; Blok answers `SOURCE_UNAVAILABLE` (retryable). `unknown` means no such handle, or it expired.
+- The lease has `save(record)`, `release()` and `remove()`. Each one checks that the lease still holds the handle (a lease token: SQL `UPDATE … WHERE lease_token = ?`, Redis compare in a Lua script). A lost lease must make `save` and `remove` throw and change nothing. `release` after the lease is gone does nothing.
+- There is no `remove` without a lease. `blok_close` and a record that could not be saved both remove through the lease.
+- `sweep(idleMs)` deletes every handle idle longer than `idleMs` that nobody leases, of every principal. Blok calls it every 60 seconds, and stops at shutdown. A store that expires records by itself (Redis `PEXPIRE` at release, `PERSIST` while leased) may do nothing. A SQL store needs it, or the records stay forever.
 - A handle expires after the idle time without a lease. A leased handle never expires; `release` restarts its idle time.
-- Records can be large: the undo steps are whole documents, and the newest step is always kept, so a record has no fixed size limit.
-- Any error the store throws is logged, and the agent sees `SOURCE_UNAVAILABLE`.
+- Leases need a time limit and renewal. A holder that dies must not hold a handle forever, so a lease ends unless it is renewed while the call runs. Renew it while held, or give it a TTL longer than the longest call (a 30 s load, a 60 s script run, plus the `--authorize` check).
+- Blok passes only handles of 1–128 characters of `[A-Za-z0-9_-]`. Any other handle from a client answers `UNKNOWN_HANDLE` before the store is called.
+- Records can be large: the undo steps are whole documents, and the newest step is always kept, so a record has no fixed size limit. In MySQL use `LONGTEXT` or `JSON`, not `TEXT` (64 KiB).
+- Keep the record exactly as given. `scopes: null` and `scopes: []` mean different things, so a serializer must not drop nulls (no `omitempty` in Go, no `WhenWritingNull` in C#).
+- A record of another format (`v` other than `1`) answers `UNKNOWN_HANDLE`.
+- Any error the store throws is logged in full, and the agent sees `SOURCE_UNAVAILABLE` (retryable). It is not answered as a protocol error, even when Blok runs inside a host's server: a store outage passes.
+
+Records are trusted. Blok checks only the principal and the tool contract of a record. Anyone who can write the store can forge the actor, scopes, client name, document and undo steps, and so write any content the principal may write. Keep the store writable by Blok's processes only.
+
+Exclusivity is best effort. Leases are time-limited, so a paused holder (a frozen process, a suspended VM) can lose its lease while it still runs, and two processes can run one call each on the same handle. The lost holder's own `save` and `remove` then fail, and the batch it already saved still answers. What keeps a save from being lost is the source's version check: a stale save must answer `409` (`DOCUMENT_CHANGED`). A source that does not check versions can lose writes across processes.
 
 `--handle-store files:<dir>` is the reference store. It keeps each handle in `<dir>` and locks with lock files, so several processes on one machine can share it. Its files are not meant to be shared with the C#, Go or Rust servers.
 

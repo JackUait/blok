@@ -21,6 +21,9 @@
  *   --example-host-prompt <name>           the host prompt's name (default host_hello)
  *   --example-allow-anonymous <principal>  serve anonymous callers as this principal
  *   --example-source endpoint:<url>        your own document store, as `source: { kind: 'custom' }`
+ *   --example-caller-error <text>          the host's caller hook throws an Error with this text, as a
+ *                                          broken sign-in would. Blok logs it and answers -32603
+ *                                          "Blok could not run this call."
  *                                          (see exampleSource; not with --source)
  *
  * The HTTP side keeps only what an example needs: no Origin/Host checks and no body cap
@@ -38,7 +41,7 @@ const { serveStdio } = await import('@modelcontextprotocol/server/stdio');
 const { BlokMcpSourceError, createBlok, parseBlokMcpArgs } = await import('@bloklabs/mcp');
 
 const NAME = 'host-example';
-const EXAMPLE_FLAGS = new Set(['--example-host-tool', '--example-host-prompt', '--example-allow-anonymous', '--example-source']);
+const EXAMPLE_FLAGS = new Set(['--example-host-tool', '--example-host-prompt', '--example-allow-anonymous', '--example-source', '--example-caller-error']);
 
 class StartError extends Error {}
 
@@ -309,6 +312,11 @@ const main = async () => {
   const blok = createBlok({ ...options, ...(source !== undefined && { source }) }, {
     // stdio has one local user; over HTTP the default reads the AuthInfo the host passed to the SDK.
     ...(stdio && { caller: () => ({ principal: 'local' }) }),
+    ...(example['caller-error'] !== undefined && {
+      caller: () => {
+        throw new Error(example['caller-error']);
+      },
+    }),
     ...(example['allow-anonymous'] !== undefined && { anonymousPrincipal: example['allow-anonymous'] }),
   });
   const host = hostSurface(example);

@@ -468,6 +468,23 @@ describe('parseMcpArgs', () => {
     });
   });
 
+  describe('--handle-store', () => {
+    it('keeps a files store directory with what the caller loads', () => {
+      const { files } = parseMcpArgs(['--handle-store', 'files:/var/blok/handles'], {});
+
+      expect(files).toEqual({ handleStore: '/var/blok/handles' });
+    });
+
+    it('takes memory as the default store, which needs nothing loaded', () => {
+      expect(parseMcpArgs(['--handle-store', 'memory'], {}).files).toEqual({});
+    });
+
+    it.each([['redis://x'], ['files:'], ['memory:x'], ['Files:/x']])('refuses %s', (value) => {
+      expect(() => parseMcpArgs(['--handle-store', value], {}))
+        .toThrow(new McpConfigError(`--handle-store must be memory or files:<dir>, got "${value}"`));
+    });
+  });
+
   describe('flags it does not know', () => {
     it.each([
       ['--auth=oauth'],
@@ -695,6 +712,19 @@ describe('checkOptionSafety', () => {
     it('refuses to start with live rooms, before the ticket check', () => {
       expect(() => checkOptionSafety({ ...base, source: files, pageTitles: 'page-map', sync: { url: 'wss://sync.example' }, createPage }))
         .toThrow(new McpConfigError('--create-page works in stored mode only: it cannot be used with live rooms (--sync-url)'));
+    });
+  });
+
+  describe('handleStore', () => {
+    const fn = (): Promise<never> => Promise.reject(new Error('unused'));
+
+    it('takes a store with count, tryAdd, acquire and remove', () => {
+      expect(() => checkOptionSafety({ ...base, handleStore: { count: fn, tryAdd: fn, acquire: fn, remove: fn } })).not.toThrow();
+    });
+
+    it.each([['null', null], ['a string', 'files:/x'], ['a store without remove', { count: fn, tryAdd: fn, acquire: fn }]])('refuses %s', (_label, handleStore) => {
+      expect(() => checkOptionSafety({ ...base, handleStore: handleStore as never }))
+        .toThrow(new McpConfigError('handleStore needs count, tryAdd, acquire and remove functions'));
     });
   });
 

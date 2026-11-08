@@ -33,7 +33,10 @@ import {
  *               "$upgradeStatus" for the sync upgrade it refuses. Every request it
  *               gets is recorded in order, or by "hostRequestOrder": "sorted" | "distinct".
  *               "maskHostKeys" masks those key names in the records after ordering, for
- *               values a server makes up per run (a page creator's suggestedPageId).
+ *               values a server makes up per run (timestamps). "mintedHostKeys" is for ids a
+ *               server mints (a page creator's suggestedPageId): each value must be a Blok id
+ *               (10 characters of [A-Za-z0-9_-]) and differ from every other one in the case;
+ *               it is recorded as "<minted>". Any other value stays as sent, so it fails.
  *   room        {"journal"?: false}: a real sync host (live-room.ts) at ${roomWs}; without
  *               a journal the host speaks blok-sync.v1 only. stdio only.
  *   session     {"protocolVersion", "capabilities"?, "clientName"?, "headers"?}: the
@@ -96,6 +99,12 @@ import {
  *               escaping counts (a raw emoji or U+2028 against a \uXXXX escape).
  *   sseOrder    "byId": http only; sort a batch's SSE answers by id, for requests that
  *               may end in either order.
+ *   instance    "b": http only; send this step to a second process started with the same argv
+ *               (and env) once the first is up, at ${mcpUrlB} / ${mcpPortB}. It gets the same
+ *               opening exchange. The two share ${dir}, so a --source or --handle-store there is
+ *               shared too. Steps without it go to the first process.
+ *   together    http only: a list of send steps sent at once, each recorded under its own
+ *               "expect"; the step ends when all are answered. Each may name its instance.
  *
  * compare      "blok-owned" (the embed suite): the server is a host's, so its SDK owns the wire.
  *               Only what Blok owns is compared (see blokOwned): each answer's result or
@@ -145,6 +154,8 @@ export interface Step {
   closeInputAfter?: boolean;
   rawText?: boolean;
   sseOrder?: 'byId';
+  instance?: 'b';
+  together?: Step[];
   afterHost?: string;
   expect?: unknown;
   expectHttp?: unknown;
@@ -177,6 +188,7 @@ export interface FixtureCase {
   hostRequestOrder?: 'sorted' | 'distinct';
   maskKeys?: string[];
   maskHostKeys?: string[];
+  mintedHostKeys?: string[];
   compare?: 'blok-owned';
   variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
@@ -340,6 +352,35 @@ const maskKeys = (value: unknown, keys: ReadonlySet<string>): unknown => {
   }
 
   return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, keys.has(key) && inner !== null ? '<masked>' : maskKeys(inner, keys)]));
+};
+
+const MINTED_ID = /^[A-Za-z0-9_-]{10}$/;
+
+/** Replaces each minted id under these key names with "<minted>", after checking its shape and that no two are equal. */
+const mintedKeys = (value: unknown, keys: ReadonlySet<string>, label: string): unknown => {
+  const seen = new Set<string>();
+  const walk = (inner: unknown): unknown => {
+    if (Array.isArray(inner)) {
+      return inner.map(walk);
+    }
+    if (!isRecord(inner)) {
+      return inner;
+    }
+
+    return Object.fromEntries(Object.entries(inner).map(([key, item]) => {
+      if (!keys.has(key) || typeof item !== 'string' || !MINTED_ID.test(item)) {
+        return [key, walk(item)];
+      }
+      if (seen.has(item)) {
+        throw new Error(`${label}: the minted ${key} ${item} was sent twice`);
+      }
+      seen.add(item);
+
+      return [key, '<minted>'];
+    }));
+  };
+
+  return walk(value);
 };
 
 const captured = (answer: unknown, source: CaptureSource): unknown => {
@@ -956,7 +997,7 @@ const withHost = async (c: FixtureCase, run: CaseRun, body: () => Promise<void>)
     await body();
     const requests = orderedRequests(host.requests, c.hostRequestOrder);
 
-    run.checkCase('expectHostRequests', maskKeys(requests, new Set(c.maskHostKeys ?? [])), `${c.name} host requests`);
+    run.checkCase('expectHostRequests', mintedKeys(maskKeys(requests, new Set(c.maskHostKeys ?? [])), new Set(c.mintedHostKeys ?? []), c.name), `${c.name} host requests`);
   } finally {
     await host.close();
   }
@@ -986,28 +1027,55 @@ const runStdio = async (run: CaseRun, c: FixtureCase, launch: Launch, room?: Liv
   }
 };
 
+const usesInstanceB = (steps: Step[]): boolean =>
+  steps.some((step) => step.instance === 'b' || usesInstanceB(step.together ?? []));
+
 const runHttp = async (run: CaseRun, c: FixtureCase, launch: Launch): Promise<void> => {
   const server = await startHttp(launch.command, launch.argv, launch.env, launch.cwd);
-
-  run.vars.set('mcpUrl', server.url);
-  run.vars.set('mcpPort', server.port);
-  try {
+  const servers: { a: HttpServer; b?: HttpServer } = { a: server };
+  const opened = async (target: HttpServer): Promise<void> => {
     await run.handshake(async (message) => {
       const headers = message.id === undefined ? sessionHeaders(c.session, message, false) : { ...BASE_HEADERS };
-      const answer = await sendHttp(server.url, {
+      const answer = await sendHttp(target.url, {
         method: 'POST',
-        path: new URL(server.url).pathname,
+        path: new URL(target.url).pathname,
         headers: mergeHeaders(headers, c.session?.headers, run.vars),
         body: Buffer.from(JSON.stringify(message)),
       });
 
       return parseHttpMessages(answer)[0];
     });
+  };
+
+  run.vars.set('mcpUrl', server.url);
+  run.vars.set('mcpPort', server.port);
+  try {
+    await opened(server);
+    if (usesInstanceB(c.steps ?? [])) {
+      servers.b = await startHttp(launch.command, launch.argv, launch.env, launch.cwd);
+      run.vars.set('mcpUrlB', servers.b.url);
+      run.vars.set('mcpPortB', servers.b.port);
+      await opened(servers.b);
+    }
+    const target = (step: Step): HttpServer => (step.instance === 'b' && servers.b !== undefined ? servers.b : server);
+    const together = async (steps: Step[], holder: Holder, label: string): Promise<void> => {
+      const held = holder.together;
+
+      if (!Array.isArray(held)) {
+        throw new Error(`${label}: "together" must be a list of steps`);
+      }
+      await Promise.all(steps.map((inner, at) => run.httpStep(target(inner), inner, held[at] as Holder, `${label}.${at}`)));
+    };
+
     for (const [index, step] of (c.steps ?? []).entries()) {
-      await run.httpStep(server, step, run.stepHolder(index), `${c.name} step ${index}`);
+      const label = `${c.name} step ${index}`;
+
+      await (step.together === undefined
+        ? run.httpStep(target(step), step, run.stepHolder(index), label)
+        : together(step.together, run.stepHolder(index), label));
     }
   } finally {
-    await server.stop();
+    await Promise.all([server.stop(), servers.b?.stop()]);
   }
 };
 

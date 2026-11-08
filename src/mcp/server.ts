@@ -19,6 +19,7 @@ import { mcpInstructions } from './instructions';
 import type { Dispatch } from './sdk-server';
 import type { HandleSession } from './session';
 import { listMcpTools } from './tools';
+import { SharedHandles } from './shared-handles';
 import { createUploaderService } from './uploads';
 import type { McpTool } from './tools';
 
@@ -27,6 +28,7 @@ export interface AssembledMcp {
   /** Sent on initialize; built from the contract tools/list renders. */
   instructions: string;
   dispatch: Dispatch;
+  /** This process's handles: all of them, or with a handleStore only the live ones. */
   handles: HandleRegistry<HandleSession>;
   stop(): Promise<void>;
 }
@@ -153,9 +155,17 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
 
   sweeper.unref();
 
+  const table = options.handleStore === undefined ? handles : new SharedHandles({
+    local: handles,
+    store: options.handleStore,
+    idleMs: handleIdleMs,
+    maxPerPrincipal: options.maxHandlesPerPrincipal ?? DEFAULTS.maxHandlesPerPrincipal,
+    contractRevision: contracts.stored.revision,
+    restore: opener.restore,
+  });
   const authorize = options.authorize;
   const dispatch = createToolDispatcher({
-    handles,
+    handles: table,
     open: deps.open ?? opener.open,
     list: deps.list ?? opener.list,
     stillAllowed: async (caller, documentId, write) =>
@@ -189,7 +199,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
         });
         const work = (async () => {
           await Promise.all([
-            handles.closeAll(async session => {
+            table.closeAll(async session => {
               await session.close('closed');
             }),
             Promise.allSettled([...sweeps]),

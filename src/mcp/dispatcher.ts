@@ -7,7 +7,7 @@ import {
 } from '../shared/mcp/calls';
 
 import { surfaceError } from './errors';
-import type { HandleRegistry } from './handles';
+import type { HandleTable } from './handles';
 import type { HandleSession } from './session';
 
 export { LIFECYCLE_ARGUMENTS, UnknownToolError } from '../shared/mcp/calls';
@@ -33,7 +33,7 @@ export interface CallOptions {
 }
 
 export interface DispatcherDeps {
-  handles: HandleRegistry<HandleSession>;
+  handles: HandleTable;
   open(request: OpenRequest, caller: Caller): Promise<HandleSession>;
   list(request: ListRequest, caller: Caller): Promise<ListResult>;
   stillAllowed(caller: Caller, documentId: string, write: boolean): Promise<boolean>;
@@ -89,7 +89,12 @@ export const createToolDispatcher = (
     signal?: AbortSignal,
   ): Promise<ToolOutcome> => {
     // Opening can mint a ticket and join a room, so refuse at the cap first.
-    deps.handles.assertRoom(caller.principal);
+    const room = deps.handles.assertRoom(caller.principal);
+
+    // Only a shared store answers later; the in-memory table keeps today's timing.
+    if (room instanceof Promise) {
+      await room;
+    }
     const session = await deps.open({ documentId, mode: step.mode, write: step.write }, caller);
 
     try {
@@ -99,7 +104,8 @@ export const createToolDispatcher = (
       if (signal?.aborted === true) {
         throw failure('CANCELLED', 'The request was cancelled before the document opened.');
       }
-      const handle = deps.handles.add(caller.principal, documentId, session);
+      const added = deps.handles.add(caller.principal, documentId, session);
+      const handle = typeof added === 'string' ? added : await added;
 
       return ok(openAnswer({
         handle,
@@ -131,8 +137,11 @@ export const createToolDispatcher = (
   const closeHandle = async (caller: Caller, handle: string): Promise<ToolOutcome> => {
     // A refused or failed check still closes, so the handle does not keep its --max-handles slot.
     // An unknown handle fails again in remove. remove waits for use, so it must run outside the callback.
-    const refusal = await onHandle(caller, handle, false, async () => undefined)
-      .then(() => null, (thrown: unknown) => ({ thrown }));
+    const refusal = await deps.handles.peek(handle, caller.principal, async (documentId) => {
+      if (!(await deps.stillAllowed(caller, documentId, false))) {
+        throw surfaceError('FORBIDDEN', 'You no longer have access to this document.');
+      }
+    }).then(() => null, (thrown: unknown) => ({ thrown }));
     const session = await deps.handles.remove(handle, caller.principal);
     const summary = await session.close('closed');
 

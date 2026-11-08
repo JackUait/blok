@@ -49,6 +49,8 @@ import { startServer, type RunningServer } from '../server-conformance/run-again
  * Writing cases: settle after every batch. The agent sends at most one awareness
  * frame per 100 ms, so two batches closer than that merge their frames. After a
  * close (injected or a redrive), wait past the reconnect backoff before reading frames.
+ * An injected close keeps the agent's socket open until the agent answers with its own close,
+ * so that answer is always in the frames.
  */
 
 export const ROOM_SECRET = 'mcp-live-conformance-secret-0123456789';
@@ -233,6 +235,8 @@ export class FrameProxy {
   private server: Server | undefined;
   private readonly sockets = new Set<Socket>();
   private readonly holdUsers = new Set<string>();
+  /** Connections an injection closed; their client socket waits for the agent's answering close. */
+  private readonly closing = new Set<Connection>();
 
   public constructor(private readonly target: { host: string; port: number }) {}
 
@@ -376,7 +380,11 @@ export class FrameProxy {
     upstream.write(Buffer.concat([head, rest]));
     this.pipeResponse(connection);
     client.once('close', () => upstream.destroy());
-    upstream.once('close', () => client.destroy());
+    upstream.once('close', () => {
+      if (!this.closing.has(connection)) {
+        client.destroy();
+      }
+    });
   }
 
   private takeInjection<K extends 'dropAck' | 'reject'>(kind: K): Extract<Injection, Record<K, unknown>> | undefined {
@@ -452,6 +460,14 @@ export class FrameProxy {
       this.touch();
       for (const frame of fromClient.push(chunk)) {
         record('out', frame);
+        if (this.closing.has(connection) && frame.opcode === 8) {
+          client.destroy();
+
+          return;
+        }
+        if (this.closing.has(connection)) {
+          continue;
+        }
         if (connection.label === 'agent' && frame.opcode === 2 && this.rejectOperation(connection, frame.payload)) {
           continue;
         }
@@ -511,7 +527,7 @@ export class FrameProxy {
   }
 
   private openAgent(): Connection {
-    const connection = [...this.connections].reverse().find((c) => c.label === 'agent' && !c.client.destroyed);
+    const connection = [...this.connections].reverse().find((c) => c.label === 'agent' && !this.closing.has(c) && !c.client.destroyed);
 
     if (connection === undefined) {
       throw new Error('live-room: no open agent socket');
@@ -535,6 +551,8 @@ export class FrameProxy {
 
   private closeConnection(connection: Connection, code: number): void {
     this.log.push({ conn: connection.id, dir: 'in', close: code, fault: 'injected' });
+    // Before destroy: the upstream close handler reads it and leaves the client open.
+    this.closing.add(connection);
     connection.upstream.destroy();
     connection.client.write(serverFrame(8, closePayload(code)));
   }

@@ -307,6 +307,47 @@ describe('MCP conformance live-room proxy', () => {
     }
   });
 
+  it('an injected close records the agent\'s answering close, however late it comes, then ends the socket', async () => {
+    const upstream = createTcpServer((socket) => {
+      socket.once('data', () => {
+        socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n');
+      });
+    });
+
+    await new Promise<void>((resolve) => upstream.listen(0, '127.0.0.1', resolve));
+    const proxy = new FrameProxy({ host: '127.0.0.1', port: (upstream.address() as AddressInfo).port });
+    const port = await proxy.start();
+    const ticket = signTicket('s', { user: 'agent:alice:x', doc: 'd', write: true });
+    const socket = connect(port, '127.0.0.1');
+    const got: Buffer[] = [];
+    const closed = new Promise<void>((resolve) => socket.once('close', () => resolve()));
+
+    socket.on('error', () => undefined);
+    socket.on('data', (chunk: Buffer) => got.push(chunk));
+
+    try {
+      socket.write(`GET /sync/d HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Protocol: ${ticket}\r\n\r\n`);
+      await vi.waitFor(() => expect(Buffer.concat(got).toString('latin1')).toContain('101'));
+      got.length = 0;
+      proxy.closeAgent(4409);
+      await vi.waitFor(() => expect(Buffer.concat(got)).toEqual(Buffer.from([0x88, 2, 0x11, 0x39])));
+      // Later than the proxy takes to drop the host side, as a loaded agent answers.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      // A masked close with a zero mask, so the code goes as is.
+      socket.write(Buffer.from([0x88, 0x82, 0, 0, 0, 0, 0x11, 0x39]));
+      await closed;
+
+      expect(proxy.log.filter((entry) => entry.close !== undefined)).toEqual([
+        { conn: 0, dir: 'in', close: 4409, fault: 'injected' },
+        { conn: 0, dir: 'out', close: 4409 },
+      ]);
+    } finally {
+      socket.destroy();
+      await proxy.close();
+      await new Promise<void>((resolve) => upstream.close(() => resolve()));
+    }
+  });
+
   it('sees every request of a keep-alive client, not just the first on a connection', async () => {
     const upstream = createServer((req, res) => {
       res.writeHead(200).end('ok');

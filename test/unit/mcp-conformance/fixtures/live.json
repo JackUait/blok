@@ -10729,6 +10729,10 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "close",
+                  "code": 4409
                 }
               ],
               "in": [
@@ -11458,6 +11462,10 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "close",
+                  "code": 1001
                 }
               ],
               "in": [
@@ -18806,6 +18814,10 @@
                   "type": "operation",
                   "lineage": "L1",
                   "operationId": "op1"
+                },
+                {
+                  "type": "close",
+                  "code": 1009
                 }
               ],
               "in": [
@@ -18847,6 +18859,10 @@
                   "type": "operation",
                   "lineage": "L1",
                   "operationId": "op1"
+                },
+                {
+                  "type": "close",
+                  "code": 1009
                 }
               ],
               "in": [

@@ -421,3 +421,25 @@ async fn the_cli_checks_and_keeps_create_page() {
         Some("http://127.0.0.1:9/pages")
     );
 }
+
+// The engine sees no rooms in the options, so Blok refuses this itself.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_creator_with_the_hosts_own_rooms_is_refused() {
+    let dir = temp_dir("rooms");
+    let pool = blok_jsruntime::Pool::new(blok_jsruntime::Options {
+        pool_size: Some(1),
+        ..blok_jsruntime::Options::default()
+    })
+    .unwrap();
+    let hooks = Hooks {
+        rooms: Some(Arc::new(blok_blokagent::Executor::new_on_runtime(
+            pool, None,
+        ))),
+        ..creator()
+    };
+    assert_eq!(
+        start_refusal(options(&dir), hooks).await,
+        "--create-page works in stored mode only: it cannot be used with live rooms (hooks.rooms)"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

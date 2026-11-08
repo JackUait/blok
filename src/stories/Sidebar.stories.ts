@@ -141,7 +141,10 @@ const render = (): HTMLElement => {
   editor.style.background = 'transparent';
   editor.style.boxShadow = 'none';
   frame.canvas.append(editor);
-  return frame.element;
+  const host = document.createElement('div');
+  host.setAttribute('data-blok-theme', 'dark');
+  host.append(frame.element);
+  return host;
 };
 
 const meta: Meta = {

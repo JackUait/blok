@@ -148,7 +148,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   const offline = new Set<string>();
 
   const shell = document.createElement('div');
-  shell.setAttribute('data-blok-interface', 'blok');
+  shell.setAttribute('data-blok-interface', 'shell');
   shell.setAttribute('data-blok-shell', '');
 
   const sidebar = document.createElement('aside');
@@ -184,27 +184,108 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   tree.setAttribute('data-blok-sidebar-tree', '');
   tree.setAttribute('aria-label', 'Pages');
 
-  const resize = document.createElement('button');
-  resize.type = 'button';
+  const edge = document.createElement('div');
+  edge.setAttribute('data-blok-sidebar-edge', '');
+  const resize = document.createElement('div');
   resize.setAttribute('data-blok-sidebar-resize', '');
-  resize.setAttribute('aria-label', 'Largeur de la barre');
+  resize.setAttribute('role', 'separator');
+  resize.setAttribute('tabindex', '0');
+  resize.setAttribute('aria-orientation', 'vertical');
+  resize.setAttribute('aria-valuemin', '0');
+  resize.setAttribute('aria-valuemax', '100');
+  resize.setAttribute('aria-label', 'Redimensionner avec les flèches gauche et droite');
+  const anchor = document.createElement('span');
+  anchor.setAttribute('data-blok-sidebar-resize-anchor', '');
+  resize.append(anchor);
+  edge.append(resize);
+  const hintAction = document.createElement('span');
+  const hint = document.createElement('div');
+  hint.setAttribute('data-blok-sidebar-resize-hint', '');
+  const hintGesture = document.createElement('span');
+  hintGesture.textContent = 'Click or ⌘\\';
+  const hintResize = document.createElement('span');
+  hintResize.textContent = 'Resize';
+  const hintDrag = document.createElement('span');
+  hintDrag.textContent = 'Drag';
+  hint.append(hintAction, hintGesture, hintResize, hintDrag);
+  const syncHint = (): void => {
+    hintAction.textContent = sidebar.hasAttribute('data-collapsed') ? 'Open' : 'Close';
+  };
+  syncHint();
+  onHover(resize, hint, { placement: 'right', anchor: () => anchor, gap: 12 });
+  const placeHint = (clientY: number): void => {
+    const rect = resize.getBoundingClientRect();
+    anchor.style.top = `${Math.min(rect.height, Math.max(0, clientY - rect.top))}px`;
+  };
+  const widthState = { open: 260 };
+  const syncValue = (): void => {
+    const span = maxWidth - minWidth;
+    const width = sidebar.getBoundingClientRect().width || widthState.open;
+    const value = sidebar.hasAttribute('data-collapsed') || span === 0
+      ? 0
+      : Math.round(((width - minWidth) / span) * 100);
+    resize.setAttribute('aria-valuenow', String(Math.min(100, Math.max(0, value))));
+  };
+  const setCollapsed = (collapsed: boolean): void => {
+    if (collapsed) {
+      widthState.open = sidebar.getBoundingClientRect().width || widthState.open;
+      sidebar.setAttribute('data-collapsed', '');
+      sidebar.style.width = '0px';
+    } else {
+      sidebar.removeAttribute('data-collapsed');
+      sidebar.style.width = `${widthState.open}px`;
+    }
+    syncHint();
+    syncValue();
+  };
+  syncValue();
   resize.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
     resize.setPointerCapture(event.pointerId);
-    resize.setAttribute('data-resizing', '');
-    const move = (next: PointerEvent) => {
+    const dragState = { dragged: false };
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const move = (next: PointerEvent): void => {
+      placeHint(next.clientY);
+      if (!dragState.dragged && Math.hypot(next.clientX - startX, next.clientY - startY) < 4) return;
+      dragState.dragged = true;
+      resize.setAttribute('data-resizing', '');
+      sidebar.removeAttribute('data-collapsed');
       const width = Math.min(maxWidth, Math.max(minWidth, next.clientX - shell.getBoundingClientRect().left));
       sidebar.style.width = `${width}px`;
+      widthState.open = width;
+      syncValue();
     };
-    const stop = () => {
+    const stop = (): void => {
       resize.removeAttribute('data-resizing');
+      if (!dragState.dragged) setCollapsed(!sidebar.hasAttribute('data-collapsed'));
       resize.removeEventListener('pointermove', move);
       resize.removeEventListener('pointerup', stop);
     };
     resize.addEventListener('pointermove', move);
     resize.addEventListener('pointerup', stop);
   });
+  resize.addEventListener('pointermove', (event) => placeHint(event.clientY));
+  resize.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const delta = event.key === 'ArrowRight' ? 16 : -16;
+    sidebar.removeAttribute('data-collapsed');
+    const width = Math.min(maxWidth, Math.max(minWidth, (sidebar.getBoundingClientRect().width || widthState.open) + delta));
+    sidebar.style.width = `${width}px`;
+    widthState.open = width;
+    syncHint();
+    syncValue();
+  });
+  shell.addEventListener('keydown', (event) => {
+    if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key !== '\\') return;
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+    event.preventDefault();
+    setCollapsed(!sidebar.hasAttribute('data-collapsed'));
+  });
 
-  sidebar.append(header, searchLabel, tree, resize);
+  sidebar.append(header, searchLabel, tree, edge);
 
   const canvas = document.createElement('main');
   canvas.setAttribute('data-blok-sidebar-canvas', '');

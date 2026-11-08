@@ -137,6 +137,121 @@ public sealed class SyncSocketMemberTests
     Assert.Equal(SyncClose.SlowConsumer, queuedClose);
   }
 
+  /// <summary>
+  /// A refused frame leaves the runtime's socket Aborted with its close still
+  /// on the way out. The connection stays counted against its user until the
+  /// peer ends its side, so faulting sockets cannot pass the per-user cap.
+  /// </summary>
+  [Fact]
+  public async Task AFaultedSocketKeepsItsLeaseUntilThePeerEndsItsSide()
+  {
+    var member = new SyncSocketMember(
+        canWrite: false, acceptsControlFrames: false, maxQueuedBytes: 10, closeGrace: TimeSpan.FromMinutes(1));
+    var lease = new RecordingLease();
+    using var socket = new FaultedSocket(new WebSocketException(WebSocketError.Faulted), lease);
+    using var peer = new CancellationTokenSource();
+
+    var run = member.RunAsync(socket, null, 1024, lease, peer.Token);
+    await socket.CloseSent.WaitAsync(Deadline.Token());
+
+    Assert.False(socket.LeaseDisposedAtClose);
+    Assert.False(lease.Disposed);
+
+    await peer.CancelAsync();
+    await run.WaitAsync(Deadline.Token());
+
+    Assert.True(lease.Disposed);
+  }
+
+  /// <summary>A peer that never ends its side holds the socket only briefly, however long the close grace.</summary>
+  [Fact]
+  public async Task AFaultedSocketWaitsOnlyBrieflyForAPeerThatStays()
+  {
+    var member = new SyncSocketMember(
+        canWrite: false, acceptsControlFrames: false, maxQueuedBytes: 10, closeGrace: TimeSpan.FromMinutes(1));
+    var lease = new RecordingLease();
+    using var socket = new FaultedSocket(new WebSocketException(WebSocketError.Faulted), lease);
+
+    await member.RunAsync(socket, null, 1024, lease, CancellationToken.None).WaitAsync(Deadline.Token());
+
+    Assert.True(lease.Disposed);
+  }
+
+  /// <summary>Our own abort surfaces as a cancelled receive: the connection is already torn down, so nothing waits.</summary>
+  [Fact]
+  public async Task ASocketAbortedByTheServerDoesNotWait()
+  {
+    var member = new SyncSocketMember(
+        canWrite: false, acceptsControlFrames: false, maxQueuedBytes: 10, closeGrace: TimeSpan.FromMinutes(1));
+    var lease = new RecordingLease();
+    using var socket = new FaultedSocket(new OperationCanceledException(), lease);
+    var started = DateTime.UtcNow;
+
+    await member.RunAsync(socket, null, 1024, lease, CancellationToken.None).WaitAsync(Deadline.Token());
+
+    Assert.True(DateTime.UtcNow - started < TimeSpan.FromMilliseconds(500));
+    Assert.True(lease.Disposed);
+  }
+
+  private sealed class RecordingLease : IDisposable
+  {
+    internal bool Disposed { get; private set; }
+
+    public void Dispose() => Disposed = true;
+  }
+
+  /// <summary>A socket whose receive fails the way the runtime's does, then reports Aborted.</summary>
+  private sealed class FaultedSocket(Exception receiveError, RecordingLease lease) : WebSocket
+  {
+    private readonly TaskCompletionSource closeSent = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    internal Task CloseSent => closeSent.Task;
+
+    internal bool LeaseDisposedAtClose { get; private set; }
+
+    public override WebSocketCloseStatus? CloseStatus => null;
+
+    public override string? CloseStatusDescription => null;
+
+    public override WebSocketState State => WebSocketState.Aborted;
+
+    public override string? SubProtocol => null;
+
+    public override void Abort()
+    {
+    }
+
+    public override Task CloseAsync(
+        WebSocketCloseStatus closeStatus,
+        string? statusDescription,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
+
+    public override Task CloseOutputAsync(
+        WebSocketCloseStatus closeStatus,
+        string? statusDescription,
+        CancellationToken cancellationToken)
+    {
+      LeaseDisposedAtClose = lease.Disposed;
+      closeSent.TrySetResult();
+
+      return Task.CompletedTask;
+    }
+
+    public override void Dispose()
+    {
+    }
+
+    public override Task<WebSocketReceiveResult> ReceiveAsync(
+        ArraySegment<byte> buffer,
+        CancellationToken cancellationToken) => Task.FromException<WebSocketReceiveResult>(receiveError);
+
+    public override Task SendAsync(
+        ArraySegment<byte> buffer,
+        WebSocketMessageType messageType,
+        bool endOfMessage,
+        CancellationToken cancellationToken) => Task.CompletedTask;
+  }
+
   private sealed class RecordingSocket : WebSocket
   {
     private WebSocketCloseStatus? closeStatus;

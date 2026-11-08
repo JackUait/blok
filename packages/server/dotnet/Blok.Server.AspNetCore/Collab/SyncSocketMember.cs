@@ -37,6 +37,12 @@ internal sealed class SyncSocketMember : ICollabMember
 
   private const int MinBytesPerReceive = 64;
 
+  /// <summary>
+  /// How long a socket the runtime closed on a refused frame stays open for
+  /// its close to reach the wire. Short: the lease is held all that time.
+  /// </summary>
+  private static readonly TimeSpan FaultCloseGrace = TimeSpan.FromSeconds(1);
+
   /// <summary>How long a peer gets to answer our close before the socket is torn down.</summary>
   private static readonly TimeSpan DefaultCloseGrace = TimeSpan.FromSeconds(5);
 
@@ -132,7 +138,8 @@ internal sealed class SyncSocketMember : ICollabMember
   /// Pumps outbound frames and reads inbound ones until the peer closes, the
   /// request aborts, or a requested close goes unanswered for the grace
   /// period. Leaves the room and frees the connection slot BEFORE answering
-  /// the peer's close, so a reconnecting client never races its own slot.
+  /// the peer's close, so a reconnecting client never races its own slot. A
+  /// socket that failed on its own keeps its slot until it is let go.
   /// </summary>
   internal async Task RunAsync(
       WebSocket socket,
@@ -143,10 +150,11 @@ internal sealed class SyncSocketMember : ICollabMember
   {
     using var receiving = CancellationTokenSource.CreateLinkedTokenSource(requestAborted);
     var pump = PumpAsync(socket, receiving, requestAborted);
+    var faulted = false;
 
     try
     {
-      await ReceiveLoopAsync(socket, membership, maxMessageBytes, receiving.Token);
+      faulted = await ReceiveLoopAsync(socket, membership, maxMessageBytes, receiving.Token);
     }
     finally
     {
@@ -155,19 +163,37 @@ internal sealed class SyncSocketMember : ICollabMember
         await membership.LeaveAsync();
       }
 
-      lease?.Dispose();
+      // A faulted socket stays open below, so it keeps its lease until then.
+      if (!faulted)
+      {
+        lease?.Dispose();
+      }
+
       RequestClose(SyncClose.Normal);
 
       try
       {
-        await pump.WaitAsync(closeGrace, CancellationToken.None);
-      }
-      catch (TimeoutException)
-      {
-        socket.Abort();
-      }
+        try
+        {
+          await pump.WaitAsync(closeGrace, CancellationToken.None);
+        }
+        catch (TimeoutException)
+        {
+          socket.Abort();
+        }
 
-      await AwaitPeerAfterFaultAsync(socket, requestAborted);
+        if (faulted)
+        {
+          await AwaitPeerAfterFaultAsync(requestAborted);
+        }
+      }
+      finally
+      {
+        if (faulted)
+        {
+          lease?.Dispose();
+        }
+      }
     }
   }
 
@@ -175,20 +201,14 @@ internal sealed class SyncSocketMember : ICollabMember
   /// A frame RFC 6455 refuses (1002, 1007) is closed by the runtime's socket,
   /// which then marks itself Aborted without tearing down. Disposing it in that
   /// state aborts the HTTP connection (ASP.NET's AbortStream), and Kestrel drops
-  /// the close frame its transport has not written yet. So the peer gets the
-  /// grace to end its side first. Every abort of our own already aborted the
-  /// request, so it does not wait here.
+  /// the close frame its transport has not written yet. So the peer gets a
+  /// short grace to end its side first.
   /// </summary>
-  private async Task AwaitPeerAfterFaultAsync(WebSocket socket, CancellationToken requestAborted)
+  private async Task AwaitPeerAfterFaultAsync(CancellationToken requestAborted)
   {
-    if (socket.State != WebSocketState.Aborted || requestAborted.IsCancellationRequested)
-    {
-      return;
-    }
-
     try
     {
-      await Task.Delay(closeGrace, requestAborted);
+      await Task.Delay(closeGrace < FaultCloseGrace ? closeGrace : FaultCloseGrace, requestAborted);
     }
     catch (OperationCanceledException)
     {
@@ -254,7 +274,8 @@ internal sealed class SyncSocketMember : ICollabMember
     }
   }
 
-  private async Task ReceiveLoopAsync(
+  /// <summary>True when the socket failed a receive on its own: a refused frame, or a dropped peer.</summary>
+  private async Task<bool> ReceiveLoopAsync(
       WebSocket socket,
       CollabMembership? membership,
       int maxMessageBytes,
@@ -275,7 +296,7 @@ internal sealed class SyncSocketMember : ICollabMember
 
         if (result.MessageType == WebSocketMessageType.Close)
         {
-          return;
+          return false;
         }
 
         if (membership is null || discarding || RequestedClose is not null)
@@ -333,9 +354,15 @@ internal sealed class SyncSocketMember : ICollabMember
         await membership.ReceiveAsync(frame, cancellationToken);
       }
     }
+    catch (WebSocketException) when (socket.State == WebSocketState.Aborted)
+    {
+      return true;
+    }
     catch (Exception error) when (IsSocketGone(error))
     {
       // The peer vanished or the grace period ran out; the caller cleans up.
+      // Our own abort lands here as a cancelled receive.
+      return false;
     }
     finally
     {

@@ -15,7 +15,9 @@ type requestCreator struct {
 	plain    int
 }
 
-func (c *requestCreator) Resolve(context.Context, string, Actor) (PageLocation, error) { return nil, nil }
+func (c *requestCreator) Resolve(context.Context, string, Actor) (PageLocation, error) {
+	return nil, nil
+}
 
 func (c *requestCreator) Create(context.Context, Actor) (string, error) {
 	c.mu.Lock()

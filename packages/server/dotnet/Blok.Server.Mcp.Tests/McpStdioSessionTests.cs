@@ -258,6 +258,46 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     Assert.Equal(["0", "2"], ids.Order(StringComparer.Ordinal));
   }
 
+  // Node answers a ping before it handles the next line, so a second ping 7 is on the wire
+  // before ping 8's answer however late the SDK runs it. The hold forces that late start; it is
+  // far below the reader's wait cap, so the fix cannot pass by timing out.
+  [Fact]
+  public async Task AnswersAPingBeforeAnyLaterLineEvenWhenItRunsLate()
+  {
+    var core = new McpServerCore(fixture.Host.Bundle, new McpConfig { Source = new McpSourceConfig.Files(dir) }, new McpHttpCaller());
+    var options = await McpSdkServer.OptionsAsync(core, _ => new McpCallerIdentity("local", null), CancellationToken.None);
+    var pingsSeven = 0;
+    Live? session = null;
+
+    options.Filters.Message.IncomingFilters.Add(next => async (context, cancellationToken) =>
+    {
+      if (context.JsonRpcMessage is ModelContextProtocol.Protocol.JsonRpcRequest { Method: "ping" } ping && ping.Id.ToString() == "7"
+          && Interlocked.Increment(ref pingsSeven) == 2)
+      {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(1);
+
+        while (session!.Answer("8") is null && DateTime.UtcNow < deadline)
+        {
+          await Task.Delay(10, CancellationToken.None);
+        }
+      }
+      await next(context, cancellationToken);
+    });
+    var live = session = new Live(core, options, new TaskCompletionSource().Task);
+
+    await live.SendAsync(Init.TrimEnd('\n').Split('\n')[0]);
+    await live.SendAsync(Init.TrimEnd('\n').Split('\n')[1]);
+    await live.AnswerAsync("0");
+    await live.SendAsync("""{"jsonrpc":"2.0","id":7,"method":"ping"}""");
+    await live.AnswerAsync("7");
+    // One write, so both lines come in one read, as a slow reader gets them.
+    await live.SendAsync("""{"jsonrpc":"2.0","id":7,"method":"ping"}""" + "\n" + """{"jsonrpc":"2.0","id":8,"method":"ping"}""");
+    await live.AnswerAsync("8");
+    await live.DisposeAsync();
+
+    Assert.Equal(["0", "7", "7", "8"], live.Lines.Select(line => JsonNode.Parse(line)!["id"]!.ToJsonString()));
+  }
+
   // A session over pipes, so a test can read answers before stdin ends.
   private sealed class Live : IAsyncDisposable
   {

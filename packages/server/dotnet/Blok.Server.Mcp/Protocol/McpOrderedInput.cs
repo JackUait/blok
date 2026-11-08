@@ -25,8 +25,20 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
   private readonly byte[] chunk = new byte[64 * 1024];
   private byte[] ready = [];
   private int readyAt;
+  private readonly Queue<(byte[] Bytes, string? AnsweredAtOnceId)> lines = new();
   private readonly TaskCompletionSource endOfInput = new(TaskCreationOptions.RunContinuationsAsynchronously);
   private bool ended;
+
+  // Requests Node answers with no I/O, so before it handles the next line. The SDK runs every line
+  // it has at once, so the next line is passed on only once these answers are written.
+  private static readonly HashSet<string> AnsweredAtOnce =
+      [RequestMethods.Ping, RequestMethods.ToolsList, RequestMethods.PromptsList, RequestMethods.PromptsGet];
+
+  // An answer that never comes holds the next line this long at most, never forever.
+  private static readonly TimeSpan AnswerWaitCap = TimeSpan.FromSeconds(10);
+
+  private readonly List<string> unanswered = [];
+  private TaskCompletionSource answered = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
   /// <summary>Completes when the inner stream ends (not when a line is too long).</summary>
   internal Task Ended => endOfInput.Task;
@@ -57,8 +69,28 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
 
   public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
   {
-    while (readyAt == ready.Length && !ended)
+    while (readyAt == ready.Length)
     {
+      if (lines.Count > 0)
+      {
+        await AnsweredAsync(cancellationToken);
+        var (bytes, id) = lines.Dequeue();
+
+        if (id is not null)
+        {
+          lock (unanswered)
+          {
+            unanswered.Add(id);
+          }
+        }
+        ready = bytes;
+        readyAt = 0;
+        continue;
+      }
+      if (ended)
+      {
+        break;
+      }
       var read = await inner.ReadAsync(chunk, cancellationToken);
 
       if (read == 0)
@@ -67,7 +99,7 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
         ended = true;
         core.InputEnded = true;
         endOfInput.TrySetResult();
-        if (holdAtEnd && readyAt == ready.Length)
+        if (holdAtEnd)
         {
           await Task.Delay(Timeout.Infinite, cancellationToken);
         }
@@ -81,6 +113,54 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
     readyAt += taken;
 
     return taken;
+  }
+
+  /// <summary>One answer for this id is out; frees one of its waiting lines.</summary>
+  internal void Answered(string id)
+  {
+    lock (unanswered)
+    {
+      if (unanswered.Remove(id))
+      {
+        answered.TrySetResult();
+      }
+    }
+  }
+
+  private async Task AnsweredAsync(CancellationToken cancellationToken)
+  {
+    var deadline = DateTime.UtcNow + AnswerWaitCap;
+
+    while (true)
+    {
+      Task changed;
+
+      lock (unanswered)
+      {
+        if (unanswered.Count == 0)
+        {
+          return;
+        }
+        if (answered.Task.IsCompleted)
+        {
+          answered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+        changed = answered.Task;
+      }
+      var left = deadline - DateTime.UtcNow;
+
+      if (left <= TimeSpan.Zero)
+      {
+        lock (unanswered)
+        {
+          unanswered.Clear();
+        }
+
+        return;
+      }
+      await Task.WhenAny(changed, Task.Delay(left, cancellationToken));
+      cancellationToken.ThrowIfCancellationRequested();
+    }
   }
 
   public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -110,9 +190,6 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
 
   private void Seen(ReadOnlySpan<byte> bytes)
   {
-    using var whole = new MemoryStream();
-
-    whole.Write(ready.AsSpan(readyAt));
     while (bytes.Length > 0 && !ended)
     {
       var end = bytes.IndexOf((byte)'\n');
@@ -129,22 +206,20 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
       {
         break;
       }
-      if (Pass(line.GetBuffer().AsMemory(0, (int)line.Length)) is { } passed)
+      if (Pass(line.GetBuffer().AsMemory(0, (int)line.Length), out var answeredAtOnceId) is { } passed)
       {
-        whole.Write(passed.Span);
-        whole.WriteByte((byte)'\n');
+        lines.Enqueue(([.. passed.Span, (byte)'\n'], answeredAtOnceId));
       }
       line.SetLength(0);
       bytes = bytes[(end + 1)..];
     }
-    ready = whole.ToArray();
-    readyAt = 0;
   }
 
   // The line as the SDK should get it: null drops it (Node's SDK never answers it), and a
   // repeated key is written out with its last value, as JSON.parse reads it.
-  private ReadOnlyMemory<byte>? Pass(ReadOnlyMemory<byte> bytes)
+  private ReadOnlyMemory<byte>? Pass(ReadOnlyMemory<byte> bytes, out string? answeredAtOnceId)
   {
+    answeredAtOnceId = null;
     var text = Encoding.UTF8.GetString(bytes.Span);
 
     if (McpDepthClamp.Clamp(text) is var clamped && !ReferenceEquals(clamped, text))
@@ -156,6 +231,7 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
     {
       long? whole = null;
       string? rawId = null;
+      string? method = null;
 
       using (document)
       {
@@ -165,9 +241,10 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
         {
           return null;
         }
-        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("id", out var id) && root.TryGetProperty("method", out _))
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("id", out var id) && root.TryGetProperty("method", out var name))
         {
           rawId = id.GetRawText();
+          method = name.ValueKind == JsonValueKind.String ? name.GetString() : null;
           whole = WholeNumberWrittenOtherwise(id);
         }
       }
@@ -187,6 +264,10 @@ internal sealed class McpOrderedInput(Stream inner, McpServerCore core, bool hol
       if (rawId is not null && SdkIdOf(whole?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? rawId) is string sdkId)
       {
         RequestIds.Enqueue(sdkId);
+        if (method is not null && AnsweredAtOnce.Contains(method))
+        {
+          answeredAtOnceId = sdkId;
+        }
       }
     }
     else

@@ -1,5 +1,6 @@
 using Blok.Server.Mcp.Core;
 using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace Blok.Server.Mcp.Protocol;
@@ -15,6 +16,23 @@ internal static class McpStdioSession
     // Wire order is known only while the transport reads, so calls take their handle places there.
     // At stdin's end the read stays open: the SDK would drop the answers still to come.
     var reader = new McpOrderedInput(input, core, holdAtEnd: true);
+
+    // The reader holds its next line until these answers are written. No cancel can free one: a
+    // cancel line is passed on only after the answer it names is out.
+    options.Filters.Message.OutgoingFilters.Add(next => async (context, cancellationToken) =>
+    {
+      try
+      {
+        await next(context, cancellationToken);
+      }
+      finally
+      {
+        if (context.JsonRpcMessage is JsonRpcResponse or JsonRpcError)
+        {
+          reader.Answered(((JsonRpcMessageWithId)context.JsonRpcMessage).Id.ToString());
+        }
+      }
+    });
     var transport = new StreamServerTransport(reader, new McpNodeBytesStream(output), "blok-mcp", NullLoggerFactory.Instance);
     var server = McpServer.Create(transport, options, NullLoggerFactory.Instance);
     var run = server.RunAsync(CancellationToken.None);

@@ -87,8 +87,6 @@ import {
  *               text JSON.stringify cannot make (e.g. an id of 3.0). The answer is the
  *               message with the id JSON.parse reads from it.
  *   noAnswer    stdio send / sendText: write the request and go on without reading an answer.
- *   read        alone, stdio: record the next message as "expect" without sending, e.g. the
- *               answer to a noAnswer request that may come after a later one.
  *               A noAnswer sendText may be any text, JSON or not.
  *   closeInputAfter  stdio send / sendText: end stdin right after the write, then read the
  *               answer, or null when the process exits without one.
@@ -133,7 +131,6 @@ export interface Step {
   noWait?: boolean;
   awaitExit?: boolean;
   noAnswer?: boolean;
-  read?: boolean;
   closeInputAfter?: boolean;
   rawText?: boolean;
   sseOrder?: 'byId';
@@ -663,11 +660,6 @@ class CaseRun {
 
   public async stdioStep(server: StdioServer, step: Step, holder: Holder, label: string): Promise<void> {
     if (await this.bareStep(server, step, holder, label)) {
-      return;
-    }
-    if (step.read === true) {
-      this.finishStep(step, holder, normalize(await server.next(step.readTimeoutMs), label, step.rawText), label);
-
       return;
     }
     const raw = step.raw === true;

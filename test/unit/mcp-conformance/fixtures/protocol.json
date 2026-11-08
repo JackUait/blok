@@ -624,12 +624,22 @@
           }
         },
         {
-          "note": "Ports may answer the two pings in either order, so the other answer is read on its own.",
-          "read": true,
+          "note": "The second answer to id 7 comes before this one.",
+          "send": {
+            "id": 8,
+            "method": "ping"
+          },
+          "notifications": [
+            {
+              "result": {},
+              "jsonrpc": "2.0",
+              "id": 7
+            }
+          ],
           "expect": {
             "result": {},
             "jsonrpc": "2.0",
-            "id": 7
+            "id": 8
           }
         }
       ],

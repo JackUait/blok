@@ -110,6 +110,19 @@ afterEach(() => {
 });
 
 describe('page sidebar row', () => {
+  it('shows a document icon and no disclosure button for a leaf page', () => {
+    const frame = createPageFrame({
+      pages: [{ id: 'leaf', title: 'Leaf', parentId: null }],
+      activeId: 'leaf',
+      onOpen: () => undefined,
+      onCreate: () => undefined,
+    });
+    document.body.append(frame.element);
+
+    expect(row('Leaf').querySelector('[data-blok-sidebar-toggle]')).toBeNull();
+    expect(row('Leaf').querySelector('[data-blok-sidebar-leaf] svg')).not.toBeNull();
+  });
+
   it('keeps a closed page menu out of the row until it is opened', () => {
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../../src/shell/sidebar.css'), 'utf8');
 

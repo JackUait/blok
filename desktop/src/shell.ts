@@ -59,6 +59,8 @@ export function mountDesktop(root: HTMLElement): void {
   box.root = root;
   root.setAttribute('data-desktop-shell', '');
   root.setAttribute('data-blok-theme', 'dark');
+  document.documentElement.setAttribute('data-blok-theme', 'dark');
+  document.body.setAttribute('data-blok-theme', 'dark');
   if (isTauri()) root.setAttribute('data-tauri', '');
   box.session = boot();
   const current = active();

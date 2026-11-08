@@ -64,6 +64,7 @@ function svg(paths: readonly string[], filled = false): SVGSVGElement {
 }
 
 const ICONS = {
+  page: ['M4 2.5h5l3 3v8H4z', 'M9 2.5v3h3'],
   star: ['M8 1.8 9.7 6.1l4.6.4-3.5 2.9 1.1 4.5L8 11.5 4.1 13.9l1.1-4.5L1.7 6.5l4.6-.4Z'],
   cloud: ['M4 11.2h8a2 2 0 0 0 .2-4 3.2 3.2 0 0 0-6.2-.8A2 2 0 0 0 4 11.2Z'],
   link: ['M6.8 9.2 5.4 10.6a1.9 1.9 0 0 1-2.7-2.7L4.1 6.5', 'M9.2 6.8 10.6 5.4a1.9 1.9 0 0 1 2.7 2.7L11.9 9.5', 'M6.5 9.5l3-3'],
@@ -319,25 +320,35 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     if (page.id === view.activeId) row.setAttribute('data-active', '');
     row.style.paddingInlineStart = `${8 + depth * 8}px`;
 
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.setAttribute('data-blok-sidebar-toggle', '');
-    toggle.setAttribute('aria-label', expanded ? 'Replier' : 'Déplier');
+    const canExpand = visibleChildren.length > 0;
+    const leading = document.createElement(canExpand ? 'button' : 'span');
+    if (canExpand) {
+      leading.setAttribute('type', 'button');
+      leading.setAttribute('data-blok-sidebar-toggle', '');
+      leading.setAttribute('aria-label', expanded ? 'Replier' : 'Déplier');
+    } else {
+      leading.setAttribute('data-blok-sidebar-leaf', '');
+      leading.setAttribute('aria-hidden', 'true');
+    }
     const glyph = document.createElement('span');
     glyph.setAttribute('data-blok-sidebar-glyph', '');
     glyph.setAttribute('aria-hidden', 'true');
-    glyph.textContent = page.icon || '·';
-    const mark = document.createElement('span');
-    mark.setAttribute('data-blok-sidebar-chevron', '');
-    mark.setAttribute('aria-hidden', 'true');
-    if (expanded) mark.setAttribute('data-open', '');
-    mark.append(chevron());
-    toggle.append(glyph, mark);
-    toggle.addEventListener('click', () => {
-      if (closed.has(page.id)) closed.delete(page.id);
-      else closed.add(page.id);
-      paint();
-    });
+    if (page.icon) glyph.textContent = page.icon;
+    else glyph.append(svg(ICONS.page));
+    leading.append(glyph);
+    if (canExpand) {
+      const mark = document.createElement('span');
+      mark.setAttribute('data-blok-sidebar-chevron', '');
+      mark.setAttribute('aria-hidden', 'true');
+      if (expanded) mark.setAttribute('data-open', '');
+      mark.append(chevron());
+      leading.append(mark);
+      leading.addEventListener('click', () => {
+        if (closed.has(page.id)) closed.delete(page.id);
+        else closed.add(page.id);
+        paint();
+      });
+    }
 
     const link = document.createElement('button');
     link.type = 'button';
@@ -395,7 +406,7 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
       openMenu(menu, more);
     });
 
-    row.append(toggle, link, add, more, menu);
+    row.append(leading, link, add, more, menu);
     const nested = expanded ? visibleChildren.flatMap((child) => rows(child, depth + 1, forceOpen)) : [];
     return [row, ...nested];
   }

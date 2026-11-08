@@ -1,4 +1,4 @@
-import '../../src/styles/main.css';
+import './editor.css';
 import '../../src/shell/sidebar.css';
 import './shell.css';
 import { mountDesktop } from './shell';

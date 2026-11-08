@@ -180,6 +180,9 @@ Exclusivity is best effort. Leases are time-limited, so a paused holder (a froze
 
 `--handle-store files:<dir>` is the reference store. It keeps each handle in `<dir>` and locks with lock files, so several processes on one machine can share it. Its files are not meant to be shared with the C#, Go or Rust servers.
 
+- It refuses to start on Windows, where its privacy checks cannot be made. Use your own store there.
+- The directory must be owned by the process's effective user, with no group or world access (`chmod 700`), and must not be a link. A server running as root refuses a directory another user owns.
+
 ## Host duties
 
 - On an ASP.NET host, `IBlokAuthorization` sees the agent's actor id, not the human's. Map it back to the human for your document checks.

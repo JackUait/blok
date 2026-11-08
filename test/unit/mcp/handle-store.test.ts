@@ -316,6 +316,22 @@ describe('the files handle store', () => {
     expect(() => createFilesHandleStore(file)).toThrow(unsafe(file));
   });
 
+  it('refuses to start on Windows, before it makes the directory', () => {
+    const dir = join(tempDir(), 'handles');
+
+    expect(() => createFilesHandleStore(dir, { platform: 'win32' }))
+      .toThrow(new McpConfigError('--handle-store files: is not supported on Windows; use your own store'));
+    expect(existsSync(dir)).toBe(false);
+  });
+
+  it.skipIf(process.platform === 'win32')('refuses a directory another user owns, judged by the effective uid', () => {
+    const dir = tempDir();
+    const owner = statSync(dir).uid;
+
+    expect(() => createFilesHandleStore(dir, { effectiveUid: () => owner + 1 })).toThrow(unsafe(dir));
+    expect(() => createFilesHandleStore(dir, { effectiveUid: () => owner })).not.toThrow();
+  });
+
   it('takes over a lease whose holder stopped refreshing it, and the old holder can no longer save', async () => {
     const dir = tempDir();
     const options = { leaseStaleMs: 200, heartbeatMs: 10_000 };

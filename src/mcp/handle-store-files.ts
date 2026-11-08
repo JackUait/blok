@@ -43,10 +43,13 @@ import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from
  * remove deletes the meta file, then the record. sweep also deletes crash leftovers older than
  * leaseStaleMs: temp files, `.break` files, records without meta, and leases without meta.
  *
- * Privacy: records hold document text, undo steps and principals. At start, once: create the
- * directory if missing (recursive, mode 0700), then lstat it and refuse to start (exit 2) unless it
- * is a directory, not a symlink, has no group or world bits (mode & 0o077 == 0), and, on POSIX, is
- * owned by the user running the server. Nothing creates it again later: a store whose directory
+ * Privacy: records hold document text, undo steps and principals. On Windows the store refuses to
+ * start: these POSIX checks cannot be made there (it is a reference and test store; use your own).
+ * Elsewhere, at start, once: resolve the path (a trailing slash would make lstat follow a link),
+ * create the directory if missing (recursive, mode 0700), then lstat it and refuse to start (exit 2)
+ * unless it is a directory, not a symlink, has no group or world bits (mode & 0o077 == 0), and its
+ * owner uid is the process's effective uid. Root runs as uid 0, so it refuses a directory another
+ * user owns too; a chmod probe would not, since root can chmod anything. Nothing creates it again later: a store whose directory
  * went away fails each write. Every file (record, meta, lease, lock, temp) is opened with mode 0600.
  */
 
@@ -63,6 +66,9 @@ const PRINCIPAL_WAIT_MS = 10_000;
 export interface FilesHandleStoreOptions {
   leaseStaleMs?: number;
   heartbeatMs?: number;
+  /** For tests: the platform and effective uid the start checks use. */
+  platform?: NodeJS.Platform;
+  effectiveUid?: () => number | undefined;
 }
 
 interface Meta { v: 1; principal: string; lastUsedMs: number }
@@ -110,7 +116,7 @@ const PRIVATE_FILE = 0o600;
 const PRIVATE_DIR = 0o700;
 
 // Another user who can read here sees documents; one who can write here could plant a record and take over a handle.
-const prepareDirectory = (dir: string): void => {
+const prepareDirectory = (dir: string, effectiveUid: () => number | undefined): void => {
   try {
     mkdirSync(dir, { recursive: true, mode: PRIVATE_DIR });
   } catch (thrown) {
@@ -120,7 +126,7 @@ const prepareDirectory = (dir: string): void => {
     }
   }
   const found = lstatSync(dir);
-  const owner = process.getuid?.();
+  const owner = effectiveUid();
 
   if (found.isSymbolicLink() || !found.isDirectory() || (found.mode & 0o077) !== 0 || (owner !== undefined && found.uid !== owner)) {
     throw new McpConfigError(`--handle-store directory ${dir} must be a directory (not a link) owned by this user, with no group or world access (chmod 700)`);
@@ -131,7 +137,10 @@ export const createFilesHandleStore = (given: string, options: FilesHandleStoreO
   // lstat on a path that ends in a slash follows a link, so the path is normalised first.
   const dir = resolve(given);
 
-  prepareDirectory(dir);
+  if ((options.platform ?? process.platform) === 'win32') {
+    throw new McpConfigError('--handle-store files: is not supported on Windows; use your own store');
+  }
+  prepareDirectory(dir, options.effectiveUid ?? (() => process.geteuid?.()));
   const leaseStaleMs = options.leaseStaleMs ?? LEASE_STALE_MS;
   const heartbeatMs = options.heartbeatMs ?? HEARTBEAT_MS;
   const paths = (handle: string): { record: string; meta: string; lease: string } => ({

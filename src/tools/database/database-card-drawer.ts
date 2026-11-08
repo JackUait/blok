@@ -31,7 +31,6 @@ import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { isEscapeConsumed, markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { getElementDirection, logicalArrow } from '../../components/utils/direction';
-import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { ScrollLocker } from '../../components/utils/scroll-locker';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { isPromotedToTopLayer, overlayMountFor, promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
@@ -63,6 +62,7 @@ import { RowPageTakeover } from './row-page-takeover';
 import { OverflowList, tabsThatFit } from '../../components/utils/overflow-list';
 import { NoEditorConstructorError, loadEditorConstructor } from '../../components/utils/editor-constructor';
 import { logLabeled } from '../../components/utils/logger';
+import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import type { BuilderTabs, PageLayoutModuleEntry } from './page-layout-builder';
 
 /** Where a property made from a builder menu goes. */
@@ -111,8 +111,19 @@ const afterSlide = (drawer: HTMLElement, done: () => void): void => {
     done();
   };
 
-  drawer.addEventListener('transitionend', finish, { once: true });
-  window.setTimeout(finish, DRAWER_TRANSITION_FALLBACK_MS);
+  // The panel's own slide only: fades inside it bubble up and end sooner.
+  const onEnd = (event: TransitionEvent): void => {
+    if (event.target === drawer && event.propertyName === 'transform') {
+      drawer.removeEventListener('transitionend', onEnd);
+      finish();
+    }
+  };
+
+  drawer.addEventListener('transitionend', onEnd);
+  window.setTimeout(() => {
+    drawer.removeEventListener('transitionend', onEnd);
+    finish();
+  }, DRAWER_TRANSITION_FALLBACK_MS);
 };
 
 /**
@@ -1799,7 +1810,7 @@ export class DatabaseCardDrawer {
     const drawer = this.drawer;
 
     // Notion runs the peek's close slide while the page widens, then shows the full page.
-    if (drawer === null || this.mode !== 'side' || !drawer.hasAttribute('data-open')) {
+    if (drawer === null || this.mode !== 'side' || !drawer.hasAttribute('data-open') || prefersReducedMotion()) {
       this.switchMode('full');
 
       return;

@@ -71,7 +71,7 @@ const click = async (el: Element | null): Promise<void> => {
 /** Open in full page waits for the side peek's close slide to end. */
 const expand = async (): Promise<void> => {
   await click(q('[data-blok-database-peek-expand]'));
-  q('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
+  q('[data-blok-database-drawer]')?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
   await quiet();
 };
 

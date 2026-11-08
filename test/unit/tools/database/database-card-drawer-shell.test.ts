@@ -219,11 +219,32 @@ describe('DatabaseCardDrawer shell', () => {
       expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
       expect(panel()?.hasAttribute('data-open')).toBe(false);
 
-      panel()?.dispatchEvent(new Event('transitionend'));
+      panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
       expect(panel()?.hasAttribute('data-open')).toBe(true);
       drawer.destroy();
+    });
+
+    it('waits for the panel\'s own slide, not a fade inside it', () => {
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+      q('[data-blok-database-peek-next]')?.dispatchEvent(new Event('transitionend', { bubbles: true }));
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      drawer.destroy();
+    });
+
+    it('shows the full page at once under reduced motion', () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query }));
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
+      drawer.destroy();
+      vi.unstubAllGlobals();
     });
 
     it('stays closed when Escape closes it during the slide', () => {
@@ -231,7 +252,7 @@ describe('DatabaseCardDrawer shell', () => {
 
       q('[data-blok-database-peek-expand]')?.click();
       drawer.close();
-      panel()?.dispatchEvent(new Event('transitionend'));
+      panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(drawer.isOpen).toBe(false);
       expect(document.querySelector('[data-blok-database-drawer][data-peek-mode="full"]')).toBeNull();
@@ -243,7 +264,7 @@ describe('DatabaseCardDrawer shell', () => {
 
       q('[data-blok-database-peek-expand]')?.click();
       drawer.open({ ...ROW, id: 'other' });
-      panel()?.dispatchEvent(new Event('transitionend'));
+      panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
       expect(panel()?.hasAttribute('data-open')).toBe(true);
@@ -301,7 +322,7 @@ describe('DatabaseCardDrawer shell', () => {
 
       first.open(ROW, 'side');
       second.open({ ...ROW, id: 'row-2' }, 'side');
-      firstOptions.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
+      firstOptions.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
       expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');

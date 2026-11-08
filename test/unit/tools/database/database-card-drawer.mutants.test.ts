@@ -315,7 +315,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       if (frame !== null) {
         (frame as FrameRequestCallback)(0);
       }
-      drawerEl.dispatchEvent(new Event('transitionend'));
+      drawerEl.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(titleInput.style.height).toBe('96px');
     });
@@ -336,6 +336,16 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
   });
 
   describe('transition listeners', () => {
+    /** The listener goes away once the panel's own slide ends. */
+    const expectOneShot = (el: HTMLElement, addListener: { mock: { calls: unknown[][] } }): void => {
+      const removeListener = vi.spyOn(el, 'removeEventListener');
+      const listener = addListener.mock.calls.find((call) => call[0] === 'transitionend')?.[1];
+
+      expect(listener).toBeInstanceOf(Function);
+      el.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
+      expect(removeListener).toHaveBeenCalledWith('transitionend', listener);
+    };
+
     it('registers the open transition listener as a one-shot', () => {
       let frame: FrameRequestCallback | null = null;
 
@@ -358,7 +368,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
         (frame as FrameRequestCallback)(0);
       }
 
-      expect(addListener).toHaveBeenCalledWith('transitionend', expect.any(Function), { once: true });
+      expectOneShot(drawerEl, addListener);
     });
 
     it('registers the close transition listener as a one-shot', () => {
@@ -376,7 +386,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
 
       drawer.close();
 
-      expect(addListener).toHaveBeenCalledWith('transitionend', expect.any(Function), { once: true });
+      expectOneShot(drawerEl, addListener);
     });
   });
 

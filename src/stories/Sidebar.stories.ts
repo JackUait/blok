@@ -12,7 +12,7 @@ import { createPageFrame } from '../shell/sidebar';
 import type { ShellPage } from '../shell/sidebar';
 import '../shell/sidebar.css';
 
-import type { OutputData } from '@/types';
+import type { Blok as EditorApi, OutputData } from '@/types';
 
 function documentFor(id: string, text: string): OutputData {
   return {
@@ -46,8 +46,12 @@ const documents = new Map<string, OutputData>([
 
 function show(editor: EditorContainer, docs: Map<string, OutputData>, id: string): void {
   const data = docs.get(id) ?? { time: Date.now(), version: '2.1.0', blocks: [] };
-  const paint = () => {
-    void editor.__blokEditor?.render(data);
+  const paint = (): void => {
+    const instance = editor.__blokEditor;
+    if (instance === undefined) return;
+    // The class gains render() when its prototype becomes the API. The published type is that surface.
+    const api = instance as unknown as EditorApi;
+    void api.render(data);
   };
   if (editor.__blokEditor) {
     paint();
@@ -108,6 +112,8 @@ const render = (): HTMLElement => {
         show(editor, docs, id);
         return;
       }
+      // The rest of the page menu stays visible. This story only renames, duplicates, and trashes.
+      if (action.type !== 'delete') return;
       const drop = new Set<string>();
       const pending = [action.id];
       while (pending.length > 0) {

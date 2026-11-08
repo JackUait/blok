@@ -1746,7 +1746,7 @@
   background-color: var(--blok-database-peek-separator);
 }
 
-/* Mode, the rules and the row steps fade in only while the bar is hovered, holds keyboard focus or has a menu open (R03, R18). */
+/* Mode, the rules and the row steps fade in only while the peek is hovered, the bar holds keyboard focus or has a menu open (R03, R18). */
 [data-blok-database-peek-mode],
 [data-blok-database-peek-separator],
 [data-blok-database-peek-prev],
@@ -1755,7 +1755,7 @@
 }
 
 @media (hover: hover) {
-  [data-blok-database-drawer-toolbar]:not(:hover):not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
+  [data-blok-database-drawer]:not(:hover) [data-blok-database-drawer-toolbar]:not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
     opacity: 0;
   }
 }

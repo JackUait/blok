@@ -359,11 +359,11 @@ describe('DatabaseCardDrawer shell', () => {
       bare.destroy();
     });
 
-    // Notion fades these in only while the pointer is on the bar.
-    it('reveals the mode switcher, the separators and the row steps only while the bar is hovered or holds keyboard focus', () => {
+    // notion-motion.md "Side peek top bar": Notion shows these while the pointer is anywhere over the peek.
+    it('reveals the mode switcher, the separators and the row steps only while the peek is hovered or the bar holds keyboard focus', () => {
       const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
       // An open mode menu keeps them shown, as in Notion, while the pointer is in the menu.
-      const rule = /\[data-blok-database-drawer-toolbar\]:not\(:hover\):not\(:has\(:focus-visible\)\):not\(:has\(\[data-blok-database-peek-mode\]\[aria-expanded="true"\]\)\) :is\(([^)]*)\)\s*\{\s*opacity:\s*0;/.exec(css);
+      const rule = /\[data-blok-database-drawer\]:not\(:hover\) \[data-blok-database-drawer-toolbar\]:not\(:has\(:focus-visible\)\):not\(:has\(\[data-blok-database-peek-mode\]\[aria-expanded="true"\]\)\) :is\(([^)]*)\)\s*\{\s*opacity:\s*0;/.exec(css);
 
       expect(rule?.[1].split(',').map((x) => x.trim()).sort()).toStrictEqual([
         '[data-blok-database-peek-mode]',
@@ -412,7 +412,20 @@ describe('DatabaseCardDrawer shell', () => {
       expect(hintOf('[data-blok-database-peek-copy-link]')).toBe('tools.database.tableCopyLink');
       expect(hintOf('[data-blok-database-peek-mode]')).toBeNull();
       expect(hintOf('[data-blok-database-peek-prev]')).toBeNull();
-      expect(hintOf('[data-blok-database-peek-next]')).toBeNull();
+      drawer.destroy();
+    });
+
+    // notion-motion.md "Side peek top bar": "Next page ⌃⇧J". Off a Mac the step is Ctrl+J (stepOf).
+    it.each([
+      ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 'tools.database.peekNext ⌃⇧J'],
+      ['Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'tools.database.peekNext Ctrl+J'],
+    ])('hints next with its shortcut on %s', (userAgent, hint) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(userAgent);
+      const drawer = new DatabaseCardDrawer(createOptions({ i18n: i18n() }));
+
+      drawer.open(ROW, 'side');
+
+      expect(hintOf('[data-blok-database-peek-next]')).toBe(hint);
       drawer.destroy();
     });
   });

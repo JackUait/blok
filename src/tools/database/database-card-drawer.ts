@@ -1650,11 +1650,11 @@ export class DatabaseCardDrawer {
     return [
       hinted(button('data-blok-database-peek-expand', 'tools.database.peekExpand', IconExpandDiagonal, () => this.expand()), 'tools.database.peekExpand'),
       separator(),
-      // No hint on mode, previous and next, as in Notion: their names are their aria-labels.
+      // Notion's hints on mode and previous are unmeasured, so they have none. Next reads "Next page ⌃⇧J".
       button('data-blok-database-peek-mode', 'tools.database.settingsOpenPagesIn', IconPeekSide, (el) => this.openModeMenu(el)),
       separator(),
       button('data-blok-database-peek-prev', 'tools.database.peekPrevious', IconChevronDown, () => this.step(-1)),
-      button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
+      this.shortcutHinted(button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)), 'tools.database.peekNext', 'J'),
       this.buildCrumbs(),
       hinted(button('data-blok-database-peek-copy-link', 'tools.database.tableCopyLink', IconLink, () => this.copyLink()), 'tools.database.tableCopyLink'),
       // research/10 §10: shown only while the layout uses the details panel (syncPageInfo).
@@ -1664,6 +1664,19 @@ export class DatabaseCardDrawer {
       // research/09 §1b: "•••" ends the bar, in a peek too (side peek: 30-row-page-actions-menu.png).
       hinted(button('data-blok-database-peek-actions', 'tools.database.peekActionsHint', IconDotsHorizontal, (el) => this.openActionsMenu(el)), 'tools.database.peekActionsHint'),
     ];
+  }
+
+  /** A hint with the row step's shortcut; it must match the keys stepOf reads. */
+  private shortcutHinted(el: HTMLButtonElement, labelKey: string, key: string): HTMLButtonElement {
+    const shortcut = getUserOS().mac ? `⌃⇧${key}` : `Ctrl+${key}`;
+
+    onHover(el, createTooltipContent([[
+      { text: this.label(labelKey), highlight: true },
+      { text: ' ', highlight: false },
+      { text: shortcut, highlight: false, direction: 'ltr' },
+    ]]));
+
+    return el;
   }
 
   /** A full page's "database / page" path (feel/findings-rowpage R17). The database crumb goes back. */

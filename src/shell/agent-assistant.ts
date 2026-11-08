@@ -171,6 +171,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   const pageBox = document.createElement('input');
   const providersHost = document.createElement('div');
   const sendButton = makeButton('Envoyer');
+  const fullSuggestions = document.createElement('div');
   const resize = document.createElement('div');
   const session = {
     open: false,
@@ -231,6 +232,8 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   pageLabel.setAttribute('data-blok-agent-page-context', '');
   pageLabel.append(pageBox, document.createTextNode(' Cette page'));
   providersHost.setAttribute('data-blok-agent-providers', '');
+  fullSuggestions.setAttribute('data-blok-agent-suggestions', '');
+  fullSuggestions.hidden = true;
   sendButton.setAttribute('aria-label', 'Envoyer à l\'assistant IA');
   sendButton.setAttribute('data-blok-agent-send', '');
   resize.setAttribute('data-blok-agent-resize', '');
@@ -242,7 +245,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   resize.tabIndex = 0;
   header.append(title, historyButton, freshButton, modeButton, settingsButton, closeButton, historyMenu, modeMenu);
   composer.append(field, pageLabel, providersHost, sendButton);
-  panel.append(resize, header, transcript, composer);
+  panel.append(resize, header, transcript, composer, fullSuggestions);
   body.append(editorSlot, panel);
   bar.append(toggle);
   shell.append(bar, body);
@@ -380,6 +383,9 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     const turns = conversation?.turns ?? [];
 
     transcript.replaceChildren();
+    fullSuggestions.replaceChildren();
+    const fullWelcome = session.mode === 'full' && turns.length === 0;
+    fullSuggestions.hidden = !fullWelcome;
 
     if (turns.length === 0) {
       const empty = document.createElement('div');
@@ -401,7 +407,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
         idea.addEventListener('click', () => {
           send(suggestion);
         });
-        empty.append(idea);
+        (fullWelcome ? fullSuggestions : empty).append(idea);
       });
       transcript.append(empty);
 
@@ -458,6 +464,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     else panel.setAttribute('hidden', '');
 
     panel.setAttribute('data-blok-agent-mode', session.mode);
+    panel.toggleAttribute('data-blok-agent-empty-view', current()?.turns.length === 0);
     panel.setAttribute('role', session.mode === 'full' ? 'region' : 'dialog');
     panel.style.setProperty('--blok-agent-width', `${session.width}px`);
     resize.setAttribute('aria-valuenow', String(session.width));

@@ -161,6 +161,13 @@ export const FullScreen: Story = {
     expect(panel.getAttribute('data-blok-agent-mode')).toBe('full');
     expect(editor).toBeTruthy();
     expect(getComputedStyle(editor!).display).toBe('none');
+    const welcome = panel.querySelector('[data-blok-agent-empty]')!;
+    const composer = panel.querySelector('[data-blok-agent-composer]')!;
+    const suggestions = panel.querySelector('[data-blok-agent-suggestions]')!;
+    expect(panel.hasAttribute('data-blok-agent-empty-view')).toBe(true);
+    expect(suggestions.hasAttribute('hidden')).toBe(false);
+    expect(welcome.getBoundingClientRect().bottom).toBeLessThan(composer.getBoundingClientRect().top);
+    expect(composer.getBoundingClientRect().bottom).toBeLessThan(suggestions.getBoundingClientRect().top);
   },
 };
 

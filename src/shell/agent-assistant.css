@@ -36,7 +36,8 @@
 
 [data-blok-agent-panel][hidden],
 [data-blok-agent-menu][hidden],
-[data-blok-agent-resize][hidden] {
+[data-blok-agent-resize][hidden],
+[data-blok-agent-suggestions][hidden] {
   display: none;
 }
 
@@ -82,6 +83,110 @@
 [data-blok-agent-panel][data-blok-agent-mode="full"] [data-blok-agent-composer] {
   width: min(100%, 820px);
   margin-inline: auto;
+}
+
+/* The full-page welcome keeps its composer with the mascot and prompt. */
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] {
+  overflow-y: auto;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-header] {
+  border-bottom: 0;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-transcript] {
+  flex: none;
+  width: min(100%, 710px);
+  min-height: 0;
+  margin: clamp(52px, 18vh, 230px) auto 0;
+  padding: 0 16px;
+  overflow: visible;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-empty] {
+  min-height: 0;
+  max-width: none;
+  gap: 14px;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-empty-mark] {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-empty] p {
+  font-size: clamp(24px, 3vw, 30px);
+  line-height: 1.2;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-empty-intro] {
+  display: none;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-composer] {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  width: min(calc(100% - 32px), 710px);
+  margin: 32px auto 0;
+  padding: 12px;
+  background: var(--blok-bg-light, #f7f6f3);
+  border-radius: 16px;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-composer] textarea {
+  min-height: 58px;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-page-context] {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-providers] {
+  grid-column: 2;
+  grid-row: 2;
+  align-items: center;
+  min-width: 0;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-send] {
+  grid-column: 3;
+  grid-row: 2;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 0;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-send]::before {
+  content: "↑";
+  font-size: 18px;
+  line-height: 1;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"] [data-blok-agent-suggestions]:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: min(calc(100% - 32px), 710px);
+  margin: 28px auto auto;
+  padding-bottom: 40px;
+}
+
+[data-blok-agent-panel][data-blok-agent-mode="full"] [data-blok-agent-suggestions] button {
+  color: var(--blok-text-secondary, #646a79);
+  font-size: 13px;
+}
+
+@media (max-height: 680px) {
+  [data-blok-agent-panel][data-blok-agent-mode="full"][data-blok-agent-empty-view] [data-blok-agent-transcript] {
+    margin-top: 48px;
+  }
 }
 
 [data-blok-agent-resize] {

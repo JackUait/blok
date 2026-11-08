@@ -123,6 +123,16 @@ describe('table column header hover', () => {
   });
 });
 
+describe('toolbar search', () => {
+  const INPUT = '[data-blok-database-search-input]';
+
+  // notion-motion.md "Search": the field grows 0→150 and fades in, both 200ms ease.
+  it('fades in while it grows, both over 200ms ease', () => {
+    expect(body(outsideReducedMotion, INPUT)).toMatch(/transition: inline-size 0\.2s ease, opacity 0\.2s ease/);
+    expect(database).toMatch(/@starting-style \{ \[data-blok-database-search-input\] \{ inline-size: 0; opacity: 0; \} \}/);
+  });
+});
+
 describe('grouped list collapse', () => {
   it('turns only the caret, -90deg over 200ms ease-out', () => {
     expect(body(outsideReducedMotion, '[data-blok-database-list-group-toggle] svg')).toContain('transition: transform 200ms ease-out');

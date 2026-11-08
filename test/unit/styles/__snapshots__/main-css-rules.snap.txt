@@ -12992,11 +12992,12 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink);
   font-size: 14px;
   outline: none;
-  transition: inline-size 0.2s ease;
+  transition: inline-size 0.2s ease, opacity 0.2s ease;
 }
 
 [@starting-style] [data-blok-database-search-input] {
   inline-size: 0;
+  opacity: 0;
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-database-search-input] {

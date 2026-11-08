@@ -12992,8 +12992,8 @@ textarea[data-blok-database-cell-input] {
 /* notion-motion.md Timeline (tlhover.png): the hover pill is 128px over a 3-day, 120px span. */
 [data-blok-database-timeline-range][data-hover] {
   box-sizing: content-box;
-  margin-inline-start: -4px;
-  padding-inline: 4px;
+  margin-inline-start: calc(-1 * var(--blok-space-1));
+  padding-inline: var(--blok-space-1);
 }
 
 [data-blok-database-timeline-units] > [data-range-edge] {

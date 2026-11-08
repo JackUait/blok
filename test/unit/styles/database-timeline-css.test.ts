@@ -185,8 +185,9 @@ describe('database timeline styles', () => {
   it('runs the hover pill 4px past each end of the bar\'s days', () => {
     const pill = ruleBody('[data-blok-database-timeline-range][data-hover]');
 
-    expect(pill).toMatch(/margin-inline-start:\s*-4px/);
-    expect(pill).toMatch(/padding-inline:\s*4px/);
+    // --blok-space-1 is 4px.
+    expect(pill).toMatch(/margin-inline-start:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
+    expect(pill).toMatch(/padding-inline:\s*var\(--blok-space-1\)/);
     expect(pill).toMatch(/box-sizing:\s*content-box/);
   });
 

@@ -35,8 +35,11 @@ describe('database drop line css', () => {
     expect(body).toContain('transition: opacity 200ms');
   });
 
-  it('tints the card being dragged like a hovered card', () => {
+  // notion-motion.md "Board": the dragged card turns rgba(55,53,47,0.06) in light. Dark is unmeasured, so it keeps the hover.
+  it('fills the card being dragged with the neutral drag fill in light, the hover fill in dark', () => {
     expect(ruleBody(database, '[data-blok-database-card][data-blok-database-drag-source]'))
-      .toContain('background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover))');
+      .toContain('background-color: var(--blok-database-card-drag-source-bg, var(--_blok-group-card-hover, var(--blok-database-card-bg-hover)))');
+    expect([ ...database.matchAll(/--blok-database-card-drag-source-bg: ([^;]+);/g) ].map((m) => m[1].trim()))
+      .toEqual(['rgba(55, 53, 47, 0.06)', 'initial', 'initial']);
   });
 });

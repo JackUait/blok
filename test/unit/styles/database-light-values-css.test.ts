@@ -121,8 +121,9 @@ describe('dark leftovers (research/26 §4c, §4e, §4f)', () => {
     expect(tokenValues('--blok-database-column-brown-card-hover-bg')).toEqual(Array(2).fill('rgb(64, 51, 43)'));
   });
 
-  it('dark blue cards hover to the measured blue', () => {
-    expect(tokenValues('--blok-database-column-blue-card-hover-bg')).toEqual(Array(2).fill('rgb(37, 54, 73)'));
+  // Light: notion-motion.md "Board", oklab(0.5608 -0.0563 -0.1409 / 0.047) in sRGB.
+  it('blue cards hover to the measured blue wash in light and 37,54,73 in dark', () => {
+    expect(tokenValues('--blok-database-column-blue-card-hover-bg')).toEqual(['rgba(0, 120, 200, 0.047)', 'rgb(37, 54, 73)', 'rgb(37, 54, 73)']);
   });
 
   it('a card hovers through its column channel, falling back to the plain hover', () => {

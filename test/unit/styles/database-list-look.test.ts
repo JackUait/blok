@@ -195,6 +195,12 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row]:hover [data-blok-database-list-row-edit]')).toContain('display: inline-flex');
   });
 
+  // notion-motion.md "View tabs, gallery, list": the gutter fades in over 200ms ease-out.
+  it('fades the hovered row\'s gutter in over 200ms ease-out, and not under reduced motion', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row-gutter]')).toContain('transition: opacity 200ms ease-out');
+    expect(ruleBody(database, '[data-blok-database-list-row-gutter]')).toContain('transition: none');
+  });
+
   it('keeps no open or delete button styles for the list', () => {
     expect(database).not.toContain('[data-blok-database-list-row-open]');
     expect(database).not.toContain('[data-blok-database-list-row-properties] [data-blok-database-delete-row]');

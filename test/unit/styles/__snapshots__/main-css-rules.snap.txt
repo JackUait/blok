@@ -4383,11 +4383,13 @@ span[data-blok-slash-search] {
   --blok-database-column-red-bg: rgba(199, 3, 3, 0.035);
   --blok-database-column-red-ring: rgba(223, 22, 0, 0.094);
   --blok-database-column-red-card-hover-bg: rgba(186, 3, 3, 0.035);
+  --blok-database-column-blue-card-hover-bg: rgba(0, 120, 200, 0.047);
   --blok-database-column-default-add-hover-bg: var(--blok-database-card-bg-hover);
   --blok-database-column-gray-add-hover-bg: var(--blok-database-column-gray-card-hover-bg, var(--blok-database-card-bg-hover));
   --blok-database-column-red-add-hover-bg: var(--blok-database-column-red-card-hover-bg);
   --blok-database-column-brown-ring: rgba(139, 46, 0, 0.086);
   --blok-database-card-bg-hover: rgba(54, 29, 2, 0.031);
+  --blok-database-card-drag-source-bg: rgba(55, 53, 47, 0.06);
   --blok-database-popover-shadow: rgba(25, 25, 25, 0.05) 0 20px 24px, rgba(25, 25, 25, 0.027) 0 5px 8px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-popover-hover: var(--blok-database-hover-bg);
   --blok-database-option-default-bg: rgba(42, 28, 0, 0.07);
@@ -4726,6 +4728,7 @@ span[data-blok-slash-search] {
   --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
+  --blok-database-card-drag-source-bg: initial;
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
@@ -5016,6 +5019,7 @@ span[data-blok-slash-search] {
   --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
+  --blok-database-card-drag-source-bg: initial;
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
@@ -5297,7 +5301,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-card][data-blok-database-drag-source] {
-  background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover));
+  background-color: var(--blok-database-card-drag-source-bg, var(--_blok-group-card-hover, var(--blok-database-card-bg-hover)));
 }
 
 [data-blok-database-column-reordering] {
@@ -7080,6 +7084,7 @@ button[data-blok-database-column-count]:hover {
   align-items: center;
   padding-inline-end: var(--blok-space-0-5);
   opacity: 0;
+  transition: opacity 200ms ease-out;
 }
 
 [data-blok-database-list-row]:hover > [data-blok-database-list-row-gutter], [data-blok-database-list-row][data-popover-open] > [data-blok-database-list-row-gutter] {
@@ -9741,7 +9746,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer], [data-blok-database-drop-line], [data-blok-database-column-actions], [data-blok-database-list-group-toggle] svg, [data-blok-database-list-row], [data-blok-database-tab], [data-blok-database-card-actions], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer], [data-blok-database-drop-line], [data-blok-database-column-actions], [data-blok-database-list-group-toggle] svg, [data-blok-database-list-row], [data-blok-database-list-row-gutter], [data-blok-database-tab], [data-blok-database-card-actions], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container] {
   transition: none;
 }
 

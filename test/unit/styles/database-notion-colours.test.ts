@@ -543,8 +543,7 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
     both('--blok-database-column-yellow-card-hover-bg', 'rgb(63, 58, 42)');
   });
 
-  it('board: a dragged or picked card keeps its column\'s hover fill', () => {
-    expect(ruleBody('[data-blok-database-card][data-blok-database-drag-source]')).toContain('background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover))');
+  it('board: a picked card keeps its column\'s hover fill', () => {
     expect(ruleBody('[data-blok-database-card-active]')).toContain('background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover))');
   });
 

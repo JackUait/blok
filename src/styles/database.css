@@ -3386,10 +3386,12 @@ button[data-blok-database-column-count]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+/* Notion's "+" is 14x14 (rowhover.png); the 20-unit glyph reaches that at 24px. The grip overflows its 18px button. */
 [data-blok-database-list-row-add] svg,
 [data-blok-database-list-row-handle] svg {
-  width: 16px;
-  height: 16px;
+  flex: none;
+  width: 24px;
+  height: 24px;
 }
 
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible,
@@ -9335,10 +9337,12 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+/* Notion's "+" is 14x14 (rowhover.png); the 20-unit glyph reaches that at 24px. The grip overflows its 18px button. */
 [data-blok-database-table-row-add] svg,
 [data-blok-database-table-row-handle] svg {
-  width: 16px;
-  height: 16px;
+  flex: none;
+  width: 24px;
+  height: 24px;
 }
 
 [data-blok-database-table-row-checkbox],

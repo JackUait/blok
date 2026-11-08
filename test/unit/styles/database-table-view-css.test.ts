@@ -113,6 +113,14 @@ describe('database table view styles', () => {
     expect(exactRule('[data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header]')).toContain('transform 200ms ease');
   });
 
+  // side-by-side-v1.md: Notion's gutter "+" is 14x14 and ⠿ 8x16 (rowhover.png); at 16px Blok drew them 9x10 and 6x8.
+  it('draws the table and list gutter "+" and ⋮⋮ glyphs at 24px, so the "+" reads Notion\'s 14px', () => {
+    expect(ruleBody('[data-blok-database-table-row-add] svg')).toMatch(/width: 24px;\s*height: 24px/);
+    expect(ruleBody('[data-blok-database-table-row-handle] svg')).toMatch(/width: 24px;\s*height: 24px/);
+    expect(ruleBody('[data-blok-database-list-row-add] svg')).toMatch(/width: 24px;\s*height: 24px/);
+    expect(ruleBody('[data-blok-database-list-row-handle] svg')).toMatch(/width: 24px;\s*height: 24px/);
+  });
+
   it('marks a checked row checkbox with primary ink on a gray fill', () => {
     const checked = ruleBody('[data-blok-database-table-row-checkbox][aria-checked="true"]');
 

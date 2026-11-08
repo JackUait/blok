@@ -7139,8 +7139,9 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-list-row-add] svg, [data-blok-database-list-row-handle] svg {
-  width: 16px;
-  height: 16px;
+  flex: none;
+  width: 24px;
+  height: 24px;
 }
 
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row-property][data-editable]:focus-visible {
@@ -12514,8 +12515,9 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-row-add] svg, [data-blok-database-table-row-handle] svg {
-  width: 16px;
-  height: 16px;
+  flex: none;
+  width: 24px;
+  height: 24px;
 }
 
 [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all] {

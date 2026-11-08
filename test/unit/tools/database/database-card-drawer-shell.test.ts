@@ -196,6 +196,61 @@ describe('DatabaseCardDrawer shell', () => {
     });
   });
 
+  // notion-motion.md "Peek: click outside, and Open in full page": ⤡ first runs the peek's close slide, then the full page shows.
+  describe('open in full page from a side peek', () => {
+    const openSide = (): { drawer: DatabaseCardDrawer; panel: () => HTMLElement | null } => {
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        cb(0);
+
+        return 0;
+      });
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+
+      return { drawer, panel: () => document.querySelector<HTMLElement>('[data-blok-database-drawer]') };
+    };
+
+    it('slides the peek out first, then shows the full page', () => {
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      expect(panel()?.hasAttribute('data-open')).toBe(false);
+
+      panel()?.dispatchEvent(new Event('transitionend'));
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
+      expect(panel()?.hasAttribute('data-open')).toBe(true);
+      drawer.destroy();
+    });
+
+    it('stays closed when Escape closes it during the slide', () => {
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+      drawer.close();
+      panel()?.dispatchEvent(new Event('transitionend'));
+
+      expect(drawer.isOpen).toBe(false);
+      expect(document.querySelector('[data-blok-database-drawer][data-peek-mode="full"]')).toBeNull();
+      drawer.destroy();
+    });
+
+    it('slides back in as a side peek when another row opens during the slide', () => {
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+      drawer.open({ ...ROW, id: 'other' });
+      panel()?.dispatchEvent(new Event('transitionend'));
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      expect(panel()?.hasAttribute('data-open')).toBe(true);
+      drawer.destroy();
+    });
+  });
+
   // Clicks beside a side peek reach other databases, so one page holds one peek, as in Notion.
   describe('one peek per page', () => {
     const shareHost = (): { host: HTMLElement; options: () => CardDrawerOptions } => {

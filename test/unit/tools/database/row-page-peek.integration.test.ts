@@ -68,6 +68,13 @@ const click = async (el: Element | null): Promise<void> => {
   await quiet();
 };
 
+/** Open in full page waits for the side peek's close slide to end. */
+const expand = async (): Promise<void> => {
+  await click(q('[data-blok-database-peek-expand]'));
+  q('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
+  await quiet();
+};
+
 const openRow = (rowId: string): Promise<void> =>
   click(q(`[data-row-id="${rowId}"] [data-blok-database-table-open]`));
 
@@ -211,7 +218,7 @@ describe('row page peek modes', () => {
     it('hides the rest of the editor and names the row in the URL; its Back undoes both', async () => {
       await make([{ id: 'p', type: 'paragraph', data: { text: 'Above' } }, ...doc()]);
       await openRow('r2');
-      await click(q('[data-blok-database-peek-expand]'));
+      await expand();
 
       expect(drawer()?.getAttribute('data-peek-mode')).toBe('full');
       expect(q('[data-blok-editor]')?.hasAttribute('data-blok-database-row-page')).toBe(true);
@@ -346,7 +353,7 @@ describe('row page peek modes', () => {
   it('expands a peek to a full page with the expand button', async () => {
     await make(doc());
     await openRow('r1');
-    await click(q('[data-blok-database-peek-expand]'));
+    await expand();
 
     expect(drawer()?.getAttribute('data-peek-mode')).toBe('full');
     expect(q('[data-blok-database-wrapper]')?.hasAttribute('data-blok-database-full-page')).toBe(true);

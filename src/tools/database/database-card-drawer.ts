@@ -490,6 +490,8 @@ export class DatabaseCardDrawer {
   private readonly viewRows: CardDrawerOptions['viewRows'];
   /** The builder's "New page" preview when the database has no rows (research/09 §1). No drawer is open then. */
   private placeholder: DatabaseRow | null = null;
+  /** The side peek sliding out before it turns into a full page. Close drops it with the drawer; a new row cancels it. */
+  private expanding: HTMLElement | null = null;
   private readonly onEditViewDefault: CardDrawerOptions['onEditViewDefault'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
@@ -680,6 +682,11 @@ export class DatabaseCardDrawer {
   }
 
   private show(row: DatabaseRow, mode: OpenPagesIn): void {
+    if (this.drawer !== null && this.expanding === this.drawer) {
+      this.expanding = null;
+      this.drawer.setAttribute('data-open', '');
+      if (this.mode === 'side') this.narrowPeekHost();
+    }
     if (this.drawer) {
       if (mode !== this.mode) {
         this.applyMode(mode);
@@ -967,6 +974,7 @@ export class DatabaseCardDrawer {
   }
 
   close(): void {
+    this.expanding = null;
     const wasOpen = this.drawer !== null;
     // The side peek slides out with its body still in it; the body goes back
     // to the pool once the slide ends.
@@ -1788,7 +1796,26 @@ export class DatabaseCardDrawer {
     if (rowId !== null && this.onExpand?.(rowId) === true) {
       return;
     }
-    this.switchMode('full');
+    const drawer = this.drawer;
+
+    // Notion runs the peek's close slide while the page widens, then shows the full page.
+    if (drawer === null || this.mode !== 'side' || !drawer.hasAttribute('data-open')) {
+      this.switchMode('full');
+
+      return;
+    }
+    this.expanding = drawer;
+    drawer.removeAttribute('data-open');
+    this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
+    this.peekHost?.style.setProperty('--_blok-peek-gap', '0px');
+    afterSlide(drawer, () => {
+      if (this.expanding !== drawer || this.drawer !== drawer) {
+        return;
+      }
+      this.expanding = null;
+      this.switchMode('full');
+      drawer.setAttribute('data-open', '');
+    });
   }
 
   private switchMode(mode: OpenPagesIn): void {

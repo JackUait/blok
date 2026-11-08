@@ -193,6 +193,32 @@ async fn release(lease: &dyn HandleLease) {
     }
 }
 
+/// A store lease that is given back even when its call is dropped (a client
+/// gone mid-call), so the next call does not wait it out.
+struct HeldLease(Option<Box<dyn HandleLease>>);
+
+impl HeldLease {
+    fn lease(&self) -> &dyn HandleLease {
+        self.0.as_deref().expect("a held lease")
+    }
+
+    async fn release(mut self) {
+        if let Some(lease) = self.0.take() {
+            release(&*lease).await;
+        }
+    }
+}
+
+impl Drop for HeldLease {
+    fn drop(&mut self) {
+        if let Some(lease) = self.0.take()
+            && let Ok(runtime) = tokio::runtime::Handle::try_current()
+        {
+            runtime.spawn(async move { release(&*lease).await });
+        }
+    }
+}
+
 fn opt<'a>(options: &'a Value, key: &str) -> Option<&'a Value> {
     options.get(key).filter(|v| !v.is_null())
 }
@@ -1390,7 +1416,7 @@ impl Mcp {
 
     /// The store's lease on a handle of `principal`. A handle Blok never
     /// minted is unknown before the store is asked.
-    async fn lease_of(&self, handle: &str, principal: &str) -> Result<Box<dyn HandleLease>, Fault> {
+    async fn lease_of(&self, handle: &str, principal: &str) -> Result<HeldLease, Fault> {
         let store = self
             .store
             .as_ref()
@@ -1414,8 +1440,9 @@ impl Mcp {
             }
         };
         // Checked here, not by the store: a store bug must not hand one user's handle to another.
-        if lease.record().v != 1 || lease.record().principal != principal {
-            release(&*lease).await;
+        let lease = HeldLease(Some(lease));
+        if lease.lease().record().v != 1 || lease.lease().record().principal != principal {
+            lease.release().await;
             return Err(crate::handles::unknown_handle().into());
         }
         Ok(lease)
@@ -1433,7 +1460,8 @@ impl Mcp {
         caller: &Caller,
         approval: &Approval,
     ) -> Result<Outcome, Fault> {
-        let lease = self.lease_of(handle, &caller.principal).await?;
+        let held = self.lease_of(handle, &caller.principal).await?;
+        let lease = held.lease();
         let ran = async {
             let record = lease.record();
             if Some(record.contract_revision.as_str()) != self.surface.stored_revision.as_str() {
@@ -1472,15 +1500,15 @@ impl Mcp {
                 record.stale,
             );
             if stored.state() != before {
-                self.keep(&*lease, &record.document_id, &stored).await;
+                self.keep(lease, &record.document_id, &stored).await;
             }
             outcome
         };
         let ran = tokio::select! {
             ran = ran => ran,
-            () = keep_renewing(&*lease) => unreachable!("renewing never ends"),
+            () = keep_renewing(lease) => unreachable!("renewing never ends"),
         };
-        release(&*lease).await;
+        held.release().await;
         ran
     }
 
@@ -1503,12 +1531,12 @@ impl Mcp {
     /// blok_close on a handle in the store. A refused check still closes, so
     /// the handle does not keep its place under the cap.
     async fn close_shared(&self, handle: &str, caller: &Caller) -> Result<Outcome, Fault> {
-        let lease = self.lease_of(handle, &caller.principal).await?;
+        let held = self.lease_of(handle, &caller.principal).await?;
         let allowed = self
-            .allowed(&caller.principal, &lease.record().document_id, false)
+            .allowed(&caller.principal, &held.lease().record().document_id, false)
             .await;
-        let removed = lease.remove().await;
-        release(&*lease).await;
+        let removed = held.lease().remove().await;
+        held.release().await;
         removed.map_err(store_failed)?;
         if !allowed {
             return Err(HostError::surface(

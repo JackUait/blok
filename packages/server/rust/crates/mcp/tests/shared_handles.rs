@@ -515,3 +515,45 @@ async fn the_cli_makes_the_files_store_and_refuses_an_open_directory() {
     assert!(private.is_dir());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+// A call whose future is dropped (a client gone mid-call) still gives the
+// lease back, so the next call does not wait out the lease.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_dropped_call_gives_its_lease_back() {
+    let dir = temp_dir("dropped");
+    let slow = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let waits = slow.clone();
+    let hooks = Hooks {
+        handle_store: Some(memory()),
+        authorize: Some(Arc::new(move |_: String, _: String, _: bool| {
+            let waits = waits.load(Ordering::SeqCst);
+            async move {
+                if waits {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
+                true
+            }
+        })),
+        ..Hooks::default()
+    };
+    let mcp = Mcp::with_hooks(Arc::new(Bundle::new(1).unwrap()), &options(&dir), hooks)
+        .await
+        .unwrap();
+    let handle = open(&mcp).await;
+    slow.store(true, Ordering::SeqCst);
+    let dropped = tokio::time::timeout(
+        Duration::from_millis(200),
+        call(&mcp, "blok_read", json!({ "handle": handle })),
+    )
+    .await;
+    assert!(dropped.is_err(), "the slow call finished");
+    slow.store(false, Ordering::SeqCst);
+    let read = tokio::time::timeout(
+        Duration::from_secs(3),
+        call(&mcp, "blok_read", json!({ "handle": handle })),
+    )
+    .await
+    .expect("the next call waited for the dropped call's lease");
+    assert_eq!(texts(&read), vec!["Hello"]);
+    let _ = std::fs::remove_dir_all(&dir);
+}

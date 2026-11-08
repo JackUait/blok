@@ -6015,6 +6015,10 @@
         }
       },
       "name": "custom source: a missing document opens empty, the first save sends no Blok-If-Version, and savedVersion is the store's",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -6526,13 +6530,15 @@
       ],
       "expectHostRequests": [
         {
-          "method": "GET",
-          "path": "/docs?limit=25&query=notes",
+          "method": "POST",
+          "path": "/authorize",
           "headers": {
-            "blok-caller": "alice",
-            "blok-caller-client": "Desktop",
-            "blok-caller-actor": "agent:alice:Desktop",
-            "blok-caller-on-behalf-of": "alice"
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": false
           }
         },
         {
@@ -6555,7 +6561,31 @@
           },
           "body": {
             "principal": "alice",
-            "documentId": "secret",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "plain",
             "write": false
           }
         },
@@ -6579,18 +6609,8 @@
           },
           "body": {
             "principal": "alice",
-            "documentId": "doc",
-            "write": true
-          }
-        },
-        {
-          "method": "GET",
-          "path": "/docs/doc",
-          "headers": {
-            "blok-caller": "alice",
-            "blok-caller-client": "Desktop",
-            "blok-caller-actor": "agent:alice:Desktop",
-            "blok-caller-on-behalf-of": "alice"
+            "documentId": "secret",
+            "write": false
           }
         },
         {
@@ -6601,8 +6621,8 @@
           },
           "body": {
             "principal": "alice",
-            "documentId": "doc",
-            "write": true
+            "documentId": "secret",
+            "write": false
           }
         },
         {
@@ -6620,6 +6640,26 @@
         },
         {
           "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "alice",
+            "blok-caller-client": "Desktop",
+            "blok-caller-actor": "agent:alice:Desktop",
+            "blok-caller-on-behalf-of": "alice"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs?limit=25&query=notes",
+          "headers": {
+            "blok-caller": "alice",
+            "blok-caller-client": "Desktop",
+            "blok-caller-actor": "agent:alice:Desktop",
+            "blok-caller-on-behalf-of": "alice"
+          }
+        },
+        {
+          "method": "GET",
           "path": "/docs?limit=25&query=other",
           "headers": {
             "blok-caller": "alice",
@@ -6627,44 +6667,9 @@
             "blok-caller-actor": "agent:alice:Other",
             "blok-caller-on-behalf-of": "alice"
           }
-        },
-        {
-          "method": "POST",
-          "path": "/authorize",
-          "headers": {
-            "content-type": "application/json"
-          },
-          "body": {
-            "principal": "alice",
-            "documentId": "doc",
-            "write": false
-          }
-        },
-        {
-          "method": "POST",
-          "path": "/authorize",
-          "headers": {
-            "content-type": "application/json"
-          },
-          "body": {
-            "principal": "alice",
-            "documentId": "secret",
-            "write": false
-          }
-        },
-        {
-          "method": "POST",
-          "path": "/authorize",
-          "headers": {
-            "content-type": "application/json"
-          },
-          "body": {
-            "principal": "alice",
-            "documentId": "plain",
-            "write": false
-          }
         }
-      ]
+      ],
+      "hostRequestOrder": "sorted"
     },
     {
       "argv": [
@@ -6705,6 +6710,10 @@
         }
       },
       "name": "custom source: a 409 on save is DOCUMENT_CHANGED, and the handle reloads the store's document",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -6929,6 +6938,10 @@
         }
       },
       "name": "custom source: a 500 on save is SOURCE_UNAVAILABLE in generic words; memory reloads and the undo step is gone",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -7222,6 +7235,10 @@
         }
       },
       "name": "custom source: refusals map to codes, with the store's message or Blok's words",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -7586,6 +7603,10 @@
         }
       },
       "name": "custom source: a document without blocks or nested too deep is SOURCE_UNAVAILABLE, and a lone surrogate reads as U+FFFD",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -7909,6 +7930,10 @@
         }
       },
       "name": "custom source: a load or save answered without a version is SOURCE_UNAVAILABLE",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -8636,6 +8661,10 @@
         }
       },
       "name": "custom source: a page insert makes its document with Blok's id: the store finds none, and the save sends no Blok-If-Version",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -8898,6 +8927,10 @@
         }
       },
       "name": "custom source: a new page id the store already has is refused as taken",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -9081,6 +9114,10 @@
         }
       },
       "name": "custom source: a repeated key in the stored text keeps its last value",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -9288,6 +9325,10 @@
         }
       },
       "name": "custom source: ids and list queries are percent-encoded as encodeURIComponent and URLSearchParams do, and . and .. never reach the store",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {
@@ -9523,6 +9564,10 @@
         }
       },
       "name": "custom source: a document 48 levels deep opens, 49 is refused",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
       "steps": [
         {
           "send": {

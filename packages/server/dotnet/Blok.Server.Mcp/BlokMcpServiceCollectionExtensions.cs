@@ -334,10 +334,7 @@ public static class BlokMcpServiceCollectionExtensions
     {
       check["createPage"] = true;
     }
-    if (options.HandleStore is not null)
-    {
-      check["handleStore"] = true;
-    }
+    // No handleStore here: that check only looks for the store's functions, which IBlokMcpHandleStore guarantees.
     // Node's names: the shared check words its refusal with them.
     if (options.Schema is { } schema)
     {

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Mcp.Core;
+using Blok.Server.Mcp.Sources;
 using Xunit;
 
 namespace Blok.Server.Mcp.Tests;
@@ -89,6 +90,47 @@ public sealed class FilesHandleStoreTests : IDisposable
     File.WriteAllText(Dir, "not a directory");
 
     Assert.Throws<BlokMcpConfigException>(() => FilesHandleStore.Open(Dir));
+  }
+
+  [Fact]
+  public void LStatReadsTheEntrysOwnerModeAndKind()
+  {
+    var target = Path.Combine(root, "target");
+
+    Directory.CreateDirectory(target, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    Directory.CreateSymbolicLink(Dir, target);
+
+    var directory = NativePath.LStat(target);
+    var link = NativePath.LStat(Dir);
+
+    Assert.NotNull(directory);
+    Assert.Equal(NativePath.EffectiveUserId(), directory.Value.Uid);
+    Assert.Equal(NativePath.DirectoryKind, directory.Value.Mode & NativePath.KindMask);
+    Assert.Equal(0b111_000_000, directory.Value.Mode & 0b111_111_111);
+    Assert.Equal(NativePath.LinkKind, link!.Value.Mode & NativePath.KindMask);
+    Assert.Null(NativePath.LStat(Path.Combine(root, "missing")));
+  }
+
+  [Theory]
+  [InlineData(1000u, 1001u)]
+  [InlineData(0u, 1001u)]
+  public void RefusesADirectoryAnotherUserOwnsEvenForRoot(uint me, uint owner)
+  {
+    var refused = Assert.Throws<BlokMcpConfigException>(() => FilesHandleStore.Open(Dir, probe: new FilesHandleStore.Probe(
+        path => NativePath.LStat(path) is { } real ? real with { Uid = owner } : null,
+        () => me,
+        Windows: false)));
+
+    Assert.Contains("owned by this user", refused.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void IsRefusedOnWindows()
+  {
+    var refused = Assert.Throws<BlokMcpConfigException>(() => FilesHandleStore.Open(Dir, probe: new FilesHandleStore.Probe(NativePath.LStat, NativePath.EffectiveUserId, Windows: true)));
+
+    Assert.Equal("--handle-store files: is not supported on Windows; use your own store", refused.Message);
+    Assert.False(Directory.Exists(Dir));
   }
 
   [Fact]

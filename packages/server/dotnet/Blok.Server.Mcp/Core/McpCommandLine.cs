@@ -82,10 +82,7 @@ internal static partial class McpCommandLine
     {
       check["createPage"] = true;
     }
-    if (handleStore is not null)
-    {
-      check["handleStore"] = true;
-    }
+    // No handleStore here: that check only looks for the store's functions, which IBlokMcpHandleStore guarantees.
     var safety = await host.Bundle.CallAsync("mcpCheckOptions", new JsonObject { ["options"] = check });
 
     if (McpJson.String(safety["error"]) is string unsafeOptions)

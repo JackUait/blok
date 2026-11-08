@@ -163,7 +163,7 @@ options.HandleStore = new MyHandleStore(db); // IBlokMcpHandleStore, over SQL or
   - Records can be large, since every undo step is a whole document: store them as long text.
   - Keep null scopes and empty scopes apart.
   - Records are trusted. Whoever can write your store can forge a handle's actor, scopes and history.
-- The files store creates its directory with mode 0700 and every file with 0600. It refuses to start when the directory is a link, not a directory, not yours, or open to group or world.
+- The files store creates its directory with mode 0700 and every file with 0600. It refuses to start when the directory is a link, not a directory, owned by another user (root included), or open to group or world. It is refused on Windows: "--handle-store files: is not supported on Windows; use your own store".
 
 ## Docs
 

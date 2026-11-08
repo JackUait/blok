@@ -50,27 +50,36 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
 
   private static Regex HandlePattern() => SharedHandles.HandlePattern();
 
-  /// <summary>Makes and checks the directory now; refuses with blok-mcp's words (exit 2).</summary>
-  internal static FilesHandleStore Open(string dir, TimeSpan? leaseStale = null, TimeSpan? heartbeat = null)
+  /// <summary>What the directory check reads from the system; tests replace it.</summary>
+  internal sealed record Probe(Func<string, Sources.NativePath.NativeStat?> LStat, Func<uint> EffectiveUserId, bool Windows)
   {
+    internal static Probe System { get; } = new(Sources.NativePath.LStat, Sources.NativePath.EffectiveUserId, OperatingSystem.IsWindows());
+  }
+
+  /// <summary>Makes and checks the directory now; refuses with blok-mcp's words (exit 2).</summary>
+  internal static FilesHandleStore Open(string dir, TimeSpan? leaseStale = null, TimeSpan? heartbeat = null, Probe? probe = null)
+  {
+    probe ??= Probe.System;
+    // No owner or mode bits to check there, so records would be open to whoever can read the folder.
+    if (probe.Windows)
+    {
+      throw new BlokMcpConfigException("--handle-store files: is not supported on Windows; use your own store");
+    }
     // A trailing slash would make the link check look at the target, not the link.
     var path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(dir));
 
-    Prepare(dir, path);
+    Prepare(dir, path, probe);
 
     return new FilesHandleStore(path, leaseStale ?? TimeSpan.FromSeconds(30), heartbeat ?? TimeSpan.FromSeconds(5));
   }
 
   // Another user who can read here sees documents; one who can write here could plant a record and take over a handle.
-  private static void Prepare(string given, string path)
+  // Made first, then checked once with one lstat, so nothing can swap it between the checks.
+  private static void Prepare(string given, string path, Probe probe)
   {
     try
     {
-      if (OperatingSystem.IsWindows())
-      {
-        Directory.CreateDirectory(path);
-      }
-      else if (!Directory.Exists(path) && !File.Exists(path))
+      if (!Directory.Exists(path) && !File.Exists(path) && !OperatingSystem.IsWindows())
       {
         Directory.CreateDirectory(path, PrivateDir);
       }
@@ -79,38 +88,13 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
     {
       throw new BlokMcpConfigException($"--handle-store cannot create {given}: {error.Message}");
     }
-    var found = new DirectoryInfo(path);
-    var refused = new BlokMcpConfigException(
-        $"--handle-store directory {given} must be a directory (not a link) owned by this user, with no group or world access (chmod 700)");
+    var found = probe.LStat(path);
 
-    // LinkTarget and Attributes read the entry itself (lstat), not where a link points.
-    if (found.LinkTarget is not null || !found.Exists || (found.Attributes & FileAttributes.Directory) == 0)
+    if (found is not { } entry || (entry.Mode & Sources.NativePath.KindMask) != Sources.NativePath.DirectoryKind
+        || (entry.Mode & (int)GroupOrWorld) != 0 || entry.Uid != probe.EffectiveUserId())
     {
-      throw refused;
-    }
-    if (OperatingSystem.IsWindows())
-    {
-      return;
-    }
-    if ((found.UnixFileMode & GroupOrWorld) != 0 || !OwnedByThisUser(path, found.UnixFileMode))
-    {
-      throw refused;
-    }
-  }
-
-  // .NET reads no owner id. Only the owner (or root) may chmod, so setting the same mode answers it.
-  [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
-  private static bool OwnedByThisUser(string path, UnixFileMode mode)
-  {
-    try
-    {
-      File.SetUnixFileMode(path, mode);
-
-      return true;
-    }
-    catch (UnauthorizedAccessException)
-    {
-      return false;
+      throw new BlokMcpConfigException(
+          $"--handle-store directory {given} must be a directory (not a link) owned by this user, with no group or world access (chmod 700)");
     }
   }
 
@@ -378,7 +362,8 @@ internal sealed class FilesHandleStore : IBlokMcpHandleStore
 
       return true;
     }
-    catch (IOException) when (File.Exists(path))
+    // Taken, or let go between the create and a look: either way the caller tries again. A missing directory is an error.
+    catch (IOException error) when (error is not DirectoryNotFoundException)
     {
       return false;
     }

@@ -4,6 +4,7 @@
  */
 
 import { onHover } from '../components/utils/tooltip';
+import { isPromotedToTopLayer, promoteToTopLayer, removeFromTopLayer } from '../components/utils/top-layer';
 
 export interface ShellPage {
   id: string;
@@ -79,17 +80,26 @@ const ADD_HINT = 'Add a page inside';
 const MORE_HINT = 'Delete, duplicate, and more';
 const MENU_WIDTH = 248;
 
-function popoverOpen(node: HTMLElement): boolean {
-  try {
-    return node.matches(':popover-open');
-  } catch {
-    return false;
-  }
-}
+const dismissers = new Map<HTMLElement, (event: PointerEvent) => void>();
 
 function closeMenu(menu: HTMLElement): void {
-  if (typeof menu.hidePopover !== 'function' || !popoverOpen(menu)) return;
-  menu.hidePopover();
+  const dismiss = dismissers.get(menu);
+  if (dismiss !== undefined) {
+    document.removeEventListener('pointerdown', dismiss, true);
+    dismissers.delete(menu);
+  }
+  removeFromTopLayer(menu);
+}
+
+function openMenu(menu: HTMLElement, anchor: HTMLElement): void {
+  promoteToTopLayer(menu);
+  const dismiss = (event: PointerEvent): void => {
+    const target = event.target;
+    if (target instanceof Node && (menu.contains(target) || anchor.contains(target))) return;
+    closeMenu(menu);
+  };
+  dismissers.set(menu, dismiss);
+  document.addEventListener('pointerdown', dismiss, true);
 }
 
 function copyLink(id: string): void {
@@ -201,6 +211,9 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
   shell.append(sidebar, canvas);
 
   function paint(): void {
+    tree.querySelectorAll('[data-blok-sidebar-menu]').forEach((node) => {
+      if (node instanceof HTMLElement) closeMenu(node);
+    });
     tree.replaceChildren();
     const needle = view.query;
     const roots = childrenOf(view.pages, null).filter((page) => needle === '' || matches(view.pages, page, needle));
@@ -280,7 +293,6 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     onHover(more, MORE_HINT);
 
     const menu = document.createElement('div');
-    menu.setAttribute('popover', 'auto');
     menu.setAttribute('data-blok-sidebar-menu', '');
     const list = document.createElement('div');
     list.setAttribute('role', 'menu');
@@ -291,14 +303,14 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     meta.textContent = 'Last edited';
     menu.append(list, meta);
     more.addEventListener('click', () => {
-      if (popoverOpen(menu)) {
+      if (isPromotedToTopLayer(menu)) {
         closeMenu(menu);
         return;
       }
       const rect = more.getBoundingClientRect();
       menu.style.top = `${rect.bottom + 4}px`;
       menu.style.left = `${Math.max(8, rect.right - MENU_WIDTH)}px`;
-      if (typeof menu.showPopover === 'function') menu.showPopover();
+      openMenu(menu, more);
     });
 
     row.append(toggle, link, add, more, menu);
@@ -333,7 +345,8 @@ export function createPageFrame(options: PageFrameOptions): PageFrame {
     entries.forEach((entry) => {
       if (entry.kind === 'separator') {
         const line = document.createElement('div');
-        line.setAttribute('role', 'separator');
+        line.setAttribute('data-blok-sidebar-menu-separator', '');
+        line.setAttribute('aria-hidden', 'true');
         list.append(line);
         return;
       }

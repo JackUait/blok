@@ -182,6 +182,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/table/table-row-col-drag.ts': 'Fixed ghost follows pointer coordinates while the local drop indicator uses table offsets.',
   'tools/video/controls.ts': 'Settings menu converts the gear rect into an offset local to the video figure, re-run on open and resize.',
   'components/modules/assistant/live-preview.ts': 'Ask AI preview boxes sit in the editor wrapper (position: relative) at the anchor holder\'s rect minus the wrapper rect; the assistant module calls relayout() on capture scroll, resize and each committed batch.',
+  'shell/sidebar.ts': 'The page menu popover is placed once from its button rect when it opens and removed from hit testing when it closes; it does not follow scroll.',
 };
 
 /** Dynamic property setters remain exact review points, never silent escapes. */

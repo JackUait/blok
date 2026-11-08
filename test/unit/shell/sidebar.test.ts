@@ -160,8 +160,8 @@ describe('page sidebar row', () => {
 
   it('lists the Notion page menu, with separators, and a muted last-edited line', () => {
     mount();
-    const script = [...menuOf('Home').querySelectorAll('[data-blok-sidebar-menu-label], [role="separator"], [data-blok-sidebar-menu-meta]')].map((child) => {
-      if (child.getAttribute('role') === 'separator') return 'separator';
+    const script = [...menuOf('Home').querySelectorAll('[data-blok-sidebar-menu-label], [data-blok-sidebar-menu-separator], [data-blok-sidebar-menu-meta]')].map((child) => {
+      if (child.hasAttribute('data-blok-sidebar-menu-separator')) return 'separator';
       if (child.hasAttribute('data-blok-sidebar-menu-meta')) return `meta:${child.textContent}`;
 
       return `item:${child.textContent}`;

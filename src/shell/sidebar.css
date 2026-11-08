@@ -255,7 +255,8 @@
   opacity: 1;
 }
 
-[data-blok-sidebar-menu] {
+[data-blok-sidebar-menu],
+[data-blok-sidebar-menu][data-blok-top-layer][popover] {
   position: fixed;
   inset: auto;
   flex-direction: column;
@@ -322,7 +323,7 @@
   color: var(--blok-text-primary);
 }
 
-[data-blok-sidebar-menu] [role="separator"] {
+[data-blok-sidebar-menu] [data-blok-sidebar-menu-separator] {
   height: 1px;
   margin: 4px 8px;
   background: var(--blok-popover-border);
@@ -333,7 +334,7 @@
   flex: none;
   width: 28px;
   height: 16px;
-  border-radius: 999px;
+  border-radius: var(--blok-radius-pill);
   background: var(--blok-toggle-off-bg);
 }
 

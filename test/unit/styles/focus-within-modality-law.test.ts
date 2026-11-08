@@ -56,6 +56,10 @@ const STANDALONE_CSS_ENTRIES = [
     file: 'src/playground/history-panels.css',
     reason: 'Dev-page history edits list and Updates feed styles, imported by src/playground/history-changes.ts and updates-feed.ts alone — never reachable from main.css.',
   },
+  {
+    file: 'src/shell/sidebar.css',
+    reason: 'Host page tree painted beside the editor in Storybook. The story imports it; main.css never does.',
+  },
 ];
 
 /** Every local .css file main.css and the lazy sheets pull in, transitively. */
@@ -123,6 +127,26 @@ const ALLOWED_FOCUS_WITHIN = [
   {
     selector: '[data-emoji-picker-body]:focus-within::-webkit-scrollbar-thumb',
     reason: 'emoji scrollbar colour; :has() on this subtree is a known perf cliff',
+  },
+  {
+    selector: '[data-blok-sidebar-search]:focus-within',
+    reason: 'search label wraps a single text input; the border is the field focus ring',
+  },
+  {
+    selector: '[data-blok-sidebar-row]:focus-within [data-blok-sidebar-glyph]',
+    reason: 'keyboard focus replaces the page emoji with the disclosure, the same chrome hover shows',
+  },
+  {
+    selector: '[data-blok-sidebar-row]:focus-within [data-blok-sidebar-chevron]',
+    reason: 'keyboard focus replaces the page emoji with the disclosure, the same chrome hover shows',
+  },
+  {
+    selector: '[data-blok-sidebar-row]:focus-within [data-blok-sidebar-add]',
+    reason: 'keyboard focus keeps Add a page inside reachable; a pointer click leaves the same row chrome up',
+  },
+  {
+    selector: '[data-blok-sidebar-row]:focus-within [data-blok-sidebar-more]',
+    reason: 'keyboard focus keeps the page menu reachable; a pointer click leaves the same row chrome up',
   },
 ];
 

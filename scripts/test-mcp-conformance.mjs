@@ -12,6 +12,16 @@
  *   go      `go build -o <tmp>/blok-mcp ./cmd/blok-mcp` in packages/server/go.
  *   rust    `cargo build --release --locked -p blok-mcp` in packages/server/rust,
  *           then `target/release/blok-mcp` (copied out).
+ * The embed suite runs each target's embed example instead: a host's own MCP server
+ * (serverInfo "host-example", tool host_echo, prompt host_hello) with Blok attached
+ * through that language's embed API and configured by the blok-mcp flag parser.
+ * Each LAUNCH entry's embed() builds it, only when the embed suite runs:
+ *   node    `node packages/mcp/examples/embed/server.mjs` (after the build above).
+ *   csharp  `dotnet build packages/server/dotnet/examples/Blok.Mcp.EmbedExample/Blok.Mcp.EmbedExample.csproj
+ *           -c Release -o <tmp>`, then the apphost `<tmp>/Blok.Mcp.EmbedExample`.
+ *   go      `go build -o <tmp>/mcp-embed ./examples/mcp-embed` in packages/server/go.
+ *   rust    `cargo build --release --locked -p blok-mcp --example embed`, then
+ *           `target/release/examples/embed` (copied out).
  * The binary gets only the flags and env vars a case names, exactly as a user
  * would pass them. There is no test-only build: the corpus suite maps the
  * spawned agent id to the golden one instead (see corpus.test.ts).
@@ -60,9 +70,11 @@ const SUITES = [
   'shutdown',
   'timeouts',
   'live',
+  'embed',
 ];
 
 const LIVE_SUITE = 'live';
+const EMBED_SUITE = 'embed';
 
 function run(command, args, options = {}) {
   return new Promise((resolveRun, reject) => {
@@ -99,6 +111,10 @@ const LAUNCH = {
 
       return [process.execPath, join(repositoryRoot, 'packages/mcp/bin/blok-mcp.mjs')];
     },
+    // build() ran first and made packages/mcp/dist, which the example imports.
+    async embed() {
+      return [process.execPath, join(repositoryRoot, 'packages/mcp/examples/embed/server.mjs')];
+    },
   },
   csharp: {
     project: 'packages/server/dotnet/Blok.Mcp/Blok.Mcp.csproj',
@@ -114,6 +130,19 @@ const LAUNCH = {
 
       return [join(output, `Blok.Mcp${suffix}`)];
     },
+    embedProject: 'packages/server/dotnet/examples/Blok.Mcp.EmbedExample/Blok.Mcp.EmbedExample.csproj',
+    async embed(temporaryDirectory) {
+      const project = join(repositoryRoot, this.embedProject);
+
+      if (!await exists(project)) {
+        throw missing('csharp', `${this.embedProject} does not exist.`);
+      }
+      const output = join(temporaryDirectory, 'csharp-mcp-embed');
+
+      await run('dotnet', ['build', project, '--configuration', 'Release', '--output', output], { cwd: repositoryRoot });
+
+      return [join(output, `Blok.Mcp.EmbedExample${suffix}`)];
+    },
   },
   go: {
     package: 'packages/server/go/cmd/blok-mcp',
@@ -124,6 +153,17 @@ const LAUNCH = {
       const binary = join(temporaryDirectory, 'go-mcp', `blok-mcp${suffix}`);
 
       await run('go', ['build', '-o', binary, './cmd/blok-mcp'], { cwd: join(repositoryRoot, 'packages/server/go') });
+
+      return [binary];
+    },
+    embedPackage: 'packages/server/go/examples/mcp-embed',
+    async embed(temporaryDirectory) {
+      if (!await exists(join(repositoryRoot, this.embedPackage))) {
+        throw missing('go', `${this.embedPackage} does not exist.`);
+      }
+      const binary = join(temporaryDirectory, 'go-mcp', `mcp-embed${suffix}`);
+
+      await run('go', ['build', '-o', binary, './examples/mcp-embed'], { cwd: join(repositoryRoot, 'packages/server/go') });
 
       return [binary];
     },
@@ -147,6 +187,20 @@ const LAUNCH = {
       await run('cargo', ['build', '--release', '--locked', '-p', this.crate], { cwd: workspace });
       await mkdir(dirname(binary), { recursive: true });
       await copyFile(join(workspace, 'target/release', `blok-mcp${suffix}`), binary);
+
+      return [binary];
+    },
+    embedExample: 'packages/server/rust/crates/mcp/examples/embed.rs',
+    async embed(temporaryDirectory) {
+      if (!await exists(join(repositoryRoot, this.embedExample))) {
+        throw missing('rust', `${this.embedExample} does not exist.`);
+      }
+      const workspace = join(repositoryRoot, 'packages/server/rust');
+      const binary = join(temporaryDirectory, 'rust-mcp', `embed${suffix}`);
+
+      await run('cargo', ['build', '--release', '--locked', '-p', this.crate, '--example', 'embed'], { cwd: workspace });
+      await mkdir(dirname(binary), { recursive: true });
+      await copyFile(join(workspace, 'target/release/examples', `embed${suffix}`), binary);
 
       return [binary];
     },
@@ -272,7 +326,10 @@ async function main() {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), 'blok-mcp-conformance-'));
 
   try {
-    const command = await LAUNCH[options.target].build(temporaryDirectory);
+    // The Node example imports the built package, so Node builds blok-mcp even for the embed suite alone.
+    const needsBlokMcp = options.target === 'node' || options.suites.some((suite) => suite !== EMBED_SUITE);
+    const command = needsBlokMcp ? await LAUNCH[options.target].build(temporaryDirectory) : undefined;
+    const embedCommand = options.suites.includes(EMBED_SUITE) ? await LAUNCH[options.target].embed(temporaryDirectory) : undefined;
     const syncHost = options.suites.includes(LIVE_SUITE) ? await HOSTS[options.host](temporaryDirectory) : undefined;
     const reportPath = join(temporaryDirectory, 'vitest-report.json');
     const vitestArgs = [
@@ -287,12 +344,13 @@ async function main() {
       ...(options.testNamePattern === undefined ? [] : ['-t', options.testNamePattern]),
     ];
 
-    console.log(`MCP conformance — target ${options.target}: ${JSON.stringify(command)}${syncHost === undefined ? '' : `, live host ${options.host}`}`);
+    console.log(`MCP conformance — target ${options.target}: ${JSON.stringify(command ?? null)}${embedCommand === undefined ? '' : `, embed ${JSON.stringify(embedCommand)}`}${syncHost === undefined ? '' : `, live host ${options.host}`}`);
     await run(process.execPath, vitestArgs, {
       cwd: repositoryRoot,
       env: {
         ...process.env,
-        BLOK_MCP_CONFORMANCE_COMMAND: JSON.stringify(command),
+        ...(command !== undefined && { BLOK_MCP_CONFORMANCE_COMMAND: JSON.stringify(command) }),
+        ...(embedCommand !== undefined && { BLOK_MCP_CONFORMANCE_EMBED_COMMAND: JSON.stringify(embedCommand) }),
         BLOK_MCP_CONFORMANCE_TARGET: options.target,
         ...(syncHost !== undefined && { BLOK_CONFORMANCE_SERVER: syncHost }),
         ...(options.update && { BLOK_MCP_CONFORMANCE_UPDATE: '1' }),

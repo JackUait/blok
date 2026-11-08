@@ -8,9 +8,13 @@ export const READ_TIMEOUT_MS = 20_000;
 const EXIT_TIMEOUT_MS = 15_000;
 const LISTENING = /listening on (\S+)/;
 
-/** The binary under test: argv[0] plus any leading args, from the runner. */
-export const conformanceCommand = (): string[] | undefined => {
-  const raw = process.env.BLOK_MCP_CONFORMANCE_COMMAND;
+/**
+ * The binary under test: argv[0] plus any leading args, from the runner.
+ * "embed": the target's embed example, a host server with Blok attached.
+ */
+export const conformanceCommand = (launch: 'blok-mcp' | 'embed' = 'blok-mcp'): string[] | undefined => {
+  const variable = launch === 'embed' ? 'BLOK_MCP_CONFORMANCE_EMBED_COMMAND' : 'BLOK_MCP_CONFORMANCE_COMMAND';
+  const raw = process.env[variable];
 
   if (raw === undefined || raw === '') {
     return undefined;
@@ -18,7 +22,7 @@ export const conformanceCommand = (): string[] | undefined => {
   const parsed: unknown = JSON.parse(raw);
 
   if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every((part) => typeof part === 'string')) {
-    throw new Error('BLOK_MCP_CONFORMANCE_COMMAND must be a JSON array of strings.');
+    throw new Error(`${variable} must be a JSON array of strings.`);
   }
 
   return parsed;

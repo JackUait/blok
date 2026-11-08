@@ -48,8 +48,8 @@ const forThisDisk = (c: FixtureCase, kind: string): FixtureCase =>
  * One vitest test per fixture case, skipped unless the runner named a binary.
  * Under --update the file is rewritten with what the binary answered.
  */
-export const fixtureSuite = (file: string): void => {
-  const command = conformanceCommand();
+export const fixtureSuite = (file: string, launch: 'blok-mcp' | 'embed' = 'blok-mcp'): void => {
+  const command = conformanceCommand(launch);
   const fixture = loadFixture(file);
   const recorded: FixtureCase[] = fixture.cases.map((c) => structuredClone(c));
 

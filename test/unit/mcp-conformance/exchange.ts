@@ -95,6 +95,14 @@ import {
  *   sseOrder    "byId": http only; sort a batch's SSE answers by id, for requests that
  *               may end in either order.
  *
+ * compare      "blok-owned" (the embed suite): the server is a host's, so its SDK owns the wire.
+ *               Only what Blok owns is compared (see blokOwned): each answer's result or
+ *               error, tools and prompts keyed by name (order is the SDK's; a host_* entry
+ *               counts by name only), serverInfo name, instructions, which of the tools and
+ *               prompts capabilities exist, and a server request's method, message and schema.
+ *               No expectHttp is recorded. --example-* flags are the example's own, so they
+ *               are left out when working out ${contractRevision}.
+ *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
  * is recorded as {"type":"text","json":"<same as structuredContent>"}. Placeholders: ${dir}, ${root}, ${host}, ${hostWs}, ${mcpUrl},
@@ -165,6 +173,7 @@ export interface FixtureCase {
   stderrPattern?: string;
   hostRequestOrder?: 'sorted' | 'distinct';
   maskKeys?: string[];
+  compare?: 'blok-owned';
   variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
   expectFiles?: Record<string, FileSpec | null>;
@@ -340,6 +349,67 @@ const captured = (answer: unknown, source: CaptureSource): unknown => {
 
   return Object.keys(isRecord(container) ? container : {})[0];
 };
+
+const SERVER_INFO_META = 'io.modelcontextprotocol/serverInfo';
+// The embed example's own tools and prompts; their schemas are each host SDK's rendering.
+const HOST_ENTRY = /^host_/;
+
+const byName = (list: unknown): unknown => (Array.isArray(list)
+  ? Object.fromEntries(list.filter(isRecord).map((entry) => [String(entry.name), HOST_ENTRY.test(String(entry.name)) ? '<host>' : entry]))
+  : list);
+
+const nameOnly = (value: unknown): unknown => (isRecord(value) ? { name: value.name } : value);
+
+/** The result keys Blok owns. Everything else (protocolVersion, cache hints, ...) is the host SDK's. */
+const blokOwnedResult = (result: Record<string, unknown>): Record<string, unknown> => {
+  const kept = Object.fromEntries(Object.entries({
+    serverInfo: nameOnly(result.serverInfo),
+    instructions: result.instructions,
+    capabilities: isRecord(result.capabilities)
+      ? { tools: 'tools' in result.capabilities, prompts: 'prompts' in result.capabilities }
+      : undefined,
+    tools: byName(result.tools),
+    prompts: byName(result.prompts),
+    description: result.description,
+    messages: result.messages,
+    content: result.content,
+    structuredContent: result.structuredContent,
+    resultType: result.resultType,
+    inputRequests: result.inputRequests,
+    _meta: isRecord(result._meta) && isRecord(result._meta[SERVER_INFO_META])
+      ? { [SERVER_INFO_META]: nameOnly(result._meta[SERVER_INFO_META]) }
+      : undefined,
+  }).filter(([, value]) => value !== undefined));
+
+  // A host SDK may leave isError: false out.
+  return Array.isArray(result.content) ? { ...kept, isError: result.isError === true } : kept;
+};
+
+/** What the embed suite compares of one message; see "compare" above. */
+const blokOwned = (message: unknown): unknown => {
+  if (!isRecord(message)) {
+    return message;
+  }
+  if (typeof message.method === 'string') {
+    const params = isRecord(message.params) ? message.params : {};
+
+    return {
+      method: message.method,
+      ...(message.method === 'elicitation/create' && { params: { message: params.message, requestedSchema: params.requestedSchema, mode: params.mode } }),
+    };
+  }
+  if (isRecord(message.error)) {
+    const { code, message: text, data } = message.error;
+
+    return { error: { code, message: text, ...(data !== undefined && { data }) } };
+  }
+
+  return isRecord(message.result) ? { result: blokOwnedResult(message.result) } : message;
+};
+
+/** The argv without the embed example's own --example-* flags, each with its value. */
+const blokArgv = (argv: string[]): string[] =>
+  argv.filter((arg, index) => !arg.startsWith('--example-') && !(argv[index - 1] ?? '').startsWith('--example-'));
 
 const sha256 = (bytes: Buffer): string => createHash('sha256').update(bytes).digest('hex');
 
@@ -564,8 +634,19 @@ class CaseRun {
     this.check(this.recorded as unknown as Holder, key, actual, label);
   }
 
+  private owned(message: unknown): unknown {
+    return this.c.compare === 'blok-owned' ? blokOwned(message) : message;
+  }
+
+  /** expectHttp: the status line and headers are the host SDK's in the embed suite. */
+  private checkHttp(holder: Holder, answer: HttpAnswer | null, label: string): void {
+    if (this.c.compare !== 'blok-owned') {
+      this.check(holder, 'expectHttp', answer === null ? null : httpSummary(answer), `${label} http`);
+    }
+  }
+
   private finishStep(step: Step, holder: Holder, answer: unknown, label: string): void {
-    const masked = maskKeys(answer, new Set(this.c.maskKeys ?? []));
+    const masked = maskKeys(this.owned(answer), new Set(this.c.maskKeys ?? []));
 
     (step.mask ?? []).forEach((pointer) => maskAt(masked, pointer));
     for (const [name, source] of Object.entries(step.capture ?? {})) {
@@ -593,7 +674,7 @@ class CaseRun {
     }
     const copy: ServerRequestSpec = { ...spec };
 
-    this.check(copy as unknown as Holder, 'expect', normalize({ ...incoming, id: '<server>' }, label), `${label} server request`);
+    this.check(copy as unknown as Holder, 'expect', this.owned(normalize({ ...incoming, id: '<server>' }, label)), `${label} server request`);
     server.send({ jsonrpc: '2.0', id: incoming.id, ...materialize(spec.reply, this.vars) as JsonMessage });
 
     return copy;
@@ -712,7 +793,7 @@ class CaseRun {
       if (typeof incoming.method === 'string' && incoming.id !== undefined) {
         seen.push(this.replyToServer(server, incoming, wanted[seen.length], label));
       } else {
-        notifications.push(normalize(incoming, label));
+        notifications.push(this.owned(normalize(incoming, label)));
       }
       incoming = await read();
     }
@@ -741,7 +822,7 @@ class CaseRun {
       const spec = materialize(step.http, this.vars) as NonNullable<Step['http']>;
       const answer = await sendHttp(server.url, { method: spec.method, path: spec.path, headers: mergeHeaders({}, spec.headers, this.vars), body: requestBody(spec) });
 
-      this.check(holder, 'expectHttp', httpSummary(answer), `${label} http`);
+      this.checkHttp(holder, answer, label);
       this.finishStep(step, holder, normalize(httpBody(answer, step.sseOrder), label, step.rawText), label);
 
       return;
@@ -763,12 +844,12 @@ class CaseRun {
     expect(Date.now() - sentAt, `${label}: answered sooner than minElapsedMs`).toBeGreaterThanOrEqual(step.minElapsedMs ?? 0);
 
     if (answer === null) {
-      this.check(holder, 'expectHttp', null, `${label} http`);
+      this.checkHttp(holder, null, label);
       this.finishStep(step, holder, null, label);
 
       return;
     }
-    this.check(holder, 'expectHttp', httpSummary(answer), `${label} http`);
+    this.checkHttp(holder, answer, label);
     if (isNotify) {
       return;
     }
@@ -925,7 +1006,7 @@ export const runCase = async (command: string[], c: FixtureCase, record: boolean
         env: caseEnv(Object.fromEntries(Object.entries(c.env ?? {}).map(([key, value]) => [key, substituteString(value, run.vars)]))),
         cwd: root,
       };
-      const revisions = await nodeContractRevisions({ argv: launch.argv, env: launch.env, cwd: root, version: packageVersion() });
+      const revisions = await nodeContractRevisions({ argv: blokArgv(launch.argv), env: launch.env, cwd: root, version: packageVersion() });
 
       if (revisions !== undefined) {
         run.vars.set('contractRevision', revisions.stored);

@@ -939,6 +939,8 @@ export interface DatabaseViewConfig {
   timelineCenter?: string;
   /** Timeline: show the table panel beside the bars. Default false. */
   showTimelineTable?: boolean;
+  /** The view toolbar is minimized to « and settings (Notion's » "Minimize"). Default false. */
+  toolbarMinimized?: boolean;
   /** Timeline: the table panel's columns, apart from the bar properties. Array order is column order. */
   tableProperties?: ViewPropertySetting[];
   /** Timeline: the self-relation that draws dependency arrows. */

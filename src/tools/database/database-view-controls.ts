@@ -136,6 +136,9 @@ const button = (testId: string, label: string, content: { icon?: string; text?: 
   return el;
 };
 
+/** Notion's controls fade back in over 200ms when « expands the toolbar; a little longer so the fade ends first. */
+const EXPAND_FADE_MS = 250;
+
 /** Longer than the 200ms shrink, so transitionend normally wins. */
 const SEARCH_CLOSE_FALLBACK_MS = 250;
 
@@ -165,6 +168,11 @@ export class DatabaseViewControls {
   private readonly filterButton: HTMLButtonElement;
   private readonly noDateButton: HTMLButtonElement;
   private readonly minimizeButton: HTMLButtonElement;
+  /** « Expand: shown in place of » while the view's toolbar is minimized. */
+  private readonly expandButton: HTMLButtonElement;
+  /** The saved view keeps its toolbar minimized. */
+  private minimized = false;
+  private expandTimer: ReturnType<typeof setTimeout> | null = null;
   /** The filter bar shows a sort, so » can fold it. */
   private barMinimizable = false;
   private searchCloseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -223,6 +231,7 @@ export class DatabaseViewControls {
     this.autofillButton = iconButton('database-toolbar-autofill', this.t('aiAutofill'), IconWand);
     this.searchButton = iconButton('database-toolbar-search', this.t('searchLabel'), IconSearch);
     this.settingsButton = iconButton('database-toolbar-settings', this.t('settingsTitle'), IconSliders);
+    this.settingsButton.setAttribute('data-blok-database-toolbar-settings', '');
     // A narrow view bar hides these together (notion-spec-2 §26.1, database-tab-bar.ts).
     for (const icon of [this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton]) {
       icon.setAttribute('data-blok-database-toolbar-foldable', '');
@@ -241,14 +250,28 @@ export class DatabaseViewControls {
       if (this.searchShown()) event.preventDefault();
     });
     this.minimizeButton.addEventListener('click', () => {
-      if (this.searchShown()) {
-        this.hideSearch();
-        if (!this.searchButton.hidden) this.searchButton.focus();
-
-        return;
-      }
+      if (this.searchShown()) this.hideSearch();
       this.barOpen = false;
+      this.host.updateView({ toolbarMinimized: true });
       this.refresh();
+      this.settingsButton.focus();
+    });
+    this.expandButton = iconButton('database-toolbar-expand', this.host.i18n.t('tools.toggle.ariaLabelExpand'), IconChevronDoubleRight);
+    this.expandButton.setAttribute('data-blok-database-toolbar-expand', '');
+    this.expandButton.hidden = true;
+    onHover(this.expandButton, this.host.i18n.t('tools.toggle.ariaLabelExpand'));
+    this.expandButton.addEventListener('click', () => {
+      // The controls fade in once; a later show of one of them stays instant.
+      // Marked first: the host's redraw lays out, and the fade only starts if the mark is on then.
+      this.toolbar.setAttribute('data-expanding', '');
+      this.host.updateView({ toolbarMinimized: false });
+      this.refresh();
+      if (this.expandTimer !== null) clearTimeout(this.expandTimer);
+      this.expandTimer = setTimeout(() => {
+        this.expandTimer = null;
+        this.toolbar.removeAttribute('data-expanding');
+      }, EXPAND_FADE_MS);
+      this.settingsButton.focus();
     });
     this.sortButton.addEventListener('click', () => this.openSort());
     this.automationsButton.addEventListener('click', () => this.openSettings(this.automationsButton, 'automations'));
@@ -282,7 +305,7 @@ export class DatabaseViewControls {
     // "Preview" reuses the file tool's word: the same in every locale.
     this.previewFormButton = iconButton('database-toolbar-preview-form', this.host.i18n.t('tools.file.preview'), IconPreview);
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
-    this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
+    this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.expandButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
       this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
     }
@@ -377,12 +400,17 @@ export class DatabaseViewControls {
     this.autofillButton.hidden = titleOnly || this.host.autofill === undefined;
     this.autofillButton.disabled = this.host.autofill?.writable() !== true;
     this.searchButton.hidden = (titleOnly || this.host.rowCount() < SEARCH_MIN_ROWS) && this.query === '';
+    this.minimized = this.host.savedView().toolbarMinimized === true;
+    this.toolbar.toggleAttribute('data-minimized', this.minimized);
+    this.expandButton.hidden = !this.minimized;
     this.renderFilterBar(view);
     this.panel?.refresh();
   }
 
   destroy(): void {
     this.endSearchClose();
+    if (this.expandTimer !== null) clearTimeout(this.expandTimer);
+    this.expandTimer = null;
     this.panel?.close();
     this.panel = null;
     this.matchObserver?.disconnect();
@@ -855,7 +883,7 @@ export class DatabaseViewControls {
 
   /** » shows for an open search or a filter bar with a sort. */
   private syncMinimize(): void {
-    this.minimizeButton.hidden = !this.searchShown() && !this.barMinimizable;
+    this.minimizeButton.hidden = this.minimized || (!this.searchShown() && !this.barMinimizable);
   }
 
   private setSearch(query: string): void {

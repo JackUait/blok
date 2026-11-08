@@ -13024,6 +13024,35 @@ textarea[data-blok-database-cell-input] {
   opacity: 0;
 }
 
+[data-blok-database-view-toolbar][data-minimized] > :not([data-blok-database-toolbar-settings], [data-blok-database-toolbar-expand], [data-blok-database-lock-badge], [data-blok-database-search-input][data-closing]) {
+  display: none;
+}
+
+[data-blok-database-toolbar-expand] {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+:is([data-blok-database-title-row], [data-blok-database-view-bar]):hover [data-blok-database-toolbar-expand], [data-blok-database-toolbar-expand]:focus-visible {
+  opacity: 1;
+}
+
+[data-blok-database-toolbar-expand] svg {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] [data-blok-database-toolbar-expand] svg {
+  transform: none;
+}
+
+[data-blok-database-view-toolbar][data-expanding] > * {
+  transition: opacity 0.2s ease;
+}
+
+[@starting-style] [data-blok-database-view-toolbar][data-expanding] > * {
+  opacity: 0;
+}
+
 [data-blok-database-search-input][data-closing] {
   inline-size: 0;
   opacity: 0;

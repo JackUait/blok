@@ -9975,6 +9975,41 @@ textarea[data-blok-database-cell-input] {
   }
 }
 
+/* Notion's » "Minimize" (notion-motion.md Round 4): only « and settings stay; the search field still shrinks away. */
+[data-blok-database-view-toolbar][data-minimized] > :not([data-blok-database-toolbar-settings], [data-blok-database-toolbar-expand], [data-blok-database-lock-badge], [data-blok-database-search-input][data-closing]) {
+  display: none;
+}
+
+/* « shows only while the pointer is on the header. */
+[data-blok-database-toolbar-expand] {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+:is([data-blok-database-title-row], [data-blok-database-view-bar]):hover [data-blok-database-toolbar-expand],
+[data-blok-database-toolbar-expand]:focus-visible {
+  opacity: 1;
+}
+
+[data-blok-database-toolbar-expand] svg {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] [data-blok-database-toolbar-expand] svg {
+  transform: none;
+}
+
+/* « brings the controls back with a 200ms fade. */
+[data-blok-database-view-toolbar][data-expanding] > * {
+  transition: opacity 0.2s ease;
+}
+
+@starting-style {
+  [data-blok-database-view-toolbar][data-expanding] > * {
+    opacity: 0;
+  }
+}
+
 /* Notion's » and Escape: the field shrinks and fades the same 200ms, then the view drops it. */
 [data-blok-database-search-input][data-closing] {
   inline-size: 0;

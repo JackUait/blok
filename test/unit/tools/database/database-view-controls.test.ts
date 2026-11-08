@@ -693,10 +693,11 @@ describe('DatabaseViewControls', () => {
       expect(q('database-toolbar-search')?.hidden).toBe(false);
     });
   });
-  // notion-motion.md Round 4 re-checks: while search is open Notion shows "»" ("Minimize") left of the icons; it closes the search.
-  describe('» closes an open search (Notion "Minimize")', () => {
-    it('shows » left of the icons only while the search is open, and » closes it', () => {
-      const { controls } = setup({ rows: 3 });
+  // notion-motion.md Round 4 re-checks: while search is open Notion shows "»" ("Minimize") left of the icons.
+  // It closes the search and minimizes the whole toolbar, saved with the view; « ("Expand") brings it back.
+  describe('» minimizes the toolbar (Notion "Minimize")', () => {
+    it('shows » left of the icons while the search is open, and » closes the search and minimizes the toolbar', () => {
+      const { controls, host } = setup({ rows: 3 });
 
       expect(q('database-toolbar-minimize')?.hidden).toBe(true);
       click('database-toolbar-search');
@@ -708,13 +709,68 @@ describe('DatabaseViewControls', () => {
 
       click('database-toolbar-minimize');
 
+      expect(host.updateView).toHaveBeenCalledWith({ toolbarMinimized: true });
       expect(q('database-search-input')).toBeNull();
       expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(controls.toolbar.hasAttribute('data-minimized')).toBe(true);
       expect(controls.filterBar.hidden).toBe(true);
     });
 
+    it('opens a view saved minimized with only « and settings', () => {
+      const { controls, saved } = setup({ rows: 3 });
+
+      saved.view = { ...saved.view, toolbarMinimized: true };
+      controls.refresh();
+      const expand = q('database-toolbar-expand');
+
+      expect(controls.toolbar.hasAttribute('data-minimized')).toBe(true);
+      expect(expand?.hidden).toBe(false);
+      expect(expand?.getAttribute('aria-label')).toBe('tools.toggle.ariaLabelExpand');
+      expect(expand?.querySelector('svg')).not.toBeNull();
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+    });
+
+    it('« brings every control back, and fades them in once', () => {
+      vi.useFakeTimers();
+      try {
+        const { controls, host, saved } = setup({ rows: 3 });
+
+        saved.view = { ...saved.view, toolbarMinimized: true };
+        controls.refresh();
+        // The host redraws inside updateView and may lay out: the fade mark must already be on.
+        const markedAtUpdate: boolean[] = [];
+
+        vi.mocked(host.updateView).mockImplementation((changes) => {
+          markedAtUpdate.push(controls.toolbar.hasAttribute('data-expanding'));
+          saved.view = { ...saved.view, ...changes };
+        });
+        click('database-toolbar-expand');
+
+        expect(markedAtUpdate).toEqual([true]);
+        expect(host.updateView).toHaveBeenCalledWith({ toolbarMinimized: false });
+        expect(controls.toolbar.hasAttribute('data-minimized')).toBe(false);
+        expect(q('database-toolbar-expand')?.hidden).toBe(true);
+        expect(controls.toolbar.hasAttribute('data-expanding')).toBe(true);
+        vi.advanceTimersByTime(300);
+        expect(controls.toolbar.hasAttribute('data-expanding')).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('shows « with no » while minimized, even with the search open', () => {
+      const { controls, saved } = setup({ rows: 3 });
+
+      click('database-toolbar-search');
+      saved.view = { ...saved.view, toolbarMinimized: true };
+      controls.refresh();
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(q('database-toolbar-expand')?.hidden).toBe(false);
+    });
+
     // A blur on an empty query closes the search, so the press must not take the focus first.
-    it('keeps the focus in the field on press, and gives it to the magnifier after', () => {
+    it('keeps the focus in the field on press, and gives it to settings, which stays, after', () => {
       setup({ rows: 3 });
       click('database-toolbar-search');
       const press = new MouseEvent('pointerdown', { bubbles: true, cancelable: true });
@@ -723,7 +779,7 @@ describe('DatabaseViewControls', () => {
       expect(press.defaultPrevented).toBe(true);
 
       click('database-toolbar-minimize');
-      expect(q('database-toolbar-search')).toHaveFocus();
+      expect(q('database-toolbar-settings')).toHaveFocus();
     });
 
     it('hints its name on hover, after the delay', () => {
@@ -787,7 +843,7 @@ describe('DatabaseViewControls', () => {
         const input = q('database-search-input') as HTMLInputElement;
 
         input.style.transitionDuration = '0.2s';
-        click('database-toolbar-minimize');
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         click('database-toolbar-search');
         vi.advanceTimersByTime(300);
         input.dispatchEvent(new Event('transitionend'));

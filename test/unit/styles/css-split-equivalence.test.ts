@@ -1510,6 +1510,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TIMELINE_END_CHIP_BYTES = 531;
     // database.css: the toolbar search fades in, and shrinks and fades out on » or Escape.
     const DATABASE_SEARCH_CLOSE_BYTES = 218;
+    // database.css: » minimizes the toolbar to « and settings; « fades the controls back.
+    const DATABASE_TOOLBAR_MINIMIZE_BYTES = 1071;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1904,7 +1906,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TOOLBAR_GLYPH_BYTES
       + DATABASE_GRIP_AND_TITLE_GLYPH_BYTES
       + DATABASE_TIMELINE_END_CHIP_BYTES
-      + DATABASE_SEARCH_CLOSE_BYTES;
+      + DATABASE_SEARCH_CLOSE_BYTES
+      + DATABASE_TOOLBAR_MINIMIZE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

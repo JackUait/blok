@@ -263,3 +263,31 @@ describe('database toolbar search', () => {
     expect(closing).toContain('opacity: 0');
   });
 });
+
+// notion-motion.md Round 4 re-checks: a minimized toolbar keeps only « and settings; « shows on header hover and fades 200ms ease.
+describe('minimized database toolbar', () => {
+  const TOOLBAR = '[data-blok-database-view-toolbar]';
+  const EXPAND = '[data-blok-database-toolbar-expand]';
+  const startStyle = [ ...database.matchAll(/@starting-style \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ].map((match) => match[1]).join(' ');
+
+  it('hides every control but settings, « and a search field still shrinking', () => {
+    expect(body(database, `${TOOLBAR}[data-minimized] > :not([data-blok-database-toolbar-settings], ${EXPAND}, [data-blok-database-lock-badge], [data-blok-database-search-input][data-closing])`))
+      .toContain('display: none');
+  });
+
+  it('shows « only while the pointer is on the header, fading over 200ms ease', () => {
+    expect(body(outsideReducedMotion, EXPAND)).toContain('opacity: 0');
+    expect(body(outsideReducedMotion, EXPAND)).toContain('transition: opacity 0.2s ease');
+    expect(body(database, `:is([data-blok-database-title-row], [data-blok-database-view-bar]):hover ${EXPAND}`)).toContain('opacity: 1');
+    expect(body(database, `${EXPAND}:focus-visible`)).toContain('opacity: 1');
+  });
+
+  it('draws « as a mirrored »', () => {
+    expect(body(database, `${EXPAND} svg`)).toContain('transform: scaleX(-1)');
+  });
+
+  it('fades the controls back in over 200ms ease when « expands it', () => {
+    expect(body(outsideReducedMotion, `${TOOLBAR}[data-expanding] > *`)).toContain('transition: opacity 0.2s ease');
+    expect(body(startStyle, `${TOOLBAR}[data-expanding] > *`)).toContain('opacity: 0');
+  });
+});

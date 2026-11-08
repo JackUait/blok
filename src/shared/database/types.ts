@@ -927,6 +927,8 @@ export interface DatabaseViewConfig {
   timelineCenter?: string;
   /** Timeline: show the table panel beside the bars. */
   showTimelineTable?: boolean;
+  /** Notion's » "Minimize": the toolbar shows only « and settings. Saved with the view. */
+  toolbarMinimized?: boolean;
   /** Timeline: the table panel's own columns, apart from the bar properties. */
   tableProperties?: ViewPropertySetting[];
   /** Timeline: the self-relation that draws dependency arrows. Absent means the "Blocked by" relation, when dependencies are on. */

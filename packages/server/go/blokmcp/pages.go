@@ -1,6 +1,7 @@
 package blokmcp
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/json"
@@ -77,8 +78,15 @@ func (s *Server) createPages(ctx context.Context, input map[string]any, who *cal
 		}
 		if err != nil {
 			failure, ok := asSurface(err)
-			if !ok {
+			if !ok && len(created) == 0 {
 				return err
+			}
+			if !ok {
+				// The pages made so far go to the batch, which fails at the
+				// next insert and reports them as orphaned.
+				logf("creating a page failed: %v", err)
+				input["createPageFailure"] = map[string]any{"helper": "as-is", "error": serverStop}
+				break
 			}
 			input["createPageFailure"] = map[string]any{"helper": failure.Helper, "error": failure.errorJSON()}
 			break
@@ -87,6 +95,75 @@ func (s *Server) createPages(ctx context.Context, input map[string]any, who *cal
 	}
 	input["createdPages"] = created
 	return nil
+}
+
+// agentError is an AgentError as the bundle takes it "as-is".
+type agentError struct {
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	Retryable bool   `json:"retryable"`
+	Details   any    `json:"details,omitempty"`
+}
+
+// serverStop is blokagent's cause for a batch a server error stopped. The
+// error itself is only logged.
+var serverStop = agentError{Code: "APPLY_FAILED", Message: "The batch stopped on a server error. Nothing was written.", Retryable: true}
+
+type pageReceipt struct {
+	Command  string `json:"command"`
+	Type     string `json:"type"`
+	Prepared struct {
+		PageID string `json:"pageId"`
+	} `json:"prepared"`
+}
+
+// createdPagesOf is what createPages made for this batch.
+func createdPagesOf(input map[string]any) []string {
+	pages, _ := input["createdPages"].([]string)
+	return pages
+}
+
+// linksAny says whether document names one of pages. Page ids are random,
+// so a match anywhere counts: a false match only leaves a page unreported.
+func linksAny(document json.RawMessage, pages []string) bool {
+	for _, page := range pages {
+		if bytes.Contains(document, []byte(`"`+page+`"`)) {
+			return true
+		}
+	}
+	return false
+}
+
+// orphanedAnswer answers a batch that stopped on err after pages were made
+// for it and before its parent was written: the host is told which pages to
+// clean up, in the shape of the bundle's withUnusedPages. With no pages, err
+// passes on. result keeps the batch's warnings; nil has none.
+func (s *Server) orphanedAnswer(ctx context.Context, input map[string]any, result json.RawMessage, err error) (*executed, error) {
+	pages := createdPagesOf(input)
+	if len(pages) == 0 {
+		return nil, err
+	}
+	logf("a batch stopped after its pages were made: %v", err)
+	orphaned := make([]pageReceipt, len(pages))
+	for index, page := range pages {
+		orphaned[index] = pageReceipt{Command: "block.insert", Type: "page"}
+		orphaned[index].Prepared.PageID = page
+	}
+	if result == nil {
+		result = json.RawMessage(`{"ok":false,"warnings":[]}`)
+	}
+	answer, answerErr := s.executeAnswer(ctx, map[string]any{"result": result, "failed": map[string]any{"helper": "as-is", "error": agentError{
+		Code:    "ORPHANED_SIDE_EFFECT",
+		Message: "The batch failed after the host did work for it (" + serverStop.Message + "). Clean up the listed items.",
+		Details: struct {
+			Orphaned []pageReceipt `json:"orphaned"`
+			Cause    agentError    `json:"cause"`
+		}{orphaned, serverStop},
+	}}})
+	if answerErr != nil {
+		return nil, err
+	}
+	return &executed{answer: answer}, nil
 }
 
 // createLivePage joins the new page's room once: the sync service seeds it,

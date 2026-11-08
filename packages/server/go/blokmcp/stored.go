@@ -143,7 +143,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	input["documentText"] = st.source.documentForm()
 	var out executeOutput
 	if err := st.server.agentExecute(ctx, input, &out, func(run func()) { run() }); err != nil {
-		return nil, err
+		return st.server.orphanedAnswer(ctx, input, nil, err)
 	}
 	if out.Ask != nil {
 		return &executed{ask: out.Ask}, nil
@@ -163,7 +163,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	if err != nil {
 		st.stale = true
 		_ = st.reload(ctx)
-		return nil, err
+		return st.server.orphanedAnswer(ctx, input, out.Result, err)
 	}
 	saved, err := st.source.save(ctx, st.documentID, []byte(*out.DocumentText), st.version)
 	if err != nil {
@@ -171,9 +171,14 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		// The work was refused, so memory must match the source again. A
 		// failed reload retries on the next call.
 		st.stale = true
-		_ = st.reload(ctx)
+		reloadErr := st.reload(ctx)
 		if !ok {
-			return nil, err
+			// A save can store the parent before it breaks: a page the
+			// parent links is in use, so it is not reported.
+			if reloadErr != nil || linksAny(st.document, createdPagesOf(input)) {
+				return nil, err
+			}
+			return st.server.orphanedAnswer(ctx, input, out.Result, err)
 		}
 		answer, answerErr := st.server.executeAnswer(ctx, map[string]any{
 			"result": out.Result, "failed": map[string]any{"helper": failure.Helper, "error": failure.errorJSON()},

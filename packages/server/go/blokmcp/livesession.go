@@ -412,7 +412,7 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		}
 	}
 	if err := l.server.agentExecute(ctx, input, &out, unlocked); err != nil {
-		return nil, err
+		return l.server.orphanedAnswer(ctx, input, nil, err)
 	}
 	if out.Ask != nil {
 		return &executed{ask: out.Ask}, nil

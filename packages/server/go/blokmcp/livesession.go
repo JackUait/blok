@@ -414,9 +414,11 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 	if l.write && !l.readOnly && l.server.pageMap() && hasPageAction(batch) && call.who != nil {
 		return l.pageAction(ctx, call, input, mark)
 	}
+	var made *madePages
 	if l.write && !l.readOnly && l.server.createsPages() && isBatchEnvelope(batch) && call.who != nil {
-		if err := l.server.createPages(ctx, input, call.who, l.server.source); err != nil {
-			return l.server.reportStopped(ctx, stoppedPages(err), l.parentNow(ctx), nil, err)
+		var err error
+		if made, err = l.server.createPages(ctx, input, call.who, l.server.source, l.documentID); err != nil {
+			return nil, err
 		}
 	}
 	var out liveExecuteOutput
@@ -432,10 +434,13 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		}
 	}
 	if err := l.server.agentExecute(ctx, input, &out, unlocked); err != nil {
-		return l.server.reportStopped(ctx, createdPagesOf(input), l.parentNow(ctx), nil, err)
+		return l.server.reportStopped(ctx, createdOf(made), l.parentNow(ctx), nil, err)
 	}
 	if out.Ask != nil {
 		return &executed{ask: out.Ask}, nil
+	}
+	if made != nil && (len(made.stranded) > 0 || made.cancelled) {
+		out.Result = finishPages(out.Result, made, l.parentNow(ctx))
 	}
 	var parsed liveResult
 	_ = json.Unmarshal(out.Result, &parsed)
@@ -488,7 +493,7 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 			room.pendingLocal = nil
 			l.readOnly = true
 			refused := surfaceError("APPLY_FAILED", "The batch could not be applied to the room.")
-			if orphans := unlinked(createdPagesOf(input), l.parentNow(ctx)); len(orphans) > 0 {
+			if orphans := unlinked(createdOf(made), l.parentNow(ctx)); len(orphans) > 0 {
 				return l.orphaned(ctx, orphans, out.Result, refused)
 			}
 			return l.failed(ctx, out.Result, refused)

@@ -171,8 +171,14 @@ func (s *Server) checkOptions(ctx context.Context, checked Options) error {
 	if err := json.Unmarshal(written, &options); err != nil {
 		return err
 	}
+	if checked.CreatePage != nil && checked.Rooms != nil {
+		return &ConfigError{Message: "CreatePage works in stored mode only: it cannot be used with Rooms"}
+	}
 	if checked.Authorize != nil {
 		options["authorize"] = json.RawMessage("true")
+	}
+	if checked.CreatePage != nil {
+		options["createPage"] = json.RawMessage("true")
 	}
 	if checked.Uploads != nil {
 		options["uploads"], _ = marshal(checked.Uploads.checkJSON())

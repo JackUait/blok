@@ -209,7 +209,7 @@ func (e *Executor) ExecuteInRoom(ctx context.Context, docID, batchJSON string, a
 				// Made outside the room lane, so a slow host never holds
 				// the room. The lane run checks the count again.
 				input.Members = append(input.Members, member("document", state))
-				made, refusal, err := e.createPages(ctx, input, options, actor)
+				made, refusal, err := e.createPages(ctx, input, options, actor, docID)
 				if err != nil {
 					return Execution{}, err
 				}

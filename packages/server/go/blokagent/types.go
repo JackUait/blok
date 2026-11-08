@@ -77,6 +77,26 @@ type PageCreator interface {
 	Create(ctx context.Context, actor Actor) (string, error)
 }
 
+// PageCreateRequest is what a PageCreatorFor learns about a new sub-page.
+type PageCreateRequest struct {
+	// Actor is the agent that inserts the page block.
+	Actor Actor
+	// ParentDocumentID is the document the page block goes into: the room's
+	// document id, or "" when the executor does not know it (Execute).
+	ParentDocumentID string
+	// Principal is the person the MCP server serves; "" outside MCP.
+	Principal string
+	// SuggestedPageID is an id Blok minted. Use it or answer your own.
+	SuggestedPageID string
+}
+
+// PageCreatorFor is an optional part of a PageCreator. When the page
+// target implements it, CreateFor is called instead of Create, with the
+// parent document. As Create: "" means this actor may not create a page.
+type PageCreatorFor interface {
+	CreateFor(ctx context.Context, request PageCreateRequest) (string, error)
+}
+
 // PageLocation is a StoredPage or a RoomPage.
 type PageLocation interface{ pageLocation() }
 

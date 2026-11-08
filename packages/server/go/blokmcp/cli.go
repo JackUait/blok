@@ -47,13 +47,14 @@ func RunCLI(args []string, env map[string]string, stdin io.ReadCloser, stdout io
 }
 
 type parsedFiles struct {
-	Manifest  *string `json:"manifest"`
-	Overrides *string `json:"overrides"`
-	Authorize *string `json:"authorize"`
+	Manifest   *string `json:"manifest"`
+	Overrides  *string `json:"overrides"`
+	Authorize  *string `json:"authorize"`
+	CreatePage *string `json:"createPage"`
 }
 
 // ParseArgs reads args and env as the blok-mcp command does, with the
-// --authorize hook and the manifest files loaded: the Options an embedding
+// --authorize and --create-page hooks and the manifest files loaded: the Options an embedding
 // host passes to Embed. A refused flag is a *ConfigError.
 func ParseArgs(args []string, env map[string]string) (Options, error) {
 	pool, err := newPool(1)
@@ -94,6 +95,10 @@ func parseArgs(engine bundle, args []string, env map[string]string) (Options, er
 			return Options{}, err
 		}
 		options.Authorize = hook
+	}
+	if files.CreatePage != nil {
+		// The bundle already refused anything but an http(s) URL.
+		options.CreatePage = CreatePageWebhook(*files.CreatePage)
 	}
 	if files.Manifest != nil {
 		if options.Manifest, err = configFile(engine, "manifest", *files.Manifest); err != nil {

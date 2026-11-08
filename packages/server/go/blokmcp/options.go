@@ -52,6 +52,19 @@ type Options struct {
 	// safety check.
 	DocumentSource DocumentSource `json:"-"`
 
+	// CreatePage, when set, makes the document of each page block the
+	// agent inserts (stored mode with PageTitles "page-map" and a source;
+	// with Sync, Rooms or no source it is refused at start). It gets the
+	// open document, the handle's opener and a suggested id, and answers
+	// the new page id: 1-512 code points, valid UTF-8, no control
+	// characters, not "." or "..". Return ErrPageRefused to refuse (the
+	// insert fails with FORBIDDEN). Any other error, or an id that breaks
+	// those rules, is logged; the agent sees SOURCE_UNAVAILABLE, or, after
+	// earlier pages of the batch, ORPHANED_SIDE_EFFECT listing them. Blok
+	// asks no Authorize about the new id and saves nothing to it: the host
+	// owns it. Undo, redo and delete never call it.
+	CreatePage func(ctx context.Context, request blokagent.PageCreateRequest) (string, error) `json:"-"`
+
 	// Uploads, when set, lets the agent upload files through the host's
 	// own uploader.
 	Uploads *Uploads `json:"-"`

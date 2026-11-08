@@ -1,7 +1,6 @@
 package blokmcp
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/json"
@@ -28,13 +27,27 @@ func (s *Server) createsPages() bool {
 	return s.options.PageTitles == "page-map" && (s.options.Sync != nil || s.source != nil)
 }
 
+// madePages is what createPages made for a batch.
+type madePages struct {
+	// created went to the bundle as createdPages.
+	created []string
+	// stranded may be stored, but no insert takes them: a create that
+	// broke after it may have saved its page.
+	stranded []string
+	// cancelled: a cancel stopped the creating. The bundle keeps a
+	// cancel's own code, so finishPages lists created.
+	cancelled bool
+}
+
 // createPages makes the page documents a batch will point at, before it
 // runs, and puts them in input as createdPages: the bundle cannot wait on
-// the host mid-batch, so agentPagesNeeded counts them first. A refused page
-// stops there and goes in as createPageFailure, so the bundle fails its
-// insert as Node's port does. The client's cancel is not checked between
-// pages, as Node does not check it inside a batch.
-func (s *Server) createPages(ctx context.Context, input map[string]any, who *caller, source docSource) error {
+// the host mid-batch, so agentPagesNeeded counts them first. A page that
+// could not be made stops there and goes in as createPageFailure, so the
+// bundle fails its insert as Node's port does, and reports the pages made
+// before it (with the command index and revision). The client's cancel is
+// not checked between pages, as Node does not check it inside a batch:
+// ctx is one a client cancel never reaches. parent is the open document.
+func (s *Server) createPages(ctx context.Context, input map[string]any, who *caller, source docSource, parent string) (*madePages, error) {
 	var needed struct {
 		Count  int `json:"count"`
 		Result *struct {
@@ -51,7 +64,7 @@ func (s *Server) createPages(ctx context.Context, input map[string]any, who *cal
 		} `json:"result"`
 	}
 	if _, err := s.bundle.call(ctx, "agentPagesNeeded", input, &needed); err != nil {
-		return err
+		return nil, err
 	}
 	count := needed.Count
 	// A batch that would be refused, or that waits on a person's answer,
@@ -68,35 +81,55 @@ func (s *Server) createPages(ctx context.Context, input map[string]any, who *cal
 			}
 		}
 	}
-	created := make([]string, 0, count)
+	made := &madePages{created: make([]string, 0, count)}
 	for range count {
-		var pageID string
-		var err error
-		if s.options.Sync != nil {
-			pageID, err = s.createLivePage(ctx, who)
-		} else {
-			pageID, err = s.createPage(ctx, source, who.principal)
-		}
+		pageID, stop, err := s.nextPage(ctx, source, who, parent, made)
 		if err != nil {
-			failure, ok := asSurface(err)
-			if !ok {
-				pages := created
-				var half *halfMadePage
-				if errors.As(err, &half) {
-					pages = append(pages, half.pageID)
-				}
-				if len(pages) == 0 {
-					return err
-				}
-				return &pagesStopped{pages: pages, err: err}
-			}
-			input["createPageFailure"] = map[string]any{"helper": failure.Helper, "error": failure.errorJSON()}
+			return nil, err
+		}
+		if stop != nil {
+			input["createPageFailure"] = stop.failure
+			made.cancelled = stop.cancelled
 			break
 		}
-		created = append(created, pageID)
+		made.created = append(made.created, pageID)
 	}
-	input["createdPages"] = created
-	return nil
+	input["createdPages"] = made.created
+	return made, nil
+}
+
+// nextPage makes one page: through the host's CreatePage, or Blok's own
+// way. A stop is the failure the bundle fails the page's insert with. A
+// plain error before any page exists fails the call, as before.
+func (s *Server) nextPage(ctx context.Context, source docSource, who *caller, parent string, made *madePages) (string, *pageStop, error) {
+	if s.options.CreatePage != nil {
+		pageID, stop := s.hostPage(ctx, parent, who, len(made.created))
+		return pageID, stop, nil
+	}
+	var pageID string
+	var err error
+	if s.options.Sync != nil {
+		pageID, err = s.createLivePage(ctx, who)
+	} else {
+		pageID, err = s.createPage(ctx, source, who.principal)
+	}
+	if err == nil {
+		return pageID, nil, nil
+	}
+	if failure, ok := asSurface(err); ok {
+		return "", stopWith(failure), nil
+	}
+	var half *halfMadePage
+	if errors.As(err, &half) {
+		made.stranded = append(made.stranded, half.pageID)
+	}
+	if len(made.created)+len(made.stranded) == 0 {
+		return "", nil, err
+	}
+	// The error itself is only logged: its text may name the host's
+	// internals.
+	logf("a batch stopped after its pages were made: %v", err)
+	return "", stopAsIs(serverStop), nil
 }
 
 // agentError is an AgentError as the bundle takes it "as-is".
@@ -119,29 +152,12 @@ type pageReceipt struct {
 	} `json:"prepared"`
 }
 
-// createdPagesOf is what createPages made for this batch.
-func createdPagesOf(input map[string]any) []string {
-	pages, _ := input["createdPages"].([]string)
-	return pages
-}
-
-// pagesStopped is createPages stopped by a server error after it made
-// pages: the batch does not run.
-type pagesStopped struct {
-	pages []string
-	err   error
-}
-
-func (p *pagesStopped) Error() string { return p.err.Error() }
-func (p *pagesStopped) Unwrap() error { return p.err }
-
-// stoppedPages is the pages a createPages error left behind.
-func stoppedPages(err error) []string {
-	var stopped *pagesStopped
-	if errors.As(err, &stopped) {
-		return stopped.pages
+// createdOf is the pages made, nil-safe.
+func createdOf(made *madePages) []string {
+	if made == nil {
+		return nil
 	}
-	return nil
+	return append(append([]string{}, made.created...), made.stranded...)
 }
 
 // halfMadePage is a page create that broke after the page may have been
@@ -154,17 +170,17 @@ type halfMadePage struct {
 func (h *halfMadePage) Error() string { return h.err.Error() }
 func (h *halfMadePage) Unwrap() error { return h.err }
 
-// unlinked is pages the parent does not name. Page ids are random, so a
-// match anywhere counts: a false match only leaves a page unreported. A
-// parent that could not be read (nil) gives none: the host must never be
-// told to delete a page the parent may use.
+// unlinked is pages the parent does not link (a page block's
+// data.pageId). A parent that could not be read (nil) gives none: the host
+// must never be told to delete a page the parent may use.
 func unlinked(pages []string, parent json.RawMessage) []string {
 	if parent == nil {
 		return nil
 	}
+	linked := linkedPageIDs(parent)
 	left := []string{}
 	for _, page := range pages {
-		if !bytes.Contains(parent, []byte(`"`+page+`"`)) {
+		if !linked[page] {
 			left = append(left, page)
 		}
 	}

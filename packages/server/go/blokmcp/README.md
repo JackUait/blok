@@ -129,6 +129,29 @@ func (s store) Save(ctx context.Context, caller blokmcp.DocumentCaller, id, text
 - Any other error is logged in full to stderr. The agent sees `SOURCE_UNAVAILABLE` in generic words. After a failed save the handle reloads, so no unsaved edit or undo step stays in memory.
 - A save answered with an empty version is `SOURCE_UNAVAILABLE`: "The host may have saved this document but did not say which version. Read it before you retry." The handle reloads.
 
+## Sub-pages your app creates
+
+With `PageTitles: "page-map"` and a source, each page block the agent inserts gets its own document. By default Blok mints the id, asks `Authorize` about it, and saves an empty document. Set `Options.CreatePage` to make that document yourself, for example as a new article under the parent:
+
+```go
+options.CreatePage = func(ctx context.Context, request blokagent.PageCreateRequest) (string, error) {
+	if !mayCreateUnder(request.Principal, request.ParentDocumentID) {
+		return "", blokmcp.ErrPageRefused
+	}
+	return createArticle(ctx, request.ParentDocumentID, request.Actor) // your own id
+}
+```
+
+- The request has the open document (`ParentDocumentID`), the principal and agent actor that opened the handle, and an id Blok minted (`SuggestedPageID`) that you may use.
+- Blok then asks no `Authorize` about the new id, checks no emptiness, and saves nothing to it: you own it. Opening it later with `blok_open` goes through `Authorize` as usual.
+- Your id becomes the page block's `data.pageId`. It must be 1-512 code points of valid UTF-8, with no control characters (U+0000-U+001F, U+007F-U+009F), and not `.` or `..`. Your source must be able to open it.
+- `ErrPageRefused` (wrapped is fine) fails the insert with `FORBIDDEN` "You may not create a page document here." Nothing is saved.
+- Any other error, or an id that breaks the rules above, is logged in full to stderr. On the batch's first page the agent sees `SOURCE_UNAVAILABLE` "The host could not create the page.". After earlier pages the batch fails with `ORPHANED_SIDE_EFFECT`: `details.orphaned` lists the pages you made, and `details.cause` is `APPLY_FAILED` (or `FORBIDDEN` for a refusal). Delete those pages. A page the parent already links is left out.
+- Pages are made one at a time, before the batch runs, at most 25 per batch. A batch over that limit never calls you. Undo, redo and deleting a page block never call you.
+- `CreatePage` needs stored mode: with `Sync`, `Rooms` or no source the server refuses to start.
+- `blok-mcp --create-page <url>` sets it to `CreatePageWebhook(url)`: `POST <url>` with `{"parentDocumentId","principal","actor":{"id","name","onBehalfOf"},"suggestedPageId"}`. A `200 {"pageId":"<id>"}` is the id, `200 {"pageId":null}` is a refusal, and anything else (another status, a redirect, a timeout after 10 s, a body without a string or null `pageId`) is an error.
+- In `blokagent`, a `PageCreator` that also implements `PageCreatorFor` gets `CreateFor` with the same request instead of `Create`. In a room the parent is the room's document id. As with `Create`, an empty id refuses.
+
 ## Docs
 
 [https://blokeditor.com/docs](https://blokeditor.com/docs) and [the server page](https://blokeditor.com/server#mcp).

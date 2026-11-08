@@ -148,19 +148,27 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	if call.approval != nil {
 		input["approval"] = call.approval
 	}
+	var made *madePages
 	if st.write && st.server.createsPages() && isBatchEnvelope(batch) {
-		if err := st.server.createPages(ctx, input, st.openerOr(call.who), st.source); err != nil {
-			return st.server.reportStopped(ctx, stoppedPages(err), st.document, nil, err)
+		var err error
+		if made, err = st.server.createPages(ctx, input, st.openerOr(call.who), st.source, st.documentID); err != nil {
+			return nil, err
+		}
+		if made.cancelled {
+			// The batch still gets its answer.
+			ctx = context.WithoutCancel(ctx)
 		}
 	}
 	input["documentText"] = st.source.documentForm()
 	var out executeOutput
 	if err := st.server.agentExecute(ctx, input, &out, func(run func()) { run() }); err != nil {
-		return st.server.reportStopped(ctx, createdPagesOf(input), st.document, nil, err)
+		return st.server.reportStopped(ctx, createdOf(made), st.document, nil, err)
 	}
 	if out.Ask != nil {
 		return &executed{ask: out.Ask}, nil
 	}
+	// A failed batch wrote nothing, so memory is the parent as saved.
+	out.Result = finishPages(out.Result, made, st.document)
 	if !out.Save || out.DocumentText == nil {
 		st.keep(out)
 		answer, err := st.server.executeAnswer(ctx, map[string]any{"result": out.Result})
@@ -175,7 +183,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 	})
 	if err != nil {
 		st.stale = true
-		return st.server.reportStopped(ctx, createdPagesOf(input), st.reloaded(ctx), out.Result, err)
+		return st.server.reportStopped(ctx, createdOf(made), st.reloaded(ctx), out.Result, err)
 	}
 	saved, err := st.source.save(ctx, st.documentID, []byte(*out.DocumentText), st.version)
 	if err != nil {
@@ -187,7 +195,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		if !ok {
 			// A save can store the parent before it breaks: the reload
 			// shows which pages it names.
-			return st.server.reportStopped(ctx, createdPagesOf(input), parent, out.Result, err)
+			return st.server.reportStopped(ctx, createdOf(made), parent, out.Result, err)
 		}
 		answer, answerErr := st.server.executeAnswer(ctx, map[string]any{
 			"result": out.Result, "failed": map[string]any{"helper": failure.Helper, "error": failure.errorJSON()},

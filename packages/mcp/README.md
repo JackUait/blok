@@ -363,6 +363,7 @@ const handler = createMcpHandler(() => {
 - A handle belongs to the caller that opened it. Another principal gets `UNKNOWN_HANDLE`.
 - `attach` throws when one of your tool or prompt names is a Blok name, or when the server already answers `tools/list`, `tools/call`, `prompts/list` or `prompts/get`. Other names reach your `callTool` and `getPrompt`. To install those four handlers yourself, use `blok.handlers(server, { tools, prompts })`; it checks your names the same way.
 - Blok's tools answer exactly as the standalone server's, including its protocol errors and the approval question (`input_required`, or elicitation for 2025 clients).
+- An error Blok did not expect, in a tool call, such as a throw from your `caller` hook, goes to stderr in full. The client gets `-32603` "Blok could not run this call.", never the error's text. Errors from your source or handle store answer `SOURCE_UNAVAILABLE` instead.
 - Origin and Host checks, a body size cap and OAuth are your server's job. Stateless HTTP (a server per request) is supported; stateful sessions are not promised.
 - `blok.close()` waits for calls in flight and closes every handle.
 

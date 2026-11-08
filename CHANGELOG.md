@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Features
+
+- **MCP tools on your own MCP server** — Serve Blok's `blok_*` tools and prompts on an MCP server you build, next to your own tools.
+  - Node `createBlok`, C# `WithBlok`, Go `blokmcp.Embed` and Rust `BlokTools`. Your server keeps its name, instructions, transport and sign-in.
+  - It needs a per-document check (`authorize`), as over HTTP. Anonymous callers are refused unless you name an anonymous principal.
+  - A host tool or prompt with a Blok name is refused, never silently replaced.
+- **MCP host document source** — Load and save stored documents through your own code instead of `files` or `endpoint`.
+  - Node `source: { kind: 'custom', source }`, C# `BlokMcpOptions.DocumentSource`, Go `Options.DocumentSource`, Rust `Hooks::source`.
+  - `load` answers JSON text and a version. `save` gets the version it must match, or `null` for a new document.
+  - Each call gets the caller that opened the handle. Throw the source error type to answer `DOCUMENT_CHANGED`, `SOURCE_UNAVAILABLE`, `FORBIDDEN` or `INVALID_ARGS`.
+- **MCP host page creator** — Your app makes each new sub-page document an agent inserts, for example as its own article.
+  - Library: `createPage` in Node, `BlokMcpOptions.PageCreator` in C#, `Options.CreatePage` in Go, `Hooks::page_creator` in Rust. CLI: `--create-page <url>`, a webhook.
+  - Works only with `--page-titles page-map` and a stored `--source`. With `--sync-url` the server refuses to start.
+  - Blok then skips `--authorize` for the new id and saves nothing there. An answer of `null` refuses with `FORBIDDEN`.
+- **MCP shared handle store** — Stored handles can live in one store, so any process can serve any call for them.
+  - Library: `handleStore` in Node, `BlokMcpOptions.HandleStore` in C#, `Options.HandleStore` in Go, `Hooks::handle_store` in Rust. CLI: `--handle-store memory|files:<dir>`, default `memory`.
+  - `files:<dir>` shares handles between processes on one machine. It refuses to start on Windows.
+  - Your store must count and add per principal in one atomic step, and fence each lease by its token.
+
+### Bug Fixes
+
+- **MCP failed saves** — In the C# and Rust builds, a stored save that fails no longer keeps the unsaved edits or their undo step in memory.
+- **MCP orphaned pages** — The C#, Go and Rust builds list the pages a failed batch made in `error.details.orphaned`, wherever the batch stopped before writing its parent.
+  - A page the parent document still links is left out.
+  - A parent save the source refuses still lists nothing.
+- **MCP errors on a host server** — An unexpected error on a host's MCP server answers `-32603` "Blok could not run this call." and goes to the log in full.
+  - Its text never reaches the client. Blok's own protocol errors pass as they are.
+- **MCP stored handle identity** — In the Go and C# builds, a stored handle now acts for the client that opened it, as in Node.
+  - Go: every batch writes as the opener's actor. Before, a later call wrote as its own client.
+  - C#: pages a batch makes or renames are opened as the opener. Before, they were opened as the current caller.
+
 ## [2.1.0](https://github.com/JackUait/blok/compare/v2.0.0...v2.1.0) (2026-11-07)
 
 ### Breaking Changes

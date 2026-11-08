@@ -20,6 +20,9 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
   private readonly string dir = Directory.CreateTempSubdirectory("blok-mcp-stdio-").FullName;
   private readonly BundleFixture fixture;
 
+  // How long the last RunWireAsync session ran, without the server setup before it.
+  private TimeSpan sessionTime;
+
   public McpStdioSessionTests(BundleFixture fixture)
   {
     this.fixture = fixture;
@@ -44,8 +47,11 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
     using var output = new MemoryStream();
 
     before?.Invoke(core);
+    var started = DateTime.UtcNow;
+
     await McpStdioSession.RunAsync(core, options, new MemoryStream(Encoding.UTF8.GetBytes(wire)), output, new TaskCompletionSource().Task)
         .WaitAsync(TimeSpan.FromSeconds(60));
+    sessionTime = DateTime.UtcNow - started;
 
     return [.. Encoding.UTF8.GetString(output.ToArray()).Split('\n', StringSplitOptions.RemoveEmptyEntries)];
   }
@@ -86,11 +92,11 @@ public sealed class McpStdioSessionTests : IClassFixture<BundleFixture>, IDispos
   [InlineData("""{"jsonrpc":"2.0","id":16,"error":{"code":1.5,"message":"x"}}""")]
   public async Task DropsALineNodesSchemaRefuses(string line)
   {
-    var started = DateTime.UtcNow;
     var lines = await RunWireAsync(Init + line + "\n");
 
     Assert.Single(lines);
-    Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(10));
+    // Setup is not timed: the first case pays the cold start, which a loaded runner stretches past 10 s.
+    Assert.True(sessionTime < TimeSpan.FromSeconds(10));
   }
 
   [Theory]

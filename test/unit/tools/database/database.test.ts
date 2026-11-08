@@ -6194,6 +6194,21 @@ describe('DatabaseTool', () => {
         again.tool.destroy();
       });
 
+      it('starts the days the last month also drew at their old ink when the month changes', () => {
+        const { tool, element } = calendarTool();
+        const ink = (iso: string): string | null | undefined =>
+          queryAllByData(element, 'data-blok-database-calendar-day').find((el) => el.getAttribute('data-day') === iso)?.getAttribute('data-ink-from');
+
+        expect(element.querySelectorAll('[data-ink-from]')).toHaveLength(0);
+        queryByData(element, 'data-blok-database-calendar-prev')?.click();
+
+        expect(ink('2026-09-28')).toBe('outside');
+        expect(ink('2026-10-02')).toBe('inside');
+        expect(ink('2026-09-10')).toBeNull();
+
+        tool.destroy();
+      });
+
       it('shows today when local storage throws', () => {
         vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
           throw new Error('blocked');

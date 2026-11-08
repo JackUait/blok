@@ -12151,6 +12151,15 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-calendar-muted-text);
 }
 
+/* A day the last month also drew starts at its old ink; the view drops the stamp after the first style read. */
+[data-blok-database-calendar-day][data-ink-from="inside"] [data-blok-database-calendar-day-number] {
+  color: var(--blok-database-calendar-day-text);
+}
+
+[data-blok-database-calendar-day][data-ink-from="outside"] [data-blok-database-calendar-day-number] {
+  color: var(--blok-database-calendar-muted-text);
+}
+
 [data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number] {
   background-color: var(--blok-database-today);
   color: var(--blok-database-calendar-day-today-text);

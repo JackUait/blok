@@ -724,6 +724,8 @@ export class DatabaseTool implements BlockTool {
   private readonly calendarAnchors = new Map<string, string>();
   /** A day to focus after the calendar redraws into a new range. */
   private calendarFocusDay: string | undefined;
+  /** The range shown before the calendar redraws into a new one: its digits fade from their old ink. */
+  private calendarInkFrom: string | undefined;
   /** Per timeline view: the centre day, for when local storage is blocked. */
   private readonly timelineCenters = new Map<string, string>();
   private reprojectQueued = false;
@@ -6054,8 +6056,10 @@ export class DatabaseTool implements BlockTool {
       ? configured
       : resolveWeekStart(locale);
     const focusDay = this.calendarFocusDay;
+    const inkFrom = this.calendarInkFrom;
 
     this.calendarFocusDay = undefined;
+    this.calendarInkFrom = undefined;
     this.view = new DatabaseCalendarView({
       readOnly: this.readOnly,
       i18n: this.api.i18n,
@@ -6072,6 +6076,7 @@ export class DatabaseTool implements BlockTool {
       ...this.commentBadgeLever(),
       ...this.calendarLever(this.dataId, viewConfig.id),
       ...(focusDay !== undefined ? { focusDay } : {}),
+      ...(inkFrom !== undefined ? { inkFrom } : {}),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         ...(this.readOnly || dateId === undefined ? {} : {
@@ -6091,6 +6096,7 @@ export class DatabaseTool implements BlockTool {
           }
         },
         navigate: (anchor, focus) => {
+          this.calendarInkFrom = this.calendarAnchor(viewConfig.id, today);
           this.setCalendarAnchor(viewConfig.id, anchor);
           this.calendarFocusDay = focus;
           this.rerenderView({ keepDrawer: true });

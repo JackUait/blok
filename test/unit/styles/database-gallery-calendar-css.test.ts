@@ -211,6 +211,17 @@ describe('database gallery and calendar styles', () => {
     expect(css).toMatch(/--blok-database-calendar-number-row:\s*33px/);
   });
 
+  it('holds a stamped day at its old ink, after the outside rule, so the 100ms ease-out colour change runs (notion-motion.md, Calendar)', () => {
+    const outside = '[data-blok-database-calendar-day][data-outside] [data-blok-database-calendar-day-number]';
+    const fromIn = '[data-blok-database-calendar-day][data-ink-from="inside"] [data-blok-database-calendar-day-number]';
+    const fromOut = '[data-blok-database-calendar-day][data-ink-from="outside"] [data-blok-database-calendar-day-number]';
+
+    expect(ruleBody('[data-blok-database-calendar-day-number]')).toMatch(/transition:\s*color 0\.1s ease-out/);
+    expect(ruleBody(fromIn)).toMatch(/color:\s*var\(--blok-database-calendar-day-text\)/);
+    expect(ruleBody(fromOut)).toMatch(/color:\s*var\(--blok-database-calendar-muted-text\)/);
+    expect(css.indexOf(fromIn)).toBeGreaterThan(css.indexOf(outside));
+  });
+
   it('draws the day "+" as a 24px white disc 6px from the corner, shown at once (notion-motion.md, Calendar)', () => {
     const add = ruleBody('[data-blok-database-calendar-add]');
 

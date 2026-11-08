@@ -1482,8 +1482,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_LIST_TITLE_BYTES = 116;
     // database.css: the title row keeps 40px with tabs, the tab bar, list and board match Notion's offsets.
     const DATABASE_VIEW_OFFSETS_BYTES = 502;
-    // database.css: the calendar day "+" is Notion's white disc with its shadow.
-    const DATABASE_VIEWS_TIME_BYTES = 237;
+    // database.css: the calendar day "+" is Notion's white disc with its shadow; days shared with the last month fade their ink.
+    const DATABASE_VIEWS_TIME_BYTES = 659;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

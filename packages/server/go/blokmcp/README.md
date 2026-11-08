@@ -152,6 +152,30 @@ options.CreatePage = func(ctx context.Context, request blokagent.PageCreateReque
 - `blok-mcp --create-page <url>` sets it to `CreatePageWebhook(url)`: `POST <url>` with `{"parentDocumentId","principal","actor":{"id","name","onBehalfOf"},"suggestedPageId"}`. A `200 {"pageId":"<id>"}` is the id, `200 {"pageId":null}` is a refusal, and anything else (another status, a redirect, a timeout after 10 s, a body without a string or null `pageId`) is an error.
 - In `blokagent`, a `PageCreator` that also implements `PageCreatorFor` gets `CreateFor` with the same request instead of `Create`. In a room the parent is the room's document id. As with `Create`, an empty id refuses.
 
+## Handles shared between processes
+
+By default each process keeps its open handles in memory, so a call must reach the process that opened its handle. Set `Options.HandleStore` (or `blok-mcp --handle-store files:<dir>`) to keep stored-mode handles where every process sharing the store can serve them, for example two replicas behind one load balancer.
+
+- Per call Blok leases the handle, rebuilds it from its record (no source load), runs the call (the source save happens here), saves the record if it changed, and releases the lease.
+- The record (`HandleRecord`, `v: 1`) carries the opener (principal, client name, scopes, actor), the document id and access, the source version, the document and its undo steps. A call from another principal gets `UNKNOWN_HANDLE`. A handle opened on a server with another tool contract gets `VERSION_SKEW`; the agent opens it again. A record with another `v` gets `UNKNOWN_HANDLE`.
+- Undo steps hold only for the document they were made on. If the record's document changed under them, undo answers `CONFLICT`.
+- If the record cannot be saved after the source save, the answer stands, the error is logged, and the handle is removed: the next call gets `UNKNOWN_HANDLE`.
+- Any other store error is logged in full. The agent sees `SOURCE_UNAVAILABLE` "The handle store is unavailable. Retry shortly.". A lease still held after 30 s answers `SOURCE_UNAVAILABLE` "Another call is using this handle. Retry shortly.".
+- Blok checks every handle a client sends (`^[A-Za-z0-9_-]{1,128}$`) before the store sees it.
+- Live handles hold sockets, so they stay in the process that opened them. The cap (`MaxHandlesPerPrincipal`) counts the store's handles plus this process's live ones.
+- Stopping a process waits for its calls and leaves the store as it is. Blok calls `Sweep` every 60 s to delete expired records.
+
+Writing your own store (Redis, SQL):
+
+- `TryAdd` must count and add in one step per principal (a row lock, `SELECT … FOR UPDATE`, or a Lua script). A plain count, then insert, lets a principal past the cap.
+- Leases are time-limited: renew them while held, and let a dead holder's lease end on its own. `Save`, `Release` and `Remove` must check the lease's token and answer `ErrLeaseLost` when another holder took it over. So exclusivity is best effort: a paused process can lose its lease, and correctness then rests on your document source's version check (`DOCUMENT_CHANGED`). A source that does not check versions can lose writes across replicas.
+- A handle expires after the idle time without a lease; a leased handle never expires. Delete expired records (`Sweep`, or your store's own expiry): they hold document text.
+- Records are trusted. Anyone who can write the store can forge an actor, scopes or history, so only Blok's processes may write it.
+- Values can be large: the history keeps whole documents and is not bounded in bytes. Use `LONGTEXT`/JSON columns, not `TEXT`.
+- Keep `scopes` null and `[]` distinct (no `omitempty`).
+
+The files store (`NewFilesHandleStore`) is for tests and several processes on one machine. It makes the directory with mode 0700 and refuses to start if the directory is a link, not a directory, reachable by group or world, or (POSIX) owned by another user. Every file in it is 0600. Its leases are renewed every 5 s and taken over after 30 s without renewal. On Windows the mode checks are skipped: Go cannot read the directory's ACL, so restricting it is your job.
+
 ## Docs
 
 [https://blokeditor.com/docs](https://blokeditor.com/docs) and [the server page](https://blokeditor.com/server#mcp).

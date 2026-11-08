@@ -100,11 +100,43 @@ func (st *storedSession) reload(ctx context.Context) error {
 }
 
 func (st *storedSession) sessionInput(call *callContext) map[string]any {
+	actor := call.actor
+	// The handle works for its opener, as Node binds the agent at open.
+	if st.opener != nil && len(st.opener.actor) > 0 {
+		actor = st.opener.actor
+	}
 	return map[string]any{
 		"mcp":      st.server.mcpFlags("stored", st.write),
 		"document": st.document,
-		"actor":    call.actor,
+		"actor":    actor,
 		"history":  st.history,
+	}
+}
+
+// snapshot is the handle as a HandleStore keeps it.
+func (st *storedSession) snapshot() HandleRecord {
+	record := HandleRecord{
+		V: 1, ContractRevision: st.server.surface.ContractRevision.Stored, DocumentID: st.documentID, Write: st.write,
+		Version: st.version, Stale: st.stale, Document: st.document, History: st.history,
+	}
+	if st.opener != nil {
+		record.Principal, record.ClientName, record.Scopes, record.Actor = st.opener.principal, st.opener.clientName, st.opener.scopes, st.opener.actor
+	}
+	return record
+}
+
+// restoreStored rebuilds a stored handle from its record, with no load:
+// the record carries the document. Its undo steps hold only while their
+// revision is the document's, as the bundle checks on every call.
+func (s *Server) restoreStored(record HandleRecord) *storedSession {
+	opener := &caller{principal: record.Principal, clientName: record.ClientName, scopes: record.Scopes, actor: record.Actor}
+	history := record.History
+	if len(history) == 0 {
+		history = emptyHistory
+	}
+	return &storedSession{
+		server: s, documentID: record.DocumentID, write: record.Write, source: s.sourceFor(opener), exists: true, opener: opener,
+		document: record.Document, history: history, version: record.Version, stale: record.Stale,
 	}
 }
 

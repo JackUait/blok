@@ -40,6 +40,8 @@ type Server struct {
 	flags   map[string]any
 	source  docSource
 	handles *handleRegistry[session]
+	// shared keeps stored handles in Options.HandleStore; nil without one.
+	shared *sharedHandles
 	// turns orders stdio calls on each handle (see handleLines).
 	turns    *handleLines
 	idleMs   float64
@@ -153,6 +155,9 @@ func buildServer(options, checked Options, runtime invoker) (*Server, error) {
 	s.handles = newHandleRegistry[session](s.idleMs, int(numberOr(options.MaxHandlesPerPrincipal, defaultMaxHandlesPerPrincipal)))
 	s.turns = newHandleLines()
 	s.handles.lines = s.turns
+	if options.HandleStore != nil {
+		s.shared = &sharedHandles{server: s, store: options.HandleStore, lanes: map[string]*sharedLane{}}
+	}
 	go s.sweepLoop()
 	return s, nil
 }
@@ -179,6 +184,9 @@ func (s *Server) checkOptions(ctx context.Context, checked Options) error {
 	}
 	if checked.CreatePage != nil {
 		options["createPage"] = json.RawMessage("true")
+	}
+	if checked.HandleStore != nil {
+		options["handleStore"] = json.RawMessage("true")
 	}
 	if checked.Uploads != nil {
 		options["uploads"], _ = marshal(checked.Uploads.checkJSON())
@@ -210,12 +218,21 @@ func (s *Server) sweepLoop() {
 	every := time.Duration(min(s.idleMs, 30_000) * float64(time.Millisecond))
 	ticker := time.NewTicker(max(every, time.Millisecond))
 	defer ticker.Stop()
+	// A store's expired records go on their own timer.
+	var storeSweeps <-chan time.Time
+	if s.shared != nil {
+		storeTicker := time.NewTicker(storeSweepEvery)
+		defer storeTicker.Stop()
+		storeSweeps = storeTicker.C
+	}
 	for {
 		select {
 		case <-s.stopped:
 			return
 		case <-ticker.C:
 			s.handles.sweep(func(sess session) { sess.close() })
+		case <-storeSweeps:
+			s.shared.sweep()
 		}
 	}
 }

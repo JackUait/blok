@@ -47,10 +47,11 @@ func RunCLI(args []string, env map[string]string, stdin io.ReadCloser, stdout io
 }
 
 type parsedFiles struct {
-	Manifest   *string `json:"manifest"`
-	Overrides  *string `json:"overrides"`
-	Authorize  *string `json:"authorize"`
-	CreatePage *string `json:"createPage"`
+	Manifest    *string `json:"manifest"`
+	Overrides   *string `json:"overrides"`
+	Authorize   *string `json:"authorize"`
+	CreatePage  *string `json:"createPage"`
+	HandleStore *string `json:"handleStore"`
 }
 
 // ParseArgs reads args and env as the blok-mcp command does, with the
@@ -99,6 +100,17 @@ func parseArgs(engine bundle, args []string, env map[string]string) (Options, er
 	if files.CreatePage != nil {
 		// The bundle already refused anything but an http(s) URL.
 		options.CreatePage = CreatePageWebhook(*files.CreatePage)
+	}
+	if files.HandleStore != nil {
+		store, err := NewFilesHandleStore(*files.HandleStore)
+		var refused *ConfigError
+		if errors.As(err, &refused) {
+			return Options{}, &configError{refused.Message}
+		}
+		if err != nil {
+			return Options{}, err
+		}
+		options.HandleStore = store
 	}
 	if files.Manifest != nil {
 		if options.Manifest, err = configFile(engine, "manifest", *files.Manifest); err != nil {

@@ -65,6 +65,12 @@ type Options struct {
 	// owns it. Undo, redo and delete never call it.
 	CreatePage func(ctx context.Context, request blokagent.PageCreateRequest) (string, error) `json:"-"`
 
+	// HandleStore, when set, keeps stored-mode handles where every process
+	// sharing it can serve them (see HandleStore). Nil keeps them in this
+	// process's memory, as before. Live handles always stay in this
+	// process; the per-principal cap counts both.
+	HandleStore HandleStore `json:"-"`
+
 	// Uploads, when set, lets the agent upload files through the host's
 	// own uploader.
 	Uploads *Uploads `json:"-"`

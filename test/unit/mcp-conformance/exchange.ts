@@ -92,6 +92,8 @@ import {
  *               answer, or null when the process exits without one.
  *   rawText     keep content[].text items as the exact strings sent, not parsed, so
  *               escaping counts (a raw emoji or U+2028 against a \uXXXX escape).
+ *   sseOrder    "byId": http only; sort a batch's SSE answers by id, for requests that
+ *               may end in either order.
  *
  * Answers are compared as parsed JSON (key order ignored, array order kept).
  * A text content item that holds JSON must equal structuredContent once parsed; it
@@ -131,6 +133,7 @@ export interface Step {
   noAnswer?: boolean;
   closeInputAfter?: boolean;
   rawText?: boolean;
+  sseOrder?: 'byId';
   afterHost?: string;
   expect?: unknown;
   expectHttp?: unknown;
@@ -370,13 +373,20 @@ const httpSummary = (answer: HttpAnswer): Record<string, unknown> => ({
   headers: Object.fromEntries(RECORDED_RESPONSE_HEADERS.map((name) => [name, answer.headers[name] ?? null])),
 });
 
-/** A raw HTTP answer body: SSE and JSON are parsed, so escaping and framing are free. */
-const httpBody = (answer: HttpAnswer): unknown => {
+const idKey = (message: Record<string, unknown>): string => JSON.stringify(message.id ?? null);
+
+/**
+ * A raw HTTP answer body: SSE and JSON are parsed, so escaping and framing are free.
+ * "byId": a batch's answers come as each request ends, so equal requests finish in any order.
+ */
+const httpBody = (answer: HttpAnswer, sseOrder?: 'byId'): unknown => {
   if (answer.body === '') {
     return null;
   }
   if ((answer.headers['content-type'] ?? '').startsWith('text/event-stream')) {
-    return { sse: parseHttpMessages(answer) };
+    const messages = parseHttpMessages(answer);
+
+    return { sse: sseOrder === 'byId' ? messages.sort((a, b) => idKey(a).localeCompare(idKey(b))) : messages };
   }
   try {
     return { json: JSON.parse(answer.body) };
@@ -732,7 +742,7 @@ class CaseRun {
       const answer = await sendHttp(server.url, { method: spec.method, path: spec.path, headers: mergeHeaders({}, spec.headers, this.vars), body: requestBody(spec) });
 
       this.check(holder, 'expectHttp', httpSummary(answer), `${label} http`);
-      this.finishStep(step, holder, normalize(httpBody(answer), label, step.rawText), label);
+      this.finishStep(step, holder, normalize(httpBody(answer, step.sseOrder), label, step.rawText), label);
 
       return;
     }

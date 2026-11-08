@@ -56,6 +56,24 @@ server.listen(0, '127.0.0.1', () => process.stderr.write('listening on http://12
 process.on('SIGTERM', () => process.exit(0));
 `);
 
+// Answers a batch over SSE in reverse, as a port that streams each answer as it ends may.
+const reversedSseServer = script('reversed-sse.cjs', `
+const server = require('node:http').createServer((req, res) => {
+  const chunks = [];
+  req.on('data', (c) => chunks.push(c));
+  req.on('end', () => {
+    const batch = JSON.parse(Buffer.concat(chunks).toString());
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    for (const call of batch.reverse()) {
+      res.write('event: message\\ndata: ' + JSON.stringify({ jsonrpc: '2.0', id: call.id, result: {} }) + '\\n\\n');
+    }
+    res.end();
+  });
+});
+server.listen(0, '127.0.0.1', () => process.stderr.write('listening on http://127.0.0.1:' + server.address().port + '/mcp\\n'));
+process.on('SIGTERM', () => process.exit(0));
+`);
+
 const toolCall = { method: 'tools/call', params: { name: 'x', arguments: {} } };
 
 describe('MCP conformance harness steps', () => {
@@ -124,6 +142,17 @@ describe('MCP conformance harness steps', () => {
     }, true);
 
     expect(result.steps?.[0].expect).toEqual({ json: { hex: '7bfffe7d' } });
+  });
+
+  it('sseOrder byId compares the SSE answers of a batch by id, not by arrival', async () => {
+    const batch = JSON.stringify([{ jsonrpc: '2.0', id: 1, method: 'ping' }, { jsonrpc: '2.0', id: 2, method: 'ping' }]);
+    const recorded = await runCase(reversedSseServer, {
+      name: 'batch',
+      transport: 'http',
+      steps: [{ http: { method: 'POST', path: '/mcp', bodyText: batch }, sseOrder: 'byId' }],
+    }, true);
+
+    expect(recorded.steps?.[0].expect).toEqual({ sse: [{ jsonrpc: '2.0', id: 1, result: {} }, { jsonrpc: '2.0', id: 2, result: {} }] });
   });
 });
 

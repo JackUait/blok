@@ -7884,6 +7884,7 @@
         },
         {
           "note": "a batch of two pings",
+          "sseOrder": "byId",
           "http": {
             "method": "POST",
             "path": "/mcp",

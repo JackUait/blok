@@ -1,4 +1,5 @@
 import { createWorkspace, type Workspace } from './workspace';
+import { applyAppearance, readAppearance, watchSystemAppearance } from './settings';
 
 const KEY = 'blok:window-tabs:v1';
 const MAX_TABS = 20;
@@ -56,9 +57,8 @@ export function mountDesktop(root: HTMLElement): void {
   install();
   box.root = root;
   root.setAttribute('data-desktop-shell', '');
-  root.setAttribute('data-blok-theme', 'dark');
-  document.documentElement.setAttribute('data-blok-theme', 'dark');
-  document.body.setAttribute('data-blok-theme', 'dark');
+  applyAppearance(root, readAppearance());
+  watchSystemAppearance(root);
   if (isTauri()) root.setAttribute('data-tauri', '');
   box.session = boot();
   const current = active();

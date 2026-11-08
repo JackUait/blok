@@ -1,7 +1,8 @@
 import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
 import { Database, DatabaseComment, DatabaseRow, Table } from '@bloklabs/core/tools';
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
-import { dataDirectory, loadIndex, readFile, writeFile, type WorkspaceIndex } from './storage';
+import { loadIndex, readFile, writeFile, type WorkspaceIndex } from './storage';
+import { createDesktopFooter, readAppearance } from './settings';
 
 const desktopTools = {
   ...defaultTools,
@@ -81,6 +82,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const instance = new Blok({
       holder,
       tools: desktopTools,
+      theme: readAppearance(),
       pageTitle: {
         placeholder: 'Nouvelle page',
         onChange(title) {
@@ -168,11 +170,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   });
   frame.element.append(status);
   const sidebar = frame.element.querySelector('[data-blok-sidebar]') as HTMLElement;
-  const storageButton = document.createElement('button');
-  storageButton.type = 'button';
-  storageButton.setAttribute('data-desktop-storage', '');
-  storageButton.textContent = 'Données sur cet appareil';
-  sidebar.insertBefore(storageButton, sidebar.querySelector('[data-blok-sidebar-edge]'));
+  sidebar.insertBefore(createDesktopFooter((mode) => editor?.theme.set(mode)), sidebar.querySelector('[data-blok-sidebar-edge]'));
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));
   observer.observe(sidebar);
   frame.element.setAttribute('data-desktop-workspace', '');
@@ -203,15 +201,6 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         index = await loadIndex();
         frame.setPages(index.pages, index.activeId);
         onRoute();
-        const directory = await dataDirectory();
-        storageButton.title = directory;
-        storageButton.setAttribute('aria-label', `Données locales : ${directory}. Copier le chemin`);
-        storageButton.addEventListener('click', () => {
-          void navigator.clipboard.writeText(directory).then(() => {
-            storageButton.textContent = 'Chemin copié';
-            window.setTimeout(() => { storageButton.textContent = 'Données sur cet appareil'; }, 1800);
-          }).catch(showError);
-        });
       } catch (error) { showError(error); }
     },
     onRoute,

@@ -15,8 +15,10 @@ On this Mac, pages are saved under:
 `index.json` holds page titles, hierarchy and the current page. Each page body is
 saved as `<page-id>.json` in the same folder. Tauri resolves this location from
 `app_data_dir`, so another macOS account or operating system uses its own data
-directory. The sidebar's **Données sur cet appareil** button shows and copies the
-actual path. Saves use a temporary file and rename on macOS.
+directory. Saves use a temporary file and rename on macOS.
+The sidebar footer opens an **Espace local** menu. **Préférences** offers a saved
+light, dark or system appearance; **Données locales** displays the path and
+the Blok and app versions. The footer menu can copy the path directly.
 
 The tab strip separately keeps its per-tab history in the webview's
 `sessionStorage` under `blok:window-tabs:v1`; this is window state, not the page

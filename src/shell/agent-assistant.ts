@@ -42,7 +42,7 @@ interface Conversation {
 const MODE_KEY = 'blok.shell.agent.panel-mode';
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 720;
-const START_WIDTH = 360;
+const START_WIDTH = 392;
 
 const SUGGESTIONS = [
   'Résumer cette page',
@@ -113,6 +113,29 @@ const makeButton = (label: string): HTMLButtonElement => {
   return node;
 };
 
+const iconButton = (node: HTMLButtonElement, label: string, paths: string[]): void => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+  svg.setAttribute('viewBox', '0 0 20 20');
+  svg.setAttribute('width', '18');
+  svg.setAttribute('height', '18');
+  svg.setAttribute('aria-hidden', 'true');
+  paths.forEach((d) => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '1.6');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    svg.append(path);
+  });
+  node.setAttribute('aria-label', label);
+  node.setAttribute('title', label);
+  node.replaceChildren(svg);
+};
+
 /**
  * The assistant button and its panel. Modes are remembered. Provider buttons
  * list only CLIs that are enabled, installed, and connected.
@@ -122,7 +145,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   const panelId = `blok-agent-panel-${crypto.randomUUID()}`;
   const shell = document.createElement('div');
   const bar = document.createElement('div');
-  const toggle = makeButton('Ouvrir l\'assistant IA');
+  const toggle = makeButton('Assistant IA');
   const body = document.createElement('div');
   const editorSlot = document.createElement('div');
   const panel = document.createElement('div');
@@ -175,6 +198,11 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   header.setAttribute('data-blok-agent-header', '');
   title.id = titleId;
   title.textContent = 'Assistant IA';
+  iconButton(historyButton, 'Historique', ['M10 3.2a6.8 6.8 0 1 1-6.5 8.8', 'M3.5 4.3v4h4', 'M10 6v4l2.8 1.7']);
+  iconButton(freshButton, 'Nouvelle conversation', ['M10 4v12', 'M4 10h12']);
+  iconButton(modeButton, 'Changer le mode du chat', ['M3.2 4.2h13.6v11.6H3.2z', 'M12.3 4.2v11.6']);
+  iconButton(settingsButton, 'Réglages de l\'assistant IA', ['M10 3.2v1.4m0 10.8v1.4M3.2 10h1.4m10.8 0h1.4M5.2 5.2l1 1m7.6 7.6 1 1m0-9.6-1 1m-7.6 7.6-1 1', 'M10 7.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z']);
+  iconButton(closeButton, 'Fermer', ['M4.5 4.5 15.5 15.5', 'M15.5 4.5 4.5 15.5']);
   historyButton.setAttribute('data-blok-agent-history', '');
   historyButton.setAttribute('aria-haspopup', 'menu');
   historyButton.setAttribute('aria-expanded', 'false');
@@ -190,13 +218,15 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   transcript.setAttribute('data-blok-agent-transcript', '');
   composer.setAttribute('data-blok-agent-composer', '');
   field.setAttribute('aria-label', 'Demander à l\'assistant IA');
-  field.setAttribute('placeholder', 'Demander à l\'IA…');
-  field.rows = 3;
+  field.setAttribute('placeholder', 'Demander à l\'assistant…');
+  field.rows = 2;
   pageBox.type = 'checkbox';
   pageBox.checked = true;
+  pageLabel.setAttribute('data-blok-agent-page-context', '');
   pageLabel.append(pageBox, document.createTextNode(' Cette page'));
   providersHost.setAttribute('data-blok-agent-providers', '');
   sendButton.setAttribute('aria-label', 'Envoyer à l\'assistant IA');
+  sendButton.setAttribute('data-blok-agent-send', '');
   resize.setAttribute('data-blok-agent-resize', '');
   resize.setAttribute('role', 'separator');
   resize.setAttribute('aria-orientation', 'vertical');
@@ -204,9 +234,9 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   resize.setAttribute('aria-valuemin', String(MIN_WIDTH));
   resize.setAttribute('aria-valuemax', String(MAX_WIDTH));
   resize.tabIndex = 0;
-  header.append(historyButton, freshButton, modeButton, settingsButton, closeButton, historyMenu, modeMenu);
+  header.append(title, historyButton, freshButton, modeButton, settingsButton, closeButton, historyMenu, modeMenu);
   composer.append(field, pageLabel, providersHost, sendButton);
-  panel.append(resize, header, title, transcript, composer);
+  panel.append(resize, header, transcript, composer);
   body.append(editorSlot, panel);
   bar.append(toggle);
   shell.append(bar, body);
@@ -307,7 +337,10 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   const paintHistory = (): void => {
     const conversation = current();
 
-    historyButton.replaceChildren(document.createTextNode(conversation === undefined ? 'Nouvelle conversation' : historyLabel(conversation)));
+    const label = conversation === undefined ? 'Nouvelle conversation' : historyLabel(conversation);
+
+    historyButton.setAttribute('aria-label', `Historique : ${label}`);
+    historyButton.title = `Historique : ${label}`;
     historyMenu.replaceChildren();
     session.conversations.forEach((item, index) => {
       const row = document.createElement('button');
@@ -339,11 +372,18 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
 
     if (turns.length === 0) {
       const empty = document.createElement('div');
+      const mark = document.createElement('span');
       const prompt = document.createElement('p');
+      const intro = document.createElement('span');
 
       empty.setAttribute('data-blok-agent-empty', '');
+      mark.setAttribute('data-blok-agent-empty-mark', '');
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = '✦';
       prompt.textContent = 'Comment puis-je t\'aider ?';
-      empty.append(prompt);
+      intro.setAttribute('data-blok-agent-empty-intro', '');
+      intro.textContent = 'Une question sur ta page ? Commence par une idée.';
+      empty.append(mark, prompt, intro);
       SUGGESTIONS.forEach((suggestion) => {
         const idea = makeButton(suggestion);
 
@@ -399,7 +439,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   const render = (): void => {
     const openLabel = session.open ? 'Fermer l\'assistant IA' : 'Ouvrir l\'assistant IA';
 
-    toggle.textContent = openLabel;
+    toggle.textContent = 'Assistant IA';
     toggle.setAttribute('aria-label', openLabel);
     toggle.setAttribute('aria-expanded', session.open ? 'true' : 'false');
 

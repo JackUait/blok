@@ -12,20 +12,21 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(3px);
   color: var(--blok-text-primary, black);
   font-family: var(--blok-font-family, var(--blok-font-sans));
 }
 
 [data-blok-agent-settings-card] {
-  width: min(560px, 100%);
+  width: min(620px, 100%);
   max-height: min(720px, 100%);
   overflow: auto;
-  padding: 20px 22px 16px;
+  padding: 26px 28px 22px;
   background: var(--blok-popover-bg, #fff);
   border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
   border-radius: var(--blok-radius-dialog);
-  box-shadow: var(--blok-popover-box-shadow, var(--blok-popover-shadow));
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.2);
 }
 
 [data-blok-agent-settings-head] {
@@ -33,6 +34,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.12));
 }
 
 [data-blok-agent-settings-head] h2,
@@ -43,12 +46,13 @@
 }
 
 [data-blok-agent-settings-head] h2 {
-  font-size: 18px;
+  font-size: 21px;
+  letter-spacing: -0.02em;
 }
 
 [data-blok-agent-settings] h3 {
-  margin-top: 18px;
-  font-size: 14px;
+  margin-top: 22px;
+  font-size: 15px;
 }
 
 [data-blok-agent-settings] p {
@@ -71,15 +75,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px 16px;
-  padding: 12px 0;
-  border-top: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.12));
+  margin-top: 10px;
+  padding: 16px;
+  border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.12));
+  border-radius: var(--blok-radius-surface);
+  background: color-mix(in srgb, var(--blok-popover-bg, #fff) 95%, var(--blok-text-primary, black) 5%);
 }
 
 [data-blok-agent-actions] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 [data-blok-agent-settings] button,
@@ -87,7 +94,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  min-height: 31px;
+  padding: 6px 10px;
   border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
   border-radius: var(--blok-radius-control);
   background: transparent;
@@ -95,6 +103,27 @@
   font: inherit;
   font-size: 13px;
   cursor: pointer;
+}
+
+[data-blok-agent-settings-head] button {
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  padding: 0;
+  border-color: transparent;
+  color: var(--blok-text-secondary, #646a79);
+  font-size: 24px;
+  line-height: 1;
+}
+
+[data-blok-agent-actions] label {
+  background: var(--blok-popover-bg, #fff);
+}
+
+[data-blok-agent-actions] input {
+  margin: 0;
+  accent-color: #d95f4b;
 }
 
 [data-blok-agent-settings] button:hover,
@@ -147,5 +176,8 @@
 }
 
 [data-blok-agent-note] {
-  margin-top: 16px;
+  margin-top: 20px;
+  padding: 11px 12px;
+  border-radius: var(--blok-radius-field);
+  background: color-mix(in srgb, var(--blok-popover-bg, #fff) 95%, var(--blok-text-primary, black) 5%);
 }

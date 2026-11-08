@@ -129,6 +129,20 @@ export const Assistant: Story = {
 
     expect(panel).toBeTruthy();
     expect(within(panel).getByText('Comment puis-je t\'aider ?')).toBeTruthy();
+  },
+};
+
+/** Provider settings, shown separately so the assistant story opens on its main panel. */
+export const Providers: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const openButton = canvas.getByRole('button', { name: 'Ouvrir l\'assistant IA' });
+
+    await waitFor(() => {
+      expect(canvasElement.querySelector('[data-blok-editor]')).toBeTruthy();
+    }, { timeout: 5000 });
+    await userEvent.click(openButton);
+    const panel = canvas.getByRole('dialog', { name: 'Assistant IA' });
 
     await userEvent.click(within(panel).getByRole('button', { name: 'Réglages de l\'assistant IA' }));
 

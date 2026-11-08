@@ -167,7 +167,7 @@ export const mountAgentSettings = (): AgentSettingsHandle => {
   const dialog = document.createElement('div');
   const card = document.createElement('div');
   const heading = document.createElement('h2');
-  const closeButton = button('Fermer', 'Fermer');
+  const closeButton = button('×', 'Fermer');
   const head = document.createElement('div');
   const section = document.createElement('section');
   const sectionTitle = document.createElement('h3');

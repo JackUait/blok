@@ -103,6 +103,8 @@ import {
  *               (and env) once the first is up, at ${mcpUrlB} / ${mcpPortB}. It gets the same
  *               opening exchange. The two share ${dir}, so a --source or --handle-store there is
  *               shared too. Steps without it go to the first process.
+ *   instanceB   (case) {"argv"?, "session"?}: what instance b runs with instead of the case's argv
+ *               and session, e.g. another contract flag (VERSION_SKEW) or another client name.
  *   together    http only: a list of send steps sent at once, each recorded under its own
  *               "expect"; the step ends when all are answered. Each may name its instance.
  *
@@ -180,6 +182,7 @@ export interface FixtureCase {
   hosts?: RouteTable & { $upgradeStatus?: number };
   room?: RoomSpec;
   session?: Session;
+  instanceB?: { argv?: string[]; session?: Session };
   steps?: Step[];
   watchFiles?: string[];
   watchModes?: string[];
@@ -887,7 +890,7 @@ class CaseRun {
     }
   }
 
-  public async httpStep(server: HttpServer, step: Step, holder: Holder, label: string): Promise<void> {
+  public async httpStep(server: HttpServer, step: Step, holder: Holder, label: string, session: Session | undefined = this.c.session): Promise<void> {
     if (await this.bareStep(server, step, holder, label)) {
       return;
     }
@@ -904,8 +907,8 @@ class CaseRun {
     const isNotify = step.notify !== undefined;
     const base = materialize(isNotify ? step.notify : step.send, this.vars) as JsonMessage;
     const id = isNotify ? undefined : base.id ?? this.nextId++;
-    const message = withMeta({ jsonrpc: '2.0', ...base, ...(id !== undefined && { id }) }, this.c.session, raw);
-    const headers = mergeHeaders(mergeHeaders(sessionHeaders(this.c.session, message, raw), this.c.session?.headers, this.vars), step.headers, this.vars);
+    const message = withMeta({ jsonrpc: '2.0', ...base, ...(id !== undefined && { id }) }, session, raw);
+    const headers = mergeHeaders(mergeHeaders(sessionHeaders(session, message, raw), session?.headers, this.vars), step.headers, this.vars);
     const sentAt = Date.now();
     const sending = sendHttp(server.url, {
       method: 'POST', path: new URL(server.url).pathname, headers, body: Buffer.from(JSON.stringify(message)), timeoutMs: step.readTimeoutMs,
@@ -933,9 +936,7 @@ class CaseRun {
   }
 
   /** The SDK client's opening exchange for a 2025 session; 2026 has none. */
-  public async handshake(send: (message: JsonMessage) => Promise<JsonMessage | undefined>): Promise<void> {
-    const session = this.c.session;
-
+  public async handshake(send: (message: JsonMessage) => Promise<JsonMessage | undefined>, session: Session | undefined = this.c.session): Promise<void> {
     if (session === undefined || session.protocolVersion === MODERN) {
       return;
     }
@@ -1033,45 +1034,50 @@ const usesInstanceB = (steps: Step[]): boolean =>
 const runHttp = async (run: CaseRun, c: FixtureCase, launch: Launch): Promise<void> => {
   const server = await startHttp(launch.command, launch.argv, launch.env, launch.cwd);
   const servers: { a: HttpServer; b?: HttpServer } = { a: server };
-  const opened = async (target: HttpServer): Promise<void> => {
+  const sessionB = c.instanceB?.session ?? c.session;
+  const opened = async (target: HttpServer, session: Session | undefined): Promise<void> => {
     await run.handshake(async (message) => {
-      const headers = message.id === undefined ? sessionHeaders(c.session, message, false) : { ...BASE_HEADERS };
+      const headers = message.id === undefined ? sessionHeaders(session, message, false) : { ...BASE_HEADERS };
       const answer = await sendHttp(target.url, {
         method: 'POST',
         path: new URL(target.url).pathname,
-        headers: mergeHeaders(headers, c.session?.headers, run.vars),
+        headers: mergeHeaders(headers, session?.headers, run.vars),
         body: Buffer.from(JSON.stringify(message)),
       });
 
       return parseHttpMessages(answer)[0];
-    });
+    }, session);
   };
 
   run.vars.set('mcpUrl', server.url);
   run.vars.set('mcpPort', server.port);
   try {
-    await opened(server);
+    await opened(server, c.session);
     if (usesInstanceB(c.steps ?? [])) {
-      servers.b = await startHttp(launch.command, launch.argv, launch.env, launch.cwd);
+      const argvB = c.instanceB?.argv?.map((arg) => substituteString(arg, run.vars)) ?? launch.argv;
+
+      servers.b = await startHttp(launch.command, argvB, launch.env, launch.cwd);
       run.vars.set('mcpUrlB', servers.b.url);
       run.vars.set('mcpPortB', servers.b.port);
-      await opened(servers.b);
+      await opened(servers.b, sessionB);
     }
-    const target = (step: Step): HttpServer => (step.instance === 'b' && servers.b !== undefined ? servers.b : server);
+    const onB = (step: Step): boolean => step.instance === 'b' && servers.b !== undefined;
+    const target = (step: Step): HttpServer => (onB(step) && servers.b !== undefined ? servers.b : server);
+    const sessionOf = (step: Step): Session | undefined => (onB(step) ? sessionB : c.session);
     const together = async (steps: Step[], holder: Holder, label: string): Promise<void> => {
       const held = holder.together;
 
       if (!Array.isArray(held)) {
         throw new Error(`${label}: "together" must be a list of steps`);
       }
-      await Promise.all(steps.map((inner, at) => run.httpStep(target(inner), inner, held[at] as Holder, `${label}.${at}`)));
+      await Promise.all(steps.map((inner, at) => run.httpStep(target(inner), inner, held[at] as Holder, `${label}.${at}`, sessionOf(inner))));
     };
 
     for (const [index, step] of (c.steps ?? []).entries()) {
       const label = `${c.name} step ${index}`;
 
       await (step.together === undefined
-        ? run.httpStep(target(step), step, run.stepHolder(index), label)
+        ? run.httpStep(target(step), step, run.stepHolder(index), label, sessionOf(step))
         : together(step.together, run.stepHolder(index), label));
     }
   } finally {

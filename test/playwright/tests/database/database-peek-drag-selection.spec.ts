@@ -314,29 +314,6 @@ test.describe('drag ghosts look like their source', () => {
     });
   }
 
-  for (const size of ['small', 'large'] as const) {
-    test(`a ${size} board column ghost keeps the card preview box and image fit`, async ({ page }) => {
-      await mount(page, imageBoard(size), 'v2');
-      const column = '[data-blok-database-column][data-option-id="o-idea"]';
-      const preview = page.locator(`${column} [data-blok-database-card][data-row-id="r1"] [data-blok-database-card-preview]`);
-
-      await expect(preview).toBeVisible();
-      const source = await preview.boundingBox();
-      const sourceFit = await preview.locator('[data-blok-database-card-image]').evaluate((el) => getComputedStyle(el).objectFit);
-
-      if (source === null) throw new Error('no preview box');
-      await dragBy(page, page.locator(`${column} [data-blok-database-column-header]`), 200, 0);
-      const ghost = page.locator('[data-blok-database-column-ghost]');
-      const clone = ghost.locator('[data-blok-database-card][data-row-id="r1"] [data-blok-database-card-preview]');
-
-      await expect(ghost).toBeVisible();
-      expect((await clone.boundingBox())?.height).toBeCloseTo(source.height, 1);
-      await expect(clone.locator('[data-blok-database-card-image]')).toHaveCSS('object-fit', sourceFit);
-      expect(sourceFit).toBe('contain');
-      await page.mouse.up();
-    });
-  }
-
   for (const showVerticalLines of [true, false]) {
     test(`a table column ghost preserves vertical lines set to ${showVerticalLines}`, async ({ page }) => {
       await mount(page, blocks({ showVerticalLines }));
@@ -378,21 +355,30 @@ test.describe('drag ghosts look like their source', () => {
     await page.mouse.up();
   });
 
-  test('a board column ghost keeps the column box', async ({ page }) => {
+  // notion-motion.md "Board column (group) drag": only the header strip moves, opaque, on the column tint.
+  test('a board column ghost is the header strip, and the passed header slides into the freed slot', async ({ page }) => {
     await mount(page, blocks(), 'v2');
-    const header = page.locator('[data-blok-database-column][data-option-id="o-idea"] [data-blok-database-column-header]');
-    const source = await boxOf(page, '[data-blok-database-column][data-option-id="o-idea"]');
+    const column = '[data-blok-database-column][data-option-id="o-idea"]';
+    const header = page.locator(`${column} [data-blok-database-column-header]`);
+    const source = await boxOf(page, column);
+    const sourceHeader = await boxOf(page, `${column} [data-blok-database-column-header]`);
 
-    await dragBy(page, header, 200, 0);
+    await dragBy(page, header, 300, 0);
     const ghost = await boxOf(page, '[data-blok-database-column-ghost]');
-    const clone = await boxOf(page, '[data-blok-database-column-ghost]', '[data-blok-database-column]');
+    const clone = await boxOf(page, '[data-blok-database-column-ghost]', '[data-blok-database-column-header]');
 
-    expect(ghost?.opacity).toBe('0.4');
+    expect(ghost?.opacity).toBe('1');
     expect(ghost?.transform).toBe('none');
-    expect(clone?.fontFamily).toBe(source?.fontFamily);
-    expect(clone?.backgroundColor).toBe(source?.backgroundColor);
-    expect(clone?.width).toBe(source?.width);
+    expect(ghost?.width).toBe(source?.width);
+    expect(ghost?.height).toBe(sourceHeader?.height);
+    expect(ghost?.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(clone?.fontFamily).toBe(sourceHeader?.fontFamily);
+    await expect(page.locator('[data-blok-database-column-ghost] [data-blok-database-card]')).toHaveCount(0);
+    expect(await page.locator('[data-blok-database-drop-line]').evaluateAll((els) => els.filter((el) => getComputedStyle(el).opacity !== '0').length)).toBe(0);
+    await expect(header).toHaveCSS('visibility', 'hidden');
+    await expect(page.locator('[data-blok-database-column-header][data-blok-database-column-sliding]').first()).toHaveCSS('transform', /matrix\(1, 0, 0, 1, -\d+/);
     await page.mouse.up();
+    await expect(page.locator('[data-blok-database-column-header][data-blok-database-column-sliding]')).toHaveCount(0);
   });
 
   test('a list row ghost keeps the row font and height', async ({ page }) => {

@@ -1,11 +1,14 @@
 import { getElementDirection, inlineStartOffset } from '../../components/utils/direction';
-import { copyGhostContext, copyGhostRadius, mountGhost } from './copy-ghost-radius';
-import { DatabaseDropLine } from './database-drop-line';
+import { mountGhost } from './copy-ghost-radius';
 
 const DRAG_THRESHOLD = 10;
 
-/** Half the 12px gap between columns, so the line sits in the gap. */
-const HALF_GAP = 6;
+/** A header's slot: its column, or a sub-grouped board's head (lane columns have no header). Slots never move. */
+const SLOT_SELECTOR = '[data-blok-database-column]:not([data-sub-group]), [data-blok-database-board-column-head]';
+
+const HEADER_SELECTOR = ':scope > [data-blok-database-column-header]';
+
+const SLIDING = 'data-blok-database-column-sliding';
 
 export interface GroupDragResult {
   optionId: string;
@@ -21,6 +24,8 @@ export interface GroupDragOptions {
 /**
  * Handles pointer-based drag-and-drop for kanban column reordering.
  * Horizontal-only movement; drop position determined by cursor X relative to column midpoints.
+ * As in Notion, only the header strip follows the pointer and the other headers slide into
+ * the order the drop would give; the cards stay put until the drop.
  */
 export class DatabaseColumnDrag {
   private readonly wrapper: HTMLElement;
@@ -33,7 +38,8 @@ export class DatabaseColumnDrag {
   private ghostEl: HTMLElement | null = null;
   private sourceColumn: HTMLElement | null = null;
   private ghostOffsetX = 0;
-  private readonly dropLine: DatabaseDropLine;
+  /** Where the dragged header would land among the other slots; -1 before the first move. */
+  private targetIndex = -1;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
   private readonly boundPointerUp: (e: PointerEvent) => void;
@@ -43,7 +49,6 @@ export class DatabaseColumnDrag {
   constructor(options: GroupDragOptions) {
     this.wrapper = options.wrapper;
     this.onDrop = options.onDrop;
-    this.dropLine = new DatabaseDropLine(options.wrapper);
 
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
@@ -57,7 +62,7 @@ export class DatabaseColumnDrag {
     this.startX = startX;
     this.startY = startY;
     this.isDragging = false;
-    this.sourceColumn = this.wrapper.querySelector(`[data-option-id="${optionId}"]`);
+    this.sourceColumn = this.slots().find((slot) => slot.getAttribute('data-option-id') === optionId) ?? null;
 
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);
@@ -74,8 +79,13 @@ export class DatabaseColumnDrag {
     this.ghostEl?.remove();
     this.ghostEl = null;
 
-    this.dropLine.hide();
+    // The reordering attribute holds the transition, so removing it in the same task snaps the headers home.
     this.wrapper.removeAttribute('data-blok-database-column-reordering');
+    for (const slot of this.slots()) {
+      this.headerOf(slot)?.style.removeProperty('transform');
+      this.headerOf(slot)?.removeAttribute(SLIDING);
+    }
+    this.targetIndex = -1;
 
     if (this.sourceColumn) {
       this.sourceColumn.removeAttribute('data-blok-database-drag-source');
@@ -94,7 +104,6 @@ export class DatabaseColumnDrag {
 
   public destroy(): void {
     this.cleanup();
-    this.dropLine.destroy();
   }
 
   private handlePointerMove(e: PointerEvent): void {
@@ -107,7 +116,7 @@ export class DatabaseColumnDrag {
 
     if (this.isDragging) {
       this.updateGhostPosition(e);
-      this.updateDropIndicator(e.clientX);
+      this.slideHeaders(e.clientX);
     }
   }
 
@@ -151,27 +160,38 @@ export class DatabaseColumnDrag {
 
     style.position = 'fixed';
     style.pointerEvents = 'none';
-    style.opacity = '0.4';
     style.zIndex = '50';
     style.overflow = 'hidden';
 
-    if (this.sourceColumn) {
-      const clone = this.sourceColumn.cloneNode(true) as HTMLElement;
+    const header = this.sourceColumn === null ? null : this.headerOf(this.sourceColumn);
 
-      clone.removeAttribute('data-blok-database-drag-source');
+    if (this.sourceColumn !== null && header !== null) {
+      const slot = this.sourceColumn;
+      const computed = getComputedStyle(slot);
+      const slotRect = slot.getBoundingClientRect();
+      const headerRect = header.getBoundingClientRect();
+      const clone = header.cloneNode(true) as HTMLElement;
+
       ghost.appendChild(clone);
 
-      copyGhostRadius(this.sourceColumn, ghost);
-      copyGhostContext(this.sourceColumn, this.sourceColumn.closest('[data-blok-database-board]'), ghost, {
-        properties: ['--blok-database-card-preview-height'],
-        attributes: ['data-fit-image'],
-      });
+      // The slot's padding keeps the pill where it was; its tint paints the strip (database.css).
+      style.paddingLeft = computed.paddingLeft;
+      style.paddingRight = computed.paddingRight;
+      style.borderTopLeftRadius = computed.borderTopLeftRadius;
+      style.borderTopRightRadius = computed.borderTopRightRadius;
+      style.borderBottomRightRadius = '0px';
+      style.borderBottomLeftRadius = '0px';
 
-      const rect = this.sourceColumn.getBoundingClientRect();
+      const tint = slot.style.getPropertyValue('--_blok-group-tint');
+
+      if (tint !== '') {
+        style.setProperty('--_blok-group-tint', tint);
+      }
 
       style.left = `${e.clientX - this.ghostOffsetX}px`;
-      style.top = `${rect.top}px`;
-      style.width = `${rect.width}px`;
+      style.top = `${headerRect.top}px`;
+      style.width = `${slotRect.width}px`;
+      style.height = `${headerRect.height}px`;
     } else {
       style.left = `${e.clientX}px`;
       style.top = `${e.clientY}px`;
@@ -189,44 +209,55 @@ export class DatabaseColumnDrag {
     this.ghostEl.style.left = `${e.clientX - this.ghostOffsetX}px`;
   }
 
-  private updateDropIndicator(clientX: number): void {
+  /** Slides the other headers into the order the drop would give. Writes only when the target slot changes. */
+  private slideHeaders(clientX: number): void {
+    const slots = this.slots();
+    const source = this.sourceColumn;
+
+    if (source === null || !slots.includes(source)) {
+      return;
+    }
+
+    const others = slots.filter((slot) => slot !== source);
     const { beforeColumn } = this.getDropPosition(clientX);
-    // The source column stays in place, so it counts as a neighbour for the line.
-    const visible = Array.from(this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]'));
-    const rtl = getElementDirection(this.wrapper) === 'rtl';
-    const startOf = (rect: DOMRect): number => (rtl ? rect.right : rect.left);
-    const endOf = (rect: DOMRect): number => (rtl ? rect.left : rect.right);
-    const outward = rtl ? -HALF_GAP : HALF_GAP;
+    const index = beforeColumn === null ? others.length : others.indexOf(beforeColumn);
 
-    if (beforeColumn !== null) {
-      const rect = beforeColumn.getBoundingClientRect();
-      const previous = visible[visible.indexOf(beforeColumn) - 1];
-      const centerX = previous === undefined
-        ? startOf(rect) - outward
-        : (endOf(previous.getBoundingClientRect()) + startOf(rect)) / 2;
-
-      this.dropLine.showVertical({ centerX, top: rect.top, height: rect.height });
-
+    if (index === this.targetIndex) {
       return;
     }
 
-    const last = visible.at(-1);
+    this.targetIndex = index;
 
-    if (last === undefined) {
-      this.dropLine.hide();
+    const order = [...others.slice(0, index), source, ...others.slice(index)];
+    const lefts = slots.map((slot) => slot.getBoundingClientRect().left);
 
-      return;
-    }
+    others.forEach((slot) => {
+      const header = this.headerOf(slot);
+      const dx = (lefts[order.indexOf(slot)] ?? 0) - (lefts[slots.indexOf(slot)] ?? 0);
 
-    const rect = last.getBoundingClientRect();
+      if (header === null) {
+        return;
+      }
+      if (dx === 0) {
+        header.style.removeProperty('transform');
+      } else {
+        header.style.transform = `translateX(${dx}px)`;
+      }
+      // A moved header carries its own tint over the column it now sits on.
+      header.toggleAttribute(SLIDING, dx !== 0);
+    });
+  }
 
-    this.dropLine.showVertical({ centerX: endOf(rect) + outward, top: rect.top, height: rect.height });
+  private slots(): HTMLElement[] {
+    return Array.from(this.wrapper.querySelectorAll<HTMLElement>(SLOT_SELECTOR));
+  }
+
+  private headerOf(slot: HTMLElement): HTMLElement | null {
+    return slot.querySelector<HTMLElement>(HEADER_SELECTOR);
   }
 
   private getDropPosition(clientX: number): { beforeColumn: HTMLElement | null; afterColumn: HTMLElement | null } {
-    const columns = Array.from(
-      this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]')
-    ).filter((col) => col.getAttribute('data-option-id') !== this.optionId);
+    const columns = this.slots().filter((col) => col.getAttribute('data-option-id') !== this.optionId);
     const direction = getElementDirection(this.wrapper);
 
     for (const col of columns) {

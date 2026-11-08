@@ -204,16 +204,23 @@ describe('DatabaseColumnDrag', () => {
       });
     });
 
-    it('draws the line on the inline-start side of the target column, and moves no column', () => {
+    it('slides the passed header toward the inline start (right), and draws no line', () => {
+      // opt-0 [400-600] is dragged to the left of opt-1's middle: opt-1 slides right into its slot.
+      wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]').forEach((column) => {
+        const header = document.createElement('div');
+
+        header.setAttribute('data-blok-database-column-header', '');
+        column.appendChild(header);
+      });
       drag.beginTracking('opt-0', 550, 50);
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 530, clientY: 50 }));
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 250, clientY: 50 }));
 
-      const target = wrapper.querySelector<HTMLElement>('[data-option-id="opt-2"]');
-      const line = document.querySelector<HTMLElement>('[data-blok-database-drop-line]');
+      const header = (id: string): string => wrapper.querySelector<HTMLElement>(`[data-option-id="${id}"] > [data-blok-database-column-header]`)?.style.transform ?? '';
+      const line = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]')).some((el) => el.style.opacity !== '0');
 
-      // RTL: opt-2 spans 0..200 and starts at its right edge, the seam with opt-1.
-      expect(line?.style.left).toBe('198px');
-      expect(target?.style.marginInlineStart).toBe('');
+      expect([header('opt-0'), header('opt-1'), header('opt-2')]).toEqual(['', 'translateX(200px)', '']);
+      expect(line).toBe(false);
     });
   });
 });

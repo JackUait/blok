@@ -1204,6 +1204,32 @@
   cursor: grabbing;
 }
 
+/*
+ * Group drag (notion-motion.md "Board column (group) drag", colgroupdrag-mid.png): only the header
+ * strip moves, opaque, on its column tint, no shadow. The other headers slide into the drop order.
+ * The tint is translucent, so the page fill under it keeps the strip opaque.
+ */
+[data-blok-database-column-ghost] {
+  box-sizing: border-box;
+  background: linear-gradient(var(--_blok-group-tint, var(--blok-database-column-bg)), var(--_blok-group-tint, var(--blok-database-column-bg))), var(--blok-bg-primary);
+}
+
+[data-blok-database-column-ghost] [data-blok-database-column-actions] {
+  opacity: 1;
+}
+
+[data-blok-database-drag-source] > [data-blok-database-column-header] {
+  visibility: hidden;
+}
+
+[data-blok-database-column-reordering] [data-blok-database-column-header] {
+  transition: transform 200ms ease;
+}
+
+[data-blok-database-column-sliding] {
+  background-color: var(--_blok-group-tint, var(--blok-database-column-bg));
+}
+
 /**
  * The drop line lives on document.body, outside the editor's token scope.
  * database-drop-line.ts copies the board's resolved token inline; this
@@ -6283,6 +6309,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   [data-blok-database-list-group-toggle] svg,
   [data-blok-database-list-row],
   [data-blok-database-list-row-gutter],
+  [data-blok-database-column-reordering] [data-blok-database-column-header],
   [data-blok-database-tab],
   [data-blok-database-card-actions],
   [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container] {
@@ -13070,8 +13097,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-board][data-fit-image] [data-blok-database-card-image],
-[data-blok-database-ghost][data-fit-image] [data-blok-database-card-image],
-[data-blok-database-column-ghost][data-fit-image] [data-blok-database-card-image] {
+[data-blok-database-ghost][data-fit-image] [data-blok-database-card-image] {
   object-fit: contain;
 }
 

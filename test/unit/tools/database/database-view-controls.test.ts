@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseViewControls } from '../../../../src/tools/database/database-view-controls';
 import type { ViewControlsHost } from '../../../../src/tools/database/database-view-controls';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -691,6 +693,115 @@ describe('DatabaseViewControls', () => {
       expect(q('database-toolbar-search')?.hidden).toBe(false);
     });
   });
+  // notion-motion.md Round 4 re-checks: while search is open Notion shows "»" ("Minimize") left of the icons; it closes the search.
+  describe('» closes an open search (Notion "Minimize")', () => {
+    it('shows » left of the icons only while the search is open, and » closes it', () => {
+      const { controls } = setup({ rows: 3 });
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      click('database-toolbar-search');
+      const minimize = q('database-toolbar-minimize');
+
+      expect(minimize?.hidden).toBe(false);
+      expect(minimize?.getAttribute('aria-label')).toBe('tools.database.filterBarMinimize');
+      expect(q('database-toolbar-no-date')?.nextElementSibling).toBe(q('database-toolbar-filter'));
+
+      click('database-toolbar-minimize');
+
+      expect(q('database-search-input')).toBeNull();
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(controls.filterBar.hidden).toBe(true);
+    });
+
+    // A blur on an empty query closes the search, so the press must not take the focus first.
+    it('keeps the focus in the field on press, and gives it to the magnifier after', () => {
+      setup({ rows: 3 });
+      click('database-toolbar-search');
+      const press = new MouseEvent('pointerdown', { bubbles: true, cancelable: true });
+
+      q('database-toolbar-minimize')?.dispatchEvent(press);
+      expect(press.defaultPrevented).toBe(true);
+
+      click('database-toolbar-minimize');
+      expect(q('database-toolbar-search')).toHaveFocus();
+    });
+
+    it('hints its name on hover, after the delay', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        setup({ rows: 3 });
+        click('database-toolbar-search');
+        hover(q('database-toolbar-minimize'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(shownHint()?.text).toBe('tools.database.filterBarMinimize');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // Notion: the field goes width 150→0 and opacity 1→0 over 200ms ease, then leaves.
+    it('keeps the field while it shrinks away, and drops it when the shrink ends', () => {
+      setup({ rows: 3 });
+      click('database-toolbar-search');
+      const input = q('database-search-input') as HTMLInputElement;
+
+      input.style.transitionDuration = '0.2s';
+      click('database-toolbar-minimize');
+
+      expect(input.isConnected).toBe(true);
+      expect(input.hasAttribute('data-closing')).toBe(true);
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(q('database-search-clear')).toBeNull();
+
+      input.dispatchEvent(new Event('transitionend'));
+
+      expect(input.isConnected).toBe(false);
+      expect(input.hasAttribute('data-closing')).toBe(false);
+    });
+
+    it('drops the field after the shrink time even when no transitionend comes', () => {
+      vi.useFakeTimers();
+      try {
+        setup({ rows: 3 });
+        click('database-toolbar-search');
+        const input = q('database-search-input') as HTMLInputElement;
+
+        input.style.transitionDuration = '0.2s';
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        expect(input.isConnected).toBe(true);
+        vi.advanceTimersByTime(300);
+        expect(input.isConnected).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('opens again over a field that is still shrinking', () => {
+      vi.useFakeTimers();
+      try {
+        setup({ rows: 3 });
+        click('database-toolbar-search');
+        const input = q('database-search-input') as HTMLInputElement;
+
+        input.style.transitionDuration = '0.2s';
+        click('database-toolbar-minimize');
+        click('database-toolbar-search');
+        vi.advanceTimersByTime(300);
+        input.dispatchEvent(new Event('transitionend'));
+
+        expect(input.isConnected).toBe(true);
+        expect(input.hasAttribute('data-closing')).toBe(false);
+        expect(input).toHaveFocus();
+        expect(q('database-toolbar-minimize')?.hidden).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   describe('Escape gives focus back to the button that opened the popover (findings K03)', () => {
     const escape = (): void => {
       (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

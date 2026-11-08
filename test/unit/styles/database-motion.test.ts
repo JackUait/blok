@@ -240,3 +240,26 @@ describe('panel list drag', () => {
     expect(body(database, `${ITEM}[data-dragging]`)).not.toContain('transition');
   });
 });
+
+// notion-motion.md Search and Round 4 re-checks: the field grows 0→150 and fades in over 200ms ease, and closes the same way back.
+describe('database toolbar search', () => {
+  const INPUT = '[data-blok-database-search-input]';
+
+  it('grows and fades over 200ms ease', () => {
+    expect(body(outsideReducedMotion, INPUT)).toContain('transition: inline-size 0.2s ease, opacity 0.2s ease');
+  });
+
+  it('starts at no width and no ink', () => {
+    const start = [ ...database.matchAll(/@starting-style \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ].map((match) => match[1]).join(' ');
+
+    expect(body(start, INPUT)).toContain('inline-size: 0');
+    expect(body(start, INPUT)).toContain('opacity: 0');
+  });
+
+  it('shrinks to no width and no ink while it closes', () => {
+    const closing = body(outsideReducedMotion, `${INPUT}[data-closing]`);
+
+    expect(closing).toContain('inline-size: 0');
+    expect(closing).toContain('opacity: 0');
+  });
+});

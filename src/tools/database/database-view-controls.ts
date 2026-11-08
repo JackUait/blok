@@ -136,6 +136,12 @@ const button = (testId: string, label: string, content: { icon?: string; text?: 
   return el;
 };
 
+/** Longer than the 200ms shrink, so transitionend normally wins. */
+const SEARCH_CLOSE_FALLBACK_MS = 250;
+
+const hasTransition = (el: HTMLElement): boolean =>
+  getComputedStyle(el).transitionDuration.split(',').some((part) => parseFloat(part) > 0);
+
 /** A 28px toolbar button that holds only an icon; its aria-label names it, and so does its hover hint. */
 const iconButton = (testId: string, label: string, icon: string): HTMLButtonElement => {
   const el = button(testId, label, { icon });
@@ -159,6 +165,9 @@ export class DatabaseViewControls {
   private readonly filterButton: HTMLButtonElement;
   private readonly noDateButton: HTMLButtonElement;
   private readonly minimizeButton: HTMLButtonElement;
+  /** The filter bar shows a sort, so » can fold it. */
+  private barMinimizable = false;
+  private searchCloseTimer: ReturnType<typeof setTimeout> | null = null;
   /** The person's choice for the chip bar: shown, hidden, or `null` to follow its chips. Reset per view. */
   private barOpen: boolean | null = null;
   private barViewId: string | null = null;
@@ -227,7 +236,17 @@ export class DatabaseViewControls {
     this.searchInput.setAttribute('data-blok-testid', 'database-search-input');
 
     this.filterButton.addEventListener('click', () => this.toggleFilterBar());
+    onHover(this.minimizeButton, this.t('filterBarMinimize'));
+    this.minimizeButton.addEventListener('pointerdown', (event) => {
+      if (this.searchShown()) event.preventDefault();
+    });
     this.minimizeButton.addEventListener('click', () => {
+      if (this.searchShown()) {
+        this.hideSearch();
+        if (!this.searchButton.hidden) this.searchButton.focus();
+
+        return;
+      }
       this.barOpen = false;
       this.refresh();
     });
@@ -363,6 +382,7 @@ export class DatabaseViewControls {
   }
 
   destroy(): void {
+    this.endSearchClose();
     this.panel?.close();
     this.panel = null;
     this.matchObserver?.disconnect();
@@ -782,23 +802,60 @@ export class DatabaseViewControls {
   }
 
   private showSearch(): void {
+    this.endSearchClose();
     if (this.searchInput.isConnected) {
+      this.searchInput.removeAttribute('data-closing');
+      this.searchInput.after(this.searchClear);
       this.searchInput.focus();
+      this.syncMinimize();
 
       return;
     }
     this.searchInput.hidden = false;
     this.searchButton.after(this.searchInput, this.searchClear);
     this.searchInput.focus();
+    this.syncMinimize();
+  }
+
+  /** Open and not on its way out. */
+  private searchShown(): boolean {
+    return this.searchInput.isConnected && !this.searchInput.hasAttribute('data-closing');
   }
 
   private hideSearch(): void {
-    this.searchInput.hidden = true;
-    this.searchInput.remove();
+    const input = this.searchInput;
+
     this.searchClear.remove();
-    this.searchInput.value = '';
+    input.value = '';
     this.setSearch('');
     this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS;
+    if (input.isConnected && !input.hasAttribute('data-closing') && hasTransition(input)) {
+      // The field shrinks to nothing first; it leaves when that ends.
+      input.setAttribute('data-closing', '');
+      input.addEventListener('transitionend', this.finishSearchClose);
+      this.searchCloseTimer = setTimeout(this.finishSearchClose, SEARCH_CLOSE_FALLBACK_MS);
+    } else if (!input.hasAttribute('data-closing')) {
+      this.finishSearchClose();
+    }
+    this.syncMinimize();
+  }
+
+  private readonly finishSearchClose = (): void => {
+    this.endSearchClose();
+    this.searchInput.removeAttribute('data-closing');
+    this.searchInput.hidden = true;
+    this.searchInput.remove();
+  };
+
+  private endSearchClose(): void {
+    this.searchInput.removeEventListener('transitionend', this.finishSearchClose);
+    if (this.searchCloseTimer !== null) clearTimeout(this.searchCloseTimer);
+    this.searchCloseTimer = null;
+  }
+
+  /** » shows for an open search or a filter bar with a sort. */
+  private syncMinimize(): void {
+    this.minimizeButton.hidden = !this.searchShown() && !this.barMinimizable;
   }
 
   private setSearch(query: string): void {
@@ -885,7 +942,8 @@ export class DatabaseViewControls {
     if (pills.length === 0 && !personal && this.barShown && this.barOpen === null) this.barOpen = true;
     this.barShown = this.barOpen ?? (pills.length > 0 || personal);
     // Inferred from shots: Notion shows » with a sort (20, 22, 23), not with filters alone (15, 17) or no rule (41).
-    this.minimizeButton.hidden = !this.barShown || view.sorts.length === 0;
+    this.barMinimizable = this.barShown && view.sorts.length > 0;
+    this.syncMinimize();
     if (!this.barShown) {
       this.filterBar.replaceChildren();
       this.filterBar.hidden = true;

@@ -9975,6 +9975,12 @@ textarea[data-blok-database-cell-input] {
   }
 }
 
+/* Notion's » and Escape: the field shrinks and fades the same 200ms, then the view drops it. */
+[data-blok-database-search-input][data-closing] {
+  inline-size: 0;
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-search-input] {
     transition: none;

@@ -288,7 +288,7 @@ export class TableFullscreen {
     // Keeps focus in the card while the mode swaps, so focusout does not apply the size.
     this.modeButton.addEventListener('pointerdown', event => event.preventDefault());
     this.modeButton.addEventListener('click', () => {
-      const grid = this.grid.hidden;
+      const grid = this.grid.hidden !== false;
 
       writeGridPreferred(grid);
       this.setGridMode(grid);

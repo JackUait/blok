@@ -126,6 +126,7 @@ const savedSorts = async (page: Page): Promise<unknown> => page.evaluate(async (
 interface Box {
   fontFamily: string;
   backgroundColor: string;
+  backgroundImage: string;
   borderRadius: string;
   opacity: string;
   transform: string;
@@ -146,6 +147,7 @@ const boxOf = async (page: Page, selector: string, inner?: string): Promise<Box 
   return {
     fontFamily: style.fontFamily,
     backgroundColor: style.backgroundColor,
+    backgroundImage: style.backgroundImage,
     borderRadius: style.borderTopLeftRadius,
     opacity: style.opacity,
     transform: style.transform,
@@ -407,9 +409,10 @@ test.describe('drag ghosts look like their source', () => {
     const ghost = await boxOf(page, '[data-blok-database-table-row-ghost]');
     const ghostCell = await boxOf(page, '[data-blok-database-table-row-ghost]', '[role="gridcell"][data-property-id="p-title"]');
 
+    // Notion's row ghost has no fill (notion-motion.md "Table row drag").
+    expect(ghost?.backgroundColor).toBe('rgba(0, 0, 0, 0)');
     expect(ghost?.opacity).toBe('0.4');
     expect(ghost?.transform).toBe('none');
-    expect(ghost?.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
     expect(ghostCell?.fontFamily).toBe(source?.fontFamily);
     expect(ghostCell?.paddingInlineStart).toBe(source?.paddingInlineStart);
     expect(ghostCell?.width).toBe(source?.width);
@@ -424,7 +427,10 @@ test.describe('drag ghosts look like their source', () => {
     await dragBy(page, header, 120, 0);
     const ghost = await boxOf(page, '[data-blok-database-table-column-ghost]');
 
-    expect(ghost?.opacity).toBe('0.4');
+    // Notion's column ghost is the header in its pressed fill, opaque (notion-motion.md "Column header drag").
+    expect(ghost?.opacity).toBe('1');
+    expect(ghost?.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(ghost?.backgroundImage).toMatch(/^linear-gradient\(/);
     expect(ghost?.fontFamily).toBe(source?.fontFamily);
     expect(ghost?.height).toBe(source?.height);
     await page.mouse.up();

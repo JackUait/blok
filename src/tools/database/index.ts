@@ -133,11 +133,15 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
-import { IconArrowDiagonal, IconCalendar, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
+import type { MenuConfigItem } from '../../../types/tools/menu-config';
+import { databasePageHost, subtreeOf } from '../page/database-page-move';
+import { createdId } from '../page/page-values';
+import { generateBlockId } from '../../components/utils/id-generator';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { isAnnotationBlock, mountChildBlocks } from '../nested-blocks';
 import { BuiltInCommentsUi } from './database-comments';
@@ -734,6 +738,8 @@ export class DatabaseTool implements BlockTool {
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
   private destroyed = false;
+  /** Turn into page is moving this database to another document: its rows live on there. */
+  private movingOut = false;
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
   private viewControls: DatabaseViewControls | null = null;
@@ -2317,14 +2323,62 @@ export class DatabaseTool implements BlockTool {
 
   /** A local delete of this database (or of a block that takes it along) deletes its rows from the backend. */
   removed(removal?: { deleted: boolean }): void {
-    if (removal?.deleted !== true || this.linked || this.readOnly) return;
+    if (removal?.deleted !== true || this.linked || this.readOnly || this.movingOut) return;
     [...this.model.getOrderedRows(), ...this.templates].forEach((row) => void this.sync.syncDeleteRow({ rowId: row.id }));
   }
 
   /** Called by a row this client deleted on its own; the row's backend copy goes too. */
   rowDeleted({ rowId }: { rowId: string }): void {
-    if (this.destroyed || this.linked || this.readOnly) return;
+    if (this.destroyed || this.linked || this.readOnly || this.movingOut) return;
     void this.sync.syncDeleteRow({ rowId });
+  }
+
+  /**
+   * The ⋮⋮ menu. "Turn into page" leads Notion's inline database menu
+   * (research-live-notion.md §4); it needs a host that stores the new page's document.
+   */
+  public renderSettings(): MenuConfigItem[] {
+    if (this.readOnly || this.linked || this.fullPage || databasePageHost(this.api) === null) return [];
+
+    return [{
+      icon: IconReplace,
+      title: this.api.i18n.t('tools.database.turnIntoPage'),
+      name: 'database-turn-into-page',
+      closeOnActivate: true,
+      onActivate: (): void => void this.turnIntoPage(),
+    }];
+  }
+
+  /**
+   * Moves this database, its rows and their bodies into a new page, and puts
+   * a database page link in its place as one undo step. The host makes the
+   * page first; if that fails nothing changes.
+   */
+  private async turnIntoPage(): Promise<void> {
+    const host = databasePageHost(this.api);
+
+    if (host === null || this.movingOut || this.readOnly || this.linked) return;
+    const id = this.block.id;
+    const [root, ...rest] = subtreeOf((await this.api.saver.save()).blocks, id);
+
+    if (root === undefined) return;
+    const { parent: _parent, ...top } = root;
+    const title = this.title;
+    const minted = generateBlockId();
+    const document: OutputData = { title, blocks: [{ ...top, data: { ...top.data, fullPage: true } }, ...rest] };
+    const pageId = await Promise.resolve(host.config.create?.({ pageId: minted, title, document }))
+      .then((answer) => createdId(answer) ?? minted, () => null);
+
+    if (pageId === null) return;
+    // The save and the host were async: the database may be gone or locked by now.
+    if (this.destroyed || this.readOnly || this.api.blocks.getById(id) === null) return;
+    this.movingOut = true;
+    this.inOneStep(() => {
+      this.api.blocks.insertAt(host.name, { pageId, kind: 'database' }, { position: { before: id } });
+      const index = this.api.blocks.getBlockIndex(id);
+
+      if (index !== undefined) void this.api.blocks.delete(index, false);
+    });
   }
 
   /** A row this client deleted from the backend is back (undo): create it there again. */

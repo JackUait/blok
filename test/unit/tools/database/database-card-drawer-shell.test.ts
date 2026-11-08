@@ -171,14 +171,49 @@ describe('DatabaseCardDrawer shell', () => {
 
   // R31: the page beside a side peek stays usable; only the center peek's backdrop closes on a click.
   describe('clicks outside the peek', () => {
-    it('leave a side peek open', () => {
+    // notion-motion.md Round 4 re-checks: a click inside the database view keeps the side peek.
+    it('inside the database leave a side peek open', () => {
+      const options = createOptions();
+      const cell = document.createElement('div');
+
+      options.wrapper.appendChild(cell);
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW, 'side');
+      cell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(drawer.isOpen).toBe(true);
+      drawer.destroy();
+    });
+
+    // notion-motion.md "Peek: click outside" and Round 4: a click on the page outside the database closes the side peek.
+    it('on the page outside the database close a side peek', () => {
+      const onClose = vi.fn();
       const page = document.createElement('p');
 
       document.body.appendChild(page);
-      const drawer = new DatabaseCardDrawer(createOptions());
+      const drawer = new DatabaseCardDrawer(createOptions({ onClose }));
 
       drawer.open(ROW, 'side');
       page.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(drawer.isOpen).toBe(false);
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    // A confirm dialog or menu over the page is not the page: its backdrop carries data-blok-popover.
+    it('in a dialog or menu over the page leave a side peek open', () => {
+      const backdrop = document.createElement('div');
+      const button = document.createElement('button');
+
+      backdrop.setAttribute('data-blok-popover', '');
+      backdrop.appendChild(button);
+      document.body.appendChild(backdrop);
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+      button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
       expect(drawer.isOpen).toBe(true);
       drawer.destroy();

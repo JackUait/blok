@@ -898,8 +898,15 @@ export class DatabaseCardDrawer {
     this.outsideClickHandler = (e: MouseEvent): void => {
       const target = e.target as Node | null;
 
-      // Only the center peek closes on a click outside; the page beside a side peek stays usable.
-      if ((target && drawer.contains(target)) || this.mode !== 'center' || (target !== null && this.builder?.contains(target) === true)) {
+      // A side peek stays open for clicks in its database, so the view beside it stays usable; it closes for the page outside.
+      const keptBy = this.mode === 'side' ? this.wrapper : null;
+
+      if (
+        (target && drawer.contains(target))
+        || this.mode === 'full'
+        || (target !== null && keptBy?.contains(target) === true)
+        || (target !== null && this.builder?.contains(target) === true)
+      ) {
         return;
       }
 
@@ -907,9 +914,10 @@ export class DatabaseCardDrawer {
        * Toolbox and other popovers are portaled to document.body,
        * so they sit outside the drawer DOM tree. Without this check,
        * clicking a popover item would be treated as an "outside click"
-       * and close the drawer.
+       * and close the drawer. Database dialogs mark their backdrop with
+       * data-blok-popover too.
        */
-      if (target instanceof Element && target.closest('[data-blok-popover-opened], [data-blok-emoji-picker], [data-blok-emoji-picker-backdrop], [data-role="audio-cover-picker"]') !== null) {
+      if (target instanceof Element && target.closest('[data-blok-popover], [data-blok-popover-opened], [data-blok-emoji-picker], [data-blok-emoji-picker-backdrop], [data-role="audio-cover-picker"]') !== null) {
         return;
       }
 

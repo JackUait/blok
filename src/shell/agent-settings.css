@@ -1,0 +1,151 @@
+/* Host provider settings. Selected and default states use neutral ink, never blue. */
+
+[data-blok-agent-settings][hidden] {
+  display: none;
+}
+
+[data-blok-agent-settings] {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--blok-text-primary, black);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+}
+
+[data-blok-agent-settings-card] {
+  width: min(560px, 100%);
+  max-height: min(720px, 100%);
+  overflow: auto;
+  padding: 20px 22px 16px;
+  background: var(--blok-popover-bg, #fff);
+  border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
+  border-radius: 12px;
+  box-shadow: var(--blok-popover-box-shadow, var(--blok-popover-shadow));
+}
+
+[data-blok-agent-settings-head] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+[data-blok-agent-settings-head] h2,
+[data-blok-agent-settings] h3 {
+  margin: 0;
+  color: var(--blok-text-primary, black);
+  font-weight: 600;
+}
+
+[data-blok-agent-settings-head] h2 {
+  font-size: 18px;
+}
+
+[data-blok-agent-settings] h3 {
+  margin-top: 18px;
+  font-size: 14px;
+}
+
+[data-blok-agent-settings] p {
+  margin: 6px 0 0;
+  color: var(--blok-text-secondary, #646a79);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+[data-blok-agent-settings] [data-blok-agent-row] p:first-child {
+  margin: 0;
+  color: var(--blok-text-primary, black);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+[data-blok-agent-row] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.12));
+}
+
+[data-blok-agent-actions] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-blok-agent-settings] button,
+[data-blok-agent-actions] label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--blok-popover-border, rgba(55, 53, 47, 0.16));
+  border-radius: 8px;
+  background: transparent;
+  color: var(--blok-text-primary, black);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+[data-blok-agent-settings] button:hover,
+[data-blok-agent-actions] label:hover {
+  background: var(--blok-item-hover-bg, rgba(55, 53, 47, 0.06));
+}
+
+[data-blok-agent-settings] button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+[data-blok-agent-settings] button:focus-visible,
+[data-blok-agent-settings] input:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 1px;
+}
+
+[data-blok-agent-default] {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--blok-icon-active-bg, rgba(55, 53, 47, 0.1));
+  color: var(--blok-text-primary, black);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+[data-blok-agent-login] {
+  margin-top: 12px;
+  color: var(--blok-text-primary, black);
+}
+
+[data-blok-agent-login] p {
+  color: var(--blok-text-primary, black);
+}
+
+[data-blok-agent-login] pre {
+  margin: 8px 0 0;
+  max-height: 180px;
+  overflow: auto;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  background: var(--blok-code-bg, var(--blok-bg-light, #f6f5f4));
+  color: var(--blok-text-primary, black);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+[data-blok-agent-note] {
+  margin-top: 16px;
+}

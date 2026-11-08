@@ -107,6 +107,8 @@ export interface DatabaseTimelineViewOptions {
   commentBadges?: CommentBadges;
   /** The host's "Manage in Calendar" (`config.calendar`), a toolbar button. Read-only keeps it. */
   manageInCalendar?: { label: string; onClick: () => void };
+  /** This draw follows a table toggle: the old chevron shrinks out over the new one. */
+  tableSwapped?: boolean;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -274,6 +276,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     toggle.setAttribute('aria-pressed', String(shown));
     toggle.setAttribute('aria-label', this.t(shown ? 'tools.database.timelineHideTable' : 'tools.database.timelineShowTable'));
     toggle.innerHTML = IconChevronDoubleRight;
+    if (this.options.tableSwapped === true) {
+      const out = document.createElement('span');
+
+      toggle.setAttribute('data-swapped', '');
+      out.setAttribute('data-blok-database-timeline-toggle-out', '');
+      out.setAttribute('aria-hidden', 'true');
+      out.innerHTML = IconChevronDoubleRight;
+      toggle.appendChild(out);
+    }
 
     const month = document.createElement('div');
 

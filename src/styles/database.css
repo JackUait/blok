@@ -12617,6 +12617,41 @@ textarea[data-blok-database-cell-input] {
   transform: none;
 }
 
+/* notion-motion.md Timeline: after a toggle the old chevron shrinks out over the new one, 160ms ease-in-out. */
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][data-swapped] {
+  position: relative;
+}
+
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][data-swapped] > svg {
+  transition: opacity 160ms ease-in-out, scale 160ms ease-in-out;
+}
+
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle] [data-blok-database-timeline-toggle-out] {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The mirror of the new chevron is the old one, in either page direction. */
+  transform: scaleX(-1);
+  opacity: 0;
+  scale: 0.3;
+  pointer-events: none;
+  transition: opacity 160ms ease-in-out, scale 160ms ease-in-out;
+}
+
+@starting-style {
+  [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][data-swapped] > svg {
+    opacity: 0;
+    scale: 0.3;
+  }
+
+  [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle] [data-blok-database-timeline-toggle-out] {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
 [data-blok-database-timeline-spacer] {
   block-size: 24px;
 }
@@ -13081,7 +13116,9 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-timeline-load-more],
   [data-blok-database-timeline-row-handle],
   [data-blok-database-timeline-bar],
-  [data-blok-database-timeline-bar]::before {
+  [data-blok-database-timeline-bar]::before,
+  [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][data-swapped] > svg,
+  [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle] [data-blok-database-timeline-toggle-out] {
     transition: none;
   }
 }

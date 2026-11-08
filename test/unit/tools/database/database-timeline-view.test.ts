@@ -407,6 +407,24 @@ describe('DatabaseTimelineView', () => {
       expect(manage).toHaveBeenCalledTimes(1);
     });
 
+    // notion-motion.md Timeline: after a table toggle the old chevron shrinks out over the new one.
+    it('keeps the old chevron, mirrored and hidden from readers, on the draw after a table toggle', () => {
+      const { root } = mount({ tableSwapped: true });
+      const toggle = root.querySelector('[data-blok-database-timeline-table-toggle]');
+      const old = toggle?.querySelector('[data-blok-database-timeline-toggle-out]');
+
+      expect(old?.innerHTML).toBe(markup(IconChevronDoubleRight));
+      expect(old?.getAttribute('aria-hidden')).toBe('true');
+      expect(toggle?.hasAttribute('data-swapped')).toBe(true);
+    });
+
+    it('draws one chevron when the table was not just toggled', () => {
+      const { root } = mount();
+
+      expect(root.querySelector('[data-blok-database-timeline-toggle-out]')).toBeNull();
+      expect(root.querySelector('[data-blok-database-timeline-table-toggle]')?.hasAttribute('data-swapped')).toBe(false);
+    });
+
     // findings C05: » toggle, the shown month, then Month ⌄ · ‹ · Today · ›.
     it('draws Notion\'s parts in order: » toggle, the month, the zoom with a chevron, ‹ Today ›', () => {
       const { root } = mount();

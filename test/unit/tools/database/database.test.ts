@@ -6360,6 +6360,19 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      it('swaps the table chevron only on the draw right after a table toggle', () => {
+        const { tool, element } = timelineTool();
+        const swapped = (): boolean => queryByData(element, 'data-blok-database-timeline-table-toggle')?.hasAttribute('data-swapped') === true;
+
+        expect(swapped()).toBe(false);
+        queryByData(element, 'data-blok-database-timeline-table-toggle')?.click();
+        expect(swapped()).toBe(true);
+        queryByData(element, 'data-blok-database-timeline-today')?.click();
+        expect(swapped()).toBe(false);
+
+        tool.destroy();
+      });
+
       it('picks a table panel calculation from its footer cell and stores it on the view', () => {
         const { tool, element } = timelineTool({ showTimelineTable: true, calculations: [{ id: 'prop-title', fn: 'count' }] });
 

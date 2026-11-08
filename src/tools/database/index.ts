@@ -728,6 +728,8 @@ export class DatabaseTool implements BlockTool {
   private calendarInkFrom: string | undefined;
   /** Per timeline view: the centre day, for when local storage is blocked. */
   private readonly timelineCenters = new Map<string, string>();
+  /** Per timeline view: whether the last draw showed the table, so the next draw knows it was toggled. */
+  private readonly timelineTableShown = new Map<string, boolean>();
   private reprojectQueued = false;
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
@@ -6174,6 +6176,10 @@ export class DatabaseTool implements BlockTool {
       ? []
       : dependencyArrows(this.model.getOrderedRows(), arrowsProperty.id).filter((a) => shownIds.has(a.from) && shownIds.has(a.to));
 
+    const tableShown = resolveShowTimelineTable(viewConfig);
+    const tableSwapped = this.timelineTableShown.has(viewConfig.id) && this.timelineTableShown.get(viewConfig.id) !== tableShown;
+
+    this.timelineTableShown.set(viewConfig.id, tableShown);
     this.view = new DatabaseTimelineView({
       readOnly: this.readOnly,
       i18n: this.api.i18n,
@@ -6189,6 +6195,7 @@ export class DatabaseTool implements BlockTool {
       center: this.timelineCenter(viewConfig.id, today),
       today,
       locale: editorLocale(this.api.i18n),
+      tableSwapped,
       cellContext: this.cellContext(),
       ...this.commentBadgeLever(),
       ...this.calendarLever(this.dataId, viewConfig.id),

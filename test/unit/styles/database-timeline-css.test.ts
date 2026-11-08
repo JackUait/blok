@@ -147,6 +147,24 @@ describe('database timeline styles', () => {
     expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
   });
 
+  // notion-motion.md Timeline: the chevrons crossfade with a scale, 0.3 to 1, over 160ms ease-in-out.
+  it('crossfades the table chevrons with a 0.3 scale over 160ms ease-in-out', () => {
+    const toggle = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle]';
+    const incoming = ruleBody(`${toggle}[data-swapped] > svg`);
+    const outgoing = ruleBody(`${toggle} [data-blok-database-timeline-toggle-out]`);
+    const starting = css.slice(css.indexOf('@starting-style', css.indexOf('data-blok-database-timeline-toggle-out')));
+
+    for (const part of [incoming, outgoing]) {
+      expect(part).toMatch(/transition:\s*opacity 160ms ease-in-out, scale 160ms ease-in-out/);
+    }
+    expect(outgoing).toMatch(/opacity:\s*0/);
+    expect(outgoing).toMatch(/scale:\s*0\.3/);
+    // The mirror is the old direction, whatever the page direction.
+    expect(outgoing).toMatch(/transform:\s*scaleX\(-1\)/);
+    expect(starting).toMatch(/\[data-swapped\] > svg\s*\{\s*opacity:\s*0;\s*scale:\s*0\.3;/);
+    expect(starting).toMatch(/toggle-out\]\s*\{\s*opacity:\s*1;\s*scale:\s*1;/);
+  });
+
   // findings C22: Notion's last zoom reads "5 Years".
   it('names the last zoom "5 Years" in English', () => {
     const en = readFileSync(resolve(__dirname, '../../../src/components/i18n/locales/en.json'), 'utf8');
@@ -213,7 +231,7 @@ describe('database timeline styles', () => {
     const reduced = timelineCss.slice(timelineCss.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
 
     expect(timelineCss).toContain('transition');
-    for (const selector of ['[data-blok-database-timeline-bar]', '[data-blok-database-timeline-bar]::before', '[data-blok-database-timeline-row-handle]']) {
+    for (const selector of ['[data-blok-database-timeline-bar]', '[data-blok-database-timeline-bar]::before', '[data-blok-database-timeline-row-handle]', '[data-blok-database-timeline-toggle-out]']) {
       expect(reduced).toContain(selector);
     }
     expect(reduced).toMatch(/transition:\s*none/);

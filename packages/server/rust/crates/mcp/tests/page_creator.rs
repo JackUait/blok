@@ -282,8 +282,8 @@ async fn a_cancel_after_a_page_lists_it_with_cancelled_as_the_cause() {
     assert_eq!(orphaned_ids(&failed), vec!["host-1"]);
     assert_eq!(
         failed["error"]["details"]["cause"],
-        // The engine's failure() marks CANCELLED retryable.
-        json!({ "code": "CANCELLED", "message": "The batch was cancelled. Nothing was written.", "retryable": true, "commandIndex": 1 })
+        // Exactly Blok.Server's cause (server-conformance fixtures/agent/host.json).
+        json!({ "code": "CANCELLED", "message": "The batch was cancelled. Nothing was written.", "retryable": false })
     );
     assert_eq!(
         failed["error"]["message"],

@@ -181,13 +181,15 @@ pub(crate) fn report_orphaned(
         if orphaned.is_empty() {
             return None;
         }
-        let cause = error.clone();
+        // Exactly Blok.Server's cause (server-conformance fixtures/agent/host.json),
+        // not the engine's failure(), which marks CANCELLED retryable.
+        let cause = json!({ "code": "CANCELLED", "message": CANCELLED, "retryable": false });
         let mut wrapped = json!({
             "code": "ORPHANED_SIDE_EFFECT",
             "message": orphan_message(&cause),
             "retryable": false,
         });
-        if let Some(index) = cause.get("commandIndex") {
+        if let Some(index) = error.get("commandIndex") {
             wrapped["commandIndex"] = index.clone();
         }
         wrapped["details"] = json!({ "orphaned": orphaned, "cause": cause });

@@ -134,6 +134,25 @@ describe('MCP conformance harness steps', () => {
     expect(result.steps?.[1].expect).toEqual({ jsonrpc: '2.0', id: 1, result: { seen: ['bad', 1] } });
   });
 
+  it('read takes the next answer without sending, so an answer that came late is still checked', async () => {
+    const reversed = script('reversed.cjs', `
+const ids = [];
+const rl = require('node:readline').createInterface({ input: process.stdin });
+rl.on('line', (line) => {
+  ids.push(JSON.parse(line).id);
+  if (ids.length === 2) for (const id of ids.reverse()) process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result: {} }) + '\\n');
+});
+rl.on('close', () => process.exit(0));
+`);
+    const result = await runCase(reversed, {
+      name: 'late',
+      transport: 'stdio',
+      steps: [{ send: { id: 1, method: 'ping' }, noAnswer: true }, { send: { id: 2, method: 'ping' } }, { read: true }],
+    }, true);
+
+    expect(result.steps?.[2].expect).toEqual({ jsonrpc: '2.0', id: 1, result: {} });
+  });
+
   it('http bodyBase64 sends the exact bytes, invalid UTF-8 included', async () => {
     const result = await runCase(echoHttpServer, {
       name: 'bytes',

@@ -49,6 +49,7 @@ export const createMemoryHandleStore = (now: () => number = Date.now): BlokMcpHa
 
     return {
       record: structuredClone(entry.record),
+      renew: () => (holds() ? Promise.resolve() : Promise.reject(lost(handle))),
       save: (next) => {
         if (!holds()) {
           return Promise.reject(lost(handle));

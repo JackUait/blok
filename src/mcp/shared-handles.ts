@@ -6,6 +6,8 @@ import type { HandleSession } from './session';
 // Above the slowest stored call (a 30 s endpoint load); a longer wait is better told to retry.
 export const LEASE_WAIT_MS = 30_000;
 export const STORE_SWEEP_MS = 60_000;
+// Well inside the 30 s a store may keep an unrenewed lease, so a few missed renewals do not lose it.
+export const LEASE_RENEW_MS = 5_000;
 // Handles reach the host's store as keys or file names, so only Blok's own shape gets that far.
 const HANDLE = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -22,6 +24,8 @@ export interface SharedHandlesOptions {
   leaseWaitMs?: number;
   /** How often the store is swept of idle handles. */
   sweepMs?: number;
+  /** How often a held lease is renewed. */
+  renewMs?: number;
 }
 
 const STORE_DOWN = 'The handle store is unavailable. Retry shortly.';
@@ -164,6 +168,12 @@ export class SharedHandles implements HandleTable {
       if (lease === 'busy') {
         throw surfaceError('SOURCE_UNAVAILABLE', 'Another call is using this handle. Retry shortly.');
       }
+      const renewer = setInterval(() => {
+        // A lost lease shows again when the call saves or removes: the store refuses those.
+        void lease.renew().catch((thrown: unknown) => console.error('blok-mcp: renewing a handle lease failed', thrown));
+      }, this.options.renewMs ?? LEASE_RENEW_MS);
+
+      renewer.unref();
       try {
         // Checked here, not by the store: a store bug must not hand one user's handle to another.
         if (lease.record.v !== 1 || lease.record.principal !== principal) {
@@ -172,6 +182,7 @@ export class SharedHandles implements HandleTable {
 
         return await fn(lease);
       } finally {
+        clearInterval(renewer);
         await lease.release().catch((thrown: unknown) => console.error('blok-mcp: releasing a handle lease failed', thrown));
       }
     });

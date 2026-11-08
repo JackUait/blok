@@ -30,9 +30,9 @@ import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from
  *     breaker at a time; a `.break` older than leaseStaleMs is removed), read the lock again, and
  *     delete it only if it still has the token and the old mtime seen before. Then create again.
  *   - else poll every 25 ms until the caller's timeout.
- * A lease holder touches its lock's mtime every heartbeatMs (5 s), so a lease outlives slow calls.
+ * renew touches the lock's mtime. Blok renews every 5 s while a call runs; the store has no timer.
  * Leases are time-limited: a holder that cannot touch its lock for leaseStaleMs (a paused process)
- * loses it. save and remove check the token first and throw once it is gone, so a holder that knows
+ * loses it. renew, save and remove check the token first and throw once it is gone, so a holder that knows
  * it lost the lease never writes. The check and the write are two steps, so a holder paused between
  * them can still write once; the source's version check (409) is what keeps that from losing a save.
  *
@@ -58,14 +58,12 @@ const RECORD = '.record.json';
 const META = '.meta.json';
 const LEASE = '.lease';
 const LEASE_STALE_MS = 30_000;
-const HEARTBEAT_MS = 5_000;
 const POLL_MS = 25;
 // tryAdd's principal lock is held for one directory scan and two small writes.
 const PRINCIPAL_WAIT_MS = 10_000;
 
 export interface FilesHandleStoreOptions {
   leaseStaleMs?: number;
-  heartbeatMs?: number;
   /** For tests: the platform and effective uid the start checks use. */
   platform?: NodeJS.Platform;
   effectiveUid?: () => number | undefined;
@@ -142,7 +140,6 @@ export const createFilesHandleStore = (given: string, options: FilesHandleStoreO
   }
   prepareDirectory(dir, options.effectiveUid ?? (() => process.geteuid?.()));
   const leaseStaleMs = options.leaseStaleMs ?? LEASE_STALE_MS;
-  const heartbeatMs = options.heartbeatMs ?? HEARTBEAT_MS;
   const paths = (handle: string): { record: string; meta: string; lease: string } => ({
     record: join(dir, `${handle}${RECORD}`),
     meta: join(dir, `${handle}${META}`),
@@ -263,28 +260,21 @@ export const createFilesHandleStore = (given: string, options: FilesHandleStoreO
   const leaseFor = (handle: string, mine: string, record: BlokMcpHandleRecord): BlokMcpHandleLease => {
     const at = paths(handle);
     const state = { released: false };
-    const beat = setInterval(() => {
-      void owns(at.lease, mine).then((still) => {
-        if (still) {
-          const now = new Date();
-
-          return utimes(at.lease, now, now);
-        }
-
-        return undefined;
-      }).catch(() => undefined);
-    }, heartbeatMs);
-
-    beat.unref();
-
     const end = (): void => {
       state.released = true;
-      clearInterval(beat);
     };
     const holds = async (): Promise<boolean> => !state.released && await owns(at.lease, mine);
 
     return {
       record,
+      renew: async () => {
+        if (!await holds()) {
+          throw lost(handle);
+        }
+        const now = new Date();
+
+        await utimes(at.lease, now, now);
+      },
       save: async (next) => {
         if (!await holds()) {
           throw lost(handle);

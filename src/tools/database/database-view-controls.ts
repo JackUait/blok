@@ -12,6 +12,7 @@ import { countFilterRules, withEntryIds } from './filter-tree';
 import { openViewSettings } from './database-view-settings-panel';
 import { openFilterChip } from './database-filter-chip';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
+import { onHover } from '../../components/utils/tooltip';
 import type { AutofillPanelSettings, DataSourceSettings, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
@@ -135,11 +136,12 @@ const button = (testId: string, label: string, content: { icon?: string; text?: 
   return el;
 };
 
-/** A 28px toolbar button that holds only an icon; its aria-label names it. */
+/** A 28px toolbar button that holds only an icon; its aria-label names it, and so does its hover hint. */
 const iconButton = (testId: string, label: string, icon: string): HTMLButtonElement => {
   const el = button(testId, label, { icon });
 
   el.setAttribute('data-blok-database-toolbar-icon', '');
+  onHover(el, label);
 
   return el;
 };

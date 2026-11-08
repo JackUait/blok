@@ -13,7 +13,9 @@ import { buildSdkServer } from './sdk-server';
 import { assembleMcp, STOP_DRAIN_MS } from './server';
 import { wellFormedIdsStdio } from './wire-ids';
 
-export type { BlokMcpOptions } from './options';
+export type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpOptions } from './options';
+export { BlokMcpSourceError } from './sources/custom';
+export type { BlokMcpSourceErrorKind } from './sources/custom';
 export { createBlok } from './embed';
 export type { BlokCallerIdentity, BlokEmbedOptions, BlokMcp, BlokMcpHandlers, BlokMcpHostSurface, CreateBlokHooks } from './embed';
 

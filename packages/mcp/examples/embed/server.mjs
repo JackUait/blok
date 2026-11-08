@@ -19,7 +19,8 @@
  *   --example-host-tool <name>             the host tool's name (default host_echo)
  *   --example-host-prompt <name>           the host prompt's name (default host_hello)
  *   --example-allow-anonymous <principal>  serve anonymous callers as this principal
- *   --example-source endpoint:<url>        a host document source (not available yet)
+ *   --example-source endpoint:<url>        your own document store, as `source: { kind: 'custom' }`
+ *                                          (see exampleSource; not with --source)
  *
  * The HTTP side keeps only what an example needs: no Origin/Host checks and no body cap
  * of its own. Those, like OAuth, belong to your server.
@@ -33,7 +34,7 @@ Object.assign(console, { log: toStderr, info: toStderr, debug: toStderr });
 
 const { createMcpHandler, Server } = await import('@modelcontextprotocol/server');
 const { serveStdio } = await import('@modelcontextprotocol/server/stdio');
-const { createBlok, parseBlokMcpArgs } = await import('@bloklabs/mcp');
+const { BlokMcpSourceError, createBlok, parseBlokMcpArgs } = await import('@bloklabs/mcp');
 
 const NAME = 'host-example';
 const EXAMPLE_FLAGS = new Set(['--example-host-tool', '--example-host-prompt', '--example-allow-anonymous', '--example-source']);
@@ -90,6 +91,121 @@ const hostSurface = (example) => {
       return { messages: [{ role: 'user', content: { type: 'text', text: 'Hello from the host.' } }] };
     },
   };
+};
+
+/*
+ * --example-source endpoint:<url>: a custom document source that keeps documents on a small
+ * HTTP store. A real host reads and writes its own database here. The shared conformance suite
+ * (test/unit/mcp-conformance/fixtures/embed.json) records this exact wire, so every port's embed
+ * example speaks it byte for byte:
+ *
+ *   <base>  <url> with one trailing "/" removed.
+ *   <id>    the document id, percent-encoded as JS encodeURIComponent does.
+ *   Every request carries the caller, values sent as given:
+ *     Blok-Caller: <caller.principal>
+ *     Blok-Caller-Client: <caller.clientName>
+ *     Blok-Caller-Actor: <caller.actor.id>
+ *     Blok-Caller-On-Behalf-Of: <caller.actor.onBehalfOf>    left out when the actor has none
+ *
+ *   load  GET <base>/<id>
+ *         200 body exactly `null`  -> never saved: load answers null.
+ *         200 any other JSON body  -> { document: body.data, version: body.version }, both passed on
+ *                                     as given (absent = null); Blok checks them, not this code.
+ *   save  PUT <base>/<id>
+ *         Content-Type: application/json; the body is documentText, byte for byte.
+ *         Blok-If-Version: <ifVersion>, left out when ifVersion is null.
+ *         200 JSON body            -> { version: body.version } as given (absent = null).
+ *   list  GET <base>?limit=<n>&query=<q>&cursor=<c>
+ *         In that order; query and cursor left out when absent; values form-encoded
+ *         (URLSearchParams). 200 JSON body -> passed on as given.
+ *
+ *   Any other answer, on every route:
+ *     409 -> BlokMcpSourceError('changed', m)       503 -> BlokMcpSourceError('unavailable', m)
+ *     403 -> BlokMcpSourceError('forbidden', m)     422 -> BlokMcpSourceError('invalidId', m)
+ *     where m is the body's JSON "message" when that is a string, else "" (Blok's own words).
+ *   Every other status, a 200 body that is not JSON, or a network error: a plain Error, which
+ *   Blok logs and shows the agent as SOURCE_UNAVAILABLE.
+ */
+const REFUSALS = { 409: 'changed', 503: 'unavailable', 403: 'forbidden', 422: 'invalidId' };
+
+const exampleSource = (url) => {
+  const base = url.endsWith('/') ? url.slice(0, -1) : url;
+  const callerHeaders = caller => ({
+    'Blok-Caller': caller.principal,
+    'Blok-Caller-Client': caller.clientName,
+    'Blok-Caller-Actor': caller.actor.id,
+    ...(caller.actor.onBehalfOf !== undefined && { 'Blok-Caller-On-Behalf-Of': caller.actor.onBehalfOf }),
+  });
+  const call = async (target, init) => {
+    const response = await fetch(target, init);
+    const text = await response.text();
+
+    if (response.status === 200) {
+      return JSON.parse(text);
+    }
+    const kind = REFUSALS[response.status];
+
+    if (kind === undefined) {
+      throw new Error(`the document store answered ${response.status}: ${text}`);
+    }
+    const message = (() => {
+      try {
+        const body = JSON.parse(text);
+
+        return typeof body?.message === 'string' ? body.message : '';
+      } catch {
+        return '';
+      }
+    })();
+
+    throw new BlokMcpSourceError(kind, message);
+  };
+  const urlOf = documentId => `${base}/${encodeURIComponent(documentId)}`;
+
+  return {
+    load: async (caller, documentId) => {
+      const body = await call(urlOf(documentId), { headers: callerHeaders(caller) });
+
+      return body === null ? null : { document: body?.data ?? null, version: body?.version ?? null };
+    },
+    save: async (caller, documentId, documentText, ifVersion) => {
+      const body = await call(urlOf(documentId), {
+        method: 'PUT',
+        headers: {
+          ...callerHeaders(caller),
+          'Content-Type': 'application/json',
+          ...(ifVersion !== null && { 'Blok-If-Version': ifVersion }),
+        },
+        body: documentText,
+      });
+
+      return { version: body?.version ?? null };
+    },
+    list: async (caller, { query, cursor, limit }) => {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        ...(query !== undefined && { query }),
+        ...(cursor !== undefined && { cursor }),
+      });
+
+      return call(`${base}?${params.toString()}`, { headers: callerHeaders(caller) });
+    },
+  };
+};
+
+/** --example-source as createBlok's source; undefined keeps the one the blok-mcp flags set. */
+const sourceOf = (example, options) => {
+  if (example.source === undefined) {
+    return undefined;
+  }
+  if (!example.source.startsWith('endpoint:')) {
+    throw new StartError(`--example-source must be endpoint:<url>, got "${example.source}"`);
+  }
+  if (options.source !== undefined) {
+    throw new StartError('--example-source cannot be combined with --source');
+  }
+
+  return { kind: 'custom', source: exampleSource(example.source.slice('endpoint:'.length)) };
 };
 
 /** The signed-in user from the fake headers, as the SDK's AuthInfo. */
@@ -178,12 +294,8 @@ const main = async () => {
   const options = await parseBlokMcpArgs(blokArgs, process.env);
   const stdio = options.transport.kind === 'stdio';
 
-  // Item 2 hooks in here: --example-source endpoint:<url> becomes a host document source
-  // passed to createBlok as options.source.
-  if (example.source !== undefined) {
-    throw new StartError('--example-source is not available yet');
-  }
-  const blok = createBlok(options, {
+  const source = sourceOf(example, options);
+  const blok = createBlok({ ...options, ...(source !== undefined && { source }) }, {
     // stdio has one local user; over HTTP the default reads the AuthInfo the host passed to the SDK.
     ...(stdio && { caller: () => ({ principal: 'local' }) }),
     ...(example['allow-anonymous'] !== undefined && { anonymousPrincipal: example['allow-anonymous'] }),

@@ -4,9 +4,9 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CallToolRequest, Server, ServerContext } from '@modelcontextprotocol/server';
 import type * as Public from '../../../packages/mcp/types/index';
-import { parseBlokMcpArgs } from '../../../src/mcp/index';
+import { BlokMcpSourceError, parseBlokMcpArgs } from '../../../src/mcp/index';
 import type { createBlok } from '../../../src/mcp/index';
-import type { BlokMcpOptions as InternalOptions } from '../../../src/mcp/options';
+import type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpOptions as InternalOptions } from '../../../src/mcp/options';
 import type { AgentActor } from '../../../types/agent';
 import type { BlokCustomToolsFile, ManifestOverrides } from '../../../types/tool-manifest';
 
@@ -28,6 +28,9 @@ const optionsFromPublic = (value: Public.BlokMcpOptions): Omit<InternalOptions, 
 const blokToPublic = (value: ReturnType<typeof createBlok>): Omit<Public.BlokMcp, 'handlers'> => value;
 const hooksFromPublic = (value: Public.CreateBlokHooks): NonNullable<Parameters<typeof createBlok>[1]> => value;
 const parseArgsToPublic: typeof Public.parseBlokMcpArgs = parseBlokMcpArgs;
+const sourceToPublic = (value: BlokMcpDocumentSource): Public.BlokMcpDocumentSource => value;
+const sourceFromPublic = (value: Public.BlokMcpDocumentSource): BlokMcpDocumentSource => value;
+const sourceErrorToPublic: typeof Public.BlokMcpSourceError = BlokMcpSourceError;
 
 // A TypeScript host wires the public handlers into the SDK without a cast.
 const wireHost = (server: Server, blok: Public.BlokMcp): void => {
@@ -49,7 +52,9 @@ const sameKeys: [
   SameKeys<BlokCustomToolsFile, Public.BlokCustomToolsFile>,
   SameKeys<CustomBlock, PublicCustomBlock>,
   SameKeys<InternalOptions, Public.BlokMcpOptions>,
-] = [true, true, true, true, true];
+  SameKeys<BlokDocumentCaller, Public.BlokDocumentCaller>,
+  SameKeys<BlokMcpDocumentSource, Public.BlokMcpDocumentSource>,
+] = [true, true, true, true, true, true, true];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -63,8 +68,8 @@ describe('@bloklabs/mcp public types', () => {
   it('keeps the compile-time checks referenced', () => {
     expect([
       actorToPublic, actorFromPublic, overridesToPublic, overridesFromPublic, customToolsToPublic, optionsToPublic, optionsFromPublic,
-      blokToPublic, hooksFromPublic, parseArgsToPublic, wireHost,
-    ]).toHaveLength(11);
+      blokToPublic, hooksFromPublic, parseArgsToPublic, wireHost, sourceToPublic, sourceFromPublic, sourceErrorToPublic,
+    ]).toHaveLength(14);
     expect(sameKeys.every(Boolean)).toBe(true);
   });
 

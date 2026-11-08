@@ -318,3 +318,33 @@ const handler = createMcpHandler(() => {
 - Blok's tools answer exactly as the standalone server's, including its protocol errors and the approval question (`input_required`, or elicitation for 2025 clients).
 - Origin and Host checks, a body size cap and OAuth are your server's job. Stateless HTTP (a server per request) is supported; stateful sessions are not promised.
 - `blok.close()` waits for calls in flight and closes every handle.
+
+### Your own document store
+
+Pass `source: { kind: 'custom', source }` to load and save stored documents through your own code. It replaces `files` and `endpoint`, and works with `createBlokMcpServer` too.
+
+```js
+import { BlokMcpSourceError } from '@bloklabs/mcp';
+
+const source = {
+  // Null: never saved. An existing document needs a non-empty version.
+  load: async (caller, documentId) => ({ document: await db.read(documentId), version: await db.version(documentId) }),
+  // ifVersion null: the document must not exist yet. Otherwise it must equal the stored version.
+  save: async (caller, documentId, documentText, ifVersion) => {
+    if (!(await db.writeIf(documentId, documentText, ifVersion, caller.actor))) {
+      throw new BlokMcpSourceError('changed', '');
+    }
+
+    return { version: await db.version(documentId) };
+  },
+  // Optional: turns on blok_list_documents.
+  list: async (caller, { query, cursor, limit }) => ({ documents: [{ id: 'doc', title: 'Notes' }], nextCursor: null }),
+};
+```
+
+- `caller` is the caller that opened the handle: `{ principal, clientName, scopes, actor }`. Blok still runs `authorize` before every open and on every listed id.
+- Blok checks each loaded document as it checks a file: a `blocks` array, at most 48 levels deep, lone surrogates read as U+FFFD.
+- Refuse with `new BlokMcpSourceError(kind, agentMessage)`: `changed` is `DOCUMENT_CHANGED`, `unavailable` is `SOURCE_UNAVAILABLE`, `forbidden` is `FORBIDDEN`, `invalidId` is `INVALID_ARGS`. The agent sees `agentMessage`, or Blok's own words when it is empty.
+- Any other throw, and a load or save answered without a version, goes to stderr in full. The agent sees `SOURCE_UNAVAILABLE` in generic words.
+- A failed save drops the batch: the handle reloads your document, and the batch's undo step is gone.
+- A custom source counts as a source everywhere: with `--ticket-url` it still needs `authorize`.

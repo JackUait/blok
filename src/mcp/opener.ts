@@ -14,6 +14,7 @@ import { resolveMode } from './mode';
 import { createPageDeliveryTracker } from './page-titles';
 import type { BlokMcpOptions } from './options';
 import type { HandleSession } from './session';
+import { createCustomSource } from './sources/custom';
 import { createEndpointSource } from './sources/endpoint';
 import { createFilesSource } from './sources/files';
 import type { DocumentSource } from './sources/types';
@@ -23,8 +24,16 @@ export const createSource = (source: BlokMcpOptions['source']): DocumentSource |
   if (source === undefined) {
     return null;
   }
-
-  return source.kind === 'files' ? createFilesSource(source.dir) : createEndpointSource(source);
+  switch (source.kind) {
+    case 'files':
+      return createFilesSource(source.dir);
+    case 'custom':
+      return createCustomSource(source.source);
+    case 'endpoint':
+    default:
+      // An unknown kind from untyped JS has always been an endpoint.
+      return createEndpointSource(source);
+  }
 };
 
 export interface OpenerDeps {
@@ -50,6 +59,9 @@ export const createOpener = (
     (deps.options.agentActor ?? defaultAgentActor)(caller.principal, caller.clientName);
 
   const authorize = deps.options.authorize;
+  // A host's source acts for the caller that opened the handle; files and endpoint ignore who calls.
+  const sourceFor = (caller: Caller, actor: AgentActor): DocumentSource | null =>
+    deps.source?.forCaller?.({ principal: caller.principal, clientName: caller.clientName, scopes: caller.scopes, actor }) ?? deps.source;
 
   const open: DispatcherDeps['open'] = async (request, caller) => {
     if (authorize !== undefined && !(await authorize(caller.principal, request.documentId, request.write))) {
@@ -65,7 +77,7 @@ export const createOpener = (
 
       return deps.openLive(request, caller, actor);
     }
-    const source = deps.source;
+    const source = sourceFor(caller, actor);
 
     if (source === null) {
       throw surfaceError('SOURCE_UNAVAILABLE', 'No document source is configured. Start blok-mcp with --source.');
@@ -95,10 +107,12 @@ export const createOpener = (
   };
 
   const list: DispatcherDeps['list'] = async (request, caller): Promise<ListResult> => {
-    if (deps.source?.list === undefined) {
+    const source = sourceFor(caller, actorFor(caller));
+
+    if (source?.list === undefined) {
       return { documents: [], nextCursor: null, supported: false };
     }
-    const listing = await deps.source.list(request);
+    const listing = await source.list(request);
     // A listed id is a read; without a hook (stdio) every document is visible.
     const readable = authorize === undefined
       ? listing.documents
@@ -118,7 +132,7 @@ export const createOpener = (
    * the host's first PUT of it comes later, on an edit or a reopen.
    */
   const createPage = async (caller: Caller): Promise<{ pageId: string }> => {
-    const source = deps.source;
+    const source = sourceFor(caller, actorFor(caller));
     const pageId = mintId();
 
     try {

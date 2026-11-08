@@ -1,3 +1,5 @@
+import type { BlokDocumentCaller } from '../options';
+
 export interface LoadedDocument {
   raw: unknown;
   version: string | null;
@@ -11,7 +13,7 @@ export interface SourceListing {
 }
 
 export interface DocumentSource {
-  readonly kind: 'files' | 'endpoint';
+  readonly kind: 'files' | 'endpoint' | 'custom';
   load(documentId: string): Promise<LoadedDocument>;
   save(
     documentId: string,
@@ -21,6 +23,8 @@ export interface DocumentSource {
   list?(request: { query?: string; cursor?: string; limit: number }): Promise<SourceListing>;
   /** Whether two ids name one stored file, as a symlink and its target do. */
   sameDocument?(first: string, second: string): Promise<boolean>;
+  /** The same source acting for one caller. Only a host's source needs one; the others ignore who calls. */
+  forCaller?(caller: BlokDocumentCaller): DocumentSource;
 }
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>

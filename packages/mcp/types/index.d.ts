@@ -51,7 +51,11 @@ export interface BlokMcpOptions {
    * agent's id is named alone. The default actor sets it to the principal.
    */
   agentActor?: (principal: string, clientName: string) => AgentActor;
-  source?: { kind: 'endpoint'; url: string; endpointAuth: string; list?: string } | { kind: 'files'; dir: string };
+  /** Where stored documents live. `custom` is your own store; it cannot be combined with the other two. */
+  source?:
+    | { kind: 'endpoint'; url: string; endpointAuth: string; list?: string }
+    | { kind: 'files'; dir: string }
+    | { kind: 'custom'; source: BlokMcpDocumentSource };
   /** Host custom tool descriptions, as `--manifest <file>` loads them. */
   manifest?: BlokCustomToolsFile;
   /** 'page-map' turns on headless page.rename / page.setIcon, and inserting a page block (it creates the page document). Default 'off'. */
@@ -76,6 +80,46 @@ export interface BlokMcpOptions {
    * On by default.
    */
   comments?: boolean;
+}
+
+/** Who works on a document: the caller that opened the handle, with the agent's actor. */
+export interface BlokDocumentCaller {
+  principal: string;
+  clientName: string;
+  /** Null when the caller came without scopes. */
+  scopes: readonly string[] | null;
+  actor: AgentActor;
+}
+
+/**
+ * Your own document store. Blok checks every loaded document as it checks a file (a `blocks`
+ * array, at most 48 levels deep, lone surrogates as U+FFFD), and still runs `authorize` first.
+ * Throw a `BlokMcpSourceError` to refuse with a code. Any other throw, or a missing version, is
+ * logged to stderr and the agent sees SOURCE_UNAVAILABLE; a failed save drops the batch from memory.
+ */
+export interface BlokMcpDocumentSource {
+  /** Null: never saved (opens empty, `exists: false`). An existing document needs a non-empty version. */
+  load(caller: BlokDocumentCaller, documentId: string): Promise<{ document: unknown; version: string } | null>;
+  /**
+   * `documentText` is compact JSON. `ifVersion` null means "must not exist yet"; otherwise it must
+   * equal the stored version, or throw `changed`. Answer the new non-empty version.
+   */
+  save(caller: BlokDocumentCaller, documentId: string, documentText: string, ifVersion: string | null): Promise<{ version: string }>;
+  /** Absent: listing is not supported. Blok drops every id `authorize` refuses. */
+  list?(
+    caller: BlokDocumentCaller,
+    request: { query?: string; cursor?: string; limit: number },
+  ): Promise<{ documents: Array<{ id: string; title?: string | null }>; nextCursor?: string | null }>;
+}
+
+/** changed: DOCUMENT_CHANGED; unavailable: SOURCE_UNAVAILABLE; forbidden: FORBIDDEN; invalidId: INVALID_ARGS. */
+export type BlokMcpSourceErrorKind = 'changed' | 'unavailable' | 'forbidden' | 'invalidId';
+
+/** A refusal from your document source. The agent sees `agentMessage`, or Blok's own words when it is empty. */
+export declare class BlokMcpSourceError extends Error {
+  readonly kind: BlokMcpSourceErrorKind;
+  readonly agentMessage: string;
+  constructor(kind: BlokMcpSourceErrorKind, agentMessage: string, options?: { cause?: unknown });
 }
 
 export type McpAssetKind = 'image' | 'video' | 'audio' | 'file';

@@ -9,7 +9,10 @@ export interface BlokMcpOptions {
   tickets?: { kind: 'secret'; secret: string } | { kind: 'url'; url: string; hostToken: string };
   authorize?: (principal: string, documentId: string, write: boolean) => Promise<boolean>;
   agentActor?: (principal: string, clientName: string) => AgentActor;
-  source?: { kind: 'endpoint'; url: string; endpointAuth: string; list?: string } | { kind: 'files'; dir: string };
+  source?:
+    | { kind: 'endpoint'; url: string; endpointAuth: string; list?: string }
+    | { kind: 'files'; dir: string }
+    | { kind: 'custom'; source: BlokMcpDocumentSource };
   manifest?: BlokCustomToolsFile;
   pageTitles?: 'off' | 'page-map';
   overrides?: ManifestOverrides;
@@ -25,6 +28,34 @@ export interface BlokMcpOptions {
    * On by default.
    */
   comments?: boolean;
+}
+
+/** Who works on a document: the caller that opened the handle, with the agent's actor. */
+export interface BlokDocumentCaller {
+  principal: string;
+  clientName: string;
+  /** Null when the caller came without scopes (stdio, or a host that passes none). */
+  scopes: readonly string[] | null;
+  actor: AgentActor;
+}
+
+/**
+ * The host's own document store (src/mcp/sources/custom.ts). Throw a BlokMcpSourceError to
+ * refuse with a code; any other throw is logged and the agent sees SOURCE_UNAVAILABLE.
+ */
+export interface BlokMcpDocumentSource {
+  /** Null: never saved. An existing document needs a non-empty version. */
+  load(caller: BlokDocumentCaller, documentId: string): Promise<{ document: unknown; version: string } | null>;
+  /**
+   * documentText is compact JSON. ifVersion null means "must not exist yet"; any other value
+   * must equal the stored version, else throw `changed`. Answer the new non-empty version.
+   */
+  save(caller: BlokDocumentCaller, documentId: string, documentText: string, ifVersion: string | null): Promise<{ version: string }>;
+  /** Absent: listing is not supported. Blok still runs authorize on every id. */
+  list?(
+    caller: BlokDocumentCaller,
+    request: { query?: string; cursor?: string; limit: number },
+  ): Promise<{ documents: Array<{ id: string; title?: string | null }>; nextCursor?: string | null }>;
 }
 
 /**

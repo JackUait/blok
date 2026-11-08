@@ -1,5 +1,5 @@
 import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
-import { Database, DatabaseComment, DatabaseRow, Table } from '@bloklabs/core/tools';
+import { Database, DatabaseComment, DatabaseRow, Page, Table, type PageConfig } from '@bloklabs/core/tools';
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
 import { loadIndex, readFile, writeFile, type DesktopPage, type WorkspaceIndex } from './storage';
 import { createDesktopFooter, readAppearance } from './settings';
@@ -36,6 +36,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   let currentId = '';
   let generation = 0;
   let saveOrder = Promise.resolve();
+  const pageListeners = new Map<string, Set<() => void>>();
   const status = document.createElement('div');
   status.setAttribute('data-desktop-status', '');
   status.setAttribute('role', 'status');
@@ -54,6 +55,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     const snapshot = JSON.stringify(index);
     saveOrder = saveOrder.then(() => writeFile('index', snapshot)).catch(showError);
   };
+  const notifyPage = (id: string): void => { pageListeners.get(id)?.forEach((listener) => listener()); };
   const showError = (error: unknown): void => {
     status.textContent = `Enregistrement impossible : ${String(error)}`;
     status.setAttribute('data-error', '');
@@ -65,8 +67,49 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       page.icon = next;
       frame.setPages(index.pages, index.activeId);
       saveManifest();
+      notifyPage(page.id);
     }
     onPageIcon(page.id, next ?? '');
+  };
+  const pageConfig: PageConfig = {
+    createFromMention: true,
+    todayMention: { label: 'Aujourd’hui', heading: 'Date', locale: 'fr' },
+    databasePages: true,
+    search: async (query) => {
+      if (!index) return [];
+      const needle = query.trim().toLocaleLowerCase();
+      return index.pages.filter((page) => page.title.toLocaleLowerCase().includes(needle)).slice(0, 40)
+        .map((page) => ({ pageId: page.id, title: page.title,
+          ...(page.icon ? { icon: { type: 'emoji' as const, value: page.icon } } : {}) }));
+    },
+    resolve: (id) => {
+      const page = index?.pages.find((item) => item.id === id);
+      return page ? { title: page.title, ...(page.icon ? { icon: { type: 'emoji' as const, value: page.icon } } : {}) } : null;
+    },
+    subscribe: (id, listener) => {
+      const listeners = pageListeners.get(id) ?? new Set<() => void>();
+      listeners.add(listener);
+      pageListeners.set(id, listeners);
+      return () => { listeners.delete(listener); if (listeners.size === 0) pageListeners.delete(id); };
+    },
+    href: (id) => `?page=${encodeURIComponent(id)}`,
+    pageIdFromHref: (href) => {
+      const url = new URL(href);
+      return url.protocol === location.protocol && url.host === location.host && url.pathname === location.pathname
+        ? url.searchParams.get('page') : null;
+    },
+    open: (id) => { if (index?.pages.some((page) => page.id === id)) navigate(id); },
+    create: async ({ pageId, title, parentId, document: initialDocument }) => {
+      if (!index) throw new Error('Espace local indisponible');
+      if (index.pages.some((page) => page.id === pageId)) throw new Error('Cette page existe déjà');
+      const page: DesktopPage = { id: pageId, title: title?.trim() || 'Nouvelle page', parentId: parentId ?? currentId };
+      if (initialDocument) await writeFile(pageId, JSON.stringify(initialDocument));
+      index.pages.push(page);
+      frame.setPages(index.pages, index.activeId);
+      saveManifest();
+      await saveOrder;
+      notifyPage(pageId);
+    },
   };
   const select = (id: string): void => {
     if (!index) return;
@@ -148,7 +191,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     renderCover();
     const instance = new Blok({
       holder,
-      tools: desktopTools,
+      tools: { ...desktopTools, page: { class: Page, config: { ...pageConfig } } },
       theme: readAppearance(),
       pageTitle: {
         placeholder: 'Nouvelle page',
@@ -157,6 +200,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           const next = title.trim() || 'Nouvelle page';
           page.title = next;
           toolbar.setTitle(next);
+          notifyPage(id);
           document.title = next;
           frame.setPages(index.pages, id);
           saveManifest();
@@ -198,6 +242,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (!page) return;
     if (command.type === 'rename') {
       page.title = command.title;
+      notifyPage(page.id);
       if (currentId === page.id) editor?.title.set(command.title);
     } else if (command.type === 'duplicate') {
       const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)` };
@@ -222,6 +267,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (removed.size === index.pages.length) return;
       index.trash = [...(index.trash ?? []), ...index.pages.filter((item) => removed.has(item.id))];
       index.pages = index.pages.filter((item) => !removed.has(item.id));
+      removed.forEach(notifyPage);
       if (removed.has(currentId)) navigate(index.pages[0]!.id, true);
     } else if (command.type === 'open-tab') {
       window.dispatchEvent(new Event('blok:desktop-new-tab'));

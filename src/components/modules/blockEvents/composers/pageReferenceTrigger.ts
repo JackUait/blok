@@ -1,4 +1,5 @@
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
+import { DATE_MENTION_ATTR, dateMentionLabel, localDateIso } from '../../../../shared/date-mention';
 import { DATA_ATTR } from '../../../constants/data-attributes';
 import type { PagePicker, PagePickerNewPage } from '../../../../tools/page/page-picker';
 import { createdId } from '../../../../tools/page/page-values';
@@ -135,6 +136,10 @@ export class PageReferenceTrigger extends BlockEventComposer {
         void this.commit(pageId);
       }, {
         newPage: this.newPageActions(page),
+        today: page.todayMention === undefined ? undefined : {
+          ...page.todayMention,
+          onPick: () => this.insertToday(),
+        },
         onClose: () => this.handlePickerClosed(picker),
         onActiveTitle: (title) => {
           this.activeTitle = title;
@@ -454,6 +459,30 @@ export class PageReferenceTrigger extends BlockEventComposer {
 
   /** Replaces "@query" with an inline page reference and closes the menu. */
   private insertMention(active: ActiveQuery, pageId: string): void {
+    const anchor = document.createElement('a');
+
+    anchor.setAttribute(PAGE_REFERENCE_ATTR, pageId);
+    anchor.textContent = PAGE_REFERENCE_FALLBACK;
+    this.insertInline(active, anchor);
+  }
+
+  /** Stores the selected calendar day, not a rolling "today" expression. */
+  private insertToday(): void {
+    const active = this.active;
+
+    if (active === null) return;
+    const now = new Date();
+    const iso = localDateIso(now);
+    const time = document.createElement('time');
+
+    time.setAttribute('datetime', iso);
+    time.setAttribute(DATE_MENTION_ATTR, '');
+    time.textContent = dateMentionLabel(iso, now, this.pageConfig?.todayMention?.locale);
+    this.insertInline(active, time);
+  }
+
+  /** Replaces the intact query with a single saved inline element. */
+  private insertInline(active: ActiveQuery, node: HTMLElement): void {
     const { input, block, start, end } = active;
     const selection = window.getSelection();
 
@@ -480,15 +509,11 @@ export class PageReferenceTrigger extends BlockEventComposer {
     range.setEnd(to.node, to.offset);
     range.deleteContents();
 
-    const anchor = document.createElement('a');
-
-    anchor.setAttribute(PAGE_REFERENCE_ATTR, pageId);
-    anchor.textContent = PAGE_REFERENCE_FALLBACK;
-    range.insertNode(anchor);
+    range.insertNode(node);
 
     const after = document.createRange();
 
-    after.setStartAfter(anchor);
+    after.setStartAfter(node);
     after.collapse(true);
     selection.removeAllRanges();
     selection.addRange(after);

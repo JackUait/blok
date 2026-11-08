@@ -11,6 +11,7 @@
 import type { SanitizerConfig } from '../../types';
 import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from './annotation-mark';
 import { EQUATION_SOURCE_ATTR } from './equation-mark';
+import { DATE_MENTION_ATTR, readDateMention } from './date-mention';
 import { preservePageReferenceAnchor } from './page-reference';
 
 /**
@@ -80,6 +81,13 @@ export const preserveEquationSpan = (node: Element): { [attr: string]: boolean |
   return { [EQUATION_SOURCE_ATTR]: true };
 };
 
+/** Keeps only valid, fixed calendar dates created by the @today action. */
+export const preserveDateMention = (node: Element): { [attr: string]: boolean } | false => {
+  return node.hasAttribute(DATE_MENTION_ATTR) && readDateMention(node.getAttribute('datetime')) !== null
+    ? { datetime: true, [DATE_MENTION_ATTR]: true }
+    : false;
+};
+
 /**
  * The one `span` rule for text fields: an annotation span keeps its two
  * attributes, an equation span follows {@link preserveEquationSpan}, and any
@@ -146,4 +154,5 @@ export const INLINE_TEXT_SANITIZE = {
   sub: {},
   mark: preserveColorStyles,
   span: preserveInlineSpan,
+  time: preserveDateMention,
 } as unknown as SanitizerConfig;

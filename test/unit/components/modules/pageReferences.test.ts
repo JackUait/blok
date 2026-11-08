@@ -27,7 +27,7 @@ interface Runtime {
   destroy: () => void;
   save: () => Promise<OutputData>;
   blocks: { delete: (index: number, setCaret?: boolean) => Promise<void> };
-  history: { clear: () => void; canUndo: () => boolean };
+  history: { clear: () => void; canUndo: () => boolean; undo: () => void };
   module: {
     blockManager: { getBlockById: (id: string) => Block | undefined };
     blockSelection: { enableNavigationMode: () => void; navigationModeEnabled: boolean };
@@ -85,6 +85,47 @@ describe('live inline page references', () => {
     peer = undefined;
     holder = undefined;
     vi.restoreAllMocks();
+  });
+
+  it('repaints a saved date mention from its calendar value', async () => {
+    const day = new Date();
+    const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    const instance = createEditor({ todayMention: { label: 'Aujourd’hui', heading: 'Date', locale: 'fr' } },
+      `<time datetime="${iso}" data-blok-date-mention="">old label</time>`);
+
+    await instance.isReady;
+    await settleFrame();
+
+    const mention = holder?.querySelector('time[data-blok-date-mention]');
+
+    expect(mention?.textContent).toBe('Aujourd’hui');
+    expect(mention?.getAttribute('datetime')).toBe(iso);
+    expect(htmlOf((await instance.save()).blocks[0]?.data.text)).toContain(`datetime="${iso}"`);
+  });
+
+  it('changes a date mention through its calendar and saves the chosen day', async () => {
+    const instance = createEditor({ todayMention: { label: 'Aujourd’hui', heading: 'Date', locale: 'fr' } },
+      '<time datetime="2026-11-08" data-blok-date-mention="">old label</time>');
+
+    await instance.isReady;
+    await settleFrame();
+    const mention = holder?.querySelector<HTMLTimeElement>('time[data-blok-date-mention]');
+
+    mention?.click();
+    const field = document.querySelector<HTMLInputElement>('[data-blok-date-picker] input[type="date"]');
+
+    expect(field).not.toBeNull();
+    if (field === null) return;
+    field.value = '2026-11-12';
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    await settleFrame();
+
+    expect(mention?.getAttribute('datetime')).toBe('2026-11-12');
+    expect(htmlOf((await instance.save()).blocks[0]?.data.text)).toContain('datetime="2026-11-12"');
+
+    instance.history.undo();
+    await settleFrame();
+    expect(htmlOf((await instance.save()).blocks[0]?.data.text)).toContain('datetime="2026-11-08"');
   });
 
   it('uses the editor locale while an inline page is unresolved', async () => {

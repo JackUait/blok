@@ -1,6 +1,7 @@
 import type { PageConfig, PageIcon, PageInfo } from '../../tools/page/types';
 import { pageIconNode } from '../../tools/page/icon-node';
 import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
+import { DATE_MENTION_ATTR, dateMentionLabel } from '../../shared/date-mention';
 import {
   PAGE_REFERENCE_ARROW_CLASSES,
   PAGE_REFERENCE_CLASSES,
@@ -14,6 +15,7 @@ import { IconArrowDiagonal } from '../icons';
 import { Module } from '../__module';
 import { DATA_ATTR } from '../constants/data-attributes';
 import { safeHref } from '../utils/sanitize-url';
+import { DateMentionPicker } from '../../tools/page/date-picker';
 
 const ICON_TESTID = 'page-reference-icon';
 const TITLE_TESTID = 'page-reference-title';
@@ -91,6 +93,8 @@ export class PageReferences extends Module {
   private readonly entries = new Map<string, PageEntry>();
   private observer: MutationObserver | null = null;
   private page: PageConfig | null = null;
+  private dateTimer: number | null = null;
+  private readonly datePicker = new DateMentionPicker();
 
   public prepare(): void {
     const wrapper = this.Blok.UI.nodes.wrapper;
@@ -106,6 +110,7 @@ export class PageReferences extends Module {
     this.listeners.on(wrapper, 'click', this.onClick, true);
     this.listeners.on(wrapper, 'keydown', this.onKeydown, true);
     this.sync();
+    this.scheduleDateRefresh();
   }
 
   public ownsTarget(target: EventTarget | null): boolean {
@@ -137,6 +142,9 @@ export class PageReferences extends Module {
   public destroy(): void {
     this.observer?.disconnect();
     this.observer = null;
+    if (this.dateTimer !== null) window.clearTimeout(this.dateTimer);
+    this.dateTimer = null;
+    this.datePicker.close();
     for (const entry of this.entries.values()) {
       ++entry.request;
       entry.unsubscribe?.();
@@ -151,6 +159,8 @@ export class PageReferences extends Module {
 
     const grouped = new Map<string, Set<HTMLAnchorElement>>();
     const wrapper = this.Blok.UI.nodes.wrapper;
+
+    this.syncDates(wrapper);
 
     for (const anchor of wrapper.querySelectorAll<HTMLAnchorElement>(`a[${PAGE_REFERENCE_ATTR}]`)) {
       if (anchor.closest(`[${DATA_ATTR.editor}]`) !== wrapper) {
@@ -181,6 +191,33 @@ export class PageReferences extends Module {
     for (const [pageId, group] of grouped) {
       this.syncEntry(pageId, group);
     }
+  }
+
+  /** Relative labels are presentation; the datetime attribute is the saved value. */
+  private syncDates(wrapper: HTMLElement): void {
+    const now = new Date();
+
+    for (const time of wrapper.querySelectorAll<HTMLTimeElement>(`time[${DATE_MENTION_ATTR}]`)) {
+      if (time.closest(`[${DATA_ATTR.editor}]`) !== wrapper) continue;
+      const label = dateMentionLabel(time.getAttribute('datetime') ?? '', now, this.page?.todayMention?.locale);
+
+      if (label === null) continue;
+      time.setAttribute('contenteditable', 'false');
+      time.setAttribute(DATA_ATTR.mutationFree, 'true');
+      time.tabIndex = 0;
+      if (time.textContent !== label) time.textContent = label;
+    }
+  }
+
+  private scheduleDateRefresh(): void {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    this.dateTimer = window.setTimeout(() => {
+      this.dateTimer = null;
+      this.sync();
+      if (!this.isDestroyed) this.scheduleDateRefresh();
+    }, next.getTime() - now.getTime() + 100);
   }
 
   private syncEntry(pageId: string, group: Set<HTMLAnchorElement>): void {
@@ -361,9 +398,19 @@ export class PageReferences extends Module {
   }
 
   private readonly onClick = (event: Event): void => {
-    if (!(event instanceof MouseEvent) || !this.ownsTarget(event.target)) {
+    if (!(event instanceof MouseEvent)) {
       return;
     }
+
+    const date = this.dateOf(event.target);
+
+    if (date !== null && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.openDatePicker(date);
+      return;
+    }
+    if (!this.ownsTarget(event.target)) return;
 
     const modified = event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
 
@@ -380,14 +427,45 @@ export class PageReferences extends Module {
   };
 
   private readonly onKeydown = (event: Event): void => {
-    if (!(event instanceof KeyboardEvent) || event.key !== 'Enter' || !this.ownsTarget(event.target)) {
+    if (!(event instanceof KeyboardEvent) || (event.key !== 'Enter' && event.key !== ' ')) {
       return;
     }
+
+    const date = this.dateOf(event.target);
+
+    if (date !== null) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.openDatePicker(date);
+      return;
+    }
+    if (event.key !== 'Enter' || !this.ownsTarget(event.target)) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
     void this.activate(event);
   };
+
+  private dateOf(target: EventTarget | null): HTMLTimeElement | null {
+    const time = target instanceof Element ? target.closest(`time[${DATE_MENTION_ATTR}]`) : null;
+
+    return time instanceof HTMLTimeElement && time.closest(`[${DATA_ATTR.editor}]`) === this.Blok.UI.nodes.wrapper
+      ? time : null;
+  }
+
+  private openDatePicker(time: HTMLTimeElement): void {
+    if (this.Blok.ReadOnly.isEnabled) return;
+    this.datePicker.open(time, this.page?.todayMention?.locale, (iso) => {
+      const block = this.Blok.BlockManager.getBlock(time);
+
+      if (block === undefined) return;
+      this.Blok.YjsManager.startSubStep();
+      time.setAttribute('datetime', iso);
+      time.textContent = dateMentionLabel(iso, new Date(), this.page?.todayMention?.locale);
+      block.dispatchChange();
+      this.Blok.YjsManager.stopCapturing();
+    });
+  }
 
   private async activate(event: MouseEvent | KeyboardEvent): Promise<void> {
     const anchor = this.anchorOf(event.target);

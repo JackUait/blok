@@ -783,6 +783,7 @@ span[data-blok-annotation]:hover::highlight(blok-annotation-open) {
 @import './heading.css';
 [data-blok-sheet='media-4'] { --blok-sheet: media-4; }
 @import './page-title.css';
+@import './date-mention.css';
 [data-blok-sheet='media-5'] { --blok-sheet: media-5; }
 @import './columns.css';
 @import './tabs.css';

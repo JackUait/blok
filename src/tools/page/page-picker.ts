@@ -1,5 +1,5 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconArrowDiagonal, IconPlus } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconPlus } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { SearchInput, SearchInputEvent } from '../../components/utils/popover/components/search-input';
@@ -64,6 +64,8 @@ export interface PagePickerOptions {
   searchField?: { placeholder: string; onQuery: (query: string) => void };
   /** Adds the "New page" section under the pages. Not with `searchField`. */
   newPage?: PagePickerNewPage;
+  /** An inline date action offered for @today, without a separate search field. */
+  today?: { label: string; heading: string; onPick: () => void };
   /** Called once when the picker closes without a pick. */
   onClose?: () => void;
   /** Gets the active row's page title, or null when the active row is not a page. */
@@ -125,6 +127,7 @@ export class PagePicker {
   private onPick: ((pageId: string) => void) | null = null;
   private onChoose: ((pageId: string) => Promise<void>) | null = null;
   private newPage: PagePickerNewPage | null = null;
+  private today: PagePickerOptions['today'] | null = null;
   /** Section headers show only in the inline menu, not under a search field. */
   private sectioned = false;
   private results: PageSearchResult[] = [];
@@ -168,6 +171,7 @@ export class PagePicker {
     this.onActiveTitle = options.onActiveTitle ?? null;
     this.sectioned = options.searchField === undefined;
     this.newPage = options.searchField === undefined ? options.newPage ?? null : null;
+    this.today = options.searchField === undefined ? options.today ?? null : null;
     this.content = document.createElement('div');
     this.popover = new PopoverDesktop({
       items: [{ type: PopoverItemType.Html, element: this.content }],
@@ -235,6 +239,7 @@ export class PagePicker {
     this.restoreAnchor();
     this.sectioned = false;
     this.newPage = null;
+    this.today = null;
     this.onChoose = step.onChoose;
     this.results = [];
     this.answered = false;
@@ -326,6 +331,7 @@ export class PagePicker {
     this.onClose = null;
     this.onActiveTitle = null;
     this.newPage = null;
+    this.today = null;
     this.results = [];
     this.entries = [];
     this.query = '';
@@ -467,6 +473,12 @@ export class PagePicker {
     if (this.loading && this.results.length === 0) {
       rows.push(skeletonRow(), skeletonRow());
     }
+    if (this.today !== null && ('today'.startsWith(this.query.toLocaleLowerCase()) ||
+      this.today.label.toLocaleLowerCase().startsWith(this.query.toLocaleLowerCase()))) {
+      rows.push(this.buildHeader('date', this.today.heading));
+      add({ key: 'date:today', element: this.buildActionOption('page-picker-today', IconCalendar, this.today.label),
+        run: () => this.today?.onPick() });
+    }
     if (this.newPage !== null) {
       this.appendNewPageSection(this.newPage, rows, add);
     }
@@ -517,7 +529,7 @@ export class PagePicker {
     this.render();
   }
 
-  private buildHeader(name: 'link' | 'new', text: string): HTMLElement {
+  private buildHeader(name: 'link' | 'new' | 'date', text: string): HTMLElement {
     const header = document.createElement('div');
 
     header.setAttribute('role', 'presentation');

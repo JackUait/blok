@@ -559,6 +559,24 @@ describe('PageReferenceTrigger — Notion "@" menu', () => {
     expect(popovers.at(-1)?.nothingFound).toBe(false);
   });
 
+  it('replaces @today with a fixed inline calendar date', async () => {
+    const { block } = mentionSetup('See @today', {
+      todayMention: { label: 'Aujourd’hui', heading: 'Date' },
+    });
+
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+    expect(option('page-picker-today')?.textContent).toBe('Aujourd’hui');
+    option('page-picker-today')?.click();
+
+    const time = block.currentInput?.querySelector('time[data-blok-date-mention]');
+    const now = new Date();
+    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    expect(time?.getAttribute('datetime')).toBe(iso);
+    expect(block.currentInput?.textContent).not.toContain('@today');
+    expect(block.dispatchChange).toHaveBeenCalledOnce();
+  });
+
   it('creates a titled sub-page, uses the host\'s id and mentions it without opening it', async () => {
     const create = vi.fn().mockResolvedValue({ pageId: 'host-id' });
     const open = vi.fn();

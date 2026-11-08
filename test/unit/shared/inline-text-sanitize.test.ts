@@ -8,6 +8,7 @@ import {
   INLINE_TEXT_SANITIZE,
   preserveColorStyles,
   preserveEquationSpan,
+  preserveDateMention,
 } from '../../../src/shared/inline-text-sanitize';
 import { sanitizeHtmlFragment } from '../../../src/view/sanitize';
 
@@ -46,5 +47,21 @@ describe('shared inline sanitize rules', () => {
     const result = sanitizeHtmlFragment(MARK, INLINE_TEXT_SANITIZE);
 
     expect(result).toBe('<mark style="color: red;">hot</mark>');
+  });
+
+  it('keeps fixed date mentions across editor and headless sanitizers', () => {
+    const input = '<time datetime="2026-11-08" data-blok-date-mention="" onclick="bad()">8 nov. 2026</time>';
+    const expected = '<time datetime="2026-11-08" data-blok-date-mention="">8 nov. 2026</time>';
+
+    expect(clean(input, INLINE_TEXT_SANITIZE)).toBe(expected);
+    expect(sanitizeHtmlFragment(input, INLINE_TEXT_SANITIZE)).toBe(expected);
+    expect(preserveDateMention(document.createElement('time'))).toBe(false);
+  });
+
+  it('rejects invalid date mention metadata', () => {
+    const input = '<time datetime="2026-02-30" data-blok-date-mention="">invalid</time>';
+
+    expect(clean(input, INLINE_TEXT_SANITIZE)).toBe('invalid');
+    expect(sanitizeHtmlFragment(input, INLINE_TEXT_SANITIZE)).toBe('invalid');
   });
 });

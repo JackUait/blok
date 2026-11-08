@@ -84,6 +84,8 @@ export interface PageConfig {
   databasePages?: boolean;
   /** Offers "New page" in the "@" menu. Needs a `create` that stores `title` and `parentId`. */
   createFromMention?: boolean;
+  /** Offers @today as a saved calendar day with a relative display label. */
+  todayMention?: { label: string; heading: string; locale?: string };
   /** Searches visible pages for an inline reference. `''` asks for recent pages. */
   search?(query: string): Promise<readonly PageSearchResult[]>;
   /** The page's URL. Without it the link has no href. */

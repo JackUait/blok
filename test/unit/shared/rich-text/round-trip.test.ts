@@ -19,4 +19,10 @@ describe.each([['parse5', htmlToSegmentsNode], ['dom', htmlToSegmentsDom]] as co
 
     expect(segmentsToHtml(read(once))).toBe(once);
   });
+
+  it('keeps an inline date and its calendar value', () => {
+    const html = '<time datetime="2026-11-08" data-blok-date-mention="">8 nov. 2026</time>';
+
+    expect(segmentsToHtml(read(html))).toBe('<time data-blok-date-mention="" datetime="2026-11-08">8 nov. 2026</time>');
+  });
 });

@@ -443,17 +443,17 @@ describe('CI critical-path law', () => {
     expect(mcp.strategy?.['fail-fast']).toBe(false);
     expect(mcp.strategy?.matrix?.include).toEqual([
       { part: 'node', target: 'node', suites: '' },
-      { part: 'go 1/2', target: 'go', suites: '--suite live' },
-      { part: 'go embed', target: 'go', suites: '--suite embed' },
-      { part: 'go 2/2', target: 'go', suites: '--suite protocol --suite tool-args --suite corpus --suite files-source --suite endpoint-source --suite cli --suite http --suite approvals --suite tickets --suite pages --suite handles --suite shutdown --suite timeouts' },
-      { part: 'rust 1/2', target: 'rust', suites: '--suite live' },
-      { part: 'rust embed', target: 'rust', suites: '--suite embed' },
-      { part: 'rust 2/2', target: 'rust', suites: '--suite protocol --suite tool-args --suite corpus --suite files-source --suite endpoint-source --suite cli --suite http --suite approvals --suite tickets --suite pages --suite handles --suite shutdown --suite timeouts' },
-      { part: 'csharp 1/4', target: 'csharp', suites: '--suite live' },
-      { part: 'csharp 2/4', target: 'csharp', suites: '--suite corpus --suite tool-args --suite handles --suite pages' },
-      { part: 'csharp 3/4', target: 'csharp', suites: '--suite protocol --suite tickets --suite approvals --suite http' },
-      { part: 'csharp embed', target: 'csharp', suites: '--suite embed' },
-      { part: 'csharp 4/4', target: 'csharp', suites: '--suite shutdown --suite cli --suite timeouts --suite files-source --suite endpoint-source' },
+      { part: 'go 1/3', target: 'go', suites: '--suite live' },
+      { part: 'go 2/3', target: 'go', suites: '--suite embed' },
+      { part: 'go 3/3', target: 'go', suites: '--suite protocol --suite tool-args --suite corpus --suite files-source --suite endpoint-source --suite cli --suite http --suite approvals --suite tickets --suite pages --suite handles --suite shutdown --suite timeouts' },
+      { part: 'rust 1/3', target: 'rust', suites: '--suite live' },
+      { part: 'rust 2/3', target: 'rust', suites: '--suite embed' },
+      { part: 'rust 3/3', target: 'rust', suites: '--suite protocol --suite tool-args --suite corpus --suite files-source --suite endpoint-source --suite cli --suite http --suite approvals --suite tickets --suite pages --suite handles --suite shutdown --suite timeouts' },
+      { part: 'csharp 1/5', target: 'csharp', suites: '--suite live' },
+      { part: 'csharp 2/5', target: 'csharp', suites: '--suite corpus --suite tool-args --suite handles --suite pages' },
+      { part: 'csharp 3/5', target: 'csharp', suites: '--suite protocol --suite tickets --suite approvals --suite http' },
+      { part: 'csharp 4/5', target: 'csharp', suites: '--suite embed' },
+      { part: 'csharp 5/5', target: 'csharp', suites: '--suite shutdown --suite cli --suite timeouts --suite files-source --suite endpoint-source' },
     ]);
     expectOrderedSteps('ci.mcp-conformance', mcp, [
       checkout,

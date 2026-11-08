@@ -12,6 +12,7 @@
  * Signing in is the host's job; this example fakes it:
  *   HTTP   `X-Example-User: <name>` signs the caller in as <name>. `X-Example-Signed-In: true`
  *          without X-Example-User signs them in without a name. Neither header: anonymous.
+ *          `X-Example-Scopes: a,b` puts scopes on the token; Blok ignores them by default.
  *   stdio  the one local user, "local".
  * Blok refuses anonymous and unnamed callers unless --example-allow-anonymous is given.
  *
@@ -208,12 +209,17 @@ const sourceOf = (example, options) => {
   return { kind: 'custom', source: exampleSource(example.source.slice('endpoint:'.length)) };
 };
 
+// X-Example-Scopes: a comma list of the token's scopes. Blok ignores them by default (the host owns auth).
+const scopesOf = headers => (typeof headers['x-example-scopes'] === 'string'
+  ? headers['x-example-scopes'].split(',').map(scope => scope.trim()).filter(scope => scope !== '')
+  : []);
+
 /** The signed-in user from the fake headers, as the SDK's AuthInfo. */
 const authInfoOf = (headers) => {
   const user = headers['x-example-user'];
 
   if (typeof user === 'string' && user !== '') {
-    return { token: 'example', clientId: NAME, scopes: [], extra: { sub: user } };
+    return { token: 'example', clientId: NAME, scopes: scopesOf(headers), extra: { sub: user } };
   }
   if (headers['x-example-signed-in'] === 'true') {
     return { token: 'example', clientId: NAME, scopes: [], extra: {} };
@@ -302,7 +308,11 @@ const main = async () => {
   });
   const host = hostSurface(example);
   const buildServer = () => {
-    const server = new Server({ name: NAME, version: '1.0.0' }, { instructions: `Host instructions.\n\n${blok.instructions}` });
+    // logging is the host's own capability: Blok must keep it.
+    const server = new Server({ name: NAME, version: '1.0.0' }, {
+      instructions: `Host instructions.\n\n${blok.instructions}`,
+      capabilities: { logging: {} },
+    });
 
     blok.attach(server, host);
 

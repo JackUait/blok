@@ -96,12 +96,6 @@ describe('MCP conformance CI law', () => {
     expect(SUITES).toEqual(SUITE_FILES);
   });
 
-  // Blok on a host's own server: each target's embed example, run by the embed suite.
-  it.each(TARGETS)('runs the embed suite on %s in CI', (target) => {
-    expect(SUITES).toContain('embed');
-    expect(suitesRunFor(mcpRuns(ciText()), target)).toContain('embed');
-  });
-
   it.each(TARGETS)('runs every MCP conformance suite on %s in CI', (target) => {
     expect(suitesRunFor(mcpRuns(ciText()), target)).toEqual(SUITES);
   });

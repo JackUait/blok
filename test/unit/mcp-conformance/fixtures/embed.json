@@ -49,7 +49,8 @@
               "instructions": "Host instructions.\n\nHow to write rich text in Blok:\nRich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.\nMarks: bold, italic, underline, strikethrough, code, sup, sub, highlight, color, background, link, and tag:<name> for a custom inline tool. sup and sub cannot share a run.\nhighlight alone is stored as background \"yellow\"; with a background, as that background. color and background take a preset: \"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.\nA link needs href. With no target or rel it gets target \"_blank\" and rel \"nofollow\"; an \"#anchor\" href gets target \"_self\". A target or rel you give is kept, but in the editor a host link config replaces both.\nEmbeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page: id is the pageId in a page block's data, not the block id.\ntext.format with unset [\"*\"] clears every mark; \"tag:*\" clears every custom mark.\nmarkdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format.\n\nRules for editing a Blok document:\n- Call blok_read when you need blocks, text or data you do not have. Address blocks by the ids it returns.\n- Rich text is segments, not Markdown and not HTML. To add Markdown, use the markdown.insert command.\n- When the blok_execute schema lists a command's full arguments, use them. Otherwise call blok_describe with { command } before using it for the first time. Call it with { tool } for a block type's data.\n- Someone may be typing in the document at the same time, so its text can change between your calls.\n- On a STALE error, call blok_read again and retry with fresh ids and text.\n- A CORRECTED warning means Blok changed your command. Check the result is what you meant.\n- Change only the blocks the request is about. To add something, insert a new block; do not convert or rewrite a nearby block to get it.\n- Put related edits in one blok_execute call.\n- A page block's data.pageId is the id of its sub-page document; open it with blok_open to write inside it.",
               "capabilities": {
                 "tools": true,
-                "prompts": true
+                "prompts": true,
+                "logging": {}
               }
             }
           }
@@ -92,7 +93,8 @@
               "instructions": "Host instructions.\n\nHow to write rich text in Blok:\nRich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.\nMarks: bold, italic, underline, strikethrough, code, sup, sub, highlight, color, background, link, and tag:<name> for a custom inline tool. sup and sub cannot share a run.\nhighlight alone is stored as background \"yellow\"; with a background, as that background. color and background take a preset: \"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.\nA link needs href. With no target or rel it gets target \"_blank\" and rel \"nofollow\"; an \"#anchor\" href gets target \"_self\". A target or rel you give is kept, but in the editor a host link config replaces both.\nEmbeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page: id is the pageId in a page block's data, not the block id.\ntext.format with unset [\"*\"] clears every mark; \"tag:*\" clears every custom mark.\nmarkdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format.\n\nRules for editing a Blok document:\n- Call blok_read when you need blocks, text or data you do not have. Address blocks by the ids it returns.\n- Rich text is segments, not Markdown and not HTML. To add Markdown, use the markdown.insert command.\n- When the blok_execute schema lists a command's full arguments, use them. Otherwise call blok_describe with { command } before using it for the first time. Call it with { tool } for a block type's data.\n- Someone may be typing in the document at the same time, so its text can change between your calls.\n- On a STALE error, call blok_read again and retry with fresh ids and text.\n- A CORRECTED warning means Blok changed your command. Check the result is what you meant.\n- Change only the blocks the request is about. To add something, insert a new block; do not convert or rewrite a nearby block to get it.\n- Put related edits in one blok_execute call.\n- A page block's data.pageId is the id of its sub-page document; open it with blok_open to write inside it.",
               "capabilities": {
                 "tools": true,
-                "prompts": true
+                "prompts": true,
+                "logging": {}
               }
             }
           }
@@ -116,7 +118,8 @@
               "instructions": "Host instructions.\n\nHow to write rich text in Blok:\nRich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.\nMarks: bold, italic, underline, strikethrough, code, sup, sub, highlight, color, background, link, and tag:<name> for a custom inline tool. sup and sub cannot share a run.\nhighlight alone is stored as background \"yellow\"; with a background, as that background. color and background take a preset: \"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.\nA link needs href. With no target or rel it gets target \"_blank\" and rel \"nofollow\"; an \"#anchor\" href gets target \"_self\". A target or rel you give is kept, but in the editor a host link config replaces both.\nEmbeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page: id is the pageId in a page block's data, not the block id.\ntext.format with unset [\"*\"] clears every mark; \"tag:*\" clears every custom mark.\nmarkdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format.\n\nRules for editing a Blok document:\n- Call blok_read when you need blocks, text or data you do not have. Address blocks by the ids it returns.\n- Rich text is segments, not Markdown and not HTML. To add Markdown, use the markdown.insert command.\n- When the blok_execute schema lists a command's full arguments, use them. Otherwise call blok_describe with { command } before using it for the first time. Call it with { tool } for a block type's data.\n- Someone may be typing in the document at the same time, so its text can change between your calls.\n- On a STALE error, call blok_read again and retry with fresh ids and text.\n- A CORRECTED warning means Blok changed your command. Check the result is what you meant.\n- Change only the blocks the request is about. To add something, insert a new block; do not convert or rewrite a nearby block to get it.\n- Put related edits in one blok_execute call.\n- A page block's data.pageId is the id of its sub-page document; open it with blok_open to write inside it.",
               "capabilities": {
                 "tools": true,
-                "prompts": true
+                "prompts": true,
+                "logging": {}
               },
               "resultType": "complete",
               "_meta": {
@@ -4608,12 +4611,12 @@
         "blok_open"
       ],
       "name": "a host tool named blok_open stops the server at start",
-      "stderrPattern": "blok_open",
+      "stderrPattern": "Blok already serves blok_open",
       "expectExit": {
         "code": 2,
         "signal": null,
         "stderr": {
-          "pattern": "blok_open"
+          "pattern": "Blok already serves blok_open"
         }
       },
       "expectHostRequests": []
@@ -4629,12 +4632,12 @@
         "improve"
       ],
       "name": "a host prompt named improve stops the server at start",
-      "stderrPattern": "improve",
+      "stderrPattern": "Blok already serves improve",
       "expectExit": {
         "code": 2,
         "signal": null,
         "stderr": {
-          "pattern": "improve"
+          "pattern": "Blok already serves improve"
         }
       },
       "expectHostRequests": []
@@ -8310,6 +8313,441 @@
         "stderr": {
           "pattern": "needs a per-document check"
         }
+      },
+      "expectHostRequests": []
+    },
+    {
+      "transport": "http",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize",
+        "--http",
+        "127.0.0.1:0"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "title": "Notes",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": "Hello"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "name": "a handle is bound to its opener: another signed-in user gets UNKNOWN_HANDLE",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "headers": {
+          "X-Example-User": "alice"
+        }
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "host-example"
+                }
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "headers": {
+            "X-Example-User": "bob"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "UNKNOWN_HANDLE",
+                  "message": "No open document has this handle. It may have expired; call blok_open again.",
+                  "retryable": false
+                }
+              },
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "host-example"
+                }
+              },
+              "isError": true
+            }
+          }
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "transport": "http",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize",
+        "--http",
+        "127.0.0.1:0"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "title": "Notes",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": "Hello"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "name": "a signed-in host user with no scope claims can execute, and scope claims are ignored by default",
+      "session": {
+        "protocolVersion": "2026-07-28",
+        "clientName": "Desktop",
+        "headers": {
+          "X-Example-User": "alice"
+        }
+      },
+      "maskKeys": [
+        "lastEditedAt",
+        "savedVersion",
+        "revision"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "host-example"
+                }
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "No scopes"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "host-example"
+                }
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Read scope only"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "headers": {
+            "X-Example-Scopes": "blok.read"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "resultType": "complete",
+              "_meta": {
+                "io.modelcontextprotocol/serverInfo": {
+                  "name": "host-example"
+                }
+              },
+              "isError": false
+            }
+          }
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": true
+          }
+        }
+      ]
+    },
+    {
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}"
+      ],
+      "name": "no --authorize stops the example at start",
+      "stderrPattern": "needs a per-document check",
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": {
+          "pattern": "needs a per-document check"
+        }
+      },
+      "expectHostRequests": []
+    },
+    {
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize",
+        "--http",
+        "127.0.0.1:0",
+        "--auth",
+        "oauth",
+        "--oauth-issuer",
+        "https://issuer.example",
+        "--oauth-audience",
+        "https://blok.example",
+        "--oauth-jwks",
+        "${host}/jwks"
+      ],
+      "name": "--auth oauth stops the example at start: the host signs callers in",
+      "stderrPattern": "Blok's own OAuth is for the standalone server",
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": {
+          "pattern": "Blok's own OAuth is for the standalone server"
+        }
+      },
+      "expectHostRequests": []
+    },
+    {
+      "transport": "cli",
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize",
+        "--principal",
+        "someone"
+      ],
+      "name": "--principal stops the example at start",
+      "stderrPattern": "principal names the standalone caller",
+      "expectExit": {
+        "code": 2,
+        "signal": null,
+        "stderr": {
+          "pattern": "principal names the standalone caller"
+        }
+      },
+      "expectHostRequests": []
+    },
+    {
+      "transport": "cli",
+      "argv": [
+        "--ticket-url",
+        "${host}/tickets",
+        "--sync-url",
+        "ws://127.0.0.1:9/sync"
+      ],
+      "name": "--ticket-url with no source and no --authorize starts: the host decides per room",
+      "env": {
+        "BLOK_MCP_HOST_TOKEN": "host-token"
+      },
+      "expectExit": {
+        "code": 0
       },
       "expectHostRequests": []
     }

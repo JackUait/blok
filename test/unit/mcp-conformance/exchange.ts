@@ -98,8 +98,9 @@ import {
  * compare      "blok-owned" (the embed suite): the server is a host's, so its SDK owns the wire.
  *               Only what Blok owns is compared (see blokOwned): each answer's result or
  *               error, tools and prompts keyed by name (order is the SDK's; a host_* entry
- *               counts by name only), serverInfo name, instructions, which of the tools and
- *               prompts capabilities exist, and a server request's method, message and schema.
+ *               counts by name only; a name listed twice is "<duplicate>"), serverInfo name,
+ *               instructions, which of the tools and prompts capabilities exist, the host's own
+ *               logging capability as is, and a server request's method, message and schema.
  *               No expectHttp is recorded. --example-* flags are the example's own, so they
  *               are left out when working out ${contractRevision}.
  *
@@ -354,8 +355,14 @@ const SERVER_INFO_META = 'io.modelcontextprotocol/serverInfo';
 // The embed example's own tools and prompts; their schemas are each host SDK's rendering.
 const HOST_ENTRY = /^host_/;
 
+// A name listed twice stays visible: clients would see two entries.
 const byName = (list: unknown): unknown => (Array.isArray(list)
-  ? Object.fromEntries(list.filter(isRecord).map((entry) => [String(entry.name), HOST_ENTRY.test(String(entry.name)) ? '<host>' : entry]))
+  ? list.filter(isRecord).reduce<Record<string, unknown>>((named, entry) => {
+    const name = String(entry.name);
+    const shown = HOST_ENTRY.test(name) ? '<host>' : entry;
+
+    return { ...named, [name]: name in named ? '<duplicate>' : shown };
+  }, {})
   : list);
 
 const nameOnly = (value: unknown): unknown => (isRecord(value) ? { name: value.name } : value);
@@ -366,7 +373,12 @@ const blokOwnedResult = (result: Record<string, unknown>): Record<string, unknow
     serverInfo: nameOnly(result.serverInfo),
     instructions: result.instructions,
     capabilities: isRecord(result.capabilities)
-      ? { tools: 'tools' in result.capabilities, prompts: 'prompts' in result.capabilities }
+      ? {
+        tools: 'tools' in result.capabilities,
+        prompts: 'prompts' in result.capabilities,
+        // The example host declares logging itself; Blok must leave it as it is.
+        logging: result.capabilities.logging,
+      }
       : undefined,
     tools: byName(result.tools),
     prompts: byName(result.prompts),

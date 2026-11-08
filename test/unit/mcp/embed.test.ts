@@ -225,6 +225,38 @@ describe('createBlok', () => {
     expect(answer.error).toEqual({ code: -32600, message: 'Blok needs a named caller (sub or NameIdentifier).' });
   });
 
+  describe('an unexpected throw', () => {
+    const HIDDEN = { code: -32603, message: 'Blok could not run this call.' };
+
+    it('from the host caller hook is logged and answered -32603 without its text', async () => {
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { blok } = await embed({}, { caller: () => { throw new Error('secret connection string'); } });
+      const answer = await call(() => hostServer(blok), 'tools/call', { name: 'blok_open', arguments: { documentId: 'doc' } }, alice);
+
+      expect(answer.error).toEqual(HIDDEN);
+      expect(logged.mock.calls.flat().some(item => item instanceof Error && item.message === 'secret connection string')).toBe(true);
+    });
+
+    it('from inside a call (the per-document check) is answered the same way', async () => {
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { blok, authorize } = await embed();
+
+      authorize.mockRejectedValueOnce(new Error('secret db text'));
+      const answer = await call(() => hostServer(blok), 'tools/call', { name: 'blok_open', arguments: { documentId: 'doc' } }, alice);
+
+      expect(answer.error).toEqual(HIDDEN);
+      expect(JSON.stringify(answer)).not.toContain('secret');
+      expect(logged).toHaveBeenCalled();
+    });
+
+    it('keeps Blok\'s own protocol errors', async () => {
+      const { blok } = await embed();
+      const answer = await call(() => hostServer(blok), 'tools/call', { name: 'blok_open', arguments: { documentId: 'doc' } });
+
+      expect(answer.error).toEqual({ code: -32600, message: 'Blok needs a signed-in caller.' });
+    });
+  });
+
   it('serves anonymous callers as anonymousPrincipal when the host opts out', async () => {
     const { blok, authorize } = await embed({}, { anonymousPrincipal: 'guest' });
     const answer = await call(() => hostServer(blok), 'tools/call', { name: 'blok_open', arguments: { documentId: 'doc' } });

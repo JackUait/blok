@@ -9684,6 +9684,68 @@
           }
         }
       ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize",
+        "--example-caller-error",
+        "secret-host-failure"
+      ],
+      "name": "an unexpected throw (here the host's caller hook) is logged and answered -32603 with fixed words, never its text",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "mcp-client"
+      },
+      "stderrPattern": "secret-host-failure",
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc"
+              }
+            }
+          },
+          "expect": {
+            "error": {
+              "code": -32603,
+              "message": "Blok could not run this call."
+            }
+          }
+        },
+        {
+          "note": "the host's own tool still answers",
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "host_echo",
+              "arguments": {
+                "text": "still here"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "still here"
+                }
+              ],
+              "isError": false
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": []
     }
   ]
 }

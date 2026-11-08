@@ -686,6 +686,21 @@
   box-shadow: none;
 }
 
+/*
+  While the sheet fades out it has a transform, so it becomes the box the fixed
+  header and close button sit in, and they scroll with it. These place them where
+  they were: without the sheet's own inset, down by its scroll (table-fullscreen.ts).
+*/
+[data-blok-table-fullscreen] [data-blok-table-fullscreen-header][data-blok-table-fullscreen-leaving] {
+  top: var(--_blok-table-leave-top, 0px);
+  inset-inline: 0;
+}
+
+[data-blok-table-fullscreen] [data-blok-table-fullscreen-toggle][data-blok-table-fullscreen-leaving] {
+  top: calc(var(--_blok-table-leave-top, 0px) + var(--blok-space-3-5));
+  inset-inline-end: var(--blok-space-3-5);
+}
+
 @media (hover: none) {
   [data-blok-table-fullscreen-toggle] {
     opacity: 1;

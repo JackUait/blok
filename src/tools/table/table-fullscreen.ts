@@ -80,8 +80,13 @@ const GRID_KEYS: Record<string, { axis: 'cols' | 'rows'; by: number } | undefine
 };
 
 const OPEN_MS = 460;
-const CLOSE_MS = 420;
+/** The sheet fades out, then the table fades in on the page: two beats, no copy of the table. */
+const FADE_OUT_MS = 180;
+const FADE_IN_MS = 220;
 const SPRING = 'cubic-bezier(.16, 1, .3, 1)';
+const SOFT = 'cubic-bezier(.22, .8, .2, 1)';
+/** Set on the header and close button while the sheet has a transform. See tables.css. */
+const LEAVING_ATTR = 'data-blok-table-fullscreen-leaving';
 /* Matches the modal's corner radius in tables.css (--blok-radius-dialog). */
 const SHEET_CLIP = 'inset(0px 0px 0px 0px round 12px)';
 
@@ -117,13 +122,6 @@ const isOpenPopover = (el: HTMLElement): boolean => {
 const canAnimate = (el: HTMLElement): boolean =>
   typeof el.animate === 'function'
   && !(typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-
-/** The width a scroll container gives its grid: its client width less its padding. */
-const contentWidth = (el: HTMLElement): number => {
-  const style = getComputedStyle(el);
-
-  return el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-};
 
 /** The clip-path inset that shows only `inner` of `outer`. */
 const insetOf = (outer: DOMRect, inner: DOMRect): string =>
@@ -209,17 +207,6 @@ export class TableFullscreen {
   /** The tool root the button sits in, watched for the pointer coming near. */
   private root: HTMLElement | null = null;
   private backdrop: HTMLElement | null = null;
-  /**
-   * The scroller's content box at open. The page is scroll-locked, so it holds until close.
-   * Full screen pads the scroller, so the motion lines up this, not its box.
-   */
-  private anchor: DOMRect | null = null;
-  /** The table's own visible box at open: the scroll container runs past a narrow grid. */
-  private shape: DOMRect | null = null;
-  /** The scroller's box at open: what the page shows of a grid that has changed size since. */
-  private pageBox: DOMRect | null = null;
-  /** The grid's room on the page. A fluid table takes it back the moment close starts. */
-  private inlineGridWidth = 0;
   /** The holder, held at its inline height so the page under the modal does not reflow. */
   private holder: HTMLElement | null = null;
   private closing: { host: HTMLElement; backdrop: HTMLElement | null; animations: Animation[] } | null = null;
@@ -408,10 +395,10 @@ export class TableFullscreen {
 
     // One layout for every read before the box moves.
     const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]') ?? host;
-    const origin = source.getBoundingClientRect();
+    // The scroller's content box: full screen pads the scroller, so the motion lines up this, not its box.
     const anchor = contentBox(source);
-    const shape = visibleGrid(source, origin);
-    const inlineGridWidth = contentWidth(source);
+    // The table's own visible box: the scroll container runs past a narrow grid.
+    const shape = visibleGrid(source, source.getBoundingClientRect());
     const holder = host.parentElement;
     const flowBefore = holder === null ? 0 : flowEdge(holder);
     const room = holder === null ? 0 : flowBefore - (window.scrollY + holder.getBoundingClientRect().top);
@@ -455,17 +442,13 @@ export class TableFullscreen {
 
     window.addEventListener('keydown', this.onKeydown, true);
     this.host = host;
-    this.anchor = anchor;
-    this.shape = shape;
-    this.pageBox = origin;
-    this.inlineGridWidth = inlineGridWidth;
     this.syncButton();
     this.animateOpen(host, backdrop, source, anchor, shape);
   }
 
   /**
-   * The dialog is gone at once for keyboard and screen reader users. The box
-   * stays in the top layer only while it shrinks back into the page.
+   * The dialog is gone at once for keyboard and screen reader users. The sheet
+   * fades out in the top layer, then the table lands on the page and fades in.
    */
   public close(): void {
     const host = this.host;
@@ -485,17 +468,43 @@ export class TableFullscreen {
     const backdrop = this.backdrop;
 
     this.backdrop = null;
-    this.closing = { host, backdrop, animations: this.animateClose(host, backdrop) };
-    this.syncButton();
+    host.getAnimations({ subtree: true }).forEach(a => a.cancel());
 
-    const animations = this.closing.animations;
+    const closing = { host, backdrop, animations: [] as Animation[] };
 
-    if (animations.length === 0) {
+    this.closing = closing;
+
+    if (!host.isConnected || !canAnimate(host)) {
       this.finishClose();
 
       return;
     }
-    void Promise.all(animations.map(a => a.finished)).then(() => this.finishClose(), () => undefined);
+
+    const out = this.animateOut(host);
+
+    closing.animations.push(out);
+
+    if (backdrop !== null) {
+      closing.animations.push(backdrop.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: FADE_OUT_MS + FADE_IN_MS, easing: 'ease-out', fill: 'forwards',
+      }));
+    }
+
+    void out.finished.then(() => {
+      if (this.closing !== closing) {
+        return;
+      }
+      // A cancelled animation's `finished` rejects, so it leaves the list first.
+      closing.animations.splice(closing.animations.indexOf(out), 1);
+      out.cancel();
+      this.land(host);
+      closing.animations.push(host.animate(
+        [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }],
+        { duration: FADE_IN_MS, easing: SOFT, fill: 'backwards' }
+      ));
+
+      return Promise.all(closing.animations.map(a => a.finished));
+    }).then(() => this.finishClose(), () => undefined);
   }
 
   /**
@@ -527,29 +536,48 @@ export class TableFullscreen {
       return;
     }
     this.closing = null;
-    this.anchor = null;
-    this.shape = null;
-    this.pageBox = null;
     closing.animations.forEach(a => a.cancel());
-    this.header.replaceChildren();
-    removeFromTopLayer(closing.host);
-    closing.host.removeAttribute(FULLSCREEN_ATTR);
-    this.holder?.style.removeProperty('min-height');
-    this.holder = null;
+    this.land(closing.host);
 
     if (closing.backdrop !== null) {
       removeFromTopLayer(closing.backdrop);
       closing.backdrop.remove();
     }
 
-    this.scroll.unlock();
-
-    if (closing.host.isConnected) {
-      this.options.onRelayout();
-    }
-
     if (this.button.isConnected) {
       this.button.focus({ preventScroll: true });
+    }
+  }
+
+  /**
+   * Puts the table back on the page, once: the full-screen attribute says it is
+   * still up. The backdrop stays until the fade-in ends.
+   */
+  private land(host: HTMLElement): void {
+    if (!host.hasAttribute(FULLSCREEN_ATTR)) {
+      return;
+    }
+    this.header.replaceChildren();
+    [this.header, this.button].forEach((el) => {
+      el.removeAttribute(LEAVING_ATTR);
+      el.style.removeProperty('--_blok-table-leave-top');
+    });
+    removeFromTopLayer(host);
+    host.removeAttribute(FULLSCREEN_ATTR);
+    // Lands at its start, as it was before it opened.
+    const scroller = host.querySelector<HTMLElement>('[data-blok-table-scroll]');
+
+    if (scroller !== null) {
+      scroller.scrollLeft = 0;
+    }
+    this.holder?.style.removeProperty('min-height');
+    this.holder = null;
+    this.scroll.unlock();
+    // The button swaps to its page icon only now: the fading sheet still shows it.
+    this.syncButton();
+
+    if (host.isConnected) {
+      this.options.onRelayout();
     }
   }
 
@@ -575,73 +603,22 @@ export class TableFullscreen {
     ));
   }
 
-  private animateClose(host: HTMLElement, backdrop: HTMLElement | null): Animation[] {
-    const anchor = this.anchor;
-    const shape = this.shape;
+  /**
+   * The sheet fades out with a slight shrink, the live table still inside it.
+   * A transform makes the sheet the box its fixed header and close button sit
+   * in, and the sheet scrolls, so they are pinned to its top for the motion.
+   */
+  private animateOut(host: HTMLElement): Animation {
+    // On these two, not the sheet: a custom property on the sheet restyles every cell.
+    [this.header, this.button].forEach((el) => {
+      el.style.setProperty('--_blok-table-leave-top', `${host.scrollTop}px`);
+      el.setAttribute(LEAVING_ATTR, '');
+    });
 
-    host.getAnimations({ subtree: true }).forEach(a => a.cancel());
-
-    if (anchor === null || shape === null || !host.isConnected || !canAnimate(host)) {
-      return [];
-    }
-    const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]');
-    const timing = { duration: CLOSE_MS, easing: SPRING, fill: 'forwards' as const };
-    // The table takes its page width back now, while it moves: after the
-    // motion a fluid table's columns would snap narrower at rest. Held by an
-    // animation on the root alone: an attribute or custom property on the host
-    // restyles every cell, and a style write on the root counts as an edit.
-    // Full screen gives the grid other end room than the page (tables.css), so
-    // the root is held at the width that leaves the grid its page width.
-    const root = source?.parentElement ?? null;
-    const width = source === null || root === null
-      ? undefined
-      : root.animate([{ width: `${this.inlineGridWidth + root.offsetWidth - contentWidth(source)}px` }], { duration: 0, fill: 'forwards' });
-
-    this.options.onRelayout();
-
-    // Rows and columns may have changed since open, so the table lands at its
-    // size now. Measured after the width hold, which gives it its page layout.
-    const landing = source === null ? shape : this.landingShape(source, anchor, shape);
-
-    // The page below makes room for the new height now; the box still covers it.
-    if (this.holder !== null && this.holder.style.minHeight !== '') {
-      this.holder.style.minHeight = `${parseFloat(this.holder.style.minHeight) + landing.height - shape.height}px`;
-    }
-
-    const animations = [
-      ...(width === undefined ? [] : [width]),
-      host.animate([{ clipPath: SHEET_CLIP }, { clipPath: insetOf(host.getBoundingClientRect(), landing) }], timing),
-    ];
-
-    if (source?.parentElement) {
-      animations.push(source.parentElement.animate([{ transform: 'none' }, shift(anchor, contentBox(source))], timing));
-      source.scrollLeft = 0;
-    }
-    if (backdrop !== null) {
-      animations.push(backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { ...timing, easing: 'linear' }));
-    }
-    // Hidden at once: the moving root would carry them off their place (see animateOpen).
-    [this.header, this.button].forEach(el => animations.push(
-      el.animate([{ opacity: 0 }, { opacity: 0 }], { duration: CLOSE_MS, fill: 'forwards' })
-    ));
-
-    return animations;
-  }
-
-  /** Where the grid as it is now shows on the page: from its inline start, cut to the scroller's box at open. */
-  private landingShape(source: HTMLElement, anchor: DOMRect, shape: DOMRect): DOMRect {
-    const grid = source.firstElementChild;
-    const box = this.pageBox;
-
-    if (!(grid instanceof HTMLElement) || box === null) {
-      return shape;
-    }
-    const { width, height } = grid.getBoundingClientRect();
-    const start = getComputedStyle(source).direction === 'rtl' ? anchor.right - width : anchor.left;
-    const left = Math.max(start, box.left);
-    const right = Math.min(start + width, box.right);
-
-    return new DOMRect(left, shape.top, Math.max(right - left, 0), height);
+    return host.animate(
+      [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.97)' }],
+      { duration: FADE_OUT_MS, easing: 'ease-out', fill: 'forwards' }
+    );
   }
 
   /**

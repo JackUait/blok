@@ -3723,6 +3723,16 @@
   box-shadow: none;
 }
 
+[data-blok-table-fullscreen] [data-blok-table-fullscreen-header][data-blok-table-fullscreen-leaving] {
+  top: var(--_blok-table-leave-top, 0px);
+  inset-inline: 0;
+}
+
+[data-blok-table-fullscreen] [data-blok-table-fullscreen-toggle][data-blok-table-fullscreen-leaving] {
+  top: calc(var(--_blok-table-leave-top, 0px) + var(--blok-space-3-5));
+  inset-inline-end: var(--blok-space-3-5);
+}
+
 [@media (hover: none)] [data-blok-table-fullscreen-toggle] {
   opacity: 1;
 }

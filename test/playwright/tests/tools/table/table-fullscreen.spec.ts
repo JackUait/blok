@@ -341,7 +341,7 @@ test.describe('Table full screen', () => {
     await expect(page.locator('[data-blok-table-fullscreen-header]')).toBeHidden();
   });
 
-  test('the modal grows out of the table and shrinks back into it', async ({ page }) => {
+  test('the modal grows out of the table and closes back onto the page', async ({ page }) => {
     await createBlok(page);
     await page.locator(TABLE_SELECTOR).hover();
 
@@ -358,13 +358,11 @@ test.describe('Table full screen', () => {
 
     await page.getByRole('button', { name: CLOSE_LABEL }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    // It shrinks while still above the page, then lands back inline.
-    expect(await clipAnimations()).toBeGreaterThan(0);
     await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
     expect(await page.locator('[data-blok-tool="table"]').evaluate(el => el.closest('[data-blok-element-content]')?.matches(':popover-open'))).toBe(false);
   });
 
-  test('a narrow table grows from and shrinks back into its own shape', async ({ page }) => {
+  test('a narrow table grows from its own shape', async ({ page }) => {
     await createBlok(page, false, narrowData);
     const grid = await page.getByRole('table').evaluate((el) => {
       const r = el.getBoundingClientRect();
@@ -372,9 +370,9 @@ test.describe('Table full screen', () => {
       return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
     });
 
-    /** The box the clip animation shows at its open (first) or closed (last) keyframe. */
-    const clipBox = async (end: 'first' | 'last'): Promise<{ left: number; top: number; right: number; bottom: number } | null> =>
-      page.evaluate((which) => {
+    /** The box the clip animation shows at its first keyframe. */
+    const clipBox = async (): Promise<{ left: number; top: number; right: number; bottom: number } | null> =>
+      page.evaluate(() => {
         const host = document.querySelector('[data-blok-tool="table"]')?.closest('[data-blok-element-content]');
         const clip = host?.getAnimations()
           .map(a => (a.effect as KeyframeEffect | null)?.getKeyframes() ?? [])
@@ -383,33 +381,23 @@ test.describe('Table full screen', () => {
         if (host === undefined || host === null || clip === undefined) {
           return null;
         }
-        const frame = which === 'first' ? clip[0] : clip[clip.length - 1];
-        const [t, r, b, l] = String(frame.clipPath).match(/-?[\d.]+px/g)?.map(parseFloat) ?? [];
+        const [t, r, b, l] = String(clip[0].clipPath).match(/-?[\d.]+px/g)?.map(parseFloat) ?? [];
         const box = host.getBoundingClientRect();
 
         return { left: box.left + l, top: box.top + t, right: box.right - r, bottom: box.bottom - b };
-      }, end);
+      });
 
     await page.getByRole('table').hover();
     await page.getByRole('button', { name: OPEN_LABEL }).click();
-    const opened = await clipBox('first');
+    const opened = await clipBox();
 
     expect(opened).not.toBeNull();
     for (const side of ['left', 'top', 'right', 'bottom'] as const) {
       expect(Math.abs((opened?.[side] ?? 0) - grid[side])).toBeLessThanOrEqual(1);
     }
-
-    await expect.poll(() => clipBox('first')).toBeNull();
-    await page.getByRole('button', { name: CLOSE_LABEL }).click();
-    const closed = await clipBox('last');
-
-    expect(closed).not.toBeNull();
-    for (const side of ['left', 'top', 'right', 'bottom'] as const) {
-      expect(Math.abs((closed?.[side] ?? 0) - grid[side])).toBeLessThanOrEqual(1);
-    }
   });
 
-  test('a fluid table does not shift as it shrinks back or when it lands', async ({ page }) => {
+  test('a fluid table lands back where it was', async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 800 });
     await createBlok(page);
     const cell = page.locator(`[data-blok-table-row]:first-child ${CELL_SELECTOR}`).nth(1);
@@ -427,19 +415,8 @@ test.describe('Table full screen', () => {
     expect((await boxOf()).width).toBeGreaterThan(inline.width + 50);
 
     await page.getByRole('button', { name: CLOSE_LABEL }).click();
-    // The last frame of the close motion.
-    await page.evaluate(() => document.getAnimations().forEach((animation) => {
-      animation.pause();
-      Object.assign(animation, { currentTime: 419 });
-    }));
-    const landing = await boxOf();
-
-    for (const key of ['x', 'y', 'width'] as const) {
-      expect(Math.abs(landing[key] - inline[key])).toBeLessThanOrEqual(1);
-    }
-
-    await page.evaluate(() => document.getAnimations().forEach(a => a.play()));
     await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
+    await expect.poll(() => cell.evaluate(el => el.closest('[data-blok-element-content]')?.getAnimations().length)).toBe(0);
     const landed = await boxOf();
 
     for (const key of ['x', 'y', 'width'] as const) {
@@ -462,9 +439,23 @@ test.describe('Table full screen', () => {
     { name: 'grown', rows: '7', cols: '3' },
     { name: 'shrunk', rows: '2', cols: '2' },
   ]) {
-    test(`a table ${name} in full screen shrinks back into its new size, and the page below moves before it lands`, async ({ page }) => {
+    test(`a table ${name} in full screen lands at its new size, with the page below right after it`, async ({ page }) => {
       await page.setViewportSize({ width: 1400, height: 900 });
       await createBlok(page, false, resizedData);
+
+      /** From the table's bottom to the next block. */
+      const gapBelow = (): Promise<number> => page.evaluate(() => {
+        const grid = document.querySelector('[data-blok-table-row]')?.parentElement?.getBoundingClientRect();
+        const after = document.querySelector('[data-blok-id="after"]')?.getBoundingClientRect();
+
+        if (grid === undefined || after === undefined) {
+          throw new Error('not laid out');
+        }
+
+        return after.top - grid.bottom;
+      });
+      const before = await gapBelow();
+
       await openWithButton(page);
       const modal = page.locator('[data-blok-table-fullscreen]');
 
@@ -479,44 +470,9 @@ test.describe('Table full screen', () => {
       await expect(page.locator('[data-blok-table-row]')).toHaveCount(Number(rows));
 
       await page.getByRole('button', { name: CLOSE_LABEL }).click();
-      // The last frame of the close motion.
-      await page.evaluate(() => document.getAnimations().forEach((animation) => {
-        animation.pause();
-        Object.assign(animation, { currentTime: 419 });
-      }));
-
-      const measure = (): Promise<{ clipBottom: number; clipRight: number; gridBottom: number; gridRight: number; after: number }> => page.evaluate(() => {
-        const host = document.querySelector<HTMLElement>('[data-blok-table-root]')?.parentElement;
-        const grid = document.querySelector('[data-blok-table-row]')?.parentElement?.getBoundingClientRect();
-        const scroller = document.querySelector('[data-blok-table-scroll]')?.getBoundingClientRect();
-        const after = document.querySelector('[data-blok-id="after"]')?.getBoundingClientRect();
-
-        if (host == null || grid === undefined || scroller === undefined || after === undefined) {
-          throw new Error('not laid out');
-        }
-        const box = host.getBoundingClientRect();
-        const inset = /inset\(([-\d.]+)px ([-\d.]+)px ([-\d.]+)px/.exec(getComputedStyle(host).clipPath);
-
-        return {
-          clipBottom: inset === null ? box.bottom : box.bottom - Number(inset[3]),
-          clipRight: inset === null ? box.right : box.right - Number(inset[2]),
-          gridBottom: grid.bottom,
-          // A grid wider than the page shows only up to the scroller's end.
-          gridRight: Math.min(grid.right, scroller.right),
-          after: after.top,
-        };
-      });
-      const landing = await measure();
-
-      await page.evaluate(() => document.getAnimations().forEach(a => a.play()));
       await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
-      const landed = await measure();
 
-      // The box closes onto the table as it rests now, not as it was when it opened.
-      expect(Math.abs(landing.clipBottom - landed.gridBottom)).toBeLessThanOrEqual(2);
-      expect(Math.abs(landing.clipRight - landed.gridRight)).toBeLessThanOrEqual(2);
-      // Nothing below the table jumps when the box lands.
-      expect(Math.abs(landed.after - landing.after)).toBeLessThanOrEqual(1);
+      expect(Math.abs(await gapBelow() - before)).toBeLessThanOrEqual(1);
     });
   }
 
@@ -735,19 +691,106 @@ test.describe('Table full screen', () => {
 
   test('with reduced motion the modal opens and closes at once', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
+
+    try {
+      await createBlok(page);
+
+      const animationsAfterClick = async (): Promise<number> => page.evaluate(() => {
+        document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click();
+        const box = document.querySelector('[data-blok-tool="table"]')?.closest('[data-blok-element-content]');
+
+        return box?.getAnimations().filter(a => !(a instanceof CSSTransition) && !(a instanceof CSSAnimation)).length ?? -1;
+      });
+
+      expect(await animationsAfterClick()).toBe(0);
+      await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
+      expect(await animationsAfterClick()).toBe(0);
+      await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
+    } finally {
+      // The page is shared across this file's tests: later ones must get their motion back.
+      await page.emulateMedia({ reducedMotion: null });
+    }
+  });
+
+  test('closing fades the sheet out with a slight shrink, then fades the table in at its place on the page', async ({ page }) => {
     await createBlok(page);
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
 
-    const animationsAfterClick = async (): Promise<number> => page.evaluate(() => {
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+
+    const out = await page.evaluate(() => {
       document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click();
-      const box = document.querySelector('[data-blok-tool="table"]')?.closest('[data-blok-element-content]');
+      const host = document.querySelector('[data-blok-tool="table"]')?.closest('[data-blok-element-content]');
+      const frames = host?.getAnimations().map(a => JSON.stringify((a.effect as KeyframeEffect | null)?.getKeyframes())) ?? [];
 
-      return box?.getAnimations().filter(a => !(a instanceof CSSTransition) && !(a instanceof CSSAnimation)).length ?? -1;
+      return { inTopLayer: host?.matches(':popover-open') ?? false, frames: frames.join(' ') };
     });
 
-    expect(await animationsAfterClick()).toBe(0);
-    await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
-    expect(await animationsAfterClick()).toBe(0);
+    // The sheet leaves while still above the page; nothing clips it down.
+    expect(out.inTopLayer).toBe(true);
+    expect(out.frames).toContain('scale(0.97)');
+    expect(out.frames).toMatch(/"opacity":"0"/);
+    expect(out.frames).not.toContain('clip');
+
+    await page.evaluate(() => document.querySelector('[data-blok-tool="table"]')?.closest('[data-blok-element-content]')?.getAnimations().forEach(a => a.finish()));
+    // Then the table is back on the page and fades in there.
+    await page.waitForFunction(() => {
+      const host = document.querySelector('[data-blok-tool="table"]')?.closest('[data-blok-element-content]');
+
+      return host !== null && host !== undefined && !host.matches(':popover-open')
+        && host.getAnimations().some(a => JSON.stringify((a.effect as KeyframeEffect | null)?.getKeyframes()).includes('translateY(4px)'));
+    }, undefined, { polling: 'raf' });
+
     await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
+    await expect.poll(() => page.locator(TABLE_SELECTOR).evaluate(el => el.closest('[data-blok-element-content]')?.getAnimations().length)).toBe(0);
+  });
+
+  test('the header and close button hold their place as the sheet starts to shrink, even scrolled', async ({ page }) => {
+    await createBlok(page, false, {
+      blocks: [{ id: 'tbl', type: 'table', data: { withHeadings: true, content: Array.from({ length: 40 }, (_, r) => [`R${r}`, 'x']) } }],
+    });
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+    await modal.evaluate(el => el.scrollTo(0, 200));
+
+    const boxes = (): Promise<number[]> => page.evaluate(() => ['[data-blok-table-fullscreen-header]', '[data-blok-table-fullscreen-toggle]']
+      .flatMap((sel) => {
+        const r = document.querySelector(sel)?.getBoundingClientRect();
+
+        return r === undefined ? [] : [r.left, r.top, r.width];
+      }));
+    const before = await boxes();
+
+    await page.evaluate(() => {
+      document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click();
+      document.getAnimations().forEach((a) => {
+        a.pause();
+        Object.assign(a, { currentTime: 0 });
+      });
+    });
+    const after = await boxes();
+
+    expect(after).toHaveLength(before.length);
+    after.forEach((value, i) => expect(Math.abs(value - before[i])).toBeLessThanOrEqual(1));
+  });
+
+  test('closing animates only opacity and transform', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+    await expect.poll(() => page.locator('[data-blok-table-fullscreen]').evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+
+    const properties = await page.evaluate(() => {
+      document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click();
+
+      return [...new Set(document.getAnimations().flatMap(a => ((a.effect as KeyframeEffect | null)?.getKeyframes() ?? [])
+        .flatMap(k => Object.keys(k))
+        .filter(k => !['offset', 'computedOffset', 'easing', 'composite'].includes(k))))];
+    });
+
+    expect(properties.filter(p => !['transform', 'opacity'].includes(p))).toEqual([]);
   });
 
   test('opening starts no CSS transitions and the motion animates no layout properties', async ({ page }) => {

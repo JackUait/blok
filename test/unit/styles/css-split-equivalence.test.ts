@@ -1470,6 +1470,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const TABLE_OFFSCREEN_CELLS_BYTES = 346;
     // tables.css: the table scroller does not rubber-band, so its add bars and grips stay with it.
     const TABLE_SCROLL_NO_BOUNCE_BYTES = 196;
+    // tables.css: the full-screen header and close button stay put while the sheet fades out with a shrink.
+    const TABLE_FULLSCREEN_LEAVE_BYTES = 642;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1845,7 +1847,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + EMBED_GENERIC_HOST_BYTES
       + HIGHLIGHT_ROOT_FORM_BYTES
       + TABLE_OFFSCREEN_CELLS_BYTES
-      + TABLE_SCROLL_NO_BOUNCE_BYTES;
+      + TABLE_SCROLL_NO_BOUNCE_BYTES
+      + TABLE_FULLSCREEN_LEAVE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

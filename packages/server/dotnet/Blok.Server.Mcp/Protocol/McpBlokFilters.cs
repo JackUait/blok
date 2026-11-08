@@ -27,7 +27,7 @@ internal sealed record McpBlokFilters(
     request.ListToolsFilters.Add(next => async (context, token) =>
     {
       var listed = await next(context, token);
-      var surface = await Surface(token);
+      var surface = await Internal(() => Surface(token));
 
       RefuseClash(listed.Tools.Select(tool => tool.Name), surface.ToolNames);
 
@@ -45,7 +45,7 @@ internal sealed record McpBlokFilters(
     request.ListPromptsFilters.Add(next => async (context, token) =>
     {
       var listed = await next(context, token);
-      var surface = await Surface(token);
+      var surface = await Internal(() => Surface(token));
 
       RefuseClash(listed.Prompts.Select(prompt => prompt.Name), surface.PromptNames);
 
@@ -60,8 +60,9 @@ internal sealed record McpBlokFilters(
       };
     });
     request.GetPromptFilters.Add(next => async (context, token) =>
-        (await Surface(token)).PromptNames.Contains(context.Params?.Name ?? string.Empty)
-            ? await PromptAsync(Core, context, token)
+        (await Internal(() => Surface(token))).PromptNames.Contains(context.Params?.Name ?? string.Empty)
+            // blok-mcp's own server lets a prompt's throw reach the SDK, as it always has.
+            ? Standalone ? await PromptAsync(Core, context, token) : await Internal(() => PromptAsync(Core, context, token))
             : await next(context, token));
     // The alternate list runs on both of the SDK's call paths, so a host's own alternate handler keeps working.
 #pragma warning disable MCPEXP002 // Experimental in SDK 2.x; the only filter list a host's alternate handler allows.
@@ -69,7 +70,7 @@ internal sealed record McpBlokFilters(
     {
       var name = context.Params?.Name ?? string.Empty;
 
-      if (!(await Surface(token)).ToolNames.Contains(name))
+      if (!(await Internal(() => Surface(token))).ToolNames.Contains(name))
       {
         return await next(context, token);
       }
@@ -105,7 +106,13 @@ internal sealed record McpBlokFilters(
     }
   }
 
-  /// <summary>As Node: a throw that is not model-fixable is JSON-RPC -32603, not a tool error.</summary>
+  /// <summary>What a host's client sees for a throw Blok did not expect; its text may name the host's internals.</summary>
+  internal const string CouldNotRun = "Blok could not run this call.";
+
+  /// <summary>
+  /// As Node: a throw that is not model-fixable is JSON-RPC -32603, not a tool error. blok-mcp's own
+  /// server words it with the exception's message (pinned); a host's server, with fixed words.
+  /// </summary>
   private async ValueTask<T> Internal<T>(Func<ValueTask<T>> run)
   {
     try
@@ -114,17 +121,23 @@ internal sealed record McpBlokFilters(
     }
     catch (Exception error) when (error is not McpProtocolException and not InputRequiredException and not OperationCanceledException)
     {
-      if (Log is null)
-      {
-        await Console.Error.WriteLineAsync($"blok-mcp: a tool call failed: {error}");
-      }
-      else
-      {
-        Log("blok-mcp: a tool call failed", error);
-      }
-
-      throw new McpProtocolException(error.Message, McpErrorCode.InternalError);
+      throw await FailedAsync(error);
     }
+  }
+
+  /// <summary>Logs a throw Blok did not expect in full and gives the protocol error the client sees.</summary>
+  internal async ValueTask<McpProtocolException> FailedAsync(Exception error)
+  {
+    if (Log is null)
+    {
+      await Console.Error.WriteLineAsync($"blok-mcp: a tool call failed: {error}");
+    }
+    else
+    {
+      Log("blok-mcp: a tool call failed", error);
+    }
+
+    return new McpProtocolException(Standalone ? error.Message : CouldNotRun, McpErrorCode.InternalError);
   }
 
   private async ValueTask<CallToolResult> CallToolAsync(string name, RequestContext<CallToolRequestParams> context, CancellationToken token)

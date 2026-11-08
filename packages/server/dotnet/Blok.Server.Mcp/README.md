@@ -74,6 +74,7 @@ app.MapMcp("/mcp").RequireAuthorization();
 - A handle belongs to the caller that opened it. Another principal gets `UNKNOWN_HANDLE`.
 - A tool or prompt of yours with a Blok name stops the app at start. A list handler of yours that returns a Blok name fails that list. Other names reach your own tools, handlers and prompts.
 - Blok's tools answer as the standalone server's, including its protocol errors and the approval question.
+- A throw Blok did not expect, such as one from your `Caller` hook, is logged in full through your `ILogger`. The client gets the protocol error `-32603` "Blok could not run this call.", never the exception's text.
 - `IBlokMcp` gives Blok's instructions, tool and prompt names and version. The app's stop waits for Blok's calls in flight.
 - Blok adds request filters only. It never sets your serverInfo, instructions or handlers, and it adds the tools and prompts capabilities only when they are missing. Keep `Capabilities.Tools` if you replace `Capabilities` per request.
 - Origin and Host checks, a body size cap and OAuth are your server's job. Stateless HTTP is the supported transport; stateful sessions are not promised.

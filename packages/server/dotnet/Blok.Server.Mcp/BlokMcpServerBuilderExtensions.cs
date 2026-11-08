@@ -176,18 +176,31 @@ internal sealed class McpEmbedding(IServiceProvider services, BlokMcpOptions opt
     server.Capabilities.Prompts ??= new PromptsCapability();
     var config = services.GetRequiredService<McpConfig>();
 
-    new McpBlokFilters(
+    McpBlokFilters? filters = null;
+
+    filters = new McpBlokFilters(
         services.GetRequiredService<McpServerCore>(),
         async token => await ReadyAsync(token),
-        IdentifyAsync,
+        (context, token) => IdentifyAsync(filters!, context, token),
         Standalone: false,
-        Log: config.LogError).Install(server);
+        Log: config.LogError);
+    filters.Install(server);
   }
 
   // As Node's createBlok: the host's hook or the signed-in user; anonymous only by opt-in.
-  private async ValueTask<McpCallerIdentity> IdentifyAsync(RequestContext<CallToolRequestParams> context, CancellationToken cancellationToken)
+  private async ValueTask<McpCallerIdentity> IdentifyAsync(McpBlokFilters filters, RequestContext<CallToolRequestParams> context, CancellationToken cancellationToken)
   {
-    var who = options.Caller is { } hook ? await hook(context, cancellationToken) : SignedIn(context.User);
+    BlokMcpCallerIdentity? who;
+
+    try
+    {
+      who = options.Caller is { } hook ? await hook(context, cancellationToken) : SignedIn(context.User);
+    }
+    // The hook's own refusal stays as it is; any other throw is logged, and the client sees fixed words.
+    catch (Exception error) when (error is not McpProtocolException and not OperationCanceledException)
+    {
+      throw await filters.FailedAsync(error);
+    }
 
     if (who is null)
     {

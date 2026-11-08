@@ -43,11 +43,16 @@ public sealed class LibraryEmbedTests : IDisposable
         new McpServerPromptCreateOptions { Name = name, Description = "Says hello." });
   }
 
-  private async Task<(WebApplication App, HttpClient Client)> StartAsync(Action<IMcpServerBuilder>? host = null, Action<BlokMcpOptions>? configure = null)
+  private async Task<(WebApplication App, HttpClient Client)> StartAsync(
+      Action<IMcpServerBuilder>? host = null, Action<BlokMcpOptions>? configure = null, ILoggerProvider? logged = null)
   {
     var builder = WebApplication.CreateSlimBuilder();
 
     builder.Logging.ClearProviders();
+    if (logged is not null)
+    {
+      builder.Logging.AddProvider(logged);
+    }
     builder.WebHost.UseTestServer();
     var mcp = builder.Services
         .AddMcpServer(options => options.ServerInfo = new Implementation { Name = "host-test", Version = "1.0.0" })
@@ -272,6 +277,76 @@ public sealed class LibraryEmbedTests : IDisposable
       var refused = await McpTestRpc.CallAsync(client, "blok_open", new JsonObject { ["documentId"] = "doc" }, user: "alice");
 
       Assert.Equal("Blok needs a signed-in caller.", (string?)refused["error"]?["message"]);
+    }
+  }
+
+  [Fact]
+  public async Task AFailingCallerHookIsLoggedInFullAndHiddenFromTheClient()
+  {
+    var logged = new LinesLogged();
+    var (app, client) = await StartAsync(
+        configure: options => options.Caller = (_, _) => throw new InvalidOperationException("secret-123"),
+        logged: logged);
+
+    await using (app)
+    {
+      var failed = await McpTestRpc.CallAsync(client, "blok_open", new JsonObject { ["documentId"] = "doc" }, user: "alice");
+
+      Assert.Equal(-32603, (int?)failed["error"]?["code"]);
+      Assert.Equal("Blok could not run this call.", (string?)failed["error"]?["message"]);
+      Assert.DoesNotContain("secret-123", failed.ToJsonString(), StringComparison.Ordinal);
+      Assert.Contains(logged.Lines, line => line.Contains("secret-123", StringComparison.Ordinal));
+    }
+  }
+
+  [Fact]
+  public async Task AFailingCallIsLoggedInFullAndHiddenFromTheClient()
+  {
+    var logged = new LinesLogged();
+    var (app, client) = await StartAsync(
+        configure: options => options.Authorize = (_, _) => throw new InvalidOperationException("secret-456"),
+        logged: logged);
+
+    await using (app)
+    {
+      var failed = await McpTestRpc.CallAsync(client, "blok_open", new JsonObject { ["documentId"] = "doc" }, user: "alice");
+
+      Assert.Equal(-32603, (int?)failed["error"]?["code"]);
+      Assert.Equal("Blok could not run this call.", (string?)failed["error"]?["message"]);
+      Assert.Contains(logged.Lines, line => line.Contains("secret-456", StringComparison.Ordinal));
+    }
+  }
+
+  private sealed class LinesLogged : ILoggerProvider, ILogger
+  {
+    public List<string> Lines { get; } = [];
+
+    public ILogger CreateLogger(string categoryName)
+    {
+      return this;
+    }
+
+    public IDisposable? BeginScope<TState>(TState state)
+        where TState : notnull
+    {
+      return null;
+    }
+
+    public bool IsEnabled(LogLevel logLevel)
+    {
+      return true;
+    }
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+      lock (Lines)
+      {
+        Lines.Add($"{formatter(state, exception)} {exception}");
+      }
+    }
+
+    public void Dispose()
+    {
     }
   }
 

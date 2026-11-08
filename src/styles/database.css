@@ -2842,6 +2842,11 @@ button[data-blok-database-column-count]:hover {
   transform: scale(0.96);
 }
 
+/* notion-motion.md "Popovers": a menu row's hover fill fades in over 20ms. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item] {
+  transition: background-color 20ms ease-in;
+}
+
 /* Notion's column header menu: 28px rows, and it fits without scrolling (498px tall, research/26 §3c).
    The core popover caps every menu at 400px. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item] {
@@ -6328,7 +6333,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   [data-blok-database-tab],
   [data-blok-database-card-actions],
   [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-container],
-  [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container] {
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container],
+  [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item] {
     transition: none;
   }
 
@@ -8507,6 +8513,12 @@ textarea[data-blok-database-cell-input] {
   outline: none;
 }
 
+@property --blok-database-header-tint {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
 /* Sticky inside its scroller. Unverified against page scroll: the scroller
    clips on both axes. */
 [data-blok-database-table-header] {
@@ -8534,15 +8546,17 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-bg);
   /* The opaque fill hides the row's own line, so each header cell draws it. */
   box-shadow: inset 0 -1px 0 var(--blok-database-table-border);
-  transition: background-color 20ms ease-in;
+  /* The hover tint lies over the opaque fill. A gradient cannot transition, its typed colour can. */
+  background-image: linear-gradient(var(--blok-database-header-tint), var(--blok-database-header-tint));
+  transition: background-color 20ms ease-in, --blok-database-header-tint 20ms ease-in;
 }
 
 [data-blok-database-table-column-header]:hover {
-  background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+  --blok-database-header-tint: var(--blok-database-table-header-hover-bg);
 }
 
 [data-blok-database-table-column-header]:active {
-  background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg));
+  --blok-database-header-tint: var(--blok-database-pressed-bg);
 }
 
 [data-blok-database-table-column-button] {

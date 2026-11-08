@@ -455,7 +455,7 @@ describe('pass 2: research/33 §4 colour dump', () => {
 
   it('pressed: header cells and toolbar icons darken to Notion\'s pressed fill', () => {
     expect(themed('--blok-database-pressed-bg')).toEqual({ light: 'rgba(33, 27, 23, 0.102)', dark: 'rgba(255, 255, 255, 0.11)', attr: 'rgba(255, 255, 255, 0.11)' });
-    expect(ruleBody('[data-blok-database-table-column-header]:active')).toContain('background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg))');
+    expect(ruleBody('[data-blok-database-table-column-header]:active')).toContain('--blok-database-header-tint: var(--blok-database-pressed-bg)');
     expect(ruleBody('[data-blok-database-view-toolbar] > button:active')).toContain('background-color: var(--blok-database-pressed-bg)');
   });
 
@@ -599,7 +599,7 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
 
     expect(ruleBody(ROW)).toContain('height: 28px');
     expect(ruleBody(ROW)).toContain('padding-block: 0');
-    expect(ruleBody("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item]")).toBe('');
+    expect(ruleBody("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item]")).not.toMatch(/height|padding/);
   });
 });
 

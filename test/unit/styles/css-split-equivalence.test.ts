@@ -1498,6 +1498,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GUTTER_GLYPH_BYTES = 268;
     // database.css: Filter, Sort and the other database panels open and close like the database menus; view settings opens at once.
     const DATABASE_PANEL_MOTION_BYTES = 1_147;
+    // database.css: database menu rows and the table column header fade their hover fill over 20ms.
+    const DATABASE_HOVER_FILL_FADE_BYTES = 603;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1886,7 +1888,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROW_DRAG_GHOST_BYTES
       + DATABASE_COLUMN_DRAG_SLIDE_BYTES
       + DATABASE_GUTTER_GLYPH_BYTES
-      + DATABASE_PANEL_MOTION_BYTES;
+      + DATABASE_PANEL_MOTION_BYTES
+      + DATABASE_HOVER_FILL_FADE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

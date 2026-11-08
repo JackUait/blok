@@ -87,6 +87,42 @@ describe('database panels (Filter, Sort, pickers)', () => {
   });
 });
 
+describe('database menu rows', () => {
+  it('fade their hover fill in over 20ms ease-in (notion-motion.md "Popovers")', () => {
+    expect(body(outsideReducedMotion, `${MENU} [data-blok-popover-item]`)).toContain('transition: background-color 20ms ease-in');
+  });
+
+  it('change their fill at once under reduced motion', () => {
+    expect(body(reducedMotion, `${MENU} [data-blok-popover-item]`)).toContain('transition: none');
+  });
+});
+
+describe('table column header hover', () => {
+  const HEADER = '[data-blok-database-table-column-header]';
+
+  // research/08:263, 21:71, 33:658: Notion's header takes a 0.051 fill on hover; notion-motion.md
+  // "Popovers": it fades in over 20ms ease-in. A gradient cannot transition, so its colour is a typed property.
+  it('registers the tint as a colour, so it can transition', () => {
+    expect(database).toMatch(/@property --blok-database-header-tint \{ syntax: '<color>'; inherits: false; initial-value: transparent; \}/);
+  });
+
+  it('paints the tint over its opaque fill and fades it over 20ms ease-in', () => {
+    const rest = body(outsideReducedMotion, HEADER);
+
+    expect(rest).toContain('background-image: linear-gradient(var(--blok-database-header-tint), var(--blok-database-header-tint))');
+    expect(rest).toMatch(/transition: [^;]*--blok-database-header-tint 20ms ease-in/);
+  });
+
+  it('takes the hover fill on hover and the pressed fill when pressed', () => {
+    expect(body(outsideReducedMotion, `${HEADER}:hover`)).toContain('--blok-database-header-tint: var(--blok-database-table-header-hover-bg)');
+    expect(body(outsideReducedMotion, `${HEADER}:active`)).toContain('--blok-database-header-tint: var(--blok-database-pressed-bg)');
+  });
+
+  it('does not fade under reduced motion', () => {
+    expect(body(reducedMotion, HEADER)).toContain('transition: none');
+  });
+});
+
 describe('grouped list collapse', () => {
   it('turns only the caret, -90deg over 200ms ease-out', () => {
     expect(body(outsideReducedMotion, '[data-blok-database-list-group-toggle] svg')).toContain('transition: transform 200ms ease-out');

@@ -69,6 +69,7 @@ export declare const IconCopy: string;
 export declare const IconPencil: string;
 export declare const IconPencilLine: string;
 export declare const IconTrash: string;
+export declare const IconRowGrip: string;
 export declare const IconDotsHorizontal: string;
 export declare const IconPin: string;
 export declare const IconPinFilled: string;

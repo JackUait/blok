@@ -113,12 +113,25 @@ describe('database table view styles', () => {
     expect(exactRule('[data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header]')).toContain('transform 200ms ease');
   });
 
-  // side-by-side-v1.md: Notion's gutter "+" is 14x14 and ⠿ 8x16 (rowhover.png); at 16px Blok drew them 9x10 and 6x8.
-  it('draws the table and list gutter "+" and ⋮⋮ glyphs at 24px, so the "+" reads Notion\'s 14px', () => {
+  // side-by-side-v1.md: Notion's gutter "+" is 14x14 (rowhover.png); at 16px Blok drew it 9x10.
+  it('draws the table and list gutter "+" at 24px, so it reads Notion\'s 14px', () => {
     expect(ruleBody('[data-blok-database-table-row-add] svg')).toMatch(/width: 24px;\s*height: 24px/);
-    expect(ruleBody('[data-blok-database-table-row-handle] svg')).toMatch(/width: 24px;\s*height: 24px/);
     expect(ruleBody('[data-blok-database-list-row-add] svg')).toMatch(/width: 24px;\s*height: 24px/);
-    expect(ruleBody('[data-blok-database-list-row-handle] svg')).toMatch(/width: 24px;\s*height: 24px/);
+  });
+
+  // Notion's ⠿ inks 8x16 (rowhover.png, listhover.png); IconRowGrip draws that at 20px, one unit per pixel.
+  it('draws the table and list row grip at 20px', () => {
+    expect(ruleBody('[data-blok-database-table-row-handle] svg')).toMatch(/width: 20px;\s*height: 20px/);
+    expect(ruleBody('[data-blok-database-list-row-handle] svg')).toMatch(/width: 20px;\s*height: 20px/);
+  });
+
+  // Notion's title "Aa" inks 18x12 in the same slot as its 16px glyphs (m38-table.png).
+  it('draws the title column\'s "Aa" at 20px, centred over the 16px icon slot', () => {
+    const aa = ruleBody('[data-blok-database-table-column-icon][data-type="title"] svg');
+
+    expect(aa).toMatch(/width: 20px;\s*height: 20px;\s*margin: -2px/);
+    // Preflight caps svg at max-height 100%, which would squash it back to the 16px slot.
+    expect(aa).toMatch(/max-height: none/);
   });
 
   it('marks a checked row checkbox with primary ink on a gray fill', () => {

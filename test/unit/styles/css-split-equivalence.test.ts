@@ -1504,6 +1504,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_SEARCH_FADE_BYTES = 75;
     // database.css: the toolbar icons draw at their own 20px, as wide as Notion's glyphs.
     const DATABASE_TOOLBAR_GLYPH_BYTES = 190;
+    // database.css: the row grip draws at 20px, and the title column's "Aa" at 20px over its 16px slot.
+    const DATABASE_GRIP_AND_TITLE_GLYPH_BYTES = 452;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1895,7 +1897,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PANEL_MOTION_BYTES
       + DATABASE_HOVER_FILL_FADE_BYTES
       + DATABASE_SEARCH_FADE_BYTES
-      + DATABASE_TOOLBAR_GLYPH_BYTES;
+      + DATABASE_TOOLBAR_GLYPH_BYTES
+      + DATABASE_GRIP_AND_TITLE_GLYPH_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

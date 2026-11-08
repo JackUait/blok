@@ -47,7 +47,7 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import {
   IconChevronDown,
   IconChevronRight,
-  IconMenu,
+  IconRowGrip,
   IconPlus,
   IconPeekSide,
   IconTrash,
@@ -672,6 +672,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const icon = document.createElement('span');
 
     icon.setAttribute('data-blok-database-table-column-icon', '');
+    icon.setAttribute('data-type', property.type);
     icon.setAttribute('aria-hidden', 'true');
     if (property.icon !== undefined && property.icon !== '') {
       icon.textContent = property.icon;
@@ -957,7 +958,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       handle.setAttribute('data-blok-database-table-row-handle', '');
       handle.setAttribute('aria-label', this.t('tools.database.tableDragHandle'));
       handle.tabIndex = -1;
-      handle.innerHTML = IconMenu;
+      handle.innerHTML = IconRowGrip;
 
       gutter.append(add, handle, this.createCheckbox('data-blok-database-table-row-checkbox', this.t('tools.database.tableSelectRow')));
       rowEl.appendChild(gutter);

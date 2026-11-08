@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { IconChevronDown, IconDotsHorizontal, IconMenu, IconPageEmpty, IconPencil, IconPlus } from '../../../../src/components/icons';
+import { IconChevronDown, IconDotsHorizontal, IconPageEmpty, IconPencil, IconPlus, IconRowGrip } from '../../../../src/components/icons';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
@@ -52,7 +52,7 @@ const serialized = (svg: string): string => {
 const gutterHtml = (rowId: string): string =>
   '<div data-blok-database-list-row-gutter="">'
   + `<button type="button" data-blok-database-list-row-add="" aria-label="T(tools.database.tableAddBelow)" tabindex="-1">${serialized(IconPlus)}</button>`
-  + `<button type="button" data-blok-database-list-row-handle="" data-row-id="${rowId}" aria-label="T(tools.database.tableDragHandle)" tabindex="-1">${serialized(IconMenu)}</button>`
+  + `<button type="button" data-blok-database-list-row-handle="" data-row-id="${rowId}" aria-label="T(tools.database.tableDragHandle)" tabindex="-1">${serialized(IconRowGrip)}</button>`
   + '</div>';
 
 const EDIT_HTML = `<button type="button" data-blok-database-list-row-edit="" aria-label="T(tools.database.editCardTitle)" tabindex="-1">${serialized(IconPencil)}</button>`;

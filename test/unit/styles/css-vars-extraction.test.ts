@@ -227,6 +227,8 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
     '[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child :is(h1, h2, h3))|margin-top',
     '[data-blok-tool="video"] .blok-video-controls__speed-needle|margin-left',
     '[data-blok-tool="video"] .blok-video-controls__speed-needle::before|margin-left',
+    // Centres the 20px title "Aa" over the 16px column icon slot.
+    '[data-blok-database-table-column-icon][data-type="title"] svg|margin',
   ]);
 
   it('no non-zero length repeats across themeable-property declarations', () => {

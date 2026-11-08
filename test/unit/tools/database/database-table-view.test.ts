@@ -4,7 +4,7 @@ import { DatabaseTableView, createTableState } from '../../../../src/tools/datab
 import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } from '../../../../src/tools/database/database-table-view';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
-import { IconInfo, IconPeekSide } from '../../../../src/components/icons';
+import { IconInfo, IconPeekSide, IconRowGrip } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
@@ -184,6 +184,24 @@ describe('DatabaseTableView', () => {
         expected.innerHTML = PROPERTY_TYPE_META[type].icon;
         expect(iconOf(`p-${type}`)).toBe(expected.innerHTML);
       }
+    });
+
+    // Notion's title "Aa" is wider than its other header glyphs (m38-table.png), so the stylesheet sizes it by type.
+    it('marks the title header icon with its property type', () => {
+      const { root } = mount({});
+      const icon = root.querySelector(`[role="columnheader"][data-property-id="${schema[0].id}"] [data-blok-database-table-column-icon]`);
+
+      expect(schema[0].type).toBe('title');
+      expect(icon?.getAttribute('data-type')).toBe('title');
+    });
+
+    // Notion's row grip is 8x16 (rowhover.png); the editor's block handle keeps IconMenu.
+    it('draws the row handle with the tall row grip', () => {
+      const { root } = mount({});
+      const expected = document.createElement('span');
+
+      expected.innerHTML = IconRowGrip;
+      expect(root.querySelector('[data-blok-database-table-row-handle]')?.innerHTML).toBe(expected.innerHTML);
     });
 
     it('draws a property\'s own icon in its header instead of the type icon (research/04, R-2022-11-17)', () => {

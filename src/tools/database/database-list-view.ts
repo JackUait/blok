@@ -8,7 +8,7 @@ import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { createGroupPill, renderCellValue } from './cells';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
-import { IconChevronDown, IconDotsHorizontal, IconMenu, IconPencil, IconPlus, IconSidebarRight } from '../../components/icons';
+import { IconChevronDown, IconDotsHorizontal, IconPencil, IconPlus, IconRowGrip, IconSidebarRight } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { propertyHint } from './property-hint';
@@ -666,7 +666,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     handle.setAttribute('data-row-id', rowId);
     handle.setAttribute('aria-label', this.i18n.t('tools.database.tableDragHandle'));
     handle.tabIndex = -1;
-    handle.innerHTML = IconMenu;
+    handle.innerHTML = IconRowGrip;
     gutter.appendChild(handle);
 
     return gutter;

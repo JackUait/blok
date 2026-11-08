@@ -3396,12 +3396,18 @@ button[data-blok-database-column-count]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-/* Notion's "+" is 14x14 (rowhover.png); the 20-unit glyph reaches that at 24px. The grip overflows its 18px button. */
-[data-blok-database-list-row-add] svg,
-[data-blok-database-list-row-handle] svg {
+/* Notion's "+" is 14x14 (rowhover.png); the 20-unit glyph reaches that at 24px. */
+[data-blok-database-list-row-add] svg {
   flex: none;
   width: 24px;
   height: 24px;
+}
+
+/* IconRowGrip is Notion's 8x16 grip at 20px, one unit per pixel. It overflows its 18px button. */
+[data-blok-database-list-row-handle] svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible,
@@ -8582,6 +8588,14 @@ textarea[data-blok-database-cell-input] {
   height: 16px;
 }
 
+/* Notion's title "Aa" inks 18x12, wider than the 16px slot; it overflows the slot evenly. */
+[data-blok-database-table-column-icon][data-type="title"] svg {
+  width: 20px;
+  height: 20px;
+  margin: -2px;
+  max-height: none;
+}
+
 [data-blok-database-table-column-name] {
   overflow: hidden;
   white-space: nowrap;
@@ -9361,12 +9375,18 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-/* Notion's "+" is 14x14 (rowhover.png); the 20-unit glyph reaches that at 24px. The grip overflows its 18px button. */
-[data-blok-database-table-row-add] svg,
-[data-blok-database-table-row-handle] svg {
+/* Notion's "+" is 14x14 (rowhover.png); the 20-unit glyph reaches that at 24px. */
+[data-blok-database-table-row-add] svg {
   flex: none;
   width: 24px;
   height: 24px;
+}
+
+/* IconRowGrip is Notion's 8x16 grip at 20px, one unit per pixel. It overflows its 18px button. */
+[data-blok-database-table-row-handle] svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-table-row-checkbox],

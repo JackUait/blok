@@ -7142,10 +7142,16 @@ button[data-blok-database-column-count]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-list-row-add] svg, [data-blok-database-list-row-handle] svg {
+[data-blok-database-list-row-add] svg {
   flex: none;
   width: 24px;
   height: 24px;
+}
+
+[data-blok-database-list-row-handle] svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 
 :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible, :where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row-property][data-editable]:focus-visible {
@@ -11818,6 +11824,13 @@ textarea[data-blok-database-cell-input] {
   height: 16px;
 }
 
+[data-blok-database-table-column-icon][data-type="title"] svg {
+  width: 20px;
+  height: 20px;
+  margin: -2px;
+  max-height: none;
+}
+
 [data-blok-database-table-column-name] {
   overflow: hidden;
   white-space: nowrap;
@@ -12519,10 +12532,16 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-table-row-add] svg, [data-blok-database-table-row-handle] svg {
+[data-blok-database-table-row-add] svg {
   flex: none;
   width: 24px;
   height: 24px;
+}
+
+[data-blok-database-table-row-handle] svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all] {

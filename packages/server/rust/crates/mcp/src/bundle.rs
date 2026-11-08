@@ -26,6 +26,12 @@ pub struct Bundle {
     /// Tests only: a call to this op whose input holds this text fails.
     #[cfg(test)]
     pub(crate) fail: std::sync::Mutex<Option<(&'static str, &'static str)>>,
+    /// Tests only: this many matching calls pass before `fail` fails one.
+    #[cfg(test)]
+    pub(crate) fail_after: std::sync::atomic::AtomicUsize,
+    /// Tests only: this op's answer loses this top-level member.
+    #[cfg(test)]
+    pub(crate) drop_member: std::sync::Mutex<Option<(&'static str, &'static str)>>,
 }
 
 // A big batch can take seconds; the pool's own 10 s default would cut it.
@@ -57,6 +63,10 @@ impl Bundle {
             pool,
             #[cfg(test)]
             fail: std::sync::Mutex::default(),
+            #[cfg(test)]
+            fail_after: std::sync::atomic::AtomicUsize::new(0),
+            #[cfg(test)]
+            drop_member: std::sync::Mutex::default(),
         })
     }
 
@@ -80,6 +90,14 @@ impl Bundle {
         if let Some((failing, marker)) = *self.fail.lock().unwrap()
             && op == failing
             && input.contains(marker)
+            && self
+                .fail_after
+                .try_update(
+                    std::sync::atomic::Ordering::SeqCst,
+                    std::sync::atomic::Ordering::SeqCst,
+                    |left| left.checked_sub(1),
+                )
+                .is_err()
         {
             return Err(BundleError(format!("{op}: failed for a test")));
         }
@@ -97,7 +115,15 @@ impl Bundle {
     /// The answer's top-level members, kept as their exact JSON text.
     pub async fn call_raw(&self, op: &str, input: &str) -> Result<RawObject, BundleError> {
         let text = self.call_text(op, input).await?;
-        RawObject::parse(&text).map_err(|e| BundleError(format!("{op}: {e}")))
+        #[allow(unused_mut)]
+        let mut raw = RawObject::parse(&text).map_err(|e| BundleError(format!("{op}: {e}")))?;
+        #[cfg(test)]
+        if let Some((dropping, member)) = *self.drop_member.lock().unwrap()
+            && op == dropping
+        {
+            raw.0.retain(|(key, _)| key != member);
+        }
+        Ok(raw)
     }
 }
 

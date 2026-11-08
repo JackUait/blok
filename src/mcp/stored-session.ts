@@ -84,7 +84,7 @@ const storedSession = (input: StoredSessionInput, initial: StoredState, exists: 
 
   // A save can store the parent before it breaks, so the reload shows which pages it names. Unread: report none.
   const brokenSave = (thrown: unknown, reloaded: boolean, warnings: McpExecuteResult['warnings']): McpExecuteResult => {
-    const orphaned = reloaded ? orphanedBySave(input.madePages ?? [], JSON.stringify(state.agent.output()), warnings) : null;
+    const orphaned = reloaded ? orphanedBySave(input.madePages ?? [], state.agent.output(), warnings) : null;
 
     if (orphaned === null) {
       throw thrown;
@@ -124,7 +124,7 @@ const storedSession = (input: StoredSessionInput, initial: StoredState, exists: 
       // result.revision is the session's own hash; equal means nothing changed here.
       const before = state.agent.revision();
       // A failed batch wrote nothing, so memory is the parent as saved.
-      const result = await state.agent.execute(batch, options).then((ran) => reportOrphanedPages(ran, JSON.stringify(state.agent.output())));
+      const result = await state.agent.execute(batch, options).then((ran) => reportOrphanedPages(ran, state.agent.output()));
 
       // An unchanged write (page.rename edits another document) has nothing to save.
       if (!result.ok || !writing || result.revision === before) {

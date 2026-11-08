@@ -33,7 +33,10 @@ import {
  *               "$upgradeStatus" for the sync upgrade it refuses. Every request it
  *               gets is recorded in order, or by "hostRequestOrder": "sorted" | "distinct".
  *               "maskHostKeys" masks those key names in the records after ordering, for
- *               values a server makes up per run (a page creator's suggestedPageId).
+ *               values a server makes up per run (timestamps). "mintedHostKeys" is for ids a
+ *               server mints (a page creator's suggestedPageId): each value must be a Blok id
+ *               (10 characters of [A-Za-z0-9_-]) and differ from every other one in the case;
+ *               it is recorded as "<minted>". Any other value stays as sent, so it fails.
  *   room        {"journal"?: false}: a real sync host (live-room.ts) at ${roomWs}; without
  *               a journal the host speaks blok-sync.v1 only. stdio only.
  *   session     {"protocolVersion", "capabilities"?, "clientName"?, "headers"?}: the
@@ -185,6 +188,7 @@ export interface FixtureCase {
   hostRequestOrder?: 'sorted' | 'distinct';
   maskKeys?: string[];
   maskHostKeys?: string[];
+  mintedHostKeys?: string[];
   compare?: 'blok-owned';
   variants?: Record<string, Partial<FixtureCase>>;
   expectExit?: unknown;
@@ -348,6 +352,35 @@ const maskKeys = (value: unknown, keys: ReadonlySet<string>): unknown => {
   }
 
   return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, keys.has(key) && inner !== null ? '<masked>' : maskKeys(inner, keys)]));
+};
+
+const MINTED_ID = /^[A-Za-z0-9_-]{10}$/;
+
+/** Replaces each minted id under these key names with "<minted>", after checking its shape and that no two are equal. */
+const mintedKeys = (value: unknown, keys: ReadonlySet<string>, label: string): unknown => {
+  const seen = new Set<string>();
+  const walk = (inner: unknown): unknown => {
+    if (Array.isArray(inner)) {
+      return inner.map(walk);
+    }
+    if (!isRecord(inner)) {
+      return inner;
+    }
+
+    return Object.fromEntries(Object.entries(inner).map(([key, item]) => {
+      if (!keys.has(key) || typeof item !== 'string' || !MINTED_ID.test(item)) {
+        return [key, walk(item)];
+      }
+      if (seen.has(item)) {
+        throw new Error(`${label}: the minted ${key} ${item} was sent twice`);
+      }
+      seen.add(item);
+
+      return [key, '<minted>'];
+    }));
+  };
+
+  return walk(value);
 };
 
 const captured = (answer: unknown, source: CaptureSource): unknown => {
@@ -964,7 +997,7 @@ const withHost = async (c: FixtureCase, run: CaseRun, body: () => Promise<void>)
     await body();
     const requests = orderedRequests(host.requests, c.hostRequestOrder);
 
-    run.checkCase('expectHostRequests', maskKeys(requests, new Set(c.maskHostKeys ?? [])), `${c.name} host requests`);
+    run.checkCase('expectHostRequests', mintedKeys(maskKeys(requests, new Set(c.maskHostKeys ?? [])), new Set(c.mintedHostKeys ?? []), c.name), `${c.name} host requests`);
   } finally {
     await host.close();
   }

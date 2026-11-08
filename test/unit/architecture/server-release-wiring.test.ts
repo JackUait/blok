@@ -356,6 +356,17 @@ describe('server release wiring', () => {
     expect(source.indexOf('Wait for successful CI'))
       .toBeLessThan(source.indexOf('dotnet nuget push'));
 
+    // A tag whose CI can never pass (a test bug fixed only on a later commit)
+    // ships through a dispatch that names its reason. A tag push has no input,
+    // so its gate always holds. The reason goes through env, not into the script.
+    const ciGateStep = steps.find((step) => step.name === 'Wait for successful CI');
+
+    expect(workflow.on?.workflow_dispatch?.inputs?.ci_waiver?.required).toBe(false);
+    expect(ciGateStep?.env?.CI_WAIVER).toBe('${{ inputs.ci_waiver }}');
+    expect(ciGate).not.toContain('${{');
+    expect(ciGate?.indexOf('if [ -n "$CI_WAIVER" ]; then')).toBe(0);
+    expect(ciGate).toContain('echo "::warning::CI gate waived for $RELEASE_TAG: $CI_WAIVER"');
+
     for (const project of [
       'packages/server/dotnet/Blok.Server/Blok.Server.csproj',
       'packages/server/dotnet/Blok.Server.AspNetCore/Blok.Server.AspNetCore.csproj',

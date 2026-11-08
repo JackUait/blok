@@ -55,11 +55,23 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-gallery-title]')).toMatch(/font-weight:\s*500/);
   });
 
-  // findings-listgallery L13: the preview is 9/16 of the card width; the card is preview + title, no bottom padding.
-  it('draws the preview 16:9 at every card size, with no padding under the card', () => {
-    expect(ruleBody('[data-blok-database-gallery-preview]')).toContain('aspect-ratio: 16 / 9');
-    expect(css).not.toContain('--blok-database-gallery-preview-height');
+  // research/07 §Gallery, 08:317, listgallery.png (side-by-side-v1): a medium preview is 146.25px at 296 and 338 wide.
+  // Small and large are unmeasured and keep 16:9. The card is preview + title, no bottom padding.
+  it('draws a medium preview 146.25px tall border to border, other sizes 16:9, with no padding under the card', () => {
+    const preview = ruleBody('[data-blok-database-gallery-preview]');
+
+    expect(preview).toContain('box-sizing: border-box');
+    expect(preview).toContain('aspect-ratio: var(--blok-database-gallery-preview-ratio, 16 / 9)');
+    expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toContain('--blok-database-gallery-preview-ratio: auto');
+    expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toContain('--blok-database-gallery-preview-height: 146.25px');
+    expect(preview).toContain('block-size: var(--blok-database-gallery-preview-height, auto)');
     expect(ruleBody('[data-blok-database-gallery-card]')).not.toContain('padding-block-end');
+  });
+
+  // A row stretches to its tallest item (L12), so the "+ New page" tile takes the card's preview height.
+  it('sizes the "+ New page" tile like a card of the same size', () => {
+    expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('padding-block-start: var(--blok-database-gallery-new-height, calc(56.25% + 38.5px))');
+    expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toContain('--blok-database-gallery-new-height: calc(146.25px + 38.5px)');
   });
 
   // findings-listgallery L12: a long title wraps in full; grid rows stretch same-row cards to one height.
@@ -87,7 +99,6 @@ describe('database gallery and calendar styles', () => {
     expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-gallery-preview-border)');
     expect(tile).toContain('font-size: 15px');
     expect(tile).not.toContain('min-height: 80px');
-    expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('padding-block-start: calc(56.25% + 38.5px)');
   });
 
   it('crops images unless Fit image is on', () => {

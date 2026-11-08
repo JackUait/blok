@@ -11644,8 +11644,13 @@ textarea[data-blok-database-cell-input] {
   --blok-database-gallery-card-min: 180px;
 }
 
+/* research/07 §Gallery, 08:317 and listgallery.png: Notion's medium preview is 146.25px at 296 and 338 wide.
+   It grows on wider cards (166.5 at 388, 218.3 at 492), which a fixed height does not follow. */
 [data-blok-database-gallery][data-card-size="medium"] {
   --blok-database-gallery-card-min: 260px;
+  --blok-database-gallery-preview-ratio: auto;
+  --blok-database-gallery-preview-height: 146.25px;
+  --blok-database-gallery-new-height: calc(146.25px + 38.5px);
 }
 
 [data-blok-database-gallery][data-card-size="large"] {
@@ -11737,10 +11742,12 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-block);
 }
 
-/* 9/16 of the card width at every size (findings-listgallery L13). */
+/* Small and large are unmeasured and keep 9/16 of the card width (findings-listgallery L13). */
 [data-blok-database-gallery-preview] {
   flex: none;
-  aspect-ratio: 16 / 9;
+  box-sizing: border-box;
+  aspect-ratio: var(--blok-database-gallery-preview-ratio, 16 / 9);
+  block-size: var(--blok-database-gallery-preview-height, auto);
   overflow: hidden;
   background-color: var(--blok-database-gallery-preview-bg);
   border-block-end: 1px solid var(--blok-database-gallery-preview-border);
@@ -11911,11 +11918,12 @@ textarea[data-blok-database-cell-input] {
   font-size: 15px;
 }
 
-/* Alone on a row, the tile still takes a card's height: a 16:9 preview plus the 38.5px title. */
+/* Alone on a row, the tile still takes a card's height: its preview plus the 38.5px title.
+   A row stretches to its tallest item, so a taller tile would stretch the cards beside it. */
 [data-blok-database-gallery-new]::before {
   content: '';
   margin-inline-end: calc(-1 * var(--blok-space-1));
-  padding-block-start: calc(56.25% + 38.5px);
+  padding-block-start: var(--blok-database-gallery-new-height, calc(56.25% + 38.5px));
 }
 
 [data-blok-database-gallery-new] svg {

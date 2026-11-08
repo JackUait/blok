@@ -1476,6 +1476,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CARD_MOTION_BYTES = 725;
     // database.css: a dragged board group moves only its header strip; the other headers slide.
     const DATABASE_GROUP_DRAG_BYTES = 932;
+    // database.css: a medium gallery preview is Notion's 146.25px, and the "+ New page" tile matches it.
+    const DATABASE_GALLERY_PREVIEW_BYTES = 662;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1854,7 +1856,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + TABLE_SCROLL_NO_BOUNCE_BYTES
       + TABLE_FULLSCREEN_LEAVE_BYTES
       + DATABASE_CARD_MOTION_BYTES
-      + DATABASE_GROUP_DRAG_BYTES;
+      + DATABASE_GROUP_DRAG_BYTES
+      + DATABASE_GALLERY_PREVIEW_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

@@ -137,10 +137,9 @@ test.describe('gallery', () => {
 
     await expect(page.locator('[data-blok-database-gallery-card]')).toHaveCount(3);
     await expect(card(page, 'r1').locator('[data-blok-database-gallery-title]')).toHaveText('Launch');
-    // findings-listgallery L13: the preview is 16:9 of the card width at every card size.
-    const width = (await card(page, 'r1').boundingBox())?.width ?? 0;
-
-    expect((await card(page, 'r1').locator('[data-blok-database-gallery-preview]').boundingBox())?.height).toBeCloseTo(width * 9 / 16, 0);
+    // research/07, 08:317, listgallery.png: a medium preview is 146.25px tall; the card adds the 38.5px title.
+    expect((await card(page, 'r1').locator('[data-blok-database-gallery-preview]').boundingBox())?.height).toBeCloseTo(146.25, 1);
+    expect((await card(page, 'r1').boundingBox())?.height).toBeCloseTo(184.75, 1);
     await expect(page.locator('[data-blok-database-gallery-grid]')).toHaveCSS('gap', '16px');
   });
 
@@ -176,10 +175,8 @@ test.describe('gallery', () => {
 
     await mount(page, blocks({ type: 'gallery', cardPreview: 'property:p-image' }, rows));
 
-    // findings-listgallery L13: the empty cover keeps the 16:9 preview of the card width.
-    const width = (await card(page, 'r2').boundingBox())?.width ?? 0;
-
-    expect((await card(page, 'r2').locator('[data-blok-database-gallery-preview]').boundingBox())?.height).toBeCloseTo(width * 9 / 16, 0);
+    // The empty cover keeps the medium preview height (research/07, 08:317).
+    expect((await card(page, 'r2').locator('[data-blok-database-gallery-preview]').boundingBox())?.height).toBeCloseTo(146.25, 1);
   });
 
   test('"Page cover" shows the row\'s own cover, and follows a cover set in the drawer', async ({ page }) => {

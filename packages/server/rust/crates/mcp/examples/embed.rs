@@ -37,8 +37,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use blok_mcp::authorize::{Authorize, Webhook};
+use blok_mcp::blok_blokagent::PageCreator;
 use blok_mcp::bundle::Bundle;
 use blok_mcp::cli::{self, AuthorizeSpec, StartError};
+use blok_mcp::create_page::CreatePageWebhook;
 use blok_mcp::document_source::{
     DocumentCaller, DocumentSource, ListedDocument, SourceError, SourceErrorKind, SourceList,
     SourceListing, StoredDocument,
@@ -741,9 +743,13 @@ async fn run(argv: Vec<String>) -> Result<(), Stop> {
     let authorize = started.authorize.map(|AuthorizeSpec::Webhook(url)| {
         Arc::new(Webhook::new(url, Outbound::new())) as Arc<dyn Authorize>
     });
+    let page_creator = started
+        .create_page
+        .map(|url| Arc::new(CreatePageWebhook::new(url, Outbound::new())) as Arc<dyn PageCreator>);
     let hooks = Hooks {
         authorize,
         source,
+        page_creator,
         ..Hooks::default()
     };
     let embed = EmbedHooks {

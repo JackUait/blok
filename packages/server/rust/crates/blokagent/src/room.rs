@@ -251,7 +251,7 @@ impl Executor {
             // room. The lane run checks the count again.
             input.members.push(member("document", state));
             let made = self
-                .create_pages(cancel, &mut input, options, actor)
+                .create_pages(cancel, &mut input, options, actor, Some(doc_id))
                 .await?;
             input.remove("document");
             match made {

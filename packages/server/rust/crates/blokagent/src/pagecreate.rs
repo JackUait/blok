@@ -3,7 +3,7 @@ use blok_jsjson::{Kind, Node, new_array, new_object};
 use crate::cancel::Cancel;
 use crate::errors::{Error, invalid_operation, no_answer};
 use crate::executor::{Executor, has_command};
-use crate::types::{Actor, Execution, Options, PageCreator};
+use crate::types::{Actor, Execution, Options, PageCreateRequest, PageCreator};
 use crate::wire::{
     failure, get, int_value, member, object, parse, revision_of, str_node, string_value, write,
 };
@@ -27,6 +27,7 @@ impl Executor {
         input: &mut Node,
         options: Option<&Options>,
         actor: &Actor,
+        parent: Option<&str>,
     ) -> Result<Created, Error> {
         let Some(creator) = options
             .filter(|options| options.page_titles)
@@ -59,7 +60,13 @@ impl Executor {
 
         let mut created = Vec::new();
         for _ in 0..count {
-            let page_id = match create_one(cancel, creator, actor).await {
+            let request = PageCreateRequest {
+                parent_document_id: parent.map(str::to_owned),
+                principal: None,
+                actor: actor.clone(),
+                suggested_page_id: suggested_page_id()?,
+            };
+            let page_id = match create_one(cancel, creator, &request).await {
                 Ok(page_id) => page_id,
                 Err(err) if !created.is_empty() => {
                     return Ok(Created::Refused(stopped_after_creating(&err, &created)?));
@@ -92,10 +99,24 @@ impl Executor {
 async fn create_one(
     cancel: &Cancel,
     creator: &dyn PageCreator,
-    actor: &Actor,
+    request: &PageCreateRequest,
 ) -> Result<Option<String>, Error> {
     cancel.check()?;
-    creator.create(cancel, actor).await
+    creator.create(cancel, request).await
+}
+
+// src/shared/mint-id.ts's alphabet, so ids look the same everywhere.
+const PAGE_ID_ALPHABET: &[u8; 64] =
+    b"57X6y3wQZNzYjJB2L_10pxbackgroundhimselfUTF-8DEMOGRAPHICSVqvt4KW9";
+
+/// Ten characters, as blok-mcp mints a page id.
+fn suggested_page_id() -> Result<String, Error> {
+    let mut bytes = [0u8; 10];
+    getrandom::fill(&mut bytes).map_err(|err| Error::Host(err.to_string().into()))?;
+    Ok(bytes
+        .iter()
+        .map(|b| PAGE_ID_ALPHABET[usize::from(b & 63)] as char)
+        .collect())
 }
 
 /// Answers a batch that stopped on a cancel or an error after the host made

@@ -32,7 +32,8 @@ pub use room::Rooms;
 pub use session::Session;
 pub use translate::translate;
 pub use types::{
-    Actor, Execution, HostFuture, Options, PageCreator, PageLocation, PageTarget, StoredPage,
+    Actor, Execution, HostFuture, Options, PageCreateRequest, PageCreator, PageLocation,
+    PageTarget, StoredPage,
 };
 
 #[cfg(test)]

@@ -179,14 +179,7 @@ impl BlokTools {
         let mut checked = options.clone();
         checked["transport"] = json!({ "kind": "http", "listen": "127.0.0.1:0" });
         checked["auth"] = json!({ "kind": "none" });
-        let refusal = crate::server::option_refusal(
-            &bundle,
-            &checked,
-            hooks.authorize.is_some(),
-            hooks.uploads.as_ref(),
-            hooks.source.is_some(),
-        )
-        .await?;
+        let refusal = crate::server::option_refusal(&bundle, &checked, &hooks).await?;
         if let Some(refusal) = refusal {
             return Err(StartError::Config(refusal));
         }

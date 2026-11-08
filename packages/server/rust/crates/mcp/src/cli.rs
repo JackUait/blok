@@ -33,6 +33,10 @@ pub struct Started {
     /// The `options` of mcpParseArgs, plus the validated manifest and overrides.
     pub options: Value,
     pub authorize: Option<AuthorizeSpec>,
+    /// `--create-page <url>`: the host's page creator webhook.
+    pub create_page: Option<String>,
+    /// `--handle-store files:<dir>`: the files handle store's directory.
+    pub handle_store: Option<String>,
 }
 
 /// The env vars the options read. Only BLOK_* names matter (src/shared/mcp/config.ts).
@@ -51,10 +55,17 @@ pub async fn start(
     env: Value,
     cwd: &Path,
 ) -> Result<Started, StartError> {
-    let Started { options, authorize } = parse(bundle, argv, env, cwd).await?;
+    let started = parse(bundle, argv, env, cwd).await?;
+    let options = &started.options;
     let mut checked_options = options.clone();
-    if authorize.is_some() {
+    if started.authorize.is_some() {
         checked_options["authorize"] = Value::Bool(true);
+    }
+    if started.create_page.is_some() {
+        checked_options["createPage"] = Value::Bool(true);
+    }
+    if started.handle_store.is_some() {
+        checked_options["handleStore"] = Value::Bool(true);
     }
     let checked = bundle
         .call(
@@ -71,7 +82,7 @@ pub async fn start(
             "OAuth authentication needs the HTTP transport (--http)".to_owned(),
         ));
     }
-    Ok(Started { options, authorize })
+    Ok(started)
 }
 
 /// Node's parseBlokMcpArgs: the blok-mcp flags and env as options, with the
@@ -116,7 +127,12 @@ pub async fn parse(
             options[key] = checked.get("value").cloned().unwrap_or(Value::Null);
         }
     }
-    Ok(Started { options, authorize })
+    Ok(Started {
+        options,
+        authorize,
+        create_page: file("createPage"),
+        handle_store: file("handleStore"),
+    })
 }
 
 /// Node's loadAuthorizeHook: an http(s) spec (lower case only) is a

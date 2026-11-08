@@ -104,6 +104,7 @@ pub struct Mcp {
     source: Option<Source>,
     authorize: Option<Arc<dyn Authorize>>,
     agent_actor: Option<AgentActorFn>,
+    page_creator: Option<Arc<dyn blok_blokagent::PageCreator>>,
     live: Option<Live>,
     live_shared: Option<Arc<LiveShared>>,
     rooms: Option<Rooms>,
@@ -192,6 +193,8 @@ fn page_writes(counted: &Value) -> Vec<(String, Value)> {
 struct HostWork {
     created: Vec<String>,
     create_failure: Option<Value>,
+    /// The host's creator was cancelled after it made `created`.
+    cancelled: bool,
     page_writes: Vec<Value>,
     /// A live page write went out but was not acknowledged.
     unconfirmed: bool,
@@ -250,6 +253,9 @@ fn runtime_failure(message: &str) -> HostError {
         "retryable": true,
     }))
 }
+
+// runtime_failure's log line for a creator failure, which is already logged in full.
+const HOST_STOPPED: &str = "the host could not create a page";
 
 /// The pages of `created` that `document` links from no page block; None
 /// when it is no document.
@@ -347,13 +353,19 @@ impl crate::stdio::Requests for Mcp {
 pub(crate) async fn option_refusal(
     bundle: &Bundle,
     options: &Value,
-    authorize: bool,
-    uploads: Option<&crate::uploads::Uploads>,
-    custom_source: bool,
+    hooks: &Hooks,
 ) -> Result<Option<String>, crate::bundle::BundleError> {
+    let (authorize, uploads, custom_source) = (
+        hooks.authorize.is_some(),
+        hooks.uploads.as_ref(),
+        hooks.source.is_some(),
+    );
     let mut checked = options.clone();
     if authorize {
         checked["authorize"] = Value::Bool(true);
+    }
+    if hooks.page_creator.is_some() {
+        checked["createPage"] = Value::Bool(true);
     }
     // A host's source is a source: with a ticket URL it still needs a per-document check.
     if custom_source {
@@ -450,32 +462,31 @@ impl Mcp {
         options: &Value,
         hooks: Hooks,
     ) -> Result<Mcp, BuildError> {
+        if hooks.source.is_some() && opt(options, "source").is_some() {
+            return Err(BuildError::Config(
+                "hooks.source (the host's own document source) cannot be combined with options.source".to_owned(),
+            ));
+        }
+        if let Some(refusal) = option_refusal(&bundle, options, &hooks).await? {
+            return Err(BuildError::Config(refusal));
+        }
+        // The bundle sees no rooms in the options; they are live rooms too.
+        if hooks.page_creator.is_some() && hooks.rooms.is_some() {
+            return Err(BuildError::Config(
+                "--create-page works in stored mode only: it cannot be used with live rooms (hooks.rooms)".to_owned(),
+            ));
+        }
+        if let Some(root) = hooks.uploads.as_ref().and_then(|u| u.root.as_ref()) {
+            crate::uploads::check_root(root).map_err(BuildError::Config)?;
+        }
         let Hooks {
             authorize,
             agent_actor,
             uploads,
             rooms,
             source: custom,
+            page_creator,
         } = hooks;
-        if custom.is_some() && opt(options, "source").is_some() {
-            return Err(BuildError::Config(
-                "hooks.source (the host's own document source) cannot be combined with options.source".to_owned(),
-            ));
-        }
-        if let Some(refusal) = option_refusal(
-            &bundle,
-            options,
-            authorize.is_some(),
-            uploads.as_ref(),
-            custom.is_some(),
-        )
-        .await?
-        {
-            return Err(BuildError::Config(refusal));
-        }
-        if let Some(root) = uploads.as_ref().and_then(|u| u.root.as_ref()) {
-            crate::uploads::check_root(root).map_err(BuildError::Config)?;
-        }
         let mut flags = surface_flags(options);
         if uploads.is_some() {
             flags["uploads"] = Value::Bool(true);
@@ -571,6 +582,7 @@ impl Mcp {
             source,
             authorize,
             agent_actor,
+            page_creator,
             live_shared,
             live,
             rooms: rooms.map(|executor| Rooms::new(executor, &flags)),
@@ -764,15 +776,73 @@ impl Mcp {
             && (self.live.is_some() || self.source.is_some())
     }
 
+    /// The host's creator, as Node's createHostPage: None refuses, and any
+    /// other failure is logged in full while the agent sees only
+    /// HOST_PAGE_FAILED. A cancel is the failure() CANCELLED.
+    async fn host_page(
+        &self,
+        creator: &dyn blok_blokagent::PageCreator,
+        caller: &Caller,
+        opener: &DocumentCaller,
+        parent: &str,
+    ) -> Result<String, Fault> {
+        let request = blok_blokagent::PageCreateRequest {
+            parent_document_id: Some(parent.to_owned()),
+            principal: Some(caller.principal.clone()),
+            actor: blok_blokagent::Actor {
+                id: opener.actor.id.clone(),
+                name: opener.actor.name.clone(),
+                on_behalf_of: opener.actor.on_behalf_of.clone(),
+            },
+            suggested_page_id: mint_page_id(),
+        };
+        let host_failed = || {
+            Fault::Host(HostError::surface(
+                "SOURCE_UNAVAILABLE",
+                crate::create_page::HOST_PAGE_FAILED,
+            ))
+        };
+        // MCP never cancels a stored batch (a cancelled call is still applied).
+        match creator
+            .create(&blok_blokagent::Cancel::new(), &request)
+            .await
+        {
+            Ok(None) => Err(HostError::surface(
+                "FORBIDDEN",
+                "You may not create a page document here.",
+            )
+            .into()),
+            Ok(Some(page_id)) if crate::create_page::is_page_id(&page_id) => Ok(page_id),
+            Ok(Some(page_id)) => {
+                eprintln!(
+                    "blok-mcp: the host page creator answered no valid page id (1-512 code points, no control characters, not \".\" or \"..\"): {page_id:?}"
+                );
+                Err(host_failed())
+            }
+            Err(err) if err.is_cancel() => {
+                Err(HostError::failure("CANCELLED", crate::create_page::CANCELLED).into())
+            }
+            Err(err) => {
+                eprintln!("blok-mcp: the host could not create a page: {err}");
+                Err(host_failed())
+            }
+        }
+    }
+
     /// Node's opener.createPage: a new id, authorized like a write open; a
     /// stored page is saved empty, a live one is joined once and must be.
+    /// With the host's creator, the host makes it (`host_page`).
     async fn create_page(
         &self,
         caller: &Caller,
         actor: &Value,
         client_name: &str,
         opener: &DocumentCaller,
+        parent: &str,
     ) -> Result<String, Fault> {
+        if let Some(creator) = &self.page_creator {
+            return self.host_page(&**creator, caller, opener, parent).await;
+        }
         let page_id = mint_page_id();
         let named = |fault: Fault| match fault {
             Fault::Host(mut error) => {
@@ -917,9 +987,23 @@ impl Mcp {
     ) -> Result<HostWork, Fault> {
         let mut work = HostWork::default();
         for _ in 0..pages_to_make(counted) {
-            match self.create_page(caller, actor, client_name, opener).await {
+            match self
+                .create_page(caller, actor, client_name, opener, open_document)
+                .await
+            {
                 Ok(page_id) => work.created.push(page_id),
+                // A host failure past the first page is a server stop, as Node answers it.
+                Err(Fault::Host(error))
+                    if !work.created.is_empty()
+                        && error.code() == "SOURCE_UNAVAILABLE"
+                        && error.error.get("message")
+                            == Some(&json!(crate::create_page::HOST_PAGE_FAILED)) =>
+                {
+                    work.create_failure = Some(runtime_failure(HOST_STOPPED).failed_input());
+                    break;
+                }
                 Err(Fault::Host(error)) => {
+                    work.cancelled = error.code() == "CANCELLED" && !work.created.is_empty();
                     work.create_failure = Some(error.failed_input());
                     break;
                 }
@@ -1973,12 +2057,23 @@ impl Mcp {
                 requested_schema: ask.get("requestedSchema").cloned().unwrap_or(Value::Null),
             }));
         }
-        let Some(result) = out.text("result").map(str::to_owned) else {
+        let Some(mut result) = out.text("result").map(str::to_owned) else {
             let fault = Fault::Internal("agentExecute gave no result".to_owned());
             return Err(self
                 .orphaned(&work.created, Some(&stored.document), fault)
                 .await);
         };
+        if self.page_creator.is_some()
+            && !work.created.is_empty()
+            && let Some(reported) = crate::create_page::report_orphaned(
+                &result,
+                &stored.document,
+                &work.created,
+                work.cancelled,
+            )
+        {
+            result = reported;
+        }
         // Memory takes a batch to save only once the source has it, so a
         // failed save leaves no edit and no undo step behind.
         let keep = |stored: &mut Stored| {

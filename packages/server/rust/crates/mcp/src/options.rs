@@ -198,6 +198,11 @@ pub struct Hooks {
     pub rooms: Option<Arc<blok_blokagent::Executor>>,
     /// The host's own document store, in place of `McpOptions::source`.
     pub source: Option<Arc<dyn crate::document_source::DocumentSource>>,
+    /// Creates each new sub-page's document as the host's own (Node's
+    /// `createPage`). Stored mode with a source and `page_titles` "page-map"
+    /// only: with `sync` or `rooms`, or without a source, the start is
+    /// refused. Blok then never authorizes, loads or saves the new page.
+    pub page_creator: Option<Arc<dyn blok_blokagent::PageCreator>>,
 }
 
 #[cfg(test)]

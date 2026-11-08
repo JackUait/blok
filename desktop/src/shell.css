@@ -83,7 +83,11 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
 [role="tab"]:hover [data-desktop-close], [role="tab"]:focus-within [data-desktop-close] { opacity: 1; }
 [data-desktop-action="new-tab"] { margin: 6px; }
 [data-desktop-workspace] { position: relative; flex: 1; min-height: 0; height: calc(100vh - 40px); }
-[data-desktop-workspace] [data-blok-sidebar] { height: 100%; }
+[data-desktop-workspace] [data-blok-sidebar] { height: 100%; min-width: 0; transition: width 160ms ease; }
+[data-desktop-workspace] [data-blok-sidebar]:has([data-blok-sidebar-resize][data-resizing]) { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  [data-desktop-workspace] [data-blok-sidebar] { transition: none; }
+}
 [data-desktop-workspace] [data-blok-sidebar-canvas] { height: 100%; }
 [data-desktop-document] {
   width: min(100%, 900px); min-height: 100%; margin-inline: auto; padding: 52px 64px 120px;

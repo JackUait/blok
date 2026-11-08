@@ -65,7 +65,7 @@ export function mountDesktop(root: HTMLElement): void {
   if (current && current.href !== location.href) nativeReplace(current.href);
   if (current && document.title !== current.title) document.title = current.title;
   box.workspace = createWorkspace((width) => {
-    root.style.setProperty('--desktop-sidebar-width', `${Math.max(isTauri() ? 112 : 80, width)}px`);
+    root.style.setProperty('--desktop-sidebar-width', `${Math.max(isTauri() ? 156 : 84, width)}px`);
   }, syncPageIcon);
   root.replaceChildren(strip(), box.workspace.element);
   root.addEventListener('click', onClick);
@@ -531,7 +531,7 @@ function leading(): HTMLElement {
   const drag = document.createElement('div');
   drag.setAttribute('data-desktop-leading-drag', '');
   drag.setAttribute('data-tauri-drag-region', '');
-  cluster.append(traffic, drag, iconButton('sidebar', 'Afficher ou masquer la barre latérale', sidebarIcon()), iconButton('new-page', 'Nouvelle page', plusIcon()));
+  cluster.append(traffic, iconButton('sidebar', 'Afficher ou masquer la barre latérale', sidebarIcon()), drag, iconButton('new-page', 'Nouvelle page', plusIcon()));
   return cluster;
 }
 

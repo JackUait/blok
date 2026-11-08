@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 use crate::test_json::{self, Json};
 use crate::{
     Actor, Cancel, CancelReason, Error, Execution, Executor, HostFuture, InvokeFuture, Invoker,
-    Options, PageCreator, PageLocation, PageTarget, StoredPage,
+    Options, PageCreateRequest, PageCreator, PageLocation, PageTarget, StoredPage,
 };
 
 pub(crate) const REPO_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../..");
@@ -208,7 +208,12 @@ impl PageTarget for Target {
 }
 
 impl PageCreator for Target {
-    fn create<'a>(&'a self, _: &'a Cancel, actor: &'a Actor) -> HostFuture<'a, Option<String>> {
+    fn create<'a>(
+        &'a self,
+        _: &'a Cancel,
+        request: &'a PageCreateRequest,
+    ) -> HostFuture<'a, Option<String>> {
+        let actor = &request.actor;
         let r = &self.recorder;
         let at = {
             let mut creates = r.creates.lock().expect("lock");

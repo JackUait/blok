@@ -34,7 +34,7 @@ flate2 = "1"
 http = "1"
 http-body-util = { version = "0.1", features = ["channel"] }
 ring = "0.17"
-serde = "1"
+serde = { version = "1", features = ["derive"] }
 # Pinned: rmcp ships a minor release about every week, and the MCP
 # conformance suite is what proves a bump. Client and auth features stay off:
 # they pull reqwest, which dials outside the outbound law.
@@ -44,6 +44,11 @@ rmcp = { version = "=3.9.0", default-features = false, features = ["server", "tr
 serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
 sha2 = "0.10"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net", "io-util", "io-std", "fs"] }
+
+[target.'cfg(unix)'.dependencies]
+# The files handle store refuses a directory another user owns; rustix reads
+# the user id without unsafe code.
+rustix = { version = "1", features = ["process"] }
 
 [dev-dependencies]
 blok-blokserver = { path = "../blokserver" }

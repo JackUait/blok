@@ -11,8 +11,8 @@ use crate::test_support::{
 };
 use crate::wire::{is_true, present, str_node, write};
 use crate::{
-    Actor, Cancel, Error, Execution, Executor, HostFuture, Options, PageCreator, PageLocation,
-    PageTarget, Session, StoredPage,
+    Actor, Cancel, Error, Execution, Executor, HostFuture, Options, PageCreateRequest, PageCreator,
+    PageLocation, PageTarget, Session, StoredPage,
 };
 
 // The Rust reader of test/fixtures/agent-server-scenarios. The runner
@@ -135,7 +135,12 @@ impl PageTarget for Target {
 }
 
 impl PageCreator for Target {
-    fn create<'a>(&'a self, _: &'a Cancel, actor: &'a Actor) -> HostFuture<'a, Option<String>> {
+    fn create<'a>(
+        &'a self,
+        _: &'a Cancel,
+        request: &'a PageCreateRequest,
+    ) -> HostFuture<'a, Option<String>> {
+        let actor = &request.actor;
         let host = &self.0;
         host.same_actor(actor);
         let mut state = host.state.lock().expect("lock");

@@ -33,6 +33,42 @@ pub struct Started {
     /// The `options` of mcpParseArgs, plus the validated manifest and overrides.
     pub options: Value,
     pub authorize: Option<AuthorizeSpec>,
+    /// `--create-page <url>`: the host's page creator webhook.
+    pub create_page: Option<String>,
+    /// `--handle-store files:<dir>`: the files handle store's directory.
+    pub handle_store: Option<String>,
+}
+
+/// The hooks the flags name: the `--authorize` and `--create-page`
+/// webhooks and the `--handle-store` files store, which is made and checked
+/// here, so a refused directory stops the start (exit code 2).
+pub fn hooks_of(started: &Started) -> Result<crate::options::Hooks, StartError> {
+    use std::sync::Arc;
+    let handle_store = match &started.handle_store {
+        None => None,
+        Some(dir) => Some(Arc::new(
+            crate::handle_store_files::FilesHandleStore::open(dir).map_err(StartError::Config)?,
+        ) as Arc<dyn crate::handle_store::HandleStore>),
+    };
+    Ok(crate::options::Hooks {
+        authorize: started
+            .authorize
+            .as_ref()
+            .map(|AuthorizeSpec::Webhook(url)| {
+                Arc::new(crate::authorize::Webhook::new(
+                    url.clone(),
+                    crate::outbound::Outbound::new(),
+                )) as Arc<dyn crate::authorize::Authorize>
+            }),
+        page_creator: started.create_page.as_ref().map(|url| {
+            Arc::new(crate::create_page::CreatePageWebhook::new(
+                url.clone(),
+                crate::outbound::Outbound::new(),
+            )) as Arc<dyn blok_blokagent::PageCreator>
+        }),
+        handle_store,
+        ..crate::options::Hooks::default()
+    })
 }
 
 /// The env vars the options read. Only BLOK_* names matter (src/shared/mcp/config.ts).
@@ -44,7 +80,46 @@ pub fn blok_env(vars: impl Iterator<Item = (String, String)>) -> Value {
     )
 }
 
+/// runCli's start: the flags (`parse`), then the standalone server's checks.
 pub async fn start(
+    bundle: &Bundle,
+    argv: &[String],
+    env: Value,
+    cwd: &Path,
+) -> Result<Started, StartError> {
+    let started = parse(bundle, argv, env, cwd).await?;
+    let options = &started.options;
+    let mut checked_options = options.clone();
+    if started.authorize.is_some() {
+        checked_options["authorize"] = Value::Bool(true);
+    }
+    if started.create_page.is_some() {
+        checked_options["createPage"] = Value::Bool(true);
+    }
+    // No handleStore here: its stand-in in the bundle's mcpCheckOptions lacks
+    // sweep, so it is always refused; the Rust trait already has every op.
+    let checked = bundle
+        .call(
+            "mcpCheckOptions",
+            &json!({ "options": checked_options }).to_string(),
+        )
+        .await?;
+    if let Some(error) = checked.get("error").and_then(Value::as_str) {
+        return Err(StartError::Config(error.to_owned()));
+    }
+    let stdio = options.pointer("/transport/kind").and_then(Value::as_str) != Some("http");
+    if stdio && options.pointer("/auth/kind").and_then(Value::as_str) != Some("none") {
+        return Err(StartError::Config(
+            "OAuth authentication needs the HTTP transport (--http)".to_owned(),
+        ));
+    }
+    Ok(started)
+}
+
+/// Node's parseBlokMcpArgs: the blok-mcp flags and env as options, with the
+/// manifest files read, and none of the standalone server's checks. A host
+/// that serves Blok's tools (`embed::BlokTools`) reads its flags this way.
+pub async fn parse(
     bundle: &Bundle,
     argv: &[String],
     env: Value,
@@ -83,26 +158,12 @@ pub async fn start(
             options[key] = checked.get("value").cloned().unwrap_or(Value::Null);
         }
     }
-    let mut checked_options = options.clone();
-    if authorize.is_some() {
-        checked_options["authorize"] = Value::Bool(true);
-    }
-    let checked = bundle
-        .call(
-            "mcpCheckOptions",
-            &json!({ "options": checked_options }).to_string(),
-        )
-        .await?;
-    if let Some(error) = checked.get("error").and_then(Value::as_str) {
-        return Err(StartError::Config(error.to_owned()));
-    }
-    let stdio = options.pointer("/transport/kind").and_then(Value::as_str) != Some("http");
-    if stdio && options.pointer("/auth/kind").and_then(Value::as_str) != Some("none") {
-        return Err(StartError::Config(
-            "OAuth authentication needs the HTTP transport (--http)".to_owned(),
-        ));
-    }
-    Ok(Started { options, authorize })
+    Ok(Started {
+        options,
+        authorize,
+        create_page: file("createPage"),
+        handle_store: file("handleStore"),
+    })
 }
 
 /// Node's loadAuthorizeHook: an http(s) spec (lower case only) is a

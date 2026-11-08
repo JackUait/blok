@@ -72,13 +72,31 @@ pub trait PageTarget: Send + Sync {
     }
 }
 
+/// What the host gets when an agent inserts a page block.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PageCreateRequest {
+    /// The document the page block goes into; None when the caller has no
+    /// id for it (a stored run).
+    pub parent_document_id: Option<String>,
+    /// Who the agent acts for, when the caller knows (blok-mcp does).
+    pub principal: Option<String>,
+    pub actor: Actor,
+    /// A fresh id the host may take for the page, or ignore.
+    pub suggested_page_id: String,
+}
+
 /// A target that also creates the document for a new sub-page. Deleting a
-/// page block never calls the host.
+/// page block, undo and redo never call the host. blok-mcp takes the same
+/// trait (`Hooks::page_creator`).
 pub trait PageCreator: Send + Sync {
     /// The new page id, or None when this actor may not create a page; the
-    /// batch then fails with FORBIDDEN.
-    fn create<'a>(&'a self, cancel: &'a Cancel, actor: &'a Actor)
-    -> HostFuture<'a, Option<String>>;
+    /// batch then fails with FORBIDDEN. An Err is a host failure, not a
+    /// refusal.
+    fn create<'a>(
+        &'a self,
+        cancel: &'a Cancel,
+        request: &'a PageCreateRequest,
+    ) -> HostFuture<'a, Option<String>>;
 }
 
 /// A page document the host loads and saves.

@@ -170,14 +170,25 @@ impl<S: Send + 'static> Drop for Turn<S> {
     }
 }
 
-fn unknown_handle() -> HostError {
+pub(crate) fn unknown_handle() -> HostError {
     HostError::surface(
         "UNKNOWN_HANDLE",
         "No open document has this handle. It may have expired; call blok_open again.",
     )
 }
 
-fn new_handle() -> String {
+pub(crate) fn shutting_down() -> HostError {
+    HostError::surface("SOURCE_UNAVAILABLE", "The server is shutting down.")
+}
+
+pub(crate) fn handle_limit(max: usize) -> HostError {
+    HostError::surface(
+        "HANDLE_LIMIT",
+        format!("You already have {max} open documents. Close one with blok_close."),
+    )
+}
+
+pub(crate) fn new_handle() -> String {
     let mut bytes = [0u8; 16];
     SystemRandom::new()
         .fill(&mut bytes)
@@ -255,26 +266,34 @@ impl<S: Send + 'static> Handles<S> {
 
     fn check_room(&self, state: &State<S>, principal: &str) -> Result<(), HostError> {
         if state.closed {
-            return Err(HostError::surface(
-                "SOURCE_UNAVAILABLE",
-                "The server is shutting down.",
-            ));
+            return Err(shutting_down());
         }
-        let count = state
+        if Self::count_in(state, principal) >= self.max_per_principal {
+            return Err(handle_limit(self.max_per_principal));
+        }
+        Ok(())
+    }
+
+    fn count_in(state: &State<S>, principal: &str) -> usize {
+        state
             .entries
             .values()
             .filter(|e| e.principal == principal)
-            .count();
-        if count >= self.max_per_principal {
-            return Err(HostError::surface(
-                "HANDLE_LIMIT",
-                format!(
-                    "You already have {} open documents. Close one with blok_close.",
-                    self.max_per_principal
-                ),
-            ));
-        }
-        Ok(())
+            .count()
+    }
+
+    /// This process's handles of `principal`.
+    pub fn count(&self, principal: &str) -> usize {
+        Self::count_in(&self.lock(), principal)
+    }
+
+    pub fn has(&self, handle: &str) -> bool {
+        self.lock().entries.contains_key(handle)
+    }
+
+    /// A stop began: no handle may open.
+    pub fn is_closed(&self) -> bool {
+        self.lock().closed
     }
 
     /// Refuses when `add` would, so a caller can refuse before opening.

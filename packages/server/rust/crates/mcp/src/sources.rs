@@ -6,6 +6,7 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use crate::bundle::RawObject;
+use crate::document_source::{CustomSource, DocumentCaller};
 use crate::errors::{Fault, HostError};
 use crate::files::FilesSource;
 use crate::outbound::Outbound;
@@ -85,6 +86,13 @@ impl ListRequest {
 pub enum Source {
     Files(FilesSource),
     Endpoint(Box<EndpointSource>),
+    /// The host's own store (`Hooks::source`).
+    Custom(CustomSource),
+}
+
+/// A host's source acts for a caller; files and endpoint ignore who calls.
+fn caller_of(caller: Option<&DocumentCaller>) -> Result<&DocumentCaller, Fault> {
+    caller.ok_or_else(|| Fault::Internal("a host document source needs its caller".to_owned()))
 }
 
 impl Source {
@@ -92,14 +100,20 @@ impl Source {
     pub fn document_text_form(&self) -> &'static str {
         match self {
             Source::Files(_) => "file",
-            Source::Endpoint(_) => "compact",
+            Source::Endpoint(_) | Source::Custom(_) => "compact",
         }
     }
 
-    pub async fn load(&self, id: &str) -> Result<Loaded, Fault> {
+    /// Whether calls need the caller they run for.
+    pub fn acts_for_caller(&self) -> bool {
+        matches!(self, Source::Custom(_))
+    }
+
+    pub async fn load(&self, id: &str, caller: Option<&DocumentCaller>) -> Result<Loaded, Fault> {
         match self {
             Source::Files(files) => files.load(id).await,
             Source::Endpoint(endpoint) => endpoint.load(id).await,
+            Source::Custom(custom) => custom.load(caller_of(caller)?, id).await,
         }
     }
 
@@ -108,10 +122,12 @@ impl Source {
         id: &str,
         text: &str,
         if_version: Option<&str>,
+        caller: Option<&DocumentCaller>,
     ) -> Result<Option<String>, Fault> {
         match self {
             Source::Files(files) => files.save(id, text, if_version).await,
             Source::Endpoint(endpoint) => endpoint.save(id, text, if_version).await,
+            Source::Custom(custom) => custom.save(caller_of(caller)?, id, text, if_version).await,
         }
     }
 
@@ -119,12 +135,16 @@ impl Source {
     pub async fn same_document(&self, first: &str, second: &str) -> bool {
         match self {
             Source::Files(files) => files.same_document(first, second).await,
-            Source::Endpoint(_) => false,
+            Source::Endpoint(_) | Source::Custom(_) => false,
         }
     }
 
     /// None: this source cannot list.
-    pub async fn list(&self, request: &ListRequest) -> Option<Result<Listing, Fault>> {
+    pub async fn list(
+        &self,
+        request: &ListRequest,
+        caller: Option<&DocumentCaller>,
+    ) -> Option<Result<Listing, Fault>> {
         match self {
             Source::Files(files) => Some(
                 files
@@ -136,6 +156,10 @@ impl Source {
                     .await,
             ),
             Source::Endpoint(endpoint) => endpoint.list(request).await,
+            Source::Custom(custom) => match caller_of(caller) {
+                Ok(caller) => custom.list(caller, request).await,
+                Err(fault) => Some(Err(fault)),
+            },
         }
     }
 }
@@ -604,6 +628,31 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(saved.as_deref(), Some("v2"));
+    }
+
+    // Node's fetch sends a URL's escapes as they are; an escaped ~ stays %7E.
+    #[tokio::test]
+    async fn a_list_query_reaches_the_endpoint_escaped_as_written() {
+        let (url, heads) = raw_endpoint("HTTP/1.1 200 OK", br#"{"documents":[]}"#.to_vec()).await;
+        EndpointSource::new(
+            url.clone(),
+            "Bearer t".to_owned(),
+            Some(url),
+            Outbound::new(),
+        )
+        .list(&ListRequest {
+            query: Some("a~b c".to_owned()),
+            cursor: None,
+            limit: 10.0,
+        })
+        .await
+        .unwrap()
+        .unwrap();
+        let head = heads.lock().unwrap()[0].clone();
+        assert!(
+            head.starts_with("GET /docs?query=a%7Eb+c&limit=10 HTTP/1.1\r\n"),
+            "{head}"
+        );
     }
 
     #[test]

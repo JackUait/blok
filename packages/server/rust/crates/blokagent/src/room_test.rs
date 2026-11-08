@@ -19,7 +19,7 @@ use crate::test_support::{lookup, must_parse, string_of};
 use crate::wire::write;
 use crate::{
     Actor, Cancel, CancelReason, Error, Execution, HostFuture, InvokeFuture, Invoker, Options,
-    PageCreator, PageLocation, PageTarget,
+    PageCreateRequest, PageCreator, PageLocation, PageTarget,
 };
 
 // Twins of the C# room tests a scenario cannot express: timing,
@@ -457,6 +457,8 @@ async fn an_undo_retries_its_own_stale_head_three_times() {
 #[derive(Default)]
 pub(crate) struct Pages {
     pub created: Mutex<Vec<String>>,
+    /// Every request the host got.
+    pub asked: Mutex<Vec<PageCreateRequest>>,
     pub during: Option<Box<dyn Fn() -> BoxFuture<'static, ()> + Send + Sync>>,
 }
 
@@ -482,7 +484,12 @@ impl PageTarget for Pages {
 }
 
 impl PageCreator for Pages {
-    fn create<'a>(&'a self, _: &'a Cancel, _: &'a Actor) -> HostFuture<'a, Option<String>> {
+    fn create<'a>(
+        &'a self,
+        _: &'a Cancel,
+        request: &'a PageCreateRequest,
+    ) -> HostFuture<'a, Option<String>> {
+        self.asked.lock().expect("lock").push(request.clone());
         Box::pin(async move {
             if let Some(during) = &self.during {
                 during().await;
@@ -808,6 +815,7 @@ async fn a_room_that_refuses_the_edit_after_the_page_was_made_lists_it() {
     let manager = r.manager.clone();
     let pages = Arc::new(Pages {
         created: Mutex::new(Vec::new()),
+        asked: Mutex::new(Vec::new()),
         during: Some(Box::new(move || {
             let manager = manager.clone();
             Box::pin(async move {
@@ -925,4 +933,29 @@ fn the_room_futures_are_send() {
         r.executor
             .execute_in_room(&Cancel::new(), "d", "{}", &room_agent(), None),
     );
+}
+
+// The host learns which room document the page goes into, and gets an id it
+// may take.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_room_page_create_names_the_parent_room() {
+    let r = new_test_room(false, None);
+    r.docs.hold("d", r#"{"blocks":[]}"#);
+    let pages = Arc::new(Pages::default());
+    r.executor
+        .execute_in_room(
+            &Cancel::new(),
+            "d",
+            INSERT_PAGE_BATCH,
+            &room_agent(),
+            Some(&page_options(pages.clone())),
+        )
+        .await
+        .expect("execute");
+    let asked = pages.asked.lock().expect("lock").clone();
+    assert_eq!(asked.len(), 1);
+    assert_eq!(asked[0].parent_document_id.as_deref(), Some("d"));
+    assert_eq!(asked[0].principal, None);
+    assert_eq!(asked[0].actor, room_agent());
+    assert_eq!(asked[0].suggested_page_id.chars().count(), 10);
 }

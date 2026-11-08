@@ -248,6 +248,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     root.addEventListener('click', this.onClick);
     root.addEventListener('keydown', this.onKeyDown);
     root.addEventListener('pointerdown', this.onPointerDown);
+    root.addEventListener('pointerover', this.onPointerOver);
+    root.addEventListener('pointerout', this.onPointerOut);
 
     // The tool attaches the view after createView returns; only then has the scroller a width.
     queueMicrotask(() => {
@@ -1327,8 +1329,29 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   }
 
+  /** notion-motion.md Timeline: a hovered bar marks its days in the header, at once. */
+  private readonly onPointerOver = (event: PointerEvent): void => {
+    const barEl = event.target instanceof Element ? event.target.closest('[data-blok-database-timeline-bar]') : null;
+    const row = this.findRow(barEl?.getAttribute('data-row-id') ?? '');
+    const span = row === undefined ? null : this.spanOf(row);
+
+    if (this.drag?.active === true || row === undefined || span === null) {
+      return;
+    }
+    this.showRange(span, this.zoom === 'hours' ? this.geometryOf(span, this.valuesOf(row)) : barGeometry(span, this.window.start, this.zoom), true);
+  };
+
+  private readonly onPointerOut = (event: PointerEvent): void => {
+    const barEl = event.target instanceof Element ? event.target.closest('[data-blok-database-timeline-bar]') : null;
+    const into = event.relatedTarget instanceof Node && barEl?.contains(event.relatedTarget) === true;
+
+    if (barEl !== null && !into && (this.root?.querySelector('[data-blok-database-timeline-range][data-hover]') ?? null) !== null) {
+      this.clearDragMarks();
+    }
+  };
+
   /** findings C15: a pill over the dragged range's day numbers; its first and last day in ink. */
-  private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }): void {
+  private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }, hover = false): void {
     const header = this.root?.querySelector('[data-blok-database-timeline-header]');
 
     if (header === null || header === undefined) {
@@ -1337,6 +1360,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const pill = header.querySelector<HTMLElement>('[data-blok-database-timeline-range]') ?? document.createElement('div');
 
     pill.setAttribute('data-blok-database-timeline-range', '');
+    pill.toggleAttribute('data-hover', hover);
     pill.style.insetInlineStart = `${offset}px`;
     pill.style.width = `${width}px`;
     if (!pill.isConnected) {

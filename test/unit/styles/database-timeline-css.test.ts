@@ -159,6 +159,19 @@ describe('database timeline styles', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-timeline-link-handle] svg')).toContain('transform: scaleX(-1)');
   });
 
+  // notion-motion.md Timeline (tlhover.png): the connector shows at once, and the hover pill is 128px over a 120px, 3-day span.
+  it('shows the connector at once on bar hover', () => {
+    expect(ruleBody('[data-blok-database-timeline-link-handle]')).not.toContain('transition');
+  });
+
+  it('runs the hover pill 4px past each end of the bar\'s days', () => {
+    const pill = ruleBody('[data-blok-database-timeline-range][data-hover]');
+
+    expect(pill).toMatch(/margin-inline-start:\s*-4px/);
+    expect(pill).toMatch(/padding-inline:\s*4px/);
+    expect(pill).toMatch(/box-sizing:\s*content-box/);
+  });
+
   it('hides an off-screen arrow that the view marks hidden', () => {
     expect(ruleBody('[data-blok-database-timeline-offscreen][hidden]')).toMatch(/display:\s*none/);
   });
@@ -182,8 +195,15 @@ describe('database timeline styles', () => {
   });
 
   // research/35 §1.5: hover ≈ rgba(33, 27, 23, 0.051) light, rgba(255, 255, 255, 0.055) dark, over the bar fill.
-  it('hovers a bar to the measured overlay', () => {
-    expect(ruleBody('[data-blok-database-timeline-bar]:hover')).toContain('linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg))');
+  // notion-motion.md Timeline: the tint comes in over 20ms ease-in. A layer under the bar's content keeps it over a colour fill.
+  it('hovers a bar to the measured overlay over 20ms ease-in', () => {
+    const layer = ruleBody('[data-blok-database-timeline-bar]::before');
+
+    expect(layer).toContain('z-index: -1');
+    expect(layer).toContain('pointer-events: none');
+    expect(layer).toMatch(/transition:\s*background-color 20ms ease-in/);
+    expect(ruleBody('[data-blok-database-timeline-bar]:hover::before')).toContain('background-color: var(--blok-database-table-header-hover-bg)');
+    expect(ruleBody('[data-blok-database-timeline-bar]:hover')).not.toContain('background-image');
     expect(css).toContain('--blok-database-hover-bg: rgba(33, 27, 23, 0.051);');
     expect(darkValues('--blok-database-table-header-hover-bg')).toEqual(['rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)']);
     expect(css).toContain('--blok-database-timeline-bar-bg: #ffffff;');
@@ -193,7 +213,7 @@ describe('database timeline styles', () => {
     const reduced = timelineCss.slice(timelineCss.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
 
     expect(timelineCss).toContain('transition');
-    for (const selector of ['[data-blok-database-timeline-bar]', '[data-blok-database-timeline-row-handle]']) {
+    for (const selector of ['[data-blok-database-timeline-bar]', '[data-blok-database-timeline-bar]::before', '[data-blok-database-timeline-row-handle]']) {
       expect(reduced).toContain(selector);
     }
     expect(reduced).toMatch(/transition:\s*none/);

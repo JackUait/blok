@@ -12845,9 +12845,22 @@ textarea[data-blok-database-cell-input] {
   outline: 2px solid var(--blok-focus-ring);
 }
 
-/* An image layer, so it tints a conditional colour fill too (research/21 §1i). */
-[data-blok-database-timeline-bar]:hover {
-  background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+/* A layer under the content, so it tints a conditional colour fill too (research/21 §1i). notion-motion.md Timeline: 20ms ease-in. */
+[data-blok-database-timeline-bar]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+  pointer-events: none;
+  transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-timeline-bar]:hover::before {
+  background-color: var(--blok-database-table-header-hover-bg);
 }
 
 /* research/35 §1.5: a picked row shows only on its bar, as a halo 2px inside it (gray, not Notion's blue). */
@@ -12938,6 +12951,13 @@ textarea[data-blok-database-cell-input] {
   block-size: 22px;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-timeline-weekend-bg);
+}
+
+/* notion-motion.md Timeline (tlhover.png): the hover pill is 128px over a 3-day, 120px span. */
+[data-blok-database-timeline-range][data-hover] {
+  box-sizing: content-box;
+  margin-inline-start: -4px;
+  padding-inline: 4px;
 }
 
 [data-blok-database-timeline-units] > [data-range-edge] {
@@ -13060,7 +13080,8 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-timeline-new],
   [data-blok-database-timeline-load-more],
   [data-blok-database-timeline-row-handle],
-  [data-blok-database-timeline-bar] {
+  [data-blok-database-timeline-bar],
+  [data-blok-database-timeline-bar]::before {
     transition: none;
   }
 }
@@ -15450,7 +15471,6 @@ button[data-blok-database-feed-reaction]:hover,
   background-color: var(--blok-bg-primary);
   opacity: 0;
   cursor: crosshair;
-  transition: opacity 0.1s ease;
 }
 
 [data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle],
@@ -15624,8 +15644,7 @@ button[data-blok-database-feed-reaction]:hover,
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-new] > button,
-  [data-blok-database-subitem-toggle] svg,
-  [data-blok-database-timeline-link-handle] {
+  [data-blok-database-subitem-toggle] svg {
     transition: none;
   }
 }

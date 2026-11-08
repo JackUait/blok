@@ -869,6 +869,69 @@ describe('DatabaseTimelineView', () => {
     });
   });
 
+  // notion-motion.md Timeline (tlhover.png): hovering a bar marks its days in the header at once.
+  describe('bar hover marks its days in the header', () => {
+    const range = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-timeline-range]');
+    const edges = (root: HTMLElement): Array<string | null> =>
+      [...root.querySelectorAll('[data-blok-database-timeline-units] > [data-range-edge]')].map((el) => el.getAttribute('data-day'));
+    const over = (target: Element, related: Element | null = null): void => {
+      target.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, relatedTarget: related }));
+    };
+    const out = (target: Element, related: Element | null): void => {
+      target.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, relatedTarget: related }));
+    };
+
+    it('shows the pill over the bar\'s days, with its first and last day in ink', () => {
+      const { root } = mount();
+
+      over(bar(root, 'r2'));
+
+      expect(range(root)?.hasAttribute('data-hover')).toBe(true);
+      expect(range(root)?.style.insetInlineStart).toBe(`${px('2026-10-12')}px`);
+      expect(range(root)?.style.width).toBe(`${3 * TIMELINE_DAY_WIDTH.month}px`);
+      expect(edges(root)).toEqual(['2026-10-12', '2026-10-14']);
+    });
+
+    it('keeps the pill while the pointer moves inside the bar, and drops it when the pointer leaves', () => {
+      const { root } = mount();
+      const title = bar(root, 'r2').querySelector('[data-blok-database-timeline-bar-title]');
+
+      if (title === null) throw new Error('no title');
+      over(bar(root, 'r2'));
+      out(bar(root, 'r2'), title);
+      expect(range(root)).not.toBeNull();
+
+      out(title, canvas(root));
+      expect(range(root)).toBeNull();
+      expect(edges(root)).toEqual([]);
+    });
+
+    it('moves the pill to the next bar hovered', () => {
+      const { root } = mount();
+
+      over(bar(root, 'r2'));
+      out(bar(root, 'r2'), bar(root, 'r1'));
+      over(bar(root, 'r1'), bar(root, 'r2'));
+
+      expect(range(root)?.style.insetInlineStart).toBe(`${px('2026-10-09')}px`);
+      expect(edges(root)).toEqual(['2026-10-09']);
+    });
+
+    it('leaves a drag\'s pill alone when the pointer leaves the bar mid-drag', () => {
+      const { root } = mount();
+
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'month').days * 40, 400);
+      over(bar(root, 'r1'));
+      pointer('pointerdown', bar(root, 'r1'), px('2026-10-09') + 20, 50);
+      pointer('pointermove', document, px('2026-10-12') + 20, 50);
+      out(bar(root, 'r1'), canvas(root));
+
+      expect(range(root)?.hasAttribute('data-hover')).toBe(false);
+      expect(edges(root)).toEqual(['2026-10-12']);
+      pointer('pointerup', document, px('2026-10-12') + 20, 50);
+    });
+  });
+
   describe('hours zoom: 15-minute snap (research/22 §9)', () => {
     const hoursStart = timelineWindow(CENTER, 'hours').start;
     /** Canvas pixels to midnight of CENTER; hours zoom draws one pixel per minute. */

@@ -84,10 +84,9 @@ describe('board and gallery card action pill divider (research/21 §1f)', () => 
 
 describe('timeline (research/21 §1i)', () => {
   it('lays the hover overlay over the bar fill, so a conditional colour stays under it', () => {
-    const hover = ruleBody('[data-blok-database-timeline-bar]:hover');
-
-    expect(hover).toContain('background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg))');
-    expect(hover).not.toContain('background-color');
+    expect(ruleBody('[data-blok-database-timeline-bar]::before')).toContain('z-index: -1');
+    expect(ruleBody('[data-blok-database-timeline-bar]:hover::before')).toContain('background-color: var(--blok-database-table-header-hover-bg)');
+    expect(ruleBody('[data-blok-database-timeline-bar]:hover')).not.toContain('background-color');
   });
 
   it('borders the 16px off-screen chip in the page colour without growing it', () => {

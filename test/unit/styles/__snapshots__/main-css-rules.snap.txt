@@ -15772,8 +15772,21 @@ textarea[data-blok-database-cell-input] {
   outline: 2px solid var(--blok-focus-ring);
 }
 
-[data-blok-database-timeline-bar]:hover {
-  background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+[data-blok-database-timeline-bar]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+  pointer-events: none;
+  transition: background-color 20ms ease-in;
+}
+
+[data-blok-database-timeline-bar]:hover::before {
+  background-color: var(--blok-database-table-header-hover-bg);
 }
 
 [data-blok-database-timeline-row][data-blok-database-row-selected] {
@@ -15858,6 +15871,12 @@ textarea[data-blok-database-cell-input] {
   block-size: 22px;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-timeline-weekend-bg);
+}
+
+[data-blok-database-timeline-range][data-hover] {
+  box-sizing: content-box;
+  margin-inline-start: -4px;
+  padding-inline: 4px;
 }
 
 [data-blok-database-timeline-units] > [data-range-edge] {
@@ -15968,7 +15987,7 @@ textarea[data-blok-database-cell-input] {
   cursor: ew-resize;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-timeline-toolbar] button, [data-blok-database-timeline-new], [data-blok-database-timeline-load-more], [data-blok-database-timeline-row-handle], [data-blok-database-timeline-bar] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-timeline-toolbar] button, [data-blok-database-timeline-new], [data-blok-database-timeline-load-more], [data-blok-database-timeline-row-handle], [data-blok-database-timeline-bar], [data-blok-database-timeline-bar]::before {
   transition: none;
 }
 
@@ -18174,7 +18193,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background-color: var(--blok-bg-primary);
   opacity: 0;
   cursor: crosshair;
-  transition: opacity 0.1s ease;
 }
 
 [data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle], [data-blok-database-timeline][data-dragging="link"] [data-blok-database-timeline-link-handle] {
@@ -18334,7 +18352,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   height: 20px;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-new] > button, [data-blok-database-subitem-toggle] svg, [data-blok-database-timeline-link-handle] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-new] > button, [data-blok-database-subitem-toggle] svg {
   transition: none;
 }
 

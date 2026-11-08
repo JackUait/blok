@@ -245,6 +245,10 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
 }
 [data-desktop-workspace] [data-blok-agent-bar] { display: none; }
 [data-desktop-workspace] [data-blok-agent-editor] { height: 100%; }
+[data-desktop-workspace] [data-blok-agent-panel][data-blok-agent-mode="floating"] {
+  height: min(720px, calc(100vh - 144px));
+  max-height: calc(100dvh - 144px);
+}
 [data-desktop-workspace] [data-blok-agent-header] h2::before {
   content: ''; display: inline-block; width: 20px; height: 20px; margin-right: 8px;
   vertical-align: -4px; background: url('../../docs/public/logo-no-sign.png') center / contain no-repeat;

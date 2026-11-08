@@ -279,8 +279,6 @@
 
 [data-blok-agent-panel] button:focus-visible,
 [data-blok-agent-bar] button:focus-visible,
-[data-blok-agent-composer] textarea:focus-visible,
-[data-blok-agent-composer] input:focus-visible,
 [data-blok-agent-resize]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 1px;
@@ -425,6 +423,11 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+:root:not([data-blok-modality="pointer"]) [data-blok-agent-composer]:has(textarea:focus-visible) {
+  border-color: var(--blok-text-secondary, #646a79);
+  box-shadow: 0 0 0 1px var(--blok-text-secondary, #646a79);
+}
+
 [data-blok-agent-composer] textarea {
   grid-column: 1 / -1;
   width: 100%;
@@ -435,6 +438,7 @@
   color: var(--blok-text-primary, black);
   font: inherit;
   resize: none;
+  outline: none;
 }
 
 [data-blok-agent-composer] [data-blok-agent-page-context] {
@@ -450,6 +454,12 @@
 [data-blok-agent-composer] [data-blok-agent-page-context] input {
   margin: 0;
   accent-color: #d95f4b;
+  outline: none;
+}
+
+:root:not([data-blok-modality="pointer"]) [data-blok-agent-composer] [data-blok-agent-page-context]:has(input:focus-visible) {
+  outline: 2px solid var(--blok-text-secondary, #646a79);
+  outline-offset: 2px;
 }
 
 [data-blok-agent-composer] [data-blok-agent-send] {

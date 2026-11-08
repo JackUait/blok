@@ -76,3 +76,17 @@ export function createAssistantButton(onClick: () => void): HTMLButtonElement {
   button.addEventListener('click', onClick);
   return button;
 }
+
+export function bindAssistantButton(button: HTMLButtonElement, panel: HTMLElement): MutationObserver {
+  const sync = (): void => {
+    const expanded = !panel.hidden;
+    button.hidden = expanded && panel.getAttribute('data-blok-agent-mode') !== 'floating';
+    button.setAttribute('aria-expanded', String(expanded));
+    button.setAttribute('aria-label', expanded ? 'Fermer l’assistant IA' : 'Ouvrir l’assistant IA');
+    button.title = expanded ? 'Fermer l’assistant IA' : 'Assistant IA';
+  };
+  const observer = new MutationObserver(sync);
+  observer.observe(panel, { attributes: true, attributeFilter: ['hidden', 'data-blok-agent-mode'] });
+  sync();
+  return observer;
+}

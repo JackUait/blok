@@ -5,7 +5,7 @@ import { loadIndex, readFile, writeFile, type DesktopPage, type WorkspaceIndex }
 import { createDesktopFooter, readAppearance } from './settings';
 import { createAddCoverButton, createPageCover, isCoverId, type CoverId } from './cover';
 import { mountAgentAssistant, type AgentAssistantHandle } from '../../src/shell/agent-assistant';
-import { createAssistantButton, inspectNativeProvider, nativeAgentModel, selectedProvider } from './assistant';
+import { bindAssistantButton, createAssistantButton, inspectNativeProvider, nativeAgentModel, selectedProvider } from './assistant';
 
 const desktopTools = {
   ...defaultTools,
@@ -237,12 +237,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     else assistant.close();
   });
   frame.canvas.append(assistantButton);
-  const syncAssistantButton = (): void => {
-    assistantButton.hidden = !panel.hidden;
-    assistantButton.setAttribute('aria-expanded', String(!panel.hidden));
-  };
-  new MutationObserver(syncAssistantButton).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
-  syncAssistantButton();
+  bindAssistantButton(assistantButton, panel);
   footer = createDesktopFooter((mode) => editor?.theme.set(mode));
   sidebar.insertBefore(footer, sidebar.querySelector('[data-blok-sidebar-edge]'));
   const observer = new ResizeObserver(() => onLayout(sidebar.getBoundingClientRect().width));

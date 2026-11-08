@@ -1161,7 +1161,7 @@ const editor = new Blok({
         type: 'boolean',
         default: 'false',
         description:
-          'Offers "Database - Full page" in the toolbox\'s Database section. It makes a sub-page that holds a new database and opens it. The link shows a table glyph until the page gets an icon.\n\nTurn it on only when `create` stores `document` as the new page\'s content and the `database` tool is registered.',
+          'Offers "Database - Full page" in the toolbox\'s Database section. It makes a sub-page that holds a new database and opens it. The link shows a table glyph until the page gets an icon.\n\nIt also adds two items to the block menu:\n\n- "Turn into page" on an inline database moves it, with its rows and their pages, to a new page made by `create`. A link takes its place.\n- "Turn into inline database" on a database page link does the reverse. It needs `loadDocument`.\n\nEach one is a single undo step. The page\'s document stays as it was, so undo can bring the link back.\n\nTurn it on only when `create` stores `document` as the new page\'s content and the `database` tool is registered.',
       },
       {
         option: 'createFromMention',

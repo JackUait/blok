@@ -52,12 +52,23 @@ type parsedFiles struct {
 	Authorize *string `json:"authorize"`
 }
 
-func serveCLI(args []string, env map[string]string, stdin io.ReadCloser, stdout io.WriteCloser) error {
+// ParseArgs reads args and env as the blok-mcp command does, with the
+// --authorize hook and the manifest files loaded: the Options an embedding
+// host passes to Embed. A refused flag is a *ConfigError.
+func ParseArgs(args []string, env map[string]string) (Options, error) {
 	pool, err := newPool(1)
 	if err != nil {
-		return err
+		return Options{}, err
 	}
-	engine := bundle{runtime: pool}
+	options, err := parseArgs(bundle{runtime: pool}, args, env)
+	var config *configError
+	if errors.As(err, &config) {
+		return Options{}, &ConfigError{Message: config.message}
+	}
+	return options, err
+}
+
+func parseArgs(engine bundle, args []string, env map[string]string) (Options, error) {
 	var parsed struct {
 		OK *struct {
 			Options json.RawMessage `json:"options"`
@@ -66,32 +77,45 @@ func serveCLI(args []string, env map[string]string, stdin io.ReadCloser, stdout 
 		Error *string `json:"error"`
 	}
 	if _, err := engine.call(context.Background(), "mcpParseArgs", map[string]any{"argv": args, "env": env}, &parsed); err != nil {
-		return err
+		return Options{}, err
 	}
 	if parsed.Error != nil {
-		return &configError{*parsed.Error}
+		return Options{}, &configError{*parsed.Error}
 	}
 	var options Options
 	if err := json.Unmarshal(parsed.OK.Options, &options); err != nil {
-		return err
+		return Options{}, err
 	}
 	files := parsed.OK.Files
+	var err error
 	if files.Authorize != nil {
 		hook, err := loadAuthorize(*files.Authorize)
 		if err != nil {
-			return err
+			return Options{}, err
 		}
 		options.Authorize = hook
 	}
 	if files.Manifest != nil {
 		if options.Manifest, err = configFile(engine, "manifest", *files.Manifest); err != nil {
-			return err
+			return Options{}, err
 		}
 	}
 	if files.Overrides != nil {
 		if options.Overrides, err = configFile(engine, "overrides", *files.Overrides); err != nil {
-			return err
+			return Options{}, err
 		}
+	}
+	return options, nil
+}
+
+func serveCLI(args []string, env map[string]string, stdin io.ReadCloser, stdout io.WriteCloser) error {
+	pool, err := newPool(1)
+	if err != nil {
+		return err
+	}
+	options, err := parseArgs(bundle{runtime: pool}, args, env)
+	if err != nil {
+		return err
 	}
 	server, err := newServer(options, pool)
 	if err != nil {

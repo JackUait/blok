@@ -207,6 +207,15 @@ func (s *Server) onHandle(ctx context.Context, who *caller, handle string, write
 	})
 }
 
+// sourceFor is the source acting for who: a host's source binds the
+// caller, the others ignore who calls.
+func (s *Server) sourceFor(who *caller) docSource {
+	if custom, ok := s.source.(*customSource); ok && who != nil {
+		return custom.forCaller(who)
+	}
+	return s.source
+}
+
 // allowed asks the authorize hook; without one everything is allowed.
 func (s *Server) allowed(ctx context.Context, principal, documentID string, write bool) (bool, error) {
 	if s.options.Authorize == nil {
@@ -230,10 +239,11 @@ type listedEntry struct {
 // list is the opener's list: the source's page, filtered by the authorize
 // hook with write false.
 func (s *Server) list(ctx context.Context, request listRequest, who *caller) (*listResult, error) {
-	if s.source == nil || !s.source.lists() {
+	source := s.sourceFor(who)
+	if source == nil || !source.lists() {
 		return &listResult{Documents: []listedEntry{}, Supported: false}, nil
 	}
-	listing, err := s.source.list(ctx, request)
+	listing, err := source.list(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -400,5 +410,5 @@ func (s *Server) open(ctx context.Context, documentID, requested string, write b
 	if s.source == nil {
 		return nil, surfaceError("SOURCE_UNAVAILABLE", "No document source is configured. Start blok-mcp with --source.")
 	}
-	return s.openStored(ctx, documentID, write)
+	return s.openStored(ctx, documentID, write, who)
 }

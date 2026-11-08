@@ -72,16 +72,22 @@ func New(options Options) (*Server, error) {
 }
 
 func newServer(options Options, runtime invoker) (*Server, error) {
+	return buildServer(options, options, runtime)
+}
+
+// buildServer checks checked (the options as the safety rules see them)
+// and serves options.
+func buildServer(options, checked Options, runtime invoker) (*Server, error) {
 	b := bundle{runtime: runtime}
 	s := &Server{options: options, bundle: b, stopped: make(chan struct{})}
 	s.callsIdle = sync.NewCond(&s.callsMu)
 	ctx := context.Background()
-	if err := s.checkOptions(ctx); err != nil {
+	if err := s.checkOptions(ctx, checked); err != nil {
 		return nil, err
 	}
 	s.flags = map[string]any{
 		"sync":    options.live(),
-		"source":  options.Source != nil,
+		"source":  options.hasSource(),
 		"uploads": options.Uploads != nil,
 	}
 	if options.PageTitles != "" {
@@ -119,12 +125,15 @@ func newServer(options Options, runtime invoker) (*Server, error) {
 		}
 		s.version = version
 	}
-	if options.Source != nil {
-		if options.Source.Kind == "files" {
-			s.source = newFilesSource(options.Source.Dir, b)
-		} else {
-			s.source = newEndpointSource(options.Source)
-		}
+	switch {
+	case options.DocumentSource != nil:
+		s.source = &customSource{host: options.DocumentSource}
+	case options.Source == nil:
+	case options.Source.Kind == "files":
+		s.source = newFilesSource(options.Source.Dir, b)
+	default:
+		// Any other kind has always been an endpoint.
+		s.source = newEndpointSource(options.Source)
 	}
 	if options.Uploads != nil && options.Uploads.Root != "" {
 		reader, err := newLocalReader(options.Uploads.Root)
@@ -150,8 +159,11 @@ func newServer(options Options, runtime invoker) (*Server, error) {
 
 // checkOptions is Node's checkOptionSafety, run where createBlokMcpServer
 // runs it.
-func (s *Server) checkOptions(ctx context.Context) error {
-	written, err := marshal(s.options)
+func (s *Server) checkOptions(ctx context.Context, checked Options) error {
+	if checked.DocumentSource != nil && checked.Source != nil {
+		return &ConfigError{Message: "DocumentSource cannot be combined with Source: give one document source"}
+	}
+	written, err := marshal(checked)
 	if err != nil {
 		return err
 	}
@@ -159,11 +171,16 @@ func (s *Server) checkOptions(ctx context.Context) error {
 	if err := json.Unmarshal(written, &options); err != nil {
 		return err
 	}
-	if s.options.Authorize != nil {
+	if checked.Authorize != nil {
 		options["authorize"] = json.RawMessage("true")
 	}
-	if s.options.Uploads != nil {
-		options["uploads"], _ = marshal(s.options.Uploads.checkJSON())
+	if checked.Uploads != nil {
+		options["uploads"], _ = marshal(checked.Uploads.checkJSON())
+	}
+	// The field is json:"-", so without this the bundle would see no source
+	// and waive the per-document check (--ticket-url with no --authorize).
+	if checked.DocumentSource != nil {
+		options["source"] = json.RawMessage(`{"kind":"custom"}`)
 	}
 	var answer struct {
 		Error *string `json:"error"`

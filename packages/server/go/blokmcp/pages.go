@@ -34,7 +34,7 @@ func (s *Server) createsPages() bool {
 // stops there and goes in as createPageFailure, so the bundle fails its
 // insert as Node's port does. The client's cancel is not checked between
 // pages, as Node does not check it inside a batch.
-func (s *Server) createPages(ctx context.Context, input map[string]any, who *caller) error {
+func (s *Server) createPages(ctx context.Context, input map[string]any, who *caller, source docSource) error {
 	var needed struct {
 		Count  int `json:"count"`
 		Result *struct {
@@ -75,7 +75,7 @@ func (s *Server) createPages(ctx context.Context, input map[string]any, who *cal
 		if s.options.Sync != nil {
 			pageID, err = s.createLivePage(ctx, who)
 		} else {
-			pageID, err = s.createPage(ctx, who.principal)
+			pageID, err = s.createPage(ctx, source, who.principal)
 		}
 		if err != nil {
 			failure, ok := asSurface(err)
@@ -265,7 +265,7 @@ func (s *Server) createLivePage(ctx context.Context, who *caller) (string, error
 
 // createPage is the opener's createPage for stored mode: a new id,
 // authorized like a write open, saved as an empty document.
-func (s *Server) createPage(ctx context.Context, principal string) (string, error) {
+func (s *Server) createPage(ctx context.Context, source docSource, principal string) (string, error) {
 	pageID := mintPageID()
 	// Node names the page in the refusal, keeping the error's own flag.
 	withPage := func(err error) error {
@@ -299,7 +299,7 @@ func (s *Server) createPage(ctx context.Context, principal string) (string, erro
 	if !allowed {
 		return "", withPage(surfaceError("FORBIDDEN", "You may not create a page document here."))
 	}
-	loaded, err := s.source.load(ctx, pageID)
+	loaded, err := source.load(ctx, pageID)
 	if err != nil {
 		return "", withPage(err)
 	}
@@ -311,10 +311,10 @@ func (s *Server) createPage(ctx context.Context, principal string) (string, erro
 	var text struct {
 		Text string `json:"text"`
 	}
-	if _, err := s.bundle.call(ctx, "mcpDocumentText", map[string]any{"document": emptyDocument, "form": s.source.documentForm()}, &text); err != nil {
+	if _, err := s.bundle.call(ctx, "mcpDocumentText", map[string]any{"document": emptyDocument, "form": source.documentForm()}, &text); err != nil {
 		return "", err
 	}
-	if _, err := s.source.save(ctx, pageID, []byte(text.Text), loaded.version); err != nil {
+	if _, err := source.save(ctx, pageID, []byte(text.Text), loaded.version); err != nil {
 		// A broken save may have stored the page. The steps before it
 		// wrote nothing.
 		if _, ok := asSurface(err); !ok {

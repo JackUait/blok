@@ -48,6 +48,9 @@ type storedSession struct {
 	write      bool
 	source     docSource
 	exists     bool
+	// opener is who opened the handle: the page documents a batch opens or
+	// makes go through the source as that caller, as the handle's own do.
+	opener *caller
 
 	mu       sync.Mutex
 	document json.RawMessage
@@ -58,13 +61,14 @@ type storedSession struct {
 
 var emptyHistory = json.RawMessage(`{}`)
 
-func (s *Server) openStored(ctx context.Context, documentID string, write bool) (*storedSession, error) {
-	first, err := s.source.load(ctx, documentID)
+func (s *Server) openStored(ctx context.Context, documentID string, write bool, who *caller) (*storedSession, error) {
+	source := s.sourceFor(who)
+	first, err := source.load(ctx, documentID)
 	if err != nil {
 		return nil, err
 	}
 	return &storedSession{
-		server: s, documentID: documentID, write: write, source: s.source, exists: !first.missing,
+		server: s, documentID: documentID, write: write, source: source, exists: !first.missing, opener: who,
 		document: first.document, history: emptyHistory, version: first.version,
 	}, nil
 }
@@ -145,7 +149,7 @@ func (st *storedSession) execute(ctx context.Context, call *callContext, batch j
 		input["approval"] = call.approval
 	}
 	if st.write && st.server.createsPages() && isBatchEnvelope(batch) {
-		if err := st.server.createPages(ctx, input, call.who); err != nil {
+		if err := st.server.createPages(ctx, input, st.openerOr(call.who), st.source); err != nil {
 			return st.server.reportStopped(ctx, stoppedPages(err), st.document, nil, err)
 		}
 	}
@@ -202,7 +206,9 @@ func (st *storedSession) pageAction(ctx context.Context, call *callContext, inpu
 	same, _ := st.source.(interface {
 		sameDocument(ctx context.Context, first, second string) bool
 	})
-	result, page, err := st.server.runPageAction(ctx, call, input, func(pageID string) bool {
+	pageCall := *call
+	pageCall.who = st.openerOr(call.who)
+	result, page, err := st.server.runPageAction(ctx, &pageCall, input, func(pageID string) bool {
 		return pageID == st.documentID || (same != nil && same.sameDocument(ctx, pageID, st.documentID))
 	})
 	if err != nil {
@@ -221,6 +227,13 @@ func (st *storedSession) pageAction(ctx context.Context, call *callContext, inpu
 	}
 	answer, err := st.server.executeAnswer(ctx, answerInput)
 	return &executed{answer: answer}, err
+}
+
+func (st *storedSession) openerOr(who *caller) *caller {
+	if st.opener != nil {
+		return st.opener
+	}
+	return who
 }
 
 func (st *storedSession) keep(out executeOutput) {

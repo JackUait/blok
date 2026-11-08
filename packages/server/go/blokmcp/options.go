@@ -45,6 +45,12 @@ type Options struct {
 	// whose OnBehalfOf is the principal.
 	AgentActor func(principal, clientName string) Actor `json:"-"`
 
+	// DocumentSource, when set, loads and saves stored documents through
+	// the host's own store, acting for the caller that opened each handle.
+	// It cannot be combined with Source, and counts as a source in every
+	// safety check.
+	DocumentSource DocumentSource `json:"-"`
+
 	// Uploads, when set, lets the agent upload files through the host's
 	// own uploader.
 	Uploads *Uploads `json:"-"`
@@ -128,6 +134,10 @@ func numberOr(n json.Number, fallback float64) float64 {
 	}
 	return value
 }
+
+// hasSource says whether stored documents have a source: Source or a
+// host's DocumentSource.
+func (o *Options) hasSource() bool { return o.Source != nil || o.DocumentSource != nil }
 
 // live says whether documents live in rooms: a remote sync service, or
 // this process's own rooms.

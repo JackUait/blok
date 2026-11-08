@@ -415,7 +415,7 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 		return l.pageAction(ctx, call, input, mark)
 	}
 	if l.write && !l.readOnly && l.server.createsPages() && isBatchEnvelope(batch) && call.who != nil {
-		if err := l.server.createPages(ctx, input, call.who); err != nil {
+		if err := l.server.createPages(ctx, input, call.who, l.server.source); err != nil {
 			return l.server.reportStopped(ctx, stoppedPages(err), l.parentNow(ctx), nil, err)
 		}
 	}

@@ -7,11 +7,11 @@ import { getBlokVersion } from '../components/utils/version';
 import { checkOptionSafety, McpConfigError } from './config';
 import type { BlokMcpOptions } from './options';
 import { listMcpPrompts } from './prompts';
-import { attachBlok, blokHandlers } from './sdk-server';
-import type { BlokHandlers, HostSurface, ResolveCaller, SdkServer } from './sdk-server';
+import { assertNoClash, attachBlok, blokHandlers } from './sdk-server';
+import type { BlokHandlers, HostNames, HostSurface, ResolveCaller, SdkServer } from './sdk-server';
 import { assembleMcp } from './server';
 
-export type { BlokHandlers as BlokMcpHandlers, HostSurface as BlokMcpHostSurface } from './sdk-server';
+export type { BlokHandlers as BlokMcpHandlers, HostNames as BlokMcpHostNames, HostSurface as BlokMcpHostSurface } from './sdk-server';
 
 /** The same options as the standalone server. The host owns the transport and sign-in, so both are optional. */
 export type BlokEmbedOptions = Omit<BlokMcpOptions, 'transport' | 'auth'> & Partial<Pick<BlokMcpOptions, 'transport' | 'auth'>>;
@@ -41,8 +41,11 @@ export interface BlokMcp {
   readonly version: string;
   /** Serves Blok's tools and prompts on the host's low-level server (or McpServer.server). */
   attach(server: SdkServer | McpServer, host?: HostSurface): void;
-  /** Blok's handlers, for a host that installs tools/list, tools/call, prompts/list and prompts/get itself. */
-  handlers(server: SdkServer | McpServer): BlokHandlers;
+  /**
+   * Blok's handlers, for a host that installs tools/list, tools/call, prompts/list and prompts/get itself.
+   * Pass the host's own tools and prompts to have their names checked against Blok's, as attach does.
+   */
+  handlers(server: SdkServer | McpServer, host?: HostNames): BlokHandlers;
   /** Waits for calls in flight and closes every handle. */
   close(): Promise<void>;
 }
@@ -108,14 +111,21 @@ export const createBlok = (options: BlokEmbedOptions, hooks: CreateBlokHooks = {
 
     return { principal: who.principal, clientName, scopes: who.scopes ?? null };
   };
-  const handlers = (server: SdkServer | McpServer): BlokHandlers => blokHandlers({ tools: assembled.tools, dispatch: assembled.dispatch, resolveCaller }, lowLevel(server));
+  const handlersFor = (server: SdkServer | McpServer): BlokHandlers => blokHandlers({ tools: assembled.tools, dispatch: assembled.dispatch, resolveCaller }, lowLevel(server));
+  const handlers = (server: SdkServer | McpServer, host: HostNames = {}): BlokHandlers => {
+    const made = handlersFor(server);
+
+    assertNoClash(made, host);
+
+    return made;
+  };
 
   return {
     instructions: assembled.instructions,
     toolNames: assembled.tools.map(tool => tool.name),
     promptNames: listMcpPrompts().map(prompt => prompt.name),
     version: getBlokVersion(),
-    attach: (server, host) => attachBlok(lowLevel(server), handlers(server), host),
+    attach: (server, host) => attachBlok(lowLevel(server), handlersFor(server), host),
     handlers,
     close: () => assembled.stop(),
   };

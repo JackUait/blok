@@ -17,7 +17,7 @@ export type { BlokDocumentCaller, BlokMcpDocumentSource, BlokMcpOptions } from '
 export { BlokMcpSourceError } from './sources/custom';
 export type { BlokMcpSourceErrorKind } from './sources/custom';
 export { createBlok } from './embed';
-export type { BlokCallerIdentity, BlokEmbedOptions, BlokMcp, BlokMcpHandlers, BlokMcpHostSurface, CreateBlokHooks } from './embed';
+export type { BlokCallerIdentity, BlokEmbedOptions, BlokMcp, BlokMcpHandlers, BlokMcpHostNames, BlokMcpHostSurface, CreateBlokHooks } from './embed';
 
 // A pipe on macOS takes writes later, so process.exit would cut off an answer the client reads slowly.
 const flushStdout = async (graceMs: number): Promise<void> => {

@@ -159,7 +159,7 @@ export type BlokEmbedOptions = Omit<BlokMcpOptions, 'transport' | 'auth'> & Part
 /** The parts of an `@modelcontextprotocol/server` request context Blok reads. The SDK's `ServerContext` fits it. */
 export interface BlokMcpRequestContext {
   mcpReq: { signal: AbortSignal; envelope?: unknown; inputResponses?: unknown };
-  http?: { authInfo?: { extra?: Record<string, unknown> } };
+  http?: { authInfo?: { token?: string; clientId?: string; scopes?: string[]; extra?: Record<string, unknown> } };
 }
 
 /** Who the host says calls. No principal (or an empty one) means signed in without a name. */
@@ -239,6 +239,12 @@ export interface BlokMcpHandlers {
 }
 
 /** The host's own tools and prompts, served next to Blok's by `attach`. Other names reach these handlers. */
+/** Your own tool and prompt names, checked against Blok's. */
+export interface BlokMcpHostNames {
+  tools?: ReadonlyArray<{ name: string }>;
+  prompts?: ReadonlyArray<{ name: string }>;
+}
+
 export interface BlokMcpHostSurface {
   tools?: BlokMcpToolEntry[];
   callTool?(request: BlokMcpToolCall, ctx: BlokMcpRequestContext): unknown;
@@ -258,7 +264,11 @@ export interface BlokMcp {
    * is a Blok name, or when the server already answers tools/list, tools/call, prompts/list or prompts/get.
    */
   attach(server: BlokMcpSdkServer, host?: BlokMcpHostSurface): void;
-  handlers(server: BlokMcpSdkServer): BlokMcpHandlers;
+  /**
+   * Blok's four handlers, for a server whose tools/list, tools/call, prompts/list and prompts/get you
+   * install yourself. Pass your own tools and prompts: it throws when one of their names is a Blok name.
+   */
+  handlers(server: BlokMcpSdkServer, host?: BlokMcpHostNames): BlokMcpHandlers;
   /** Waits for calls in flight and closes every handle. */
   close(): Promise<void>;
 }

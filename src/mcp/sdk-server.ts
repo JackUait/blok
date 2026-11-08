@@ -130,7 +130,13 @@ const clashes = (names: string[] | undefined, owns: (name: string) => boolean): 
  * It never changes serverInfo, instructions or a handler the host set; it only adds the
  * tools and prompts capabilities when they are missing.
  */
-export const attachBlok = (server: SdkServer, blok: BlokHandlers, host: HostSurface = {}): void => {
+/** The host's tool and prompt names, checked against Blok's before anything is served. */
+export interface HostNames {
+  tools?: ReadonlyArray<{ name: string }>;
+  prompts?: ReadonlyArray<{ name: string }>;
+}
+
+export const assertNoClash = (blok: BlokHandlers, host: HostNames): void => {
   const taken = [
     ...clashes(host.tools?.map(tool => tool.name), blok.ownsTool),
     ...clashes(host.prompts?.map(prompt => prompt.name), blok.ownsPrompt),
@@ -139,6 +145,10 @@ export const attachBlok = (server: SdkServer, blok: BlokHandlers, host: HostSurf
   if (taken.length > 0) {
     throw new Error(`Blok already serves ${taken.join(', ')}: rename the host's tool or prompt`);
   }
+};
+
+export const attachBlok = (server: SdkServer, blok: BlokHandlers, host: HostSurface = {}): void => {
+  assertNoClash(blok, host);
   for (const method of BLOK_METHODS) {
     try {
       server.assertCanSetRequestHandler(method);

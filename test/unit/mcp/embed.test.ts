@@ -267,6 +267,41 @@ describe('createBlok', () => {
     expect(answer.result?.isError).toBe(false);
   });
 
+  it('checks the names a handlers() host passes, as attach does', async () => {
+    const { blok } = await embed();
+    const server = new Server({ name: 'host-example', version: '1' }, { capabilities: { tools: {}, prompts: {} } });
+
+    expect(() => blok.handlers(server, { tools: [{ name: 'blok_open' }], prompts: [{ name: 'improve' }] }))
+      .toThrow("Blok already serves blok_open, improve: rename the host's tool or prompt");
+    expect(() => blok.handlers(server, { tools: [HOST_TOOL], prompts: [HOST_PROMPT] })).not.toThrow();
+  });
+
+  it('ignores the host token\'s scopes by default: a signed-in user without blok scopes can write', async () => {
+    const { blok } = await embed();
+    const readOnly: AuthInfo = { token: 't', clientId: 'app', scopes: ['blok.read'], extra: { sub: 'alice' } };
+    const open = await call(() => hostServer(blok), 'tools/call', { name: 'blok_open', arguments: { documentId: 'doc', write: true } }, readOnly);
+
+    expect(open.result?.isError).toBe(false);
+  });
+
+  it('enforces scopes the caller hook returns, as standalone does', async () => {
+    const { blok } = await embed({}, { caller: () => ({ principal: 'alice', scopes: ['blok.read'] }) });
+    const open = await call(() => hostServer(blok), 'tools/call', { name: 'blok_open', arguments: { documentId: 'doc', write: true } });
+
+    expect(open.result?.isError).toBe(true);
+    expect(JSON.stringify(open.result?.structuredContent)).toContain('blok.write');
+  });
+
+  it('binds a handle to its opener: another principal gets UNKNOWN_HANDLE', async () => {
+    const { blok } = await embed();
+    const open = await call(() => hostServer(blok), 'tools/call', { name: 'blok_open', arguments: { documentId: 'doc' } }, alice);
+    const handle = (open.result?.structuredContent as { handle: string }).handle;
+    const bob: AuthInfo = { token: 't', clientId: 'app', scopes: [], extra: { sub: 'bob' } };
+    const read = await call(() => hostServer(blok), 'tools/call', { name: 'blok_read', arguments: { handle } }, bob);
+
+    expect(read.result?.structuredContent).toMatchObject({ error: { code: 'UNKNOWN_HANDLE' } });
+  });
+
   it('stops once and keeps stopped', async () => {
     const { blok } = await embed();
 

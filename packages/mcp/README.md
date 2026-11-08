@@ -313,8 +313,10 @@ const handler = createMcpHandler(() => {
 
 - Options are `BlokMcpOptions`; `transport` and `auth` are not needed. `parseBlokMcpArgs(argv, env)` reads the `blok-mcp` flags into them.
 - `authorize` is required, as over HTTP: Blok cannot see your transport. `auth: oauth` and `principal` are refused; your server signs callers in.
-- Who calls: by default the `authInfo` you passed to the SDK, named by `extra.sub`. Pass `hooks.caller(ctx)` to read it yourself. An anonymous caller gets the protocol error `-32600` "Blok needs a signed-in caller."; a caller with no name gets "Blok needs a named caller (sub or NameIdentifier).". `hooks.anonymousPrincipal` serves anonymous callers as that principal instead.
-- `attach` throws when one of your tool or prompt names is a Blok name, or when the server already answers `tools/list`, `tools/call`, `prompts/list` or `prompts/get`. Other names reach your `callTool` and `getPrompt`. To install those four handlers yourself, use `blok.handlers(server)`.
+- Who calls: by default the `authInfo` you passed to the SDK, named by `extra.sub`. Pass `hooks.caller(ctx)` to read it yourself. An anonymous caller gets the protocol error `-32600` "Blok needs a signed-in caller."; a caller with no name gets "Blok needs a named caller (sub or NameIdentifier).". `hooks.anonymousPrincipal` serves anonymous callers as that principal instead. All anonymous callers then share it: its handles and its handle limit. Pick a principal no real user can have.
+- Scopes: by default Blok ignores the token's scopes, since your server owns sign-in; make read-only agents in `authorize`. When `hooks.caller` returns `scopes`, Blok checks `blok.read` and `blok.write` as the standalone server does.
+- A handle belongs to the caller that opened it. Another principal gets `UNKNOWN_HANDLE`.
+- `attach` throws when one of your tool or prompt names is a Blok name, or when the server already answers `tools/list`, `tools/call`, `prompts/list` or `prompts/get`. Other names reach your `callTool` and `getPrompt`. To install those four handlers yourself, use `blok.handlers(server, { tools, prompts })`; it checks your names the same way.
 - Blok's tools answer exactly as the standalone server's, including its protocol errors and the approval question (`input_required`, or elicitation for 2025 clients).
 - Origin and Host checks, a body size cap and OAuth are your server's job. Stateless HTTP (a server per request) is supported; stateful sessions are not promised.
 - `blok.close()` waits for calls in flight and closes every handle.

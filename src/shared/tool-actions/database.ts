@@ -1950,6 +1950,9 @@ const deletedPropertiesPatch = (list: DeletedPropertyDefinition[]): { deletedPro
   ({ deletedProperties: list.length > 0 ? list : undefined });
 
 const deletedAt = (ctx: ToolActionContext, block: TargetBlock, state: DatabaseState, propertyId: string): number => {
+  if (isRecord(block.data.source)) {
+    return ctx.fail('PRECONDITION_FAILED', 'This is a linked view: its deleted properties live on its source database.');
+  }
   const index = deletedPropertiesOf(block, state).findIndex(property => property.id === propertyId);
 
   return index >= 0 ? index : ctx.fail('PRECONDITION_FAILED', `This database has no deleted property ${propertyId}.`);

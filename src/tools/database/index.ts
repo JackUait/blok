@@ -454,6 +454,9 @@ const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefi
  * prunes every key it leaves out from the shared document, so dropping a
  * newer version's key here would delete it for every client.
  */
+type LinkedPropertyOp = 'delete' | 'restore' | 'purge';
+type LinkedPropertyResult = PropertyDefinition | null | boolean;
+
 const unknownKeys = (data: DatabaseData | undefined): Record<string, unknown> =>
   Object.fromEntries(Object.entries(data ?? {}).filter(([key]) => !KNOWN_KEYS.has(key)));
 
@@ -11509,7 +11512,7 @@ export class DatabaseTool implements BlockTool {
    * restore shows them again. The title cannot be deleted.
    */
   deleteProperty(propertyId: string): void {
-    if (this.forwardToSource('delete', propertyId)) return;
+    if (this.forwardToSource('delete', propertyId).forwarded) return;
     const property = this.model.getProperty(propertyId);
 
     if (this.readOnly || this.destroyed || property === undefined || property.type === 'title') return;
@@ -11520,8 +11523,12 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Brings a deleted property back with its row values. Null when there is none to restore. */
-  restoreProperty(propertyId: string): PropertyDefinition | null {
-    if (this.forwardToSource('restore', propertyId)) return this.model.getProperty(propertyId) ?? null;
+  restoreProperty(param: string | { propertyId: string }): PropertyDefinition | null {
+    const propertyId = typeof param === 'string' ? param : param.propertyId;
+
+    const linked = this.forwardToSource('restore', propertyId);
+
+    if (linked.forwarded) return typeof linked.result === 'object' ? linked.result : null;
     if (this.readOnly || this.destroyed || this.structureLocked()) return null;
     const restored = this.model.restoreProperty(propertyId);
 
@@ -11544,8 +11551,12 @@ export class DatabaseTool implements BlockTool {
    * Removes a deleted property for good: its entry, and its value, reminder
    * and kept original in every row and template, as one undo step.
    */
-  deletePropertyPermanently(propertyId: string): boolean {
-    if (this.forwardToSource('purge', propertyId)) return this.model.getDeletedProperties().every((p) => p.id !== propertyId);
+  deletePropertyPermanently(param: string | { propertyId: string }): boolean {
+    const propertyId = typeof param === 'string' ? param : param.propertyId;
+
+    const linked = this.forwardToSource('purge', propertyId);
+
+    if (linked.forwarded) return linked.result === true;
     if (this.readOnly || this.destroyed || this.structureLocked() || this.model.getDeletedProperties().every((p) => p.id !== propertyId)) return false;
     const write = (): void => {
       this.model.purgeProperty(propertyId);
@@ -11579,24 +11590,28 @@ export class DatabaseTool implements BlockTool {
 
   /**
    * A linked view in this document has no rows or schema of its own: the
-   * property operation runs on its source. Returns whether it forwarded.
+   * property operation runs on its source, which hands back its result.
    */
-  private forwardToSource(op: 'delete' | 'restore' | 'purge', propertyId: string): boolean {
-    if (this.source === undefined || this.source.documentId !== undefined || this.destroyed) return false;
-    this.api.blocks.getById(this.source.databaseId)?.call('runLinkedPropertyOp', { op, propertyId });
+  private forwardToSource(op: LinkedPropertyOp, propertyId: string): { forwarded: boolean; result?: LinkedPropertyResult } {
+    if (this.source === undefined || this.source.documentId !== undefined) return { forwarded: false };
+    // A read-only linked view must not reach its source.
+    if (this.readOnly || this.destroyed) return { forwarded: true };
+    const answer: { result?: LinkedPropertyResult } = {};
+
+    this.api.blocks.getById(this.source.databaseId)?.call('runLinkedPropertyOp', { op, propertyId, receive: (result: LinkedPropertyResult) => { answer.result = result; } });
     this.pullLinkedSchema();
     this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
     this.rerenderView({ keepDrawer: true });
 
-    return true;
+    return { forwarded: true, ...answer };
   }
 
   /** Called on a source database by one of its linked views. */
-  runLinkedPropertyOp(param: { op: 'delete' | 'restore' | 'purge'; propertyId: string }): void {
+  runLinkedPropertyOp(param: { op: LinkedPropertyOp; propertyId: string; receive?: (result: LinkedPropertyResult) => void }): void {
     if (this.linked) return;
     if (param.op === 'delete') this.deleteProperty(param.propertyId);
-    else if (param.op === 'restore') this.restoreProperty(param.propertyId);
-    else this.deletePropertyPermanently(param.propertyId);
+    else if (param.op === 'restore') param.receive?.(this.restoreProperty(param.propertyId));
+    else param.receive?.(this.deletePropertyPermanently(param.propertyId));
   }
 
   /** Drops a property this session just made, with no deleted entry: a discarded draft or relation. */

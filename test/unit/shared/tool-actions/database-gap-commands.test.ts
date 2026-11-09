@@ -203,6 +203,19 @@ describe('database deleted properties (H50)', () => {
     expect(rowData(doc, templateId).properties).not.toHaveProperty(status.id);
   });
 
+  it('restoreProperty and deletePropertyPermanently refuse a linked view: its properties live on its source', () => {
+    const { doc, id, schema } = make();
+    const status = schema()[1];
+
+    run(doc, id, 'deleteProperty', { propertyId: status.id });
+    const ctx = createFakeCtx(doc, id);
+    const data = ctx.read(id)?.data ?? {};
+
+    ctx.update(id, { ...data, source: { databaseId: 'elsewhere' } });
+    expect(() => run(doc, id, 'restoreProperty', { propertyId: status.id })).toThrow(/linked/);
+    expect(() => run(doc, id, 'deletePropertyPermanently', { propertyId: status.id })).toThrow(/linked/);
+  });
+
   it('deletePropertyPermanently refuses a live property and a locked database', () => {
     const { doc, id, schema } = make();
     const status = schema()[1];

@@ -259,6 +259,52 @@ describe('deleted database properties (H50)', { timeout: 30000 }, () => {
     expect(holder?.textContent).toContain('Two');
   });
 
+  it('a host reaches restore and permanent delete through block.call with { propertyId }', async () => {
+    const blok = await make();
+
+    call(blok, 'db', 'deleteProperty', 'n');
+    await quiet();
+    call(blok, 'db', 'restoreProperty', { propertyId: 'n' });
+    await quiet();
+    expect(schemaIds(await blok.save())).toEqual(['t', 's', 'n']);
+
+    call(blok, 'db', 'deleteProperty', 'n');
+    await quiet();
+    call(blok, 'db', 'deletePropertyPermanently', { propertyId: 'n' });
+    await quiet();
+    const saved = await blok.save();
+
+    expect(deletedIds(saved)).toBeUndefined();
+    expect(rowValues(saved, 'r1')).toEqual({ t: 'One', s: 'o1' });
+  });
+
+  it('a read-only linked view changes nothing on its source', async () => {
+    const linked: OutputBlockData = {
+      id: 'link',
+      type: 'database',
+      data: {
+        source: { databaseId: 'db' },
+        schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'lv', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'lv',
+      },
+    };
+    const blok = await make([...doc(), linked]);
+
+    call(blok, 'db', 'deleteProperty', 's');
+    await quiet();
+    blok.blocks.getById('link')?.call('setReadOnly', true as never);
+    call(blok, 'link', 'deleteProperty', 'n');
+    call(blok, 'link', 'restoreProperty', 's');
+    call(blok, 'link', 'deletePropertyPermanently', 's');
+    await quiet();
+    const saved = await blok.save();
+
+    expect(schemaIds(saved)).toEqual(['t', 'n']);
+    expect(deletedIds(saved)).toEqual(['s']);
+    expect(rowValues(saved, 'r1').s).toBe('o1');
+  });
+
   it('a linked view deletes, restores and purges on its source, and never saves a deleted list itself', async () => {
     const linked: OutputBlockData = {
       id: 'link',

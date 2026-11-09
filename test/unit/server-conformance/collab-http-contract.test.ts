@@ -820,6 +820,17 @@ suite('collab restore guards, enforced', () => {
     expect([answer.status, answer.headers['x-blok-restore-refusal']]).toEqual([409, 'confirmation_required']);
   });
 
+  it.each([
+    ['an array', '[]'],
+    ['a number', '5'],
+    ['a repeated key', '{"confirm":["share","unlock"],"confirm":["share"]}'],
+  ])('confirms nothing with a body that is %s, and still answers the JSON refusal', async (_name, body) => {
+    const answer = await restore(1, [[KEY, 'k-odd-body'], [CONFIRM, 'share']], body);
+
+    expect([answer.status, answer.headers['x-blok-restore-refusal']]).toEqual([409, 'confirmation_required']);
+    expect(JSON.parse(answer.body)).toEqual({ error: 'confirmation_required', guards: UNLOCK_AND_SHARE });
+  });
+
   it('restores once every kind is confirmed, under the key a refusal did not consume', async () => {
     const answer = await restore(1, [[KEY, 'k-refused'], [CONFIRM, 'unlock'], [CONFIRM, ' share ,lockedReshape']]);
 
@@ -904,7 +915,7 @@ suite('collab restore dry run', () => {
     (await send(base, 'GET', `/sync/${DOC}/state`)).headers['blok-doc-sequence'];
 
   it('answers the plan, its guards, its size and the head, writes nothing, and needs no key', async () => {
-    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore?dryRun=1`);
+    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore/preview`);
 
     expect(answer.status).toBe(200);
     expect(answer.headers['content-type']).toBe('application/json');
@@ -926,7 +937,7 @@ suite('collab restore dry run', () => {
   });
 
   it('names the same blocks and kinds the real restore journals', async () => {
-    const preview = JSON.parse((await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore?dryRun=1`)).body) as Preview;
+    const preview = JSON.parse((await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore/preview`)).body) as Preview;
     const restore = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore`,
       [[KEY, 'p-restore'], ['If-Match', `"${preview.expectRevision}"`]]);
 
@@ -942,27 +953,27 @@ suite('collab restore dry run', () => {
 
   it('answers the guards it would raise, enforced or not', async () => {
     const seeded = await seedGuardedDoc(base);
-    const answer = await send(base, 'POST', `/sync/${GUARDED_DOC}/history/${seeded}/1/restore?dryRun=1`);
+    const answer = await send(base, 'POST', `/sync/${GUARDED_DOC}/history/${seeded}/1/restore/preview`);
 
     expect(answer.status).toBe(200);
     expect((JSON.parse(answer.body) as Preview).guards).toEqual(UNLOCK_AND_SHARE);
   });
 
   it('answers 412 with the head when If-Match is stale', async () => {
-    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore?dryRun=1`,
+    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore/preview`,
       [['If-Match', `"${lineage}:1"`]]);
 
     expect([answer.status, answer.headers['blok-doc-sequence']]).toEqual([412, '4']);
   });
 
   it('answers 404 for a point that is not there', async () => {
-    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/99/restore?dryRun=1`);
+    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/99/restore/preview`);
 
     expect([answer.status, answer.body]).toEqual([404, 'no such version\n']);
   });
 
-  it.each(['dryRun=0', 'dryRun=true', 'dryRun=1&dryRun=1'])('treats %s as a real restore, which needs a key', async (query) => {
-    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore?${query}`);
+  it('leaves the restore route as it was: a dryRun query is a real restore, which needs a key', async () => {
+    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore?dryRun=1`);
 
     expect([answer.status, answer.body]).toEqual([400, `a valid ${KEY} header is required\n`]);
   });
@@ -1265,7 +1276,7 @@ suite('collab history past its limits', () => {
 
     expect(removeAll.status).toBe(204);
 
-    const preview = await send(base, 'POST', `/sync/doc-huge/history/${lineage}/${sequence}/restore?dryRun=1`);
+    const preview = await send(base, 'POST', `/sync/doc-huge/history/${lineage}/${sequence}/restore/preview`);
     const planned = JSON.parse(preview.body) as { fits: boolean; frameBytes: number; limitBytes: number };
 
     expect(preview.status).toBe(200);

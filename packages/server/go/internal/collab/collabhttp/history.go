@@ -337,11 +337,6 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	// Exactly dryRun=1; any other value is today's restore.
-	if values := dotnet.QueryAll(r.URL.RawQuery, "dryRun"); len(values) == 1 && values[0] == "1" {
-		h.restorePreview(w, r, a, lineage, sequence)
-		return
-	}
 	keys := r.Header.Values(IdempotencyKeyHeader)
 	var operationID string
 	if len(keys) == 1 {
@@ -381,10 +376,18 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 	WriteEditResult(w, *edit, a.rooms.RetryAfter())
 }
 
-// restorePreview is POST .../restore?dryRun=1: the restore planned and
-// measured, nothing written, no key needed. If-Match is checked as the
-// restore would.
-func (h *Handlers) restorePreview(w http.ResponseWriter, r *http.Request, a *admitted, lineage string, sequence uint64) {
+// HistoryRestorePreview is POST .../restore/preview: the restore planned
+// and measured, nothing written, no key needed. It needs write access, as
+// the restore does. If-Match is checked as the restore would.
+func (h *Handlers) HistoryRestorePreview(w http.ResponseWriter, r *http.Request) {
+	a, ok := h.admitHistory(w, r, true)
+	if !ok {
+		return
+	}
+	lineage, sequence, ok := historyPoint(w, r)
+	if !ok {
+		return
+	}
 	var expect *room.Precondition
 	if values, present := r.Header["If-Match"]; present {
 		var ok bool

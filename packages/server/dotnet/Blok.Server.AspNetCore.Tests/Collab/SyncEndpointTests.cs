@@ -119,6 +119,7 @@ public sealed class SyncEndpointTests
     Assert.Equal(
         "GET /blok/sync/{doc}/history, GET /blok/sync/{doc}/history/{lineage}/{sequence}, " +
         "DELETE /blok/sync/{doc}/history/{lineage}, POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore, " +
+        "POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore/preview, " +
         "GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes, GET /blok/sync/{doc}/history/at, " +
         "GET /blok/sync/{doc}/history/changes",
         fields["History"]);

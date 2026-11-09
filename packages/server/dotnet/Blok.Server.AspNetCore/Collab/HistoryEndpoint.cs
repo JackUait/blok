@@ -16,7 +16,8 @@ namespace Blok.Server.AspNetCore.Collab;
 /// The version history kept by the operation journal:
 /// <c>GET /sync/{doc}/history</c>, <c>GET /sync/{doc}/history/{lineage}/{sequence}</c>,
 /// <c>DELETE /sync/{doc}/history/{lineage}</c>,
-/// <c>POST /sync/{doc}/history/{lineage}/{sequence}/restore</c> and
+/// <c>POST /sync/{doc}/history/{lineage}/{sequence}/restore</c>,
+/// <c>POST /sync/{doc}/history/{lineage}/{sequence}/restore/preview</c> and
 /// <c>GET /sync/{doc}/history/{lineage}/{sequence}/changes</c>.
 ///
 /// Same door as the edit endpoint: the HTTP guard checks origin, ticket and
@@ -262,14 +263,6 @@ internal static partial class HistoryEndpoint
       return;
     }
 
-    // Exactly dryRun=1; any other value is today's restore.
-    if (context.Request.Query.TryGetValue("dryRun", out var dryRun) && dryRun is [ "1" ])
-    {
-      await PreviewAsync(context, admitted, point.Lineage, point.Sequence);
-
-      return;
-    }
-
     var header = EditEndpoint.IdempotencyKeyHeader;
 
     if (!context.Request.Headers.TryGetValue(header, out var keys) ||
@@ -331,11 +324,18 @@ internal static partial class HistoryEndpoint
   }
 
   /// <summary>
-  /// <c>POST .../restore?dryRun=1</c>: the restore planned and measured, nothing written, no key needed.
-  /// If-Match is checked as the restore would.
+  /// <c>POST .../restore/preview</c>: the restore planned and measured, nothing written, no key needed.
+  /// It needs write access, as the restore does. If-Match is checked as the restore would.
   /// </summary>
-  private static async Task PreviewAsync(HttpContext context, Admitted admitted, string lineage, ulong sequence)
+  public static async Task PreviewRestoreAsync(HttpContext context)
   {
+    if (await AdmitAsync(context, requireWrite: true) is not { } admitted ||
+        await PointAsync(context) is not { } point)
+    {
+      return;
+    }
+
+    var (lineage, sequence) = point;
     CollabEditPrecondition? expect = null;
 
     if (context.Request.Headers.ContainsKey(HeaderNames.IfMatch) &&
@@ -447,7 +447,7 @@ internal static partial class HistoryEndpoint
 
     try
     {
-      if (buffer.Length > 0 && JsonNode.Parse(buffer.ToArray())?["confirm"] is JsonArray list)
+      if (buffer.Length > 0 && JsonNode.Parse(buffer.ToArray()) is JsonObject body && body["confirm"] is JsonArray list)
       {
         foreach (var item in list)
         {
@@ -455,9 +455,9 @@ internal static partial class HistoryEndpoint
         }
       }
     }
-    catch (JsonException)
+    catch (Exception error) when (error is JsonException or ArgumentException)
     {
-      // Not JSON: it confirms nothing.
+      // Not JSON, or an object with a repeated key: it confirms nothing.
     }
 
     return confirmed;

@@ -86,7 +86,8 @@ func TestWarnsAtRegistrationWhenNothingGuardsTheSyncRoutesInProcess(t *testing.T
 		"GET /blok/sync/{doc}/history,",
 		"GET /blok/sync/{doc}/history/{lineage}/{sequence}",
 		"DELETE /blok/sync/{doc}/history/{lineage}",
-		"POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore",
+		"POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore,",
+		"POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore/preview",
 		"GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes",
 	} {
 		if !strings.Contains(warning, part) {
@@ -117,6 +118,7 @@ func TestWarnsAtRegistrationWhenNothingGuardsTheSyncRoutesInProcess(t *testing.T
 		"State":     "GET /blok/sync/{doc}/state",
 		"History": "GET /blok/sync/{doc}/history, GET /blok/sync/{doc}/history/{lineage}/{sequence}, " +
 			"DELETE /blok/sync/{doc}/history/{lineage}, POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore, " +
+			"POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore/preview, " +
 			"GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes, GET /blok/sync/{doc}/history/at, " +
 			"GET /blok/sync/{doc}/history/changes",
 	} {

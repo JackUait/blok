@@ -184,6 +184,7 @@ func TestAPurgedDocumentAnswersForbiddenOnEveryDoor(t *testing.T) {
 		{"GET", "/sync/doc/history/0123456789abcdef0123456789abcdef/0/changes"},
 		{"DELETE", "/sync/doc/history/0123456789abcdef0123456789abcdef"},
 		{"POST", "/sync/doc/history/0123456789abcdef0123456789abcdef/0/restore"},
+		{"POST", "/sync/doc/history/0123456789abcdef0123456789abcdef/0/restore/preview"},
 	} {
 		request, _ := http.NewRequest(c.method, host.URL+c.path,
 			strings.NewReader(`{"ops":[{"op":"remove","id":"a"}]}`))

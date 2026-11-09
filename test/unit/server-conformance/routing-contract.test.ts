@@ -230,6 +230,7 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       ['GET', '/sync/x/state', {}],
       ['POST', '/sync/x/edit', { 'Content-Length': '0' }],
       ['GET', '/sync/x/history', {}],
+      ['POST', '/sync/x/history/l/1/restore/preview', { 'Content-Length': '0' }],
     ])('answers %s %s with the 404 catch-all when collab is off', async (method, path, headers: Record<string, string>) => {
       const response = await rawRequest(server.baseUrl, method, path, headers);
 
@@ -480,6 +481,8 @@ describe('routing contract: health, unknown routes and ported routes', () => {
     it.each([
       ['/sync/x/state', 'GET, OPTIONS'],
       ['/sync/x/history/l', 'DELETE, OPTIONS'],
+      ['/sync/x/history/l/1/restore', 'POST, OPTIONS'],
+      ['/sync/x/history/l/1/restore/preview', 'POST, OPTIONS'],
     ])('answers a preflight on %s with Allow-Methods %s and the origin as sent', async (path, methods) => {
       const sentOrigin = 'https://APP.example.com';
       const response = await rawRequest(server.baseUrl, 'OPTIONS', path, { Origin: sentOrigin });

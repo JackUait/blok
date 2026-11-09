@@ -396,16 +396,6 @@ impl Handlers {
         let Some((lineage, sequence)) = history_point(&request, &mut response).await else {
             return;
         };
-        // Exactly dryRun=1; any other value is today's restore.
-        if query_all(
-            request.query().strip_prefix('?').unwrap_or(request.query()),
-            "dryRun",
-        ) == ["1"]
-        {
-            self.restore_preview(&request, &mut response, &a, &lineage, sequence)
-                .await;
-            return;
-        }
         let Some(operation_id) = operation_id(&request) else {
             refuse(&mut response, 400, KEY_REQUIRED).await;
             return;
@@ -452,16 +442,17 @@ impl Handlers {
         }
     }
 
-    /// POST .../restore?dryRun=1: the restore planned and measured, nothing
-    /// written, no key needed. If-Match is checked as the restore would.
-    async fn restore_preview(
-        &self,
-        request: &Request,
-        response: &mut ResponseWriter,
-        a: &Admitted,
-        lineage: &str,
-        sequence: u64,
-    ) {
+    /// POST .../restore/preview: the restore planned and measured, nothing
+    /// written, no key needed. It needs write access, as the restore does.
+    /// If-Match is checked as the restore would.
+    pub async fn history_restore_preview(&self, request: Request, mut response: ResponseWriter) {
+        let Some(a) = self.admit_history(&request, &mut response, true).await else {
+            return;
+        };
+        let Some((lineage, sequence)) = history_point(&request, &mut response).await else {
+            return;
+        };
+        let (request, response, a) = (&request, &mut response, &a);
         let Ok(expect) = precondition(request) else {
             refuse(response, 400, BAD_IF_MATCH).await;
             return;

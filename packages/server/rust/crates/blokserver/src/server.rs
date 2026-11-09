@@ -27,6 +27,7 @@ enum CollabRoute {
     HistoryRead,
     HistoryDelete,
     HistoryRestore,
+    HistoryRestorePreview,
     HistoryChanges,
     HistoryAt,
     HistoryChangesBetween,
@@ -47,6 +48,9 @@ impl CollabRoute {
             CollabRoute::HistoryRead => routes.history_read(request, response).await,
             CollabRoute::HistoryDelete => routes.history_delete(request, response).await,
             CollabRoute::HistoryRestore => routes.history_restore(request, response).await,
+            CollabRoute::HistoryRestorePreview => {
+                routes.history_restore_preview(request, response).await
+            }
             CollabRoute::HistoryChanges => routes.history_changes(request, response).await,
             CollabRoute::HistoryAt => routes.history_at(request, response).await,
             CollabRoute::HistoryChangesBetween => {
@@ -394,6 +398,11 @@ impl Server {
                 "/history/{lineage}/{sequence}/restore",
                 "POST",
                 CollabRoute::HistoryRestore,
+            ),
+            (
+                "/history/{lineage}/{sequence}/restore/preview",
+                "POST",
+                CollabRoute::HistoryRestorePreview,
             ),
             (
                 "/history/{lineage}/{sequence}/changes",

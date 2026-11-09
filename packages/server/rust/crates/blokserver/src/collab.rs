@@ -337,6 +337,7 @@ impl Inner {
             format!("GET {prefix}/sync/{{doc}}/history/{{lineage}}/{{sequence}}"),
             format!("DELETE {prefix}/sync/{{doc}}/history/{{lineage}}"),
             format!("POST {prefix}/sync/{{doc}}/history/{{lineage}}/{{sequence}}/restore"),
+            format!("POST {prefix}/sync/{{doc}}/history/{{lineage}}/{{sequence}}/restore/preview"),
             format!("GET {prefix}/sync/{{doc}}/history/{{lineage}}/{{sequence}}/changes"),
             format!("GET {prefix}/sync/{{doc}}/history/at"),
             format!("GET {prefix}/sync/{{doc}}/history/changes"),

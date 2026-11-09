@@ -71,14 +71,29 @@ const BLOCKS: OutputBlockData[] = [
   { id: 'z', type: 'paragraph', data: { text: 'after' } },
 ];
 
-const boot = async (page: PageConfig, blocks: OutputBlockData[] = BLOCKS): Promise<Runtime> => {
+/** A database backend that records every write and never answers a load. */
+const backend = () => ({
+  loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
+  createRow: vi.fn(async (params: { id: string }) => ({ ...params })),
+  updateRow: vi.fn(async () => undefined),
+  moveRow: vi.fn(async () => undefined),
+  deleteRow: vi.fn(async () => undefined),
+  createProperty: vi.fn(async (params: { id: string }) => ({ ...params })),
+  updateProperty: vi.fn(async () => undefined),
+  deleteProperty: vi.fn(async () => undefined),
+  createView: vi.fn(async (params: { id: string }) => ({ ...params })),
+  updateView: vi.fn(async () => undefined),
+  deleteView: vi.fn(async () => undefined),
+});
+
+const boot = async (page: PageConfig, blocks: OutputBlockData[] = BLOCKS, database: Record<string, unknown> = {}): Promise<Runtime> => {
   const instance = new Blok({
     holder,
     dataModel: 'hierarchical',
     tools: {
       paragraph: Paragraph,
       toggle: Toggle,
-      database: DatabaseTool,
+      database: { class: DatabaseTool, config: database },
       'database-row': DatabaseRowTool,
       page: { class: PageTool, config: page },
     },
@@ -176,6 +191,24 @@ describe('Turn into inline database on a database page link', () => {
 
     await step(instance, () => instance.history.undo());
     expect(await saved(instance)).toBe(before);
+  }, 30_000);
+
+  it('keeps the rows in the backend: no row is made twice or deleted, nor on undo', async () => {
+    const adapter = backend();
+    const loadDocument = vi.fn().mockResolvedValue(structuredClone(PAGE_DOCUMENT));
+    const instance = await boot({ databasePages: true, create: vi.fn(), loadDocument }, BLOCKS, { adapter });
+
+    await step(instance, () => turnIntoInline(instance)?.onActivate?.());
+    await settle(600);
+    expect((await instance.save()).blocks.map(block => block.id)).toEqual(['a', 'db', 'r1', 'b1', 'r2', 'z']);
+    expect(adapter.createRow).not.toHaveBeenCalled();
+    expect(adapter.deleteRow).not.toHaveBeenCalled();
+
+    await step(instance, () => instance.history.undo());
+    await step(instance, () => instance.history.redo());
+    await settle(600);
+    expect(adapter.createRow).not.toHaveBeenCalled();
+    expect(adapter.deleteRow).not.toHaveBeenCalled();
   }, 30_000);
 
   it('changes nothing when the page has no document', async () => {

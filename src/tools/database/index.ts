@@ -139,7 +139,7 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
 import type { MenuConfigItem } from '../../../types/tools/menu-config';
-import { databasePageHost, subtreeOf } from '../page/database-page-move';
+import { databasePageHost, movedDatabases, subtreeOf } from '../page/database-page-move';
 import { createdId } from '../page/page-values';
 import { generateBlockId } from '../../components/utils/id-generator';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -738,7 +738,7 @@ export class DatabaseTool implements BlockTool {
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
   private destroyed = false;
-  /** Turn into page is moving this database to another document: its rows live on there. */
+  /** This copy is leaving for another document that holds the same rows. */
   private movingOut = false;
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
@@ -2323,6 +2323,8 @@ export class DatabaseTool implements BlockTool {
 
   /** A local delete of this database (or of a block that takes it along) deletes its rows from the backend. */
   removed(removal?: { deleted: boolean }): void {
+    // Its rows' own removals come after this one: they must see the flag.
+    if (movedDatabases.has(this.block.id)) this.movingOut = true;
     if (removal?.deleted !== true || this.linked || this.readOnly || this.movingOut) return;
     [...this.model.getOrderedRows(), ...this.templates].forEach((row) => void this.sync.syncDeleteRow({ rowId: row.id }));
   }
@@ -2380,12 +2382,13 @@ export class DatabaseTool implements BlockTool {
     // The save and the host were async: the database may be gone or locked by now.
     if (this.destroyed || this.readOnly || this.api.blocks.getById(id) === null) return;
     this.inOneStep(() => {
-      this.api.blocks.insertAt(host.name, { pageId, kind: 'database' }, { position: { before: id } });
+      // research-live-notion.md §4: the new link row stays selected.
+      this.api.blocks.insertAt(host.name, { pageId, kind: 'database' }, { position: { before: id }, select: true });
       const index = this.api.blocks.getBlockIndex(id);
 
       if (index === undefined) return;
-      // Set only once the link is in: a failed insert keeps this database and its backend deletes.
-      this.movingOut = true;
+      // Only once the link is in: a failed insert keeps this database and its backend deletes.
+      [root, ...rest].forEach((block) => { if (block.id !== undefined) movedDatabases.add(block.id); });
       void this.api.blocks.delete(index, false);
     });
   }
@@ -3002,6 +3005,8 @@ export class DatabaseTool implements BlockTool {
       (capture.origin !== 'undo' && capture.origin !== 'redo') ||
       native?.type !== 'database-row'
     ) return;
+    // Undo or redo of Turn into page / inline: the other document holds this row on the same backend.
+    if (movedDatabases.has(capture.blockId)) return;
 
     const relocation = capture.relocation;
 

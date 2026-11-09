@@ -57,7 +57,7 @@ import { declaredRichTextFields } from '../../components/tools/base';
 import { richTextFieldsFor } from '../../shared/rich-text/fields';
 import type { PageConfig, PageData, PageIcon, PageInfo } from './types';
 import { createdId, readIcon } from './page-values';
-import { subtreeOf } from './database-page-move';
+import { movedDatabases, subtreeOf } from './database-page-move';
 import { overrideStatic } from '../../components/utils/override-static';
 
 const isOutputBlock = (value: unknown): value is OutputBlockData =>
@@ -166,9 +166,12 @@ export class PageTool implements BlockTool {
     this.readOnly = Boolean(options.readOnly);
   }
 
-  /** The block menu is a "Page" section with Turn into first, and Delete reads "Move to Trash". */
-  public static get blockMenu(): { titled: boolean; trash: boolean } {
-    return { titled: true, trash: true };
+  /**
+   * The block menu is a "Page" section with Turn into first, and Delete reads
+   * "Move to Trash". A database page link puts "Turn into inline database" first.
+   */
+  public static get blockMenu(): { titled: boolean; trash: boolean; lead: string[] } {
+    return { titled: true, trash: true, lead: ['page-turn-into-inline-database'] };
   }
 
   /**
@@ -513,6 +516,8 @@ export class PageTool implements BlockTool {
         const index = this.api.blocks.getBlockIndex(this.block.id);
 
         if (index === undefined) return;
+        // The page keeps the same rows: undo removing this copy must not delete them from a backend.
+        subtree.forEach((block) => { if (block.id !== undefined) movedDatabases.add(block.id); });
         this.api.blocks.insertMany(blocks, index);
         const own = this.api.blocks.getBlockIndex(this.block.id);
 

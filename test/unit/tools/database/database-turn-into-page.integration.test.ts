@@ -64,6 +64,22 @@ const BLOCKS: OutputBlockData[] = [
   { id: 'z', type: 'paragraph', data: { text: 'after' } },
 ];
 
+/** A database backend that records every write and never answers a load. */
+const backend = () => ({
+  // Never answers: a load would replace the schema mid-test.
+  loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
+  createRow: vi.fn(async (params: { id: string }) => ({ ...params })),
+  updateRow: vi.fn(async () => undefined),
+  moveRow: vi.fn(async () => undefined),
+  deleteRow: vi.fn(async () => undefined),
+  createProperty: vi.fn(async (params: { id: string }) => ({ ...params })),
+  updateProperty: vi.fn(async () => undefined),
+  deleteProperty: vi.fn(async () => undefined),
+  createView: vi.fn(async (params: { id: string }) => ({ ...params })),
+  updateView: vi.fn(async () => undefined),
+  deleteView: vi.fn(async () => undefined),
+});
+
 const boot = async (page: PageConfig, database: Record<string, unknown> = {}, blocks: OutputBlockData[] = BLOCKS): Promise<Runtime> => {
   const instance = new Blok({
     holder,
@@ -161,6 +177,8 @@ describe('Turn into page on an inline database', () => {
       ['paragraph', null], ['page', null], ['paragraph', null],
     ]);
     expect(after.blocks[1].data).toEqual({ pageId: init.pageId, kind: 'database' });
+    // research-live-notion.md §4: the new link row stays selected.
+    expect(instance.module.blockManager.blocks.find(block => block.name === 'page')?.selected).toBe(true);
 
     // One undo brings the inline database back, rows and bodies included.
     await step(instance, () => instance.history.undo());
@@ -222,27 +240,39 @@ describe('Turn into page on an inline database', () => {
     expect(instance.history.canUndo()).toBe(couldUndo);
   }, 30_000);
 
-  it('keeps the rows in the backend: they move, they are not deleted', async () => {
-    const adapter = {
-      // Never answers: a load would replace the schema mid-test.
-      loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
-      createRow: vi.fn(async (params: { id: string }) => ({ ...params })),
-      updateRow: vi.fn(async () => undefined),
-      moveRow: vi.fn(async () => undefined),
-      deleteRow: vi.fn(async () => undefined),
-      createProperty: vi.fn(async (params: { id: string }) => ({ ...params })),
-      updateProperty: vi.fn(async () => undefined),
-      deleteProperty: vi.fn(async () => undefined),
-      createView: vi.fn(async (params: { id: string }) => ({ ...params })),
-      updateView: vi.fn(async () => undefined),
-      deleteView: vi.fn(async () => undefined),
-    };
-    const instance = await boot({ databasePages: true, create: vi.fn() }, { adapter });
+  it('keeps the rows in the backend: no row is deleted or made twice, here, in the page, or on undo', async () => {
+    const adapter = backend();
+    const create = vi.fn();
+    const instance = await boot({ databasePages: true, create }, { adapter });
 
     await step(instance, () => turnIntoPage(instance)?.onActivate?.());
 
     expect((await instance.save()).blocks.map(block => block.type)).toEqual(['paragraph', 'page', 'paragraph']);
     expect(adapter.deleteRow).not.toHaveBeenCalled();
+    expect(adapter.createRow).not.toHaveBeenCalled();
+
+    await step(instance, () => instance.history.undo());
+    await step(instance, () => instance.history.redo());
+    expect(adapter.deleteRow).not.toHaveBeenCalled();
+    expect(adapter.createRow).not.toHaveBeenCalled();
+
+    // The page opens its document in an editor of its own, on the same backend.
+    instance.destroy();
+    editor = undefined;
+    const page = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, toggle: Toggle, database: { class: DatabaseTool, config: { adapter } }, 'database-row': DatabaseRowTool },
+      data: create.mock.calls[0][0].document,
+    } as never) as unknown as Runtime;
+
+    editor = page;
+    await page.isReady;
+    await settleFrame();
+    await settle(600);
+    expect((await page.save()).blocks.map(block => block.id)).toEqual(['db', 'r1', 'b1', 'r2']);
+    expect(adapter.deleteRow).not.toHaveBeenCalled();
+    expect(adapter.createRow).not.toHaveBeenCalled();
   }, 30_000);
 
   it('is not offered on a database inside a database, which refuses a page', async () => {

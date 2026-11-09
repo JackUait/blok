@@ -1,6 +1,15 @@
 import type { API, OutputBlockData } from '../../../types';
 import type { PageConfig } from './types';
 
+/**
+ * Ids of the database blocks and their rows (and row bodies) that Turn into
+ * page or Turn into inline database moved between documents. The other
+ * document still holds the same rows, so removing or restoring this copy (the
+ * move itself, its undo or redo) must not delete or create them in a database
+ * backend.
+ */
+export const movedDatabases = new Set<string>();
+
 /** The page tool that makes full-page databases: its registered name and config. */
 export interface DatabasePageHost {
   name: string;

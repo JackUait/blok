@@ -46,6 +46,44 @@ type callTracker struct {
 	inUse       map[jsonrpc.ID]int
 	aliases     map[jsonrpc.ID]jsonrpc.ID
 	latest      map[jsonrpc.ID]jsonrpc.ID
+	// atOnce are the requests passed on that Node answers before it reads
+	// the next line; the SDK runs each line in its own goroutine.
+	atOnce map[jsonrpc.ID]bool
+}
+
+// answeredAtOnce are the methods Node answers with no I/O, so before it
+// handles the next line.
+var answeredAtOnce = map[string]bool{"ping": true, "tools/list": true, "prompts/list": true, "prompts/get": true}
+
+// atOnceWait caps how long an answer that never comes holds the next line.
+const atOnceWait = 10 * time.Second
+
+// passedOn notes a request handed to the SDK.
+func (t *callTracker) passedOn(message jsonrpc.Message) {
+	request, ok := message.(*jsonrpc.Request)
+	if !ok || !request.IsCall() || !answeredAtOnce[request.Method] {
+		return
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.atOnce[request.ID] = true
+}
+
+// waitAtOnce holds the next line until those answers are written.
+func (t *callTracker) waitAtOnce() {
+	deadline := time.Now().Add(atOnceWait)
+	timer := time.AfterFunc(atOnceWait, func() {
+		t.mu.Lock()
+		t.idle.Broadcast()
+		t.mu.Unlock()
+	})
+	defer timer.Stop()
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for len(t.atOnce) > 0 && !t.closed && time.Now().Before(deadline) {
+		t.idle.Wait()
+	}
+	clear(t.atOnce)
 }
 
 // closeTransport drops every later message, as Node's closed transport
@@ -115,7 +153,7 @@ func (t *callTracker) endedLocked(id jsonrpc.ID) {
 func newCallTracker() *callTracker {
 	tracker := &callTracker{running: map[jsonrpc.ID]bool{}, cancelled: map[jsonrpc.ID]bool{},
 		lines: newHandleLines(), booked: map[jsonrpc.ID][]string{}, open: map[jsonrpc.ID]int{},
-		calls: map[jsonrpc.ID]bool{}, signals: map[string]context.Context{}, cancels: map[jsonrpc.ID]context.CancelFunc{}, callSignals: map[jsonrpc.ID]string{}, inUse: map[jsonrpc.ID]int{}, aliases: map[jsonrpc.ID]jsonrpc.ID{}, latest: map[jsonrpc.ID]jsonrpc.ID{}}
+		calls: map[jsonrpc.ID]bool{}, signals: map[string]context.Context{}, cancels: map[jsonrpc.ID]context.CancelFunc{}, callSignals: map[jsonrpc.ID]string{}, inUse: map[jsonrpc.ID]int{}, aliases: map[jsonrpc.ID]jsonrpc.ID{}, latest: map[jsonrpc.ID]jsonrpc.ID{}, atOnce: map[jsonrpc.ID]bool{}}
 	tracker.idle = sync.NewCond(&tracker.mu)
 	return tracker
 }
@@ -311,6 +349,7 @@ func (t *callTracker) answered(message jsonrpc.Message) {
 	delete(t.running, response.ID)
 	delete(t.cancelled, response.ID)
 	delete(t.calls, response.ID)
+	delete(t.atOnce, response.ID)
 	if cancel, ok := t.cancels[response.ID]; ok {
 		cancel()
 		delete(t.signals, t.callSignals[response.ID])
@@ -368,6 +407,15 @@ type trackedConnection struct {
 }
 
 func (c trackedConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
+	c.tracker.waitAtOnce()
+	message, err := c.next(ctx)
+	if err == nil {
+		c.tracker.passedOn(message)
+	}
+	return message, err
+}
+
+func (c trackedConnection) next(ctx context.Context) (jsonrpc.Message, error) {
 	if pending := c.client.takePending(); pending != nil {
 		c.tracker.read(pending)
 		return pending, nil

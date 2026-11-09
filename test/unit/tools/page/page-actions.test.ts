@@ -158,7 +158,12 @@ describe('Page tool actions', () => {
     });
 
     it('lays the block menu out as a titled page section that trashes on delete', () => {
-      expect(PageTool.blockMenu).toEqual({ titled: true, trash: true });
+      expect(PageTool.blockMenu).toMatchObject({ titled: true, trash: true });
+    });
+
+    // research-live-notion.md §3: it heads Notion's menu on a database page link.
+    it('puts Turn into inline database before Turn into', () => {
+      expect(PageTool.blockMenu.lead).toEqual(['page-turn-into-inline-database']);
     });
   });
 

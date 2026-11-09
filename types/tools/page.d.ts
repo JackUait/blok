@@ -244,8 +244,8 @@ export declare class Page implements BlockTool {
    */
   static copyAsLink(data: PageData, config: PageConfig): { url: string; text: string } | null;
 
-  /** A titled "Page" menu with Turn into first; Delete reads "Move to Trash". */
-  static blockMenu?: { titled: boolean; trash: boolean };
+  /** A titled "Page" menu with Turn into first; Delete reads "Move to Trash". "Turn into inline database" leads it. */
+  static blockMenu?: { titled: boolean; trash: boolean; lead: string[] };
 
   /** Hides "Database - Full page" unless `config.databasePages` is true. */
   static filterToolbox(entries: ToolboxConfigEntry[], config: PageConfig): ToolboxConfigEntry[];

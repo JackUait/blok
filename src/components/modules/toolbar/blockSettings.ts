@@ -504,6 +504,15 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       items.push(...toolTunes);
     }
 
+    // Items the tool names in `lead` come before Turn into, like Notion's
+    // "Turn into inline database" on a database page link.
+    const lead = titled && hasToolTunes ? blockMenu?.lead ?? [] : [];
+    const isLead = (tune: MenuConfigItem): boolean => 'name' in tune && typeof tune.name === 'string' && lead.includes(tune.name);
+
+    if (lead.length > 0) {
+      items.push(...(toolTunes ?? []).filter(isLead));
+    }
+
     /**
      * Get convertible tools based on selection:
      * - For single block: use existing single-block conversion logic
@@ -625,7 +634,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     if (titled && hasToolTunes) {
-      items.push(...toolTunes);
+      items.push(...toolTunes.filter((tune) => !isLead(tune)));
     }
 
     // Formatting still needs a boundary before the actions when the block

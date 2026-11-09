@@ -169,15 +169,15 @@ describe('row page peek modes', () => {
       expect(label('r2')).toBe('Open');
     });
 
-    // notion-motion.md "Side peek top bar": on Next page the new row's halo starts about 70ms after the old one fades.
-    it('marks the row the peek moves to, but not the row it first opens on', async () => {
+    // notion-motion.md Round 6: a step paints the new row like a first open, so both ring fades start together.
+    it('marks the row the peek moves to the same way as the row it first opens on', async () => {
       await make(doc());
       await openRow('r1');
 
       expect(button('r1')?.getAttribute('data-peeked')).toBe('');
       await click(q('[data-blok-database-peek-next]'));
 
-      expect(button('r2')?.getAttribute('data-peeked')).toBe('step');
+      expect(button('r2')?.getAttribute('data-peeked')).toBe('');
       expect(button('r1')?.hasAttribute('data-peeked')).toBe(false);
     });
 

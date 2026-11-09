@@ -228,11 +228,10 @@ describe('side peek', () => {
     expect(body(reducedMotion, '[data-blok-database-table-row]::before')).toContain('transition: none');
   });
 
-  // motion-peeknext.json: the old halo fades from t=1222, the new one from about t=1291.
-  it('starts the halo of a row the peek steps to 70ms late', () => {
-    const stepped = body(outsideReducedMotion, '[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked="step"])::before');
-
-    expect(stepped).toContain('transition-delay: 70ms');
+  // notion-motion.md Round 6: Notion's "~70ms" lag was a busy main thread, not a delay.
+  it('starts the new row\'s ring on the same frame the old one starts to fade', () => {
+    expect(database).not.toContain('data-peeked="step"');
+    expect(database).not.toMatch(/\[data-blok-database-table-row\][^{}]*::before \{[^}]*transition-delay/);
   });
 
   it('neither slides nor narrows gradually under reduced motion', () => {

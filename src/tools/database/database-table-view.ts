@@ -530,16 +530,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   /** notion-spec-2 §25.3: OPEN reads CLOSE, with the hint "Close side peek" above it (62-close-hover.png), while its row is in the side peek. */
-  private paintOpen(button: HTMLElement, rowId: string, stepped = false): void {
+  private paintOpen(button: HTMLElement, rowId: string): void {
     const peeked = this.options.peek?.rowId() === rowId;
     const label = button.lastElementChild;
 
-    if (peeked && !button.hasAttribute('data-peeked')) {
-      // "step": the peek moved here from another row; database.css starts its halo late.
-      button.setAttribute('data-peeked', stepped ? 'step' : '');
-    } else if (!peeked) {
-      button.removeAttribute('data-peeked');
-    }
+    button.toggleAttribute('data-peeked', peeked);
     if (label !== null) label.textContent = this.t(peeked ? 'tools.database.close' : 'tools.database.tableOpen');
     if (peeked) {
       onHover(button, this.t('tools.database.closeSidePeek'), { placement: 'top' });
@@ -559,14 +554,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   private repaintOpen(): void {
-    const buttons = [...this.root?.querySelectorAll<HTMLElement>('[data-blok-database-table-open]') ?? []];
-    const peekedRow = this.options.peek?.rowId();
-    const stepped = buttons.some((button) => button.hasAttribute('data-peeked') && button.closest('[data-row-id]')?.getAttribute('data-row-id') !== peekedRow);
-
-    buttons.forEach((button) => {
+    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-table-open]').forEach((button) => {
       const rowId = button.closest('[data-row-id]')?.getAttribute('data-row-id');
 
-      if (typeof rowId === 'string') this.paintOpen(button, rowId, stepped);
+      if (typeof rowId === 'string') this.paintOpen(button, rowId);
     });
   }
 

@@ -1546,8 +1546,6 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GROUP_MENU_ROWS_BYTES = 507;
     // database.css: the board card ghost keeps the drag fill and its ✎⋯ pill at the card's own height.
     const DATABASE_CARD_GHOST_FILL_BYTES = 438;
-    // database.css: the ring of a row the peek steps to starts 70ms late.
-    const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
@@ -1953,7 +1951,6 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FULL_PAGE_INSET_BYTES
       + DATABASE_TITLE_ROW_FOLD_BYTES
       + DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES
-      + DATABASE_PEEK_STEP_HALO_BYTES
       + DATABASE_ROW_GUTTER_EASE_BYTES
       + DATABASE_TITLE_ROW_FOLD_PROBE_BYTES
       + DATABASE_TITLE_ROW_TOOLBAR_MARKS_BYTES

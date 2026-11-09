@@ -498,18 +498,14 @@ describe('database card drag mutants', () => {
       });
     });
 
-    it('keeps the dragged card out of the drop maths', () => {
+    // Counted as its own neighbour, the card would not match its start and the drop would move it.
+    it('keeps the dragged card out of the drop maths, so a drop on its own place is no move', () => {
       const board = buildBoard(TWO_COLUMNS);
 
       startDrag(board, 170, 60);
       document.dispatchEvent(pointer('pointerup', 170, 60));
 
-      expect(board.onDrop).toHaveBeenCalledWith({
-        rowId: 'a1',
-        toOptionId: 'opt-0',
-        beforeRowId: 'a2',
-        afterRowId: null,
-      });
+      expect(board.onDrop).not.toHaveBeenCalled();
     });
 
     it('treats a card midpoint as belonging to the card above it', () => {

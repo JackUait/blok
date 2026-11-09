@@ -126,7 +126,7 @@ describe('DatabaseCardDrag', () => {
     expect(document.querySelector('[data-blok-database-ghost]')).toBeNull();
   });
 
-  it('filters dragged card from drop position calculation', () => {
+  it('filters dragged card from drop position calculation, so a drop on its own place is no move', () => {
     wrapper.remove();
     wrapper = createWrapper(1, 3);
     drag.destroy();
@@ -141,14 +141,36 @@ describe('DatabaseCardDrag', () => {
 
     // Drop at clientY=80 which is clearly above row-0-1's midpoint (90)
     // With fix: cards = [row-0-1, row-0-2], clientY=80 < row-0-1 mid(90) → beforeEl = row-0-1, beforeIndex=0, afterRowId = null
+    // Counted as its own neighbour, row-0-0 would not match its start and the drop would move it.
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 80 }));
 
-    expect(onDrop).toHaveBeenCalledWith({
-      rowId: 'row-0-0',
-      toOptionId: 'opt-0',
-      beforeRowId: 'row-0-1',
-      afterRowId: null,
-    });
+    expect(onDrop).not.toHaveBeenCalled();
+  });
+
+  // A drop back on the start would rewrite the row's position and add an undo step for nothing.
+  it('moves nothing when a card is dropped back where it started', () => {
+    drag.beginTracking('row-0-1', 50, 90);
+
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 140 }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 95 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 95 }));
+
+    expect(onDrop).not.toHaveBeenCalled();
+    expect(wrapper.querySelector('[data-blok-database-drag-source]')).toBeNull();
+  });
+
+  // The card stays in the DOM on a drop back, so the release would click it and open its page.
+  it('does not let the release after a drag click the card', () => {
+    const card = wrapper.querySelector<HTMLElement>('[data-row-id="row-0-1"]');
+    const opened = vi.fn();
+
+    card?.addEventListener('click', opened);
+    drag.beginTracking('row-0-1', 50, 90);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 140 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 95 }));
+    card?.click();
+
+    expect(opened).not.toHaveBeenCalled();
   });
 
   it('cleans up previous tracking session when beginTracking is called again', () => {

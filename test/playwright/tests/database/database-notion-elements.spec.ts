@@ -99,11 +99,12 @@ const LIGHT: Look = {
   closeBg: 'rgba(42, 28, 0, 0.07)',
   closeHover: 'rgba(42, 28, 0, 0.106)',
   closeGlyph: 'rgb(142, 139, 134)',
-  // research/27 §6. A light row press was not read: it keeps the hover fill.
+  // research/27 §6; research/30 B5: a light row press doubles the hover alpha.
   // Chrome reads Notion's 0.102 and 0.051 alphas back as 0.1 and 0.05 (8-bit alpha).
+  // rowPressed must differ from rowHover: the row fades over 20ms, so an equal pin passes only on an early read.
   closePressed: 'rgba(33, 27, 23, 0.1)',
   rowHover: 'rgba(33, 27, 23, 0.05)',
-  rowPressed: 'rgba(33, 27, 23, 0.05)',
+  rowPressed: 'rgba(33, 27, 23, 0.1)',
   todayHover: 'rgba(33, 27, 23, 0.05)',
   // The database tertiary AA step: Notion's rgb(142, 139, 134) is 3.39:1 on white.
   todayInk: 'rgb(114, 111, 106)',

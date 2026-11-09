@@ -1193,6 +1193,12 @@ const editor = new Blok({
     saveDataShape: `interface PageData {
   pageId: string;
   kind?: 'database';  // Set by "Database - Full page"
+  trashed?: {         // Set by a server restore with CollabRestoreTrashesPages
+    at: number;       // Unix ms
+    by: string | null;
+    formerParentId: string | null;
+    formerIndex: number;
+  };
 }`,
     saveDataExample: `{
   "id": "pg001",

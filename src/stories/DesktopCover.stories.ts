@@ -3,7 +3,7 @@ import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { createAddCoverButton, createPageCover, type CoverId } from '../../desktop/src/cover';
 import '../../desktop/src/shell.css';
 
-function page(initialCover?: CoverId): HTMLElement {
+function page(initialCover?: CoverId, initialIcon?: string): HTMLElement {
   const canvas = document.createElement('main');
   canvas.setAttribute('data-blok-sidebar-canvas', '');
   canvas.style.minHeight = '680px';
@@ -19,7 +19,15 @@ function page(initialCover?: CoverId): HTMLElement {
   addIcon.type = 'button';
   addIcon.setAttribute('data-blok-page-add-icon', '');
   addIcon.textContent = 'Ajouter une icône';
-  iconRow.append(addIcon);
+  if (initialIcon) {
+    iconRow.setAttribute('data-has-icon', '');
+    const icon = document.createElement('button');
+    icon.type = 'button';
+    icon.setAttribute('data-blok-page-icon', '');
+    icon.setAttribute('aria-label', 'Changer l’icône');
+    icon.textContent = initialIcon;
+    iconRow.append(icon);
+  } else iconRow.append(addIcon);
   const title = document.createElement('h1');
   title.textContent = 'Carnet de voyage';
   title.style.fontSize = '48px';
@@ -64,7 +72,8 @@ export const ActionsAuSurvol: Story = {
   render: () => page(),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const header = canvasElement.querySelector<HTMLElement>('[data-blok-page-header]')!;
+    const header = canvasElement.querySelector<HTMLElement>('[data-blok-page-header]');
+    if (!header) throw new Error('L’en-tête de page doit être présent.');
     const add = canvas.getByRole('button', { name: 'Ajouter une couverture' });
     await userEvent.hover(header);
     await waitFor(() => expect(getComputedStyle(add).opacity).toBe('1'));
@@ -76,7 +85,9 @@ export const Ajout: Story = {
   render: () => page(),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.hover(canvasElement.querySelector<HTMLElement>('[data-blok-page-header]')!);
+    const header = canvasElement.querySelector<HTMLElement>('[data-blok-page-header]');
+    if (!header) throw new Error('L’en-tête de page doit être présent.');
+    await userEvent.hover(header);
     const add = canvas.getByRole('button', { name: 'Ajouter une couverture' });
     await userEvent.click(add);
     expect(canvas.getByRole('img', { name: 'Couverture de la page' })).toBeTruthy();
@@ -89,6 +100,29 @@ export const Galerie: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole('button', { name: 'Changer la couverture' }));
     expect(canvas.getByRole('dialog', { name: 'Choisir une couverture' })).toBeTruthy();
+  },
+};
+
+export const IconeSurCouverture: Story = {
+  render: () => page('met-oxbow', '🚙'),
+  play: ({ canvasElement }) => {
+    const cover = canvasElement.querySelector<HTMLElement>('[data-desktop-cover]');
+    const icon = canvasElement.querySelector<HTMLElement>('[data-blok-page-icon]');
+    if (!cover || !icon) throw new Error('La couverture et l’icône doivent être présentes.');
+    const edge = cover.getBoundingClientRect().bottom;
+    const iconBox = icon.getBoundingClientRect();
+    expect(iconBox.top).toBeLessThan(edge);
+    expect(iconBox.bottom).toBeGreaterThan(edge);
+  },
+};
+
+export const CouvertureSansIcone: Story = {
+  render: () => page('met-oxbow'),
+  play: ({ canvasElement }) => {
+    const cover = canvasElement.querySelector<HTMLElement>('[data-desktop-cover]');
+    const addIcon = canvasElement.querySelector<HTMLElement>('[data-blok-page-add-icon]');
+    if (!cover || !addIcon) throw new Error('La couverture et l’action d’icône doivent être présentes.');
+    expect(addIcon.getBoundingClientRect().top).toBeGreaterThanOrEqual(cover.getBoundingClientRect().bottom);
   },
 };
 

@@ -178,6 +178,18 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
 }
 [data-desktop-document][data-full-width] { width: 100%; padding-inline: clamp(24px, 5vw, 96px); }
 [data-desktop-document][data-has-cover] { padding-top: 38px; }
+[data-desktop-document][data-has-cover]:has([data-blok-page-icon-row][data-has-icon]) { padding-top: 0; }
+[data-desktop-document][data-has-cover] [data-blok-page-icon-row][data-has-icon] {
+  position: relative;
+  z-index: 1;
+  margin-top: calc(var(--blok-page-icon-box, 92px) / -2);
+}
+@container (max-width: 480px) {
+  [data-desktop-document][data-has-cover] [data-blok-page-icon-row][data-has-icon] { --blok-page-icon-box: 72px; }
+}
+@container (max-width: 360px) {
+  [data-desktop-document][data-has-cover] [data-blok-page-icon-row][data-has-icon] { --blok-page-icon-box: 60px; }
+}
 [data-desktop-add-cover] {
   display: inline-flex; align-items: center; align-self: flex-end; gap: 6px;
   min-height: 28px; margin-inline-start: 6px; padding: 4px 8px;

@@ -39,8 +39,11 @@ export class DatabaseTableColumnDrag {
     this.stop();
   }
 
+  /** The pressed header's own row: a grouped table repeats the header row per group. */
   private headers(): HTMLElement[] {
-    return [...this.grid.querySelectorAll<HTMLElement>('[data-blok-database-table-column-header]')];
+    const row = this.press?.header.parentElement ?? this.grid;
+
+    return [...row.querySelectorAll<HTMLElement>(':scope > [data-blok-database-table-column-header]')];
   }
 
   private readonly handleDown = (event: PointerEvent): void => {
@@ -134,7 +137,7 @@ export class DatabaseTableColumnDrag {
     setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 0);
 
     const propertyId = press.header.getAttribute('data-property-id') ?? '';
-    const headers = this.headers();
+    const headers = [...press.header.parentElement?.querySelectorAll<HTMLElement>(':scope > [data-blok-database-table-column-header]') ?? []];
     const next = headers[headers.indexOf(press.header) + 1]?.getAttribute('data-property-id') ?? null;
 
     if (beforeId !== propertyId && beforeId !== next) {

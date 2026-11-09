@@ -1591,6 +1591,71 @@ describe('DatabaseTableView', () => {
       expect(handlers.addRow).toHaveBeenCalledWith('o-idea');
     });
 
+    it('repeats the column header row at the top of each group, like Notion', () => {
+      const { root } = mount({ groups: groups() });
+      const sections = [...root.querySelectorAll('[data-blok-database-table-group]')];
+
+      expect(grid(root).querySelectorAll(':scope > [data-blok-database-table-header]')).toHaveLength(0);
+      for (const section of sections) {
+        const content = section.querySelector('[data-blok-database-table-group-content]');
+        const header = content?.firstElementChild;
+
+        expect(header?.hasAttribute('data-blok-database-table-header')).toBe(true);
+        expect([...(header?.querySelectorAll('[role="columnheader"]') ?? [])].map((el) => el.getAttribute('data-property-id')))
+          .toEqual(['p-title', 'p-notes', 'p-amount', 'p-stage', 'p-done']);
+        expect(header?.hasAttribute('aria-rowindex')).toBe(false);
+      }
+    });
+
+    it('a collapsed group hides its header row and opening it brings the row back', () => {
+      const { root } = mount({ groups: groups() });
+      const section = root.querySelector<HTMLElement>('[data-blok-database-table-group][data-group-key="__none__"]');
+      const toggle = section?.querySelector<HTMLElement>('[data-blok-database-table-group-toggle]');
+
+      toggle?.click();
+      expect(section?.querySelectorAll('[data-blok-database-table-header]')).toHaveLength(0);
+      toggle?.click();
+      expect(section?.querySelectorAll('[data-blok-database-table-header]')).toHaveLength(1);
+    });
+
+    it('keeps one header row when no group is drawn', () => {
+      const { root } = mount({ groups: [] });
+
+      expect(root.querySelectorAll('[data-blok-database-table-header]')).toHaveLength(1);
+    });
+
+    it('a header in any group opens the property menu for its column', () => {
+      const { root, handlers } = mount({ groups: groups() });
+      const header = root.querySelector<HTMLElement>('[data-group-key="__none__"] [data-blok-database-table-column-header][data-property-id="p-notes"]');
+
+      header?.click();
+      expect(handlers.openPropertyMenu).toHaveBeenCalledWith('p-notes', header);
+    });
+
+    it('every group header checkbox follows the row selection', () => {
+      const { root } = mount({ groups: groups() });
+
+      root.querySelector<HTMLElement>('[data-row-id="r2"] [data-blok-database-table-row-checkbox]')?.click();
+      const boxes = [...root.querySelectorAll('[data-blok-database-table-select-all]')];
+
+      expect(boxes).toHaveLength(2);
+      expect(boxes.map((box) => box.getAttribute('aria-checked'))).toEqual(['mixed', 'mixed']);
+    });
+
+    it('resizing a column from a later group resizes it in every group', () => {
+      const { root, handlers } = mount({ groups: groups() });
+      const handle = root.querySelector<HTMLElement>('[data-group-key="__none__"] [data-blok-database-table-column-header][data-property-id="p-notes"] [data-blok-database-table-resize]');
+
+      handle?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, clientX: 100 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 140 }));
+      const widths = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-column-header][data-property-id="p-notes"]')].map((el) => el.style.width);
+
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 140 }));
+      expect(widths).toHaveLength(2);
+      expect(new Set(widths).size).toBe(1);
+      expect(handlers.updateView).toHaveBeenCalled();
+    });
+
     it('draws no calculation footer in a group while nothing is calculated', () => {
       const { root } = mount({ groups: groups() });
 

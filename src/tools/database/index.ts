@@ -11828,8 +11828,15 @@ export class DatabaseTool implements BlockTool {
     param.receive(prop.id);
   }
 
-  private liveColumnHeader(propertyId: string, context?: NativeWidgetContext): HTMLElement | null {
-    return (context?.root ?? this.boardContainer)?.querySelector<HTMLElement>(`[data-blok-database-table-column-header][data-property-id="${CSS.escape(propertyId)}"]`) ?? null;
+  /** `groupKey`: a grouped table repeats its headers, so the menu stays on the group it opened from. */
+  private liveColumnHeader(propertyId: string, context?: NativeWidgetContext, groupKey?: string | null): HTMLElement | null {
+    const root = context?.root ?? this.boardContainer;
+    const header = `[data-blok-database-table-column-header][data-property-id="${CSS.escape(propertyId)}"]`;
+    const inGroup = groupKey === null || groupKey === undefined
+      ? null
+      : root?.querySelector<HTMLElement>(`[data-blok-database-table-group][data-group-key="${CSS.escape(groupKey)}"] ${header}`);
+
+    return inGroup ?? root?.querySelector<HTMLElement>(header) ?? null;
   }
 
   /** `rowPage`: opened from a row page label, so the menu is the row page's own (no view rows). */
@@ -11846,6 +11853,8 @@ export class DatabaseTool implements BlockTool {
       return;
     }
     const previous = this.propertyMenu;
+    // Read now: a redraw detaches the anchor from its group.
+    const groupKey = anchor.closest('[data-blok-database-table-group]')?.getAttribute('data-group-key');
 
     this.propertyMenu = null;
     previous?.destroy();
@@ -11858,7 +11867,7 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       hasPeople: this.hasPeople,
       ...(onCustomizeLayout === undefined ? {} : { onCustomizeLayout }),
-      ...(rowPage === undefined ? { liveAnchor: () => this.liveColumnHeader(propertyId, context) } : {}),
+      ...(rowPage === undefined ? { liveAnchor: () => this.liveColumnHeader(propertyId, context, groupKey) } : {}),
       onClose: () => {
         if (this.titleIconMenu?.menu === menu) this.titleIconMenu = null;
         if (this.propertyMenu !== menu || menu.isIconPickerOpen) return;

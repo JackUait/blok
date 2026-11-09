@@ -478,6 +478,86 @@ test.describe('load more and groups', () => {
     await expect(idea.locator('[data-blok-database-table-row]')).toHaveCount(0);
     await expect(idea.locator('[data-blok-database-table-group-toggle]')).toHaveAttribute('aria-expanded', 'false');
   });
+
+  const groupHeader = (page: Page, groupKey: string, propertyId: string): Locator =>
+    page.locator(`[data-blok-database-table-group][data-group-key="${groupKey}"] [role="columnheader"][data-property-id="${propertyId}"]`);
+
+  test('each group draws its own header row, like Notion', async ({ page }) => {
+    await mount(page, blocks({ groupBy: 'p-stage' }));
+    const groups = page.locator('[data-blok-database-table-group]');
+
+    await expect(groups).toHaveCount(3);
+    for (const index of [0, 1, 2]) {
+      await expect(groups.nth(index).locator('[role="columnheader"][data-property-id="p-notes"]')).toHaveCount(1);
+    }
+  });
+
+  test('resizing a column from the second group resizes it in every group and saves once', async ({ page }) => {
+    await mount(page, blocks({ groupBy: 'p-stage' }));
+    const handle = groupHeader(page, 'o-build', 'p-notes').locator('[data-blok-database-table-resize]');
+    const box = await handle.boundingBox();
+
+    if (box === null) {
+      throw new Error('no resize handle');
+    }
+    await page.mouse.move(box.x + 2, box.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 82, box.y + 10, { steps: 4 });
+    await expect.poll(async () => (await groupHeader(page, 'o-idea', 'p-notes').boundingBox())?.width).toBe(280);
+    await page.mouse.up();
+
+    await expect.poll(async () => (await page.locator('[data-row-id="r1"] [role="gridcell"][data-property-id="p-notes"]').boundingBox())?.width).toBe(280);
+    const notes = ((await savedView(page)).properties as Array<{ id: string; width?: number }>).find((p) => p.id === 'p-notes');
+
+    expect(notes?.width).toBe(280);
+  });
+
+  test('dragging a header in the second group reorders the columns of every group', async ({ page }) => {
+    await mount(page, blocks({ groupBy: 'p-stage' }));
+    const from = await groupHeader(page, 'o-build', 'p-stage').boundingBox();
+    const to = await groupHeader(page, 'o-build', 'p-notes').boundingBox();
+
+    if (from === null || to === null) {
+      throw new Error('no header');
+    }
+    await page.mouse.move(from.x + 20, from.y + 18);
+    await page.mouse.down();
+    await page.mouse.move(to.x + 10, to.y + 18, { steps: 8 });
+    // Only the dragged header's own row slides aside.
+    const transform = (key: string): Promise<string> => groupHeader(page, key, 'p-notes').evaluate((el) => el.style.transform);
+
+    await expect.poll(() => transform('o-build')).not.toBe('');
+    expect(await transform('o-idea')).toBe('');
+    await page.mouse.up();
+
+    for (const key of ['o-idea', 'o-build']) {
+      await expect(page.locator(`[data-blok-database-table-group][data-group-key="${key}"] [role="columnheader"]`).nth(1)).toHaveAttribute('data-property-id', 'p-stage');
+    }
+    const order = ((await savedView(page)).properties as Array<{ id: string }>).map((p) => p.id);
+
+    expect(order.indexOf('p-stage')).toBe(order.indexOf('p-title') + 1);
+  });
+
+  test('a property menu opened from a later group stays on that group when the table redraws', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 1600 });
+    await mount(page, blocks({ groupBy: 'p-stage' }));
+    const last = page.locator('[data-blok-database-table-group]').last();
+    const notes = last.locator('[role="columnheader"][data-property-id="p-notes"]');
+
+    await notes.click();
+    const menu = page.locator('[data-blok-popover-opened="true"] [data-blok-popover-container]').first();
+
+    await expect(menu).toBeVisible();
+    const gap = async (): Promise<number> => ((await menu.boundingBox())?.y ?? 0) - ((await notes.boundingBox())?.y ?? 0);
+    const before = await gap();
+
+    // A new row in the first group pushes the later groups down and redraws the table.
+    await page.evaluate(() => {
+      window.blokInstance?.blocks.insert('database-row', { position: 'a9', properties: { 'p-title': 'Delta', 'p-stage': 'o-idea' } }, undefined, undefined, false, false, undefined, undefined, 'api', 'db-1');
+    });
+    await expect(page.locator('[data-row-id]').filter({ hasText: 'Delta' })).toHaveCount(1);
+    await expect.poll(gap).toBeCloseTo(before, 0);
+  });
 });
 
 test.describe('property and row menus', () => {

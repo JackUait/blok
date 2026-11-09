@@ -353,6 +353,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     return this.options.i18n.t(key, vars);
   }
 
+  private grouped(): boolean {
+    return this.options.groups !== undefined && this.options.groups.length > 0;
+  }
+
   private allRows(): DatabaseRow[] {
     return this.options.groups !== undefined ? this.options.groups.flatMap((group) => group.rows) : this.options.rows;
   }
@@ -393,7 +397,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     gridEl.setAttribute('data-blok-database-table-grid', '');
     gridEl.setAttribute('data-blok-keyboard-owner', '');
     gridEl.setAttribute('aria-label', this.t('tools.database.tableLabel'));
-    gridEl.setAttribute('aria-rowcount', String(this.allRows().length + 1));
+    gridEl.setAttribute('aria-rowcount', String(this.allRows().length + Math.max(1, this.options.groups?.length ?? 0)));
     gridEl.setAttribute('aria-colcount', String(this.columns.length));
     gridEl.setAttribute('aria-multiselectable', 'true');
     gridEl.setAttribute('data-vertical-lines', String(resolveShowVerticalLines(this.options.view)));
@@ -403,7 +407,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     gridEl.tabIndex = 0;
     this.gridEl = gridEl;
 
-    gridEl.appendChild(this.createHeader());
+    // Notion repeats the header row under each group (research/shots-08/59-table-grouped.png).
+    // With no group drawn, one header stays so properties, resize and "+" remain reachable.
+    if (!this.grouped()) {
+      gridEl.appendChild(this.createHeader());
+    }
     if (this.options.groups !== undefined) {
       for (const group of this.options.groups) {
         gridEl.appendChild(this.createGroup(group));
@@ -621,7 +629,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     header.setAttribute('role', 'row');
     header.setAttribute('data-blok-database-table-header', '');
-    header.setAttribute('aria-rowindex', '1');
+    // Rows carry no index; one index per group header would repeat it.
+    if (!this.grouped()) {
+      header.setAttribute('aria-rowindex', '1');
+    }
 
     if (this.editable) {
       const gutter = this.createGutter();
@@ -1270,11 +1281,19 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     content.setAttribute('data-blok-database-table-group-content', '');
     // Rows mount and unmount at once (research/08); only the caret turns.
     if (!collapsed) {
-      content.appendChild(this.createBody(group.rows, group.key, group));
+      content.appendChild(this.createGroupContent(group));
     }
     section.appendChild(content);
 
     return section;
+  }
+
+  private createGroupContent(group: TableGroup): DocumentFragment {
+    const fragment = this.createBody(group.rows, group.key, group);
+
+    fragment.prepend(this.createHeader());
+
+    return fragment;
   }
 
   private toggleGroup(section: HTMLElement): void {
@@ -1293,7 +1312,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       content.replaceChildren();
     } else {
       this.state.collapsed.delete(key);
-      content.replaceChildren(this.createBody(group.rows, key, group));
+      content.replaceChildren(this.createGroupContent(group));
     }
     section.toggleAttribute('data-collapsed', collapse);
     caret?.setAttribute('aria-expanded', String(!collapse));
@@ -1356,10 +1375,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const selection = this.state.selection;
     const rowIds = selection?.kind === 'rows' ? selection.rowIds : [];
     const total = gridEl.querySelectorAll('[data-blok-database-table-row]').length;
-    const all = gridEl.querySelector('[data-blok-database-table-select-all]');
     const someState = rowIds.length >= total ? 'true' : 'mixed';
 
-    all?.setAttribute('aria-checked', rowIds.length > 0 ? someState : 'false');
+    gridEl.querySelectorAll('[data-blok-database-table-select-all]').forEach((all) => {
+      all.setAttribute('aria-checked', rowIds.length > 0 ? someState : 'false');
+    });
 
     if (rowIds.length === 0) {
       this.removeSelectionBar();

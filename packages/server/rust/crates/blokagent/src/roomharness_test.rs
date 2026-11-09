@@ -224,6 +224,15 @@ pub(crate) fn new_test_room_on_with(
 }
 
 impl TestRoom {
+    /// The same rooms, with the host's history hooks.
+    pub(crate) fn with_policy(mut self, policy: crate::HistoryPolicy) -> TestRoom {
+        self.executor = Arc::new(Executor::new_on_runtime(
+            Arc::new(SharedPool),
+            Some(Rooms::with_history(self.manager.clone(), policy)),
+        ));
+        self
+    }
+
     pub(crate) async fn export(&self, doc: &str) -> Node {
         let state = self.manager.state(doc).await.expect("state");
         assert_eq!(state.status, StateStatus::Ready, "state {:?}", state.err);

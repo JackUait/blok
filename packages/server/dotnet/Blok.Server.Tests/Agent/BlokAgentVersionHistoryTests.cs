@@ -8,7 +8,7 @@ using Xunit;
 namespace Blok.Server.Tests.Agent;
 
 /// <summary>history.versions, history.read, history.changes and history.restore in a room, against the in-memory history journal.</summary>
-public sealed class BlokAgentVersionHistoryTests
+public sealed partial class BlokAgentVersionHistoryTests
 {
   private const string DocId = "history-room";
   private static readonly BlokAgentActor Actor = new("agent-cs", "Agent");

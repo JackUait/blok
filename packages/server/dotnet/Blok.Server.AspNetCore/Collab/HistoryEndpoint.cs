@@ -659,8 +659,7 @@ internal static partial class HistoryEndpoint
       return (true, null);
     }
 
-    var now = (context.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System).GetUtcNow();
-    var cut = CollabHistoryWindow.Cut(now, span);
+    var cut = CollabHistoryWindow.Cut(admitted.Rooms.Now, span);
     var (status, floors) = await admitted.Rooms.HistoryFloorsAsync(admitted.Doc, cut, context.RequestAborted);
 
     if (status != CollabHistoryStatus.Ready)

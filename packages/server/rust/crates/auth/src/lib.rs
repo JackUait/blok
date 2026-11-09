@@ -47,7 +47,9 @@ pub trait Authorization: Send + Sync {
     /// history list, a version read, its changes, history/at,
     /// history/changes and restore/preview, only after can_read_document
     /// (and can_write_document on preview) said yes. A restore or a delete
-    /// is decided by the write gate. The default is yes.
+    /// is decided by the write gate. The default is yes. The in-process
+    /// agent asks it too, with a user named by the person it acts for, else
+    /// by the agent.
     fn can_read_history<'a>(
         &'a self,
         _user: &'a User,
@@ -62,7 +64,7 @@ pub trait Authorization: Send + Sync {
     /// hidden, never deleted: reading it, its changes, history/at resolving
     /// to it, a before naming it, a restore to it and its preview answer 404
     /// {"reason":"retention"}; the list and the range leave it out. Not
-    /// asked on delete.
+    /// asked on delete. The in-process agent asks it too.
     fn history_window<'a>(
         &'a self,
         _user: &'a User,

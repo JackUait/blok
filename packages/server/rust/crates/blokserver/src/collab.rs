@@ -429,7 +429,12 @@ impl Server {
             .agent
             .get_or_init(|| {
                 let rooms = match &inner.collab {
-                    Some(collab) => Some(blok_blokagent::Rooms::new(collab.get(inner)?)),
+                    Some(collab) => Some(match agent_history_policy(&inner.options) {
+                        Some(policy) => {
+                            blok_blokagent::Rooms::with_history(collab.get(inner)?, policy)
+                        }
+                        None => blok_blokagent::Rooms::new(collab.get(inner)?),
+                    }),
                     None => None,
                 };
                 Ok(Arc::new(blok_blokagent::Executor::new_on_runtime(
@@ -463,4 +468,27 @@ pub(crate) fn runtime_options(o: &Options) -> blok_jsruntime::Options {
         timeout: o.documents.timeout,
         memory_budget: o.documents.memory_budget,
     }
+}
+
+/// The host's history hooks for an agent call. The agent has no request, so
+/// the hooks get a user named by the person it acts for, else the agent, and
+/// empty extensions. None when the host sets no authorization hook.
+fn agent_history_policy(options: &Options) -> Option<blok_blokagent::HistoryPolicy> {
+    let hook = options.authorization.clone()?;
+    Some(Arc::new(move |user_id: String, doc_id: String| {
+        let hook = Arc::clone(&hook);
+        Box::pin(async move {
+            let user = blok_auth::User {
+                id: user_id.clone(),
+                name: user_id,
+                authenticated: true,
+                ..blok_auth::User::default()
+            };
+            let request = blok_auth::Extensions::default();
+            Ok(blok_blokagent::HistoryAccess {
+                can_read: hook.can_read_history(&user, &doc_id, &request).await?,
+                window: hook.history_window(&user, &doc_id, &request).await?,
+            })
+        })
+    }))
 }

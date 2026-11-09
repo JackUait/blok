@@ -19,11 +19,32 @@ import (
 // Rooms is the collaboration server's live rooms, which ExecuteInRoom
 // edits. blokserver.Server.AgentExecutor builds an executor over its own
 // rooms; a host does not make one.
-type Rooms struct{ manager *room.Manager }
+type Rooms struct {
+	manager *room.Manager
+	policy  HistoryPolicy
+}
 
 // NewRooms wraps a room manager. It is for blokserver, which owns the
 // manager.
 func NewRooms(manager *room.Manager) *Rooms { return &Rooms{manager: manager} }
+
+// HistoryAccess is what the host's history hooks allow one agent call.
+// CanRead false refuses history.versions, history.read and history.changes;
+// Window nil shows the whole history.
+type HistoryAccess struct {
+	CanRead bool
+	Window  *time.Duration
+}
+
+// HistoryPolicy asks the host's history hooks for userID on docID: the
+// person the agent acts for, else the agent.
+type HistoryPolicy func(ctx context.Context, userID, docID string) (HistoryAccess, error)
+
+// NewRoomsWithHistory is NewRooms with the host's history hooks, asked on
+// every agent history command. It is for blokserver.
+func NewRoomsWithHistory(manager *room.Manager, policy HistoryPolicy) *Rooms {
+	return &Rooms{manager: manager, policy: policy}
+}
 
 // NewOnRuntime is for blokserver: an executor over the server's own engine
 // pool, the one its rooms read HTML with, as a C# host shares one

@@ -30,14 +30,52 @@ use crate::wire::{
 #[derive(Clone)]
 pub struct Rooms {
     manager: Manager,
+    policy: Option<HistoryPolicy>,
 }
 
 impl Rooms {
     /// Wraps a room manager. It is for blokserver, which owns the manager.
     pub fn new(manager: Manager) -> Rooms {
-        Rooms { manager }
+        Rooms {
+            manager,
+            policy: None,
+        }
+    }
+
+    /// `new` with the host's history hooks, asked on every agent history
+    /// command. It is for blokserver.
+    pub fn with_history(manager: Manager, policy: HistoryPolicy) -> Rooms {
+        Rooms {
+            manager,
+            policy: Some(policy),
+        }
     }
 }
+
+/// What the host's history hooks allow one agent call. `can_read` false
+/// refuses history.versions, history.read and history.changes; `window`
+/// None shows the whole history.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HistoryAccess {
+    pub can_read: bool,
+    pub window: Option<std::time::Duration>,
+}
+
+/// Asks the host's history hooks for a user on a document: the person the
+/// agent acts for, else the agent.
+pub type HistoryPolicy = Arc<
+    dyn Fn(
+            String,
+            String,
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<
+                        Output = Result<HistoryAccess, Box<dyn std::error::Error + Send + Sync>>,
+                    > + Send,
+            >,
+        > + Send
+        + Sync,
+>;
 
 impl fmt::Debug for Rooms {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -49,6 +87,7 @@ impl fmt::Debug for Rooms {
 pub(crate) struct Live {
     pub manager: Manager,
     pub history: Arc<RoomHistory>,
+    pub policy: Option<HistoryPolicy>,
 }
 
 impl Live {
@@ -63,6 +102,7 @@ impl Live {
         Live {
             manager: rooms.manager,
             history,
+            policy: rooms.policy,
         }
     }
 }

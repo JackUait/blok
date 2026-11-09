@@ -299,9 +299,39 @@ func (s *Server) AgentExecutor() (*blokagent.Executor, error) {
 				s.agentErr = err
 				return
 			}
-			rooms = blokagent.NewRooms(manager)
+			rooms = blokagent.NewRoomsWithHistory(manager, agentHistoryPolicy(s.options.Authorization))
 		}
 		s.agent = blokagent.NewOnRuntime(s.runtime, rooms)
 	})
 	return s.agent, s.agentErr
+}
+
+// agentHistoryPolicy is the host's history hooks for an agent call. The
+// agent has no request, so the hooks get a user named by the person it acts
+// for, else the agent. Nil when the host sets neither hook.
+func agentHistoryPolicy(hook Authorization) blokagent.HistoryPolicy {
+	reader, reads := hook.(HistoryReadAuthorizer)
+	windower, windows := hook.(HistoryWindower)
+	if !reads && !windows {
+		return nil
+	}
+	return func(ctx context.Context, userID, docID string) (blokagent.HistoryAccess, error) {
+		user := User{ID: userID, Name: userID, Authenticated: true}
+		access := blokagent.HistoryAccess{CanRead: true}
+		if reads {
+			allowed, err := reader.CanReadHistory(ctx, user, docID)
+			if err != nil {
+				return blokagent.HistoryAccess{}, err
+			}
+			access.CanRead = allowed
+		}
+		if windows {
+			window, err := windower.HistoryWindow(ctx, user, docID)
+			if err != nil {
+				return blokagent.HistoryAccess{}, err
+			}
+			access.Window = window
+		}
+		return access, nil
+	}
 }

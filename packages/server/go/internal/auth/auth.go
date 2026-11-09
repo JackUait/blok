@@ -44,7 +44,8 @@ type Authorization interface {
 // read, its changes, history/at, history/changes and restore/preview, only
 // after CanReadDocument (and CanWriteDocument on preview) said yes. A restore
 // or a delete is decided by the write gate. Without it, history is readable
-// to whoever can read the document.
+// to whoever can read the document. The in-process agent asks it too, with a
+// user named by the person it acts for, else by the agent.
 type HistoryReadAuthorizer interface {
 	CanReadHistory(ctx context.Context, u User, documentID string) (bool, error)
 }
@@ -55,6 +56,7 @@ type HistoryReadAuthorizer interface {
 // changes, history/at resolving to it, a before naming it, a restore to it
 // and its preview answer 404 {"reason":"retention"}; the list and the range
 // leave it out. A negative window counts as zero. It is not asked on delete.
+// The in-process agent asks it too, as for HistoryReadAuthorizer.
 type HistoryWindower interface {
 	HistoryWindow(ctx context.Context, u User, documentID string) (*time.Duration, error)
 }

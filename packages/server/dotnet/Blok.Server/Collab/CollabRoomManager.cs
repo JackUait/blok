@@ -230,6 +230,9 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   /// replaying one now would bring back what this replaced.
   /// </summary>
   internal event Action<string>? DocumentReplaced;
+
+  /// <summary>The room clock: what a history window counts back from.</summary>
+  internal DateTimeOffset Now => timeProvider.GetUtcNow();
   private readonly Dictionary<string, CommitCooldown> cooldowns = new(StringComparer.Ordinal);
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;

@@ -356,3 +356,19 @@ internal static class TicketPrincipal
     return new ClaimsPrincipal(identity);
   }
 }
+
+/// <summary>The principal the history hooks get for an agent call, which has no request.</summary>
+internal static class AgentPrincipal
+{
+  private const string AuthenticationType = "blok-agent";
+
+  internal static ClaimsPrincipal For(string user)
+  {
+    var identity = new ClaimsIdentity(AuthenticationType);
+
+    identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user));
+    identity.AddClaim(new Claim(ClaimTypes.Name, user));
+
+    return new ClaimsPrincipal(identity);
+  }
+}

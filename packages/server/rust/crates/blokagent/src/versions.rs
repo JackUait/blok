@@ -1,7 +1,9 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::{Duration, SystemTime};
 
-use blok_collab_room::{EditStatus, HistoryStatus, Precondition, StateStatus};
+use blok_collab_room::{
+    EditStatus, HistoryStatus, Precondition, RestoreOptions, StateStatus, hides_point, history_cut,
+};
 use blok_jsjson::{Kind, Node, new_array, new_bool, new_null, new_number, new_object};
 
 use crate::cancel::Cancel;
@@ -47,8 +49,16 @@ impl Executor {
         // No history journal: the contract says unavailable and the bundle
         // refuses it.
         let live = self.live().expect("rooms");
+        let mut floors = None;
         if live.manager.has_history() {
-            let versions = Box::pin(self.load_versions(doc_id, name, args)).await?;
+            let (refused, hidden) = self.history_access(doc_id, &input).await?;
+            floors = hidden;
+            // As the HTTP routes: a restore is decided by the write gate, not
+            // the read hook.
+            let versions = match refused {
+                Some(refused) if name != "history.restore" => refused,
+                _ => Box::pin(self.load_versions(doc_id, name, args, floors.as_ref())).await?,
+            };
             input.members.push(member("versionHistory", versions));
         }
         input.members.push(member("document", document));
@@ -62,7 +72,15 @@ impl Executor {
             // on that head or not at all.
             let expect = expect.or_else(|| parse_head_text(&current));
             return self
-                .restore(cancel, doc_id, &version, result, &input, expect)
+                .restore(
+                    cancel,
+                    doc_id,
+                    &version,
+                    result,
+                    &input,
+                    expect,
+                    floors.as_ref(),
+                )
                 .await;
         }
         with_head(
@@ -77,6 +95,10 @@ impl Executor {
 
     /// The restore the bundle checked, as one journalled edit by the agent:
     /// the same restore the history route runs.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the restore's request and the window's floors"
+    )]
     async fn restore(
         &self,
         cancel: &Cancel,
@@ -85,6 +107,7 @@ impl Executor {
         result: &Node,
         input: &Node,
         expect: Option<Precondition>,
+        floors: Option<&HashMap<String, Option<u64>>>,
     ) -> Result<Execution, Error> {
         let Some(colon) = version.rfind(':') else {
             return Err(Error::Argument {
@@ -102,17 +125,21 @@ impl Executor {
         let actor_id = string_value(field(actor, "id")?)?;
         let live = self.live().expect("rooms");
         cancel.check()?;
-        let (status, edit) = live
+        let hidden = floors.is_some_and(|floors| hides_point(floors, &version[..colon], sequence));
+        let outcome = live
             .manager
-            .restore(
+            .restore_with(
                 doc_id,
                 &version[..colon],
                 sequence,
                 &new_guid(),
                 &actor_id,
                 expect,
+                None,
+                RestoreOptions { hidden },
             )
             .await?;
+        let (status, edit) = (outcome.status, outcome.edit);
         match status {
             HistoryStatus::Ready => {}
             HistoryStatus::NotFound => {
@@ -165,18 +192,32 @@ impl Executor {
 
     /// What one read needs: the version list, or the documents it names
     /// (null when there is no such version).
-    async fn load_versions(&self, doc_id: &str, name: &str, args: &Node) -> Result<Node, Error> {
+    async fn load_versions(
+        &self,
+        doc_id: &str,
+        name: &str,
+        args: &Node,
+        floors: Option<&HashMap<String, Option<u64>>>,
+    ) -> Result<Node, Error> {
         let manager = &self.live().expect("rooms").manager;
+        let hidden = |lineage: &str, sequence: u64| {
+            floors.is_some_and(|floors| hides_point(floors, lineage, sequence))
+        };
         // A restore names the version that was current before, so it needs
         // the list too.
         if name == "history.restore" {
-            let listed =
-                Box::pin(self.load_versions(doc_id, "history.versions", &new_object(Vec::new())))
-                    .await?;
+            let listed = Box::pin(self.load_versions(
+                doc_id,
+                "history.versions",
+                &new_object(Vec::new()),
+                floors,
+            ))
+            .await?;
             if listed.lookup("failed").ok().flatten().is_some() {
                 return Ok(listed);
             }
-            let mut named = Box::pin(self.load_versions(doc_id, "history.read", args)).await?;
+            let mut named =
+                Box::pin(self.load_versions(doc_id, "history.read", args, floors)).await?;
             let versions = listed
                 .lookup("versions")
                 .map_err(from_json)?
@@ -212,7 +253,11 @@ impl Executor {
                 .map(|lineage| lineage.lineage.as_str())
                 .collect();
             let mut versions = Vec::new();
-            for version in &list.versions {
+            for version in list
+                .versions
+                .iter()
+                .filter(|version| !hidden(&version.lineage, version.sequence))
+            {
                 let actors = version.actors.iter().map(|a| str_node(a)).collect();
                 let mut entry = new_object(vec![
                     member(
@@ -256,7 +301,11 @@ impl Executor {
                 blok_dotnet::parse_uint64_none(&version[colon + 1..])
                     .map(|sequence| (&version[..colon], sequence))
             });
-            let Some((lineage, sequence)) = parsed else {
+            // A version the host's window hides reads as one that does not
+            // exist.
+            let Some((lineage, sequence)) =
+                parsed.filter(|(lineage, sequence)| !hidden(lineage, *sequence))
+            else {
                 documents.members.push(member(version, new_null()));
                 continue;
             };
@@ -276,6 +325,53 @@ impl Executor {
             }
         }
         Ok(new_object(vec![member("documents", documents)]))
+    }
+}
+
+impl Executor {
+    /// The host's hooks for this call: a versionHistory refusal when the
+    /// read hook says no, and each lineage's floor when it sets a window.
+    async fn history_access(
+        &self,
+        doc_id: &str,
+        input: &Node,
+    ) -> Result<(Option<Node>, Option<HashMap<String, Option<u64>>>), Error> {
+        let live = self.live().expect("rooms");
+        let Some(policy) = &live.policy else {
+            return Ok((None, None));
+        };
+        let actor = field(Some(input), "actor")?;
+        let user = match field(actor, "onBehalfOf")? {
+            Some(person) => string_value(Some(person))?,
+            None => string_value(field(actor, "id")?)?,
+        };
+        let access = policy(user, doc_id.to_owned()).await.map_err(Error::Host)?;
+        let mut refused = (!access.can_read).then(|| {
+            new_object(vec![
+                member(
+                    "failed",
+                    str_node("The version history could not be read (not allowed)."),
+                ),
+                member("status", new_number("403")),
+            ])
+        });
+        let Some(window) = access.window else {
+            return Ok((refused, None));
+        };
+        // A .NET tick is 100ns.
+        let ticks = i64::try_from(window.as_nanos() / 100).unwrap_or(i64::MAX);
+        let cut = history_cut(live.manager.now(), ticks);
+        let (status, floors) = live.manager.history_floors_at(doc_id, cut).await?;
+        if status != HistoryStatus::Ready {
+            refused.get_or_insert_with(|| {
+                version_failure(
+                    &format!("The version history could not be read ({status})."),
+                    status,
+                )
+            });
+            return Ok((refused, None));
+        }
+        Ok((refused, Some(floors)))
     }
 }
 

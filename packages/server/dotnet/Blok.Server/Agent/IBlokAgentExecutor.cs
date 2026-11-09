@@ -194,3 +194,12 @@ public abstract record BlokPageLocation
   /// <param name="DocId">The room document ID.</param>
   public sealed record Room(string DocId) : BlokPageLocation;
 }
+
+/// <summary>What the host's history hooks allow one agent call.</summary>
+/// <param name="CanRead">The read hook's answer. No refuses history.versions, history.read and history.changes.</param>
+/// <param name="Window">How far back the call may see; null for all of it.</param>
+internal sealed record BlokAgentHistoryAccess(bool CanRead, TimeSpan? Window);
+
+/// <summary>Asks the host's history hooks for <paramref name="userId"/> on <paramref name="documentId"/>.</summary>
+internal delegate ValueTask<BlokAgentHistoryAccess> BlokAgentHistoryPolicy(
+    string userId, string documentId, CancellationToken cancellationToken);

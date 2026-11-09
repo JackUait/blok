@@ -59,6 +59,8 @@ public interface IBlokAuthorization
   /// <see cref="CanReadDocumentAsync"/> (and <see cref="CanWriteDocumentAsync"/>
   /// on preview) said yes. A restore or a delete is decided by the write gate.
   /// The default is yes, so history is readable to whoever can read the document.
+  /// The in-process agent asks it too, with a principal named by the person it
+  /// acts for, else by the agent.
   /// </remarks>
   /// <returns>False to answer 403.</returns>
   ValueTask<bool> CanReadHistoryAsync(
@@ -72,7 +74,8 @@ public interface IBlokAuthorization
   /// minus the window is hidden, never deleted: reading it, its changes,
   /// <c>history/at</c> resolving to it, a <c>before</c> naming it, a restore
   /// to it and its preview answer 404 <c>{"reason":"retention"}</c>; the list
-  /// and the range leave it out. A negative window counts as zero.
+  /// and the range leave it out. A negative window counts as zero. The
+  /// in-process agent asks it too, as for <see cref="CanReadHistoryAsync"/>.
   /// </remarks>
   /// <returns>The window, or null (the default) for the whole history.</returns>
   ValueTask<TimeSpan?> HistoryWindowAsync(

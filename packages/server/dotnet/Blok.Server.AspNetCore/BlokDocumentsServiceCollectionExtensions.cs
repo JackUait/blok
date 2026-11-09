@@ -1,4 +1,5 @@
 using System.Text;
+using Blok.Server.AspNetCore.Collab;
 using Blok.Server.Documents;
 using Blok.Server.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,7 +83,10 @@ public static class BlokDocumentsServiceCollectionExtensions
         ? provider.GetRequiredService<Blok.Server.Collab.CollabRoomManager>()
         : null;
 
-      return new Agent.BlokAgentExecutor(provider.GetRequiredService<IBlokRuntime>(), rooms, rooms?.Converter);
+      return new Agent.BlokAgentExecutor(provider.GetRequiredService<IBlokRuntime>(), rooms, rooms?.Converter)
+      {
+        HistoryPolicy = AgentHistoryPolicy(provider.GetService<IBlokAuthorization>()),
+      };
     });
 
     if (warmUp)
@@ -92,6 +96,22 @@ public static class BlokDocumentsServiceCollectionExtensions
 
     return services;
   }
+
+  /// <summary>
+  /// The host's history hooks for an agent call. The agent has no request, so
+  /// the hooks get a principal named by the person it acts for, else the agent.
+  /// </summary>
+  private static Agent.BlokAgentHistoryPolicy? AgentHistoryPolicy(IBlokAuthorization? authorization) =>
+      authorization is null
+        ? null
+        : async (user, documentId, cancellationToken) =>
+        {
+          var principal = AgentPrincipal.For(user);
+
+          return new Agent.BlokAgentHistoryAccess(
+              await authorization.CanReadHistoryAsync(principal, documentId, cancellationToken),
+              await authorization.HistoryWindowAsync(principal, documentId, cancellationToken));
+        };
 }
 
 /// <summary>

@@ -220,6 +220,263 @@
       ]
     },
     {
+      "name": "closing a workspace form asks",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "closed": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "lock guards come in the current order, then share guards in the target order",
+      "current": [
+        {
+          "id": "a",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "b",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "b",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "a",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [],
+            "automations": []
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "lockedReshape",
+          "blockId": "a"
+        },
+        {
+          "kind": "unlock",
+          "blockId": "b"
+        },
+        {
+          "kind": "share",
+          "blockId": "b",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "share guards follow the target\u0027s databases, then each one\u0027s views",
+      "current": [
+        {
+          "id": "x",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              },
+              {
+                "id": "v2",
+                "type": "table"
+              }
+            ]
+          }
+        },
+        {
+          "id": "y",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "y",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "x",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v2",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              },
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "anonymous": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "y",
+          "viewId": "v1"
+        },
+        {
+          "kind": "share",
+          "blockId": "x",
+          "viewId": "v2"
+        },
+        {
+          "kind": "share",
+          "blockId": "x",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
       "name": "a locked database is unlocked",
       "current": [
         {

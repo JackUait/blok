@@ -95,6 +95,8 @@ export interface PageConfig {
   preview?(pageId: string): OutputBlockData[] | null | undefined | Promise<OutputBlockData[] | null | undefined>;
   /** The page's own document, for the editor's agent. `null` when missing. */
   loadDocument?(pageId: string): OutputData | null | Promise<OutputData | null>;
+  /** Asked before "Turn into inline database" reads a page and moves its database in. Only `true` allows it. */
+  canMoveInto?(pageId: string): boolean | Promise<boolean>;
   /** Saves the page's document after an agent batch changed it. */
   saveDocument?(pageId: string, data: OutputData): void | Promise<void>;
 }

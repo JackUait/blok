@@ -36,6 +36,7 @@ All notable changes to this project will be documented in this file.
   - Both show only when `databasePages` is set. The reverse also needs `loadDocument`.
   - Each move is one undo step and keeps block ids. Rows move in a database backend; they are never deleted or recreated.
   - "Turn into inline database" changes nothing unless the page holds exactly one full-page database.
+  - Add `canMoveInto(pageId)` to refuse a page before "Turn into inline database" reads it. Only `true` lets it move in.
 - **Block menu lead items and selecting a new block** — Tools can put their own block menu items before Turn into, and `insertAt` can select the block it adds.
   - Set `blockMenu.lead` to the names of the items that come first in a titled menu.
   - Pass `select: true` in `InsertAtOptions` to leave the new block selected alone.

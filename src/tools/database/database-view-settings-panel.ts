@@ -89,6 +89,8 @@ export interface ViewGroupEntry {
   key: string;
   label: string;
   count: number;
+  /** The group's option pill, as its column header draws it. Absent: the plain name. */
+  pill?: () => HTMLElement;
 }
 
 /** What the panels ask of the database tool. */
@@ -1376,6 +1378,31 @@ export class ViewSettingsPages {
     return row;
   }
 
+  /** The group's pill (or name) and an eye. A hidden group's pill is faded (database.css). */
+  private groupVisibilityRow(group: ViewGroupEntry, isHidden: boolean, disabled: boolean, onToggle: () => void): HTMLElement {
+    const row = document.createElement('div');
+    const name = document.createElement('span');
+    const eye = document.createElement('button');
+
+    row.setAttribute('data-blok-database-property-visibility-row', '');
+    row.setAttribute('data-blok-database-group-visibility-row', '');
+    row.toggleAttribute('data-hidden', isHidden);
+    name.setAttribute('data-blok-database-panel-label', '');
+    name.append(group.pill?.() ?? group.label);
+    eye.type = 'button';
+    eye.setAttribute('role', 'switch');
+    eye.setAttribute('aria-checked', String(!isHidden));
+    eye.setAttribute('aria-label', group.label);
+    eye.setAttribute('data-blok-database-property-eye', '');
+    eye.setAttribute('data-blok-testid', `database-group-visible-${group.key}`);
+    eye.innerHTML = isHidden ? IconEyeSlash : IconPreview;
+    eye.disabled = disabled;
+    eye.addEventListener('click', onToggle);
+    row.append(name, eye);
+
+    return row;
+  }
+
   /** research/35:197, 12-notion-propvis.png: "Shown in <layout>" and Hide all (Show all once all are hidden). */
   private shownHeader(panel: DatabasePanel, listed: ReturnType<typeof resolveViewProperties>): HTMLElement[] {
     const titleId = this.ctx.schema().find((p) => p.type === 'title')?.id;
@@ -2188,26 +2215,26 @@ export class ViewSettingsPages {
           isGroupHidden(this.ctx.view(), stateKey(key));
         const allHidden = groups.length > 0 && groups.every((g) => hidden(g.key));
 
+        // notion-motion.md, Round 8c "Hidden groups": Hide all on the Groups label, then each group's pill and eye.
+        const header = document.createElement('div');
+        const hideAll = document.createElement('button');
+
+        header.setAttribute('data-blok-database-property-visibility-header', '');
+        hideAll.type = 'button';
+        hideAll.setAttribute('data-blok-database-property-hide-all', '');
+        hideAll.setAttribute('data-blok-testid', 'database-group-hide-all');
+        hideAll.textContent = this.t(allHidden ? 'groupShowAll' : 'groupHideAll');
+        hideAll.disabled = disabled;
+        hideAll.addEventListener('click', refreshAfter(() => this.ctx.updateView({
+          ...withGroupFlags(this.ctx.view(), groups.map((g) => stateKey(g.key)), { hidden: !allHidden }),
+        })));
+        header.append(panelLabel(this.t('groupGroups')), hideAll);
         rows.push(
           panelSeparator(),
-          panelLabel(this.t('groupGroups')),
-          panelRow({
-            label: this.t(allHidden ? 'groupShowAll' : 'groupHideAll'),
-            testId: 'database-group-hide-all',
-            disabled,
-            onClick: refreshAfter(() => this.ctx.updateView({
-              ...withGroupFlags(this.ctx.view(), groups.map((g) => stateKey(g.key)), { hidden: !allHidden }),
-            })),
-          }),
-          ...groups.map((group) => panelSwitch({
-            label: `${group.label} (${group.count})`,
-            testId: `database-group-visible-${group.key}`,
-            checked: !hidden(group.key),
-            disabled,
-            onToggle: (visible) => this.ctx.updateView({
-              ...withGroupFlags(this.ctx.view(), [stateKey(group.key)], { hidden: !visible }),
-            }),
-          })),
+          header,
+          ...groups.map((group) => this.groupVisibilityRow(group, hidden(group.key), disabled, refreshAfter(() => this.ctx.updateView({
+            ...withGroupFlags(this.ctx.view(), [stateKey(group.key)], { hidden: !hidden(group.key) }),
+          })))),
         );
         if (view.type !== 'board' || sub) {
           rows.push(panelSeparator(), panelRow({

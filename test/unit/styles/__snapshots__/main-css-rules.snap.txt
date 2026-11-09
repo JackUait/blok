@@ -14978,6 +14978,10 @@ input[data-blok-database-picker-search]:focus {
   height: 20px;
 }
 
+[data-blok-database-group-visibility-row][data-hidden] > [data-blok-database-panel-label] {
+  opacity: 0.4;
+}
+
 [data-blok-database-filter-group], [data-blok-database-color-rule] {
   margin-block: var(--blok-space-1);
   padding-block: var(--blok-space-1);

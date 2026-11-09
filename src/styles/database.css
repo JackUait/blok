@@ -11918,6 +11918,11 @@ input[data-blok-database-picker-search]:focus {
   height: 20px;
 }
 
+/* notion-motion.md, Round 8c "Hidden groups": a hidden group's pill is faded to 0.4. */
+[data-blok-database-group-visibility-row][data-hidden] > [data-blok-database-panel-label] {
+  opacity: 0.4;
+}
+
 [data-blok-database-filter-group],
 [data-blok-database-color-rule] {
   margin-block: var(--blok-space-1);

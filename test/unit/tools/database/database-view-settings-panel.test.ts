@@ -1107,6 +1107,33 @@ describe('view settings panel', () => {
     expect(h.state.view.filterTree?.conjunction).toBe('or');
   });
 
+  // notion-motion.md, Round 8c "Hidden groups": a group is its name and an eye; a hidden one is faded.
+  it('lists each group with an eye that hides or shows it', () => {
+    const h = harness({ type: 'board', groupBy: 'stage', hiddenGroups: [{ id: 'none' }] });
+
+    h.open('group');
+    const rows = (): Array<[string | undefined, boolean]> => [...document.querySelectorAll('[data-blok-database-group-visibility-row]')]
+      .map((row) => [row.textContent?.trim(), row.hasAttribute('data-hidden')]);
+    const eye = (key: string): Element | null => document.querySelector(`[data-blok-testid="database-group-visible-${key}"]`);
+
+    expect(rows()).toEqual([['Idea', false], ['No Stage', true]]);
+    expect([eye('o1')?.getAttribute('role'), eye('o1')?.getAttribute('aria-label'), eye('o1')?.getAttribute('aria-checked')]).toEqual(['switch', 'Idea', 'true']);
+    expect(eye('none')?.getAttribute('aria-checked')).toBe('false');
+
+    click('database-group-visible-none');
+
+    expect(h.state.view.hiddenGroups ?? []).toEqual([]);
+    expect(rows()).toEqual([['Idea', false], ['No Stage', false]]);
+  });
+
+  it('puts Hide all on the Groups label row', () => {
+    harness({ type: 'board', groupBy: 'stage' }).open('group');
+
+    const hideAll = document.querySelector('[data-blok-testid="database-group-hide-all"]');
+
+    expect(hideAll?.parentElement?.textContent).toBe('tools.database.groupGroupstools.database.groupHideAll');
+  });
+
   it('groups a date by week and hides every group at once', () => {
     const h = harness({ groupBy: 'due' });
 
@@ -1375,8 +1402,8 @@ describe('view settings panel', () => {
   });
 
   it.each([
-    ['ascending', ['To-do (1)', 'In progress (1)', 'Complete (1)']],
-    ['descending', ['Complete (1)', 'In progress (1)', 'To-do (1)']],
+    ['ascending', ['To-do', 'In progress', 'Complete']],
+    ['descending', ['Complete', 'In progress', 'To-do']],
   ] as const)('renders status Group %s in the configured progress order', (sort, labels) => {
     const status: PropertyDefinition = {
       id: 'prog', name: 'Progress', type: 'status', position: 'a0',
@@ -1412,7 +1439,7 @@ describe('view settings panel', () => {
     const panel = h.open('group');
 
     try {
-      expect([...panel.root.querySelectorAll('[data-blok-testid^="database-group-visible-"]')].map((row) => row.textContent?.trim()))
+      expect([...panel.root.querySelectorAll('[data-blok-database-group-visibility-row]')].map((row) => row.textContent?.trim()))
         .toEqual(labels);
     } finally {
       panel.close();

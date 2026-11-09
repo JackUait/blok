@@ -19,7 +19,7 @@ import { drawMapLibrePlace } from './database-maplibre';
 import { DatabaseDashboardView } from './database-dashboard-view';
 import type { DashboardMount } from './database-dashboard-view';
 import { planTypeChange } from './property-conversion';
-import { openCellEditor } from './cells';
+import { createGroupPill, openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle, RelatedPeek } from './cells';
 import { ComputedProperties } from './computed-properties';
 import { openFormulaEditor } from './database-formula-editor';
@@ -6728,7 +6728,15 @@ export class DatabaseTool implements BlockTool {
     const grouped = sub ? { ...view, groupBy, groupSettings: view.subGroupSettings } : view;
     const counts = new Map(data.model.queryGroups(grouped, { search: this.controls.search }).map((g) => [g.key, g.count]));
 
-    return data.groupOptions(groupBy, grouped, this.controls.search).map((option) => ({ key: option.id, label: option.label, count: counts.get(option.id) ?? 0 }));
+    const property = data.model.getProperty(groupBy);
+    const pills = property !== undefined && OPTION_GROUP_TYPES.includes(property.type);
+
+    return data.groupOptions(groupBy, grouped, this.controls.search).map((option) => ({
+      key: option.id,
+      label: option.label,
+      count: counts.get(option.id) ?? 0,
+      ...(pills ? { pill: () => createGroupPill(option, property) } : {}),
+    }));
   }
 
   /** A board needs a grouping: the first select-like property, else the first property it can group by. */

@@ -10,8 +10,8 @@ use blok_dotnet::{parse_uint64_none, query_all, ticks, time_from_ticks};
 use blok_http::{Request, ResponseWriter};
 
 use super::{
-    CHANGES_ENVELOPE_BYTES, append_millis, blocking, change_row, narrowed, query_block,
-    query_detail, quoted, write_history_head, write_json,
+    CHANGES_ENVELOPE_BYTES, append_millis, blocking, change_row, hidden, narrowed, query_block,
+    query_detail, quoted, refuse_retention, write_history_head, write_json,
 };
 use crate::{Handlers, failed};
 
@@ -27,7 +27,10 @@ impl Handlers {
     /// time. A redirect to the point, or the point as JSON when the caller
     /// accepts JSON.
     pub async fn history_at(&self, request: Request, mut response: ResponseWriter) {
-        let Some(a) = self.admit_history(&request, &mut response, false).await else {
+        let Some(a) = self
+            .admit_history(&request, &mut response, false, true)
+            .await
+        else {
             return;
         };
         let at = match query_time(&request, "time") {
@@ -36,6 +39,9 @@ impl Handlers {
                 refuse(&mut response, 400, BAD_TIME).await;
                 return;
             }
+        };
+        let Ok(window) = self.window(&request, &mut response, &a).await else {
+            return;
         };
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
         let result = match blocking(&request, async move { rooms.at(&doc, at).await }).await {
@@ -60,6 +66,10 @@ impl Handlers {
             self.refuse_history(&mut response, &a, result.status).await;
             return;
         };
+        if hidden(window.as_ref(), &point.lineage, point.sequence) {
+            refuse_retention(&mut response).await;
+            return;
+        }
         // The lineage goes into a Location: anything not shaped like one is a
         // broken store.
         if !is_lineage(&point.lineage) {
@@ -95,7 +105,10 @@ impl Handlers {
     /// [from, to), newest first across lineages. The default range is the
     /// last 24 hours.
     pub async fn history_changes_between(&self, request: Request, mut response: ResponseWriter) {
-        let Some(a) = self.admit_history(&request, &mut response, false).await else {
+        let Some(a) = self
+            .admit_history(&request, &mut response, false, true)
+            .await
+        else {
             return;
         };
         let (Ok(from), Ok(to)) = (query_time(&request, "from"), query_time(&request, "to")) else {
@@ -121,16 +134,28 @@ impl Handlers {
             refuse(&mut response, 400, BAD_BLOCK).await;
             return;
         };
+        let Ok(window) = self.window(&request, &mut response, &a).await else {
+            return;
+        };
+        if before
+            .as_ref()
+            .is_some_and(|before| hidden(window.as_ref(), &before.lineage, before.sequence))
+        {
+            refuse_retention(&mut response).await;
+            return;
+        }
+        let cut = window.as_ref().map(|window| window.cut);
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
         let changes = async move {
             rooms
-                .changes_between(
+                .changes_between_windowed(
                     &doc,
                     start,
                     end,
                     before.as_ref(),
                     MAX_CHANGE_RECORDS,
                     MAX_CHANGE_BYTES,
+                    cut,
                 )
                 .await
         };

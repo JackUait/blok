@@ -563,12 +563,53 @@ impl Manager {
         expect: Option<Precondition>,
         confirmed: Option<HashSet<String>>,
     ) -> Result<(HistoryStatus, Option<EditResult>, Vec<RestoreGuard>), Error> {
-        let point = self.read_point(doc_id, lineage, sequence).await?;
+        let outcome = self
+            .restore_with(
+                doc_id,
+                lineage,
+                sequence,
+                operation_id,
+                actor_id,
+                expect,
+                confirmed,
+                RestoreOptions::default(),
+            )
+            .await?;
+        Ok((outcome.status, outcome.edit, outcome.refused))
+    }
+
+    /// restore_guarded with its options. A hidden point is never rebuilt; it
+    /// is refused in the lane, after the duplicate check, so a committed
+    /// retry still gets its receipt.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "restore's arguments, the confirmed kinds and the options"
+    )]
+    pub async fn restore_with(
+        &self,
+        doc_id: &str,
+        lineage: &str,
+        sequence: u64,
+        operation_id: &str,
+        actor_id: &str,
+        expect: Option<Precondition>,
+        confirmed: Option<HashSet<String>>,
+        options: RestoreOptions,
+    ) -> Result<RestoreOutcome, Error> {
+        let point = if options.hidden {
+            Point::status(HistoryStatus::NotFound)
+        } else {
+            self.read_point(doc_id, lineage, sequence).await?
+        };
         // A missing point still goes to the room: a retry whose lineage was
         // deleted since gets its first receipt from the duplicate check.
         if point.status != HistoryStatus::Ready && point.status != HistoryStatus::NotFound {
-            return Ok((point.status, None, Vec::new()));
+            return Ok(RestoreOutcome {
+                status: point.status,
+                ..RestoreOutcome::default()
+            });
         }
+        let hidden = options.hidden;
         let refused: Arc<Mutex<Vec<RestoreGuard>>> = Arc::default();
         let confirmed = Arc::new(confirmed);
         let target = Arc::new(blocks_of(point.output.as_ref()));
@@ -588,6 +629,9 @@ impl Manager {
                 trash.clone(),
             );
             Box::pin(async move {
+                if hidden {
+                    return Err(Error::Other(Box::new(RestoreHidden)));
+                }
                 let Some(target_doc) = target_doc else {
                     return Err(Error::RestorePointMissing);
                 };
@@ -629,7 +673,17 @@ impl Manager {
         };
         let edit = match self.edit_in_room(doc_id, request).await {
             Err(Error::RestorePointMissing) => {
-                return Ok((HistoryStatus::NotFound, None, Vec::new()));
+                return Ok(RestoreOutcome {
+                    status: HistoryStatus::NotFound,
+                    ..RestoreOutcome::default()
+                });
+            }
+            Err(Error::Other(err)) if err.is::<RestoreHidden>() => {
+                return Ok(RestoreOutcome {
+                    status: HistoryStatus::NotFound,
+                    hidden: true,
+                    ..RestoreOutcome::default()
+                });
             }
             Err(Error::Other(err)) if err.is::<RestoreGuarded>() => {
                 let guards = std::mem::take(
@@ -637,16 +691,64 @@ impl Manager {
                         .lock()
                         .unwrap_or_else(|poisoned| poisoned.into_inner()),
                 );
-                return Ok((HistoryStatus::Ready, None, guards));
+                return Ok(RestoreOutcome {
+                    status: HistoryStatus::Ready,
+                    refused: guards,
+                    ..RestoreOutcome::default()
+                });
             }
             other => other?,
         };
         if edit.status == EditStatus::Applied {
             self.0.document_replaced(doc_id);
         }
-        Ok((HistoryStatus::Ready, Some(edit), Vec::new()))
+        Ok(RestoreOutcome {
+            status: HistoryStatus::Ready,
+            edit: Some(edit),
+            ..RestoreOutcome::default()
+        })
     }
 }
+
+/// CollabRestoreOptions. `hidden`: the host's history window hides the
+/// point.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RestoreOptions {
+    pub hidden: bool,
+}
+
+/// CollabRestoreResult: `edit` when Ready and run, `refused` when a guard
+/// refused it, `hidden` when the window hid the point.
+#[derive(Debug)]
+pub struct RestoreOutcome {
+    pub status: HistoryStatus,
+    pub edit: Option<EditResult>,
+    pub refused: Vec<RestoreGuard>,
+    pub hidden: bool,
+}
+
+impl Default for RestoreOutcome {
+    fn default() -> Self {
+        Self {
+            status: HistoryStatus::Ready,
+            edit: None,
+            refused: Vec::new(),
+            hidden: false,
+        }
+    }
+}
+
+/// A restore's planner refused: the host's window hides its point.
+#[derive(Debug)]
+struct RestoreHidden;
+
+impl std::fmt::Display for RestoreHidden {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("collab: the history window hides the restore point")
+    }
+}
+
+impl std::error::Error for RestoreHidden {}
 
 /// A restore planned and measured against the live doc, with nothing
 /// applied: the blocks and page keys it would change, its guards, and its

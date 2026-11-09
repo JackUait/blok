@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -6,7 +6,8 @@ use blok_auth::User;
 use blok_collab_journal::LineageDeleteOutcome;
 use blok_collab_room::{
     BlockChangeKind, CONFIRMABLE_GUARDS, Error, HistoryStatus, MAX_CHANGE_BYTES,
-    MAX_CHANGE_RECORDS, Manager, RecordChanges, RecordNote, RestoreGuard, describe_database_change,
+    MAX_CHANGE_RECORDS, Manager, RecordChanges, RecordNote, RestoreGuard, RestoreOptions,
+    describe_database_change, hides_point, history_cut, window_since,
 };
 use blok_collab_synchttp::{derive_actor, refuse};
 use blok_collab_workingset::is_lineage;
@@ -18,7 +19,7 @@ use crate::edit::{
     BAD_IF_MATCH, KEY_REQUIRED, operation_id, precondition, read_body, while_connected,
     write_edit_result,
 };
-use crate::{Handlers, expose, failed, refuse_retry_later};
+use crate::{Handlers, expose, failed, internal_error, refuse_retry_later};
 
 #[path = "history_time.rs"]
 mod time;
@@ -136,6 +137,27 @@ async fn refuse_restore(response: &mut ResponseWriter, reason: &str, guards: &[R
     let _ = response.write(text.as_bytes()).await;
 }
 
+/// The host's window as each lineage's floor.
+struct HistoryWindow {
+    cut: SystemTime,
+    floors: HashMap<String, Option<u64>>,
+}
+
+/// The window hides the point; no window hides nothing.
+fn hidden(window: Option<&HistoryWindow>, lineage: &str, sequence: u64) -> bool {
+    window.is_some_and(|window| hides_point(&window.floors, lineage, sequence))
+}
+
+/// A point the window hides: 404 as JSON, so a client can tell it from a
+/// missing one.
+async fn refuse_retention(response: &mut ResponseWriter) {
+    response
+        .headers_mut()
+        .set("Content-Type", "application/json");
+    blok_route::start_stream(response, 404).await;
+    let _ = response.write(br#"{"reason":"retention"}"#).await;
+}
+
 async fn write_json(response: &mut ResponseWriter, body: &[u8]) {
     response
         .headers_mut()
@@ -147,14 +169,33 @@ async fn write_json(response: &mut ResponseWriter, body: &[u8]) {
 impl Handlers {
     /// Sends no-store first: versions are document content behind an access
     /// check, whatever the answer.
+    /// `reads_history` asks the host's history read hook too, after the
+    /// document gates said yes.
     async fn admit_history(
         &self,
         request: &Request,
         response: &mut ResponseWriter,
         write: bool,
+        reads_history: bool,
     ) -> Option<Admitted> {
         response.headers_mut().set("Cache-Control", "no-store");
         let admitted = self.admit(request, response, write).await?;
+        if let Some(hook) = self.config.authorization.as_ref().filter(|_| reads_history) {
+            match hook
+                .can_read_history(&admitted.user, &admitted.doc, &request.extensions)
+                .await
+            {
+                Err(_) => {
+                    internal_error(response).await;
+                    return None;
+                }
+                Ok(false) => {
+                    refuse(response, 403, "forbidden\n").await;
+                    return None;
+                }
+                Ok(true) => {}
+            }
+        }
         let rooms = self.manager(response).await?;
         Some(Admitted {
             ticket_user: self.ticket_user(&admitted.user),
@@ -165,9 +206,53 @@ impl Handlers {
         })
     }
 
+    /// The host's window hook. Ok(None) when the host sets none; Err once it
+    /// has refused.
+    async fn window(
+        &self,
+        request: &Request,
+        response: &mut ResponseWriter,
+        a: &Admitted,
+    ) -> Result<Option<HistoryWindow>, ()> {
+        let Some(hook) = &self.config.authorization else {
+            return Ok(None);
+        };
+        let span = match hook
+            .history_window(&a.user, &a.doc, &request.extensions)
+            .await
+        {
+            Ok(None) => return Ok(None),
+            Ok(Some(span)) => span,
+            Err(_) => {
+                internal_error(response).await;
+                return Err(());
+            }
+        };
+        // A .NET tick is 100ns.
+        let window_ticks = i64::try_from(span.as_nanos() / 100).unwrap_or(i64::MAX);
+        let cut = history_cut(a.rooms.now(), window_ticks);
+        let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
+        let floors = async move { rooms.history_floors_at(&doc, cut).await };
+        let (status, floors) = match blocking(request, floors).await {
+            Some(Ok(result)) => result,
+            _ => {
+                failed(request, response).await;
+                return Err(());
+            }
+        };
+        if status != HistoryStatus::Ready {
+            self.refuse_history(response, a, status).await;
+            return Err(());
+        }
+        Ok(Some(HistoryWindow { cut, floors }))
+    }
+
     /// GET /sync/{doc}/history.
     pub async fn history_list(&self, request: Request, mut response: ResponseWriter) {
-        let Some(a) = self.admit_history(&request, &mut response, false).await else {
+        let Some(a) = self
+            .admit_history(&request, &mut response, false, true)
+            .await
+        else {
             return;
         };
         let minutes = match query_number(&request, "group") {
@@ -177,6 +262,9 @@ impl Handlers {
                 refuse(&mut response, 400, "group must be 1, 15 or 60\n").await;
                 return;
             }
+        };
+        let Ok(window) = self.window(&request, &mut response, &a).await else {
+            return;
         };
         let group = Duration::from_secs(minutes.unwrap_or(0) * 60);
         // Shipped route: any other by is ignored, as unknown keys always were.
@@ -219,7 +307,11 @@ impl Handlers {
             body.extend_from_slice(format!(r#","current":{}}}"#, lineage.current).as_bytes());
         }
         body.extend_from_slice(br#"],"versions":["#);
-        for (i, version) in result.versions.iter().enumerate() {
+        let listed = result
+            .versions
+            .iter()
+            .filter(|version| !hidden(window.as_ref(), &version.lineage, version.sequence));
+        for (i, version) in listed.enumerate() {
             if i > 0 {
                 body.push(b',');
             }
@@ -256,12 +348,22 @@ impl Handlers {
 
     /// GET /sync/{doc}/history/{lineage}/{sequence}.
     pub async fn history_read(&self, request: Request, mut response: ResponseWriter) {
-        let Some(a) = self.admit_history(&request, &mut response, false).await else {
+        let Some(a) = self
+            .admit_history(&request, &mut response, false, true)
+            .await
+        else {
             return;
         };
         let Some((lineage, sequence)) = history_point(&request, &mut response).await else {
             return;
         };
+        let Ok(window) = self.window(&request, &mut response, &a).await else {
+            return;
+        };
+        if hidden(window.as_ref(), &lineage, sequence) {
+            refuse_retention(&mut response).await;
+            return;
+        }
         let (rooms, doc, at) = (a.rooms.clone(), a.doc.clone(), lineage.clone());
         let read = async move { rooms.read_version(&doc, &at, sequence).await };
         let result = match blocking(&request, read).await {
@@ -282,7 +384,10 @@ impl Handlers {
     /// GET .../changes: the edits of each record in (since, sequence]. The
     /// client names the previous version's sequence.
     pub async fn history_changes(&self, request: Request, mut response: ResponseWriter) {
-        let Some(a) = self.admit_history(&request, &mut response, false).await else {
+        let Some(a) = self
+            .admit_history(&request, &mut response, false, true)
+            .await
+        else {
             return;
         };
         let Some((lineage, sequence)) = history_point(&request, &mut response).await else {
@@ -304,6 +409,16 @@ impl Handlers {
         // ignored, not refused.
         let detail = query_detail(&request) == Ok(true);
         let block = query_block(&request).unwrap_or(None);
+        let Ok(window) = self.window(&request, &mut response, &a).await else {
+            return;
+        };
+        if hidden(window.as_ref(), &lineage, sequence) {
+            refuse_retention(&mut response).await;
+            return;
+        }
+        let since = window.as_ref().map_or(since, |window| {
+            window_since(window.floors.get(&lineage).copied().flatten(), since)
+        });
         let (rooms, doc, at) = (a.rooms.clone(), a.doc.clone(), lineage.clone());
         let changes = async move {
             rooms
@@ -383,12 +498,35 @@ impl Handlers {
 
     /// DELETE /sync/{doc}/history/{lineage}.
     pub async fn history_delete(&self, request: Request, mut response: ResponseWriter) {
-        let Some(a) = self.admit_history(&request, &mut response, true).await else {
+        let Some(a) = self
+            .admit_history(&request, &mut response, true, false)
+            .await
+        else {
             return;
         };
         let Some(lineage) = history_lineage(&request, &mut response).await else {
             return;
         };
+        if let Some(hook) = &self.config.authorization {
+            match hook
+                .is_history_held(&a.doc, &lineage, &request.extensions)
+                .await
+            {
+                Err(_) => {
+                    internal_error(&mut response).await;
+                    return;
+                }
+                Ok(true) => {
+                    response
+                        .headers_mut()
+                        .set("Content-Type", "application/json");
+                    blok_route::start_stream(&mut response, 409).await;
+                    let _ = response.write(br#"{"reason":"held"}"#).await;
+                    return;
+                }
+                Ok(false) => {}
+            }
+        }
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
         let delete = async move { rooms.delete_lineage(&doc, &lineage).await };
         let (status, outcome) = match blocking(&request, delete).await {
@@ -426,7 +564,10 @@ impl Handlers {
     /// POST .../restore: the key is required, If-Match is optional, and it
     /// answers like an edit.
     pub async fn history_restore(&self, mut request: Request, mut response: ResponseWriter) {
-        let Some(a) = self.admit_history(&request, &mut response, true).await else {
+        let Some(a) = self
+            .admit_history(&request, &mut response, true, false)
+            .await
+        else {
             return;
         };
         let Some((lineage, sequence)) = history_point(&request, &mut response).await else {
@@ -440,6 +581,12 @@ impl Handlers {
             refuse(&mut response, 400, BAD_IF_MATCH).await;
             return;
         };
+        let Ok(window) = self.window(&request, &mut response, &a).await else {
+            return;
+        };
+        let options = RestoreOptions {
+            hidden: hidden(window.as_ref(), &lineage, sequence),
+        };
         let confirmed = if self.config.enforce_restore_guards {
             Some(restore_confirms(&mut request, self.config.max_message_bytes).await)
         } else {
@@ -449,7 +596,7 @@ impl Handlers {
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
         let restore = async move {
             rooms
-                .restore_guarded(
+                .restore_with(
                     &doc,
                     &lineage,
                     sequence,
@@ -457,24 +604,29 @@ impl Handlers {
                     &actor,
                     expect,
                     confirmed,
+                    options,
                 )
                 .await
         };
-        let (status, edit, refused) = match blocking(&request, restore).await {
+        let outcome = match blocking(&request, restore).await {
             Some(Ok(result)) => result,
             _ => {
                 failed(&request, &mut response).await;
                 return;
             }
         };
-        match edit {
-            Some(edit) if status == HistoryStatus::Ready => {
+        if outcome.hidden {
+            refuse_retention(&mut response).await;
+            return;
+        }
+        match outcome.edit {
+            Some(edit) if outcome.status == HistoryStatus::Ready => {
                 write_edit_result(&mut response, &edit, a.rooms.retry_after()).await;
             }
-            None if status == HistoryStatus::Ready => {
-                refuse_restore(&mut response, "confirmation_required", &refused).await;
+            None if outcome.status == HistoryStatus::Ready => {
+                refuse_restore(&mut response, "confirmation_required", &outcome.refused).await;
             }
-            _ => self.refuse_history(&mut response, &a, status).await,
+            _ => self.refuse_history(&mut response, &a, outcome.status).await,
         }
     }
 
@@ -482,7 +634,10 @@ impl Handlers {
     /// written, no key needed. It needs write access, as the restore does.
     /// If-Match is checked as the restore would.
     pub async fn history_restore_preview(&self, request: Request, mut response: ResponseWriter) {
-        let Some(a) = self.admit_history(&request, &mut response, true).await else {
+        let Some(a) = self
+            .admit_history(&request, &mut response, true, true)
+            .await
+        else {
             return;
         };
         let Some((lineage, sequence)) = history_point(&request, &mut response).await else {
@@ -493,6 +648,13 @@ impl Handlers {
             refuse(response, 400, BAD_IF_MATCH).await;
             return;
         };
+        let Ok(window) = self.window(request, response, a).await else {
+            return;
+        };
+        if hidden(window.as_ref(), &lineage, sequence) {
+            refuse_retention(response).await;
+            return;
+        }
         let (rooms, doc, lineage) = (a.rooms.clone(), a.doc.clone(), lineage.to_owned());
         let actor = derive_actor(&a.ticket_user, &a.user, a.has_user);
         let preview = async move {

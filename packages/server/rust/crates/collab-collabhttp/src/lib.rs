@@ -207,6 +207,8 @@ mod dropped_peer_test;
 #[cfg(test)]
 mod edit_result_test;
 #[cfg(test)]
+mod history_hooks_test;
+#[cfg(test)]
 mod history_test;
 #[cfg(test)]
 mod retry_test;

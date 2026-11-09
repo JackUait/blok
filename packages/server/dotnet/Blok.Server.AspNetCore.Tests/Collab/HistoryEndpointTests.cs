@@ -17,7 +17,7 @@ namespace Blok.Server.AspNetCore.Tests.Collab;
 /// The five history routes: list, read, delete and restore versions kept by
 /// the operation journal, and list the edits inside one. Runs on the real converter and the local journal.
 /// </summary>
-public sealed class HistoryEndpointTests
+public sealed partial class HistoryEndpointTests
 {
   private const string UnknownLineage = "ffffffffffffffffffffffffffffffff";
 
@@ -1138,10 +1138,16 @@ public sealed class HistoryEndpointTests
       string? ticket = null,
       string? key = null,
       string? ifMatch = null,
-      string? body = null)
+      string? body = null,
+      string? accept = null)
   {
     using var request = new HttpRequestMessage(method, $"/sync/{SyncApp.Doc}{path}");
     request.Headers.TryAddWithoutValidation("Origin", SyncApp.AllowedOrigin);
+
+    if (accept is not null)
+    {
+      request.Headers.TryAddWithoutValidation("Accept", accept);
+    }
 
     if (ticket is not null)
     {
@@ -1299,9 +1305,9 @@ public sealed class HistoryEndpointTests
       Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
     }
 
-    internal Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, string? ticket = null)
+    internal Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, string? ticket = null, string? accept = null)
     {
-      return Send(App, method, path, ticket);
+      return Send(App, method, path, ticket, accept: accept);
     }
 
     internal Task<HttpResponseMessage> RestoreAsync(

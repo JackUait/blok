@@ -44,7 +44,7 @@ internal static partial class HistoryEndpoint
 
   public static async Task ListAsync(HttpContext context)
   {
-    if (await AdmitAsync(context, requireWrite: false) is not { } admitted)
+    if (await AdmitAsync(context, requireWrite: false, readsHistory: true) is not { } admitted)
     {
       return;
     }
@@ -56,12 +56,17 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (await WindowAsync(context, admitted) is not (true, var window))
+    {
+      return;
+    }
+
     // Shipped route: any other by is ignored, as unknown keys always were.
     var byActor = context.Request.Query.TryGetValue("by", out var by) && by.Count == 1 && by[0] == "actor";
 
     var result = await admitted.Rooms.HistoryAsync(
         admitted.Doc,
-        minutes is { } window ? TimeSpan.FromMinutes(window) : null,
+        minutes is { } group ? TimeSpan.FromMinutes(group) : null,
         byActor,
         context.RequestAborted);
 
@@ -82,7 +87,9 @@ internal static partial class HistoryEndpoint
         ["createdAt"] = UnixMilliseconds(lineage.CreatedAt),
         ["current"] = lineage.Current,
       })]),
-      ["versions"] = new JsonArray([.. result.Versions.Select(version =>
+      ["versions"] = new JsonArray([.. result.Versions
+        .Where(version => window is null || !window.Hides(version.Lineage, version.Sequence))
+        .Select(version =>
       {
         var entry = new JsonObject
         {
@@ -109,9 +116,17 @@ internal static partial class HistoryEndpoint
 
   public static async Task ReadAsync(HttpContext context)
   {
-    if (await AdmitAsync(context, requireWrite: false) is not { } admitted ||
-        await PointAsync(context) is not { } point)
+    if (await AdmitAsync(context, requireWrite: false, readsHistory: true) is not { } admitted ||
+        await PointAsync(context) is not { } point ||
+        await WindowAsync(context, admitted) is not (true, var window))
     {
+      return;
+    }
+
+    if (window is not null && window.Hides(point.Lineage, point.Sequence))
+    {
+      await RefuseRetentionAsync(context);
+
       return;
     }
 
@@ -140,7 +155,7 @@ internal static partial class HistoryEndpoint
   /// </summary>
   public static async Task ChangesAsync(HttpContext context)
   {
-    if (await AdmitAsync(context, requireWrite: false) is not { } admitted ||
+    if (await AdmitAsync(context, requireWrite: false, readsHistory: true) is not { } admitted ||
         await PointAsync(context) is not { } point)
     {
       return;
@@ -160,11 +175,30 @@ internal static partial class HistoryEndpoint
     var detail = TryQueryDetail(context, out var asked) && asked;
     TryQueryBlock(context, out var block);
 
+    if (await WindowAsync(context, admitted) is not (true, var window))
+    {
+      return;
+    }
+
+    if (window is not null && window.Hides(point.Lineage, point.Sequence))
+    {
+      await RefuseRetentionAsync(context);
+
+      return;
+    }
+
+    var from = since ?? 0;
+
+    if (window is not null && window.Floors.TryGetValue(point.Lineage, out var floor))
+    {
+      from = CollabHistoryWindow.Since(floor, from);
+    }
+
     var result = await admitted.Rooms.ChangesAsync(
         admitted.Doc,
         point.Lineage,
         point.Sequence,
-        since ?? 0,
+        from,
         cancellationToken: context.RequestAborted);
 
     if (result.Status != CollabHistoryStatus.Ready)
@@ -245,6 +279,16 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (admitted.Authorization is { } authorization &&
+        await authorization.IsHistoryHeldAsync(admitted.Doc, lineage, context.RequestAborted))
+    {
+      context.Response.StatusCode = StatusCodes.Status409Conflict;
+      context.Response.ContentType = "application/json";
+      await context.Response.WriteAsync("{\"reason\":\"held\"}", context.RequestAborted);
+
+      return;
+    }
+
     var (status, outcome) = await admitted.Rooms.DeleteLineageAsync(
         admitted.Doc,
         lineage,
@@ -319,6 +363,11 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (await WindowAsync(context, admitted) is not (true, var window))
+    {
+      return;
+    }
+
     var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
     var confirmed = options.CollabEnforceRestoreGuards
       ? await RestoreConfirmsAsync(context, options.CollabMaxMessageBytes)
@@ -331,7 +380,15 @@ internal static partial class HistoryEndpoint
         SyncHandshake.DeriveActor(admitted.TicketUser, admitted.User),
         expect,
         confirmed,
+        new CollabRestoreOptions(Hidden: window is not null && window.Hides(point.Lineage, point.Sequence)),
         context.RequestAborted);
+
+    if (result.Hidden)
+    {
+      await RefuseRetentionAsync(context);
+
+      return;
+    }
 
     if (result.History != CollabHistoryStatus.Ready)
     {
@@ -358,7 +415,7 @@ internal static partial class HistoryEndpoint
   /// </summary>
   public static async Task PreviewRestoreAsync(HttpContext context)
   {
-    if (await AdmitAsync(context, requireWrite: true) is not { } admitted ||
+    if (await AdmitAsync(context, requireWrite: true, readsHistory: true) is not { } admitted ||
         await PointAsync(context) is not { } point)
     {
       return;
@@ -374,6 +431,18 @@ internal static partial class HistoryEndpoint
           context,
           StatusCodes.Status400BadRequest,
           "If-Match must be one quoted \"<lineage>:<sequence>\" tag\n");
+
+      return;
+    }
+
+    if (await WindowAsync(context, admitted) is not (true, var window))
+    {
+      return;
+    }
+
+    if (window is not null && window.Hides(lineage, sequence))
+    {
+      await RefuseRetentionAsync(context);
 
       return;
     }
@@ -517,7 +586,7 @@ internal static partial class HistoryEndpoint
   /// The checks every route shares, in the edit endpoint's order. Answers
   /// null once it has refused.
   /// </summary>
-  private static async Task<Admitted?> AdmitAsync(HttpContext context, bool requireWrite)
+  private static async Task<Admitted?> AdmitAsync(HttpContext context, bool requireWrite, bool readsHistory = false)
   {
     // Versions are document content behind an access check: no shared cache may keep any answer.
     context.Response.Headers.CacheControl = "no-store";
@@ -560,11 +629,61 @@ internal static partial class HistoryEndpoint
       return null;
     }
 
+    // Asked only once the document gates said yes, so a host's read counts stay as they were.
+    if (readsHistory &&
+        authorization is not null &&
+        !await authorization.CanReadHistoryAsync(user, doc, context.RequestAborted))
+    {
+      await SyncEndpoint.RefuseAsync(context, StatusCodes.Status403Forbidden, "forbidden\n");
+
+      return null;
+    }
+
     return new Admitted(
         doc,
         user,
         claims is { } actorTicket ? actorTicket.User : "",
-        context.RequestServices.GetRequiredService<CollabRoomManager>());
+        context.RequestServices.GetRequiredService<CollabRoomManager>(),
+        authorization);
+  }
+
+  /// <summary>
+  /// The host's history window as each lineage's floor. Null window when the
+  /// host sets none. Answers false once it has refused.
+  /// </summary>
+  private static async Task<(bool Ok, HistoryWindow? Window)> WindowAsync(HttpContext context, Admitted admitted)
+  {
+    if (admitted.Authorization is not { } authorization ||
+        await authorization.HistoryWindowAsync(admitted.User, admitted.Doc, context.RequestAborted) is not { } span)
+    {
+      return (true, null);
+    }
+
+    var now = (context.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System).GetUtcNow();
+    var cut = CollabHistoryWindow.Cut(now, span);
+    var (status, floors) = await admitted.Rooms.HistoryFloorsAsync(admitted.Doc, cut, context.RequestAborted);
+
+    if (status != CollabHistoryStatus.Ready)
+    {
+      await RefuseAsync(context, admitted, status);
+
+      return (false, null);
+    }
+
+    return (true, new HistoryWindow(cut, floors));
+  }
+
+  /// <summary>A point the host's window hides: 404 as JSON, so a client can tell it from a missing one.</summary>
+  private static async Task RefuseRetentionAsync(HttpContext context)
+  {
+    context.Response.StatusCode = StatusCodes.Status404NotFound;
+    context.Response.ContentType = "application/json";
+    await context.Response.WriteAsync("{\"reason\":\"retention\"}", context.RequestAborted);
+  }
+
+  private sealed record HistoryWindow(DateTimeOffset Cut, IReadOnlyDictionary<string, ulong?> Floors)
+  {
+    internal bool Hides(string lineage, ulong sequence) => CollabHistoryWindow.Hides(Floors, lineage, sequence);
   }
 
   /// <summary>The route's lineage and sequence; a sequence that is not a plain ulong is refused.</summary>
@@ -828,5 +947,6 @@ internal static partial class HistoryEndpoint
       string Doc,
       ClaimsPrincipal User,
       string TicketUser,
-      CollabRoomManager Rooms);
+      CollabRoomManager Rooms,
+      IBlokAuthorization? Authorization);
 }

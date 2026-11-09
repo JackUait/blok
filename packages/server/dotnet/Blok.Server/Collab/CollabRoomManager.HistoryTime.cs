@@ -57,6 +57,21 @@ internal sealed partial class CollabRoomManager
       : (CollabHistoryStatus.Ready, lineages);
   }
 
+  /// <summary>Each lineage's floor under the cut: the highest sequence a host's window hides.</summary>
+  internal async ValueTask<(CollabHistoryStatus Status, IReadOnlyDictionary<string, ulong?> Floors)> HistoryFloorsAsync(
+      string docId,
+      DateTimeOffset cut,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+
+    var (status, lineages) = await ReadTimelineAsync(docId, cancellationToken);
+
+    return (status, status == CollabHistoryStatus.Ready
+      ? CollabHistoryWindow.Floors(lineages, cut)
+      : new Dictionary<string, ulong?>(StringComparer.Ordinal));
+  }
+
   /// <summary>The newest point at or before <paramref name="time"/>. NotFound when the history starts later.</summary>
   internal async ValueTask<CollabHistoryAtResult> AtAsync(
       string docId,
@@ -90,6 +105,7 @@ internal sealed partial class CollabRoomManager
       (string Lineage, ulong Sequence)? before,
       int maxRecords = MaxChangeRecords,
       int maxBytes = MaxChangeBytes,
+      DateTimeOffset? cut = null,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
@@ -101,7 +117,12 @@ internal sealed partial class CollabRoomManager
       return new CollabHistoryRangeResult(status, [], false);
     }
 
-    var selection = CollabHistoryTime.SelectRange(lineages, from, to, before, maxRecords);
+    var selection = CollabHistoryTime.SelectRange(
+        cut is { } at ? CollabHistoryWindow.Visible(lineages, at) : lineages,
+        from,
+        to,
+        before,
+        maxRecords);
 
     if (selection.Status != CollabHistoryStatus.Ready)
     {

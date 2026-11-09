@@ -42,6 +42,49 @@ pub trait Authorization: Send + Sync {
         document_id: &'a str,
         request: &'a Extensions,
     ) -> BoxFuture<'a, Result<bool, Error>>;
+
+    /// May this caller read the document's version history? Asked on the
+    /// history list, a version read, its changes, history/at,
+    /// history/changes and restore/preview, only after can_read_document
+    /// (and can_write_document on preview) said yes. A restore or a delete
+    /// is decided by the write gate. The default is yes.
+    fn can_read_history<'a>(
+        &'a self,
+        _user: &'a User,
+        _document_id: &'a str,
+        _request: &'a Extensions,
+    ) -> BoxFuture<'a, Result<bool, Error>> {
+        Box::pin(async { Ok(true) })
+    }
+
+    /// How far back this caller may see the document's history; None (the
+    /// default) is all of it. A point older than now minus the window is
+    /// hidden, never deleted: reading it, its changes, history/at resolving
+    /// to it, a before naming it, a restore to it and its preview answer 404
+    /// {"reason":"retention"}; the list and the range leave it out. Not
+    /// asked on delete.
+    fn history_window<'a>(
+        &'a self,
+        _user: &'a User,
+        _document_id: &'a str,
+        _request: &'a Extensions,
+    ) -> BoxFuture<'a, Result<Option<std::time::Duration>, Error>> {
+        Box::pin(async { Ok(None) })
+    }
+
+    /// Is this lineage held, so that DELETE /sync/{doc}/history/{lineage}
+    /// answers 409 {"reason":"held"}? Asked before anything else about the
+    /// lineage. Blok stores no bookmarks: a host that keeps named versions
+    /// as (lineage, sequence) pairs holds their lineages here. A document
+    /// purge does not ask. The default holds nothing.
+    fn is_history_held<'a>(
+        &'a self,
+        _document_id: &'a str,
+        _lineage: &'a str,
+        _request: &'a Extensions,
+    ) -> BoxFuture<'a, Result<bool, Error>> {
+        Box::pin(async { Ok(false) })
+    }
 }
 
 #[cfg(test)]

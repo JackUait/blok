@@ -112,6 +112,9 @@ func (m *Manager) logfOrError(message string) (err error) {
 // RetryAfter is how long an overloaded request should wait.
 func (m *Manager) RetryAfter() time.Duration { return m.options.RetryBackoff }
 
+// Now is the room clock: what a history window counts back from.
+func (m *Manager) Now() time.Time { return m.options.Now() }
+
 // HasJournal: an operation store is registered.
 func (m *Manager) HasJournal() bool { return m.operations != nil }
 

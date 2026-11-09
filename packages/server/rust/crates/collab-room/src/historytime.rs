@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::{Duration, SystemTime};
 
 use blok_collab_journal::{Context, RecordHeader};
@@ -7,6 +7,7 @@ use blok_dotnet::time_from_ticks;
 use crate::changes::RecordChanges;
 use crate::error::is_corrupt;
 use crate::manager::Manager;
+use crate::window::{history_floors, visible_timeline};
 use crate::{Error, HistoryStatus, LineageHeaders};
 
 /// CollabHistoryPoint: a record, or a lineage baseline (sequence 0).
@@ -287,6 +288,20 @@ impl Manager {
         Ok((HistoryStatus::Ready, lineages))
     }
 
+    /// Each lineage's floor under the cut: the highest sequence a host's
+    /// window hides.
+    pub async fn history_floors_at(
+        &self,
+        doc_id: &str,
+        cut: SystemTime,
+    ) -> Result<(HistoryStatus, HashMap<String, Option<u64>>), Error> {
+        let (status, lineages) = self.read_timeline(doc_id)?;
+        if status != HistoryStatus::Ready {
+            return Ok((status, HashMap::new()));
+        }
+        Ok((HistoryStatus::Ready, history_floors(&lineages, cut)))
+    }
+
     /// The newest point at or before `at`. NotFound when the history starts
     /// later.
     pub async fn at(&self, doc_id: &str, at: SystemTime) -> Result<HistoryAt, Error> {
@@ -321,14 +336,37 @@ impl Manager {
         max_records: usize,
         max_bytes: i64,
     ) -> Result<HistoryRange, Error> {
+        self.changes_between_windowed(doc_id, from, to, before, max_records, max_bytes, None)
+            .await
+    }
+
+    /// changes_between over what a window with this cut shows; None shows
+    /// everything.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "changes_between's arguments and the cut"
+    )]
+    pub async fn changes_between_windowed(
+        &self,
+        doc_id: &str,
+        from: SystemTime,
+        to: SystemTime,
+        before: Option<&HistoryPoint>,
+        max_records: usize,
+        max_bytes: i64,
+        cut: Option<SystemTime>,
+    ) -> Result<HistoryRange, Error> {
         let empty = |status| HistoryRange {
             status,
             records: Vec::new(),
             truncated: false,
         };
-        let (status, lineages) = self.read_timeline(doc_id)?;
+        let (status, mut lineages) = self.read_timeline(doc_id)?;
         if status != HistoryStatus::Ready {
             return Ok(empty(status));
+        }
+        if let Some(cut) = cut {
+            lineages = visible_timeline(&lineages, cut);
         }
         let selection = select_range(&lineages, from, to, before, max_records, MAX_RANGE_LINEAGES);
         if selection.status != HistoryStatus::Ready {

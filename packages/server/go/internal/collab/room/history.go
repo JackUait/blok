@@ -471,14 +471,44 @@ func (m *Manager) restoreTrash(actorID string) *RestoreTrash {
 // committed retry still gets its receipt.
 func (m *Manager) RestoreGuarded(ctx context.Context, docID, lineage string, sequence uint64, operationID, actorID string,
 	expect *Precondition, confirmed map[string]bool) (HistoryStatus, *EditResult, []RestoreGuard, error) {
-	p, err := m.readPoint(ctx, docID, lineage, sequence)
-	if err != nil {
-		return 0, nil, nil, err
+	outcome, err := m.RestoreWith(ctx, docID, lineage, sequence, operationID, actorID, expect, confirmed, RestoreOptions{})
+	return outcome.Status, outcome.Edit, outcome.Refused, err
+}
+
+// RestoreOptions is CollabRestoreOptions. Hidden: the host's history window
+// hides the point.
+type RestoreOptions struct {
+	Hidden bool
+}
+
+// RestoreOutcome is CollabRestoreResult: Edit when Ready and applied or
+// refused by the edit gates, Refused when a guard refused it, Hidden when
+// the window hid the point.
+type RestoreOutcome struct {
+	Status  HistoryStatus
+	Edit    *EditResult
+	Refused []RestoreGuard
+	Hidden  bool
+}
+
+var errRestorePointHidden = errors.New("collab: the history window hides the restore point")
+
+// RestoreWith is RestoreGuarded with its options. A hidden point is never
+// rebuilt; it is refused in the lane, after the duplicate check, so a
+// committed retry still gets its receipt.
+func (m *Manager) RestoreWith(ctx context.Context, docID, lineage string, sequence uint64, operationID, actorID string,
+	expect *Precondition, confirmed map[string]bool, options RestoreOptions) (RestoreOutcome, error) {
+	p := point{status: HistoryNotFound}
+	if !options.Hidden {
+		var err error
+		if p, err = m.readPoint(ctx, docID, lineage, sequence); err != nil {
+			return RestoreOutcome{}, err
+		}
 	}
 	// A missing point still goes to the room: a retry whose lineage was
 	// deleted since gets its first receipt from the duplicate check.
 	if p.status != HistoryReady && p.status != HistoryNotFound {
-		return p.status, nil, nil, nil
+		return RestoreOutcome{Status: p.status}, nil
 	}
 	var refused []RestoreGuard
 	var target []any
@@ -495,6 +525,9 @@ func (m *Manager) RestoreGuarded(ctx context.Context, docID, lineage string, seq
 	digest := convert.RestoreDigest(lineage, sequence)
 	edit, err := m.editInRoom(docID, func(r *Room) (*EditResult, error) {
 		return r.edit(ctx, func(ctx context.Context, doc *yjs.Doc) ([]convert.EditOp, error) {
+			if options.Hidden {
+				return nil, errRestorePointHidden
+			}
 			if p.status == HistoryNotFound || p.doc == nil {
 				return nil, errRestorePointMissing
 			}
@@ -520,19 +553,22 @@ func (m *Manager) RestoreGuarded(ctx context.Context, docID, lineage string, seq
 				m.restoreTrash(actorID)), nil
 		}, true, operationID, digest, actorID, expect, nil, nil)
 	})
+	if errors.Is(err, errRestorePointHidden) {
+		return RestoreOutcome{Status: HistoryNotFound, Hidden: true}, nil
+	}
 	if errors.Is(err, errRestorePointMissing) {
-		return HistoryNotFound, nil, nil, nil
+		return RestoreOutcome{Status: HistoryNotFound}, nil
 	}
 	if errors.Is(err, errRestoreGuarded) {
-		return HistoryReady, nil, refused, nil
+		return RestoreOutcome{Status: HistoryReady, Refused: refused}, nil
 	}
 	if err != nil {
-		return 0, nil, nil, err
+		return RestoreOutcome{}, err
 	}
 	if edit.Status == EditApplied {
 		m.documentReplaced(docID)
 	}
-	return HistoryReady, &edit, nil, nil
+	return RestoreOutcome{Status: HistoryReady, Edit: &edit}, nil
 }
 
 // RestorePreview is a restore planned and measured against the live doc,

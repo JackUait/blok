@@ -26,13 +26,17 @@ const (
 // before the time. A redirect to the point, or the point as JSON when the
 // caller accepts JSON.
 func (h *Handlers) HistoryAt(w http.ResponseWriter, r *http.Request) {
-	a, ok := h.admitHistory(w, r, false)
+	a, ok := h.admitHistory(w, r, false, true)
 	if !ok {
 		return
 	}
 	at, ok := queryTime(r, "time")
 	if !ok || at == nil {
 		synchttp.Refuse(w, http.StatusBadRequest, badTime)
+		return
+	}
+	window, ok := h.window(w, r, a)
+	if !ok {
 		return
 	}
 	result, err := a.rooms.At(r.Context(), a.doc, *at)
@@ -51,6 +55,10 @@ func (h *Handlers) HistoryAt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	point := result.Point
+	if window.hides(point.Lineage, point.Sequence) {
+		refuseRetention(w)
+		return
+	}
 	// The lineage goes into a Location: anything not shaped like one is a
 	// broken store.
 	if !workingset.IsLineage(point.Lineage) {
@@ -77,7 +85,7 @@ func (h *Handlers) HistoryAt(w http.ResponseWriter, r *http.Request) {
 // record's edits in [from, to), newest first across lineages. The default
 // range is the last 24 hours.
 func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request) {
-	a, ok := h.admitHistory(w, r, false)
+	a, ok := h.admitHistory(w, r, false, true)
 	if !ok {
 		return
 	}
@@ -114,7 +122,19 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 		synchttp.Refuse(w, http.StatusBadRequest, badBlock)
 		return
 	}
-	result, err := a.rooms.ChangesBetween(r.Context(), a.doc, start, end, before, room.MaxChangeRecords, room.MaxChangeBytes)
+	window, ok := h.window(w, r, a)
+	if !ok {
+		return
+	}
+	if before != nil && window.hides(before.Lineage, before.Sequence) {
+		refuseRetention(w)
+		return
+	}
+	var cut *time.Time
+	if window != nil {
+		cut = &window.cut
+	}
+	result, err := a.rooms.ChangesBetweenWindowed(r.Context(), a.doc, start, end, before, room.MaxChangeRecords, room.MaxChangeBytes, cut)
 	if err != nil {
 		failed(w, r.Context())
 		return

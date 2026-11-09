@@ -12,7 +12,7 @@ use crate::{
 
 // The twins of C# CollabHistoryTimeCaptureTests.
 
-fn fixture(name: &str) -> Object {
+pub(crate) fn fixture(name: &str) -> Object {
     read_repo_json(&[
         "test",
         "unit",
@@ -23,29 +23,29 @@ fn fixture(name: &str) -> Object {
     ])
 }
 
-fn text(object: &Object, key: &str) -> String {
+pub(crate) fn text(object: &Object, key: &str) -> String {
     match member(object, key) {
         Value::String(s) => s.to_string(),
         _ => panic!("{key:?} is not a string"),
     }
 }
 
-fn optional_text(object: &Object, key: &str) -> Option<String> {
+pub(crate) fn optional_text(object: &Object, key: &str) -> Option<String> {
     match member(object, key) {
         Value::Null => None,
         _ => Some(text(object, key)),
     }
 }
 
-fn at(object: &Object, key: &str) -> Option<SystemTime> {
+pub(crate) fn at(object: &Object, key: &str) -> Option<SystemTime> {
     optional_text(object, key).map(|s| time_from_ticks(s.parse().unwrap()))
 }
 
-fn number(object: &Object, key: &str) -> u64 {
+pub(crate) fn number(object: &Object, key: &str) -> u64 {
     text(object, key).parse().unwrap()
 }
 
-fn lineages(c: &Object) -> Vec<LineageHeaders> {
+pub(crate) fn lineages(c: &Object) -> Vec<LineageHeaders> {
     array(member(c, "lineages"))
         .iter()
         .map(|entry| {

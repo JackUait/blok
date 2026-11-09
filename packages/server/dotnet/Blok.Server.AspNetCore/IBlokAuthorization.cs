@@ -51,4 +51,45 @@ public interface IBlokAuthorization
       ClaimsPrincipal user,
       string documentId,
       CancellationToken cancellationToken = default);
+
+  /// <summary>May this caller read the document's version history?</summary>
+  /// <remarks>
+  /// Asked on the history list, a version read, its changes, <c>history/at</c>,
+  /// <c>history/changes</c> and <c>restore/preview</c>, only after
+  /// <see cref="CanReadDocumentAsync"/> (and <see cref="CanWriteDocumentAsync"/>
+  /// on preview) said yes. A restore or a delete is decided by the write gate.
+  /// The default is yes, so history is readable to whoever can read the document.
+  /// </remarks>
+  /// <returns>False to answer 403.</returns>
+  ValueTask<bool> CanReadHistoryAsync(
+      ClaimsPrincipal user,
+      string documentId,
+      CancellationToken cancellationToken = default) => ValueTask.FromResult(true);
+
+  /// <summary>How far back this caller may see the document's history.</summary>
+  /// <remarks>
+  /// Asked on every history request except a delete. A point older than now
+  /// minus the window is hidden, never deleted: reading it, its changes,
+  /// <c>history/at</c> resolving to it, a <c>before</c> naming it, a restore
+  /// to it and its preview answer 404 <c>{"reason":"retention"}</c>; the list
+  /// and the range leave it out. A negative window counts as zero.
+  /// </remarks>
+  /// <returns>The window, or null (the default) for the whole history.</returns>
+  ValueTask<TimeSpan?> HistoryWindowAsync(
+      ClaimsPrincipal user,
+      string documentId,
+      CancellationToken cancellationToken = default) => ValueTask.FromResult<TimeSpan?>(null);
+
+  /// <summary>Is this lineage held, so that it must not be deleted?</summary>
+  /// <remarks>
+  /// Asked by <c>DELETE /sync/{doc}/history/{lineage}</c> before anything
+  /// else about the lineage: true answers 409 <c>{"reason":"held"}</c>.
+  /// Blok stores no bookmarks: a host that keeps named versions as
+  /// (lineage, sequence) pairs holds their lineages here. A document purge
+  /// does not ask. The default holds nothing.
+  /// </remarks>
+  ValueTask<bool> IsHistoryHeldAsync(
+      string documentId,
+      string lineage,
+      CancellationToken cancellationToken = default) => ValueTask.FromResult(false);
 }

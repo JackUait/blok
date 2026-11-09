@@ -206,7 +206,11 @@ internal sealed record CollabRestorePreviewResult(
 internal sealed record CollabRestoreResult(
     CollabHistoryStatus History,
     CollabEditResult? Edit,
-    IReadOnlyList<CollabRestoreGuard>? Refused = null);
+    IReadOnlyList<CollabRestoreGuard>? Refused = null,
+    bool Hidden = false);
+
+/// <summary>How one restore runs. <paramref name="Hidden"/>: the host's history window hides the point.</summary>
+internal sealed record CollabRestoreOptions(bool Hidden = false);
 
 /// <summary>
 /// Owns one <see cref="CollabRoom"/> per open doc. Rooms remove themselves
@@ -873,7 +877,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   /// with the guards enforced when <paramref name="confirmed"/> is not null: a guard whose kind it lacks
   /// refuses the restore, which changes nothing and answers the guards in <see cref="CollabRestoreResult.Refused"/>.
   /// </summary>
-  internal async ValueTask<CollabRestoreResult> RestoreAsync(
+  internal ValueTask<CollabRestoreResult> RestoreAsync(
       string docId,
       string lineage,
       ulong sequence,
@@ -883,9 +887,31 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
       IReadOnlySet<string>? confirmed,
       CancellationToken cancellationToken = default)
   {
-    ArgumentException.ThrowIfNullOrEmpty(operationId);
+    return RestoreAsync(docId, lineage, sequence, operationId, actorId, expect, confirmed, new CollabRestoreOptions(), cancellationToken);
+  }
 
-    var point = await ReadPointAsync(docId, lineage, sequence, cancellationToken);
+  /// <summary>
+  /// A restore with its <paramref name="restore"/> options. A hidden point is
+  /// never rebuilt; it is refused in the lane, after the duplicate check, so
+  /// a committed retry still gets its receipt.
+  /// </summary>
+  internal async ValueTask<CollabRestoreResult> RestoreAsync(
+      string docId,
+      string lineage,
+      ulong sequence,
+      string operationId,
+      string? actorId,
+      CollabEditPrecondition? expect,
+      IReadOnlySet<string>? confirmed,
+      CollabRestoreOptions restore,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(operationId);
+    ArgumentNullException.ThrowIfNull(restore);
+
+    var point = restore.Hidden
+      ? (Status: CollabHistoryStatus.NotFound, Output: (JsonNode?)null, Time: (DateTimeOffset?)null, Doc: (YDoc?)null)
+      : await ReadPointAsync(docId, lineage, sequence, cancellationToken);
     IReadOnlyList<CollabRestoreGuard>? refused = null;
 
     // A missing point still goes to the room: a retry whose lineage was
@@ -908,6 +934,11 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
           room => room.EditAsync(
               async (doc, token) =>
               {
+                if (restore.Hidden)
+                {
+                  throw new RestorePointHiddenException();
+                }
+
                 if (point.Status == CollabHistoryStatus.NotFound || targetMaps is null)
                 {
                   throw new RestorePointMissingException();
@@ -951,6 +982,10 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     catch (RestorePointMissingException)
     {
       return new CollabRestoreResult(CollabHistoryStatus.NotFound, null);
+    }
+    catch (RestorePointHiddenException)
+    {
+      return new CollabRestoreResult(CollabHistoryStatus.NotFound, null, Hidden: true);
     }
     catch (RestoreGuardedException)
     {
@@ -1039,6 +1074,9 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
 
   /// <summary>Thrown by a restore's planner when its point is gone and the op id was never committed.</summary>
   private sealed class RestorePointMissingException : Exception;
+
+  /// <summary>Thrown by a restore's planner when the host's window hides its point.</summary>
+  private sealed class RestorePointHiddenException : Exception;
 
   /// <summary>Thrown by a restore's planner when a guard is present that the request did not confirm.</summary>
   private sealed class RestoreGuardedException : Exception;

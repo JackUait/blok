@@ -25,6 +25,7 @@ mod room;
 mod seams;
 mod sync;
 mod timeline;
+mod window;
 
 pub use cancel::Token;
 pub use changes::{
@@ -33,7 +34,10 @@ pub use changes::{
 };
 pub use database_changes::describe_database_change;
 pub use error::{Error, PURGE_UNSUPPORTED, is_cancellation, is_transient};
-pub use history::{HistoryChanges, HistoryList, HistoryRead, HistoryStatus, RestorePreview};
+pub use history::{
+    HistoryChanges, HistoryList, HistoryRead, HistoryStatus, RestoreOptions, RestoreOutcome,
+    RestorePreview,
+};
 pub use historytime::{
     DEFAULT_HISTORY_RANGE, HistoryAt, HistoryPoint, HistoryRange, MAX_RANGE_LINEAGES, RangeRecord,
     RangeSelection, fit_rows, fits, parse_history_time, record_bytes, resolve_at, select_range,
@@ -58,6 +62,9 @@ pub use seams::*;
 pub use timeline::{
     ActorKind, LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions,
     group_versions_by,
+};
+pub use window::{
+    hides_point, history_cut, history_floor, history_floors, visible_timeline, window_since,
 };
 
 /// MaxChangeRecords and MaxChangeBytes bound one changes answer; the newest
@@ -109,6 +116,8 @@ mod history_fixture_test;
 mod history_test;
 #[cfg(test)]
 mod historytime_fixture_test;
+#[cfg(test)]
+mod window_fixture_test;
 #[cfg(test)]
 mod join_test;
 #[cfg(test)]

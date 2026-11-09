@@ -36,12 +36,24 @@ type admitted struct {
 }
 
 // admitHistory sends no-store first: versions are document content behind
-// an access check, whatever the answer.
-func (h *Handlers) admitHistory(w http.ResponseWriter, r *http.Request, write bool) (*admitted, bool) {
+// an access check, whatever the answer. readsHistory asks the host's history
+// read hook too, after the document gates said yes.
+func (h *Handlers) admitHistory(w http.ResponseWriter, r *http.Request, write, readsHistory bool) (*admitted, bool) {
 	w.Header().Set("Cache-Control", "no-store")
 	doc, user, hasUser, ok := h.admit(w, r, write)
 	if !ok {
 		return nil, false
+	}
+	if reader, asks := h.config.Authorization.(auth.HistoryReadAuthorizer); readsHistory && asks {
+		allowed, err := reader.CanReadHistory(r.Context(), user, doc)
+		if err != nil {
+			internalError(w)
+			return nil, false
+		}
+		if !allowed {
+			synchttp.Refuse(w, http.StatusForbidden, "forbidden\n")
+			return nil, false
+		}
 	}
 	manager, ok := h.manager(w)
 	if !ok {
@@ -54,15 +66,66 @@ func (h *Handlers) admitHistory(w http.ResponseWriter, r *http.Request, write bo
 	return a, true
 }
 
+// historyWindow is the host's window as each lineage's floor.
+type historyWindow struct {
+	cut    time.Time
+	floors map[string]*uint64
+}
+
+func (v *historyWindow) hides(lineage string, sequence uint64) bool {
+	return v != nil && room.HidesPoint(v.floors, lineage, sequence)
+}
+
+// window asks the host's window hook. Nil when the host sets none; false
+// once it has refused.
+func (h *Handlers) window(w http.ResponseWriter, r *http.Request, a *admitted) (*historyWindow, bool) {
+	windower, ok := h.config.Authorization.(auth.HistoryWindower)
+	if !ok {
+		return nil, true
+	}
+	span, err := windower.HistoryWindow(r.Context(), a.user, a.doc)
+	if err != nil {
+		internalError(w)
+		return nil, false
+	}
+	if span == nil {
+		return nil, true
+	}
+	// A .NET tick is 100ns.
+	cut := room.HistoryCut(a.rooms.Now(), int64(*span/100))
+	floors, status, err := a.rooms.HistoryFloorsAt(r.Context(), a.doc, cut)
+	if err != nil {
+		failed(w, r.Context())
+		return nil, false
+	}
+	if status != room.HistoryReady {
+		h.refuseHistory(w, a, status)
+		return nil, false
+	}
+	return &historyWindow{cut: cut, floors: floors}, true
+}
+
+// refuseRetention is a point the window hides: 404 as JSON, so a client can
+// tell it from a missing one.
+func refuseRetention(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	route.StartStream(w, http.StatusNotFound)
+	_, _ = w.Write([]byte(`{"reason":"retention"}`))
+}
+
 // HistoryList is GET /sync/{doc}/history.
 func (h *Handlers) HistoryList(w http.ResponseWriter, r *http.Request) {
-	a, ok := h.admitHistory(w, r, false)
+	a, ok := h.admitHistory(w, r, false, true)
 	if !ok {
 		return
 	}
 	minutes, ok := queryNumber(r, "group")
 	if !ok || (minutes != nil && *minutes != 1 && *minutes != 15 && *minutes != 60) {
 		synchttp.Refuse(w, http.StatusBadRequest, "group must be 1, 15 or 60\n")
+		return
+	}
+	window, ok := h.window(w, r, a)
+	if !ok {
 		return
 	}
 	var group time.Duration
@@ -99,10 +162,15 @@ func (h *Handlers) HistoryList(w http.ResponseWriter, r *http.Request) {
 		body = append(body, '}')
 	}
 	body = append(body, `],"versions":[`...)
-	for i, version := range result.Versions {
-		if i > 0 {
+	listed := 0
+	for _, version := range result.Versions {
+		if window.hides(version.Lineage, version.Sequence) {
+			continue
+		}
+		if listed > 0 {
 			body = append(body, ',')
 		}
+		listed++
 		body = append(body, `{"lineage":`...)
 		body = jsjson.AppendQuoted(body, jsjson.FromString(version.Lineage))
 		body = append(body, `,"sequence":`...)
@@ -150,12 +218,20 @@ func writeJSON(w http.ResponseWriter, body []byte) {
 
 // HistoryRead is GET /sync/{doc}/history/{lineage}/{sequence}.
 func (h *Handlers) HistoryRead(w http.ResponseWriter, r *http.Request) {
-	a, ok := h.admitHistory(w, r, false)
+	a, ok := h.admitHistory(w, r, false, true)
 	if !ok {
 		return
 	}
 	lineage, sequence, ok := historyPoint(w, r)
 	if !ok {
+		return
+	}
+	window, ok := h.window(w, r, a)
+	if !ok {
+		return
+	}
+	if window.hides(lineage, sequence) {
+		refuseRetention(w)
 		return
 	}
 	result, err := a.rooms.ReadVersion(r.Context(), a.doc, lineage, sequence)
@@ -174,7 +250,7 @@ func (h *Handlers) HistoryRead(w http.ResponseWriter, r *http.Request) {
 // HistoryChanges is GET .../changes: the edits of each record in
 // (since, sequence]. The client names the previous version's sequence.
 func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
-	a, ok := h.admitHistory(w, r, false)
+	a, ok := h.admitHistory(w, r, false, true)
 	if !ok {
 		return
 	}
@@ -197,6 +273,17 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 	var from uint64
 	if since != nil {
 		from = *since
+	}
+	window, ok := h.window(w, r, a)
+	if !ok {
+		return
+	}
+	if window.hides(lineage, sequence) {
+		refuseRetention(w)
+		return
+	}
+	if window != nil {
+		from = room.WindowSince(window.floors[lineage], from)
 	}
 	result, err := a.rooms.Changes(r.Context(), a.doc, lineage, sequence, from, room.MaxChangeRecords, room.MaxChangeBytes)
 	if err != nil {
@@ -381,13 +468,26 @@ func queryBlock(r *http.Request) (*string, bool) {
 
 // HistoryDelete is DELETE /sync/{doc}/history/{lineage}.
 func (h *Handlers) HistoryDelete(w http.ResponseWriter, r *http.Request) {
-	a, ok := h.admitHistory(w, r, true)
+	a, ok := h.admitHistory(w, r, true, false)
 	if !ok {
 		return
 	}
 	lineage, ok := historyLineage(w, r)
 	if !ok {
 		return
+	}
+	if holder, asks := h.config.Authorization.(auth.HistoryHolder); asks {
+		held, err := holder.IsHistoryHeld(r.Context(), a.doc, lineage)
+		if err != nil {
+			internalError(w)
+			return
+		}
+		if held {
+			w.Header().Set("Content-Type", "application/json")
+			route.StartStream(w, http.StatusConflict)
+			_, _ = w.Write([]byte(`{"reason":"held"}`))
+			return
+		}
 	}
 	status, outcome, err := a.rooms.DeleteLineage(r.Context(), a.doc, lineage)
 	if err != nil {
@@ -413,7 +513,7 @@ func (h *Handlers) HistoryDelete(w http.ResponseWriter, r *http.Request) {
 // HistoryRestore is POST .../restore: the key is required, If-Match is
 // optional, and it answers like an edit.
 func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
-	a, ok := h.admitHistory(w, r, true)
+	a, ok := h.admitHistory(w, r, true, false)
 	if !ok {
 		return
 	}
@@ -439,32 +539,41 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	window, ok := h.window(w, r, a)
+	if !ok {
+		return
+	}
 	var confirmed map[string]bool
 	if h.config.EnforceRestoreGuards {
 		confirmed = restoreConfirms(r, h.config.MaxMessageBytes)
 	}
 	actor := synchttp.DeriveActor(a.ticketUser, a.user, a.hasUser)
-	status, edit, refused, err := a.rooms.RestoreGuarded(r.Context(), a.doc, lineage, sequence, operationID, actor, expect, confirmed)
+	outcome, err := a.rooms.RestoreWith(r.Context(), a.doc, lineage, sequence, operationID, actor, expect, confirmed,
+		room.RestoreOptions{Hidden: window.hides(lineage, sequence)})
 	if err != nil {
 		failed(w, r.Context())
 		return
 	}
-	if status != room.HistoryReady {
-		h.refuseHistory(w, a, status)
+	if outcome.Hidden {
+		refuseRetention(w)
 		return
 	}
-	if edit == nil {
-		refuseRestore(w, "confirmation_required", refused)
+	if outcome.Status != room.HistoryReady {
+		h.refuseHistory(w, a, outcome.Status)
 		return
 	}
-	WriteEditResult(w, *edit, a.rooms.RetryAfter())
+	if outcome.Edit == nil {
+		refuseRestore(w, "confirmation_required", outcome.Refused)
+		return
+	}
+	WriteEditResult(w, *outcome.Edit, a.rooms.RetryAfter())
 }
 
 // HistoryRestorePreview is POST .../restore/preview: the restore planned
 // and measured, nothing written, no key needed. It needs write access, as
 // the restore does. If-Match is checked as the restore would.
 func (h *Handlers) HistoryRestorePreview(w http.ResponseWriter, r *http.Request) {
-	a, ok := h.admitHistory(w, r, true)
+	a, ok := h.admitHistory(w, r, true, true)
 	if !ok {
 		return
 	}
@@ -479,6 +588,14 @@ func (h *Handlers) HistoryRestorePreview(w http.ResponseWriter, r *http.Request)
 			synchttp.Refuse(w, http.StatusBadRequest, "If-Match must be one quoted \"<lineage>:<sequence>\" tag\n")
 			return
 		}
+	}
+	window, ok := h.window(w, r, a)
+	if !ok {
+		return
+	}
+	if window.hides(lineage, sequence) {
+		refuseRetention(w)
+		return
 	}
 	status, preview, edit, err := a.rooms.PreviewRestore(r.Context(), a.doc, lineage, sequence, expect,
 		synchttp.DeriveActor(a.ticketUser, a.user, a.hasUser))

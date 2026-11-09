@@ -24,7 +24,7 @@ internal static partial class HistoryEndpoint
   /// </summary>
   public static async Task AtAsync(HttpContext context)
   {
-    if (await AdmitAsync(context, requireWrite: false) is not { } admitted)
+    if (await AdmitAsync(context, requireWrite: false, readsHistory: true) is not { } admitted)
     {
       return;
     }
@@ -33,6 +33,11 @@ internal static partial class HistoryEndpoint
     {
       await SyncEndpoint.RefuseAsync(context, StatusCodes.Status400BadRequest, BadTime);
 
+      return;
+    }
+
+    if (await WindowAsync(context, admitted) is not (true, var window))
+    {
       return;
     }
 
@@ -55,6 +60,13 @@ internal static partial class HistoryEndpoint
     }
 
     var point = result.Point!;
+
+    if (window is not null && window.Hides(point.Lineage, point.Sequence))
+    {
+      await RefuseRetentionAsync(context);
+
+      return;
+    }
 
     // The lineage goes into a Location: anything not shaped like one is a broken store.
     if (!CollabWorkingSetTag.IsLineage(point.Lineage))
@@ -88,7 +100,7 @@ internal static partial class HistoryEndpoint
   /// <summary>Each record's edits in [from, to), newest first across lineages. The default range is the last 24 hours.</summary>
   public static async Task ChangesBetweenAsync(HttpContext context)
   {
-    if (await AdmitAsync(context, requireWrite: false) is not { } admitted)
+    if (await AdmitAsync(context, requireWrite: false, readsHistory: true) is not { } admitted)
     {
       return;
     }
@@ -133,11 +145,24 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (await WindowAsync(context, admitted) is not (true, var window))
+    {
+      return;
+    }
+
+    if (window is not null && before is { } named && window.Hides(named.Lineage, named.Sequence))
+    {
+      await RefuseRetentionAsync(context);
+
+      return;
+    }
+
     var result = await admitted.Rooms.ChangesBetweenAsync(
         admitted.Doc,
         start,
         end,
         before,
+        cut: window?.Cut,
         cancellationToken: context.RequestAborted);
 
     if (result.Status != CollabHistoryStatus.Ready)

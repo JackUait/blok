@@ -645,6 +645,8 @@ pub struct AppOptions {
     pub journal: bool,
     pub ticket_mode: bool,
     pub authorization: Option<Arc<RecordingAuthorization>>,
+    /// Any other hook; it wins over `authorization`.
+    pub policy: Option<Arc<dyn Authorization>>,
     /// None keeps the room's default, as the C# harness does.
     pub retry_backoff: Option<Duration>,
     /// The journal keeps no history.
@@ -722,9 +724,9 @@ pub async fn start_app(options: AppOptions) -> App {
     let logged = corrupt.clone();
     let routes = Handlers::new(Config {
         ticket_mode: options.ticket_mode,
-        authorization: options
+        authorization: options.policy.or(options
             .authorization
-            .map(|hook| hook as Arc<dyn Authorization>),
+            .map(|hook| hook as Arc<dyn Authorization>)),
         rooms: Arc::new(move || Ok(rooms.clone())),
         max_message_bytes: 8 << 20,
         corrupt_log: Some(Arc::new(move |doc: &str| {
@@ -755,6 +757,13 @@ pub async fn start_app(options: AppOptions) -> App {
             "POST",
             Route::Restore,
         ),
+        (
+            "/sync/{doc}/history/{lineage}/{sequence}/restore/preview",
+            "POST",
+            Route::Preview,
+        ),
+        ("/sync/{doc}/history/at", "GET", Route::At),
+        ("/sync/{doc}/history/changes", "GET", Route::Range),
     ] {
         let routes = routes.clone();
         router.handle(
@@ -790,6 +799,9 @@ pub async fn start_app(options: AppOptions) -> App {
                         Route::Delete => routes.history_delete(request, response).await,
                         Route::Changes => routes.history_changes(request, response).await,
                         Route::Restore => routes.history_restore(request, response).await,
+                        Route::Preview => routes.history_restore_preview(request, response).await,
+                        Route::At => routes.history_at(request, response).await,
+                        Route::Range => routes.history_changes_between(request, response).await,
                     }
                 }
             },
@@ -816,6 +828,9 @@ enum Route {
     Delete,
     Changes,
     Restore,
+    Preview,
+    At,
+    Range,
 }
 
 impl App {

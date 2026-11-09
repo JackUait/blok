@@ -1,0 +1,2180 @@
+{
+  "$comment": "CollabHistoryWindow as C# answers it. Captured by CollabHistoryWindowCaptureTests; do not edit by hand. cuts: now minus the window as .NET UTC ticks, never below 0, a negative window counting as zero. cases: each lineage\u0027s floor, the highest sequence the cut hides (null: none). The baseline is hidden when created before the cut or with no created-at; a record when committed before the cut; and every point below a hidden one. points: hidden answers 404 retention on read, changes, restore and restore/preview. since: a changes read\u0027s since, raised to the floor. at: the point the full timeline resolves, retention when it is hidden. range: the records [from, to) of the visible timeline; a hidden before answers retention. answers: the two new refusals. delete: DELETE .../history/{lineage} with the hold hook, which is asked before the lineage is looked up.",
+  "cuts": [
+    {
+      "name": "an hour",
+      "now": "639269712000000000",
+      "window": "36000000000",
+      "cut": "639269676000000000"
+    },
+    {
+      "name": "a zero window hides everything before now",
+      "now": "639269712000000000",
+      "window": "0",
+      "cut": "639269712000000000"
+    },
+    {
+      "name": "a negative window counts as zero",
+      "now": "639269712000000000",
+      "window": "-600000000",
+      "cut": "639269712000000000"
+    },
+    {
+      "name": "a window longer than time stops at tick 0",
+      "now": "639269712000000000",
+      "window": "9223372036854775807",
+      "cut": "0"
+    },
+    {
+      "name": "a window just past now stops at tick 0",
+      "now": "5",
+      "window": "6",
+      "cut": "0"
+    }
+  ],
+  "cases": [
+    {
+      "name": "a cut before everything hides nothing",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639269711999999999",
+      "floors": {
+        "L1": null,
+        "L2": null
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "0",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "0"
+        },
+        {
+          "lineage": "L2",
+          "since": "0",
+          "from": "0"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269711999999998",
+          "point": null,
+          "reason": "not_found"
+        },
+        {
+          "time": "639269711999999999",
+          "point": null,
+          "reason": "not_found"
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "4"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a cut on the creation keeps the baseline",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639269712000000000",
+      "floors": {
+        "L1": null,
+        "L2": null
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "0",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "0"
+        },
+        {
+          "lineage": "L2",
+          "since": "0",
+          "from": "0"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269711999999999",
+          "point": null,
+          "reason": "not_found"
+        },
+        {
+          "time": "639269712000000000",
+          "point": {
+            "lineage": "L1",
+            "sequence": "0"
+          },
+          "reason": null
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "4"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a cut one tick after the creation hides the baseline",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639269712000000001",
+      "floors": {
+        "L1": "0",
+        "L2": null
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "0",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "0"
+        },
+        {
+          "lineage": "L2",
+          "since": "0",
+          "from": "0"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269712000000000",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639269712000000001",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "4"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a record on the cut is kept",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639269713200000000",
+      "floors": {
+        "L1": "1",
+        "L2": null
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "0",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "1"
+        },
+        {
+          "lineage": "L2",
+          "since": "0",
+          "from": "0"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269713199999999",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639269713200000000",
+          "point": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": null
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "4"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a record one tick before the cut is hidden",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639269713200000001",
+      "floors": {
+        "L1": "2",
+        "L2": null
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "0",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "2"
+        },
+        {
+          "lineage": "L2",
+          "since": "0",
+          "from": "0"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269713200000000",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639269713200000001",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": null,
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "4"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "4"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a cut after a reset hides the old lineage whole",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639269748300000000",
+      "floors": {
+        "L1": "4",
+        "L2": "0"
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "hidden": true
+        },
+        {
+          "lineage": "L2",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "4"
+        },
+        {
+          "lineage": "L2",
+          "since": "0",
+          "from": "0"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269748299999999",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639269748300000000",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "4"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a reset on the cut keeps the new baseline",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639269748000000000",
+      "floors": {
+        "L1": "4",
+        "L2": null
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "hidden": true
+        },
+        {
+          "lineage": "L2",
+          "sequence": "0",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "4"
+        },
+        {
+          "lineage": "L2",
+          "since": "0",
+          "from": "0"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269747999999999",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639269748000000000",
+          "point": {
+            "lineage": "L2",
+            "sequence": "0"
+          },
+          "reason": null
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "4"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L2",
+              "sequence": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a cut after the head hides everything",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639270612000000000",
+      "floors": {
+        "L1": "4",
+        "L2": "2"
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "hidden": true
+        },
+        {
+          "lineage": "L2",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "hidden": true
+        },
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "hidden": true
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "4"
+        },
+        {
+          "lineage": "L2",
+          "since": "0",
+          "from": "2"
+        }
+      ],
+      "at": [
+        {
+          "time": "639270611999999999",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639270612000000000",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639271476000000000",
+          "point": null,
+          "reason": "retention"
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "4"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "1"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L2",
+            "sequence": "2"
+          },
+          "reason": "retention",
+          "records": []
+        }
+      ]
+    },
+    {
+      "name": "a baseline with no created-at is hidden",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": null,
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639269712600000000",
+      "floors": {
+        "L1": "0"
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": false
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "0"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269712599999999",
+          "point": null,
+          "reason": "not_found"
+        },
+        {
+          "time": "639269712600000000",
+          "point": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": null
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "2"
+            },
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": null,
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a record older than one before it hides everything below it",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269715000000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269715600000000"
+            }
+          ]
+        }
+      ],
+      "cut": "639269713800000000",
+      "floors": {
+        "L1": "2"
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "hidden": true
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "2"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269713799999999",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639269713800000000",
+          "point": null,
+          "reason": "retention"
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": [
+            {
+              "lineage": "L1",
+              "sequence": "3"
+            }
+          ]
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "1"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "2"
+          },
+          "reason": "retention",
+          "records": []
+        },
+        {
+          "before": {
+            "lineage": "L1",
+            "sequence": "3"
+          },
+          "reason": null,
+          "records": []
+        }
+      ]
+    },
+    {
+      "name": "a lineage with no records created after the cut hides nothing",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269748000000000",
+          "headers": []
+        }
+      ],
+      "cut": "639269712000000000",
+      "floors": {
+        "L1": null
+      },
+      "points": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "hidden": false
+        }
+      ],
+      "since": [
+        {
+          "lineage": "L1",
+          "since": "0",
+          "from": "0"
+        }
+      ],
+      "at": [
+        {
+          "time": "639269711999999999",
+          "point": null,
+          "reason": "not_found"
+        },
+        {
+          "time": "639269712000000000",
+          "point": null,
+          "reason": "not_found"
+        },
+        {
+          "time": "639271476000000000",
+          "point": {
+            "lineage": "L1",
+            "sequence": "0"
+          },
+          "reason": null
+        }
+      ],
+      "range": [
+        {
+          "before": null,
+          "reason": null,
+          "records": []
+        }
+      ]
+    }
+  ],
+  "answers": {
+    "retention": {
+      "status": 404,
+      "contentType": "application/json",
+      "body": "{\u0022reason\u0022:\u0022retention\u0022}"
+    },
+    "held": {
+      "status": 409,
+      "contentType": "application/json",
+      "body": "{\u0022reason\u0022:\u0022held\u0022}"
+    }
+  },
+  "delete": [
+    {
+      "name": "an old lineage nobody holds is deleted",
+      "held": false,
+      "lineage": "old",
+      "status": 204,
+      "body": null
+    },
+    {
+      "name": "a held lineage is refused",
+      "held": true,
+      "lineage": "old",
+      "status": 409,
+      "body": "{\u0022reason\u0022:\u0022held\u0022}"
+    },
+    {
+      "name": "a hold is asked before the current lineage check",
+      "held": true,
+      "lineage": "current",
+      "status": 409,
+      "body": "{\u0022reason\u0022:\u0022held\u0022}"
+    },
+    {
+      "name": "a hold is asked before the lineage is looked up",
+      "held": true,
+      "lineage": "unknown",
+      "status": 409,
+      "body": "{\u0022reason\u0022:\u0022held\u0022}"
+    },
+    {
+      "name": "the current lineage nobody holds keeps its plain refusal",
+      "held": false,
+      "lineage": "current",
+      "status": 409,
+      "body": "the document is on this lineage; it cannot be deleted\n"
+    },
+    {
+      "name": "an unknown lineage nobody holds is not found",
+      "held": false,
+      "lineage": "unknown",
+      "status": 404,
+      "body": "no such version\n"
+    }
+  ]
+}

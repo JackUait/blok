@@ -66,6 +66,16 @@ func (m *Manager) readTimeline(ctx context.Context, docID string) ([]LineageHead
 	return out, HistoryReady, nil
 }
 
+// HistoryFloorsAt is each lineage's floor under the cut: the highest
+// sequence a host's window hides.
+func (m *Manager) HistoryFloorsAt(ctx context.Context, docID string, cut time.Time) (map[string]*uint64, HistoryStatus, error) {
+	lineages, status, err := m.readTimeline(ctx, docID)
+	if err != nil || status != HistoryReady {
+		return nil, status, err
+	}
+	return HistoryFloors(lineages, cut), HistoryReady, nil
+}
+
 // At is the newest point at or before at. NotFound when the document's
 // history starts later.
 func (m *Manager) At(ctx context.Context, docID string, at time.Time) (HistoryAt, error) {
@@ -85,9 +95,19 @@ func (m *Manager) At(ctx context.Context, docID string, at time.Time) (HistoryAt
 // replays on its own, under the same caps as Changes.
 func (m *Manager) ChangesBetween(ctx context.Context, docID string, from, to time.Time, before *HistoryPoint,
 	maxRecords int, maxBytes int64) (HistoryRange, error) {
+	return m.ChangesBetweenWindowed(ctx, docID, from, to, before, maxRecords, maxBytes, nil)
+}
+
+// ChangesBetweenWindowed is ChangesBetween over what a window with this cut
+// shows; a nil cut shows everything.
+func (m *Manager) ChangesBetweenWindowed(ctx context.Context, docID string, from, to time.Time, before *HistoryPoint,
+	maxRecords int, maxBytes int64, cut *time.Time) (HistoryRange, error) {
 	lineages, status, err := m.readTimeline(ctx, docID)
 	if err != nil || status != HistoryReady {
 		return HistoryRange{Status: status}, err
+	}
+	if cut != nil {
+		lineages = VisibleTimeline(lineages, *cut)
 	}
 	selection := SelectRange(lineages, from, to, before, maxRecords, MaxRangeLineages)
 	if selection.Status != HistoryReady {

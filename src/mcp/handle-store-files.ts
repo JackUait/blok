@@ -39,6 +39,7 @@ import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from
  * Expiry: a handle expires when it is not leased and now - lastUsedMs > idleMs. acquire deletes an
  * expired handle under its lease; count deletes the asking principal's ones and sweep every one,
  * each only when its lease is free. release writes lastUsedMs.
+ * acquire also answers unknown, and deletes the handle, when its record is not a JSON object.
  * tryAdd writes the record, then the meta file, so a crash leaves at most an unreferenced record.
  * remove deletes the meta file, then the record. sweep also deletes crash leftovers older than
  * leaseStaleMs: temp files, `.break` files, records without meta, and leases without meta.
@@ -110,6 +111,17 @@ const parseMeta = (text: string | null): Meta | null => {
   }
 };
 
+// Only the JSON is checked here; Blok checks the record's fields itself.
+const parseRecord = (text: string): BlokMcpHandleRecord | null => {
+  try {
+    const value: unknown = JSON.parse(text);
+
+    return isRecord(value) ? value as unknown as BlokMcpHandleRecord : null;
+  } catch {
+    return null;
+  }
+};
+
 const PRIVATE_FILE = 0o600;
 const PRIVATE_DIR = 0o700;
 
@@ -131,13 +143,17 @@ const prepareDirectory = (dir: string, effectiveUid: () => number | undefined): 
   }
 };
 
+const refuseWindows = (options: FilesHandleStoreOptions): void => {
+  if ((options.platform ?? process.platform) === 'win32') {
+    throw new McpConfigError('--handle-store files: is not supported on Windows; use your own store');
+  }
+};
+
 export const createFilesHandleStore = (given: string, options: FilesHandleStoreOptions = {}): BlokMcpHandleStore => {
   // lstat on a path that ends in a slash follows a link, so the path is normalised first.
   const dir = resolve(given);
 
-  if ((options.platform ?? process.platform) === 'win32') {
-    throw new McpConfigError('--handle-store files: is not supported on Windows; use your own store');
-  }
+  refuseWindows(options);
   prepareDirectory(dir, options.effectiveUid ?? (() => process.geteuid?.()));
   const leaseStaleMs = options.leaseStaleMs ?? LEASE_STALE_MS;
   const paths = (handle: string): { record: string; meta: string; lease: string } => ({
@@ -293,15 +309,19 @@ export const createFilesHandleStore = (given: string, options: FilesHandleStoreO
         if (meta !== null) {
           await writeAtomic(at.meta, JSON.stringify({ ...meta, lastUsedMs: Date.now() }));
         }
-        await rm(at.lease, { force: true });
+        // A holder paused past leaseStaleMs in the write above must not delete the next holder's lease.
+        await dropLock(at.lease, mine);
       },
       remove: async () => {
         if (!await holds()) {
           throw lost(handle);
         }
         end();
-        await forget(handle);
-        await dropLock(at.lease, mine);
+        try {
+          await forget(handle);
+        } finally {
+          await dropLock(at.lease, mine);
+        }
       },
     };
   };
@@ -324,15 +344,17 @@ export const createFilesHandleStore = (given: string, options: FilesHandleStoreO
     try {
       const meta = parseMeta(await readText(at.meta));
       const text = meta === null ? null : await readText(at.record);
+      // A record that does not parse is as lost as a missing one: Blok answers UNKNOWN_HANDLE, not a store outage.
+      const parsed = text === null ? null : parseRecord(text);
 
-      if (meta === null || text === null || expired(meta, idleMs)) {
+      if (meta === null || parsed === null || expired(meta, idleMs)) {
         await forget(handle);
         await dropLock(at.lease, mine);
 
         return 'unknown';
       }
 
-      return leaseFor(handle, mine, JSON.parse(text) as BlokMcpHandleRecord);
+      return leaseFor(handle, mine, parsed);
     } catch (thrown) {
       await dropLock(at.lease, mine);
       throw thrown;
@@ -446,4 +468,40 @@ export const createFilesHandleStore = (given: string, options: FilesHandleStoreO
     acquire,
     sweep,
   };
+};
+
+// Stores whose directory step waits for prepareHandleStore. Keyed by the store, so the public store shape stays as it is.
+const unprepared = new WeakMap<BlokMcpHandleStore, () => void>();
+
+/**
+ * The CLI's `--handle-store files:<dir>`: the directory is made and checked only by prepareHandleStore,
+ * which the server calls after its option checks, so a refused start leaves no directory behind.
+ */
+export const deferredFilesHandleStore = (given: string, options: FilesHandleStoreOptions = {}): BlokMcpHandleStore => {
+  refuseWindows(options);
+  const state: { store?: BlokMcpHandleStore } = {};
+  const ready = (): BlokMcpHandleStore => {
+    state.store ??= createFilesHandleStore(given, options);
+
+    return state.store;
+  };
+  const store: BlokMcpHandleStore = {
+    count: (...args) => ready().count(...args),
+    tryAdd: (...args) => ready().tryAdd(...args),
+    acquire: (...args) => ready().acquire(...args),
+    sweep: (...args) => ready().sweep(...args),
+  };
+
+  unprepared.set(store, () => {
+    ready();
+  });
+
+  return store;
+};
+
+/** Makes and checks a deferred files store's directory; throws McpConfigError as a start refusal. Other stores: nothing. */
+export const prepareHandleStore = (store: BlokMcpHandleStore | undefined): void => {
+  if (store !== undefined) {
+    unprepared.get(store)?.();
+  }
 };

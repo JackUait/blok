@@ -58,11 +58,11 @@ const FAILED = 'Blok could not run this call.';
  * own) must not reach the client: it is logged in full and answered -32603 with fixed words.
  * Blok's protocol errors pass as they are. The standalone server keeps the SDK's own answer.
  */
-const hidden = (thrown: unknown): never => {
+const hidden = (what: string) => (thrown: unknown): never => {
   if (thrown instanceof ProtocolError) {
     throw thrown;
   }
-  console.error('blok-mcp: a tool call failed', thrown);
+  console.error(`blok-mcp: ${what} failed`, thrown);
   throw new ProtocolError(ProtocolErrorCode.InternalError, FAILED);
 };
 const UNNAMED = 'Blok needs a named caller (sub or NameIdentifier).';
@@ -128,7 +128,17 @@ export const createBlok = (options: BlokEmbedOptions, hooks: CreateBlokHooks = {
   const handlersFor = (server: SdkServer | McpServer): BlokHandlers => {
     const made = blokHandlers({ tools: assembled.tools, dispatch: assembled.dispatch, resolveCaller }, lowLevel(server));
 
-    return { ...made, callTool: (request, ctx) => made.callTool(request, ctx).catch(hidden) };
+    return {
+      ...made,
+      callTool: (request, ctx) => made.callTool(request, ctx).catch(hidden('a tool call')),
+      getPrompt: (request) => {
+        try {
+          return made.getPrompt(request);
+        } catch (thrown) {
+          return hidden('a prompt request')(thrown);
+        }
+      },
+    };
   };
   const handlers = (server: SdkServer | McpServer, host: HostNames = {}): BlokHandlers => {
     const made = handlersFor(server);

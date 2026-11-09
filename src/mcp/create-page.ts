@@ -12,6 +12,8 @@ const WEBHOOK_TIMEOUT_MS = 10_000;
 const MAX_PAGE_ID = 512;
 // How much of a refused answer goes to stderr.
 const BODY_SHOWN = 500;
+// A page id answer is under 3 KiB; anything far past that is not one, and is not read to its end.
+const MAX_BODY_BYTES = 64 * 1024;
 // A high surrogate with no low one after it, or a low one with no high one before it.
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 // Unicode Cc: C0, DEL and C1.
@@ -40,7 +42,34 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  *   (a lone surrogate from a \ud800 escape is refused, never turned into U+FFFD), with no Unicode Cc
  *   character (U+0000-U+001F, U+007F-U+009F), and not "." or "..". Anything else is a host error.
  *   A host error is logged to stderr with the status and the first 500 characters of the body.
+ *   A body over 64 KiB is a host error too; it is not read past that.
  */
+const cappedText = async (url: string, response: Response): Promise<string> => {
+  if (response.body === null) {
+    return '';
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  const read = { bytes: 0 };
+
+  for (;;) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+    read.bytes += value.byteLength;
+    if (read.bytes > MAX_BODY_BYTES) {
+      await reader.cancel();
+      throw new Error(`--create-page ${url} answered more than ${MAX_BODY_BYTES} bytes`);
+    }
+    chunks.push(value);
+  }
+
+  // TextDecoder, as response.text(): it drops a BOM, which Buffer#toString keeps.
+  return new TextDecoder().decode(Buffer.concat(chunks));
+};
+
 export const createPageWebhook = (url: string, deps: { fetchImpl?: typeof fetch } = {}): CreatePage => {
   const fetchImpl = deps.fetchImpl ?? fetch;
 
@@ -58,12 +87,18 @@ export const createPageWebhook = (url: string, deps: { fetchImpl?: typeof fetch 
       signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
     });
 
-    const text = await response.text();
+    const text = await cappedText(url, response);
 
     if (response.status !== 200) {
       throw new Error(`--create-page ${url} answered ${response.status}: ${text.slice(0, BODY_SHOWN)}`);
     }
-    const body: unknown = JSON.parse(text);
+    const body = ((): unknown => {
+      try {
+        return JSON.parse(text) as unknown;
+      } catch {
+        throw new Error(`--create-page ${url} answered 200 with a body that is not JSON: ${text.slice(0, BODY_SHOWN)}`);
+      }
+    })();
     const pageId = isRecord(body) ? body.pageId : undefined;
 
     if (pageId !== null && typeof pageId !== 'string') {
@@ -79,11 +114,6 @@ const isPageId = (value: unknown): value is string =>
   typeof value === 'string' && value !== '' && value !== '.' && value !== '..' && !LONE_SURROGATE.test(value)
   && [...value].length <= MAX_PAGE_ID && !CONTROL.test(value);
 
-/**
- * The host's create, as the executor's page port: null refuses, and every other failure is
- * logged in full while the agent sees only HOST_PAGE_FAILED. Nothing here authorizes, loads or
- * saves the new id: the host owns it.
- */
 const hostFailed = (): AgentFailure => new AgentFailure(surfaceError('SOURCE_UNAVAILABLE', HOST_PAGE_FAILED).agentError);
 
 const askHost = async (createPage: CreatePage, request: BlokPageCreateRequest): Promise<unknown> => {

@@ -301,7 +301,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 
 ## Other builds: C#, Go and Rust
 
-The same server is also written in C#, Go and Rust. They take the same flags and environment variables, and one shared conformance suite checks each against this package. No release has shipped them yet.
+The same server is also written in C#, Go and Rust. They take the same flags and environment variables, and one shared conformance suite checks each against this package. Release 2.1.0 shipped the C# and Go builds. The Rust build has not shipped yet.
 
 | Build | Install | In your app | README |
 |---|---|---|---|
@@ -361,7 +361,7 @@ const handler = createMcpHandler(() => {
 - Who calls: by default the `authInfo` you passed to the SDK, named by `extra.sub`. Pass `hooks.caller(ctx)` to read it yourself. An anonymous caller gets the protocol error `-32600` "Blok needs a signed-in caller."; a caller with no name gets "Blok needs a named caller (sub or NameIdentifier).". `hooks.anonymousPrincipal` serves anonymous callers as that principal instead. All anonymous callers then share it: its handles and its handle limit. Pick a principal no real user can have.
 - Scopes: by default Blok ignores the token's scopes, since your server owns sign-in; make read-only agents in `authorize`. When `hooks.caller` returns `scopes`, Blok checks `blok.read` and `blok.write` as the standalone server does.
 - A handle belongs to the caller that opened it. Another principal gets `UNKNOWN_HANDLE`.
-- `attach` throws when one of your tool or prompt names is a Blok name, or when the server already answers `tools/list`, `tools/call`, `prompts/list` or `prompts/get`. Other names reach your `callTool` and `getPrompt`. To install those four handlers yourself, use `blok.handlers(server, { tools, prompts })`; it checks your names the same way.
+- `attach` throws when one of your tool or prompt names is a Blok name, or when the server already answers `tools/list`, `tools/call`, `prompts/list` or `prompts/get`. It also throws when you list tools without `callTool`, or prompts without `getPrompt`. Other names reach your `callTool` and `getPrompt`. To install those four handlers yourself, use `blok.handlers(server, { tools, prompts })`; it checks your names the same way.
 - Blok's tools answer exactly as the standalone server's, including its protocol errors and the approval question (`input_required`, or elicitation for 2025 clients).
 - An error Blok did not expect, in a tool call, such as a throw from your `caller` hook, goes to stderr in full. The client gets `-32603` "Blok could not run this call.", never the error's text. Errors from your source or handle store answer `SOURCE_UNAVAILABLE` instead.
 - Origin and Host checks, a body size cap and OAuth are your server's job. Stateless HTTP (a server per request) is supported; stateful sessions are not promised.

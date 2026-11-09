@@ -1,4 +1,4 @@
-import { surfaceError } from './errors';
+import { isMcpSurfaceError, surfaceError } from './errors';
 import { handleLimit, type HandleRegistry, type HandleTable, newHandleId, shuttingDown, unknownHandle } from './handles';
 import type { BlokMcpHandleLease, BlokMcpHandleRecord, BlokMcpHandleStore } from './options';
 import type { HandleSession } from './session';
@@ -6,6 +6,8 @@ import type { HandleSession } from './session';
 // Above the slowest stored call (a 30 s endpoint load); a longer wait is better told to retry.
 export const LEASE_WAIT_MS = 30_000;
 export const STORE_SWEEP_MS = 60_000;
+// Half the sweep interval: a hung sweep is given up on (logged) before the next one is due.
+export const STORE_SWEEP_TIMEOUT_MS = 30_000;
 // Well inside the 30 s a store may keep an unrenewed lease, so a few missed renewals do not lose it.
 export const LEASE_RENEW_MS = 5_000;
 // Handles reach the host's store as keys or file names, so only Blok's own shape gets that far.
@@ -24,6 +26,8 @@ export interface SharedHandlesOptions {
   leaseWaitMs?: number;
   /** How often the store is swept of idle handles. */
   sweepMs?: number;
+  /** How long a sweep may run before it is logged and the next one may start. */
+  sweepTimeoutMs?: number;
   /** How often a held lease is renewed. */
   renewMs?: number;
 }
@@ -45,6 +49,21 @@ const viaStore = async <T>(call: () => Promise<T>): Promise<T> => {
   }
 };
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+// The fields restore reads. A record that misses one was not written by Blok, so its handle is unknown.
+const wellFormed = (record: Record<string, unknown>): boolean =>
+  typeof record.documentId === 'string'
+  && typeof record.clientName === 'string'
+  && typeof record.write === 'boolean'
+  && typeof record.stale === 'boolean'
+  && (record.version === null || typeof record.version === 'string')
+  && (record.scopes === null || (Array.isArray(record.scopes) && record.scopes.every((scope) => typeof scope === 'string')))
+  && isObject(record.actor)
+  && isObject(record.document) && Array.isArray(record.document.blocks)
+  && isObject(record.history);
+
 const CLOSED: Pick<HandleSession, 'close'> = { close: () => Promise.resolve({ unsavedBatches: 0, hostRecordLags: false }) };
 
 /**
@@ -53,11 +72,13 @@ const CLOSED: Pick<HandleSession, 'close'> = { close: () => Promise.resolve({ un
  * save the record if it changed, release. A record that cannot be saved after the source save
  * is dropped: the answer stands, and the next call answers UNKNOWN_HANDLE.
  * Calls on one handle keep their arrival order inside this process; across processes the lease
- * runs them one at a time. A timer sweeps idle handles out of the store until shutdown. Shutdown
- * waits for this process's calls and sweep and never clears the store.
+ * runs them one at a time. A timer sweeps idle handles out of the store until shutdown. Shutdown refuses
+ * new calls, waits for this process's accepted ones (never for a sweep) and never clears the store.
  */
 export class SharedHandles implements HandleTable {
   private closed = false;
+  private sweeping = false;
+  private sweepLimit?: ReturnType<typeof setTimeout>;
   private readonly turns = new Map<string, Promise<unknown>>();
   private readonly inFlight = new Set<Promise<unknown>>();
   private readonly newHandle: () => string;
@@ -111,7 +132,16 @@ export class SharedHandles implements HandleTable {
       if (record.contractRevision !== this.options.contractRevision) {
         throw surfaceError('VERSION_SKEW', 'This handle was opened on a server with another tool contract. Call blok_open again.');
       }
-      const session = await this.options.restore(record);
+      if (!wellFormed(record as unknown as Record<string, unknown>)) {
+        throw unknownHandle();
+      }
+      const session = await this.options.restore(record).catch((thrown: unknown) => {
+        if (isMcpSurfaceError(thrown)) {
+          throw thrown;
+        }
+        console.error('blok-mcp: a handle from the handle store could not be rebuilt', thrown);
+        throw unknownHandle();
+      });
       const before = JSON.stringify(session.snapshot?.());
 
       try {
@@ -127,7 +157,13 @@ export class SharedHandles implements HandleTable {
       return this.options.local.peek(handle, principal, fn);
     }
 
-    return this.leased(handle, principal, (lease) => fn(lease.record.documentId));
+    return this.leased(handle, principal, (lease) => {
+      if (typeof lease.record.documentId !== 'string') {
+        throw unknownHandle();
+      }
+
+      return fn(lease.record.documentId);
+    });
   }
 
   public async remove(handle: string, principal: string): Promise<Pick<HandleSession, 'close'>> {
@@ -139,23 +175,43 @@ export class SharedHandles implements HandleTable {
     return CLOSED;
   }
 
-  /** Waits for this process's calls; the store and its handles stay for the other processes. */
+  /** Waits for this process's calls, not for a sweep; the store and its handles stay for the other processes. */
   public async closeAll(close: (session: HandleSession) => Promise<void>): Promise<void> {
     this.closed = true;
     clearInterval(this.sweeper);
+    clearTimeout(this.sweepLimit);
     await Promise.all([this.options.local.closeAll(close), Promise.allSettled([...this.inFlight])]);
   }
 
+  // One sweep at a time. A sweep past its timeout is given up on, so a hung store cannot stop sweeping for good.
   private sweep(): void {
+    if (this.sweeping) {
+      return;
+    }
+    this.sweeping = true;
+    const limitMs = this.options.sweepTimeoutMs ?? STORE_SWEEP_TIMEOUT_MS;
+    const timedOut = new Promise<void>((resolve) => {
+      this.sweepLimit = setTimeout(() => {
+        console.error(`blok-mcp: sweeping the handle store took longer than ${limitMs} ms`);
+        resolve();
+      }, limitMs);
+      this.sweepLimit.unref();
+    });
     const swept = this.options.store.sweep(this.options.idleMs)
       .catch((thrown: unknown) => console.error('blok-mcp: sweeping the handle store failed', thrown));
 
-    this.inFlight.add(swept);
-    void swept.finally(() => this.inFlight.delete(swept));
+    void Promise.race([swept, timedOut]).finally(() => {
+      clearTimeout(this.sweepLimit);
+      this.sweeping = false;
+    });
   }
 
   /** Runs fn under the handle's lease, after this process's earlier calls on it, for its owner only. */
   private leased<T>(handle: string, principal: string, fn: (lease: BlokMcpHandleLease) => Promise<T>): Promise<T> {
+    // As the in-memory registry: a call that arrives after shutdown began is refused; one queued before still runs.
+    if (this.closed) {
+      return Promise.reject(shuttingDown());
+    }
     if (!HANDLE.test(handle)) {
       return Promise.reject(unknownHandle());
     }
@@ -176,7 +232,9 @@ export class SharedHandles implements HandleTable {
       renewer.unref();
       try {
         // Checked here, not by the store: a store bug must not hand one user's handle to another.
-        if (lease.record.v !== 1 || lease.record.principal !== principal) {
+        const record: unknown = lease.record;
+
+        if (!isObject(record) || record.v !== 1 || record.principal !== principal) {
           throw unknownHandle();
         }
 

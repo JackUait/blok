@@ -22,15 +22,20 @@ All notable changes to this project will be documented in this file.
   - Library: `handleStore` in Node, `BlokMcpOptions.HandleStore` in C#, `Options.HandleStore` in Go, `Hooks::handle_store` in Rust. CLI: `--handle-store memory|files:<dir>`, default `memory`.
   - `files:<dir>` shares handles between processes on one machine. It refuses to start on Windows.
   - Your store must count and add per principal in one atomic step, and fence each lease by its token.
+  - A stored record that cannot be read answers `UNKNOWN_HANDLE`. A call that arrives after shutdown began answers `SOURCE_UNAVAILABLE` "The server is shutting down."
+  - Shutdown never waits for a sweep of the store. A sweep that runs past 30 seconds is logged, and the next one may start.
+  - `--handle-store files:<dir>` makes its directory only after every other start check passed.
+- **MCP errors on a host server** — An unexpected error in a tool call or a prompt request on a host's MCP server answers `-32603` "Blok could not run this call." and goes to the log in full.
+  - Its text never reaches the client. Blok's own protocol errors pass as they are.
+  - In Node, `attach` refuses a host that lists its own tools without `callTool`, or its own prompts without `getPrompt`.
 
 ### Bug Fixes
 
+- **MCP page creator webhook** — In Node, `--create-page` reads at most 64 KiB of the answer. A 200 answer that is not JSON is logged with the start of its body.
 - **MCP failed saves** — In the C# and Rust builds, a stored save that fails no longer keeps the unsaved edits or their undo step in memory.
 - **MCP orphaned pages** — The C#, Go and Rust builds list the pages a failed batch made in `error.details.orphaned`, wherever the batch stopped before writing its parent.
   - A page the parent document still links is left out.
   - A parent save the source refuses still lists nothing.
-- **MCP errors on a host server** — An unexpected error on a host's MCP server answers `-32603` "Blok could not run this call." and goes to the log in full.
-  - Its text never reaches the client. Blok's own protocol errors pass as they are.
 - **MCP stored handle identity** — In the Go and C# builds, a stored handle now acts for the client that opened it, as in Node.
   - Go: every batch writes as the opener's actor. Before, a later call wrote as its own client.
   - C#: pages a batch makes or renames are opened as the opener. Before, they were opened as the current caller.

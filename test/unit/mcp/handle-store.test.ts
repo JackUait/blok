@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -447,6 +447,32 @@ describe('the files handle store', () => {
       await taken.release();
     }
     await held.release();
+  });
+
+  it.each([['not JSON', '{"v":1,'], ['empty', '']])('answers unknown for a record file that is %s, and forgets the handle', async (_label, text) => {
+    const dir = tempDir();
+    const store = createFilesHandleStore(dir);
+
+    await store.tryAdd('h1', record('alice'), 8, 60_000);
+    writeFileSync(join(dir, 'h1.record.json'), text);
+
+    expect(await store.acquire('h1', 60_000, 100)).toBe('unknown');
+    expect(readdirSync(dir).filter((name) => name.startsWith('h1.'))).toEqual([]);
+  });
+
+  it('gives the lease back when a remove fails, so the next acquire need not wait for it to go stale', async () => {
+    const dir = tempDir();
+    const store = createFilesHandleStore(dir);
+
+    await store.tryAdd('h1', record('alice'), 8, 60_000);
+    const lease = await leaseOf(store, 'h1');
+
+    // rm without recursive refuses a directory, so deleting the record fails.
+    rmSync(join(dir, 'h1.record.json'));
+    mkdirSync(join(dir, 'h1.record.json'));
+    await expect(lease.remove()).rejects.toThrow();
+    await lease.release();
+    expect(existsSync(join(dir, 'h1.lease'))).toBe(false);
   });
 
   it('answers unknown for a meta file without its record, as a crashed add leaves', async () => {

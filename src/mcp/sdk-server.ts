@@ -149,6 +149,13 @@ export const assertNoClash = (blok: BlokHandlers, host: HostNames): void => {
  */
 export const attachBlok = (server: SdkServer, blok: BlokHandlers, host: HostSurface = {}): void => {
   assertNoClash(blok, host);
+  // Without the handler, a call to a listed host tool or prompt would reach Blok and answer "Unknown tool".
+  if ((host.tools?.length ?? 0) > 0 && host.callTool === undefined) {
+    throw new Error('The host lists its own tools but passes no callTool to attach()');
+  }
+  if ((host.prompts?.length ?? 0) > 0 && host.getPrompt === undefined) {
+    throw new Error('The host lists its own prompts but passes no getPrompt to attach()');
+  }
   for (const method of BLOK_METHODS) {
     try {
       server.assertCanSetRequestHandler(method);

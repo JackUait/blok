@@ -116,3 +116,13 @@ describe('Blok.Mcp server.json', () => {
       .toEqual(['BLOK_DOC_ENDPOINT_AUTH', 'BLOK_MCP_HOST_TOKEN', 'BLOK_SECRET']);
   });
 });
+
+// 2.1.0 shipped the Go server earlier and the C# and Go MCP builds (CHANGELOG); only Rust has not shipped.
+describe('which builds the READMEs say have shipped', () => {
+  it.each(['packages/mcp/README.md', 'packages/server/README.md'])('%s names Rust as the one MCP build not shipped', (file) => {
+    const text = readFileSync(resolve(ROOT, file), 'utf-8');
+
+    expect(text).not.toContain('No release has shipped them yet.');
+    expect(text).toMatch(/Rust build has not shipped/);
+  });
+});

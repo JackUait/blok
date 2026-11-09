@@ -345,7 +345,15 @@ const normalize = (value: unknown, label: string, rawText = false): unknown => {
   return { ...out, content };
 };
 
-/** Masks every non-null value under these key names, anywhere in the answer. */
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** In a raw body text: each "key":<string or number> becomes "key":"<masked>", the rest stays byte for byte. */
+const maskTextKeys = (text: string, keys: ReadonlySet<string>): string => (keys.size === 0 ? text : text.replace(
+  new RegExp(`"(${[...keys].map(escapeRegExp).join('|')})":(?:"(?:[^"\\\\]|\\\\.)*"|-?\\d[\\d.eE+-]*)`, 'g'),
+  '"$1":"<masked>"',
+));
+
+/** Masks every non-null value under these key names, anywhere in the answer, and in a recorded bodyText. */
 const maskKeys = (value: unknown, keys: ReadonlySet<string>): unknown => {
   if (Array.isArray(value)) {
     return value.map((item) => maskKeys(item, keys));
@@ -354,7 +362,13 @@ const maskKeys = (value: unknown, keys: ReadonlySet<string>): unknown => {
     return value;
   }
 
-  return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, keys.has(key) && inner !== null ? '<masked>' : maskKeys(inner, keys)]));
+  return Object.fromEntries(Object.entries(value).map(([key, inner]) => {
+    if (key === 'bodyText' && typeof inner === 'string') {
+      return [key, maskTextKeys(inner, keys)];
+    }
+
+    return [key, keys.has(key) && inner !== null ? '<masked>' : maskKeys(inner, keys)];
+  }));
 };
 
 const MINTED_ID = /^[A-Za-z0-9_-]{10}$/;

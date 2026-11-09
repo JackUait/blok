@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "ಕ್ಯಾಲೆಂಡರ್‌ನಲ್ಲಿ ತೋರಿಸಲಾಗಿದೆ",
   "tools.database.settingsShownInTimeline": "ಟೈಮ್‌ಲೈನ್‌ನಲ್ಲಿ ತೋರಿಸಲಾಗಿದೆ",
   "tools.database.settingsSearchProperty": "ಗುಣಲಕ್ಷಣವನ್ನು ಹುಡುಕಿ…",
+  "tools.database.settingsEditProperties": "ಗುಣಲಕ್ಷಣಗಳನ್ನು ಸಂಪಾದಿಸಿ",
+  "tools.database.settingsNewProperty": "ಹೊಸ ಗುಣಲಕ್ಷಣ",
   "tools.database.settingsFilter": "ಫಿಲ್ಟರ್ ಮಾಡಿ",
   "tools.database.settingsSort": "ವಿಂಗಡಿಸಿ",
   "tools.database.settingsSource": "ಮೂಲ",

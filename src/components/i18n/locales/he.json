@@ -1193,6 +1193,8 @@
   "tools.database.settingsShownInCalendar": "מוצגים בלוח השנה",
   "tools.database.settingsShownInTimeline": "מוצגים בציר הזמן",
   "tools.database.settingsSearchProperty": "חיפוש מאפיין…",
+  "tools.database.settingsEditProperties": "ערוך מאפיינים",
+  "tools.database.settingsNewProperty": "מאפיין חדש",
   "tools.database.settingsFilter": "סנן",
   "tools.database.settingsSort": "מיין",
   "tools.database.settingsSource": "מקור",

@@ -1196,6 +1196,8 @@
   "tools.database.settingsShownInCalendar": "Показаны в календаре",
   "tools.database.settingsShownInTimeline": "Показаны в хронологии",
   "tools.database.settingsSearchProperty": "Поиск свойства…",
+  "tools.database.settingsEditProperties": "Изменить свойства",
+  "tools.database.settingsNewProperty": "Новое свойство",
   "tools.database.settingsFilter": "Фильтровать",
   "tools.database.settingsSort": "Сортировать",
   "tools.database.settingsSource": "Источник",

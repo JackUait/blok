@@ -1193,6 +1193,8 @@
   "tools.database.settingsShownInCalendar": "Prikazano u kalendaru",
   "tools.database.settingsShownInTimeline": "Prikazano na vremenskoj liniji",
   "tools.database.settingsSearchProperty": "Pretražite svojstvo…",
+  "tools.database.settingsEditProperties": "Uredi svojstva",
+  "tools.database.settingsNewProperty": "Novo svojstvo",
   "tools.database.settingsFilter": "Filtriraj",
   "tools.database.settingsSort": "Sortiraj",
   "tools.database.settingsSource": "Izvor",

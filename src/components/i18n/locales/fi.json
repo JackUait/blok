@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Näytetään kalenterissa",
   "tools.database.settingsShownInTimeline": "Näytetään aikajanalla",
   "tools.database.settingsSearchProperty": "Etsi ominaisuutta…",
+  "tools.database.settingsEditProperties": "Muokkaa ominaisuuksia",
+  "tools.database.settingsNewProperty": "Uusi ominaisuus",
   "tools.database.settingsFilter": "Suodata",
   "tools.database.settingsSort": "Lajittele",
   "tools.database.settingsSource": "Lähde",

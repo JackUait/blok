@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Εμφανίζονται στο ημερολόγιο",
   "tools.database.settingsShownInTimeline": "Εμφανίζονται στο χρονολόγιο",
   "tools.database.settingsSearchProperty": "Αναζήτηση ιδιότητας…",
+  "tools.database.settingsEditProperties": "Επεξεργασία ιδιοτήτων",
+  "tools.database.settingsNewProperty": "Νέα ιδιότητα",
   "tools.database.settingsFilter": "Φιλτράρισμα",
   "tools.database.settingsSort": "Ταξινόμηση",
   "tools.database.settingsSource": "Πηγή",

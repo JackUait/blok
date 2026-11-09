@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Ditunjukkan dalam kalendar",
   "tools.database.settingsShownInTimeline": "Ditunjukkan dalam garis masa",
   "tools.database.settingsSearchProperty": "Cari sifat…",
+  "tools.database.settingsEditProperties": "Sunting sifat",
+  "tools.database.settingsNewProperty": "Sifat baharu",
   "tools.database.settingsFilter": "Tapis",
   "tools.database.settingsSort": "Isih",
   "tools.database.settingsSource": "Sumber",

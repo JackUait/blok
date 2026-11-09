@@ -382,6 +382,27 @@ test.describe('database view settings', () => {
     expect(first.width).toBe(274);
   });
 
+  // research/10 L16 and research/35 L197: a property opens its Edit property panel; New property asks for a name and a type.
+  test('Edit properties opens a property\'s editor and New property', async ({ page }) => {
+    await mount(page, blocks());
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-edit-properties').click();
+    await expect(byTestId(page, 'database-edit-properties-search')).toBeFocused();
+    await byTestId(page, 'database-edit-property-p-amount').click();
+
+    await expect(byTestId(page, 'database-view-settings')).toBeHidden();
+    await expect(page.getByRole('textbox', { name: 'Property name' })).toHaveValue('Amount');
+    await page.keyboard.press('Escape');
+
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-edit-properties').click();
+    await byTestId(page, 'database-edit-properties-new').click();
+    const name = page.getByRole('textbox', { name: 'Property name' });
+
+    await expect(name).toBeVisible();
+    await expect(name).toHaveValue('');
+  });
+
   test('Cmd/Ctrl+Alt+T folds every group', async ({ page }) => {
     await mount(page, blocks({ groupBy: 'p-stage' }));
     await page.keyboard.press('ControlOrMeta+Alt+KeyT');

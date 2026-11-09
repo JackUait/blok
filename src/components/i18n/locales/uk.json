@@ -1196,6 +1196,8 @@
   "tools.database.settingsShownInCalendar": "Показано в календарі",
   "tools.database.settingsShownInTimeline": "Показано на часовій шкалі",
   "tools.database.settingsSearchProperty": "Шукати властивість…",
+  "tools.database.settingsEditProperties": "Редагувати властивості",
+  "tools.database.settingsNewProperty": "Нова властивість",
   "tools.database.settingsFilter": "Фільтрувати",
   "tools.database.settingsSort": "Сортувати",
   "tools.database.settingsSource": "Джерело",

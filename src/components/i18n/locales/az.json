@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Təqvimdə göstərilir",
   "tools.database.settingsShownInTimeline": "Zaman xəttində göstərilir",
   "tools.database.settingsSearchProperty": "Xüsusiyyət axtar…",
+  "tools.database.settingsEditProperties": "Xüsusiyyətləri redaktə et",
+  "tools.database.settingsNewProperty": "Yeni xüsusiyyət",
   "tools.database.settingsFilter": "Filtrlə",
   "tools.database.settingsSort": "Sırala",
   "tools.database.settingsSource": "Mənbə",

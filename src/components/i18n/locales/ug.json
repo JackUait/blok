@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "كالېنداردا كۆرسىتىلگەن",
   "tools.database.settingsShownInTimeline": "ۋاقىت ئوقىدا كۆرسىتىلگەن",
   "tools.database.settingsSearchProperty": "خاسلىق ئىزدەش…",
+  "tools.database.settingsEditProperties": "خاسلىقلارنى تەھرىرلەش",
+  "tools.database.settingsNewProperty": "يېڭى خاسلىق",
   "tools.database.settingsFilter": "سۈزۈش",
   "tools.database.settingsSort": "رەتلەش",
   "tools.database.settingsSource": "مەنبە",

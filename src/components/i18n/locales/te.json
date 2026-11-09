@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "క్యాలెండర్‌లో చూపినవి",
   "tools.database.settingsShownInTimeline": "టైమ్‌లైన్‌లో చూపినవి",
   "tools.database.settingsSearchProperty": "ప్రాపర్టీ కోసం వెతకండి…",
+  "tools.database.settingsEditProperties": "ప్రాపర్టీలను సవరించు",
+  "tools.database.settingsNewProperty": "కొత్త ప్రాపర్టీ",
   "tools.database.settingsFilter": "ఫిల్టర్ చేయి",
   "tools.database.settingsSort": "క్రమబద్ధీకరించు",
   "tools.database.settingsSource": "మూలం",

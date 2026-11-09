@@ -1,4 +1,4 @@
-import { IconBolt, IconCalendar, IconCheck, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
+import { IconBolt, IconCalendar, IconCheck, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconListBulleted, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -138,6 +138,8 @@ export interface ViewSettingsContext {
   automations?: AutomationSettings;
   /** The host gave `config.ai.autofill`. Without it there is no AI Autofill row. */
   autofill?: AutofillPanelSettings;
+  /** "Edit properties" (research/26 §1a). Without it there is no such row. */
+  editProperties?: EditPropertiesSettings;
   /** "Undo … database" on a Tasks or Skills database, "Turn into" on any other (research/33 §3.10). */
   starterRow?: () => StarterRow | undefined;
   /** The database's data sources. With only one, the Source row is greyed (research/09 §1). */
@@ -175,6 +177,16 @@ export interface AutofillPanelSettings {
   writable: () => boolean;
   /** Opens the property's AI Autofill setup. The panel is closed first. */
   open: (propertyId: string) => void;
+}
+
+export interface EditPropertiesSettings {
+  /** The saved schema, localized, in its order. */
+  properties: () => PropertyDefinition[];
+  writable: () => boolean;
+  /** Opens the property's Edit property panel. The panel is closed first. */
+  edit: (propertyId: string) => void;
+  /** Opens the new property's name and type picker. The panel is closed first. */
+  add: () => void;
 }
 
 /** Database-level sub-item and dependency settings (research/05 §11). */
@@ -414,6 +426,21 @@ export class ViewSettingsPages {
             opensPage: true,
             disabled: !this.shared || others.length === 0,
             onClick: () => panel.push(this.sourcePicker(sources)),
+          }));
+        }
+        const editProperties = this.ctx.editProperties;
+
+        // research/28 L131: a map's settings have no Edit properties row.
+        if (editProperties !== undefined && !isMap) {
+          rows.push(panelRow({
+            label: this.t('settingsEditProperties'),
+            testId: 'database-settings-edit-properties',
+            icon: IconListBulleted,
+            opensPage: true,
+            disabled: !editProperties.writable(),
+            onClick: () => {
+              if (editProperties.writable()) panel.push(this.editPropertiesPage(editProperties));
+            },
           }));
         }
         const automations = this.ctx.automations;
@@ -1191,6 +1218,71 @@ export class ViewSettingsPages {
     const titleId = view.type === 'feed' ? schema.find((p) => p.type === 'title')?.id : undefined;
 
     return resolveViewProperties(view, schema).filter((entry) => entry.id !== titleId);
+  }
+
+  /**
+   * 33-edit-properties.png, research/35 L196: "Properties", a focused search,
+   * each property (type glyph, name, chevron), then "New property". A feed's
+   * list leaves out the title.
+   */
+  private editPropertiesPage(settings: EditPropertiesSettings): PanelPage {
+    const state = { query: '' };
+    const list = document.createElement('div');
+    const fill = (panel: DatabasePanel): void => {
+      const query = state.query.trim().toLowerCase();
+      const feed = this.ctx.view().type === 'feed';
+      const rows = settings.properties()
+        .filter((property) => !(feed && property.type === 'title') && property.name.toLowerCase().includes(query))
+        .map((property) => panelRow({
+          label: property.name,
+          testId: `database-edit-property-${property.id}`,
+          icon: propertyTypeMeta(property.type).icon,
+          opensPage: true,
+          onClick: () => {
+            panel.close();
+            settings.edit(property.id);
+          },
+        }));
+
+      list.replaceChildren(...(rows.length === 0 ? [panelText(this.ctx.i18n.t('find.noResults'))] : rows));
+    };
+
+    return {
+      title: this.t('propertiesSection'),
+      build: (panel) => {
+        const search = panelInput({
+          value: state.query,
+          placeholder: this.t('settingsSearchProperty'),
+          label: this.t('settingsSearchProperty'),
+          testId: 'database-edit-properties-search',
+          // Only the list redraws, so the field keeps its caret.
+          onInput: (value) => {
+            state.query = value;
+            fill(panel);
+          },
+        });
+
+        search.autofocus = true;
+        list.setAttribute('data-blok-database-picker-list', '');
+        fill(panel);
+
+        return [
+          search,
+          list,
+          panelSeparator(),
+          panelRow({
+            label: this.t('settingsNewProperty'),
+            testId: 'database-edit-properties-new',
+            icon: IconPlus,
+            muted: true,
+            onClick: () => {
+              panel.close();
+              settings.add();
+            },
+          }),
+        ];
+      },
+    };
   }
 
   properties(): PanelPage {

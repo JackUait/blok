@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Takvimde gösterilenler",
   "tools.database.settingsShownInTimeline": "Zaman çizelgesinde gösterilenler",
   "tools.database.settingsSearchProperty": "Bir özellik arayın…",
+  "tools.database.settingsEditProperties": "Özellikleri düzenle",
+  "tools.database.settingsNewProperty": "Yeni özellik",
   "tools.database.settingsFilter": "Filtrele",
   "tools.database.settingsSort": "Sırala",
   "tools.database.settingsSource": "Kaynak",

@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "पात्रोमा देखाइएका",
   "tools.database.settingsShownInTimeline": "समयरेखामा देखाइएका",
   "tools.database.settingsSearchProperty": "गुण खोज्नुहोस्…",
+  "tools.database.settingsEditProperties": "गुणहरू सम्पादन गर्नुहोस्",
+  "tools.database.settingsNewProperty": "नयाँ गुण",
   "tools.database.settingsFilter": "फिल्टर गर्नुहोस्",
   "tools.database.settingsSort": "क्रमबद्ध गर्नुहोस्",
   "tools.database.settingsSource": "स्रोत",

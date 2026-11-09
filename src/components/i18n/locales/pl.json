@@ -1196,6 +1196,8 @@
   "tools.database.settingsShownInCalendar": "Widoczne w kalendarzu",
   "tools.database.settingsShownInTimeline": "Widoczne na osi czasu",
   "tools.database.settingsSearchProperty": "Wyszukaj właściwość…",
+  "tools.database.settingsEditProperties": "Edytuj właściwości",
+  "tools.database.settingsNewProperty": "Nowa właściwość",
   "tools.database.settingsFilter": "Filtruj",
   "tools.database.settingsSort": "Sortuj",
   "tools.database.settingsSource": "Źródło",

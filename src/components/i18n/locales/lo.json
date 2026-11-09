@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "ສະແດງໃນປະຕິທິນ",
   "tools.database.settingsShownInTimeline": "ສະແດງໃນເສັ້ນເວລາ",
   "tools.database.settingsSearchProperty": "ຄົ້ນຫາຄຸນສົມບັດ…",
+  "tools.database.settingsEditProperties": "ແກ້ໄຂຄຸນສົມບັດ",
+  "tools.database.settingsNewProperty": "ຄຸນສົມບັດໃໝ່",
   "tools.database.settingsFilter": "ກອງ",
   "tools.database.settingsSort": "ຈັດຮຽງ",
   "tools.database.settingsSource": "ແຫຼ່ງ",

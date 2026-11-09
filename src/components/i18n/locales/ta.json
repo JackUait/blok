@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "நாட்காட்டியில் காட்டப்படுபவை",
   "tools.database.settingsShownInTimeline": "காலவரிசையில் காட்டப்படுபவை",
   "tools.database.settingsSearchProperty": "பண்பைத் தேடு…",
+  "tools.database.settingsEditProperties": "பண்புகளைத் திருத்து",
+  "tools.database.settingsNewProperty": "புதிய பண்பு",
   "tools.database.settingsFilter": "வடிகட்டு",
   "tools.database.settingsSort": "வரிசைப்படுத்து",
   "tools.database.settingsSource": "மூலம்",

@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "კალენდარში ნაჩვენები",
   "tools.database.settingsShownInTimeline": "დროის ხაზზე ნაჩვენები",
   "tools.database.settingsSearchProperty": "თვისების ძიება…",
+  "tools.database.settingsEditProperties": "თვისებების რედაქტირება",
+  "tools.database.settingsNewProperty": "ახალი თვისება",
   "tools.database.settingsFilter": "გაფილტვრა",
   "tools.database.settingsSort": "დალაგება",
   "tools.database.settingsSource": "წყარო",

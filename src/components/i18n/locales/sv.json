@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Visas i kalendern",
   "tools.database.settingsShownInTimeline": "Visas på tidslinjen",
   "tools.database.settingsSearchProperty": "Sök efter en egenskap…",
+  "tools.database.settingsEditProperties": "Redigera egenskaper",
+  "tools.database.settingsNewProperty": "Ny egenskap",
   "tools.database.settingsFilter": "Filtrera",
   "tools.database.settingsSort": "Sortera",
   "tools.database.settingsSource": "Källa",

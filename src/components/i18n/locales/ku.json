@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "پیشاندراو لە ساڵنامە",
   "tools.database.settingsShownInTimeline": "پیشاندراو لە هێڵی کات",
   "tools.database.settingsSearchProperty": "گەڕان بۆ تایبەتمەندییەک…",
+  "tools.database.settingsEditProperties": "دەستکاریکردنی تایبەتمەندییەکان",
+  "tools.database.settingsNewProperty": "تایبەتمەندیی نوێ",
   "tools.database.settingsFilter": "فلتەرکردن",
   "tools.database.settingsSort": "ڕیزکردن",
   "tools.database.settingsSource": "سەرچاوە",

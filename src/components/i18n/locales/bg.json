@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Показани в календара",
   "tools.database.settingsShownInTimeline": "Показани във времевата линия",
   "tools.database.settingsSearchProperty": "Търсене на свойство…",
+  "tools.database.settingsEditProperties": "Редактирай свойствата",
+  "tools.database.settingsNewProperty": "Ново свойство",
   "tools.database.settingsFilter": "Филтрирай",
   "tools.database.settingsSort": "Сортирай",
   "tools.database.settingsSource": "Източник",

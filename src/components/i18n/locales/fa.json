@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "نمایش‌داده‌شده در تقویم",
   "tools.database.settingsShownInTimeline": "نمایش‌داده‌شده در خط زمانی",
   "tools.database.settingsSearchProperty": "جستجوی ویژگی…",
+  "tools.database.settingsEditProperties": "ویرایش ویژگی‌ها",
+  "tools.database.settingsNewProperty": "ویژگی جدید",
   "tools.database.settingsFilter": "فیلتر",
   "tools.database.settingsSort": "مرتب‌سازی",
   "tools.database.settingsSource": "منبع",

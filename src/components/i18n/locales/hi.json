@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "कैलेंडर में दिखाए गए",
   "tools.database.settingsShownInTimeline": "टाइमलाइन में दिखाए गए",
   "tools.database.settingsSearchProperty": "कोई प्रॉपर्टी खोजें…",
+  "tools.database.settingsEditProperties": "प्रॉपर्टीज़ संपादित करें",
+  "tools.database.settingsNewProperty": "नई प्रॉपर्टी",
   "tools.database.settingsFilter": "फ़िल्टर करें",
   "tools.database.settingsSort": "क्रमबद्ध करें",
   "tools.database.settingsSource": "स्रोत",

@@ -1196,6 +1196,8 @@
   "tools.database.settingsShownInCalendar": "Zobrazené v kalendári",
   "tools.database.settingsShownInTimeline": "Zobrazené na časovej osi",
   "tools.database.settingsSearchProperty": "Hľadať vlastnosť…",
+  "tools.database.settingsEditProperties": "Upraviť vlastnosti",
+  "tools.database.settingsNewProperty": "Nová vlastnosť",
   "tools.database.settingsFilter": "Filtrovať",
   "tools.database.settingsSort": "Zoradiť",
   "tools.database.settingsSource": "Zdroj",

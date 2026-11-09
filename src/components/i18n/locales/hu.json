@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "A naptárban látható",
   "tools.database.settingsShownInTimeline": "Az idővonalon látható",
   "tools.database.settingsSearchProperty": "Tulajdonság keresése…",
+  "tools.database.settingsEditProperties": "Tulajdonságok szerkesztése",
+  "tools.database.settingsNewProperty": "Új tulajdonság",
   "tools.database.settingsFilter": "Szűrés",
   "tools.database.settingsSort": "Rendezés",
   "tools.database.settingsSource": "Forrás",

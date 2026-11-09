@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Ditampilkan di kalender",
   "tools.database.settingsShownInTimeline": "Ditampilkan di linimasa",
   "tools.database.settingsSearchProperty": "Cari properti…",
+  "tools.database.settingsEditProperties": "Edit properti",
+  "tools.database.settingsNewProperty": "Properti baru",
   "tools.database.settingsFilter": "Filter",
   "tools.database.settingsSort": "Urutkan",
   "tools.database.settingsSource": "Sumber",

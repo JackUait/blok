@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "在日历中显示",
   "tools.database.settingsShownInTimeline": "在时间线中显示",
   "tools.database.settingsSearchProperty": "搜索属性…",
+  "tools.database.settingsEditProperties": "编辑属性",
+  "tools.database.settingsNewProperty": "新建属性",
   "tools.database.settingsFilter": "筛选",
   "tools.database.settingsSort": "排序",
   "tools.database.settingsSource": "来源",

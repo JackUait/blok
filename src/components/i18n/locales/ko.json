@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "캘린더에 표시됨",
   "tools.database.settingsShownInTimeline": "타임라인에 표시됨",
   "tools.database.settingsSearchProperty": "속성 검색…",
+  "tools.database.settingsEditProperties": "속성 편집",
+  "tools.database.settingsNewProperty": "새 속성",
   "tools.database.settingsFilter": "필터",
   "tools.database.settingsSort": "정렬",
   "tools.database.settingsSource": "소스",

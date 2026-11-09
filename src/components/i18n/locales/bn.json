@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "ক্যালেন্ডারে দেখানো",
   "tools.database.settingsShownInTimeline": "টাইমলাইনে দেখানো",
   "tools.database.settingsSearchProperty": "একটি বৈশিষ্ট্য খুঁজুন…",
+  "tools.database.settingsEditProperties": "বৈশিষ্ট্যগুলি সম্পাদনা করুন",
+  "tools.database.settingsNewProperty": "নতুন বৈশিষ্ট্য",
   "tools.database.settingsFilter": "ফিল্টার করুন",
   "tools.database.settingsSort": "সাজান",
   "tools.database.settingsSource": "সোর্স",

@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Ipinapakita sa kalendaryo",
   "tools.database.settingsShownInTimeline": "Ipinapakita sa linya ng panahon",
   "tools.database.settingsSearchProperty": "Maghanap ng property…",
+  "tools.database.settingsEditProperties": "I-edit ang mga property",
+  "tools.database.settingsNewProperty": "Bagong property",
   "tools.database.settingsFilter": "I-filter",
   "tools.database.settingsSort": "I-sort",
   "tools.database.settingsSource": "Pinagmulan",

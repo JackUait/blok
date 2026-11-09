@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Shown in calendar",
   "tools.database.settingsShownInTimeline": "Shown in timeline",
   "tools.database.settingsSearchProperty": "Search for a property…",
+  "tools.database.settingsEditProperties": "Edit properties",
+  "tools.database.settingsNewProperty": "New property",
   "tools.database.settingsFilter": "Filter",
   "tools.database.settingsSort": "Sort",
   "tools.database.settingsSource": "Source",

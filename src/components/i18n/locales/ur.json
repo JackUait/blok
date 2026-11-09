@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "کیلنڈر میں دکھائی گئیں",
   "tools.database.settingsShownInTimeline": "ٹائم لائن میں دکھائی گئیں",
   "tools.database.settingsSearchProperty": "پراپرٹی تلاش کریں…",
+  "tools.database.settingsEditProperties": "پراپرٹیز میں ترمیم کریں",
+  "tools.database.settingsNewProperty": "نئی پراپرٹی",
   "tools.database.settingsFilter": "فلٹر کریں",
   "tools.database.settingsSort": "ترتیب دیں",
   "tools.database.settingsSource": "ماخذ",

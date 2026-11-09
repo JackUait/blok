@@ -14,7 +14,7 @@ import { openAdvancedFilter, openViewSettings } from './database-view-settings-p
 import { openFilterChip } from './database-filter-chip';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
 import { onHover } from '../../components/utils/tooltip';
-import type { AutofillPanelSettings, DataSourceSettings, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
+import type { AutofillPanelSettings, DataSourceSettings, EditPropertiesSettings, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
 import { GROUPABLE_TYPES, groupByChange } from './group-keys';
@@ -81,6 +81,11 @@ export interface ViewControlsHost {
   automations?: AutomationSettings;
   /** AI Autofill: only when the host gave `config.ai.autofill`. */
   autofill?: AutofillPanelSettings;
+  /** View settings "Edit properties": each editor opens under `anchor`, the control that opened the panel. */
+  editProperties?: Omit<EditPropertiesSettings, 'edit' | 'add'> & {
+    edit: (propertyId: string, anchor: HTMLElement) => void;
+    add: (anchor: HTMLElement) => void;
+  };
   starterRow?: () => StarterRow | undefined;
   /** View settings "Source". */
   dataSources?: DataSourceSettings;
@@ -474,7 +479,7 @@ export class DatabaseViewControls {
 
   openSettings(anchor: HTMLElement, start: ViewSettingsStart): void {
     this.panel?.close();
-    this.panel = openViewSettings(anchor, this.settingsContext(), start, (escape) => this.panelClosed(anchor, escape));
+    this.panel = openViewSettings(anchor, this.settingsContext(anchor), start, (escape) => this.panelClosed(anchor, escape));
     anchor.setAttribute('data-popover-open', '');
   }
 
@@ -521,7 +526,10 @@ export class DatabaseViewControls {
     this.refresh();
   }
 
-  private settingsContext(): ViewSettingsContext {
+  /** `anchor`: the control that opened view settings; editors the panel hands off to open under it. */
+  private settingsContext(anchor?: HTMLElement): ViewSettingsContext {
+    const editProperties = this.host.editProperties;
+
     return {
       i18n: this.host.i18n,
       view: () => this.view() ?? this.emptyView(),
@@ -550,6 +558,14 @@ export class DatabaseViewControls {
       ...(this.host.customizeLayout !== undefined ? { customizeLayout: this.host.customizeLayout } : {}),
       ...(this.host.automations !== undefined ? { automations: this.host.automations } : {}),
       ...(this.host.autofill !== undefined ? { autofill: this.host.autofill } : {}),
+      ...(editProperties !== undefined && anchor !== undefined ? {
+        editProperties: {
+          properties: editProperties.properties,
+          writable: editProperties.writable,
+          edit: (propertyId: string) => editProperties.edit(propertyId, anchor),
+          add: () => editProperties.add(anchor),
+        },
+      } : {}),
       ...(this.host.starterRow !== undefined ? { starterRow: this.host.starterRow } : {}),
       ...(this.host.dataSources !== undefined ? { dataSources: this.host.dataSources } : {}),
       ...(this.host.structure !== undefined ? { structure: this.host.structure } : {}),

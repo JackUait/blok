@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "カレンダーに表示",
   "tools.database.settingsShownInTimeline": "タイムラインに表示",
   "tools.database.settingsSearchProperty": "プロパティを検索…",
+  "tools.database.settingsEditProperties": "プロパティを編集",
+  "tools.database.settingsNewProperty": "新しいプロパティ",
   "tools.database.settingsFilter": "フィルター",
   "tools.database.settingsSort": "並べ替え",
   "tools.database.settingsSource": "ソース",

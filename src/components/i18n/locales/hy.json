@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Ցուցադրված օրացույցում",
   "tools.database.settingsShownInTimeline": "Ցուցադրված ժամանակագծում",
   "tools.database.settingsSearchProperty": "Որոնել հատկություն…",
+  "tools.database.settingsEditProperties": "Խմբագրել հատկությունները",
+  "tools.database.settingsNewProperty": "Նոր հատկություն",
   "tools.database.settingsFilter": "Ֆիլտրել",
   "tools.database.settingsSort": "Տեսակավորել",
   "tools.database.settingsSource": "Աղբյուր",

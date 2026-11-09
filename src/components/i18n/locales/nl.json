@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Zichtbaar in kalender",
   "tools.database.settingsShownInTimeline": "Zichtbaar in tijdlijn",
   "tools.database.settingsSearchProperty": "Een eigenschap zoeken…",
+  "tools.database.settingsEditProperties": "Eigenschappen bewerken",
+  "tools.database.settingsNewProperty": "Nieuwe eigenschap",
   "tools.database.settingsFilter": "Filteren",
   "tools.database.settingsSort": "Sorteren",
   "tools.database.settingsSource": "Bron",

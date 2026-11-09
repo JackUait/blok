@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "ކަލަންޑަރުގައި ދައްކާ",
   "tools.database.settingsShownInTimeline": "ޓައިމްލައިނުގައި ދައްކާ",
   "tools.database.settingsSearchProperty": "ޕްރޮޕަރޓީއެއް ހޯދާ…",
+  "tools.database.settingsEditProperties": "ޕްރޮޕަރޓީތައް ބަދަލުކުރޭ",
+  "tools.database.settingsNewProperty": "އައު ޕްރޮޕަރޓީ",
   "tools.database.settingsFilter": "ފިލްޓަރުކުރޭ",
   "tools.database.settingsSort": "ތަރުތީބުކުރޭ",
   "tools.database.settingsSource": "ސޯސް",

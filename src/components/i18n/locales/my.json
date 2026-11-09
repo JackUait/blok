@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "ပြက္ခဒိန်တွင် ပြထားသည်",
   "tools.database.settingsShownInTimeline": "အချိန်လိုင်းတွင် ပြထားသည်",
   "tools.database.settingsSearchProperty": "ဂုဏ်သတ္တိ ရှာပါ…",
+  "tools.database.settingsEditProperties": "ဂုဏ်သတ္တိများ တည်းဖြတ်ရန်",
+  "tools.database.settingsNewProperty": "ဂုဏ်သတ္တိ အသစ်",
   "tools.database.settingsFilter": "စစ်ထုတ်ရန်",
   "tools.database.settingsSort": "စီရန်",
   "tools.database.settingsSource": "ရင်းမြစ်",

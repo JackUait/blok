@@ -1196,6 +1196,8 @@
   "tools.database.settingsShownInCalendar": "Prikazano v koledarju",
   "tools.database.settingsShownInTimeline": "Prikazano na časovnici",
   "tools.database.settingsSearchProperty": "Poiščite lastnost…",
+  "tools.database.settingsEditProperties": "Uredi lastnosti",
+  "tools.database.settingsNewProperty": "Nova lastnost",
   "tools.database.settingsFilter": "Filtriraj",
   "tools.database.settingsSort": "Razvrsti",
   "tools.database.settingsSource": "Vir",

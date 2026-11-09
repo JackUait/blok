@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "በቀን መቁጠሪያ ውስጥ የሚታዩ",
   "tools.database.settingsShownInTimeline": "በጊዜ መስመር ውስጥ የሚታዩ",
   "tools.database.settingsSearchProperty": "ንብረት ፈልግ…",
+  "tools.database.settingsEditProperties": "ንብረቶችን አርትዕ",
+  "tools.database.settingsNewProperty": "አዲስ ንብረት",
   "tools.database.settingsFilter": "አጣራ",
   "tools.database.settingsSort": "ደርድር",
   "tools.database.settingsSource": "ምንጭ",

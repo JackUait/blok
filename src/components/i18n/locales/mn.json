@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Хуанлид харагдана",
   "tools.database.settingsShownInTimeline": "Цагийн хэлхээст харагдана",
   "tools.database.settingsSearchProperty": "Шинж хайх…",
+  "tools.database.settingsEditProperties": "Шинжүүдийг засах",
+  "tools.database.settingsNewProperty": "Шинэ шинж",
   "tools.database.settingsFilter": "Шүүх",
   "tools.database.settingsSort": "Эрэмбэлэх",
   "tools.database.settingsSource": "Эх сурвалж",

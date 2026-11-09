@@ -1193,6 +1193,8 @@
   "tools.database.settingsShownInCalendar": "Exibidas no calendário",
   "tools.database.settingsShownInTimeline": "Exibidas na linha do tempo",
   "tools.database.settingsSearchProperty": "Pesquisar uma propriedade…",
+  "tools.database.settingsEditProperties": "Editar propriedades",
+  "tools.database.settingsNewProperty": "Nova propriedade",
   "tools.database.settingsFilter": "Filtrar",
   "tools.database.settingsSort": "Classificar",
   "tools.database.settingsSource": "Fonte",

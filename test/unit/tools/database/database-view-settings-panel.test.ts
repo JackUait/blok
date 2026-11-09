@@ -1778,3 +1778,117 @@ describe('view settings panel — AI Autofill', () => {
     expect(open).toHaveBeenCalledWith('notes');
   });
 });
+
+// research/26 §1a L32 (row order), research/35 §2.2 L196-197 and 33-edit-properties.png (the page),
+// research/10 L16 (a property opens its Edit property panel), research/28 L131 (a map has no row).
+describe('view settings: Edit properties', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  const rowIds = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid^="database-settings-"]')]
+    .map((el) => el.getAttribute('data-blok-testid') ?? '');
+
+  const editRowNames = (): Array<string | null> => [...document.querySelectorAll('[data-blok-testid^="database-edit-property-"]')]
+    .map((row) => row.querySelector('[data-blok-database-panel-label]')?.textContent ?? null);
+
+  const withEditProperties = (view: Partial<DatabaseViewConfig> = {}, writable = true): { h: Harness; edit: ReturnType<typeof vi.fn>; add: ReturnType<typeof vi.fn> } => {
+    const h = harness(view);
+    const edit = vi.fn();
+    const add = vi.fn();
+
+    h.ctx.dataSources = { list: () => [{ id: 'db', title: 'Tasks', fits: true }], current: () => 'db', pick: vi.fn() };
+    h.ctx.automations = { read: () => undefined, schema: () => [], views: () => [], writable: () => true, write: () => true };
+    h.ctx.editProperties = { properties: () => schema, writable: () => writable, edit, add };
+
+    return { h, edit, add };
+  };
+
+  it('sits between Source and Automations under Data source settings', () => {
+    withEditProperties().h.open();
+    const root = rowIds();
+    const at = root.indexOf('database-settings-edit-properties');
+
+    expect(at).toBeGreaterThan(-1);
+    expect(root[at - 1]).toBe('database-settings-source');
+    expect(root[at + 1]).toBe('database-settings-automations');
+    expect(document.querySelector('[data-blok-testid="database-settings-edit-properties"]')?.textContent).toContain('tools.database.settingsEditProperties');
+  });
+
+  it('has no row without the lever, on a map, or a usable one when the database cannot be written', () => {
+    harness().open();
+    expect(exists('database-settings-edit-properties')).toBe(false);
+    document.body.innerHTML = '';
+
+    withEditProperties({ type: 'map' }).h.open();
+    expect(exists('database-settings-edit-properties')).toBe(false);
+    document.body.innerHTML = '';
+
+    withEditProperties({}, false).h.open();
+    expect(document.querySelector<HTMLButtonElement>('[data-blok-testid="database-settings-edit-properties"]')?.disabled).toBe(true);
+  });
+
+  it('opens "Properties": a focused search, every property in schema order, then New property', () => {
+    withEditProperties().h.open();
+    click('database-settings-edit-properties');
+    const panel = document.querySelector<HTMLElement>('[data-blok-testid="database-view-settings"]');
+    const search = document.querySelector<HTMLInputElement>('[data-blok-testid="database-edit-properties-search"]');
+    const listed = editRowNames();
+
+    expect(panel?.querySelector('[data-blok-database-panel-header]')?.textContent).toContain('tools.database.propertiesSection');
+    expect(search?.placeholder).toBe('tools.database.settingsSearchProperty');
+    expect(search).toHaveFocus();
+    expect(listed).toEqual(['Name', 'Due', 'Amount', 'Stage', 'Progress', 'Owner']);
+    expect(document.querySelector('[data-blok-testid="database-edit-property-due"] [data-blok-database-panel-chevron]')).not.toBeNull();
+    expect(document.querySelector('[data-blok-testid="database-edit-properties-new"]')?.textContent).toContain('tools.database.settingsNewProperty');
+  });
+
+  it('filters by the search, and reads "No results" when nothing matches', () => {
+    withEditProperties().h.open();
+    click('database-settings-edit-properties');
+    const search = document.querySelector<HTMLInputElement>('[data-blok-testid="database-edit-properties-search"]');
+
+    if (search === null) throw new Error('no search');
+    search.value = 'am';
+    search.dispatchEvent(new Event('input'));
+    expect(editRowNames()).toEqual(['Name', 'Amount']);
+
+    search.value = 'zzz';
+    search.dispatchEvent(new Event('input'));
+    expect(document.querySelectorAll('[data-blok-testid^="database-edit-property-"]')).toHaveLength(0);
+    expect(document.querySelector('[data-blok-testid="database-view-settings"]')?.textContent).toContain('find.noResults');
+    expect(search).toHaveFocus();
+  });
+
+  it('leaves the title out of a feed\'s list', () => {
+    withEditProperties({ type: 'feed' }).h.open();
+    click('database-settings-edit-properties');
+
+    expect(exists('database-edit-property-title')).toBe(false);
+    expect(exists('database-edit-property-due')).toBe(true);
+  });
+
+  it('opens a property\'s Edit property panel and New property, closing the panel first', () => {
+    const { h, edit, add } = withEditProperties();
+    const panel = h.open();
+    const close = vi.spyOn(panel, 'close');
+
+    click('database-settings-edit-properties');
+    click('database-edit-property-due');
+
+    expect(edit).toHaveBeenCalledWith('due');
+    expect(close.mock.invocationCallOrder[0]).toBeLessThan(edit.mock.invocationCallOrder[0]);
+
+    const again = h.open();
+
+    click('database-settings-edit-properties');
+    click('database-edit-properties-new');
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(again).toBeDefined();
+  });
+});

@@ -1193,6 +1193,8 @@
   "tools.database.settingsShownInCalendar": "Redzams kalendārā",
   "tools.database.settingsShownInTimeline": "Redzams laika skalā",
   "tools.database.settingsSearchProperty": "Meklēt rekvizītu…",
+  "tools.database.settingsEditProperties": "Rediģēt rekvizītus",
+  "tools.database.settingsNewProperty": "Jauns rekvizīts",
   "tools.database.settingsFilter": "Filtrēt",
   "tools.database.settingsSort": "Kārtot",
   "tools.database.settingsSource": "Avots",

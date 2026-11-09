@@ -6644,6 +6644,14 @@ export class DatabaseTool implements BlockTool {
           },
         },
       }),
+      editProperties: {
+        properties: () => localizeDatabaseSchema(data().model.getSchema(), this.api.i18n),
+        writable: () => !data().destroyed && !data().readOnly && !data().structureLocked() && (context === undefined || context.writable()),
+        // research/10 L16: the same Edit property panel the row page opens.
+        edit: (propertyId: string, anchor: HTMLElement) => data().openPropertyMenu(propertyId, anchor, undefined, context, undefined, { edit: true }),
+        // research/35 L197: New property asks for a name, then a type, as the row page's list does.
+        add: (anchor: HTMLElement) => data().openAddProperty(anchor, undefined, () => undefined, context),
+      },
       ...(context === undefined && !this.linked ? {
         dataSources: {
           list: () => this.dataSourceChoices(),

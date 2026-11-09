@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Të shfaqura në kalendar",
   "tools.database.settingsShownInTimeline": "Të shfaqura në kronologji",
   "tools.database.settingsSearchProperty": "Kërko një veti…",
+  "tools.database.settingsEditProperties": "Ndrysho vetitë",
+  "tools.database.settingsNewProperty": "Veti e re",
   "tools.database.settingsFilter": "Filtro",
   "tools.database.settingsSort": "Rendit",
   "tools.database.settingsSource": "Burimi",

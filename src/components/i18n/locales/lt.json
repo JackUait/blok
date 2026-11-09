@@ -1196,6 +1196,8 @@
   "tools.database.settingsShownInCalendar": "Rodoma kalendoriuje",
   "tools.database.settingsShownInTimeline": "Rodoma laiko juostoje",
   "tools.database.settingsSearchProperty": "Ieškoti savybės…",
+  "tools.database.settingsEditProperties": "Redaguoti savybes",
+  "tools.database.settingsNewProperty": "Nauja savybė",
   "tools.database.settingsFilter": "Filtruoti",
   "tools.database.settingsSort": "Rikiuoti",
   "tools.database.settingsSource": "Šaltinis",

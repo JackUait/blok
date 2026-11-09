@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Zinaonyeshwa kwenye kalenda",
   "tools.database.settingsShownInTimeline": "Zinaonyeshwa kwenye rekodi ya matukio",
   "tools.database.settingsSearchProperty": "Tafuta sifa…",
+  "tools.database.settingsEditProperties": "Hariri sifa",
+  "tools.database.settingsNewProperty": "Sifa mpya",
   "tools.database.settingsFilter": "Chuja",
   "tools.database.settingsSort": "Panga",
   "tools.database.settingsSource": "Chanzo",

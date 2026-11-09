@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "Im Kalender angezeigt",
   "tools.database.settingsShownInTimeline": "In der Zeitleiste angezeigt",
   "tools.database.settingsSearchProperty": "Nach einer Eigenschaft suchen…",
+  "tools.database.settingsEditProperties": "Eigenschaften bearbeiten",
+  "tools.database.settingsNewProperty": "Neue Eigenschaft",
   "tools.database.settingsFilter": "Filtern",
   "tools.database.settingsSort": "Sortieren",
   "tools.database.settingsSource": "Quelle",

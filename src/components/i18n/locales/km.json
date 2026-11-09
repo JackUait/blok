@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "បង្ហាញក្នុងប្រតិទិន",
   "tools.database.settingsShownInTimeline": "បង្ហាញក្នុងបន្ទាត់ពេលវេលា",
   "tools.database.settingsSearchProperty": "ស្វែងរកលក្ខណៈ…",
+  "tools.database.settingsEditProperties": "កែសម្រួលលក្ខណៈ",
+  "tools.database.settingsNewProperty": "លក្ខណៈថ្មី",
   "tools.database.settingsFilter": "ត្រង",
   "tools.database.settingsSort": "តម្រៀប",
   "tools.database.settingsSource": "ប្រភព",

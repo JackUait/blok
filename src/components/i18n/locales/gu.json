@@ -1190,6 +1190,8 @@
   "tools.database.settingsShownInCalendar": "કૅલેન્ડરમાં બતાવેલ",
   "tools.database.settingsShownInTimeline": "સમયરેખામાં બતાવેલ",
   "tools.database.settingsSearchProperty": "ગુણધર્મ શોધો…",
+  "tools.database.settingsEditProperties": "ગુણધર્મો સંપાદિત કરો",
+  "tools.database.settingsNewProperty": "નવો ગુણધર્મ",
   "tools.database.settingsFilter": "ફિલ્ટર કરો",
   "tools.database.settingsSort": "સૉર્ટ કરો",
   "tools.database.settingsSource": "સ્રોત",

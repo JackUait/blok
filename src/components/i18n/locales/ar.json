@@ -1202,6 +1202,8 @@
   "tools.database.settingsShownInCalendar": "معروضة في التقويم",
   "tools.database.settingsShownInTimeline": "معروضة في الخط الزمني",
   "tools.database.settingsSearchProperty": "البحث عن خاصية…",
+  "tools.database.settingsEditProperties": "تعديل الخصائص",
+  "tools.database.settingsNewProperty": "خاصية جديدة",
   "tools.database.settingsFilter": "تصفية",
   "tools.database.settingsSort": "فرز",
   "tools.database.settingsSource": "المصدر",

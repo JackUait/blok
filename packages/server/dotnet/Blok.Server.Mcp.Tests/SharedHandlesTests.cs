@@ -355,9 +355,9 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
     };
 
     await store.TryAddAsync("handle-1", record, 8, TimeSpan.FromMinutes(10), CancellationToken.None);
-    await shared.PeekAsync("handle-1", "alice", _ => Task.Delay(100));
+    // Held until a renewal has started, so the release meets one in flight.
+    await shared.PeekAsync("handle-1", "alice", _ => store.RenewStarted.Task.WaitAsync(TimeSpan.FromSeconds(10)));
 
-    Assert.True(store.Renews >= 1, "never renewed");
     Assert.Equal(0, store.RenewingAtRelease);
     Assert.Equal(1, store.MostRenewsAtOnce);
   }
@@ -428,6 +428,8 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
     internal bool FailRemoves { get; set; }
 
     internal TimeSpan RenewTakes { get; set; }
+
+    internal TaskCompletionSource RenewStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     internal int RenewingAtRelease { get; private set; } = -1;
 
@@ -528,6 +530,7 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
           store.Renews++;
           store.MostRenewsAtOnce = Math.Max(store.MostRenewsAtOnce, now);
         }
+        store.RenewStarted.TrySetResult();
         try
         {
           await Task.Delay(store.RenewTakes, CancellationToken.None);

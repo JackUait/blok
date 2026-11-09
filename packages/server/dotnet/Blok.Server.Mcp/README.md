@@ -77,7 +77,7 @@ app.MapMcp("/mcp").RequireAuthorization();
     context.User?.FindFirst("k:i")?.Value is { } id ? new BlokMcpCallerIdentity(id) : null);
   ```
 
-  With `Caller` set, a registered `IBlokAuthorization` gets the signed-in user with all its claims; `Authorize` gets the principal `Caller` named.
+  With `Caller` set, a registered `IBlokAuthorization` gets the signed-in user with all its claims (a call served as `AnonymousPrincipal` gets that principal only); `Authorize` gets the principal `Caller` named.
   `Caller` and `AnonymousPrincipal` are for `WithBlok` only: `AddBlokMcp` refuses them at registration. An anonymous caller gets the protocol error `-32600` "Blok needs a signed-in caller."; a signed-in caller with no name gets "Blok needs a named caller (sub or NameIdentifier).". `AnonymousPrincipal` serves anonymous callers as that principal instead. They all share it, and its handle limit: pick a name no real user has.
 - Scopes: Blok ignores the user's scope claims, since your server owns sign-in. Make read-only agents in `Authorize`. When `Caller` returns `Scopes`, Blok checks `blok.read` and `blok.write` as the standalone server does.
 - A handle belongs to the caller that opened it. Another principal gets `UNKNOWN_HANDLE`.

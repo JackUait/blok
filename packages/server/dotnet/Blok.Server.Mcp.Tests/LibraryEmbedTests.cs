@@ -48,7 +48,7 @@ public sealed class LibraryEmbedTests : IDisposable
 
   private async Task<(WebApplication App, HttpClient Client)> StartAsync(
       Action<IMcpServerBuilder>? host = null, Action<BlokMcpOptions>? configure = null, ILoggerProvider? logged = null,
-      Action<IServiceCollection>? services = null)
+      Action<IServiceCollection>? services = null, Action<IMcpServerBuilder>? afterBlok = null)
   {
     var builder = WebApplication.CreateSlimBuilder();
 
@@ -86,6 +86,7 @@ public sealed class LibraryEmbedTests : IDisposable
       };
       configure?.Invoke(options);
     });
+    afterBlok?.Invoke(mcp);
     var app = builder.Build();
 
     app.UseTestSignIn();
@@ -604,10 +605,14 @@ public sealed class LibraryEmbedTests : IDisposable
     mcp.AddAuthorizationFilters().WithTools<GuardedHostTools>();
   }
 
-  [Fact]
-  public async Task BloksToolsWorkBesideTheHostsAuthorizationFiltersWhichStillGuardTheHostsTools()
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task BloksToolsWorkBesideTheHostsAuthorizationFiltersWhichStillGuardTheHostsTools(bool filtersFirst)
   {
-    var (app, client) = await StartAsync(host: WithHostAuthorization);
+    var (app, client) = filtersFirst
+        ? await StartAsync(host: WithHostAuthorization)
+        : await StartAsync(host: _ => { }, afterBlok: WithHostAuthorization);
 
     await using (app)
     {
@@ -693,6 +698,29 @@ public sealed class LibraryEmbedTests : IDisposable
       Assert.True((bool?)opened["write"]);
       Assert.Equal("FORBIDDEN", (string?)other["error"]?["code"]);
       Assert.All(rules.Seen, user => Assert.Equal("7", user.FindFirst("mcp:tid")?.Value));
+    }
+  }
+
+  [Fact]
+  public async Task IBlokAuthorizationSeesTheAnonymousPrincipalNotTheUserWhenACallerHookNamesNobody()
+  {
+    var rules = new KbRules();
+    var (app, client) = await StartAsync(
+        configure: options =>
+        {
+          options.Authorize = null;
+          options.AnonymousPrincipal = "guest";
+          options.Caller = (_, _) => ValueTask.FromResult<BlokMcpCallerIdentity?>(null);
+        },
+        services: services => services.AddSingleton<IBlokAuthorization>(rules));
+
+    await using (app)
+    {
+      var refused = await McpTestRpc.ToolAsync(client, "blok_open", new JsonObject { ["documentId"] = "doc" }, claims: KbUser);
+
+      Assert.Equal("FORBIDDEN", (string?)refused["error"]?["code"]);
+      Assert.All(rules.Seen, user => Assert.Equal("guest", user.FindFirst("sub")?.Value));
+      Assert.All(rules.Seen, user => Assert.Null(user.FindFirst("k:i")));
     }
   }
 

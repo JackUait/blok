@@ -221,7 +221,7 @@ public static class BlokMcpServiceCollectionExtensions
     var rules = provider.GetService<IBlokAuthorization>();
     McpAuthorize? hook = authorize is not null
         ? async (principal, documentId, write, token) => await authorize(new BlokMcpAccessRequest(principal, documentId, write), token)
-        : rules is not null ? (principal, documentId, write, token) => AllowedByRulesAsync(rules, provider.GetService<IHttpContextAccessor>(), options.Caller is not null, principal, documentId, write, token) : null;
+        : rules is not null ? (principal, documentId, write, token) => AllowedByRulesAsync(rules, provider.GetService<IHttpContextAccessor>(), options.Caller is not null && principal != options.AnonymousPrincipal, principal, documentId, write, token) : null;
 
     if (options.DocumentSource is not null && (options.FilesDirectory is not null || options.DocumentEndpoint is not null))
     {
@@ -415,7 +415,8 @@ public static class BlokMcpServiceCollectionExtensions
   {
     var signedIn = http?.HttpContext?.User;
     // The host's Caller hook named this request's user from claims Blok cannot read (such as a
-    // custom id claim), so the rules get that user as signed in, with every claim.
+    // custom id claim), so the rules get that user as signed in, with every claim. Not when the
+    // hook named nobody and the call runs as AnonymousPrincipal.
     var user = (callerHook && signedIn?.Identity?.IsAuthenticated == true) || HostUserName(signedIn) == principal
         ? signedIn!
         : new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", principal), new Claim(ClaimTypes.NameIdentifier, principal)], "blok-mcp"));

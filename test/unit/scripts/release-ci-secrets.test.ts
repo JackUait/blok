@@ -60,3 +60,19 @@ describe('release CI secret gate', () => {
     })).toEqual(['BLOK_GITHUB_TOKEN']);
   });
 });
+
+// With a second remote (the dodopizza mirror), `gh secret list` refuses to
+// guess the repository, and the release dies before it publishes.
+describe('release.mjs gh calls', () => {
+  const source = read('scripts/release.mjs');
+
+  it('names the repository on every gh command', () => {
+    const calls = [...source.matchAll(/(?:run|runCapture)\(\s*[`'"](gh [^`'"]*)/g)].map((match) => match[1]);
+
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) {
+      expect(call, call).toContain('-R ${RELEASE_REPO}');
+    }
+    expect(source).toContain("const RELEASE_REPO = 'JackUait/blok';");
+  });
+});

@@ -18,6 +18,9 @@ export const RELEASE_TAG_WORKFLOWS = [
 
 const GO_MODULE_DIRECTORY = 'packages/server/go';
 
+// gh cannot pick a repository when the clone also has the mirror remote.
+const RELEASE_REPO = 'JackUait/blok';
+
 const RUST_WORKSPACE_DIRECTORY = 'packages/server/rust';
 const RUST_RELEASE_FILES = `${RUST_WORKSPACE_DIRECTORY}/Cargo.toml ${RUST_WORKSPACE_DIRECTORY}/Cargo.lock`;
 
@@ -277,7 +280,7 @@ if (isDirectRun) {
   // then BLOK_GITHUB_TOKEN, each reached a tag they could not serve.
   const absentSecrets = missingWorkflowSecrets({
     workflowSources: RELEASE_TAG_WORKFLOWS.map((file) => readFileSync(file, 'utf-8')),
-    existingSecrets: runCapture('gh secret list --json name --jq \'.[].name\'').split('\n').filter(Boolean),
+    existingSecrets: runCapture(`gh secret list -R ${RELEASE_REPO} --json name --jq '.[].name'`).split('\n').filter(Boolean),
   });
 
   if (absentSecrets.length > 0) {
@@ -313,7 +316,7 @@ if (isDirectRun) {
     await waitForSuccessfulCi({
       sha: sourceSha,
       getRuns: (sha) => JSON.parse(runCapture(
-        `gh run list --workflow CI --branch main --event push --commit ${sha} --limit 1 --json status,conclusion`,
+        `gh run list -R ${RELEASE_REPO} --workflow CI --branch main --event push --commit ${sha} --limit 1 --json status,conclusion`,
       )),
       sleep: () => new Promise((resolve) => setTimeout(resolve, 10_000)),
     });
@@ -509,7 +512,7 @@ if (isDirectRun) {
     notesFlag = ` --notes-file ${notesFile}`;
   }
 
-  run(`gh release create ${gitTag} --draft${prereleaseFlag}${notesFlag}`);
+  run(`gh release create ${gitTag} -R ${RELEASE_REPO} --draft${prereleaseFlag}${notesFlag}`);
 
   // Safe to re-run: it skips crates crates.io already has at this version.
   run(`node scripts/publish-rust-crates.mjs ${version}`);

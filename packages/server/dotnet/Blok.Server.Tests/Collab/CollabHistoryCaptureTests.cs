@@ -144,7 +144,7 @@ public sealed partial class CollabHistoryCaptureTests
           [("L1", T0, [(1, T0, "bob"), (2, T0, "agent:bob:cursor"), (3, T0, "carol"), (4, T0, "bob"), (5, T0, null)])],
           Notes: new()
           {
-            [("L1", 2)] = new CollabRecordNote("agent", "cursor", "bob"),
+            [("L1", 2)] = new CollabRecordNote("agent", "bob"),
             [("L1", 4)] = new CollabRecordNote("person"),
           }),
       new("actor kinds follow the actor groups", null,
@@ -153,7 +153,7 @@ public sealed partial class CollabHistoryCaptureTests
           Notes: new()
           {
             [("L1", 1)] = new CollabRecordNote("person"),
-            [("L1", 2)] = new CollabRecordNote("agent", "cursor", "bob"),
+            [("L1", 2)] = new CollabRecordNote("agent", "bob"),
           }),
     ];
 

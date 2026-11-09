@@ -730,15 +730,10 @@ internal static partial class HistoryEndpoint
     return buffer.WrittenSpan.ToArray();
   }
 
-  /// <summary>{id, kind, client?, onBehalfOf?}.</summary>
+  /// <summary>{id, kind, onBehalfOf?}.</summary>
   private static JsonObject ActorKindJson(string id, CollabRecordNote note)
   {
     var json = new JsonObject { ["id"] = id, ["kind"] = note.Kind };
-
-    if (note.Client is { } client)
-    {
-      json["client"] = client;
-    }
 
     if (note.OnBehalfOf is { } person)
     {

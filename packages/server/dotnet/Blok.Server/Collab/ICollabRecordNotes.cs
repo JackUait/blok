@@ -6,13 +6,14 @@ namespace Blok.Server.Collab;
 /// What kind of actor wrote one journal record. Kept beside the journal, never
 /// in it: the journal bytes are shared by every backend and do not change.
 /// </summary>
-/// <param name="Kind">"person" or "agent".</param>
-/// <param name="Client">
-/// An agent's client name, as the agent id carries it (<c>agent:&lt;person&gt;:&lt;client&gt;</c>).
-/// Raw: the host maps it to a brand.
+/// <param name="Kind">
+/// "agent" for a write by Blok's in-process agent executor, "person" for any
+/// other verified actor. A ticket's user is whatever the host minted, so its
+/// text never makes it an agent; a host that mints tickets for agents can
+/// rewrite the kind in its own <see cref="ICollabRecordNotes.WriteAsync"/>.
 /// </param>
 /// <param name="OnBehalfOf">The person an agent acted for, when one is known.</param>
-public sealed record CollabRecordNote(string Kind, string? Client = null, string? OnBehalfOf = null);
+public sealed record CollabRecordNote(string Kind, string? OnBehalfOf = null);
 
 /// <summary>
 /// Optional store for one <see cref="CollabRecordNote"/> per journal record,
@@ -99,14 +100,11 @@ internal static class CollabActorKinds
   internal const string Person = "person";
   internal const string Agent = "agent";
 
-  // src/shared/mcp/actor.ts builds agent:<principal>:<client>, and its
-  // client name never holds a colon, so the last colon splits the two.
-  private const string AgentPrefix = "agent:";
-
   /// <summary>
   /// The note for a record by <paramref name="actorId"/>. Null when no actor
-  /// is known. An in-process agent passes <paramref name="agent"/> and its
-  /// own <paramref name="onBehalfOf"/>, which wins over the id's.
+  /// is known. Only the in-process agent path passes <paramref name="agent"/>:
+  /// the id's text is never read, because a host may mint a person's ticket
+  /// with any id, <c>agent:</c> ones included.
   /// </summary>
   internal static CollabRecordNote? Classify(string? actorId, bool agent = false, string? onBehalfOf = null)
   {
@@ -115,36 +113,9 @@ internal static class CollabActorKinds
       return null;
     }
 
-    string? client = null;
-    string? person = null;
-
-    if (actorId.StartsWith(AgentPrefix, StringComparison.Ordinal))
-    {
-      agent = true;
-      var rest = actorId[AgentPrefix.Length..];
-      var split = rest.LastIndexOf(':');
-
-      if (split >= 0)
-      {
-        person = rest[..split];
-        client = rest[(split + 1)..];
-      }
-    }
-
-    if (!agent)
-    {
-      return new CollabRecordNote(Person);
-    }
-
-    if (!string.IsNullOrEmpty(onBehalfOf))
-    {
-      person = onBehalfOf;
-    }
-
-    return new CollabRecordNote(
-        Agent,
-        string.IsNullOrEmpty(client) ? null : client,
-        string.IsNullOrEmpty(person) ? null : person);
+    return agent
+        ? new CollabRecordNote(Agent, string.IsNullOrEmpty(onBehalfOf) ? null : onBehalfOf)
+        : new CollabRecordNote(Person);
   }
 
   /// <summary>

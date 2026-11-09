@@ -115,9 +115,9 @@ public static class BlokServerBuilderExtensions
   }
 
   /// <summary>
-  /// Keeps a note of who wrote each journal record: a person or an agent,
-  /// the agent's client and the person it acted for. The history routes then
-  /// return actor kinds. Registered as a singleton.
+  /// Keeps a note of who wrote each journal record: an agent of Blok's
+  /// in-process executor and the person it acted for, or a person. The
+  /// history routes then return actor kinds. Registered as a singleton.
   /// </summary>
   /// <remarks>
   /// The note is written right after its record, but not atomically with it:

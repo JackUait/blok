@@ -7,7 +7,7 @@ namespace Blok.Server.Tests.Collab;
 public sealed partial class CollabHistoryManagerTests
 {
   [Fact]
-  public async Task EachJournalledEditLeavesANoteOfItsActorsKind()
+  public async Task EachJournalledEditLeavesANoteOfItsActorsKindNeverReadFromTheIdsText()
   {
     var notes = new InMemoryCollabRecordNotes();
     var manager = ManagerOver(operations, recordNotes: notes);
@@ -19,7 +19,7 @@ public sealed partial class CollabHistoryManagerTests
     var written = await notes.ReadAsync(DocId, Lineage(), default);
 
     Assert.Equal(new CollabRecordNote("person"), written[1]);
-    Assert.Equal(new CollabRecordNote("agent", "claude-code", "alice"), written[2]);
+    Assert.Equal(new CollabRecordNote("person"), written[2]);
     Assert.False(written.ContainsKey(3));
   }
 
@@ -41,7 +41,7 @@ public sealed partial class CollabHistoryManagerTests
         note: CollabActorKinds.Classify("bot-7", agent: true, onBehalfOf: "carol"));
 
     Assert.Equal(CollabEditStatus.Applied, result.Status);
-    Assert.Equal(new CollabRecordNote("agent", null, "carol"), (await notes.ReadAsync(DocId, Lineage(), default))[1]);
+    Assert.Equal(new CollabRecordNote("agent", "carol"), (await notes.ReadAsync(DocId, Lineage(), default))[1]);
   }
 
   [Fact]
@@ -58,7 +58,7 @@ public sealed partial class CollabHistoryManagerTests
 
     Assert.Equal(
         [new CollabActorKind("u1", new CollabRecordNote("person")),
-         new CollabActorKind("agent:u1:cursor", new CollabRecordNote("agent", "cursor", "u1"))],
+         new CollabActorKind("agent:u1:cursor", new CollabRecordNote("person"))],
         withNotes.Versions[0].ActorKinds);
     Assert.Empty(withNotes.Versions[1].ActorKinds!);
     Assert.All(without.Versions, version => Assert.Null(version.ActorKinds));

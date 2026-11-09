@@ -1169,7 +1169,6 @@
               "actor": "agent:bob:cursor",
               "note": {
                 "kind": "agent",
-                "client": "cursor",
                 "onBehalfOf": "bob"
               }
             },
@@ -1213,7 +1212,6 @@
             {
               "id": "agent:bob:cursor",
               "kind": "agent",
-              "client": "cursor",
               "onBehalfOf": "bob"
             }
           ]
@@ -1251,7 +1249,6 @@
               "actor": "agent:bob:cursor",
               "note": {
                 "kind": "agent",
-                "client": "cursor",
                 "onBehalfOf": "bob"
               }
             }
@@ -1284,7 +1281,6 @@
             {
               "id": "agent:bob:cursor",
               "kind": "agent",
-              "client": "cursor",
               "onBehalfOf": "bob"
             }
           ]

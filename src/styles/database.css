@@ -9353,7 +9353,8 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-row-add],
 [data-blok-database-table-row-handle] {
   opacity: 0;
-  transition: opacity 200ms;
+  /* notion-motion.md "Row hover": the 0→1 gutter element fades ease-out, in and out. */
+  transition: opacity 200ms ease-out;
 }
 
 [data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-add],
@@ -9379,8 +9380,10 @@ textarea[data-blok-database-cell-input] {
   width: 24px;
 }
 
+/* Notion's "+" and grip centres sit 75px and 53px before the table, 8px clear of the checkbox slot. */
 [data-blok-database-table-row-handle] {
   width: 18px;
+  margin-inline-end: var(--blok-space-2);
   cursor: grab;
 }
 
@@ -9416,7 +9419,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control-sm);
   opacity: 0;
   cursor: pointer;
-  transition: background-color 200ms ease-out, opacity 200ms;
+  transition: background-color 200ms ease-out, opacity 200ms ease;
 }
 
 /* notion-spec-2 §24.3: 0.7 on row hover, 1 under the pointer or once picked. Header hover is unmeasured and keeps 1. */

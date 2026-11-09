@@ -174,6 +174,18 @@ describe('database table view styles', () => {
       expect(css).not.toContain('[data-blok-database-table-row][aria-selected="true"] > [data-blok-database-table-gutter]');
     });
 
+    // notion-motion.md "Row hover" and "Cell editors": the 0→1 gutter element fades 200ms ease-out both ways (origin 0 0);
+    // the 0→0.7 one (origin 18px 18px, the 36px checkbox slot) keeps ease.
+    it('fades + and ⋮⋮ with ease-out, the checkbox with ease', () => {
+      expect(ruleBody('[data-blok-database-table-row-add]')).toContain('transition: opacity 200ms ease-out');
+      expect(ruleBody(BOX)).toContain('opacity 200ms ease;');
+    });
+
+    // side-by-side-v2 "Gutter glyphs": Notion's "+" centre is 75px and the grip's 53px before the table; Blok's sat 8px closer.
+    it('keeps 8px between ⋮⋮ and the checkbox slot', () => {
+      expect(exactRule('[data-blok-database-table-row-handle]')).toContain('margin-inline-end: var(--blok-space-2)');
+    });
+
     it('sits the 16px box 10px in from the table edge, in a 36px tall gutter', () => {
       expect(ruleBody(BOX)).toContain('margin-inline: var(--blok-space-2-5)');
       expect(ruleBody('[data-blok-database-table-gutter]')).not.toMatch(/padding-inline-end/);

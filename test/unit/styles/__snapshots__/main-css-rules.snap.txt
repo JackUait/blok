@@ -12503,7 +12503,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-row-add], [data-blok-database-table-row-handle] {
   opacity: 0;
-  transition: opacity 200ms;
+  transition: opacity 200ms ease-out;
 }
 
 [data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-add], [data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-handle] {
@@ -12529,6 +12529,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-row-handle] {
   width: 18px;
+  margin-inline-end: var(--blok-space-2);
   cursor: grab;
 }
 
@@ -12559,7 +12560,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control-sm);
   opacity: 0;
   cursor: pointer;
-  transition: background-color 200ms ease-out, opacity 200ms;
+  transition: background-color 200ms ease-out, opacity 200ms ease;
 }
 
 [data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-checkbox]:not(:hover, [aria-checked="true"]) {

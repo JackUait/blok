@@ -584,6 +584,55 @@ suite('collab HTTP routes on a journal', () => {
       },
     );
 
+    it('breaks database edits down by property, schema entry and view with detail=properties', async () => {
+      const title = { id: 'title', name: 'Name', type: 'title', position: 'a' };
+      const status = { id: 'st', name: 'Status', type: 'status', position: 'b' };
+      const view = { id: 'v1', name: 'Table', type: 'table', position: 'a', sorts: [], filters: [] };
+      const database = (schema: object[], views: object[]): object => ({ schema, views, activeViewId: 'v1' });
+      const edit = async (key: string, ops: object[]): Promise<string> => {
+        const answer = await send(base, 'POST', '/sync/doc-database/edit', [[KEY, key]], JSON.stringify({ ops }));
+
+        expect(answer.status).toBe(204);
+
+        return String(answer.headers['blok-doc-lineage']);
+      };
+
+      await edit('d1', [
+        { op: 'insert', id: 'db', block: { type: 'database', data: database([title], [view]) } },
+        { op: 'insert', id: 'r1', parent: 'db', block: { type: 'database-row', data: { properties: { st: 'todo' } } } },
+      ]);
+      await edit('d2', [{ op: 'update', id: 'r1', data: { properties: { st: 'done' } } }]);
+      const dbLineage = await edit('d3', [{ op: 'update', id: 'db', data: database([title, status], [{ ...view, name: 'All' }]) }]);
+
+      type Block = { id: string; properties?: unknown; schema?: unknown; views?: unknown };
+      const read = async (path: string): Promise<Block[][]> =>
+        (JSON.parse((await send(base, 'GET', path)).body) as { changes: { blocks: Block[] }[] }).changes.map((change) => change.blocks);
+
+      const plain = await read(`/sync/doc-database/history/${dbLineage}/3/changes?since=1`);
+
+      expect(plain.flat().map((block) => Object.keys(block).filter((key) => ['properties', 'schema', 'views'].includes(key))))
+        .toEqual([[], []]);
+
+      const detailed = await read(`/sync/doc-database/history/${dbLineage}/3/changes?since=1&detail=properties`);
+
+      expect(detailed.map((blocks) => blocks.map(({ id, properties, schema, views }) => ({ id, properties, schema, views })))).toEqual([
+        [{ id: 'r1', properties: [{ id: 'st', before: 'todo', after: 'done' }], schema: undefined, views: undefined }],
+        [{ id: 'db', properties: undefined, schema: [{ id: 'st', name: 'Status', action: 'created' }], views: [{ id: 'v1', action: 'updated' }] }],
+      ]);
+
+      const ranged = await read('/sync/doc-database/history/changes?from=2000-01-01T00:00:00Z&detail=properties');
+
+      expect(ranged[1].map((block) => block.properties)).toEqual([[{ id: 'st', before: 'todo', after: 'done' }]]);
+    });
+
+    it.each(['detail=', 'detail=all', 'detail=properties&detail=properties'])('refuses ?%s on both changes routes', async (query) => {
+      for (const path of [`/sync/doc-history/history/${lineage}/3/changes?${query}`, `/sync/doc-history/history/changes?${query}`]) {
+        const answer = await send(base, 'GET', path);
+
+        expect([answer.status, answer.body]).toEqual([400, 'detail must be properties\n']);
+      }
+    });
+
     it('restores a point as one journalled edit, needs the key, and dedupes a retry', async () => {
       const missing = await send(base, 'POST', `/sync/doc-history/history/${lineage}/1/restore`);
 

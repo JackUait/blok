@@ -171,6 +171,11 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 		synchttp.Refuse(w, http.StatusBadRequest, "since must be a whole number no greater than the sequence\n")
 		return
 	}
+	detail, ok := queryDetail(r)
+	if !ok {
+		synchttp.Refuse(w, http.StatusBadRequest, badDetail)
+		return
+	}
 	var from uint64
 	if since != nil {
 		from = *since
@@ -189,7 +194,7 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 	size := int64(changesEnvelopeBytes + olderEndBytes)
 	truncated := result.Truncated
 	for index := len(result.Changes) - 1; index >= 0; index-- {
-		row, err := changeRow(result.Changes[index])
+		row, err := changeRow(result.Changes[index], detail)
 		if err != nil {
 			failed(w, r.Context())
 			return
@@ -221,7 +226,9 @@ var changeKinds = map[room.BlockChangeKind]string{
 	room.BlockAdded: "added", room.BlockRemoved: "removed", room.BlockChanged: "changed", room.BlockMoved: "moved",
 }
 
-func changeRow(record room.RecordChanges) ([]byte, error) {
+// changeRow writes one row. With detail, a changed database or row also
+// carries what changed inside its data.
+func changeRow(record room.RecordChanges, detail bool) ([]byte, error) {
 	row := []byte(`{"sequence":`)
 	row = strconv.AppendUint(row, record.Sequence, 10)
 	row = append(row, `,"committedAt":`...)
@@ -261,6 +268,16 @@ func changeRow(record room.RecordChanges) ([]byte, error) {
 			}
 			row = append(row, `,"`+side.name+`":`...)
 			row = append(row, encoded...)
+		}
+		if detail && change.Kind == room.BlockChanged {
+			fields := room.DescribeDatabaseChange(change.Type, change.Before, change.After)
+			if fields.Len() > 0 {
+				encoded, err := docendpoint.Serialize(fields)
+				if err != nil {
+					return nil, err
+				}
+				row = append(append(row, ','), encoded[1:len(encoded)-1]...)
+			}
 		}
 		row = append(row, '}')
 	}

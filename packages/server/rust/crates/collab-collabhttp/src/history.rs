@@ -5,7 +5,7 @@ use blok_auth::User;
 use blok_collab_journal::LineageDeleteOutcome;
 use blok_collab_room::{
     BlockChangeKind, Error, HistoryStatus, MAX_CHANGE_BYTES, MAX_CHANGE_RECORDS, Manager,
-    RecordChanges,
+    RecordChanges, describe_database_change,
 };
 use blok_collab_synchttp::{derive_actor, refuse};
 use blok_collab_workingset::is_lineage;
@@ -24,6 +24,7 @@ mod time;
 const HISTORY_LINEAGE_HEADER: &str = "Blok-History-Lineage";
 const HISTORY_SEQUENCE_HEADER: &str = "Blok-History-Sequence";
 const NO_SUCH_VERSION: &str = "no such version\n";
+const BAD_DETAIL: &str = "detail must be properties\n";
 /// {"changes":[ and ],"truncated":true}.
 const CHANGES_ENVELOPE_BYTES: i64 = 32;
 
@@ -222,6 +223,10 @@ impl Handlers {
                 return;
             }
         };
+        let Ok(detail) = query_detail(&request) else {
+            refuse(&mut response, 400, BAD_DETAIL).await;
+            return;
+        };
         let (rooms, doc, at) = (a.rooms.clone(), a.doc.clone(), lineage.clone());
         let changes = async move {
             rooms
@@ -251,7 +256,7 @@ impl Handlers {
         let mut size = CHANGES_ENVELOPE_BYTES + time::OLDER_END_BYTES;
         let mut truncated = result.truncated;
         for record in result.changes.iter().rev() {
-            let Ok(row) = change_row(record) else {
+            let Ok(row) = change_row(record, detail) else {
                 failed(&request, &mut response).await;
                 return;
             };
@@ -402,7 +407,12 @@ fn change_kind(kind: BlockChangeKind) -> &'static str {
     }
 }
 
-fn change_row(record: &RecordChanges) -> Result<Vec<u8>, blok_collab_docendpoint::Error> {
+/// One changes row. With `detail`, a changed database or row also carries
+/// what changed inside its data.
+fn change_row(
+    record: &RecordChanges,
+    detail: bool,
+) -> Result<Vec<u8>, blok_collab_docendpoint::Error> {
     let mut row = format!(
         r#"{{"sequence":{},"committedAt":{},"actor":"#,
         record.sequence,
@@ -435,6 +445,18 @@ fn change_row(record: &RecordChanges) -> Result<Vec<u8>, blok_collab_docendpoint
             let encoded = blok_collab_docendpoint::serialize(&Value::Object(block.clone()))?;
             row.extend_from_slice(format!(r#","{name}":"#).as_bytes());
             row.extend_from_slice(&encoded);
+        }
+        if detail && change.kind == BlockChangeKind::Changed {
+            let fields = describe_database_change(
+                change.kind_type.as_ref(),
+                change.before.as_ref(),
+                change.after.as_ref(),
+            );
+            if !fields.is_empty() {
+                let encoded = blok_collab_docendpoint::serialize(&Value::Object(fields))?;
+                row.push(b',');
+                row.extend_from_slice(&encoded[1..encoded.len() - 1]);
+            }
         }
         row.push(b'}');
     }
@@ -484,6 +506,16 @@ fn query_number(request: &Request, name: &str) -> Result<Option<u64>, ()> {
     match values.as_slice() {
         [] => Ok(None),
         [value] => parse_uint64_none(value).map(Some).ok_or(()),
+        _ => Err(()),
+    }
+}
+
+/// Absent is Ok(false); only one detail=properties is Ok(true).
+fn query_detail(request: &Request) -> Result<bool, ()> {
+    let raw = request.query();
+    match query_all(raw.strip_prefix('?').unwrap_or(raw), "detail").as_slice() {
+        [] => Ok(false),
+        [value] if value == "properties" => Ok(true),
         _ => Err(()),
     }
 }

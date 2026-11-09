@@ -18,6 +18,7 @@ const (
 	badTime   = "time must be an ISO 8601 time with an offset\n"
 	badRange  = "from and to must be ISO 8601 times with an offset, from no later than to\n"
 	badBefore = "before must be one <lineage>:<sequence>\n"
+	badDetail = "detail must be properties\n"
 	// olderEndBytes is the longest ,"olderEnd":{...} an answer adds.
 	olderEndBytes = 125
 )
@@ -93,6 +94,11 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 		synchttp.Refuse(w, http.StatusBadRequest, badBefore)
 		return
 	}
+	detail, ok := queryDetail(r)
+	if !ok {
+		synchttp.Refuse(w, http.StatusBadRequest, badDetail)
+		return
+	}
 	result, err := a.rooms.ChangesBetween(r.Context(), a.doc, start, end, before, room.MaxChangeRecords, room.MaxChangeBytes)
 	if err != nil {
 		failed(w, r.Context())
@@ -106,7 +112,7 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 	size := int64(changesEnvelopeBytes + olderEndBytes)
 	truncated := result.Truncated
 	for _, record := range result.Records {
-		row, err := changeRow(record.RecordChanges)
+		row, err := changeRow(record.RecordChanges, detail)
 		if err != nil {
 			failed(w, r.Context())
 			return
@@ -198,4 +204,13 @@ func acceptsJSON(r *http.Request) bool {
 		}
 	}
 	return false
+}
+
+// queryDetail: absent is false; only one detail=properties is true.
+func queryDetail(r *http.Request) (bool, bool) {
+	values := dotnet.QueryAll(r.URL.RawQuery, "detail")
+	if len(values) == 0 {
+		return false, true
+	}
+	return true, len(values) == 1 && values[0] == "properties"
 }

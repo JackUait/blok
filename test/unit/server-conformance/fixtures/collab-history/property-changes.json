@@ -1,0 +1,1253 @@
+{
+  "$comment": "CollabDatabaseChanges.Describe as C# answers it. Captured by CollabDatabaseChangesCaptureTests; do not edit by hand. fields are what a changes row adds to one block with detail=properties: properties [{id, before?, after?}] for a database-row, schema [{id, name?, action}] and views [{id, action}] for a database; each left out when empty. A side is left out when the key is absent; null is a value.",
+  "cases": [
+    {
+      "name": "a status change",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "title": [
+              {
+                "text": "Row A"
+              }
+            ],
+            "st": "todo"
+          }
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "title": [
+              {
+                "text": "Row A"
+              }
+            ],
+            "st": "done"
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {
+        "properties": [
+          {
+            "id": "st",
+            "before": "todo",
+            "after": "done"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a title edit",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "title": [
+              {
+                "text": "\u2014"
+              }
+            ]
+          }
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "title": [
+              {
+                "text": "Row A"
+              }
+            ]
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {
+        "properties": [
+          {
+            "id": "title",
+            "before": [
+              {
+                "text": "\u2014"
+              }
+            ],
+            "after": [
+              {
+                "text": "Row A"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a value set for the first time and one cleared",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "title": [],
+            "gone": "x"
+          }
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "title": [],
+            "new": 3
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {
+        "properties": [
+          {
+            "id": "new",
+            "after": 3
+          },
+          {
+            "id": "gone",
+            "before": "x"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a value set to null is not a cleared one",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": "todo"
+          }
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": null
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {
+        "properties": [
+          {
+            "id": "st",
+            "before": "todo",
+            "after": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "several changes keep after\u0027s order, then the cleared ones",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "a": 1,
+            "b": 2,
+            "c": 3,
+            "d": 4
+          }
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "d": 5,
+            "b": 2,
+            "a": 0,
+            "e": 6
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {
+        "properties": [
+          {
+            "id": "d",
+            "before": 4,
+            "after": 5
+          },
+          {
+            "id": "a",
+            "before": 1,
+            "after": 0
+          },
+          {
+            "id": "e",
+            "after": 6
+          },
+          {
+            "id": "c",
+            "before": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "a nested value compares deeply",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "people": [
+              {
+                "id": "u1"
+              }
+            ]
+          }
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "people": [
+              {
+                "id": "u1"
+              },
+              {
+                "id": "u2"
+              }
+            ]
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {
+        "properties": [
+          {
+            "id": "people",
+            "before": [
+              {
+                "id": "u1"
+              }
+            ],
+            "after": [
+              {
+                "id": "u1"
+              },
+              {
+                "id": "u2"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "only other row data changed",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": "todo"
+          }
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": "todo"
+          },
+          "pageId": "p1"
+        },
+        "parent": "db"
+      },
+      "fields": {}
+    },
+    {
+      "name": "a row moved with the same data",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": "todo"
+          }
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": "todo"
+          }
+        },
+        "parent": "db2"
+      },
+      "fields": {}
+    },
+    {
+      "name": "properties that are not an object read as none",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": [
+            1
+          ]
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": "todo"
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {
+        "properties": [
+          {
+            "id": "st",
+            "after": "todo"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an id outside the BMP",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "\uD83D\uDE00": "a",
+            "\u00E9": "x"
+          }
+        },
+        "parent": "db"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "\u00E9": "x",
+            "\uD83D\uDE00": "b"
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {
+        "properties": [
+          {
+            "id": "\uD83D\uDE00",
+            "before": "a",
+            "after": "b"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an added row has no breakdown",
+      "type": "database-row",
+      "before": null,
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": "todo"
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {}
+    },
+    {
+      "name": "a removed row has no breakdown",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": "todo"
+          }
+        },
+        "parent": "db"
+      },
+      "after": null,
+      "fields": {}
+    },
+    {
+      "name": "a property added",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": "st",
+              "name": "Status",
+              "type": "status",
+              "position": "b"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "schema": [
+          {
+            "id": "st",
+            "name": "Status",
+            "action": "created"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a property renamed",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": "st",
+              "name": "Status",
+              "type": "status",
+              "position": "b"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": "st",
+              "name": "Stage",
+              "type": "status",
+              "position": "b"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "schema": [
+          {
+            "id": "st",
+            "name": "Stage",
+            "action": "updated"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a property deleted keeps its old name",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": "st",
+              "name": "Status",
+              "type": "status",
+              "position": "b"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "schema": [
+          {
+            "id": "st",
+            "name": "Status",
+            "action": "deleted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a property type change",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": "st",
+              "name": "Status",
+              "type": "status",
+              "position": "b"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": "st",
+              "name": "Status",
+              "type": "select",
+              "position": "b"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "schema": [
+          {
+            "id": "st",
+            "name": "Status",
+            "action": "updated"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a property moved is an update",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": "st",
+              "name": "Status",
+              "type": "status",
+              "position": "b"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "st",
+              "name": "Status",
+              "type": "status",
+              "position": "b"
+            },
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "c"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "schema": [
+          {
+            "id": "title",
+            "name": "Name",
+            "action": "updated"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a view filter change",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": [
+                {
+                  "propertyId": "st",
+                  "operator": "is",
+                  "value": "done"
+                }
+              ]
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "views": [
+          {
+            "id": "v1",
+            "action": "updated"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a view created and one deleted",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v2",
+              "name": "Board",
+              "type": "board",
+              "position": "b",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "views": [
+          {
+            "id": "v2",
+            "action": "created"
+          },
+          {
+            "id": "v1",
+            "action": "deleted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "missing views read as none",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "views": [
+          {
+            "id": "v1",
+            "action": "created"
+          }
+        ]
+      }
+    },
+    {
+      "name": "schema and views change together",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": "st",
+              "name": "Status",
+              "type": "status",
+              "position": "b"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "All",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "schema": [
+          {
+            "id": "st",
+            "name": "Status",
+            "action": "created"
+          }
+        ],
+        "views": [
+          {
+            "id": "v1",
+            "action": "updated"
+          }
+        ]
+      }
+    },
+    {
+      "name": "entries without a string id are skipped, a repeated id keeps the first",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": 7,
+              "name": "n"
+            },
+            "x",
+            {
+              "id": "st",
+              "name": "A"
+            },
+            {
+              "id": "st",
+              "name": "B"
+            }
+          ],
+          "views": [],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            },
+            {
+              "id": "st",
+              "name": "A"
+            },
+            {
+              "name": "no id"
+            }
+          ],
+          "views": [],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {}
+    },
+    {
+      "name": "a name that is not a string is left out",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "p",
+              "name": 1
+            }
+          ],
+          "views": [],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "p",
+              "name": 2
+            }
+          ],
+          "views": [],
+          "activeViewId": "v1"
+        }
+      },
+      "fields": {
+        "schema": [
+          {
+            "id": "p",
+            "action": "updated"
+          }
+        ]
+      }
+    },
+    {
+      "name": "only the title changed",
+      "type": "database",
+      "before": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1"
+        }
+      },
+      "after": {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "schema": [
+            {
+              "id": "title",
+              "name": "Name",
+              "type": "title",
+              "position": "a"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a",
+              "sorts": [],
+              "filters": []
+            }
+          ],
+          "activeViewId": "v1",
+          "title": "Tasks"
+        }
+      },
+      "fields": {}
+    },
+    {
+      "name": "another block type has no breakdown",
+      "type": "paragraph",
+      "before": {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "a",
+          "properties": {
+            "x": 1
+          }
+        }
+      },
+      "after": {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "b",
+          "properties": {
+            "x": 2
+          }
+        }
+      },
+      "fields": {}
+    },
+    {
+      "name": "a block without data",
+      "type": "database-row",
+      "before": {
+        "id": "r1",
+        "type": "database-row"
+      },
+      "after": {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "properties": {
+            "st": "todo"
+          }
+        },
+        "parent": "db"
+      },
+      "fields": {
+        "properties": [
+          {
+            "id": "st",
+            "after": "todo"
+          }
+        ]
+      }
+    }
+  ]
+}

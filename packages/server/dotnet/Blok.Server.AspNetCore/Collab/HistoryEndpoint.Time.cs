@@ -14,6 +14,7 @@ internal static partial class HistoryEndpoint
   private const string BadTime = "time must be an ISO 8601 time with an offset\n";
   private const string BadRange = "from and to must be ISO 8601 times with an offset, from no later than to\n";
   private const string BadBefore = "before must be one <lineage>:<sequence>\n";
+  private const string BadDetail = "detail must be properties\n";
 
   /// <summary>The longest ,"olderEnd":{...} an answer adds.</summary>
   private const int OlderEndBytes = 125;
@@ -107,6 +108,13 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (!TryQueryDetail(context, out var detail))
+    {
+      await SyncEndpoint.RefuseAsync(context, StatusCodes.Status400BadRequest, BadDetail);
+
+      return;
+    }
+
     var result = await admitted.Rooms.ChangesBetweenAsync(
         admitted.Doc,
         start,
@@ -127,7 +135,7 @@ internal static partial class HistoryEndpoint
 
     foreach (var record in result.Records)
     {
-      var row = ChangeRow(record.Changes);
+      var row = ChangeRow(record.Changes, detail);
       var prefix = Encoding.UTF8.GetBytes($"{{\"lineage\":\"{record.Lineage}\",");
       var lineaged = new byte[prefix.Length + row.Length - 1];
 
@@ -227,6 +235,14 @@ internal static partial class HistoryEndpoint
     value = (text[..colon], sequence);
 
     return true;
+  }
+
+  /// <summary>Absent is false; only one detail=properties is true.</summary>
+  private static bool TryQueryDetail(HttpContext context, out bool detail)
+  {
+    detail = context.Request.Query.TryGetValue("detail", out var values);
+
+    return !detail || (values.Count == 1 && values[0] == "properties");
   }
 
   /// <summary>Some Accept entry is application/json, ignoring case and parameters. */* is a redirect.</summary>

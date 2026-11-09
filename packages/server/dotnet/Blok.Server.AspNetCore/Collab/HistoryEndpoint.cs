@@ -141,6 +141,13 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (!TryQueryDetail(context, out var detail))
+    {
+      await SyncEndpoint.RefuseAsync(context, StatusCodes.Status400BadRequest, BadDetail);
+
+      return;
+    }
+
     var result = await admitted.Rooms.ChangesAsync(
         admitted.Doc,
         point.Lineage,
@@ -162,7 +169,7 @@ internal static partial class HistoryEndpoint
 
     for (var index = result.Changes.Count - 1; index >= 0; index--)
     {
-      var row = ChangeRow(result.Changes[index]);
+      var row = ChangeRow(result.Changes[index], detail);
 
       if (rows.Count > 0 && size + row.Length + 1 > CollabRoomManager.MaxChangeBytes)
       {
@@ -437,8 +444,11 @@ internal static partial class HistoryEndpoint
     EditEndpoint.Expose(context, LineageHeader, SequenceHeader);
   }
 
-  /// <summary>One changes row as UTF-8 JSON.</summary>
-  private static byte[] ChangeRow(CollabRecordChanges record)
+  /// <summary>
+  /// One changes row as UTF-8 JSON. With <paramref name="detail"/>, a changed
+  /// database or row also carries what changed inside its data.
+  /// </summary>
+  private static byte[] ChangeRow(CollabRecordChanges record, bool detail)
   {
     var buffer = new ArrayBufferWriter<byte>();
 
@@ -473,6 +483,23 @@ internal static partial class HistoryEndpoint
         {
           writer.WritePropertyName("after");
           after.WriteTo(writer);
+        }
+
+        if (detail && change.Kind == CollabBlockChangeKind.Changed)
+        {
+          foreach (var (name, value) in CollabDatabaseChanges.Describe(change.Type, change.Before, change.After))
+          {
+            writer.WritePropertyName(name);
+
+            if (value is null)
+            {
+              writer.WriteNullValue();
+            }
+            else
+            {
+              value.WriteTo(writer);
+            }
+          }
         }
 
         writer.WriteEndObject();

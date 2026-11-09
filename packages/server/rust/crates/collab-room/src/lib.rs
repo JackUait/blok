@@ -7,6 +7,7 @@
 mod activity;
 mod cancel;
 mod changes;
+mod database_changes;
 mod error;
 mod history;
 mod historytime;
@@ -28,6 +29,7 @@ pub use changes::{
     BlockChange, BlockChangeKind, RecordChanges, diff_blocks, diff_page, page_fields,
     replay_changes,
 };
+pub use database_changes::describe_database_change;
 pub use error::{Error, PURGE_UNSUPPORTED, is_cancellation, is_transient};
 pub use history::{HistoryChanges, HistoryList, HistoryRead, HistoryStatus};
 pub use historytime::{
@@ -80,6 +82,8 @@ mod csharp_room_a_test;
 mod csharp_room_b_test;
 #[cfg(test)]
 mod csharp_timeline_test;
+#[cfg(test)]
+mod database_changes_test;
 #[cfg(test)]
 mod export_test;
 #[cfg(test)]

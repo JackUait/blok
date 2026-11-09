@@ -10,8 +10,8 @@ use blok_dotnet::{parse_uint64_none, query_all, ticks, time_from_ticks};
 use blok_http::{Request, ResponseWriter};
 
 use super::{
-    CHANGES_ENVELOPE_BYTES, append_millis, blocking, change_row, quoted, write_history_head,
-    write_json,
+    BAD_DETAIL, CHANGES_ENVELOPE_BYTES, append_millis, blocking, change_row, query_detail, quoted,
+    write_history_head, write_json,
 };
 use crate::{Handlers, failed};
 
@@ -101,6 +101,10 @@ impl Handlers {
             refuse(&mut response, 400, BAD_BEFORE).await;
             return;
         };
+        let Ok(detail) = query_detail(&request) else {
+            refuse(&mut response, 400, BAD_DETAIL).await;
+            return;
+        };
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
         let changes = async move {
             rooms
@@ -129,7 +133,7 @@ impl Handlers {
         let mut size = CHANGES_ENVELOPE_BYTES + OLDER_END_BYTES;
         let mut truncated = result.truncated;
         for record in &result.records {
-            let Ok(row) = change_row(&record.changes) else {
+            let Ok(row) = change_row(&record.changes, detail) else {
                 failed(&request, &mut response).await;
                 return;
             };

@@ -400,7 +400,7 @@ export class DatabaseViewControls {
     this.autofillButton.hidden = titleOnly || this.host.autofill === undefined;
     this.autofillButton.disabled = this.host.autofill?.writable() !== true;
     this.searchButton.hidden = (titleOnly || this.host.rowCount() < SEARCH_MIN_ROWS) && this.query === '';
-    this.minimized = this.host.savedView().toolbarMinimized === true;
+    this.minimized = this.host.savedView()?.toolbarMinimized === true;
     this.toolbar.toggleAttribute('data-minimized', this.minimized);
     this.expandButton.hidden = !this.minimized;
     this.renderFilterBar(view);

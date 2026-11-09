@@ -1043,6 +1043,7 @@ export type DatabaseViewSettingKey =
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'showDataSourceTitle' | 'groupByStatus'
   | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'calendarBy' | 'calendarRange' | 'showWeekends'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'
+  | 'toolbarMinimized'
   | 'chartType' | 'chartMeasure' | 'chartSort' | 'chartOmitZero' | 'chartCumulative' | 'chartColor' | 'chartHeight'
   | 'chartGridLines' | 'chartAxisNames' | 'chartDataLabels' | 'chartSmooth' | 'chartGradient' | 'chartCenterValue' | 'chartLegend'
   | 'subItemsDisplay' | 'subItemsFilter'

@@ -3885,6 +3885,17 @@
                               }
                             ]
                           },
+                          "toolbarMinimized": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "The view toolbar is minimized to Expand and settings. Default false."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "tableProperties": {
                             "anyOf": [
                               {

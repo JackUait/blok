@@ -3320,6 +3320,10 @@
                 "type": "boolean",
                 "description": "Timeline: show the table panel. Default false."
               },
+              "toolbarMinimized": {
+                "type": "boolean",
+                "description": "The view toolbar is minimized to Expand and settings. Default false."
+              },
               "tableProperties": {
                 "type": "array",
                 "description": "Timeline table panel columns, apart from the bar properties; array order is column order.",

@@ -276,7 +276,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2060 + 138 + 519 + 4 closure for all 2721 keys', () => {
+  it('rebuilds a disjoint 2060 + 138 + 522 + 4 closure for all 2724 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -290,7 +290,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2721);
+    expect(lifecycle.size).toBe(2724);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -573,7 +573,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -4: the groupSort* keys (see executable-literal).
       // -1: propertyNamePlaceholder (see executable-literal).
       // -1: tools.database.rollupProperty (see executable-literal).
-      'registered-namespace-compatible': 519,
+      // +3: the Filter / Sort pickers' filterByPlaceholder, sortByPlaceholder and filterAddAdvanced, via the tools.database t().
+      'registered-namespace-compatible': 522,
       'catalog-only': 4,
     });
     expect(

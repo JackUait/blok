@@ -11452,6 +11452,28 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink);
   font: inherit;
   outline: none;
+  /* A long list below would squeeze the field under 28px. */
+  flex-shrink: 0;
+}
+
+/* Filter / Sort property picker (notion-motion.md Round 5): only the list scrolls, so the search and the footer stay. */
+[data-blok-database-picker-list] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The border takes 1px of each inset, so the text sits 3px 6px in as Notion's does and focus does not move it. */
+[data-blok-database-picker-search] {
+  padding-block: calc(var(--blok-space-0-75) - var(--blok-border-width-hairline));
+  padding-inline: calc(var(--blok-space-1-5) - var(--blok-border-width-hairline));
+  border: var(--blok-border-width-hairline) solid transparent;
+}
+
+/* The shared field look (field.css): a border, no fill, no ring. */
+input[data-blok-database-picker-search]:focus {
+  border-color: var(--blok-database-table-control-border);
+  background-color: transparent;
 }
 
 /* findings V10 (09-notion-rename-full.png): a 28px glyph tile, then the "View name" field. */

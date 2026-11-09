@@ -14441,6 +14441,24 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink);
   font: inherit;
   outline: none;
+  flex-shrink: 0;
+}
+
+[data-blok-database-picker-list] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+[data-blok-database-picker-search] {
+  padding-block: calc(var(--blok-space-0-75) - var(--blok-border-width-hairline));
+  padding-inline: calc(var(--blok-space-1-5) - var(--blok-border-width-hairline));
+  border: var(--blok-border-width-hairline) solid transparent;
+}
+
+input[data-blok-database-picker-search]:focus {
+  border-color: var(--blok-database-table-control-border);
+  background-color: transparent;
 }
 
 [data-blok-database-view-name-row] {

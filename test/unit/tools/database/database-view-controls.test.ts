@@ -220,6 +220,54 @@ describe('DatabaseViewControls', () => {
     expect(q('database-pick-property-num')?.hasAttribute('data-active')).toBe(false);
   });
 
+  // notion-motion.md Round 5 (filter-field.png), side-by-side-v1 (sort-open.png).
+  it('names the Filter picker search "Filter by…"', () => {
+    setup();
+    click('database-toolbar-filter');
+
+    expect((q('database-filter-picker-search') as HTMLInputElement).placeholder).toBe('tools.database.filterByPlaceholder');
+    expect(q('database-filter-picker-search')?.getAttribute('aria-label')).toBe('tools.database.filterByPlaceholder');
+  });
+
+  it('names the Sort picker search "Sort by…"', () => {
+    setup();
+    click('database-toolbar-sort');
+
+    expect((q('database-sort-picker-search') as HTMLInputElement).placeholder).toBe('tools.database.sortByPlaceholder');
+  });
+
+  // notion-motion.md Round 5: the Filter list's last row is "Add advanced filter", pinned under the scrolling list.
+  it('ends "+ Filter" with "Add advanced filter" under the property list, and it opens the advanced filter', () => {
+    const { saved } = setup();
+
+    click('database-toolbar-filter');
+    const picker = q('database-filter-picker');
+    const list = picker?.querySelector('[data-blok-database-picker-list]');
+    const footer = q('database-filter-picker-advanced');
+
+    expect(footer).not.toBeNull();
+    expect(text(footer)).toBe('tools.database.filterAddAdvanced');
+    expect(list?.contains(footer)).toBe(false);
+    expect(picker?.lastElementChild).toBe(footer);
+    expect(list?.contains(q('database-pick-property-num'))).toBe(true);
+
+    click('database-filter-picker-advanced');
+
+    expect(q('database-filter-picker')).toBeNull();
+    expect(q('database-advanced-filter')).not.toBeNull();
+    expect(document.querySelector('[data-blok-testid="database-advanced-filter"] [data-blok-testid^="database-filter-add-rule-"]')).not.toBeNull();
+    expect(saved.view.filterTree).toBeUndefined();
+  });
+
+  it('gives "+ Sort" no advanced footer', () => {
+    setup();
+    click('database-toolbar-sort');
+
+    expect(q('database-sort-picker')).not.toBeNull();
+    expect(q('database-filter-picker-advanced')).toBeNull();
+    expect(q('database-sort-picker')?.querySelector('[data-blok-database-picker-list]')).not.toBeNull();
+  });
+
   it('filters "+ Filter" as you type, moves the highlight with the arrows and picks it with Enter', () => {
     setup();
     click('database-toolbar-filter');

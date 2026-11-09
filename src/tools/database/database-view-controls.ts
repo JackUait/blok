@@ -3,13 +3,13 @@ import { nanoid } from 'nanoid';
 import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconTrash, IconChevronDoubleRight } from '../../components/icons';
 import { propertyTypeMeta } from './database-property-types';
 import type { I18n } from '../../../types';
-import { DatabasePanel, panelInput, panelReorderList, panelRow } from './database-panel';
+import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator } from './database-panel';
 import type { PanelPage } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules, withEntryIds } from './filter-tree';
-import { openViewSettings } from './database-view-settings-panel';
+import { openAdvancedFilter, openViewSettings } from './database-view-settings-panel';
 import { openFilterChip } from './database-filter-chip';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
 import { onHover } from '../../components/utils/tooltip';
@@ -594,16 +594,43 @@ export class DatabaseViewControls {
 
   /** "+ Filter": pick a property, then edit the new filter's value (research/21 §1c). */
   private openFilterPicker(anchor: HTMLElement): void {
-    this.openPropertyPicker(anchor, 'database-filter-picker', FILTERABLE_TYPES, (property) => this.filterBy(property.id, anchor));
+    this.openPropertyPicker(anchor, 'database-filter-picker', FILTERABLE_TYPES, (property) => this.filterBy(property.id, anchor), {
+      placeholder: this.t('filterByPlaceholder'),
+      footer: (close) => panelRow({
+        label: this.t('filterAddAdvanced'),
+        testId: 'database-filter-picker-advanced',
+        icon: IconPlus,
+        muted: true,
+        onClick: () => {
+          close();
+          this.openAdvanced(anchor);
+        },
+      }),
+    });
+  }
+
+  private openAdvanced(anchor: HTMLElement): void {
+    this.barOpen = true;
+    this.refresh();
+    this.panel = openAdvancedFilter(anchor, this.settingsContext(), (escape) => this.panelClosed(anchor, escape));
+    anchor.setAttribute('data-popover-open', '');
   }
 
   /**
    * Notion's property list: 290 wide, a search on top, the first option
    * highlighted, Name first and then A→Z, each with its type glyph.
    */
-  private openPropertyPicker(anchor: HTMLElement, testId: string, types: readonly PropertyType[], onPick: (property: PropertyDefinition) => void): void {
+  private openPropertyPicker(
+    anchor: HTMLElement,
+    testId: string,
+    types: readonly PropertyType[],
+    onPick: (property: PropertyDefinition) => void,
+    options: { placeholder: string; footer?: (close: () => void) => HTMLElement }
+  ): void {
     const state = { query: '', active: 0 };
     const list = document.createElement('div');
+
+    list.setAttribute('data-blok-database-picker-list', '');
     const matches = (): PropertyDefinition[] => {
       const needle = state.query.trim().toLowerCase();
       const shown = this.host.schema()
@@ -639,8 +666,8 @@ export class DatabaseViewControls {
         build: () => {
           const search = panelInput({
             value: state.query,
-            placeholder: this.t('layoutSearchProperties'),
-            label: this.t('layoutSearchProperties'),
+            placeholder: options.placeholder,
+            label: options.placeholder,
             testId: `${testId}-search`,
             // Only the list redraws, so the field keeps its caret.
             onInput: (value) => {
@@ -665,9 +692,10 @@ export class DatabaseViewControls {
               if (property !== undefined) pick(property);
             }
           });
+          search.setAttribute('data-blok-database-picker-search', '');
           fill();
 
-          return [search, list];
+          return options.footer === undefined ? [search, list] : [search, list, panelSeparator(), options.footer(() => panel.close())];
         },
       },
       testId,
@@ -689,7 +717,7 @@ export class DatabaseViewControls {
       this.openPropertyPicker(this.sortButton, 'database-sort-picker', SORTABLE_TYPES, (property) => {
         this.barOpen = true;
         this.updatePersonal({ sorts: [{ id: nanoid(), propertyId: property.id, direction: 'asc' }] });
-      });
+      }, { placeholder: this.t('sortByPlaceholder') });
 
       return;
     }

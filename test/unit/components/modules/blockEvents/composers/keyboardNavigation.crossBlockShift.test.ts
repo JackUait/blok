@@ -139,6 +139,17 @@ describe('Shift+ArrowDown from inside a block\'s text', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it('never lets the move append a block after a container', () => {
+    const { nav, first, navigateVerticalNext } = setup();
+
+    collapseAt(first.text, 6);
+    vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+
+    nav.handleArrowRightAndDown(shiftDown());
+
+    expect(navigateVerticalNext).toHaveBeenCalledWith(false, false);
+  });
+
   it('moves from the focus end of a selection, not from its anchor', () => {
     const { nav, first, second, navigateVerticalNext } = setup();
 

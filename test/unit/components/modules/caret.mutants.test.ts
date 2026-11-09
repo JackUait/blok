@@ -517,6 +517,26 @@ describe('Caret — mutation coverage', () => {
       expect(setCaretAtX).not.toHaveBeenCalled();
     });
 
+    it('appends nothing when told not to, and leaves the caret in the container', () => {
+      const { caret, blockManager } = createCaret();
+      const other = createBlock({ id: 'other',
+        inputs: { current: createContentEditable('other') } });
+      const child = createBlock({ id: 'child',
+        parentId: 'cell',
+        inputs: { current: createContentEditable('child') } });
+
+      blockManager.blocks = [ other, child ];
+      blockManager.currentBlock = child;
+      blockManager.nextVisibleBlock = null;
+      blockManager.getBlockById.mockReturnValue(undefined);
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
+
+      expect(caret.navigateVerticalNext(false, false)).toBe(false);
+      expect(blockManager.insertAtEnd).not.toHaveBeenCalled();
+    });
+
     it('lands on the block sitting right before the container', () => {
       const { caret, blockManager } = createCaret();
       const before = createBlock({ id: 'before',

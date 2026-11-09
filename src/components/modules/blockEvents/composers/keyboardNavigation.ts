@@ -1442,7 +1442,8 @@ export class KeyboardNavigation extends BlockEventComposer {
     /** Caret helpers read a collapsed caret, so navigate from the focus alone. */
     selection.collapse(focus.node, focus.offset);
 
-    if (!Caret.navigateVerticalNext(false)) {
+    /** Shift only selects: it must never append a block, so no undo step appears. */
+    if (!Caret.navigateVerticalNext(false, false)) {
       /** setBaseAndExtent keeps a backward selection backward; it only clamps across hosts. */
       if (getEditingHost(anchor.node) === getEditingHost(focus.node)) {
         selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);

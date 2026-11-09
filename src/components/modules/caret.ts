@@ -819,9 +819,11 @@ export class Caret extends Module {
    * Navigates to the next block using vertical (Arrow Down) navigation.
    * Implements Notion-style behavior: line-by-line within block, then jump to next block.
    * Preserves horizontal caret position when moving between blocks.
+   * @param allowBlockCreation - whether the last block may append a new one
+   * @param appendAfterContainer - whether leaving a container that ends the document appends a block
    * @returns {boolean} - true if navigation to next block occurred
    */
-  public navigateVerticalNext(allowBlockCreation = true): boolean {
+  public navigateVerticalNext(allowBlockCreation = true, appendAfterContainer = true): boolean {
     const { BlockManager } = this.Blok;
     const { currentBlock, nextVisibleBlock: nextBlock } = BlockManager;
 
@@ -902,6 +904,10 @@ export class Caret extends Module {
         this.setToBlockAtXPosition(blockAfterContainer, caretX, true);
 
         return true;
+      }
+
+      if (!appendAfterContainer) {
+        return false;
       }
 
       // No block after the container — create one

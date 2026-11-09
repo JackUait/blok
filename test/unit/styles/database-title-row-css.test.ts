@@ -139,9 +139,9 @@ describe('a narrow view bar folds like Notion (notion-spec-2 §26.1)', () => {
     expect(rule('[data-blok-database-tab-bar][data-blok-database-tab-folded] > [data-blok-database-add-view]')).toMatch(/display: none/);
   });
 
-  it('the icon group hides together, and New hides on its own', () => {
-    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-foldable]')).toMatch(/display: none/);
-    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new]')).toMatch(/display: none/);
+  it('the icon group hides together, and New hides on its own, in the view bar and in a one-view title row', () => {
+    expect(rule(':is([data-blok-database-view-bar], [data-blok-database-title-row][data-single-view])[data-blok-database-fold-icons] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-foldable]')).toMatch(/display: none/);
+    expect(rule(':is([data-blok-database-view-bar], [data-blok-database-title-row][data-single-view])[data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new]')).toMatch(/display: none/);
   });
 
   // notion-spec-2 §26.1 (`tb-1000-closed.txt`): "4 more…" is 76.7x32, as tall as a tab.

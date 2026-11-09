@@ -133,6 +133,7 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
+import { foldTitleRow } from './database-view-bar-fold';
 import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -662,6 +663,8 @@ export class DatabaseTool implements BlockTool {
   private element: HTMLDivElement | null = null;
   private titleElement: HTMLElement | null = null;
   private titleRowElement: HTMLDivElement | null = null;
+  /** Refolds a one-view title row when it or its title changes size. */
+  private titleRowFold: ResizeObserver | null = null;
   /** The title line of a view on a second source; null on this block's own views. */
   private sourceTitleElement: HTMLElement | null = null;
   private boardContainer: HTMLDivElement | null = null;
@@ -2082,6 +2085,8 @@ export class DatabaseTool implements BlockTool {
     this.tabBar = null;
     this.unregisterGroupToggle?.();
     this.unregisterGroupToggle = null;
+    this.titleRowFold?.disconnect();
+    this.titleRowFold = null;
     this.titleElement = null;
     this.titleRowElement = null;
     this.boardContainer = null;
@@ -2210,6 +2215,10 @@ export class DatabaseTool implements BlockTool {
     const titleRow = document.createElement('div');
     titleRow.setAttribute('data-blok-database-title-row', '');
     titleRow.appendChild(titleEl);
+    // The title shrinks inside the row, so typing does not resize it.
+    titleRow.addEventListener('input', () => {
+      if (titleRow.hasAttribute('data-single-view')) foldTitleRow(titleRow);
+    });
     this.titleRowElement = titleRow;
     this.paintDatabaseIcon();
     wrapper.appendChild(titleRow);
@@ -4875,6 +4884,23 @@ export class DatabaseTool implements BlockTool {
         tabBarEl.style.display = views.length >= 2 ? '' : 'none';
       }
     }
+    this.syncTitleRowFold(single);
+  }
+
+  /** One view: the title row folds its toolbar as the view bar does (peek-top.png). */
+  private syncTitleRowFold(single: boolean): void {
+    const row = this.titleRowElement;
+
+    this.titleRowFold?.disconnect();
+    this.titleRowFold = null;
+    row?.removeAttribute('data-blok-database-fold-icons');
+    row?.removeAttribute('data-blok-database-fold-new');
+    if (!single || row === null) return;
+    foldTitleRow(row);
+    if (typeof ResizeObserver === 'undefined') return;
+    this.titleRowFold = new ResizeObserver(() => foldTitleRow(row));
+    this.titleRowFold.observe(row);
+    if (this.titleElement !== null) this.titleRowFold.observe(this.titleElement);
   }
 
   /** "Edit title": the caret at the end of the title. */

@@ -63,3 +63,53 @@ export const planViewBarFold = (parts: ViewBarParts): ViewBarFold => {
 
   return { tabs: shown.length >= 2 ? shown : 'compact', icons, newButton };
 };
+
+/** A one-view title row: the row's width, what sits before the toolbar, and the toolbar with and without its icons. */
+export interface TitleRowParts {
+  width: number;
+  lead: number;
+  toolbar: { full: number; noIcons: number };
+}
+
+/**
+ * The title row folds the same parts as the view bar: the icon group first,
+ * New last, Settings never. Notion's switch points for this row are not
+ * measured, so it folds only when the toolbar would run over the title.
+ */
+export const planTitleRowFold = (parts: TitleRowParts): Omit<ViewBarFold, 'tabs'> => {
+  const room = parts.width - parts.lead;
+  const icons = parts.toolbar.full <= room;
+
+  return { icons, newButton: icons || parts.toolbar.noIcons <= room };
+};
+
+const outerWidth = (el: HTMLElement, width: number): number => {
+  const style = getComputedStyle(el);
+
+  return width + (Number.parseFloat(style.marginLeft) || 0) + (Number.parseFloat(style.marginRight) || 0);
+};
+
+/** Measures a one-view title row and sets the fold marks database.css reads. */
+export const foldTitleRow = (row: HTMLElement): void => {
+  row.removeAttribute('data-blok-database-fold-icons');
+  row.removeAttribute('data-blok-database-fold-new');
+  const toolbar = row.querySelector<HTMLElement>(':scope > [data-blok-database-view-toolbar]');
+
+  if (toolbar === null || !row.isConnected) return;
+  const full = toolbar.offsetWidth;
+
+  row.setAttribute('data-blok-database-fold-icons', '');
+  const noIcons = toolbar.offsetWidth;
+
+  row.removeAttribute('data-blok-database-fold-icons');
+  // The title shrinks to fit the row, so its text width is what it needs.
+  const lead = Array.from(row.children)
+    .filter((child): child is HTMLElement => child instanceof HTMLElement && child !== toolbar)
+    .reduce((sum, child) => sum + outerWidth(child, child.hasAttribute('data-blok-database-title') ? child.scrollWidth : child.offsetWidth), 0);
+  const style = getComputedStyle(row);
+  const width = row.clientWidth - (Number.parseFloat(style.paddingLeft) || 0) - (Number.parseFloat(style.paddingRight) || 0);
+  const fold = planTitleRowFold({ width, lead, toolbar: { full, noIcons } });
+
+  row.toggleAttribute('data-blok-database-fold-icons', !fold.icons);
+  row.toggleAttribute('data-blok-database-fold-new', !fold.newButton);
+};

@@ -36,9 +36,23 @@ public static class BlokMcpServiceCollectionExtensions
     var options = new BlokMcpOptions();
 
     configure(options);
+    CheckStandalone(options);
     services.AddBlokShell(options, embedded: false);
 
     return services.AddBlokMcpServer(options.OAuth is not null);
+  }
+
+  // As WithBlok refuses the standalone-only options: an ignored Caller would answer every caller it names 401.
+  private static void CheckStandalone(BlokMcpOptions options)
+  {
+    if (options.Caller is not null)
+    {
+      throw new BlokMcpConfigException("BlokMcpOptions.Caller works only on a host's server (WithBlok); AddBlokMcp names callers from its own sign-in and Principal");
+    }
+    if (options.AnonymousPrincipal is not null)
+    {
+      throw new BlokMcpConfigException("BlokMcpOptions.AnonymousPrincipal works only on a host's server (WithBlok); AddBlokMcp serves anonymous callers as Principal");
+    }
   }
 
   /// <summary>
@@ -52,7 +66,8 @@ public static class BlokMcpServiceCollectionExtensions
     if (options.CommandLineHost is { } parsed)
     {
       // The runtime BlokMcpCommandLine already started, and the HTTP caller its --authorize webhook uses.
-      services.TryAddSingleton(parsed.Http);
+      // A factory, not an instance: the container disposes only what a factory made.
+      services.TryAddSingleton(_ => parsed.Http);
       services.TryAddSingleton(parsed);
     }
     services.TryAddSingleton(_ => new McpHttpCaller());
@@ -206,7 +221,7 @@ public static class BlokMcpServiceCollectionExtensions
     var rules = provider.GetService<IBlokAuthorization>();
     McpAuthorize? hook = authorize is not null
         ? async (principal, documentId, write, token) => await authorize(new BlokMcpAccessRequest(principal, documentId, write), token)
-        : rules is not null ? (principal, documentId, write, token) => AllowedByRulesAsync(rules, provider.GetService<IHttpContextAccessor>(), principal, documentId, write, token) : null;
+        : rules is not null ? (principal, documentId, write, token) => AllowedByRulesAsync(rules, provider.GetService<IHttpContextAccessor>(), options.Caller is not null && principal != options.AnonymousPrincipal, principal, documentId, write, token) : null;
 
     if (options.DocumentSource is not null && (options.FilesDirectory is not null || options.DocumentEndpoint is not null))
     {
@@ -396,10 +411,13 @@ public static class BlokMcpServiceCollectionExtensions
 
   // IBlokAuthorization only narrows: a write also needs read.
   private static async Task<bool> AllowedByRulesAsync(
-      IBlokAuthorization rules, IHttpContextAccessor? http, string principal, string documentId, bool write, CancellationToken cancellationToken)
+      IBlokAuthorization rules, IHttpContextAccessor? http, bool callerHook, string principal, string documentId, bool write, CancellationToken cancellationToken)
   {
     var signedIn = http?.HttpContext?.User;
-    var user = HostUserName(signedIn) == principal
+    // The host's Caller hook named this request's user from claims Blok cannot read (such as a
+    // custom id claim), so the rules get that user as signed in, with every claim. Not when the
+    // hook named nobody and the call runs as AnonymousPrincipal.
+    var user = (callerHook && signedIn?.Identity?.IsAuthenticated == true) || HostUserName(signedIn) == principal
         ? signedIn!
         : new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", principal), new Claim(ClaimTypes.NameIdentifier, principal)], "blok-mcp"));
 

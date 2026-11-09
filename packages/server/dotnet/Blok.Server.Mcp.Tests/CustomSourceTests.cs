@@ -311,6 +311,24 @@ public sealed class CustomSourceTests
     }
   }
 
+  [Fact]
+  public async Task ALoadWithoutAVersionLogsTheTextsLengthNotTheText()
+  {
+    var store = new Store();
+    var logged = new Logged();
+
+    store.Documents["empty"] = new BlokMcpStoredDocument("""{"title":"secret-text","blocks":[]}""", string.Empty);
+    var (app, client) = await StartAsync(store, logged: logged);
+
+    await using (app)
+    {
+      await OpenAsync(client, "empty");
+
+      Assert.Contains(logged.Lines, line => line.Contains("load answered document text of 35 characters and version \"\"", StringComparison.Ordinal));
+      Assert.DoesNotContain(logged.Lines, line => line.Contains("secret-text", StringComparison.Ordinal));
+    }
+  }
+
   [Theory]
   [InlineData("")]
   [InlineData(".")]

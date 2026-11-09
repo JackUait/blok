@@ -196,7 +196,7 @@ internal sealed class StoredSession : IHandleSession
         throw;
       }
 
-      return new McpExecuteOutcome(await PagePorts.StrandedAnswerAsync(bundle, error, unlinked), null);
+      return new McpExecuteOutcome(await Pages!.StrandedAnswerAsync(bundle, error, unlinked), null);
     }
   }
 

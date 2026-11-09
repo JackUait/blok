@@ -94,6 +94,34 @@ public sealed class CommandLineTests : IDisposable
   }
 
   [Fact]
+  public async Task ARefusedCommandLineMakesNoHandleStoreDirectory()
+  {
+    var handles = Path.Combine(dir, "refused-handles");
+    var argv = new[] { "--page-titles", "page-map", "--create-page", "http://127.0.0.1:9/pages", "--handle-store", $"files:{handles}" };
+
+    await Assert.ThrowsAsync<BlokMcpConfigException>(() => BlokMcpCommandLine.ParseAsync(argv, new Dictionary<string, string>()));
+
+    Assert.False(Directory.Exists(handles));
+  }
+
+  [Fact]
+  public async Task TheAppDisposesTheHttpClientTheCommandLineMade()
+  {
+    var parsed = await BlokMcpCommandLine.ParseAsync(["--source", $"files:{dir}", "--authorize", "http://127.0.0.1:9/authorize"], new Dictionary<string, string>());
+    var services = new ServiceCollection();
+
+    services.AddBlokMcp(parsed.ApplyTo);
+    var provider = services.BuildServiceProvider();
+    var http = provider.GetRequiredService<Blok.Server.Mcp.Outbound.McpHttpCaller>();
+
+    await provider.DisposeAsync();
+    var failed = await Assert.ThrowsAsync<Blok.Server.Mcp.Outbound.McpUnreachableException>(() =>
+        http.SendAsync(new Blok.Server.Mcp.Outbound.McpHttpRequest("GET", "http://127.0.0.1:9/", []), TimeSpan.FromSeconds(5)));
+
+    Assert.IsType<ObjectDisposedException>(failed.InnerException);
+  }
+
+  [Fact]
   public async Task HandleStoreMemoryKeepsHandlesInTheProcess()
   {
     var cli = await McpCommandLine.ConfigureAsync(BlokMcpHost.CreateRuntime(1), ["--source", "files:./docs", "--handle-store", "memory"], new Dictionary<string, string>());

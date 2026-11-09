@@ -1,5 +1,8 @@
+using Blok.Server.AspNetCore;
 using Blok.Server.Mcp.Core;
+using System.Security.Claims;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -44,9 +47,12 @@ public sealed class LibraryEmbedTests : IDisposable
   }
 
   private async Task<(WebApplication App, HttpClient Client)> StartAsync(
-      Action<IMcpServerBuilder>? host = null, Action<BlokMcpOptions>? configure = null, ILoggerProvider? logged = null)
+      Action<IMcpServerBuilder>? host = null, Action<BlokMcpOptions>? configure = null, ILoggerProvider? logged = null,
+      Action<IServiceCollection>? services = null, Action<IMcpServerBuilder>? afterBlok = null)
   {
     var builder = WebApplication.CreateSlimBuilder();
+
+    services?.Invoke(builder.Services);
 
     builder.Logging.ClearProviders();
     if (logged is not null)
@@ -80,6 +86,7 @@ public sealed class LibraryEmbedTests : IDisposable
       };
       configure?.Invoke(options);
     });
+    afterBlok?.Invoke(mcp);
     var app = builder.Build();
 
     app.UseTestSignIn();
@@ -579,6 +586,173 @@ public sealed class LibraryEmbedTests : IDisposable
 
     Assert.Equal("Unknown tool: blok_nope", (string?)tool["error"]?["message"]);
     Assert.Equal("Unknown prompt: nope", (string?)prompt["error"]?["message"]);
+  }
+
+  /// <summary>A host tool only users with the "kb" claim may call, as Knowledge Base guards its own tools.</summary>
+  [McpServerToolType]
+  public sealed class GuardedHostTools
+  {
+    [McpServerTool(Name = "host_guarded"), Authorize(Policy = "kb")]
+    public static string Guarded()
+    {
+      return "guarded ran";
+    }
+  }
+
+  private static void WithHostAuthorization(IMcpServerBuilder mcp)
+  {
+    mcp.Services.AddAuthorizationBuilder().AddPolicy("kb", policy => policy.RequireClaim("kb"));
+    mcp.AddAuthorizationFilters().WithTools<GuardedHostTools>();
+  }
+
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task BloksToolsWorkBesideTheHostsAuthorizationFiltersWhichStillGuardTheHostsTools(bool filtersFirst)
+  {
+    var (app, client) = filtersFirst
+        ? await StartAsync(host: WithHostAuthorization)
+        : await StartAsync(host: _ => { }, afterBlok: WithHostAuthorization);
+
+    await using (app)
+    {
+      var listed = (JsonArray)(await McpTestRpc.SendAsync(client, "tools/list", [], user: "alice"))["result"]!["tools"]!;
+      var opened = await McpTestRpc.ToolAsync(client, "blok_open", new JsonObject { ["documentId"] = "doc" }, user: "alice");
+      var read = await McpTestRpc.ToolAsync(client, "blok_read", new JsonObject { ["handle"] = opened["handle"]!.DeepClone() }, user: "alice");
+      var refused = await McpTestRpc.CallAsync(client, "host_guarded", [], user: "alice");
+      var allowed = await McpTestRpc.CallAsync(client, "host_guarded", [], claims: "sub=carol,kb=yes");
+
+      Assert.Contains(listed, tool => (string?)tool!["name"] == "blok_open");
+      Assert.DoesNotContain(listed, tool => (string?)tool!["name"] == "host_guarded");
+      Assert.Equal("Doc", (string?)read["page"]?["title"]);
+      Assert.NotNull(refused["error"]);
+      Assert.Null(refused["result"]);
+      Assert.Equal("guarded ran", (string?)allowed["result"]?["content"]?[0]?["text"]);
+    }
+  }
+
+  // Knowledge Base's personal-token users carry only these two claims: no sub, no NameIdentifier.
+  private const string KbUser = "k:i=42,mcp:tid=7";
+
+  private static void CallerFromKbClaim(BlokMcpOptions options)
+  {
+    options.Caller = (context, _) => ValueTask.FromResult(
+        context.User?.FindFirst("k:i")?.Value is { } id ? new BlokMcpCallerIdentity(id) : null);
+  }
+
+  [Fact]
+  public async Task ACallerHookNamesAUserFromTheHostsOwnClaim()
+  {
+    var (app, client) = await StartAsync(configure: CallerFromKbClaim);
+
+    await using (app)
+    {
+      var opened = await McpTestRpc.ToolAsync(client, "blok_open", new JsonObject { ["documentId"] = "doc" }, claims: KbUser);
+      var read = await McpTestRpc.ToolAsync(client, "blok_read", new JsonObject { ["handle"] = opened["handle"]!.DeepClone() }, claims: KbUser);
+      var stolen = await McpTestRpc.ToolAsync(client, "blok_read", new JsonObject { ["handle"] = opened["handle"]!.DeepClone() }, claims: "k:i=43,mcp:tid=7");
+
+      Assert.Equal("Doc", (string?)read["page"]?["title"]);
+      Assert.Equal("UNKNOWN_HANDLE", (string?)stolen["error"]?["code"]);
+      Assert.Equal(["42 read doc", "42 read doc"], asked);
+    }
+  }
+
+  /// <summary>Allows only users whose k:i claim is 42, as a host's rules over its own claims would.</summary>
+  private sealed class KbRules : IBlokAuthorization
+  {
+    internal List<ClaimsPrincipal> Seen { get; } = [];
+
+    public ValueTask<bool> CanReadDocumentAsync(ClaimsPrincipal user, string documentId, CancellationToken cancellationToken = default)
+    {
+      lock (Seen)
+      {
+        Seen.Add(user);
+      }
+
+      return ValueTask.FromResult(user.FindFirst("k:i")?.Value == "42");
+    }
+
+    public ValueTask<bool> CanWriteDocumentAsync(ClaimsPrincipal user, string documentId, CancellationToken cancellationToken = default)
+    {
+      return CanReadDocumentAsync(user, documentId, cancellationToken);
+    }
+  }
+
+  [Fact]
+  public async Task IBlokAuthorizationSeesTheRealSignedInUserWhenACallerHookNamesThem()
+  {
+    var rules = new KbRules();
+    var (app, client) = await StartAsync(
+        configure: options =>
+        {
+          options.Authorize = null;
+          CallerFromKbClaim(options);
+        },
+        services: services => services.AddSingleton<IBlokAuthorization>(rules));
+
+    await using (app)
+    {
+      var opened = await McpTestRpc.ToolAsync(client, "blok_open", new JsonObject { ["documentId"] = "doc", ["write"] = true }, claims: KbUser);
+      var other = await McpTestRpc.ToolAsync(client, "blok_open", new JsonObject { ["documentId"] = "doc" }, claims: "k:i=43,mcp:tid=7");
+
+      Assert.True((bool?)opened["write"]);
+      Assert.Equal("FORBIDDEN", (string?)other["error"]?["code"]);
+      Assert.All(rules.Seen, user => Assert.Equal("7", user.FindFirst("mcp:tid")?.Value));
+    }
+  }
+
+  [Fact]
+  public async Task IBlokAuthorizationSeesTheAnonymousPrincipalNotTheUserWhenACallerHookNamesNobody()
+  {
+    var rules = new KbRules();
+    var (app, client) = await StartAsync(
+        configure: options =>
+        {
+          options.Authorize = null;
+          options.AnonymousPrincipal = "guest";
+          options.Caller = (_, _) => ValueTask.FromResult<BlokMcpCallerIdentity?>(null);
+        },
+        services: services => services.AddSingleton<IBlokAuthorization>(rules));
+
+    await using (app)
+    {
+      var refused = await McpTestRpc.ToolAsync(client, "blok_open", new JsonObject { ["documentId"] = "doc" }, claims: KbUser);
+
+      Assert.Equal("FORBIDDEN", (string?)refused["error"]?["code"]);
+      Assert.All(rules.Seen, user => Assert.Equal("guest", user.FindFirst("sub")?.Value));
+      Assert.All(rules.Seen, user => Assert.Null(user.FindFirst("k:i")));
+    }
+  }
+
+  [Fact]
+  public async Task AFailingPromptIsLoggedInFullAndHiddenFromTheClient()
+  {
+    var logged = new LinesLogged();
+    var runtime = new FaultyRuntime(BlokMcpHost.Runtime()) { Throws = (operation, _) => operation == "mcpPrompt" };
+    var (app, client) = await StartAsync(
+        logged: logged,
+        services: services => services.AddSingleton(new BlokMcpHost(new McpBundle(runtime), new Blok.Server.Mcp.Outbound.McpHttpCaller())));
+
+    await using (app)
+    {
+      var failed = await McpTestRpc.SendAsync(client, "prompts/get", new JsonObject { ["name"] = "improve", ["arguments"] = new JsonObject { ["selection"] = "Hi" } });
+
+      Assert.Equal(-32603, (int?)failed["error"]?["code"]);
+      Assert.Equal("Blok could not run this call.", (string?)failed["error"]?["message"]);
+      Assert.Contains(logged.Lines, line => line.Contains("mcpPrompt failed", StringComparison.Ordinal));
+    }
+  }
+
+  [Fact]
+  public async Task RefusesWithBlokTwiceAtRegistration()
+  {
+    var builder = WebApplication.CreateSlimBuilder();
+    var mcp = builder.Services.AddMcpServer();
+
+    mcp.WithBlok(options => options.AllowEveryCallerEveryDocument = true);
+    var refused = Assert.Throws<BlokMcpConfigException>(() => mcp.WithBlok(options => options.AllowEveryCallerEveryDocument = true));
+
+    Assert.Equal("WithBlok was already called on this app: call it once", refused.Message);
   }
 
   private static System.Text.Json.JsonElement JsonDocumentOf(string json)

@@ -62,6 +62,7 @@ internal sealed class McpServerCore : IAsyncDisposable
           : config.PageCreator is not null ? CreateHostPageAsync : CreatePageAsync,
       Open = (pageId, caller, cancellationToken) => OpenSessionAsync(pageId, "auto", true, caller, cancellationToken),
       TrackClose = TrackPageClose,
+      LogError = config.LogError,
     };
     uploads = config.Uploads is null ? null : new UploadPorts(config.Uploads, config.LogError);
     if (live is not null)
@@ -576,6 +577,7 @@ internal sealed class McpServerCore : IAsyncDisposable
     // Opening can mint a ticket and join a room, so refuse at the cap first.
     await handles.AssertRoomAsync(caller.Principal);
     var session = await OpenSessionAsync(documentId, McpJson.String(step["mode"]) ?? "auto", write, caller, cancellationToken);
+    string? handle = null;
 
     try
     {
@@ -598,7 +600,7 @@ internal sealed class McpServerCore : IAsyncDisposable
       {
         throw new McpHostError("CANCELLED", "The request was cancelled before the document opened.", helper: "failure");
       }
-      var handle = await handles.AddAsync(caller.Principal, documentId, session);
+      handle = await handles.AddAsync(caller.Principal, documentId, session);
       var input = new JsonObject
       {
         ["handle"] = handle,
@@ -619,8 +621,25 @@ internal sealed class McpServerCore : IAsyncDisposable
     }
     catch
     {
+      // Nobody got the handle: a shared store would count it toward the cap until it expired.
+      if (handle is not null)
+      {
+        await ForgetQuietlyAsync(handle, caller.Principal);
+      }
       await CloseQuietlyAsync(session);
       throw;
+    }
+  }
+
+  private async Task ForgetQuietlyAsync(string handle, string principal)
+  {
+    try
+    {
+      await handles.RemoveAsync(handle, principal);
+    }
+    catch (Exception error)
+    {
+      await LogAsync("blok-mcp: removing a handle whose open failed failed", error);
     }
   }
 

@@ -99,6 +99,10 @@ internal sealed partial class SharedHandles : IHandleTable
   private readonly Func<string> newHandle;
   private readonly Dictionary<string, Task> turns = new(StringComparer.Ordinal);
   private readonly HashSet<Task> inFlight = [];
+  // The sweep in progress's cancel, which stop also triggers; guarded by turns.
+  private CancellationTokenSource? sweepCancel;
+  // 1 while the host's sweep runs, until its task really ends, even past the timeout.
+  private int sweeping;
   private volatile bool closed;
 
   internal SharedHandles(
@@ -125,6 +129,9 @@ internal sealed partial class SharedHandles : IHandleTable
 
   // Well inside the 30 s a store may keep an unrenewed lease, so a few missed renewals do not lose it.
   internal TimeSpan RenewEvery { get; init; } = TimeSpan.FromSeconds(5);
+
+  // Half the sweep period, so a sweep ends before the next one is due.
+  internal TimeSpan SweepTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
   public async Task AssertRoomAsync(string principal)
   {
@@ -239,22 +246,67 @@ internal sealed partial class SharedHandles : IHandleTable
     await local.SweepAsync();
   }
 
-  /// <summary>The store's own expiry, on its own timer. A failure is logged; the next sweep tries again.</summary>
+  /// <summary>
+  /// The store's own expiry, on its own timer. One sweep at a time: while the host's sweep still
+  /// runs, a later one does nothing. It is cancelled after <see cref="SweepTimeout"/> or on stop,
+  /// and nobody waits for a sweep that ignores the cancel. A failure is logged; the next sweep tries again.
+  /// </summary>
   internal async Task SweepStoreAsync()
   {
+    if (closed || Interlocked.Exchange(ref sweeping, 1) == 1)
+    {
+      return;
+    }
+    using var deadline = new CancellationTokenSource(SweepTimeout);
+    Task? sweep = null;
+
+    lock (turns)
+    {
+      sweepCancel = deadline;
+    }
     try
     {
-      await store.SweepAsync(idle, CancellationToken.None);
+      // Stop may have run before sweepCancel was set.
+      if (closed)
+      {
+        await deadline.CancelAsync();
+      }
+      sweep = store.SweepAsync(idle, deadline.Token).AsTask();
+      _ = sweep.ContinueWith(_ => Volatile.Write(ref sweeping, 0), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+      await sweep.WaitAsync(deadline.Token);
+    }
+    catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+    {
+      if (!closed)
+      {
+        log("blok-mcp: sweeping the handle store timed out", new TimeoutException($"The handle store's sweep ran longer than {SweepTimeout}."));
+      }
     }
     catch (Exception error)
     {
       log("blok-mcp: sweeping the handle store failed", error);
+    }
+    finally
+    {
+      lock (turns)
+      {
+        sweepCancel = null;
+      }
+      // The store threw before it gave a task, so nothing else frees the next sweep.
+      if (sweep is null)
+      {
+        Volatile.Write(ref sweeping, 0);
+      }
     }
   }
 
   public async Task CloseAllAsync(Func<IHandleSession, Task> close)
   {
     closed = true;
+    lock (turns)
+    {
+      sweepCancel?.Cancel();
+    }
     Task[] pending;
 
     lock (inFlight)
@@ -295,7 +347,7 @@ internal sealed partial class SharedHandles : IHandleTable
     try
     {
       await previous;
-      var acquired = await ViaStoreAsync(() => store.AcquireAsync(handle, idle, Wait, CancellationToken.None).AsTask());
+      var acquired = await AcquireAsync(handle);
 
       if (acquired.Lease is not { } lease)
       {
@@ -304,7 +356,7 @@ internal sealed partial class SharedHandles : IHandleTable
             : HandleRegistry<IHandleSession>.UnknownHandle();
       }
       // A lost lease shows again when the call saves or removes: the store refuses those.
-      var renewer = new Timer(_ => _ = RenewAsync(lease), null, RenewEvery, RenewEvery);
+      var renewer = new Renewal(lease, RenewEvery, log);
 
       try
       {
@@ -346,15 +398,81 @@ internal sealed partial class SharedHandles : IHandleTable
     }
   }
 
-  private async Task RenewAsync(IBlokMcpHandleLease lease)
+  // A record BlokMcpHandleRecord.FromJson cannot read can never be used: UNKNOWN_HANDLE stops the agent's retries.
+  private async Task<BlokMcpHandleAcquisition> AcquireAsync(string handle)
   {
     try
     {
-      await lease.RenewAsync(CancellationToken.None);
+      return await store.AcquireAsync(handle, idle, Wait, CancellationToken.None);
+    }
+    catch (System.Text.Json.JsonException error)
+    {
+      log("blok-mcp: a handle record in the handle store could not be read", error);
+
+      throw HandleRegistry<IHandleSession>.UnknownHandle();
     }
     catch (Exception error)
     {
-      log("blok-mcp: renewing a handle lease failed", error);
+      log("blok-mcp: the handle store failed", error);
+
+      throw McpHostError.Surface("SOURCE_UNAVAILABLE", StoreDown);
+    }
+  }
+
+  /// <summary>
+  /// Renews a lease on a timer while a call holds it: one renewal at a time, and the last one
+  /// done before <see cref="DisposeAsync"/> returns, so none runs during or after the release.
+  /// </summary>
+  private sealed class Renewal : IAsyncDisposable
+  {
+    private readonly IBlokMcpHandleLease lease;
+    private readonly Action<string, Exception> log;
+    private readonly Timer timer;
+    private readonly object gate = new();
+    private Task running = Task.CompletedTask;
+    private bool stopped;
+
+    internal Renewal(IBlokMcpHandleLease lease, TimeSpan every, Action<string, Exception> log)
+    {
+      this.lease = lease;
+      this.log = log;
+      timer = new Timer(_ => Tick(), null, every, every);
+    }
+
+    private void Tick()
+    {
+      lock (gate)
+      {
+        if (!stopped && running.IsCompleted)
+        {
+          running = RenewAsync();
+        }
+      }
+    }
+
+    private async Task RenewAsync()
+    {
+      try
+      {
+        await lease.RenewAsync(CancellationToken.None);
+      }
+      catch (Exception error)
+      {
+        log("blok-mcp: renewing a handle lease failed", error);
+      }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+      Task last;
+
+      lock (gate)
+      {
+        stopped = true;
+        last = running;
+      }
+      await timer.DisposeAsync();
+      await last;
     }
   }
 

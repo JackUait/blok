@@ -216,10 +216,19 @@ internal sealed class HostDocumentSource(IBlokMcpDocumentSource host, Action<str
       if (answer.DocumentText is null || string.IsNullOrEmpty(answer.Version))
       {
         throw source.HostFailed("load", id, new InvalidOperationException(
-            $"load answered {answer}; expected null, or JSON text with a non-empty version"), FailedLoad);
+            $"load answered {Shape(answer)}; expected null, or JSON text with a non-empty version"), FailedLoad);
       }
 
       return new LoadedDocument(CheckedDocument(id, answer.DocumentText), answer.Version);
+    }
+
+    // The text's length only: a log line must not carry a whole document.
+    private static string Shape(BlokMcpStoredDocument answer)
+    {
+      var text = answer.DocumentText is null ? "no document text" : $"document text of {answer.DocumentText.Length} characters";
+      var version = answer.Version is null ? "no version" : $"version \"{answer.Version}\"";
+
+      return $"{text} and {version}";
     }
 
     public async Task<string?> SaveAsync(string documentId, string text, string? ifVersion, CancellationToken cancellationToken)

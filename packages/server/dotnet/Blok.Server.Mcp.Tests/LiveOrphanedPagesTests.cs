@@ -10,9 +10,15 @@ namespace Blok.Server.Mcp.Tests;
 /// <summary>A live batch that made pages and then wrote nothing to the room names them in error.details.orphaned.</summary>
 public sealed class LiveOrphanedPagesTests(BundleFixture fixture) : IClassFixture<BundleFixture>
 {
-  private static async Task<(LiveSession Session, List<string> Made, LiveRoom Room)> OpenAsync(McpBundle bundle, Action? afterCreate = null, Func<int, string>? pageIds = null)
+  private static async Task<(LiveSession Session, List<string> Made, LiveRoom Room)> OpenAsync(
+      McpBundle bundle, Action? afterCreate = null, Func<int, string>? pageIds = null, Action<string, Exception>? log = null, Func<LiveRoom, Task>? seed = null)
   {
     var (room, _) = await LiveRoomTests.OpenAsync();
+
+    if (seed is not null)
+    {
+      await seed(room);
+    }
     var flags = new McpConfig { PageTitles = "page-map", Sync = new McpSync("ws://127.0.0.1:1/sync", null) }.SurfaceFlags();
     var made = new List<string>();
     var session = new LiveSession(
@@ -26,7 +32,7 @@ public sealed class LiveOrphanedPagesTests(BundleFixture fixture) : IClassFixtur
         afterCreate?.Invoke();
 
         return Task.FromResult(made[^1]);
-      }),
+      }, log),
     };
 
     await room.Loop.RunAsync(session.Start);
@@ -45,6 +51,53 @@ public sealed class LiveOrphanedPagesTests(BundleFixture fixture) : IClassFixtur
     Assert.Equal(["page-1"], made);
     Assert.Equal(StoredOrphanedPagesTests.Orphaned("APPLY_FAILED", true, "page-1"), answer?["error"]?.ToJsonString());
     await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task AFailureAfterAPageWasMadeIsLoggedToTheHostsLogger()
+  {
+    var logged = new List<string>();
+    var runtime = new FaultyRuntime(fixture.Host.Bundle.Runtime) { Throws = (operation, _) => operation == "agentExecute" };
+    var (session, _, room) = await OpenAsync(new McpBundle(runtime), log: (message, error) => logged.Add($"{message}: {error.Message}"));
+
+    await session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None);
+
+    Assert.Equal(["blok-mcp: a batch failed after it made pages: agentExecute failed"], logged);
+    await room.CloseAsync();
+  }
+
+  [Fact]
+  public async Task ARoomThatCannotBeReadAfterAFailureIsLoggedToTheHostsLogger()
+  {
+    var logged = new List<string>();
+    var runtime = new FaultyRuntime(fixture.Host.Bundle.Runtime);
+    var (session, _, room) = await OpenAsync(
+        new McpBundle(runtime),
+        // After the page is made: the batch then fails, and so does the room's re-read.
+        afterCreate: () => runtime.Throws = (operation, _) => operation is "agentExecute" or "htmlFieldsToSegments",
+        log: (message, error) => logged.Add(message),
+        seed: room => SeedLegacyTextAsync(room, fixture.Host.Bundle));
+
+    var answer = await Assert.ThrowsAnyAsync<Exception>(() => session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None));
+
+    Assert.Equal("agentExecute failed", answer.Message);
+    Assert.Equal(["blok-mcp: the room could not be read after a batch failed, so no page is reported"], logged);
+    await room.CloseAsync();
+  }
+
+  // A paragraph whose text is a plain string: legacy HTML, which every read sends to the runtime.
+  private static async Task SeedLegacyTextAsync(LiveRoom room, McpBundle bundle)
+  {
+    var seed = new Blok.Server.Collab.CollabDocConverter(
+        TimeProvider.System, new Blok.Server.Collab.RuntimeRichTextHtmlReader(bundle.Runtime), Blok.Server.Collab.RichTextFields.BuiltIn);
+
+    await room.Loop.RunAsync(() => seed.SeedAsync(room.Doc, JsonNode.Parse("""{"blocks":[{"id":"p1","type":"paragraph","data":{"text":"Hi"}}]}""")!).AsTask());
+    await room.Loop.RunAsync(() => room.WriteLocal(new object(), tx =>
+    {
+      room.Doc.GetMap("blocks").TryGet("p1", out var block);
+      ((Blok.Server.Yjs.YMap)block!).TryGet("data", out var data);
+      ((Blok.Server.Yjs.YMap)data!).Set(tx, "text", "<b>Hi</b>");
+    }));
   }
 
   [Fact]

@@ -88,6 +88,21 @@ public sealed class HostPageCreatorTests : IClassFixture<BundleFixture>, IDispos
     Assert.False(File.Exists(Path.Combine(dir, "host-page-1.json")));
   }
 
+  [Fact]
+  public async Task WithoutAHandleStoreAnotherClientsBatchStillActsAsTheOpener()
+  {
+    var creator = new FakeCreator("host-page-1");
+    await using var core = Core(creator);
+    var opener = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var other = await core.CallerAsync("alice", "phone", null, CancellationToken.None);
+    var handle = await OpenAsync(core, opener);
+
+    await ExecuteAsync(core, other, handle, CancellationToken.None, InsertPage("np"));
+
+    var request = Assert.Single(creator.Requests);
+    Assert.Equal(new BlokAgentActor(McpJson.String(opener.Actor["id"])!, McpJson.String(opener.Actor["name"])!, "alice"), request.Actor);
+  }
+
   [Theory]
   [InlineData(null)]
   [InlineData("")]

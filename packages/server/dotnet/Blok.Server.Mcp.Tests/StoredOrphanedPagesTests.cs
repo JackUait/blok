@@ -78,6 +78,18 @@ public sealed class StoredOrphanedPagesTests : IClassFixture<BundleFixture>, IDi
   }
 
   [Fact]
+  public async Task AFailureAfterAPageWasMadeIsLoggedToTheHostsLogger()
+  {
+    var logged = new List<string>();
+    var runtime = new FaultyRuntime(fixture.Host.Bundle.Runtime) { Throws = (operation, _) => operation == "agentExecute" };
+    var session = await OpenAsync(new McpBundle(runtime), source, Pages(Make, (message, error) => logged.Add($"{message}: {error.Message}")));
+
+    await session.ExecuteAsync(Batch(InsertPage("a")), Caller, null, CancellationToken.None);
+
+    Assert.Equal(["blok-mcp: a batch failed after it made pages: agentExecute failed"], logged);
+  }
+
+  [Fact]
   public async Task AnEngineFailureReportsNoPageTheParentAlreadyLinks()
   {
     File.WriteAllText(Path.Combine(dir, "doc.json"), """{"blocks":[{"id":"old","type":"page","data":{"pageId":"page-1"}}]}""");

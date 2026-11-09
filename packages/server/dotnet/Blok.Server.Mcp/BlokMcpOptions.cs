@@ -43,13 +43,15 @@ public sealed class BlokMcpOptions
   internal bool PrincipalSet => principal is not null;
 
   /// <summary>
-  /// <c>WithBlok</c> only: who calls one tools/call, or null for an anonymous caller. The default
-  /// reads the user the host's auth signed in: its <c>sub</c>, else its <c>NameIdentifier</c>, with no scopes.
+  /// <c>WithBlok</c> only (<c>AddBlokMcp</c> refuses it): who calls one tools/call, or null for an
+  /// anonymous caller. The default reads the user the host's auth signed in: its <c>sub</c>, else its
+  /// <c>NameIdentifier</c>, with no scopes. With this set, a registered <c>IBlokAuthorization</c> gets
+  /// the signed-in user with all its claims.
   /// </summary>
   public Func<RequestContext<CallToolRequestParams>, CancellationToken, ValueTask<BlokMcpCallerIdentity?>>? Caller { get; set; }
 
   /// <summary>
-  /// <c>WithBlok</c> only: serve anonymous callers as this principal. Unset, they are refused.
+  /// <c>WithBlok</c> only (<c>AddBlokMcp</c> refuses it): serve anonymous callers as this principal. Unset, they are refused.
   /// Every anonymous caller shares it, and its handle limit: pick a name no real user has.
   /// </summary>
   public string? AnonymousPrincipal { get; set; }

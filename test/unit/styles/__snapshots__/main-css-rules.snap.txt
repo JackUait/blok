@@ -5325,6 +5325,15 @@ span[data-blok-slash-search] {
   background-color: var(--blok-database-card-drag-source-bg, var(--_blok-group-card-hover, var(--blok-database-card-bg-hover)));
 }
 
+[data-blok-database-ghost] > [data-blok-database-card] {
+  margin: 0;
+  background-color: var(--blok-database-card-drag-source-bg, var(--_blok-group-card-hover, var(--blok-database-card-bg-hover)));
+}
+
+[data-blok-database-ghost] > [data-blok-database-card] [data-blok-database-card-actions] {
+  opacity: 1;
+}
+
 [data-blok-database-column-reordering] {
   cursor: grabbing;
 }

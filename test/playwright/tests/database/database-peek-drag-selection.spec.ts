@@ -281,6 +281,23 @@ test.describe('drag ghosts look like their source', () => {
     await page.mouse.up();
   });
 
+  // notion-live/carddrag-mid.png: the ghost is the card's own 40px, in the drag fill (no white), with ✎⋯ riding along.
+  test('a card ghost is the card at its own height, in the drag fill, with its buttons', async ({ page }) => {
+    await mount(page, blocks(), 'v2');
+    const card = page.locator('[data-blok-database-card][data-row-id="r3"]');
+    const source = await card.boundingBox();
+
+    if (source === null) throw new Error('no card box');
+    await dragBy(page, card, -300, 0);
+    const ghost = page.locator('[data-blok-database-ghost]');
+
+    await expect(ghost).toBeVisible();
+    expect((await ghost.boundingBox())?.height).toBeCloseTo(source.height, 1);
+    await expect(ghost.locator('[data-blok-database-card]')).toHaveCSS('background-color', 'rgba(55, 53, 47, 0.06)');
+    await expect(ghost.locator('[data-blok-database-card-actions]')).toHaveCSS('opacity', '1');
+    await page.mouse.up();
+  });
+
   test('a colored card keeps its group ring in the drag ghost', async ({ page }) => {
     await mount(page, imageBoard('large'), 'v2');
     const card = page.locator('[data-blok-database-card][data-row-id="r1"]');

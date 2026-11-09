@@ -1544,6 +1544,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TITLE_EDIT_ONE_LINE_BYTES = 478;
     // database.css: the board group menu's icon and text offsets and its 4px bottom.
     const DATABASE_GROUP_MENU_ROWS_BYTES = 507;
+    // database.css: the board card ghost keeps the drag fill and its ✎⋯ pill at the card's own height.
+    const DATABASE_CARD_GHOST_FILL_BYTES = 438;
     // database.css: the ring of a row the peek steps to starts 70ms late.
     const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
@@ -1961,7 +1963,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TITLE_ONE_LINE_BYTES
       + DATABASE_PANEL_MENU_RADIUS_BYTES
       + DATABASE_TITLE_EDIT_ONE_LINE_BYTES
-      + DATABASE_GROUP_MENU_ROWS_BYTES;
+      + DATABASE_GROUP_MENU_ROWS_BYTES
+      + DATABASE_CARD_GHOST_FILL_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

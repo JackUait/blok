@@ -208,6 +208,16 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-board-lane][data-collapsed] [data-blok-database-board-lane-columns]')).toMatch(/display:\s*none/);
   });
 
+  // notion-live/carddrag-mid.png: the ghost is the card at 260x40 with the 0.06 drag fill (250 over white,
+  // 4 darker over the column, so no white) and its ring, faded to 0.4, with the ✎⋯ pill riding along.
+  it('draws the card ghost in the drag fill at the card\'s own height, with its buttons', () => {
+    const clone = ruleBody('[data-blok-database-ghost] > [data-blok-database-card]');
+
+    expect(clone).toMatch(/margin:\s*0/);
+    expect(clone).toContain('background-color: var(--blok-database-card-drag-source-bg, var(--_blok-group-card-hover, var(--blok-database-card-bg-hover)))');
+    expect(ruleBody('[data-blok-database-ghost] > [data-blok-database-card] [data-blok-database-card-actions]')).toMatch(/opacity:\s*1/);
+  });
+
   it('draws the measured "No date" button', () => {
     const body = ruleBody('[data-blok-database-view-toolbar] [data-blok-database-no-date-button]');
 

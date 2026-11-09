@@ -82,6 +82,8 @@ func fromCSharp(t *testing.T, spec map[string]json.RawMessage) Options {
 			read(raw, &o.CollabEnforceRestoreGuards)
 		case "CollabRestoreTrashesPages":
 			read(raw, &o.CollabRestoreTrashesPages)
+		case "CollabStampAuthority":
+			read(raw, &o.CollabStampAuthority)
 		case "CollabMaxConnectionsPerUserPerDoc":
 			read(raw, &o.CollabMaxConnectionsPerUserPerDoc)
 		case "CollabMaxConnections":

@@ -154,7 +154,7 @@ func (r *Room) commitFromMemberLocked(membership *Membership, op wire.Operation)
 		r.acknowledgeLocked(membership, op, r.committedThrough)
 		return
 	}
-	sequence, ok := r.appendCommittedLocked(op.OperationID, membership.member.ActorID(), membership.member.ProtocolSource(), op.Update, digest[:])
+	sequence, ok := r.appendCommittedLocked(op.OperationID, membership.member.ActorID(), membership.member.ProtocolSource(), op.Update, digest[:], nil)
 	if !ok {
 		return
 	}
@@ -170,7 +170,9 @@ func (r *Room) commitFromMemberLocked(membership *Membership, op wire.Operation)
 
 // appendCommittedLocked is the durable step every journal write shares. It
 // answers the sequence, or closes the room before anything is published.
-func (r *Room) appendCommittedLocked(operationID, actorID string, source collab.OperationSource, update, digest []byte) (uint64, bool) {
+// note nil reads the record note from actorID.
+func (r *Room) appendCommittedLocked(operationID, actorID string, source collab.OperationSource, update, digest []byte,
+	note *RecordNote) (uint64, bool) {
 	var actor *string
 	if actorID != "" {
 		actor = &actorID
@@ -195,6 +197,10 @@ func (r *Room) appendCommittedLocked(operationID, actorID string, source collab.
 		return 0, false
 	}
 	r.committedThrough = appended.Sequence
+	if note == nil {
+		note = ClassifyActor(actorID, false, "")
+	}
+	r.writeNoteLocked(appended.Sequence, note)
 	// After the append: an edit is reported once it is durable.
 	r.recordActivityLocked(actorID, ActivityEdited)
 	r.operationsSinceCheckpoint++
@@ -208,6 +214,21 @@ func (r *Room) appendCommittedLocked(operationID, actorID string, source collab.
 		})
 	}
 	return appended.Sequence, true
+}
+
+// writeNoteLocked stores who wrote the record just journalled. Not atomic
+// with the journal: a crash, a timeout or an error here loses only this
+// note, and never fails the edit or closes the room.
+func (r *Room) writeNoteLocked(sequence uint64, note *RecordNote) {
+	if r.notes == nil || note == nil {
+		return
+	}
+	ctx, cancel := r.boundedLocked()
+	err := r.notes.Write(ctx, r.docID, r.tag.Lineage, sequence, *note)
+	cancel()
+	if err != nil {
+		r.logf(`collab: the record note of ` + strconv.FormatUint(sequence, 10) + ` in "` + r.docID + `" was not written: ` + err.Error())
+	}
 }
 
 func appendOutcomeName(outcome operation.AppendOutcome) string {
@@ -263,7 +284,7 @@ func (r *Room) applyFromMemberLocked(membership *Membership, update []byte) {
 		return
 	}
 	digest := sha256.Sum256(update)
-	if _, ok := r.appendCommittedLocked(newOperationID(), membership.member.ActorID(), membership.member.ProtocolSource(), update, digest[:]); !ok {
+	if _, ok := r.appendCommittedLocked(newOperationID(), membership.member.ActorID(), membership.member.ProtocolSource(), update, digest[:], nil); !ok {
 		return
 	}
 	r.publishFromMemberLocked(membership, update)

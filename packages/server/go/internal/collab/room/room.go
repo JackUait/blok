@@ -84,6 +84,7 @@ type Room struct {
 	store      WorkingSetStore
 	operations OperationStore
 	activity   ActivityObserver
+	notes      RecordNotes
 	endpoint   Endpoint
 	converter  Converter
 	options    Options
@@ -159,6 +160,7 @@ func newRoom(docID string, m *Manager) *Room {
 		store:          m.store,
 		operations:     m.operations,
 		activity:       m.activity,
+		notes:          m.notes,
 		endpoint:       m.endpoint,
 		converter:      m.converter,
 		options:        m.options,

@@ -312,7 +312,7 @@ func (e *Executor) ExecuteInRoom(ctx context.Context, docID, batchJSON string, a
 		}
 		e.history.add(docID, actor, recorded)
 		return nil
-	})
+	}, agentNote(actor))
 	var asked *askError
 	if errors.As(err, &asked) {
 		return Execution{askJSON: &asked.json}, nil

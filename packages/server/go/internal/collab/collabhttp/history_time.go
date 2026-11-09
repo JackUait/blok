@@ -19,6 +19,7 @@ const (
 	badRange  = "from and to must be ISO 8601 times with an offset, from no later than to\n"
 	badBefore = "before must be one <lineage>:<sequence>\n"
 	badDetail = "detail must be properties\n"
+	badBlock  = "block must be one block id\n"
 )
 
 // HistoryAt is GET /sync/{doc}/history/at?time=: the newest point at or
@@ -108,6 +109,11 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 		synchttp.Refuse(w, http.StatusBadRequest, badDetail)
 		return
 	}
+	block, ok := queryBlock(r)
+	if !ok {
+		synchttp.Refuse(w, http.StatusBadRequest, badBlock)
+		return
+	}
 	result, err := a.rooms.ChangesBetween(r.Context(), a.doc, start, end, before, room.MaxChangeRecords, room.MaxChangeBytes)
 	if err != nil {
 		failed(w, r.Context())
@@ -119,8 +125,24 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 	}
 	var rows [][]byte
 	var sizes []int64
+	var shown []room.RangeRecord
+	type lineageNotes struct {
+		notes map[uint64]room.RecordNote
+		noted bool
+	}
+	notes := map[string]lineageNotes{}
 	for _, record := range result.Records {
-		row, err := changeRow(record.RecordChanges, detail)
+		changes, ok := narrowed(record.RecordChanges, block)
+		if !ok {
+			continue
+		}
+		read, seen := notes[record.Lineage]
+		if !seen {
+			read.notes, read.noted = a.rooms.ReadNotes(r.Context(), a.doc, record.Lineage)
+			notes[record.Lineage] = read
+		}
+		shown = append(shown, record)
+		row, err := changeRow(changes, detail, read.notes, read.noted)
 		if err != nil {
 			failed(w, r.Context())
 			return
@@ -130,8 +152,15 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 		rows = append(rows, row)
 		sizes = append(sizes, int64(len(row)))
 	}
+	// As /changes: cut by the room with every row kept, the answer ends at the oldest record read.
+	olderEndOf := func(oldest int) room.RangeRecord {
+		if oldest == len(rows)-1 && len(result.Records) > 0 {
+			return result.Records[len(result.Records)-1]
+		}
+		return shown[oldest]
+	}
 	kept, truncated := fitAnswer(sizes, result.Truncated, func(oldest int) int64 {
-		record := result.Records[oldest]
+		record := olderEndOf(oldest)
 		return int64(len(appendOlderEnd(nil, record.Lineage, record.Sequence, record.CommittedAt)))
 	})
 	rows = rows[:kept]
@@ -144,7 +173,7 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 	}
 	body = append(body, ']')
 	if truncated {
-		oldest := result.Records[len(rows)-1]
+		oldest := olderEndOf(kept - 1)
 		body = appendOlderEnd(body, oldest.Lineage, oldest.Sequence, oldest.CommittedAt)
 	}
 	writeJSON(w, append(body, '}'))

@@ -172,6 +172,7 @@ func TestGroupVersionsMatchesTheTimelineFixture(t *testing.T) {
 	for _, c := range historyFixture(t, "timeline.json") {
 		name := text(t, c, "name")
 		var lineages []LineageHeaders
+		var notes map[string]map[uint64]RecordNote
 		for _, entry := range objects(t, member(t, c, "lineages")) {
 			lineage := LineageHeaders{Lineage: journal.LineageInfo{
 				Lineage: text(t, entry, "lineage"), Epoch: 1, Format: 2, CreatedAt: ticks(t, entry, "createdAt"),
@@ -182,6 +183,15 @@ func TestGroupVersionsMatchesTheTimelineFixture(t *testing.T) {
 					CommittedAt: *ticks(t, header, "committedAt"),
 					ActorID:     optionalText(t, header, "actor"),
 				})
+				if note, ok := header.Get(jsjson.FromString("note")); ok {
+					if notes == nil {
+						notes = map[string]map[uint64]RecordNote{}
+					}
+					if notes[lineage.Lineage.Lineage] == nil {
+						notes[lineage.Lineage.Lineage] = map[uint64]RecordNote{}
+					}
+					notes[lineage.Lineage.Lineage][number(t, header, "sequence")] = noteOf(t, note.(*jsjson.Object))
+				}
 			}
 			lineages = append(lineages, lineage)
 		}
@@ -189,7 +199,19 @@ func TestGroupVersionsMatchesTheTimelineFixture(t *testing.T) {
 		if window, ok := member(t, c, "windowMinutes").(float64); ok {
 			gap, span = time.Duration(window)*time.Minute, time.Duration(window)*time.Minute
 		}
-		got := GroupVersions(lineages, gap, span)
+		byActor, _ := c.Get(jsjson.FromString("byActor"))
+		_, withKinds := c.Get(jsjson.FromString("versions"))
+		withKinds = withKinds && notes != nil
+		var lookup func(lineage string, sequence uint64) *RecordNote
+		if withKinds {
+			lookup = func(lineage string, sequence uint64) *RecordNote {
+				if note, ok := notes[lineage][sequence]; ok {
+					return &note
+				}
+				return nil
+			}
+		}
+		got := GroupVersionsBy(lineages, gap, span, byActor == true, lookup)
 		want := objects(t, member(t, c, "versions"))
 		if len(got) != len(want) {
 			t.Errorf("%s: %d versions, want %d", name, len(got), len(want))
@@ -202,6 +224,23 @@ func TestGroupVersionsMatchesTheTimelineFixture(t *testing.T) {
 				!sameText(ticksText(g.SavedAt), optionalText(t, version, "savedAt")) ||
 				!sameStrings(g.Actors, stringList(t, member(t, version, "actors"))) {
 				t.Errorf("%s: version %d is %+v, want %s", name, i, g, stringified(t, version))
+			}
+			kinds, hasKinds := version.Get(jsjson.FromString("actorKinds"))
+			if hasKinds != g.Noted {
+				t.Errorf("%s: version %d noted is %v, want %v", name, i, g.Noted, hasKinds)
+				continue
+			}
+			if hasKinds {
+				want := objects(t, kinds)
+				if len(want) != len(g.ActorKinds) {
+					t.Errorf("%s: version %d has %d kinds, want %d", name, i, len(g.ActorKinds), len(want))
+					continue
+				}
+				for k, kind := range want {
+					if g.ActorKinds[k].ID != text(t, kind, "id") || g.ActorKinds[k].Note != noteOf(t, kind) {
+						t.Errorf("%s: version %d kind %d is %+v, want %s", name, i, k, g.ActorKinds[k], stringified(t, kind))
+					}
+				}
 			}
 		}
 	}
@@ -379,6 +418,80 @@ func TestPlanRestoreMatchesTheRestorePlansFixture(t *testing.T) {
 			if got, expected := opText(t, op), stringified(t, want[i]); got != expected {
 				t.Errorf("%s: op %d is %s, want %s", name, i, got, expected)
 			}
+		}
+	}
+}
+
+// noteOf reads {kind, onBehalfOf?}.
+func noteOf(t *testing.T, object *jsjson.Object) RecordNote {
+	t.Helper()
+	note := RecordNote{Kind: text(t, object, "kind")}
+	if _, ok := object.Get(jsjson.FromString("onBehalfOf")); ok {
+		note.OnBehalfOf = text(t, object, "onBehalfOf")
+	}
+	return note
+}
+
+// Twin of C# CollabAttributionCaptureTests.TheActorKindsMatchTheRules.
+func TestClassifyActorMatchesTheActorKindsFixture(t *testing.T) {
+	for _, c := range historyFixture(t, "actor-kinds.json") {
+		name := text(t, c, "name")
+		actor := optionalText(t, c, "actor")
+		onBehalfOf := optionalText(t, c, "onBehalfOf")
+		actorID, person := "", ""
+		if actor != nil {
+			actorID = *actor
+		}
+		if onBehalfOf != nil {
+			person = *onBehalfOf
+		}
+		agent := member(t, c, "agent") == true
+		got := ClassifyActor(actorID, agent, person)
+		want, _ := member(t, c, "note").(*jsjson.Object)
+		switch {
+		case want == nil && got != nil:
+			t.Errorf("%s: note %+v, want none", name, *got)
+		case want != nil && (got == nil || *got != noteOf(t, want)):
+			t.Errorf("%s: note %+v, want %s", name, got, stringified(t, want))
+		}
+		by, with := Attribution(actorID, got)
+		if !sameText(nonEmpty(by), optionalText(t, c, "by")) || !sameText(nonEmpty(with), optionalText(t, c, "with")) {
+			t.Errorf("%s: by %q with %q, want %s", name, by, with, stringified(t, c))
+		}
+	}
+}
+
+func nonEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// Twin of C# CollabAttributionCaptureTests.TheStampAuthorityMatchesTheRules.
+func TestStampAuthorityMatchesTheFixture(t *testing.T) {
+	fixture := readRepoJSON(t, "test", "unit", "server-conformance", "fixtures", "collab-edits", "stamp-authority.json")
+	cases := objects(t, member(t, fixture, "cases"))
+	if len(cases) < 5 {
+		t.Fatalf("only %d cases", len(cases))
+	}
+	for _, c := range cases {
+		name := text(t, c, "name")
+		ops, err := convert.ParseEditOps([]byte(text(t, c, "body")))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		actorID := ""
+		if actor := optionalText(t, c, "actor"); actor != nil {
+			actorID = *actor
+		}
+		stamped := StampAuthority(ops, actorID, member(t, c, "nowMs").(float64))
+		canonical, err := convert.CanonicalBody(stamped)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if string(canonical) != text(t, c, "canonical") {
+			t.Errorf("%s:\n got %s\nwant %s", name, canonical, text(t, c, "canonical"))
 		}
 	}
 }

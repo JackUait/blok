@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver/collabstore"
 )
 
 const conformanceOriginPrefix = "http://127.0.0.1:"
@@ -22,6 +23,10 @@ type conformanceArguments struct {
 	restoreGuards bool
 	// restoreTrashesPages is CollabRestoreTrashesPages.
 	restoreTrashesPages bool
+	// recordNotes keeps record notes in memory.
+	recordNotes bool
+	// stampAuthority is CollabStampAuthority.
+	stampAuthority bool
 	// keepAlive is CollabKeepAliveInterval, when set.
 	keepAlive *time.Duration
 }
@@ -47,6 +52,14 @@ func parseConformanceArguments(args []string) ([]string, conformanceArguments, s
 		}
 		if argument == "--conformance-restore-trashes-pages" {
 			parsed.restoreTrashesPages = true
+			continue
+		}
+		if argument == "--conformance-record-notes" {
+			parsed.recordNotes = true
+			continue
+		}
+		if argument == "--conformance-stamp-authority" {
+			parsed.stampAuthority = true
 			continue
 		}
 		if text, ok := strings.CutPrefix(argument, "--conformance-keep-alive-ms="); ok {
@@ -102,6 +115,10 @@ func applyConformanceOptions(options *blokserver.Options, parsed conformanceArgu
 	}
 	options.CollabEnforceRestoreGuards = parsed.restoreGuards
 	options.CollabRestoreTrashesPages = parsed.restoreTrashesPages
+	options.CollabStampAuthority = parsed.stampAuthority
+	if parsed.recordNotes {
+		options.CollabRecordNotes = collabstore.NewMemoryRecordNotes()
+	}
 }
 
 // applyConformance wires the parsed flags into the server.

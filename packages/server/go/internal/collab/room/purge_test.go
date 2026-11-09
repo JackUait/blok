@@ -116,7 +116,7 @@ func TestEveryDoorRefusesAnEmptyDocIDBeforeAnyRoomExists(t *testing.T) {
 			return err
 		},
 		"agent edit": func() error {
-			_, err := manager.AgentEdit(ctx, "", noPlan, "op", nil, "", nil, nil)
+			_, err := manager.AgentEdit(ctx, "", noPlan, "op", nil, "", nil, nil, nil)
 			return err
 		},
 		"state":      func() error { _, err := manager.State(ctx, ""); return err },
@@ -131,7 +131,7 @@ func TestEveryDoorRefusesAnEmptyDocIDBeforeAnyRoomExists(t *testing.T) {
 		err.Error() != "The value cannot be an empty string. (Parameter 'operationId')" {
 		t.Errorf("edit: %v", err)
 	}
-	if _, err := manager.AgentEdit(ctx, "doc", noPlan, "", nil, "", nil, nil); !errors.Is(err, ErrEmptyOperationID) {
+	if _, err := manager.AgentEdit(ctx, "doc", noPlan, "", nil, "", nil, nil, nil); !errors.Is(err, ErrEmptyOperationID) {
 		t.Errorf("agent edit: %v", err)
 	}
 	if manager.LiveRoomCount() != 0 || endpoint.loaded() != 0 {

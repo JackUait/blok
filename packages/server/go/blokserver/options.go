@@ -115,6 +115,16 @@ type Options struct {
 	// must show such a block as in Trash: the editor does not hide it.
 	CollabRestoreTrashesPages bool
 
+	// CollabRecordNotes is UseCollabRecordNotes<T>: a note of who wrote each
+	// journal record, kept beside the journal. The history routes then carry
+	// actor kinds. Nil keeps none.
+	CollabRecordNotes collabstore.RecordNotes
+
+	// CollabStampAuthority is CollabStampAuthority: POST /edit inserts get the
+	// server's createdAt/By/With and lastEditedAt/By/With, and an update
+	// stamps its block's lastEdited*. False, the default, keeps the caller's.
+	CollabStampAuthority bool
+
 	// Clock is the TimeProvider override: tickets, the rate limit window, S3
 	// signing and the rooms' timestamps (activity, cooldowns, export
 	// deadlines) read it. Nil is the system clock.

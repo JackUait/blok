@@ -33,6 +33,11 @@ type Config struct {
 	// reshape a locked database is refused 409 until the request confirms
 	// each kind. Off keeps the restore unasked.
 	EnforceRestoreGuards bool
+	// StampAuthority: an /edit insert gets the server's stamps and an update
+	// stamps its block. Off keeps the caller's.
+	StampAuthority bool
+	// Now is the clock the stamps read; nil is the system clock.
+	Now func() time.Time
 }
 
 // Handlers serves the routes.

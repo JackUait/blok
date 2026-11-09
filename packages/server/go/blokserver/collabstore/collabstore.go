@@ -119,6 +119,17 @@ const (
 // one a room makes no calls at all.
 type ActivityObserver = room.ActivityObserver
 
+// RecordNotes is ICollabRecordNotes: one note per journal record, written
+// right after the append but not atomically with it. Blok never deletes
+// notes; delete a document's notes when you purge it.
+type RecordNotes = room.RecordNotes
+
+// RecordNote is CollabRecordNote.
+type RecordNote = room.RecordNote
+
+// NewMemoryRecordNotes is InMemoryCollabRecordNotes: notes in memory, lost on restart.
+func NewMemoryRecordNotes() *room.MemoryRecordNotes { return room.NewMemoryRecordNotes() }
+
 // ActivityKind is CollabActivityKind.
 type ActivityKind = room.ActivityKind
 

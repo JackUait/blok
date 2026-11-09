@@ -71,10 +71,10 @@ func refusalStatus(refusal *convert.EditError) EditStatus {
 }
 
 func (r *Room) edit(ctx context.Context, plan PlanOps, gateFrameSize bool, operationID string, digest []byte,
-	actorID string, expect *Precondition, applied Applied) (*EditResult, error) {
+	actorID string, expect *Precondition, applied Applied, note *RecordNote) (*EditResult, error) {
 	var result *EditResult
 	err := r.run(ctx, func() (err error) {
-		result, err = r.editLocked(plan, gateFrameSize, operationID, digest, actorID, expect, applied, false)
+		result, err = r.editLocked(plan, gateFrameSize, operationID, digest, actorID, expect, applied, false, note)
 		return err
 	})
 	return result, err
@@ -85,14 +85,14 @@ func (r *Room) edit(ctx context.Context, plan PlanOps, gateFrameSize bool, opera
 func (r *Room) preview(ctx context.Context, plan PlanOps, expect *Precondition) (*EditResult, error) {
 	var result *EditResult
 	err := r.run(ctx, func() (err error) {
-		result, err = r.editLocked(plan, false, "", nil, "", expect, nil, true)
+		result, err = r.editLocked(plan, false, "", nil, "", expect, nil, true, nil)
 		return err
 	})
 	return result, err
 }
 
 func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, digest []byte,
-	actorID string, expect *Precondition, applied Applied, dryRun bool) (*EditResult, error) {
+	actorID string, expect *Precondition, applied Applied, dryRun bool, note *RecordNote) (*EditResult, error) {
 	if r.purgeRequested.Load() {
 		return &EditResult{Status: EditPurged}, nil
 	}
@@ -236,7 +236,7 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 		return &EditResult{Status: EditUnavailable}, nil
 	}
 	update := r.localUpdates[0]
-	sequence, ok := r.appendCommittedLocked(operationID, actorID, collab.SourceHTTPEdit, update, digest)
+	sequence, ok := r.appendCommittedLocked(operationID, actorID, collab.SourceHTTPEdit, update, digest, note)
 	if !ok {
 		return &EditResult{Status: EditUnavailable}, nil
 	}

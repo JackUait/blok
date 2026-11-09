@@ -179,7 +179,7 @@ func (e *Executor) runRoomHistoryOnce(ctx context.Context, docID string, undo bo
 		}
 		_, err = e.history.replayed(docID, actor, step, undo, actual)
 		return err
-	})
+	}, agentNote(actor))
 	var refusal *historyRefusal
 	if errors.As(err, &refusal) {
 		return failure(refusal.code, refusal.message, refusal.retryable, refusal.details, "")
@@ -211,4 +211,13 @@ func (e *Executor) runRoomHistoryOnce(ctx context.Context, docID string, undo bo
 	}
 	return failure("APPLY_FAILED", "The room refused the "+short+" ("+edit.Status.String()+"). Nothing was written.",
 		retryableEdit(edit.Status), jsjson.NewObject(member("status", str(edit.Status.String()))), head)
+}
+
+// agentNote is the record note of an in-process agent's write.
+func agentNote(actor Actor) *room.RecordNote {
+	person := ""
+	if actor.OnBehalfOf != nil {
+		person = *actor.OnBehalfOf
+	}
+	return room.ClassifyActor(actor.ID, true, person)
 }

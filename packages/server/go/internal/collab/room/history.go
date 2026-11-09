@@ -76,6 +76,26 @@ func (m *Manager) isPurged(ctx context.Context, history HistoryStore, docID stri
 // History lists every lineage and its versions newest first. group > 0
 // replaces both default grouping limits.
 func (m *Manager) History(ctx context.Context, docID string, group time.Duration) (HistoryList, error) {
+	return m.HistoryBy(ctx, docID, group, false)
+}
+
+// ReadNotes is the record notes of one lineage; false without a store. A
+// store that fails reads as no notes: they are informational.
+func (m *Manager) ReadNotes(ctx context.Context, docID, lineage string) (map[uint64]RecordNote, bool) {
+	if m.notes == nil {
+		return nil, false
+	}
+	notes, err := m.notes.Read(ctx, docID, lineage)
+	if err != nil {
+		m.logf(`collab: the record notes of "` + docID + `" could not be read: ` + err.Error())
+		return map[uint64]RecordNote{}, true
+	}
+	return notes, true
+}
+
+// HistoryBy is History where byActor also starts a version where the actor
+// changes. With a record notes store, each version carries its actor kinds.
+func (m *Manager) HistoryBy(ctx context.Context, docID string, group time.Duration, byActor bool) (HistoryList, error) {
 	history, ok := m.history()
 	if !ok {
 		return HistoryList{Status: HistoryNone}, nil
@@ -115,7 +135,21 @@ func (m *Manager) History(ctx context.Context, docID string, group time.Duration
 	if group > 0 {
 		idleGap, maxSpan = group, group
 	}
-	return HistoryList{Status: HistoryReady, Lineages: lineages, Versions: GroupVersions(withHeaders, idleGap, maxSpan)}, nil
+	var noteOf func(lineage string, sequence uint64) *RecordNote
+	if m.notes != nil {
+		byLineage := map[string]map[uint64]RecordNote{}
+		for _, lineage := range lineages {
+			byLineage[lineage.Lineage], _ = m.ReadNotes(ctx, docID, lineage.Lineage)
+		}
+		noteOf = func(lineage string, sequence uint64) *RecordNote {
+			if note, ok := byLineage[lineage][sequence]; ok {
+				return &note
+			}
+			return nil
+		}
+	}
+	return HistoryList{Status: HistoryReady, Lineages: lineages,
+		Versions: GroupVersionsBy(withHeaders, idleGap, maxSpan, byActor, noteOf)}, nil
 }
 
 type point struct {
@@ -484,7 +518,7 @@ func (m *Manager) RestoreGuarded(ctx context.Context, docID, lineage string, seq
 			}
 			return PlanRestoreTrashing(current, structure, target, convert.ReadPageMaps(doc), targetMaps,
 				m.restoreTrash(actorID)), nil
-		}, true, operationID, digest, actorID, expect, nil)
+		}, true, operationID, digest, actorID, expect, nil, nil)
 	})
 	if errors.Is(err, errRestorePointMissing) {
 		return HistoryNotFound, nil, nil, nil

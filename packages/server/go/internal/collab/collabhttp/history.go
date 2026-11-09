@@ -69,7 +69,10 @@ func (h *Handlers) HistoryList(w http.ResponseWriter, r *http.Request) {
 	if minutes != nil {
 		group = time.Duration(*minutes) * time.Minute
 	}
-	result, err := a.rooms.History(r.Context(), a.doc, group)
+	// Shipped route: any other by is ignored, as unknown keys always were.
+	by := dotnet.QueryAll(r.URL.RawQuery, "by")
+	byActor := len(by) == 1 && by[0] == "actor"
+	result, err := a.rooms.HistoryBy(r.Context(), a.doc, group, byActor)
 	if err != nil {
 		failed(w, r.Context())
 		return
@@ -115,7 +118,18 @@ func (h *Handlers) HistoryList(w http.ResponseWriter, r *http.Request) {
 			}
 			body = jsjson.AppendQuoted(body, jsjson.FromString(actor))
 		}
-		body = append(body, "]}"...)
+		body = append(body, ']')
+		if version.Noted {
+			body = append(body, `,"actorKinds":[`...)
+			for j, kind := range version.ActorKinds {
+				if j > 0 {
+					body = append(body, ',')
+				}
+				body = appendActorKind(body, kind.ID, kind.Note)
+			}
+			body = append(body, ']')
+		}
+		body = append(body, '}')
 	}
 	body = append(body, "]}"...)
 	writeJSON(w, body)
@@ -173,9 +187,13 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 		synchttp.Refuse(w, http.StatusBadRequest, "since must be a whole number no greater than the sequence\n")
 		return
 	}
-	// v2.1.0 ignored unknown keys here, so a bad detail is ignored, not refused.
+	// v2.1.0 ignored unknown keys here, so a bad detail or block is ignored, not refused.
 	detail, ok := queryDetail(r)
 	detail = detail && ok
+	block, ok := queryBlock(r)
+	if !ok {
+		block = nil
+	}
 	var from uint64
 	if since != nil {
 		from = *since
@@ -189,20 +207,35 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 		h.refuseHistory(w, a, result.Status)
 		return
 	}
+	notes, noted := a.rooms.ReadNotes(r.Context(), a.doc, lineage)
 	// Rows are measured newest first; the newest always goes out.
 	var rows [][]byte
 	var sizes []int64
+	var shown []room.RecordChanges
 	for index := len(result.Changes) - 1; index >= 0; index-- {
-		row, err := changeRow(result.Changes[index], detail)
+		record, ok := narrowed(result.Changes[index], block)
+		if !ok {
+			continue
+		}
+		row, err := changeRow(record, detail, notes, noted)
 		if err != nil {
 			failed(w, r.Context())
 			return
 		}
 		rows = append(rows, row)
 		sizes = append(sizes, int64(len(row)))
+		shown = append(shown, record)
+	}
+	// Cut by the room with every row kept, the answer ends at the oldest
+	// record read, so a narrowed answer still moves its cursor.
+	olderEndOf := func(oldest int) room.RecordChanges {
+		if oldest == len(rows)-1 && len(result.Changes) > 0 {
+			return result.Changes[0]
+		}
+		return shown[oldest]
 	}
 	kept, truncated := fitAnswer(sizes, result.Truncated, func(oldest int) int64 {
-		record := result.Changes[len(result.Changes)-1-oldest]
+		record := olderEndOf(oldest)
 		return int64(len(appendOlderEnd(nil, lineage, record.Sequence, record.CommittedAt)))
 	})
 	rows = rows[:kept]
@@ -216,7 +249,7 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 	}
 	body = append(body, ']')
 	if truncated {
-		oldest := result.Changes[len(result.Changes)-len(rows)]
+		oldest := olderEndOf(kept - 1)
 		body = appendOlderEnd(body, lineage, oldest.Sequence, oldest.CommittedAt)
 	}
 	writeJSON(w, append(body, '}'))
@@ -227,8 +260,9 @@ var changeKinds = map[room.BlockChangeKind]string{
 }
 
 // changeRow writes one row. With detail, a changed database or row also
-// carries what changed inside its data.
-func changeRow(record room.RecordChanges, detail bool) ([]byte, error) {
+// carries what changed inside its data. With a notes store (noted), the row
+// carries actors: its actor's kind, or nothing when the record has no note.
+func changeRow(record room.RecordChanges, detail bool, notes map[uint64]room.RecordNote, noted bool) ([]byte, error) {
 	row := []byte(`{"sequence":`)
 	row = strconv.AppendUint(row, record.Sequence, 10)
 	row = append(row, `,"committedAt":`...)
@@ -238,6 +272,13 @@ func changeRow(record room.RecordChanges, detail bool) ([]byte, error) {
 		row = append(row, "null"...)
 	} else {
 		row = jsjson.AppendQuoted(row, jsjson.FromString(*record.ActorID))
+	}
+	if noted {
+		row = append(row, `,"actors":[`...)
+		if note, ok := notes[record.Sequence]; ok && record.ActorID != nil {
+			row = appendActorKind(row, *record.ActorID, note)
+		}
+		row = append(row, ']')
 	}
 	row = append(row, `,"blocks":[`...)
 	for i, change := range record.Blocks {
@@ -293,6 +334,47 @@ func changeRow(record room.RecordChanges, detail bool) ([]byte, error) {
 		row = append(row, ']')
 	}
 	return append(row, '}'), nil
+}
+
+// appendActorKind writes {id, kind, onBehalfOf?}.
+func appendActorKind(body []byte, id string, note room.RecordNote) []byte {
+	body = jsjson.AppendQuoted(append(body, `{"id":`...), jsjson.FromString(id))
+	body = jsjson.AppendQuoted(append(body, `,"kind":`...), jsjson.FromString(note.Kind))
+	if note.OnBehalfOf != "" {
+		body = jsjson.AppendQuoted(append(body, `,"onBehalfOf":`...), jsjson.FromString(note.OnBehalfOf))
+	}
+	return append(body, '}')
+}
+
+// narrowed is the record narrowed to one block: only its changes, no page
+// keys. False when the record did not touch it. A nil block keeps it whole.
+func narrowed(record room.RecordChanges, block *string) (room.RecordChanges, bool) {
+	if block == nil {
+		return record, true
+	}
+	var blocks []room.BlockChange
+	for _, change := range record.Blocks {
+		if change.ID.String() == *block {
+			blocks = append(blocks, change)
+		}
+	}
+	if len(blocks) == 0 {
+		return record, false
+	}
+	record.Blocks, record.Page = blocks, nil
+	return record, true
+}
+
+// queryBlock: absent is nil; anything but one non-empty value is false.
+func queryBlock(r *http.Request) (*string, bool) {
+	values := dotnet.QueryAll(r.URL.RawQuery, "block")
+	if len(values) == 0 {
+		return nil, true
+	}
+	if len(values) != 1 || values[0] == "" {
+		return nil, false
+	}
+	return &values[0], true
 }
 
 // HistoryDelete is DELETE /sync/{doc}/history/{lineage}.

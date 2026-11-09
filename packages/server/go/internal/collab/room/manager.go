@@ -26,6 +26,8 @@ type ManagerOptions struct {
 	// Operations nil means no journal: v1 only, no history.
 	Operations OperationStore
 	Activity   ActivityObserver
+	// Notes nil keeps no record notes: history answers carry no actor kinds.
+	Notes RecordNotes
 }
 
 type cooldown struct {
@@ -44,6 +46,7 @@ type Manager struct {
 	log        func(string)
 	operations OperationStore
 	activity   ActivityObserver
+	notes      RecordNotes
 
 	mu         sync.Mutex
 	rooms      map[string]*Room
@@ -65,6 +68,7 @@ func NewManager(o ManagerOptions) *Manager {
 		log:        o.Log,
 		operations: o.Operations,
 		activity:   o.Activity,
+		notes:      o.Notes,
 		rooms:      map[string]*Room{},
 		purgeLanes: map[string]*lane{},
 		cooldowns:  map[string]cooldown{},
@@ -187,14 +191,15 @@ func (m *Manager) Edit(ctx context.Context, docID string, ops []convert.EditOp, 
 	}
 	return m.editInRoom(docID, func(r *Room) (*EditResult, error) {
 		return r.edit(ctx, func(context.Context, *yjs.Doc) ([]convert.EditOp, error) { return ops, nil },
-			false, operationID, digest, actorID, expect, nil)
+			false, operationID, digest, actorID, expect, nil, nil)
 	})
 }
 
 // AgentEdit is AgentEditAsync: a batch planned against the live doc inside
 // the lane, after the duplicate and precondition checks, gated to one frame.
+// note, when not nil, is the record note in place of one read from actorID.
 func (m *Manager) AgentEdit(ctx context.Context, docID string, plan PlanOps, operationID string, digest []byte,
-	actorID string, expect *Precondition, applied Applied) (EditResult, error) {
+	actorID string, expect *Precondition, applied Applied, note *RecordNote) (EditResult, error) {
 	if err := checkEditIDs(docID, operationID); err != nil {
 		return EditResult{}, err
 	}
@@ -202,7 +207,7 @@ func (m *Manager) AgentEdit(ctx context.Context, docID string, plan PlanOps, ope
 		return EditResult{Status: EditPreconditionRequired}, nil
 	}
 	return m.editInRoom(docID, func(r *Room) (*EditResult, error) {
-		return r.edit(ctx, plan, true, operationID, digest, actorID, expect, applied)
+		return r.edit(ctx, plan, true, operationID, digest, actorID, expect, applied, note)
 	})
 }
 

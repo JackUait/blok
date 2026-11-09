@@ -137,6 +137,7 @@ func (s *Server) buildRoomManager() (*room.Manager, error) {
 		Log:        s.collabLog,
 		Operations: operations,
 		Activity:   o.CollabActivityObserver,
+		Notes:      o.CollabRecordNotes,
 	}), nil
 }
 

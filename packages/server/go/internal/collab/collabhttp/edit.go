@@ -76,6 +76,14 @@ func (h *Handlers) Edit(w http.ResponseWriter, r *http.Request) {
 		ticketUser = user.ID
 	}
 	actor := synchttp.DeriveActor(ticketUser, user, hasUser)
+	// After the digest, which is of the request as sent, so a retry still matches.
+	if h.config.StampAuthority {
+		now := time.Now
+		if h.config.Now != nil {
+			now = h.config.Now
+		}
+		ops = room.StampAuthority(ops, actor, float64(now().UnixMilli()))
+	}
 	result, err := manager.Edit(r.Context(), doc, ops, operationID, digest, actor, expect)
 	if err != nil {
 		failed(w, r.Context())

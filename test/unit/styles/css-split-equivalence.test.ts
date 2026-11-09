@@ -1519,7 +1519,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: the Filter / Sort picker keeps its 28px field, scrolls only its list and borders the search on focus.
     const DATABASE_PROPERTY_PICKER_BYTES = 891;
     // database.css: a one-view title row keeps the peek gap, as the view bar does.
-    const DATABASE_PEEK_TITLE_ROW_BYTES = 256;
+    const DATABASE_PEEK_TITLE_ROW_BYTES = 291;
     // database.css: a full row page widens its column by the title inset.
     const DATABASE_FULL_PAGE_INSET_BYTES = 156;
     // database.css: a one-view title row folds its toolbar as the view bar does.

@@ -498,6 +498,14 @@ export class PageTool implements BlockTool {
       if (document === null || document === undefined || root?.id === undefined || this.detached || this.readOnly || pageId !== this.data.pageId) return;
       const subtree = subtreeOf(document.blocks, root.id);
 
+      // `kind` is block data any collaborator can set, so it could point at a page of
+      // someone else's. Move only what Turn into page writes: one fullPage database, nothing else.
+      if (root.data.fullPage !== true || subtree.length !== document.blocks.length) {
+        log('Turn into inline database: the page is not a full-page database; nothing changed.', 'warn');
+
+        return;
+      }
+
       // Same ids as on the page, like Notion. A clash would merge two blocks into one.
       if (subtree.some((block) => block.id !== undefined && this.api.blocks.getById(block.id) !== null)) {
         log('Turn into inline database: a block of the page is already in this document; nothing changed.', 'warn');

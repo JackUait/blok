@@ -222,6 +222,32 @@ describe('Turn into inline database on a database page link', () => {
     expect(await saved(instance)).toBe(before);
   }, 30_000);
 
+  // block data is shared: a collaborator can point the link at any page the clicker can read.
+  it.each<[string, OutputData]>([
+    ['a plain page', { title: 'Notes', blocks: [{ id: 'n1', type: 'paragraph', data: { text: 'secret' } }] }],
+    ['a page with a database and other blocks', {
+      ...PAGE_DOCUMENT,
+      blocks: [{ id: 'n1', type: 'paragraph', data: { text: 'secret' } }, ...PAGE_DOCUMENT.blocks],
+    }],
+    ['a database without fullPage', {
+      ...PAGE_DOCUMENT,
+      blocks: PAGE_DOCUMENT.blocks.map(block => block.id === 'db' ? { ...block, data: { ...block.data, fullPage: undefined } } : block),
+    }],
+    ['a full-page database plus a stray block outside it', {
+      ...PAGE_DOCUMENT,
+      blocks: [...PAGE_DOCUMENT.blocks, { id: 'n1', type: 'paragraph', parent: 'elsewhere', data: { text: 'secret' } }],
+    }],
+  ])('changes nothing when the page is %s', async (_name, document) => {
+    const loadDocument = vi.fn().mockResolvedValue(structuredClone(document));
+    const instance = await boot({ databasePages: true, create: vi.fn(), loadDocument });
+    const before = await saved(instance);
+
+    await step(instance, () => turnIntoInline(instance)?.onActivate?.());
+
+    expect(await saved(instance)).toBe(before);
+    expect(loadDocument).toHaveBeenCalledTimes(1);
+  }, 30_000);
+
   it('is offered only on a database page link of a host with database pages and loadDocument', async () => {
     const plain = await boot({ databasePages: true, create: vi.fn(), loadDocument: vi.fn() }, [
       { id: 'link', type: 'page', data: { pageId: 'p1' } },

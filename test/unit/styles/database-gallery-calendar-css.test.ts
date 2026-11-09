@@ -56,7 +56,7 @@ describe('database gallery and calendar styles', () => {
   });
 
   // research/07 §Gallery, 08:317, listgallery.png (side-by-side-v1): a medium preview is 146.25px at 296 and 338 wide.
-  // Small and large are unmeasured and keep 16:9. The card is preview + title, no bottom padding.
+  // Small and large keep 16:9 (notion-motion.md "Round 6"). The card is preview + title, no bottom padding.
   it('draws a medium preview 146.25px tall border to border, other sizes 16:9, with no padding under the card', () => {
     const preview = ruleBody('[data-blok-database-gallery-preview]');
 

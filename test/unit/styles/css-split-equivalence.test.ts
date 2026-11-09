@@ -1534,6 +1534,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TABLE_ROW_GUTTER_BLEED_BYTES = 1173;
     // database.css: the list's row gutter bleeds the same way.
     const DATABASE_LIST_ROW_GUTTER_BLEED_BYTES = 80;
+    // database.css: board card hover and dark card tints for every hue, and the measured gallery sizes.
+    const DATABASE_CARD_HUE_TINTS_BYTES = 1728;
     // database.css: the ring of a row the peek steps to starts 70ms late.
     const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
@@ -1946,7 +1948,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TITLE_ROW_FOLD_PROBE_BYTES
       + DATABASE_TITLE_ROW_TOOLBAR_MARKS_BYTES
       + DATABASE_TABLE_ROW_GUTTER_BLEED_BYTES
-      + DATABASE_LIST_ROW_GUTTER_BLEED_BYTES;
+      + DATABASE_LIST_ROW_GUTTER_BLEED_BYTES
+      + DATABASE_CARD_HUE_TINTS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

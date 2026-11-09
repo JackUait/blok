@@ -81,6 +81,13 @@
   --blok-database-column-red-card-hover-bg: rgba(186, 3, 3, 0.035);
   /* notion-motion.md "Board": oklab(0.5608 -0.0563 -0.1409 / 0.047) in sRGB. */
   --blok-database-column-blue-card-hover-bg: rgba(0, 120, 200, 0.047);
+  /* notion-motion.md "Round 6": a card hovers to its column tint 2.5 lightness darker. Live on default and blue only;
+     these hues are that rule on Notion's own tints. */
+  --blok-database-column-brown-card-hover-bg: rgba(103, 53, 3, 0.035);
+  --blok-database-column-orange-card-hover-bg: rgba(173, 67, 3, 0.043);
+  --blok-database-column-green-card-hover-bg: rgba(3, 75, 27, 0.035);
+  --blok-database-column-purple-card-hover-bg: rgba(90, 3, 148, 0.031);
+  --blok-database-column-pink-card-hover-bg: rgba(148, 3, 61, 0.031);
   /* research/36 §1.1, §11: a hovered "+ New page" is the hovered card. Measured for these three only;
      the other hues keep the list hover. They resolve per theme, so one definition covers dark. */
   --blok-database-column-default-add-hover-bg: var(--blok-database-card-bg-hover);
@@ -597,6 +604,14 @@
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
+  /* notion-motion.md "Round 6": the rest is Notion's card colour, the hover 2.5 lightness lighter (probe-derived). */
+  --blok-database-column-orange-card-bg: rgb(61, 42, 29);
+  --blok-database-column-purple-card-bg: rgb(54, 41, 63);
+  --blok-database-column-pink-card-bg: rgb(63, 38, 49);
+  --blok-database-column-orange-card-hover-bg: rgb(70, 48, 33);
+  --blok-database-column-green-card-hover-bg: rgb(41, 60, 49);
+  --blok-database-column-purple-card-hover-bg: rgb(61, 46, 71);
+  --blok-database-column-pink-card-hover-bg: rgb(71, 43, 55);
     --blok-database-column-pink-accent: rgb(226, 112, 160);
     --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
     --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -934,6 +949,14 @@
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
+  /* notion-motion.md "Round 6": the rest is Notion's card colour, the hover 2.5 lightness lighter (probe-derived). */
+  --blok-database-column-orange-card-bg: rgb(61, 42, 29);
+  --blok-database-column-purple-card-bg: rgb(54, 41, 63);
+  --blok-database-column-pink-card-bg: rgb(63, 38, 49);
+  --blok-database-column-orange-card-hover-bg: rgb(70, 48, 33);
+  --blok-database-column-green-card-hover-bg: rgb(41, 60, 49);
+  --blok-database-column-purple-card-hover-bg: rgb(61, 46, 71);
+  --blok-database-column-pink-card-hover-bg: rgb(71, 43, 55);
   --blok-database-column-pink-accent: rgb(226, 112, 160);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -11823,8 +11846,8 @@ input[data-blok-database-picker-search]:focus {
 /* ─── Gallery ───
    Measured (research/07, 08): 16px gap, 146px cover, 10px card radius,
    40px title row (8px 10px, 15px/22.5px 500), cover text 12px/18px.
-   Unmeasured: the card minimum widths (Notion's medium column falls between
-   254px and 296px), small and large sizes, the "+ New" card and load more. */
+   Card minimum widths 180/260/320 and the 9:16 covers: notion-motion.md "Round 6".
+   Unmeasured: the "+ New" card and load more. */
 
 [data-blok-database-gallery] {
   --blok-database-gallery-card-min: 260px;
@@ -11841,7 +11864,8 @@ input[data-blok-database-picker-search]:focus {
 }
 
 /* research/07 §Gallery, 08:317 and listgallery.png: Notion's medium preview is 146.25px at 296 and 338 wide.
-   It grows on wider cards (166.5 at 388, 218.3 at 492), which a fixed height does not follow. */
+   It grows on wider cards (166.5 at 388, 218.3 at 492), which a fixed height does not follow.
+   notion-motion.md "Round 6" saw 146.25 after a tab switch but 190.125 (9:16 of 338) after a reload. Notion is inconsistent, so 146.25 stays. */
 [data-blok-database-gallery][data-card-size="medium"] {
   --blok-database-gallery-card-min: 260px;
   --blok-database-gallery-preview-ratio: auto;
@@ -11850,7 +11874,7 @@ input[data-blok-database-picker-search]:focus {
 }
 
 [data-blok-database-gallery][data-card-size="large"] {
-  --blok-database-gallery-card-min: 340px;
+  --blok-database-gallery-card-min: 320px;
 }
 
 [data-blok-database-gallery-grid] {
@@ -11938,7 +11962,7 @@ input[data-blok-database-picker-search]:focus {
   border-radius: var(--blok-radius-block);
 }
 
-/* Small and large are unmeasured and keep 9/16 of the card width (findings-listgallery L13). */
+/* Small and large covers are 9/16 of the card width (notion-motion.md "Round 6"). */
 [data-blok-database-gallery-preview] {
   flex: none;
   box-sizing: border-box;

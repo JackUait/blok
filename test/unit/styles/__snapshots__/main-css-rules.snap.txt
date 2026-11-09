@@ -4384,6 +4384,11 @@ span[data-blok-slash-search] {
   --blok-database-column-red-ring: rgba(223, 22, 0, 0.094);
   --blok-database-column-red-card-hover-bg: rgba(186, 3, 3, 0.035);
   --blok-database-column-blue-card-hover-bg: rgba(0, 120, 200, 0.047);
+  --blok-database-column-brown-card-hover-bg: rgba(103, 53, 3, 0.035);
+  --blok-database-column-orange-card-hover-bg: rgba(173, 67, 3, 0.043);
+  --blok-database-column-green-card-hover-bg: rgba(3, 75, 27, 0.035);
+  --blok-database-column-purple-card-hover-bg: rgba(90, 3, 148, 0.031);
+  --blok-database-column-pink-card-hover-bg: rgba(148, 3, 61, 0.031);
   --blok-database-column-default-add-hover-bg: var(--blok-database-card-bg-hover);
   --blok-database-column-gray-add-hover-bg: var(--blok-database-column-gray-card-hover-bg, var(--blok-database-card-bg-hover));
   --blok-database-column-red-add-hover-bg: var(--blok-database-column-red-card-hover-bg);
@@ -4790,6 +4795,13 @@ span[data-blok-slash-search] {
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
+  --blok-database-column-orange-card-bg: rgb(61, 42, 29);
+  --blok-database-column-purple-card-bg: rgb(54, 41, 63);
+  --blok-database-column-pink-card-bg: rgb(63, 38, 49);
+  --blok-database-column-orange-card-hover-bg: rgb(70, 48, 33);
+  --blok-database-column-green-card-hover-bg: rgb(41, 60, 49);
+  --blok-database-column-purple-card-hover-bg: rgb(61, 46, 71);
+  --blok-database-column-pink-card-hover-bg: rgb(71, 43, 55);
   --blok-database-column-pink-accent: rgb(226, 112, 160);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -5081,6 +5093,13 @@ span[data-blok-slash-search] {
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
+  --blok-database-column-orange-card-bg: rgb(61, 42, 29);
+  --blok-database-column-purple-card-bg: rgb(54, 41, 63);
+  --blok-database-column-pink-card-bg: rgb(63, 38, 49);
+  --blok-database-column-orange-card-hover-bg: rgb(70, 48, 33);
+  --blok-database-column-green-card-hover-bg: rgb(41, 60, 49);
+  --blok-database-column-purple-card-hover-bg: rgb(61, 46, 71);
+  --blok-database-column-pink-card-hover-bg: rgb(71, 43, 55);
   --blok-database-column-pink-accent: rgb(226, 112, 160);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -14826,7 +14845,7 @@ input[data-blok-database-picker-search]:focus {
 }
 
 [data-blok-database-gallery][data-card-size="large"] {
-  --blok-database-gallery-card-min: 340px;
+  --blok-database-gallery-card-min: 320px;
 }
 
 [data-blok-database-gallery-grid] {

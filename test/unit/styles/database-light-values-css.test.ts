@@ -118,12 +118,27 @@ describe('dark leftovers (research/26 §4c, §4e, §4f)', () => {
     expect(tokenValues('--blok-database-column-brown-ring')).toEqual(['rgba(139, 46, 0, 0.086)', 'rgba(255, 174, 122, 0.133)', 'rgba(255, 174, 122, 0.133)']);
     expect(dark('--blok-database-column-brown-accent')).toEqual(Array(2).fill('rgb(187, 142, 106)'));
     expect(tokenValues('--blok-database-column-brown-card-bg')).toEqual(Array(2).fill('rgb(56, 45, 38)'));
-    expect(tokenValues('--blok-database-column-brown-card-hover-bg')).toEqual(Array(2).fill('rgb(64, 51, 43)'));
+    expect(tokenValues('--blok-database-column-brown-card-hover-bg').slice(-2)).toEqual(Array(2).fill('rgb(64, 51, 43)'));
   });
 
   // Light: notion-motion.md "Board", oklab(0.5608 -0.0563 -0.1409 / 0.047) in sRGB.
   it('blue cards hover to the measured blue wash in light and 37,54,73 in dark', () => {
     expect(tokenValues('--blok-database-column-blue-card-hover-bg')).toEqual(['rgba(0, 120, 200, 0.047)', 'rgb(37, 54, 73)', 'rgb(37, 54, 73)']);
+  });
+
+  // notion-motion.md "Round 6": light hover = column tint 2.5 lightness darker; dark rests tinted and hovers 2.5 lighter.
+  // Each hue needs its own dark value in both dark blocks, or the translucent light hover leaks into dark.
+  it.each([
+    [ 'brown', 'rgba(103, 53, 3, 0.035)', null, 'rgb(64, 51, 43)' ],
+    [ 'orange', 'rgba(173, 67, 3, 0.043)', 'rgb(61, 42, 29)', 'rgb(70, 48, 33)' ],
+    [ 'green', 'rgba(3, 75, 27, 0.035)', null, 'rgb(41, 60, 49)' ],
+    [ 'purple', 'rgba(90, 3, 148, 0.031)', 'rgb(54, 41, 63)', 'rgb(61, 46, 71)' ],
+    [ 'pink', 'rgba(148, 3, 61, 0.031)', 'rgb(63, 38, 49)', 'rgb(71, 43, 55)' ],
+  ])('%s cards hover to the derived light wash and take the dark card tint and hover', (hue, light, darkRest, darkHover) => {
+    expect(tokenValues(`--blok-database-column-${hue}-card-hover-bg`)).toEqual([ light, darkHover, darkHover ]);
+    if (darkRest !== null) {
+      expect(tokenValues(`--blok-database-column-${hue}-card-bg`)).toEqual([ darkRest, darkRest ]);
+    }
   });
 
   it('a card hovers through its column channel, falling back to the plain hover', () => {

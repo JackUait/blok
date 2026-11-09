@@ -11531,7 +11531,9 @@ textarea[data-blok-database-cell-input] {
   line-height: 16px;
 }
 
+/* An overflowing panel must not squeeze the line to 0px. */
 [data-blok-database-panel-separator] {
+  flex: none;
   height: 1px;
   margin-block: var(--blok-space-1);
   background-color: var(--blok-database-table-border);
@@ -11607,6 +11609,70 @@ input[data-blok-database-picker-search]:focus {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
+}
+
+/*
+ * notion-live/settings.png and vs-propvis.png (panel box top 130): the header
+ * text centres 25px down, the field centres 64px down, rows are 274 wide at x 8.
+ * Root: first row at 86 on a 29px step; a rule 11px under the row above, inset
+ * 16; the next row 52px under that row. Property visibility: "Shown in" centres
+ * at 110, rows from 124 on a 28px step.
+ */
+:is([data-blok-database-panel-page="root"], [data-blok-database-panel-page="properties"]) {
+  --blok-database-settings-head-drop: 7px;
+  --blok-database-settings-gap: 11px;
+  --blok-database-settings-row-gap: 1px;
+}
+
+:is([data-blok-database-panel-page="root"], [data-blok-database-panel-page="properties"]) > [data-blok-database-panel-header] {
+  flex: none;
+  margin-block-start: var(--blok-database-settings-head-drop);
+}
+
+[data-blok-database-panel-page="root"] > [data-blok-database-panel-header] {
+  padding-inline: var(--blok-space-3);
+}
+
+[data-blok-database-panel-page="root"] > [data-blok-database-view-name-row] {
+  flex: none;
+  padding-block: var(--blok-database-settings-gap) var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="root"] > [data-blok-database-panel-row] {
+  inline-size: auto;
+  margin-inline: var(--blok-space-1);
+}
+
+[data-blok-database-panel-page="root"] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-database-settings-row-gap);
+}
+
+[data-blok-database-panel-page="root"] > [data-blok-database-panel-separator] {
+  margin: var(--blok-database-settings-gap) var(--blok-space-3) var(--blok-space-1);
+}
+
+[data-blok-database-panel-page="root"] > [data-blok-database-panel-separator] + [data-blok-database-panel-section] {
+  flex: none;
+  margin: var(--blok-space-2) var(--blok-space-1) 9px;
+  padding: var(--blok-space-1) var(--blok-space-2) 0;
+  line-height: 15px;
+}
+
+[data-blok-database-panel-page="properties"] > [data-blok-database-panel-input] {
+  margin-block: var(--blok-database-settings-gap) 0;
+}
+
+[data-blok-database-panel-page="properties"] [data-blok-database-property-visibility-header] {
+  min-block-size: 28px;
+  margin: 18px var(--blok-space-1) 0;
+}
+
+[data-blok-database-panel-page="properties"] [data-blok-database-property-visibility-header] > [data-blok-database-panel-section] {
+  padding-block: 0;
+}
+
+[data-blok-database-panel-page="properties"] [data-blok-database-panel-list-item] {
+  margin-inline: var(--blok-space-1);
 }
 
 /* findings V13 (11-notion-layout.png): 3 columns of 83x56 tiles, a 20px glyph over the label. */

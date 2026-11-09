@@ -14,6 +14,8 @@ export interface PanelPage {
   headerAction?: (panel: DatabasePanel) => HTMLElement;
   /** `data-blok-testid` of the control that opened this page; leaving the page focuses it again. */
   returnFocus?: string;
+  /** Set as the panel's `data-blok-database-panel-page`, for CSS that holds one page's measured offsets. */
+  name?: string;
   build: (panel: DatabasePanel) => HTMLElement[];
 }
 
@@ -144,6 +146,11 @@ export class DatabasePanel {
       children.push(this.header(page.title ?? '', page.headerAction?.(this), page.titleIsLabel === true));
     }
     children.push(...page.build(this));
+    if (page.name === undefined) {
+      this.element.removeAttribute('data-blok-database-panel-page');
+    } else {
+      this.element.setAttribute('data-blok-database-panel-page', page.name);
+    }
     this.element.replaceChildren(...children);
   }
 

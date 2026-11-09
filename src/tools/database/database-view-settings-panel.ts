@@ -303,6 +303,7 @@ export class ViewSettingsPages {
   root(): PanelPage {
     return {
       title: this.t('settingsTitle'),
+      name: 'root',
       headerAction: (panel) => panelCloseButton(panel, this.t('close')),
       titleIsLabel: true,
       build: (panel) => {
@@ -1228,6 +1229,7 @@ export class ViewSettingsPages {
 
     return {
       title: this.t('settingsPropertyVisibility'),
+      name: 'properties',
       build: (panel) => {
         const search = panelInput({
           value: state.query,

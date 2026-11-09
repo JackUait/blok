@@ -327,6 +327,61 @@ test.describe('database view settings', () => {
     await expect(knob).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 12, 0)');
   });
 
+  // notion-live/settings.png and vs-propvis.png, panel box top y 130 (motion-vspage.json):
+  // field box 49–79, rows 274 wide at x 8, root rows 28 tall on a 29px step, Property visibility rows on 28.
+  test('lays out the root and Property visibility pages at Notion\'s offsets', async ({ page }) => {
+    await mount(page, blocks());
+    await byTestId(page, 'database-toolbar-settings').click();
+    const panel = byTestId(page, 'database-view-settings');
+    const boxes = async (selectors: string[]): Promise<Array<{ top: number; bottom: number; left: number; width: number; height: number }>> =>
+      panel.evaluate((root, list) => {
+        const origin = root.getBoundingClientRect();
+
+        return list.map((selector) => {
+          const r = (root.querySelector(selector) ?? root).getBoundingClientRect();
+
+          return { top: r.top - origin.top, bottom: r.bottom - origin.top, left: r.left - origin.left, width: r.width, height: r.height };
+        });
+      }, selectors);
+
+    const [field, layout, visibility, separator, source] = await boxes([
+      '[data-blok-testid="database-settings-view-name"]',
+      '[data-blok-testid="database-settings-layout"]',
+      '[data-blok-testid="database-settings-properties"]',
+      '[data-blok-database-panel-separator]',
+      '[data-blok-testid="database-settings-source"]',
+    ]);
+    const beforeSeparator = await panel.evaluate((root) => {
+      const line = root.querySelector('[data-blok-database-panel-separator]');
+      const row = line?.previousElementSibling;
+
+      return row === null || row === undefined ? 0 : row.getBoundingClientRect().bottom - root.getBoundingClientRect().top;
+    });
+
+    expect(field.top + field.height / 2).toBeCloseTo(64, 0);
+    expect(layout.top).toBeCloseTo(86, 0);
+    expect(visibility.top - layout.top).toBeCloseTo(29, 0);
+    expect(layout.width).toBe(274);
+    expect(layout.left).toBe(8);
+    expect(separator.height).toBe(1);
+    expect(separator.top - beforeSeparator).toBeCloseTo(11, 0);
+    expect(source.top - beforeSeparator).toBeCloseTo(52, 0);
+
+    await byTestId(page, 'database-settings-properties').click();
+    const [search, label, first, second] = await boxes([
+      '[data-blok-testid="database-property-search"]',
+      '[data-blok-database-property-visibility-header]',
+      '[data-blok-database-panel-list-item]',
+      '[data-blok-database-panel-list-item] + [data-blok-database-panel-list-item]',
+    ]);
+
+    expect(search.top + search.height / 2).toBeCloseTo(64, 0);
+    expect(label.top + label.height / 2).toBeCloseTo(110, 0);
+    expect(first.top).toBeCloseTo(124, 0);
+    expect(second.top - first.top).toBe(28);
+    expect(first.width).toBe(274);
+  });
+
   test('Cmd/Ctrl+Alt+T folds every group', async ({ page }) => {
     await mount(page, blocks({ groupBy: 'p-stage' }));
     await page.keyboard.press('ControlOrMeta+Alt+KeyT');

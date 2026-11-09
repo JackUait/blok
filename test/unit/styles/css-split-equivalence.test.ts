@@ -1550,6 +1550,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TOOLBAR_CHEVRON_FADE_BYTES = 902;
     // database.css: view settings root and Property visibility at Notion's header, field and row offsets.
     const DATABASE_VIEW_SETTINGS_OFFSETS_BYTES = 2473;
+    // database.css: the timeline table panel is a white card from above « to the chart's bottom, and the "←" chip sits 8px in.
+    const DATABASE_TIMELINE_PANEL_CARD_BYTES = 1350;
     // database.css: the ring of a row the peek steps to starts 70ms late.
     const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
@@ -1969,7 +1971,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_GROUP_MENU_ROWS_BYTES
       + DATABASE_CARD_GHOST_FILL_BYTES
       + DATABASE_TOOLBAR_CHEVRON_FADE_BYTES
-      + DATABASE_VIEW_SETTINGS_OFFSETS_BYTES;
+      + DATABASE_VIEW_SETTINGS_OFFSETS_BYTES
+      + DATABASE_TIMELINE_PANEL_CARD_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

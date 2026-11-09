@@ -316,6 +316,9 @@
   --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
   /* findings C20 (r26 §4d, r33 §4.6): the canvas fill. */
   --blok-database-timeline-canvas-bg: rgb(253, 253, 253);
+  /* motion-r6-timelinepanel.json: the table panel card. */
+  --blok-database-timeline-panel-bg: rgb(255, 255, 255);
+  --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0;
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(44, 44, 43);
   --blok-database-timeline-control-text: rgb(142, 139, 134);
@@ -683,6 +686,9 @@
     --blok-database-timeline-header-line: rgb(56, 56, 54);
     --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
     --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
+    /* Dark panel unmeasured in Notion: the page surface and the light shadow stand in. */
+    --blok-database-timeline-panel-bg: var(--blok-bg-primary);
+    --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0;
     --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
     --blok-database-timeline-text: rgb(240, 239, 237);
     --blok-database-timeline-control-text: rgb(173, 169, 163);
@@ -1028,6 +1034,9 @@
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
   --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
+  /* Dark panel unmeasured in Notion: the page surface and the light shadow stand in. */
+  --blok-database-timeline-panel-bg: var(--blok-bg-primary);
+  --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0;
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
@@ -12726,6 +12735,9 @@ input[data-blok-database-picker-search]:focus {
   display: flex;
   align-items: center;
   gap: var(--blok-space-1);
+  position: relative;
+  /* Above the table panel, which runs up behind « and the month. */
+  z-index: 2;
   min-block-size: 42px;
   /* The toolbar starts at the text column; the grid below stays as wide as the view (side-by-side-4 #2). */
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
@@ -12839,7 +12851,8 @@ input[data-blok-database-picker-search]:focus {
 /* findings C19: no line under the toolbar. */
 [data-blok-database-timeline-body] {
   display: flex;
-  align-items: flex-start;
+  /* motion-r6-timelinepanel.json: the panel and the chart end at the same line. */
+  align-items: stretch;
 }
 
 [data-blok-database-timeline-table] {
@@ -12847,8 +12860,19 @@ input[data-blok-database-picker-search]:focus {
   inline-size: var(--blok-database-timeline-table-width);
   /* Notion keeps 96 before the Name column at every width; it does not follow the text column. */
   padding-inline-start: 96px;
+  /*
+   * motion-r6-timelinepanel.json: the card starts 8px above «. « sits 9px into the 42px toolbar,
+   * so the card reaches 41px up into it. The padding keeps the rows where they were.
+   */
+  --blok-database-timeline-panel-reach: 41px;
+  position: relative;
+  z-index: 1;
+  margin-block-start: calc(-1 * var(--blok-database-timeline-panel-reach));
+  padding-block-start: var(--blok-database-timeline-panel-reach);
   overflow: hidden;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
+  background-color: var(--blok-database-timeline-panel-bg);
+  box-shadow: var(--blok-database-timeline-panel-shadow);
 }
 
 [data-blok-database-timeline-table-header],
@@ -13012,7 +13036,8 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-timeline-canvas] {
   position: relative;
-  min-block-size: 120px;
+  /* Fills a scroller stretched to the panel, so the stripes and today line reach the bottom. */
+  min-block-size: max(120px, 100%);
 }
 
 [data-blok-database-timeline-header] {
@@ -13176,6 +13201,12 @@ input[data-blok-database-picker-search]:focus {
   background-color: var(--blok-database-timeline-arrow-bg);
   color: var(--blok-database-timeline-arrow-icon);
   cursor: pointer;
+}
+
+/* timeline.png (Alpha row): the "←" box starts 8px into the chart, before the row handle. */
+[data-blok-database-timeline-row-edge] > [data-blok-database-timeline-offscreen] {
+  order: -1;
+  margin-inline-start: var(--blok-space-1);
 }
 
 [data-blok-database-timeline-offscreen]:hover {

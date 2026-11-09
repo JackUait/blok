@@ -4567,6 +4567,8 @@ span[data-blok-slash-search] {
   --blok-database-timeline-header-line: rgb(230, 229, 227);
   --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
   --blok-database-timeline-canvas-bg: rgb(253, 253, 253);
+  --blok-database-timeline-panel-bg: rgb(255, 255, 255);
+  --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0;
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(44, 44, 43);
   --blok-database-timeline-control-text: rgb(142, 139, 134);
@@ -4865,6 +4867,8 @@ span[data-blok-slash-search] {
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
   --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
+  --blok-database-timeline-panel-bg: var(--blok-bg-primary);
+  --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0;
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
@@ -5163,6 +5167,8 @@ span[data-blok-slash-search] {
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
   --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
+  --blok-database-timeline-panel-bg: var(--blok-bg-primary);
+  --blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0;
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
@@ -15596,6 +15602,8 @@ input[data-blok-database-picker-search]:focus {
   display: flex;
   align-items: center;
   gap: var(--blok-space-1);
+  position: relative;
+  z-index: 2;
   min-block-size: 42px;
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
@@ -15691,15 +15699,22 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-timeline-body] {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 [data-blok-database-timeline-table] {
   flex: none;
   inline-size: var(--blok-database-timeline-table-width);
   padding-inline-start: 96px;
+  --blok-database-timeline-panel-reach: 41px;
+  position: relative;
+  z-index: 1;
+  margin-block-start: calc(-1 * var(--blok-database-timeline-panel-reach));
+  padding-block-start: var(--blok-database-timeline-panel-reach);
   overflow: hidden;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
+  background-color: var(--blok-database-timeline-panel-bg);
+  box-shadow: var(--blok-database-timeline-panel-shadow);
 }
 
 [data-blok-database-timeline-table-header], [data-blok-database-timeline-table-row], [data-blok-database-timeline-table-group], [data-blok-database-timeline-table-footer] {
@@ -15849,7 +15864,7 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-timeline-canvas] {
   position: relative;
-  min-block-size: 120px;
+  min-block-size: max(120px, 100%);
 }
 
 [data-blok-database-timeline-header] {
@@ -16008,6 +16023,11 @@ input[data-blok-database-picker-search]:focus {
   background-color: var(--blok-database-timeline-arrow-bg);
   color: var(--blok-database-timeline-arrow-icon);
   cursor: pointer;
+}
+
+[data-blok-database-timeline-row-edge] > [data-blok-database-timeline-offscreen] {
+  order: -1;
+  margin-inline-start: var(--blok-space-1);
 }
 
 [data-blok-database-timeline-offscreen]:hover {

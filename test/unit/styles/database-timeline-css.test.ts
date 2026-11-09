@@ -34,6 +34,8 @@ const TOKENS = [
   '--blok-database-timeline-arrow-icon',
   '--blok-database-timeline-arrow-hover-bg',
   '--blok-database-timeline-canvas-bg',
+  '--blok-database-timeline-panel-bg',
+  '--blok-database-timeline-panel-shadow',
 ];
 
 describe('database timeline styles', () => {
@@ -88,6 +90,22 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-timeline-bar-title] + [data-blok-database-timeline-bar-property]')).toContain('margin-inline-start: var(--blok-space-1)');
     expect(ruleBody('[data-blok-database-timeline-bar-property] > [data-blok-database-cell]')).toMatch(/white-space:\s*nowrap/);
     expect(ruleBody('[data-blok-database-timeline-bar-property] > [data-blok-database-cell]')).toMatch(/flex-wrap:\s*nowrap/);
+  });
+
+  // motion-r6-timelinepanel.json: the panel is a white card with a soft shadow, over the chart, under the toolbar.
+  it('draws the table panel as a card above the chart and below the toolbar', () => {
+    expect(css).toContain('--blok-database-timeline-panel-bg: rgb(255, 255, 255)');
+    expect(css).toContain('--blok-database-timeline-panel-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0');
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('background-color: var(--blok-database-timeline-panel-bg)');
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('box-shadow: var(--blok-database-timeline-panel-shadow)');
+  });
+
+  // timeline.png (Alpha row): the "←" chip starts 8px into the chart, before the row handle.
+  it('puts the off-screen "←" chip first in the row edge, 8px in', () => {
+    const rule = ruleBody('[data-blok-database-timeline-row-edge] > [data-blok-database-timeline-offscreen]');
+
+    expect(rule).toMatch(/order:\s*-1/);
+    expect(rule).toContain('margin-inline-start: var(--blok-space-1)');
   });
 
   it('draws the measured today marker and off-screen arrow', () => {

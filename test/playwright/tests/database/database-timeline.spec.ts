@@ -405,6 +405,53 @@ test.describe('timeline', () => {
     }
   });
 
+  // motion-r6-timelinepanel.json: panel y 309 h 460, « y 317, view box ends at 769 too; white with a soft shadow.
+  test('the table panel is a white card from above « to the chart\'s bottom', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
+
+    for (const width of [1512, 1100]) {
+      await page.setViewportSize({ width, height: 717 });
+      const panelLocator = page.locator('[data-blok-database-timeline-table]');
+      const panel = await panelLocator.boundingBox();
+      const toggle = await page.locator('[data-blok-database-timeline-table-toggle]').boundingBox();
+      const scroller = await page.locator('[data-blok-database-timeline-scroller]').boundingBox();
+      const canvas = await page.locator('[data-blok-database-timeline-canvas]').boundingBox();
+
+      if (panel === null || toggle === null || scroller === null || canvas === null) throw new Error('no layout');
+      expect(toggle.y - panel.y).toBeCloseTo(8, 0);
+      expect(panel.y + panel.height).toBeCloseTo(scroller.y + scroller.height, 0);
+      // The weekend stripes and today line run to the bottom too.
+      expect(canvas.y + canvas.height).toBeCloseTo(scroller.y + scroller.height - 1, 0);
+      expect(await panelLocator.evaluate((el) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).boxShadow])).toEqual([
+        'rgb(255, 255, 255)',
+        'rgba(25, 25, 25, 0.027) 0px 4px 12px 0px, rgba(25, 25, 25, 0.02) 0px 1px 2px 0px',
+      ]);
+      // « stays on top of the card it sits in.
+      expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-blok-database-timeline-table-toggle]') !== null, { x: toggle.x + toggle.width / 2, y: toggle.y + toggle.height / 2 })).toBe(true);
+    }
+  });
+
+  // timeline.png (Alpha row): the "←" chip's 16px box (white edge, 14px grey fill) starts 8px into the chart.
+  for (const readOnly of [false, true]) {
+    test(`an off-screen "←" chip sits 8px into the chart${readOnly ? ' in a read-only view' : ''}`, async ({ page }) => {
+      const rows = [
+        { id: 'r1', properties: { 'p-title': 'Now', 'p-due': '2026-10-09' } },
+        { id: 'r2', properties: { 'p-title': 'Long ago', 'p-due': '2025-01-05' } },
+      ];
+
+      await mount(page, blocks({ type: 'timeline', showTimelineTable: true }, rows), readOnly);
+      const arrow = page.locator('[data-blok-database-timeline-row][data-row-id="r2"] [data-blok-database-timeline-offscreen="before"]');
+
+      await expect(arrow).toBeVisible();
+      const box = await arrow.boundingBox();
+      const scroller = await page.locator('[data-blok-database-timeline-scroller]').boundingBox();
+
+      if (box === null || scroller === null) throw new Error('no layout');
+      expect(box.x - scroller.x).toBeCloseTo(8, 0);
+      expect([box.width, box.height]).toEqual([16, 16]);
+    });
+  }
+
   // timeline.png: the panel's border is at x 639, the « ink starts 27px before it, the month ink 18px after it.
   test('with the table shown, « sits at the panel\'s end and the month 16px into the chart, in a view wider than the text column', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));

@@ -95,10 +95,54 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
   height: 44px; min-width: 0; padding: 0 16px;
   background: var(--desktop-canvas); color: var(--desktop-ink);
 }
-[data-desktop-page-identity] { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 14px; }
+[data-desktop-page-identity] { display: flex; flex: 1; align-items: center; min-width: 0; font-size: 14px; }
+[data-desktop-page-breadcrumbs] { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+[data-desktop-page-breadcrumbs] ol { display: flex; align-items: center; min-width: 0; margin: 0; padding: 0; list-style: none; }
+[data-desktop-page-breadcrumb-item] { flex: 0 1 auto; min-width: 0; max-width: 240px; }
+[data-desktop-page-breadcrumb-item] > :is(button, span) {
+  display: flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%;
+  min-height: 28px; padding: 4px 6px; border: 0; border-radius: 5px;
+  background: transparent; color: inherit; font: inherit; white-space: nowrap;
+}
+[data-desktop-page-breadcrumb-item] button { cursor: pointer; }
+[data-desktop-page-breadcrumb-item] button:hover,
+[data-desktop-page-breadcrumb-item] button[aria-expanded="true"] { background: var(--desktop-hover); }
+[data-desktop-page-breadcrumb-item] button:focus-visible { outline: 2px solid #2e8cff; outline-offset: -2px; }
+[data-desktop-page-breadcrumb-separator] { flex: none; width: 10px; color: var(--desktop-muted); text-align: center; }
 [data-desktop-page-toolbar-icon] { display: grid; flex: none; place-items: center; width: 18px; height: 18px; font-size: 17px; line-height: 1; }
 [data-desktop-page-toolbar-icon] svg { color: var(--desktop-muted); }
-[data-desktop-page-toolbar-title] { overflow: hidden; max-width: 240px; text-overflow: ellipsis; white-space: nowrap; }
+[data-desktop-page-toolbar-title] { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; }
+[data-desktop-breadcrumb-menu] {
+  position: absolute; top: calc(100% + 6px); z-index: 14;
+  width: min(320px, calc(100vw - 24px)); max-height: min(380px, calc(100vh - 100px));
+  overflow-y: auto; padding: 8px; border: 1px solid var(--desktop-border); border-radius: 12px;
+  background: var(--desktop-strip); color: var(--desktop-ink);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .28);
+}
+[data-desktop-breadcrumb-menu][hidden] { display: none; }
+[data-desktop-breadcrumb-menu-heading] { padding: 8px 10px; color: var(--desktop-muted); font-size: 12px; font-weight: 600; }
+[data-desktop-breadcrumb-menu-row] { display: flex; align-items: center; min-height: 34px; border-radius: 7px; }
+[data-desktop-breadcrumb-menu-item], [data-desktop-breadcrumb-menu-more], [data-desktop-breadcrumb-menu-back] {
+  display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 34px;
+  padding: 5px 10px; border: 0; border-radius: 7px; background: transparent;
+  color: inherit; font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+[data-desktop-breadcrumb-menu-item] { flex: 1; }
+[data-desktop-breadcrumb-menu-more], [data-desktop-breadcrumb-menu-back] { width: 100%; }
+[data-desktop-breadcrumb-menu-row]:is(:hover, :focus-within, [data-current]) { background: #2d3848; }
+[data-desktop-shell][data-blok-theme="light"] [data-desktop-breadcrumb-menu-row]:is(:hover, :focus-within, [data-current]) { background: #e7eef9; }
+[data-desktop-breadcrumb-menu-item]:focus-visible, [data-desktop-breadcrumb-menu-children]:focus-visible,
+[data-desktop-breadcrumb-menu-back]:focus-visible { outline: 2px solid #2e8cff; outline-offset: -2px; }
+[data-desktop-breadcrumb-menu-icon] { display: grid; flex: none; place-items: center; width: 19px; height: 19px; font-size: 18px; }
+[data-desktop-breadcrumb-menu-icon] svg { color: var(--desktop-muted); }
+[data-desktop-breadcrumb-menu-item] > span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-desktop-breadcrumb-menu-children] {
+  flex: none; display: grid; place-items: center; width: 28px; height: 34px;
+  padding: 0; border: 0; border-radius: 7px; background: transparent;
+  color: var(--desktop-muted); font: inherit; font-size: 22px; line-height: 1; cursor: pointer;
+}
+[data-desktop-breadcrumb-menu-more] { color: var(--desktop-muted); }
+[data-desktop-breadcrumb-menu-more]:hover { background: var(--desktop-hover); color: var(--desktop-ink); }
 [data-desktop-page-local] { display: inline-flex; align-items: center; gap: 5px; flex: none; margin-left: 8px; color: var(--desktop-muted); font-size: 12px; }
 [data-desktop-page-actions] { position: relative; flex: none; }
 [data-desktop-page-more] {

@@ -7,7 +7,7 @@ import '../../desktop/src/shell.css';
 
 let liveEditor: Blok | null = null;
 
-function page(fullWidth: boolean): HTMLElement {
+function page(fullWidth: boolean, nested = false): HTMLElement {
   try { liveEditor?.destroy(); } catch { /* A previous story may already have been removed. */ }
   liveEditor = null;
   const root = document.createElement('div');
@@ -27,7 +27,19 @@ function page(fullWidth: boolean): HTMLElement {
     article.toggleAttribute('data-full-width', enabled);
     editor?.width.set(enabled ? 'full' : 'narrow');
   };
-  const toolbar = createPageToolbar('Carnet de voyage', '🌍', fullWidth, apply);
+  const title = nested ? 'jojo' : 'Carnet de voyage';
+  const toolbar = createPageToolbar([
+    ...(nested ? [{ id: 'parent', title: 'Nouvelle page', icon: '🏕️', menuHeading: 'Pages locales', menu: [
+      { id: 'parent', title: 'Nouvelle page', icon: '🏕️', current: true, children: [
+        { id: 'current', title, icon: '🎸', current: true, onOpen: () => undefined },
+      ], onOpen: () => undefined },
+      { id: 'other', title: 'Autre page', onOpen: () => undefined },
+    ] }] : []),
+    { id: 'current', title, icon: nested ? '🎸' : '🌍', ...(nested ? {
+      menuHeading: 'Nouvelle page',
+      menu: [{ id: 'current', title, icon: '🎸', current: true, onOpen: () => undefined }],
+    } : {}) },
+  ], fullWidth, apply);
   canvas.append(toolbar.element, article);
   root.append(canvas);
   editor = new Blok({
@@ -41,7 +53,7 @@ function page(fullWidth: boolean): HTMLElement {
   });
   liveEditor = editor;
   apply(fullWidth);
-  void editor.isReady.then(() => editor?.title.set('Carnet de voyage', { record: false })).catch(() => undefined);
+  void editor.isReady.then(() => editor?.title.set(title, { record: false })).catch(() => undefined);
   return root;
 }
 
@@ -55,6 +67,18 @@ type Story = StoryObj;
 
 export const Normale: Story = { render: () => page(false) };
 export const PleineLargeur: Story = { render: () => page(true) };
+export const SousPage: Story = {
+  render: () => page(false, true),
+  play: async ({ canvasElement }) => {
+    const items = canvasElement.querySelectorAll('[data-desktop-page-breadcrumb-item]');
+
+    expect(Array.from(items).map((item) => item.textContent)).toEqual(['🏕️Nouvelle page', '🎸jojo']);
+    expect(canvasElement.querySelector('[data-desktop-page-breadcrumb-separator]')?.textContent).toBe('/');
+    await userEvent.click(canvasElement.querySelector<HTMLButtonElement>('[data-page-id="parent"] > button')!);
+    expect(canvasElement.querySelector('[data-desktop-breadcrumb-menu-heading]')?.textContent).toBe('Pages locales');
+    expect(canvasElement.querySelector('[data-desktop-breadcrumb-menu-children]')).not.toBeNull();
+  },
+};
 export const Bascule: Story = {
   render: () => page(false),
   play: async ({ canvasElement }) => {

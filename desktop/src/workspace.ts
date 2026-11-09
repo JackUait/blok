@@ -6,7 +6,7 @@ import { createDesktopFooter, readAppearance } from './settings';
 import { createAddCoverButton, createPageCover, isCoverId, type CoverId } from './cover';
 import { mountAgentAssistant, type AgentAssistantHandle } from '../../src/shell/agent-assistant';
 import { bindAssistantButton, createAssistantButton, inspectNativeProvider, nativeAgentModel, selectedProvider } from './assistant';
-import { createPageToolbar, type PageToolbar } from './page-toolbar';
+import { createPageToolbar, type PageBreadcrumbChoice, type PageBreadcrumbItem, type PageToolbar } from './page-toolbar';
 
 const desktopTools = {
   ...defaultTools,
@@ -56,6 +56,37 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     saveOrder = saveOrder.then(() => writeFile('index', snapshot)).catch(showError);
   };
   const notifyPage = (id: string): void => { pageListeners.get(id)?.forEach((listener) => listener()); };
+  const breadcrumbs = (pageId: string): PageBreadcrumbItem[] => {
+    if (!index) return [];
+    const pages = index.pages;
+    const byId = new Map(pages.map((page) => [page.id, page]));
+    const seen = new Set<string>();
+    const trail: ShellPage[] = [];
+    let page = byId.get(pageId);
+
+    while (page && !seen.has(page.id)) {
+      trail.unshift(page);
+      seen.add(page.id);
+      page = page.parentId ? byId.get(page.parentId) : undefined;
+    }
+    const choicesFor = (parentId: string | null, selectedId: string, visited: Set<string> = new Set()): PageBreadcrumbChoice[] =>
+      pages.filter((candidate) => candidate.parentId === parentId && !visited.has(candidate.id)).map((candidate) => {
+        const children = choicesFor(candidate.id, pageId, new Set([...visited, candidate.id]));
+
+        return {
+          id: candidate.id, title: candidate.title, icon: candidate.icon,
+          current: candidate.id === selectedId || candidate.id === pageId,
+          ...(children.length ? { children } : {}),
+          onOpen: () => navigate(candidate.id),
+        };
+      });
+    return trail.map((item, position) => ({
+      id: item.id, title: item.title, icon: item.icon,
+      ...(position < trail.length - 1 ? { onOpen: () => navigate(item.id) } : {}),
+      menuHeading: item.parentId ? byId.get(item.parentId)?.title ?? 'Pages' : 'Pages locales',
+      menu: choicesFor(item.parentId, item.id),
+    }));
+  };
   const showError = (error: unknown): void => {
     status.textContent = `Enregistrement impossible : ${String(error)}`;
     status.setAttribute('data-error', '');
@@ -66,6 +97,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (page.icon !== next) {
       page.icon = next;
       frame.setPages(index.pages, index.activeId);
+      pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
       saveManifest();
       notifyPage(page.id);
     }
@@ -120,7 +152,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     saveManifest();
     frame.setPages(index.pages, id);
     onPageIcon(id, page.icon ?? '');
-    if (currentId === id) return;
+    if (currentId === id) {
+      pageToolbar?.setBreadcrumbs(breadcrumbs(id));
+      return;
+    }
     currentId = id;
     const turn = ++generation;
     coverRowObserver?.disconnect();
@@ -138,7 +173,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       article.toggleAttribute('data-full-width', enabled);
       editor?.width.set(enabled ? 'full' : 'narrow');
     };
-    const toolbar = createPageToolbar(page.title, page.icon, page.fullWidth === true, (enabled) => {
+    const toolbar = createPageToolbar(breadcrumbs(id), page.fullWidth === true, (enabled) => {
       page.fullWidth = enabled;
       applyFullWidth();
       saveManifest();
@@ -199,7 +234,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           if (generation !== turn || !index) return;
           const next = title.trim() || 'Nouvelle page';
           page.title = next;
-          toolbar.setTitle(next);
+          toolbar.setBreadcrumbs(breadcrumbs(id));
           notifyPage(id);
           document.title = next;
           frame.setPages(index.pages, id);
@@ -208,7 +243,6 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         onIconChange(icon) {
           if (generation !== turn || !index) return;
           syncPageIcon(page, icon);
-          toolbar.setIcon(page.icon);
         },
       },
       documentId: id,
@@ -230,7 +264,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       attachCoverAction();
       if (!instance.title.get()) instance.title.set(page.title, { record: false });
       syncPageIcon(page, instance.title.icon.get());
-      toolbar.setIcon(page.icon);
+      toolbar.setBreadcrumbs(breadcrumbs(id));
       document.title = page.title;
       status.textContent = '';
     }).catch(showError);
@@ -244,6 +278,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       page.title = command.title;
       notifyPage(page.id);
       if (currentId === page.id) editor?.title.set(command.title);
+      else pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
     } else if (command.type === 'duplicate') {
       const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)` };
       index.pages.push(copy);

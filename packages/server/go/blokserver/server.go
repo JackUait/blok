@@ -191,6 +191,8 @@ func (s *Server) handler(prefix string, protect func(http.Handler) http.Handler)
 			Rooms:           s.collab.get,
 			MaxMessageBytes: o.CollabMaxMessageBytes,
 			CorruptLog:      s.corruptLog,
+
+			EnforceRestoreGuards: o.CollabEnforceRestoreGuards,
 		})
 		shell(prefix+"/sync/{doc}/reset", "POST", routes.Reset)
 		shell(prefix+"/sync/{doc}/edit", "POST", routes.Edit)

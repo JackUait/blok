@@ -93,7 +93,7 @@ interface Host {
   directory: string;
 }
 
-async function startHost(journal: boolean, shared?: Host): Promise<Host> {
+async function startHost(journal: boolean, shared?: Host, extra: string[] = []): Promise<Host> {
   const directory = shared?.directory ?? await mkdtemp(join(tmpdir(), 'blok-collab-http-'));
   const endpoint = shared?.endpoint ?? await startDocEndpoint();
   const server = await startServer({
@@ -107,6 +107,7 @@ async function startHost(journal: boolean, shared?: Host): Promise<Host> {
       '--collab-dir', directory,
       '--doc-endpoint', endpoint.url,
       ...(journal ? ['--conformance-journal'] : []),
+      ...extra,
     ],
   });
 
@@ -722,6 +723,149 @@ suite('collab HTTP routes on a journal', () => {
 
       expect([again.status, again.body]).toEqual([404, 'no such version\n']);
     });
+  });
+});
+
+const GUARDED_DOC = 'doc-guards';
+const CONFIRM = 'X-Blok-Restore-Confirm';
+
+/** Sequence 1 has a public form; sequence 2 locks the database and closes the form to the workspace. */
+async function seedGuardedDoc(base: string): Promise<string> {
+  const created = await send(base, 'POST', `/sync/${GUARDED_DOC}/edit`, [[KEY, 'g1']], JSON.stringify({
+    ops: [{ op: 'insert', id: 'db', block: { type: 'database', data: {
+      schema: [{ id: 't', type: 'title' }], views: [{ id: 'v1', type: 'table', form: { public: true } }],
+    } } }],
+  }));
+
+  expect([created.status, created.body]).toEqual([204, '']);
+
+  const locked = await send(base, 'POST', `/sync/${GUARDED_DOC}/edit`, [[KEY, 'g2']], JSON.stringify({
+    ops: [{ op: 'update', id: 'db', data: {
+      schema: [{ id: 't', type: 'title', databaseLocked: true }], views: [{ id: 'v1', type: 'table' }],
+    } }],
+  }));
+
+  expect([locked.status, locked.headers['blok-doc-sequence'], locked.body]).toEqual([204, '2', '']);
+
+  return String(locked.headers['blok-doc-lineage']);
+}
+
+const UNLOCK_AND_SHARE = [{ kind: 'unlock', blockId: 'db' }, { kind: 'share', blockId: 'db', viewId: 'v1' }];
+
+suite('collab restore guards, off by default', () => {
+  let host: Host | undefined;
+  let base = '';
+  let lineage = '';
+
+  // The first edit warms the server's rich text reader: seed where the time limit is a minute.
+  beforeAll(async () => {
+    host = await startHost(true);
+    base = host.server.baseUrl;
+    lineage = await seedGuardedDoc(base);
+  }, 60_000);
+
+  afterAll(async () => {
+    await stopHost(host);
+  });
+
+  it('restores a version that unlocks a database and brings back a public form, unasked', async () => {
+    const restore = await send(base, 'POST', `/sync/${GUARDED_DOC}/history/${lineage}/1/restore`, [[KEY, 'r1']]);
+
+    expect([restore.status, restore.headers['blok-doc-sequence']]).toEqual([204, '3']);
+  });
+});
+
+suite('collab restore guards, enforced', () => {
+  let host: Host | undefined;
+  let base = '';
+  let lineage = '';
+
+  beforeAll(async () => {
+    host = await startHost(true, undefined, ['--conformance-restore-guards']);
+    base = host.server.baseUrl;
+    lineage = await seedGuardedDoc(base);
+  }, 60_000);
+
+  afterAll(async () => {
+    await stopHost(host);
+  });
+
+  const restore = (sequence: number, headers: [string, string][], body?: string): Promise<Answer> =>
+    send(base, 'POST', `/sync/${GUARDED_DOC}/history/${lineage}/${sequence}/restore`, headers, body);
+
+  const head = async (): Promise<string | undefined> =>
+    (await send(base, 'GET', `/sync/${GUARDED_DOC}/state`)).headers['blok-doc-sequence'];
+
+  it('refuses with 409, a JSON body naming every guard and the refusal header, and changes nothing', async () => {
+    const answer = await restore(1, [[KEY, 'k-refused']]);
+
+    expect(answer.status).toBe(409);
+    expect(answer.headers['content-type']).toBe('application/json');
+    expect(answer.headers['x-blok-restore-refusal']).toBe('confirmation_required');
+    expect(answer.headers['cache-control']).toBe('no-store');
+    expect(JSON.parse(answer.body)).toEqual({ error: 'confirmation_required', guards: UNLOCK_AND_SHARE });
+    expect(await head()).toBe('2');
+  });
+
+  it('still refuses when the confirm leaves out one kind present', async () => {
+    const answer = await restore(1, [[KEY, 'k-partial'], [CONFIRM, 'share']]);
+
+    expect([answer.status, answer.headers['x-blok-restore-refusal']]).toEqual([409, 'confirmation_required']);
+    expect(await head()).toBe('2');
+  });
+
+  it('ignores kinds it does not know and a body that does not parse', async () => {
+    const answer = await restore(1, [[KEY, 'k-unknown'], [CONFIRM, 'everything']], '{not json');
+
+    expect([answer.status, answer.headers['x-blok-restore-refusal']]).toEqual([409, 'confirmation_required']);
+  });
+
+  it('restores once every kind is confirmed, under the key a refusal did not consume', async () => {
+    const answer = await restore(1, [[KEY, 'k-refused'], [CONFIRM, 'unlock'], [CONFIRM, ' share ,lockedReshape']]);
+
+    expect([answer.status, answer.headers['blok-doc-sequence']]).toEqual([204, '3']);
+  });
+
+  it('takes the confirm from a JSON body', async () => {
+    // Back to sequence 2's state, locked with the form closed: closing the form is a share change too.
+    const back = await restore(2, [[KEY, 'k-back'], [CONFIRM, 'share']]);
+
+    expect([back.status, back.headers['blok-doc-sequence']]).toEqual([204, '4']);
+
+    const answer = await restore(1, [[KEY, 'k-body']], JSON.stringify({ confirm: ['share', 'unlock'] }));
+
+    expect([answer.status, answer.headers['blok-doc-sequence']]).toEqual([204, '5']);
+  });
+
+  it('names a removed locked database as lockedReshape', async () => {
+    expect((await restore(2, [[KEY, 'k-relock'], [CONFIRM, 'share']])).status).toBe(204);
+
+    const answer = await restore(0, [[KEY, 'k-empty']]);
+
+    expect(answer.status).toBe(409);
+    expect(JSON.parse(answer.body)).toEqual({ error: 'confirmation_required', guards: [{ kind: 'lockedReshape', blockId: 'db' }] });
+  });
+
+  it('keeps the key-reuse 409 plain text, without the refusal header', async () => {
+    const answer = await restore(0, [[KEY, 'k-body']]);
+
+    expect(answer.status).toBe(409);
+    expect(answer.headers['content-type']).toBe('text/plain; charset=utf-8');
+    expect(answer.headers['x-blok-restore-refusal']).toBeUndefined();
+    expect(answer.body).toBe('the idempotency key was already used for a different edit\n');
+  });
+
+  it('a retry of a committed restore gets its receipt without a confirm', async () => {
+    const answer = await restore(1, [[KEY, 'k-refused']]);
+
+    expect([answer.status, answer.headers['blok-doc-sequence']]).toEqual([204, '3']);
+  });
+
+  it('a restore that raises no guard needs no confirm', async () => {
+    // Sequence 6 is k-relock (locked, form closed); restoring it over itself changes nothing a guard sees.
+    const answer = await restore(6, [[KEY, 'k-same']]);
+
+    expect(answer.status).toBe(204);
   });
 });
 

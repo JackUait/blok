@@ -29,6 +29,10 @@ type Config struct {
 	// CorruptLog reports an unreadable stored version: C# logs it at Error,
 	// event id 3 (CollabHistoryCorrupt).
 	CorruptLog func(doc string)
+	// EnforceRestoreGuards: a restore that would change sharing or unlock or
+	// reshape a locked database is refused 409 until the request confirms
+	// each kind. Off keeps the restore unasked.
+	EnforceRestoreGuards bool
 }
 
 // Handlers serves the routes.

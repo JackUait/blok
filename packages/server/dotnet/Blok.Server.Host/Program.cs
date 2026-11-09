@@ -49,6 +49,8 @@ if (conformance.KeepAliveMs is { } keepAliveMs)
 {
   options.CollabKeepAliveInterval = TimeSpan.FromMilliseconds(keepAliveMs);
 }
+
+options.CollabEnforceRestoreGuards = conformance.RestoreGuards;
 #endif
 
 try

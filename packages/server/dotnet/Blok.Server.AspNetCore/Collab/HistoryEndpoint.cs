@@ -289,6 +289,10 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
+    var confirmed = options.CollabEnforceRestoreGuards
+      ? await RestoreConfirmsAsync(context, options.CollabMaxMessageBytes)
+      : null;
     var result = await admitted.Rooms.RestoreAsync(
         admitted.Doc,
         point.Lineage,
@@ -296,6 +300,7 @@ internal static partial class HistoryEndpoint
         operationId,
         SyncHandshake.DeriveActor(admitted.TicketUser, admitted.User),
         expect,
+        confirmed,
         context.RequestAborted);
 
     if (result.History != CollabHistoryStatus.Ready)
@@ -305,9 +310,93 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (result.Refused is { } refused)
+    {
+      await RefuseRestoreAsync(context, "confirmation_required", refused);
+
+      return;
+    }
+
     var edit = result.Edit ?? throw new UnreachableException("a ready restore carries its edit");
 
     await EditEndpoint.WriteResultAsync(context, edit, admitted.Rooms.RetryAfter);
+  }
+
+  /// <summary>Lists the guard kinds a restore confirms; a body <c>{"confirm":[...]}</c> adds to it.</summary>
+  internal const string RestoreConfirmHeader = "X-Blok-Restore-Confirm";
+
+  /// <summary>Marks a guard's 409, which the key-reuse 409 lacks.</summary>
+  internal const string RestoreRefusalHeader = "X-Blok-Restore-Refusal";
+
+  /// <summary>
+  /// The kinds from every header line and comma item, then the body's confirm list. Unknown kinds and a
+  /// body that does not parse or is over the cap confirm nothing.
+  /// </summary>
+  private static async Task<IReadOnlySet<string>> RestoreConfirmsAsync(HttpContext context, int maxBytes)
+  {
+    var confirmed = new HashSet<string>(StringComparer.Ordinal);
+
+    void Add(string? kind)
+    {
+      if (kind is not null && CollabRestoreGuard.Confirmable.Contains(kind))
+      {
+        confirmed.Add(kind);
+      }
+    }
+
+    foreach (var line in context.Request.Headers[RestoreConfirmHeader])
+    {
+      foreach (var item in (line ?? "").Split(','))
+      {
+        Add(item.Trim(' ', '\t'));
+      }
+    }
+
+    using var buffer = new MemoryStream();
+    var chunk = new byte[8192];
+    int read;
+
+    while ((read = await context.Request.Body.ReadAsync(chunk, context.RequestAborted)) > 0)
+    {
+      if (buffer.Length + read > maxBytes)
+      {
+        return confirmed;
+      }
+
+      buffer.Write(chunk, 0, read);
+    }
+
+    try
+    {
+      if (buffer.Length > 0 && JsonNode.Parse(buffer.ToArray())?["confirm"] is JsonArray list)
+      {
+        foreach (var item in list)
+        {
+          Add(item is JsonValue value && value.TryGetValue<string>(out var kind) ? kind : null);
+        }
+      }
+    }
+    catch (JsonException)
+    {
+      // Not JSON: it confirms nothing.
+    }
+
+    return confirmed;
+  }
+
+  /// <summary>The guard's 409: JSON with the refusal header, so a client never mistakes it for a reused key.</summary>
+  private static async Task RefuseRestoreAsync(HttpContext context, string reason, IReadOnlyList<CollabRestoreGuard> guards)
+  {
+    var body = new JsonObject
+    {
+      ["error"] = reason,
+      ["guards"] = new JsonArray([.. guards.Select(guard => (JsonNode)guard.ToJson())]),
+    };
+
+    context.Response.StatusCode = StatusCodes.Status409Conflict;
+    context.Response.ContentType = "application/json";
+    context.Response.Headers[RestoreRefusalHeader] = reason;
+    await context.Response.WriteAsync(body.ToJsonString(), context.RequestAborted);
   }
 
   /// <summary>

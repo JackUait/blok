@@ -212,6 +212,14 @@ public sealed class BlokServerOptions
   public int CollabMaxMessageBytes { get; set; } = 1 << 20;
 
   /// <summary>
+  /// Refuses a history restore with 409 when it would change who can see or
+  /// fill out a database view, or unlock or reshape a locked database, until
+  /// the request confirms each kind (<c>X-Blok-Restore-Confirm</c> or a body
+  /// <c>{"confirm":[...]}</c>). Off, the default, restores without asking.
+  /// </summary>
+  public bool CollabEnforceRestoreGuards { get; set; }
+
+  /// <summary>
   /// WebSocket keep-alive ping interval; zero turns pings off. A socket that
   /// does not answer within twice this is aborted, which is what frees a dead
   /// connection's slot in the per-user cap.

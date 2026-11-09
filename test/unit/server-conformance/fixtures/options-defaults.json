@@ -3,6 +3,7 @@
   "Auth": "none",
   "CollabDirectory": "",
   "CollabEnabled": false,
+  "CollabEnforceRestoreGuards": false,
   "CollabInboundAwarenessBytesPerSecond": 131072,
   "CollabInboundBurstFrames": 100,
   "CollabInboundFramesPerSecond": 50,

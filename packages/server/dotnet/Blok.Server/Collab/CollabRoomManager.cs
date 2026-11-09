@@ -187,7 +187,8 @@ internal sealed record CollabHistoryChangesResult(
 /// <summary><paramref name="Edit"/> is set only when <paramref name="History"/> is Ready.</summary>
 internal sealed record CollabRestoreResult(
     CollabHistoryStatus History,
-    CollabEditResult? Edit);
+    CollabEditResult? Edit,
+    IReadOnlyList<CollabRestoreGuard>? Refused = null);
 
 /// <summary>
 /// Owns one <see cref="CollabRoom"/> per open doc. Rooms remove themselves
@@ -777,7 +778,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   /// after the duplicate and precondition checks, so a retry gets its first
   /// receipt and nothing lands between planning and applying.
   /// </summary>
-  internal async ValueTask<CollabRestoreResult> RestoreAsync(
+  internal ValueTask<CollabRestoreResult> RestoreAsync(
       string docId,
       string lineage,
       ulong sequence,
@@ -786,9 +787,28 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
       CollabEditPrecondition? expect = null,
       CancellationToken cancellationToken = default)
   {
+    return RestoreAsync(docId, lineage, sequence, operationId, actorId, expect, null, cancellationToken);
+  }
+
+  /// <summary>
+  /// <see cref="RestoreAsync(string, string, ulong, string, string?, CollabEditPrecondition?, CancellationToken)"/>
+  /// with the guards enforced when <paramref name="confirmed"/> is not null: a guard whose kind it lacks
+  /// refuses the restore, which changes nothing and answers the guards in <see cref="CollabRestoreResult.Refused"/>.
+  /// </summary>
+  internal async ValueTask<CollabRestoreResult> RestoreAsync(
+      string docId,
+      string lineage,
+      ulong sequence,
+      string operationId,
+      string? actorId,
+      CollabEditPrecondition? expect,
+      IReadOnlySet<string>? confirmed,
+      CancellationToken cancellationToken = default)
+  {
     ArgumentException.ThrowIfNullOrEmpty(operationId);
 
     var point = await ReadPointAsync(docId, lineage, sequence, cancellationToken);
+    IReadOnlyList<CollabRestoreGuard>? refused = null;
 
     // A missing point still goes to the room: a retry whose lineage was
     // deleted since must get its first receipt from the duplicate check.
@@ -817,9 +837,23 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
 
                 var structure = YDocConverter.DescribeStructure(doc);
                 var current = await converter.ExportAsync(doc, token);
+                var currentBlocks = current["blocks"] as JsonArray ?? [];
+
+                // After the duplicate check: a refusal consumes no key, and a committed retry keeps its receipt.
+                if (confirmed is not null)
+                {
+                  var guards = CollabRestoreGuards.Of(currentBlocks, target);
+
+                  if (guards.Any(guard => !confirmed.Contains(guard.Kind)))
+                  {
+                    refused = guards;
+
+                    throw new RestoreGuardedException();
+                  }
+                }
 
                 return CollabRestorePlanner.Plan(
-                    current["blocks"] as JsonArray ?? [],
+                    currentBlocks,
                     structure,
                     target,
                     YDocConverter.ReadPageMaps(doc),
@@ -835,6 +869,10 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     catch (RestorePointMissingException)
     {
       return new CollabRestoreResult(CollabHistoryStatus.NotFound, null);
+    }
+    catch (RestoreGuardedException)
+    {
+      return new CollabRestoreResult(CollabHistoryStatus.Ready, null, refused);
     }
 
     if (edit.Status == CollabEditStatus.Applied)
@@ -855,6 +893,9 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
 
   /// <summary>Thrown by a restore's planner when its point is gone and the op id was never committed.</summary>
   private sealed class RestorePointMissingException : Exception;
+
+  /// <summary>Thrown by a restore's planner when a guard is present that the request did not confirm.</summary>
+  private sealed class RestoreGuardedException : Exception;
 
   /// <summary>
   /// A point rebuilt and exported. Its bounds come from the store's headers:

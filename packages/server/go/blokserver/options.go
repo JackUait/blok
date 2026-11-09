@@ -102,6 +102,13 @@ type Options struct {
 	// calls.
 	CollabActivityObserver collabstore.ActivityObserver
 
+	// CollabEnforceRestoreGuards is CollabEnforceRestoreGuards: a history
+	// restore that would change who can see or fill out a view, or unlock or
+	// reshape a locked database, is refused 409 until the request confirms
+	// each kind (X-Blok-Restore-Confirm or a body {"confirm":[...]}). False,
+	// the default, restores without asking.
+	CollabEnforceRestoreGuards bool
+
 	// Clock is the TimeProvider override: tickets, the rate limit window, S3
 	// signing and the rooms' timestamps (activity, cooldowns, export
 	// deadlines) read it. Nil is the system clock.

@@ -1,8 +1,10 @@
 package collabhttp
 
 import (
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/v2/internal/auth"
@@ -353,8 +355,12 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	var confirmed map[string]bool
+	if h.config.EnforceRestoreGuards {
+		confirmed = restoreConfirms(r, h.config.MaxMessageBytes)
+	}
 	actor := synchttp.DeriveActor(a.ticketUser, a.user, a.hasUser)
-	status, edit, err := a.rooms.Restore(r.Context(), a.doc, lineage, sequence, operationID, actor, expect)
+	status, edit, refused, err := a.rooms.RestoreGuarded(r.Context(), a.doc, lineage, sequence, operationID, actor, expect, confirmed)
 	if err != nil {
 		failed(w, r.Context())
 		return
@@ -363,7 +369,78 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 		h.refuseHistory(w, a, status)
 		return
 	}
+	if edit == nil {
+		refuseRestore(w, "confirmation_required", refused)
+		return
+	}
 	WriteEditResult(w, *edit, a.rooms.RetryAfter())
+}
+
+// RestoreConfirmHeader lists the guard kinds a restore confirms; the body's
+// {confirm:[...]} adds to it.
+const RestoreConfirmHeader = "X-Blok-Restore-Confirm"
+
+// RestoreRefusalHeader marks a guard's 409, which the key-reuse 409 lacks.
+const RestoreRefusalHeader = "X-Blok-Restore-Refusal"
+
+// restoreConfirms: the kinds from every header line and comma item, then a
+// body {confirm:[...]}. Unknown kinds and a body that does not parse are
+// ignored: they confirm nothing.
+func restoreConfirms(r *http.Request, maxBytes int) map[string]bool {
+	confirmed := map[string]bool{}
+	add := func(kind string) {
+		for _, known := range room.ConfirmableGuards {
+			if kind == known {
+				confirmed[kind] = true
+			}
+		}
+	}
+	for _, line := range r.Header.Values(RestoreConfirmHeader) {
+		for _, item := range strings.Split(line, ",") {
+			add(strings.Trim(item, " \t"))
+		}
+	}
+	if r.Body == nil {
+		return confirmed
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, int64(maxBytes)+1))
+	if err != nil || len(body) == 0 || len(body) > maxBytes {
+		return confirmed
+	}
+	parsed, err := jsjson.Parse(body)
+	object, ok := parsed.(*jsjson.Object)
+	if err != nil || !ok {
+		return confirmed
+	}
+	list, _ := object.Get(jsjson.FromString("confirm"))
+	items, _ := list.([]any)
+	for _, item := range items {
+		if kind, ok := item.(jsjson.Str); ok {
+			add(kind.String())
+		}
+	}
+	return confirmed
+}
+
+// refuseRestore is the guard's 409: JSON {error, guards} and the refusal
+// header, so a client never mistakes it for a reused key.
+func refuseRestore(w http.ResponseWriter, reason string, guards []room.RestoreGuard) {
+	list := make([]any, 0, len(guards))
+	for _, guard := range guards {
+		list = append(list, guard.JSON())
+	}
+	body := &jsjson.Object{}
+	body.Set(jsjson.FromString("error"), jsjson.FromString(reason))
+	body.Set(jsjson.FromString("guards"), list)
+	text, err := jsjson.Stringify(body)
+	if err != nil {
+		internalError(w)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(RestoreRefusalHeader, reason)
+	w.WriteHeader(http.StatusConflict)
+	_, _ = w.Write([]byte(text))
 }
 
 // historyPoint is the route's lineage and sequence; a sequence that is not

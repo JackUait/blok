@@ -9,7 +9,8 @@ internal sealed record ConformanceParseResult(
     int Port,
     bool Journal,
     string? Error,
-    int? KeepAliveMs = null);
+    int? KeepAliveMs = null,
+    bool RestoreGuards = false);
 
 internal static class ConformanceArguments
 {
@@ -25,6 +26,7 @@ internal static class ConformanceArguments
     string? origin = null;
     var port = 0;
     var journal = false;
+    var restoreGuards = false;
     int? keepAliveMs = null;
 
     for (var index = 0; index < arguments.Length; index++)
@@ -42,6 +44,12 @@ internal static class ConformanceArguments
       if (argument is "--conformance-journal" or "-conformance-journal")
       {
         journal = true;
+        continue;
+      }
+
+      if (argument == "--conformance-restore-guards")
+      {
+        restoreGuards = true;
         continue;
       }
 
@@ -118,7 +126,8 @@ internal static class ConformanceArguments
         port,
         journal,
         null,
-        keepAliveMs);
+        keepAliveMs,
+        restoreGuards);
   }
 
   private static ConformanceParseResult Error(string error)

@@ -411,15 +411,29 @@ var errRestorePointMissing = errors.New("collab: the restore point is gone")
 // inside the lane after the duplicate and precondition checks.
 func (m *Manager) Restore(ctx context.Context, docID, lineage string, sequence uint64, operationID, actorID string,
 	expect *Precondition) (HistoryStatus, *EditResult, error) {
+	status, edit, _, err := m.RestoreGuarded(ctx, docID, lineage, sequence, operationID, actorID, expect, nil)
+	return status, edit, err
+}
+
+var errRestoreGuarded = errors.New("collab: the restore needs confirmation")
+
+// RestoreGuarded is Restore with the guards enforced when confirmed is not
+// nil: a guard whose kind it lacks refuses the restore, which then changes
+// nothing and answers the guards with a nil edit. The check runs in the
+// lane after the duplicate check, so a refusal consumes no key and a
+// committed retry still gets its receipt.
+func (m *Manager) RestoreGuarded(ctx context.Context, docID, lineage string, sequence uint64, operationID, actorID string,
+	expect *Precondition, confirmed map[string]bool) (HistoryStatus, *EditResult, []RestoreGuard, error) {
 	p, err := m.readPoint(ctx, docID, lineage, sequence)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, nil, err
 	}
 	// A missing point still goes to the room: a retry whose lineage was
 	// deleted since gets its first receipt from the duplicate check.
 	if p.status != HistoryReady && p.status != HistoryNotFound {
-		return p.status, nil, nil
+		return p.status, nil, nil, nil
 	}
+	var refused []RestoreGuard
 	var target []any
 	if p.output != nil {
 		if blocks, ok := p.output.Get(jsjson.FromString("blocks")); ok {
@@ -446,19 +460,31 @@ func (m *Manager) Restore(ctx context.Context, docID, lineage string, sequence u
 			if blocks, ok := exported.Get(jsjson.FromString("blocks")); ok {
 				current, _ = blocks.([]any)
 			}
+			if confirmed != nil {
+				guards := RestoreGuards(current, target)
+				for _, guard := range guards {
+					if !confirmed[guard.Kind] {
+						refused = guards
+						return nil, errRestoreGuarded
+					}
+				}
+			}
 			return PlanRestore(current, structure, target, convert.ReadPageMaps(doc), targetMaps), nil
 		}, true, operationID, digest, actorID, expect, nil)
 	})
 	if errors.Is(err, errRestorePointMissing) {
-		return HistoryNotFound, nil, nil
+		return HistoryNotFound, nil, nil, nil
+	}
+	if errors.Is(err, errRestoreGuarded) {
+		return HistoryReady, nil, refused, nil
 	}
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, nil, err
 	}
 	if edit.Status == EditApplied {
 		m.documentReplaced(docID)
 	}
-	return HistoryReady, &edit, nil
+	return HistoryReady, &edit, nil, nil
 }
 
 func itoa64(n uint64) string { return strconv.FormatUint(n, 10) }

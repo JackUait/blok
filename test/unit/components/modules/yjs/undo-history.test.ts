@@ -1012,6 +1012,82 @@ describe('UndoHistory', () => {
       input.remove();
     });
 
+    it('records the end of a range that ends in another block', () => {
+      const first = document.createElement('div');
+      const second = document.createElement('div');
+
+      first.textContent = 'Alpha one';
+      second.textContent = 'Beta two';
+      document.body.append(first, second);
+      const b1 = { id: 'b1', inputs: [first], currentInputIndex: 0, currentInput: first };
+      const b2 = { id: 'b2', inputs: [second], currentInputIndex: 0, currentInput: second };
+
+      (blok.BlockManager as unknown as { getBlockByChildNode: ReturnType<typeof vi.fn> }).getBlockByChildNode
+        .mockImplementation((node: Node) => (second.contains(node) ? b2 : b1));
+      const range = document.createRange();
+
+      range.setStart(first.firstChild as Text, 6);
+      range.setEnd(second.firstChild as Text, 8);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      expect(history.captureCaretSnapshot()).toEqual({
+        blockId: 'b1',
+        inputIndex: 0,
+        offset: 6,
+        endIn: { blockId: 'b2', inputIndex: 0, offset: 8 },
+      });
+      first.remove();
+      second.remove();
+    });
+
+    it('re-selects a range that ends in another block', () => {
+      const first = document.createElement('div');
+      const second = document.createElement('div');
+
+      first.textContent = 'Alpha one';
+      second.textContent = 'Beta two';
+      document.body.append(first, second);
+      const blocks: Record<string, unknown> = {
+        b1: { id: 'b1', inputs: [first], parentId: null },
+        b2: { id: 'b2', inputs: [second], parentId: null },
+      };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockImplementation((id: string) => blocks[id]);
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push({
+        before: { blockId: 'b1', inputIndex: 0, offset: 6, endIn: { blockId: 'b2', inputIndex: 0, offset: 8 } },
+        after: null,
+      });
+
+      history.undo();
+
+      const selection = window.getSelection();
+
+      expect([
+        selection?.anchorNode === first.firstChild,
+        selection?.anchorOffset,
+        selection?.focusNode === second.firstChild,
+        selection?.focusOffset,
+      ]).toEqual([true, 6, true, 8]);
+      first.remove();
+      second.remove();
+    });
+
+    it('records nothing extra for a collapsed caret', () => {
+      const input = document.createElement('div');
+
+      input.textContent = 'hello world';
+      document.body.appendChild(input);
+      const block = { id: 'b1', inputs: [input], currentInputIndex: 0, currentInput: input };
+      const text = input.firstChild as Text;
+
+      (blok.BlockManager as unknown as { getBlockByChildNode: ReturnType<typeof vi.fn> }).getBlockByChildNode.mockReturnValue(block);
+      window.getSelection()?.setBaseAndExtent(text, 6, text, 6);
+
+      expect(history.captureCaretSnapshot()).toEqual({ blockId: 'b1', inputIndex: 0, offset: 6 });
+      input.remove();
+    });
+
     it('does nothing when snapshot is null and no block manager available', () => {
       // Test the edge case where Blok is not fully initialized
       const emptyBlok: BlokModules = {} as unknown as BlokModules;

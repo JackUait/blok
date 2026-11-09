@@ -2,6 +2,7 @@ import * as Y from 'yjs';
 
 import { getCaretOffset } from '../../../components/utils/caret/index';
 import { resolveCaretRange } from '../collaboration/caret-position';
+import { applySpanningSelection } from '../../selection/cross-block-range';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { hiddenAncestors } from '../blockManager/new-block-placement';
 import { carriesReadOnly, isBlockReadOnly } from '../../utils/read-only-blocks';
@@ -3231,13 +3232,42 @@ export class UndoHistory {
 
     const offset = input !== undefined ? getCaretOffset(input) : 0;
     const end = input !== undefined ? UndoHistory.selectionEndIn(input) : null;
+    const endIn = input !== undefined && end === null ? this.selectionEndInOtherBlock(input) : null;
 
     return {
       blockId: currentBlock.id,
       inputIndex,
       offset,
       ...(end === null ? {} : { end }),
+      ...(endIn === null ? {} : { endIn }),
     };
+  }
+
+  /**
+   * Where a range that starts in `input` ends, when that is another block's input
+   * @param input - the input the range starts in
+   */
+  private selectionEndInOtherBlock(input: HTMLElement): CaretSnapshot['endIn'] | null {
+    const selection = window.getSelection();
+    const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+    if (range === null || range.collapsed || !input.contains(range.startContainer) || input.contains(range.endContainer)) {
+      return null;
+    }
+
+    const block = this.blok.BlockManager.getBlockByChildNode(range.endContainer);
+    const inputIndex = block?.inputs.findIndex(candidate => candidate.contains(range.endContainer)) ?? -1;
+
+    if (block === undefined || inputIndex === -1) {
+      return null;
+    }
+
+    const preEnd = document.createRange();
+
+    preEnd.selectNodeContents(block.inputs[inputIndex]);
+    preEnd.setEnd(range.endContainer, range.endOffset);
+
+    return { blockId: block.id, inputIndex, offset: preEnd.toString().length };
   }
 
   /**
@@ -3428,6 +3458,12 @@ export class UndoHistory {
    * @param snapshot - the snapshot being restored
    */
   private selectRange(input: HTMLElement, snapshot: CaretSnapshot): void {
+    if (snapshot.endIn !== undefined) {
+      this.selectRangeAcrossBlocks(input, snapshot, snapshot.endIn);
+
+      return;
+    }
+
     if (snapshot.end === undefined) {
       return;
     }
@@ -3442,6 +3478,34 @@ export class UndoHistory {
 
     if (start !== null && end !== null) {
       window.getSelection()?.setBaseAndExtent(start.startContainer, start.startOffset, end.startContainer, end.startOffset);
+    }
+  }
+
+  /**
+   * Re-select a range that ended in another block's input
+   * @param input - the restored input, where the range starts
+   * @param snapshot - the snapshot being restored
+   * @param endIn - where the range ends
+   */
+  private selectRangeAcrossBlocks(input: HTMLElement, snapshot: CaretSnapshot, endIn: NonNullable<CaretSnapshot['endIn']>): void {
+    const endInput = this.blok.BlockManager.getBlockById(endIn.blockId)?.inputs[endIn.inputIndex];
+
+    if (endInput === undefined || !endInput.isConnected) {
+      return;
+    }
+
+    if (this.blok.InlineToolbar.opened) {
+      this.blok.InlineToolbar.close();
+    }
+
+    const start = resolveCaretRange(input, snapshot.offset);
+    const end = resolveCaretRange(endInput, endIn.offset);
+
+    if (start !== null && end !== null) {
+      applySpanningSelection(
+        { node: start.startContainer, offset: start.startOffset },
+        { node: end.startContainer, offset: end.startOffset }
+      );
     }
   }
 

@@ -109,10 +109,12 @@ test.describe('undo audit: keyboard cross-block text selection (U072)', () => {
 
     expect(await savedText(page)).toEqual(['b1:Alpha one', 'b2:Beta two']);
     expect(await canUndo(page)).toBe(false);
+    expect(await selection(page)).toBe('b1@6 -> b2@8');
 
     await page.keyboard.press(`${MOD}+Shift+z`);
     await pause(page, 300);
 
     expect(await savedText(page)).toEqual(['b1:Alpha <strong>one</strong>', 'b2:<strong>Beta two</strong>']);
+    expect(await selection(page)).toBe('b1@6 -> b2@8');
   });
 });

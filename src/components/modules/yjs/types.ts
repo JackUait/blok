@@ -131,6 +131,11 @@ export interface CaretSnapshot {
   offset: number;
   /** Offset of the selection's other end when it was a range inside the same input. */
   end?: number;
+  /**
+   * The selection's end when the range ended in another block's input. Kept
+   * apart from `end` because a peer rewrite rebases `end` by this block's text.
+   */
+  endIn?: { blockId: string; inputIndex: number; offset: number };
 }
 
 /**

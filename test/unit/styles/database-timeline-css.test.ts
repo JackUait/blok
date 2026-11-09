@@ -151,10 +151,13 @@ describe('database timeline styles', () => {
 
   // timeline.png (round V1): the panel runs x 360–640 with its border, 280px. Its « sits at the panel's end, beside the month.
   it('draws the table panel 280px wide and turns the toggle into « at its end while it shows', () => {
-    expect(ruleBody('[data-blok-database-timeline-table]')).toMatch(/inline-size:\s*280px/);
+    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-table-width: 280px');
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('inline-size: var(--blok-database-timeline-table-width)');
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
-    expect(ruleBody(shown)).toMatch(/margin-inline-start:\s*256px/);
+    expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - 38px)');
+    expect(ruleBody(shown)).toContain('margin-inline-end: 22px');
+    expect(ruleBody('[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])')).toContain('padding-inline-start: 0');
     expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
   });
 

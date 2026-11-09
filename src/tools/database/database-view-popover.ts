@@ -1,4 +1,4 @@
-import { IconViewBoard, IconCalendar, IconChart, IconGallery, IconListBulleted, IconMessage, IconTable, IconTimeline, IconListChecklist, IconMap, IconDatabase } from '../../components/icons';
+import { IconViewBoard, IconCalendar, IconChart, IconGallery, IconListBulleted, IconMessage, IconTable, IconViewTimeline, IconListChecklist, IconMap, IconDatabase } from '../../components/icons';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -19,7 +19,7 @@ const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'gallery', icon: IconGallery, labelKey: 'tools.database.viewTypeGallery' },
   { type: 'list', icon: IconListBulleted, labelKey: 'tools.database.viewTypeList' },
   { type: 'chart', icon: IconChart, labelKey: 'tools.database.viewTypeChart' },
-  { type: 'timeline', icon: IconTimeline, labelKey: 'tools.database.viewTypeTimeline' },
+  { type: 'timeline', icon: IconViewTimeline, labelKey: 'tools.database.viewTypeTimeline' },
   { type: 'feed', icon: IconMessage, labelKey: 'tools.database.viewTypeFeed' },
   // Form and map are Tier 3 (D6). Dashboard, after Chart in Notion, is a data slot only, so it is not offered.
   { type: 'map', icon: IconMap, labelKey: 'tools.database.viewTypeMap' },

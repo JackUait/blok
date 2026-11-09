@@ -64,6 +64,7 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 }));
 
 import { DatabaseViewPopover } from '../../../../src/tools/database/database-view-popover';
+import { VIEW_ICONS } from '../../../../src/tools/database/database-tab-bar';
 
 describe('DatabaseViewPopover', () => {
   let onSelect: ReturnType<typeof vi.fn<(type: ViewType) => void>>;
@@ -262,6 +263,16 @@ describe('DatabaseViewPopover', () => {
         'data-blok-database-view-option-label',
       ]);
       expect(board.querySelector('[data-blok-database-view-option-desc]')).toBeNull();
+    });
+
+    // Notion draws one timeline glyph in the tile and in the tab (notion-live/addview.png, timeline.png).
+    it('draws the Timeline tile with the Timeline tab\'s icon', () => {
+      popover.open(anchor);
+
+      const tab = document.createElement('span');
+
+      tab.innerHTML = VIEW_ICONS.timeline;
+      expect(option('timeline').querySelector('[data-blok-database-view-option-icon]')?.innerHTML).toBe(tab.innerHTML);
     });
 
     it('is a 390px grid menu', () => {

@@ -32,7 +32,7 @@ pub use changes::{
 };
 pub use database_changes::describe_database_change;
 pub use error::{Error, PURGE_UNSUPPORTED, is_cancellation, is_transient};
-pub use history::{HistoryChanges, HistoryList, HistoryRead, HistoryStatus};
+pub use history::{HistoryChanges, HistoryList, HistoryRead, HistoryStatus, RestorePreview};
 pub use historytime::{
     DEFAULT_HISTORY_RANGE, HistoryAt, HistoryPoint, HistoryRange, MAX_RANGE_LINEAGES, RangeRecord,
     RangeSelection, fit_rows, fits, parse_history_time, record_bytes, resolve_at, select_range,

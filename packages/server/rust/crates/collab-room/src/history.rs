@@ -9,10 +9,14 @@ use blok_collab_journal::{Context, LineageDeleteOutcome, LineageInfo, RecordHead
 use blok_jsjson::{Object, Str, Value};
 use blok_yjs::Doc;
 
-use crate::changes::{RecordChanges, replay_changes};
+use crate::changes::{
+    BlockChange, RecordChanges, diff_blocks, diff_page, page_fields, replay_changes,
+};
 use crate::error::{is_cancellation, is_corrupt, is_transient};
 use crate::manager::Manager;
-use crate::ops::{EditResult, EditStatus, PlanOps, Precondition};
+use crate::ops::{
+    EditResult, EditStatus, PlanOps, Precondition, Receipt, apply_to_scratch, frame_limit,
+};
 use crate::restore::plan_restore;
 use crate::restore_guards::{RestoreGuard, restore_guards};
 use crate::timeline::{
@@ -559,6 +563,7 @@ impl Manager {
             actor_id: actor_id.to_owned(),
             expect,
             applied: None,
+            dry_run: false,
         };
         let edit = match self.edit_in_room(doc_id, request).await {
             Err(Error::RestorePointMissing) => {
@@ -578,6 +583,98 @@ impl Manager {
             self.0.document_replaced(doc_id);
         }
         Ok((HistoryStatus::Ready, Some(edit), Vec::new()))
+    }
+}
+
+/// A restore planned and measured against the live doc, with nothing
+/// applied: the blocks and page keys it would change, its guards, and its
+/// frame size against the one-update limit.
+#[derive(Debug, Default)]
+pub struct RestorePreview {
+    pub blocks: Vec<BlockChange>,
+    pub page: Vec<String>,
+    pub guards: Vec<RestoreGuard>,
+    pub frame_bytes: i64,
+    pub limit_bytes: i64,
+    /// The revision it planned against, for the real call's If-Match.
+    pub head: Option<Receipt>,
+}
+
+impl Manager {
+    /// A restore's dry run. A refusal before the plan (a stale If-Match, a
+    /// purge, a room that cannot load) comes back as the edit.
+    pub async fn preview_restore(
+        &self,
+        doc_id: &str,
+        lineage: &str,
+        sequence: u64,
+        expect: Option<Precondition>,
+    ) -> Result<(HistoryStatus, Option<RestorePreview>, Option<EditResult>), Error> {
+        let point = self.read_point(doc_id, lineage, sequence).await?;
+        let (HistoryStatus::Ready, Some(target_doc)) = (point.status, point.doc.clone()) else {
+            let status = match point.status {
+                HistoryStatus::Ready => HistoryStatus::NotFound,
+                other => other,
+            };
+            return Ok((status, None, None));
+        };
+        let target = Arc::new(blocks_of(point.output.as_ref()));
+        let target_maps = Arc::new(read_page_maps(&target_doc)?);
+        let converter = self.0.converter.clone();
+        let preview: Arc<Mutex<RestorePreview>> = Arc::default();
+        let filled = preview.clone();
+        let plan: PlanOps = Arc::new(move |doc: Doc| {
+            let (target, target_maps, converter, filled) = (
+                target.clone(),
+                target_maps.clone(),
+                converter.clone(),
+                filled.clone(),
+            );
+            Box::pin(async move {
+                let current = blocks_of(Some(&converter.export(&doc).await?));
+                let ops = plan_restore(
+                    &current,
+                    &describe_structure(&doc)?,
+                    &target,
+                    &read_page_maps(&doc)?,
+                    &target_maps,
+                );
+                let (scratch, frame_bytes) =
+                    apply_to_scratch(&doc, converter.as_ref(), &ops).await?;
+                let after = blocks_of(Some(&converter.export(&scratch).await?));
+                let mut preview = filled
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                preview.blocks = diff_blocks(&current, &after);
+                preview.page = diff_page(&page_fields(&doc)?, &page_fields(&scratch)?);
+                preview.guards = restore_guards(&current, &target);
+                preview.frame_bytes = frame_bytes;
+                Ok(ops)
+            })
+        });
+        let request = crate::ops::EditRequest {
+            plan,
+            gate_frame_size: false,
+            operation_id: String::new(),
+            digest: Vec::new(),
+            actor_id: String::new(),
+            expect,
+            applied: None,
+            dry_run: true,
+        };
+        let edit = self.edit_in_room(doc_id, request).await?;
+        // A plan that ran answers Applied with the head it planned against.
+        if edit.status != EditStatus::Applied {
+            return Ok((HistoryStatus::Ready, None, Some(edit)));
+        }
+        let mut preview = std::mem::take(
+            &mut *preview
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()),
+        );
+        preview.limit_bytes = frame_limit(&self.0.options);
+        preview.head = edit.receipt;
+        Ok((HistoryStatus::Ready, Some(preview), None))
     }
 }
 

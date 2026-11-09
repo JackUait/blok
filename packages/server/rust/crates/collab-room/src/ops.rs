@@ -13,7 +13,7 @@ use crate::cancel::Token;
 use crate::error::{error_text, is_transient};
 use crate::options::CHECKPOINT_FAILURE_LIMIT;
 use crate::room::{Phase, Room, State};
-use crate::{Converter, Error};
+use crate::{Converter, Error, Options};
 
 /// CollabEditStatus.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -177,6 +177,15 @@ pub async fn planned_frame_bytes(
     converter: &dyn Converter,
     ops: &[EditOp],
 ) -> Result<i64, Error> {
+    Ok(apply_to_scratch(live, converter, ops).await?.1)
+}
+
+/// Applies ops to a copy of live and counts the frames it would broadcast.
+pub(crate) async fn apply_to_scratch(
+    live: &Doc,
+    converter: &dyn Converter,
+    ops: &[EditOp],
+) -> Result<(Doc, i64), Error> {
     let scratch = Doc::new(blok_yjs::Options::default());
     let whole = live.encode_state_as_update(&[])?;
     scratch.apply_update(&whole)?;
@@ -195,7 +204,21 @@ pub async fn planned_frame_bytes(
     let applied = converter.apply_ops(&scratch, ops).await;
     subscription.unsubscribe();
     applied?;
-    Ok(*frame_bytes.lock().unwrap_or_else(PoisonError::into_inner))
+    let bytes = *frame_bytes.lock().unwrap_or_else(PoisonError::into_inner);
+    Ok((scratch, bytes))
+}
+
+/// The announced cap (1 MiB when none), lowered to the store's append limit
+/// when known.
+pub(crate) fn frame_limit(options: &Options) -> i64 {
+    let mut limit: i64 = 1 << 20;
+    if options.announced_max_message_bytes > 0 {
+        limit = options.announced_max_message_bytes;
+    }
+    if options.max_update_bytes > 0 && options.max_update_bytes < limit {
+        limit = options.max_update_bytes;
+    }
+    limit
 }
 
 #[derive(Clone)]
@@ -207,6 +230,10 @@ pub(crate) struct EditRequest {
     pub actor_id: String,
     pub expect: Option<Precondition>,
     pub applied: Option<Applied>,
+    /// Plan after the precondition check, then stop: no op-id lookup,
+    /// nothing applied. A plan that ran answers Applied with the head it
+    /// planned against, which only the dry run reads.
+    pub dry_run: bool,
 }
 
 impl Room {
@@ -250,7 +277,7 @@ impl Room {
             return Ok(Some(EditResult::status(EditStatus::Purged)));
         }
 
-        if let Some(session) = st.session.clone() {
+        if let Some(session) = st.session.clone().filter(|_| !request.dry_run) {
             let ctx = self.lifetime.journal().clone();
             let committed = self
                 .lifetime
@@ -286,6 +313,8 @@ impl Room {
                 }
                 LookupOutcome::NotCommitted => {}
             }
+        }
+        if st.session.is_some() {
             if let Some(expect) = &request.expect
                 && (expect.lineage != st.tag.lineage || expect.sequence != st.committed_through)
             {
@@ -330,6 +359,18 @@ impl Room {
                 return classify(err).map(Some);
             }
         };
+
+        if request.dry_run {
+            self.update_eviction_locked(st, None);
+            return Ok(Some(EditResult {
+                status: EditStatus::Applied,
+                err: None,
+                receipt: Some(Receipt {
+                    tag: st.tag.clone(),
+                    server_sequence: st.committed_through,
+                }),
+            }));
+        }
 
         self.take_local_updates();
         if st.session.is_none() {
@@ -462,13 +503,7 @@ impl Room {
     /// The limit is the announced cap (1 MiB when none), lowered to the
     /// store's append limit when known.
     async fn fits_one_frame_locked(&self, doc: &Doc, ops: &[EditOp]) -> Result<bool, Error> {
-        let mut limit: i64 = 1 << 20;
-        if self.options.announced_max_message_bytes > 0 {
-            limit = self.options.announced_max_message_bytes;
-        }
-        if self.options.max_update_bytes > 0 && self.options.max_update_bytes < limit {
-            limit = self.options.max_update_bytes;
-        }
+        let limit = frame_limit(&self.options);
         let planned = self
             .lifetime
             .run(planned_frame_bytes(doc, self.converter.as_ref(), ops))

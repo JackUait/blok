@@ -396,6 +396,16 @@ impl Handlers {
         let Some((lineage, sequence)) = history_point(&request, &mut response).await else {
             return;
         };
+        // Exactly dryRun=1; any other value is today's restore.
+        if query_all(
+            request.query().strip_prefix('?').unwrap_or(request.query()),
+            "dryRun",
+        ) == ["1"]
+        {
+            self.restore_preview(&request, &mut response, &a, &lineage, sequence)
+                .await;
+            return;
+        }
         let Some(operation_id) = operation_id(&request) else {
             refuse(&mut response, 400, KEY_REQUIRED).await;
             return;
@@ -439,6 +449,87 @@ impl Handlers {
                 refuse_restore(&mut response, "confirmation_required", &refused).await;
             }
             _ => self.refuse_history(&mut response, &a, status).await,
+        }
+    }
+
+    /// POST .../restore?dryRun=1: the restore planned and measured, nothing
+    /// written, no key needed. If-Match is checked as the restore would.
+    async fn restore_preview(
+        &self,
+        request: &Request,
+        response: &mut ResponseWriter,
+        a: &Admitted,
+        lineage: &str,
+        sequence: u64,
+    ) {
+        let Ok(expect) = precondition(request) else {
+            refuse(response, 400, BAD_IF_MATCH).await;
+            return;
+        };
+        let (rooms, doc, lineage) = (a.rooms.clone(), a.doc.clone(), lineage.to_owned());
+        let preview = async move {
+            rooms
+                .preview_restore(&doc, &lineage, sequence, expect)
+                .await
+        };
+        let (status, preview, edit) = match blocking(request, preview).await {
+            Some(Ok(result)) => result,
+            _ => {
+                failed(request, response).await;
+                return;
+            }
+        };
+        if status != HistoryStatus::Ready {
+            self.refuse_history(response, a, status).await;
+            return;
+        }
+        let Some(preview) = preview else {
+            if let Some(edit) = edit {
+                write_edit_result(response, &edit, a.rooms.retry_after()).await;
+            }
+            return;
+        };
+        let key = |name: &str| Str::from_utf8(name.as_bytes());
+        let text = |value: &str| Value::String(key(value));
+        let blocks = preview
+            .blocks
+            .iter()
+            .map(|change| {
+                let mut row = Object::new();
+                row.set(key("id"), Value::String(change.id.clone()));
+                row.set(
+                    key("type"),
+                    change.kind_type.clone().map_or(Value::Null, Value::String),
+                );
+                row.set(key("kind"), text(change_kind(change.kind)));
+                Value::Object(row)
+            })
+            .collect();
+        let mut undo = Object::new();
+        undo.set(key("blocks"), Value::Array(blocks));
+        undo.set(
+            key("page"),
+            Value::Array(preview.page.iter().map(|page| text(page)).collect()),
+        );
+        let head = preview.head.as_ref().map_or(String::new(), |head| {
+            format!("{}:{}", head.tag.lineage, head.server_sequence)
+        });
+        let mut body = Object::new();
+        body.set(key("wouldUndo"), Value::Object(undo));
+        body.set(
+            key("guards"),
+            Value::Array(preview.guards.iter().map(RestoreGuard::json).collect()),
+        );
+        body.set(
+            key("fits"),
+            Value::Bool(preview.frame_bytes <= preview.limit_bytes),
+        );
+        body.set(key("frameBytes"), Value::Number(preview.frame_bytes as f64));
+        body.set(key("limitBytes"), Value::Number(preview.limit_bytes as f64));
+        body.set(key("expectRevision"), text(&head));
+        match stringify(&Value::Object(body)) {
+            Ok(json) => write_json(response, json.as_bytes()).await,
+            Err(_) => failed(request, response).await,
         }
     }
 

@@ -679,6 +679,7 @@ fn request(
         actor_id: actor_id.to_owned(),
         expect,
         applied,
+        dry_run: false,
     }
 }
 

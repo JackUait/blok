@@ -6,7 +6,7 @@
 
 import type { AgentModel, AgentModelMessage, AgentModelResponse } from '../../types/api';
 import { createCliAgentModel, inspectCli, providerLabel, type CliCommand, type CliStatus } from './agent-model';
-import { preferredCommand, readAgentSettings, subscribeAgentSettings } from './agent-settings';
+import { readAgentSettings, subscribeAgentSettings } from './agent-settings';
 import './agent-assistant.css';
 
 export interface AgentAssistantOptions {
@@ -142,6 +142,25 @@ const iconButton = (node: HTMLButtonElement, label: string, paths: string[]): vo
   node.replaceChildren(svg);
 };
 
+const sendGlyph = (running: boolean): SVGSVGElement => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+  svg.setAttribute('viewBox', '0 0 20 20');
+  svg.setAttribute('width', '18');
+  svg.setAttribute('height', '18');
+  svg.setAttribute('aria-hidden', 'true');
+  path.setAttribute('d', running ? 'M5.5 5.5h9v9h-9z' : 'M10 16V4m-5 5 5-5 5 5');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-width', '1.8');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  svg.append(path);
+
+  return svg;
+};
+
 /**
  * The assistant button and its panel. Modes are remembered. Provider buttons
  * list only CLIs that are enabled, installed, and connected.
@@ -270,6 +289,9 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   });
 
   const current = (): Conversation | undefined => session.conversations[session.active];
+  const updateSendState = (): void => {
+    sendButton.disabled = session.run === null && (field.value.trim() === '' || session.picked === null);
+  };
 
   const stopRun = (): void => {
     session.token = { id: session.token.id + 1 };
@@ -291,6 +313,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
       empty.setAttribute('data-blok-agent-providers-empty', '');
       empty.textContent = 'Connecte et active un provider dans les réglages.';
       providersHost.append(empty);
+      updateSendState();
 
       return;
     }
@@ -313,6 +336,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
       });
       providersHost.append(choice);
     });
+    updateSendState();
   };
 
   const refreshProviders = async (): Promise<void> => {
@@ -342,7 +366,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     if (session.picked === null) {
       const preferred = options.preferredProvider?.();
       session.picked = preferred !== undefined && preferred !== null && usable.includes(preferred)
-        ? preferred : preferredCommand(session.statuses);
+        ? preferred : usable[0] ?? null;
     }
 
     paintProviders(usable);
@@ -491,8 +515,13 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
       if (mark !== null) mark.textContent = selected ? '✓' : '';
     });
 
-    sendButton.textContent = session.run === null ? 'Envoyer' : 'Arrêter la réponse';
-    sendButton.setAttribute('aria-label', session.run === null ? 'Envoyer à l\'assistant IA' : 'Arrêter la réponse');
+    const sending = session.run !== null;
+    const sendLabel = document.createElement('span');
+
+    sendLabel.textContent = sending ? 'Arrêter la réponse' : 'Envoyer';
+    sendButton.replaceChildren(sendGlyph(sending), sendLabel);
+    sendButton.setAttribute('aria-label', sending ? 'Arrêter la réponse' : 'Envoyer à l\'assistant IA');
+    updateSendState();
     paintHistory();
     paintMessages();
   };
@@ -617,6 +646,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
 
     send(field.value);
   });
+  field.addEventListener('input', updateSendState);
   sendButton.addEventListener('click', () => {
     if (session.run !== null) {
       stopRun();

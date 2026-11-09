@@ -15,7 +15,7 @@
         "label": "main",
         "title": "Blok",
         "width": 1440,
-        "height": 900,
+        "height": 800,
         "minWidth": 900,
         "minHeight": 600,
         "resizable": true,

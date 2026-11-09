@@ -135,6 +135,12 @@ export const Assistant: Story = {
 
     expect(panel).toBeTruthy();
     expect(within(panel).getByText('Comment puis-je t\'aider ?')).toBeTruthy();
+    const lastSuggestion = within(panel).getByRole('button', { name: /Que manque-t-il dans cette page/ });
+    const composer = panel.querySelector<HTMLElement>('[data-blok-agent-composer]')!;
+    const gap = composer.getBoundingClientRect().top - lastSuggestion.getBoundingClientRect().bottom;
+
+    expect(gap).toBeLessThanOrEqual(40);
+    expect(composer.getBoundingClientRect().bottom).toBeLessThanOrEqual(panel.getBoundingClientRect().bottom);
   },
 };
 
@@ -168,10 +174,16 @@ export const FullScreen: Story = {
     const welcome = panel.querySelector('[data-blok-agent-empty]')!;
     const composer = panel.querySelector('[data-blok-agent-composer]')!;
     const suggestions = panel.querySelector('[data-blok-agent-suggestions]')!;
+    const send = panel.querySelector<HTMLButtonElement>('[data-blok-agent-send]')!;
     expect(panel.hasAttribute('data-blok-agent-empty-view')).toBe(true);
     expect(suggestions.hasAttribute('hidden')).toBe(false);
     expect(welcome.getBoundingClientRect().bottom).toBeLessThan(composer.getBoundingClientRect().top);
-    expect(composer.getBoundingClientRect().bottom).toBeLessThan(suggestions.getBoundingClientRect().top);
+    if (getComputedStyle(suggestions).display !== 'none') {
+      expect(composer.getBoundingClientRect().bottom).toBeLessThan(suggestions.getBoundingClientRect().top);
+    }
+    expect(composer.getBoundingClientRect().bottom).toBeLessThanOrEqual(panel.getBoundingClientRect().bottom);
+    expect(send.querySelector('svg')).toBeTruthy();
+    expect(send.disabled).toBe(true);
   },
 };
 

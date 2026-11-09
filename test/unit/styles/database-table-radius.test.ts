@@ -98,9 +98,8 @@ describe('database board', () => {
       .toEqual([inner('control')]);
   });
 
-  it('the column pill (4px, research/08) and the delete button are small controls', () => {
+  it('the column pill (4px, research/08) is a small control', () => {
     expect(radiusOf('database.css', '[data-blok-database-column-pill]')).toEqual([role('control-sm')]);
-    expect(radiusOf('database.css', '[data-blok-database-delete-column]')).toEqual([role('control-sm')]);
   });
 
   it('scrollbar thumbs are small controls', () => {

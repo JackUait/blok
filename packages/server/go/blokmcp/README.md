@@ -163,18 +163,18 @@ By default each process keeps its open handles in memory, so a call must reach t
 - Any other store error is logged in full. The agent sees `SOURCE_UNAVAILABLE` "The handle store is unavailable. Retry shortly.". A lease still held after 30 s answers `SOURCE_UNAVAILABLE` "Another call is using this handle. Retry shortly.".
 - Blok checks every handle a client sends (`^[A-Za-z0-9_-]{1,128}$`) before the store sees it.
 - Live handles hold sockets, so they stay in the process that opened them. The cap (`MaxHandlesPerPrincipal`) counts the store's handles plus this process's live ones.
-- Stopping a process waits for its calls and leaves the store as it is. Blok calls `Sweep` every 60 s to delete expired records.
+- Stopping a process waits for its calls and leaves the store as it is. Blok calls `Sweep` every 60 s to delete expired records, one sweep at a time, with a 30 s timeout. Stopping cancels a sweep in flight and waits for it at most 1 s, so a `Sweep` must honour its context.
 
 Writing your own store (Redis, SQL):
 
 - `TryAdd` must count and add in one step per principal (a row lock, `SELECT … FOR UPDATE`, or a Lua script). A plain count, then insert, lets a principal past the cap.
-- Leases are time-limited: Blok calls `Renew` every 5 s while a call holds one, so keep no timer of your own, and let an unrenewed lease end on its own (the files store: 30 s). `Save`, `Renew` and `Remove` must check the lease's token and answer `ErrLeaseLost` (changing nothing) when another holder took it over; `Release` then does nothing. So exclusivity is best effort: a paused process can lose its lease, and correctness then rests on your document source's version check (`DOCUMENT_CHANGED`). A source that does not check versions can lose writes across replicas.
-- A handle expires after the idle time without a lease; a leased handle never expires. Delete expired records (`Sweep`, or your store's own expiry): they hold document text.
+- Leases are time-limited: Blok calls `Renew` every 5 s while a call holds one, so keep no timer of your own, and let an unrenewed lease end on its own (the files store: 30 s). `Save`, `Renew` and `Remove` must check the lease's token and answer `ErrLeaseLost` (changing nothing) when another holder took it over; `Release` then does nothing. Blok calls `Release` at the end of every call, also after `Remove`. Blok calls `Renew` from its own goroutine while `Save` or `Remove` runs, so a lease must be safe for concurrent use. So exclusivity is best effort: a paused process can lose its lease, and correctness then rests on your document source's version check (`DOCUMENT_CHANGED`). A source that does not check versions can lose writes across replicas.
+- A handle expires after the idle time without a lease; a leased handle never expires. `Acquire` answers `ErrHandleUnknown` for a record it cannot read, not an error (an error is a store outage, and the agent would retry it). Delete expired records (`Sweep`, or your store's own expiry): they hold document text.
 - Records are trusted. Anyone who can write the store can forge an actor, scopes or history, so only Blok's processes may write it.
 - Values can be large: the history keeps whole documents and is not bounded in bytes. Use `LONGTEXT`/JSON columns, not `TEXT`.
 - Keep `scopes` null and `[]` distinct (no `omitempty`).
 
-The files store (`NewFilesHandleStore`) is for tests and several processes on one machine. It makes the directory with mode 0700 and refuses to start if the directory is a link, not a directory, reachable by group or world, or (POSIX) owned by another user. Every file in it is 0600. Its owner must be the effective user (root too). A lease not renewed for 30 s is taken over, one breaker at a time. It refuses to start on Windows ("--handle-store files: is not supported on Windows; use your own store"): Go cannot check the directory's ACL there.
+The files store (`NewFilesHandleStore`) is for tests and several processes on one machine. It makes the directory with mode 0700 (with `--handle-store files:`, when `New` or `Embed` starts, after the option checks) and refuses to start if the directory is a link, not a directory, reachable by group or world, or (POSIX) owned by another user. Every file in it is 0600. Its owner must be the effective user (root too). A lease not renewed for 30 s is taken over, one breaker at a time. It refuses to start on Windows ("--handle-store files: is not supported on Windows; use your own store"): Go cannot check the directory's ACL there.
 
 ## Docs
 

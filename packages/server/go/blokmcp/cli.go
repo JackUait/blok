@@ -56,7 +56,10 @@ type parsedFiles struct {
 
 // ParseArgs reads args and env as the blok-mcp command does, with the
 // --authorize and --create-page hooks and the manifest files loaded: the Options an embedding
-// host passes to Embed. A refused flag is a *ConfigError.
+// host passes to Embed. A refused flag is a *ConfigError. A --handle-store
+// files: directory is made and checked when New or Embed starts, which
+// answers a refused one as a *ConfigError; a host that wraps that store
+// skips the start check, and a refused directory then fails each call.
 func ParseArgs(args []string, env map[string]string) (Options, error) {
 	pool, err := newPool(1)
 	if err != nil {

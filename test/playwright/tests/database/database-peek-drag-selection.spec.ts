@@ -506,6 +506,21 @@ test.describe('selection bar', () => {
     await expect(bar).toHaveCount(0);
     await expect(page.locator('[data-blok-database-tab-bar]')).toBeVisible();
   });
+  // With tabs the bar sat at the view bar's edge, 316px left of the table (sweep9a motion-rowdrag.json).
+  test('starts at the table content with tabs, as it does with one view', async ({ page }) => {
+    await mount(page, blocks());
+    // A wide holder gives the content a centring offset, so a bar at the view bar's edge shows.
+    await page.evaluate(() => document.getElementById('blok')?.style.setProperty('max-width', 'none'));
+    await tableRow(page, 'r1').hover();
+    await tableRow(page, 'r1').locator('[data-blok-database-table-row-checkbox]').click();
+
+    const bar = await page.locator('[data-blok-database-table-selection-bar]').boundingBox();
+    const firstHeader = await page.getByRole('columnheader', { name: 'Name' }).boundingBox();
+
+    if (bar === null || firstHeader === null) throw new Error('no layout');
+    expect(firstHeader.x).toBeGreaterThan(100);
+    expect(Math.abs(bar.x - firstHeader.x)).toBeLessThanOrEqual(1);
+  });
 });
 
 test.describe('fill handle', () => {

@@ -9859,9 +9859,9 @@ textarea[data-blok-database-cell-input] {
   visibility: hidden;
 }
 
+/* No inset-inline-start here: the base rule's centring offset lines the bar up with the tabs and the table. */
 [data-blok-database-view-bar] > [data-blok-database-table-selection-bar] {
   inset-block: 0;
-  inset-inline-start: 0;
   margin-block: auto;
 }
 

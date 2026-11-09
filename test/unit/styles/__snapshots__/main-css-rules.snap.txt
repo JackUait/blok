@@ -12946,7 +12946,6 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-view-bar] > [data-blok-database-table-selection-bar] {
   inset-block: 0;
-  inset-inline-start: 0;
   margin-block: auto;
 }
 

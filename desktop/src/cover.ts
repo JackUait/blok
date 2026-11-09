@@ -7,6 +7,14 @@ import rockyMountains from './assets/covers/met_rocky_mountains.jpg';
 import aegeanSea from './assets/covers/met_aegean_sea.jpg';
 import greatWave from './assets/covers/met_great_wave.jpg';
 import seteWave from './assets/covers/met_sete_wave.jpg';
+import cypresses from './assets/covers/met_wheat_field_cypresses.jpg';
+import summerAfternoon from './assets/covers/met_summer_afternoon.jpg';
+import gulfStream from './assets/covers/met_gulf_stream.jpg';
+import irises from './assets/covers/met_irises.jpg';
+import roses from './assets/covers/met_roses.jpg';
+import haraFuji from './assets/covers/met_hara_fuji.jpg';
+import nihonbashi from './assets/covers/met_nihonbashi.jpg';
+import fujiSenju from './assets/covers/met_fuji_senju.jpg';
 
 export const COVER_GROUPS = [
   { label: 'Couleurs et dégradés', items: [
@@ -27,10 +35,22 @@ export const COVER_GROUPS = [
     { id: 'met-lake-george', label: 'Lake George · John Frederick Kensett', background: `url("${lakeGeorge}")` },
     { id: 'met-rocky-mountains', label: 'Rocky Mountains · Albert Bierstadt', background: `url("${rockyMountains}")` },
     { id: 'met-aegean-sea', label: 'The Aegean Sea · Frederic Edwin Church', background: `url("${aegeanSea}")` },
+    { id: 'met-wheat-field-cypresses', label: 'Champ de blé aux cyprès · Vincent van Gogh', background: `url("${cypresses}")` },
+    { id: 'met-summer-afternoon', label: 'Après-midi d’été · Asher Brown Durand', background: `url("${summerAfternoon}")` },
+    { id: 'met-gulf-stream', label: 'Le Gulf Stream · Winslow Homer', background: `url("${gulfStream}")` },
   ] },
   { label: 'Vagues · The Met', items: [
     { id: 'met-great-wave', label: 'La Grande Vague · Hokusai', background: `url("${greatWave}")` },
     { id: 'met-sete-wave', label: 'La Grande Vague, Sète · Gustave Le Gray', background: `url("${seteWave}")` },
+  ] },
+  { label: 'Fleurs · The Met', items: [
+    { id: 'met-irises', label: 'Iris · Vincent van Gogh', background: `url("${irises}")` },
+    { id: 'met-roses', label: 'Roses · Vincent van Gogh', background: `url("${roses}")` },
+  ] },
+  { label: 'Estampes japonaises · The Met', items: [
+    { id: 'met-hara-fuji', label: 'Le mont Fuji au matin · Utagawa Hiroshige', background: `url("${haraFuji}")` },
+    { id: 'met-nihonbashi', label: 'Averse à Nihonbashi · Utagawa Hiroshige', background: `url("${nihonbashi}")` },
+    { id: 'met-fuji-senju', label: 'Fuji vu de Senju · Katsushika Hokusai', background: `url("${fujiSenju}")` },
   ] },
 ] as const;
 
@@ -133,6 +153,7 @@ export function createPageCover(
   change.addEventListener('click', () => {
     if (gallery.hidden) {
       gallery.hidden = false;
+      scroll.style.maxHeight = `${Math.max(0, Math.min(400, window.innerHeight - gallery.getBoundingClientRect().top - 54))}px`;
       change.setAttribute('aria-expanded', 'true');
       actions.setAttribute('data-open', '');
     } else closeGallery();

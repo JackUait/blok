@@ -136,6 +136,16 @@ export const DomainePublic: Story = {
   },
 };
 
+export const GalerieEtendue: Story = {
+  render: () => page('met-irises', '🌸'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: 'Changer la couverture' }));
+    expect(canvas.getByRole('button', { name: 'Iris · Vincent van Gogh' }).getAttribute('aria-pressed')).toBe('true');
+    expect(canvas.getByRole('region', { name: 'Estampes japonaises · The Met' })).toBeTruthy();
+  },
+};
+
 export const Repositionnement: Story = {
   render: () => page('earth'),
   play: async ({ canvasElement }) => {

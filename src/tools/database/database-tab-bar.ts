@@ -1,4 +1,4 @@
-import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline, IconLink, IconDotsHorizontal } from '../../components/icons';
+import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -69,6 +69,8 @@ export interface TabBarOptions {
   onCopyLink?: (viewId: string) => void;
   /** "Edit title" in the title row's "…". */
   onEditTitle?: () => void;
+  /** "Edit layout" in the title row's "…": Customize layout on a row page. */
+  onEditLayout?: () => void;
   /** This person's "Display as". Defaults to both. */
   display?: DatabaseTabDisplay;
   /** Offers "Display as" in the tab menu. */
@@ -943,9 +945,9 @@ export class DatabaseTabBar {
     button.innerHTML = IconDotsHorizontal;
     button.addEventListener('click', () => {
       if (this.contextPopover !== null) return;
-      const onCopyLink = this.options.onCopyLink;
-      const onEditTitle = this.options.onEditTitle;
-      const first: PopoverItemParams[] = [
+      const { onCopyLink, onEditTitle, onEditLayout, onDataSourceTitlesToggle } = this.options;
+      const hidden = this.options.dataSourceTitlesHidden === true;
+      const view: PopoverItemParams[] = [
         ...(onCopyLink === undefined ? [] : [{
           icon: IconLink,
           name: 'database-title-copy-link',
@@ -961,15 +963,35 @@ export class DatabaseTabBar {
           onActivate: () => this.options.onDuplicate(viewId),
         },
       ];
-      const second: PopoverItemParams[] = onEditTitle === undefined ? [] : [{
-        icon: IconPencil,
-        name: 'database-title-edit',
-        title: t('tools.database.editCardTitle', 'Edit title'),
+      // A hidden title has nothing to edit.
+      const edit: PopoverItemParams[] = [
+        ...(onEditTitle === undefined || hidden ? [] : [{
+          icon: IconPencil,
+          name: 'database-title-edit',
+          title: t('tools.database.editCardTitle', 'Edit title'),
+          closeOnActivate: true,
+          onActivate: onEditTitle,
+        }]),
+        ...(onEditLayout === undefined ? [] : [{
+          icon: IconPageLayout,
+          name: 'database-title-edit-layout',
+          title: t('tools.database.editLayout', 'Edit layout'),
+          closeOnActivate: true,
+          onActivate: onEditLayout,
+        }]),
+      ];
+      const title: PopoverItemParams[] = onDataSourceTitlesToggle === undefined ? [] : [{
+        icon: IconEyeSlash,
+        name: 'database-title-hide',
+        title: hidden ? t('tools.database.showTitle', 'Show title') : t('tools.database.hideTitle', 'Hide title'),
         closeOnActivate: true,
-        onActivate: onEditTitle,
+        onActivate: onDataSourceTitlesToggle,
       }];
+      const items = [view, edit, title]
+        .filter((group) => group.length > 0)
+        .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator as const }, ...group]);
 
-      this.showMenu(button, second.length === 0 ? first : [...first, { type: PopoverItemType.Separator }, ...second]);
+      this.showMenu(button, items);
     });
 
     return button;

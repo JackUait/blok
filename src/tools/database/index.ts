@@ -4889,6 +4889,13 @@ export class DatabaseTool implements BlockTool {
     window.getSelection()?.addRange(range);
   }
 
+  /** The title row's "Edit layout" runs "Customize page layout", where that exists. */
+  private editLayoutOption(): { onEditLayout?: () => void } {
+    const action = this.customizeLayoutAction();
+
+    return action === undefined ? {} : { onEditLayout: action.onClick };
+  }
+
   private toggleDataSourceTitles(): void {
     if (this.readOnly || this.structureLocked()) return;
     this.dataSourceTitlesHidden = !this.dataSourceTitlesHidden;
@@ -4911,13 +4918,15 @@ export class DatabaseTool implements BlockTool {
       onRenameView: (viewId, anchor) => this.editView(viewId, anchor, 'rename'),
       onCopyLink: (viewId) => this.copyViewLink(viewId),
       onEditTitle: () => this.focusTitle(),
+      ...this.editLayoutOption(),
       display: this.tabDisplay.get(),
       onDisplayChange: (display) => {
         this.tabDisplay.set(display);
         this.rebuildTabBar();
       },
       dataSourceTitlesHidden: this.dataSourceTitlesHidden,
-      ...(this.readOnly || this.structureLocked() ? {} : { onDataSourceTitlesToggle: () => this.toggleDataSourceTitles() }),
+      // A full-page database never shows its title, so there is nothing to toggle.
+      ...(this.readOnly || this.structureLocked() || this.fullPage ? {} : { onDataSourceTitlesToggle: () => this.toggleDataSourceTitles() }),
       // The bar hides it while read-only or locked; it flips in place (setReadOnly), so this is not gated here.
       ...(this.linked ? {} : { onNewDataSource: () => this.newDataSourceWithPanel() }),
       api: this.api,

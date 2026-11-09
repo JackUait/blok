@@ -257,14 +257,61 @@ describe('view tabs (feel/findings-toolbar)', () => {
   describe('V03: the title row "…" with one view', () => {
     const titleMore = (): HTMLElement | null => parentRoot().querySelector<HTMLElement>('[data-blok-database-title-row] [data-blok-database-title-more]');
 
-    it('sits after "+" and lists Copy link to view, Duplicate view, then Edit title', async () => {
+    const menuGroups = (): string[][] => [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened="true"] [data-blok-popover-items] > *')]
+      .reduce<string[][]>((groups, item) => {
+        const name = item.getAttribute('data-blok-item-name');
+
+        if (name !== null) groups[groups.length - 1].push(name);
+        else if (item.getAttribute('data-blok-testid') === 'popover-item-separator') groups.push([]);
+
+        return groups;
+      }, [[]]);
+
+    it('sits after "+" and lists Notion\'s groups: view, title and layout, then Hide title', async () => {
       await make(doc([table('v1', 'a0')]));
 
       expect(titleMore()?.previousElementSibling?.hasAttribute('data-blok-database-add-view')).toBe(true);
       titleMore()?.click();
       await quiet();
 
-      expect(menuItems()).toEqual(['database-title-copy-link', 'database-title-duplicate', 'database-title-edit']);
+      expect(menuGroups()).toEqual([
+        ['database-title-copy-link', 'database-title-duplicate'],
+        ['database-title-edit', 'database-title-edit-layout'],
+        ['database-title-hide'],
+      ]);
+    });
+
+    it('Hide title hides the title and saves it; the "…" stays and offers Show title', async () => {
+      const api = await make(doc([table('v1', 'a0')]));
+
+      titleMore()?.click();
+      await quiet();
+      menuItem('database-title-hide').click();
+      await quiet();
+
+      expect(own('[data-blok-database-title]').hidden).toBe(true);
+      expect(((await api.save()).blocks.find((b) => b.id === 'db')?.data as DatabaseData).hideDataSourceTitles).toBe(true);
+      titleMore()?.click();
+      await quiet();
+
+      expect(menuItem('database-title-hide').textContent).toContain('Show title');
+      expect(menuItems()).not.toContain('database-title-edit');
+      menuItem('database-title-hide').click();
+      await quiet();
+
+      expect(own('[data-blok-database-title]').hidden).toBe(false);
+      expect(((await api.save()).blocks.find((b) => b.id === 'db')?.data as DatabaseData).hideDataSourceTitles).toBeUndefined();
+    });
+
+    it('Edit layout opens the first row page in Customize layout', async () => {
+      await make(doc([table('v1', 'a0')]));
+
+      titleMore()?.click();
+      await quiet();
+      menuItem('database-title-edit-layout').click();
+      await quiet();
+
+      expect(document.querySelector('[data-blok-database-layout-apply]')).not.toBeNull();
     });
 
     it('Duplicate view adds a second view', async () => {

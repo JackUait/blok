@@ -421,6 +421,8 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-title-copy-link': exempt('chrome', 'Copies a link to the view to the clipboard; the document does not change.'),
   'menu:database/database-title-duplicate': cmd('database.duplicateView'),
   'menu:database/database-title-edit': exempt('chrome', 'Puts the caret in the database title; the title edit itself is ui-file:src/tools/database/index.ts (block.update).'),
+  'menu:database/database-title-edit-layout': cmds(['database.updateProperty'], PAGE_LAYOUT),
+  'menu:database/database-title-hide': fld('database.hideDataSourceTitles'),
   'menu:database/database-autofill-summary-paragraph': cmd('database.updateProperty'),
   'menu:database/database-autofill-trigger-onCreate-*': cmd('database.updateProperty'),
   'menu:database/database-autofill-trigger-onEdit-off': cmd('database.updateProperty'),

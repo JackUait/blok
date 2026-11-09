@@ -6831,11 +6831,11 @@ button[data-blok-database-column-count]:hover {
   display: none;
 }
 
-[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-icons]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable], [data-blok-database-view-toolbar][data-blok-database-fold-probe="no-icons"] > [data-blok-database-toolbar-foldable] {
+[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-foldable], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-icons] > [data-blok-database-toolbar-foldable] {
   display: none;
 }
 
-[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-new], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new]:not([data-blok-database-fold-probe]) > [data-blok-database-new] {
+[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-new] {
   display: none;
 }
 

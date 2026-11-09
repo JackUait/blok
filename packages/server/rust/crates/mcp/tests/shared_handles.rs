@@ -207,6 +207,32 @@ async fn a_restored_handle_acts_for_its_opener() {
     );
 }
 
+// Without a store the handle writes as its opener too, as Node binds the agent at open.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_handle_without_a_store_writes_as_its_opener() {
+    let dir = temp_dir("opener-local");
+    let mcp = Mcp::with_hooks(
+        Arc::new(Bundle::new(1).unwrap()),
+        &options(&dir),
+        Hooks::default(),
+    )
+    .await
+    .unwrap();
+    let handle = open(&mcp).await;
+    let ran = call_as(
+        &mcp,
+        &caller("alice", "Later"),
+        "blok_execute",
+        json!({ "handle": handle, "commands": insert("World") }),
+    )
+    .await;
+    assert_eq!(ran["ok"], true, "{ran}");
+    let saved = std::fs::read_to_string(dir.join("doc.json")).unwrap();
+    assert!(saved.contains("agent:alice:Desk"), "{saved}");
+    assert!(!saved.contains("Later"), "{saved}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A host source that remembers who saved.
 #[derive(Default)]
 struct Recording {

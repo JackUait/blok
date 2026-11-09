@@ -2289,38 +2289,41 @@ impl Mcp {
         }
         let mut lease = self.on_handle(caller, handle, write).await?;
         let document_id = lease.document_id.clone();
-        let (actor, client_name) = self.actor(caller).await?;
-        let stored = match &mut *lease.session {
-            Session::Stored(stored) => stored,
+        match &mut *lease.session {
+            // A stored handle writes as its opener, as with a handle store (on_shared).
+            Session::Stored(stored) => {
+                let (actor, client_name) =
+                    (stored.actor.clone(), stored.opener.client_name.clone());
+                self.on_stored(
+                    caller,
+                    &document_id,
+                    stored,
+                    &call,
+                    &actor,
+                    &client_name,
+                    approval,
+                )
+                .await
+            }
             Session::Room(room) => {
-                return self
-                    .on_room(&document_id, room, &call, &actor, &client_name, approval)
-                    .await;
+                let (actor, client_name) = self.actor(caller).await?;
+                self.on_room(&document_id, room, &call, &actor, &client_name, approval)
+                    .await
             }
             Session::Remote(room) => {
-                return self
-                    .on_remote(
-                        caller,
-                        &document_id,
-                        room,
-                        &call,
-                        &actor,
-                        &client_name,
-                        approval,
-                    )
-                    .await;
+                let (actor, client_name) = self.actor(caller).await?;
+                self.on_remote(
+                    caller,
+                    &document_id,
+                    room,
+                    &call,
+                    &actor,
+                    &client_name,
+                    approval,
+                )
+                .await
             }
-        };
-        self.on_stored(
-            caller,
-            &document_id,
-            stored,
-            &call,
-            &actor,
-            &client_name,
-            approval,
-        )
-        .await
+        }
     }
 
     /// One call on a stored handle's document.

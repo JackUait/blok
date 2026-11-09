@@ -2,6 +2,118 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0](https://github.com/JackUait/blok/compare/v2.1.0...v2.2.0) (2026-11-09)
+
+### Breaking Changes
+
+- **MCP option checks** — `@bloklabs/mcp` and the C# `AddBlokMcp` now refuse bad `schema`, `pageTitles`, `handleIdleMs` and `maxHandlesPerPrincipal` values at startup.
+  - Old: `schema: 'bogus'` threw a raw TypeError, and `handleIdleMs: 0`, negatives and `maxHandlesPerPrincipal: 0` were accepted. New: each throws an error naming the option.
+  - C#: a zero, negative or fractional `HandleIdleTimeout`, a `MaxHandlesPerPrincipal` of 0 or less, or a bad `Schema` makes `AddBlokMcp` throw `InvalidOperationException`.
+  - Pass an allowed value, or a positive whole number, or leave the option out for its default.
+- **MCP nesting limit** — Every MCP build refuses JSON nested deeper than 48 levels of objects and arrays.
+  - Old: `@bloklabs/mcp` took any depth. New: deeper arguments get `INVALID_ARGS`, and so does a batch or undo that would nest the document deeper.
+  - A stored or endpoint document deeper than 48 levels is refused with `SOURCE_UNAVAILABLE`.
+  - Flatten deeply nested block data before `blok-mcp` opens it.
+- **Lone surrogates in MCP** — `@bloklabs/mcp` reads a lone UTF-16 surrogate as U+FFFD, as the C#, Go and Rust builds do.
+  - Old: a document kept `"\ud800"` and a save wrote the escape back. New: it saves U+FFFD as UTF-8, so the file and its version hash change.
+  - A request id holding a lone surrogate is echoed with U+FFFD. Clients must match answers by that form.
+- **`blok-mcp --http` port** — The Node, C# and Go builds refuse an `--http` port that is not plain digits from 0 to 65535, and exit 1.
+  - Old: Node read `0x10` as 16 and `1e3` as 1000. C# and Go took values like `" 0"` or `"000001"`. New: all of these exit 1.
+  - A failed bind prints Node's one-line `Cannot listen on ...` message and exits 1. Scripts matching the old text must update.
+  - Pass a plain port. In Node the bind error keeps its `code`, so a retry on `EADDRINUSE` still works.
+- **Doc endpoint header encoding** — The Go and C# servers send the `--doc-endpoint-auth` value and `Blok-Doc-Version` as Latin-1, and refuse what Node's fetch refuses.
+  - Old: Go sent U+0080 to U+00FF as UTF-8 bytes, and C# refused them. New: both send them as one Latin-1 byte each.
+  - A control character other than tab, or one past U+00FF, now fails with "cannot be sent as a header" and the room cannot load or save.
+  - Use ASCII credentials and versions, or decode the header as Latin-1.
+
+### Features
+
+- **Rust MCP server** — Blok's MCP server now ships on crates.io as `blok-mcp`, at the same version as `@bloklabs/mcp`.
+  - Install it with `cargo install blok-mcp` (Rust 1.99 or later).
+  - Embed it with `cargo add blok-mcp`, then run it in your process with `blok_mcp::Embedded`.
+  - A host serving it through `Embedded::http` must cap the request body at 4 MiB itself and answer 413.
+- **Turn a database into a page** — An inline database's block menu offers "Turn into page", and a database page link offers "Turn into inline database".
+  - Both show only when `databasePages` is set. The reverse also needs `loadDocument`.
+  - Each move is one undo step and keeps block ids. Rows move in a database backend; they are never deleted or recreated.
+  - "Turn into inline database" changes nothing unless the page holds exactly one full-page database.
+- **Block menu lead items and selecting a new block** — Tools can put their own block menu items before Turn into, and `insertAt` can select the block it adds.
+  - Set `blockMenu.lead` to the names of the items that come first in a titled menu.
+  - Pass `select: true` in `InsertAtOptions` to leave the new block selected alone.
+- **Minimize the database toolbar** — A » button minimizes the view toolbar to « and settings, and the state is saved with the view.
+  - It saves as the optional `toolbarMinimized` view field. Older data reads as not minimized.
+  - The agent view schema lists it, and `DatabaseViewSettingKey` includes it.
+  - » also closes an open toolbar search.
+- **Database title menu** — The title "⋯" menu adds Edit layout and a Hide title or Show title toggle.
+  - Hide title sets the saved `hideDataSourceTitles`. A full-page database shows no title toggle.
+- **Add advanced filter** — The Filter picker ends with an "Add advanced filter" row, and the Filter and Sort search fields keep their height.
+  - New strings `tools.database.filterAddAdvanced`, `tools.database.filterByPlaceholder` and `tools.database.sortByPlaceholder` are in every locale.
+- **Table size grid** — The table size card has a "Pick on grid" button that swaps the steppers for a 10 × 10 grid.
+  - Point and click a cell, or use the arrow keys and Enter. "Type numbers" goes back to the steppers for bigger tables.
+  - The card reopens in the last mode, kept per viewer in `localStorage` under `blok:table:size-mode`.
+  - New strings `tools.table.pickOnGrid` and `tools.table.typeNumbers` are in every locale.
+- **Full-screen table close** — Closing a full-screen table fades the sheet out, then fades the table in on the page.
+- **Upload panels** — Image, video, audio and file upload panels no longer list accepted formats. The size limit still shows when set.
+- **Row grip icon** — `IconRowGrip` is a new exported icon, the two-column grip that database table and list rows use.
+
+### Bug Fixes
+
+- **Refused writes** — A write the collaboration room refused is no longer sent again by the next connection, in the editor or in `blok-mcp`.
+  - The editor drops its offline copy at a refusal, so a reload cannot bring the write back.
+  - Agent undo and redo after the room's copy is swapped in act on the live document. This holds in the Node, C# and Go builds.
+- **MCP saved batches** — The C# and Go `blok-mcp` build a batch's answer before saving it. A failed answer no longer leaves a saved write behind.
+  - Before, the client saw an error for a saved write, so a retry applied it twice.
+  - In Go, a failed export after a batch no longer holds back later local writes.
+- **MCP shutdown and stdin** — The C# and Go `blok-mcp` save a write read just before stdin ends, or one cancelled while in flight.
+  - C# also saves a write read just before SIGTERM, and its shutdown waits for a call that has not returned yet.
+- **MCP outbound headers** — The C# and Go `blok-mcp` refuse header values with CR, LF or NUL. In C#, a token or version could add header lines.
+  - Outer spaces and tabs are trimmed first, as Node's fetch does. U+0080 to U+00FF go out as Latin-1.
+  - The C# server's doc endpoint client also drops outer spaces and tabs.
+- **MCP live restore and tickets** — In Go, a live restore sends `If-Match`, so it never overwrites a peer's newer edit.
+  - In Go, a ticket refused for version history ends the live room, and a restore whose ticket fails is not retryable.
+  - In C#, a refused ticket fails the history command, as in Node.
+- **MCP protocol parity** — The C# and Go `blok-mcp` answer stdio and HTTP requests as `@bloklabs/mcp` does.
+  - Go no longer exits on a malformed stdio line. Go and C# skip it, and Go answers calls sent before `initialize`.
+  - HTTP errors use Node's status codes and JSON-RPC bodies. C# answers a refused Origin with 403 before asking for a token.
+  - Batch answers go out as each request ends. Tool text carries emoji and line separators raw, not as escapes.
+- **MCP text and numbers** — The C# `blok-mcp` reads a lone surrogate as U+FFFD instead of failing every read, and a repeated key takes its last value.
+  - Go opens a document holding `1e400` and saves it as `null`. C# and Go read `1e400` in arguments as Infinity.
+  - A Go document over the time or size limit now says so, without engine internals.
+- **Collaboration servers** — The Go and C# servers retry a failed eviction save on their own, and make no room once a drain has begun.
+  - The C# server keeps the close frame of a refused WebSocket frame on the wire, and holds the user's slot while that socket lingers.
+- **Database drags** — Table column and board group drags move only the header, and the others slide aside.
+  - Pressing a row handle selects the row, closes the add-property menu, and no longer selects text across the page.
+  - A cancelled fill-handle drag fills nothing, and a cell that opens no editor no longer leaves the table stuck.
+- **Database side peek** — The side peek slides in and out, and a click on the page outside the database closes it.
+  - The third Escape from a cell editor closes it. Open in full page slides it out first.
+  - Row steps and the page header row show while the pointer is anywhere over the peek. Next page shows its shortcut on hover.
+- **Database views** — Database popovers open and close with motion, and Filter and Sort panels stay inside the window.
+  - Toolbar icons are larger and show their names on hover. The one-view title row folds its toolbar instead of covering the title.
+  - Gallery cards, long list titles, row "+" and grip, and the full row page title now match Notion's layout.
+- **Database timeline and calendar** — Hiding or showing the timeline table leaves the days in place, and a bar cut by the chart's end shows a → chip.
+  - A hovered bar marks its days and shows a connector. Calendar day numbers fade when the month changes.
+- **Full-row database page** — The block handle no longer floats at the top of a database row opened as a full page.
+- **Table column drags at the edge** — Holding a column drag at either window edge adds or removes columns at one steady pace, in full screen too.
+- **Full-screen table** — Close lands on the table's new size, and the add-row bar matches the table width.
+  - The table scroller no longer bounces past its ends on a fast sideways scroll.
+- **Table cancel and teardown** — A cancelled touch press selects no cell, and a resizer torn down mid-drag puts the old widths back.
+  - The size card's − and + buttons have their own centred chips.
+- **Cancelled uploads** — Image, video, audio and file blocks ignore an upload failure that arrives after Cancel or a new pick.
+  - Cancel and Replace stop a running GIF or video conversion. A stale conversion no longer replaces a newer image.
+- **Pointer cancel in media** — A cancelled pointer no longer leaves the audio waveform seeking or the video scrub stuck.
+  - A second press on a video no longer jumps playback to 2x after release.
+  - The image lightbox closes on the first backdrop click after a cancelled drag.
+- **Tool cleanup on destroy** — Audio, code, file and spacer blocks free their listeners, timers and previews on `editor.destroy()`.
+  - Turning on read-only ends an open code filename edit and keeps the typed name.
+- **Ordered lists** — A list item turned numbered or bulleted now renumbers its siblings correctly.
+- **Selection outside the window** — A text press or cross-block drag released outside the window now ends on the next move.
+- **Undo steps** — A move inside a tool transaction no longer splits one action into two undo steps.
+- **Menus and cards** — A popover leaves confirmation mode when the confirmed action throws, and a submenu opened during the menu's entrance stays on its row.
+  - The link hover card stays when the pointer comes back to the link. Opening "/" twice leaves no stray pill.
+- **Destroyed editor** — A late async block render or emoji menu open no longer acts on an editor that was destroyed.
+- **Framework adapters** — React, Vue and Angular blocks no longer dispatch a change after removal, or render into a destroyed editor.
+  - Vue and Angular render data that changed before the editor was ready.
+  - Angular tears down an editor whose boot failed.
+
 ## [2.1.0](https://github.com/JackUait/blok/compare/v2.0.0...v2.1.0) (2026-11-07)
 
 ### Breaking Changes

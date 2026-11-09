@@ -316,6 +316,10 @@ func (t *callTracker) answer(message jsonrpc.Message) bool {
 	return !t.closed && !t.cancelled[response.ID] && !(t.stdinDone && t.calls[response.ID])
 }
 
+// stdinEndedHook runs once stdin's end is recorded, so a test can hold a
+// call until its answer would be dropped. Nil outside tests.
+var stdinEndedHook func()
+
 // stdinEnded waits, up to the deadline, for the requests already read:
 // Node answers those that are not tools/call before it sees stdin end. Its
 // tools/call run on, their signals aborted, and their answers are
@@ -332,6 +336,9 @@ func (t *callTracker) stdinEnded(deadline time.Time) {
 	t.stdinDone = true
 	for _, cancel := range t.cancels {
 		cancel()
+	}
+	if stdinEndedHook != nil {
+		stdinEndedHook()
 	}
 	for len(t.running) > 0 && time.Now().Before(deadline) {
 		t.idle.Wait()

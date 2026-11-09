@@ -9,8 +9,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -284,16 +282,33 @@ func (w *closingWriter) Write(p []byte) (int, error) {
 }
 func (w *closingWriter) Close() error { return nil }
 
+// gatedSource holds every Load until stdin's end is recorded, so the
+// tools/call is truly still running then.
+type gatedSource struct {
+	*memorySource
+	release chan struct{}
+}
+
+func (g *gatedSource) Load(ctx context.Context, caller DocumentCaller, documentID string) (*StoredDocument, error) {
+	<-g.release
+	return g.memorySource.Load(ctx, caller, documentID)
+}
+
 // When stdin ends, Node answers what it already read and answers at once,
 // and drops a tools/call still running (measured: ids 0 and 2, not 1).
 func TestStdinEndAnswersWhatWasReadButNotARunningCall(t *testing.T) {
-	dir := t.TempDir()
-	_ = os.WriteFile(filepath.Join(dir, "doc.json"), []byte(`{"blocks":[]}`), 0o644)
-	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: dir}})
+	source := &gatedSource{
+		memorySource: newMemorySource(map[string]StoredDocument{"doc": {DocumentText: `{"blocks":[]}`, Version: "v1"}}),
+		release:      make(chan struct{}),
+	}
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, DocumentSource: source})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(server.Close)
+	var once sync.Once
+	stdinEndedHook = func() { once.Do(func() { close(source.release) }) }
+	t.Cleanup(func() { stdinEndedHook = nil })
 	in := io.NopCloser(strings.NewReader(strings.Join([]string{
 		`{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}`,
 		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,

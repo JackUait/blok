@@ -58,6 +58,9 @@ export class DatabaseTableRowDrag {
     if (rowEl === null || rowEl === undefined || event.button !== 0) {
       return;
     }
+    // No mousedown follows, so core's text drag never starts. The handle press
+    // moves no caret, and core would anchor on a caret left in another block.
+    event.preventDefault();
     const rect = rowEl.getBoundingClientRect();
 
     this.press = { rowEl, x: event.clientX, y: event.clientY, offsetY: event.clientY - rect.top };

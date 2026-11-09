@@ -505,3 +505,31 @@ test.describe('fill handle', () => {
     expect(cellRing.startsWith(ring)).toBe(true);
   });
 });
+
+// Notion shows no text selection during a drag (rowdrag-mid). A caret left in a
+// paragraph below must not become the anchor of a text drag into the database.
+test.describe('a drag with the caret in a paragraph below', () => {
+  const withParagraph = (): OutputBlockData[] => [...blocks(), { id: 'p-after', type: 'paragraph', data: { text: 'After the database' } }];
+
+  const cases: Array<{ name: string; viewId: string; handle: (page: Page) => Locator; hover?: (page: Page) => Locator; ghost: string; dx: number; dy: number }> = [
+    { name: 'table row', viewId: 'v1', handle: (page) => tableRow(page, 'r1').locator('[data-blok-database-table-row-handle]'), hover: (page) => tableRow(page, 'r1'), ghost: '[data-blok-database-table-row-ghost]', dx: 0, dy: 60 },
+    { name: 'table column', viewId: 'v1', handle: (page) => page.getByRole('columnheader', { name: 'Notes' }), ghost: '[data-blok-database-table-column-ghost]', dx: 200, dy: 0 },
+    { name: 'board card', viewId: 'v2', handle: (page) => page.locator('[data-blok-database-card][data-row-id="r1"]'), ghost: '[data-blok-database-ghost]', dx: 300, dy: 0 },
+    { name: 'list row', viewId: 'v3', handle: (page) => page.locator('[data-blok-database-list-row][data-row-id="r1"]'), ghost: '[data-blok-database-ghost]', dx: 0, dy: 50 },
+  ];
+
+  for (const item of cases) {
+    test(`a ${item.name} drag selects no text`, async ({ page }) => {
+      await mount(page, withParagraph(), item.viewId);
+      await page.getByText('After the database').click();
+      expect(await page.evaluate(() => window.getSelection()?.isCollapsed)).toBe(true);
+
+      await item.hover?.(page).hover();
+      await dragBy(page, item.handle(page), item.dx, item.dy);
+      await expect(page.locator(item.ghost)).toBeVisible();
+
+      expect(await page.evaluate(() => window.getSelection()?.isCollapsed)).toBe(true);
+      await page.mouse.up();
+    });
+  }
+});

@@ -431,7 +431,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Database',
     description:
-      'A multi-view database block supporting board (Kanban) and list views. It stores a schema of typed properties (text, select, multiSelect, date, checkbox, etc.) and view configurations. Rows are stored as child `database-row` blocks.\n\nIt supports grouping, drag-and-drop reordering, inline editing, and an optional backend sync adapter. (`sorts` and `filters` are persisted in the view config but are not applied yet.)',
+      'A multi-view database block supporting board (Kanban) and list views. It stores a schema of typed properties (text, select, multiSelect, date, checkbox, etc.) and view configurations. Rows are stored as child `database-row` blocks.\n\nIt supports grouping, drag-and-drop reordering, inline editing, and an optional backend sync adapter. (`sorts` and `filters` are persisted in the view config but are not applied yet.)\n\nDeleting a property moves it to `deletedProperties`. Its row values stay in the rows.\n\nTwo block methods act on a deleted property:\n\n- `restoreProperty(id)` brings it back with its values.\n- `deletePropertyPermanently(id)` removes the entry and strips its values from every row.\n\nEach one is a single undo step. A locked database refuses both.\n\nViews keep their filters, sorts and columns on a deleted property. They use them again after a restore.',
     importExample: `import { Database } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -450,6 +450,8 @@ const editor = new Blok({
                                        // but fall back to the board renderer)
   activeViewId: string;                // Currently active view ID
   fullPage?: boolean;                  // The database is a whole page; the page title is its title
+  deletedProperties?: DeletedPropertyDefinition[]; // Deleted properties: PropertyDefinition
+                                       // plus deletedAt (epoch ms) and deletedBy (person id)
 }
 // Rows are NOT stored here — they are child database-row blocks.`,
     saveDataExample: `{

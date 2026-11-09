@@ -143,6 +143,14 @@ export const GalerieEtendue: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Changer la couverture' }));
     expect(canvas.getByRole('button', { name: 'Iris · Vincent van Gogh' }).getAttribute('aria-pressed')).toBe('true');
     expect(canvas.getByRole('region', { name: 'Estampes japonaises · The Met' })).toBeTruthy();
+    const scroll = canvasElement.querySelector<HTMLElement>('[data-desktop-cover-gallery-scroll]');
+    const scrollbar = canvasElement.querySelector<HTMLElement>('[data-desktop-cover-gallery-scrollbar]');
+    const thumb = canvasElement.querySelector<HTMLElement>('[data-desktop-cover-gallery-thumb]');
+    if (!scroll || !scrollbar || !thumb) throw new Error('La galerie doit avoir une barre de défilement.');
+    expect(scrollbar.hidden).toBe(false);
+    const initialTop = thumb.getBoundingClientRect().top;
+    scroll.scrollTop = scroll.scrollHeight - scroll.clientHeight;
+    await waitFor(() => expect(thumb.getBoundingClientRect().top).toBeGreaterThan(initialTop));
   },
 };
 

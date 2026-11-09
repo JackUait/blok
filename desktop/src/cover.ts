@@ -123,6 +123,14 @@ export function createPageCover(
   gallery.append(head);
   const scroll = document.createElement('div');
   scroll.setAttribute('data-desktop-cover-gallery-scroll', '');
+  const scrollFrame = document.createElement('div');
+  scrollFrame.setAttribute('data-desktop-cover-gallery-viewport', '');
+  const scrollbar = document.createElement('div');
+  scrollbar.setAttribute('data-desktop-cover-gallery-scrollbar', '');
+  scrollbar.setAttribute('aria-hidden', 'true');
+  const thumb = document.createElement('div');
+  thumb.setAttribute('data-desktop-cover-gallery-thumb', '');
+  scrollbar.append(thumb);
   for (const group of COVER_GROUPS) {
     const section = document.createElement('section');
     section.setAttribute('aria-label', group.label);
@@ -144,7 +152,42 @@ export function createPageCover(
     section.append(heading, grid);
     scroll.append(section);
   }
-  gallery.append(scroll);
+  scrollFrame.append(scroll, scrollbar);
+  gallery.append(scrollFrame);
+  const updateScrollbar = (): void => {
+    const maxScroll = scroll.scrollHeight - scroll.clientHeight;
+    scrollbar.hidden = maxScroll <= 1;
+    if (scrollbar.hidden) return;
+    const trackHeight = scrollbar.clientHeight;
+    const thumbHeight = Math.max(24, trackHeight * scroll.clientHeight / scroll.scrollHeight);
+    const travel = Math.max(0, trackHeight - thumbHeight);
+    thumb.style.height = `${thumbHeight}px`;
+    thumb.style.transform = `translateY(${travel * scroll.scrollTop / maxScroll}px)`;
+  };
+  scroll.addEventListener('scroll', updateScrollbar);
+  let dragStart: { y: number; scrollTop: number } | null = null;
+  thumb.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragStart = { y: event.clientY, scrollTop: scroll.scrollTop };
+    thumb.setPointerCapture(event.pointerId);
+  });
+  thumb.addEventListener('pointermove', (event) => {
+    if (!dragStart) return;
+    const travel = scrollbar.clientHeight - thumb.clientHeight;
+    if (travel > 0) scroll.scrollTop = dragStart.scrollTop
+      + (event.clientY - dragStart.y) * (scroll.scrollHeight - scroll.clientHeight) / travel;
+  });
+  const endDrag = (): void => { dragStart = null; };
+  thumb.addEventListener('pointerup', endDrag);
+  thumb.addEventListener('pointercancel', endDrag);
+  scrollbar.addEventListener('pointerdown', (event) => {
+    if (event.target === thumb) return;
+    const travel = scrollbar.clientHeight - thumb.clientHeight;
+    if (travel <= 0) return;
+    const y = event.clientY - scrollbar.getBoundingClientRect().top - thumb.clientHeight / 2;
+    scroll.scrollTop = y * (scroll.scrollHeight - scroll.clientHeight) / travel;
+  });
   const closeGallery = (): void => {
     gallery.hidden = true;
     change.setAttribute('aria-expanded', 'false');
@@ -154,6 +197,7 @@ export function createPageCover(
     if (gallery.hidden) {
       gallery.hidden = false;
       scroll.style.maxHeight = `${Math.max(0, Math.min(400, window.innerHeight - gallery.getBoundingClientRect().top - 54))}px`;
+      updateScrollbar();
       change.setAttribute('aria-expanded', 'true');
       actions.setAttribute('data-open', '');
     } else closeGallery();

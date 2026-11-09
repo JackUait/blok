@@ -223,6 +223,8 @@ const createHarness = (options?: {
         DEFAULT: 'default',
       },
     },
+    // Undo and redo key presses announce their result.
+    I18n: { t: (key: string) => key },
     YjsManager: {
       markCaretBeforeChange: vi.fn(() => {
         order.push('controller');
@@ -230,8 +232,8 @@ const createHarness = (options?: {
       checkAndHandleBoundary: vi.fn(() => {
         order.push('boundary');
       }),
-      undo: vi.fn(),
-      redo: vi.fn(),
+      undo: vi.fn(() => true),
+      redo: vi.fn(() => true),
       stopCapturing: vi.fn(),
     },
     DragManager: {

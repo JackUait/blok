@@ -104,8 +104,8 @@ export class PageTitle extends Module {
         this.Blok.API.methods.caret.setToFirstBlock('start');
       },
       toFirstBlock: (x) => this.caretToFirstBlock(x),
-      undo: () => this.Blok.API.methods.history.undo(),
-      redo: () => this.Blok.API.methods.history.redo(),
+      undo: () => this.Blok.HistoryAPI.press('undo'),
+      redo: () => this.Blok.HistoryAPI.press('redo'),
       // A plain Event, not InputEvent: paste and Enter are their own undo steps.
       commit: () => this.dom?.title.dispatchEvent(new Event('input')),
     });

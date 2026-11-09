@@ -106,10 +106,12 @@ const createBlokStub = (): BlokModules => {
         DEFAULT: 'default',
       },
     },
+    // Undo and redo key presses announce their result.
+    I18n: { t: (key: string) => key },
     YjsManager: {
       markCaretBeforeChange: vi.fn(),
-      undo: vi.fn(),
-      redo: vi.fn(),
+      undo: vi.fn(() => true),
+      redo: vi.fn(() => true),
       stopCapturing: vi.fn(),
     },
     DragManager: {

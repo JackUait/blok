@@ -6,6 +6,7 @@
  */
 import type { History, HistoryStep, HistoryValue, HistoryValueChange, HistoryValueData } from '../../../../types/api';
 import { Module } from '../../__module';
+import { announceHistoryPress } from '../../utils/history-announcement';
 import type { CaretHistoryEntry } from '../yjs/types';
 
 /**
@@ -51,6 +52,21 @@ export class HistoryAPI extends Module {
       get: (): T | undefined => YjsManager.getValue(key) as T | undefined,
       set: (value, options): void => YjsManager.setValue(key, value, options),
     };
+  }
+
+  /**
+   * A key press in the page title: one undo or redo, then say what it did.
+   * @param direction - which history to walk
+   */
+  public press(direction: 'undo' | 'redo'): void {
+    if (this.Blok.ReadOnly.isEnabled) {
+      return;
+    }
+
+    const { YjsManager, I18n } = this.Blok;
+    const applied = direction === 'undo' ? YjsManager.undo() : YjsManager.redo();
+
+    announceHistoryPress((key) => I18n.t(key), direction, applied);
   }
 
   /**

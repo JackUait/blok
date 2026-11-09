@@ -7,6 +7,7 @@ import { getCaretOffset } from '../../../utils/caret/selection';
 import { markEscapeConsumed } from '../../../utils/consumed-escape';
 import { runConvert } from '../../../utils/convert-refusal';
 import { hasEscapeLayer } from '../../../utils/dismissable-layer';
+import { announceHistoryPress } from '../../../utils/history-announcement';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
@@ -1177,11 +1178,7 @@ export class KeyboardController extends Controller {
       return;
     }
 
-    if (event.inputType === 'historyRedo') {
-      this.Blok.YjsManager.redo();
-    } else {
-      this.Blok.YjsManager.undo();
-    }
+    this.runHistory(event.inputType === 'historyRedo' ? 'redo' : 'undo');
   }
 
   /**
@@ -1227,11 +1224,18 @@ export class KeyboardController extends Controller {
     event.preventDefault();
     event.stopPropagation();
 
-    if (event.shiftKey) {
-      this.Blok.YjsManager.redo();
-    } else {
-      this.Blok.YjsManager.undo();
-    }
+    this.runHistory(event.shiftKey ? 'redo' : 'undo');
+  }
+
+  /**
+   * Run one undo or redo for a user press and say what it did.
+   * @param direction - which history to walk
+   */
+  private runHistory(direction: 'undo' | 'redo'): void {
+    const { YjsManager, I18n } = this.Blok;
+    const applied = direction === 'undo' ? YjsManager.undo() : YjsManager.redo();
+
+    announceHistoryPress((key) => I18n.t(key), direction, applied);
   }
 
   /**
@@ -1270,7 +1274,7 @@ export class KeyboardController extends Controller {
     event.preventDefault();
     event.stopPropagation();
 
-    this.Blok.YjsManager.redo();
+    this.runHistory('redo');
   }
 
   /**

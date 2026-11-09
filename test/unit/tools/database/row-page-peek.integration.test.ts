@@ -708,6 +708,36 @@ describe('row page peek modes', () => {
     expect(document.querySelector('[data-blok-popover-opened]')?.textContent).toContain('Open pages in');
   });
 
+  // notion-motion.md "Round 5": with a cell editor open, Esc 1 keeps the cell, Esc 2 the row, Esc 3 closes the peek.
+  it('steps Escape from a cell editor to the cell, then the row, then closes the side peek with nothing selected', async () => {
+    const blocks = doc({ visibleProperties: ['n'] });
+    const db = blocks[0].data as { schema: unknown[] };
+
+    db.schema.push({ id: 'n', name: 'Notes', type: 'text', position: 'a1' });
+    await make(blocks);
+    await openRow('r1');
+    await click(q('[data-row-id="r2"] [role="gridcell"][data-property-id="n"]'));
+    const field = document.querySelector('[data-blok-database-cell-editor] [data-blok-database-cell-input]');
+    const grid = (): HTMLElement | null => q('[role="grid"]');
+    const press = async (target: Element | null): Promise<void> => {
+      target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await quiet();
+    };
+    const isOpen = (): boolean => q('[data-blok-database-drawer][data-open]') !== null;
+
+    await press(field);
+    expect(q('[data-row-id="r2"] [role="gridcell"][data-property-id="n"]')?.getAttribute('aria-selected')).toBe('true');
+    expect(isOpen()).toBe(true);
+
+    await press(grid());
+    expect(q('[data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('true');
+    expect(isOpen()).toBe(true);
+
+    await press(grid());
+    expect(isOpen()).toBe(false);
+    expect(q('[data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('false');
+  });
+
   // One Escape = one layer: the menu first, the peek on the next press.
   // Read-only has no editor keyboard handling, so the popover registry's own backstop closes the menu.
   it.each([false, true])('closes only the Open pages in menu on the first Escape, and the peek on the second (read-only: %s)', async (readOnly) => {

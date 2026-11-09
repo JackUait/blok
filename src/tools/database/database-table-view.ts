@@ -130,6 +130,8 @@ export interface TableHandlers {
   configureRollup?: (propertyId: string, cell: HTMLElement) => void;
   /** The date picker's format rows. Returns undefined where the property may not change. Drawn on editEnded. */
   dateDisplayChanger?: (propertyId: string) => ((change: DateDisplayChange) => void) | undefined;
+  /** Escape cleared selected rows: close the side peek. */
+  rowsEscaped?: () => void;
 }
 
 /** Sub-items "Nested in toggle": what the table asks about each shown row. */
@@ -434,6 +436,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         commitCells: (changes, newRows) => this.handlers?.commitCells(changes, newRows),
         bulkEdit: (rowIds) => this.openBulkPicker(rowIds),
         rowCommand: (rowId, command) => this.rowCommand(rowId, command),
+        rowsEscaped: () => this.handlers?.rowsEscaped?.(),
         ...(this.handlers?.optionsChange !== undefined
           ? { optionsChange: (propertyId: string, next: SelectOption[]) => this.handlers?.optionsChange?.(propertyId, next) }
           : {}),

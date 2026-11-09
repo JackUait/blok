@@ -7448,6 +7448,7 @@ export class DatabaseTool implements BlockTool {
       },
       duplicateRow: (rowId) => { if (writable()) this.duplicateTableRow(rowId); },
       openRow: (rowId, mode) => context === undefined ? this.handleRowClick(rowId, mode) : context.openRow(rowId, mode),
+      rowsEscaped: () => { if (context === undefined) this.closeRowPage(); },
       copyRowLink: (rowId) => this.copyRowLink(rowId),
       moveTargets: () => this.moveTargets(),
       // After the click that closed the editor, which would count as outside the
@@ -8892,23 +8893,25 @@ export class DatabaseTool implements BlockTool {
     this.keyboard = this.createKeyboard(boardEl);
   }
 
+  /** Escape closes an open row page, and drops its row if "+ New" made it and it stayed empty. */
+  private closeRowPage(): boolean {
+    if (this.cardDrawer?.isOpen !== true) {
+      return false;
+    }
+    const rowId = this.cardDrawer.openRowId;
+
+    this.cardDrawer.close();
+    if (rowId !== null) {
+      this.dropFreshRow(rowId);
+    }
+
+    return true;
+  }
+
   private createKeyboard(boardEl: HTMLDivElement): DatabaseKeyboard {
     const keyboard = new DatabaseKeyboard({
       wrapper: boardEl,
-      onEscape: () => {
-        if (this.cardDrawer?.isOpen) {
-          const rowId = this.cardDrawer.openRowId;
-
-          this.cardDrawer.close();
-          if (rowId !== null) {
-            this.dropFreshRow(rowId);
-          }
-
-          return true;
-        }
-
-        return this.freshRow !== null && this.dropFreshRow(this.freshRow.id);
-      },
+      onEscape: () => this.closeRowPage() || (this.freshRow !== null && this.dropFreshRow(this.freshRow.id)),
     });
     keyboard.attach();
 

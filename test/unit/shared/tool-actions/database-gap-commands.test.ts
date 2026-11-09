@@ -145,6 +145,76 @@ describe('database.duplicateProperty / deleteProperty', () => {
   });
 });
 
+describe('database deleted properties (H50)', () => {
+  const stamped = (doc: FakeDoc, id: string): ReturnType<typeof createFakeCtx> => Object.assign(createFakeCtx(doc, id), { now: 1700000000000, actorId: 'u1' });
+
+  it('deleteProperty keeps the definition in deletedProperties, stamped, as the editor does', () => {
+    const { doc, id, schema, data } = make();
+    const status = schema()[1];
+
+    handler('deleteProperty').run(stamped(doc, id), { propertyId: status.id }, undefined);
+
+    expect(data().deletedProperties).toEqual([{ ...status, deletedAt: 1700000000000, deletedBy: 'u1' }]);
+    expect(validateAgainst(DATABASE_DATA, data())).toEqual([]);
+  });
+
+  it('restoreProperty puts it back without the stamps and drops the empty list', () => {
+    const { doc, id, schema, data } = make();
+    const status = schema()[1];
+
+    run(doc, id, 'deleteProperty', { propertyId: status.id });
+    run(doc, id, 'restoreProperty', { propertyId: status.id });
+
+    expect(schema()).toEqual([schema()[0], status]);
+    expect(data()).not.toHaveProperty('deletedProperties');
+    expect(() => run(doc, id, 'restoreProperty', { propertyId: status.id })).toThrow(/no deleted property/);
+  });
+
+  it('restoreProperty gives a free name when a live property took the old one', () => {
+    const { doc, id, schema } = make();
+    const status = schema()[1];
+
+    run(doc, id, 'deleteProperty', { propertyId: status.id });
+    run(doc, id, 'addProperty', { name: status.name, type: 'text' });
+    run(doc, id, 'restoreProperty', { propertyId: status.id });
+
+    expect(schema().find(property => property.id === status.id)?.name).toBe(`${status.name} 1`);
+  });
+
+  it('deletePropertyPermanently drops the entry and strips rows and templates, reminders and kept originals too', () => {
+    const { doc, id, schema, data } = make();
+    const status = schema()[1];
+    const option = status.config?.options[0]?.id;
+    const { rowId } = run(doc, id, 'addRow', { values: { [status.id]: option } }) as { rowId: string };
+    const { templateId } = run(doc, id, 'addTemplate', {}) as { templateId: string };
+
+    run(doc, id, 'setRowValues', { rowId: templateId, values: { [status.id]: option } });
+    createFakeCtx(doc, id).update(rowId, {
+      reminders: { [status.id]: { remind: 'on_day_of_event' } },
+      convertedValues: { [status.id]: { type: 'text', value: 'x' } },
+    });
+    run(doc, id, 'deleteProperty', { propertyId: status.id });
+    run(doc, id, 'deletePropertyPermanently', { propertyId: status.id });
+
+    expect(data()).not.toHaveProperty('deletedProperties');
+    expect(rowData(doc, rowId).properties).not.toHaveProperty(status.id);
+    expect(rowData(doc, rowId)).not.toHaveProperty('reminders');
+    expect(rowData(doc, rowId)).not.toHaveProperty('convertedValues');
+    expect(rowData(doc, templateId).properties).not.toHaveProperty(status.id);
+  });
+
+  it('deletePropertyPermanently refuses a live property and a locked database', () => {
+    const { doc, id, schema } = make();
+    const status = schema()[1];
+
+    expect(() => run(doc, id, 'deletePropertyPermanently', { propertyId: status.id })).toThrow(/no deleted property/);
+    run(doc, id, 'deleteProperty', { propertyId: status.id });
+    lock(doc, id, schema());
+    expect(() => run(doc, id, 'deletePropertyPermanently', { propertyId: status.id })).toThrow(/locked/);
+    expect(() => run(doc, id, 'restoreProperty', { propertyId: status.id })).toThrow(/locked/);
+  });
+});
+
 describe('database.recolorOption', () => {
   it('sets an option color by id', () => {
     const { doc, id, schema } = make();
@@ -214,6 +284,7 @@ describe('gap command declarations', () => {
   it.each([
     'database.updateProperty', 'database.duplicateProperty', 'database.deleteProperty', 'database.recolorOption',
     'database.addTemplate', 'database.setDefaultTemplate', 'database.setTemplateRepeat', 'database.changePropertyType',
+    'database.restoreProperty', 'database.deletePropertyPermanently',
   ])('%s is a database action', command => {
     expect(describeDatabase().actions?.map(action => `database.${action.name}`)).toContain(command);
   });
@@ -228,7 +299,7 @@ describe('gap command declarations', () => {
     expect(validateAgainst(argsOf('setTemplateRepeat'), { templateId: 't', repeat: { frequency: 'daily', start: 'x' } })).toEqual([]);
     expect(validateAgainst(argsOf('setTemplateRepeat'), { templateId: 't', repeat: { frequency: 'hourly', start: 'x' } }).length).toBeGreaterThan(0);
     expect(validateAgainst(argsOf('addTemplate'), {})).toEqual([]);
-    for (const name of ['updateProperty', 'duplicateProperty', 'deleteProperty', 'recolorOption', 'setDefaultTemplate', 'setTemplateRepeat', 'addTemplate']) {
+    for (const name of ['updateProperty', 'duplicateProperty', 'deleteProperty', 'restoreProperty', 'deletePropertyPermanently', 'recolorOption', 'setDefaultTemplate', 'setTemplateRepeat', 'addTemplate']) {
       expect(BUILT_IN_TOOL_RUNTIMES.get('database')?.actions[name], name).toBe(handler(name));
     }
   });

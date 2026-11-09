@@ -172,6 +172,7 @@ export const databaseSanitize = (): SanitizerConfig => {
   return {
     title: PLAINTEXT,
     schema: PLAINTEXT,
+    deletedProperties: PLAINTEXT,
     views: PLAINTEXT,
     activeViewId: PLAINTEXT,
     automations: PLAINTEXT,

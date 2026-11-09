@@ -698,6 +698,9 @@ describe('history.restore', () => {
       ['a version with different views under the same lock', [paragraph('a', 'Old'), {
         ...database(true), data: { ...database(true).data, views: [{ id: 'v9', name: 'Board', type: 'board', position: 'a0' }] },
       }]],
+      ['a version with different deleted properties under the same lock', [paragraph('a', 'Old'), {
+        ...database(true), data: { ...database(true).data, deletedProperties: [{ id: 'n', name: 'Size', type: 'number', position: 'a1', deletedAt: 1 }] },
+      }]],
     ])('asks before %s', async (_label, blocks) => {
       const { history, agent } = withDatabase(true, blocks);
       const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });

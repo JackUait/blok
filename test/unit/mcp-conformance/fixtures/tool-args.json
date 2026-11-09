@@ -3864,7 +3864,11 @@
                     },
                     {
                       "name": "database.deleteProperty",
-                      "summary": "Remove a property from the schema. Row values stay in the rows."
+                      "summary": "Move a property from the schema to deletedProperties. Row values stay in the rows."
+                    },
+                    {
+                      "name": "database.deletePropertyPermanently",
+                      "summary": "Remove a deleted property for good: its deletedProperties entry and its value in every row and template."
                     },
                     {
                       "name": "database.deleteRow",
@@ -3931,6 +3935,10 @@
                     {
                       "name": "database.resolveComment",
                       "summary": "Resolve a thread, anyone's, as its resolve button does. Then it leaves reads and takes no reply, edit or delete: nothing reopens it."
+                    },
+                    {
+                      "name": "database.restoreProperty",
+                      "summary": "Move a deleted property back into the schema, at its old position. Its row values show again."
                     },
                     {
                       "name": "database.setDefaultTemplate",

@@ -203,6 +203,27 @@
             "id": "db1",
             "propertyId": "db3"
           }
+        },
+        {
+          "name": "database.restoreProperty",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3"
+          }
+        },
+        {
+          "name": "database.deleteProperty",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3"
+          }
+        },
+        {
+          "name": "database.deletePropertyPermanently",
+          "args": {
+            "id": "db1",
+            "propertyId": "db3"
+          }
         }
       ]
     },

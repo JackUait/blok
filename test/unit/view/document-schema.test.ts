@@ -185,6 +185,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     hideDataSourceTitles: true,
     icon: { glyph: 'check', color: 'green' },
     starter: 'tasks',
+    deletedProperties: [{ id: 'p2', name: 'Size', type: 'number', position: 'a1', deletedAt: 1000, deletedBy: 'u1' }],
   })).save(contentElement('')),
 
   // A row as the tool writes one today: a top-level `title` beside the

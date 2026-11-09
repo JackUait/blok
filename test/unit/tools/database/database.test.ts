@@ -7151,6 +7151,19 @@ describe('DatabaseTool — property operations', () => {
       expect(savedOf(tool).deletedProperties?.map((p) => p.id)).toEqual(['prop-n']);
     });
 
+    it('neither restores nor deletes permanently while the database is locked', () => {
+      const one = realRow('r1', { 'prop-title': 'A', 'prop-n': 5 });
+      const { tool } = build([one]);
+
+      tool.deleteProperty('prop-n');
+      (tool as unknown as { setDatabaseLocked: (locked: boolean) => void }).setDatabaseLocked(true);
+
+      expect(tool.restoreProperty('prop-n')).toBeNull();
+      expect(tool.deletePropertyPermanently('prop-n')).toBe(false);
+      expect(one.tool.getProperties()['prop-n']).toBe(5);
+      expect(savedOf(tool).deletedProperties?.map((p) => p.id)).toEqual(['prop-n']);
+    });
+
     it('drops a discarded "Add new relation" mirror without a deleted entry', () => {
       const { tool } = build([]);
 

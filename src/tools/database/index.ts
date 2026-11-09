@@ -8,7 +8,7 @@ import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
 import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
+import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -618,6 +618,8 @@ export class DatabaseTool implements BlockTool {
   private source: DatabaseSourceRef | undefined;
   /** Linked database: the schema it saves, a stand-in older clients can read. */
   private stubSchema: PropertyDefinition[];
+  /** Linked database: the deleted list it was saved with, kept as it came. Its own deletes go to the source. */
+  private stubDeleted: DeletedPropertyDefinition[] | undefined;
   /** A new "Linked view of data source" that has not picked its source yet. */
   private linkPicker: boolean;
   /** The open "New database" / "New view" panel of a linked view. */
@@ -789,6 +791,7 @@ export class DatabaseTool implements BlockTool {
 
     this.source = sourceRefOf(data);
     this.stubSchema = Array.isArray(data?.schema) ? structuredClone(data.schema) : [];
+    this.stubDeleted = structuredClone(data?.deletedProperties);
     this.linkPicker = this.source === undefined && (data as Record<string, unknown> | undefined)?.[LINK_PICKER_KEY] === true;
     // Only a user's insert: a load, undo, redo or a peer's insert never opens it. Form opens none (research/28 §3).
     this.offerNewDatabasePanel = origin === 'user' && this.seeded && !this.linkPicker && initialView !== 'form';
@@ -1555,6 +1558,7 @@ export class DatabaseTool implements BlockTool {
     const title = this.model.getSchema().find((p) => p.type === 'title');
 
     this.stubSchema = title === undefined ? [] : [structuredClone(title)];
+    this.stubDeleted = undefined;
     this.source = { databaseId: picked.id, documentId };
     this.linkPicker = false;
     this.lastSourceTitle = picked.title;
@@ -1769,6 +1773,7 @@ export class DatabaseTool implements BlockTool {
     const title = this.model.getSchema().find((p) => p.type === 'title');
 
     this.stubSchema = title === undefined ? [] : [structuredClone(title)];
+    this.stubDeleted = undefined;
     this.source = { databaseId };
     this.linkPicker = false;
     this.inOneStep(() => {
@@ -2610,12 +2615,13 @@ export class DatabaseTool implements BlockTool {
     return {
       ...structuredClone(this.unknown),
       ...snapshot,
-      // A linked view's deleted properties live on its source.
       ...(deletedProperties !== undefined && this.source === undefined ? { deletedProperties } : {}),
       // Written even when empty: two peers that each create this key keep only one (serializer.ts objectToYMap).
       automations: structuredClone(this.savedAutomations ?? DATABASE_EMPTY_AUTOMATIONS),
       // Linked: a reference, never a copy of the source's schema.
       ...(this.source !== undefined ? { schema: structuredClone(this.stubSchema), source: { ...this.source } } : {}),
+      // A linked view's deleted properties live on its source: it only passes on what it was saved with.
+      ...(this.source !== undefined && this.stubDeleted !== undefined ? { deletedProperties: structuredClone(this.stubDeleted) } : {}),
       ...(this.dataSourceTitlesHidden ? { hideDataSourceTitles: true } : {}),
       ...(this.fullPage ? { fullPage: true } : {}),
       ...(this.databaseIcon !== undefined ? { icon: { ...this.databaseIcon } } : {}),
@@ -2781,6 +2787,7 @@ export class DatabaseTool implements BlockTool {
     this.source = sourceRefOf(data);
     if (this.source !== undefined) {
       this.stubSchema = structuredClone(data.schema);
+      this.stubDeleted = structuredClone(data.deletedProperties);
       this.model.replaceDefinition({ schema: this.model.getSchema(), views: data.views });
       this.pullLinkedSchema();
     } else {
@@ -11515,7 +11522,7 @@ export class DatabaseTool implements BlockTool {
   /** Brings a deleted property back with its row values. Null when there is none to restore. */
   restoreProperty(propertyId: string): PropertyDefinition | null {
     if (this.forwardToSource('restore', propertyId)) return this.model.getProperty(propertyId) ?? null;
-    if (this.readOnly || this.destroyed) return null;
+    if (this.readOnly || this.destroyed || this.structureLocked()) return null;
     const restored = this.model.restoreProperty(propertyId);
 
     if (restored === undefined) return null;
@@ -11539,7 +11546,7 @@ export class DatabaseTool implements BlockTool {
    */
   deletePropertyPermanently(propertyId: string): boolean {
     if (this.forwardToSource('purge', propertyId)) return this.model.getDeletedProperties().every((p) => p.id !== propertyId);
-    if (this.readOnly || this.destroyed || this.model.getDeletedProperties().every((p) => p.id !== propertyId)) return false;
+    if (this.readOnly || this.destroyed || this.structureLocked() || this.model.getDeletedProperties().every((p) => p.id !== propertyId)) return false;
     const write = (): void => {
       this.model.purgeProperty(propertyId);
       for (const child of this.api.blocks.getChildren(this.dataId).filter((block) => block.name === 'database-row')) {

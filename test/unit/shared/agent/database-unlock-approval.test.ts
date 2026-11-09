@@ -397,6 +397,21 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
       }
     });
 
+    it('writing the deleted properties of a locked database directly is refused', async () => {
+      const session = open(seed());
+      const gone = { id: 'n', name: 'Size', type: 'number', position: 'a1', deletedAt: 1 };
+
+      try {
+        const result = await run(session, [{ name: 'block.update', args: { id: 'db', data: { deletedProperties: [gone] } } }]);
+        const read = await session.read({ ids: ['db'], detail: 'full' });
+
+        expect(result.ok).toBe(false);
+        expect(read.blocks.find(block => block.id === 'db')?.data).not.toHaveProperty('deletedProperties');
+      } finally {
+        session.close();
+      }
+    });
+
     it('writing the schema directly is refused', async () => {
       const session = open(seed());
 

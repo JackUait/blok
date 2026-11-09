@@ -424,6 +424,78 @@ const TIER3_VIEW_FIELDS = {
   dataSourceId: { type: 'string', description: 'Multi-source slot: the database block whose rows this view shows. Absent means this database. Blok reads only its own rows yet.' },
 };
 
+const PROPERTY_DEFINITION = {
+  type: 'object',
+  required: ['id', 'name', 'type', 'position'],
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string' },
+    name: { type: 'string' },
+    type: {
+      type: 'string',
+      enum: PROPERTY_TYPES,
+    },
+    position: { type: 'string', description: 'Fractional-index sort key.' },
+    databaseLocked: { type: 'boolean', description: 'Read on the title property only: locks the schema and views. Data entry still works.' },
+    defaultTemplateId: { type: 'string', description: 'Read on the title property only: the template row new rows start from.' },
+    pageLayoutStructure: { type: 'string', enum: ['simple', 'tabbed'], description: 'Read on the title property only: the row page structure. Default simple.' },
+    pageLayoutGroupIn: { type: 'string', enum: ['page', 'panel'], description: 'Read on the title property only: where the row page property group sits. Default page.' },
+    pageLayoutPropertyIcons: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the icon beside each row page property label. Absent means shown.' },
+    pageLayoutPropertyLabels: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the property labels in the row page heading. Absent means shown.' },
+    pageLayoutTemplates: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the database templates on an empty row page. Absent means shown.' },
+    pageLayoutFullWidth: { type: 'boolean', enum: [true], description: 'Read on the title property only: true lays every row page out full width. Absent means off.' },
+    pageLayoutTabsId: { type: 'string', description: 'Read on the title property only: id of the tabs child of this database that holds the row page view tabs (first tab is Content; each other tab holds one linked database). Kept while Simple. Absent means none yet. A tab or tabs child carrying `draft` is someone\'s unapplied layout draft, not part of the layout.' },
+    pageLayoutPlacements: {
+      type: 'array',
+      description: 'Read on the title property only: where properties sit on the row page. A property with no entry sits in the property group.',
+      items: {
+        type: 'object',
+        required: ['id', 'place'],
+        additionalProperties: false,
+        properties: {
+          id: { type: 'string', description: 'The property id.' },
+          place: { type: 'string', enum: ['heading', 'page', 'panel', 'section', 'group'], description: 'heading pins it under the title; page and panel give it a module of its own; group keeps it in the property group, ahead of the properties with no entry.' },
+          sectionId: { type: 'string', description: 'With place "section": the section it sits in.' },
+        },
+      },
+    },
+    pageLayoutSections: {
+      type: 'array',
+      description: 'Read on the title property only: named sections of the row page property group.',
+      items: {
+        type: 'object',
+        required: ['id', 'name'],
+        additionalProperties: false,
+        properties: { id: { type: 'string' }, name: { type: 'string' } },
+      },
+    },
+    config: {
+      type: 'object',
+      description: 'Type-specific options; select/multiSelect carry their choices here.',
+      required: ['options'],
+      additionalProperties: false,
+      properties: {
+        options: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'label', 'position'],
+            additionalProperties: false,
+            properties: {
+              id: { type: 'string' },
+              label: { type: 'string' },
+              color: { type: 'string' },
+              position: { type: 'string' },
+              groupId: { type: 'string', description: 'Status only: the id of the status group holding this option.' },
+            },
+          },
+        },
+      },
+    },
+    ...PROPERTY_SETTINGS,
+  },
+};
+
 export const DATABASE_DATA = {
   type: 'object',
   description: 'Schema and view configuration only — rows are child `database-row` blocks.',
@@ -534,75 +606,18 @@ export const DATABASE_DATA = {
     schema: {
       type: 'array',
       description: 'Column definitions. Exactly one must have type "title".',
+      items: PROPERTY_DEFINITION,
+    },
+    deletedProperties: {
+      type: 'array',
+      description: 'Deleted properties, newest last. Row values stay in the rows until database.deletePropertyPermanently, so database.restoreProperty shows them again.',
       items: {
-        type: 'object',
-        required: ['id', 'name', 'type', 'position'],
-        additionalProperties: false,
+        ...PROPERTY_DEFINITION,
+        required: [...PROPERTY_DEFINITION.required, 'deletedAt'],
         properties: {
-          id: { type: 'string' },
-          name: { type: 'string' },
-          type: {
-            type: 'string',
-            enum: PROPERTY_TYPES,
-          },
-          position: { type: 'string', description: 'Fractional-index sort key.' },
-          databaseLocked: { type: 'boolean', description: 'Read on the title property only: locks the schema and views. Data entry still works.' },
-          defaultTemplateId: { type: 'string', description: 'Read on the title property only: the template row new rows start from.' },
-          pageLayoutStructure: { type: 'string', enum: ['simple', 'tabbed'], description: 'Read on the title property only: the row page structure. Default simple.' },
-          pageLayoutGroupIn: { type: 'string', enum: ['page', 'panel'], description: 'Read on the title property only: where the row page property group sits. Default page.' },
-          pageLayoutPropertyIcons: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the icon beside each row page property label. Absent means shown.' },
-          pageLayoutPropertyLabels: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the property labels in the row page heading. Absent means shown.' },
-          pageLayoutTemplates: { type: 'boolean', enum: [false], description: 'Read on the title property only: false hides the database templates on an empty row page. Absent means shown.' },
-          pageLayoutFullWidth: { type: 'boolean', enum: [true], description: 'Read on the title property only: true lays every row page out full width. Absent means off.' },
-          pageLayoutTabsId: { type: 'string', description: 'Read on the title property only: id of the tabs child of this database that holds the row page view tabs (first tab is Content; each other tab holds one linked database). Kept while Simple. Absent means none yet. A tab or tabs child carrying `draft` is someone\'s unapplied layout draft, not part of the layout.' },
-          pageLayoutPlacements: {
-            type: 'array',
-            description: 'Read on the title property only: where properties sit on the row page. A property with no entry sits in the property group.',
-            items: {
-              type: 'object',
-              required: ['id', 'place'],
-              additionalProperties: false,
-              properties: {
-                id: { type: 'string', description: 'The property id.' },
-                place: { type: 'string', enum: ['heading', 'page', 'panel', 'section', 'group'], description: 'heading pins it under the title; page and panel give it a module of its own; group keeps it in the property group, ahead of the properties with no entry.' },
-                sectionId: { type: 'string', description: 'With place "section": the section it sits in.' },
-              },
-            },
-          },
-          pageLayoutSections: {
-            type: 'array',
-            description: 'Read on the title property only: named sections of the row page property group.',
-            items: {
-              type: 'object',
-              required: ['id', 'name'],
-              additionalProperties: false,
-              properties: { id: { type: 'string' }, name: { type: 'string' } },
-            },
-          },
-          config: {
-            type: 'object',
-            description: 'Type-specific options; select/multiSelect carry their choices here.',
-            required: ['options'],
-            additionalProperties: false,
-            properties: {
-              options: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  required: ['id', 'label', 'position'],
-                  additionalProperties: false,
-                  properties: {
-                    id: { type: 'string' },
-                    label: { type: 'string' },
-                    color: { type: 'string' },
-                    position: { type: 'string' },
-                    groupId: { type: 'string', description: 'Status only: the id of the status group holding this option.' },
-                  },
-                },
-              },
-            },
-          },
-          ...PROPERTY_SETTINGS,
+          ...PROPERTY_DEFINITION.properties,
+          deletedAt: { type: 'number', description: 'When, in epoch milliseconds.' },
+          deletedBy: { type: 'string', description: 'Who, as a person id.' },
         },
       },
     },
@@ -1147,9 +1162,27 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'deleteProperty',
-    summary: 'Remove a property from the schema. Row values stay in the rows.',
+    summary: 'Move a property from the schema to deletedProperties. Row values stay in the rows.',
+    guidance: 'database.restoreProperty brings it back with its values. database.deletePropertyPermanently removes it for good.',
     target: 'block',
     preconditions: ['The title property cannot be deleted.'],
+    args: closed({ propertyId: PROPERTY_ID }, ['propertyId']),
+    mirrors: [],
+  },
+  {
+    name: 'restoreProperty',
+    summary: 'Move a deleted property back into the schema, at its old position. Its row values show again.',
+    guidance: 'If a live property took its name, it gets the lowest free " N" suffix.',
+    target: 'block',
+    preconditions: ['The property must be in deletedProperties.'],
+    args: closed({ propertyId: PROPERTY_ID }, ['propertyId']),
+    mirrors: [],
+  },
+  {
+    name: 'deletePropertyPermanently',
+    summary: 'Remove a deleted property for good: its deletedProperties entry and its value in every row and template.',
+    target: 'block',
+    preconditions: ['The property must be in deletedProperties.'],
     args: closed({ propertyId: PROPERTY_ID }, ['propertyId']),
     mirrors: [],
   },

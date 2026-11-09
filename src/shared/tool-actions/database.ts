@@ -35,7 +35,7 @@ import type { BlockPosition } from '../../../types/api/blocks';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
 import type { ChildCommandRoute } from '../agent/types';
 import type { ConvertibleRow } from '../database/property-conversion';
-import type { ButtonCallbackAction, ButtonSendNotificationAction, ConvertedValue, DatabaseViewConfig, DateReminder, PropertyDefinition, PropertyType, PropertyValue, RelationSettings, SelectOption, TemplateRepeat, ViewType } from '../database/types';
+import type { ButtonCallbackAction, ButtonSendNotificationAction, ConvertedValue, DatabaseViewConfig, DateReminder, DeletedPropertyDefinition, PropertyDefinition, PropertyType, PropertyValue, RelationSettings, SelectOption, TemplateRepeat, ViewType } from '../database/types';
 
 type TargetBlock = NonNullable<ToolActionContext['block']>;
 
@@ -92,7 +92,7 @@ export const assertUnlocked = (ctx: ToolActionContext, state: DatabaseState): vo
 };
 
 /** Database fields the editor freezes with the schema while the database is locked (structureLocked). */
-const LOCKED_FIELDS = ['automations', 'source', 'hideDataSourceTitles', 'starter'];
+const LOCKED_FIELDS = ['automations', 'source', 'hideDataSourceTitles', 'starter', 'deletedProperties'];
 
 /** Everything a database lock freezes: the schema (which holds the lock), the views and LOCKED_FIELDS. */
 export const LOCK_PROTECTED_FIELDS: readonly string[] = ['schema', 'views', ...LOCKED_FIELDS];
@@ -1935,16 +1935,96 @@ const duplicateProperty: ToolActionImpl<{ propertyId: string }, undefined, { pro
   },
 };
 
-/** As DatabaseTool.deleteProperty: the schema entry goes, row values stay (D9). The title cannot go. */
+/** The saved deleted list, without entries a live property has the id of (DatabaseModel.getDeletedProperties). */
+const deletedPropertiesOf = (block: TargetBlock, state: DatabaseState): DeletedPropertyDefinition[] => {
+  const saved = block.data.deletedProperties;
+  const live = new Set(state.schema.map(property => property.id));
+
+  return Array.isArray(saved)
+    ? jsonCopy(saved as DeletedPropertyDefinition[]).filter(property => isRecord(property) && !live.has(property.id))
+    : [];
+};
+
+/** The list as data: an empty list is no key, as the editor saves it. */
+const deletedPropertiesPatch = (list: DeletedPropertyDefinition[]): { deletedProperties: DeletedPropertyDefinition[] | undefined } =>
+  ({ deletedProperties: list.length > 0 ? list : undefined });
+
+const deletedAt = (ctx: ToolActionContext, block: TargetBlock, state: DatabaseState, propertyId: string): number => {
+  const index = deletedPropertiesOf(block, state).findIndex(property => property.id === propertyId);
+
+  return index >= 0 ? index : ctx.fail('PRECONDITION_FAILED', `This database has no deleted property ${propertyId}.`);
+};
+
+/** As DatabaseTool.deleteProperty: the definition moves to deletedProperties, row values stay (D9). The title cannot go. */
 const deleteProperty: ToolActionImpl<{ propertyId: string }> = {
   run: (ctx, args) => {
     const { block, state } = openDatabase(ctx);
     const index = propertyAt(ctx, state, args.propertyId);
+    const property = state.schema[index];
 
-    if (state.schema[index]?.type === 'title') {
-      ctx.fail('PRECONDITION_FAILED', 'A database keeps its title property.');
+    if (property === undefined || property.type === 'title') {
+      return ctx.fail('PRECONDITION_FAILED', 'A database keeps its title property.');
     }
-    ctx.update(block.id, { schema: state.schema.filter((_, i) => i !== index) });
+    const deleted: DeletedPropertyDefinition = {
+      ...property,
+      deletedAt: ctx.now ?? Date.now(),
+      ...(ctx.actorId !== undefined && ctx.actorId !== '' ? { deletedBy: ctx.actorId } : {}),
+    };
+    const rest = deletedPropertiesOf(block, state).filter(each => each.id !== property.id);
+
+    ctx.update(block.id, { schema: state.schema.filter((_, i) => i !== index), ...deletedPropertiesPatch([...rest, deleted]) });
+
+    return undefined;
+  },
+};
+
+/** As DatabaseTool.restoreProperty: back at its position, a free name if a live property took its own. */
+const restoreProperty: ToolActionImpl<{ propertyId: string }> = {
+  run: (ctx, args) => {
+    const { block, state } = openDatabase(ctx);
+    const list = deletedPropertiesOf(block, state);
+    const index = deletedAt(ctx, block, state, args.propertyId);
+    const { deletedAt: _at, deletedBy: _by, ...property } = list[index];
+    const restored: PropertyDefinition = { ...property, name: freePropertyName(state.schema.map(each => each.name), property.name) };
+
+    ctx.update(block.id, {
+      schema: sortedByPosition([...state.schema, restored]),
+      ...deletedPropertiesPatch(list.filter((_, i) => i !== index)),
+    });
+
+    return undefined;
+  },
+};
+
+/** The value, reminder and kept original of `propertyId` gone from one row's data, or undefined when it holds none. */
+const strippedRow = (data: Record<string, unknown>, propertyId: string): Record<string, unknown> | undefined => {
+  const patch: Record<string, unknown> = {};
+
+  for (const key of ['properties', 'reminders', 'convertedValues']) {
+    const map = data[key];
+
+    if (!isRecord(map) || !Object.hasOwn(map, propertyId)) continue;
+    const { [propertyId]: _gone, ...rest } = map;
+
+    patch[key] = key !== 'properties' && Object.keys(rest).length === 0 ? undefined : rest;
+  }
+
+  return Object.keys(patch).length > 0 ? patch : undefined;
+};
+
+/** As DatabaseTool.deletePropertyPermanently: the entry and every row's and template's value go. */
+const deletePropertyPermanently: ToolActionImpl<{ propertyId: string }> = {
+  run: (ctx, args) => {
+    const { block, state } = openDatabase(ctx);
+    const index = deletedAt(ctx, block, state, args.propertyId);
+
+    ctx.update(block.id, deletedPropertiesPatch(deletedPropertiesOf(block, state).filter((_, i) => i !== index)));
+    for (const row of rowBlocksOf(ctx, block.id)) {
+      const data = ctx.read(row.id)?.data;
+      const patch = isRecord(data) ? strippedRow(data, args.propertyId) : undefined;
+
+      if (patch !== undefined) ctx.update(row.id, patch);
+    }
 
     return undefined;
   },
@@ -2083,6 +2163,6 @@ export const DATABASE_ACTION_HANDLERS: Readonly<Record<string, ToolActionImpl>> 
   create, addView, renameView, duplicateView, deleteView, moveView, updateView, setLayout, setLock,
   addProperty, addOption, renameOption, moveOption, deleteOption,
   addRow, moveRow, setRowValues, deleteRow, applyTemplate, duplicateRow, moveRowTo,
-  updateProperty, duplicateProperty, deleteProperty, recolorOption,
+  updateProperty, duplicateProperty, deleteProperty, restoreProperty, deletePropertyPermanently, recolorOption,
   addTemplate, setDefaultTemplate, setTemplateRepeat, changePropertyType, submitForm, pressButton,
 };

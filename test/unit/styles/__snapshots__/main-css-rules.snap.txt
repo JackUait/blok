@@ -5724,7 +5724,7 @@ span[data-blok-slash-search] {
 [data-blok-database-drawer][data-peek-mode="full"]:not([data-full-width]) [data-blok-database-drawer-content] {
   box-sizing: border-box;
   inline-size: 100%;
-  max-inline-size: var(--blok-content-max-width, var(--max-width-content));
+  max-inline-size: calc(var(--blok-content-max-width, var(--max-width-content)) + 2 * var(--blok-space-1-5));
   margin-inline: auto;
 }
 

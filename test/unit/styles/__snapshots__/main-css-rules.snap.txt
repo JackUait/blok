@@ -11756,7 +11756,7 @@ textarea[data-blok-database-cell-input] {
   padding-block-end: var(--blok-space-6);
 }
 
-[data-blok-database-board-container]:has(> [data-blok-database-table]) {
+[data-blok-database-board-container]:has(> [data-blok-database-table], > [data-blok-database-list]) {
   margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
   padding-inline-start: max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
 }

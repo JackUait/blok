@@ -559,6 +559,25 @@ describe('history.restore', () => {
       expect(history.restore).not.toHaveBeenCalled();
     });
 
+    it('never restores a version that repeats a block id: the host may write either copy', async () => {
+      const history = {
+        list: vi.fn(async () => VERSIONS),
+        read: vi.fn(async () => ({ blocks: [formDb({}), formDb({ public: true })] })),
+        restore: vi.fn(async () => true),
+      };
+      const setup = createHeadlessAgentSetup({ services: ['versionHistory'], runtime: 'node', restores: true });
+      const agent = createDocumentAgentSession({
+        document: { blocks: [formDb({})] }, tools: setup.tools, contract: setup.contract, actor, ports: setup.ports,
+        services: { versionHistory: history, databaseFormsHost: true },
+      });
+      const approve = vi.fn(async () => true);
+      const result = await agent.execute(RESTORE, { approve });
+
+      expect(history.restore).not.toHaveBeenCalled();
+      expect(approve).not.toHaveBeenCalled();
+      expect(!result.ok && result.error.code).toBe('TOOL_ACTION_FAILED');
+    });
+
     it('asks nothing when the version shares the view the same way', async () => {
       const { history, agent } = withForm({ public: true }, { public: true, submitLabel: 'Go' });
       const approve = vi.fn(async () => true);
@@ -592,6 +611,30 @@ describe('history.restore', () => {
 
       return { history, agent };
     };
+
+    it('never restores a version that repeats the locked database\'s id, whichever copy unlocks it', async () => {
+      const { history, agent } = withDatabase(false, [database(true), database(false)]);
+      const approve = vi.fn(async () => true);
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] }, { approve });
+
+      expect(history.restore).not.toHaveBeenCalled();
+      expect(approve).not.toHaveBeenCalled();
+      expect(!result.ok && result.error.code).toBe('TOOL_ACTION_FAILED');
+    });
+
+    it.each([
+      ['an empty id', [database(true), { id: '', type: 'paragraph', data: { text: 'x' } }]],
+      ['a missing id', [database(true), { type: 'paragraph', data: { text: 'x' } }]],
+      ['a parent cycle', [database(true), { id: 'p', parent: 'q', type: 'paragraph', data: { text: 'p' } }, { id: 'q', parent: 'p', type: 'paragraph', data: { text: 'q' } }]],
+    ] as Array<[string, OutputData['blocks']]>)('never restores a version with %s, as history.read cannot read it', async (_name, blocks) => {
+      const { history, agent } = withDatabase(true, blocks);
+      const approve = vi.fn(async () => true);
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] }, { approve });
+
+      expect(history.restore).not.toHaveBeenCalled();
+      expect(approve).not.toHaveBeenCalled();
+      expect(!result.ok && result.error.code).toBe('TOOL_ACTION_FAILED');
+    });
 
     it('is refused with APPROVAL_REQUIRED, and the host never restores', async () => {
       const { history, agent } = withDatabase(false);

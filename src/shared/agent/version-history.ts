@@ -113,6 +113,15 @@ const readVersion = async (
   if (!isOutputData(output)) {
     throw failure('INVALID_ARGS', `There is no version "${version}". history.versions lists them.`, { path });
   }
+
+  return snapshotOf(version, output, ctx);
+};
+
+/**
+ * A version as a snapshot. One with a missing, non-string, empty or repeated block id, or a parent cycle,
+ * cannot be read.
+ */
+const snapshotOf = (version: string, output: OutputData, ctx: VersionContext): DocSnapshot => {
   // A server export may keep rich text as HTML; reads and diffs need segments.
   const blocks = outputBlocksToSegments(output.blocks, type => ctx.tools.get(type)?.entry.richTextFields ?? [], ctx.ports.htmlToSegments);
 
@@ -212,6 +221,9 @@ export const runRestore = async (
   if (!isOutputData(target)) {
     throw notFound(version);
   }
+  // Refuses what history.read refuses. Which copy of a repeated id the host writes is the host's choice,
+  // so no question could name it.
+  snapshotOf(version, target, ctx);
   const now = current();
 
   // A lock protects more than its flag: removing, replacing or reshaping the database needs the person's yes too.

@@ -159,7 +159,9 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
     ...write('Restore a saved version, as the version history\'s Restore does: the document becomes that version, title and icon too.', obj({ version }, ['version']),
       'Only when the user asks for it. Sub-pages keep their own history. No other version is deleted. history.undo cannot undo a restore: '
       + 'to go back, restore the result\'s previous version. A version that removes, unlocks or reshapes a database a person locked asks '
-      + 'the person first; a no, or no way to ask, fails with APPROVAL_REQUIRED. Read the document again before your next write.'),
+      + 'the person first; a no, or no way to ask, fails with APPROVAL_REQUIRED. A version history.read cannot read (a missing, non-string, '
+      + 'empty or repeated block id, or a parent cycle) fails with TOOL_ACTION_FAILED before anyone is asked. '
+      + 'Read the document again before your next write.'),
     requires: ['versionHistory'],
   },
 };

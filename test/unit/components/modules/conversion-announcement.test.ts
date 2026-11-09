@@ -5,6 +5,9 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { Header } from '../../../../src/tools/header';
 import { ListItem } from '../../../../src/tools/list';
 import { DividerTool } from '../../../../src/tools/divider';
+import { ToggleItem } from '../../../../src/tools/toggle';
+import { Quote } from '../../../../src/tools/quote';
+import { CodeTool } from '../../../../src/tools/code';
 import type { Blok as PublicBlok, OutputBlockData } from '../../../../types';
 
 /**
@@ -57,6 +60,9 @@ describe('markdown shortcut conversion announcements', () => {
         header: { class: Header },
         list: { class: ListItem },
         divider: { class: DividerTool },
+        toggle: { class: ToggleItem },
+        quote: { class: Quote },
+        code: { class: CodeTool },
       },
       data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: '' } }] },
     }) as unknown as PublicBlok;
@@ -120,6 +126,10 @@ describe('markdown shortcut conversion announcements', () => {
     ['- ', 'Converted to Bulleted list'],
     ['---', 'Converted to Divider'],
     ['>## ', 'Converted to Toggle heading 2'],
+    ['1. ', 'Converted to Numbered list'],
+    ['> ', 'Converted to Toggle list'],
+    ['" ', 'Converted to Quote'],
+    ['```', 'Converted to Code'],
   ])('typing %j says %j', async (text, message) => {
     await boot();
 

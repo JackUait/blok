@@ -207,10 +207,14 @@ internal sealed record CollabRestoreResult(
     CollabHistoryStatus History,
     CollabEditResult? Edit,
     IReadOnlyList<CollabRestoreGuard>? Refused = null,
-    bool Hidden = false);
+    bool Hidden = false,
+    string RefusedAs = "confirmation_required");
 
-/// <summary>How one restore runs. <paramref name="Hidden"/>: the host's history window hides the point.</summary>
-internal sealed record CollabRestoreOptions(bool Hidden = false);
+/// <summary>
+/// How one restore runs. <paramref name="Hidden"/>: the host's history window hides the point.
+/// <paramref name="KeepDatabases"/>: <c>databases=keep</c>, every database stays as it is now.
+/// </summary>
+internal sealed record CollabRestoreOptions(bool Hidden = false, bool KeepDatabases = false);
 
 /// <summary>
 /// Owns one <see cref="CollabRoom"/> per open doc. Rooms remove themselves
@@ -851,10 +855,17 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   }
 
   /// <summary>The restore key's digest: the request line, never the plan.</summary>
-  internal static byte[] RestoreDigest(string lineage, ulong sequence)
+  internal static byte[] RestoreDigest(string lineage, ulong sequence) => RestoreDigest(lineage, sequence, false);
+
+  /// <summary>
+  /// With <paramref name="keepDatabases"/> the line ends in <c>\nkeep</c>, so a key
+  /// reused across the two kinds of restore is a different edit. Without it the
+  /// digest is the one restores always had.
+  /// </summary>
+  internal static byte[] RestoreDigest(string lineage, ulong sequence, bool keepDatabases)
   {
     return SHA256.HashData(Encoding.UTF8.GetBytes(
-        string.Create(CultureInfo.InvariantCulture, $"restore\n{lineage}\n{sequence}")));
+        string.Create(CultureInfo.InvariantCulture, $"restore\n{lineage}\n{sequence}{(keepDatabases ? "\nkeep" : "")}")));
   }
 
   /// <summary>
@@ -927,7 +938,8 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     var target = point.Output?["blocks"] as JsonArray ?? [];
     var targetMaps = point.Doc is { } replayed ? YDocConverter.ReadPageMaps(replayed) : null;
     // The request, never the plan: a retry plans against a doc that moved.
-    var digest = RestoreDigest(lineage, sequence);
+    var digest = RestoreDigest(lineage, sequence, restore.KeepDatabases);
+    var refusedAs = "confirmation_required";
     CollabEditResult edit;
 
     try
@@ -950,11 +962,30 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
                 var structure = YDocConverter.DescribeStructure(doc);
                 var current = await converter.ExportAsync(doc, token);
                 var currentBlocks = current["blocks"] as JsonArray ?? [];
+                var aim = target;
+                IReadOnlySet<string>? pinned = null;
 
                 // After the duplicate check: a refusal consumes no key, and a committed retry keeps its receipt.
+                if (restore.KeepDatabases)
+                {
+                  var kept = CollabRestorePlanner.KeepDatabases(currentBlocks, target);
+
+                  // Never confirmable, and refused whether or not the server enforces guards.
+                  if (kept.Orphaned.Count > 0)
+                  {
+                    refused = kept.Orphaned;
+                    refusedAs = "restore_refused";
+
+                    throw new RestoreGuardedException();
+                  }
+
+                  aim = kept.Target;
+                  pinned = kept.Pinned;
+                }
+
                 if (confirmed is not null)
                 {
-                  var guards = CollabRestoreGuards.Of(currentBlocks, target);
+                  var guards = CollabRestoreGuards.Of(currentBlocks, aim);
 
                   if (guards.Any(guard => !confirmed.Contains(guard.Kind)))
                   {
@@ -967,12 +998,13 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
                 return CollabRestorePlanner.Plan(
                     currentBlocks,
                     structure,
-                    target,
+                    aim,
                     YDocConverter.ReadPageMaps(doc),
                     targetMaps,
                     options.RestoreTrashesPages
                       ? new CollabRestoreTrash(string.IsNullOrEmpty(actorId) ? null : actorId, timeProvider.GetUtcNow().ToUnixTimeMilliseconds())
-                      : null);
+                      : null,
+                    pinned);
               },
               operationId,
               digest,
@@ -992,7 +1024,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     }
     catch (RestoreGuardedException)
     {
-      return new CollabRestoreResult(CollabHistoryStatus.Ready, null, refused);
+      return new CollabRestoreResult(CollabHistoryStatus.Ready, null, refused, RefusedAs: refusedAs);
     }
 
     if (edit.Status == CollabEditStatus.Applied)
@@ -1008,14 +1040,27 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   /// and never applied. A refusal before the plan (a stale If-Match, a purge, a room that cannot load)
   /// comes back as the edit.
   /// </summary>
-  internal async ValueTask<CollabRestorePreviewResult> PreviewRestoreAsync(
+  internal ValueTask<CollabRestorePreviewResult> PreviewRestoreAsync(
       string docId,
       string lineage,
       ulong sequence,
       CollabEditPrecondition? expect,
       string? actorId = null,
+      CancellationToken cancellationToken = default) =>
+      PreviewRestoreAsync(docId, lineage, sequence, expect, actorId, new CollabRestoreOptions(), cancellationToken);
+
+  /// <summary>A restore's dry run with its options. A kept database's orphaning shows as a guard.</summary>
+  internal async ValueTask<CollabRestorePreviewResult> PreviewRestoreAsync(
+      string docId,
+      string lineage,
+      ulong sequence,
+      CollabEditPrecondition? expect,
+      string? actorId,
+      CollabRestoreOptions restore,
       CancellationToken cancellationToken = default)
   {
+    ArgumentNullException.ThrowIfNull(restore);
+
     var point = await ReadPointAsync(docId, lineage, sequence, cancellationToken);
 
     if (point.Status != CollabHistoryStatus.Ready || point.Doc is not { } replayed)
@@ -1036,22 +1081,25 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
             async (doc, token) =>
             {
               var current = (await converter.ExportAsync(doc, token))["blocks"] as JsonArray ?? [];
+              var kept = restore.KeepDatabases ? CollabRestorePlanner.KeepDatabases(current, target) : null;
+              var aim = kept?.Target ?? target;
               var ops = CollabRestorePlanner.Plan(
                   current,
                   YDocConverter.DescribeStructure(doc),
-                  target,
+                  aim,
                   YDocConverter.ReadPageMaps(doc),
                   targetMaps,
                   // The restorer's id is part of the frame the real restore sends.
                   options.RestoreTrashesPages
                     ? new CollabRestoreTrash(string.IsNullOrEmpty(actorId) ? null : actorId, timeProvider.GetUtcNow().ToUnixTimeMilliseconds())
-                    : null);
+                    : null,
+                  kept?.Pinned);
               var (scratch, bytes) = await CollabRoom.ApplyToScratchAsync(doc, converter, ops, token);
               var after = (await converter.ExportAsync(scratch, token))["blocks"] as JsonArray ?? [];
 
               blocks = CollabVersionChanges.Blocks(current, after);
               page = CollabVersionChanges.Page(CollabVersionChanges.PageFields(doc), CollabVersionChanges.PageFields(scratch));
-              guards = CollabRestoreGuards.Of(current, target);
+              guards = [.. CollabRestoreGuards.Of(current, aim), .. kept?.Orphaned ?? []];
               frameBytes = bytes;
 
               return ops;

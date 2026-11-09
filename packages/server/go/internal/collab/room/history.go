@@ -479,6 +479,8 @@ func (m *Manager) RestoreGuarded(ctx context.Context, docID, lineage string, seq
 // hides the point.
 type RestoreOptions struct {
 	Hidden bool
+	// KeepDatabases is databases=keep: every database stays as it is now.
+	KeepDatabases bool
 }
 
 // RestoreOutcome is CollabRestoreResult: Edit when Ready and applied or
@@ -489,6 +491,9 @@ type RestoreOutcome struct {
 	Edit    *EditResult
 	Refused []RestoreGuard
 	Hidden  bool
+	// RefusedAs is the refusal's error: confirmation_required, or
+	// restore_refused for a guard no confirm can pass.
+	RefusedAs string
 }
 
 var errRestorePointHidden = errors.New("collab: the history window hides the restore point")
@@ -522,7 +527,8 @@ func (m *Manager) RestoreWith(ctx context.Context, docID, lineage string, sequen
 		targetMaps = convert.ReadPageMaps(p.doc)
 	}
 	// The request, never the plan: a retry plans against a doc that moved.
-	digest := convert.RestoreDigest(lineage, sequence)
+	digest := convert.RestoreDigestKeeping(lineage, sequence, options.KeepDatabases)
+	refusedAs := "confirmation_required"
 	edit, err := m.editInRoom(docID, func(r *Room) (*EditResult, error) {
 		return r.edit(ctx, func(ctx context.Context, doc *yjs.Doc) ([]convert.EditOp, error) {
 			if options.Hidden {
@@ -540,8 +546,19 @@ func (m *Manager) RestoreWith(ctx context.Context, docID, lineage string, sequen
 			if blocks, ok := exported.Get(jsjson.FromString("blocks")); ok {
 				current, _ = blocks.([]any)
 			}
+			aim := target
+			var pinned map[string]bool
+			if options.KeepDatabases {
+				kept := KeepDatabases(current, target)
+				// Never confirmable, and refused whether or not the server enforces guards.
+				if len(kept.Orphaned) > 0 {
+					refused, refusedAs = kept.Orphaned, "restore_refused"
+					return nil, errRestoreGuarded
+				}
+				aim, pinned = kept.Target, kept.Pinned
+			}
 			if confirmed != nil {
-				guards := RestoreGuards(current, target)
+				guards := RestoreGuards(current, aim)
 				for _, guard := range guards {
 					if !confirmed[guard.Kind] {
 						refused = guards
@@ -549,8 +566,8 @@ func (m *Manager) RestoreWith(ctx context.Context, docID, lineage string, sequen
 					}
 				}
 			}
-			return PlanRestoreTrashing(current, structure, target, convert.ReadPageMaps(doc), targetMaps,
-				m.restoreTrash(actorID)), nil
+			return PlanRestorePinned(current, structure, aim, convert.ReadPageMaps(doc), targetMaps,
+				m.restoreTrash(actorID), pinned), nil
 		}, true, operationID, digest, actorID, expect, nil, nil)
 	})
 	if errors.Is(err, errRestorePointHidden) {
@@ -560,7 +577,7 @@ func (m *Manager) RestoreWith(ctx context.Context, docID, lineage string, sequen
 		return RestoreOutcome{Status: HistoryNotFound}, nil
 	}
 	if errors.Is(err, errRestoreGuarded) {
-		return RestoreOutcome{Status: HistoryReady, Refused: refused}, nil
+		return RestoreOutcome{Status: HistoryReady, Refused: refused, RefusedAs: refusedAs}, nil
 	}
 	if err != nil {
 		return RestoreOutcome{}, err
@@ -588,6 +605,13 @@ type RestorePreview struct {
 // stale If-Match, a purge, a room that cannot load) comes back as the edit.
 func (m *Manager) PreviewRestore(ctx context.Context, docID, lineage string, sequence uint64,
 	expect *Precondition, actorID string) (HistoryStatus, *RestorePreview, *EditResult, error) {
+	return m.PreviewRestoreWith(ctx, docID, lineage, sequence, expect, actorID, RestoreOptions{})
+}
+
+// PreviewRestoreWith is PreviewRestore with its options. A kept database's
+// orphaning shows as a guard.
+func (m *Manager) PreviewRestoreWith(ctx context.Context, docID, lineage string, sequence uint64,
+	expect *Precondition, actorID string, options RestoreOptions) (HistoryStatus, *RestorePreview, *EditResult, error) {
 	p, err := m.readPoint(ctx, docID, lineage, sequence)
 	if err != nil {
 		return 0, nil, nil, err
@@ -607,9 +631,16 @@ func (m *Manager) PreviewRestore(ctx context.Context, docID, lineage string, seq
 			if err != nil {
 				return nil, err
 			}
+			aim := target
+			var pinned map[string]bool
+			var orphaned []RestoreGuard
+			if options.KeepDatabases {
+				kept := KeepDatabases(current, target)
+				aim, pinned, orphaned = kept.Target, kept.Pinned, kept.Orphaned
+			}
 			// The restorer's id is part of the frame the real restore sends.
-			ops := PlanRestoreTrashing(current, convert.DescribeStructure(doc), target, convert.ReadPageMaps(doc), targetMaps,
-				m.restoreTrash(actorID))
+			ops := PlanRestorePinned(current, convert.DescribeStructure(doc), aim, convert.ReadPageMaps(doc), targetMaps,
+				m.restoreTrash(actorID), pinned)
 			scratch, frameBytes, err := applyToScratch(ctx, doc, m.converter, ops)
 			if err != nil {
 				return nil, err
@@ -620,7 +651,7 @@ func (m *Manager) PreviewRestore(ctx context.Context, docID, lineage string, seq
 			}
 			preview.Blocks = DiffBlocks(current, after)
 			preview.Page = DiffPage(PageFields(doc), PageFields(scratch))
-			preview.Guards = RestoreGuards(current, target)
+			preview.Guards = append(RestoreGuards(current, aim), orphaned...)
 			preview.FrameBytes = frameBytes
 			return ops, nil
 		}, expect)

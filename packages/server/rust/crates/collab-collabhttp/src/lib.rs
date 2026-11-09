@@ -209,6 +209,8 @@ mod edit_result_test;
 #[cfg(test)]
 mod history_hooks_test;
 #[cfg(test)]
+mod history_scope_test;
+#[cfg(test)]
 mod history_test;
 #[cfg(test)]
 mod retry_test;

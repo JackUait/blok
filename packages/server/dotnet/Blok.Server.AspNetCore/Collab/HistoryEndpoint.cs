@@ -363,6 +363,13 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (!TryQueryDatabases(context, out var keepDatabases))
+    {
+      await SyncEndpoint.RefuseAsync(context, StatusCodes.Status400BadRequest, BadDatabases);
+
+      return;
+    }
+
     if (await WindowAsync(context, admitted) is not (true, var window))
     {
       return;
@@ -380,7 +387,9 @@ internal static partial class HistoryEndpoint
         SyncHandshake.DeriveActor(admitted.TicketUser, admitted.User),
         expect,
         confirmed,
-        new CollabRestoreOptions(Hidden: window is not null && window.Hides(point.Lineage, point.Sequence)),
+        new CollabRestoreOptions(
+            Hidden: window is not null && window.Hides(point.Lineage, point.Sequence),
+            KeepDatabases: keepDatabases),
         context.RequestAborted);
 
     if (result.Hidden)
@@ -399,7 +408,7 @@ internal static partial class HistoryEndpoint
 
     if (result.Refused is { } refused)
     {
-      await RefuseRestoreAsync(context, "confirmation_required", refused);
+      await RefuseRestoreAsync(context, result.RefusedAs, refused);
 
       return;
     }
@@ -435,6 +444,13 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (!TryQueryDatabases(context, out var keepDatabases))
+    {
+      await SyncEndpoint.RefuseAsync(context, StatusCodes.Status400BadRequest, BadDatabases);
+
+      return;
+    }
+
     if (await WindowAsync(context, admitted) is not (true, var window))
     {
       return;
@@ -453,6 +469,7 @@ internal static partial class HistoryEndpoint
         sequence,
         expect,
         SyncHandshake.DeriveActor(admitted.TicketUser, admitted.User),
+        new CollabRestoreOptions(KeepDatabases: keepDatabases),
         context.RequestAborted);
 
     if (result.History != CollabHistoryStatus.Ready)
@@ -713,6 +730,23 @@ internal static partial class HistoryEndpoint
   /// An optional query number, parsed like the route's sequence. Absent is
   /// null; a repeated, empty or signed value is false.
   /// </summary>
+  private const string BadDatabases = "databases must be keep or restore\n";
+
+  /// <summary><c>databases=keep|restore</c>; absent is restore. A repeated or other value is refused.</summary>
+  private static bool TryQueryDatabases(HttpContext context, out bool keep)
+  {
+    keep = false;
+
+    if (!context.Request.Query.TryGetValue("databases", out var values))
+    {
+      return true;
+    }
+
+    keep = values.Count == 1 && values[0] == "keep";
+
+    return values.Count == 1 && values[0] is "keep" or "restore";
+  }
+
   private static bool TryQueryNumber(HttpContext context, string name, out ulong? value)
   {
     value = null;

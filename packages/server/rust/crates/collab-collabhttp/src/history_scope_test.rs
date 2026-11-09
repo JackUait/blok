@@ -1,0 +1,176 @@
+use blok_jsjson::{Str, Value, parse, stringify};
+
+use crate::test_support::start_history;
+
+// Twins of C# HistoryEndpointTests.Scope: databases=keep|restore.
+
+const TABLE_DATA: &str = r#"{ "schema": [{ "id": "t", "type": "title" }], "views": [] }"#;
+
+fn blocks_of(text: &str) -> Value {
+    match parse(text.as_bytes()) {
+        Ok(Value::Object(state)) => state
+            .get(&Str::from("blocks"))
+            .cloned()
+            .unwrap_or(Value::Null),
+        other => panic!("state: {other:?}"),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_databases_other_than_keep_or_restore_is_a_bad_request() {
+    let history = start_history().await;
+    let lineage = history.open().await;
+    for query in [
+        "?databases=",
+        "?databases=Keep",
+        "?databases=none",
+        "?databases=keep&databases=keep",
+    ] {
+        let restore = history
+            .send(
+                "POST",
+                &format!("/history/{lineage}/0/restore{query}"),
+                "bad",
+                "",
+                "",
+            )
+            .await;
+        let preview = history
+            .send(
+                "POST",
+                &format!("/history/{lineage}/0/restore/preview{query}"),
+                "",
+                "",
+                "",
+            )
+            .await;
+        for (name, a) in [("restore", restore), ("preview", preview)] {
+            assert!(
+                a.status == 400 && a.text() == "databases must be keep or restore\n",
+                "{name} {query} = {} {:?}",
+                a.status,
+                a.text()
+            );
+        }
+    }
+    history.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_keep_restore_that_would_orphan_a_database_is_refused_even_with_every_confirm() {
+    let history = start_history().await;
+    let lineage = history.open().await;
+    history
+        .edit(
+            "toggle",
+            r#"{ "ops": [ { "op": "insert", "id": "t", "block": { "type": "toggle", "data": {} } } ] }"#,
+        )
+        .await;
+    history
+        .edit(
+            "database",
+            &format!(
+                r#"{{ "ops": [ {{ "op": "insert", "id": "d", "parent": "t", "block": {{ "type": "database", "data": {TABLE_DATA} }} }} ] }}"#
+            ),
+        )
+        .await;
+    let before = blocks_of(&history.blocks().await);
+
+    let refused = history
+        .request(
+            "POST",
+            &format!("/history/{lineage}/0/restore?databases=keep"),
+            &[
+                ("Blok-Idempotency-Key", "orphan"),
+                (
+                    "X-Blok-Restore-Confirm",
+                    "share, unlock, lockedReshape, orphanedDatabase",
+                ),
+            ],
+            "",
+        )
+        .await;
+    assert!(
+        refused.status == 409
+            && refused.header("X-Blok-Restore-Refusal") == "restore_refused"
+            && refused.text()
+                == r#"{"error":"restore_refused","guards":[{"kind":"orphanedDatabase","blockId":"d"}]}"#,
+        "refused = {} {:?} {}",
+        refused.status,
+        refused.header("X-Blok-Restore-Refusal"),
+        refused.text()
+    );
+    assert_eq!(
+        blocks_of(&history.blocks().await),
+        before,
+        "the refused restore wrote"
+    );
+
+    let preview = history
+        .send(
+            "POST",
+            &format!("/history/{lineage}/0/restore/preview?databases=keep"),
+            "",
+            "",
+            "",
+        )
+        .await;
+    let guards = match parse(&preview.body) {
+        Ok(Value::Object(body)) => body
+            .get(&Str::from("guards"))
+            .cloned()
+            .unwrap_or(Value::Null),
+        other => panic!("preview: {other:?}"),
+    };
+    assert_eq!(
+        stringify(&guards).unwrap(),
+        r#"[{"kind":"orphanedDatabase","blockId":"d"}]"#
+    );
+    // Without keep, the same restore runs as it always did.
+    let restored = history.restore(&lineage, "0", "orphan", "").await;
+    assert_eq!(restored.status, 204, "restore = {}", restored.text());
+    history.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_keep_restore_leaves_a_database_as_it_is_now() {
+    let history = start_history().await;
+    let lineage = history.open().await;
+    history
+        .edit(
+            "database",
+            &format!(
+                r#"{{ "ops": [ {{ "op": "insert", "id": "d", "block": {{ "type": "database", "data": {TABLE_DATA} }} }} ] }}"#
+            ),
+        )
+        .await;
+    history.edit_text("two").await;
+
+    let restore = history
+        .send(
+            "POST",
+            &format!("/history/{lineage}/0/restore?databases=keep"),
+            "keep",
+            "",
+            "",
+        )
+        .await;
+    assert_eq!(restore.status, 204, "restore = {}", restore.text());
+    let Value::Array(blocks) = blocks_of(&history.blocks().await) else {
+        panic!("no blocks");
+    };
+    let ids: Vec<String> = blocks
+        .iter()
+        .map(|block| match block {
+            Value::Object(block) => match block.get(&Str::from("id")) {
+                Some(Value::String(id)) => id.to_string(),
+                other => panic!("id: {other:?}"),
+            },
+            other => panic!("block: {other:?}"),
+        })
+        .collect();
+    // An insert with no anchor went first; the kept database stays there.
+    assert_eq!(ids, ["d", "a"]);
+    assert!(history.blocks().await.contains(r#""one""#));
+    history.drain().await;
+}

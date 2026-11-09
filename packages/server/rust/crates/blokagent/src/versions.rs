@@ -136,7 +136,10 @@ impl Executor {
                 &actor_id,
                 expect,
                 None,
-                RestoreOptions { hidden },
+                RestoreOptions {
+                    hidden,
+                    ..RestoreOptions::default()
+                },
             )
             .await?;
         let (status, edit) = (outcome.status, outcome.edit);

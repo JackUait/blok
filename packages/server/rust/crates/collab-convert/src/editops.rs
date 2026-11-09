@@ -360,7 +360,15 @@ pub fn normalize_idempotency_key(key: &[u8]) -> Option<String> {
 
 /// The restore key's digest: the request line, never the plan.
 pub fn restore_digest(lineage: &str, sequence: u64) -> Vec<u8> {
-    Sha256::digest(format!("restore\n{lineage}\n{sequence}")).to_vec()
+    restore_digest_keeping(lineage, sequence, false)
+}
+
+/// With `keep_databases` the line ends in `\nkeep`, so a key reused across
+/// the two kinds of restore is a different edit. Without it the digest is
+/// the one restores always had.
+pub fn restore_digest_keeping(lineage: &str, sequence: u64, keep_databases: bool) -> Vec<u8> {
+    let keep = if keep_databases { "\nkeep" } else { "" };
+    Sha256::digest(format!("restore\n{lineage}\n{sequence}{keep}")).to_vec()
 }
 
 /// The SHA-256 of `canonical_body`.

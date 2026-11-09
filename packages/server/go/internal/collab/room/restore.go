@@ -29,10 +29,17 @@ type RestoreTrash struct {
 // PlanRestoreTrashing is PlanRestore with the C# planner's trash argument.
 func PlanRestoreTrashing(currentBlocks []any, current convert.DocStructure, targetBlocks []any,
 	currentMaps, targetMaps []convert.PageMap, trash *RestoreTrash) []convert.EditOp {
+	return PlanRestorePinned(currentBlocks, current, targetBlocks, currentMaps, targetMaps, trash, nil)
+}
+
+// PlanRestorePinned is PlanRestoreTrashing where every pinned block (by
+// unitKey) stays as it is: no op names it.
+func PlanRestorePinned(currentBlocks []any, current convert.DocStructure, targetBlocks []any,
+	currentMaps, targetMaps []convert.PageMap, trash *RestoreTrash, pinned map[string]bool) []convert.EditOp {
 	if trash != nil {
 		targetBlocks = withTrashedPages(currentBlocks, targetBlocks, trash)
 	}
-	ops := planBlocks(currentBlocks, current, targetBlocks)
+	ops := planBlocks(currentBlocks, current, targetBlocks, pinned)
 	var patches []convert.MapPatch
 	for _, name := range convert.PageMaps {
 		live := pageMapEntries(currentMaps, name)
@@ -94,7 +101,7 @@ type exportedBlock struct {
 	position int
 }
 
-func planBlocks(currentBlocks []any, current convert.DocStructure, targetBlocks []any) []convert.EditOp {
+func planBlocks(currentBlocks []any, current convert.DocStructure, targetBlocks []any, pinned map[string]bool) []convert.EditOp {
 	var target []*jsjson.Object
 	for _, item := range NormalizeTarget(targetBlocks) {
 		if block, ok := item.(*jsjson.Object); ok {
@@ -123,7 +130,22 @@ func planBlocks(currentBlocks []any, current convert.DocStructure, targetBlocks 
 	for _, shape := range current.Keys {
 		shapes[unitKey(shape.ID)] = shape
 	}
-	kept := keptInPlace(target, exported, current, shapes, hasTargetChildren)
+	// A pinned block is kept whatever the longest run says; the others order around it.
+	unpinned := target
+	if pinned != nil {
+		unpinned = nil
+		for _, block := range target {
+			if !pinned[unitKey(*stringOf(block, "id"))] {
+				unpinned = append(unpinned, block)
+			}
+		}
+	}
+	kept := keptInPlace(unpinned, exported, current, shapes, hasTargetChildren)
+	for key := range pinned {
+		if _, live := exported[key]; live {
+			kept[key] = true
+		}
+	}
 	var ops []convert.EditOp
 	removed := removals(currentBlocks, current, shapes, kept, &ops)
 	for id := range removed {

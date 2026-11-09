@@ -30,7 +30,7 @@ pub use docconverter::{
 };
 pub use editops::{
     EditError, EditOp, JSON_MAX_DEPTH, MapPatch, canonical_body, canonical_body_digest,
-    normalize_idempotency_key, parse_edit_ops, restore_digest,
+    normalize_idempotency_key, parse_edit_ops, restore_digest, restore_digest_keeping,
 };
 pub use error::{EDIT_FAILED_MID_WRITE, Error, NOT_UNICODE};
 pub use export::{

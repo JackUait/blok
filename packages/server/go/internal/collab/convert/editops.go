@@ -410,7 +410,18 @@ func NormalizeIdempotencyKey(key string) (string, bool) {
 
 // RestoreDigest is the restore key's digest: the request line, never the plan.
 func RestoreDigest(lineage string, sequence uint64) []byte {
-	sum := sha256.Sum256([]byte("restore\n" + lineage + "\n" + strconv.FormatUint(sequence, 10)))
+	return RestoreDigestKeeping(lineage, sequence, false)
+}
+
+// RestoreDigestKeeping: with keepDatabases the line ends in \nkeep, so a key
+// reused across the two kinds of restore is a different edit. Without it
+// the digest is the one restores always had.
+func RestoreDigestKeeping(lineage string, sequence uint64, keepDatabases bool) []byte {
+	line := "restore\n" + lineage + "\n" + strconv.FormatUint(sequence, 10)
+	if keepDatabases {
+		line += "\nkeep"
+	}
+	sum := sha256.Sum256([]byte(line))
 	return sum[:]
 }
 

@@ -1,0 +1,267 @@
+{
+  "$comment": "CollabRestorePlanner.KeepDatabases then Plan, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. databases: keep leaves every database on either side, and everything below it on either side, as it is now; restore is today\u0027s restore. kept: the blocks no op may name, sorted. orphaned: an orphanedDatabase guard per kept root whose parent the restore removes; the restore is then refused. digests: the restore key digest; keep adds \\nkeep to the line, restore keeps the old digest. Updates are base64 Yjs v1 updates.",
+  "cases": [
+    {
+      "name": "keep leaves an edited row as it is now",
+      "databases": "keep",
+      "current": "ASEHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEA25vdycABwAFdHVuZXMBJwAHAApjb250ZW50SWRzACcBBmJsb2NrcwFkASgABwoCaWQBdwFkKAAHCgR0eXBlAXcIZGF0YWJhc2UnAAcKBGRhdGEBJwAHDQZzY2hlbWEBJwAHDgZfX3Jvd3MBJwAHDwF0ASgABxACaWQBdwF0KAAHEAR0eXBlAXcFdGl0bGUnAAcOCV9fcm93S2V5cwAIAAcTAXcBdCgABw0Fdmlld3MBdQAnAAcKBXR1bmVzAScABwoKY29udGVudElkcwAIAAcXAXcBcicBBmJsb2NrcwFyASgABxkCaWQBdwFyKAAHGQR0eXBlAXcMZGF0YWJhc2Utcm93JwAHGQRkYXRhAScABxwKcHJvcGVydGllcwEoAAcdAXQBdwNub3cnAAcZBXR1bmVzASgABxkIcGFyZW50SWQBdwFkJwAHGQpjb250ZW50SWRzAAgBBHJvb3QCdwFhdwFkAA==",
+      "target": "ASEHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEBHRoZW4nAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBZAEoAAcLAmlkAXcBZCgABwsEdHlwZQF3CGRhdGFiYXNlJwAHCwRkYXRhAScABw4Gc2NoZW1hAScABw8GX19yb3dzAScABxABdAEoAAcRAmlkAXcBdCgABxEEdHlwZQF3BXRpdGxlJwAHDwlfX3Jvd0tleXMACAAHFAF3AXQoAAcOBXZpZXdzAXUAJwAHCwV0dW5lcwEnAAcLCmNvbnRlbnRJZHMACAAHGAF3AXInAQZibG9ja3MBcgEoAAcaAmlkAXcBcigABxoEdHlwZQF3DGRhdGFiYXNlLXJvdycABxoEZGF0YQEnAAcdCnByb3BlcnRpZXMBKAAHHgF0AXcEdGhlbicABxoFdHVuZXMBKAAHGghwYXJlbnRJZAF3AWQnAAcaCmNvbnRlbnRJZHMACAEEcm9vdAJ3AWF3AWQA",
+      "ops": [
+        {
+          "op": "update",
+          "id": "a",
+          "data": {
+            "text": [
+              {
+                "text": "then"
+              }
+            ]
+          }
+        }
+      ],
+      "kept": [
+        "d",
+        "r"
+      ],
+      "orphaned": []
+    },
+    {
+      "name": "restore brings the row back, as today",
+      "databases": "restore",
+      "current": "ASEHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEA25vdycABwAFdHVuZXMBJwAHAApjb250ZW50SWRzACcBBmJsb2NrcwFkASgABwoCaWQBdwFkKAAHCgR0eXBlAXcIZGF0YWJhc2UnAAcKBGRhdGEBJwAHDQZzY2hlbWEBJwAHDgZfX3Jvd3MBJwAHDwF0ASgABxACaWQBdwF0KAAHEAR0eXBlAXcFdGl0bGUnAAcOCV9fcm93S2V5cwAIAAcTAXcBdCgABw0Fdmlld3MBdQAnAAcKBXR1bmVzAScABwoKY29udGVudElkcwAIAAcXAXcBcicBBmJsb2NrcwFyASgABxkCaWQBdwFyKAAHGQR0eXBlAXcMZGF0YWJhc2Utcm93JwAHGQRkYXRhAScABxwKcHJvcGVydGllcwEoAAcdAXQBdwNub3cnAAcZBXR1bmVzASgABxkIcGFyZW50SWQBdwFkJwAHGQpjb250ZW50SWRzAAgBBHJvb3QCdwFhdwFkAA==",
+      "target": "ASEHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEBHRoZW4nAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBZAEoAAcLAmlkAXcBZCgABwsEdHlwZQF3CGRhdGFiYXNlJwAHCwRkYXRhAScABw4Gc2NoZW1hAScABw8GX19yb3dzAScABxABdAEoAAcRAmlkAXcBdCgABxEEdHlwZQF3BXRpdGxlJwAHDwlfX3Jvd0tleXMACAAHFAF3AXQoAAcOBXZpZXdzAXUAJwAHCwV0dW5lcwEnAAcLCmNvbnRlbnRJZHMACAAHGAF3AXInAQZibG9ja3MBcgEoAAcaAmlkAXcBcigABxoEdHlwZQF3DGRhdGFiYXNlLXJvdycABxoEZGF0YQEnAAcdCnByb3BlcnRpZXMBKAAHHgF0AXcEdGhlbicABxoFdHVuZXMBKAAHGghwYXJlbnRJZAF3AWQnAAcaCmNvbnRlbnRJZHMACAEEcm9vdAJ3AWF3AWQA",
+      "ops": [
+        {
+          "op": "update",
+          "id": "a",
+          "data": {
+            "text": [
+              {
+                "text": "then"
+              }
+            ]
+          }
+        },
+        {
+          "op": "update",
+          "id": "r",
+          "data": {
+            "properties": {
+              "t": "then"
+            }
+          }
+        }
+      ],
+      "kept": [],
+      "orphaned": []
+    },
+    {
+      "name": "keep leaves a row body as it is now",
+      "databases": "keep",
+      "current": "ASMHACcBBmJsb2NrcwFkASgABwACaWQBdwFkKAAHAAR0eXBlAXcIZGF0YWJhc2UnAAcABGRhdGEBJwAHAwZzY2hlbWEBJwAHBAZfX3Jvd3MBJwAHBQF0ASgABwYCaWQBdwF0KAAHBgR0eXBlAXcFdGl0bGUnAAcECV9fcm93S2V5cwAIAAcJAXcBdCgABwMFdmlld3MBdQAnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAAcNAXcBcicBBmJsb2NrcwFyASgABw8CaWQBdwFyKAAHDwR0eXBlAXcMZGF0YWJhc2Utcm93JwAHDwRkYXRhAScABxIKcHJvcGVydGllcwEoAAcTAXQBdwNyb3cnAAcPBXR1bmVzASgABw8IcGFyZW50SWQBdwFkJwAHDwpjb250ZW50SWRzAAgABxcBdwFiJwEGYmxvY2tzAWIBKAAHGQJpZAF3AWIoAAcZBHR5cGUBdwlwYXJhZ3JhcGgnAAcZBGRhdGEBJwAHHAR0ZXh0BgQABx0Dbm93JwAHGQV0dW5lcwEoAAcZCHBhcmVudElkAXcBcicABxkKY29udGVudElkcwAIAQRyb290AXcBZAA=",
+      "target": "ASMHACcBBmJsb2NrcwFkASgABwACaWQBdwFkKAAHAAR0eXBlAXcIZGF0YWJhc2UnAAcABGRhdGEBJwAHAwZzY2hlbWEBJwAHBAZfX3Jvd3MBJwAHBQF0ASgABwYCaWQBdwF0KAAHBgR0eXBlAXcFdGl0bGUnAAcECV9fcm93S2V5cwAIAAcJAXcBdCgABwMFdmlld3MBdQAnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAAcNAXcBcicBBmJsb2NrcwFyASgABw8CaWQBdwFyKAAHDwR0eXBlAXcMZGF0YWJhc2Utcm93JwAHDwRkYXRhAScABxIKcHJvcGVydGllcwEoAAcTAXQBdwNyb3cnAAcPBXR1bmVzASgABw8IcGFyZW50SWQBdwFkJwAHDwpjb250ZW50SWRzAAgABxcBdwFiJwEGYmxvY2tzAWIBKAAHGQJpZAF3AWIoAAcZBHR5cGUBdwlwYXJhZ3JhcGgnAAcZBGRhdGEBJwAHHAR0ZXh0BgQABx0EdGhlbicABxkFdHVuZXMBKAAHGQhwYXJlbnRJZAF3AXInAAcZCmNvbnRlbnRJZHMACAEEcm9vdAF3AWQA",
+      "ops": [],
+      "kept": [
+        "b",
+        "d",
+        "r"
+      ],
+      "orphaned": []
+    },
+    {
+      "name": "keep leaves a row added since in place",
+      "databases": "keep",
+      "current": "ASIHACcBBmJsb2NrcwFkASgABwACaWQBdwFkKAAHAAR0eXBlAXcIZGF0YWJhc2UnAAcABGRhdGEBJwAHAwZzY2hlbWEBJwAHBAZfX3Jvd3MBJwAHBQF0ASgABwYCaWQBdwF0KAAHBgR0eXBlAXcFdGl0bGUnAAcECV9fcm93S2V5cwAIAAcJAXcBdCgABwMFdmlld3MBdQAnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAAcNAncBcncBcycBBmJsb2NrcwFyASgABxACaWQBdwFyKAAHEAR0eXBlAXcMZGF0YWJhc2Utcm93JwAHEARkYXRhAScABxMKcHJvcGVydGllcwEoAAcUAXQBdwFyJwAHEAV0dW5lcwEoAAcQCHBhcmVudElkAXcBZCcABxAKY29udGVudElkcwAnAQZibG9ja3MBcwEoAAcZAmlkAXcBcygABxkEdHlwZQF3DGRhdGFiYXNlLXJvdycABxkEZGF0YQEnAAccCnByb3BlcnRpZXMBKAAHHQF0AXcDbmV3JwAHGQV0dW5lcwEoAAcZCHBhcmVudElkAXcBZCcABxkKY29udGVudElkcwAIAQRyb290AXcBZAA=",
+      "target": "ARkHACcBBmJsb2NrcwFkASgABwACaWQBdwFkKAAHAAR0eXBlAXcIZGF0YWJhc2UnAAcABGRhdGEBJwAHAwZzY2hlbWEBJwAHBAZfX3Jvd3MBJwAHBQF0ASgABwYCaWQBdwF0KAAHBgR0eXBlAXcFdGl0bGUnAAcECV9fcm93S2V5cwAIAAcJAXcBdCgABwMFdmlld3MBdQAnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAAcNAXcBcicBBmJsb2NrcwFyASgABw8CaWQBdwFyKAAHDwR0eXBlAXcMZGF0YWJhc2Utcm93JwAHDwRkYXRhAScABxIKcHJvcGVydGllcwEoAAcTAXQBdwFyJwAHDwV0dW5lcwEoAAcPCHBhcmVudElkAXcBZCcABw8KY29udGVudElkcwAIAQRyb290AXcBZAA=",
+      "ops": [],
+      "kept": [
+        "d",
+        "r",
+        "s"
+      ],
+      "orphaned": []
+    },
+    {
+      "name": "a database deleted after the point stays deleted",
+      "databases": "keep",
+      "current": "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBYQA=",
+      "target": "ASEHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBZAEoAAcIAmlkAXcBZCgABwgEdHlwZQF3CGRhdGFiYXNlJwAHCARkYXRhAScABwsGc2NoZW1hAScABwwGX19yb3dzAScABw0BdAEoAAcOAmlkAXcBdCgABw4EdHlwZQF3BXRpdGxlJwAHDAlfX3Jvd0tleXMACAAHEQF3AXQoAAcLBXZpZXdzAXUAJwAHCAV0dW5lcwEnAAcICmNvbnRlbnRJZHMACAAHFQF3AXInAQZibG9ja3MBcgEoAAcXAmlkAXcBcigABxcEdHlwZQF3DGRhdGFiYXNlLXJvdycABxcEZGF0YQEnAAcaCnByb3BlcnRpZXMBKAAHGwF0AXcEZ29uZScABxcFdHVuZXMBKAAHFwhwYXJlbnRJZAF3AWQnAAcXCmNvbnRlbnRJZHMACAEEcm9vdAJ3AWF3AWQA",
+      "ops": [],
+      "kept": [],
+      "orphaned": []
+    },
+    {
+      "name": "a database created after the point stays",
+      "databases": "keep",
+      "current": "ASEHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBZAEoAAcIAmlkAXcBZCgABwgEdHlwZQF3CGRhdGFiYXNlJwAHCARkYXRhAScABwsGc2NoZW1hAScABwwGX19yb3dzAScABw0BdAEoAAcOAmlkAXcBdCgABw4EdHlwZQF3BXRpdGxlJwAHDAlfX3Jvd0tleXMACAAHEQF3AXQoAAcLBXZpZXdzAXUAJwAHCAV0dW5lcwEnAAcICmNvbnRlbnRJZHMACAAHFQF3AXInAQZibG9ja3MBcgEoAAcXAmlkAXcBcigABxcEdHlwZQF3DGRhdGFiYXNlLXJvdycABxcEZGF0YQEnAAcaCnByb3BlcnRpZXMBKAAHGwF0AXcDbmV3JwAHFwV0dW5lcwEoAAcXCHBhcmVudElkAXcBZCcABxcKY29udGVudElkcwAIAQRyb290AncBYXcBZAA=",
+      "target": "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBYQA=",
+      "ops": [],
+      "kept": [
+        "d",
+        "r"
+      ],
+      "orphaned": []
+    },
+    {
+      "name": "a database whose parent the restore removes is refused",
+      "databases": "keep",
+      "current": "ASEHACcBBmJsb2NrcwF0ASgABwACaWQBdwF0KAAHAAR0eXBlAXcGdG9nZ2xlJwAHAARkYXRhAScABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgABwUBdwFkJwEGYmxvY2tzAWQBKAAHBwJpZAF3AWQoAAcHBHR5cGUBdwhkYXRhYmFzZScABwcEZGF0YQEnAAcKBnNjaGVtYQEnAAcLBl9fcm93cwEnAAcMAXQBKAAHDQJpZAF3AXQoAAcNBHR5cGUBdwV0aXRsZScABwsJX19yb3dLZXlzAAgABxABdwF0KAAHCgV2aWV3cwF1ACcABwcFdHVuZXMBKAAHBwhwYXJlbnRJZAF3AXQnAAcHCmNvbnRlbnRJZHMACAAHFQF3AXInAQZibG9ja3MBcgEoAAcXAmlkAXcBcigABxcEdHlwZQF3DGRhdGFiYXNlLXJvdycABxcEZGF0YQEnAAcaCnByb3BlcnRpZXMBKAAHGwF0AXcDcm93JwAHFwV0dW5lcwEoAAcXCHBhcmVudElkAXcBZCcABxcKY29udGVudElkcwAIAQRyb290AXcBdAA=",
+      "target": "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBYQA=",
+      "ops": [
+        {
+          "op": "remove",
+          "id": "t"
+        },
+        {
+          "op": "insert",
+          "id": "a",
+          "after": null,
+          "parent": null,
+          "block": {
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "a"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "op": "insert",
+          "id": "d",
+          "after": "a",
+          "parent": null,
+          "block": {
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "t",
+                  "type": "title"
+                }
+              ],
+              "views": []
+            }
+          }
+        },
+        {
+          "op": "insert",
+          "id": "r",
+          "after": null,
+          "parent": "d",
+          "block": {
+            "type": "database-row",
+            "data": {
+              "properties": {
+                "t": "row"
+              }
+            }
+          }
+        }
+      ],
+      "kept": [
+        "d",
+        "r"
+      ],
+      "orphaned": [
+        {
+          "kind": "orphanedDatabase",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a database inside a block the restore keeps stays inside it",
+      "databases": "keep",
+      "current": "ARkHACcBBmJsb2NrcwF0ASgABwACaWQBdwF0KAAHAAR0eXBlAXcGdG9nZ2xlJwAHAARkYXRhAScABwMEdGV4dAYEAAcEA25vdycABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgABwkBdwFkJwEGYmxvY2tzAWQBKAAHCwJpZAF3AWQoAAcLBHR5cGUBdwhkYXRhYmFzZScABwsEZGF0YQEnAAcOBnNjaGVtYQEnAAcPBl9fcm93cwEnAAcQAXQBKAAHEQJpZAF3AXQoAAcRBHR5cGUBdwV0aXRsZScABw8JX19yb3dLZXlzAAgABxQBdwF0KAAHDgV2aWV3cwF1ACcABwsFdHVuZXMBKAAHCwhwYXJlbnRJZAF3AXQnAAcLCmNvbnRlbnRJZHMACAEEcm9vdAF3AXQA",
+      "target": "AQkHACcBBmJsb2NrcwF0ASgABwACaWQBdwF0KAAHAAR0eXBlAXcGdG9nZ2xlJwAHAARkYXRhAScABwMEdGV4dAYEAAcEBHRoZW4nAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBdAA=",
+      "ops": [
+        {
+          "op": "update",
+          "id": "t",
+          "data": {
+            "text": [
+              {
+                "text": "then"
+              }
+            ]
+          }
+        }
+      ],
+      "kept": [
+        "d"
+      ],
+      "orphaned": []
+    },
+    {
+      "name": "siblings reordered around a kept database leave it where it is",
+      "databases": "keep",
+      "current": "AR8HACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBZAEoAAcIAmlkAXcBZCgABwgEdHlwZQF3CGRhdGFiYXNlJwAHCARkYXRhAScABwsGc2NoZW1hAScABwwGX19yb3dzAScABw0BdAEoAAcOAmlkAXcBdCgABw4EdHlwZQF3BXRpdGxlJwAHDAlfX3Jvd0tleXMACAAHEQF3AXQoAAcLBXZpZXdzAXUAJwAHCAV0dW5lcwEnAAcICmNvbnRlbnRJZHMAJwEGYmxvY2tzAWIBKAAHFgJpZAF3AWIoAAcWBHR5cGUBdwlwYXJhZ3JhcGgnAAcWBGRhdGEBJwAHGQR0ZXh0BgQABxoBYicABxYFdHVuZXMBJwAHFgpjb250ZW50SWRzAAgBBHJvb3QDdwFhdwFkdwFiAA==",
+      "target": "AREHACcBBmJsb2NrcwFiASgABwACaWQBdwFiKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWInAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBYQEoAAcIAmlkAXcBYSgABwgEdHlwZQF3CXBhcmFncmFwaCcABwgEZGF0YQEnAAcLBHRleHQGBAAHDAFhJwAHCAV0dW5lcwEnAAcICmNvbnRlbnRJZHMACAEEcm9vdAJ3AWJ3AWEA",
+      "ops": [
+        {
+          "op": "remove",
+          "id": "b"
+        },
+        {
+          "op": "insert",
+          "id": "b",
+          "after": null,
+          "parent": null,
+          "block": {
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "b"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "kept": [
+        "d"
+      ],
+      "orphaned": []
+    },
+    {
+      "name": "a block that is a database only now stays a database",
+      "databases": "keep",
+      "current": "AQ8HACcBBmJsb2NrcwF4ASgABwACaWQBdwF4KAAHAAR0eXBlAXcIZGF0YWJhc2UnAAcABGRhdGEBJwAHAwZzY2hlbWEBJwAHBAZfX3Jvd3MBJwAHBQF0ASgABwYCaWQBdwF0KAAHBgR0eXBlAXcFdGl0bGUnAAcECV9fcm93S2V5cwAIAAcJAXcBdCgABwMFdmlld3MBdQAnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBeAA=",
+      "target": "AQkHACcBBmJsb2NrcwF4ASgABwACaWQBdwF4KAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEBHRoZW4nAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBeAA=",
+      "ops": [],
+      "kept": [
+        "x"
+      ],
+      "orphaned": []
+    },
+    {
+      "name": "a block that was a database only at the point stays as it is now",
+      "databases": "keep",
+      "current": "AQkHACcBBmJsb2NrcwF4ASgABwACaWQBdwF4KAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEA25vdycABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgBBHJvb3QBdwF4AA==",
+      "target": "AQ8HACcBBmJsb2NrcwF4ASgABwACaWQBdwF4KAAHAAR0eXBlAXcIZGF0YWJhc2UnAAcABGRhdGEBJwAHAwZzY2hlbWEBJwAHBAZfX3Jvd3MBJwAHBQF0ASgABwYCaWQBdwF0KAAHBgR0eXBlAXcFdGl0bGUnAAcECV9fcm93S2V5cwAIAAcJAXcBdCgABwMFdmlld3MBdQAnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBeAA=",
+      "ops": [],
+      "kept": [
+        "x"
+      ],
+      "orphaned": []
+    }
+  ],
+  "digests": [
+    {
+      "lineage": "0123456789abcdef0123456789abcdef",
+      "sequence": "7",
+      "databases": "restore",
+      "digestHex": "e7cb478b101cde5b7764e6ffd34fc1c6b8c4351516d6c946f5d0d073ae193fe5"
+    },
+    {
+      "lineage": "0123456789abcdef0123456789abcdef",
+      "sequence": "7",
+      "databases": "keep",
+      "digestHex": "7bb5de6483daff3aca206c7e6e111f8597faa9dcf9d18a107c56da24ee63487f"
+    }
+  ]
+}

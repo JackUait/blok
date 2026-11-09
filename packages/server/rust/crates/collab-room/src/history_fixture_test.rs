@@ -297,14 +297,14 @@ async fn replay_changes_matches_the_changes_fixture() {
     assert!(failures.is_empty(), "{failures:#?}");
 }
 
-fn doc_of(update: &str) -> Doc {
+pub(crate) fn doc_of(update: &str) -> Doc {
     let doc = Doc::new(Options::default());
     doc.apply_update(&decode(update))
         .unwrap_or_else(|err| panic!("{err}"));
     doc
 }
 
-fn exported_blocks(doc: &Doc) -> Vec<Value> {
+pub(crate) fn exported_blocks(doc: &Doc) -> Vec<Value> {
     let (blocks, slots) = no_html_converter()
         .export_blocks(doc, &mut HashSet::new())
         .unwrap_or_else(|err| panic!("{err}"));
@@ -316,7 +316,7 @@ fn exported_blocks(doc: &Doc) -> Vec<Value> {
     blocks
 }
 
-fn op_text(op: &EditOp) -> String {
+pub(crate) fn op_text(op: &EditOp) -> String {
     let mut out = Object::new();
     let str_field = |out: &mut Object, key: &str, value: Option<&Str>| {
         out.set(

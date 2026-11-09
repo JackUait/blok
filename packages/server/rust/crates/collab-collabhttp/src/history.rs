@@ -581,11 +581,16 @@ impl Handlers {
             refuse(&mut response, 400, BAD_IF_MATCH).await;
             return;
         };
+        let Ok(keep_databases) = query_databases(&request) else {
+            refuse(&mut response, 400, BAD_DATABASES).await;
+            return;
+        };
         let Ok(window) = self.window(&request, &mut response, &a).await else {
             return;
         };
         let options = RestoreOptions {
             hidden: hidden(window.as_ref(), &lineage, sequence),
+            keep_databases,
         };
         let confirmed = if self.config.enforce_restore_guards {
             Some(restore_confirms(&mut request, self.config.max_message_bytes).await)
@@ -624,7 +629,7 @@ impl Handlers {
                 write_edit_result(&mut response, &edit, a.rooms.retry_after()).await;
             }
             None if outcome.status == HistoryStatus::Ready => {
-                refuse_restore(&mut response, "confirmation_required", &outcome.refused).await;
+                refuse_restore(&mut response, outcome.refused_as, &outcome.refused).await;
             }
             _ => self.refuse_history(&mut response, &a, outcome.status).await,
         }
@@ -648,6 +653,10 @@ impl Handlers {
             refuse(response, 400, BAD_IF_MATCH).await;
             return;
         };
+        let Ok(keep_databases) = query_databases(request) else {
+            refuse(response, 400, BAD_DATABASES).await;
+            return;
+        };
         let Ok(window) = self.window(request, response, a).await else {
             return;
         };
@@ -657,9 +666,13 @@ impl Handlers {
         }
         let (rooms, doc, lineage) = (a.rooms.clone(), a.doc.clone(), lineage.to_owned());
         let actor = derive_actor(&a.ticket_user, &a.user, a.has_user);
+        let options = RestoreOptions {
+            keep_databases,
+            ..RestoreOptions::default()
+        };
         let preview = async move {
             rooms
-                .preview_restore(&doc, &lineage, sequence, expect, &actor)
+                .preview_restore_with(&doc, &lineage, sequence, expect, &actor, options)
                 .await
         };
         let (status, preview, edit) = match blocking(request, preview).await {
@@ -918,6 +931,20 @@ fn query_block(request: &Request) -> Result<Option<String>, ()> {
     match query_all(raw.strip_prefix('?').unwrap_or(raw), "block").as_slice() {
         [] => Ok(None),
         [value] if !value.is_empty() => Ok(Some(value.clone())),
+        _ => Err(()),
+    }
+}
+
+const BAD_DATABASES: &str = "databases must be keep or restore\n";
+
+/// databases=keep|restore: Ok(true) for keep, absent is restore. A repeated
+/// or other value is Err.
+fn query_databases(request: &Request) -> Result<bool, ()> {
+    let raw = request.query();
+    match query_all(raw.strip_prefix('?').unwrap_or(raw), "databases").as_slice() {
+        [] => Ok(false),
+        [value] if value == "keep" => Ok(true),
+        [value] if value == "restore" => Ok(false),
         _ => Err(()),
     }
 }

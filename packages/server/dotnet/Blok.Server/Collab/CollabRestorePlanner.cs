@@ -31,6 +31,16 @@ internal sealed record CollabKeyShape(
     IReadOnlyList<string>? ListedChildren);
 
 /// <summary>
+/// What a <c>databases=keep</c> restore aims at: the target with every kept
+/// block as it is now, the kept blocks that exist now, and one guard per
+/// kept root the restore would orphan.
+/// </summary>
+internal sealed record CollabKeptDatabases(
+    JsonArray Target,
+    IReadOnlySet<string> Pinned,
+    IReadOnlyList<CollabRestoreGuard> Orphaned);
+
+/// <summary>
 /// Plans a version restore as /edit ops against the live doc: blocks that can
 /// stay keep their place, everything else is removed and inserted again. The
 /// rules (design doc, section 5) follow what EditPlanner accepts: an insert's
@@ -48,10 +58,26 @@ internal static class CollabRestorePlanner
       CollabPageMaps targetMaps,
       CollabRestoreTrash? trash = null)
   {
+    return Plan(currentBlocks, current, targetBlocks, currentMaps, targetMaps, trash, null);
+  }
+
+  /// <summary>
+  /// <see cref="Plan(JsonArray, CollabDocStructure, JsonArray, CollabPageMaps, CollabPageMaps, CollabRestoreTrash?)"/>
+  /// where every <paramref name="pinned"/> block stays as it is: no op names it.
+  /// </summary>
+  internal static IReadOnlyList<CollabEditOp> Plan(
+      JsonArray currentBlocks,
+      CollabDocStructure current,
+      JsonArray targetBlocks,
+      CollabPageMaps currentMaps,
+      CollabPageMaps targetMaps,
+      CollabRestoreTrash? trash,
+      IReadOnlySet<string>? pinned)
+  {
     ArgumentNullException.ThrowIfNull(currentMaps);
     ArgumentNullException.ThrowIfNull(targetMaps);
 
-    var ops = Plan(currentBlocks, current, trash is null ? targetBlocks : WithTrashedPages(currentBlocks, targetBlocks, trash)).ToList();
+    var ops = Plan(currentBlocks, current, trash is null ? targetBlocks : WithTrashedPages(currentBlocks, targetBlocks, trash), pinned).ToList();
     var patches = new List<CollabMapPatch>();
 
     foreach (var name in YDocConverter.PageMaps)
@@ -87,7 +113,7 @@ internal static class CollabRestorePlanner
   }
 
   internal static IReadOnlyList<CollabEditOp> Plan(
-      JsonArray currentBlocks, CollabDocStructure current, JsonArray targetBlocks)
+      JsonArray currentBlocks, CollabDocStructure current, JsonArray targetBlocks, IReadOnlySet<string>? pinned = null)
   {
     ArgumentNullException.ThrowIfNull(currentBlocks);
     ArgumentNullException.ThrowIfNull(current);
@@ -108,7 +134,18 @@ internal static class CollabRestorePlanner
         .Select(ParentOf)
         .OfType<string>()
         .ToHashSet(StringComparer.Ordinal);
-    var kept = KeptInPlace(target, exported, current, hasTargetChildren);
+    // A pinned block is kept whatever the longest run says; the others order around it.
+    var kept = KeptInPlace(
+        pinned is null ? target : [.. target.Where(block => !pinned.Contains(IdOf(block)!))],
+        exported,
+        current,
+        hasTargetChildren);
+
+    if (pinned is not null)
+    {
+      kept.UnionWith(pinned.Where(exported.ContainsKey));
+    }
+
     var ops = new List<CollabEditOp>();
     var removed = Removals(currentBlocks, current, kept, ops);
 
@@ -281,6 +318,195 @@ internal static class CollabRestorePlanner
 
     return afterLast ?? first ?? target.Count;
   }
+
+  /// <summary>
+  /// A <c>databases=keep</c> restore: every database, on either side, stays as
+  /// it is now, with everything below it on either side (rows, row bodies,
+  /// comments). One deleted since the point stays deleted; one made since
+  /// stays. <see cref="CollabKeptDatabases.Target"/> is the target with the
+  /// kept blocks as they are now, each kept root after the nearest sibling
+  /// it follows now. A kept root whose parent the restore removes is
+  /// orphaned: the restore is refused, never moved.
+  /// </summary>
+  internal static CollabKeptDatabases KeepDatabases(JsonArray currentBlocks, JsonArray targetBlocks)
+  {
+    ArgumentNullException.ThrowIfNull(currentBlocks);
+
+    var target = NormalizeTarget(targetBlocks).OfType<JsonObject>().ToList();
+    var live = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+    var liveChildren = new Dictionary<ParentKey, List<string>>();
+    var targetChildren = new Dictionary<ParentKey, List<string>>();
+
+    // First copy wins, as the planner reads the export.
+    foreach (var block in currentBlocks.OfType<JsonObject>())
+    {
+      if (IdOf(block) is { } id && live.TryAdd(id, block))
+      {
+        Children(liveChildren, new ParentKey(ParentOf(block))).Add(id);
+      }
+    }
+
+    foreach (var block in target)
+    {
+      Children(targetChildren, new ParentKey(ParentOf(block))).Add(IdOf(block)!);
+    }
+
+    var kept = new HashSet<string>(StringComparer.Ordinal);
+    var pending = new Stack<string>(
+        live.Values.Concat(target).Where(block => TypeOf(block) == "database").Select(block => IdOf(block)!));
+
+    while (pending.Count > 0)
+    {
+      var id = pending.Pop();
+
+      if (!kept.Add(id))
+      {
+        continue;
+      }
+
+      foreach (var child in Children(liveChildren, new ParentKey(id)).Concat(Children(targetChildren, new ParentKey(id))))
+      {
+        pending.Push(child);
+      }
+    }
+
+    var restored = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+
+    foreach (var block in target.Where(block => !kept.Contains(IdOf(block)!)))
+    {
+      restored[IdOf(block)!] = block;
+    }
+
+    var orphaned = new List<CollabRestoreGuard>();
+    var orphanParents = new Dictionary<string, string?>(StringComparer.Ordinal);
+    var orphanRoots = new List<string>();
+    // A kept root goes right after the nearest sibling it follows now that the
+    // restore places under the same parent, or first. One pass in current
+    // order: each parent's anchor is the last such sibling seen.
+    var first = new Dictionary<ParentKey, List<string>>();
+    var after = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+    var anchors = new Dictionary<ParentKey, string>();
+
+    foreach (var (id, block) in live)
+    {
+      var parent = ParentOf(block);
+      var key = new ParentKey(parent);
+
+      if (!kept.Contains(id))
+      {
+        if (restored.TryGetValue(id, out var placedBlock) && ParentOf(placedBlock) == parent)
+        {
+          anchors[key] = id;
+        }
+
+        continue;
+      }
+
+      if (parent is not null && kept.Contains(parent) && live.ContainsKey(parent))
+      {
+        continue;
+      }
+
+      if (parent is not null && !restored.ContainsKey(parent))
+      {
+        orphaned.Add(new CollabRestoreGuard(OrphanedDatabase, id));
+        orphanParents[id] = null;
+        orphanRoots.Add(id);
+
+        continue;
+      }
+
+      if (anchors.TryGetValue(key, out var anchor))
+      {
+        (after.TryGetValue(anchor, out var list) ? list : after[anchor] = []).Add(id);
+      }
+      else
+      {
+        Children(first, key).Add(id);
+      }
+
+      anchors[key] = id;
+    }
+
+    var placed = new Dictionary<ParentKey, List<string>>();
+
+    // Each id, then the roots that follow it, depth first; a stack, since a run of kept roots can be long.
+    void Follow(ParentKey key, IReadOnlyList<string> ids)
+    {
+      var stack = new Stack<string>(ids.Reverse());
+
+      while (stack.Count > 0)
+      {
+        var id = stack.Pop();
+
+        Children(placed, key).Add(id);
+
+        if (after.TryGetValue(id, out var next))
+        {
+          for (var index = next.Count - 1; index >= 0; index--)
+          {
+            stack.Push(next[index]);
+          }
+        }
+      }
+    }
+
+    foreach (var (key, ids) in first)
+    {
+      Follow(key, ids);
+    }
+
+    foreach (var block in target)
+    {
+      if (restored.ContainsKey(IdOf(block)!))
+      {
+        Follow(new ParentKey(ParentOf(block)), [IdOf(block)!]);
+      }
+    }
+
+    Children(placed, new ParentKey(null)).AddRange(orphanRoots);
+
+    var blocks = new JsonArray();
+    var byId = target.ToDictionary(block => IdOf(block)!, StringComparer.Ordinal);
+    var walk = new Stack<string>(Enumerable.Reverse(Children(placed, new ParentKey(null))));
+
+    while (walk.Count > 0)
+    {
+      var id = walk.Pop();
+      var children = kept.Contains(id)
+        ? Children(liveChildren, new ParentKey(id))
+        : Children(placed, new ParentKey(id));
+
+      if (kept.Contains(id))
+      {
+        var copy = live[id].DeepClone().AsObject();
+
+        if (orphanParents.ContainsKey(id))
+        {
+          copy.Remove("parent");
+        }
+
+        blocks.Add(copy);
+      }
+      else
+      {
+        blocks.Add(byId[id].DeepClone());
+      }
+
+      for (var index = children.Count - 1; index >= 0; index--)
+      {
+        walk.Push(children[index]);
+      }
+    }
+
+    return new CollabKeptDatabases(
+        blocks,
+        kept.Where(live.ContainsKey).ToHashSet(StringComparer.Ordinal),
+        orphaned);
+  }
+
+  /// <summary>The guard kind of a kept database whose parent the restore removes. Never confirmable.</summary>
+  internal const string OrphanedDatabase = "orphanedDatabase";
 
   /// <summary>
   /// The target as a restore reproduces it: a parent naming no target block

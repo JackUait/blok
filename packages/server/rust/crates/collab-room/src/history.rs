@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use blok_collab_convert::{
-    build_replay, describe_structure, plain_page_maps, read_page_maps, restore_digest,
+    build_replay, describe_structure, plain_page_maps, read_page_maps, restore_digest_keeping,
 };
 use blok_collab_journal::{Context, LineageDeleteOutcome, LineageInfo, RecordHeader};
 use blok_jsjson::{Object, Str, Value};
@@ -17,8 +17,9 @@ use crate::manager::Manager;
 use crate::ops::{
     EditResult, EditStatus, PlanOps, Precondition, Receipt, apply_to_scratch, frame_limit,
 };
-use crate::restore::{RestoreTrash, plan_restore_trashing};
+use crate::restore::{RestoreTrash, plan_restore_pinned};
 use crate::restore_guards::{RestoreGuard, restore_guards};
+use crate::restore_scope::keep_databases;
 use crate::timeline::{
     LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions_by,
 };
@@ -609,7 +610,7 @@ impl Manager {
                 ..RestoreOutcome::default()
             });
         }
-        let hidden = options.hidden;
+        let (hidden, keep) = (options.hidden, options.keep_databases);
         let refused: Arc<Mutex<Vec<RestoreGuard>>> = Arc::default();
         let confirmed = Arc::new(confirmed);
         let target = Arc::new(blocks_of(point.output.as_ref()));
@@ -638,8 +639,22 @@ impl Manager {
                 let structure = describe_structure(&doc)?;
                 let exported = converter.export(&doc).await?;
                 let current = blocks_of(Some(&exported));
+                let kept = keep.then(|| keep_databases(&current, &target));
+                if let Some(kept) = &kept
+                    && !kept.orphaned.is_empty()
+                {
+                    // Never confirmable, and refused whether or not the
+                    // server enforces guards.
+                    *refusal
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner()) = kept.orphaned.clone();
+                    return Err(Error::Other(Box::new(RestoreOrphaned)));
+                }
+                let aim = kept
+                    .as_ref()
+                    .map_or(target.as_slice(), |kept| kept.target.as_slice());
                 if let Some(confirmed) = confirmed.as_ref() {
-                    let guards = restore_guards(&current, &target);
+                    let guards = restore_guards(&current, aim);
                     if guards.iter().any(|guard| !confirmed.contains(guard.kind)) {
                         *refusal
                             .lock()
@@ -647,19 +662,20 @@ impl Manager {
                         return Err(Error::Other(Box::new(RestoreGuarded)));
                     }
                 }
-                Ok(plan_restore_trashing(
+                Ok(plan_restore_pinned(
                     &current,
                     &structure,
-                    &target,
+                    aim,
                     &read_page_maps(&doc)?,
                     &read_page_maps(&target_doc)?,
                     trash.as_ref().as_ref(),
+                    kept.as_ref().map(|kept| &kept.pinned),
                 ))
             })
         });
         // The request, never the plan: a retry plans against a doc that
         // moved.
-        let digest = restore_digest(lineage, sequence);
+        let digest = restore_digest_keeping(lineage, sequence, keep);
         let request = crate::ops::EditRequest {
             plan,
             gate_frame_size: true,
@@ -697,6 +713,19 @@ impl Manager {
                     ..RestoreOutcome::default()
                 });
             }
+            Err(Error::Other(err)) if err.is::<RestoreOrphaned>() => {
+                let guards = std::mem::take(
+                    &mut *refused
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner()),
+                );
+                return Ok(RestoreOutcome {
+                    status: HistoryStatus::Ready,
+                    refused: guards,
+                    refused_as: "restore_refused",
+                    ..RestoreOutcome::default()
+                });
+            }
             other => other?,
         };
         if edit.status == EditStatus::Applied {
@@ -715,6 +744,8 @@ impl Manager {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RestoreOptions {
     pub hidden: bool,
+    /// databases=keep: every database stays as it is now.
+    pub keep_databases: bool,
 }
 
 /// CollabRestoreResult: `edit` when Ready and run, `refused` when a guard
@@ -725,6 +756,9 @@ pub struct RestoreOutcome {
     pub edit: Option<EditResult>,
     pub refused: Vec<RestoreGuard>,
     pub hidden: bool,
+    /// The refusal's error: confirmation_required, or restore_refused for a
+    /// guard no confirm can pass.
+    pub refused_as: &'static str,
 }
 
 impl Default for RestoreOutcome {
@@ -734,9 +768,22 @@ impl Default for RestoreOutcome {
             edit: None,
             refused: Vec::new(),
             hidden: false,
+            refused_as: "confirmation_required",
         }
     }
 }
+
+/// A keep restore's planner refused: it would orphan a kept database.
+#[derive(Debug)]
+struct RestoreOrphaned;
+
+impl std::fmt::Display for RestoreOrphaned {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("collab: the restore would orphan a kept database")
+    }
+}
+
+impl std::error::Error for RestoreOrphaned {}
 
 /// A restore's planner refused: the host's window hides its point.
 #[derive(Debug)]
@@ -793,6 +840,29 @@ impl Manager {
         expect: Option<Precondition>,
         actor_id: &str,
     ) -> Result<(HistoryStatus, Option<RestorePreview>, Option<EditResult>), Error> {
+        self.preview_restore_with(
+            doc_id,
+            lineage,
+            sequence,
+            expect,
+            actor_id,
+            RestoreOptions::default(),
+        )
+        .await
+    }
+
+    /// preview_restore with its options. A kept database's orphaning shows
+    /// as a guard.
+    pub async fn preview_restore_with(
+        &self,
+        doc_id: &str,
+        lineage: &str,
+        sequence: u64,
+        expect: Option<Precondition>,
+        actor_id: &str,
+        options: RestoreOptions,
+    ) -> Result<(HistoryStatus, Option<RestorePreview>, Option<EditResult>), Error> {
+        let keep = options.keep_databases;
         let point = self.read_point(doc_id, lineage, sequence).await?;
         let (HistoryStatus::Ready, Some(target_doc)) = (point.status, point.doc.clone()) else {
             let status = match point.status {
@@ -818,13 +888,18 @@ impl Manager {
             );
             Box::pin(async move {
                 let current = blocks_of(Some(&converter.export(&doc).await?));
-                let ops = plan_restore_trashing(
+                let kept = keep.then(|| keep_databases(&current, &target));
+                let aim = kept
+                    .as_ref()
+                    .map_or(target.as_slice(), |kept| kept.target.as_slice());
+                let ops = plan_restore_pinned(
                     &current,
                     &describe_structure(&doc)?,
-                    &target,
+                    aim,
                     &read_page_maps(&doc)?,
                     &target_maps,
                     trash.as_ref().as_ref(),
+                    kept.as_ref().map(|kept| &kept.pinned),
                 );
                 let (scratch, frame_bytes) =
                     apply_to_scratch(&doc, converter.as_ref(), &ops).await?;
@@ -834,7 +909,10 @@ impl Manager {
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
                 preview.blocks = diff_blocks(&current, &after);
                 preview.page = diff_page(&page_fields(&doc)?, &page_fields(&scratch)?);
-                preview.guards = restore_guards(&current, &target);
+                preview.guards = restore_guards(&current, aim);
+                preview
+                    .guards
+                    .extend(kept.into_iter().flat_map(|kept| kept.orphaned));
                 preview.frame_bytes = frame_bytes;
                 Ok(ops)
             })

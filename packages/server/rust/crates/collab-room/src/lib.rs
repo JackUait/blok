@@ -21,6 +21,7 @@ mod ordered;
 mod persist;
 mod restore;
 mod restore_guards;
+mod restore_scope;
 mod room;
 mod seams;
 mod sync;
@@ -52,11 +53,14 @@ pub use ops::{
     StateResult, StateStatus, planned_frame_bytes,
 };
 pub use options::{Clock, Options, Timers};
-pub use restore::{RestoreTrash, normalize_target, plan_restore, plan_restore_trashing};
+pub use restore::{
+    RestoreTrash, normalize_target, plan_restore, plan_restore_pinned, plan_restore_trashing,
+};
 pub use restore_guards::{
     CONFIRMABLE_GUARDS, GUARD_LOCKED_RESHAPE, GUARD_SHARE, GUARD_UNLOCK, RestoreGuard,
     restore_guards,
 };
+pub use restore_scope::{GUARD_ORPHANED_DATABASE, KeptDatabases, keep_databases};
 pub use room::{Log, Membership};
 pub use seams::*;
 pub use timeline::{
@@ -117,8 +121,6 @@ mod history_test;
 #[cfg(test)]
 mod historytime_fixture_test;
 #[cfg(test)]
-mod window_fixture_test;
-#[cfg(test)]
 mod join_test;
 #[cfg(test)]
 mod lane_test;
@@ -133,6 +135,8 @@ mod replaced_test;
 #[cfg(test)]
 mod restore_guards_fixture_test;
 #[cfg(test)]
+mod restore_scope_fixture_test;
+#[cfg(test)]
 mod retry_test;
 #[cfg(test)]
 mod room_test;
@@ -143,3 +147,5 @@ mod test_support;
 mod timers_test;
 #[cfg(test)]
 mod version_test;
+#[cfg(test)]
+mod window_fixture_test;

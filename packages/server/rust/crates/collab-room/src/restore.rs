@@ -51,6 +51,28 @@ pub fn plan_restore_trashing(
     target_maps: &[PageMap],
     trash: Option<&RestoreTrash>,
 ) -> Vec<EditOp> {
+    plan_restore_pinned(
+        current_blocks,
+        current,
+        target_blocks,
+        current_maps,
+        target_maps,
+        trash,
+        None,
+    )
+}
+
+/// plan_restore_trashing where every pinned block stays as it is: no op
+/// names it.
+pub fn plan_restore_pinned(
+    current_blocks: &[Value],
+    current: &DocStructure,
+    target_blocks: &[Value],
+    current_maps: &[PageMap],
+    target_maps: &[PageMap],
+    trash: Option<&RestoreTrash>,
+    pinned: Option<&HashSet<Str>>,
+) -> Vec<EditOp> {
     let with_trash;
     let target_blocks = match trash {
         Some(trash) => {
@@ -59,7 +81,7 @@ pub fn plan_restore_trashing(
         }
         None => target_blocks,
     };
-    let mut ops = plan_blocks(current_blocks, current, target_blocks);
+    let mut ops = plan_blocks(current_blocks, current, target_blocks, pinned);
     let mut patches = Vec::new();
     for name in PAGE_MAPS {
         let live = page_map_entries(current_maps, name);
@@ -248,6 +270,7 @@ fn plan_blocks(
     current_blocks: &[Value],
     current: &DocStructure,
     target_blocks: &[Value],
+    pinned: Option<&HashSet<Str>>,
 ) -> Vec<EditOp> {
     let normalized = normalize_target(target_blocks);
     let target: Vec<&Object> = normalized
@@ -275,7 +298,22 @@ fn plan_blocks(
     for shape in &current.keys {
         shapes.insert(&shape.id, shape);
     }
-    let mut kept = kept_in_place(&target, &exported, current, &shapes, &has_target_children);
+    // A pinned block is kept whatever the longest run says; the others
+    // order around it.
+    let unpinned: Vec<&Object> = target
+        .iter()
+        .copied()
+        .filter(|block| pinned.is_none_or(|pinned| !pinned.contains(target_id(block))))
+        .collect();
+    let mut kept = kept_in_place(&unpinned, &exported, current, &shapes, &has_target_children);
+    if let Some(pinned) = pinned {
+        for block in &target {
+            let id = target_id(block);
+            if pinned.contains(id) && exported.contains_key(id) {
+                kept.insert(id);
+            }
+        }
+    }
     let mut ops = Vec::new();
     let removed = removals(current_blocks, current, &shapes, &kept, &mut ops);
     kept.retain(|id| !removed.contains(id));

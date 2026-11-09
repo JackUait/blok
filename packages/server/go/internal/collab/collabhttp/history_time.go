@@ -295,3 +295,24 @@ func fitAnswer(sizes []int64, cut bool, olderEnd func(oldest int) int64) (int, b
 	}
 	return kept, true
 }
+
+const badDatabases = "databases must be keep or restore\n"
+
+// queryDatabases reads databases=keep|restore: absent is restore. A
+// repeated or other value is false.
+func queryDatabases(r *http.Request) (keep bool, ok bool) {
+	values := dotnet.QueryAll(r.URL.RawQuery, "databases")
+	switch {
+	case len(values) == 0:
+		return false, true
+	case len(values) != 1:
+		return false, false
+	}
+	switch values[0] {
+	case "keep":
+		return true, true
+	case "restore":
+		return false, true
+	}
+	return false, false
+}

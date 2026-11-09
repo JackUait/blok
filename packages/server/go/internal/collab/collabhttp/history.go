@@ -539,6 +539,11 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	keep, ok := queryDatabases(r)
+	if !ok {
+		synchttp.Refuse(w, http.StatusBadRequest, badDatabases)
+		return
+	}
 	window, ok := h.window(w, r, a)
 	if !ok {
 		return
@@ -549,7 +554,7 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := synchttp.DeriveActor(a.ticketUser, a.user, a.hasUser)
 	outcome, err := a.rooms.RestoreWith(r.Context(), a.doc, lineage, sequence, operationID, actor, expect, confirmed,
-		room.RestoreOptions{Hidden: window.hides(lineage, sequence)})
+		room.RestoreOptions{Hidden: window.hides(lineage, sequence), KeepDatabases: keep})
 	if err != nil {
 		failed(w, r.Context())
 		return
@@ -563,7 +568,7 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if outcome.Edit == nil {
-		refuseRestore(w, "confirmation_required", outcome.Refused)
+		refuseRestore(w, outcome.RefusedAs, outcome.Refused)
 		return
 	}
 	WriteEditResult(w, *outcome.Edit, a.rooms.RetryAfter())
@@ -589,6 +594,11 @@ func (h *Handlers) HistoryRestorePreview(w http.ResponseWriter, r *http.Request)
 			return
 		}
 	}
+	keep, ok := queryDatabases(r)
+	if !ok {
+		synchttp.Refuse(w, http.StatusBadRequest, badDatabases)
+		return
+	}
 	window, ok := h.window(w, r, a)
 	if !ok {
 		return
@@ -597,8 +607,8 @@ func (h *Handlers) HistoryRestorePreview(w http.ResponseWriter, r *http.Request)
 		refuseRetention(w)
 		return
 	}
-	status, preview, edit, err := a.rooms.PreviewRestore(r.Context(), a.doc, lineage, sequence, expect,
-		synchttp.DeriveActor(a.ticketUser, a.user, a.hasUser))
+	status, preview, edit, err := a.rooms.PreviewRestoreWith(r.Context(), a.doc, lineage, sequence, expect,
+		synchttp.DeriveActor(a.ticketUser, a.user, a.hasUser), room.RestoreOptions{KeepDatabases: keep})
 	if err != nil {
 		failed(w, r.Context())
 		return

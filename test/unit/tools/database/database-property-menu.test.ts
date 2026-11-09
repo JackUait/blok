@@ -180,7 +180,7 @@ describe('DatabasePropertyMenu', () => {
     expect(container.element.querySelector<HTMLElement>('[data-blok-popover-container]')?.style.getPropertyValue('--max-height')).toBe('364px');
     expect(params.cover).toBe(true);
     expect(params.viewportMargin).toBe(11.6);
-    expect([position.x, position.y]).toEqual([654, 202.4]);
+    expect([position.x, position.y]).toEqual([648, 202.4]);
     menu.destroy();
   });
 
@@ -337,6 +337,20 @@ describe('DatabasePropertyMenu', () => {
     // blok-database-column-menu: the divider rules the peek, card and rollup menus must not get.
     expect(String(params?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-header-menu', 'blok-database-column-menu']);
     expect(params?.animateClose).toBe(true);
+  });
+
+  // notion-live/motion-header.json + header.png: the Name cell spans x 539..818, its menu box starts at x 533, y 296 (the cell's bottom).
+  it('opens the header menu 6px left of its cell, at the cell\'s bottom', () => {
+    const anchor = document.body.appendChild(document.createElement('div'));
+
+    vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 539, y: 260, width: 280, height: 36 }));
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+    menu.open(prop('text'), anchor);
+
+    expect(captured.popovers[captured.popovers.length - 1]?.params.position).toMatchObject({ x: 533, y: 296 });
+    menu.destroy();
+    anchor.remove();
   });
 
   it.each(['close', 'Enter'] as const)('notifies its host once when closed through %s', (method) => {
@@ -1274,7 +1288,7 @@ describe('DatabasePropertyMenu', () => {
       list?.querySelector<HTMLElement>('[data-blok-database-option-color="red"]')?.click();
 
       expect(onOptionsChange).toHaveBeenCalled();
-      expect(popover?.moves.map((move) => [move.positionContext, move.position.x, move.position.y, move.position.width])).toEqual([[live, 40, 133, 200]]);
+      expect(popover?.moves.map((move) => [move.positionContext, move.position.x, move.position.y, move.position.width])).toEqual([[live, 34, 133, 200]]);
       expect(captured.popovers[captured.popovers.length - 1]).toBe(popover);
       menu.destroy();
       live.remove();

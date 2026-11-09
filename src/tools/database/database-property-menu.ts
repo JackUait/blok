@@ -64,11 +64,14 @@ const capHeaderMenu = (popover: PopoverDesktop): void => {
     ?.style.setProperty('--max-height', `${Math.round(window.innerHeight * HEADER_MENU_HEIGHT_SHARE * 10) / 10}px`);
 };
 
+/** notion-live/header.png: the Name cell starts at x 539, its menu at 533. Measured on the first column only. */
+const HEADER_MENU_INSET = -6;
+
 /** On the header's bottom edge, with no gap; cover slides it up when it would pass the window's bottom margin. */
 const headerMenuPosition = (anchor: HTMLElement): PlaceOver => {
   const { left, bottom, width } = anchor.getBoundingClientRect();
 
-  return { cover: true, viewportMargin: HEADER_MENU_BOTTOM_MARGIN, position: DOMRect.fromRect({ x: left, y: bottom, width, height: 0 }), positionContext: anchor };
+  return { cover: true, viewportMargin: HEADER_MENU_BOTTOM_MARGIN, position: DOMRect.fromRect({ x: left + HEADER_MENU_INSET, y: bottom, width, height: 0 }), positionContext: anchor };
 };
 
 const ruleAfterSort = (items: PopoverItemParams[]): PopoverItemParams[] =>

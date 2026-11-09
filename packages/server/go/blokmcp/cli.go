@@ -102,15 +102,9 @@ func parseArgs(engine bundle, args []string, env map[string]string) (Options, er
 		options.CreatePage = CreatePageWebhook(*files.CreatePage)
 	}
 	if files.HandleStore != nil {
-		store, err := NewFilesHandleStore(*files.HandleStore)
-		var refused *ConfigError
-		if errors.As(err, &refused) {
-			return Options{}, &configError{refused.Message}
-		}
-		if err != nil {
-			return Options{}, err
-		}
-		options.HandleStore = store
+		// Made at start, after the option checks: a refused start leaves
+		// no directory behind.
+		options.HandleStore = &filesStoreAt{dir: *files.HandleStore}
 	}
 	if files.Manifest != nil {
 		if options.Manifest, err = configFile(engine, "manifest", *files.Manifest); err != nil {

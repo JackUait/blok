@@ -101,6 +101,51 @@ func newFilesHandleStore(dir string, stale time.Duration) (*FilesHandleStore, er
 	return &FilesHandleStore{dir: dir, stale: stale}, nil
 }
 
+// filesStoreAt is --handle-store files:<dir> as parsed. The server opens
+// it after its option checks (opener); used before, it opens on first use.
+type filesStoreAt struct {
+	dir   string
+	once  sync.Once
+	store *FilesHandleStore
+	err   error
+}
+
+// opener is a store that is made at start.
+type opener interface{ open() error }
+
+func (f *filesStoreAt) open() error {
+	f.once.Do(func() { f.store, f.err = NewFilesHandleStore(f.dir) })
+	return f.err
+}
+
+func (f *filesStoreAt) Count(ctx context.Context, principal string, idle time.Duration) (int, error) {
+	if err := f.open(); err != nil {
+		return 0, err
+	}
+	return f.store.Count(ctx, principal, idle)
+}
+
+func (f *filesStoreAt) TryAdd(ctx context.Context, handle string, record HandleRecord, maxPerPrincipal int, idle time.Duration) (bool, error) {
+	if err := f.open(); err != nil {
+		return false, err
+	}
+	return f.store.TryAdd(ctx, handle, record, maxPerPrincipal, idle)
+}
+
+func (f *filesStoreAt) Acquire(ctx context.Context, handle string, idle, wait time.Duration) (HandleLease, error) {
+	if err := f.open(); err != nil {
+		return nil, err
+	}
+	return f.store.Acquire(ctx, handle, idle, wait)
+}
+
+func (f *filesStoreAt) Sweep(ctx context.Context, idle time.Duration) error {
+	if err := f.open(); err != nil {
+		return err
+	}
+	return f.store.Sweep(ctx, idle)
+}
+
 func (f *FilesHandleStore) path(name string) string { return filepath.Join(f.dir, name) }
 
 type storeMeta struct {

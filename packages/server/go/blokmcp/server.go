@@ -87,6 +87,11 @@ func buildServer(options, checked Options, runtime invoker) (*Server, error) {
 	if err := s.checkOptions(ctx, checked); err != nil {
 		return nil, err
 	}
+	if store, ok := options.HandleStore.(opener); ok {
+		if err := store.open(); err != nil {
+			return nil, err
+		}
+	}
 	s.flags = map[string]any{
 		"sync":    options.live(),
 		"source":  options.hasSource(),

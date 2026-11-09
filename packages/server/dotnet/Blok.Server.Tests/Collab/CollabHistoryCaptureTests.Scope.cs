@@ -17,6 +17,29 @@ public sealed partial class CollabHistoryCaptureTests
     Check("collab-history/restore-scope.json", await RestoreScope());
   }
 
+  /// <summary>A wide document with many kept databases stays fast: every lookup is by id, and each kept root is placed in one pass.</summary>
+  [Fact]
+  public void KeepDatabasesIsLinearInTheBlocks()
+  {
+    const int n = 100_000;
+    var current = new JsonArray();
+    var target = new JsonArray();
+
+    for (var i = 0; i < n; i++)
+    {
+      current.Add(new JsonObject { ["id"] = $"p{i}", ["type"] = "paragraph" });
+      current.Add(new JsonObject { ["id"] = $"d{i}", ["type"] = "database" });
+      target.Add(new JsonObject { ["id"] = $"p{i}", ["type"] = "paragraph" });
+    }
+
+    var started = System.Diagnostics.Stopwatch.StartNew();
+    var kept = CollabRestorePlanner.KeepDatabases(current, target);
+
+    Assert.Equal(2 * n, kept.Target.Count);
+    Assert.Equal(n, kept.Pinned.Count);
+    Assert.True(started.Elapsed < TimeSpan.FromMinutes(1), $"took {started.Elapsed}");
+  }
+
   private static readonly string[] DigestKinds = ["restore", "keep"];
 
   private static string Block(string id, string type, string? parent = null, string[]? content = null, string data = "{}") =>

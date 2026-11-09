@@ -80,47 +80,76 @@ func KeepDatabases(currentBlocks, targetBlocks []any) KeptDatabases {
 		pending = append(pending, targetChildren[parentKey(&id)]...)
 	}
 
-	placed := map[string][]jsjson.Str{}
-	restored := map[string]bool{}
+	restored := map[string]*jsjson.Object{}
 	for _, block := range target {
-		id := *stringOf(block, "id")
-		if kept[unitKey(id)] {
-			continue
+		if id := *stringOf(block, "id"); !kept[unitKey(id)] {
+			restored[unitKey(id)] = block
 		}
-		restored[unitKey(id)] = true
-		key := parentKey(parentOf(block))
-		placed[key] = append(placed[key], id)
 	}
 
 	var orphaned []RestoreGuard
 	orphans := map[string]bool{}
-	// Roots in current order, so a kept root can follow one placed before it.
+	var orphanRoots []jsjson.Str
+	// A kept root goes right after the nearest sibling it follows now that
+	// the restore places under the same parent, or first. One pass in
+	// current order: each parent's anchor is the last such sibling seen.
+	first := map[string][]jsjson.Str{}
+	after := map[string][]jsjson.Str{}
+	anchors := map[string]*jsjson.Str{}
 	for _, id := range liveOrder {
 		parent := parentOf(live[unitKey(id)])
+		key := parentKey(parent)
 		if !kept[unitKey(id)] {
+			if block := restored[unitKey(id)]; block != nil && parentKey(parentOf(block)) == key {
+				anchors[key] = &id
+			}
 			continue
 		}
 		if parent != nil && kept[unitKey(*parent)] && live[unitKey(*parent)] != nil {
 			continue
 		}
-		if parent != nil && !restored[unitKey(*parent)] {
+		if parent != nil && restored[unitKey(*parent)] == nil {
 			orphaned = append(orphaned, RestoreGuard{Kind: GuardOrphanedDatabase, BlockID: id.String()})
 			orphans[unitKey(id)] = true
-			placed[parentKey(nil)] = append(placed[parentKey(nil)], id)
+			orphanRoots = append(orphanRoots, id)
 			continue
 		}
-		key := parentKey(parent)
-		siblings := placed[key]
-		before := liveChildren[key]
-		at := 0
-		for index := indexOf(before, id) - 1; index >= 0; index-- {
-			if found := indexOf(siblings, before[index]); found >= 0 {
-				at = found + 1
-				break
+		if anchor := anchors[key]; anchor != nil {
+			after[unitKey(*anchor)] = append(after[unitKey(*anchor)], id)
+		} else {
+			first[key] = append(first[key], id)
+		}
+		anchors[key] = &id
+	}
+	placed := map[string][]jsjson.Str{}
+	// Each id, then the roots that follow it, depth first; a stack, since a
+	// run of kept roots can be long.
+	follow := func(key string, ids []jsjson.Str) {
+		var stack []jsjson.Str
+		for index := len(ids) - 1; index >= 0; index-- {
+			stack = append(stack, ids[index])
+		}
+		for len(stack) > 0 {
+			id := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			placed[key] = append(placed[key], id)
+			next := after[unitKey(id)]
+			for index := len(next) - 1; index >= 0; index-- {
+				stack = append(stack, next[index])
 			}
 		}
-		placed[key] = append(siblings[:at:at], append([]jsjson.Str{id}, siblings[at:]...)...)
 	}
+	for key, ids := range first {
+		follow(key, ids)
+	}
+	for _, block := range target {
+		id := *stringOf(block, "id")
+		if restored[unitKey(id)] != nil {
+			key := parentKey(parentOf(block))
+			follow(key, []jsjson.Str{id})
+		}
+	}
+	placed[parentKey(nil)] = append(placed[parentKey(nil)], orphanRoots...)
 
 	var blocks []any
 	roots := placed[parentKey(nil)]
@@ -160,13 +189,4 @@ func KeepDatabases(currentBlocks, targetBlocks []any) KeptDatabases {
 func isDatabase(block *jsjson.Object) bool {
 	kind := typeOf(block)
 	return kind != nil && kind.String() == "database"
-}
-
-func indexOf(list []jsjson.Str, id jsjson.Str) int {
-	for index, item := range list {
-		if jsjson.Compare(item, id) == 0 {
-			return index
-		}
-	}
-	return -1
 }

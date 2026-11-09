@@ -3,8 +3,10 @@ package room
 import (
 	"encoding/hex"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
@@ -71,4 +73,30 @@ func TestKeepDatabasesMatchesTheRestoreScopeFixture(t *testing.T) {
 func asObject(value any) *jsjson.Object {
 	object, _ := value.(*jsjson.Object)
 	return object
+}
+
+// A wide document with many kept databases stays fast: every lookup is by
+// id, and each kept root is placed in one pass.
+func TestKeepDatabasesIsLinearInTheBlocks(t *testing.T) {
+	const n = 100_000
+	block := func(id, kind string) any {
+		object := &jsjson.Object{}
+		object.Set(jsjson.FromString("id"), jsjson.FromString(id))
+		object.Set(jsjson.FromString("type"), jsjson.FromString(kind))
+		return object
+	}
+	var current, target []any
+	for i := range n {
+		paragraph := block("p"+strconv.Itoa(i), "paragraph")
+		current = append(current, paragraph, block("d"+strconv.Itoa(i), "database"))
+		target = append(target, paragraph)
+	}
+	started := time.Now()
+	kept := KeepDatabases(current, target)
+	if len(kept.Target) != 2*n || len(kept.Pinned) != n {
+		t.Fatalf("%d blocks, %d kept", len(kept.Target), len(kept.Pinned))
+	}
+	if elapsed := time.Since(started); elapsed > time.Minute {
+		t.Fatalf("took %v", elapsed)
+	}
 }

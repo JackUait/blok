@@ -89,34 +89,40 @@ pub fn keep_databases(current_blocks: &[Value], target_blocks: &[Value]) -> Kept
         }
     }
 
-    let mut placed: HashMap<Option<&Str>, Vec<&Str>> = HashMap::new();
-    let mut restored: HashSet<&Str> = HashSet::new();
+    let mut restored: HashMap<&Str, &Object> = HashMap::new();
     for block in &target {
-        let id = by_id
-            .iter()
-            .find(|(_, b)| std::ptr::eq(**b, *block))
-            .map(|(id, _)| *id)
-            .unwrap_or_else(|| unreachable!("every target block is indexed"));
-        if kept.contains(id) {
-            continue;
+        let id =
+            string_of(block, "id").unwrap_or_else(|| unreachable!("a normalized block has an id"));
+        if !kept.contains(id) {
+            restored.insert(id, block);
         }
-        restored.insert(id);
-        placed.entry(parent_of(block)).or_default().push(id);
     }
 
     let mut orphaned = Vec::new();
     let mut orphans: HashSet<&Str> = HashSet::new();
-    // Roots in current order, so a kept root can follow one placed before it.
+    let mut orphan_roots: Vec<&Str> = Vec::new();
+    // A kept root goes right after the nearest sibling it follows now that
+    // the restore places under the same parent, or first. One pass in
+    // current order: each parent's anchor is the last such sibling seen.
+    let mut first: HashMap<Option<&Str>, Vec<&Str>> = HashMap::new();
+    let mut after: HashMap<&Str, Vec<&Str>> = HashMap::new();
+    let mut anchors: HashMap<Option<&Str>, &Str> = HashMap::new();
     for &id in &live_order {
+        let parent = parent_of(live[id]);
         if !kept.contains(id) {
+            if restored
+                .get(id)
+                .is_some_and(|block| parent_of(block) == parent)
+            {
+                anchors.insert(parent, id);
+            }
             continue;
         }
-        let parent = parent_of(live[id]);
         if parent.is_some_and(|parent| kept.contains(parent) && live.contains_key(parent)) {
             continue;
         }
         if let Some(parent) = parent
-            && !restored.contains(parent)
+            && !restored.contains_key(parent)
         {
             orphaned.push(RestoreGuard {
                 kind: GUARD_ORPHANED_DATABASE,
@@ -124,19 +130,27 @@ pub fn keep_databases(current_blocks: &[Value], target_blocks: &[Value]) -> Kept
                 view_id: None,
             });
             orphans.insert(id);
-            placed.entry(None).or_default().push(id);
+            orphan_roots.push(id);
             continue;
         }
-        let before = live_children.get(&parent).cloned().unwrap_or_default();
-        let siblings = placed.entry(parent).or_default();
-        let position = before.iter().position(|item| *item == id).unwrap_or(0);
-        let at = before[..position]
-            .iter()
-            .rev()
-            .find_map(|sibling| siblings.iter().position(|item| item == sibling))
-            .map_or(0, |found| found + 1);
-        siblings.insert(at, id);
+        match anchors.get(&parent) {
+            Some(anchor) => after.entry(*anchor).or_default().push(id),
+            None => first.entry(parent).or_default().push(id),
+        }
+        anchors.insert(parent, id);
     }
+    let mut placed: HashMap<Option<&Str>, Vec<&Str>> = HashMap::new();
+    for (key, ids) in &first {
+        follow(&mut placed, &after, *key, ids);
+    }
+    for block in &target {
+        let id =
+            string_of(block, "id").unwrap_or_else(|| unreachable!("a normalized block has an id"));
+        if restored.contains_key(id) {
+            follow(&mut placed, &after, parent_of(block), &[id]);
+        }
+    }
+    placed.entry(None).or_default().extend(orphan_roots);
 
     let mut blocks = Vec::new();
     let mut walk: Vec<&Str> = placed.get(&None).cloned().unwrap_or_default();
@@ -168,5 +182,20 @@ pub fn keep_databases(current_blocks: &[Value], target_blocks: &[Value]) -> Kept
             .map(|id| (*id).clone())
             .collect(),
         orphaned,
+    }
+}
+
+/// Each id, then the roots that follow it, depth first; a stack, since a run
+/// of kept roots can be long.
+fn follow<'a>(
+    placed: &mut HashMap<Option<&'a Str>, Vec<&'a Str>>,
+    after: &HashMap<&'a Str, Vec<&'a Str>>,
+    key: Option<&'a Str>,
+    ids: &[&'a Str],
+) {
+    let mut stack: Vec<&Str> = ids.iter().rev().copied().collect();
+    while let Some(id) = stack.pop() {
+        placed.entry(key).or_default().push(id);
+        stack.extend(after.get(id).into_iter().flatten().rev().copied());
     }
 }

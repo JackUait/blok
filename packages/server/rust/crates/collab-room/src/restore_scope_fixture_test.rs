@@ -88,3 +88,38 @@ fn keep_databases_matches_the_restore_scope_fixture() {
     }
     assert!(failures.is_empty(), "{failures:#?}");
 }
+
+// A wide document with many kept databases stays fast: every lookup is by
+// id, and each kept root is placed in one pass.
+#[test]
+fn keep_databases_is_linear_in_the_blocks() {
+    const N: usize = 50_000;
+    let block = |id: String, kind: &str| {
+        let mut object = blok_jsjson::Object::new();
+        object.set(
+            blok_jsjson::Str::from("id"),
+            Value::String(blok_jsjson::Str::from(id.as_str())),
+        );
+        object.set(
+            blok_jsjson::Str::from("type"),
+            Value::String(blok_jsjson::Str::from(kind)),
+        );
+        Value::Object(object)
+    };
+    let mut current = Vec::new();
+    let mut target = Vec::new();
+    for i in 0..N {
+        current.push(block(format!("p{i}"), "paragraph"));
+        current.push(block(format!("d{i}"), "database"));
+        target.push(block(format!("p{i}"), "paragraph"));
+    }
+    let started = std::time::Instant::now();
+    let kept = keep_databases(&current, &target);
+    assert_eq!(kept.target.len(), 2 * N);
+    assert_eq!(kept.pinned.len(), N);
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(60),
+        "{:?}",
+        started.elapsed()
+    );
+}

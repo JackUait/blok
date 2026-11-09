@@ -30,6 +30,10 @@
 //	--example-caller-error <text>          the caller hook fails with this text,
 //	                                       to show what a client sees of a host
 //	                                       bug: -32603 with fixed words
+//	--example-caller-scopes <a,b>          the caller hook gives exactly these
+//	                                       scopes, which Blok checks ("" is
+//	                                       none); without it scopes are nil
+//	                                       and Blok checks none
 //
 // The HTTP side keeps only what an example needs: no Origin/Host checks and
 // no body cap of its own. Those, like OAuth, belong to your server.
@@ -58,7 +62,7 @@ const name = "host-example"
 
 var exampleFlags = map[string]bool{
 	"--example-host-tool": true, "--example-host-prompt": true, "--example-allow-anonymous": true, "--example-source": true,
-	"--example-caller-error": true,
+	"--example-caller-error": true, "--example-caller-scopes": true,
 }
 
 // startError stops the example at start with exit code 2.
@@ -185,6 +189,43 @@ func serveHTTP(ctx context.Context, listen string, build func() (*mcp.Server, er
 	return func(ctx context.Context) { _ = server.Shutdown(ctx) }, nil
 }
 
+// callerHook is the example's caller hook; nil over HTTP keeps Blok's
+// default, which reads the SDK's TokenInfo.
+func callerHook(example map[string]string, stdio bool) func(context.Context, *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
+	if text, ok := example["caller-error"]; ok {
+		return func(context.Context, *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
+			return nil, errors.New(text)
+		}
+	}
+	list, scoped := example["caller-scopes"]
+	// nil, not [], without the flag: [] would refuse every call.
+	var scopes []string
+	if scoped {
+		scopes = []string{}
+		for _, scope := range strings.Split(list, ",") {
+			if scope = strings.TrimSpace(scope); scope != "" {
+				scopes = append(scopes, scope)
+			}
+		}
+	}
+	if stdio {
+		// stdio has one local user.
+		return func(context.Context, *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
+			return &blokmcp.CallerIdentity{Principal: "local", Scopes: scopes}, nil
+		}
+	}
+	if !scoped {
+		return nil
+	}
+	return func(_ context.Context, req *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
+		// No token is anonymous, as with the default caller.
+		if req.Extra == nil || req.Extra.TokenInfo == nil {
+			return nil, nil
+		}
+		return &blokmcp.CallerIdentity{Principal: req.Extra.TokenInfo.UserID, Scopes: scopes}, nil
+	}
+}
+
 func run() error {
 	example, blokArgs, err := splitArgs(os.Args[1:])
 	if err != nil {
@@ -211,18 +252,7 @@ func run() error {
 		options.DocumentSource = newExampleSource(url)
 	}
 	stdio := options.Transport.Kind != "http"
-	embed := blokmcp.EmbedOptions{AnonymousPrincipal: example["allow-anonymous"]}
-	if stdio {
-		// stdio has one local user; over HTTP the default reads the SDK's TokenInfo.
-		embed.Caller = func(context.Context, *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
-			return &blokmcp.CallerIdentity{Principal: "local"}, nil
-		}
-	}
-	if text, ok := example["caller-error"]; ok {
-		embed.Caller = func(context.Context, *mcp.CallToolRequest) (*blokmcp.CallerIdentity, error) {
-			return nil, errors.New(text)
-		}
-	}
+	embed := blokmcp.EmbedOptions{AnonymousPrincipal: example["allow-anonymous"], Caller: callerHook(example, stdio)}
 	blok, err := blokmcp.Embed(options, embed)
 	if err != nil {
 		return err

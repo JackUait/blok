@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -425,5 +426,51 @@ func TestAnUnexpectedPromptErrorIsAnsweredWithFixedWords(t *testing.T) {
 	}
 	if !strings.Contains(log.String(), "secret-prompt-failure") {
 		t.Fatalf("log %q", log.String())
+	}
+}
+
+// A caller hook's scopes are checked as the standalone server checks
+// OAuth scopes: [] allows nothing, blok.read allows reads only.
+func TestCallerScopesAreCheckedAsStandaloneScopes(t *testing.T) {
+	standalone, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: embedOptions(t).Source})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(standalone.Close)
+	expected := func(scopes []string, tool string, arguments map[string]any) map[string]any {
+		who, err := standalone.actorFor(context.Background(), "alice", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		who.scopes = scopes
+		written, _ := json.Marshal(arguments)
+		ran, err := standalone.dispatch(context.Background(), &toolCall{name: tool, arguments: written, caller: who})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return structured(t, ran.answer)
+	}
+	for _, scopes := range [][]string{{}, {"blok.read"}} {
+		_, session := attachedHost(t, EmbedOptions{Caller: func(context.Context, *mcp.CallToolRequest) (*CallerIdentity, error) {
+			return &CallerIdentity{Principal: "alice", Scopes: scopes}, nil
+		}})
+		read, err := callBlok(t, session, "blok_open", map[string]any{"documentId": "doc"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		write, err := callBlok(t, session, "blok_open", map[string]any{"documentId": "doc", "write": true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(scopes) == 0 {
+			if code := errorCode(read); code == "" || !reflect.DeepEqual(read, expected(scopes, "blok_open", map[string]any{"documentId": "doc"})) {
+				t.Fatalf("[] read %v", read)
+			}
+		} else if _, ok := read["handle"].(string); !ok {
+			t.Fatalf("blok.read read %v", read)
+		}
+		if code := errorCode(write); code == "" || !reflect.DeepEqual(write, expected(scopes, "blok_open", map[string]any{"documentId": "doc", "write": true})) {
+			t.Fatalf("%v write %v", scopes, write)
+		}
 	}
 }

@@ -15490,7 +15490,7 @@ input[data-blok-database-picker-search]:focus {
   --blok-database-timeline-line: 28px;
   --blok-database-timeline-header-rows: 2;
   --blok-database-timeline-day: 40px;
-  --blok-database-timeline-table-width: 280px;
+  --blok-database-timeline-table-width: 376px;
   container-type: inline-size;
   display: flex;
   flex-direction: column;
@@ -15603,6 +15603,7 @@ input[data-blok-database-picker-search]:focus {
 [data-blok-database-timeline-table] {
   flex: none;
   inline-size: var(--blok-database-timeline-table-width);
+  padding-inline-start: 96px;
   overflow: hidden;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
 }

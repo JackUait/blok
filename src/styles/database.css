@@ -3042,7 +3042,7 @@ button[data-blok-database-column-count]:hover {
   cursor: pointer;
   color: var(--blok-database-tab-text);
   margin-inline-start: var(--blok-border-width-hairline);
-  transition: background-color 120ms ease, opacity 120ms ease;
+  transition: background-color 100ms ease-in-out, opacity 120ms ease;
   opacity: 0;
 }
 

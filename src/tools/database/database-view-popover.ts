@@ -95,6 +95,8 @@ export class DatabaseViewPopover {
       animateClose: true,
       items,
       trigger: anchor,
+      // motion-addview.json: Notion's card starts 4px under the "+".
+      offset: 4,
       width: '390px',
       autoFocusFirstItem: false,
     });

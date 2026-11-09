@@ -126,6 +126,11 @@ describe('tab row sizes (V26, V32, V33)', () => {
     expect(rule('[data-blok-database-add-view] svg')).toMatch(/width: 16px; height: 16px/);
   });
 
+  // motion-addview.json: the "+" hover fill is Notion's icon-button 100ms ease-in-out.
+  it('the "+" hover fill eases in-out over 100ms', () => {
+    expect(rule('[data-blok-database-add-view]')).toMatch(/transition: background-color 100ms ease-in-out,/);
+  });
+
   it('"N more…" is 14px', () => {
     expect(rule('[data-blok-database-tab-more]')).toMatch(/font-size: 14px/);
   });

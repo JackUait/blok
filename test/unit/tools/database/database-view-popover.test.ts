@@ -275,6 +275,13 @@ describe('DatabaseViewPopover', () => {
       expect(option('timeline').querySelector('[data-blok-database-view-option-icon]')?.innerHTML).toBe(tab.innerHTML);
     });
 
+    // motion-addview.json: "+" ends at y 252 and the card starts at y 256.
+    it('opens 4px below the "+"', () => {
+      popover.open(anchor);
+
+      expect((mockPopoverInstances.at(-1)?.params as { offset?: number }).offset).toBe(4);
+    });
+
     it('is a 390px grid menu', () => {
       popover.open(anchor);
 

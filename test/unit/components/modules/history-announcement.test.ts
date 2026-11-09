@@ -47,7 +47,13 @@ describe('undo and redo announcements', () => {
   const announced = async (): Promise<string> => {
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    return document.getElementById('blok-announcer')?.textContent ?? '';
+    const region = document.getElementById('blok-announcer');
+
+    if (region === null) {
+      throw new Error('no live region');
+    }
+
+    return region.textContent;
   };
 
   /** Each press clears the region first; wait out the queue settle so presses do not merge. */

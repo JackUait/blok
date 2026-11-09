@@ -57,8 +57,9 @@ test.describe('undo audit — undo and redo announcements', () => {
 
     await editable.click();
     await page.keyboard.press('End');
-    await page.keyboard.type(' one');
-    await expect.poll(() => savedText(page)).toBe('Alpha one');
+    // One letter, no space: a space plus a pause would cut a second step.
+    await page.keyboard.type('X');
+    await expect.poll(() => savedText(page)).toBe('AlphaX');
 
     // The region clears 1 s after each message, so check right after each press.
     await page.keyboard.press(UNDO);
@@ -67,12 +68,12 @@ test.describe('undo audit — undo and redo announcements', () => {
 
     await page.keyboard.press(REDO);
     await expect(status).toHaveText('Redone');
-    await expect.poll(() => savedText(page)).toBe('Alpha one');
+    await expect.poll(() => savedText(page)).toBe('AlphaX');
 
     // If an announcement had made a step, this redo would have something to apply.
     await page.keyboard.press(REDO);
     await expect(status).toHaveText('Nothing to redo');
-    await expect.poll(() => savedText(page)).toBe('Alpha one');
+    await expect.poll(() => savedText(page)).toBe('AlphaX');
   });
 
   test('an undo press with nothing to undo says nothing', async ({ page }) => {

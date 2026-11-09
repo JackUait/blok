@@ -414,6 +414,128 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
+    describe('caret across the reparent', () => {
+      const textBlock = (id: string, text: string, overrides: Partial<Block> = {}): Block => {
+        const block = createBlock({ id, parentId: null, ...overrides });
+
+        block.inputs[0].textContent = text;
+        document.body.appendChild(block.holder);
+
+        return block;
+      };
+
+      const caretAt = (block: Block, offset: number): void => {
+        const text = block.inputs[0].firstChild;
+
+        if (text === null) {
+          throw new Error('block has no text');
+        }
+        window.getSelection()?.setPosition(text, offset);
+      };
+
+      const caretOffsetIn = (block: Block): number | null => {
+        const selection = window.getSelection();
+        const text = block.inputs[0].firstChild;
+
+        return selection?.anchorNode === text ? selection?.anchorOffset ?? null : null;
+      };
+
+      // A real reparent re-inserts the holder; the DOM collapses a selection inside a removed node.
+      const movingReparent = (parent: Block, current: Block) => vi.fn((block: Block, parentId: string | null) => {
+        Object.assign(block, { parentId });
+        current.holder.remove();
+        parent.holder.appendChild(current.holder);
+      });
+
+      afterEach(() => {
+        document.body.replaceChildren();
+        window.getSelection()?.removeAllRanges();
+      });
+
+      it('keeps the caret offset when Tab moves the holder', () => {
+        const previous = textBlock('prev', 'one', { name: 'list' });
+        const current = textBlock('cur', 'two', { name: 'list' });
+        const blok = tabModules([previous, current], current);
+
+        Object.assign(blok.BlockManager, { setBlockParent: movingReparent(previous, current) });
+        caretAt(current, 3);
+
+        new KeyboardNavigation(blok).handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: false }));
+
+        expect(caretOffsetIn(current)).toBe(3);
+      });
+
+      it('keeps the caret offset when Shift+Tab moves the holder', () => {
+        const parent = textBlock('p', 'one', { name: 'list', contentIds: ['cur'] });
+        const current = textBlock('cur', 'two', { name: 'list', parentId: 'p' });
+        const blok = tabModules([parent, current], current);
+
+        Object.assign(blok.BlockManager, { setBlockParent: vi.fn((block: Block, parentId: string | null) => {
+          Object.assign(block, { parentId });
+          current.holder.remove();
+          document.body.appendChild(current.holder);
+        }) });
+        caretAt(current, 2);
+
+        new KeyboardNavigation(blok).handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: true }));
+
+        expect(caretOffsetIn(current)).toBe(2);
+      });
+
+      it('opens a closed toggle it nests into, before the caret comes back', () => {
+        const toggle = textBlock('toggle', 'Tog', { name: 'toggle', contentIds: [] });
+        const marker = document.createElement('div');
+
+        marker.setAttribute('data-blok-toggle-open', 'false');
+        toggle.holder.prepend(marker);
+        const order: string[] = [];
+        const call = vi.fn((method: string) => {
+          order.push(`call:${method}`);
+          marker.setAttribute('data-blok-toggle-open', 'true');
+        });
+
+        Object.assign(toggle, { call });
+        const current = textBlock('cur', 'move me');
+        const blok = tabModules([toggle, current], current);
+
+        Object.assign(blok.BlockManager, { setBlockParent: movingReparent(toggle, current) });
+        caretAt(current, 7);
+        const setBaseAndExtent = Selection.prototype.setBaseAndExtent;
+
+        vi.spyOn(Selection.prototype, 'setBaseAndExtent').mockImplementation(function (this: Selection, ...args) {
+          order.push('selection');
+          setBaseAndExtent.apply(this, args);
+        });
+
+        new KeyboardNavigation(blok).handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: false }));
+
+        expect(call).toHaveBeenCalledWith('expand');
+        expect(caretOffsetIn(current)).toBe(7);
+        expect(order).toEqual(['call:expand', 'selection']);
+      });
+
+      it('leaves an open parent alone', () => {
+        const toggle = textBlock('toggle', 'Tog', { name: 'toggle', contentIds: [] });
+        const marker = document.createElement('div');
+
+        marker.setAttribute('data-blok-toggle-open', 'true');
+        toggle.holder.prepend(marker);
+        const call = vi.fn();
+
+        Object.assign(toggle, { call });
+        const current = textBlock('cur', 'move me');
+        const blok = tabModules([toggle, current], current);
+
+        Object.assign(blok.BlockManager, { setBlockParent: movingReparent(toggle, current) });
+        caretAt(current, 4);
+
+        new KeyboardNavigation(blok).handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: false }));
+
+        expect(call).not.toHaveBeenCalled();
+        expect(caretOffsetIn(current)).toBe(4);
+      });
+    });
+
     it('preventDefaults when indent is impossible so focus never tabs out of the editor', () => {
       const current = createBlock({ id: 'cur', parentId: null });
       const navigateNext = vi.fn(() => false);

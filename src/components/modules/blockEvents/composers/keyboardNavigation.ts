@@ -15,6 +15,7 @@ import { applySpanningSelection, getEditingHost } from '../../../selection/cross
 import { BlockEventComposer } from './__base';
 import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-siblings';
 import { carriesReadOnly } from '../../../utils/read-only-blocks';
+import { hiddenAncestors } from '../../blockManager/new-block-placement';
 
 /**
  * Checks if the keyboard event is a block movement shortcut (Cmd/Ctrl+Shift+Arrow)
@@ -203,8 +204,13 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     const { YjsManager } = this.Blok;
     const outcome = { handled: false };
+    const caret = this.selectionInCurrentBlock();
     const reparent = (): void => {
       outcome.handled = event.shiftKey ? this.outdentCurrentBlock() : this.indentCurrentBlock();
+      // Inside the move group: its caret-after is read when the group ends.
+      if (outcome.handled) {
+        this.revealAndRestoreCaret(caret);
+      }
     };
 
     if (typeof YjsManager.transactMoves === 'function') {
@@ -248,6 +254,49 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     event.preventDefault();
+  }
+
+  /** The selection's ends, when both lie in the current block. */
+  private selectionInCurrentBlock(): { anchor: Node; anchorOffset: number; focus: Node; focusOffset: number } | null {
+    const holder = this.Blok.BlockManager.currentBlock?.holder;
+    const selection = window.getSelection();
+    const anchor = selection?.anchorNode ?? null;
+    const focusNode = selection?.focusNode ?? null;
+
+    if (holder === undefined || selection === null || anchor === null || focusNode === null
+      || !holder.contains(anchor) || !holder.contains(focusNode)) {
+      return null;
+    }
+
+    return { anchor, anchorOffset: selection.anchorOffset, focus: focusNode, focusOffset: selection.focusOffset };
+  }
+
+  /**
+   * A reparent re-inserts the holder, and the DOM collapses a selection inside a
+   * removed node. A closed toggle or tab would hide the block, so it opens first:
+   * its open state is personal view state, not history.
+   * @param caret - the selection from before the reparent
+   */
+  private revealAndRestoreCaret(caret: ReturnType<KeyboardNavigation['selectionInCurrentBlock']>): void {
+    const { BlockManager } = this.Blok;
+    const block = BlockManager.currentBlock;
+
+    if (block === undefined) {
+      return;
+    }
+    hiddenAncestors(block, (id) => BlockManager.getBlockById(id))
+      .reverse()
+      .forEach((parent) => parent.call('expand'));
+
+    if (caret === null || !caret.anchor.isConnected || !caret.focus.isConnected) {
+      return;
+    }
+    const editable = (caret.anchor instanceof HTMLElement ? caret.anchor : caret.anchor.parentElement)?.closest('[contenteditable="true"]');
+
+    if (editable instanceof HTMLElement && document.activeElement !== editable) {
+      editable.focus();
+    }
+    window.getSelection()?.setBaseAndExtent(caret.anchor, caret.anchorOffset, caret.focus, caret.focusOffset);
   }
 
   /**

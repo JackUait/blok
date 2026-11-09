@@ -794,7 +794,7 @@ go test -p 2 ./...
 
 ## Go module and archives
 
-The release workflow ships the Go server in two forms. No release has shipped them yet.
+The release workflow ships the Go server in two forms, starting with release 2.0.0.
 
 - **Module.** `yarn release X.Y.Z` also tags `packages/server/go/vX.Y.Z` on the release commit. Go reads a module in a subdirectory only from tags with that prefix. The module path is `github.com/JackUait/blok/packages/server/go/v2`. Import `blokserver` for the routes and `blokdocs` for the converter. Your own operation store and activity observer go in `Options.CollabOperationStore` and `Options.CollabActivityObserver`. Their types are in `blokserver/collabstore`. To put your own auth in front of the routes, use `Server.HandlerWithAuth(prefix, auth)`. It works like `RequireAuthorization()` on the C# group: health and CORS preflights stay open.
 - **MCP server.** Import `blokmcp` to run blok-mcp inside your own Go program. `Server.Handler()` serves it on a listener you own, so `New` cannot check that the listener is loopback. Without `Transport.Public`, the handler answers only callers whose address is loopback, and 403 to everyone else. Behind a reverse proxy every caller looks loopback, so set `Transport.Public` and `Auth.Kind: "oauth"` there.
@@ -806,7 +806,7 @@ These names never overlap the C# archives or `checksums.txt`. The npm wrapper do
 
 ## MCP server
 
-Blok's MCP server lets an MCP client read and edit Blok documents. Besides the Node package, `@bloklabs/mcp`, it comes in three builds next to the servers here. No release has shipped them yet. All four take the same flags, and one shared suite checks each of them against Node: `node scripts/test-mcp-conformance.mjs --target node|csharp|go|rust`.
+Blok's MCP server lets an MCP client read and edit Blok documents. Besides the Node package, `@bloklabs/mcp`, it comes in three builds next to the servers here. Release 2.1.0 shipped the C# and Go builds. The Rust build has not shipped yet. All four take the same flags, and one shared suite checks each of them against Node: `node scripts/test-mcp-conformance.mjs --target node|csharp|go|rust`.
 
 All four refuse JSON nested more than 48 levels of objects and arrays: in a call's arguments, in a document they open, and in a document a call would save. The C#, Go and Rust engines read JSON only 64 levels deep, and the margin covers the levels they add when they pass a document on.
 

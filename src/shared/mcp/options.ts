@@ -79,6 +79,8 @@ export interface BlokMcpHandleLease {
   /**
    * Extends the lease. Blok calls it every 5 seconds while a call holds the lease, so a store needs
    * no timer of its own; a lease not renewed for longer than the store's lease time (30 s) may be taken.
+   * Its timer does not wait for the other ops: a renew may run while save, remove or release of the
+   * same lease is in progress, so a store must allow that.
    */
   renew(): Promise<void>;
   /** Replaces the record. Blok calls it after the source save, before release. */

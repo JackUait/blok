@@ -21,10 +21,16 @@
  *   --example-host-prompt <name>           the host prompt's name (default host_hello)
  *   --example-allow-anonymous <principal>  serve anonymous callers as this principal
  *   --example-source endpoint:<url>        your own document store, as `source: { kind: 'custom' }`
+ *                                          (see exampleSource; not with --source)
+ *   --example-caller-scopes <a,b>          the host's caller hook returns exactly these scopes with the
+ *                                          caller: a comma list, each item trimmed, empty items dropped,
+ *                                          so "" is []. Blok then checks blok.read / blok.write as the
+ *                                          standalone server does. The principal stays as above (stdio
+ *                                          "local"; HTTP X-Example-User, signed in without a name, or
+ *                                          anonymous). Without the flag the hook returns no scopes (null).
  *   --example-caller-error <text>          the host's caller hook throws an Error with this text, as a
  *                                          broken sign-in would. Blok logs it and answers -32603
- *                                          "Blok could not run this call."
- *                                          (see exampleSource; not with --source)
+ *                                          "Blok could not run this call." Wins over --example-caller-scopes.
  *
  * The HTTP side keeps only what an example needs: no Origin/Host checks and no body cap
  * of its own. Those, like OAuth, belong to your server.
@@ -41,7 +47,9 @@ const { serveStdio } = await import('@modelcontextprotocol/server/stdio');
 const { BlokMcpSourceError, createBlok, parseBlokMcpArgs } = await import('@bloklabs/mcp');
 
 const NAME = 'host-example';
-const EXAMPLE_FLAGS = new Set(['--example-host-tool', '--example-host-prompt', '--example-allow-anonymous', '--example-source', '--example-caller-error']);
+const EXAMPLE_FLAGS = new Set([
+  '--example-host-tool', '--example-host-prompt', '--example-allow-anonymous', '--example-source', '--example-caller-scopes', '--example-caller-error',
+]);
 
 class StartError extends Error {}
 
@@ -236,6 +244,25 @@ const authInfoOf = (headers) => {
   return undefined;
 };
 
+/** --example-caller-scopes as a caller hook: the principal Blok's default would name, with exactly these scopes. */
+const scopedCaller = (list, stdio) => {
+  const scopes = list.split(',').map(scope => scope.trim()).filter(scope => scope !== '');
+
+  return (ctx) => {
+    if (stdio) {
+      return { principal: 'local', scopes };
+    }
+    const info = ctx.http?.authInfo;
+
+    if (info === undefined) {
+      return null;
+    }
+    const sub = info.extra?.sub;
+
+    return { principal: typeof sub === 'string' ? sub : null, scopes };
+  };
+};
+
 const toRequest = async (req, url) => {
   const headers = new Headers();
 
@@ -312,6 +339,7 @@ const main = async () => {
   const blok = createBlok({ ...options, ...(source !== undefined && { source }) }, {
     // stdio has one local user; over HTTP the default reads the AuthInfo the host passed to the SDK.
     ...(stdio && { caller: () => ({ principal: 'local' }) }),
+    ...(example['caller-scopes'] !== undefined && { caller: scopedCaller(example['caller-scopes'], stdio) }),
     ...(example['caller-error'] !== undefined && {
       caller: () => {
         throw new Error(example['caller-error']);

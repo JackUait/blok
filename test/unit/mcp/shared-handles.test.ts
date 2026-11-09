@@ -440,6 +440,160 @@ describe('SharedHandles with live handles', () => {
     expect(logged).toHaveBeenCalled();
   });
 
+  const withLease = (inner: BlokMcpHandleStore, change: (lease: BlokMcpHandleLease) => BlokMcpHandleLease): BlokMcpHandleStore => ({
+    ...inner,
+    acquire: async (...args) => {
+      const lease = await inner.acquire(...args);
+
+      return typeof lease === 'string' ? lease : change(lease);
+    },
+  });
+  const tracked = (inner: BlokMcpHandleStore, change: (lease: BlokMcpHandleLease) => Partial<BlokMcpHandleLease> = () => ({})): { store: BlokMcpHandleStore; released: ReturnType<typeof vi.fn> } => {
+    const released = vi.fn();
+    const store = withLease(inner, (lease) => ({
+      ...lease,
+      ...change(lease),
+      release: () => {
+        released();
+
+        return lease.release();
+      },
+    }));
+
+    return { store, released };
+  };
+  const tableOn = (store: BlokMcpHandleStore, restore: (record: BlokMcpHandleRecord) => Promise<HandleSession> = () => Promise.resolve(liveSession())): SharedHandles => new SharedHandles({
+    local: registry(), store, idleMs: 600_000, maxPerPrincipal: 2, contractRevision: 'c1', restore,
+  });
+
+  it.each([
+    ['null', null],
+    ['an array', []],
+    ['a record without documentId', { ...storedRecord, documentId: undefined }],
+    ['a record whose document has no blocks', { ...storedRecord, document: {} }],
+    ['a record whose history is not an object', { ...storedRecord, history: 'x' }],
+    ['a record whose scopes are not strings', { ...storedRecord, scopes: [1] }],
+  ])('answers UNKNOWN_HANDLE to a corrupt record from the store (%s), and releases the lease', async (_label, record) => {
+    const inner = createMemoryHandleStore();
+    const { store, released } = tracked(withLease(inner, (lease) => ({ ...lease, record: record as unknown as BlokMcpHandleRecord })));
+    const table = tableOn(store);
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    await expect(table.use('h1', 'alice', (session) => session.read({}))).rejects.toMatchObject({ agentError: { code: 'UNKNOWN_HANDLE' } });
+    expect(released).toHaveBeenCalledTimes(1);
+    await table.closeAll(() => Promise.resolve());
+  });
+
+  it('answers UNKNOWN_HANDLE when a record cannot be rebuilt, and logs it', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const inner = createMemoryHandleStore();
+    const { store, released } = tracked(inner);
+    const table = tableOn(store, () => Promise.reject(new TypeError('bad blocks')));
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    await expect(table.use('h1', 'alice', (session) => session.read({}))).rejects.toMatchObject({ agentError: { code: 'UNKNOWN_HANDLE' } });
+    expect(released).toHaveBeenCalledTimes(1);
+    expect(logged).toHaveBeenCalled();
+    await table.closeAll(() => Promise.resolve());
+  });
+
+  it('still answers VERSION_SKEW before it looks deeper into a record of another contract', async () => {
+    const inner = createMemoryHandleStore();
+    const table = tableOn(inner);
+
+    await inner.tryAdd('h1', { ...storedRecord, contractRevision: 'c0', document: {} as never }, 2, 600_000);
+    await expect(table.use('h1', 'alice', (session) => session.read({}))).rejects.toMatchObject({ agentError: { code: 'VERSION_SKEW' } });
+    await table.closeAll(() => Promise.resolve());
+  });
+
+  it('releases the lease when the remove of a close fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const inner = createMemoryHandleStore();
+    const { store, released } = tracked(inner, () => ({ remove: () => Promise.reject(new Error('store down')) }));
+    const table = tableOn(store);
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    await expect(table.remove('h1', 'alice')).rejects.toMatchObject({ agentError: { code: 'SOURCE_UNAVAILABLE' } });
+    expect(released).toHaveBeenCalledTimes(1);
+    await table.closeAll(() => Promise.resolve());
+  });
+
+  it('releases the lease when both the save and the remove after it fail', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const inner = createMemoryHandleStore();
+    const { store, released } = tracked(inner, () => ({
+      save: () => Promise.reject(new Error('store down')),
+      remove: () => Promise.reject(new Error('store down')),
+    }));
+    const changing = (): HandleSession => ({ ...liveSession(), snapshot: () => ({ ...storedRecord, version: String(Math.random()) }) });
+    const table = tableOn(store, () => Promise.resolve(changing()));
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    expect(await table.use('h1', 'alice', () => Promise.resolve('done'))).toBe('done');
+    expect(released).toHaveBeenCalledTimes(1);
+    await table.closeAll(() => Promise.resolve());
+  });
+
+  it('never waits for a sweep that hangs at shutdown, and starts no second sweep while one runs', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const store = createMemoryHandleStore();
+    const sweep = vi.spyOn(store, 'sweep').mockReturnValue(new Promise<void>(() => undefined));
+    const table = new SharedHandles({
+      local: registry(), store, idleMs: 600_000, maxPerPrincipal: 2, contractRevision: 'c1', restore: () => Promise.reject(new Error('unused')),
+      sweepMs: 20, sweepTimeoutMs: 1_000,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 110));
+    expect(sweep).toHaveBeenCalledTimes(1);
+    const closing = table.closeAll(() => Promise.resolve());
+
+    await expect(Promise.race([closing.then(() => 'closed'), new Promise((resolve) => setTimeout(() => resolve('blocked'), 200))])).resolves.toBe('closed');
+    expect(logged).not.toHaveBeenCalled();
+  });
+
+  it('logs a sweep that outlives its timeout, and sweeps again after it', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const store = createMemoryHandleStore();
+    const sweep = vi.spyOn(store, 'sweep').mockReturnValue(new Promise<void>(() => undefined));
+    const table = new SharedHandles({
+      local: registry(), store, idleMs: 600_000, maxPerPrincipal: 2, contractRevision: 'c1', restore: () => Promise.reject(new Error('unused')),
+      sweepMs: 20, sweepTimeoutMs: 50,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await table.closeAll(() => Promise.resolve());
+    expect(sweep.mock.calls.length).toBeGreaterThan(1);
+    expect(logged.mock.calls.some((call) => String(call[0]).includes('sweep'))).toBe(true);
+  });
+
+  it('refuses new calls on stored handles once shutdown started, without asking the store', async () => {
+    const inner = createMemoryHandleStore();
+    const acquire = vi.spyOn(inner, 'acquire');
+    const table = tableOn(inner);
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    await table.closeAll(() => Promise.resolve());
+    const refused = { agentError: { code: 'SOURCE_UNAVAILABLE', message: 'The server is shutting down.' } };
+
+    await expect(table.use('h1', 'alice', (session) => session.read({}))).rejects.toMatchObject(refused);
+    await expect(table.peek('h1', 'alice', () => Promise.resolve())).rejects.toMatchObject(refused);
+    await expect(table.remove('h1', 'alice')).rejects.toMatchObject(refused);
+    expect(acquire).not.toHaveBeenCalled();
+  });
+
+  it('still runs a call accepted before shutdown that waits behind another one on the handle', async () => {
+    const inner = createMemoryHandleStore();
+    const table = tableOn(inner);
+
+    await inner.tryAdd('h1', storedRecord, 2, 600_000);
+    const first = table.use('h1', 'alice', () => new Promise((resolve) => setTimeout(() => resolve('first'), 50)));
+    const second = table.use('h1', 'alice', () => Promise.resolve('second'));
+
+    await table.closeAll(() => Promise.resolve());
+    await expect(first).resolves.toBe('first');
+    await expect(second).resolves.toBe('second');
+  });
+
   it('closes only this process\'s live handles at shutdown and leaves the store alone', async () => {
     const store = createMemoryHandleStore();
     const local = registry();

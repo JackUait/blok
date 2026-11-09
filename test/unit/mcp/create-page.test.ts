@@ -303,6 +303,29 @@ describe('createPageWebhook', () => {
     await expect(createPageWebhook('https://app.example/pages', { fetchImpl: fetchMock })(request)).rejects.toThrow();
   });
 
+  it('names the status and the start of the body when a 200 body is not JSON', async () => {
+    fetchMock.mockResolvedValueOnce(answer(200, `<html>${'x'.repeat(600)}`));
+
+    await expect(createPageWebhook('https://app.example/pages', { fetchImpl: fetchMock })(request))
+      .rejects.toThrow(`--create-page https://app.example/pages answered 200 with a body that is not JSON: <html>${'x'.repeat(494)}`);
+  });
+
+  it('stops reading a body past 64 KiB and throws, without waiting for the rest', async () => {
+    const chunk = new TextEncoder().encode('x'.repeat(16 * 1024));
+    const pulled = { count: 0 };
+    const endless = new ReadableStream<Uint8Array>({
+      pull: (controller) => {
+        pulled.count += 1;
+        controller.enqueue(chunk);
+      },
+    });
+
+    fetchMock.mockResolvedValueOnce(new Response(endless, { status: 200 }));
+    await expect(createPageWebhook('https://app.example/pages', { fetchImpl: fetchMock })(request))
+      .rejects.toThrow('--create-page https://app.example/pages answered more than 65536 bytes');
+    expect(pulled.count).toBeLessThan(10);
+  });
+
   it('throws when the host cannot be reached', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
 

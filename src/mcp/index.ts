@@ -7,7 +7,7 @@ import { loadAuthorizeHook } from './auth/authorize';
 import { checkOptionSafety, McpConfigError, parseMcpArgs } from './config';
 import { readManifestFiles } from './contract-flags';
 import { createPageWebhook } from './create-page';
-import { createFilesHandleStore } from './handle-store-files';
+import { deferredFilesHandleStore } from './handle-store-files';
 import { McpListenError, startHttpServer } from './http';
 import { DEFAULTS } from './options';
 import type { BlokMcpOptions } from './options';
@@ -142,7 +142,7 @@ export const parseBlokMcpArgs = async (argv: string[], env: NodeJS.ProcessEnv): 
     ...options,
     ...(authorize !== undefined && { authorize }),
     ...(files.createPage !== undefined && { createPage: createPageWebhook(files.createPage) }),
-    ...(files.handleStore !== undefined && { handleStore: createFilesHandleStore(files.handleStore) }),
+    ...(files.handleStore !== undefined && { handleStore: deferredFilesHandleStore(files.handleStore) }),
     ...await readManifestFiles(files),
   };
 };

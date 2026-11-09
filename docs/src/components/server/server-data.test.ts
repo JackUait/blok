@@ -121,6 +121,15 @@ describe('server docs data', () => {
       expect(differences).not.toMatch(/C# library opens live handles only|C# открывает живые хэндлы только/);
     });
 
+    // 2.1.0 shipped the C# and Go MCP builds (CHANGELOG, the packages/server/go/v2.1.0 tag); Rust has not shipped.
+    it.each(['en', 'ru'] as const)('says which MCP builds a release has shipped (%s)', (locale) => {
+      const intro = value(locale, 'server.mcpIntro');
+
+      expect(intro).not.toMatch(/No release has shipped the C#|Сборки на C#, Go и Rust ещё не выходили/);
+      expect(intro).toContain('2.1.0');
+      expect(intro).toMatch(locale === 'en' ? /Rust build has not shipped/ : /Сборка на Rust ещё не выходила/);
+    });
+
     it.each([
       ['en', serverMcpIntro],
       ['ru', ''],

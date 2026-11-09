@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { chmodSync, existsSync, statSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -11,7 +12,7 @@ import { getBlokVersion } from '../../../src/components/utils/version';
 import { McpConfigError } from '../../../src/mcp/config';
 import { createBlok } from '../../../src/mcp/embed';
 import { createMemoryHandleStore } from '../../../src/mcp/handle-store';
-import { parseBlokMcpArgs } from '../../../src/mcp/index';
+import { createBlokMcpServer, parseBlokMcpArgs } from '../../../src/mcp/index';
 import { listMcpPrompts } from '../../../src/mcp/prompts';
 import { assembleMcp } from '../../../src/mcp/server';
 
@@ -136,7 +137,7 @@ describe('createBlok', () => {
     const standalone = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir: '/x' } });
 
     try {
-      const answer = await call(() => hostServer(blok, { tools: [HOST_TOOL] }), 'tools/list');
+      const answer = await call(() => hostServer(blok, { tools: [HOST_TOOL], callTool: () => ({ content: [] }) }), 'tools/list');
       const tools = answer.result?.tools;
 
       expect(Array.isArray(tools)).toBe(true);
@@ -315,6 +316,41 @@ describe('createBlok', () => {
     expect(answer.result?.isError).toBe(false);
   });
 
+  it('answers an unexpected prompts/get failure with the fixed -32603 words, and logs it', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { blok } = await embed();
+    const server = new Server({ name: 'host-example', version: '1' }, { capabilities: { tools: {}, prompts: {} } });
+    const handlers = blok.handlers(server);
+    const name = listMcpPrompts()[0].name;
+    const broken = new Proxy({}, {
+      get: () => {
+        throw new TypeError('secret prompt failure');
+      },
+    });
+    const thrown = ((): unknown => {
+      try {
+        handlers.getPrompt({ method: 'prompts/get', params: { name, arguments: broken } });
+      } catch (error) {
+        return error;
+      }
+
+      return undefined;
+    })();
+
+    expect(thrown).toMatchObject({ code: -32603, message: 'Blok could not run this call.' });
+    expect(logged).toHaveBeenCalledWith('blok-mcp: a prompt request failed', expect.any(TypeError));
+    expect(() => handlers.getPrompt({ method: 'prompts/get', params: { name: 'nope' } })).toThrow('Unknown prompt: nope');
+  });
+
+  it('refuses at attach a host tool listed without callTool, and a host prompt listed without getPrompt', async () => {
+    const { blok } = await embed();
+    const server = (): Server => new Server({ name: 'host-example', version: '1' }, {});
+
+    expect(() => blok.attach(server(), { tools: [HOST_TOOL] })).toThrow('The host lists its own tools but passes no callTool to attach()');
+    expect(() => blok.attach(server(), { prompts: [HOST_PROMPT] })).toThrow('The host lists its own prompts but passes no getPrompt to attach()');
+    expect(() => blok.attach(server(), { tools: [], prompts: [] })).not.toThrow();
+  });
+
   it('checks the names a handlers() host passes, as attach does', async () => {
     const { blok } = await embed();
     const server = new Server({ name: 'host-example', version: '1' }, { capabilities: { tools: {}, prompts: {} } });
@@ -408,5 +444,52 @@ describe('parseBlokMcpArgs', () => {
     expect(store).toEqual({ count: expect.any(Function), tryAdd: expect.any(Function), acquire: expect.any(Function), sweep: expect.any(Function) });
     expect((await parseBlokMcpArgs(['--handle-store', 'memory'], {})).handleStore).toBeUndefined();
     expect((await parseBlokMcpArgs([], {})).handleStore).toBeUndefined();
+  });
+
+  describe('--handle-store files:<dir> makes its directory only after the option checks', () => {
+    const parent = async (): Promise<string> => {
+      const dir = await mkdtemp(join(tmpdir(), 'blok-handles-parent-'));
+
+      dirs.push(dir);
+
+      return dir;
+    };
+
+    it('makes nothing while parsing', async () => {
+      const dir = join(await parent(), 'handles');
+
+      await parseBlokMcpArgs(['--handle-store', `files:${dir}`], {});
+      expect(existsSync(dir)).toBe(false);
+    });
+
+    it('makes nothing when the standalone server refuses the options', async () => {
+      const dir = join(await parent(), 'handles');
+      const options = await parseBlokMcpArgs(['--handle-store', `files:${dir}`, '--source', `files:${dir}-docs`, '--http', '0.0.0.0:1', '--authorize', 'http://127.0.0.1:9/a'], {});
+
+      expect(() => createBlokMcpServer(options)).toThrow(McpConfigError);
+      expect(existsSync(dir)).toBe(false);
+    });
+
+    it('makes nothing when createBlok refuses the options', async () => {
+      const dir = join(await parent(), 'handles');
+      const options = await parseBlokMcpArgs(['--handle-store', `files:${dir}`, '--source', `files:${dir}-docs`], {});
+
+      expect(() => createBlok(options)).toThrow(McpConfigError);
+      expect(existsSync(dir)).toBe(false);
+    });
+
+    it('makes it once the server is built, and refuses an unsafe one there with the start error', async () => {
+      const root = await parent();
+      const dir = join(root, 'handles');
+      const options = await parseBlokMcpArgs(['--handle-store', `files:${dir}`, '--source', `files:${root}`], {});
+      const server = createBlokMcpServer(options);
+
+      expect(statSync(dir).isDirectory()).toBe(true);
+      await server.stop();
+      chmodSync(dir, 0o755);
+      const unsafe = await parseBlokMcpArgs(['--handle-store', `files:${dir}`, '--source', `files:${root}`], {});
+
+      expect(() => createBlokMcpServer(unsafe)).toThrow(McpConfigError);
+    });
   });
 });

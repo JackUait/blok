@@ -9,6 +9,7 @@ import { contractFlagsOf } from './contract-flags';
 import { createTicketProvider } from './auth/tickets';
 import { createToolDispatcher } from './dispatcher';
 import type { Caller, DispatcherDeps } from './dispatcher';
+import { prepareHandleStore } from './handle-store-files';
 import { HandleRegistry } from './handles';
 import { createOpenLive } from './live/open-live';
 import { createOpener, createSource } from './opener';
@@ -58,6 +59,8 @@ const drain = async (sets: Set<Promise<unknown>>[], seen = new Set<Promise<unkno
 };
 
 export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): AssembledMcp => {
+  // Callers check the options first, so a refused start makes no --handle-store directory.
+  prepareHandleStore(options.handleStore);
   const handleIdleMs = options.handleIdleMs ?? DEFAULTS.handleIdleMs;
   const pageMap = (options.pageTitles ?? DEFAULTS.pageTitles) === 'page-map';
   const source = createSource(options.source);

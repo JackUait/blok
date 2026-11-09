@@ -8656,7 +8656,8 @@
           "status": 200,
           "json": {
             "version": "v2"
-          }
+          },
+          "rawBody": true
         }
       },
       "name": "custom source: a page insert makes its document with Blok's id: the store finds none, and the save sends no Blok-If-Version",
@@ -8867,23 +8868,7 @@
             "blok-caller-actor": "agent:local:mcp-client",
             "blok-caller-on-behalf-of": "local"
           },
-          "body": {
-            "blocks": [
-              {
-                "createdAt": "<masked>",
-                "createdBy": "local",
-                "createdWith": "agent:local:mcp-client",
-                "lastEditedAt": "<masked>",
-                "lastEditedBy": "local",
-                "lastEditedWith": "agent:local:mcp-client",
-                "id": "np",
-                "type": "page",
-                "data": {
-                  "pageId": "${pageId}"
-                }
-              }
-            ]
-          }
+          "bodyText": "{\"blocks\":[{\"createdAt\":\"<masked>\",\"createdBy\":\"local\",\"createdWith\":\"agent:local:mcp-client\",\"lastEditedAt\":\"<masked>\",\"lastEditedBy\":\"local\",\"lastEditedWith\":\"agent:local:mcp-client\",\"id\":\"np\",\"type\":\"page\",\"data\":{\"pageId\":\"${pageId}\"}}]}"
         }
       ]
     },
@@ -9745,6 +9730,526 @@
         "code": 0
       },
       "expectHostRequests": []
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize",
+        "--example-caller-scopes",
+        "blok.read"
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "title": "Notes",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": "Hello"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "name": "--example-caller-scopes blok.read: a read open and blok_read work; a write open and blok_execute are refused as the standalone scope check answers",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop"
+      },
+      "maskKeys": [
+        "lastEditedAt",
+        "savedVersion",
+        "revision"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": false,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "page": {
+                  "title": "Notes"
+                },
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "Hello"
+                  }
+                ]
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "This call needs the blok.write scope.",
+                  "retryable": false,
+                  "details": {
+                    "requiredScope": "blok.write"
+                  }
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Changed"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": false,
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "This call needs the blok.write scope.",
+                  "retryable": false,
+                  "details": {
+                    "requiredScope": "blok.write"
+                  }
+                },
+                "delivery": {
+                  "durable": false,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": null
+                }
+              },
+              "isError": true
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "local",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
+    },
+    {
+      "argv": [
+        "--source",
+        "files:${dir}",
+        "--authorize",
+        "${host}/authorize",
+        "--example-caller-scopes",
+        ""
+      ],
+      "files": {
+        "doc.json": {
+          "json": {
+            "title": "Notes",
+            "blocks": [
+              {
+                "id": "p1",
+                "type": "paragraph",
+                "data": {
+                  "text": "Hello"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "name": "--example-caller-scopes with an empty list: the hook returns [] and even a read open is refused",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop"
+      },
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": false
+              }
+            }
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "error": {
+                  "code": "FORBIDDEN",
+                  "message": "This call needs the blok.read scope.",
+                  "retryable": false,
+                  "details": {
+                    "requiredScope": "blok.read"
+                  }
+                }
+              },
+              "isError": true
+            }
+          }
+        }
+      ],
+      "expectExit": {
+        "code": 0
+      },
+      "expectHostRequests": []
+    },
+    {
+      "transport": "http",
+      "argv": [
+        "--example-source",
+        "endpoint:${host}/docs",
+        "--authorize",
+        "${host}/authorize",
+        "--handle-store",
+        "files:${root}/handles",
+        "--http",
+        "127.0.0.1:0"
+      ],
+      "hosts": {
+        "POST /authorize": {
+          "status": 200,
+          "json": {
+            "allowed": true
+          }
+        },
+        "GET /docs/doc": {
+          "status": 200,
+          "json": {
+            "documentText": "{\"title\":\"Notes\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hello\"}}]}",
+            "version": "v1"
+          }
+        },
+        "PUT /docs/doc": {
+          "status": 200,
+          "json": {
+            "version": "v2"
+          },
+          "rawBody": true
+        }
+      },
+      "name": "embed with --handle-store files: a handle opened on instance A executes on instance B",
+      "session": {
+        "protocolVersion": "2025-11-25",
+        "clientName": "Desktop",
+        "headers": {
+          "X-Example-User": "alice"
+        }
+      },
+      "maskKeys": [
+        "lastEditedAt",
+        "savedVersion",
+        "revision"
+      ],
+      "maskHostKeys": [
+        "lastEditedAt"
+      ],
+      "steps": [
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_open",
+              "arguments": {
+                "documentId": "doc",
+                "write": true
+              }
+            }
+          },
+          "capture": {
+            "handle": "/result/structuredContent/handle"
+          },
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "handle": "${handle}",
+                "mode": "stored",
+                "write": true,
+                "durability": "saved-on-execute",
+                "expiresAfterIdleMs": 600000,
+                "contractRevision": "${contractRevision}",
+                "exists": true
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_execute",
+              "arguments": {
+                "handle": "${handle}",
+                "commands": [
+                  {
+                    "name": "doc.setTitle",
+                    "args": {
+                      "title": "Changed"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "instance": "b",
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "ok": true,
+                "revision": "<masked>",
+                "results": [
+                  {}
+                ],
+                "delivery": {
+                  "durable": true,
+                  "pending": false,
+                  "serverSequence": null,
+                  "savedVersion": "<masked>"
+                }
+              },
+              "isError": false
+            }
+          }
+        },
+        {
+          "send": {
+            "method": "tools/call",
+            "params": {
+              "name": "blok_read",
+              "arguments": {
+                "handle": "${handle}"
+              }
+            }
+          },
+          "note": "A reads the batch B ran",
+          "expect": {
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": "<same as structuredContent>"
+                }
+              ],
+              "structuredContent": {
+                "revision": "<masked>",
+                "rootId": null,
+                "page": {
+                  "title": "Changed"
+                },
+                "blocks": [
+                  {
+                    "id": "p1",
+                    "type": "paragraph",
+                    "depth": 0,
+                    "text": "Hello"
+                  }
+                ]
+              },
+              "isError": false
+            }
+          }
+        }
+      ],
+      "expectHostRequests": [
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/docs/doc",
+          "headers": {
+            "blok-caller": "alice",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:alice:mcp-client",
+            "blok-caller-on-behalf-of": "alice"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": true
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/docs/doc",
+          "headers": {
+            "content-type": "application/json",
+            "blok-if-version": "v1",
+            "blok-caller": "alice",
+            "blok-caller-client": "mcp-client",
+            "blok-caller-actor": "agent:alice:mcp-client",
+            "blok-caller-on-behalf-of": "alice"
+          },
+          "bodyText": "{\"title\":\"Changed\",\"blocks\":[{\"id\":\"p1\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello\"}]}}]}"
+        },
+        {
+          "method": "POST",
+          "path": "/authorize",
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "principal": "alice",
+            "documentId": "doc",
+            "write": false
+          }
+        }
+      ]
     }
   ]
 }

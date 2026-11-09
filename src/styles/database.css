@@ -81,6 +81,13 @@
   --blok-database-column-red-card-hover-bg: rgba(186, 3, 3, 0.035);
   /* notion-motion.md "Board": oklab(0.5608 -0.0563 -0.1409 / 0.047) in sRGB. */
   --blok-database-column-blue-card-hover-bg: rgba(0, 120, 200, 0.047);
+  /* notion-motion.md "Round 6": a card hovers to its column tint 2.5 lightness darker. Live on default and blue only;
+     these hues are that rule on Notion's own tints. */
+  --blok-database-column-brown-card-hover-bg: rgba(103, 53, 3, 0.035);
+  --blok-database-column-orange-card-hover-bg: rgba(173, 67, 3, 0.043);
+  --blok-database-column-green-card-hover-bg: rgba(3, 75, 27, 0.035);
+  --blok-database-column-purple-card-hover-bg: rgba(90, 3, 148, 0.031);
+  --blok-database-column-pink-card-hover-bg: rgba(148, 3, 61, 0.031);
   /* research/36 §1.1, §11: a hovered "+ New page" is the hovered card. Measured for these three only;
      the other hues keep the list hover. They resolve per theme, so one definition covers dark. */
   --blok-database-column-default-add-hover-bg: var(--blok-database-card-bg-hover);
@@ -597,6 +604,14 @@
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
+  /* notion-motion.md "Round 6": the rest is Notion's card colour, the hover 2.5 lightness lighter (probe-derived). */
+  --blok-database-column-orange-card-bg: rgb(61, 42, 29);
+  --blok-database-column-purple-card-bg: rgb(54, 41, 63);
+  --blok-database-column-pink-card-bg: rgb(63, 38, 49);
+  --blok-database-column-orange-card-hover-bg: rgb(70, 48, 33);
+  --blok-database-column-green-card-hover-bg: rgb(41, 60, 49);
+  --blok-database-column-purple-card-hover-bg: rgb(61, 46, 71);
+  --blok-database-column-pink-card-hover-bg: rgb(71, 43, 55);
     --blok-database-column-pink-accent: rgb(226, 112, 160);
     --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
     --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -934,6 +949,14 @@
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
+  /* notion-motion.md "Round 6": the rest is Notion's card colour, the hover 2.5 lightness lighter (probe-derived). */
+  --blok-database-column-orange-card-bg: rgb(61, 42, 29);
+  --blok-database-column-purple-card-bg: rgb(54, 41, 63);
+  --blok-database-column-pink-card-bg: rgb(63, 38, 49);
+  --blok-database-column-orange-card-hover-bg: rgb(70, 48, 33);
+  --blok-database-column-green-card-hover-bg: rgb(41, 60, 49);
+  --blok-database-column-purple-card-hover-bg: rgb(61, 46, 71);
+  --blok-database-column-pink-card-hover-bg: rgb(71, 43, 55);
   --blok-database-column-pink-accent: rgb(226, 112, 160);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -2648,6 +2671,18 @@ button[data-blok-database-column-count]:hover {
   padding-right: 0;
 }
 
+/* Notion's long title is one line with an ellipsis (notion-motion.md, Round 7).
+   Focus lifts the clamp so typing never goes into hidden lines. :not([hidden]) keeps
+   a title that fullPage or Hide title hid hidden: this display would show it. */
+[data-blok-database-title-row][data-single-view] > [data-blok-database-title]:not(:focus, [hidden]) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: break-spaces;
+}
+
 /* The placeholder has no width (placeholder-layout-inert law), so a hidden copy
    holds the empty title open and "+" lands after it (feel/findings-toolbar V02). */
 [data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after {
@@ -2662,6 +2697,7 @@ button[data-blok-database-column-count]:hover {
 /* Notion's title row: "+" and "…" are 24px (feel/findings-toolbar V02, V03). */
 [data-blok-database-title-row][data-single-view] [data-blok-database-add-view] {
   width: 24px; height: 24px;
+  flex-shrink: 0;
   margin-inline-start: var(--blok-space-1);
 }
 
@@ -2671,6 +2707,7 @@ button[data-blok-database-column-count]:hover {
   justify-content: center;
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
   padding: 0;
   border: none;
   background: none;
@@ -3038,15 +3075,19 @@ button[data-blok-database-column-count]:hover {
   display: none;
 }
 
-/* foldTitleRow probes and marks on the toolbar: a write on the row is a block change. */
-[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable],
-[data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-icons]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable],
-[data-blok-database-view-toolbar][data-blok-database-fold-probe="no-icons"] > [data-blok-database-toolbar-foldable] {
+/* foldTitleRow marks the toolbar: a write on the row is a block change. */
+[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-foldable],
+[data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-icons] > [data-blok-database-toolbar-foldable] {
   display: none;
 }
 
-[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-new],
-[data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new]:not([data-blok-database-fold-probe]) > [data-blok-database-new] {
+[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new],
+[data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-new] {
+  display: none;
+}
+
+/* Below a 320px row Notion drops » with New (notion-motion.md, Round 7 "⤢ fold point"). */
+[data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-toolbar-minimize] {
   display: none;
 }
 
@@ -7095,8 +7136,9 @@ textarea[data-blok-database-property-description][data-blok-field] {
   padding: 0;
 }
 
-/* research/26 §1a: view settings, docked at the window's end edge, radius 10px. */
-[data-blok-popover-custom-class~='blok-database-docked-panel'] [data-blok-popover-container] {
+/* Panels are menus, not cell editors: radius 10px (research/08 "View settings panel", research/21 §1a).
+   View settings is one of them (research/26 §1a). Must stay after the cell editor rule: same specificity. */
+[data-blok-popover-custom-class~='blok-database-panel'] [data-blok-popover-container] {
   border-radius: var(--blok-radius-surface);
 }
 
@@ -11823,8 +11865,8 @@ input[data-blok-database-picker-search]:focus {
 /* ─── Gallery ───
    Measured (research/07, 08): 16px gap, 146px cover, 10px card radius,
    40px title row (8px 10px, 15px/22.5px 500), cover text 12px/18px.
-   Unmeasured: the card minimum widths (Notion's medium column falls between
-   254px and 296px), small and large sizes, the "+ New" card and load more. */
+   Card minimum widths 180/260/320 and the 9:16 covers: notion-motion.md "Round 6".
+   Unmeasured: the "+ New" card and load more. */
 
 [data-blok-database-gallery] {
   --blok-database-gallery-card-min: 260px;
@@ -11841,7 +11883,8 @@ input[data-blok-database-picker-search]:focus {
 }
 
 /* research/07 §Gallery, 08:317 and listgallery.png: Notion's medium preview is 146.25px at 296 and 338 wide.
-   It grows on wider cards (166.5 at 388, 218.3 at 492), which a fixed height does not follow. */
+   It grows on wider cards (166.5 at 388, 218.3 at 492), which a fixed height does not follow.
+   notion-motion.md "Round 6" saw 146.25 after a tab switch but 190.125 (9:16 of 338) after a reload. Notion is inconsistent, so 146.25 stays. */
 [data-blok-database-gallery][data-card-size="medium"] {
   --blok-database-gallery-card-min: 260px;
   --blok-database-gallery-preview-ratio: auto;
@@ -11850,7 +11893,7 @@ input[data-blok-database-picker-search]:focus {
 }
 
 [data-blok-database-gallery][data-card-size="large"] {
-  --blok-database-gallery-card-min: 340px;
+  --blok-database-gallery-card-min: 320px;
 }
 
 [data-blok-database-gallery-grid] {
@@ -11938,7 +11981,7 @@ input[data-blok-database-picker-search]:focus {
   border-radius: var(--blok-radius-block);
 }
 
-/* Small and large are unmeasured and keep 9/16 of the card width (findings-listgallery L13). */
+/* Small and large covers are 9/16 of the card width (notion-motion.md "Round 6"). */
 [data-blok-database-gallery-preview] {
   flex: none;
   box-sizing: border-box;
@@ -12573,8 +12616,8 @@ input[data-blok-database-picker-search]:focus {
   --blok-database-timeline-header-rows: 2;
   /* The view sets the day width inline on the canvas. */
   --blok-database-timeline-day: 40px;
-  /* timeline.png (round V1): x 360–640 with the border. The toolbar's « and month are placed from it. */
-  --blok-database-timeline-table-width: 280px;
+  /* notion-motion.md Round 6: 376 with the border, at 1512 and 1100. The toolbar's « and month are placed from it. */
+  --blok-database-timeline-table-width: 376px;
   /* "+ New" reads the view's width (cqi) from inside the wide canvas. */
   container-type: inline-size;
   display: flex;
@@ -12706,6 +12749,8 @@ input[data-blok-database-picker-search]:focus {
 [data-blok-database-timeline-table] {
   flex: none;
   inline-size: var(--blok-database-timeline-table-width);
+  /* Notion keeps 96 before the Name column at every width; it does not follow the text column. */
+  padding-inline-start: 96px;
   overflow: hidden;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
 }

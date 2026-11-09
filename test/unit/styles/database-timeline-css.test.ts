@@ -149,10 +149,12 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip="start"]')).toMatch(/display:\s*inline-flex/);
   });
 
-  // timeline.png (round V1): the panel runs x 360–640 with its border, 280px. Its « sits at the panel's end, beside the month.
-  it('draws the table panel 280px wide and turns the toggle into « at its end while it shows', () => {
-    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-table-width: 280px');
+  // notion-motion.md Round 6 "Timeline left table panel": 376 wide with 96 of it padding before the Name column, at 1512 and 1100.
+  // Its « sits at the panel's end, beside the month.
+  it('draws the table panel 376px wide, 96 of it padding, and turns the toggle into « at its end while it shows', () => {
+    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-table-width: 376px');
     expect(ruleBody('[data-blok-database-timeline-table]')).toContain('inline-size: var(--blok-database-timeline-table-width)');
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('padding-inline-start: 96px');
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
     expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - 38px)');

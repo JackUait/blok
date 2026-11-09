@@ -390,6 +390,21 @@ test.describe('timeline', () => {
     expect((await savedView(page)).showTimelineTable).toBe(true);
   });
 
+  // notion-motion.md Round 6: the panel is 376 wide and its Name column starts 96 in, at both 1512 and 1100.
+  test('the table panel is 376 wide with its Name column 96 in, whatever the window width', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
+
+    for (const width of [1512, 1100]) {
+      await page.setViewportSize({ width, height: 717 });
+      const panel = await page.locator('[data-blok-database-timeline-table]').boundingBox();
+      const name = await page.locator('[data-blok-database-timeline-table-header]').boundingBox();
+
+      if (panel === null || name === null) throw new Error('no layout');
+      expect(panel.width).toBeCloseTo(376, 0);
+      expect(name.x - panel.x).toBeCloseTo(96, 0);
+    }
+  });
+
   // timeline.png: the panel's border is at x 639, the « ink starts 27px before it, the month ink 18px after it.
   test('with the table shown, « sits at the panel\'s end and the month 16px into the chart, in a view wider than the text column', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));

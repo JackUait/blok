@@ -486,12 +486,21 @@ export class PageTool implements BlockTool {
    * back, and the link must still open the database.
    */
   private async turnIntoInlineDatabase(): Promise<void> {
-    const { loadDocument } = this.config;
+    const { loadDocument, canMoveInto } = this.config;
     const { pageId } = this.data;
 
     if (loadDocument === undefined || this.movingIn) return;
     this.movingIn = true;
     try {
+      // Asked before the load, so a refused page is never read. `unknown`: a JS host
+      // may answer any value, and only `true` allows the move.
+      const allowed: unknown = canMoveInto === undefined ? true : await canMoveInto(pageId);
+
+      if (allowed !== true) {
+        log('Turn into inline database: canMoveInto refused the page; nothing changed.', 'warn');
+
+        return;
+      }
       const document = await loadDocument(pageId);
       const root = document?.blocks.find((block) => block.type === 'database' && block.parent === undefined && typeof block.id === 'string');
 

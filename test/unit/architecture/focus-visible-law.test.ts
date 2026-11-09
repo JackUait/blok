@@ -188,6 +188,11 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Text-entry field: the formula box is a contenteditable; its focus border belongs to the field.',
   },
   {
+    file: 'src/styles/database.css',
+    match: '[data-blok-database-title]:not(:focus',
+    reason: 'Text-entry field: the contenteditable database title unclamps while it is edited, so the caret never sits in a hidden line.',
+  },
+  {
     file: 'src/components/utils/placeholder.ts',
     match: ':focus:before:',
     reason: 'Renders placeholder TEXT inside a contenteditable — content, not a focus indicator.',

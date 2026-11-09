@@ -212,6 +212,30 @@ test.describe('gallery', () => {
     expect(large).toBeGreaterThan(small);
   });
 
+  // notion-motion.md "Round 6", gallery card sizes: on a 692 wide grid Small is 3 x 220 with a 123.75 cover, Large 2 x 338 with 190.125.
+  test('small and large cards fill a 692 wide grid like Notion', async ({ page }) => {
+    const measure = async (size: string): Promise<{ widths: number[]; cover: number }> => {
+      await mount(page, blocks({ type: 'gallery', cardSize: size }));
+      await page.locator('[data-blok-database-gallery-grid]').evaluate((grid) => {
+        grid.style.setProperty('width', '692px');
+      });
+      const widths = await page.locator('[data-blok-database-gallery-card]').evaluateAll((cards) => cards.map((c) => c.getBoundingClientRect().width));
+      const cover = (await card(page, 'r1').locator('[data-blok-database-gallery-preview]').boundingBox())?.height ?? 0;
+
+      return { widths, cover };
+    };
+
+    const large = await measure('large');
+
+    expect(large.widths.slice(0, 2)).toEqual([ 338, 338 ]);
+    expect(large.cover).toBeCloseTo(190.125, 1);
+
+    const small = await measure('small');
+
+    expect(small.widths).toEqual([ 220, 220, 220 ]);
+    expect(small.cover).toBeCloseTo(123.75, 1);
+  });
+
   test('"+ New" in the trailing card adds a row', async ({ page }) => {
     await mount(page, blocks({ type: 'gallery' }));
 

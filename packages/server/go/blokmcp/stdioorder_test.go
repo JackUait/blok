@@ -275,3 +275,40 @@ func TestAStopWaitsForACallQueuedOnItsHandle(t *testing.T) {
 		t.Fatalf("saved %v before the stop ended", titles)
 	}
 }
+
+// Node answers a ping before it reads the next line, so two pings with one
+// id are both answered before a later ping is.
+func TestStdioAnswersEachPingBeforeTheNextLine(t *testing.T) {
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	send, reader, _ := stdioClient(t, server, ctx)
+	const rounds = 300
+	// io.Pipe has no buffer, as stdin does: send from its own goroutine.
+	go func() {
+		for range rounds {
+			send(`{"jsonrpc":"2.0","id":7,"method":"ping"}`)
+			send(`{"jsonrpc":"2.0","id":7,"method":"ping"}`)
+			send(`{"jsonrpc":"2.0","id":8,"method":"ping"}`)
+		}
+	}()
+	for round := range rounds {
+		for _, want := range []int{7, 7, 8} {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				t.Fatal(err)
+			}
+			var answer struct {
+				ID int `json:"id"`
+			}
+			_ = json.Unmarshal([]byte(line), &answer)
+			if answer.ID != want {
+				t.Fatalf("round %d: got id %d, want %d", round, answer.ID, want)
+			}
+		}
+	}
+}

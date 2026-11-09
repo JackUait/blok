@@ -248,6 +248,35 @@ describe('Turn into inline database on a database page link', () => {
     expect(loadDocument).toHaveBeenCalledTimes(1);
   }, 30_000);
 
+  it.each<[string, () => boolean | Promise<boolean>]>([
+    ['false', () => false],
+    ['a promise of false', async () => false],
+    ['an error', () => { throw new Error('denied'); }],
+    ['a rejected promise', async () => { throw new Error('denied'); }],
+  ])('neither loads nor moves the page when canMoveInto answers %s', async (_name, answer) => {
+    const loadDocument = vi.fn().mockResolvedValue(structuredClone(PAGE_DOCUMENT));
+    const canMoveInto = vi.fn(answer);
+    const instance = await boot({ databasePages: true, create: vi.fn(), loadDocument, canMoveInto });
+    const before = await saved(instance);
+
+    await step(instance, () => turnIntoInline(instance)?.onActivate?.());
+
+    expect(await saved(instance)).toBe(before);
+    expect(canMoveInto).toHaveBeenCalledWith('p1');
+    expect(loadDocument).not.toHaveBeenCalled();
+  }, 30_000);
+
+  it('moves the page in when canMoveInto answers true', async () => {
+    const loadDocument = vi.fn().mockResolvedValue(structuredClone(PAGE_DOCUMENT));
+    const canMoveInto = vi.fn(async () => true);
+    const instance = await boot({ databasePages: true, create: vi.fn(), loadDocument, canMoveInto });
+
+    await step(instance, () => turnIntoInline(instance)?.onActivate?.());
+
+    expect(canMoveInto).toHaveBeenCalledWith('p1');
+    expect((await instance.save()).blocks.map(block => block.id)).toEqual(['a', 'db', 'r1', 'b1', 'r2', 'z']);
+  }, 30_000);
+
   it('is offered only on a database page link of a host with database pages and loadDocument', async () => {
     const plain = await boot({ databasePages: true, create: vi.fn(), loadDocument: vi.fn() }, [
       { id: 'link', type: 'page', data: { pageId: 'p1' } },

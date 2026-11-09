@@ -249,6 +249,74 @@ test.describe('research/26 §5f, light side peek hovers', () => {
   });
 });
 
+/*
+ * notion-motion.md "Round 6", board card hover tint. Light: a white card hovers to its column tint 2.5 lightness
+ * darker. Dark: the card rests on the column's card colour and hovers 2.5 lighter. Chromium prints alpha 0.031 as 0.03.
+ */
+const HUES = [ 'default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red' ] as const;
+
+const LIGHT_HOVER: Record<typeof HUES[number], string> = {
+  default: 'rgba(54, 29, 2, 0.03)',
+  gray: 'rgba(54, 29, 2, 0.03)',
+  brown: 'rgba(103, 53, 3, 0.035)',
+  orange: 'rgba(173, 67, 3, 0.043)',
+  yellow: 'rgba(194, 164, 0, 0.063)',
+  green: 'rgba(3, 75, 27, 0.035)',
+  blue: 'rgba(0, 120, 200, 0.047)',
+  purple: 'rgba(90, 3, 148, 0.03)',
+  pink: 'rgba(148, 3, 61, 0.03)',
+  red: 'rgba(186, 3, 3, 0.035)',
+};
+
+const DARK_CARD: Record<typeof HUES[number], [rest: string, hover: string]> = {
+  default: [ 'rgb(32, 32, 32)', 'rgb(38, 38, 38)' ],
+  gray: [ 'rgb(44, 44, 43)', 'rgb(50, 50, 49)' ],
+  brown: [ 'rgb(56, 45, 38)', 'rgb(64, 51, 43)' ],
+  orange: [ 'rgb(61, 42, 29)', 'rgb(70, 48, 33)' ],
+  yellow: [ 'rgb(55, 51, 37)', 'rgb(63, 58, 42)' ],
+  green: [ 'rgb(36, 52, 43)', 'rgb(41, 60, 49)' ],
+  blue: [ 'rgb(33, 48, 65)', 'rgb(37, 54, 73)' ],
+  purple: [ 'rgb(54, 41, 63)', 'rgb(61, 46, 71)' ],
+  pink: [ 'rgb(63, 38, 49)', 'rgb(71, 43, 55)' ],
+  red: [ 'rgb(65, 39, 37)', 'rgb(73, 44, 42)' ],
+};
+
+const hueBoard = (): OutputBlockData[] => [
+  {
+    id: 'db-hues',
+    type: 'database',
+    data: {
+      schema: [
+        { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'p-hue', name: 'Hue', type: 'select', position: 'a1', config: { options: HUES.map((hue, i) => ({ id: `o-${hue}`, label: hue, color: hue, position: `a${i}` })) } },
+      ],
+      views: [ { id: 'v1', name: 'View', type: 'board', groupBy: 'p-hue', position: 'a0', sorts: [], filters: [], visibleProperties: [] } ],
+      activeViewId: 'v1',
+    },
+    content: HUES.map((hue) => `r-${hue}`),
+  },
+  ...HUES.map((hue, i) => ({ id: `r-${hue}`, type: 'database-row', parent: 'db-hues', data: { position: `a${i}`, properties: { 'p-title': hue, 'p-hue': `o-${hue}` } } })),
+];
+
+for (const theme of THEMES) {
+  test.describe(`notion-motion.md round 6, board card tint per hue in ${theme.name}`, () => {
+    test('every hue rests and hovers on Notion\'s card fill', async ({ page }) => {
+      await mount(page, hueBoard());
+      await theme.apply(page);
+
+      for (const hue of HUES) {
+        const card = page.locator(`[data-blok-database-card][data-row-id="r-${hue}"]`);
+        const [ rest, hover ] = theme.dark ? DARK_CARD[hue] : [ 'rgb(255, 255, 255)', LIGHT_HOVER[hue] ];
+
+        await page.mouse.move(0, 0);
+        await expect(card, `${hue} at rest`).toHaveCSS('background-color', rest);
+        await card.hover();
+        await expect(card, `${hue} on hover`).toHaveCSS('background-color', hover);
+      }
+    });
+  });
+}
+
 for (const theme of THEMES.filter((t) => t.dark)) {
   test.describe(`research/26 §4e, board in ${theme.name}`, () => {
     test('blue and brown columns, counts, cards and card hovers take the measured dark values', async ({ page }) => {

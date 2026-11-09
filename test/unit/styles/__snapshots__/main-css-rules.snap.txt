@@ -4384,6 +4384,11 @@ span[data-blok-slash-search] {
   --blok-database-column-red-ring: rgba(223, 22, 0, 0.094);
   --blok-database-column-red-card-hover-bg: rgba(186, 3, 3, 0.035);
   --blok-database-column-blue-card-hover-bg: rgba(0, 120, 200, 0.047);
+  --blok-database-column-brown-card-hover-bg: rgba(103, 53, 3, 0.035);
+  --blok-database-column-orange-card-hover-bg: rgba(173, 67, 3, 0.043);
+  --blok-database-column-green-card-hover-bg: rgba(3, 75, 27, 0.035);
+  --blok-database-column-purple-card-hover-bg: rgba(90, 3, 148, 0.031);
+  --blok-database-column-pink-card-hover-bg: rgba(148, 3, 61, 0.031);
   --blok-database-column-default-add-hover-bg: var(--blok-database-card-bg-hover);
   --blok-database-column-gray-add-hover-bg: var(--blok-database-column-gray-card-hover-bg, var(--blok-database-card-bg-hover));
   --blok-database-column-red-add-hover-bg: var(--blok-database-column-red-card-hover-bg);
@@ -4790,6 +4795,13 @@ span[data-blok-slash-search] {
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
+  --blok-database-column-orange-card-bg: rgb(61, 42, 29);
+  --blok-database-column-purple-card-bg: rgb(54, 41, 63);
+  --blok-database-column-pink-card-bg: rgb(63, 38, 49);
+  --blok-database-column-orange-card-hover-bg: rgb(70, 48, 33);
+  --blok-database-column-green-card-hover-bg: rgb(41, 60, 49);
+  --blok-database-column-purple-card-hover-bg: rgb(61, 46, 71);
+  --blok-database-column-pink-card-hover-bg: rgb(71, 43, 55);
   --blok-database-column-pink-accent: rgb(226, 112, 160);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -5081,6 +5093,13 @@ span[data-blok-slash-search] {
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
+  --blok-database-column-orange-card-bg: rgb(61, 42, 29);
+  --blok-database-column-purple-card-bg: rgb(54, 41, 63);
+  --blok-database-column-pink-card-bg: rgb(63, 38, 49);
+  --blok-database-column-orange-card-hover-bg: rgb(70, 48, 33);
+  --blok-database-column-green-card-hover-bg: rgb(41, 60, 49);
+  --blok-database-column-purple-card-hover-bg: rgb(61, 46, 71);
+  --blok-database-column-pink-card-hover-bg: rgb(71, 43, 55);
   --blok-database-column-pink-accent: rgb(226, 112, 160);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -6485,6 +6504,15 @@ button[data-blok-database-column-count]:hover {
   padding-right: 0;
 }
 
+[data-blok-database-title-row][data-single-view] > [data-blok-database-title]:not(:focus, [hidden]) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: break-spaces;
+}
+
 [data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after {
   content: attr(data-placeholder);
   display: block;
@@ -6497,6 +6525,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-title-row][data-single-view] [data-blok-database-add-view] {
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
   margin-inline-start: var(--blok-space-1);
 }
 
@@ -6506,6 +6535,7 @@ button[data-blok-database-column-count]:hover {
   justify-content: center;
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
   padding: 0;
   border: none;
   background: none;
@@ -6812,11 +6842,15 @@ button[data-blok-database-column-count]:hover {
   display: none;
 }
 
-[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-icons]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable], [data-blok-database-view-toolbar][data-blok-database-fold-probe="no-icons"] > [data-blok-database-toolbar-foldable] {
+[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-foldable], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-icons] > [data-blok-database-toolbar-foldable] {
   display: none;
 }
 
-[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-new], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new]:not([data-blok-database-fold-probe]) > [data-blok-database-new] {
+[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-new] {
+  display: none;
+}
+
+[data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-toolbar-minimize] {
   display: none;
 }
 
@@ -10523,7 +10557,7 @@ textarea[data-blok-database-property-description][data-blok-field] {
   padding: 0;
 }
 
-[data-blok-popover-custom-class~='blok-database-docked-panel'] [data-blok-popover-container] {
+[data-blok-popover-custom-class~='blok-database-panel'] [data-blok-popover-container] {
   border-radius: var(--blok-radius-surface);
 }
 
@@ -14826,7 +14860,7 @@ input[data-blok-database-picker-search]:focus {
 }
 
 [data-blok-database-gallery][data-card-size="large"] {
-  --blok-database-gallery-card-min: 340px;
+  --blok-database-gallery-card-min: 320px;
 }
 
 [data-blok-database-gallery-grid] {
@@ -15471,7 +15505,7 @@ input[data-blok-database-picker-search]:focus {
   --blok-database-timeline-line: 28px;
   --blok-database-timeline-header-rows: 2;
   --blok-database-timeline-day: 40px;
-  --blok-database-timeline-table-width: 280px;
+  --blok-database-timeline-table-width: 376px;
   container-type: inline-size;
   display: flex;
   flex-direction: column;
@@ -15584,6 +15618,7 @@ input[data-blok-database-picker-search]:focus {
 [data-blok-database-timeline-table] {
   flex: none;
   inline-size: var(--blok-database-timeline-table-width);
+  padding-inline-start: 96px;
   overflow: hidden;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
 }

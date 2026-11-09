@@ -47,6 +47,23 @@ describe('the empty title keeps its placeholder width (V02)', () => {
   });
 });
 
+// notion-motion.md, Round 7 "Long database title".
+describe('a long one-view title stays one line', () => {
+  const body = (): string => rule('[data-blok-database-title-row][data-single-view] > [data-blok-database-title]:not(:focus, [hidden])');
+
+  it('clamps to one line with an ellipsis, as Notion does', () => {
+    expect(body()).toMatch(/display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1;/);
+    expect(body()).toMatch(/overflow: hidden/);
+    expect(body()).toMatch(/text-overflow: ellipsis/);
+    expect(body()).toMatch(/white-space: break-spaces/);
+  });
+
+  it('"+" and "…" keep their 24px while the title gives way', () => {
+    expect(rule('[data-blok-database-title-row][data-single-view] [data-blok-database-add-view]')).toMatch(/flex-shrink: 0/);
+    expect(rule('[data-blok-database-title-more]')).toMatch(/flex-shrink: 0/);
+  });
+});
+
 describe("Add view is Notion's tile grid (V04)", () => {
   it('lays the tiles out in 4 columns', () => {
     expect(rule("[data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items]")).toMatch(/grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
@@ -140,8 +157,13 @@ describe('a narrow view bar folds like Notion (notion-spec-2 §26.1)', () => {
   });
 
   it('the icon group hides together, and New hides on its own, in the view bar and in a one-view title row', () => {
-    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-icons]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable], [data-blok-database-view-toolbar][data-blok-database-fold-probe="no-icons"] > [data-blok-database-toolbar-foldable]')).toMatch(/display: none/);
-    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-new], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new]:not([data-blok-database-fold-probe]) > [data-blok-database-new]')).toMatch(/display: none/);
+    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-foldable], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-icons] > [data-blok-database-toolbar-foldable]')).toMatch(/display: none/);
+    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-new]')).toMatch(/display: none/);
+  });
+
+  // notion-motion.md, Round 7 "⤢ fold point": » goes with New ⌄.
+  it('a one-view title row folds » with New', () => {
+    expect(rule('[data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new] > [data-blok-database-toolbar-minimize]')).toMatch(/display: none/);
   });
 
   // notion-spec-2 §26.1 (`tb-1000-closed.txt`): "4 more…" is 76.7x32, as tall as a tab.

@@ -200,6 +200,16 @@ export interface PageConfig {
    */
   loadDocument?(pageId: string): OutputData | null | Promise<OutputData | null>;
   /**
+   * Asked before "Turn into inline database" reads the page's document and
+   * moves its database, rows and row bodies into this document. Answer `true`
+   * to allow it. Any other answer, or an error, changes nothing and skips
+   * `loadDocument`. A link's page id is block data any collaborator can set,
+   * so use it to refuse a page that people with access to this document must
+   * not see. Without it, any page `loadDocument` returns a full-page database for
+   * can move in.
+   */
+  canMoveInto?(pageId: string): boolean | Promise<boolean>;
+  /**
    * Saves the page's document after an agent changed it. Called once per
    * agent batch that changed something. A rejection fails that batch.
    */

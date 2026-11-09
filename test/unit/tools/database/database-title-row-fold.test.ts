@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { MutationHandler } from '../../../../src/components/block/mutation-handler';
 import { foldTitleRow, planTitleRowFold } from '../../../../src/tools/database/database-view-bar-fold';
 
 /**
@@ -27,6 +28,7 @@ describe('planTitleRowFold', () => {
 
 describe('foldTitleRow', () => {
   let row: HTMLElement;
+  let wrapper: HTMLElement;
 
   const sized = <T extends HTMLElement>(el: T, width: () => number, prop: 'offsetWidth' | 'scrollWidth' = 'offsetWidth'): T => {
     Object.defineProperty(el, prop, { configurable: true, get: width });
@@ -42,13 +44,25 @@ describe('foldTitleRow', () => {
     // The title is squeezed to 80 in the row; its text needs 156.
     const title = sized(sized(document.createElement('div'), () => 80), () => 156, 'scrollWidth');
     const add = sized(document.createElement('button'), () => 24);
-    const toolbar = sized(document.createElement('div'), () => (row.hasAttribute('data-blok-database-fold-icons') ? 103 : 243));
+    // The icon group hides under the row's mark, unless a probe says otherwise.
+    const toolbar: HTMLElement = document.createElement('div');
+
+    sized(toolbar, () => {
+      const probe = toolbar.getAttribute('data-blok-database-fold-probe');
+      const folded = probe === null ? row.hasAttribute('data-blok-database-fold-icons') : probe === 'no-icons';
+
+      return folded ? 103 : 243;
+    });
 
     title.setAttribute('data-blok-database-title', '');
     add.setAttribute('data-blok-database-add-view', '');
     toolbar.setAttribute('data-blok-database-view-toolbar', '');
+    // As DatabaseViewControls draws it.
+    toolbar.setAttribute('data-blok-mutation-free', 'true');
     row.append(title, add, toolbar);
-    document.body.appendChild(row);
+    wrapper = document.createElement('div');
+    wrapper.appendChild(row);
+    document.body.appendChild(wrapper);
   };
 
   beforeEach(() => {
@@ -56,7 +70,7 @@ describe('foldTitleRow', () => {
   });
 
   afterEach(() => {
-    row.remove();
+    wrapper.remove();
     vi.restoreAllMocks();
   });
 
@@ -88,5 +102,23 @@ describe('foldTitleRow', () => {
 
     expect(row.hasAttribute('data-blok-database-fold-icons')).toBe(false);
     expect(row.hasAttribute('data-blok-database-fold-new')).toBe(false);
+  });
+
+  // A resize that keeps the fold (the side peek sliding) must save nothing.
+  it.each([
+    ['folded', 358],
+    ['unfolded', 474],
+  ])('refolding a %s row to the same marks is not a block change', (_state, width) => {
+    mount(width);
+    foldTitleRow(row);
+    const observer = new MutationObserver(() => undefined);
+
+    observer.observe(wrapper, { subtree: true, attributes: true, childList: true, characterData: true });
+    foldTitleRow(row);
+    const records = observer.takeRecords();
+
+    observer.disconnect();
+
+    expect(new MutationHandler(() => wrapper, null, () => undefined).handleMutation(records).shouldFireUpdate).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { nanoid } from 'nanoid';
 import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconTrash, IconChevronDoubleRight } from '../../components/icons';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyTypeMeta } from './database-property-types';
 import type { I18n } from '../../../types';
 import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator } from './database-panel';
@@ -212,6 +213,8 @@ export class DatabaseViewControls {
     this.toolbar.setAttribute('data-blok-database-view-toolbar', '');
     this.toolbar.setAttribute('role', 'toolbar');
     this.toolbar.setAttribute('aria-label', this.t('toolbarLabel'));
+    // The fold probes write here on every resize (database-view-bar-fold.ts); they are not edits.
+    this.toolbar.setAttribute(DATA_ATTR.mutationFree, 'true');
 
     this.lockBadge = document.createElement('span');
     this.lockBadge.setAttribute('data-blok-database-lock-badge', '');

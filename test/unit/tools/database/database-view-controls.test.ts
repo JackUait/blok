@@ -89,6 +89,13 @@ describe('DatabaseViewControls', () => {
     expect(q('database-toolbar-sort')?.getAttribute('aria-label')).toBe('tools.database.settingsSort');
   });
 
+  // The fold probes write on it on every resize; they are not edits.
+  it('draws the toolbar as mutation-free, so its own writes are not block changes', () => {
+    const { controls } = setup();
+
+    expect(controls.toolbar.getAttribute('data-blok-mutation-free')).toBe('true');
+  });
+
   it('marks Filter, Sort, Automations, AI Autofill and search as the group a narrow bar hides together (notion-spec-2 §26.1)', () => {
     setup({ levers: {
       automations: { read: () => undefined, schema: () => schema, views: () => [], writable: () => true, write: () => true },

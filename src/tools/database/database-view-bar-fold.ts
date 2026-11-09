@@ -89,19 +89,28 @@ const outerWidth = (el: HTMLElement, width: number): number => {
   return width + (Number.parseFloat(style.marginLeft) || 0) + (Number.parseFloat(style.marginRight) || 0);
 };
 
-/** Measures a one-view title row and sets the fold marks database.css reads. */
+/**
+ * Measures a one-view title row and sets the fold marks database.css reads.
+ * It runs on every resize, so it writes the row only when a mark changes:
+ * the row is not mutation-free, and any write there is saved as a block change.
+ * The probes go on the toolbar, which is mutation-free (database-view-controls.ts).
+ */
 export const foldTitleRow = (row: HTMLElement): void => {
-  row.removeAttribute('data-blok-database-fold-icons');
-  row.removeAttribute('data-blok-database-fold-new');
   const toolbar = row.querySelector<HTMLElement>(':scope > [data-blok-database-view-toolbar]');
 
-  if (toolbar === null || !row.isConnected) return;
+  if (toolbar === null || !row.isConnected) {
+    row.toggleAttribute('data-blok-database-fold-icons', false);
+    row.toggleAttribute('data-blok-database-fold-new', false);
+
+    return;
+  }
+  toolbar.setAttribute('data-blok-database-fold-probe', 'full');
   const full = toolbar.offsetWidth;
 
-  row.setAttribute('data-blok-database-fold-icons', '');
+  toolbar.setAttribute('data-blok-database-fold-probe', 'no-icons');
   const noIcons = toolbar.offsetWidth;
 
-  row.removeAttribute('data-blok-database-fold-icons');
+  toolbar.removeAttribute('data-blok-database-fold-probe');
   // The title shrinks to fit the row, so its text width is what it needs.
   const lead = Array.from(row.children)
     // The selection bar lies over the row while rows are picked; it takes no room.
@@ -111,6 +120,7 @@ export const foldTitleRow = (row: HTMLElement): void => {
   const width = row.clientWidth - (Number.parseFloat(style.paddingLeft) || 0) - (Number.parseFloat(style.paddingRight) || 0);
   const fold = planTitleRowFold({ width, lead, toolbar: { full, noIcons } });
 
+  // toggleAttribute with force writes nothing when the mark is already right.
   row.toggleAttribute('data-blok-database-fold-icons', !fold.icons);
   row.toggleAttribute('data-blok-database-fold-new', !fold.newButton);
 };

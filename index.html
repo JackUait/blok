@@ -2020,7 +2020,7 @@
       // Captured now: callbacks of this editor must keep writing to ITS page
       // even after navigation has moved `currentPageId` on.
       const pageId = currentPageId;
-      const pointers = new PointerWatch(pages);
+      const pointers = new PointerWatch(pages, pageId);
       livePointers = pointers;
 
       if (state.tools.page) tools.page = {

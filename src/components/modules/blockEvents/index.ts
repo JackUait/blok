@@ -272,6 +272,8 @@ export class BlockEvents extends Module {
       this.Blok.Caret.resetGoalColumn();
     }
 
+    this.keyboardNavigation.handleShiftEnd(event);
+
     /**
      * We check for "key" here since on different keyboard layouts "/" can be typed as "Shift + 7" etc
      * @todo probably using "beforeInput" event would be better here

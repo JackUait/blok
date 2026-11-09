@@ -10,6 +10,7 @@ import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_N
 import { deliverOnSubmit } from '../../../utils/on-submit';
 import { horizontalArrowIntent, keyCodeFromEvent } from '../utils/keyboard';
 import { findAllOwn, findOwn } from '../../../utils/own-element';
+import { applySpanningSelection, getEditingHost } from '../../../selection/cross-block-range';
 
 import { BlockEventComposer } from './__base';
 import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-siblings';
@@ -1266,6 +1267,14 @@ export class KeyboardNavigation extends BlockEventComposer {
       void this.Blok.InlineToolbar.tryToShow();
     }
 
+    if (isShiftDownKey && !this.shouldDeferSelectionToTableCell) {
+      if (this.extendTextSelectionDown()) {
+        event.preventDefault();
+      }
+
+      return;
+    }
+
     const isPlainRightKey = isForwardKey && !event.shiftKey;
 
     const nbpsTarget = isPlainRightKey && caretInput instanceof HTMLElement
@@ -1370,6 +1379,89 @@ export class KeyboardNavigation extends BlockEventComposer {
      * Clear blocks selection by arrows
      */
     this.Blok.BlockSelection.clearSelection(event);
+  }
+
+  /**
+   * Shift+End when the selection spans two blocks. The browser clamps the
+   * extend to the anchor's block, so move the focus to its line end here.
+   * @param event - keydown
+   */
+  public handleShiftEnd(event: KeyboardEvent): void {
+    if (event.key !== 'End' || !event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+
+    const selection = SelectionUtils.get();
+
+    if (!selection?.anchorNode || !selection.focusNode) {
+      return;
+    }
+
+    const anchor = { node: selection.anchorNode, offset: selection.anchorOffset };
+    const focusHost = getEditingHost(selection.focusNode);
+
+    if (focusHost === null || focusHost === getEditingHost(anchor.node)) {
+      return;
+    }
+
+    selection.collapse(selection.focusNode, selection.focusOffset);
+    selection.modify('move', 'forward', 'lineboundary');
+
+    if (selection.focusNode === null) {
+      return;
+    }
+
+    applySpanningSelection(anchor, { node: selection.focusNode, offset: selection.focusOffset });
+    event.preventDefault();
+  }
+
+  /**
+   * Shift+ArrowDown on the last line of a block: keep the anchor and move the
+   * focus to the same column in the next block, as Notion does. Each block is
+   * its own editing host, so the browser cannot extend across on its own.
+   * @returns true when the focus moved into another block
+   */
+  private extendTextSelectionDown(): boolean {
+    const { BlockManager, Caret } = this.Blok;
+    const selection = SelectionUtils.get();
+
+    if (!selection?.anchorNode || !selection.focusNode) {
+      return false;
+    }
+
+    const anchor = { node: selection.anchorNode, offset: selection.anchorOffset };
+    const focus = { node: selection.focusNode, offset: selection.focusOffset };
+
+    BlockManager.setCurrentBlockByChildNode(focus.node);
+
+    /** No block below: navigation could insert one, and Shift must never add a block. */
+    if (BlockManager.nextVisibleBlock === null) {
+      return false;
+    }
+
+    /** Caret helpers read a collapsed caret, so navigate from the focus alone. */
+    selection.collapse(focus.node, focus.offset);
+
+    if (!Caret.navigateVerticalNext(false)) {
+      /** setBaseAndExtent keeps a backward selection backward; it only clamps across hosts. */
+      if (getEditingHost(anchor.node) === getEditingHost(focus.node)) {
+        selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+      } else {
+        applySpanningSelection(anchor, focus);
+      }
+
+      return false;
+    }
+
+    const moved = SelectionUtils.get();
+
+    if (this.Blok.BlockSelection.anyBlockSelected || !moved?.focusNode) {
+      return true;
+    }
+
+    applySpanningSelection(anchor, { node: moved.focusNode, offset: moved.focusOffset });
+
+    return true;
   }
 
   /**

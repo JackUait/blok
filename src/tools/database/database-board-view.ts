@@ -64,11 +64,17 @@ interface DatabaseBoardViewOptions {
 }
 
 /** A card title edit in progress, carried across a redraw so typed text is not lost. */
-export interface CardTitleDraft {
-  rowId: string;
-  value: string;
+/** What a title edit asks of its owner when it ends. */
+export interface CardTitleHooks {
   /** Enter with a name: make the next new card (feel findings B09). */
   onEnter?: () => void;
+  /** Escape with no name: select the card (notion-motion.md, Round 8c). */
+  onEscapeEmpty?: () => void;
+}
+
+export interface CardTitleDraft extends CardTitleHooks {
+  rowId: string;
+  value: string;
 }
 
 export interface BoardLane {
@@ -124,7 +130,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private root: HTMLElement | null = null;
   private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
   private readonly editHints = new WeakMap<HTMLElement, HTMLElement>();
-  private editing: { rowId: string; input: HTMLInputElement; onEnter?: () => void } | null = null;
+  private editing: ({ rowId: string; input: HTMLInputElement } & CardTitleHooks) | null = null;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, aggregate, aggregateHint, ...settings
@@ -915,7 +921,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   }
 
   /** Edits a card's title in place; `value` seeds a draft carried over a redraw. */
-  editTitle(rowId: string, options: { value?: string; onEnter?: () => void } = {}): void {
+  editTitle(rowId: string, options: { value?: string } & CardTitleHooks = {}): void {
     const cardEl = this.root?.querySelector<HTMLElement>(`[data-blok-database-card][data-row-id="${CSS.escape(rowId)}"]`);
 
     if (this.readOnly || cardEl === null || cardEl === undefined) {
@@ -933,11 +939,13 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
     this.editing = null;
 
-    return { rowId: editing.rowId, value: editing.input.value, ...(editing.onEnter !== undefined ? { onEnter: editing.onEnter } : {}) };
+    const { input, ...hooks } = editing;
+
+    return { ...hooks, value: input.value };
   }
 
   restoreTitleDraft(draft: CardTitleDraft): void {
-    this.editTitle(draft.rowId, { value: draft.value, ...(draft.onEnter !== undefined ? { onEnter: draft.onEnter } : {}) });
+    this.editTitle(draft.rowId, draft);
   }
 
   /**
@@ -945,7 +953,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
    * (research/36 §4). While it is open the card shows the page glyph and the
    * pencil turns into Open in side peek (feel findings B22).
    */
-  private startCardTitleEdit(cardEl: HTMLElement, rowId: string, options: { value?: string; onEnter?: () => void } = {}): void {
+  private startCardTitleEdit(cardEl: HTMLElement, rowId: string, options: { value?: string } & CardTitleHooks = {}): void {
     const titleEl = cardEl.querySelector<HTMLElement>('[data-blok-database-card-title]');
 
     if (titleEl === null) {
@@ -954,7 +962,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     // An untitled card shows placeholder text; it must not seed the input or count as the old title.
     const originalTitle = titleEl.hasAttribute('data-placeholder') ? '' : titleEl.textContent ?? '';
-    const state: { viaEnter: boolean; input: HTMLInputElement | null } = { viaEnter: false, input: null };
+    const state: { viaEnter: boolean; viaEscape: boolean; input: HTMLInputElement | null } = { viaEnter: false, viaEscape: false, input: null };
     const editBtn = cardEl.querySelector<HTMLElement>('[data-blok-database-edit-card]');
     const editHint = this.editHints.get(cardEl);
     const endEditing = (): void => {
@@ -1000,9 +1008,15 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
         input.addEventListener('keydown', (event) => {
           // eslint-disable-next-line @typescript-eslint/no-deprecated -- Keep the IME 229 fallback when isComposing is false.
           state.viaEnter = event.key === 'Enter' && !event.isComposing && event.keyCode !== 229;
+          state.viaEscape = event.key === 'Escape';
         });
         state.input = input;
-        this.editing = { rowId, input, ...(options.onEnter !== undefined ? { onEnter: options.onEnter } : {}) };
+        this.editing = {
+          rowId,
+          input,
+          ...(options.onEnter !== undefined ? { onEnter: options.onEnter } : {}),
+          ...(options.onEscapeEmpty !== undefined ? { onEscapeEmpty: options.onEscapeEmpty } : {}),
+        };
       },
       buildRestored: buildTitleDiv,
       onCommit: (newTitle) => {
@@ -1022,6 +1036,10 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
         // An empty Enter makes no next card: held Enter would make one after another (Notion unmeasured).
         if (state.viaEnter && newTitle !== '') {
           editing.onEnter?.();
+        }
+        // Only the unnamed Escape: a named one selects nothing (research/35:362).
+        if (state.viaEscape && newTitle === '') {
+          editing.onEscapeEmpty?.();
         }
       },
     });

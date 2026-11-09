@@ -9318,9 +9318,13 @@ export class DatabaseTool implements BlockTool {
     this.syncRowsFromBlocks();
 
     // feel findings B09: the new card opens with its title being edited; Enter with a name makes the next one.
+    // notion-motion.md, Round 8c: Escape with no name keeps the empty card, selected.
     const editNewCard = (): void => {
       if (this.view instanceof DatabaseBoardView) {
-        this.view.editTitle(rowData.id, { onEnter: () => this.handleAddRow(optionId, this.boardContainer ?? boardEl, subKey) });
+        this.view.editTitle(rowData.id, {
+          onEnter: () => this.handleAddRow(optionId, this.boardContainer ?? boardEl, subKey),
+          onEscapeEmpty: () => this.selectRows([rowData.id]),
+        });
       }
     };
 

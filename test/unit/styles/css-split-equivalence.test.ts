@@ -1552,6 +1552,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_VIEW_SETTINGS_OFFSETS_BYTES = 2473;
     // database.css: the timeline table panel is a white card from above « to the chart's bottom, and the "←" chip sits 8px in.
     const DATABASE_TIMELINE_PANEL_CARD_BYTES = 1350;
+    // database.css: the column drag ghost lets the next header show through, and the selection bar keeps its centring offset with tabs.
+    const DATABASE_DRAG_GHOST_SEE_THROUGH_BYTES = 156;
     // database.css: the ring of a row the peek steps to starts 70ms late.
     const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
@@ -1972,7 +1974,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CARD_GHOST_FILL_BYTES
       + DATABASE_TOOLBAR_CHEVRON_FADE_BYTES
       + DATABASE_VIEW_SETTINGS_OFFSETS_BYTES
-      + DATABASE_TIMELINE_PANEL_CARD_BYTES;
+      + DATABASE_TIMELINE_PANEL_CARD_BYTES
+      + DATABASE_DRAG_GHOST_SEE_THROUGH_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

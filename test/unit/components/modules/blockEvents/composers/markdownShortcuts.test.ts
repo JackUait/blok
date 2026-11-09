@@ -1907,6 +1907,31 @@ describe('MarkdownShortcuts', () => {
       expect(stopCapturing.mock.invocationCallOrder[0]).toBeGreaterThan(replace.mock.invocationCallOrder[0]);
     });
 
+    it('converts an em dash followed by a hyphen to divider (what "---" becomes after the em dash autoreplace)', () => {
+      const mockBlock = createBlock();
+
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '\u2014-';
+      }
+      const replace = vi.fn(() => createBlock({ id: 'divider-block' }));
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+          getBlockIndex: vi.fn(() => 0),
+          insertDefaultBlockAtIndex: vi.fn(() => mockBlock),
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([['divider', { settings: {} }]]),
+        } as unknown as BlokModules['Tools'],
+      });
+
+      const result = new MarkdownShortcuts(blok).handleInput(createInputEvent({ data: '-' }));
+
+      expect(replace).toHaveBeenCalledWith(mockBlock, 'divider', {});
+      expect(result).toBe(true);
+    });
+
     it('does not convert -- (only two hyphens)', () => {
       const mockBlock = createBlock();
       if (mockBlock.currentInput) {
@@ -2064,6 +2089,115 @@ describe('MarkdownShortcuts', () => {
 
       expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(newBlockIndex + 1);
       expect(setToBlock).toHaveBeenCalledWith(paragraphBlock, 'start');
+    });
+  });
+
+  describe('em dash autoreplace', () => {
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    const setupDash = (text: string, caretAt = text.length, wrapIn?: string): {
+      input: HTMLElement;
+      result: boolean;
+      dispatchChange: ReturnType<typeof vi.fn>;
+      startSubStep: ReturnType<typeof vi.fn>;
+      stopCapturing: ReturnType<typeof vi.fn>;
+    } => {
+      const input = document.createElement('div');
+
+      input.contentEditable = 'true';
+      document.body.appendChild(input);
+      const textNode = document.createTextNode(text);
+
+      if (wrapIn === undefined) {
+        input.appendChild(textNode);
+      } else {
+        const wrapper = document.createElement(wrapIn);
+
+        wrapper.appendChild(textNode);
+        input.appendChild(wrapper);
+      }
+
+      const range = document.createRange();
+
+      range.setStart(textNode, caretAt);
+      range.collapse(true);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      const dispatchChange = vi.fn();
+      const startSubStep = vi.fn();
+      const stopCapturing = vi.fn();
+      const mockBlock = createBlock({ currentInput: input, firstInput: input, lastInput: input, inputs: [input], dispatchChange });
+      const blok = createBlokModules({
+        BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
+        YjsManager: { startSubStep, stopCapturing } as unknown as BlokModules['YjsManager'],
+      });
+      const result = new MarkdownShortcuts(blok).handleInput(createInputEvent({ data: '-' }));
+
+      return { input, result, dispatchChange, startSubStep, stopCapturing };
+    };
+
+    const caretOffset = (): number => window.getSelection()?.getRangeAt(0).startOffset ?? -1;
+
+    it('turns "--" into an em dash as its own undo step, caret after the dash', () => {
+      const { input, result, dispatchChange, startSubStep, stopCapturing } = setupDash('a--');
+
+      expect(input.textContent).toBe('a\u2014');
+      expect(result).toBe(true);
+      expect(caretOffset()).toBe(2);
+      expect(startSubStep).toHaveBeenCalledTimes(1);
+      expect(dispatchChange).toHaveBeenCalledTimes(1);
+      expect(startSubStep.mock.invocationCallOrder[0]).toBeLessThan(dispatchChange.mock.invocationCallOrder[0]);
+      expect(stopCapturing.mock.invocationCallOrder[0]).toBeGreaterThan(dispatchChange.mock.invocationCallOrder[0]);
+    });
+
+    it('replaces only the "--" before the caret and keeps the text after it', () => {
+      const { input, result } = setupDash('a--b', 3);
+
+      expect(input.textContent).toBe('a\u2014b');
+      expect(result).toBe(true);
+      expect(caretOffset()).toBe(2);
+    });
+
+    it('leaves a single hyphen alone', () => {
+      const { input, result, startSubStep } = setupDash('a-');
+
+      expect(input.textContent).toBe('a-');
+      expect(result).toBe(false);
+      expect(startSubStep).not.toHaveBeenCalled();
+    });
+
+    it('leaves "--" inside inline code literal', () => {
+      const { input, result, startSubStep } = setupDash('a--', 3, 'code');
+
+      expect(input.textContent).toBe('a--');
+      expect(result).toBe(false);
+      expect(startSubStep).not.toHaveBeenCalled();
+    });
+
+    it('does not replace on paste', () => {
+      const input = document.createElement('div');
+
+      input.contentEditable = 'true';
+      document.body.appendChild(input);
+      const textNode = document.createTextNode('a--');
+
+      input.appendChild(textNode);
+      const range = document.createRange();
+
+      range.setStart(textNode, 3);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+      const blok = createBlokModules({
+        BlockManager: { currentBlock: createBlock({ currentInput: input }) } as unknown as BlokModules['BlockManager'],
+      });
+
+      const result = new MarkdownShortcuts(blok).handleInput(createInputEvent({ inputType: 'insertFromPaste', data: '--' }));
+
+      expect(input.textContent).toBe('a--');
+      expect(result).toBe(false);
     });
   });
 

@@ -102,7 +102,8 @@ export const DIVIDER_TOOL_NAME = 'divider';
  * Regex pattern for detecting divider shortcuts.
  * Matches exactly three hyphens with no other content.
  */
-export const DIVIDER_PATTERN = /^-{3}$/;
+// "\u2014-" is what "---" becomes once "--" autoreplaces to an em dash.
+export const DIVIDER_PATTERN = /^(?:-{3}|\u2014-)$/;
 
 /**
  * Tool name for quote blocks.

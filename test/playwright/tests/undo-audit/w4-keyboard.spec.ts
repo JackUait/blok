@@ -227,7 +227,8 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     await gotoTestPage(page);
   });
 
-  const shortcuts: Array<{ id: string; typed: string; converted: string[] }> = [
+  // `undone` is the literal text one undo leaves when it differs from what was typed.
+  const shortcuts: Array<{ id: string; typed: string; converted: string[]; undone?: string }> = [
     { id: 'W4K-1', typed: '# ', converted: ['header:'] },
     { id: 'W4K-2', typed: '## ', converted: ['header:'] },
     { id: 'W4K-3', typed: '### ', converted: ['header:'] },
@@ -237,7 +238,8 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     { id: 'W4K-7', typed: '[] ', converted: ['list:'] },
     { id: 'W4K-8', typed: '[x] ', converted: ['list:'] },
     { id: 'W4K-9', typed: '```', converted: ['code:'] },
-    { id: 'W4K-10', typed: '---', converted: ['divider:', 'paragraph:'] },
+    // The first two hyphens became an em dash while typing (Notion U080: u1 gives "—-").
+    { id: 'W4K-10', typed: '---', converted: ['divider:', 'paragraph:'], undone: '\u2014-' },
     { id: 'W4K-11', typed: '" ', converted: ['quote:'] },
     { id: 'W4K-13', typed: '**b**', converted: ['paragraph:b'] },
     { id: 'W4K-14', typed: '[a](x.io)', converted: ['paragraph:a'] },
@@ -256,7 +258,9 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
 
       await page.keyboard.press(UNDO);
       await settle(page);
-      expect(await plain(page), 'first undo leaves the literal marker').toEqual({ dom: [`paragraph:${s.typed}`], saved: [`paragraph:${s.typed}`] });
+      const literal = s.undone ?? s.typed;
+
+      expect(await plain(page), 'first undo leaves the literal marker').toEqual({ dom: [`paragraph:${literal}`], saved: [`paragraph:${literal}`] });
 
       await page.keyboard.press(REDO);
       await settle(page);
@@ -280,6 +284,72 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     await page.keyboard.press(UNDO);
     await settle(page);
     expect(await plain(page)).toEqual({ dom: ['paragraph:# Hello'], saved: ['paragraph:# Hello'] });
+  });
+
+  // Notion U080: "--" turns into an em dash while typing, as its own undo step.
+  test('W4K-EM1: "--" becomes an em dash and one undo gives back "--" with the caret after it', async ({ page }) => {
+    await create(page, [P('p', 'Note')]);
+    await caretAt(page, 'p', 'end');
+    await gap(page);
+    await page.keyboard.type(' --');
+    await gap(page);
+    expect(await plain(page)).toEqual({ dom: ['paragraph:Note \u2014'], saved: ['paragraph:Note \u2014'] });
+
+    await page.keyboard.press(UNDO);
+    await settle(page);
+    expect(await plain(page)).toEqual({ dom: ['paragraph:Note --'], saved: ['paragraph:Note --'] });
+    expect(await caret(page)).toBe('p@7');
+
+    await page.keyboard.press(REDO);
+    await settle(page);
+    expect(await plain(page)).toEqual({ dom: ['paragraph:Note \u2014'], saved: ['paragraph:Note \u2014'] });
+  });
+
+  // Notion U080 after "---": u1 "\u2014-" caret 2, u2 "\u2014" caret 1. Undo past "--" is unmeasured in Notion.
+  test('W4K-EM2: undo after "---" walks back through the em dash like Notion', async ({ page }) => {
+    await create(page, [P('p', '')]);
+    await caretAt(page, 'p', 0);
+    await page.keyboard.type('---');
+    await gap(page);
+    expect((await plain(page)).dom).toEqual(['divider:', 'paragraph:']);
+
+    await page.keyboard.press(UNDO);
+    await settle(page);
+    expect((await plain(page)).dom).toEqual(['paragraph:\u2014-']);
+    expect(await caret(page)).toBe('p@2');
+
+    await page.keyboard.press(UNDO);
+    await settle(page);
+    expect((await plain(page)).dom).toEqual(['paragraph:\u2014']);
+    expect(await caret(page)).toBe('p@1');
+
+    await page.keyboard.press(UNDO);
+    await settle(page);
+    expect((await plain(page)).dom).toEqual(['paragraph:--']);
+    expect(await caret(page)).toBe('p@2');
+  });
+
+  test('W4K-EM3: "-" typed after an em dash at the start of an empty block makes a divider', async ({ page }) => {
+    await create(page, [P('p', '\u2014')]);
+    await caretAt(page, 'p', 'end');
+    await gap(page);
+    await page.keyboard.type('-');
+    await gap(page);
+    expect((await plain(page)).dom).toEqual(['divider:', 'paragraph:']);
+  });
+
+  test('W4K-EM4: pasted "--" stays two hyphens', async ({ page }) => {
+    await create(page, [P('p', 'a')]);
+    await caretAt(page, 'p', 'end');
+    await page.locator('[data-blok-id="p"] [contenteditable="true"]').evaluate((node: HTMLElement) => {
+      const event = Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+        clipboardData: { getData: (type: string): string => (type === 'text/plain' ? '--' : ''), types: ['text/plain'] },
+      });
+
+      node.dispatchEvent(event);
+    });
+    await gap(page);
+    expect(await plain(page)).toEqual({ dom: ['paragraph:a--'], saved: ['paragraph:a--'] });
   });
 
   // Undo of an emoji conversion puts the caret after the literal shortcode.

@@ -165,7 +165,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
      * Divider shortcut triggers on the third hyphen — no space needed.
      */
     if (event.data === '-') {
-      return this.handleDividerShortcut();
+      return this.handleDividerShortcut() || this.handleEmDash();
     }
 
     /**
@@ -444,6 +444,53 @@ export class MarkdownShortcuts extends BlockEventComposer {
 
     // The DOM was mutated directly (not via a Tool re-render), so notify the
     // block to flush the change to Yjs — see the CRDT sync contract.
+    currentBlock.dispatchChange();
+
+    this.Blok.YjsManager.stopCapturing();
+
+    return true;
+  }
+
+  /**
+   * Notion turns a typed "--" into an em dash. It is its own undo step, so one
+   * undo gives back the literal "--".
+   * @returns true if "--" was replaced
+   */
+  private handleEmDash(): boolean {
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+    const currentInput = currentBlock?.currentInput;
+
+    if (!currentBlock || !currentInput) {
+      return false;
+    }
+
+    const selection = window.getSelection();
+
+    if (selection === null || !selection.isCollapsed || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const { startContainer: node, startOffset: offset } = selection.getRangeAt(0);
+
+    if (!(node instanceof Text) || !currentInput.contains(node) || node.parentElement?.closest('code')) {
+      return false;
+    }
+
+    if (offset < 2 || node.data.slice(offset - 2, offset) !== '--') {
+      return false;
+    }
+
+    this.Blok.YjsManager.startSubStep();
+
+    node.replaceData(offset - 2, 2, '\u2014');
+
+    const caretRange = document.createRange();
+
+    caretRange.setStart(node, offset - 1);
+    caretRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(caretRange);
+
     currentBlock.dispatchChange();
 
     this.Blok.YjsManager.stopCapturing();

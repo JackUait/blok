@@ -591,6 +591,39 @@ describe('page trash', () => {
     expect(pages.trashedIn('keys')).toBeNull();
   });
 
+  const trashedPointer = (pageId: string): { id: string; type: string; data: Record<string, unknown> } => ({
+    id: `p-${pageId}`,
+    type: 'page',
+    data: { pageId, trashed: { at: 1, by: 'u1', formerParentId: null, formerIndex: 0 } },
+  });
+
+  it('trashes a page whose block a restore marked trashed', () => {
+    const pages = new PageRegistry(seed());
+    const watch = new PointerWatch(pages);
+
+    watch.observe([pointer('keys')]);
+    watch.observe([trashedPointer('keys')]);
+
+    expect(pages.trashedIn('keys')?.id).toBe('keys');
+  });
+
+  it('never untrashes a page whose only block is marked trashed, even on a fresh editor', () => {
+    const pages = new PageRegistry(seed());
+
+    pages.trash('keys');
+    new PointerWatch(pages).observe([trashedPointer('keys')]);
+
+    expect(pages.trashedIn('keys')?.id).toBe('keys');
+  });
+
+  it('trashes a page a fresh editor finds only as a trashed block', () => {
+    const pages = new PageRegistry(seed());
+
+    new PointerWatch(pages).observe([trashedPointer('keys')]);
+
+    expect(pages.trashedIn('keys')?.id).toBe('keys');
+  });
+
   it('never trashes a page made from an "@" mention: no page block ever pointed at it', () => {
     const pages = new PageRegistry(seed());
     const watch = new PointerWatch(pages);

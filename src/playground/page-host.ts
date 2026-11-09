@@ -491,8 +491,13 @@ export class PageRegistry {
 
 /* ----------------------------------------------------------------- trash */
 
-const pointedPages = (blocks: OutputBlockData[]): string[] =>
-  blocks.flatMap((block) => (block.type === 'page' && typeof block.data?.pageId === 'string' ? [block.data.pageId] : []));
+/** A page block a server restore marked trashed: the page is in Trash, though the block stays. */
+const isTrashedPointer = (block: OutputBlockData): boolean =>
+  typeof block.data?.trashed === 'object' && block.data.trashed !== null;
+
+const pointedPages = (blocks: OutputBlockData[], trashed = false): string[] =>
+  blocks.flatMap((block) => (block.type === 'page' && typeof block.data?.pageId === 'string'
+    && isTrashedPointer(block) === trashed ? [block.data.pageId] : []));
 
 /**
  * Notion's Trash, derived from page blocks: a page whose block this editor saw
@@ -533,6 +538,12 @@ export class PointerWatch {
         this.pages.trash(id);
       } else {
         this.pages.move(id, holder);
+      }
+    });
+    // A trashed block is no pointer, even on first sight: unlike a late render, it says so itself.
+    pointedPages(blocks, true).forEach((id) => {
+      if (!present.has(id) && (own === undefined || this.pages.holderOf(id, own) === null)) {
+        this.pages.trash(id);
       }
     });
   }

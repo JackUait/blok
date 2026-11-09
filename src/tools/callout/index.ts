@@ -24,6 +24,7 @@ import { createColorPicker, type ColorPickerHandle } from '../../components/shar
 import { colorVarName } from '../../components/shared/color-presets';
 import { mapToNearestPresetName } from '../../components/utils/color-mapping';
 import { EmojiPicker, prefetchEmojiPickerData } from './emoji-picker';
+import { chooseLanding, playLanding, type Landing } from './emoji-landing';
 import { IconCallout, IconEmojiSmile, IconPaintRoller } from '../../components/icons';
 import { renderCalloutPreview } from './preview';
 import {
@@ -119,6 +120,8 @@ export class CalloutTool implements BlockTool {
   private readOnly: boolean;
   private _data: CalloutData;
   private _dom: CalloutDOMRefs | null = null;
+  private _lastLanding: Landing | null = null;
+  private _stopLanding: (() => void) | null = null;
   private _colorPicker: ColorPickerHandle | null = null;
   private readonly _customEmojiPicker: ((onSelect: (emoji: string) => void) => void) | undefined;
   private blockId?: string;
@@ -433,6 +436,9 @@ export class CalloutTool implements BlockTool {
    * block, so the last callout out takes the shared picker with it.
    */
   public destroy(): void {
+    this._stopLanding?.();
+    this._stopLanding = null;
+
     const shared = sharedEmojiPickers.get(this.api.i18n);
 
     if (shared === undefined || !shared.users.delete(this)) {
@@ -530,7 +536,7 @@ export class CalloutTool implements BlockTool {
     }
 
     const handlers = {
-      onSelect: (native: string): void => this.setEmoji(native),
+      onSelect: (native: string, origin?: DOMRect): void => this.setEmoji(native, origin),
       onRemove: (): void => this.setEmoji(''),
     };
     const shared = this.acquireEmojiPicker(handlers);
@@ -541,7 +547,7 @@ export class CalloutTool implements BlockTool {
     }
 
     shared.owner = this;
-    void shared.picker.open(this._dom.emojiButton, undefined, handlers);
+    void shared.picker.open(this._dom.emojiButton, undefined, { ...handlers, current: this._data.emoji });
   }
 
   private acquireEmojiPicker(handlers: { onSelect: (native: string) => void; onRemove: () => void }): SharedEmojiPicker {
@@ -570,20 +576,38 @@ export class CalloutTool implements BlockTool {
     return created;
   }
 
-  private setEmoji(native: string): void {
+  /**
+   * @param native - the new emoji, or '' to remove it
+   * @param origin - where the picked glyph was on screen; a pick from the picker lands from there
+   */
+  private setEmoji(native: string, origin?: DOMRect): void {
     const previous = this._data.emoji;
 
     this._data.emoji = native;
+    this._stopLanding?.();
+    this._stopLanding = null;
 
     if (this._dom === null) {
       return;
     }
 
-    if (native !== previous) {
+    this._dom.emojiFace.textContent = native;
+
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+
+    if (origin !== undefined && native !== '' && !reduceMotion) {
+      this._lastLanding = chooseLanding(this._lastLanding);
+      this._stopLanding = playLanding(this._lastLanding, {
+        from: origin,
+        face: this._dom.emojiFace,
+        surface: this._dom.wrapper,
+        previous,
+        next: native,
+      });
+    } else if (native !== previous) {
       this.animateEmojiSwap(previous, native);
     }
 
-    this._dom.emojiFace.textContent = native;
     this._dom.emojiButton.setAttribute(
       'aria-label',
       calloutEmojiButtonLabel(

@@ -117,4 +117,23 @@ test.describe('undo audit: keyboard cross-block text selection (U072)', () => {
     expect(await savedText(page)).toEqual(['b1:Alpha <strong>one</strong>', 'b2:<strong>Beta two</strong>']);
     expect(await selection(page)).toBe('b1@6 -> b2@8');
   });
+
+  test('Shift+ArrowDown from a text selection keeps the focus column in the next block', async ({ page }) => {
+    await mount(page, SETUP);
+    await editable(page, 'b1').click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    expect(await selection(page)).toBe('b1@3 -> b1@6');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.up('Shift');
+
+    expect(await selection(page)).toBe('b1@3 -> b2@4');
+  });
 });

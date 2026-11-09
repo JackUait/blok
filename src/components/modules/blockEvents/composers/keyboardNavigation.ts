@@ -5,7 +5,7 @@ import { Flipper } from '../../../flipper';
 import { SelectionUtils } from '../../../selection';
 import { keyCodes, delay, isIosDevice } from '../../../utils';
 import { areBlocksMergeable } from '../../../utils/blocks';
-import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret/index';
+import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtLastLine, isCaretAtStartOfInput } from '../../../utils/caret/index';
 import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_NAME } from '../constants';
 import { deliverOnSubmit } from '../../../utils/on-submit';
 import { horizontalArrowIntent, keyCodeFromEvent } from '../utils/keyboard';
@@ -1441,6 +1441,16 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     /** Caret helpers read a collapsed caret, so navigate from the focus alone. */
     selection.collapse(focus.node, focus.offset);
+
+    const focusHost = getEditingHost(focus.node);
+
+    /**
+     * An open inline toolbar can cover the next block, and the column lookup
+     * would hit it and fall back to offset 0. It reopens on the new selection.
+     */
+    if (this.Blok.InlineToolbar.opened && focusHost !== null && isCaretAtLastLine(focusHost)) {
+      this.Blok.InlineToolbar.close(false);
+    }
 
     /** Shift only selects: it must never append a block, so no undo step appears. */
     if (!Caret.navigateVerticalNext(false, false)) {

@@ -1538,6 +1538,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CARD_HUE_TINTS_BYTES = 1728;
     // database.css: a one-view title stays one line, "+" and "…" keep 24px, and » folds with New.
     const DATABASE_TITLE_ONE_LINE_BYTES = 679;
+    // database.css: every database panel, not only View settings, takes the 10px menu corner.
+    const DATABASE_PANEL_MENU_RADIUS_BYTES = 125;
     // database.css: the ring of a row the peek steps to starts 70ms late.
     const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
@@ -1952,7 +1954,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TABLE_ROW_GUTTER_BLEED_BYTES
       + DATABASE_LIST_ROW_GUTTER_BLEED_BYTES
       + DATABASE_CARD_HUE_TINTS_BYTES
-      + DATABASE_TITLE_ONE_LINE_BYTES;
+      + DATABASE_TITLE_ONE_LINE_BYTES
+      + DATABASE_PANEL_MENU_RADIUS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

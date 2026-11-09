@@ -47,15 +47,29 @@ describe('the empty title keeps its placeholder width (V02)', () => {
   });
 });
 
-// notion-motion.md, Round 7 "Long database title".
-describe('a long one-view title stays one line', () => {
-  const body = (): string => rule('[data-blok-database-title-row][data-single-view] > [data-blok-database-title]:not(:focus, [hidden])');
+// notion-motion.md, Round 7 "Long database title" and Round 8b "Long title while editing".
+describe('a long title stays one line', () => {
+  const rest = (): string => rule('[data-blok-database-title-row] > [data-blok-database-title]:not([hidden])');
+  const editing = (): string => rule('[data-blok-database-title-row] > [data-blok-database-title]:focus:not([hidden])');
 
-  it('clamps to one line with an ellipsis, as Notion does', () => {
-    expect(body()).toMatch(/display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1;/);
-    expect(body()).toMatch(/overflow: hidden/);
-    expect(body()).toMatch(/text-overflow: ellipsis/);
-    expect(body()).toMatch(/white-space: break-spaces/);
+  it('clamps to one line with an ellipsis, with one view or several', () => {
+    expect(rest()).toMatch(/display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1;/);
+    expect(rest()).toMatch(/overflow: hidden/);
+    expect(rest()).toMatch(/text-overflow: ellipsis/);
+    expect(rest()).toMatch(/white-space: break-spaces/);
+  });
+
+  it('stays one line while edited and scrolls sideways with no scrollbar', () => {
+    expect(editing()).toMatch(/display: block/);
+    expect(editing()).toMatch(/-webkit-line-clamp: none/);
+    expect(editing()).toMatch(/white-space: nowrap/);
+    expect(editing()).toMatch(/overflow-x: auto/);
+    expect(editing()).toMatch(/text-overflow: clip/);
+    expect(editing()).toMatch(/scrollbar-width: none/);
+  });
+
+  it('with several views the title spans its own row', () => {
+    expect(rule('[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title]')).toMatch(/flex: 1 1 0%; min-width: 0/);
   });
 
   it('"+" and "…" keep their 24px while the title gives way', () => {

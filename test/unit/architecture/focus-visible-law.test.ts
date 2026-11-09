@@ -189,8 +189,8 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
   },
   {
     file: 'src/styles/database.css',
-    match: '[data-blok-database-title]:not(:focus',
-    reason: 'Text-entry field: the contenteditable database title unclamps while it is edited, so the caret never sits in a hidden line.',
+    match: '[data-blok-database-title]:focus:not([hidden])',
+    reason: 'Text-entry field: the contenteditable database title stays one line and scrolls sideways while it is edited, so the caret never sits in a hidden line.',
   },
   {
     file: 'src/components/utils/placeholder.ts',

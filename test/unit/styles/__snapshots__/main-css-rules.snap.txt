@@ -6504,13 +6504,28 @@ button[data-blok-database-column-count]:hover {
   padding-right: 0;
 }
 
-[data-blok-database-title-row][data-single-view] > [data-blok-database-title]:not(:focus, [hidden]) {
+[data-blok-database-title-row] > [data-blok-database-title]:not([hidden]) {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: break-spaces;
+}
+
+[data-blok-database-title-row]:not([data-single-view]) > [data-blok-database-title] {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+[data-blok-database-title-row] > [data-blok-database-title]:focus:not([hidden]) {
+  display: block;
+  -webkit-line-clamp: none;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+  scrollbar-width: none;
 }
 
 [data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after {

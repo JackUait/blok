@@ -94,6 +94,30 @@ const titleBox = (page: Page): Promise<{ height: number; clientHeight: number; s
     };
   });
 
+const editBox = (page: Page): Promise<{ height: number; clientHeight: number; scrollHeight: number; scrollLeft: number; whiteSpace: string; scrollbarWidth: string; clamp: string; overflow: string; left: number; right: number; rowRight: number; caretRight: number }> =>
+  page.locator(TITLE).evaluate((el) => {
+    const style = getComputedStyle(el);
+    const box = el.getBoundingClientRect();
+    const row = el.parentElement?.getBoundingClientRect();
+    const selection = window.getSelection();
+    const caret = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0).getBoundingClientRect() : null;
+
+    return {
+      height: box.height,
+      clientHeight: el.clientHeight,
+      scrollHeight: el.scrollHeight,
+      scrollLeft: el.scrollLeft,
+      whiteSpace: style.whiteSpace,
+      scrollbarWidth: style.scrollbarWidth,
+      clamp: style.webkitLineClamp,
+      overflow: style.textOverflow,
+      left: box.left,
+      right: box.right,
+      rowRight: row?.right ?? 0,
+      caretRight: caret?.right ?? 0,
+    };
+  });
+
 test.describe('Database — a long title stays one line', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -122,24 +146,70 @@ test.describe('Database — a long title stays one line', () => {
     });
   }
 
-  test('shows the whole title while it is edited, and one line again after Enter', async ({ page }) => {
+  // notion-motion.md, Round 8b "Long title while editing": one 31.2 line that scrolls sideways.
+  test('stays one line while it is edited and scrolls to the caret, then clamps again after Enter', async ({ page }) => {
     await create(page, { title: LONG_TITLE });
     await setRowWidth(page, 400);
     await page.locator(TITLE).click();
-    // End only reaches the end of a wrapped line: put the caret after the last letter.
-    await page.locator(TITLE).evaluate((el) => window.getSelection()?.collapse(el, el.childNodes.length));
+    await page.keyboard.press('End');
     await page.keyboard.type('!');
-    const editing = await titleBox(page);
+    const editing = await editBox(page);
 
+    expect(editing.height).toBeCloseTo(31.2, 0);
     expect(editing.scrollHeight).toBe(editing.clientHeight);
-    expect(editing.height).toBeGreaterThan(40);
+    expect(editing.whiteSpace).toBe('nowrap');
+    expect(editing.scrollbarWidth).toBe('none');
+    expect(editing.scrollLeft).toBeGreaterThan(0);
+    expect(editing.caretRight).toBeLessThanOrEqual(editing.right + 1);
+    expect(editing.caretRight).toBeGreaterThan(editing.left);
+    expect(editing.right).toBeLessThanOrEqual(editing.rowRight);
     await expect(page.locator(TITLE)).toHaveText(`${LONG_TITLE}!`);
 
     await page.keyboard.press('Enter');
-    const after = await titleBox(page);
+    const after = await editBox(page);
 
     expect(after.height).toBeCloseTo(31.2, 0);
-    expect(after.scrollTop).toBe(0);
+    expect(after.clamp).toBe('1');
+    expect(after.overflow).toBe('ellipsis');
+    expect(after.scrollLeft).toBe(0);
+  });
+
+  // notion-motion.md, Round 8b "Long title with view tabs": the title has its own one-line row.
+  test('with several views the title is one line with an ellipsis above the tabs', async ({ page }) => {
+    await create(page, {
+      title: LONG_TITLE,
+      views: [
+        { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], properties: [{ id: 't', visible: true, width: 280 }] },
+        { id: 'v2', name: 'List view', type: 'list', position: 'a1', sorts: [], filters: [], properties: [{ id: 't', visible: true }] },
+      ],
+    });
+    await setRowWidth(page, 400);
+    const box = await titleBox(page);
+
+    expect(box.height).toBeCloseTo(31.2, 0);
+    expect(box.clamp).toBe('1');
+    expect(box.overflow).toBe('ellipsis');
+    const title = await page.locator(TITLE).boundingBox();
+    const tab = await page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-tab-bar] [role="tab"], ${BLOK_INTERFACE_SELECTOR} [data-blok-database-tab-compact]`).first().boundingBox();
+
+    // Notion: title top 224.4, first tab top 269.
+    expect((tab?.y ?? 0) - (title?.y ?? 0)).toBeCloseTo(44.6, 0);
+  });
+
+  // Notion's title box spans its own row (Round 8b: 388 wide in a 400 database), so an empty one still shows its placeholder.
+  test('with several views an empty title spans the row and shows its placeholder', async ({ page }) => {
+    await create(page, {
+      title: '',
+      views: [
+        { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], properties: [{ id: 't', visible: true, width: 280 }] },
+        { id: 'v2', name: 'List view', type: 'list', position: 'a1', sorts: [], filters: [], properties: [{ id: 't', visible: true }] },
+      ],
+    });
+    await setRowWidth(page, 400);
+    const box = await page.locator(TITLE).boundingBox();
+
+    expect(box?.width).toBeCloseTo(400, 0);
+    expect(box?.height).toBeCloseTo(31.2, 0);
   });
 
   test('an empty title keeps its placeholder width', async ({ page }) => {

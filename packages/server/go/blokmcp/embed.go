@@ -247,7 +247,7 @@ func (a *Attached) middleware(next mcp.MethodHandler) mcp.MethodHandler {
 			}
 		case "prompts/get":
 			if get, ok := req.(*mcp.GetPromptRequest); ok && get.Params != nil && a.ownsPrompt(get.Params.Name) {
-				return internalError(a.server.getPrompt(ctx, req))
+				return hidden(a.server.getPrompt(ctx, req))
 			}
 		}
 		return next(ctx, method, req)
@@ -352,16 +352,17 @@ func withEntries(host any, key string, blok []json.RawMessage) ([]byte, error) {
 	return marshal(members)
 }
 
-// hidden passes Blok's own protocol errors on. Any other error (the host's
-// caller hook, a host source, creator or store, Blok's own) is logged in
-// full and answered -32603 with fixed words. The standalone server keeps
+// hidden, for Blok's tools/call and prompts/get, passes Blok's own protocol
+// errors on. Any other error (the host's caller hook, a host source,
+// creator or store, Blok's own) is logged in full and answered -32603 with
+// fixed words. The standalone server keeps
 // internalError, which sends the text.
 func hidden(result mcp.Result, err error) (mcp.Result, error) {
 	var wire *jsonrpc.Error
 	if err == nil || errors.As(err, &wire) {
 		return result, err
 	}
-	logf("a tool call failed: %v", err)
+	logf("a Blok call failed: %v", err)
 	return nil, &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: callFailed}
 }
 

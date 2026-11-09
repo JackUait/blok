@@ -385,3 +385,45 @@ func TestAnUnexpectedErrorIsLoggedAndAnsweredWithFixedWords(t *testing.T) {
 		t.Fatalf("host_echo: %v", err)
 	}
 }
+
+// promptFails runs the real engine but fails Blok's prompts.
+type promptFails struct{ real invoker }
+
+func (p promptFails) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
+	if op == "mcpPrompt" {
+		return "", errors.New("secret-prompt-failure")
+	}
+	return p.real.Invoke(ctx, op, input, timeout)
+}
+
+// An unexpected prompts/get error gets the same fixed words as a tool call.
+func TestAnUnexpectedPromptErrorIsAnsweredWithFixedWords(t *testing.T) {
+	var log strings.Builder
+	previous := logOutput
+	logOutput = &log
+	t.Cleanup(func() { logOutput = previous })
+	pool, err := newPool(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blok, err := embedWith(embedOptions(t), as("alice"), promptFails{real: pool})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(blok.Close)
+	if len(blok.promptNames) == 0 {
+		t.Fatal("Blok serves no prompts")
+	}
+	server := hostServer(blok, "", "")
+	if err := blok.Attach(server); err != nil {
+		t.Fatal(err)
+	}
+	session := connect(t, server)
+	_, err = session.GetPrompt(context.Background(), &mcp.GetPromptParams{Name: blok.promptNames[0]})
+	if wire := wireError(err); wire == nil || wire.Code != jsonrpc.CodeInternalError || wire.Message != "Blok could not run this call." {
+		t.Fatalf("err %v", err)
+	}
+	if !strings.Contains(log.String(), "secret-prompt-failure") {
+		t.Fatalf("log %q", log.String())
+	}
+}

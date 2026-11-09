@@ -42,7 +42,24 @@ describe('property type glyphs (Notion shapes on the Blok Line grid)', () => {
   it('Title draws "Aa" from strokes, with the cap on the type grid (cap 5, baseline 15)', () => {
     const d = svg(icons.IconLetterCase).querySelector('path')?.getAttribute('d') ?? '';
 
-    expect(d).toMatch(/^M3 15L6\.5 5L10 15/);
+    expect(d).toMatch(/^M2 15L6 5L10 15/);
+  });
+
+  // Notion's header "Aa" inks 18x12 px (views-kit/notion-live/m38-table.png). At 20px
+  // the strokes span x 2..18 and y 5..15, so the ink reads 18x12 there too.
+  it('Title "Aa" spans the full width at Notion\'s 3:2 shape, with a stroke of air between A and a', () => {
+    const root = svg(icons.IconLetterCase);
+    const d = root.querySelector('path')?.getAttribute('d') ?? '';
+    const points = [...d.matchAll(/[MLHV]?([\d.]+) ([\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+    const bowl = root.querySelector('circle');
+    const [cx, cy, r] = [num(bowl, 'cx'), num(bowl, 'cy'), num(bowl, 'r')];
+    const xs = [...points.map(([x]) => x), cx - r, cx + r];
+    const ys = [...points.map(([, y]) => y), cy - r, cy + r];
+    const stem = Number(/V([\d.]+)$/.exec(d)?.[1]);
+
+    expect([Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]).toEqual([2, 18, 5, 15]);
+    expect(Math.max(...xs) - Math.min(...xs) + 1.25).toBeGreaterThan((stem - Math.min(...ys) + 1.25) * 1.5);
+    expect(cx - r - 10 - 1.25).toBeGreaterThanOrEqual(1.25);
   });
 
   it('the two people heads keep a full stroke of space between them', () => {

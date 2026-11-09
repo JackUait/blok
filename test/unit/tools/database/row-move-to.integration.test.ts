@@ -1515,7 +1515,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
 
         if (close === null) throw new Error('missing native body drawer close button');
         close.click();
-        opened.drawer.dispatchEvent(new Event('transitionend'));
+        opened.drawer.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
       } else {
         await dashboardCapabilityBodySourceOpen('q2');
       }
@@ -1811,7 +1811,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
       if (close === null) throw new Error('missing denied drawer close button');
       if (!denied.title.readOnly) throw new Error('denied-born drawer fixture was writable');
       close.click();
-      denied.drawer.dispatchEvent(new Event('transitionend'));
+      denied.drawer.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
       await quiet();
       const ownerId = loss === 'dashboard-readonly' ? 'db' : 'dashboard-capability-definition';
       const owner = current.blocks.getById(ownerId);

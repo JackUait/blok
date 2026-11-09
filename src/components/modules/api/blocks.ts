@@ -610,10 +610,19 @@ export class BlocksAPI extends Module {
    * @param data - tool data
    * @param options - parent, position, id, tunes, focus, replace
    */
-  public insertAt = (type?: string, data?: BlockToolData, options: InsertAtOptions = {}): BlockAPIInterface =>
-    options.anonymous === true
+  public insertAt = (type?: string, data?: BlockToolData, options: InsertAtOptions = {}): BlockAPIInterface => {
+    const placed = options.anonymous === true
       ? this.Blok.YjsManager.withoutAuthor(() => this.placeBlock(type, data, options, 'api'))
       : this.placeBlock(type, data, options, 'api');
+    const block = options.select === true ? this.Blok.BlockManager.getBlockById(placed.id) : undefined;
+
+    if (block !== undefined) {
+      this.Blok.BlockSelection.clearSelection();
+      this.Blok.BlockSelection.selectBlock(block);
+    }
+
+    return placed;
+  };
 
   /**
    * Add a block the way a toolbox pick does: wait for the tool's

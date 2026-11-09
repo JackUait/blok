@@ -152,6 +152,35 @@ test('toolbar Filter and Sort are 28px icon buttons in Notion icon gray (researc
   await expect(page.getByRole('button', { name: 'Filter', exact: true })).toBeVisible();
 });
 
+// notion-motion.md Round 5 (filter-field.png): a 266x28 field over a list that scrolls, "Add advanced filter" pinned at the foot.
+test('"+ Filter" over a long schema keeps a 28px "Filter by…" field and its "Add advanced filter" footer in the window', async ({ page }) => {
+  const many = [
+    { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+    ...Array.from({ length: 24 }, (_, i) => ({ id: `p-t${i}`, name: `Text ${String(i).padStart(2, '0')}`, type: 'text', position: `b${String(i).padStart(2, '0')}` })),
+  ];
+
+  await page.setViewportSize({ width: 1512, height: 717 });
+  await mount(page, undefined, [{
+    id: 'db-1',
+    type: 'database',
+    data: { schema: many, views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }], activeViewId: 'v1' },
+  }]);
+  await page.getByTestId('database-toolbar-filter').click();
+
+  const field = page.getByTestId('database-filter-picker-search');
+  const footer = page.getByTestId('database-filter-picker-advanced');
+
+  await expect(field).toHaveAttribute('placeholder', 'Filter by…');
+  // The card opens from scale(0.96): measure once it settles.
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+  expect(await field.evaluate((el) => (el as HTMLElement).offsetHeight)).toBe(28);
+  await expect(footer).toHaveText('Add advanced filter');
+  const box = await footer.boundingBox();
+
+  expect(box).not.toBeNull();
+  expect((box?.y ?? Infinity) + (box?.height ?? 0)).toBeLessThanOrEqual(717);
+});
+
 test('rows stay 37px with Files and Button columns and a long URL (research/07:70, 08:380)', async ({ page }) => {
   for (const rowId of ['r1', 'r2']) {
     expect((await page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`).boundingBox())?.height).toBe(37);

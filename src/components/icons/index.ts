@@ -494,6 +494,18 @@ export const IconTrash = `
 
 // Horizontal dots / more options icon — the house more-options glyph, used by
 // menus and by the CSS-sized image and embed overlay bars alike.
+// Database row gutter grip: Notion's 8x16 at 20px. The editor's block handle stays IconMenu.
+export const IconRowGrip = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="7.5" cy="4" r="1.25" fill="currentColor"/>
+  <circle cx="12.5" cy="4" r="1.25" fill="currentColor"/>
+  <circle cx="7.5" cy="10" r="1.25" fill="currentColor"/>
+  <circle cx="12.5" cy="10" r="1.25" fill="currentColor"/>
+  <circle cx="7.5" cy="16" r="1.25" fill="currentColor"/>
+  <circle cx="12.5" cy="16" r="1.25" fill="currentColor"/>
+</svg>
+`;
+
 export const IconDotsHorizontal = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <circle cx="6" cy="10" r="1" fill="currentColor"/>
@@ -1484,8 +1496,8 @@ export const IconDownload = `
 // Database property type glyphs, drawn after Notion's.
 export const IconLetterCase = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3 15L6.5 5L10 15M4.25 11.5H8.75M17 9.5V15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="14.25" cy="12.25" r="2.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2 15L6 5L10 15M3.25 12H8.75M18 9.5V15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="15.25" cy="12.25" r="2.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

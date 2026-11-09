@@ -27,7 +27,23 @@ const buildBoard = (ids: string[]): Board => {
 
     column.setAttribute('data-blok-database-column', '');
     column.setAttribute('data-option-id', id);
-    column.textContent = id;
+
+    const header = document.createElement('div');
+
+    header.setAttribute('data-blok-database-column-header', '');
+    header.textContent = id;
+    vi.spyOn(header, 'getBoundingClientRect').mockReturnValue({
+      left: index * COLUMN_WIDTH + 8,
+      right: index * COLUMN_WIDTH + COLUMN_WIDTH - 8,
+      top: 0,
+      bottom: 40,
+      width: COLUMN_WIDTH - 16,
+      height: 40,
+      x: index * COLUMN_WIDTH + 8,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    column.appendChild(header);
     board.appendChild(column);
 
     const left = index * COLUMN_WIDTH;
@@ -57,9 +73,15 @@ const pointer = (type: string, clientX: number, clientY = 100): PointerEvent =>
 
 const ghost = (): HTMLElement | null => document.body.querySelector('[data-blok-database-column-ghost]');
 
-/** The left edge of the drop line that is showing, ignoring one that is fading out. */
-const lineLeft = (): string | null => Array.from(document.body.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'))
-  .find((el) => el.style.opacity !== '0')?.style.left ?? null;
+/** No drop line shows: the headers sliding apart mark the drop. */
+const lineShown = (): boolean => Array.from(document.body.querySelectorAll<HTMLElement>('[data-blok-database-drop-line]'))
+  .some((el) => el.style.opacity !== '0');
+
+const headerOf = (column: HTMLElement | undefined): HTMLElement | null =>
+  column?.querySelector<HTMLElement>(':scope > [data-blok-database-column-header]') ?? null;
+
+/** Each column's header transform, in column order. */
+const slides = (board: Board): string[] => board.columns.map((column) => headerOf(column)?.style.transform ?? '');
 
 const hideComputedShorthand = (): void => {
   const real = window.getComputedStyle.bind(window);
@@ -142,12 +164,17 @@ describe('database column drag mutants', () => {
       document.dispatchEvent(pointer('pointermove', from + DRAG_THRESHOLD + 1));
     };
 
-    it('carries a copy of the column and leaves the original in place, marked as the source', () => {
+    // notion-motion.md "Board column (group) drag": only the header strip moves; the cards stay.
+    it('carries a copy of the header only, and marks the column as the source', () => {
       const board = buildBoard(['a', 'b', 'c']);
+      const card = document.createElement('div');
 
+      card.setAttribute('data-blok-database-card', '');
+      board.columns[0].appendChild(card);
       startDrag(board);
 
-      expect(ghost()?.textContent).toBe('a');
+      expect(ghost()?.querySelector('[data-blok-database-column-header]')?.textContent).toBe('a');
+      expect(ghost()?.querySelector('[data-blok-database-card]')).toBeNull();
       expect(board.columns[0].style.opacity).toBe('');
       expect(board.columns[0].getAttribute('data-blok-database-drag-source')).toBe('');
 
@@ -180,55 +207,80 @@ describe('database column drag mutants', () => {
     });
   });
 
-  describe('the drop line', () => {
+  describe('the sliding headers', () => {
     const startDrag = (board: Board): void => {
       board.drag.beginTracking('a', 50, 100);
       document.dispatchEvent(pointer('pointermove', 61));
     };
 
-    it('draws the line on the seam before the column the cursor is left of', () => {
+    it('moves no header while the drop is the start slot, and draws no line', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 120));
 
-      expect(lineLeft()).toBe('98px');
+      expect(slides(board)).toEqual(['', '', '']);
+      expect(lineShown()).toBe(false);
 
       board.drag.cleanup();
     });
 
-    it('moves the line rather than drawing a second one', () => {
+    it('slides the passed header into the freed slot', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
-      document.dispatchEvent(pointer('pointermove', 120));
       document.dispatchEvent(pointer('pointermove', 220));
 
-      expect(board.columns[1].style.marginInlineStart).toBe('');
-      expect(lineLeft()).toBe('198px');
+      expect(slides(board)).toEqual(['', 'translateX(-100px)', '']);
+      expect(board.columns.map((column) => headerOf(column)?.hasAttribute('data-blok-database-column-sliding'))).toEqual([false, true, false]);
+      expect(lineShown()).toBe(false);
 
       board.drag.cleanup();
     });
 
-    it('draws the line after the last column when the cursor is past it', () => {
+    it('slides every passed header when the cursor is past the last column', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(lineLeft()).toBe('304px');
-      expect(board.columns[1].style.marginInlineStart).toBe('');
+      expect(slides(board)).toEqual(['', 'translateX(-100px)', 'translateX(-100px)']);
 
       board.drag.cleanup();
     });
 
-    it('never moves a column, the dragged one included', () => {
+    it('slides a header back when the cursor returns', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
+      document.dispatchEvent(pointer('pointermove', 400));
+      document.dispatchEvent(pointer('pointermove', 120));
+
+      expect(slides(board)).toEqual(['', '', '']);
+      expect(board.wrapper.querySelector('[data-blok-database-column-sliding]')).toBeNull();
+
+      board.drag.cleanup();
+    });
+
+    it('slides headers the other way when a column moves toward the start', () => {
+      const board = buildBoard(['a', 'b', 'c']);
+
+      board.drag.beginTracking('c', 250, 100);
+      document.dispatchEvent(pointer('pointermove', 239));
       document.dispatchEvent(pointer('pointermove', 10));
 
-      expect(board.columns[0].style.marginInlineStart).toBe('');
+      expect(slides(board)).toEqual(['translateX(100px)', 'translateX(100px)', '']);
+
+      board.drag.cleanup();
+    });
+
+    it('never moves a column body, only headers', () => {
+      const board = buildBoard(['a', 'b', 'c']);
+
+      startDrag(board);
+      document.dispatchEvent(pointer('pointermove', 400));
+
+      expect(board.columns.map((column) => column.style.transform)).toEqual(['', '', '']);
 
       board.drag.cleanup();
     });
@@ -280,15 +332,14 @@ describe('database column drag mutants', () => {
     const startDrag = (board: Board): void => {
       board.drag.beginTracking('a', 50, 100);
       document.dispatchEvent(pointer('pointermove', 61));
-      document.dispatchEvent(pointer('pointermove', 120));
+      document.dispatchEvent(pointer('pointermove', 400));
     };
 
     const assertClean = (board: Board): void => {
       expect(ghost()).toBeNull();
       expect(board.columns[0].hasAttribute('data-blok-database-drag-source')).toBe(false);
-      expect(lineLeft()).toBeNull();
-      expect(board.columns[1].style.marginInlineStart).toBe('');
-      expect(board.board.style.paddingInlineEnd).toBe('');
+      expect(slides(board)).toEqual(['', '', '']);
+      expect(board.wrapper.querySelector('[data-blok-database-column-sliding]')).toBeNull();
       expect(board.wrapper.hasAttribute('data-blok-database-column-reordering')).toBe(false);
     };
 
@@ -331,8 +382,29 @@ describe('database column drag mutants', () => {
       document.dispatchEvent(pointer('pointermove', 400));
       document.dispatchEvent(pointer('pointerup', 400));
 
-      expect(ghost()).toBeNull();
+      assertClean(board);
       expect(board.onDrop).not.toHaveBeenCalled();
+    });
+
+    it('undoes everything on a drop, after reporting it', () => {
+      const board = buildBoard(['a', 'b', 'c']);
+
+      startDrag(board);
+      document.dispatchEvent(pointer('pointerup', 400));
+
+      assertClean(board);
+      expect(board.onDrop).toHaveBeenCalledTimes(1);
+    });
+
+    it('undoes the last drag when tracking starts again', () => {
+      const board = buildBoard(['a', 'b', 'c']);
+
+      startDrag(board);
+      board.drag.beginTracking('b', 150, 100);
+
+      assertClean(board);
+
+      board.drag.cleanup();
     });
   });
 });
@@ -402,7 +474,8 @@ describe('database column drag — strict mutants', () => {
       document.dispatchEvent(pointer('pointermove', from + DRAG_THRESHOLD + 1));
     };
 
-    it('is anchored to the column rect and drawn flat at 0.4 opacity', () => {
+    // Pixels of colgroupdrag-mid.png: the dragged strip is opaque, flat, and as tall as the header.
+    it('is the header strip at full opacity, as wide as the column and as tall as the header', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
@@ -412,13 +485,14 @@ describe('database column drag — strict mutants', () => {
       expect(g?.getAttribute('data-blok-database-column-ghost')).toBe('');
       expect(g?.style.position).toBe('fixed');
       expect(g?.style.pointerEvents).toBe('none');
-      expect(g?.style.opacity).toBe('0.4');
+      expect(g?.style.opacity).toBe('');
       expect(g?.style.zIndex).toBe('50');
       expect(g?.style.boxShadow).toBe('');
       expect(g?.style.overflow).toBe('hidden');
       expect(g?.style.transform).toBe('');
       expect(g?.style.top).toBe('0px');
       expect(g?.style.width).toBe(`${COLUMN_WIDTH}px`);
+      expect(g?.style.height).toBe('40px');
       expect(board.wrapper.getAttribute('data-blok-database-column-reordering')).toBe('');
 
       const clone = g?.firstElementChild;
@@ -428,7 +502,7 @@ describe('database column drag — strict mutants', () => {
       board.drag.cleanup();
     });
 
-    it('keeps the radius the column has on the board', () => {
+    it('keeps the column\'s top corners and squares the bottom ones', () => {
       const sheet = document.createElement('style');
 
       // Longhands: jsdom does not expand a stylesheet shorthand into computed longhands.
@@ -441,7 +515,7 @@ describe('database column drag — strict mutants', () => {
         hideComputedShorthand();
         startDrag(board);
 
-        expect(corners(ghost())).toEqual(['1px', '2px', '3px', '4px']);
+        expect(corners(ghost())).toEqual(['1px', '2px', '0px', '0px']);
 
         board.drag.cleanup();
       } finally {
@@ -472,7 +546,7 @@ describe('database column drag — strict mutants', () => {
       board.drag.beginTracking('a', 50, 100);
       document.dispatchEvent(pointer('pointermove', 50 + DRAG_THRESHOLD - 5));
 
-      expect(board.columns[1].style.marginInlineStart).toBe('');
+      expect(slides(board)).toEqual(['', '', '']);
       expect(board.board.style.paddingInlineEnd).toBe('');
 
       board.drag.cleanup();
@@ -488,7 +562,7 @@ describe('database column drag — strict mutants', () => {
       document.dispatchEvent(pointer('pointermove', 150));
 
       // Column b spans 100-200, so its midpoint is exactly 150.
-      expect(lineLeft()).toBe('198px');
+      expect(slides(board)).toEqual(['', 'translateX(-100px)', '']);
 
       document.dispatchEvent(pointer('pointerup', 150));
 
@@ -502,7 +576,7 @@ describe('database column drag — strict mutants', () => {
       document.dispatchEvent(pointer('pointermove', 61));
       document.dispatchEvent(pointer('pointermove', 400));
 
-      expect(lineLeft()).toBe('104px');
+      expect(slides(board)).toEqual(['']);
 
       document.dispatchEvent(pointer('pointerup', 400));
 
@@ -524,79 +598,40 @@ describe('database column drag — strict mutants', () => {
     });
   });
 
-  describe('the gap bookkeeping', () => {
+  describe('the slide bookkeeping', () => {
     const startDrag = (board: Board): void => {
       board.drag.beginTracking('a', 50, 100);
       document.dispatchEvent(pointer('pointermove', 61));
     };
 
-    it('clears the board padding when the gap moves back onto a column', () => {
+    it('writes no header style while the cursor stays over the same slot', () => {
       const board = buildBoard(['a', 'b', 'c']);
 
       startDrag(board);
-      document.dispatchEvent(pointer('pointermove', 400));
+      document.dispatchEvent(pointer('pointermove', 220));
 
-      expect(lineLeft()).toBe('304px');
+      const header = headerOf(board.columns[1]);
+      const writes = header === null ? [] : styleWritesDuring(header, () => {
+        document.dispatchEvent(pointer('pointermove', 230));
+      });
 
-      document.dispatchEvent(pointer('pointermove', 120));
-
-      expect(board.board.style.paddingInlineEnd).toBe('');
-      expect(lineLeft()).toBe('98px');
+      expect(writes).toStrictEqual([]);
+      expect(slides(board)).toEqual(['', 'translateX(-100px)', '']);
 
       board.drag.cleanup();
     });
 
-    it('leaves the end gap untouched when the board disappears mid-drag', () => {
+    it('does not throw when the board disappears mid-drag', () => {
       const recorder = recordWindowErrors();
-      const board = buildBoard(['a']);
+      const board = buildBoard(['a', 'b']);
 
       startDrag(board);
-      document.dispatchEvent(pointer('pointermove', 400));
-
-      expect(lineLeft()).toBe('104px');
-
       board.board.remove();
       document.dispatchEvent(pointer('pointermove', 400));
 
       expect(recorder.errors).toStrictEqual([]);
 
       recorder.stop();
-      board.drag.cleanup();
-    });
-
-    it('does not tear down and rebuild the gap the cursor is already on', () => {
-      const board = buildBoard(['a', 'b', 'c']);
-
-      startDrag(board);
-      document.dispatchEvent(pointer('pointermove', 120));
-
-      expect(lineLeft()).toBe('98px');
-
-      const writes = styleWritesDuring(board.columns[1], () => {
-        document.dispatchEvent(pointer('pointermove', 120));
-      });
-
-      expect(writes).toStrictEqual([]);
-      expect(lineLeft()).toBe('98px');
-
-      board.drag.cleanup();
-    });
-
-    it('does not tear down and rebuild the end gap the cursor is already on', () => {
-      const board = buildBoard(['a', 'b', 'c']);
-
-      startDrag(board);
-      document.dispatchEvent(pointer('pointermove', 400));
-
-      expect(lineLeft()).toBe('304px');
-
-      const writes = styleWritesDuring(board.board, () => {
-        document.dispatchEvent(pointer('pointermove', 400));
-      });
-
-      expect(writes).toStrictEqual([]);
-      expect(lineLeft()).toBe('304px');
-
       board.drag.cleanup();
     });
   });

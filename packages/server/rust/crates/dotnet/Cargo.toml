@@ -1,10 +1,12 @@
 [package]
 name = "blok-dotnet"
-version = "0.0.0"
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish.workspace = true
+repository.workspace = true
+description = "Internal part of blok-mcp (.NET-compatible helpers). Not a stable API."
+publish = true
 
 [dependencies]
 # The Unicode tables only. 1.1 is the unicode-rs back end; later ones pull

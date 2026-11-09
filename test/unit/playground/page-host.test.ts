@@ -604,6 +604,45 @@ describe('page trash', () => {
     expect(pages.trashedIn('plan')).toBeNull();
   });
 
+  describe('a database that turns into a page and back, with a page block in a row', () => {
+    const db = { id: 'db', type: 'database', data: {}, content: ['r1'] };
+    const row = { id: 'r1', type: 'database-row', data: {}, parent: 'db', content: ['p-keys'] };
+    const nested = { ...pointer('keys'), parent: 'r1' };
+
+    it('keeps the row\'s page out of trash and moves it under the new page', () => {
+      const pages = new PageRegistry(seed());
+      const watch = new PointerWatch(pages, 'guide');
+
+      watch.observe([db, row, nested]);
+      createHostPage(pages, { pageId: 'dbp', title: 'Tasks', document: { blocks: [db, row, nested] } }, 'guide');
+      watch.observe([pointer('dbp')]);
+
+      expect(pages.trashedIn('keys')).toBeNull();
+      expect(pages.get('keys')?.parentId).toBe('dbp');
+    });
+
+    it('brings the row\'s page back with the database, and keeps it through undo', () => {
+      const pages = new PageRegistry(seed());
+      const watch = new PointerWatch(pages, 'guide');
+
+      watch.observe([db, row, nested]);
+      createHostPage(pages, { pageId: 'dbp', title: 'Tasks', document: { blocks: [db, row, nested] } }, 'guide');
+      watch.observe([pointer('dbp')]);
+
+      // Turn into inline database: the link goes, the database comes back.
+      watch.observe([db, row, nested]);
+      expect(pages.trashedIn('dbp')?.id).toBe('dbp');
+      expect(pages.trashedIn('keys')).toBeNull();
+      expect(pages.get('keys')?.parentId).toBe('guide');
+
+      // Undo: the link is back, and the page document still holds the row's page.
+      watch.observe([pointer('dbp')]);
+      expect(pages.trashedIn('dbp')).toBeNull();
+      expect(pages.trashedIn('keys')).toBeNull();
+      expect(pages.get('keys')?.parentId).toBe('dbp');
+    });
+  });
+
   it('puts a sub-page in trash with the page that holds it', () => {
     const pages = new PageRegistry(seed());
 

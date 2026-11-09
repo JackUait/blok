@@ -4,7 +4,7 @@ import { DatabaseTableView, createTableState } from '../../../../src/tools/datab
 import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } from '../../../../src/tools/database/database-table-view';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
-import { IconInfo, IconPeekSide } from '../../../../src/components/icons';
+import { IconInfo, IconPeekSide, IconRowGrip } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
@@ -184,6 +184,24 @@ describe('DatabaseTableView', () => {
         expected.innerHTML = PROPERTY_TYPE_META[type].icon;
         expect(iconOf(`p-${type}`)).toBe(expected.innerHTML);
       }
+    });
+
+    // Notion's title "Aa" is wider than its other header glyphs (m38-table.png), so the stylesheet sizes it by type.
+    it('marks the title header icon with its property type', () => {
+      const { root } = mount({});
+      const icon = root.querySelector(`[role="columnheader"][data-property-id="${schema[0].id}"] [data-blok-database-table-column-icon]`);
+
+      expect(schema[0].type).toBe('title');
+      expect(icon?.getAttribute('data-type')).toBe('title');
+    });
+
+    // Notion's row grip is 8x16 (rowhover.png); the editor's block handle keeps IconMenu.
+    it('draws the row handle with the tall row grip', () => {
+      const { root } = mount({});
+      const expected = document.createElement('span');
+
+      expected.innerHTML = IconRowGrip;
+      expect(root.querySelector('[data-blok-database-table-row-handle]')?.innerHTML).toBe(expected.innerHTML);
     });
 
     it('draws a property\'s own icon in its header instead of the type icon (research/04, R-2022-11-17)', () => {
@@ -1449,6 +1467,50 @@ describe('DatabaseTableView', () => {
       expect(handlers.openPropertyMenu).not.toHaveBeenCalled();
     });
 
+    // notion-motion.md "Column header drag": only the header row moves, and the other headers slide aside.
+    describe('drag', () => {
+      const lay = (root: HTMLElement): HTMLElement[] => {
+        const headers = [...root.querySelectorAll<HTMLElement>('[role="columnheader"][data-property-id]')];
+
+        headers.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(i * 200, 0, 200, 36)));
+
+        return headers;
+      };
+
+      it('slides the headers between the start and the pointer aside by the dragged width, and leaves the body alone', () => {
+        const { root } = mount();
+        const headers = lay(root);
+
+        pointer(header(root, 'p-notes'), 'pointerdown', 250, 10);
+        pointer(document, 'pointermove', 560, 10);
+
+        expect(header(root, 'p-amount').style.transform).toBe('translateX(-200px)');
+        expect(header(root, 'p-title').style.transform).toBe('');
+        expect(headers.slice(3).every((el) => el.style.transform === '')).toBe(true);
+        expect(header(root, 'p-notes').hasAttribute('data-dragging')).toBe(true);
+        expect(cell(root, 'r1', 'p-amount').style.transform).toBe('');
+        expect(root.querySelector('[data-blok-database-table-column-drop-line]')).toBeNull();
+        expect(document.querySelector('[data-blok-database-table-column-ghost]')).not.toBeNull();
+        pointer(document, 'pointerup', 560, 10);
+      });
+
+      it('slides headers the other way when the drag goes left, and puts them back on release', () => {
+        const { root, handlers } = mount();
+
+        lay(root);
+        pointer(header(root, 'p-amount'), 'pointerdown', 450, 10);
+        pointer(document, 'pointermove', 250, 10);
+
+        expect(header(root, 'p-notes').style.transform).toBe('translateX(200px)');
+
+        pointer(document, 'pointerup', 250, 10);
+
+        expect(header(root, 'p-notes').style.transform).toBe('');
+        expect(header(root, 'p-amount').hasAttribute('data-dragging')).toBe(false);
+        expect(vi.mocked(handlers.updateView).mock.lastCall?.[0].properties?.map((p) => p.id).slice(0, 3)).toEqual(['p-title', 'p-amount', 'p-notes']);
+      });
+    });
+
     it('the + header button asks for a new property', () => {
       const { root, handlers } = mount();
       const add = root.querySelector<HTMLElement>('[data-blok-database-table-add-property]');
@@ -1579,6 +1641,31 @@ describe('DatabaseTableView', () => {
 
       expect(handlers.moveRow).toHaveBeenCalledWith({ rowId: 'r1', beforeRowId: null, afterRowId: 'r3', groupKey: '', fromGroupKey: '' });
       expect(document.querySelector('[data-blok-database-table-row-ghost]')).toBeNull();
+    });
+
+    // notion-motion.md "Table row drag": pressing ⋮⋮ selects the row, so the selection bar shows during the drag.
+    it('selects the row on a press of ⋮⋮, before it moves', () => {
+      const { root } = mount();
+
+      root.querySelector<HTMLElement>('[data-row-id="r2"] [data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 50, button: 0 }));
+
+      expect(root.querySelector('[data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('true');
+      expect(root.querySelector('[data-blok-database-table-selection-count]')?.textContent).toBe('tools.database.tableSelectedCount:1');
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 50 }));
+    });
+
+    it('keeps a selection of several rows when one of them is pressed', () => {
+      const { root } = mount();
+      const checkbox = (id: string): HTMLElement | null => root.querySelector<HTMLElement>(`[data-row-id="${id}"] [data-blok-database-table-row-checkbox]`);
+
+      checkbox('r1')?.click();
+      checkbox('r2')?.click();
+      root.querySelector<HTMLElement>('[data-row-id="r2"] [data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 50, button: 0 }));
+
+      expect(root.querySelector('[data-blok-database-table-selection-count]')?.textContent).toBe('tools.database.tableSelectedCount:2');
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 50 }));
     });
 
     it('in a sorted view a drop goes to the sorted-drop hook instead', () => {

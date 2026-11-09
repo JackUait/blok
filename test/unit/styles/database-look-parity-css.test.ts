@@ -64,6 +64,15 @@ describe('toolbar Filter and Sort (research/07:53)', () => {
     expect(body).toContain('height: 28px');
     expect(body).toContain('color: var(--blok-database-table-header-icon)');
   });
+
+  // side-by-side-v1.md X3: Notion's glyphs are 12-13px wide (filter 13x8, sort 13x11); Blok's
+  // 20-unit icons drawn at 16px came out 10px wide. At their own 20px they match.
+  it('draw their icons at the icons\' own 20px, inside the same 28px button', () => {
+    const body = ruleBody('[data-blok-database-view-toolbar] [data-blok-database-toolbar-icon]');
+
+    expect(body).toContain('padding: var(--blok-space-1)');
+    expect(ruleBody('[data-blok-database-view-toolbar] [data-blok-database-toolbar-icon] svg')).toMatch(/width: 20px;\s*height: 20px/);
+  });
 });
 
 describe('board card (research/07:132-135, 08:73, 317)', () => {
@@ -179,13 +188,14 @@ describe('fill handle (D3)', () => {
 
 describe('the row open in the side peek (notion-live-8/62-close-hover.png)', () => {
   it('gets Notion\'s 1px ring round the whole row, from the table\'s start, without catching the pointer', () => {
-    const ring = ruleBody('[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked])::before');
+    const ring = ruleBody('[data-blok-database-table-row]::before');
 
     expect(ring).toContain("content: ''");
     expect(ring).toContain('position: absolute');
     expect(ring).toContain('inset: 0');
     expect(ring).toContain('pointer-events: none');
     expect(ring).toContain('box-shadow: inset 0 0 0 1px var(--blok-icon-active-text)');
+    expect(ruleBody('[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked])::before')).toContain('opacity: 1');
   });
 });
 
@@ -480,6 +490,13 @@ describe('row page header hover row', () => {
     const shown = '[data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-customize],';
 
     expect(database.includes(shown)).toBe(true);
+  });
+
+  // notion-motion.md "Side peek top bar": in a peek the row shows while the pointer is anywhere over the peek.
+  it('shows in a side or center peek while the peek is hovered', () => {
+    for (const button of buttons) {
+      expect(database.includes(`[data-blok-database-drawer]:not([data-peek-mode="full"]):hover ${button}`)).toBe(true);
+    }
   });
 });
 

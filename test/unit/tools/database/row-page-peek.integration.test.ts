@@ -68,6 +68,13 @@ const click = async (el: Element | null): Promise<void> => {
   await quiet();
 };
 
+/** Open in full page waits for the side peek's close slide to end. */
+const expand = async (): Promise<void> => {
+  await click(q('[data-blok-database-peek-expand]'));
+  q('[data-blok-database-drawer]')?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
+  await quiet();
+};
+
 const openRow = (rowId: string): Promise<void> =>
   click(q(`[data-row-id="${rowId}"] [data-blok-database-table-open]`));
 
@@ -162,6 +169,18 @@ describe('row page peek modes', () => {
       expect(label('r2')).toBe('Open');
     });
 
+    // notion-motion.md "Side peek top bar": on Next page the new row's halo starts about 70ms after the old one fades.
+    it('marks the row the peek moves to, but not the row it first opens on', async () => {
+      await make(doc());
+      await openRow('r1');
+
+      expect(button('r1')?.getAttribute('data-peeked')).toBe('');
+      await click(q('[data-blok-database-peek-next]'));
+
+      expect(button('r2')?.getAttribute('data-peeked')).toBe('step');
+      expect(button('r1')?.hasAttribute('data-peeked')).toBe(false);
+    });
+
     it('follows a step with the header arrow and with Ctrl+J', async () => {
       await make(doc());
       await openRow('r1');
@@ -211,7 +230,7 @@ describe('row page peek modes', () => {
     it('hides the rest of the editor and names the row in the URL; its Back undoes both', async () => {
       await make([{ id: 'p', type: 'paragraph', data: { text: 'Above' } }, ...doc()]);
       await openRow('r2');
-      await click(q('[data-blok-database-peek-expand]'));
+      await expand();
 
       expect(drawer()?.getAttribute('data-peek-mode')).toBe('full');
       expect(q('[data-blok-editor]')?.hasAttribute('data-blok-database-row-page')).toBe(true);
@@ -346,7 +365,7 @@ describe('row page peek modes', () => {
   it('expands a peek to a full page with the expand button', async () => {
     await make(doc());
     await openRow('r1');
-    await click(q('[data-blok-database-peek-expand]'));
+    await expand();
 
     expect(drawer()?.getAttribute('data-peek-mode')).toBe('full');
     expect(q('[data-blok-database-wrapper]')?.hasAttribute('data-blok-database-full-page')).toBe(true);
@@ -699,6 +718,36 @@ describe('row page peek modes', () => {
     await click(items[3] ?? null);
 
     expect(document.querySelector('[data-blok-popover-opened]')?.textContent).toContain('Open pages in');
+  });
+
+  // notion-motion.md "Round 5": with a cell editor open, Esc 1 keeps the cell, Esc 2 the row, Esc 3 closes the peek.
+  it('steps Escape from a cell editor to the cell, then the row, then closes the side peek with nothing selected', async () => {
+    const blocks = doc({ visibleProperties: ['n'] });
+    const db = blocks[0].data as { schema: unknown[] };
+
+    db.schema.push({ id: 'n', name: 'Notes', type: 'text', position: 'a1' });
+    await make(blocks);
+    await openRow('r1');
+    await click(q('[data-row-id="r2"] [role="gridcell"][data-property-id="n"]'));
+    const field = document.querySelector('[data-blok-database-cell-editor] [data-blok-database-cell-input]');
+    const grid = (): HTMLElement | null => q('[role="grid"]');
+    const press = async (target: Element | null): Promise<void> => {
+      target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await quiet();
+    };
+    const isOpen = (): boolean => q('[data-blok-database-drawer][data-open]') !== null;
+
+    await press(field);
+    expect(q('[data-row-id="r2"] [role="gridcell"][data-property-id="n"]')?.getAttribute('aria-selected')).toBe('true');
+    expect(isOpen()).toBe(true);
+
+    await press(grid());
+    expect(q('[data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('true');
+    expect(isOpen()).toBe(true);
+
+    await press(grid());
+    expect(isOpen()).toBe(false);
+    expect(q('[data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('false');
   });
 
   // One Escape = one layer: the menu first, the peek on the next press.

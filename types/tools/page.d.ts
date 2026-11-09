@@ -80,7 +80,7 @@ export interface PageCreateInit {
   pageId: string;
   /** The page's starting content. */
   document?: OutputData;
-  /** The page's title, from the "@" menu's New page items. */
+  /** The page's title: the "@" menu's typed text, or the database's title from "Turn into page". */
   title?: string;
   /** The page to put it under. Missing means the page this editor shows. */
   parentId?: string;
@@ -94,6 +94,13 @@ export interface PageConfig {
    * Offers "Database - Full page" in the toolbox. Default false. Turn it on
    * only when `create` stores `document` as the new page's content and the
    * `database` tool is registered.
+   *
+   * It also offers "Turn into page" in an inline database's block menu: the
+   * database, its rows and their bodies go to a new page made by `create`
+   * (with `title` and `document`), and a link takes its place. With
+   * `loadDocument`, a database page link offers "Turn into inline database",
+   * the reverse. Both undo as one step here. The page's document is left as
+   * it is, so undo can bring the link back.
    */
   databasePages?: boolean;
   /**
@@ -237,8 +244,8 @@ export declare class Page implements BlockTool {
    */
   static copyAsLink(data: PageData, config: PageConfig): { url: string; text: string } | null;
 
-  /** A titled "Page" menu with Turn into first; Delete reads "Move to Trash". */
-  static blockMenu?: { titled: boolean; trash: boolean };
+  /** A titled "Page" menu with Turn into first; Delete reads "Move to Trash". "Turn into inline database" leads it. */
+  static blockMenu?: { titled: boolean; trash: boolean; lead: string[] };
 
   /** Hides "Database - Full page" unless `config.databasePages` is true. */
   static filterToolbox(entries: ToolboxConfigEntry[], config: PageConfig): ToolboxConfigEntry[];

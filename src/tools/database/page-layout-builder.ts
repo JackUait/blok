@@ -1566,6 +1566,7 @@ export class PageLayoutBuilder {
 
     this.showMenu(new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: 'auto',
       minWidth: '300px',
@@ -1582,6 +1583,7 @@ export class PageLayoutBuilder {
   private openMoreSave(anchor: HTMLElement): void {
     this.showMenu(new PopoverDesktop({
       class: `${DATABASE_MENU_CLASS} blok-database-layout-reset-menu`,
+      animateClose: true,
       trigger: anchor,
       width: 'auto',
       // notion-spec-2 §11: Notion's menu is 254 wide.

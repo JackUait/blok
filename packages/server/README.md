@@ -806,13 +806,13 @@ These names never overlap the C# archives or `checksums.txt`. The npm wrapper do
 
 ## MCP server
 
-Blok's MCP server lets an MCP client read and edit Blok documents. Besides the Node package, `@bloklabs/mcp`, it comes in three builds next to the servers here. Release 2.1.0 shipped the C# and Go builds. The Rust build has not shipped yet. All four take the same flags, and one shared suite checks each of them against Node: `node scripts/test-mcp-conformance.mjs --target node|csharp|go|rust`.
+Blok's MCP server lets an MCP client read and edit Blok documents. Besides the Node package, `@bloklabs/mcp`, it comes in three builds next to the servers here. Each ships with every release. All four take the same flags, and one shared suite checks each of them against Node: `node scripts/test-mcp-conformance.mjs --target node|csharp|go|rust`.
 
 All four refuse JSON nested more than 48 levels of objects and arrays: in a call's arguments, in a document they open, and in a document a call would save. The C#, Go and Rust engines read JSON only 64 levels deep, and the margin covers the levels they add when they pass a document on.
 
 - **C#.** Two NuGet packages. `Blok.Mcp` is a .NET tool: `dotnet tool install -g Blok.Mcp`, or `dnx Blok.Mcp`. `Blok.Server.Mcp` adds it to an ASP.NET Core app with `builder.Services.AddBlokMcp(...)` and `app.MapBlokMcp("/mcp")`. See `dotnet/Blok.Mcp/README.md` and `dotnet/Blok.Server.Mcp/README.md`.
 - **Go.** `go install github.com/JackUait/blok/packages/server/go/v2/cmd/blok-mcp@latest`, or embed it with `blokmcp.New`. The release also ships `blok-mcp-go_<os>_<arch>` archives beside the Go server's. See `go/blokmcp/README.md`.
-- **Rust.** `cargo build --release -p blok-mcp` in `rust/`. Like the Rust server, it ships nothing yet. See `rust/crates/mcp/README.md`.
+- **Rust.** `cargo install blok-mcp`, or `cargo add blok-mcp` to embed it. See `rust/crates/mcp/README.md`.
 
 The release packs both NuGets with the release version, and writes that version into `Blok.Mcp`'s `.mcp/server.json`.
 

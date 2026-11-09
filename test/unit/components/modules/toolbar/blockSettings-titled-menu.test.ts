@@ -97,7 +97,7 @@ vi.mock('../../../../../src/components/i18n', () => ({
   },
 }));
 
-const createBlock = (blockMenu = { titled: false, trash: false }): Block => ({
+const createBlock = (blockMenu: { titled: boolean; trash: boolean; lead?: string[] } = { titled: false, trash: false }): Block => ({
   getTunes: vi.fn(() => ({ commonTunes: [] })),
   getActiveToolboxEntry: vi.fn(async () => undefined),
   name: 'page',
@@ -207,6 +207,16 @@ describe('BlockSettings — a tool that declares a titled block menu', () => {
       '---',
       'edit-metadata',
     ]);
+  });
+
+  it('puts the tool items named in lead before Turn into', async () => {
+    getConvertibleToolsForBlockMock.mockResolvedValueOnce([
+      { name: 'paragraph', toolbox: [{ icon: '<svg />', titleKey: 'text' }] },
+    ]);
+
+    const items = await tunesItems(createBlock({ titled: true, trash: true, lead: ['rename'] }));
+
+    expect(layout(items).slice(0, 5)).toEqual(['# toolNames.page', 'rename', 'convert-to', 'color', '---']);
   });
 
   it('reads Delete as Move to Trash', async () => {

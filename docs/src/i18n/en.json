@@ -2580,7 +2580,7 @@
             "description": "Makes the page in your app. Blok calls it once per new page, with an id it minted. It is never called on load, paste, undo, redo or a collaborator's change, or in read-only mode.\n\nWhen a user picks Page in the toolbox, Blok waits for it. The item shows a spinner, and the block appears once it resolves. Return `{ pageId }` to use your backend's id instead of Blok's. If it throws, no block is inserted; show the error yourself. Closing the menu while it runs does not cancel the insert.\n\nWhen your code inserts a page through the API without a `pageId`, the block appears at once with Blok's id. A different returned id is ignored with a warning, so pass your own `pageId` to `insert` instead. If it throws, the block shows \"Page not found\". Blok still asks `resolve`, so a page your app made after all shows up.\n\n`init.document`, when present, is the new page's starting content. Store it as the page's document. \"Database - Full page\" sends one `database` block with `fullPage: true`. The database finishes its setup when the page opens.\n\nWith `createFromMention`, the `@` menu calls it too. Then `init.title` is the typed text, and `init.parentId` is the page the user chose. No `parentId` means the page this editor shows. Blok mentions the new page and does not open it."
           },
           "databasePages": {
-            "description": "Offers \"Database - Full page\" in the toolbox's Database section. It makes a sub-page that holds a new database and opens it. The link shows a table glyph until the page gets an icon.\n\nTurn it on only when `create` stores `document` as the new page's content and the `database` tool is registered."
+            "description": "Offers \"Database - Full page\" in the toolbox's Database section. It makes a sub-page that holds a new database and opens it. The link shows a table glyph until the page gets an icon.\n\nIt also adds two items to the block menu:\n\n- \"Turn into page\" on an inline database moves it, with its rows and their pages, to a new page made by `create`. A link takes its place.\n- \"Turn into inline database\" on a database page link does the reverse. It needs `loadDocument`.\n\nEach one is a single undo step. The page's document stays as it was, so undo can bring the link back.\n\nTurn it on only when `create` stores `document` as the new page's content and the `database` tool is registered."
           },
           "createFromMention": {
             "description": "Offers a New page section in the `@` menu. It has two items: a sub-page of the current page, and a page under one the user picks. Each makes a page titled with the typed text and mentions it.\n\nTurn it on only when `create` stores `title` and `parentId`."
@@ -3184,7 +3184,7 @@
       }
     },
     "mcpHeading": "Let agents edit documents: the MCP server",
-    "mcpIntro": "Blok's MCP server lets an outside agent read and edit Blok documents through any MCP client. It comes in four builds: Node, C#, Go and Rust. Release 2.1.0 shipped the C# and Go builds. The Rust build has not shipped yet.\n\nAll four serve the same six tools and take the same flags and environment variables. One shared test suite checks every build against the Node one. The Node README lists the flags.\n\nFour options let your own app take over more of the work:\n\n- Embedding serves Blok's `blok_*` tools and prompts on an MCP server you build, next to your own tools. Use `createBlok` in Node, `WithBlok` in C#, `blokmcp.Embed` in Go and `BlokTools` in Rust.\n- A document source of your own loads and saves stored documents through your code, instead of `files` or `endpoint`.\n- `--create-page <url>` lets your app make each new sub-page document. It needs `--page-titles page-map` and a stored `--source`.\n- `--handle-store memory|files:<dir>` sets where stored handles live. With one shared store, any process can serve any call for a stored handle. `files:<dir>` shares them on one machine.\n\nEvery build refuses JSON nested more than 48 levels of objects and arrays: in a call's arguments, in a document it opens, and in a document a call would save.",
+    "mcpIntro": "Blok's MCP server lets an outside agent read and edit Blok documents through any MCP client. It comes in four builds: Node, C#, Go and Rust.\n\nAll four serve the same six tools and take the same flags and environment variables. One shared test suite checks every build against the Node one. The Node README lists the flags.\n\nFour options let your own app take over more of the work:\n\n- Embedding serves Blok's `blok_*` tools and prompts on an MCP server you build, next to your own tools. Use `createBlok` in Node, `WithBlok` in C#, `blokmcp.Embed` in Go and `BlokTools` in Rust.\n- A document source of your own loads and saves stored documents through your code, instead of `files` or `endpoint`.\n- `--create-page <url>` lets your app make each new sub-page document. It needs `--page-titles page-map` and a stored `--source`.\n- `--handle-store memory|files:<dir>` sets where stored handles live. With one shared store, any process can serve any call for a stored handle. `files:<dir>` shares them on one machine.\n\nEvery build refuses JSON nested more than 48 levels of objects and arrays: in a call's arguments, in a document it opens, and in a document a call would save.",
     "mcp": {
       "node": {
         "title": "Node: @bloklabs/mcp",
@@ -3226,11 +3226,14 @@
         }
       },
       "rust": {
-        "title": "Rust: build it from source",
-        "description": "The Rust build ships nothing yet, like the Rust server. Build it from a clone of the repository, with the Rust version that `rust-toolchain.toml` names.",
+        "title": "Rust: blok-mcp on crates.io",
+        "description": "The `blok-mcp` crate on crates.io holds the command and the library. It needs Rust 1.99 or later. The `blok-*` crates it pulls in are its own parts, not a stable API.",
         "samples": {
           "0": {
-            "label": "Build it and run it"
+            "label": "Install the command"
+          },
+          "1": {
+            "label": "Add it to your app, then start it with blok_mcp::Embedded"
           }
         }
       }

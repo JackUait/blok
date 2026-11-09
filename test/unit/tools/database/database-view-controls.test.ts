@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseViewControls } from '../../../../src/tools/database/database-view-controls';
 import type { ViewControlsHost } from '../../../../src/tools/database/database-view-controls';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -85,6 +87,13 @@ describe('DatabaseViewControls', () => {
     }
     expect(q('database-toolbar-filter')?.getAttribute('aria-label')).toBe('tools.database.settingsFilter');
     expect(q('database-toolbar-sort')?.getAttribute('aria-label')).toBe('tools.database.settingsSort');
+  });
+
+  // The fold probes write on it on every resize; they are not edits.
+  it('draws the toolbar as mutation-free, so its own writes are not block changes', () => {
+    const { controls } = setup();
+
+    expect(controls.toolbar.getAttribute('data-blok-mutation-free')).toBe('true');
   });
 
   it('marks Filter, Sort, Automations, AI Autofill and search as the group a narrow bar hides together (notion-spec-2 §26.1)', () => {
@@ -216,6 +225,69 @@ describe('DatabaseViewControls', () => {
     expect(search).toHaveFocus();
     expect(q('database-pick-property-title')?.hasAttribute('data-active')).toBe(true);
     expect(q('database-pick-property-num')?.hasAttribute('data-active')).toBe(false);
+  });
+
+  // notion-motion.md Round 5 (filter-field.png), side-by-side-v1 (sort-open.png).
+  it('names the Filter picker search "Filter by…"', () => {
+    setup();
+    click('database-toolbar-filter');
+
+    expect((q('database-filter-picker-search') as HTMLInputElement).placeholder).toBe('tools.database.filterByPlaceholder');
+    expect(q('database-filter-picker-search')?.getAttribute('aria-label')).toBe('tools.database.filterByPlaceholder');
+  });
+
+  it('names the Sort picker search "Sort by…"', () => {
+    setup();
+    click('database-toolbar-sort');
+
+    expect((q('database-sort-picker-search') as HTMLInputElement).placeholder).toBe('tools.database.sortByPlaceholder');
+  });
+
+  // notion-motion.md Round 5: the Filter list's last row is "Add advanced filter", pinned under the scrolling list.
+  it('ends "+ Filter" with "Add advanced filter" under the property list, and it opens the advanced filter', () => {
+    const { saved } = setup();
+
+    click('database-toolbar-filter');
+    const picker = q('database-filter-picker');
+    const list = picker?.querySelector('[data-blok-database-picker-list]');
+    const footer = q('database-filter-picker-advanced');
+
+    expect(footer).not.toBeNull();
+    expect(text(footer)).toBe('tools.database.filterAddAdvanced');
+    expect(list?.contains(footer)).toBe(false);
+    expect(picker?.lastElementChild).toBe(footer);
+    expect(list?.contains(q('database-pick-property-num'))).toBe(true);
+
+    click('database-filter-picker-advanced');
+
+    expect(q('database-filter-picker')).toBeNull();
+    expect(q('database-advanced-filter')).not.toBeNull();
+    expect(document.querySelector('[data-blok-testid="database-advanced-filter"] [data-blok-testid^="database-filter-add-rule-"]')).not.toBeNull();
+    expect(saved.view.filterTree).toBeUndefined();
+  });
+
+  it('shows the filter bar only once the advanced filter gets its first rule', () => {
+    const { controls } = setup();
+
+    click('database-toolbar-filter');
+    click('database-filter-picker-advanced');
+
+    expect(controls.filterBar.hidden).toBe(true);
+
+    document.querySelector<HTMLElement>('[data-blok-testid="database-advanced-filter"] [data-blok-testid^="database-filter-add-rule-"]')?.click();
+    click('database-pick-property-num');
+
+    expect(controls.filterBar.hidden).toBe(false);
+    expect(q('database-advanced-pill')).not.toBeNull();
+  });
+
+  it('gives "+ Sort" no advanced footer', () => {
+    setup();
+    click('database-toolbar-sort');
+
+    expect(q('database-sort-picker')).not.toBeNull();
+    expect(q('database-filter-picker-advanced')).toBeNull();
+    expect(q('database-sort-picker')?.querySelector('[data-blok-database-picker-list]')).not.toBeNull();
   });
 
   it('filters "+ Filter" as you type, moves the highlight with the arrows and picks it with Enter', () => {
@@ -691,6 +763,171 @@ describe('DatabaseViewControls', () => {
       expect(q('database-toolbar-search')?.hidden).toBe(false);
     });
   });
+  // notion-motion.md Round 4 re-checks: while search is open Notion shows "»" ("Minimize") left of the icons.
+  // It closes the search and minimizes the whole toolbar, saved with the view; « ("Expand") brings it back.
+  describe('» minimizes the toolbar (Notion "Minimize")', () => {
+    it('shows » left of the icons while the search is open, and » closes the search and minimizes the toolbar', () => {
+      const { controls, host } = setup({ rows: 3 });
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      click('database-toolbar-search');
+      const minimize = q('database-toolbar-minimize');
+
+      expect(minimize?.hidden).toBe(false);
+      expect(minimize?.getAttribute('aria-label')).toBe('tools.database.filterBarMinimize');
+      expect(q('database-toolbar-no-date')?.nextElementSibling).toBe(q('database-toolbar-filter'));
+
+      click('database-toolbar-minimize');
+
+      expect(host.updateView).toHaveBeenCalledWith({ toolbarMinimized: true });
+      expect(q('database-search-input')).toBeNull();
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(controls.toolbar.hasAttribute('data-minimized')).toBe(true);
+      expect(controls.filterBar.hidden).toBe(true);
+    });
+
+    it('opens a view saved minimized with only « and settings', () => {
+      const { controls, saved } = setup({ rows: 3 });
+
+      saved.view = { ...saved.view, toolbarMinimized: true };
+      controls.refresh();
+      const expand = q('database-toolbar-expand');
+
+      expect(controls.toolbar.hasAttribute('data-minimized')).toBe(true);
+      expect(expand?.hidden).toBe(false);
+      expect(expand?.getAttribute('aria-label')).toBe('tools.toggle.ariaLabelExpand');
+      expect(expand?.querySelector('svg')).not.toBeNull();
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+    });
+
+    it('« brings every control back, and fades them in once', () => {
+      vi.useFakeTimers();
+      try {
+        const { controls, host, saved } = setup({ rows: 3 });
+
+        saved.view = { ...saved.view, toolbarMinimized: true };
+        controls.refresh();
+        // The host redraws inside updateView and may lay out: the fade mark must already be on.
+        const markedAtUpdate: boolean[] = [];
+
+        vi.mocked(host.updateView).mockImplementation((changes) => {
+          markedAtUpdate.push(controls.toolbar.hasAttribute('data-expanding'));
+          saved.view = { ...saved.view, ...changes };
+        });
+        click('database-toolbar-expand');
+
+        expect(markedAtUpdate).toEqual([true]);
+        expect(host.updateView).toHaveBeenCalledWith({ toolbarMinimized: false });
+        expect(controls.toolbar.hasAttribute('data-minimized')).toBe(false);
+        expect(q('database-toolbar-expand')?.hidden).toBe(true);
+        expect(controls.toolbar.hasAttribute('data-expanding')).toBe(true);
+        vi.advanceTimersByTime(300);
+        expect(controls.toolbar.hasAttribute('data-expanding')).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('shows « with no » while minimized, even with the search open', () => {
+      const { controls, saved } = setup({ rows: 3 });
+
+      click('database-toolbar-search');
+      saved.view = { ...saved.view, toolbarMinimized: true };
+      controls.refresh();
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(q('database-toolbar-expand')?.hidden).toBe(false);
+    });
+
+    // A blur on an empty query closes the search, so the press must not take the focus first.
+    it('keeps the focus in the field on press, and gives it to settings, which stays, after', () => {
+      setup({ rows: 3 });
+      click('database-toolbar-search');
+      const press = new MouseEvent('pointerdown', { bubbles: true, cancelable: true });
+
+      q('database-toolbar-minimize')?.dispatchEvent(press);
+      expect(press.defaultPrevented).toBe(true);
+
+      click('database-toolbar-minimize');
+      expect(q('database-toolbar-settings')).toHaveFocus();
+    });
+
+    it('hints its name on hover, after the delay', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        setup({ rows: 3 });
+        click('database-toolbar-search');
+        hover(q('database-toolbar-minimize'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(shownHint()?.text).toBe('tools.database.filterBarMinimize');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // Notion: the field goes width 150→0 and opacity 1→0 over 200ms ease, then leaves.
+    it('keeps the field while it shrinks away, and drops it when the shrink ends', () => {
+      setup({ rows: 3 });
+      click('database-toolbar-search');
+      const input = q('database-search-input') as HTMLInputElement;
+
+      input.style.transitionDuration = '0.2s';
+      click('database-toolbar-minimize');
+
+      expect(input.isConnected).toBe(true);
+      expect(input.hasAttribute('data-closing')).toBe(true);
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+      expect(q('database-search-clear')).toBeNull();
+
+      input.dispatchEvent(new Event('transitionend'));
+
+      expect(input.isConnected).toBe(false);
+      expect(input.hasAttribute('data-closing')).toBe(false);
+    });
+
+    it('drops the field after the shrink time even when no transitionend comes', () => {
+      vi.useFakeTimers();
+      try {
+        setup({ rows: 3 });
+        click('database-toolbar-search');
+        const input = q('database-search-input') as HTMLInputElement;
+
+        input.style.transitionDuration = '0.2s';
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        expect(input.isConnected).toBe(true);
+        vi.advanceTimersByTime(300);
+        expect(input.isConnected).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('opens again over a field that is still shrinking', () => {
+      vi.useFakeTimers();
+      try {
+        setup({ rows: 3 });
+        click('database-toolbar-search');
+        const input = q('database-search-input') as HTMLInputElement;
+
+        input.style.transitionDuration = '0.2s';
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        click('database-toolbar-search');
+        vi.advanceTimersByTime(300);
+        input.dispatchEvent(new Event('transitionend'));
+
+        expect(input.isConnected).toBe(true);
+        expect(input.hasAttribute('data-closing')).toBe(false);
+        expect(input).toHaveFocus();
+        expect(q('database-toolbar-minimize')?.hidden).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   describe('Escape gives focus back to the button that opened the popover (findings K03)', () => {
     const escape = (): void => {
       (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

@@ -1,0 +1,1 @@
+../../../../go/internal/jsruntime/blok-server-runtime.js

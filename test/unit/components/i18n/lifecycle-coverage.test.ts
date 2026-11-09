@@ -276,7 +276,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2055 + 138 + 519 + 4 closure for all 2716 keys', () => {
+  it('rebuilds a disjoint 2060 + 138 + 522 + 4 closure for all 2724 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -290,7 +290,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2716);
+    expect(lifecycle.size).toBe(2724);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -494,7 +494,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the notice when the host's frame check refuses an embed, tools.embed.checkBlocked, by literal.
       // +1: the notifier deck's close-all button, notifier.dismissAll, by literal.
       // +2: the table size card's "Pick on grid" / "Type numbers" button, by literal.
-      'executable-literal': 2055,
+      // +2: Turn into page / Turn into inline database, tools.database.turnIntoPage and tools.page.turnIntoInlineDatabase.
+      'executable-literal': 2060,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -572,7 +573,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -4: the groupSort* keys (see executable-literal).
       // -1: propertyNamePlaceholder (see executable-literal).
       // -1: tools.database.rollupProperty (see executable-literal).
-      'registered-namespace-compatible': 519,
+      // +3: the Filter / Sort pickers' filterByPlaceholder, sortByPlaceholder and filterAddAdvanced, via the tools.database t().
+      'registered-namespace-compatible': 522,
       'catalog-only': 4,
     });
     expect(

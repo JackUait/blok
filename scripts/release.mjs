@@ -3,6 +3,7 @@ import { writeFileSync, unlinkSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
+import { bumpCargoWorkspaceVersion } from './release-cargo.mjs';
 import { collectGprRewriteFiles, FAMILY, prepareManifestForGpr, rewriteSpecifiersForGpr } from './release-manifest.mjs';
 import { isReleaseVersion } from './release-version.mjs';
 
@@ -16,6 +17,12 @@ export const RELEASE_TAG_WORKFLOWS = [
 ];
 
 const GO_MODULE_DIRECTORY = 'packages/server/go';
+
+// gh cannot pick a repository when the clone also has the mirror remote.
+const RELEASE_REPO = 'JackUait/blok';
+
+const RUST_WORKSPACE_DIRECTORY = 'packages/server/rust';
+const RUST_RELEASE_FILES = `${RUST_WORKSPACE_DIRECTORY}/Cargo.toml ${RUST_WORKSPACE_DIRECTORY}/Cargo.lock`;
 
 /**
  * The family tag and the Go module's tag. A module in a subdirectory is
@@ -273,7 +280,7 @@ if (isDirectRun) {
   // then BLOK_GITHUB_TOKEN, each reached a tag they could not serve.
   const absentSecrets = missingWorkflowSecrets({
     workflowSources: RELEASE_TAG_WORKFLOWS.map((file) => readFileSync(file, 'utf-8')),
-    existingSecrets: runCapture('gh secret list --json name --jq \'.[].name\'').split('\n').filter(Boolean),
+    existingSecrets: runCapture(`gh secret list -R ${RELEASE_REPO} --json name --jq '.[].name'`).split('\n').filter(Boolean),
   });
 
   if (absentSecrets.length > 0) {
@@ -281,6 +288,14 @@ if (isDirectRun) {
       `The release tag runs workflows that read secrets this repository does not hold: ${absentSecrets.join(', ')}.\n` +
       `Create each one with \`gh secret set <NAME>\` before releasing.`,
     );
+    process.exit(1);
+  }
+
+  // The crates go up last, after npm and the tags. Missing credentials there
+  // would leave a release that ships every build but Rust.
+  if (!isDryRun && !process.env.CARGO_REGISTRY_TOKEN
+    && !existsSync(join(process.env.CARGO_HOME ?? join(process.env.HOME ?? '', '.cargo'), 'credentials.toml'))) {
+    console.error('No crates.io token. Run `cargo login` or set CARGO_REGISTRY_TOKEN in .env first.');
     process.exit(1);
   }
 
@@ -301,7 +316,7 @@ if (isDirectRun) {
     await waitForSuccessfulCi({
       sha: sourceSha,
       getRuns: (sha) => JSON.parse(runCapture(
-        `gh run list --workflow CI --branch main --event push --commit ${sha} --limit 1 --json status,conclusion`,
+        `gh run list -R ${RELEASE_REPO} --workflow CI --branch main --event push --commit ${sha} --limit 1 --json status,conclusion`,
       )),
       sleep: () => new Promise((resolve) => setTimeout(resolve, 10_000)),
     });
@@ -342,6 +357,12 @@ if (isDirectRun) {
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   }
 
+  const cargoManifest = `${RUST_WORKSPACE_DIRECTORY}/Cargo.toml`;
+
+  writeFileSync(cargoManifest, bumpCargoWorkspaceVersion(readFileSync(cargoManifest, 'utf-8'), version));
+  // CI builds with --locked, so the lock must carry the new crate versions.
+  run('cargo update --workspace --offline', { cwd: RUST_WORKSPACE_DIRECTORY });
+
   // yarn.lock records the workspaces' peer ranges; without this sync the
   // release commit fails CI's `yarn install --immutable` with YN0028.
   run('yarn install --mode=update-lockfile');
@@ -361,7 +382,7 @@ if (isDirectRun) {
   }
 
   if (!isDryRun) {
-    run(`git add package.json yarn.lock packages/server/go/internal/jsruntime/blok-server-runtime.js test/unit/server-conformance/fixtures/documents/ops.json ${WORKSPACE_MANIFESTS.join(' ')}`);
+    run(`git add package.json yarn.lock packages/server/go/internal/jsruntime/blok-server-runtime.js test/unit/server-conformance/fixtures/documents/ops.json ${RUST_RELEASE_FILES} ${WORKSPACE_MANIFESTS.join(' ')}`);
     run(`git commit -m "chore(release): ${version}"`);
 
     if (runCapture('git status --porcelain') !== '') {
@@ -454,7 +475,7 @@ if (isDirectRun) {
   cleanupNpmrc = false; // the family loop always removes .npmrc in restoreName
 
   if (isDryRun) {
-    run('git checkout -- package.json yarn.lock packages/server/go/internal/jsruntime/blok-server-runtime.js test/unit/server-conformance/fixtures/documents/ops.json ' + WORKSPACE_MANIFESTS.join(' '));
+    run('git checkout -- package.json yarn.lock packages/server/go/internal/jsruntime/blok-server-runtime.js test/unit/server-conformance/fixtures/documents/ops.json ' + RUST_RELEASE_FILES + ' ' + WORKSPACE_MANIFESTS.join(' '));
     console.log(`\nDry run complete for ${version} — nothing was published.`);
     process.exit(0);
   }
@@ -491,7 +512,10 @@ if (isDirectRun) {
     notesFlag = ` --notes-file ${notesFile}`;
   }
 
-  run(`gh release create ${gitTag} --draft${prereleaseFlag}${notesFlag}`);
+  run(`gh release create ${gitTag} -R ${RELEASE_REPO} --draft${prereleaseFlag}${notesFlag}`);
+
+  // Safe to re-run: it skips crates crates.io already has at this version.
+  run(`node scripts/publish-rust-crates.mjs ${version}`);
 
   console.log(`\nReleased ${version} successfully.`);
 }

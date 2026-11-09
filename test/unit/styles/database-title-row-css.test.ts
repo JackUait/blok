@@ -104,6 +104,26 @@ describe('tab row sizes (V26, V32, V33)', () => {
   });
 });
 
+// side-by-side-v1 X2 and Board: pixels of listview.png, listgallery.png, caltimeline.png, board.png.
+describe('vertical offsets match Notion', () => {
+  it('keeps the title row 40px with tabs too, so the title does not move up', () => {
+    const body = rule('[data-blok-database-title-row]');
+
+    expect(body).toMatch(/min-height: 40px/);
+    // With the tab bar's 4px top padding, tab pills start 9px under the title row (Notion: pill drawn at 270, title baseline 248).
+    expect(body).toMatch(/margin-bottom: var\(--blok-space-1-25\)/);
+  });
+
+  it('leaves 4px under the tab pills; the list adds Notion\'s 4px inner padding (research/07 "List")', () => {
+    expect(rule('[data-blok-database-tab-bar]')).toMatch(/padding: var\(--blok-space-1\) 0 var\(--blok-space-1\);/);
+    expect(rule('[data-blok-database-list]')).toMatch(/padding-block-start: var\(--blok-space-1\)/);
+  });
+
+  it('starts the board 8px under the title row (Notion columns at 269, title baseline 248)', () => {
+    expect(rule('[data-blok-database-board]')).toMatch(/padding-top: var\(--blok-space-2\)/);
+  });
+});
+
 describe('dragging a tab (V27)', () => {
   it('the source tab leaves the row, so the others reflow live', () => {
     expect(rule('[data-blok-database-tab][data-blok-database-tab-drag-source]')).toMatch(/display: none/);
@@ -119,9 +139,9 @@ describe('a narrow view bar folds like Notion (notion-spec-2 §26.1)', () => {
     expect(rule('[data-blok-database-tab-bar][data-blok-database-tab-folded] > [data-blok-database-add-view]')).toMatch(/display: none/);
   });
 
-  it('the icon group hides together, and New hides on its own', () => {
-    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-foldable]')).toMatch(/display: none/);
-    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new]')).toMatch(/display: none/);
+  it('the icon group hides together, and New hides on its own, in the view bar and in a one-view title row', () => {
+    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-icons]:not([data-blok-database-fold-probe]) > [data-blok-database-toolbar-foldable], [data-blok-database-view-toolbar][data-blok-database-fold-probe="no-icons"] > [data-blok-database-toolbar-foldable]')).toMatch(/display: none/);
+    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar]:not([data-blok-database-fold-probe]) > [data-blok-database-new], [data-blok-database-title-row][data-single-view] > [data-blok-database-view-toolbar][data-blok-database-fold-new]:not([data-blok-database-fold-probe]) > [data-blok-database-new]')).toMatch(/display: none/);
   });
 
   // notion-spec-2 §26.1 (`tb-1000-closed.txt`): "4 more…" is 76.7x32, as tall as a tab.

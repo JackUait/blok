@@ -327,6 +327,9 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:embed/embed-replace': cmd('embed.setUrl'),
   'menu:embed/embed-copy-url': exempt('clipboard', COPY_URL),
   'menu:paste-menu/paste-menu-*': exempt('gesture-alias', 'Each paste-as menu item is one choice of paste:menu/embed, paste:menu/bookmark, paste:menu/mention or paste:menu/plain.'),
+  // No agent command moves a database between documents. These rebuild it with new ids, in several undo steps.
+  'menu:page/page-turn-into-inline-database': cmds(['database.create', 'database.addProperty', 'database.addRow', 'block.delete'], 'Read the page (page field: needs the host\'s loadDocument and saveDocument), rebuild its database here with database.create, addProperty and addRow, then delete the link.'),
+  'menu:database/database-turn-into-page': cmds(['block.insert', 'block.delete'], 'Editor only: insert a page with data { kind: "database" }, rebuild this database in it (page field: needs loadDocument and saveDocument), then delete this one. Headless hosts cannot insert a page: see KNOWN_GAPS.'),
   'menu:page/page-open-new-tab': exempt('view-only', 'Opens the linked page in a new tab; this document does not change.'),
   'menu:page/page-open-side-peek': exempt('view-only', 'Opens another page in a panel; this document does not change.'),
   'menu:table/table-heading-row': fld('table.withHeadings'),
@@ -418,6 +421,8 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-title-copy-link': exempt('chrome', 'Copies a link to the view to the clipboard; the document does not change.'),
   'menu:database/database-title-duplicate': cmd('database.duplicateView'),
   'menu:database/database-title-edit': exempt('chrome', 'Puts the caret in the database title; the title edit itself is ui-file:src/tools/database/index.ts (block.update).'),
+  'menu:database/database-title-edit-layout': cmds(['database.updateProperty'], PAGE_LAYOUT),
+  'menu:database/database-title-hide': fld('database.hideDataSourceTitles'),
   'menu:database/database-autofill-summary-paragraph': cmd('database.updateProperty'),
   'menu:database/database-autofill-trigger-onCreate-*': cmd('database.updateProperty'),
   'menu:database/database-autofill-trigger-onEdit-off': cmd('database.updateProperty'),

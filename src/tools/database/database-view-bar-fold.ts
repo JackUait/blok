@@ -63,3 +63,57 @@ export const planViewBarFold = (parts: ViewBarParts): ViewBarFold => {
 
   return { tabs: shown.length >= 2 ? shown : 'compact', icons, newButton };
 };
+
+/** A one-view title row: the row's width, what sits before the toolbar, and the toolbar with and without its icons. */
+export interface TitleRowParts {
+  width: number;
+  lead: number;
+  toolbar: { full: number; noIcons: number };
+}
+
+/**
+ * The title row folds the same parts as the view bar: the icon group first,
+ * New last, Settings never. Notion's switch points for this row are not
+ * measured, so it folds only when the toolbar would run over the title.
+ */
+export const planTitleRowFold = (parts: TitleRowParts): Omit<ViewBarFold, 'tabs'> => {
+  const room = parts.width - parts.lead;
+  const icons = parts.toolbar.full <= room;
+
+  return { icons, newButton: icons || parts.toolbar.noIcons <= room };
+};
+
+const outerWidth = (el: HTMLElement, width: number): number => {
+  const style = getComputedStyle(el);
+
+  return width + (Number.parseFloat(style.marginLeft) || 0) + (Number.parseFloat(style.marginRight) || 0);
+};
+
+/**
+ * Measures a one-view title row and sets the fold marks database.css reads.
+ * Probes and marks go on the toolbar, which is mutation-free
+ * (database-view-controls.ts): the row is not, so a write there is a block change.
+ */
+export const foldTitleRow = (row: HTMLElement): void => {
+  const toolbar = row.querySelector<HTMLElement>(':scope > [data-blok-database-view-toolbar]');
+
+  if (toolbar === null || !row.isConnected) return;
+  toolbar.setAttribute('data-blok-database-fold-probe', 'full');
+  const full = toolbar.offsetWidth;
+
+  toolbar.setAttribute('data-blok-database-fold-probe', 'no-icons');
+  const noIcons = toolbar.offsetWidth;
+
+  toolbar.removeAttribute('data-blok-database-fold-probe');
+  // The title shrinks to fit the row, so its text width is what it needs.
+  const lead = Array.from(row.children)
+    // The selection bar lies over the row while rows are picked; it takes no room.
+    .filter((child): child is HTMLElement => child instanceof HTMLElement && child !== toolbar && !['absolute', 'fixed'].includes(getComputedStyle(child).position))
+    .reduce((sum, child) => sum + outerWidth(child, child.hasAttribute('data-blok-database-title') ? child.scrollWidth : child.offsetWidth), 0);
+  const style = getComputedStyle(row);
+  const width = row.clientWidth - (Number.parseFloat(style.paddingLeft) || 0) - (Number.parseFloat(style.paddingRight) || 0);
+  const fold = planTitleRowFold({ width, lead, toolbar: { full, noIcons } });
+
+  toolbar.toggleAttribute('data-blok-database-fold-icons', !fold.icons);
+  toolbar.toggleAttribute('data-blok-database-fold-new', !fold.newButton);
+};

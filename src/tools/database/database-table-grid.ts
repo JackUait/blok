@@ -78,6 +78,8 @@ export interface GridCallbacks {
   bulkEdit?: (rowIds: string[]) => void;
   /** Cmd/Ctrl+Shift+M or P on one selected row: its Comment or Move to. True when it acted. */
   rowCommand?: (rowId: string, command: 'comment' | 'moveTo') => boolean;
+  /** Escape cleared selected rows. Notion's side peek closes on that same press. */
+  rowsEscaped?: () => void;
 }
 
 export interface GridOptions {
@@ -924,6 +926,7 @@ export class DatabaseTableGrid {
     }
     this.state.selection = null;
     this.paint();
+    this.callbacks.rowsEscaped?.();
   }
 
   private cellKey(event: KeyboardEvent, selection: Extract<TableSelection, { kind: 'cell' }>): void {

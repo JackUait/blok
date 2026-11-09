@@ -71,12 +71,19 @@ export interface TimelineHandlers {
   openZoomMenu: (anchor: HTMLElement) => void;
   /** Redraw centred on `day`. */
   navigate: (day: string) => void;
-  toggleTable: () => void;
+  /** `origin` is where the days sit now, for the next draw to keep. */
+  toggleTable: (origin?: TimelineOrigin) => void;
   loadMore: (groupKey: string) => void;
   /** A link drawn from one bar's handle onto another: `from` now blocks `to`. */
   link?: (fromRowId: string, toRowId: string) => void;
   /** A table panel footer cell was clicked: pick its calculation. */
   openCalculationMenu?: (anchor: HTMLElement, propertyId: string) => void;
+}
+
+/** Where the drawn window's first day sits: px from the view's inline start. */
+export interface TimelineOrigin {
+  start: string;
+  at: number;
 }
 
 export interface DatabaseTimelineViewOptions {
@@ -107,6 +114,10 @@ export interface DatabaseTimelineViewOptions {
   commentBadges?: CommentBadges;
   /** The host's "Manage in Calendar" (`config.calendar`), a toolbar button. Read-only keeps it. */
   manageInCalendar?: { label: string; onClick: () => void };
+  /** This draw follows a table toggle: the old chevron shrinks out over the new one. */
+  tableSwapped?: boolean;
+  /** Draw the days here instead of centring on `center`, when the window still starts on `origin.start`. */
+  origin?: TimelineOrigin;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -248,10 +259,22 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     root.addEventListener('click', this.onClick);
     root.addEventListener('keydown', this.onKeyDown);
     root.addEventListener('pointerdown', this.onPointerDown);
+    root.addEventListener('pointerover', this.onPointerOver);
+    root.addEventListener('pointerout', this.onPointerOut);
 
     // The tool attaches the view after createView returns; only then has the scroller a width.
     queueMicrotask(() => {
-      if (this.root?.isConnected === true) {
+      if (this.root?.isConnected !== true) {
+        return;
+      }
+      const origin = this.options.origin;
+
+      if (origin?.start === this.window.start) {
+        this.recentring = true;
+        this.scrollStart = Math.max(0, this.chartInset() - origin.at);
+        this.recentring = false;
+        this.refreshOffscreen();
+      } else {
         this.scrollToDay(this.options.center, 'center');
       }
     });
@@ -272,6 +295,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     toggle.setAttribute('aria-pressed', String(shown));
     toggle.setAttribute('aria-label', this.t(shown ? 'tools.database.timelineHideTable' : 'tools.database.timelineShowTable'));
     toggle.innerHTML = IconChevronDoubleRight;
+    if (this.options.tableSwapped === true) {
+      const out = document.createElement('span');
+
+      toggle.setAttribute('data-swapped', '');
+      out.setAttribute('data-blok-database-timeline-toggle-out', '');
+      out.setAttribute('aria-hidden', 'true');
+      out.innerHTML = IconChevronDoubleRight;
+      toggle.appendChild(out);
+    }
 
     const month = document.createElement('div');
 
@@ -865,12 +897,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       el.appendChild(this.createHandle('start'));
     }
 
-    const chip = document.createElement('span');
-
-    chip.setAttribute('data-blok-database-timeline-bar-chip', '');
-    chip.setAttribute('aria-hidden', 'true');
-    chip.innerHTML = IconArrowLeftSmall;
-    el.appendChild(chip);
+    el.appendChild(this.createBarChip('start'));
 
     const titleEl = this.createBarTitle(title);
     const icon = showsPageIcon(this.options.view) ? pageIconElement(row) : null;
@@ -902,6 +929,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       }
     }
 
+    el.appendChild(this.createBarChip('end'));
     if (this.canEdit) {
       el.appendChild(this.createHandle('end'));
     }
@@ -916,6 +944,16 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     return el;
+  }
+
+  private createBarChip(side: 'start' | 'end'): HTMLElement {
+    const chip = document.createElement('span');
+
+    chip.setAttribute('data-blok-database-timeline-bar-chip', side);
+    chip.setAttribute('aria-hidden', 'true');
+    chip.innerHTML = side === 'start' ? IconArrowLeftSmall : IconArrowRightSmall;
+
+    return chip;
   }
 
   private barProperties(): PropertyDefinition[] {
@@ -962,12 +1000,29 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   }
 
-  private scrollToDay(day: string, align: 'center' | 'start'): void {
+  /** The scroller's distance from the view's inline start. */
+  private chartInset(): number {
+    const view = this.root?.getBoundingClientRect();
+    const chart = this.scroller?.getBoundingClientRect();
+
+    if (view === undefined || chart === undefined) {
+      return 0;
+    }
+
+    return this.rtl ? view.right - chart.right : chart.left - view.left;
+  }
+
+  private scrollToDay(day: string, align: 'center' | 'start' | 'end'): void {
     const offset = daysBetween(this.window.start, day) * this.dayWidth;
     const viewport = this.scroller?.clientWidth ?? 0;
+    const target = {
+      center: offset - viewport / 2,
+      start: offset - this.dayWidth,
+      end: offset + 2 * this.dayWidth - viewport,
+    }[align];
 
     this.recentring = true;
-    this.scrollStart = Math.max(0, align === 'center' ? offset - viewport / 2 : offset - this.dayWidth);
+    this.scrollStart = Math.max(0, target);
     this.recentring = false;
     this.refreshOffscreen();
   }
@@ -999,10 +1054,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       line.querySelectorAll('[data-blok-database-timeline-offscreen]').forEach((arrow) => {
         arrow.toggleAttribute('hidden', arrow.getAttribute('data-blok-database-timeline-offscreen') !== side);
       });
-      const barStart = row === undefined || span === null ? null : this.geometryOf(span, this.valuesOf(row)).offset;
+      const geometry = row === undefined || span === null ? null : this.geometryOf(span, this.valuesOf(row));
+      const barEl = line.querySelector('[data-blok-database-timeline-bar]');
+      const shown = geometry !== null && side === null;
 
-      line.querySelector('[data-blok-database-timeline-bar]')
-        ?.toggleAttribute('data-clipped-start', barStart !== null && side === null && barStart < this.scrollStart);
+      barEl?.toggleAttribute('data-clipped-start', shown && geometry.offset < this.scrollStart);
+      barEl?.toggleAttribute('data-clipped-end', shown && geometry.offset + geometry.width > this.scrollStart + this.scroller.clientWidth);
     }
   }
 
@@ -1030,7 +1087,8 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     this.scrollStart = this.scrollStart + direction * (this.scroller?.clientWidth ?? 0);
   }
 
-  private jumpTo(rowId: string): void {
+  /** Brings a bar's start, or with `side` "end" its end, onto the screen. */
+  private jumpTo(rowId: string, side: 'start' | 'end' = 'start'): void {
     const row = this.findRow(rowId);
     const span = row === undefined ? null : this.spanOf(row);
 
@@ -1038,14 +1096,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return;
     }
 
-    const index = daysBetween(this.window.start, span.start);
+    const day = span[side];
+    const index = daysBetween(this.window.start, day);
 
     if (index < 0 || index >= this.window.days) {
-      this.options.handlers?.navigate(span.start);
+      this.options.handlers?.navigate(day);
 
       return;
     }
-    this.scrollToDay(span.start, 'start');
+    this.scrollToDay(day, side);
   }
 
   private readonly onClick = (event: MouseEvent): void => {
@@ -1063,7 +1122,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     const actions: Array<[string, (el: Element) => void]> = [
-      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable()],
+      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable({ start: this.window.start, at: this.chartInset() - this.scrollStart })],
       ['[data-blok-database-timeline-zoom]', (el) => {
         if (el instanceof HTMLElement) {
           handlers.openZoomMenu(el);
@@ -1079,7 +1138,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         }
       }],
       ['[data-blok-database-timeline-load-more]', (el) => handlers.loadMore(el.getAttribute('data-group-key') ?? '')],
-      ['[data-blok-database-timeline-offscreen], [data-blok-database-timeline-bar-chip]', (el) => this.jumpTo(el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '')],
+      [
+        '[data-blok-database-timeline-offscreen], [data-blok-database-timeline-bar-chip]',
+        (el) => this.jumpTo(el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '', el.getAttribute('data-blok-database-timeline-bar-chip') === 'end' ? 'end' : 'start'),
+      ],
       ['[data-blok-database-timeline-table-title], [data-blok-database-timeline-bar]', (el) => {
         const rowId = el.closest('[data-row-id]')?.getAttribute('data-row-id');
 
@@ -1327,8 +1389,29 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   }
 
+  /** notion-motion.md Timeline: a hovered bar marks its days in the header, at once. */
+  private readonly onPointerOver = (event: PointerEvent): void => {
+    const barEl = event.target instanceof Element ? event.target.closest('[data-blok-database-timeline-bar]') : null;
+    const row = this.findRow(barEl?.getAttribute('data-row-id') ?? '');
+    const span = row === undefined ? null : this.spanOf(row);
+
+    if (this.drag?.active === true || row === undefined || span === null) {
+      return;
+    }
+    this.showRange(span, this.zoom === 'hours' ? this.geometryOf(span, this.valuesOf(row)) : barGeometry(span, this.window.start, this.zoom), true);
+  };
+
+  private readonly onPointerOut = (event: PointerEvent): void => {
+    const barEl = event.target instanceof Element ? event.target.closest('[data-blok-database-timeline-bar]') : null;
+    const into = event.relatedTarget instanceof Node && barEl?.contains(event.relatedTarget) === true;
+
+    if (barEl !== null && !into && (this.root?.querySelector('[data-blok-database-timeline-range][data-hover]') ?? null) !== null) {
+      this.clearDragMarks();
+    }
+  };
+
   /** findings C15: a pill over the dragged range's day numbers; its first and last day in ink. */
-  private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }): void {
+  private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }, hover = false): void {
     const header = this.root?.querySelector('[data-blok-database-timeline-header]');
 
     if (header === null || header === undefined) {
@@ -1337,6 +1420,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const pill = header.querySelector<HTMLElement>('[data-blok-database-timeline-range]') ?? document.createElement('div');
 
     pill.setAttribute('data-blok-database-timeline-range', '');
+    pill.toggleAttribute('data-hover', hover);
     pill.style.insetInlineStart = `${offset}px`;
     pill.style.width = `${width}px`;
     if (!pill.isConnected) {

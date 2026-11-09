@@ -46,6 +46,93 @@ describe('database menus', () => {
   });
 });
 
+/* Filter, Sort and every other panel or editor that sits in a CellPopover (notion-motion.md "Popovers"). */
+const EDITOR = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-cell-editor']";
+const EDITOR_CLOSED = `${EDITOR}:not([data-blok-popover-opened='true'])`;
+
+/** The rule that wins for `selector`: the last one in the file that names it. */
+const lastBody = (css: string, selector: string): string =>
+  rules(css).filter((rule) => rule.selectors.includes(selector)).map((rule) => rule.body).pop() ?? '';
+
+describe('database panels (Filter, Sort, pickers)', () => {
+  it('open and close like the database menus: 200ms ease, from and back to scale .96', () => {
+    expect(body(outsideReducedMotion, `${EDITOR} [data-blok-popover-container]`)).toContain('transition: opacity 200ms ease, transform 200ms ease');
+    expect(body(outsideReducedMotion, `${EDITOR_CLOSED} [data-blok-popover-container]`)).toContain('transform: scale(0.96)');
+    expect(body(outsideReducedMotion, "[data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-cell-editor']"))
+      .toContain('transition: display 200ms allow-discrete, overlay 200ms allow-discrete');
+  });
+
+  it('do not move under reduced motion', () => {
+    expect(body(reducedMotion, `${EDITOR} [data-blok-popover-container]`)).toContain('transition: none');
+    expect(body(reducedMotion, `${EDITOR_CLOSED} [data-blok-popover-container]`)).toContain('transform: none');
+  });
+
+  it.each([
+    ['view settings (notion-motion.md "View settings": no entrance)', 'blok-database-docked-panel'],
+    ['a table cell editor (notion-motion.md "Cell editors")', 'blok-database-table-cell-editor'],
+    ['a row page value editor', 'blok-database-value-editor'],
+  ])('%s still opens at its final size and opacity', (_, cls) => {
+    const at = `[data-blok-popover][data-blok-popover-custom-class~='${cls}']`;
+    const ownRule = lastBody(outsideReducedMotion, `${at} > [data-blok-popover-container]`);
+    const closedRule = lastBody(outsideReducedMotion, `${at}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`);
+
+    expect(ownRule).toContain('transition: none');
+    expect(closedRule).toContain('transform: none');
+    // The opt-out must come after the panel motion it overrides (same specificity).
+    const motionAt = outsideReducedMotion.indexOf(`${EDITOR} [data-blok-popover-container]`);
+    const optOutAt = outsideReducedMotion.lastIndexOf(`${at} > [data-blok-popover-container]`);
+
+    expect(motionAt).toBeGreaterThan(-1);
+    expect(optOutAt).toBeGreaterThan(motionAt);
+  });
+});
+
+describe('database menu rows', () => {
+  it('fade their hover fill in over 20ms ease-in (notion-motion.md "Popovers")', () => {
+    expect(body(outsideReducedMotion, `${MENU} [data-blok-popover-item]`)).toContain('transition: background-color 20ms ease-in');
+  });
+
+  it('change their fill at once under reduced motion', () => {
+    expect(body(reducedMotion, `${MENU} [data-blok-popover-item]`)).toContain('transition: none');
+  });
+});
+
+describe('table column header hover', () => {
+  const HEADER = '[data-blok-database-table-column-header]';
+
+  // research/08:263, 21:71, 33:658: Notion's header takes a 0.051 fill on hover; notion-motion.md
+  // "Popovers": it fades in over 20ms ease-in. A gradient cannot transition, so its colour is a typed property.
+  it('registers the tint as a colour, so it can transition', () => {
+    expect(database).toMatch(/@property --blok-database-header-tint \{ syntax: '<color>'; inherits: false; initial-value: transparent; \}/);
+  });
+
+  it('paints the tint over its opaque fill and fades it over 20ms ease-in', () => {
+    const rest = body(outsideReducedMotion, HEADER);
+
+    expect(rest).toContain('background-image: linear-gradient(var(--blok-database-header-tint), var(--blok-database-header-tint))');
+    expect(rest).toMatch(/transition: [^;]*--blok-database-header-tint 20ms ease-in/);
+  });
+
+  it('takes the hover fill on hover and the pressed fill when pressed', () => {
+    expect(body(outsideReducedMotion, `${HEADER}:hover`)).toContain('--blok-database-header-tint: var(--blok-database-table-header-hover-bg)');
+    expect(body(outsideReducedMotion, `${HEADER}:active`)).toContain('--blok-database-header-tint: var(--blok-database-pressed-bg)');
+  });
+
+  it('does not fade under reduced motion', () => {
+    expect(body(reducedMotion, HEADER)).toContain('transition: none');
+  });
+});
+
+describe('toolbar search', () => {
+  const INPUT = '[data-blok-database-search-input]';
+
+  // notion-motion.md "Search": the field grows 0→150 and fades in, both 200ms ease.
+  it('fades in while it grows, both over 200ms ease', () => {
+    expect(body(outsideReducedMotion, INPUT)).toMatch(/transition: inline-size 0\.2s ease, opacity 0\.2s ease/);
+    expect(database).toMatch(/@starting-style \{ \[data-blok-database-search-input\] \{ inline-size: 0; opacity: 0; \} \}/);
+  });
+});
+
 describe('grouped list collapse', () => {
   it('turns only the caret, -90deg over 200ms ease-out', () => {
     expect(body(outsideReducedMotion, '[data-blok-database-list-group-toggle] svg')).toContain('transition: transform 200ms ease-out');
@@ -81,18 +168,19 @@ describe('view tab switch', () => {
 });
 
 describe('side peek', () => {
-  it('takes the width the drawer sets, 756px by default, and slides with translateX over 200ms ease', () => {
+  it('takes the width the drawer sets, 756px by default, and slides in from a window width away over 200ms ease', () => {
     const drawer = body(outsideReducedMotion, '[data-blok-database-drawer]');
 
     expect(drawer).toContain('width: min(var(--_blok-peek-width, 756px), 100vw)');
-    expect(drawer).toContain('transform: translateX(100%)');
+    // Notion starts at translateX(1512px) in a 1512px window (notion-motion.md "Side peek").
+    expect(drawer).toContain('transform: translateX(100vw)');
     expect(drawer).toContain('transition: transform 200ms ease');
     expect(drawer).not.toMatch(/transition: width/);
     expect(body(outsideReducedMotion, '[data-blok-database-drawer][data-open]')).toContain('transform: none');
   });
 
   it('slides in from the left in RTL', () => {
-    expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100%)');
+    expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100vw)');
   });
 
   it('narrows the page beside it over the same 200ms', () => {
@@ -111,6 +199,15 @@ describe('side peek', () => {
     expect(bar).toContain('transition: margin-inline-end 200ms ease');
   });
 
+  // peek-top.png: with one view the toolbar sits in the title row, and New ⌄ still ends 24px short of the peek.
+  it('keeps a one-view title row toolbar clear of the peek too, and still under reduced motion', () => {
+    const row = '[data-blok-database-peek] [data-blok-database-title-row][data-single-view]:not([data-blok-database-drawer] *)';
+
+    expect(body(outsideReducedMotion, row)).toContain('margin-inline-end: var(--_blok-peek-gap, 0px)');
+    expect(body(outsideReducedMotion, row)).toContain('transition: margin-inline-end 200ms ease');
+    expect(body(reducedMotion, row)).toContain('transition: none');
+  });
+
   it('lets the page follow a resize drag at once', () => {
     expect(body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-resizing]'))
       .toContain('transition: none !important');
@@ -119,6 +216,23 @@ describe('side peek', () => {
   it('has no pan scrollbar', () => {
     expect(database).not.toContain('data-blok-database-peek-scrollbar');
     expect(database).not.toContain('--_blok-peek-offset');
+  });
+
+  it('fades the open row\'s ring in and out over 200ms ease', () => {
+    const ring = body(outsideReducedMotion, '[data-blok-database-table-row]::before');
+    const peeked = body(outsideReducedMotion, '[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked])::before');
+
+    expect(ring).toContain('opacity: 0');
+    expect(ring).toContain('transition: opacity 200ms ease');
+    expect(peeked).toContain('opacity: 1');
+    expect(body(reducedMotion, '[data-blok-database-table-row]::before')).toContain('transition: none');
+  });
+
+  // motion-peeknext.json: the old halo fades from t=1222, the new one from about t=1291.
+  it('starts the halo of a row the peek steps to 70ms late', () => {
+    const stepped = body(outsideReducedMotion, '[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked="step"])::before');
+
+    expect(stepped).toContain('transition-delay: 70ms');
   });
 
   it('neither slides nor narrows gradually under reduced motion', () => {
@@ -140,5 +254,56 @@ describe('panel list drag', () => {
   it('jumps rows with no transition', () => {
     expect(body(database, ITEM)).not.toContain('transition');
     expect(body(database, `${ITEM}[data-dragging]`)).not.toContain('transition');
+  });
+});
+
+// notion-motion.md Search and Round 4 re-checks: the field grows 0→150 and fades in over 200ms ease, and closes the same way back.
+describe('database toolbar search', () => {
+  const INPUT = '[data-blok-database-search-input]';
+
+  it('grows and fades over 200ms ease', () => {
+    expect(body(outsideReducedMotion, INPUT)).toContain('transition: inline-size 0.2s ease, opacity 0.2s ease');
+  });
+
+  it('starts at no width and no ink', () => {
+    const start = [ ...database.matchAll(/@starting-style \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ].map((match) => match[1]).join(' ');
+
+    expect(body(start, INPUT)).toContain('inline-size: 0');
+    expect(body(start, INPUT)).toContain('opacity: 0');
+  });
+
+  it('shrinks to no width and no ink while it closes', () => {
+    const closing = body(outsideReducedMotion, `${INPUT}[data-closing]`);
+
+    expect(closing).toContain('inline-size: 0');
+    expect(closing).toContain('opacity: 0');
+  });
+});
+
+// notion-motion.md Round 4 re-checks: a minimized toolbar keeps only « and settings; « shows on header hover and fades 200ms ease.
+describe('minimized database toolbar', () => {
+  const TOOLBAR = '[data-blok-database-view-toolbar]';
+  const EXPAND = '[data-blok-database-toolbar-expand]';
+  const startStyle = [ ...database.matchAll(/@starting-style \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ].map((match) => match[1]).join(' ');
+
+  it('hides every control but settings, « and a search field still shrinking', () => {
+    expect(body(database, `${TOOLBAR}[data-minimized] > :not([data-blok-database-toolbar-settings], ${EXPAND}, [data-blok-database-lock-badge], [data-blok-database-search-input][data-closing])`))
+      .toContain('display: none');
+  });
+
+  it('shows « only while the pointer is on the header, fading over 200ms ease', () => {
+    expect(body(outsideReducedMotion, EXPAND)).toContain('opacity: 0');
+    expect(body(outsideReducedMotion, EXPAND)).toContain('transition: opacity 0.2s ease');
+    expect(body(database, `:is([data-blok-database-title-row], [data-blok-database-view-bar]):hover ${EXPAND}`)).toContain('opacity: 1');
+    expect(body(database, `${EXPAND}:focus-visible`)).toContain('opacity: 1');
+  });
+
+  it('draws « as a mirrored »', () => {
+    expect(body(database, `${EXPAND} svg`)).toContain('transform: scaleX(-1)');
+  });
+
+  it('fades the controls back in over 200ms ease when « expands it', () => {
+    expect(body(outsideReducedMotion, `${TOOLBAR}[data-expanding] > *`)).toContain('transition: opacity 0.2s ease');
+    expect(body(startStyle, `${TOOLBAR}[data-expanding] > *`)).toContain('opacity: 0');
   });
 });

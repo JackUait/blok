@@ -323,6 +323,37 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.toggleTable).toHaveBeenCalled();
     });
 
+    // timeline.png / tlcollapse.png: the days keep their x when the table toggles.
+    it('hands the toggle where the first day sits, measured from the view\'s start', () => {
+      const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true }) });
+      const el = scroller(root);
+
+      rect(root, 100, 0, 1000, 400);
+      rect(el, 380, 0, 720, 400);
+      el.scrollLeft = 600;
+      root.querySelector<HTMLElement>('[data-blok-database-timeline-table-toggle]')?.click();
+      expect(handlers.toggleTable).toHaveBeenCalledWith({ start: '2026-07-01', at: -320 });
+    });
+
+    it('a draw handed that place scrolls so the first day sits there again', async () => {
+      const { root } = mount({ origin: { start: '2026-07-01', at: -320 } });
+      const el = scroller(root);
+
+      rect(root, 100, 0, 1000, 400);
+      rect(el, 100, 0, 1000, 400);
+      await Promise.resolve();
+      expect(el.scrollLeft).toBe(320);
+    });
+
+    it('a place from another window is ignored: the draw centres as usual', async () => {
+      const handed = mount({ origin: { start: '2026-08-01', at: -320 } }).root;
+      const plain = mount().root;
+
+      await Promise.resolve();
+      expect(scroller(handed).scrollLeft).toBe(scroller(plain).scrollLeft);
+      expect(scroller(handed).scrollLeft).not.toBe(320);
+    });
+
     it('lists the table properties, not the bar properties, with one row per item', () => {
       const { root } = mount({
         view: timelineView({
@@ -405,6 +436,24 @@ describe('DatabaseTimelineView', () => {
       expect(button?.nextElementSibling?.hasAttribute('data-blok-database-timeline-zoom')).toBe(true);
       button?.click();
       expect(manage).toHaveBeenCalledTimes(1);
+    });
+
+    // notion-motion.md Timeline: after a table toggle the old chevron shrinks out over the new one.
+    it('keeps the old chevron, mirrored and hidden from readers, on the draw after a table toggle', () => {
+      const { root } = mount({ tableSwapped: true });
+      const toggle = root.querySelector('[data-blok-database-timeline-table-toggle]');
+      const old = toggle?.querySelector('[data-blok-database-timeline-toggle-out]');
+
+      expect(old?.innerHTML).toBe(markup(IconChevronDoubleRight));
+      expect(old?.getAttribute('aria-hidden')).toBe('true');
+      expect(toggle?.hasAttribute('data-swapped')).toBe(true);
+    });
+
+    it('draws one chevron when the table was not just toggled', () => {
+      const { root } = mount();
+
+      expect(root.querySelector('[data-blok-database-timeline-toggle-out]')).toBeNull();
+      expect(root.querySelector('[data-blok-database-timeline-table-toggle]')?.hasAttribute('data-swapped')).toBe(false);
     });
 
     // findings C05: » toggle, the shown month, then Month ⌄ · ‹ · Today · ›.
@@ -694,6 +743,40 @@ describe('DatabaseTimelineView', () => {
       expect(el.scrollLeft).toBeLessThan(px('2026-10-13'));
     });
 
+    // notion-motion.md Timeline (tlcollapse.png, Gamma): a bar cut by the screen's end shows a "→" chip at that end.
+    it('marks a bar that runs past the screen\'s end, and its "→" chip jumps to it', () => {
+      const { root, view } = mount();
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 400, configurable: true });
+      el.scrollLeft = px('2026-10-04');
+      view.refreshOffscreen();
+
+      expect(bar(root, 'r2').hasAttribute('data-clipped-end')).toBe(true);
+      expect(bar(root, 'r1').hasAttribute('data-clipped-end')).toBe(false);
+      const chip = bar(root, 'r2').querySelector<HTMLElement>('[data-blok-database-timeline-bar-chip="end"]');
+
+      expect(chip?.innerHTML).toBe(markup(IconArrowRightSmall));
+      chip?.click();
+      expect(el.scrollLeft).toBeGreaterThan(px('2026-10-04'));
+    });
+
+    it('scrolls a bar cut at both ends forward from its "→" chip, to its end', () => {
+      const { root, view } = mount({ groups: single([row('r1', 'Long', '2026-10-01/2026-10-20')]) });
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 400, configurable: true });
+      el.scrollLeft = px('2026-10-05');
+      view.refreshOffscreen();
+
+      expect(bar(root, 'r1').hasAttribute('data-clipped-start')).toBe(true);
+      expect(bar(root, 'r1').hasAttribute('data-clipped-end')).toBe(true);
+      bar(root, 'r1').querySelector<HTMLElement>('[data-blok-database-timeline-bar-chip="end"]')?.click();
+
+      // The end day, with one day of room after it.
+      expect(el.scrollLeft).toBe(px('2026-10-22') - 400);
+    });
+
     // research/26 §4d: Notion draws a straight arrow in the chip, not a chevron.
     it('draws a straight arrow pointing to the side the bar is on', () => {
       const { root } = mount({ groups: single([row('r1', 'Early', '2026-09-02')]) });
@@ -866,6 +949,69 @@ describe('DatabaseTimelineView', () => {
       expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
       key(document, 'Escape');
       expect(range(root)).toBeNull();
+    });
+  });
+
+  // notion-motion.md Timeline (tlhover.png): hovering a bar marks its days in the header at once.
+  describe('bar hover marks its days in the header', () => {
+    const range = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-timeline-range]');
+    const edges = (root: HTMLElement): Array<string | null> =>
+      [...root.querySelectorAll('[data-blok-database-timeline-units] > [data-range-edge]')].map((el) => el.getAttribute('data-day'));
+    const over = (target: Element, related: Element | null = null): void => {
+      target.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, relatedTarget: related }));
+    };
+    const out = (target: Element, related: Element | null): void => {
+      target.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, relatedTarget: related }));
+    };
+
+    it('shows the pill over the bar\'s days, with its first and last day in ink', () => {
+      const { root } = mount();
+
+      over(bar(root, 'r2'));
+
+      expect(range(root)?.hasAttribute('data-hover')).toBe(true);
+      expect(range(root)?.style.insetInlineStart).toBe(`${px('2026-10-12')}px`);
+      expect(range(root)?.style.width).toBe(`${3 * TIMELINE_DAY_WIDTH.month}px`);
+      expect(edges(root)).toEqual(['2026-10-12', '2026-10-14']);
+    });
+
+    it('keeps the pill while the pointer moves inside the bar, and drops it when the pointer leaves', () => {
+      const { root } = mount();
+      const title = bar(root, 'r2').querySelector('[data-blok-database-timeline-bar-title]');
+
+      if (title === null) throw new Error('no title');
+      over(bar(root, 'r2'));
+      out(bar(root, 'r2'), title);
+      expect(range(root)).not.toBeNull();
+
+      out(title, canvas(root));
+      expect(range(root)).toBeNull();
+      expect(edges(root)).toEqual([]);
+    });
+
+    it('moves the pill to the next bar hovered', () => {
+      const { root } = mount();
+
+      over(bar(root, 'r2'));
+      out(bar(root, 'r2'), bar(root, 'r1'));
+      over(bar(root, 'r1'), bar(root, 'r2'));
+
+      expect(range(root)?.style.insetInlineStart).toBe(`${px('2026-10-09')}px`);
+      expect(edges(root)).toEqual(['2026-10-09']);
+    });
+
+    it('leaves a drag\'s pill alone when the pointer leaves the bar mid-drag', () => {
+      const { root } = mount();
+
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'month').days * 40, 400);
+      over(bar(root, 'r1'));
+      pointer('pointerdown', bar(root, 'r1'), px('2026-10-09') + 20, 50);
+      pointer('pointermove', document, px('2026-10-12') + 20, 50);
+      out(bar(root, 'r1'), canvas(root));
+
+      expect(range(root)?.hasAttribute('data-hover')).toBe(false);
+      expect(edges(root)).toEqual(['2026-10-12']);
+      pointer('pointerup', document, px('2026-10-12') + 20, 50);
     });
   });
 

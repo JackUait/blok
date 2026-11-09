@@ -79,7 +79,7 @@ describe('@bloklabs/mcp README', () => {
   it('lists the C#, Go and Rust builds and where they differ on purpose', () => {
     const section = readme.slice(readme.indexOf('## Other builds: C#, Go and Rust'), readme.indexOf('## Limits'));
 
-    for (const name of ['Blok.Mcp', 'AddBlokMcp', 'MapBlokMcp', 'blokmcp.New', 'blok_mcp::Embedded::new', 'cargo build --release -p blok-mcp']) {
+    for (const name of ['Blok.Mcp', 'AddBlokMcp', 'MapBlokMcp', 'blokmcp.New', 'blok_mcp::Embedded::new', 'cargo install blok-mcp']) {
       expect(section, name).toContain(name);
     }
     expect(section).toMatch(/60 second limit per call/);
@@ -114,15 +114,5 @@ describe('Blok.Mcp server.json', () => {
   it('marks the secrets as secret', () => {
     expect(listed.filter(({ isSecret }) => isSecret).map(({ name }) => name).sort())
       .toEqual(['BLOK_DOC_ENDPOINT_AUTH', 'BLOK_MCP_HOST_TOKEN', 'BLOK_SECRET']);
-  });
-});
-
-// 2.1.0 shipped the Go server earlier and the C# and Go MCP builds (CHANGELOG); only Rust has not shipped.
-describe('which builds the READMEs say have shipped', () => {
-  it.each(['packages/mcp/README.md', 'packages/server/README.md'])('%s names Rust as the one MCP build not shipped', (file) => {
-    const text = readFileSync(resolve(ROOT, file), 'utf-8');
-
-    expect(text).not.toContain('No release has shipped them yet.');
-    expect(text).toMatch(/Rust build has not shipped/);
   });
 });

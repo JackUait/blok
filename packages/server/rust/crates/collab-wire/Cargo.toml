@@ -1,13 +1,15 @@
 [package]
 name = "blok-collab-wire"
-version = "0.0.0"
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish.workspace = true
+repository.workspace = true
+description = "Internal part of blok-mcp (collaboration wire format). Not a stable API."
+publish = true
 
 [dependencies]
-blok-jsjson = { path = "../jsjson" }
+blok-jsjson.workspace = true
 
 [dev-dependencies]
 blok-yjs = { path = "../yjs" }

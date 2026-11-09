@@ -99,4 +99,35 @@ describe('toolbar — a holder marked no-controls', () => {
 
     expect(toolbarModule.opened).toBe(true);
   });
+
+  // A database row opened as a full page marks its holder while the toolbar is open on it.
+  // The holder then resizes; the handle must go, not float above the page (side-by-side-v2 "Full page stray handle").
+  it('closes when the open block gets the mark and then resizes', async () => {
+    const observers: ResizeObserverCallback[] = [];
+
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: ResizeObserverCallback) {
+        observers.push(callback);
+      }
+
+      public observe(): void {}
+
+      public unobserve(): void {}
+
+      public disconnect(): void {}
+    });
+    const booted = await boot();
+    const toolbarModule = booted.moduleInstances.Toolbar;
+    const block = booted.moduleInstances.BlockManager.blocks[0];
+
+    if (block === undefined) throw new Error('no block');
+    toolbarModule.moveAndOpen(block);
+    expect(toolbarModule.opened).toBe(true);
+
+    block.holder.setAttribute(DATA_ATTR.noControls, '');
+    observers.forEach((callback) => callback([], {} as ResizeObserver));
+
+    expect(toolbarModule.opened).toBe(false);
+    vi.unstubAllGlobals();
+  });
 });

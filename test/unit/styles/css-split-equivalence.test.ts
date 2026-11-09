@@ -1468,6 +1468,76 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const HIGHLIGHT_ROOT_FORM_BYTES = 1_181;
     // tables.css: off-screen cell containers skip style and layout.
     const TABLE_OFFSCREEN_CELLS_BYTES = 346;
+    // tables.css: the table scroller does not rubber-band, so its add bars and grips stay with it.
+    const TABLE_SCROLL_NO_BOUNCE_BYTES = 196;
+    // tables.css: the full-screen header and close button stay put while the sheet fades out with a shrink.
+    const TABLE_FULLSCREEN_LEAVE_BYTES = 642;
+    // database.css: blue cards hover blue, a dragged card takes Notion's drag fill, the list gutter fades in.
+    const DATABASE_CARD_MOTION_BYTES = 725;
+    // database.css: a dragged board group moves only its header strip; the other headers slide.
+    const DATABASE_GROUP_DRAG_BYTES = 932;
+    // database.css: a medium gallery preview is Notion's 146.25px, and the "+ New page" tile matches it.
+    const DATABASE_GALLERY_PREVIEW_BYTES = 662;
+    // database.css: a list title gives way to the properties.
+    const DATABASE_LIST_TITLE_BYTES = 116;
+    // database.css: the title row keeps 40px with tabs, the tab bar, list and board match Notion's offsets.
+    const DATABASE_VIEW_OFFSETS_BYTES = 502;
+    // database.css: the calendar day "+" is Notion's white disc with its shadow; days shared with the last month fade their ink;
+    // the timeline bar tint is a layer that fades in, and the hover pill runs past the bar's days;
+    // the table chevrons crossfade with a scale; the table panel cites its 280px measurement.
+    const DATABASE_VIEWS_TIME_BYTES = 2_690;
+    // database.css: the side peek's open-row ring sits on every row at 0, so it fades in and out.
+    const DATABASE_PEEK_HALO_FADE_BYTES = 296;
+    // database.css: the side peek's row steps show while the pointer is anywhere over the peek.
+    const DATABASE_PEEK_BAR_HOVER_BYTES = 37;
+    // database.css: the table row drag ghost has no background, and the dragged row hides its selection fill.
+    const DATABASE_ROW_DRAG_GHOST_BYTES = 355;
+    // database.css: a table column drag slides the other headers aside under a pressed-fill ghost.
+    const DATABASE_COLUMN_DRAG_SLIDE_BYTES = 746;
+    // database.css: the table and list row gutter glyphs draw at 24px, Notion's 14px "+".
+    const DATABASE_GUTTER_GLYPH_BYTES = 268;
+    // database.css: Filter, Sort and the other database panels open and close like the database menus; view settings opens at once.
+    const DATABASE_PANEL_MOTION_BYTES = 1_147;
+    // database.css: database menu rows and the table column header fade their hover fill over 20ms.
+    const DATABASE_HOVER_FILL_FADE_BYTES = 603;
+    // database.css: the toolbar search field fades in while it grows.
+    const DATABASE_SEARCH_FADE_BYTES = 75;
+    // database.css: the toolbar icons draw at their own 20px, as wide as Notion's glyphs.
+    const DATABASE_TOOLBAR_GLYPH_BYTES = 190;
+    // database.css: the row grip draws at 20px, and the title column's "Aa" at 20px over its 16px slot.
+    const DATABASE_GRIP_AND_TITLE_GLYPH_BYTES = 452;
+    // database.css: a timeline bar cut by the screen's end shows a "→" chip there.
+    const DATABASE_TIMELINE_END_CHIP_BYTES = 531;
+    // database.css: the toolbar search fades in, and shrinks and fades out on » or Escape.
+    const DATABASE_SEARCH_CLOSE_BYTES = 218;
+    // database.css: » minimizes the toolbar to « and settings; « fades the controls back.
+    const DATABASE_TOOLBAR_MINIMIZE_BYTES = 1071;
+    // database.css: with the timeline table shown, « and the month are placed from the panel's width at the view's edge.
+    const DATABASE_TIMELINE_TOOLBAR_PLACE_BYTES = 486;
+    // database.css: a hovered timeline bar shows Notion's "–o" connector: a 2px line into an 8px ring.
+    const DATABASE_TIMELINE_CONNECTOR_BYTES = 539;
+    // database.css: the Filter / Sort picker keeps its 28px field, scrolls only its list and borders the search on focus.
+    const DATABASE_PROPERTY_PICKER_BYTES = 891;
+    // database.css: a one-view title row keeps the peek gap, as the view bar does.
+    const DATABASE_PEEK_TITLE_ROW_BYTES = 291;
+    // database.css: a full row page widens its column by the title inset.
+    const DATABASE_FULL_PAGE_INSET_BYTES = 156;
+    // database.css: a one-view title row folds its toolbar as the view bar does.
+    const DATABASE_TITLE_ROW_FOLD_BYTES = 189;
+    // database.css: row + and grip fade ease-out and sit 8px clear of the checkbox.
+    const DATABASE_ROW_GUTTER_EASE_BYTES = 251;
+    // database.css: the title row fold probes on the toolbar, so a refold saves nothing.
+    const DATABASE_TITLE_ROW_FOLD_PROBE_BYTES = 271;
+    // database.css: the title row's fold marks sit on its toolbar, so a real fold saves nothing.
+    const DATABASE_TITLE_ROW_TOOLBAR_MARKS_BYTES = 283;
+    // database.css: the table bleeds left so a side peek or a narrow host does not clip the row gutter.
+    const DATABASE_TABLE_ROW_GUTTER_BLEED_BYTES = 1173;
+    // database.css: the list's row gutter bleeds the same way.
+    const DATABASE_LIST_ROW_GUTTER_BLEED_BYTES = 80;
+    // database.css: the ring of a row the peek steps to starts 70ms late.
+    const DATABASE_PEEK_STEP_HALO_BYTES = 265;
+    // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
+    const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1842,7 +1912,41 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + EMBED_GENERIC_GATE_BYTES
       + EMBED_GENERIC_HOST_BYTES
       + HIGHLIGHT_ROOT_FORM_BYTES
-      + TABLE_OFFSCREEN_CELLS_BYTES;
+      + TABLE_OFFSCREEN_CELLS_BYTES
+      + TABLE_SCROLL_NO_BOUNCE_BYTES
+      + TABLE_FULLSCREEN_LEAVE_BYTES
+      + DATABASE_CARD_MOTION_BYTES
+      + DATABASE_GROUP_DRAG_BYTES
+      + DATABASE_GALLERY_PREVIEW_BYTES
+      + DATABASE_LIST_TITLE_BYTES
+      + DATABASE_VIEW_OFFSETS_BYTES
+      + DATABASE_VIEWS_TIME_BYTES
+      + DATABASE_PEEK_HALO_FADE_BYTES
+      + DATABASE_PEEK_BAR_HOVER_BYTES
+      + DATABASE_ROW_DRAG_GHOST_BYTES
+      + DATABASE_COLUMN_DRAG_SLIDE_BYTES
+      + DATABASE_GUTTER_GLYPH_BYTES
+      + DATABASE_PANEL_MOTION_BYTES
+      + DATABASE_HOVER_FILL_FADE_BYTES
+      + DATABASE_SEARCH_FADE_BYTES
+      + DATABASE_TOOLBAR_GLYPH_BYTES
+      + DATABASE_GRIP_AND_TITLE_GLYPH_BYTES
+      + DATABASE_TIMELINE_END_CHIP_BYTES
+      + DATABASE_SEARCH_CLOSE_BYTES
+      + DATABASE_TOOLBAR_MINIMIZE_BYTES
+      + DATABASE_TIMELINE_TOOLBAR_PLACE_BYTES
+      + DATABASE_TIMELINE_CONNECTOR_BYTES
+      + DATABASE_PROPERTY_PICKER_BYTES
+      + DATABASE_PEEK_TITLE_ROW_BYTES
+      + DATABASE_FULL_PAGE_INSET_BYTES
+      + DATABASE_TITLE_ROW_FOLD_BYTES
+      + DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES
+      + DATABASE_PEEK_STEP_HALO_BYTES
+      + DATABASE_ROW_GUTTER_EASE_BYTES
+      + DATABASE_TITLE_ROW_FOLD_PROBE_BYTES
+      + DATABASE_TITLE_ROW_TOOLBAR_MARKS_BYTES
+      + DATABASE_TABLE_ROW_GUTTER_BLEED_BYTES
+      + DATABASE_LIST_ROW_GUTTER_BLEED_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

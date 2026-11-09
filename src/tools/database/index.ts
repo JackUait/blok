@@ -76,7 +76,7 @@ import { formatDateValue } from '../../shared/database/date-value';
 import { freePropertyName } from '../../shared/database/schema-ops';
 import { OPTION_GROUP_TYPES, layoutChange } from '../../shared/database/view-changes';
 import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
-import type { TimelineGroup } from './database-timeline-view';
+import type { TimelineGroup, TimelineOrigin } from './database-timeline-view';
 import type { BarWrite } from './timeline-dates';
 import { boardLayoutItems, calendarLayoutItems, galleryLayoutItems, timelineLayoutItems } from './database-layout-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
@@ -133,11 +133,16 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
-import { IconArrowDiagonal, IconCalendar, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { foldTitleRow } from './database-view-bar-fold';
+import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
+import type { MenuConfigItem } from '../../../types/tools/menu-config';
+import { databasePageHost, movedDatabases, subtreeOf } from '../page/database-page-move';
+import { createdId } from '../page/page-values';
+import { generateBlockId } from '../../components/utils/id-generator';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { isAnnotationBlock, mountChildBlocks } from '../nested-blocks';
 import { BuiltInCommentsUi } from './database-comments';
@@ -658,6 +663,8 @@ export class DatabaseTool implements BlockTool {
   private element: HTMLDivElement | null = null;
   private titleElement: HTMLElement | null = null;
   private titleRowElement: HTMLDivElement | null = null;
+  /** Refolds a one-view title row when it or its title changes size. */
+  private titleRowFold: ResizeObserver | null = null;
   /** The title line of a view on a second source; null on this block's own views. */
   private sourceTitleElement: HTMLElement | null = null;
   private boardContainer: HTMLDivElement | null = null;
@@ -724,12 +731,20 @@ export class DatabaseTool implements BlockTool {
   private readonly calendarAnchors = new Map<string, string>();
   /** A day to focus after the calendar redraws into a new range. */
   private calendarFocusDay: string | undefined;
+  /** The range shown before the calendar redraws into a new one: its digits fade from their old ink. */
+  private calendarInkFrom: string | undefined;
   /** Per timeline view: the centre day, for when local storage is blocked. */
   private readonly timelineCenters = new Map<string, string>();
+  /** Per timeline view: whether the last draw showed the table, so the next draw knows it was toggled. */
+  private readonly timelineTableShown = new Map<string, boolean>();
+  /** Per timeline view: where a table toggle left the days, for the draw it causes. */
+  private readonly timelineOrigins = new Map<string, TimelineOrigin>();
   private reprojectQueued = false;
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
   private destroyed = false;
+  /** This copy is leaving for another document that holds the same rows. */
+  private movingOut = false;
   /** Set while a full redraw waits for an inline edit or drag to end. */
   private redrawWhenIdleRetry: (() => void) | null = null;
   private viewControls: DatabaseViewControls | null = null;
@@ -2070,6 +2085,8 @@ export class DatabaseTool implements BlockTool {
     this.tabBar = null;
     this.unregisterGroupToggle?.();
     this.unregisterGroupToggle = null;
+    this.titleRowFold?.disconnect();
+    this.titleRowFold = null;
     this.titleElement = null;
     this.titleRowElement = null;
     this.boardContainer = null;
@@ -2198,6 +2215,10 @@ export class DatabaseTool implements BlockTool {
     const titleRow = document.createElement('div');
     titleRow.setAttribute('data-blok-database-title-row', '');
     titleRow.appendChild(titleEl);
+    // The title shrinks inside the row, so typing does not resize it.
+    titleRow.addEventListener('input', () => {
+      if (titleRow.hasAttribute('data-single-view')) foldTitleRow(titleRow);
+    });
     this.titleRowElement = titleRow;
     this.paintDatabaseIcon();
     wrapper.appendChild(titleRow);
@@ -2206,6 +2227,8 @@ export class DatabaseTool implements BlockTool {
     const viewBar = document.createElement('div');
 
     viewBar.setAttribute('data-blok-database-view-bar', '');
+    // Chrome: its fold rewrites tabs on every resize. View edits made here dispatch their own change.
+    viewBar.setAttribute(DATA_ATTR.mutationFree, 'true');
     viewBar.append(this.tabBar.render(), this.controls.toolbar);
     wrapper.append(viewBar, this.controls.filterBar);
     this.syncTitleRowAddBtn();
@@ -2313,14 +2336,74 @@ export class DatabaseTool implements BlockTool {
 
   /** A local delete of this database (or of a block that takes it along) deletes its rows from the backend. */
   removed(removal?: { deleted: boolean }): void {
-    if (removal?.deleted !== true || this.linked || this.readOnly) return;
+    // Its rows' own removals come after this one: they must see the flag.
+    if (movedDatabases.has(this.block.id)) this.movingOut = true;
+    if (removal?.deleted !== true || this.linked || this.readOnly || this.movingOut) return;
     [...this.model.getOrderedRows(), ...this.templates].forEach((row) => void this.sync.syncDeleteRow({ rowId: row.id }));
   }
 
   /** Called by a row this client deleted on its own; the row's backend copy goes too. */
   rowDeleted({ rowId }: { rowId: string }): void {
-    if (this.destroyed || this.linked || this.readOnly) return;
+    if (this.destroyed || this.linked || this.readOnly || this.movingOut) return;
     void this.sync.syncDeleteRow({ rowId });
+  }
+
+  /**
+   * The ⋮⋮ menu. "Turn into page" leads Notion's inline database menu
+   * (research-live-notion.md §4); it needs a host that stores the new page's document.
+   */
+  public renderSettings(): MenuConfigItem[] {
+    if (this.readOnly || this.linked || this.fullPage || this.insideDatabase() || databasePageHost(this.api) === null) return [];
+
+    return [{
+      icon: IconReplace,
+      title: this.api.i18n.t('tools.database.turnIntoPage'),
+      name: 'database-turn-into-page',
+      closeOnActivate: true,
+      onActivate: (): void => void this.turnIntoPage(),
+    }];
+  }
+
+  /** A database's children are rows, sources and tabs: a page link put there would be turned into a row. */
+  private insideDatabase(): boolean {
+    const parentId = this.block.parentId;
+
+    return parentId !== null && parentId !== undefined && this.api.blocks.getById(parentId)?.name === this.block.name;
+  }
+
+  /**
+   * Moves this database, its rows and their bodies into a new page, and puts
+   * a database page link in its place as one undo step. The host makes the
+   * page first; if that fails nothing changes.
+   */
+  private async turnIntoPage(): Promise<void> {
+    const host = databasePageHost(this.api);
+
+    if (host === null || this.movingOut || this.readOnly || this.linked) return;
+    const id = this.block.id;
+    const [root, ...rest] = subtreeOf((await this.api.saver.save()).blocks, id);
+
+    if (root === undefined) return;
+    const { parent: _parent, ...top } = root;
+    const title = this.title;
+    const minted = generateBlockId();
+    const document: OutputData = { title, blocks: [{ ...top, data: { ...top.data, fullPage: true } }, ...rest] };
+    const pageId = await Promise.resolve(host.config.create?.({ pageId: minted, title, document }))
+      .then((answer) => createdId(answer) ?? minted, () => null);
+
+    if (pageId === null) return;
+    // The save and the host were async: the database may be gone or locked by now.
+    if (this.destroyed || this.readOnly || this.api.blocks.getById(id) === null) return;
+    this.inOneStep(() => {
+      // research-live-notion.md §4: the new link row stays selected.
+      this.api.blocks.insertAt(host.name, { pageId, kind: 'database' }, { position: { before: id }, select: true });
+      const index = this.api.blocks.getBlockIndex(id);
+
+      if (index === undefined) return;
+      // Only once the link is in: a failed insert keeps this database and its backend deletes.
+      [root, ...rest].forEach((block) => { if (block.id !== undefined) movedDatabases.add(block.id); });
+      void this.api.blocks.delete(index, false);
+    });
   }
 
   /** A row this client deleted from the backend is back (undo): create it there again. */
@@ -2935,6 +3018,8 @@ export class DatabaseTool implements BlockTool {
       (capture.origin !== 'undo' && capture.origin !== 'redo') ||
       native?.type !== 'database-row'
     ) return;
+    // Undo or redo of Turn into page / inline: the other document holds this row on the same backend.
+    if (movedDatabases.has(capture.blockId)) return;
 
     const relocation = capture.relocation;
 
@@ -4614,6 +4699,7 @@ export class DatabaseTool implements BlockTool {
     if (this.structureLocked()) return;
     this.model.updateView(viewId, { name });
     void this.sync.syncUpdateView({ viewId, changes: { name } });
+    this.block.dispatchChange();
   }
 
   duplicateView(viewId: string): void {
@@ -4725,6 +4811,7 @@ export class DatabaseTool implements BlockTool {
     } else {
       this.rebuildTabBar();
     }
+    this.block.dispatchChange();
   }
 
   reorderView(viewId: string, newPosition: string): void {
@@ -4732,6 +4819,7 @@ export class DatabaseTool implements BlockTool {
     this.model.updateView(viewId, { position: newPosition });
     void this.sync.syncUpdateView({ viewId, changes: { position: newPosition } });
     this.rebuildTabBar();
+    this.block.dispatchChange();
   }
 
   private rebuildTabBar(): void {
@@ -4801,6 +4889,24 @@ export class DatabaseTool implements BlockTool {
         tabBarEl.style.display = views.length >= 2 ? '' : 'none';
       }
     }
+    this.syncTitleRowFold(single);
+  }
+
+  /** One view: the title row folds its toolbar as the view bar does (peek-top.png). */
+  private syncTitleRowFold(single: boolean): void {
+    const row = this.titleRowElement;
+
+    this.titleRowFold?.disconnect();
+    this.titleRowFold = null;
+    // Inert: the toolbar is mutation-free. The view bar keeps its own marks.
+    this.controls.toolbar.removeAttribute('data-blok-database-fold-icons');
+    this.controls.toolbar.removeAttribute('data-blok-database-fold-new');
+    if (!single || row === null) return;
+    foldTitleRow(row);
+    if (typeof ResizeObserver === 'undefined') return;
+    this.titleRowFold = new ResizeObserver(() => foldTitleRow(row));
+    this.titleRowFold.observe(row);
+    if (this.titleElement !== null) this.titleRowFold.observe(this.titleElement);
   }
 
   /** "Edit title": the caret at the end of the title. */
@@ -4815,6 +4921,13 @@ export class DatabaseTool implements BlockTool {
     range.collapse(false);
     window.getSelection()?.removeAllRanges();
     window.getSelection()?.addRange(range);
+  }
+
+  /** The title row's "Edit layout" runs "Customize page layout", where that exists. */
+  private editLayoutOption(): { onEditLayout?: () => void } {
+    const action = this.customizeLayoutAction();
+
+    return action === undefined ? {} : { onEditLayout: action.onClick };
   }
 
   private toggleDataSourceTitles(): void {
@@ -4839,13 +4952,15 @@ export class DatabaseTool implements BlockTool {
       onRenameView: (viewId, anchor) => this.editView(viewId, anchor, 'rename'),
       onCopyLink: (viewId) => this.copyViewLink(viewId),
       onEditTitle: () => this.focusTitle(),
+      ...this.editLayoutOption(),
       display: this.tabDisplay.get(),
       onDisplayChange: (display) => {
         this.tabDisplay.set(display);
         this.rebuildTabBar();
       },
       dataSourceTitlesHidden: this.dataSourceTitlesHidden,
-      ...(this.readOnly || this.structureLocked() ? {} : { onDataSourceTitlesToggle: () => this.toggleDataSourceTitles() }),
+      // A full-page database never shows its title, so there is nothing to toggle.
+      ...(this.readOnly || this.structureLocked() || this.fullPage ? {} : { onDataSourceTitlesToggle: () => this.toggleDataSourceTitles() }),
       // The bar hides it while read-only or locked; it flips in place (setReadOnly), so this is not gated here.
       ...(this.linked ? {} : { onNewDataSource: () => this.newDataSourceWithPanel() }),
       api: this.api,
@@ -6054,8 +6169,10 @@ export class DatabaseTool implements BlockTool {
       ? configured
       : resolveWeekStart(locale);
     const focusDay = this.calendarFocusDay;
+    const inkFrom = this.calendarInkFrom;
 
     this.calendarFocusDay = undefined;
+    this.calendarInkFrom = undefined;
     this.view = new DatabaseCalendarView({
       readOnly: this.readOnly,
       i18n: this.api.i18n,
@@ -6072,6 +6189,7 @@ export class DatabaseTool implements BlockTool {
       ...this.commentBadgeLever(),
       ...this.calendarLever(this.dataId, viewConfig.id),
       ...(focusDay !== undefined ? { focusDay } : {}),
+      ...(inkFrom !== undefined ? { inkFrom } : {}),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         ...(this.readOnly || dateId === undefined ? {} : {
@@ -6091,6 +6209,7 @@ export class DatabaseTool implements BlockTool {
           }
         },
         navigate: (anchor, focus) => {
+          this.calendarInkFrom = this.calendarAnchor(viewConfig.id, today);
           this.setCalendarAnchor(viewConfig.id, anchor);
           this.calendarFocusDay = focus;
           this.rerenderView({ keepDrawer: true });
@@ -6168,6 +6287,13 @@ export class DatabaseTool implements BlockTool {
       ? []
       : dependencyArrows(this.model.getOrderedRows(), arrowsProperty.id).filter((a) => shownIds.has(a.from) && shownIds.has(a.to));
 
+    const tableShown = resolveShowTimelineTable(viewConfig);
+    const tableSwapped = this.timelineTableShown.has(viewConfig.id) && this.timelineTableShown.get(viewConfig.id) !== tableShown;
+
+    this.timelineTableShown.set(viewConfig.id, tableShown);
+    const origin = this.timelineOrigins.get(viewConfig.id);
+
+    this.timelineOrigins.delete(viewConfig.id);
     this.view = new DatabaseTimelineView({
       readOnly: this.readOnly,
       i18n: this.api.i18n,
@@ -6183,6 +6309,8 @@ export class DatabaseTool implements BlockTool {
       center: this.timelineCenter(viewConfig.id, today),
       today,
       locale: editorLocale(this.api.i18n),
+      tableSwapped,
+      ...(origin !== undefined ? { origin } : {}),
       cellContext: this.cellContext(),
       ...this.commentBadgeLever(),
       ...this.calendarLever(this.dataId, viewConfig.id),
@@ -6206,7 +6334,10 @@ export class DatabaseTool implements BlockTool {
           this.setTimelineCenter(viewConfig.id, day);
           this.rerenderView({ keepDrawer: true });
         },
-        toggleTable: () => this.updateActiveView({ showTimelineTable: !resolveShowTimelineTable(viewConfig) }),
+        toggleTable: (keep) => {
+          if (keep !== undefined) this.timelineOrigins.set(viewConfig.id, keep);
+          this.updateActiveView({ showTimelineTable: !resolveShowTimelineTable(viewConfig) });
+        },
         ...(this.readOnly ? {} : { openCalculationMenu: (anchor: HTMLElement, propertyId: string) => this.openTimelineCalculationMenu(anchor, viewConfig, propertyId) }),
         loadMore: (groupKey) => {
           shown.set(groupKey, (shown.get(groupKey) ?? limit) + limit);
@@ -7349,6 +7480,7 @@ export class DatabaseTool implements BlockTool {
       },
       duplicateRow: (rowId) => { if (writable()) this.duplicateTableRow(rowId); },
       openRow: (rowId, mode) => context === undefined ? this.handleRowClick(rowId, mode) : context.openRow(rowId, mode),
+      rowsEscaped: () => { if (context === undefined) this.closeRowPage(); },
       copyRowLink: (rowId) => this.copyRowLink(rowId),
       moveTargets: () => this.moveTargets(),
       // After the click that closed the editor, which would count as outside the
@@ -8793,23 +8925,25 @@ export class DatabaseTool implements BlockTool {
     this.keyboard = this.createKeyboard(boardEl);
   }
 
+  /** Escape closes an open row page, and drops its row if "+ New" made it and it stayed empty. */
+  private closeRowPage(): boolean {
+    if (this.cardDrawer?.isOpen !== true) {
+      return false;
+    }
+    const rowId = this.cardDrawer.openRowId;
+
+    this.cardDrawer.close();
+    if (rowId !== null) {
+      this.dropFreshRow(rowId);
+    }
+
+    return true;
+  }
+
   private createKeyboard(boardEl: HTMLDivElement): DatabaseKeyboard {
     const keyboard = new DatabaseKeyboard({
       wrapper: boardEl,
-      onEscape: () => {
-        if (this.cardDrawer?.isOpen) {
-          const rowId = this.cardDrawer.openRowId;
-
-          this.cardDrawer.close();
-          if (rowId !== null) {
-            this.dropFreshRow(rowId);
-          }
-
-          return true;
-        }
-
-        return this.freshRow !== null && this.dropFreshRow(this.freshRow.id);
-      },
+      onEscape: () => this.closeRowPage() || (this.freshRow !== null && this.dropFreshRow(this.freshRow.id)),
     });
     keyboard.attach();
 
@@ -11660,6 +11794,8 @@ export class DatabaseTool implements BlockTool {
   private openRelatedToPicker(propertyId: string, anchor: HTMLElement): void {
     if (!anchor.isConnected) return;
     const popover = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
+      animateClose: true,
       items: this.documentDatabases().map((database) => ({
         name: `relatedTo-${database.id}`,
         title: database.title === '' ? this.api.i18n.t('tools.database.relationUntitledDatabase') : database.title,

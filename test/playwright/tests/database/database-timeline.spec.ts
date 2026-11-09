@@ -390,6 +390,36 @@ test.describe('timeline', () => {
     expect((await savedView(page)).showTimelineTable).toBe(true);
   });
 
+  // timeline.png: the panel's border is at x 639, the « ink starts 27px before it, the month ink 18px after it.
+  test('with the table shown, « sits at the panel\'s end and the month 16px into the chart, in a view wider than the text column', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
+
+    const panel = await page.locator('[data-blok-database-timeline-table]').boundingBox();
+    const chevron = await page.locator('[data-blok-database-timeline-table-toggle]').evaluate((el) => el.querySelector('svg')?.getBoundingClientRect().toJSON() as { x: number } | undefined ?? null);
+    const month = await page.locator('[data-blok-database-timeline-month]').boundingBox();
+
+    if (panel === null || chevron === null || month === null) throw new Error('no layout');
+    const panelEnd = panel.x + panel.width;
+
+    expect(chevron.x - panelEnd).toBeCloseTo(-32, 0);
+    expect(month.x - panelEnd).toBeCloseTo(16, 0);
+  });
+
+  // timeline.png and tlcollapse.png: hiding the table leaves every day at the same x (day 13 at 648, day 10 at 528).
+  test('hiding and showing the table leaves the bars where they are', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
+    const x = async (): Promise<number> => (await bar(page, 'r2').boundingBox())?.x ?? Number.NaN;
+    const shown = await x();
+
+    await page.locator('[data-blok-database-timeline-table-toggle]').click();
+    await expect(page.locator('[data-blok-database-timeline-table]')).toHaveCount(0);
+    expect(await x()).toBeCloseTo(shown, 0);
+
+    await page.locator('[data-blok-database-timeline-table-toggle]').click();
+    await expect(page.locator('[data-blok-database-timeline-table]')).toBeVisible();
+    expect(await x()).toBeCloseTo(shown, 0);
+  });
+
   test('"Today" and clicking a bar open the row in a peek', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline' }));
 

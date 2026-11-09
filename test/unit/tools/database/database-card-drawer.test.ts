@@ -107,7 +107,7 @@ describe('DatabaseCardDrawer', () => {
 
     const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-    el.dispatchEvent(new Event('transitionend'));
+    el.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
     expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
   });
@@ -286,7 +286,7 @@ describe('DatabaseCardDrawer', () => {
       expect(gap(host)).toBe('0px');
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
 
-      options.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
+      options.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
       expect(inset(host)).toBe('');
@@ -820,7 +820,7 @@ describe('DatabaseCardDrawer', () => {
 
       const drawerEl = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-      drawerEl.dispatchEvent(new Event('transitionend'));
+      drawerEl.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
 
@@ -1395,7 +1395,7 @@ describe('DatabaseCardDrawer', () => {
 
       const drawerEl = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-      drawerEl.dispatchEvent(new Event('transitionend'));
+      drawerEl.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(focusSpy).toHaveBeenCalled();
 
@@ -1456,7 +1456,7 @@ describe('DatabaseCardDrawer', () => {
 
       const drawerEl = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-      drawerEl.dispatchEvent(new Event('transitionend'));
+      drawerEl.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(focusSpy).not.toHaveBeenCalled();
     });
@@ -2162,7 +2162,7 @@ describe('DatabaseCardDrawer', () => {
 
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-      el.dispatchEvent(new Event('transitionend'));
+      el.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
     });

@@ -529,7 +529,8 @@ describe('database row page layout css', () => {
   it('widens only the full page when the layout is full width', () => {
     const narrow = ruleBody('[data-blok-database-drawer][data-peek-mode="full"]:not([data-full-width]) [data-blok-database-drawer-content]');
 
-    expect(narrow).toContain('max-inline-size: var(--blok-content-max-width, var(--max-width-content))');
+    // fullpage.png: the title ink and the labels sit on the page's text column (x 539, 563), so the 6px title inset lies outside it.
+    expect(narrow).toContain('max-inline-size: calc(var(--blok-content-max-width, var(--max-width-content)) + 2 * var(--blok-space-1-5))');
     expect(narrow).toContain('margin-inline: auto');
     expect(database).not.toMatch(/data-peek-mode="(?:side|center)"\][^{]*data-full-width/);
   });

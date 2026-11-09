@@ -135,7 +135,7 @@ Every backend feature in `packages/server` is written three times: in Go (`packa
 - All three test suites read the same fixtures under `test/unit/server-conformance/fixtures`.
 - A backend change is not done until all three servers have it, with tests.
 - `test/unit/architecture/server-go-parity-law.test.ts` fails if CI stops running any target.
-- The Rust build ships nothing yet. `packages/server/rust/README.md` has its layout and rules.
+- The Rust server ships nothing yet. The Rust MCP server ships on crates.io as `blok-mcp`. `packages/server/rust/README.md` has its layout, rules and publishing steps.
 
 ## Architecture
 

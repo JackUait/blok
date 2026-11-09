@@ -18,6 +18,8 @@ export interface TableRowDropResult {
 export interface TableRowDragOptions {
   grid: HTMLElement;
   state: TableState;
+  /** A press on ⋮⋮, before any move. */
+  onPress?: (rowId: string) => void;
   onDrop: (result: TableRowDropResult) => void;
 }
 
@@ -30,6 +32,7 @@ export class DatabaseTableRowDrag {
   private readonly grid: HTMLElement;
   private readonly state: TableState;
   private readonly onDrop: (result: TableRowDropResult) => void;
+  private readonly onPress: ((rowId: string) => void) | undefined;
   private press: { rowEl: HTMLElement; x: number; y: number; offsetY: number } | null = null;
   private ghost: HTMLElement | null = null;
   private line: HTMLElement | null = null;
@@ -39,6 +42,7 @@ export class DatabaseTableRowDrag {
     this.grid = options.grid;
     this.state = options.state;
     this.onDrop = options.onDrop;
+    this.onPress = options.onPress;
     this.grid.addEventListener('pointerdown', this.handleDown);
   }
 
@@ -54,6 +58,9 @@ export class DatabaseTableRowDrag {
     if (rowEl === null || rowEl === undefined || event.button !== 0) {
       return;
     }
+    // No mousedown follows, so core's text drag never starts. The handle press
+    // moves no caret, and core would anchor on a caret left in another block.
+    event.preventDefault();
     const rect = rowEl.getBoundingClientRect();
 
     this.press = { rowEl, x: event.clientX, y: event.clientY, offsetY: event.clientY - rect.top };
@@ -61,6 +68,7 @@ export class DatabaseTableRowDrag {
     document.addEventListener('pointerup', this.handleUp);
     document.addEventListener('pointercancel', this.handleCancel);
     document.addEventListener('keydown', this.handleKey, true);
+    this.onPress?.(rowEl.getAttribute('data-row-id') ?? '');
   };
 
   private readonly handleMove = (event: PointerEvent): void => {

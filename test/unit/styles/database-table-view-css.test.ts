@@ -96,6 +96,44 @@ describe('database table view styles', () => {
     expect(`${selected}${anchor}${row}`).not.toContain('focus-ring');
   });
 
+  // notion-motion.md "Table row drag": the ghost has no background, and the source row stays painted as normal.
+  it('draws the row drag ghost with no background, and fades the pressed row\'s selection fill out while it drags', () => {
+    expect(exactRule('[data-blok-database-table-row-ghost]')).toContain('background-color: transparent');
+    expect(exactRule('[data-blok-database-table-row][data-dragging]::after')).toContain('opacity: 0');
+  });
+
+  // notion-motion.md "Column header drag": coldrag-mid.png samples rgb(232,232,231), the pressed fill on white.
+  it('draws the column ghost as the header in its pressed fill, opaque and unshadowed, and slides the other headers over 200ms ease', () => {
+    const ghost = exactRule('[data-blok-database-table-column-ghost]');
+
+    expect(ghost).toContain('opacity: 1');
+    expect(ghost).toContain('background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg))');
+    expect(ghost).toContain('box-shadow: none');
+    expect(exactRule('[data-blok-database-table-column-header][data-dragging]')).toContain('visibility: hidden');
+    expect(exactRule('[data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header]')).toContain('transform 200ms ease');
+  });
+
+  // side-by-side-v1.md: Notion's gutter "+" is 14x14 (rowhover.png); at 16px Blok drew it 9x10.
+  it('draws the table and list gutter "+" at 24px, so it reads Notion\'s 14px', () => {
+    expect(ruleBody('[data-blok-database-table-row-add] svg')).toMatch(/width: 24px;\s*height: 24px/);
+    expect(ruleBody('[data-blok-database-list-row-add] svg')).toMatch(/width: 24px;\s*height: 24px/);
+  });
+
+  // Notion's ⠿ inks 8x16 (rowhover.png, listhover.png); IconRowGrip draws that at 20px, one unit per pixel.
+  it('draws the table and list row grip at 20px', () => {
+    expect(ruleBody('[data-blok-database-table-row-handle] svg')).toMatch(/width: 20px;\s*height: 20px/);
+    expect(ruleBody('[data-blok-database-list-row-handle] svg')).toMatch(/width: 20px;\s*height: 20px/);
+  });
+
+  // Notion's title "Aa" inks 18x12 in the same slot as its 16px glyphs (m38-table.png).
+  it('draws the title column\'s "Aa" at 20px, centred over the 16px icon slot', () => {
+    const aa = ruleBody('[data-blok-database-table-column-icon][data-type="title"] svg');
+
+    expect(aa).toMatch(/width: 20px;\s*height: 20px;\s*margin: -2px/);
+    // Preflight caps svg at max-height 100%, which would squash it back to the 16px slot.
+    expect(aa).toMatch(/max-height: none/);
+  });
+
   it('marks a checked row checkbox with primary ink on a gray fill', () => {
     const checked = ruleBody('[data-blok-database-table-row-checkbox][aria-checked="true"]');
 
@@ -134,6 +172,18 @@ describe('database table view styles', () => {
       expect(ruleBody('[data-blok-database-table-row-add]')).toMatch(/opacity:\s*0;/);
       expect(ruleBody('[data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-add]')).toMatch(/opacity:\s*1/);
       expect(css).not.toContain('[data-blok-database-table-row][aria-selected="true"] > [data-blok-database-table-gutter]');
+    });
+
+    // notion-motion.md "Row hover" and "Cell editors": the 0→1 gutter element fades 200ms ease-out both ways (origin 0 0);
+    // the 0→0.7 one (origin 18px 18px, the 36px checkbox slot) keeps ease.
+    it('fades + and ⋮⋮ with ease-out, the checkbox with ease', () => {
+      expect(ruleBody('[data-blok-database-table-row-add]')).toContain('transition: opacity 200ms ease-out');
+      expect(ruleBody(BOX)).toContain('opacity 200ms ease;');
+    });
+
+    // side-by-side-v2 "Gutter glyphs": Notion's "+" centre is 75px and the grip's 53px before the table; Blok's sat 8px closer.
+    it('keeps 8px between ⋮⋮ and the checkbox slot', () => {
+      expect(exactRule('[data-blok-database-table-row-handle]')).toContain('margin-inline-end: var(--blok-space-2)');
     });
 
     it('sits the 16px box 10px in from the table edge, in a 36px tall gutter', () => {

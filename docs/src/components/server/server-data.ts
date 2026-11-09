@@ -775,7 +775,7 @@ export const serverLimits: ServerLimit[] = [
 ];
 
 export const serverMcpIntro: string =
-  'Blok\'s MCP server lets an outside agent read and edit Blok documents through any MCP client. It comes in four builds: Node, C#, Go and Rust. Release 2.1.0 shipped the C# and Go builds. The Rust build has not shipped yet.\n\nAll four serve the same six tools and take the same flags and environment variables. One shared test suite checks every build against the Node one. The Node README lists the flags.\n\nFour options let your own app take over more of the work:\n\n- Embedding serves Blok\'s `blok_*` tools and prompts on an MCP server you build, next to your own tools. Use `createBlok` in Node, `WithBlok` in C#, `blokmcp.Embed` in Go and `BlokTools` in Rust.\n- A document source of your own loads and saves stored documents through your code, instead of `files` or `endpoint`.\n- `--create-page <url>` lets your app make each new sub-page document. It needs `--page-titles page-map` and a stored `--source`.\n- `--handle-store memory|files:<dir>` sets where stored handles live. With one shared store, any process can serve any call for a stored handle. `files:<dir>` shares them on one machine.\n\nEvery build refuses JSON nested more than 48 levels of objects and arrays: in a call\'s arguments, in a document it opens, and in a document a call would save.';
+  'Blok\'s MCP server lets an outside agent read and edit Blok documents through any MCP client. It comes in four builds: Node, C#, Go and Rust.\n\nAll four serve the same six tools and take the same flags and environment variables. One shared test suite checks every build against the Node one. The Node README lists the flags.\n\nFour options let your own app take over more of the work:\n\n- Embedding serves Blok\'s `blok_*` tools and prompts on an MCP server you build, next to your own tools. Use `createBlok` in Node, `WithBlok` in C#, `blokmcp.Embed` in Go and `BlokTools` in Rust.\n- A document source of your own loads and saves stored documents through your code, instead of `files` or `endpoint`.\n- `--create-page <url>` lets your app make each new sub-page document. It needs `--page-titles page-map` and a stored `--source`.\n- `--handle-store memory|files:<dir>` sets where stored handles live. With one shared store, any process can serve any call for a stored handle. `files:<dir>` shares them on one machine.\n\nEvery build refuses JSON nested more than 48 levels of objects and arrays: in a call\'s arguments, in a document it opens, and in a document a call would save.';
 
 export const serverMcpDifferences: string =
   'Where the C#, Go and Rust builds differ from Node, on purpose:\n\n- `--authorize` takes only an http(s) webhook URL. A module path is JavaScript, so they refuse it at startup.\n- Uploads work only through the library API, as in Node. There is no flag for them.\n- Each call runs in an embedded JavaScript engine, with a 60 second limit. Node has no such limit.\n- Each engine also has a memory budget per call: 2 GiB of allocations in C#, about 1 GiB of heap growth in Go, 256 MiB held in Rust.\n- The C# library checks the `Host` header only when you list `AllowedHosts`. Without it, use ASP.NET Core\'s own host filtering. Node answers 403 to a `Host` that is not loopback, unless `--public`.\n- In the Rust library, naming `hosts` in `Embedded::http` also serves callers from other machines, even without OAuth. In Node a caller from another machine needs `--public`, and `--public` needs OAuth.\n- The libraries can also open live handles on the rooms of their own app, in the same process, with no socket and no ticket: `LiveRooms` in C#, `Options.Rooms` in Go and `rooms` in Rust. They join a remote sync service too, as Node does with `--sync-url` (`SyncUrl` in C#).\n\nEach library\'s options are listed in its README, next to its code in `packages/server`.';
@@ -882,14 +882,21 @@ log.Fatal(http.ListenAndServe("127.0.0.1:3001", handler))`,
   },
   {
     id: 'rust',
-    title: 'Rust: build it from source',
+    title: 'Rust: blok-mcp on crates.io',
     description:
-      'The Rust build ships nothing yet, like the Rust server. Build it from a clone of the repository, with the Rust version that `rust-toolchain.toml` names.',
+      'The `blok-mcp` crate on crates.io holds the command and the library. It needs Rust 1.99 or later. The `blok-*` crates it pulls in are its own parts, not a stable API.',
     samples: [
       {
-        label: 'Build it and run it',
+        label: 'Install the command',
         language: 'bash',
-        code: 'cd packages/server/rust\ncargo build --release -p blok-mcp\n./target/release/blok-mcp --source files:./docs',
+        code: 'cargo install blok-mcp\nblok-mcp --source files:./docs',
+        install: true,
+      },
+      {
+        label: 'Add it to your app, then start it with blok_mcp::Embedded',
+        language: 'bash',
+        code: 'cargo add blok-mcp',
+        install: true,
       },
     ],
   },

@@ -171,14 +171,49 @@ describe('DatabaseCardDrawer shell', () => {
 
   // R31: the page beside a side peek stays usable; only the center peek's backdrop closes on a click.
   describe('clicks outside the peek', () => {
-    it('leave a side peek open', () => {
+    // notion-motion.md Round 4 re-checks: a click inside the database view keeps the side peek.
+    it('inside the database leave a side peek open', () => {
+      const options = createOptions();
+      const cell = document.createElement('div');
+
+      options.wrapper.appendChild(cell);
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(ROW, 'side');
+      cell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(drawer.isOpen).toBe(true);
+      drawer.destroy();
+    });
+
+    // notion-motion.md "Peek: click outside" and Round 4: a click on the page outside the database closes the side peek.
+    it('on the page outside the database close a side peek', () => {
+      const onClose = vi.fn();
       const page = document.createElement('p');
 
       document.body.appendChild(page);
-      const drawer = new DatabaseCardDrawer(createOptions());
+      const drawer = new DatabaseCardDrawer(createOptions({ onClose }));
 
       drawer.open(ROW, 'side');
       page.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(drawer.isOpen).toBe(false);
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    // A confirm dialog or menu over the page is not the page: its backdrop carries data-blok-popover.
+    it('in a dialog or menu over the page leave a side peek open', () => {
+      const backdrop = document.createElement('div');
+      const button = document.createElement('button');
+
+      backdrop.setAttribute('data-blok-popover', '');
+      backdrop.appendChild(button);
+      document.body.appendChild(backdrop);
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+      button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
       expect(drawer.isOpen).toBe(true);
       drawer.destroy();
@@ -193,6 +228,82 @@ describe('DatabaseCardDrawer shell', () => {
 
       expect(drawer.isOpen).toBe(false);
       expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  // notion-motion.md "Peek: click outside, and Open in full page": ⤡ first runs the peek's close slide, then the full page shows.
+  describe('open in full page from a side peek', () => {
+    const openSide = (): { drawer: DatabaseCardDrawer; panel: () => HTMLElement | null } => {
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        cb(0);
+
+        return 0;
+      });
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+
+      return { drawer, panel: () => document.querySelector<HTMLElement>('[data-blok-database-drawer]') };
+    };
+
+    it('slides the peek out first, then shows the full page', () => {
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      expect(panel()?.hasAttribute('data-open')).toBe(false);
+
+      panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
+      expect(panel()?.hasAttribute('data-open')).toBe(true);
+      drawer.destroy();
+    });
+
+    it('waits for the panel\'s own slide, not a fade inside it', () => {
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+      q('[data-blok-database-peek-next]')?.dispatchEvent(new Event('transitionend', { bubbles: true }));
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      drawer.destroy();
+    });
+
+    it('shows the full page at once under reduced motion', () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query }));
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('full');
+      drawer.destroy();
+      vi.unstubAllGlobals();
+    });
+
+    it('stays closed when Escape closes it during the slide', () => {
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+      drawer.close();
+      panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
+
+      expect(drawer.isOpen).toBe(false);
+      expect(document.querySelector('[data-blok-database-drawer][data-peek-mode="full"]')).toBeNull();
+      drawer.destroy();
+    });
+
+    it('slides back in as a side peek when another row opens during the slide', () => {
+      const { drawer, panel } = openSide();
+
+      q('[data-blok-database-peek-expand]')?.click();
+      drawer.open({ ...ROW, id: 'other' });
+      panel()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
+
+      expect(panel()?.getAttribute('data-peek-mode')).toBe('side');
+      expect(panel()?.hasAttribute('data-open')).toBe(true);
+      drawer.destroy();
     });
   });
 
@@ -246,7 +357,7 @@ describe('DatabaseCardDrawer shell', () => {
 
       first.open(ROW, 'side');
       second.open({ ...ROW, id: 'row-2' }, 'side');
-      firstOptions.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
+      firstOptions.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
       expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
@@ -359,11 +470,11 @@ describe('DatabaseCardDrawer shell', () => {
       bare.destroy();
     });
 
-    // Notion fades these in only while the pointer is on the bar.
-    it('reveals the mode switcher, the separators and the row steps only while the bar is hovered or holds keyboard focus', () => {
+    // notion-motion.md "Side peek top bar": Notion shows these while the pointer is anywhere over the peek.
+    it('reveals the mode switcher, the separators and the row steps only while the peek is hovered or the bar holds keyboard focus', () => {
       const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
       // An open mode menu keeps them shown, as in Notion, while the pointer is in the menu.
-      const rule = /\[data-blok-database-drawer-toolbar\]:not\(:hover\):not\(:has\(:focus-visible\)\):not\(:has\(\[data-blok-database-peek-mode\]\[aria-expanded="true"\]\)\) :is\(([^)]*)\)\s*\{\s*opacity:\s*0;/.exec(css);
+      const rule = /\[data-blok-database-drawer\]:not\(:hover\) \[data-blok-database-drawer-toolbar\]:not\(:has\(:focus-visible\)\):not\(:has\(\[data-blok-database-peek-mode\]\[aria-expanded="true"\]\)\) :is\(([^)]*)\)\s*\{\s*opacity:\s*0;/.exec(css);
 
       expect(rule?.[1].split(',').map((x) => x.trim()).sort()).toStrictEqual([
         '[data-blok-database-peek-mode]',
@@ -412,7 +523,20 @@ describe('DatabaseCardDrawer shell', () => {
       expect(hintOf('[data-blok-database-peek-copy-link]')).toBe('tools.database.tableCopyLink');
       expect(hintOf('[data-blok-database-peek-mode]')).toBeNull();
       expect(hintOf('[data-blok-database-peek-prev]')).toBeNull();
-      expect(hintOf('[data-blok-database-peek-next]')).toBeNull();
+      drawer.destroy();
+    });
+
+    // notion-motion.md "Side peek top bar": "Next page ⌃⇧J". Off a Mac the step is Ctrl+J (stepOf).
+    it.each([
+      ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 'tools.database.peekNext ⌃⇧J'],
+      ['Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'tools.database.peekNext Ctrl+J'],
+    ])('hints next with its shortcut on %s', (userAgent, hint) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(userAgent);
+      const drawer = new DatabaseCardDrawer(createOptions({ i18n: i18n() }));
+
+      drawer.open(ROW, 'side');
+
+      expect(hintOf('[data-blok-database-peek-next]')).toBe(hint);
       drawer.destroy();
     });
   });

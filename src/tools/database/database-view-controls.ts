@@ -1,17 +1,19 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { nanoid } from 'nanoid';
 import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconTrash, IconChevronDoubleRight } from '../../components/icons';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { propertyTypeMeta } from './database-property-types';
 import type { I18n } from '../../../types';
-import { DatabasePanel, panelInput, panelReorderList, panelRow } from './database-panel';
+import { DatabasePanel, panelInput, panelReorderList, panelRow, panelSeparator } from './database-panel';
 import type { PanelPage } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules, withEntryIds } from './filter-tree';
-import { openViewSettings } from './database-view-settings-panel';
+import { openAdvancedFilter, openViewSettings } from './database-view-settings-panel';
 import { openFilterChip } from './database-filter-chip';
 import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
+import { onHover } from '../../components/utils/tooltip';
 import type { AutofillPanelSettings, DataSourceSettings, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
@@ -135,11 +137,21 @@ const button = (testId: string, label: string, content: { icon?: string; text?: 
   return el;
 };
 
-/** A 28px toolbar button that holds only an icon; its aria-label names it. */
+/** Notion's controls fade back in over 200ms when « expands the toolbar; a little longer so the fade ends first. */
+const EXPAND_FADE_MS = 250;
+
+/** Longer than the 200ms shrink, so transitionend normally wins. */
+const SEARCH_CLOSE_FALLBACK_MS = 250;
+
+const hasTransition = (el: HTMLElement): boolean =>
+  getComputedStyle(el).transitionDuration.split(',').some((part) => parseFloat(part) > 0);
+
+/** A 28px toolbar button that holds only an icon; its aria-label names it, and so does its hover hint. */
 const iconButton = (testId: string, label: string, icon: string): HTMLButtonElement => {
   const el = button(testId, label, { icon });
 
   el.setAttribute('data-blok-database-toolbar-icon', '');
+  onHover(el, label);
 
   return el;
 };
@@ -157,6 +169,14 @@ export class DatabaseViewControls {
   private readonly filterButton: HTMLButtonElement;
   private readonly noDateButton: HTMLButtonElement;
   private readonly minimizeButton: HTMLButtonElement;
+  /** « Expand: shown in place of » while the view's toolbar is minimized. */
+  private readonly expandButton: HTMLButtonElement;
+  /** The saved view keeps its toolbar minimized. */
+  private minimized = false;
+  private expandTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The filter bar shows a sort, so » can fold it. */
+  private barMinimizable = false;
+  private searchCloseTimer: ReturnType<typeof setTimeout> | null = null;
   /** The person's choice for the chip bar: shown, hidden, or `null` to follow its chips. Reset per view. */
   private barOpen: boolean | null = null;
   private barViewId: string | null = null;
@@ -193,6 +213,8 @@ export class DatabaseViewControls {
     this.toolbar.setAttribute('data-blok-database-view-toolbar', '');
     this.toolbar.setAttribute('role', 'toolbar');
     this.toolbar.setAttribute('aria-label', this.t('toolbarLabel'));
+    // The fold probes write here on every resize (database-view-bar-fold.ts); they are not edits.
+    this.toolbar.setAttribute(DATA_ATTR.mutationFree, 'true');
 
     this.lockBadge = document.createElement('span');
     this.lockBadge.setAttribute('data-blok-database-lock-badge', '');
@@ -212,6 +234,7 @@ export class DatabaseViewControls {
     this.autofillButton = iconButton('database-toolbar-autofill', this.t('aiAutofill'), IconWand);
     this.searchButton = iconButton('database-toolbar-search', this.t('searchLabel'), IconSearch);
     this.settingsButton = iconButton('database-toolbar-settings', this.t('settingsTitle'), IconSliders);
+    this.settingsButton.setAttribute('data-blok-database-toolbar-settings', '');
     // A narrow view bar hides these together (notion-spec-2 §26.1, database-tab-bar.ts).
     for (const icon of [this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton]) {
       icon.setAttribute('data-blok-database-toolbar-foldable', '');
@@ -225,9 +248,33 @@ export class DatabaseViewControls {
     this.searchInput.setAttribute('data-blok-testid', 'database-search-input');
 
     this.filterButton.addEventListener('click', () => this.toggleFilterBar());
+    onHover(this.minimizeButton, this.t('filterBarMinimize'));
+    this.minimizeButton.addEventListener('pointerdown', (event) => {
+      if (this.searchShown()) event.preventDefault();
+    });
     this.minimizeButton.addEventListener('click', () => {
+      if (this.searchShown()) this.hideSearch();
       this.barOpen = false;
+      this.host.updateView({ toolbarMinimized: true });
       this.refresh();
+      this.settingsButton.focus();
+    });
+    this.expandButton = iconButton('database-toolbar-expand', this.host.i18n.t('tools.toggle.ariaLabelExpand'), IconChevronDoubleRight);
+    this.expandButton.setAttribute('data-blok-database-toolbar-expand', '');
+    this.expandButton.hidden = true;
+    onHover(this.expandButton, this.host.i18n.t('tools.toggle.ariaLabelExpand'));
+    this.expandButton.addEventListener('click', () => {
+      // The controls fade in once; a later show of one of them stays instant.
+      // Marked first: the host's redraw lays out, and the fade only starts if the mark is on then.
+      this.toolbar.setAttribute('data-expanding', '');
+      this.host.updateView({ toolbarMinimized: false });
+      this.refresh();
+      if (this.expandTimer !== null) clearTimeout(this.expandTimer);
+      this.expandTimer = setTimeout(() => {
+        this.expandTimer = null;
+        this.toolbar.removeAttribute('data-expanding');
+      }, EXPAND_FADE_MS);
+      this.settingsButton.focus();
     });
     this.sortButton.addEventListener('click', () => this.openSort());
     this.automationsButton.addEventListener('click', () => this.openSettings(this.automationsButton, 'automations'));
@@ -261,7 +308,7 @@ export class DatabaseViewControls {
     // "Preview" reuses the file tool's word: the same in every locale.
     this.previewFormButton = iconButton('database-toolbar-preview-form', this.host.i18n.t('tools.file.preview'), IconPreview);
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
-    this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
+    this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.expandButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
       this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
     }
@@ -356,11 +403,17 @@ export class DatabaseViewControls {
     this.autofillButton.hidden = titleOnly || this.host.autofill === undefined;
     this.autofillButton.disabled = this.host.autofill?.writable() !== true;
     this.searchButton.hidden = (titleOnly || this.host.rowCount() < SEARCH_MIN_ROWS) && this.query === '';
+    this.minimized = this.host.savedView()?.toolbarMinimized === true;
+    this.toolbar.toggleAttribute('data-minimized', this.minimized);
+    this.expandButton.hidden = !this.minimized;
     this.renderFilterBar(view);
     this.panel?.refresh();
   }
 
   destroy(): void {
+    this.endSearchClose();
+    if (this.expandTimer !== null) clearTimeout(this.expandTimer);
+    this.expandTimer = null;
     this.panel?.close();
     this.panel = null;
     this.matchObserver?.disconnect();
@@ -544,16 +597,50 @@ export class DatabaseViewControls {
 
   /** "+ Filter": pick a property, then edit the new filter's value (research/21 §1c). */
   private openFilterPicker(anchor: HTMLElement): void {
-    this.openPropertyPicker(anchor, 'database-filter-picker', FILTERABLE_TYPES, (property) => this.filterBy(property.id, anchor));
+    this.openPropertyPicker(anchor, 'database-filter-picker', FILTERABLE_TYPES, (property) => this.filterBy(property.id, anchor), {
+      placeholder: this.t('filterByPlaceholder'),
+      footer: (close) => panelRow({
+        label: this.t('filterAddAdvanced'),
+        testId: 'database-filter-picker-advanced',
+        icon: IconPlus,
+        muted: true,
+        onClick: () => {
+          close();
+          this.openAdvanced(anchor);
+        },
+      }),
+    });
+  }
+
+  /** The bar shows once the first rule is written, as "+ Filter" does with a pick. */
+  private openAdvanced(anchor: HTMLElement): void {
+    const ctx: ViewSettingsContext = {
+      ...this.settingsContext(),
+      updatePersonal: (patch) => {
+        this.barOpen = true;
+        this.updatePersonal(patch);
+      },
+    };
+
+    this.panel = openAdvancedFilter(anchor, ctx, (escape) => this.panelClosed(anchor, escape));
+    anchor.setAttribute('data-popover-open', '');
   }
 
   /**
    * Notion's property list: 290 wide, a search on top, the first option
    * highlighted, Name first and then A→Z, each with its type glyph.
    */
-  private openPropertyPicker(anchor: HTMLElement, testId: string, types: readonly PropertyType[], onPick: (property: PropertyDefinition) => void): void {
+  private openPropertyPicker(
+    anchor: HTMLElement,
+    testId: string,
+    types: readonly PropertyType[],
+    onPick: (property: PropertyDefinition) => void,
+    options: { placeholder: string; footer?: (close: () => void) => HTMLElement }
+  ): void {
     const state = { query: '', active: 0 };
     const list = document.createElement('div');
+
+    list.setAttribute('data-blok-database-picker-list', '');
     const matches = (): PropertyDefinition[] => {
       const needle = state.query.trim().toLowerCase();
       const shown = this.host.schema()
@@ -589,8 +676,8 @@ export class DatabaseViewControls {
         build: () => {
           const search = panelInput({
             value: state.query,
-            placeholder: this.t('layoutSearchProperties'),
-            label: this.t('layoutSearchProperties'),
+            placeholder: options.placeholder,
+            label: options.placeholder,
             testId: `${testId}-search`,
             // Only the list redraws, so the field keeps its caret.
             onInput: (value) => {
@@ -615,9 +702,10 @@ export class DatabaseViewControls {
               if (property !== undefined) pick(property);
             }
           });
+          search.setAttribute('data-blok-database-picker-search', '');
           fill();
 
-          return [search, list];
+          return options.footer === undefined ? [search, list] : [search, list, panelSeparator(), options.footer(() => panel.close())];
         },
       },
       testId,
@@ -639,7 +727,7 @@ export class DatabaseViewControls {
       this.openPropertyPicker(this.sortButton, 'database-sort-picker', SORTABLE_TYPES, (property) => {
         this.barOpen = true;
         this.updatePersonal({ sorts: [{ id: nanoid(), propertyId: property.id, direction: 'asc' }] });
-      });
+      }, { placeholder: this.t('sortByPlaceholder') });
 
       return;
     }
@@ -780,23 +868,60 @@ export class DatabaseViewControls {
   }
 
   private showSearch(): void {
+    this.endSearchClose();
     if (this.searchInput.isConnected) {
+      this.searchInput.removeAttribute('data-closing');
+      this.searchInput.after(this.searchClear);
       this.searchInput.focus();
+      this.syncMinimize();
 
       return;
     }
     this.searchInput.hidden = false;
     this.searchButton.after(this.searchInput, this.searchClear);
     this.searchInput.focus();
+    this.syncMinimize();
+  }
+
+  /** Open and not on its way out. */
+  private searchShown(): boolean {
+    return this.searchInput.isConnected && !this.searchInput.hasAttribute('data-closing');
   }
 
   private hideSearch(): void {
-    this.searchInput.hidden = true;
-    this.searchInput.remove();
+    const input = this.searchInput;
+
     this.searchClear.remove();
-    this.searchInput.value = '';
+    input.value = '';
     this.setSearch('');
     this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS;
+    if (input.isConnected && !input.hasAttribute('data-closing') && hasTransition(input)) {
+      // The field shrinks to nothing first; it leaves when that ends.
+      input.setAttribute('data-closing', '');
+      input.addEventListener('transitionend', this.finishSearchClose);
+      this.searchCloseTimer = setTimeout(this.finishSearchClose, SEARCH_CLOSE_FALLBACK_MS);
+    } else if (!input.hasAttribute('data-closing')) {
+      this.finishSearchClose();
+    }
+    this.syncMinimize();
+  }
+
+  private readonly finishSearchClose = (): void => {
+    this.endSearchClose();
+    this.searchInput.removeAttribute('data-closing');
+    this.searchInput.hidden = true;
+    this.searchInput.remove();
+  };
+
+  private endSearchClose(): void {
+    this.searchInput.removeEventListener('transitionend', this.finishSearchClose);
+    if (this.searchCloseTimer !== null) clearTimeout(this.searchCloseTimer);
+    this.searchCloseTimer = null;
+  }
+
+  /** » shows for an open search or a filter bar with a sort. */
+  private syncMinimize(): void {
+    this.minimizeButton.hidden = this.minimized || (!this.searchShown() && !this.barMinimizable);
   }
 
   private setSearch(query: string): void {
@@ -883,7 +1008,8 @@ export class DatabaseViewControls {
     if (pills.length === 0 && !personal && this.barShown && this.barOpen === null) this.barOpen = true;
     this.barShown = this.barOpen ?? (pills.length > 0 || personal);
     // Inferred from shots: Notion shows » with a sort (20, 22, 23), not with filters alone (15, 17) or no rule (41).
-    this.minimizeButton.hidden = !this.barShown || view.sorts.length === 0;
+    this.barMinimizable = this.barShown && view.sorts.length > 0;
+    this.syncMinimize();
     if (!this.barShown) {
       this.filterBar.replaceChildren();
       this.filterBar.hidden = true;

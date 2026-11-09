@@ -31,7 +31,6 @@ import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { isEscapeConsumed, markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { getElementDirection, logicalArrow } from '../../components/utils/direction';
-import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { ScrollLocker } from '../../components/utils/scroll-locker';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { isPromotedToTopLayer, overlayMountFor, promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
@@ -63,6 +62,7 @@ import { RowPageTakeover } from './row-page-takeover';
 import { OverflowList, tabsThatFit } from '../../components/utils/overflow-list';
 import { NoEditorConstructorError, loadEditorConstructor } from '../../components/utils/editor-constructor';
 import { logLabeled } from '../../components/utils/logger';
+import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import type { BuilderTabs, PageLayoutModuleEntry } from './page-layout-builder';
 
 /** Where a property made from a builder menu goes. */
@@ -111,8 +111,19 @@ const afterSlide = (drawer: HTMLElement, done: () => void): void => {
     done();
   };
 
-  drawer.addEventListener('transitionend', finish, { once: true });
-  window.setTimeout(finish, DRAWER_TRANSITION_FALLBACK_MS);
+  // The panel's own slide only: fades inside it bubble up and end sooner.
+  const onEnd = (event: TransitionEvent): void => {
+    if (event.target === drawer && event.propertyName === 'transform') {
+      drawer.removeEventListener('transitionend', onEnd);
+      finish();
+    }
+  };
+
+  drawer.addEventListener('transitionend', onEnd);
+  window.setTimeout(() => {
+    drawer.removeEventListener('transitionend', onEnd);
+    finish();
+  }, DRAWER_TRANSITION_FALLBACK_MS);
 };
 
 /**
@@ -490,6 +501,8 @@ export class DatabaseCardDrawer {
   private readonly viewRows: CardDrawerOptions['viewRows'];
   /** The builder's "New page" preview when the database has no rows (research/09 §1). No drawer is open then. */
   private placeholder: DatabaseRow | null = null;
+  /** The side peek sliding out before it turns into a full page. Close drops it with the drawer; a new row cancels it. */
+  private expanding: HTMLElement | null = null;
   private readonly onEditViewDefault: CardDrawerOptions['onEditViewDefault'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
@@ -680,6 +693,11 @@ export class DatabaseCardDrawer {
   }
 
   private show(row: DatabaseRow, mode: OpenPagesIn): void {
+    if (this.drawer !== null && this.expanding === this.drawer) {
+      this.expanding = null;
+      this.drawer.setAttribute('data-open', '');
+      if (this.mode === 'side') this.narrowPeekHost();
+    }
     if (this.drawer) {
       if (mode !== this.mode) {
         this.applyMode(mode);
@@ -880,8 +898,15 @@ export class DatabaseCardDrawer {
     this.outsideClickHandler = (e: MouseEvent): void => {
       const target = e.target as Node | null;
 
-      // Only the center peek closes on a click outside; the page beside a side peek stays usable.
-      if ((target && drawer.contains(target)) || this.mode !== 'center' || (target !== null && this.builder?.contains(target) === true)) {
+      // A side peek stays open for clicks in its database, so the view beside it stays usable; it closes for the page outside.
+      const keptBy = this.mode === 'side' ? this.wrapper : null;
+
+      if (
+        (target && drawer.contains(target))
+        || this.mode === 'full'
+        || (target !== null && keptBy?.contains(target) === true)
+        || (target !== null && this.builder?.contains(target) === true)
+      ) {
         return;
       }
 
@@ -889,9 +914,10 @@ export class DatabaseCardDrawer {
        * Toolbox and other popovers are portaled to document.body,
        * so they sit outside the drawer DOM tree. Without this check,
        * clicking a popover item would be treated as an "outside click"
-       * and close the drawer.
+       * and close the drawer. Database dialogs mark their backdrop with
+       * data-blok-popover too.
        */
-      if (target instanceof Element && target.closest('[data-blok-popover-opened], [data-blok-emoji-picker], [data-blok-emoji-picker-backdrop], [data-role="audio-cover-picker"]') !== null) {
+      if (target instanceof Element && target.closest('[data-blok-popover], [data-blok-popover-opened], [data-blok-emoji-picker], [data-blok-emoji-picker-backdrop], [data-role="audio-cover-picker"]') !== null) {
         return;
       }
 
@@ -967,6 +993,7 @@ export class DatabaseCardDrawer {
   }
 
   close(): void {
+    this.expanding = null;
     const wasOpen = this.drawer !== null;
     // The side peek slides out with its body still in it; the body goes back
     // to the pool once the slide ends.
@@ -1400,6 +1427,7 @@ export class DatabaseCardDrawer {
     heading.textContent = this.label('tools.database.backlinksTitle');
     const menu = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: 'auto',
       // Notion's list is 500 wide; a phone keeps a 16px gutter.
@@ -1650,11 +1678,11 @@ export class DatabaseCardDrawer {
     return [
       hinted(button('data-blok-database-peek-expand', 'tools.database.peekExpand', IconExpandDiagonal, () => this.expand()), 'tools.database.peekExpand'),
       separator(),
-      // No hint on mode, previous and next, as in Notion: their names are their aria-labels.
+      // Notion's hints on mode and previous are unmeasured, so they have none. Next reads "Next page ⌃⇧J".
       button('data-blok-database-peek-mode', 'tools.database.settingsOpenPagesIn', IconPeekSide, (el) => this.openModeMenu(el)),
       separator(),
       button('data-blok-database-peek-prev', 'tools.database.peekPrevious', IconChevronDown, () => this.step(-1)),
-      button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
+      this.shortcutHinted(button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)), 'tools.database.peekNext', 'J'),
       this.buildCrumbs(),
       hinted(button('data-blok-database-peek-copy-link', 'tools.database.tableCopyLink', IconLink, () => this.copyLink()), 'tools.database.tableCopyLink'),
       // research/10 §10: shown only while the layout uses the details panel (syncPageInfo).
@@ -1664,6 +1692,19 @@ export class DatabaseCardDrawer {
       // research/09 §1b: "•••" ends the bar, in a peek too (side peek: 30-row-page-actions-menu.png).
       hinted(button('data-blok-database-peek-actions', 'tools.database.peekActionsHint', IconDotsHorizontal, (el) => this.openActionsMenu(el)), 'tools.database.peekActionsHint'),
     ];
+  }
+
+  /** A hint with the row step's shortcut; it must match the keys stepOf reads. */
+  private shortcutHinted(el: HTMLButtonElement, labelKey: string, key: string): HTMLButtonElement {
+    const shortcut = getUserOS().mac ? `⌃⇧${key}` : `Ctrl+${key}`;
+
+    onHover(el, createTooltipContent([[
+      { text: this.label(labelKey), highlight: true },
+      { text: ' ', highlight: false },
+      { text: shortcut, highlight: false, direction: 'ltr' },
+    ]]));
+
+    return el;
   }
 
   /** A full page's "database / page" path (feel/findings-rowpage R17). The database crumb goes back. */
@@ -1775,7 +1816,26 @@ export class DatabaseCardDrawer {
     if (rowId !== null && this.onExpand?.(rowId) === true) {
       return;
     }
-    this.switchMode('full');
+    const drawer = this.drawer;
+
+    // Notion runs the peek's close slide while the page widens, then shows the full page.
+    if (drawer === null || this.mode !== 'side' || !drawer.hasAttribute('data-open') || prefersReducedMotion()) {
+      this.switchMode('full');
+
+      return;
+    }
+    this.expanding = drawer;
+    drawer.removeAttribute('data-open');
+    this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
+    this.peekHost?.style.setProperty('--_blok-peek-gap', '0px');
+    afterSlide(drawer, () => {
+      if (this.expanding !== drawer || this.drawer !== drawer) {
+        return;
+      }
+      this.expanding = null;
+      this.switchMode('full');
+      drawer.setAttribute('data-open', '');
+    });
   }
 
   private switchMode(mode: OpenPagesIn): void {
@@ -1804,6 +1864,7 @@ export class DatabaseCardDrawer {
     const menu = new PopoverDesktop({
       // Notion's 28px rows.
       class: DATABASE_HEADER_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: '220px',
       autoFocusFirstItem: false,
@@ -1849,6 +1910,7 @@ export class DatabaseCardDrawer {
     const copyLink = this.onCopyViewLink;
     const menu = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: 'auto',
       minWidth: '240px',
@@ -1896,6 +1958,7 @@ export class DatabaseCardDrawer {
     const menu = new PopoverDesktop({
       // Notion's 28px rows (feel/findings-rowpage R27).
       class: DATABASE_HEADER_MENU_CLASS,
+      animateClose: true,
       trigger: anchor,
       width: 'auto',
       minWidth: '240px',

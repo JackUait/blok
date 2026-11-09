@@ -443,6 +443,25 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.navigate).toHaveBeenNthCalledWith(3, '2026-10-09');
     });
 
+    // notion-motion.md Calendar: days shown in both months fade their digit ink over 100ms.
+    it('starts the days shared with the last month at their old ink, then lets go so the colour transition runs', async () => {
+      const { root } = mount({ anchor: '2026-10-01', inkFrom: '2026-09-01' });
+
+      expect(day(root, '2026-09-28').getAttribute('data-ink-from')).toBe('inside');
+      expect(day(root, '2026-10-02').getAttribute('data-ink-from')).toBe('outside');
+      expect(day(root, '2026-10-10').hasAttribute('data-ink-from')).toBe(false);
+
+      await Promise.resolve();
+
+      expect(root.querySelectorAll('[data-ink-from]')).toHaveLength(0);
+    });
+
+    it('stamps no old ink on a first draw', () => {
+      const { root } = mount({ anchor: '2026-10-01' });
+
+      expect(root.querySelectorAll('[data-ink-from]')).toHaveLength(0);
+    });
+
     it('steps a week at a time in week range', () => {
       const { root, handlers } = mount({ view: calendarView({ calendarRange: 'week' }) });
 

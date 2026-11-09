@@ -50,6 +50,21 @@ export const ROUTE_PROBES: Record<string, RouteProbe> = {
     seed: TWO_DATABASES,
     commands: [{ name: 'database.moveRowTo', args: { id: 'db1', rowId: 'r1', databaseId: 'db2' } }],
   },
+  // The half of each Turn into that lands in this document.
+  'menu:page/page-turn-into-inline-database': {
+    seed: { blocks: [{ id: 'link', type: 'page', data: { pageId: 'p1', kind: 'database' } }] },
+    commands: [
+      { name: 'database.create', args: { title: 'Tasks', view: 'table' } },
+      { name: 'block.delete', args: { id: 'link' } },
+    ],
+  },
+  'menu:database/database-turn-into-page': {
+    seed: ONE_ROW,
+    commands: [
+      { name: 'block.insert', args: { type: 'page', data: { kind: 'database' }, position: { before: 'db1' } } },
+      { name: 'block.delete', args: { id: 'db1' } },
+    ],
+  },
   'menu:database/template-*': { seed: ONE_TEMPLATE, commands: [{ name: 'database.duplicateRow', args: { id: 'db1', rowId: 't1' } }] },
 };
 
@@ -58,4 +73,6 @@ export const ROUTE_PROBES: Record<string, RouteProbe> = {
  * finding that proves it. The law checks they still fail, so a fix that lands
  * must drop its entry here.
  */
-export const KNOWN_GAPS: Record<string, string> = {};
+export const KNOWN_GAPS: Record<string, string> = {
+  'menu:database/database-turn-into-page': 'json and store sessions refuse block.insert of a page (COMMAND_UNAVAILABLE: this host creates no page document). No agent command moves a database into a new page.',
+};

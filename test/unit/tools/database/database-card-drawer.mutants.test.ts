@@ -315,7 +315,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       if (frame !== null) {
         (frame as FrameRequestCallback)(0);
       }
-      drawerEl.dispatchEvent(new Event('transitionend'));
+      drawerEl.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
 
       expect(titleInput.style.height).toBe('96px');
     });
@@ -336,6 +336,16 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
   });
 
   describe('transition listeners', () => {
+    /** The listener goes away once the panel's own slide ends. */
+    const expectOneShot = (el: Element, addListener: { mock: { calls: unknown[][] } }): void => {
+      const removeListener = vi.spyOn(el, 'removeEventListener');
+      const listener = addListener.mock.calls.find((call) => call[0] === 'transitionend')?.[1];
+
+      expect(listener).toBeInstanceOf(Function);
+      el.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
+      expect(removeListener).toHaveBeenCalledWith('transitionend', listener);
+    };
+
     it('registers the open transition listener as a one-shot', () => {
       let frame: FrameRequestCallback | null = null;
 
@@ -358,7 +368,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
         (frame as FrameRequestCallback)(0);
       }
 
-      expect(addListener).toHaveBeenCalledWith('transitionend', expect.any(Function), { once: true });
+      expectOneShot(drawerEl, addListener);
     });
 
     it('registers the close transition listener as a one-shot', () => {
@@ -376,7 +386,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
 
       drawer.close();
 
-      expect(addListener).toHaveBeenCalledWith('transitionend', expect.any(Function), { once: true });
+      expectOneShot(drawerEl, addListener);
     });
   });
 
@@ -457,17 +467,17 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
   });
 
   describe('outside click', () => {
-    // findings-rowpage R31: Notion's side peek stays open on a click beside it.
-    it('stays open when mousedown lands on an element outside a side peek', () => {
+    // notion-motion.md Round 4 re-checks: a click in the database beside a side peek keeps it; R31 was such a click.
+    it('stays open when mousedown lands in the database beside a side peek', () => {
       const options = createOptions();
       const drawer = makeDrawer(options);
 
       drawer.open(makeRow());
 
-      const outside = document.createElement('div');
+      const beside = document.createElement('div');
 
-      document.body.appendChild(outside);
-      outside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      options.wrapper.appendChild(beside);
+      beside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
       expect(drawer.isOpen).toBe(true);
     });

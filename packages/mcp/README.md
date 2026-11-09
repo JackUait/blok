@@ -301,13 +301,13 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 
 ## Other builds: C#, Go and Rust
 
-The same server is also written in C#, Go and Rust. They take the same flags and environment variables, and one shared conformance suite checks each against this package. Release 2.1.0 shipped the C# and Go builds. The Rust build has not shipped yet.
+The same server is also written in C#, Go and Rust. They take the same flags and environment variables, and one shared conformance suite checks each against this package. Each ships with every release, at the same version as this package.
 
 | Build | Install | In your app | README |
 |---|---|---|---|
 | C# | `dotnet tool install -g Blok.Mcp`, or `dnx Blok.Mcp` | `builder.Services.AddBlokMcp(...)` and `app.MapBlokMcp("/mcp")`, from the `Blok.Server.Mcp` NuGet package | `packages/server/dotnet/Blok.Mcp`, `packages/server/dotnet/Blok.Server.Mcp` |
 | Go | `go install github.com/JackUait/blok/packages/server/go/v2/cmd/blok-mcp@latest` | `blokmcp.New(blokmcp.Options{...})`, then `Handler()` or `ServeStdio` | `packages/server/go/blokmcp` |
-| Rust | Build from source: `cargo build --release -p blok-mcp` in `packages/server/rust` | `blok_mcp::Embedded::new(...)` | `packages/server/rust/crates/mcp` |
+| Rust | `cargo install blok-mcp` (Rust 1.99 or later) | `cargo add blok-mcp`, then `blok_mcp::Embedded::new(...)` | `packages/server/rust/crates/mcp` |
 
 Each library's options change faster than this page. Its README lists them.
 

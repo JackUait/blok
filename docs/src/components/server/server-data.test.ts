@@ -121,15 +121,6 @@ describe('server docs data', () => {
       expect(differences).not.toMatch(/C# library opens live handles only|C# открывает живые хэндлы только/);
     });
 
-    // 2.1.0 shipped the C# and Go MCP builds (CHANGELOG, the packages/server/go/v2.1.0 tag); Rust has not shipped.
-    it.each(['en', 'ru'] as const)('says which MCP builds a release has shipped (%s)', (locale) => {
-      const intro = value(locale, 'server.mcpIntro');
-
-      expect(intro).not.toMatch(/No release has shipped the C#|Сборки на C#, Go и Rust ещё не выходили/);
-      expect(intro).toContain('2.1.0');
-      expect(intro).toMatch(locale === 'en' ? /Rust build has not shipped/ : /Сборка на Rust ещё не выходила/);
-    });
-
     it.each([
       ['en', serverMcpIntro],
       ['ru', ''],
@@ -140,6 +131,7 @@ describe('server docs data', () => {
         expect(intro).toBe(source);
       }
       expect(intro).toContain('48');
+      expect(intro).not.toMatch(/No release has shipped|не выходили ни в одном релизе/);
     });
   });
 
@@ -169,14 +161,15 @@ describe('server docs data', () => {
       expect(code('go')).toContain('server.Handler()');
     });
 
-    it('builds the Rust server from source, since it ships nothing', () => {
-      expect(code('rust')).toContain('cargo build --release -p blok-mcp');
-      expect(build('rust')?.description).toMatch(/ships nothing|not published/i);
+    it('installs the Rust command from crates.io and adds the crate to an app', () => {
+      expect(code('rust')).toContain('cargo install blok-mcp');
+      expect(code('rust')).toContain('cargo add blok-mcp');
+      expect(build('rust')?.description).toMatch(/crates\.io/);
     });
 
     it('flags package and tool installs, and only those, as install copies', () => {
       const isInstall = (text: string) =>
-        /^(dotnet add package|dotnet tool install|go install|npm install)\b/.test(text);
+        /^(cargo add|cargo install|dotnet add package|dotnet tool install|go install|npm install)\b/.test(text);
 
       for (const sample of serverMcpBuilds.flatMap((entry) => entry.samples)) {
         expect(sample.install === true, sample.label).toBe(isInstall(sample.code));

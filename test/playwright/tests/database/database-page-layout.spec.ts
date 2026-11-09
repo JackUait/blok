@@ -1254,6 +1254,9 @@ test.describe('row page layout', () => {
     await expect(picker).toBeHidden();
   });
 
+  // The 720px content column plus the title's 6px inset on each side (full-page column rule in database.css).
+  const FULL_PAGE_TITLE_WIDTH = 732;
+
   // research/09 §9: Full width widens only the full page; both peeks keep their width.
   test('widens the full page and leaves both peeks alone when Full width is on', async ({ page }) => {
     const titleWidth = async (mode: 'full' | 'center' | 'side', fullWidth: boolean): Promise<number> => {
@@ -1270,7 +1273,7 @@ test.describe('row page layout', () => {
     };
     const full = [await titleWidth('full', false), await titleWidth('full', true)];
 
-    expect(full[0]).toBeCloseTo(720, 0);
+    expect(full[0]).toBeCloseTo(FULL_PAGE_TITLE_WIDTH, 0);
     expect(full[1]).toBeGreaterThan(full[0]);
     expect(await titleWidth('center', true)).toBeCloseTo(await titleWidth('center', false), 0);
     expect(await titleWidth('side', true)).toBeCloseTo(await titleWidth('side', false), 0);
@@ -1284,7 +1287,7 @@ test.describe('row page layout', () => {
     const width = async (): Promise<number> => (await title.boundingBox())?.width ?? 0;
 
     await expect(title).toBeVisible();
-    expect(await width()).toBeGreaterThan(720);
+    expect(await width()).toBeGreaterThan(FULL_PAGE_TITLE_WIDTH);
 
     await peek(page).getByRole('button', { name: 'Page settings & actions' }).click();
     const fullWidth = page.getByRole('switch', { name: 'Full width' });
@@ -1292,7 +1295,7 @@ test.describe('row page layout', () => {
     await expect(fullWidth).toHaveAttribute('aria-checked', 'true');
     await fullWidth.click();
     await expect(fullWidth).toHaveAttribute('aria-checked', 'false');
-    await expect.poll(width).toBeCloseTo(720, 0);
+    await expect.poll(width).toBeCloseTo(FULL_PAGE_TITLE_WIDTH, 0);
 
     await page.keyboard.press('Escape');
     await expect(fullWidth).toBeHidden();
@@ -1300,7 +1303,7 @@ test.describe('row page layout', () => {
     await peek(page).locator('[data-blok-database-peek-crumb="database"]').click();
     await openRow(page, 'r2');
     await expect(title).toHaveValue('Bravo');
-    await expect.poll(width).toBeGreaterThan(720);
+    await expect.poll(width).toBeGreaterThan(FULL_PAGE_TITLE_WIDTH);
   });
 
   test('leaves both peeks alone when a page has its own Full width', async ({ page }) => {

@@ -1,15 +1,17 @@
 [package]
 name = "blok-collab-docendpoint"
-version = "0.0.0"
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish.workspace = true
+repository.workspace = true
+description = "Internal part of blok-mcp (document endpoint client). Not a stable API."
+publish = true
 
 [dependencies]
-blok-dotnet = { path = "../dotnet" }
-blok-jsjson = { path = "../jsjson" }
-blok-outbound = { path = "../outbound" }
+blok-dotnet.workspace = true
+blok-jsjson.workspace = true
+blok-outbound.workspace = true
 tokio = { version = "1", features = ["io-util", "net", "rt", "time", "macros"] }
 
 [dev-dependencies]

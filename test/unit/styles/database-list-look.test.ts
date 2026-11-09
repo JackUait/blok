@@ -91,10 +91,12 @@ describe('list rows (research/07)', () => {
 
 describe('list row widths (findings-listgallery L01)', () => {
   // The title box holds the title and the Edit pencil right after its text (L04).
-  it('keeps the title box at least 120px wide and lets it grow; the title hugs its text', () => {
+  // listview.png: a long title gives way to the properties and stops at about 117px ("Beta is a very l…").
+  // A zero basis means the title box only takes what the properties leave, never under 120px.
+  it('keeps the title box at least 120px wide and gives the properties first claim on the row; the title hugs its text', () => {
     const box = ruleBody(database, '[data-blok-database-list-row-main]');
 
-    expect(box).toContain('flex: 1 1 auto');
+    expect(box).toContain('flex: 1 1 0');
     expect(box).toContain('min-width: 120px');
     expect(ruleBody(database, '[data-blok-database-list-row-title]')).toContain('flex: 0 1 auto');
     expect(ruleBody(database, '[data-blok-database-list-row-title]')).toContain('min-width: 0');
@@ -193,6 +195,12 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
     expect(body).toContain('background: var(--blok-database-card-actions-bg)');
     expect(body).toContain('box-shadow: var(--blok-database-card-actions-shadow)');
     expect(ruleBody(database, '[data-blok-database-list-row]:hover [data-blok-database-list-row-edit]')).toContain('display: inline-flex');
+  });
+
+  // notion-motion.md "View tabs, gallery, list": the gutter fades in over 200ms ease-out.
+  it('fades the hovered row\'s gutter in over 200ms ease-out, and not under reduced motion', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row-gutter]')).toContain('transition: opacity 200ms ease-out');
+    expect(ruleBody(database, '[data-blok-database-list-row-gutter]')).toContain('transition: none');
   });
 
   it('keeps no open or delete button styles for the list', () => {

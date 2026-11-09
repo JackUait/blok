@@ -708,6 +708,7 @@ export const DATABASE_DATA = {
           },
           timelineCenter: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$', description: "Timeline: the shared centre day (YYYY-MM-DD). A person's own last centre wins over it." },
           showTimelineTable: { type: 'boolean', description: 'Timeline: show the table panel. Default false.' },
+          toolbarMinimized: { type: 'boolean', description: 'The view toolbar is minimized to Expand and settings. Default false.' },
           tableProperties: {
             type: 'array',
             description: 'Timeline table panel columns, apart from the bar properties; array order is column order.',

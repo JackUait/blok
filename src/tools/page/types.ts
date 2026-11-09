@@ -67,7 +67,7 @@ export interface PageSearchResult {
 
 /** Page tool config. Every hook is optional. */
 export interface PageConfig {
-  /** Offers "Database - Full page" in the toolbox. Needs a `create` that stores `document`. */
+  /** Offers "Database - Full page" and "Turn into page"; with `loadDocument`, "Turn into inline database". Needs a `create` that stores `document`. */
   databasePages?: boolean;
   /** Offers "New page" in the "@" menu. Needs a `create` that stores `title` and `parentId`. */
   createFromMention?: boolean;

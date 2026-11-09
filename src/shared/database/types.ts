@@ -927,6 +927,8 @@ export interface DatabaseViewConfig {
   timelineCenter?: string;
   /** Timeline: show the table panel beside the bars. */
   showTimelineTable?: boolean;
+  /** Notion's » "Minimize": the toolbar shows only « and settings. Saved with the view. */
+  toolbarMinimized?: boolean;
   /** Timeline: the table panel's own columns, apart from the bar properties. */
   tableProperties?: ViewPropertySetting[];
   /** Timeline: the self-relation that draws dependency arrows. Absent means the "Blocked by" relation, when dependencies are on. */
@@ -1041,6 +1043,7 @@ export type DatabaseViewSettingKey =
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'showDataSourceTitle' | 'groupByStatus'
   | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'calendarBy' | 'calendarRange' | 'showWeekends'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'
+  | 'toolbarMinimized'
   | 'chartType' | 'chartMeasure' | 'chartSort' | 'chartOmitZero' | 'chartCumulative' | 'chartColor' | 'chartHeight'
   | 'chartGridLines' | 'chartAxisNames' | 'chartDataLabels' | 'chartSmooth' | 'chartGradient' | 'chartCenterValue' | 'chartLegend'
   | 'subItemsDisplay' | 'subItemsFilter'

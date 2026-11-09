@@ -55,11 +55,23 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-gallery-title]')).toMatch(/font-weight:\s*500/);
   });
 
-  // findings-listgallery L13: the preview is 9/16 of the card width; the card is preview + title, no bottom padding.
-  it('draws the preview 16:9 at every card size, with no padding under the card', () => {
-    expect(ruleBody('[data-blok-database-gallery-preview]')).toContain('aspect-ratio: 16 / 9');
-    expect(css).not.toContain('--blok-database-gallery-preview-height');
+  // research/07 §Gallery, 08:317, listgallery.png (side-by-side-v1): a medium preview is 146.25px at 296 and 338 wide.
+  // Small and large are unmeasured and keep 16:9. The card is preview + title, no bottom padding.
+  it('draws a medium preview 146.25px tall border to border, other sizes 16:9, with no padding under the card', () => {
+    const preview = ruleBody('[data-blok-database-gallery-preview]');
+
+    expect(preview).toContain('box-sizing: border-box');
+    expect(preview).toContain('aspect-ratio: var(--blok-database-gallery-preview-ratio, 16 / 9)');
+    expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toContain('--blok-database-gallery-preview-ratio: auto');
+    expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toContain('--blok-database-gallery-preview-height: 146.25px');
+    expect(preview).toContain('block-size: var(--blok-database-gallery-preview-height, auto)');
     expect(ruleBody('[data-blok-database-gallery-card]')).not.toContain('padding-block-end');
+  });
+
+  // A row stretches to its tallest item (L12), so the "+ New page" tile takes the card's preview height.
+  it('sizes the "+ New page" tile like a card of the same size', () => {
+    expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('padding-block-start: var(--blok-database-gallery-new-height, calc(56.25% + 38.5px))');
+    expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toContain('--blok-database-gallery-new-height: calc(146.25px + 38.5px)');
   });
 
   // findings-listgallery L12: a long title wraps in full; grid rows stretch same-row cards to one height.
@@ -87,7 +99,6 @@ describe('database gallery and calendar styles', () => {
     expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-gallery-preview-border)');
     expect(tile).toContain('font-size: 15px');
     expect(tile).not.toContain('min-height: 80px');
-    expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('padding-block-start: calc(56.25% + 38.5px)');
   });
 
   it('crops images unless Fit image is on', () => {
@@ -200,14 +211,37 @@ describe('database gallery and calendar styles', () => {
     expect(css).toMatch(/--blok-database-calendar-number-row:\s*33px/);
   });
 
-  it('draws the day "+" 20px at 8px from the corner, with a 20px glyph (findings C11)', () => {
+  it('holds a stamped day at its old ink, after the outside rule, so the 100ms ease-out colour change runs (notion-motion.md, Calendar)', () => {
+    const outside = '[data-blok-database-calendar-day][data-outside] [data-blok-database-calendar-day-number]';
+    const fromIn = '[data-blok-database-calendar-day][data-ink-from="inside"] [data-blok-database-calendar-day-number]';
+    const fromOut = '[data-blok-database-calendar-day][data-ink-from="outside"] [data-blok-database-calendar-day-number]';
+
+    expect(ruleBody('[data-blok-database-calendar-day-number]')).toMatch(/transition:\s*color 0\.1s ease-out/);
+    expect(ruleBody(fromIn)).toMatch(/color:\s*var\(--blok-database-calendar-day-text\)/);
+    expect(ruleBody(fromOut)).toMatch(/color:\s*var\(--blok-database-calendar-muted-text\)/);
+    expect(css.indexOf(fromIn)).toBeGreaterThan(css.indexOf(outside));
+  });
+
+  it('draws the day "+" as a 24px white disc 6px from the corner, shown at once (notion-motion.md, Calendar)', () => {
     const add = ruleBody('[data-blok-database-calendar-add]');
 
-    expect(add).toMatch(/inset-block-start:\s*8px/);
-    expect(add).toMatch(/inset-inline-start:\s*8px/);
-    expect(add).toMatch(/inline-size:\s*20px/);
-    expect(add).toMatch(/block-size:\s*20px/);
-    expect(ruleBody('[data-blok-database-calendar-add] svg')).toMatch(/inline-size:\s*20px/);
+    expect(add).toMatch(/inset-block-start:\s*6px/);
+    expect(add).toMatch(/inset-inline-start:\s*6px/);
+    expect(add).toMatch(/inline-size:\s*24px/);
+    expect(add).toMatch(/block-size:\s*24px/);
+    expect(add).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
+    expect(add).toMatch(/background-color:\s*var\(--blok-database-calendar-event-bg\)/);
+    // Fitted to calhover.png pixel by pixel: the popover shadow's tail matches within 1 step.
+    expect(add).toMatch(/box-shadow:\s*var\(--blok-database-popover-shadow\)/);
+    expect(add).not.toMatch(/transition/);
+    expect(ruleBody('[data-blok-database-calendar-add] svg')).toMatch(/inline-size:\s*24px/);
+  });
+
+  it('tints the day "+" on hover without losing its white fill', () => {
+    const hover = ruleBody('[data-blok-database-calendar-add]:hover');
+
+    expect(hover).not.toMatch(/background-color/);
+    expect(hover).toMatch(/background-image:\s*linear-gradient/);
   });
 
   it('draws ‹ and › as 24px squares (findings C12)', () => {

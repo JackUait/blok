@@ -3,10 +3,36 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
+version = "2.1.0"
+repository = "https://github.com/JackUait/blok"
 edition = "2024"
 rust-version = "1.99"
 license = "Apache-2.0"
 publish = false
+
+# The crates blok-mcp needs. The release moves every pin to its version.
+[workspace.dependencies]
+blok-blokagent = { path = "crates/blokagent", version = "=2.1.0" }
+blok-blokdocs = { path = "crates/blokdocs", version = "=2.1.0" }
+blok-blokserver-ticket = { path = "crates/blokserver-ticket", version = "=2.1.0" }
+blok-collab = { path = "crates/collab", version = "=2.1.0" }
+blok-collab-convert = { path = "crates/collab-convert", version = "=2.1.0" }
+blok-collab-docendpoint = { path = "crates/collab-docendpoint", version = "=2.1.0" }
+blok-collab-journal = { path = "crates/collab-journal", version = "=2.1.0" }
+blok-collab-operation = { path = "crates/collab-operation", version = "=2.1.0" }
+blok-collab-room = { path = "crates/collab-room", version = "=2.1.0" }
+blok-collab-wire = { path = "crates/collab-wire", version = "=2.1.0" }
+blok-collab-workingset = { path = "crates/collab-workingset", version = "=2.1.0" }
+blok-dotnet = { path = "crates/dotnet", version = "=2.1.0" }
+blok-http = { path = "crates/http", version = "=2.1.0" }
+blok-jsjson = { path = "crates/jsjson", version = "=2.1.0" }
+blok-jsruntime = { path = "crates/jsruntime", version = "=2.1.0" }
+blok-lib0 = { path = "crates/lib0", version = "=2.1.0" }
+blok-mcp = { path = "crates/mcp", version = "=2.1.0" }
+blok-mediatype = { path = "crates/mediatype", version = "=2.1.0" }
+blok-outbound = { path = "crates/outbound", version = "=2.1.0" }
+blok-ticket = { path = "crates/ticket", version = "=2.1.0" }
+blok-yjs = { path = "crates/yjs", version = "=2.1.0" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

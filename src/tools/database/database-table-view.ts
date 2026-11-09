@@ -47,7 +47,7 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import {
   IconChevronDown,
   IconChevronRight,
-  IconMenu,
+  IconRowGrip,
   IconPlus,
   IconPeekSide,
   IconTrash,
@@ -130,6 +130,8 @@ export interface TableHandlers {
   configureRollup?: (propertyId: string, cell: HTMLElement) => void;
   /** The date picker's format rows. Returns undefined where the property may not change. Drawn on editEnded. */
   dateDisplayChanger?: (propertyId: string) => ((change: DateDisplayChange) => void) | undefined;
+  /** Escape cleared selected rows: close the side peek. */
+  rowsEscaped?: () => void;
 }
 
 /** Sub-items "Nested in toggle": what the table asks about each shown row. */
@@ -434,6 +436,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         commitCells: (changes, newRows) => this.handlers?.commitCells(changes, newRows),
         bulkEdit: (rowIds) => this.openBulkPicker(rowIds),
         rowCommand: (rowId, command) => this.rowCommand(rowId, command),
+        rowsEscaped: () => this.handlers?.rowsEscaped?.(),
         ...(this.handlers?.optionsChange !== undefined
           ? { optionsChange: (propertyId: string, next: SelectOption[]) => this.handlers?.optionsChange?.(propertyId, next) }
           : {}),
@@ -474,6 +477,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       this.rowDrag = new DatabaseTableRowDrag({
         grid: gridEl,
         state: this.state,
+        // Notion selects the pressed row at once; a row already in a selection keeps it.
+        onPress: (rowId) => {
+          const selection = this.state.selection;
+
+          if (selection?.kind !== 'rows' || !selection.rowIds.includes(rowId)) this.grid?.selectRows([rowId]);
+        },
         onDrop: (result) => {
           if (this.options.view.sorts.length > 0) {
             this.handlers?.sortedRowDrop(result);
@@ -521,11 +530,16 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   /** notion-spec-2 §25.3: OPEN reads CLOSE, with the hint "Close side peek" above it (62-close-hover.png), while its row is in the side peek. */
-  private paintOpen(button: HTMLElement, rowId: string): void {
+  private paintOpen(button: HTMLElement, rowId: string, stepped = false): void {
     const peeked = this.options.peek?.rowId() === rowId;
     const label = button.lastElementChild;
 
-    button.toggleAttribute('data-peeked', peeked);
+    if (peeked && !button.hasAttribute('data-peeked')) {
+      // "step": the peek moved here from another row; database.css starts its halo late.
+      button.setAttribute('data-peeked', stepped ? 'step' : '');
+    } else if (!peeked) {
+      button.removeAttribute('data-peeked');
+    }
     if (label !== null) label.textContent = this.t(peeked ? 'tools.database.close' : 'tools.database.tableOpen');
     if (peeked) {
       onHover(button, this.t('tools.database.closeSidePeek'), { placement: 'top' });
@@ -545,10 +559,14 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   private repaintOpen(): void {
-    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-table-open]').forEach((button) => {
+    const buttons = [...this.root?.querySelectorAll<HTMLElement>('[data-blok-database-table-open]') ?? []];
+    const peekedRow = this.options.peek?.rowId();
+    const stepped = buttons.some((button) => button.hasAttribute('data-peeked') && button.closest('[data-row-id]')?.getAttribute('data-row-id') !== peekedRow);
+
+    buttons.forEach((button) => {
       const rowId = button.closest('[data-row-id]')?.getAttribute('data-row-id');
 
-      if (typeof rowId === 'string') this.paintOpen(button, rowId);
+      if (typeof rowId === 'string') this.paintOpen(button, rowId, stepped);
     });
   }
 
@@ -666,6 +684,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const icon = document.createElement('span');
 
     icon.setAttribute('data-blok-database-table-column-icon', '');
+    icon.setAttribute('data-type', property.type);
     icon.setAttribute('aria-hidden', 'true');
     if (property.icon !== undefined && property.icon !== '') {
       icon.textContent = property.icon;
@@ -951,7 +970,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       handle.setAttribute('data-blok-database-table-row-handle', '');
       handle.setAttribute('aria-label', this.t('tools.database.tableDragHandle'));
       handle.tabIndex = -1;
-      handle.innerHTML = IconMenu;
+      handle.innerHTML = IconRowGrip;
 
       gutter.append(add, handle, this.createCheckbox('data-blok-database-table-row-checkbox', this.t('tools.database.tableSelectRow')));
       rowEl.appendChild(gutter);

@@ -134,17 +134,49 @@ describe('database timeline styles', () => {
   // findings C17: the chip before a cut bar's title, the same 16px chip as the off-screen one.
   it('shows the cut-start chip only on a bar the view marks, and keeps it and the title at the screen\'s start', () => {
     expect(ruleBody('[data-blok-database-timeline-bar-chip]')).toMatch(/display:\s*none/);
-    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip]')).toMatch(/display:\s*inline-flex/);
-    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip]')).toMatch(/position:\s*sticky/);
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip="start"]')).toMatch(/display:\s*inline-flex/);
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip="start"]')).toMatch(/position:\s*sticky/);
   });
 
-  // findings C14: a 244px panel, its « at the panel's end, beside the month.
-  it('draws the table panel 244px wide and turns the toggle into « at its end while it shows', () => {
-    expect(ruleBody('[data-blok-database-timeline-table]')).toMatch(/inline-size:\s*244px/);
+  // notion-motion.md Timeline (tlcollapse.png): the cut-end chip mirrors the cut-start one, held at the screen's end.
+  it('shows the cut-end chip only on a bar cut at the end, held at the screen\'s end', () => {
+    const end = ruleBody('[data-blok-database-timeline-bar][data-clipped-end] > [data-blok-database-timeline-bar-chip="end"]');
+
+    expect(end).toMatch(/display:\s*inline-flex/);
+    expect(end).toMatch(/position:\s*sticky/);
+    expect(end).toContain('inset-inline-end: var(--blok-space-2)');
+    expect(end).toMatch(/margin-inline-start:\s*auto/);
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip="start"]')).toMatch(/display:\s*inline-flex/);
+  });
+
+  // timeline.png (round V1): the panel runs x 360–640 with its border, 280px. Its « sits at the panel's end, beside the month.
+  it('draws the table panel 280px wide and turns the toggle into « at its end while it shows', () => {
+    expect(ruleBody('[data-blok-database-timeline]')).toContain('--blok-database-timeline-table-width: 280px');
+    expect(ruleBody('[data-blok-database-timeline-table]')).toContain('inline-size: var(--blok-database-timeline-table-width)');
     const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
 
-    expect(ruleBody(shown)).toMatch(/margin-inline-start:/);
+    expect(ruleBody(shown)).toContain('margin-inline-start: calc(var(--blok-database-timeline-table-width) - 38px)');
+    expect(ruleBody(shown)).toContain('margin-inline-end: 22px');
+    expect(ruleBody('[data-blok-database-timeline-toolbar]:has(> [data-blok-database-timeline-table-toggle][aria-pressed="true"])')).toContain('padding-inline-start: 0');
     expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
+  });
+
+  // notion-motion.md Timeline: the chevrons crossfade with a scale, 0.3 to 1, over 160ms ease-in-out.
+  it('crossfades the table chevrons with a 0.3 scale over 160ms ease-in-out', () => {
+    const toggle = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle]';
+    const incoming = ruleBody(`${toggle}[data-swapped] > svg`);
+    const outgoing = ruleBody(`${toggle} [data-blok-database-timeline-toggle-out]`);
+    const starting = css.slice(css.indexOf('@starting-style', css.indexOf('data-blok-database-timeline-toggle-out')));
+
+    for (const part of [incoming, outgoing]) {
+      expect(part).toMatch(/transition:\s*opacity 160ms ease-in-out, scale 160ms ease-in-out/);
+    }
+    expect(outgoing).toMatch(/opacity:\s*0/);
+    expect(outgoing).toMatch(/scale:\s*0\.3/);
+    // The mirror is the old direction, whatever the page direction.
+    expect(outgoing).toMatch(/transform:\s*scaleX\(-1\)/);
+    expect(starting).toMatch(/\[data-swapped\] > svg\s*\{\s*opacity:\s*0;\s*scale:\s*0\.3;/);
+    expect(starting).toMatch(/toggle-out\]\s*\{\s*opacity:\s*1;\s*scale:\s*1;/);
   });
 
   // findings C22: Notion's last zoom reads "5 Years".
@@ -157,6 +189,20 @@ describe('database timeline styles', () => {
   it('mirrors the cut-bar chip and the connector chevron in RTL', () => {
     expect(ruleBody('[dir="rtl"] [data-blok-database-timeline-bar-chip] svg')).toContain('transform: scaleX(-1)');
     expect(ruleBody('[dir="rtl"] [data-blok-database-timeline-link-handle] svg')).toContain('transform: scaleX(-1)');
+  });
+
+  // notion-motion.md Timeline (tlhover.png): the connector shows at once, and the hover pill is 128px over a 120px, 3-day span.
+  it('shows the connector at once on bar hover', () => {
+    expect(ruleBody('[data-blok-database-timeline-link-handle]')).not.toContain('transition');
+  });
+
+  it('runs the hover pill 4px past each end of the bar\'s days', () => {
+    const pill = ruleBody('[data-blok-database-timeline-range][data-hover]');
+
+    // --blok-space-1 is 4px.
+    expect(pill).toMatch(/margin-inline-start:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
+    expect(pill).toMatch(/padding-inline:\s*var\(--blok-space-1\)/);
+    expect(pill).toMatch(/box-sizing:\s*content-box/);
   });
 
   it('hides an off-screen arrow that the view marks hidden', () => {
@@ -182,8 +228,15 @@ describe('database timeline styles', () => {
   });
 
   // research/35 §1.5: hover ≈ rgba(33, 27, 23, 0.051) light, rgba(255, 255, 255, 0.055) dark, over the bar fill.
-  it('hovers a bar to the measured overlay', () => {
-    expect(ruleBody('[data-blok-database-timeline-bar]:hover')).toContain('linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg))');
+  // notion-motion.md Timeline: the tint comes in over 20ms ease-in. A layer under the bar's content keeps it over a colour fill.
+  it('hovers a bar to the measured overlay over 20ms ease-in', () => {
+    const layer = ruleBody('[data-blok-database-timeline-bar]::before');
+
+    expect(layer).toContain('z-index: -1');
+    expect(layer).toContain('pointer-events: none');
+    expect(layer).toMatch(/transition:\s*background-color 20ms ease-in/);
+    expect(ruleBody('[data-blok-database-timeline-bar]:hover::before')).toContain('background-color: var(--blok-database-table-header-hover-bg)');
+    expect(ruleBody('[data-blok-database-timeline-bar]:hover')).not.toContain('background-image');
     expect(css).toContain('--blok-database-hover-bg: rgba(33, 27, 23, 0.051);');
     expect(darkValues('--blok-database-table-header-hover-bg')).toEqual(['rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)']);
     expect(css).toContain('--blok-database-timeline-bar-bg: #ffffff;');
@@ -193,7 +246,7 @@ describe('database timeline styles', () => {
     const reduced = timelineCss.slice(timelineCss.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
 
     expect(timelineCss).toContain('transition');
-    for (const selector of ['[data-blok-database-timeline-bar]', '[data-blok-database-timeline-row-handle]']) {
+    for (const selector of ['[data-blok-database-timeline-bar]', '[data-blok-database-timeline-bar]::before', '[data-blok-database-timeline-row-handle]', '[data-blok-database-timeline-toggle-out]']) {
       expect(reduced).toContain(selector);
     }
     expect(reduced).toMatch(/transition:\s*none/);

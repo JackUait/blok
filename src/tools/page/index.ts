@@ -20,6 +20,7 @@ import {
   IconLock,
   IconPage,
   IconPencil,
+  IconReplace,
   IconSplitView,
   IconTable,
 } from '../../components/icons';
@@ -56,6 +57,7 @@ import { declaredRichTextFields } from '../../components/tools/base';
 import { richTextFieldsFor } from '../../shared/rich-text/fields';
 import type { PageConfig, PageData, PageIcon, PageInfo } from './types';
 import { createdId, readIcon } from './page-values';
+import { movedDatabases, subtreeOf } from './database-page-move';
 import { overrideStatic } from '../../components/utils/override-static';
 
 const isOutputBlock = (value: unknown): value is OutputBlockData =>
@@ -141,6 +143,8 @@ export class PageTool implements BlockTool {
   private accessDialog: ModalDialogHandle | null = null;
   private readOnly: boolean;
   private renaming = false;
+  /** Turn into inline database is waiting for the page's document. */
+  private movingIn = false;
   private emojiPicker: EmojiPicker | null = null;
   private readonly preview = new PageHoverPreview(() => this.previewContent(), () => this.previewBody());
 
@@ -162,9 +166,12 @@ export class PageTool implements BlockTool {
     this.readOnly = Boolean(options.readOnly);
   }
 
-  /** The block menu is a "Page" section with Turn into first, and Delete reads "Move to Trash". */
-  public static get blockMenu(): { titled: boolean; trash: boolean } {
-    return { titled: true, trash: true };
+  /**
+   * The block menu is a "Page" section with Turn into first, and Delete reads
+   * "Move to Trash". A database page link puts "Turn into inline database" first.
+   */
+  public static get blockMenu(): { titled: boolean; trash: boolean; lead: string[] } {
+    return { titled: true, trash: true, lead: ['page-turn-into-inline-database'] };
   }
 
   /**
@@ -343,7 +350,7 @@ export class PageTool implements BlockTool {
   public renderSettings(): MenuConfig {
     const { t } = this.api.i18n;
     const navigable = this.isNavigable;
-    const edits: MenuConfigItem[] = this.colorTunes();
+    const edits: MenuConfigItem[] = [...this.turnIntoInlineTune(), ...this.colorTunes()];
     const opens: MenuConfigItem[] = [];
 
     if (navigable && this.config.setIcon !== undefined) {
@@ -451,6 +458,84 @@ export class PageTool implements BlockTool {
     link.click();
 
     return true;
+  }
+
+  /**
+   * "Turn into inline database" leads Notion's menu on a database page link
+   * (research-live-notion.md §3). It reads the page's document, so it needs `loadDocument`.
+   */
+  private turnIntoInlineTune(): MenuConfigItem[] {
+    const { databasePages, loadDocument } = this.config;
+
+    if (this.data.kind !== 'database' || databasePages !== true || loadDocument === undefined || this.readOnly) return [];
+    // An unresolved page still has a document; a denied, missing or unborn one has none to read.
+    if (this.state === 'no-access' || this.state === 'missing' || this.state === 'creating') return [];
+
+    return [{
+      icon: IconReplace,
+      title: this.api.i18n.t('tools.page.turnIntoInlineDatabase'),
+      name: 'page-turn-into-inline-database',
+      closeOnActivate: true,
+      onActivate: (): void => void this.turnIntoInlineDatabase(),
+    }];
+  }
+
+  /**
+   * Puts the page's database, rows and row bodies in this block's place, as
+   * one undo step. The page document is left as it is: undo brings this link
+   * back, and the link must still open the database.
+   */
+  private async turnIntoInlineDatabase(): Promise<void> {
+    const { loadDocument } = this.config;
+    const { pageId } = this.data;
+
+    if (loadDocument === undefined || this.movingIn) return;
+    this.movingIn = true;
+    try {
+      const document = await loadDocument(pageId);
+      const root = document?.blocks.find((block) => block.type === 'database' && block.parent === undefined && typeof block.id === 'string');
+
+      if (document === null || document === undefined || root?.id === undefined || this.detached || this.readOnly || pageId !== this.data.pageId) return;
+      const subtree = subtreeOf(document.blocks, root.id);
+
+      // `kind` is block data any collaborator can set, so it could point at a page of
+      // someone else's. Move only what Turn into page writes: one fullPage database, nothing else.
+      if (root.data.fullPage !== true || subtree.length !== document.blocks.length) {
+        log('Turn into inline database: the page is not a full-page database; nothing changed.', 'warn');
+
+        return;
+      }
+
+      // Same ids as on the page, like Notion. A clash would merge two blocks into one.
+      if (subtree.some((block) => block.id !== undefined && this.api.blocks.getById(block.id) !== null)) {
+        log('Turn into inline database: a block of the page is already in this document; nothing changed.', 'warn');
+
+        return;
+      }
+      const { fullPage: _fullPage, ...data } = root.data;
+      const title = typeof document.title === 'string' && document.title !== '' ? document.title : this.info?.title ?? '';
+      const parent = this.block.parentId ?? undefined;
+      const blocks = subtree.map((block) => block === root
+        ? { ...block, data: { ...data, title }, ...(parent === undefined ? {} : { parent }) }
+        : block);
+      const transact = this.api.blocks.transact ?? ((fn: () => void): void => fn());
+
+      transact(() => {
+        const index = this.api.blocks.getBlockIndex(this.block.id);
+
+        if (index === undefined) return;
+        // The page keeps the same rows: undo removing this copy must not delete them from a backend.
+        subtree.forEach((block) => { if (block.id !== undefined) movedDatabases.add(block.id); });
+        this.api.blocks.insertMany(blocks, index);
+        const own = this.api.blocks.getBlockIndex(this.block.id);
+
+        if (own !== undefined) void this.api.blocks.delete(own, false);
+      });
+    } catch {
+      // A failed load changes nothing.
+    } finally {
+      this.movingIn = false;
+    }
   }
 
   private colorTunes(): MenuConfigItem[] {

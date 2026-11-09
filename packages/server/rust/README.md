@@ -2,7 +2,12 @@
 
 This is the third build of Blok's server, next to C# (`../dotnet`) and Go (`../go`). It serves the same routes and reads and writes the same files on disk.
 
-It passes the full conformance suite, and CI runs it there. It ships nothing yet: the npm binary, the Docker image and the NuGet packages still ship the C# server.
+It passes the full conformance suite, and CI runs it there. The server ships nothing yet: the npm binary, the Docker image and the NuGet packages still ship the C# server.
+
+The MCP server ships on crates.io as `blok-mcp`, with the 20 crates it needs.
+- Only those crates set `publish = true`. Each one pins its `blok-*` dependencies through `[workspace.dependencies]`, so the release moves every version at once.
+- `yarn release` bumps them, then runs `node scripts/publish-rust-crates.mjs <version>`. The script is safe to re-run: it skips crates crates.io already has.
+- `crates/jsruntime/src/blok-server-runtime.js` is a symlink to Go's bundle. `cargo publish` packs only files inside a crate, and it packs a symlink's target.
 
 It builds for Unix and Windows. On Windows the collab journal holds a document with the open's share mode, as Go's `lock_windows.go` does, and file modes are left to Windows. CI tests it on Linux only; `cargo check --workspace --all-targets --target x86_64-pc-windows-gnu` (with a MinGW toolchain for `ring`) checks the Windows build.
 

@@ -1,10 +1,12 @@
 [package]
 name = "blok-jsjson"
-version = "0.0.0"
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish.workspace = true
+repository.workspace = true
+description = "Internal part of blok-mcp (JSON reader and writer that matches JavaScript). Not a stable API."
+publish = true
 
 [lints]
 workspace = true

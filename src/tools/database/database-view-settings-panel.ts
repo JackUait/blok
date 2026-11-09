@@ -1741,7 +1741,7 @@ export class ViewSettingsPages {
 
   // ─── Advanced filter ───
 
-  private advanced(): PanelPage {
+  advanced(): PanelPage {
     // Keep rule ids stable until the first edit saves the tree.
     const view = this.ctx.view();
     const fallback = { ...emptyFilterTree(), filterRules: withEntryIds(view.filters) };
@@ -2521,6 +2521,22 @@ export const openFilterList = (anchor: HTMLElement, ctx: ViewSettingsContext, te
     testId,
     width: 290,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
+  });
+
+  panel.open();
+
+  return panel;
+};
+
+/** The advanced filter on its own: "+ Filter"'s "Add advanced filter" footer opens it. */
+export const openAdvancedFilter = (anchor: HTMLElement, ctx: ViewSettingsContext, onClose?: (escape: boolean) => void): DatabasePanel => {
+  const panel = new DatabasePanel({
+    anchor,
+    root: new ViewSettingsPages(ctx).advanced(),
+    testId: 'database-advanced-filter',
+    width: 290,
+    backLabel: ctx.i18n.t('tools.database.settingsBack'),
+    ...(onClose !== undefined ? { onClose } : {}),
   });
 
   panel.open();

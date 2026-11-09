@@ -67,6 +67,8 @@ export interface DatabaseCalendarViewOptions {
   cellContext?: Partial<CellContext>;
   /** A day to focus once drawn: keyboard navigation that crossed into a new range. */
   focusDay?: string;
+  /** The anchor shown before this draw. Days in both months start at their old ink and fade to the new one. */
+  inkFrom?: string;
   commentBadges?: CommentBadges;
   /** The host's "Manage in Calendar" (`config.calendar`), a toolbar button. Read-only keeps it. */
   manageInCalendar?: { label: string; onClick: () => void };
@@ -113,8 +115,18 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   private shownDays: string[] = [];
   private columns = 7;
 
+  /** Each day the last month drew, and whether it was inside that month. */
+  private readonly inkBefore = new Map<string, boolean>();
+
   constructor(options: DatabaseCalendarViewOptions) {
     this.options = options;
+    const from = options.inkFrom;
+
+    if (from !== undefined && this.range === 'month') {
+      for (const dayIso of calendarWeeks({ anchor: from, range: 'month', weekStart: options.weekStart }).flat()) {
+        this.inkBefore.set(dayIso, dayIso.startsWith(from.slice(0, 7)));
+      }
+    }
   }
 
   get interacting(): boolean {
@@ -160,6 +172,23 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     root.addEventListener('dblclick', this.onDoubleClick);
     root.addEventListener('keydown', this.onKeyDown);
     root.addEventListener('pointerdown', this.onPointerDown);
+
+    if (root.querySelector('[data-ink-from]') !== null) {
+      // The tool attaches the view after createView returns. Reading the style
+      // there commits the old ink, so dropping the stamp runs the transition.
+      queueMicrotask(() => {
+        const cells = [...root.querySelectorAll<HTMLElement>('[data-ink-from]')];
+
+        cells.forEach((cell) => {
+          const number = cell.querySelector('[data-blok-database-calendar-day-number]');
+
+          if (number !== null && root.isConnected) {
+            getComputedStyle(number).getPropertyValue('color');
+          }
+        });
+        cells.forEach((cell) => cell.removeAttribute('data-ink-from'));
+      });
+    }
 
     if (this.options.focusDay !== undefined) {
       const focusDay = this.options.focusDay;
@@ -347,6 +376,11 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       }
       if (this.range === 'month' && !dayIso.startsWith(month)) {
         cell.setAttribute('data-outside', '');
+      }
+      const before = this.inkBefore.get(dayIso);
+
+      if (before !== undefined && before !== dayIso.startsWith(month) && dayIso !== this.options.today) {
+        cell.setAttribute('data-ink-from', before ? 'inside' : 'outside');
       }
       if (isWeekend(dayIso)) {
         cell.setAttribute('data-weekend', '');

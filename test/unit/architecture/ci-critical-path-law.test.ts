@@ -497,7 +497,7 @@ describe('CI critical-path law', () => {
       },
     ]);
     // A step gated on a part name that no longer exists is skipped without a word.
-    const parts = (mcp.strategy?.matrix?.include ?? []).map((entry: { part: string }) => entry.part);
+    const parts = (mcp.strategy?.matrix?.include ?? []).map((entry) => (entry as Record<string, unknown>).part);
     for (const step of mcp.steps ?? []) {
       for (const [, part] of String(step.if ?? '').matchAll(/matrix\.part == '([^']+)'/g)) {
         expect(parts, step.name).toContain(part);

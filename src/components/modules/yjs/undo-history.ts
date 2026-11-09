@@ -1757,13 +1757,14 @@ export class UndoHistory {
    * - a spent item leaves the history.
    *
    * When nothing applies, `canUndo()` says so until the doc changes.
+   * @returns whether a step applied
    */
-  public undo(expectedToken?: CaretHistoryEntry): void {
+  public undo(expectedToken?: CaretHistoryEntry): boolean {
     // Land buffered typing writes first so they are part of the group we pop.
     this.flushPendingWritesHook();
     this.applyHeldAfter();
     if (expectedToken !== undefined && !this.isTopStep('undo', expectedToken)) {
-      return;
+      return false;
     }
 
     // Save scroll position before DOM manipulation. Removing focused elements
@@ -1793,6 +1794,8 @@ export class UndoHistory {
       this.nothingUndoable = true;
     }
     this.restoreScrollIfJumped(savedScrollY);
+
+    return applied;
   }
 
   /**
@@ -1946,33 +1949,38 @@ export class UndoHistory {
    * @param carets - the caret stack whose top is the refused group's entry
    * @param moves - the move stack whose top is the refused group
    * @param replay - replays the next entry down
+   * @returns what the replay returned
    */
   private reachPastRefusedMove(
     carets: CaretHistoryEntry[],
     moves: MoveHistoryEntry[],
-    replay: () => void
-  ): void {
+    replay: () => boolean
+  ): boolean {
     const caret = carets.pop();
     const group = moves.pop();
     const opposite = carets === this.caretUndoStack ? this.caretRedoStack : this.caretUndoStack;
     const carriedBefore = opposite.at(-1);
 
-    try {
-      replay();
-    } finally {
-      if (caret !== undefined) {
-        carets.push(caret);
+    const applied = ((): boolean => {
+      try {
+        return replay();
+      } finally {
+        if (caret !== undefined) {
+          carets.push(caret);
+        }
+        if (group !== undefined) {
+          moves.push(group);
+        }
       }
-      if (group !== undefined) {
-        moves.push(group);
-      }
-    }
+    })();
 
     const carried = opposite.at(-1);
 
     if (carried !== undefined && carried !== carriedBefore) {
       this.noteReachedPast(carried, [{ entry: caret }]);
     }
+
+    return applied;
   }
 
   /**
@@ -2107,13 +2115,14 @@ export class UndoHistory {
    * Redo the last undone operation.
    * Checks move stack first since moves are handled separately from Yjs UndoManager.
    * Restores caret position after the redo operation.
+   * @returns whether a step applied
    */
-  public redo(expectedToken?: CaretHistoryEntry): void {
+  public redo(expectedToken?: CaretHistoryEntry): boolean {
     // Same barrier as undo: buffered writes must not outlive the replay.
     this.flushPendingWritesHook();
     this.applyHeldAfter();
     if (expectedToken !== undefined && !this.isTopStep('redo', expectedToken)) {
-      return;
+      return false;
     }
 
     // Save scroll position before DOM manipulation (same rationale as undo).
@@ -2128,14 +2137,14 @@ export class UndoHistory {
     // depend on it (typing in the block the refused replace creates). The
     // refused item and everything after it wait on the stack.
     if (!nextIsMove && this.topStackItemIsRefused('redo')) {
-      return;
+      return false;
     }
 
     if (nextIsMove) {
       const pending = this.moveRedoStack[this.moveRedoStack.length - 1];
 
       if (expectedToken !== undefined && (pending === undefined || pending.length === 0)) {
-        return;
+        return false;
       }
       // Same law as undo, read against `from`: the undo put the block back
       // there, and once the peer has moved it somewhere else replaying `to`
@@ -2144,12 +2153,10 @@ export class UndoHistory {
         && (this.groupWasDisplacedSince(pending, 'from') || this.movesReadOnly(pending));
 
       if (displaced && expectedToken !== undefined) {
-        return;
+        return false;
       }
       if (displaced) {
-        this.reachPastRefusedMove(this.caretRedoStack, this.moveRedoStack, () => this.redo());
-
-        return;
+        return this.reachPastRefusedMove(this.caretRedoStack, this.moveRedoStack, () => this.redo());
       }
     }
 
@@ -2174,26 +2181,30 @@ export class UndoHistory {
       this.putBackUnderReachedPast(caretEntry, this.caretUndoStack, this.undoManager.undoStack, this.moveUndoStack);
       this.restoreScrollIfJumped(savedScrollY);
 
-      return;
+      return true;
     }
 
     const item = this.undoManager.redoStack.at(-1);
     const caretEntry = this.replayTrackedEntry('redo');
 
     if (this.poppedStackItem !== null || item === undefined) {
+      const applied = this.poppedStackItem !== null || caretEntry !== undefined;
+
       this.pushCaretAndRestore(caretEntry, this.caretUndoStack, 'after');
       this.putBackUnderReachedPast(caretEntry, this.caretUndoStack, this.undoManager.undoStack, this.moveUndoStack);
       this.restoreScrollIfJumped(savedScrollY);
 
-      return;
+      return applied;
     }
 
     // A spent item left the history and nothing later can depend on it: try
     // the next. One that is waiting stays on top and, like a refused one,
     // holds every later step back.
     if (expectedToken === undefined && !this.undoManager.redoStack.includes(item)) {
-      this.redo();
+      return this.redo();
     }
+
+    return false;
   }
 
   /**

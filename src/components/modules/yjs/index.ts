@@ -1027,10 +1027,12 @@ export class YjsManager extends Module {
 
   /**
    * Undo the last operation.
+   * @returns whether a step applied
    */
-  public undo(): void {
+  public undo(): boolean {
     this.beforeUserStep.forEach((listener) => listener());
-    this.undoHistory.undo();
+
+    return this.undoHistory.undo();
   }
 
   /**
@@ -1049,10 +1051,12 @@ export class YjsManager extends Module {
 
   /**
    * Redo the last undone operation.
+   * @returns whether a step applied
    */
-  public redo(): void {
+  public redo(): boolean {
     this.beforeUserStep.forEach((listener) => listener());
-    this.undoHistory.redo();
+
+    return this.undoHistory.redo();
   }
 
   /**

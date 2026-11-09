@@ -1,7 +1,14 @@
 import type { PageConfig, PageIcon, PageInfo } from '../../tools/page/types';
 import { pageIconNode } from '../../tools/page/icon-node';
 import { PAGE_REFERENCE_ATTR } from '../../shared/page-reference';
-import { DATE_MENTION_ATTR, dateMentionLabel } from '../../shared/date-mention';
+import {
+  DATE_MENTION_ATTR, DATE_MENTION_FORMAT_ATTR, DATE_MENTION_TIME_FORMAT_ATTR,
+  DATE_MENTION_TIME_ZONE_ATTR, DATE_MENTION_VALUE_ATTR, dateMentionText,
+  readDateMentionDisplay, readDateMentionValue,
+} from '../../shared/date-mention';
+import type { PropertyDefinition } from '../../tools/database/types';
+import type { CellEditorHandle } from '../../tools/database/cells/types';
+import { loadSheet } from '../utils/lazy-styles';
 import {
   PAGE_REFERENCE_ARROW_CLASSES,
   PAGE_REFERENCE_CLASSES,
@@ -15,7 +22,6 @@ import { IconArrowDiagonal } from '../icons';
 import { Module } from '../__module';
 import { DATA_ATTR } from '../constants/data-attributes';
 import { safeHref } from '../utils/sanitize-url';
-import { DateMentionPicker } from '../../tools/page/date-picker';
 
 const ICON_TESTID = 'page-reference-icon';
 const TITLE_TESTID = 'page-reference-title';
@@ -94,7 +100,7 @@ export class PageReferences extends Module {
   private observer: MutationObserver | null = null;
   private page: PageConfig | null = null;
   private dateTimer: number | null = null;
-  private readonly datePicker = new DateMentionPicker();
+  private dateEditor: CellEditorHandle | null = null;
 
   public prepare(): void {
     const wrapper = this.Blok.UI.nodes.wrapper;
@@ -144,7 +150,8 @@ export class PageReferences extends Module {
     this.observer = null;
     if (this.dateTimer !== null) window.clearTimeout(this.dateTimer);
     this.dateTimer = null;
-    this.datePicker.close();
+    this.dateEditor?.close();
+    this.dateEditor = null;
     for (const entry of this.entries.values()) {
       ++entry.request;
       entry.unsubscribe?.();
@@ -199,7 +206,7 @@ export class PageReferences extends Module {
 
     for (const time of wrapper.querySelectorAll<HTMLTimeElement>(`time[${DATE_MENTION_ATTR}]`)) {
       if (time.closest(`[${DATA_ATTR.editor}]`) !== wrapper) continue;
-      const label = dateMentionLabel(time.getAttribute('datetime') ?? '', now, this.page?.todayMention?.locale);
+      const label = dateMentionText(time, now, this.page?.todayMention?.locale);
 
       if (label === null) continue;
       time.setAttribute('contenteditable', 'false');
@@ -407,7 +414,7 @@ export class PageReferences extends Module {
     if (date !== null && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      this.openDatePicker(date);
+      void this.openDatePicker(date);
       return;
     }
     if (!this.ownsTarget(event.target)) return;
@@ -436,7 +443,7 @@ export class PageReferences extends Module {
     if (date !== null) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      this.openDatePicker(date);
+      void this.openDatePicker(date);
       return;
     }
     if (event.key !== 'Enter' || !this.ownsTarget(event.target)) return;
@@ -453,17 +460,55 @@ export class PageReferences extends Module {
       ? time : null;
   }
 
-  private openDatePicker(time: HTMLTimeElement): void {
+  private async openDatePicker(time: HTMLTimeElement): Promise<void> {
     if (this.Blok.ReadOnly.isEnabled) return;
-    this.datePicker.open(time, this.page?.todayMention?.locale, (iso) => {
+    this.dateEditor?.close();
+    const [module] = await Promise.all([
+      import('../../tools/database/cells/date-editor'),
+      loadSheet('database'),
+    ]);
+
+    if (this.isDestroyed || !time.isConnected) return;
+    const display = readDateMentionDisplay(time);
+    const property: PropertyDefinition = { id: 'inline-date', name: this.page?.todayMention?.heading ?? 'Date', type: 'date', position: '0', date: display };
+    const commit = (value: string | null): void => {
       const block = this.Blok.BlockManager.getBlock(time);
 
       if (block === undefined) return;
       this.Blok.YjsManager.startSubStep();
-      time.setAttribute('datetime', iso);
-      time.textContent = dateMentionLabel(iso, new Date(), this.page?.todayMention?.locale);
+      if (value === null) {
+        time.replaceWith(document.createTextNode(''));
+      } else {
+        time.setAttribute('datetime', value.slice(0, 10));
+        if (value.length > 10) time.setAttribute(DATE_MENTION_VALUE_ATTR, value);
+        else time.removeAttribute(DATE_MENTION_VALUE_ATTR);
+        time.textContent = dateMentionText(time, new Date(), this.page?.todayMention?.locale);
+      }
       block.dispatchChange();
       this.Blok.YjsManager.stopCapturing();
+    };
+    this.dateEditor = module.openDateEditor(property, readDateMentionValue(time), time, {
+      i18n: this.Blok.I18n,
+      locale: this.page?.todayMention?.locale,
+      readOnly: false,
+      onCommit: (value) => commit(typeof value === 'string' ? value : null),
+      onDateDisplayChange: (change) => {
+        const block = this.Blok.BlockManager.getBlock(time);
+
+        if (block === undefined) return;
+        const attr = 'dateFormat' in change ? DATE_MENTION_FORMAT_ATTR
+          : 'timeFormat' in change ? DATE_MENTION_TIME_FORMAT_ATTR : DATE_MENTION_TIME_ZONE_ATTR;
+        const value = 'dateFormat' in change ? change.dateFormat
+          : 'timeFormat' in change ? change.timeFormat : change.timeZone;
+
+        this.Blok.YjsManager.startSubStep();
+        if (value === null) time.removeAttribute(attr);
+        else time.setAttribute(attr, value);
+        time.textContent = dateMentionText(time, new Date(), this.page?.todayMention?.locale);
+        block.dispatchChange();
+        this.Blok.YjsManager.stopCapturing();
+      },
+      onClose: () => { this.dateEditor = null; },
     });
   }
 

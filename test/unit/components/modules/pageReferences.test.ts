@@ -112,12 +112,11 @@ describe('live inline page references', () => {
     const mention = holder?.querySelector<HTMLTimeElement>('time[data-blok-date-mention]');
 
     mention?.click();
-    const field = document.querySelector<HTMLInputElement>('[data-blok-date-picker] input[type="date"]');
+    await vi.waitFor(() => expect(document.querySelector('[data-blok-database-date-editor]')).not.toBeNull());
+    const day = document.querySelector<HTMLButtonElement>('[data-blok-database-date-day="2026-11-12"]');
 
-    expect(field).not.toBeNull();
-    if (field === null) return;
-    field.value = '2026-11-12';
-    field.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(day).not.toBeNull();
+    day?.click();
     await settleFrame();
 
     expect(mention?.getAttribute('datetime')).toBe('2026-11-12');
@@ -126,6 +125,29 @@ describe('live inline page references', () => {
     instance.history.undo();
     await settleFrame();
     expect(htmlOf((await instance.save()).blocks[0]?.data.text)).toContain('datetime="2026-11-08"');
+  });
+
+  it('stores the existing date editor’s range and format on the mention', async () => {
+    const instance = createEditor({ todayMention: { label: 'Aujourd’hui', heading: 'Date', locale: 'fr' } },
+      '<time datetime="2026-11-08" data-blok-date-mention="">Date</time>');
+
+    await instance.isReady;
+    await settleFrame();
+    const mention = holder?.querySelector<HTMLTimeElement>('time[data-blok-date-mention]');
+
+    mention?.click();
+    await vi.waitFor(() => expect(document.querySelector('[data-blok-database-date-editor]')).not.toBeNull());
+    document.querySelector<HTMLButtonElement>('[data-blok-database-date-setting="dateFormat"]')?.click();
+    document.querySelector<HTMLButtonElement>('[data-blok-database-date-setting-option="year_month_day"]')?.click();
+    document.querySelector<HTMLButtonElement>('[data-blok-database-date-end-toggle]')?.click();
+    await settleFrame();
+
+    const html = htmlOf((await instance.save()).blocks[0]?.data.text);
+
+    expect(mention?.getAttribute('data-blok-date-format')).toBe('year_month_day');
+    expect(mention?.getAttribute('data-blok-date-value')).toBe('2026-11-08/2026-11-08');
+    expect(html).toContain('data-blok-date-format="year_month_day"');
+    expect(html).toContain('data-blok-date-value="2026-11-08/2026-11-08"');
   });
 
   it('uses the editor locale while an inline page is unresolved', async () => {

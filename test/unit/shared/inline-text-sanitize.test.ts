@@ -64,4 +64,12 @@ describe('shared inline sanitize rules', () => {
     expect(clean(input, INLINE_TEXT_SANITIZE)).toBe('invalid');
     expect(sanitizeHtmlFragment(input, INLINE_TEXT_SANITIZE)).toBe('invalid');
   });
+
+  it('keeps a date mention range, time and format across sanitizers', () => {
+    const input = '<time data-blok-date-mention="" datetime="2026-11-08" data-blok-date-value="2026-11-08T09:00/2026-11-10T10:00" data-blok-date-format="relative" data-blok-date-time-format="24_hour" onclick="bad()">Dimanche</time>';
+    const expected = '<time data-blok-date-mention="" datetime="2026-11-08" data-blok-date-value="2026-11-08T09:00/2026-11-10T10:00" data-blok-date-format="relative" data-blok-date-time-format="24_hour">Dimanche</time>';
+
+    expect(clean(input, INLINE_TEXT_SANITIZE)).toBe(expected);
+    expect(sanitizeHtmlFragment(input, INLINE_TEXT_SANITIZE)).toBe(expected);
+  });
 });

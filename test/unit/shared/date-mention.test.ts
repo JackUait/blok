@@ -9,7 +9,7 @@ describe('inline calendar date labels', () => {
     expect(dateMentionLabel(stored, new Date(2026, 10, 7), 'fr')).toBe('Demain');
     expect(dateMentionLabel(stored, new Date(2026, 10, 8), 'fr')).toBe('Aujourd’hui');
     expect(dateMentionLabel(stored, new Date(2026, 10, 9), 'fr')).toBe('Hier');
-    expect(dateMentionLabel(stored, new Date(2026, 10, 18), 'fr')).toContain('nov. 2026');
+    expect(dateMentionLabel(stored, new Date(2026, 10, 18), 'fr')).toContain('novembre 2026');
   });
 
   it('rejects nonexistent calendar days', () => {

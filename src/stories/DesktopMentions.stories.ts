@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
-import { expect, waitFor } from 'storybook/test';
+import { expect, userEvent, waitFor } from 'storybook/test';
 import { Blok } from '../blok';
 import { localDateIso } from '../shared/date-mention';
 import { PageTool, type PageConfig } from '../tools/page';
@@ -54,5 +54,12 @@ export const PageEtDate: Story = {
   play: async ({ canvasElement }) => {
     await waitFor(() => expect(canvasElement.querySelector('time[data-blok-date-mention]')?.textContent).toBe('Aujourd’hui'));
     expect(canvasElement.querySelector('a[data-blok-page-id="roadmap"]')).toBeTruthy();
+    const date = canvasElement.querySelector<HTMLElement>('time[data-blok-date-mention]');
+
+    if (date === null) return;
+    await userEvent.click(date);
+    await waitFor(() => expect(document.querySelector('[data-blok-database-date-editor]')).toBeTruthy());
+    expect(document.querySelector('[data-blok-database-date-end-toggle]')).toBeTruthy();
+    expect(document.querySelector('[data-blok-database-date-setting="dateFormat"]')).toBeTruthy();
   },
 };

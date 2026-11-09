@@ -1,63 +1,15 @@
 [data-blok-interface="blok"] time[data-blok-date-mention] {
-  display: inline;
-  padding: 1px 3px;
-  border-radius: 3px;
-  background: var(--blok-item-hover-bg, rgba(127, 127, 127, .16));
-  color: inherit;
+  color: var(--blok-text-secondary, #9b9a97);
   white-space: nowrap;
   cursor: pointer;
 }
 
-[data-blok-date-picker] {
-  width: 280px;
-  padding: 10px;
-  color: var(--blok-text-primary);
-  font-size: 13px;
+[data-blok-interface="blok"] time[data-blok-date-mention]::before {
+  content: '@';
+  opacity: .6;
 }
-[data-blok-date-picker] input {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--blok-border, #555);
-  border-radius: 5px;
-  background: var(--blok-popover-bg, #252525);
-  color: inherit;
-  font: inherit;
+
+[data-blok-interface="blok"] time[data-blok-date-mention]:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
-[data-blok-date-picker-caption] {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 10px 0 6px;
-  font-weight: 600;
-}
-[data-blok-date-picker] button {
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-[data-blok-date-picker-caption] button { width: 26px; height: 26px; font-size: 21px; }
-[data-blok-date-picker-caption] button[data-blok-date-picker-today] {
-  width: auto;
-  padding-inline: 6px;
-  font-size: 12px;
-}
-[data-blok-date-picker-caption] span { flex: 1; text-align: center; }
-[data-blok-date-picker-grid] {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
-}
-[data-blok-date-picker-grid] > * {
-  display: grid;
-  place-items: center;
-  height: 32px;
-}
-[data-blok-date-picker-grid] > span { color: var(--blok-text-secondary); font-size: 11px; }
-[data-blok-date-picker-grid] button:hover,
-[data-blok-date-picker-caption] button:hover { background: var(--blok-item-hover-bg); }
-[data-blok-date-picker-grid] button[data-outside-month] { color: var(--blok-text-secondary); }
-[data-blok-date-picker-grid] button[aria-pressed="true"] { background: var(--blok-focus-ring, #2383e2); color: #fff; }

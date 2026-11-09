@@ -626,14 +626,15 @@ describe('server docs data', () => {
     expect(body).toMatch(/--rate-limit/);
   });
 
-  it('prices version history: points, the seven routes, the journal and trimming', () => {
+  it('prices version history: points, the eight routes, the journal and trimming', () => {
     const body = serverLimits.find((l) => l.id === 'collab-version-history')?.body ?? '';
 
-    expect(body).toMatch(/Seven routes/);
+    expect(body).toMatch(/Eight routes/);
     expect(body).toMatch(inOrder('truncated', 'olderEnd', 'olderEnd.sequence'));
     expect(body).toMatch(inOrder('detail=properties', 'database-row', 'properties', 'database', 'schema', 'created', 'views'));
     expect(body).toMatch(inOrder('GET /sync/\\{doc\\}/history/at', 'offset', '%2B', '302', 'application/json', 'not_found'));
     expect(body).toMatch(inOrder('GET /sync/\\{doc\\}/history/changes', 'from', 'to', '24 hours', 'before=', 'olderEnd'));
+    expect(body).toMatch(inOrder('POST /sync/\\{doc\\}/history/\\{lineage\\}/\\{sequence\\}/restore/preview', 'expectRevision', 'If-Match', '404'));
     expect(body).toMatch(inOrder('group', '1, 15 or 60', '400'));
     expect(body).toMatch(inOrder('GET /sync/\\{doc\\}/history/\\{lineage\\}/\\{sequence\\}/changes', 'since', 'truncated'));
     expect(body).toMatch(inOrder('added', 'removed', 'changed', 'moved'));

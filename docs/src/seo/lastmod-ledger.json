@@ -136,8 +136,8 @@
     "date": "2026-10-07"
   },
   "/docs/history-api": {
-    "hash": "98dccab31e1ad77a",
-    "date": "2026-09-24"
+    "hash": "b69dafdf556993a1",
+    "date": "2026-11-09"
   },
   "/docs/i18n-api": {
     "hash": "f49d20326c37eb23",
@@ -472,8 +472,8 @@
     "date": "2026-10-07"
   },
   "/ru/docs/history-api": {
-    "hash": "68310da4af5c9191",
-    "date": "2026-09-24"
+    "hash": "ed2b7667741842f3",
+    "date": "2026-11-09"
   },
   "/ru/docs/i18n-api": {
     "hash": "54ffa8c4ea5b422b",
@@ -676,7 +676,7 @@
     "date": "2026-11-03"
   },
   "/ru/server": {
-    "hash": "8e81d9da31e1253d",
+    "hash": "a1cf5df53c73ec16",
     "date": "2026-11-09"
   },
   "/ru/tools": {
@@ -684,7 +684,7 @@
     "date": null
   },
   "/server": {
-    "hash": "a2ae100cf3717ebe",
+    "hash": "dc5b7c0faef319b8",
     "date": "2026-11-09"
   },
   "/tools": {

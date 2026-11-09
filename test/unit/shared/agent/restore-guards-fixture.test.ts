@@ -12,9 +12,13 @@ import type { OutputBlockData, OutputData } from '../../../../types/data-formats
  * The servers guard an HTTP restore with the agent's rules. restore-guards.json is captured from C#,
  * and the Go and Rust servers read it too; this keeps the TS rules the same as what they read.
  */
-interface Guard { kind: 'share' | 'unlock' | 'lockedReshape'; blockId: string; viewId?: string }
+interface Guard { kind: 'share' | 'unlock' | 'lockedReshape' | 'orphanedDatabase'; blockId: string; viewId?: string }
 
-interface GuardCase { name: string; current: OutputBlockData[]; target: OutputBlockData[]; guards: Guard[] }
+/** No databases is databases=restore. */
+interface GuardCase { name: string; databases?: 'keep'; current: OutputBlockData[]; target: OutputBlockData[]; guards: Guard[] }
+
+/** The servers alone refuse a keep restore that would orphan a database; the agent has no keep restore. */
+const asked = (guards: Guard[]): Guard[] => guards.filter(guard => guard.kind !== 'orphanedDatabase');
 
 const fixture = JSON.parse(readFileSync(
   resolve(process.cwd(), 'test/unit/server-conformance/fixtures/collab-history/restore-guards.json'),
@@ -37,7 +41,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /** One view at a time, so a view the agent refuses to read (it throws) still names itself. */
-const shareGuards = (now: DocSnapshot, target: OutputData): Guard[] => target.blocks.flatMap((block) => {
+const shareGuards = (now: DocSnapshot, target: OutputData, databases: 'keep' | 'restore'): Guard[] => target.blocks.flatMap((block) => {
   const views = isRecord(block.data) && Array.isArray(block.data.views) ? block.data.views : [];
 
   return block.type !== 'database' || block.id === undefined ? [] : views.filter(isRecord).flatMap((view) => {
@@ -45,7 +49,7 @@ const shareGuards = (now: DocSnapshot, target: OutputData): Guard[] => target.bl
     const viewId = typeof view.id === 'string' ? view.id : '';
 
     try {
-      return restoreShares(now, single).map(step => ({ kind: 'share' as const, blockId: step.blockId, viewId: step.viewId }));
+      return restoreShares(now, single, { databases }).map(step => ({ kind: 'share' as const, blockId: step.blockId, viewId: step.viewId }));
     } catch (error) {
       expect(error).toBeInstanceOf(AgentFailure);
 
@@ -54,33 +58,34 @@ const shareGuards = (now: DocSnapshot, target: OutputData): Guard[] => target.bl
   });
 });
 
-const agentGuards = (current: OutputBlockData[], target: OutputBlockData[]): Guard[] => {
+const agentGuards = (current: OutputBlockData[], target: OutputBlockData[], databases: 'keep' | 'restore'): Guard[] => {
   const now = DocSnapshot.fromOutput({ blocks: current });
   const restored: OutputData = { blocks: firstCopies(target) };
   const unlocked = new Set(unlockedBetween(now, DocSnapshot.fromOutput(restored)));
-  const locks = restoreTouchesLocked(now, restored)
+  const locks = restoreTouchesLocked(now, restored, { databases })
     .map(blockId => ({ kind: unlocked.has(blockId) ? 'unlock' as const : 'lockedReshape' as const, blockId }));
 
-  return [...locks, ...shareGuards(now, restored)];
+  return [...locks, ...shareGuards(now, restored, databases)];
 };
 
 describe('restore-guards.json agrees with the agent rules', () => {
   it('has cases of every kind', () => {
     const kinds = new Set(fixture.cases.flatMap(entry => entry.guards.map(guard => guard.kind)));
 
-    expect([...kinds].sort()).toEqual(['lockedReshape', 'share', 'unlock']);
+    expect([...kinds].sort()).toEqual(['lockedReshape', 'orphanedDatabase', 'share', 'unlock']);
     expect(fixture.cases.some(entry => entry.guards.length === 0)).toBe(true);
+    expect(fixture.cases.filter(entry => entry.databases === 'keep').length).toBeGreaterThanOrEqual(4);
   });
 
   it.each(agentCases.map(entry => [entry.name, entry] as const))('%s', (_name, entry) => {
-    expect(agentGuards(entry.current, entry.target).map(key).sort()).toEqual(entry.guards.map(key).sort());
+    expect(agentGuards(entry.current, entry.target, entry.databases ?? 'restore').map(key).sort()).toEqual(asked(entry.guards).map(key).sort());
   });
 
   it('the lock guards together are exactly what restoreTouchesLocked asks about', () => {
     for (const entry of agentCases) {
-      const ids = restoreTouchesLocked(DocSnapshot.fromOutput({ blocks: entry.current }), { blocks: entry.target });
+      const ids = restoreTouchesLocked(DocSnapshot.fromOutput({ blocks: entry.current }), { blocks: entry.target }, { databases: entry.databases ?? 'restore' });
 
-      expect(entry.guards.filter(guard => guard.kind !== 'share').map(guard => guard.blockId).sort()).toEqual([...ids].sort());
+      expect(asked(entry.guards).filter(guard => guard.kind !== 'share').map(guard => guard.blockId).sort()).toEqual([...ids].sort());
     }
   });
 

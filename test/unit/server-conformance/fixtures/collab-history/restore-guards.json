@@ -1,5 +1,5 @@
 {
-  "$comment": "CollabRestoreGuards.Of over the exported blocks of current and target, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Mirrors restoreTouchesLocked, unlockedBetween and restoreShares in src/shared/agent/approval.ts.",
+  "$comment": "CollabRestoreGuards.Of over the exported blocks of current and target, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Mirrors restoreTouchesLocked, unlockedBetween and restoreShares in src/shared/agent/approval.ts. A case with databases keep is a databases=keep restore: the guards of the kept target, then an orphanedDatabase guard per kept database whose parent the restore removes; a case without it is databases=restore.",
   "cases": [
     {
       "name": "a public form comes back",
@@ -3177,6 +3177,208 @@
         }
       ],
       "guards": []
+    },
+    {
+      "name": "keep: a locked database the restore would unlock stays locked: no guard",
+      "databases": "keep",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "keep: a locked database the restore would remove stays: no guard",
+      "databases": "keep",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "keep: a public form the restore would bring back stays as it is: no guard",
+      "databases": "keep",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "keep: a deleted database with a public form stays deleted: no guard",
+      "databases": "keep",
+      "current": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "keep: a locked database whose parent the restore removes is refused",
+      "databases": "keep",
+      "current": [
+        {
+          "id": "t",
+          "type": "toggle",
+          "data": {},
+          "content": [
+            "d"
+          ]
+        },
+        {
+          "id": "d",
+          "type": "database",
+          "parent": "t",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "orphanedDatabase",
+          "blockId": "d"
+        }
+      ]
     }
   ]
 }

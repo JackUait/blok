@@ -280,10 +280,20 @@ const firstById = (target: OutputData): Map<string, OutputData['blocks'][number]
 };
 
 /**
+ * How a restore treats databases, as the server's `databases` param: `keep` leaves every database, on either
+ * side, as it is now, so it touches no lock and no share. `restore` (the default) restores them.
+ */
+export interface RestoreScope { databases?: 'keep' | 'restore' }
+
+/**
  * Databases locked now (their own lock or a holder's) that the restored version removes, turns into
  * something else, or changes in any field the lock protects. A new id never stands in for an old one.
  */
-export const restoreTouchesLocked = (now: DocSnapshot, target: OutputData): string[] => {
+export const restoreTouchesLocked = (now: DocSnapshot, target: OutputData, scope: RestoreScope = {}): string[] => {
+  if (scope.databases === 'keep') {
+    return [];
+  }
+
   const locked = lockedIn(now);
   const restored = firstById(target);
 
@@ -417,7 +427,11 @@ export const sharedBetween = (from: DocSnapshot, to: DocSnapshot): ShareStep[] =
   shareSteps(to.ids(), snapshotSource(from), snapshotSource(to));
 
 /** Restoring `target` over `now` changes these views' sharing. */
-export const restoreShares = (now: DocSnapshot, target: OutputData): ShareStep[] => {
+export const restoreShares = (now: DocSnapshot, target: OutputData, scope: RestoreScope = {}): ShareStep[] => {
+  if (scope.databases === 'keep') {
+    return [];
+  }
+
   const restored = firstById(target);
 
   return shareSteps([...restored.keys()], snapshotSource(now), id => {

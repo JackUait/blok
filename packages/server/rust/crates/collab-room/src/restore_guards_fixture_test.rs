@@ -12,11 +12,21 @@ fn restore_guards_match_the_fixture() {
             .iter()
             .map(stringified)
             .collect();
-        let got: Vec<String> =
-            restore_guards(array(member(&c, "current")), array(member(&c, "target")))
-                .iter()
-                .map(|guard| stringified(&guard.json()))
-                .collect();
+        let (current, target) = (array(member(&c, "current")), array(member(&c, "target")));
+        // A keep restore guards the kept target, then refuses each orphan.
+        let guards = match c.get(&"databases".into()) {
+            Some(blok_jsjson::Value::String(databases)) if databases.to_string() == "keep" => {
+                let kept = crate::keep_databases(current, target);
+                let mut guards = restore_guards(current, &kept.target);
+                guards.extend(kept.orphaned);
+                guards
+            }
+            _ => restore_guards(current, target),
+        };
+        let got: Vec<String> = guards
+            .iter()
+            .map(|guard| stringified(&guard.json()))
+            .collect();
         if got != wanted {
             failures.push(format!("{name}: guards are {got:?}, want {wanted:?}"));
         }

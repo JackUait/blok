@@ -801,8 +801,8 @@ public sealed partial class CollabHistoryCaptureTests
 
     return new JsonObject
     {
-      ["$comment"] = "CollabRestoreGuards.Of over the exported blocks of current and target, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Mirrors restoreTouchesLocked, unlockedBetween and restoreShares in src/shared/agent/approval.ts.",
-      ["cases"] = written,
+      ["$comment"] = "CollabRestoreGuards.Of over the exported blocks of current and target, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Mirrors restoreTouchesLocked, unlockedBetween and restoreShares in src/shared/agent/approval.ts. A case with databases keep is a databases=keep restore: the guards of the kept target, then an orphanedDatabase guard per kept database whose parent the restore removes; a case without it is databases=restore.",
+      ["cases"] = AddKeepGuardCases(written),
     };
   }
 

@@ -40,6 +40,45 @@ public sealed partial class CollabHistoryCaptureTests
     Assert.True(started.Elapsed < TimeSpan.FromMinutes(1), $"took {started.Elapsed}");
   }
 
+  /// <summary>restore-guards.json cases for <c>databases=keep</c>: a kept database raises no lock or share guard.</summary>
+  private static JsonArray AddKeepGuardCases(JsonArray written)
+  {
+    var lockedSchema = """[{ "id": "t", "type": "title", "databaseLocked": true }]""";
+    var publicView = $"""[{View("\"form\": { \"public\": true }")}]""";
+    (string Name, string[] Current, string[] Target, string[] Expect)[] cases =
+    [
+      ("keep: a locked database the restore would unlock stays locked: no guard",
+          [Db("d", lockedSchema)], [Db("d")], []),
+      ("keep: a locked database the restore would remove stays: no guard",
+          [Db("d", lockedSchema)], [P("a")], []),
+      ("keep: a public form the restore would bring back stays as it is: no guard",
+          [Db("d", views: $"[{View()}]")], [Db("d", views: publicView)], []),
+      ("keep: a deleted database with a public form stays deleted: no guard",
+          [P("a")], [P("a"), Db("d", views: publicView)], []),
+      ("keep: a locked database whose parent the restore removes is refused",
+          [Block("t", "toggle", content: ["d"]), Db("d", lockedSchema, parent: "t")], [P("a")], ["orphanedDatabase d"]),
+    ];
+
+    foreach (var (name, current, target, expect) in cases)
+    {
+      var currentBlocks = new JsonArray([.. current.Select(ParseBlock)]);
+      var kept = CollabRestorePlanner.KeepDatabases(currentBlocks, new JsonArray([.. target.Select(ParseBlock)]));
+      var guards = CollabRestoreGuards.Of(currentBlocks, kept.Target).Concat(kept.Orphaned).ToList();
+
+      Assert.Equal(expect, guards.Select(guard => $"{guard.Kind} {guard.BlockId}"));
+      written.Add(new JsonObject
+      {
+        ["name"] = name,
+        ["databases"] = "keep",
+        ["current"] = new JsonArray([.. current.Select(json => JsonNode.Parse(json))]),
+        ["target"] = new JsonArray([.. target.Select(json => JsonNode.Parse(json))]),
+        ["guards"] = new JsonArray([.. guards.Select(guard => (JsonNode)guard.ToJson())]),
+      });
+    }
+
+    return written;
+  }
+
   private static readonly string[] DigestKinds = ["restore", "keep"];
 
   private static string Block(string id, string type, string? parent = null, string[]? content = null, string data = "{}") =>

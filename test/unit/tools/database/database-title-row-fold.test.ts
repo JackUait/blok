@@ -68,6 +68,18 @@ describe('foldTitleRow', () => {
     expect(row.hasAttribute('data-blok-database-fold-new')).toBe(false);
   });
 
+  // The selection bar lies over the row (position absolute) while rows are picked; it takes no room.
+  it('leaves out children taken out of the row, such as the selection bar', () => {
+    mount(474);
+    const bar = sized(document.createElement('div'), () => 500);
+
+    bar.style.position = 'absolute';
+    row.insertBefore(bar, row.lastElementChild);
+    foldTitleRow(row);
+
+    expect(row.hasAttribute('data-blok-database-fold-icons')).toBe(false);
+  });
+
   it('clears the marks once the row is wide again', () => {
     mount(358);
     foldTitleRow(row);

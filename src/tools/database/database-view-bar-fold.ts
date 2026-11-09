@@ -104,7 +104,8 @@ export const foldTitleRow = (row: HTMLElement): void => {
   row.removeAttribute('data-blok-database-fold-icons');
   // The title shrinks to fit the row, so its text width is what it needs.
   const lead = Array.from(row.children)
-    .filter((child): child is HTMLElement => child instanceof HTMLElement && child !== toolbar)
+    // The selection bar lies over the row while rows are picked; it takes no room.
+    .filter((child): child is HTMLElement => child instanceof HTMLElement && child !== toolbar && !['absolute', 'fixed'].includes(getComputedStyle(child).position))
     .reduce((sum, child) => sum + outerWidth(child, child.hasAttribute('data-blok-database-title') ? child.scrollWidth : child.offsetWidth), 0);
   const style = getComputedStyle(row);
   const width = row.clientWidth - (Number.parseFloat(style.paddingLeft) || 0) - (Number.parseFloat(style.paddingRight) || 0);

@@ -117,8 +117,8 @@ test.describe('Database — a long title stays one line', () => {
       expect(box.overflow).toBe('ellipsis');
       expect((await page.locator(ROW).boundingBox())?.height).toBe(40);
       // The title gives way: "+" and "…" stay 24 wide, as Notion's do.
-      expect((await page.locator(`${ROW} > [data-blok-database-add-view]`).boundingBox())?.width).toBe(24);
-      expect((await page.locator(`${ROW} > [data-blok-database-title-more]`).boundingBox())?.width).toBe(24);
+      expect((await page.locator(ROW).locator('[data-blok-database-add-view]').boundingBox())?.width).toBe(24);
+      expect((await page.locator(ROW).locator('[data-blok-database-title-more]').boundingBox())?.width).toBe(24);
     });
   }
 

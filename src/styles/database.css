@@ -148,6 +148,8 @@
   --blok-database-number-yellow: rgb(189, 141, 35);
   --blok-database-status-pill-pad-start: 7px;
   --blok-database-status-pill-pad-end: 9px;
+  /* The table row gutter: "+" 24, grip 18 + 8, checkbox slot 36. Must match the gutter rules. */
+  --blok-database-table-row-gutter: calc(24px + 18px + var(--blok-space-2) + 16px + 2 * var(--blok-space-2-5));
   --blok-database-checkbox-check: #ffffff;
   /* Notion's calendar "today" (research/07) and the date picker's today circle (research/26 §1c). */
   --blok-database-today: rgb(229, 100, 88);
@@ -8513,11 +8515,21 @@ textarea[data-blok-database-cell-input] {
   position: relative;
 }
 
-/* Spans the editor and lines its content up with the text column, like the board. */
+/* Spans the editor and lines its content up with the text column, like the board.
+   When the centring padding is narrower than the row gutter (side peek, narrow host),
+   it bleeds left by the shortfall so the gutter is not clipped; the columns stay put. */
 [data-blok-database-table-scroller] {
   overflow-x: auto;
+  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
   padding-inline: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(var(--blok-database-table-row-gutter), calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   padding-block-end: var(--blok-space-6);
+}
+
+/* It clips too (overflow set inline), so it bleeds the same way. */
+[data-blok-database-board-container]:has(> [data-blok-database-table]) {
+  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
+  padding-inline-start: max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
 }
 
 [data-blok-database-table-grid] {

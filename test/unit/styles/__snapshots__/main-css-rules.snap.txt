@@ -4436,6 +4436,7 @@ span[data-blok-slash-search] {
   --blok-database-number-yellow: rgb(189, 141, 35);
   --blok-database-status-pill-pad-start: 7px;
   --blok-database-status-pill-pad-end: 9px;
+  --blok-database-table-row-gutter: calc(24px + 18px + var(--blok-space-2) + 16px + 2 * var(--blok-space-2-5));
   --blok-database-checkbox-check: #ffffff;
   --blok-database-today: rgb(229, 100, 88);
   --blok-database-column-bg: rgba(66, 35, 3, 0.03);
@@ -11749,8 +11750,15 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-scroller] {
   overflow-x: auto;
+  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
   padding-inline: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(var(--blok-database-table-row-gutter), calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   padding-block-end: var(--blok-space-6);
+}
+
+[data-blok-database-board-container]:has(> [data-blok-database-table]) {
+  margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
+  padding-inline-start: max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2)));
 }
 
 [data-blok-database-table-grid] {

@@ -2010,6 +2010,13 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (!this.hoveredBlock || !this.nodes.plusButton) {
       return;
     }
+    // The block got the mark while the toolbar was open on it (a full database row page);
+    // its anchor may be hidden now, which would place the handle off the block.
+    if (this.hoveredBlock.holder.hasAttribute(DATA_ATTR.noControls)) {
+      this.close({ setExplicitlyClosed: false });
+
+      return;
+    }
 
     this.positioner.repositionToolbar(
       this.nodes,

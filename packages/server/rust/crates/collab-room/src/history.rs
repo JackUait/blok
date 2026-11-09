@@ -20,7 +20,7 @@ use crate::ops::{
 use crate::restore::{RestoreTrash, plan_restore_trashing};
 use crate::restore_guards::{RestoreGuard, restore_guards};
 use crate::timeline::{
-    LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions,
+    LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions_by,
 };
 use crate::{Error, HistoryStore};
 
@@ -164,6 +164,37 @@ impl Manager {
     /// Every lineage and its versions newest first. A group above zero
     /// replaces both default grouping limits.
     pub async fn history(&self, doc_id: &str, group: Duration) -> Result<HistoryList, Error> {
+        self.history_by(doc_id, group, false).await
+    }
+
+    /// The record notes of one lineage; None without a store. A store that
+    /// fails reads as no notes: they are informational.
+    pub async fn read_notes(
+        &self,
+        doc_id: &str,
+        lineage: &str,
+    ) -> Option<std::collections::HashMap<u64, crate::RecordNote>> {
+        let notes = self.0.notes.clone()?;
+        match notes.read(doc_id, lineage).await {
+            Ok(read) => Some(read),
+            Err(err) => {
+                self.0.logf(&format!(
+                    "collab: the record notes of \"{doc_id}\" could not be read: {err}"
+                ));
+                Some(Default::default())
+            }
+        }
+    }
+
+    /// `history` where `by_actor` also starts a version where the actor
+    /// changes. With a record notes store, each version carries its actor
+    /// kinds.
+    pub async fn history_by(
+        &self,
+        doc_id: &str,
+        group: Duration,
+        by_actor: bool,
+    ) -> Result<HistoryList, Error> {
         let Some(history) = self.history_store() else {
             return Ok(HistoryList::status(HistoryStatus::None));
         };
@@ -203,10 +234,37 @@ impl Manager {
         } else {
             (TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN)
         };
+        let mut notes = None;
+        if self.0.notes.is_some() {
+            let mut by_lineage = std::collections::HashMap::new();
+            for lineage in &lineages {
+                let read = self
+                    .read_notes(doc_id, &lineage.lineage)
+                    .await
+                    .unwrap_or_default();
+                by_lineage.insert(lineage.lineage.clone(), read);
+            }
+            notes = Some(by_lineage);
+        }
+        let note_of = notes.as_ref().map(|notes| {
+            move |lineage: &str, sequence: u64| {
+                notes
+                    .get(lineage)
+                    .and_then(|notes| notes.get(&sequence))
+                    .cloned()
+            }
+        });
+        let versions = group_versions_by(
+            &with_headers,
+            idle_gap,
+            max_span,
+            by_actor,
+            note_of.as_ref(),
+        );
         Ok(HistoryList {
             status: HistoryStatus::Ready,
             lineages,
-            versions: group_versions(&with_headers, idle_gap, max_span),
+            versions,
         })
     }
 
@@ -567,6 +625,7 @@ impl Manager {
             expect,
             applied: None,
             dry_run: false,
+            note: None,
         };
         let edit = match self.edit_in_room(doc_id, request).await {
             Err(Error::RestorePointMissing) => {
@@ -687,6 +746,7 @@ impl Manager {
             expect,
             applied: None,
             dry_run: true,
+            note: None,
         };
         let edit = self.edit_in_room(doc_id, request).await?;
         // A plan that ran answers Applied with the head it planned against.

@@ -103,6 +103,16 @@ impl Handlers {
             &admitted.user,
             admitted.has_user,
         );
+        // After the digest, which is of the request as sent, so a retry
+        // still matches.
+        let ops = if self.config.stamp_authority {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |since| since.as_millis() as u64);
+            blok_collab_room::stamp_authority(ops, &actor, now as f64)
+        } else {
+            ops
+        };
         let edit = manager.edit(&admitted.doc, ops, &operation_id, &digest, &actor, expect);
         match while_connected(&request, edit).await {
             Some(Ok(result)) => {

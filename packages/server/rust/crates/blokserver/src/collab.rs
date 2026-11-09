@@ -324,6 +324,7 @@ impl Inner {
             log,
             operations,
             activity: o.collab_activity_observer.clone(),
+            notes: o.collab_record_notes.clone(),
         }))
     }
 

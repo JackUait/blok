@@ -31,6 +31,7 @@ fn flush_room() -> FlushRoom {
         log: Some(logs.log()),
         operations: None,
         activity: None,
+        notes: None,
     });
     FlushRoom {
         manager,

@@ -14,6 +14,7 @@ mod historytime;
 mod lane;
 mod load;
 mod manager;
+mod notes;
 mod ops;
 mod options;
 mod ordered;
@@ -38,6 +39,10 @@ pub use historytime::{
     RangeSelection, fit_rows, fits, parse_history_time, record_bytes, resolve_at, select_range,
 };
 pub use manager::{Manager, ManagerOptions};
+pub use notes::{
+    KIND_AGENT, KIND_PERSON, MemoryRecordNotes, RecordNote, RecordNotesStore, attribution,
+    classify_actor, stamp_authority,
+};
 pub use ops::{
     Applied, EditResult, EditStatus, PlanOps, Precondition, Receipt, ResetResult, ResetStatus,
     StateResult, StateStatus, planned_frame_bytes,
@@ -50,7 +55,10 @@ pub use restore_guards::{
 };
 pub use room::{Log, Membership};
 pub use seams::*;
-pub use timeline::{LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions};
+pub use timeline::{
+    ActorKind, LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions,
+    group_versions_by,
+};
 
 /// MaxChangeRecords and MaxChangeBytes bound one changes answer; the newest
 /// records are kept.

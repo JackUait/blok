@@ -108,6 +108,7 @@ async fn a_quarantined_working_copy_survives_the_journal_taking_over() {
             log: Some(r.logs.log()),
             operations: Some(Arc::new(r.operations.clone())),
             activity: None,
+            notes: None,
         });
         let state = manager.state(TEST_DOC).await.expect("state");
         manager.drain().await.expect("drain");

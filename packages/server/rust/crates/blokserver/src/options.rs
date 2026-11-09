@@ -107,6 +107,16 @@ pub struct Options {
     /// as in Trash: the editor does not hide it.
     pub collab_restore_trashes_pages: bool,
 
+    /// UseCollabRecordNotes<T>: a note of who wrote each journal record,
+    /// kept beside the journal. The history routes then carry actor kinds.
+    /// None keeps none.
+    pub collab_record_notes: Option<Arc<dyn blok_collab_room::RecordNotesStore>>,
+
+    /// CollabStampAuthority: POST /edit inserts get the server's
+    /// createdAt/By/With and lastEditedAt/By/With, and an update stamps its
+    /// block's lastEdited*. False, the default, keeps the caller's.
+    pub collab_stamp_authority: bool,
+
     /// The TimeProvider override: tickets, the rate limit window, S3 signing
     /// and the rooms' timestamps (activity, cooldowns, export deadlines) read
     /// it. None is the system clock.
@@ -164,6 +174,8 @@ impl Default for Options {
             collab_activity_observer: None,
             collab_enforce_restore_guards: false,
             collab_restore_trashes_pages: false,
+            collab_record_notes: None,
+            collab_stamp_authority: false,
             clock: None,
             timers: None,
             logger: None,
@@ -250,6 +262,8 @@ impl fmt::Debug for Options {
                 "collab_restore_trashes_pages",
                 &self.collab_restore_trashes_pages,
             )
+            .field("collab_record_notes", &self.collab_record_notes.is_some())
+            .field("collab_stamp_authority", &self.collab_stamp_authority)
             .field("clock", &self.clock.is_some())
             .field("logger", &self.logger.is_some())
             .finish()

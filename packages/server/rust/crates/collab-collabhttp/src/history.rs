@@ -6,7 +6,7 @@ use blok_auth::User;
 use blok_collab_journal::LineageDeleteOutcome;
 use blok_collab_room::{
     BlockChangeKind, CONFIRMABLE_GUARDS, Error, HistoryStatus, MAX_CHANGE_BYTES,
-    MAX_CHANGE_RECORDS, Manager, RecordChanges, RestoreGuard, describe_database_change,
+    MAX_CHANGE_RECORDS, Manager, RecordChanges, RecordNote, RestoreGuard, describe_database_change,
 };
 use blok_collab_synchttp::{derive_actor, refuse};
 use blok_collab_workingset::is_lineage;
@@ -179,8 +179,17 @@ impl Handlers {
             }
         };
         let group = Duration::from_secs(minutes.unwrap_or(0) * 60);
+        // Shipped route: any other by is ignored, as unknown keys always were.
+        let raw = request.query();
+        let by_actor = matches!(
+            query_all(raw.strip_prefix('?').unwrap_or(raw), "by").as_slice(),
+            [by] if by == "actor"
+        );
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
-        let result = match blocking(&request, async move { rooms.history(&doc, group).await }).await
+        let result = match blocking(&request, async move {
+            rooms.history_by(&doc, group, by_actor).await
+        })
+        .await
         {
             Some(Ok(result)) => result,
             _ => {
@@ -228,7 +237,18 @@ impl Handlers {
                 }
                 quoted(&mut body, actor);
             }
-            body.extend_from_slice(b"]}");
+            body.push(b']');
+            if let Some(kinds) = &version.actor_kinds {
+                body.extend_from_slice(br#","actorKinds":["#);
+                for (j, kind) in kinds.iter().enumerate() {
+                    if j > 0 {
+                        body.push(b',');
+                    }
+                    append_actor_kind(&mut body, &kind.id, &kind.note);
+                }
+                body.push(b']');
+            }
+            body.push(b'}');
         }
         body.extend_from_slice(b"]}");
         write_json(&mut response, &body).await;
@@ -280,9 +300,10 @@ impl Handlers {
                 return;
             }
         };
-        // v2.1.0 ignored unknown keys here, so a bad detail is ignored, not
-        // refused.
+        // v2.1.0 ignored unknown keys here, so a bad detail or block is
+        // ignored, not refused.
         let detail = query_detail(&request) == Ok(true);
+        let block = query_block(&request).unwrap_or(None);
         let (rooms, doc, at) = (a.rooms.clone(), a.doc.clone(), lineage.clone());
         let changes = async move {
             rooms
@@ -307,17 +328,32 @@ impl Handlers {
             self.refuse_history(&mut response, &a, result.status).await;
             return;
         }
+        let notes = a.rooms.read_notes(&a.doc, &lineage).await;
         // Rows are measured newest first; the newest always goes out.
         let mut rows: Vec<Vec<u8>> = Vec::new();
+        let mut shown: Vec<RecordChanges> = Vec::new();
         for record in result.changes.iter().rev() {
-            let Ok(row) = change_row(record, detail) else {
+            let Some(record) = narrowed(record, block.as_deref()) else {
+                continue;
+            };
+            let Ok(row) = change_row(&record, detail, notes.as_ref()) else {
                 failed(&request, &mut response).await;
                 return;
             };
             rows.push(row);
+            shown.push(record);
         }
+        // Cut by the room with every row kept, the answer ends at the oldest
+        // record read, so a narrowed answer still moves its cursor.
+        let row_count = rows.len();
+        let older_end_of = |oldest: usize| -> &RecordChanges {
+            match result.changes.first() {
+                Some(first) if oldest + 1 == row_count => first,
+                _ => &shown[oldest],
+            }
+        };
         let (kept, truncated) = time::fit_answer(&rows, result.truncated, |oldest| {
-            let record = &result.changes[result.changes.len() - 1 - oldest];
+            let record = older_end_of(oldest);
             let mut older_end = Vec::new();
             time::append_older_end(
                 &mut older_end,
@@ -338,7 +374,7 @@ impl Handlers {
         }
         body.push(b']');
         if truncated {
-            let oldest = &result.changes[result.changes.len() - rows.len()];
+            let oldest = older_end_of(kept - 1);
             time::append_older_end(&mut body, &lineage, oldest.sequence, oldest.committed_at);
         }
         body.push(b'}');
@@ -568,10 +604,12 @@ fn change_kind(kind: BlockChangeKind) -> &'static str {
 }
 
 /// One changes row. With `detail`, a changed database or row also carries
-/// what changed inside its data.
+/// what changed inside its data. With a notes store (`notes` given), the row
+/// carries actors: its actor's kind, or nothing when the record has no note.
 fn change_row(
     record: &RecordChanges,
     detail: bool,
+    notes: Option<&std::collections::HashMap<u64, RecordNote>>,
 ) -> Result<Vec<u8>, blok_collab_docendpoint::Error> {
     let mut row = format!(
         r#"{{"sequence":{},"committedAt":{},"actor":"#,
@@ -582,6 +620,13 @@ fn change_row(
     match &record.actor_id {
         None => row.extend_from_slice(b"null"),
         Some(actor) => quoted(&mut row, actor),
+    }
+    if let Some(notes) = notes {
+        row.extend_from_slice(br#","actors":["#);
+        if let (Some(actor), Some(note)) = (&record.actor_id, notes.get(&record.sequence)) {
+            append_actor_kind(&mut row, actor, note);
+        }
+        row.push(b']');
     }
     row.extend_from_slice(br#","blocks":["#);
     for (i, change) in record.blocks.iter().enumerate() {
@@ -666,6 +711,51 @@ fn query_number(request: &Request, name: &str) -> Result<Option<u64>, ()> {
     match values.as_slice() {
         [] => Ok(None),
         [value] => parse_uint64_none(value).map(Some).ok_or(()),
+        _ => Err(()),
+    }
+}
+
+/// {id, kind, onBehalfOf?}.
+fn append_actor_kind(body: &mut Vec<u8>, id: &str, note: &RecordNote) {
+    body.extend_from_slice(br#"{"id":"#);
+    quoted(body, id);
+    body.extend_from_slice(br#","kind":"#);
+    quoted(body, &note.kind);
+    if let Some(person) = &note.on_behalf_of {
+        body.extend_from_slice(br#","onBehalfOf":"#);
+        quoted(body, person);
+    }
+    body.push(b'}');
+}
+
+/// The record narrowed to one block: only its changes, no page keys. None
+/// when the record did not touch it. No block keeps it whole.
+fn narrowed(record: &RecordChanges, block: Option<&str>) -> Option<RecordChanges> {
+    let Some(block) = block else {
+        return Some(record.clone());
+    };
+    let blocks: Vec<_> = record
+        .blocks
+        .iter()
+        .filter(|change| to_string_lossy(change.id.units()) == block)
+        .cloned()
+        .collect();
+    if blocks.is_empty() {
+        return None;
+    }
+    Some(RecordChanges {
+        blocks,
+        page: Vec::new(),
+        ..record.clone()
+    })
+}
+
+/// Absent is Ok(None); anything but one non-empty value is Err.
+fn query_block(request: &Request) -> Result<Option<String>, ()> {
+    let raw = request.query();
+    match query_all(raw.strip_prefix('?').unwrap_or(raw), "block").as_slice() {
+        [] => Ok(None),
+        [value] if !value.is_empty() => Ok(Some(value.clone())),
         _ => Err(()),
     }
 }

@@ -215,6 +215,7 @@ fn migration_manager_with(
         log: Some(r.logs.log()),
         operations: journalled.then(|| Arc::new(r.operations.clone()) as Arc<dyn OperationStore>),
         activity: None,
+        notes: None,
     })
 }
 

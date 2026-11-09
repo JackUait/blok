@@ -449,6 +449,7 @@ impl Bench {
             }),
             operations,
             activity,
+            notes: None,
         })
     }
 

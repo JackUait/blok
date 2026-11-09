@@ -286,6 +286,7 @@ impl Executor {
                 &actor.id,
                 expect,
                 Some(applied),
+                crate::roomreplay::agent_note(actor),
             )
             .await;
         let planned = slot

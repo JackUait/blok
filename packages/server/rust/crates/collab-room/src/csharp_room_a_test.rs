@@ -408,6 +408,7 @@ impl Cs {
             operations: journalled
                 .then(|| Arc::new(self.journal.clone()) as Arc<dyn OperationStore>),
             activity: None,
+            notes: None,
         })
     }
 

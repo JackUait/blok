@@ -212,6 +212,7 @@ pub(crate) fn new_test_room_on_with(
         log: None,
         operations,
         activity: None,
+        notes: None,
     });
     let runtime: Arc<dyn Invoker> = Arc::new(SharedPool);
     let runtime = match wrap {

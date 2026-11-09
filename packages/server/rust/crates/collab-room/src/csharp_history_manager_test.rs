@@ -238,6 +238,7 @@ impl Bench {
             log: None,
             operations,
             activity: None,
+            notes: None,
         })
     }
 
@@ -1635,4 +1636,206 @@ async fn changes_between_reads_at_most_eight_lineages() {
     let got: Vec<&str> = result.records.iter().map(|r| r.lineage.as_str()).collect();
     let want: Vec<&str> = lineages[1..].iter().rev().map(String::as_str).collect();
     assert_eq!(got, want);
+}
+
+// Twins of C# CollabHistoryManagerTests.Notes.
+
+struct FailingNotes;
+
+impl RecordNotesStore for FailingNotes {
+    fn write<'a>(
+        &'a self,
+        _doc_id: &'a str,
+        _lineage: &'a str,
+        _sequence: u64,
+        _note: RecordNote,
+    ) -> BoxFuture<'a, Result<(), Error>> {
+        Box::pin(async { Err(Error::message("the notes are down")) })
+    }
+
+    fn read<'a>(
+        &'a self,
+        _doc_id: &'a str,
+        _lineage: &'a str,
+    ) -> BoxFuture<'a, Result<std::collections::HashMap<u64, RecordNote>, Error>> {
+        Box::pin(async { Err(Error::message("the notes are down")) })
+    }
+}
+
+impl Bench {
+    fn noted(
+        &self,
+        notes: Arc<dyn RecordNotesStore>,
+        logs: Option<Arc<Mutex<Vec<String>>>>,
+    ) -> Manager {
+        Manager::new(ManagerOptions {
+            store: self.store.clone(),
+            endpoint: self.endpoint.clone(),
+            converter: Arc::new(runtime_converter()),
+            room: Options::default(),
+            log: logs.map(|logs| -> Log {
+                Arc::new(move |line: &str| logs.lock().unwrap().push(line.to_owned()))
+            }),
+            operations: Some(self.journal.clone()),
+            activity: None,
+            notes: Some(notes),
+        })
+    }
+}
+
+fn person() -> RecordNote {
+    RecordNote {
+        kind: KIND_PERSON.to_owned(),
+        on_behalf_of: None,
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn each_journalled_edit_leaves_a_note_of_its_actors_kind_never_read_from_the_ids_text() {
+    let bench = Bench::new();
+    let notes = Arc::new(MemoryRecordNotes::default());
+    let manager = bench.noted(notes.clone(), None);
+    blocks(&manager).await;
+    edit(&manager, update("a", "1"), Some("u1")).await;
+    edit(&manager, update("a", "2"), Some("agent:alice:claude-code")).await;
+    edit(&manager, update("a", "3"), None).await;
+
+    let written = notes.read(DOC, &bench.lineage()).await.unwrap();
+    assert_eq!(written.get(&1), Some(&person()));
+    assert_eq!(written.get(&2), Some(&person()));
+    assert_eq!(written.get(&3), None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_agent_edit_notes_the_agent_and_its_person() {
+    let bench = Bench::new();
+    let notes = Arc::new(MemoryRecordNotes::default());
+    let manager = bench.noted(notes.clone(), None);
+    blocks(&manager).await;
+    let op = update("a", "by an agent");
+    let digest = canonical_body_digest(std::slice::from_ref(&op)).expect("digest");
+    let plan: PlanOps = Arc::new(move |_| {
+        let op = op.clone();
+        Box::pin(async move { Ok(vec![op]) })
+    });
+    let result = manager
+        .agent_edit(
+            DOC,
+            plan,
+            &fresh_id(),
+            &digest,
+            "bot-7",
+            None,
+            None,
+            classify_actor("bot-7", true, "carol"),
+        )
+        .await
+        .expect("edit");
+    assert_eq!(result.status, EditStatus::Applied, "{:?}", result.err);
+    let written = notes.read(DOC, &bench.lineage()).await.unwrap();
+    assert_eq!(
+        written.get(&1),
+        Some(&RecordNote {
+            kind: KIND_AGENT.to_owned(),
+            on_behalf_of: Some("carol".to_owned()),
+        })
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_list_carries_actor_kinds_only_with_a_record_notes_store() {
+    let bench = Bench::new();
+    let manager = bench.noted(Arc::new(MemoryRecordNotes::default()), None);
+    blocks(&manager).await;
+    edit(&manager, update("a", "1"), Some("u1")).await;
+    edit(&manager, update("a", "2"), Some("agent:u1:cursor")).await;
+
+    let noted = manager.history(DOC, Duration::ZERO).await.unwrap();
+    assert_eq!(
+        noted.versions[0].actor_kinds,
+        Some(vec![
+            ActorKind {
+                id: "u1".to_owned(),
+                note: person()
+            },
+            ActorKind {
+                id: "agent:u1:cursor".to_owned(),
+                note: person()
+            },
+        ])
+    );
+    assert_eq!(noted.versions[1].actor_kinds, Some(Vec::new()));
+    let plain = bench
+        .manager(Options::default())
+        .history(DOC, Duration::ZERO)
+        .await
+        .unwrap();
+    assert!(
+        plain
+            .versions
+            .iter()
+            .all(|version| version.actor_kinds.is_none())
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn by_actor_starts_a_version_when_the_actor_changes() {
+    let bench = Bench::new();
+    let manager = bench.manager(Options::default());
+    blocks(&manager).await;
+    edit(&manager, update("a", "1"), Some("u1")).await;
+    edit(&manager, update("a", "2"), Some("u1")).await;
+    edit(&manager, update("a", "3"), Some("u2")).await;
+
+    let sequences = |list: HistoryList| -> Vec<u64> {
+        list.versions
+            .iter()
+            .map(|version| version.sequence)
+            .collect()
+    };
+    assert_eq!(
+        sequences(manager.history(DOC, Duration::ZERO).await.unwrap()),
+        [3, 0]
+    );
+    assert_eq!(
+        sequences(manager.history_by(DOC, Duration::ZERO, true).await.unwrap()),
+        [3, 2, 0]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_note_that_fails_never_fails_the_edit() {
+    let bench = Bench::new();
+    let logs = Arc::new(Mutex::new(Vec::new()));
+    let manager = bench.noted(Arc::new(FailingNotes), Some(logs.clone()));
+    blocks(&manager).await;
+    edit(&manager, update("a", "kept"), Some("u1")).await;
+
+    assert_eq!(bench.committed().len(), 1);
+    assert!(
+        logs.lock()
+            .unwrap()
+            .iter()
+            .any(|line| line.contains("record note")),
+        "{:?}",
+        logs.lock().unwrap()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_restore_is_noted_as_its_restorer() {
+    let bench = Bench::new();
+    let notes = Arc::new(MemoryRecordNotes::default());
+    let manager = bench.noted(notes.clone(), None);
+    blocks(&manager).await;
+    edit(&manager, update("a", "1"), Some("u1")).await;
+    let lineage = bench.lineage();
+
+    let (status, edit) = restore(&manager, &lineage, 0, &fresh_id(), Some("u2"), None).await;
+    assert_eq!(status, HistoryStatus::Ready);
+    assert_eq!(edit.map(|edit| edit.status), Some(EditStatus::Applied));
+    assert_eq!(
+        notes.read(DOC, &lineage).await.unwrap().get(&2),
+        Some(&person())
+    );
 }

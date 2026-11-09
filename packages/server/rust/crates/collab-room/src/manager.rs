@@ -29,6 +29,8 @@ pub struct ManagerOptions {
     /// None means no journal: v1 only, no history.
     pub operations: Option<Arc<dyn OperationStore>>,
     pub activity: Option<Arc<dyn ActivityObserver>>,
+    /// None keeps no record notes: history answers carry no actor kinds.
+    pub notes: Option<Arc<dyn crate::RecordNotesStore>>,
 }
 
 struct Cooldown {
@@ -53,6 +55,7 @@ pub(crate) struct Shared {
     pub log: Option<Log>,
     pub operations: Option<Arc<dyn OperationStore>>,
     pub activity: Option<Arc<dyn ActivityObserver>>,
+    pub notes: Option<Arc<dyn crate::RecordNotesStore>>,
     rooms: Mutex<Rooms>,
     draining: AtomicBool,
     replaced: Mutex<Vec<Replaced>>,
@@ -212,6 +215,7 @@ impl Manager {
             log: o.log,
             operations: o.operations,
             activity: o.activity,
+            notes: o.notes,
             rooms: Mutex::new(Rooms::default()),
             draining: AtomicBool::new(false),
             replaced: Mutex::new(Vec::new()),
@@ -397,7 +401,8 @@ impl Manager {
 
     /// AgentEditAsync: a batch planned against the live doc inside the
     /// lane, after the duplicate and precondition checks, gated to one
-    /// frame.
+    /// frame. `note`, when given, is the record note in place of one read
+    /// from `actor_id`.
     #[allow(clippy::too_many_arguments, reason = "the Go and C# signatures")]
     pub async fn agent_edit(
         &self,
@@ -408,16 +413,15 @@ impl Manager {
         actor_id: &str,
         expect: Option<Precondition>,
         applied: Option<Applied>,
+        note: Option<crate::RecordNote>,
     ) -> Result<EditResult, Error> {
         check_edit_ids(doc_id, operation_id)?;
         if expect.is_some() && self.0.operations.is_none() {
             return Ok(EditResult::status(EditStatus::PreconditionRequired));
         }
-        self.edit_in_room(
-            doc_id,
-            request(plan, true, operation_id, digest, actor_id, expect, applied),
-        )
-        .await
+        let mut request = request(plan, true, operation_id, digest, actor_id, expect, applied);
+        request.note = note;
+        self.edit_in_room(doc_id, request).await
     }
 
     pub(crate) async fn edit_in_room(
@@ -680,6 +684,7 @@ fn request(
         expect,
         applied,
         dry_run: false,
+        note: None,
     }
 }
 

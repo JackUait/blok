@@ -114,6 +114,7 @@ async fn mcp_on_rooms(journal_dir: &std::path::Path) -> Mcp {
         log: None,
         operations: Some(Arc::new(LocalJournal(journal))),
         activity: None,
+        notes: None,
     });
     let executor = Arc::new(Executor::new_on_runtime(pool(), Some(Rooms::new(manager))));
     let options = json!({ "transport": { "kind": "stdio" }, "auth": { "kind": "none" } });

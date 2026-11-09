@@ -40,6 +40,9 @@ pub struct Config {
     /// database, is refused 409 until the request confirms each kind. Off
     /// keeps the restore unasked.
     pub enforce_restore_guards: bool,
+    /// An /edit insert gets the server's stamps and an update stamps its
+    /// block. Off keeps the caller's.
+    pub stamp_authority: bool,
 }
 
 /// Serves the routes. Clones share one config.

@@ -30,6 +30,7 @@ impl AwarenessRoom {
             log: Some(logs.log()),
             operations: None,
             activity: None,
+            notes: None,
         });
         AwarenessRoom { manager, logs }
     }

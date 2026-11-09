@@ -234,6 +234,8 @@ pub(crate) struct EditRequest {
     /// nothing applied. A plan that ran answers Applied with the head it
     /// planned against, which only the dry run reads.
     pub dry_run: bool,
+    /// The record note in place of one read from `actor_id`.
+    pub note: Option<crate::RecordNote>,
 }
 
 impl Room {
@@ -473,6 +475,7 @@ impl Room {
                 OperationSource::HttpEdit,
                 &update,
                 &request.digest,
+                request.note.clone(),
             )
             .await
         else {

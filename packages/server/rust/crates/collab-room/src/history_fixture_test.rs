@@ -16,7 +16,10 @@ use blok_yjs::{Doc, Options, Out};
 use crate::changes::replay_changes;
 use crate::changes_test::{array, kind_name, member, object, read_repo_json, string};
 use crate::restore::{RestoreTrash, plan_restore_trashing};
-use crate::{Error, LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions};
+use crate::{
+    ActorKind, Error, LineageHeaders, RecordNote, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version,
+    attribution, classify_actor, group_versions_by, stamp_authority,
+};
 
 // The twins of C# CollabHistoryCaptureTests: the same grouping, changes
 // and restore plans, read from fixtures/collab-history.
@@ -130,6 +133,7 @@ fn group_versions_matches_the_timeline_fixture() {
     for c in history_fixture("timeline.json") {
         let name = text(&c, "name");
         let mut lineages = Vec::new();
+        let mut notes: Option<std::collections::HashMap<(String, u64), RecordNote>> = None;
         for entry in objects(member(&c, "lineages")) {
             let mut lineage = LineageHeaders {
                 lineage: LineageInfo {
@@ -148,6 +152,12 @@ fn group_versions_matches_the_timeline_fixture() {
                         .unwrap_or_else(|| panic!("{name}: no committedAt")),
                     actor_id: optional_text(header, "actor"),
                 });
+                if let Some(Value::Object(note)) = header.get(&"note".into()) {
+                    notes.get_or_insert_with(Default::default).insert(
+                        (text(entry, "lineage"), number(header, "sequence")),
+                        note_of(note),
+                    );
+                }
             }
             lineages.push(lineage);
         }
@@ -156,7 +166,16 @@ fn group_versions_matches_the_timeline_fixture() {
             let minutes = Duration::from_secs(60 * *window as u64);
             (gap, span) = (minutes, minutes);
         }
-        let got = group_versions(&lineages, gap, span);
+        let by_actor = matches!(c.get(&"byActor".into()), Some(Value::Bool(true)));
+        let lookup = notes.as_ref().map(|notes| {
+            move |lineage: &str, sequence: u64| notes.get(&(lineage.to_owned(), sequence)).cloned()
+        });
+        let got = match &lookup {
+            Some(lookup) => group_versions_by(&lineages, gap, span, by_actor, Some(lookup)),
+            None => group_versions_by::<fn(&str, u64) -> Option<RecordNote>>(
+                &lineages, gap, span, by_actor, None,
+            ),
+        };
         let want = objects(member(&c, "versions"));
         if got.len() != want.len() {
             failures.push(format!(
@@ -173,6 +192,7 @@ fn group_versions_matches_the_timeline_fixture() {
                 || ticks_text(g.started_at) != optional_text(version, "startedAt")
                 || ticks_text(g.saved_at) != optional_text(version, "savedAt")
                 || g.actors != string_list(member(version, "actors"))
+                || g.actor_kinds != version.get(&"actorKinds".into()).map(actor_kinds_of)
             {
                 failures.push(format!(
                     "{name}: version {i} is {}, want {}",
@@ -387,6 +407,89 @@ fn plan_restore_matches_the_restore_plans_fixture() {
             if got != expected {
                 failures.push(format!("{name}: op {i} is {got}, want {expected}"));
             }
+        }
+    }
+    assert!(failures.is_empty(), "{failures:#?}");
+}
+
+/// Reads {kind, onBehalfOf?}.
+fn note_of(object: &Object) -> RecordNote {
+    RecordNote {
+        kind: text(object, "kind"),
+        on_behalf_of: object
+            .get(&"onBehalfOf".into())
+            .map(|_| text(object, "onBehalfOf")),
+    }
+}
+
+fn actor_kinds_of(value: &Value) -> Vec<ActorKind> {
+    objects(value)
+        .into_iter()
+        .map(|kind| ActorKind {
+            id: text(kind, "id"),
+            note: note_of(kind),
+        })
+        .collect()
+}
+
+/// Twin of C# CollabAttributionCaptureTests.TheActorKindsMatchTheRules.
+#[test]
+fn classify_actor_matches_the_actor_kinds_fixture() {
+    let mut failures = Vec::new();
+    for c in history_fixture("actor-kinds.json") {
+        let name = text(&c, "name");
+        let actor = optional_text(&c, "actor").unwrap_or_default();
+        let on_behalf_of = optional_text(&c, "onBehalfOf").unwrap_or_default();
+        let agent = matches!(member(&c, "agent"), Value::Bool(true));
+        let got = classify_actor(&actor, agent, &on_behalf_of);
+        let want = match member(&c, "note") {
+            Value::Object(note) => Some(note_of(note)),
+            _ => None,
+        };
+        if got != want {
+            failures.push(format!("{name}: note {got:?}, want {want:?}"));
+        }
+        let (by, with) = attribution(&actor, got.as_ref());
+        if by != optional_text(&c, "by") || with != optional_text(&c, "with") {
+            failures.push(format!("{name}: by {by:?} with {with:?}"));
+        }
+    }
+    assert!(failures.is_empty(), "{failures:#?}");
+}
+
+/// Twin of C# CollabAttributionCaptureTests.TheStampAuthorityMatchesTheRules.
+#[test]
+fn stamp_authority_matches_the_fixture() {
+    let fixture = read_repo_json(&[
+        "test",
+        "unit",
+        "server-conformance",
+        "fixtures",
+        "collab-edits",
+        "stamp-authority.json",
+    ]);
+    let cases = array(member(&fixture, "cases"));
+    assert!(cases.len() >= 5, "only {} cases", cases.len());
+    let mut failures = Vec::new();
+    for c in cases {
+        let c = object(c);
+        let name = text(c, "name");
+        let ops = blok_collab_convert::parse_edit_ops(text(c, "body").as_bytes())
+            .unwrap_or_else(|err| panic!("{name}: {err:?}"));
+        let actor = optional_text(c, "actor").unwrap_or_default();
+        let now = match member(c, "nowMs") {
+            Value::Number(now) => *now,
+            other => panic!("{name}: nowMs is {other:?}"),
+        };
+        let stamped = stamp_authority(ops, &actor, now);
+        let canonical = blok_collab_convert::canonical_body(&stamped)
+            .unwrap_or_else(|err| panic!("{name}: {err:?}"));
+        if String::from_utf8_lossy(&canonical) != text(c, "canonical") {
+            failures.push(format!(
+                "{name}:\n got {}\nwant {}",
+                String::from_utf8_lossy(&canonical),
+                text(c, "canonical")
+            ));
         }
     }
     assert!(failures.is_empty(), "{failures:#?}");

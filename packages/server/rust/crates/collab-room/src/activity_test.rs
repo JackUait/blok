@@ -59,6 +59,7 @@ pub(crate) fn activity_manager(o: Options, observer: Arc<GatedObserver>, logs: &
         log: Some(logs.log()),
         operations: None,
         activity: Some(observer),
+        notes: None,
     })
 }
 

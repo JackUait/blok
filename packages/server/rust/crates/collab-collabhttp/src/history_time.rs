@@ -10,8 +10,8 @@ use blok_dotnet::{parse_uint64_none, query_all, ticks, time_from_ticks};
 use blok_http::{Request, ResponseWriter};
 
 use super::{
-    CHANGES_ENVELOPE_BYTES, append_millis, blocking, change_row, query_detail, quoted,
-    write_history_head, write_json,
+    CHANGES_ENVELOPE_BYTES, append_millis, blocking, change_row, narrowed, query_block,
+    query_detail, quoted, write_history_head, write_json,
 };
 use crate::{Handlers, failed};
 
@@ -20,6 +20,7 @@ const BAD_RANGE: &str =
     "from and to must be ISO 8601 times with an offset, from no later than to\n";
 const BAD_BEFORE: &str = "before must be one <lineage>:<sequence>\n";
 const BAD_DETAIL: &str = "detail must be properties\n";
+const BAD_BLOCK: &str = "block must be one block id\n";
 
 impl Handlers {
     /// GET /sync/{doc}/history/at?time=: the newest point at or before the
@@ -116,6 +117,10 @@ impl Handlers {
             refuse(&mut response, 400, BAD_DETAIL).await;
             return;
         };
+        let Ok(block) = query_block(&request) else {
+            refuse(&mut response, 400, BAD_BLOCK).await;
+            return;
+        };
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
         let changes = async move {
             rooms
@@ -141,8 +146,18 @@ impl Handlers {
             return;
         }
         let mut rows: Vec<Vec<u8>> = Vec::new();
+        let mut shown = Vec::new();
+        let mut notes = std::collections::HashMap::new();
         for record in &result.records {
-            let Ok(row) = change_row(&record.changes, detail) else {
+            let Some(changes) = narrowed(&record.changes, block.as_deref()) else {
+                continue;
+            };
+            if !notes.contains_key(&record.lineage) {
+                let read = a.rooms.read_notes(&a.doc, &record.lineage).await;
+                notes.insert(record.lineage.clone(), read);
+            }
+            shown.push(record);
+            let Ok(row) = change_row(&changes, detail, notes[&record.lineage].as_ref()) else {
                 failed(&request, &mut response).await;
                 return;
             };
@@ -152,8 +167,15 @@ impl Handlers {
             lineaged.extend_from_slice(&row[1..]);
             rows.push(lineaged);
         }
+        // As /changes: cut by the room with every row kept, the answer ends
+        // at the oldest record read.
+        let row_count = rows.len();
+        let older_end_of = |oldest: usize| match result.records.last() {
+            Some(last) if oldest + 1 == row_count => last,
+            _ => shown[oldest],
+        };
         let (kept, truncated) = fit_answer(&rows, result.truncated, |oldest| {
-            let record = &result.records[oldest];
+            let record = older_end_of(oldest);
             let mut older_end = Vec::new();
             append_older_end(
                 &mut older_end,
@@ -173,7 +195,7 @@ impl Handlers {
         }
         body.push(b']');
         if truncated {
-            let oldest = &result.records[rows.len() - 1];
+            let oldest = older_end_of(kept - 1);
             append_older_end(
                 &mut body,
                 &oldest.lineage,

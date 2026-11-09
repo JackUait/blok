@@ -40,3 +40,9 @@ pub use blok_collab_operation::{
 /// room's lane, one at a time per room, in the order the room made them.
 /// Without one a room makes no calls at all.
 pub use blok_collab_room::{ActivityKind, ActivityObserver};
+
+/// ICollabRecordNotes, CollabRecordNote and InMemoryCollabRecordNotes: one
+/// note per journal record, written right after the append but not
+/// atomically with it. Blok never deletes notes; delete a document's notes
+/// when you purge it.
+pub use blok_collab_room::{MemoryRecordNotes, RecordNote, RecordNotesStore};

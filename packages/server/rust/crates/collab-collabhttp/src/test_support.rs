@@ -717,6 +717,7 @@ pub async fn start_app(options: AppOptions) -> App {
             .clone()
             .map(|journal| journal as Arc<dyn OperationStore>),
         activity: None,
+        notes: None,
     });
     let rooms = manager.clone();
     let corrupt = Arc::new(Mutex::new(Vec::new()));
@@ -732,6 +733,7 @@ pub async fn start_app(options: AppOptions) -> App {
             logged.lock().unwrap().push(doc.to_owned());
         })),
         enforce_restore_guards: false,
+        stamp_authority: false,
     });
     let mut router = Router::new();
     for (pattern, method, which) in [

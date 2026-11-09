@@ -69,6 +69,7 @@ fn export_room(err: fn() -> Error, operations: Option<Arc<dyn OperationStore>>) 
         log: Some(logs.log()),
         operations,
         activity: None,
+        notes: None,
     });
     ExportRoom {
         manager,

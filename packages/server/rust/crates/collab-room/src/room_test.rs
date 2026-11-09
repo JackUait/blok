@@ -252,6 +252,7 @@ async fn activity_reports_joined_active_once_in_the_window_and_left() {
         log: None,
         operations: None,
         activity: Some(observer.clone()),
+        notes: None,
     });
     let membership = join(
         &manager,

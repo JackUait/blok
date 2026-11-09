@@ -1075,6 +1075,7 @@ pub(crate) fn test_manager(
         log: None,
         operations,
         activity: None,
+        notes: None,
     });
     (manager, store, endpoint)
 }
@@ -1167,6 +1168,7 @@ impl TextRoom {
             operations: journalled
                 .then(|| Arc::new(self.operations.clone()) as Arc<dyn OperationStore>),
             activity: None,
+            notes: None,
         })
     }
 

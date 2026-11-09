@@ -544,6 +544,7 @@ impl Kit {
                 }) as Arc<dyn OperationStore>
             }),
             activity: activity.then(|| self.activity.clone() as Arc<dyn ActivityObserver>),
+            notes: None,
         })
     }
 

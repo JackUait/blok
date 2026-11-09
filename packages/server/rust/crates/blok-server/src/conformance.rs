@@ -23,6 +23,10 @@ pub struct ConformanceArguments {
     pub restore_guards: bool,
     /// CollabRestoreTrashesPages.
     pub restore_trashes_pages: bool,
+    /// Record notes kept in memory.
+    pub record_notes: bool,
+    /// CollabStampAuthority.
+    pub stamp_authority: bool,
 }
 
 /// Takes the two flags out of args, at any place before "--", before the
@@ -52,6 +56,16 @@ pub fn parse_conformance_arguments(
         }
         if argument == "--conformance-restore-trashes-pages" {
             parsed.restore_trashes_pages = true;
+            i += 1;
+            continue;
+        }
+        if argument == "--conformance-record-notes" {
+            parsed.record_notes = true;
+            i += 1;
+            continue;
+        }
+        if argument == "--conformance-stamp-authority" {
+            parsed.stamp_authority = true;
             i += 1;
             continue;
         }
@@ -119,6 +133,12 @@ pub fn apply_conformance_options(options: &mut Options, parsed: &ConformanceArgu
     }
     options.collab_enforce_restore_guards = parsed.restore_guards;
     options.collab_restore_trashes_pages = parsed.restore_trashes_pages;
+    options.collab_stamp_authority = parsed.stamp_authority;
+    if parsed.record_notes {
+        options.collab_record_notes = Some(std::sync::Arc::new(
+            blok_blokserver::MemoryRecordNotes::default(),
+        ));
+    }
 }
 
 #[cfg(not(feature = "conformance"))]

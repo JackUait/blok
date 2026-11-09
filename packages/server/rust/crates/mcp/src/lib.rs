@@ -89,7 +89,7 @@ pub async fn run_cli(argv: Vec<String>, env: Value, cwd: &Path) -> i32 {
     };
     let hooks = match cli::hooks_of(&started) {
         Ok(hooks) => hooks,
-        // Only a refused --handle-store directory fails here.
+        // Only --handle-store files: on Windows is refused here.
         Err(StartError::Config(message) | StartError::Failed(message)) => {
             eprintln!("blok-mcp: {message}");
             return 2;

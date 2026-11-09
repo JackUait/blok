@@ -107,6 +107,12 @@ pub enum Acquired {
 /// Where stored-mode handles live, so any process sharing the store can
 /// serve a call. Blok passes only handles of `[A-Za-z0-9_-]{1,128}`.
 pub trait HandleStore: Send + Sync {
+    /// Called once as the server is built, after Blok's own option checks:
+    /// the place to make or check what the store needs. An Err refuses the
+    /// start with its text (a config error, exit code 2).
+    fn start(&self) -> Result<(), String> {
+        Ok(())
+    }
     /// The principal's handles that have not expired.
     fn count(&self, principal: String, idle: Duration) -> BoxFuture<'_, Result<usize, StoreError>>;
     /// Counts and adds as one step, per principal: false, and nothing added,

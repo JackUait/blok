@@ -559,17 +559,30 @@ impl HandleStore for Counting {
     }
 }
 
-// The CLI takes --handle-store files:<dir> as the files store, made and
-// checked at start: a refusal is a config error (exit 2), never ignored.
+async fn embed(
+    bundle: &Arc<Bundle>,
+    hooks: Hooks,
+    started: &blok_mcp::cli::Started,
+) -> Result<blok_mcp::embed::BlokTools, blok_mcp::cli::StartError> {
+    blok_mcp::embed::BlokTools::new(
+        bundle.clone(),
+        &started.options,
+        hooks,
+        blok_mcp::embed::EmbedHooks::default(),
+    )
+    .await
+}
+
+// The CLI takes --handle-store files:<dir> as the files store. Its
+// directory is made and checked only once Blok's own option checks pass: a
+// start refused for another reason leaves no directory behind, and a
+// refused directory is a config error (exit 2), never ignored.
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread")]
-async fn the_cli_makes_the_files_store_and_refuses_an_open_directory() {
+async fn the_cli_makes_the_files_store_only_after_the_option_checks() {
     use std::os::unix::fs::PermissionsExt;
-    let bundle = Bundle::new(1).unwrap();
+    let bundle = Arc::new(Bundle::new(1).unwrap());
     let dir = temp_dir("cli");
-    let open_dir = dir.join("open");
-    std::fs::create_dir(&open_dir).unwrap();
-    std::fs::set_permissions(&open_dir, std::fs::Permissions::from_mode(0o777)).unwrap();
     let argv = |store: &std::path::Path| -> Vec<String> {
         vec![
             "--source".to_owned(),
@@ -578,23 +591,42 @@ async fn the_cli_makes_the_files_store_and_refuses_an_open_directory() {
             format!("files:{}", store.display()),
         ]
     };
-    let started = blok_mcp::cli::start(&bundle, &argv(&open_dir), json!({}), &dir)
-        .await
-        .unwrap();
-    match blok_mcp::cli::hooks_of(&started) {
-        Err(blok_mcp::cli::StartError::Config(message)) => {
-            assert!(message.contains("chmod 700"), "{message}");
-        }
-        Err(other) => panic!("{other:?}"),
-        Ok(_) => panic!("an open directory was taken"),
-    }
+    let allow = || -> Option<Arc<dyn blok_mcp::authorize::Authorize>> {
+        Some(Arc::new(|_: String, _: String, _: bool| async { true }))
+    };
+
+    // Refused for another reason: no authorize hook on a host's server.
     let private = dir.join("private");
-    let started = blok_mcp::cli::start(&bundle, &argv(&private), json!({}), &dir)
+    let started = blok_mcp::cli::parse(&bundle, &argv(&private), json!({}), &dir)
         .await
         .unwrap();
     let hooks = blok_mcp::cli::hooks_of(&started).unwrap();
-    assert!(hooks.handle_store.is_some());
+    assert!(!private.exists(), "made while parsing");
+    assert!(matches!(
+        embed(&bundle, hooks, &started).await,
+        Err(blok_mcp::cli::StartError::Config(_))
+    ));
+    assert!(!private.exists(), "made by a refused start");
+
+    let mut hooks = blok_mcp::cli::hooks_of(&started).unwrap();
+    hooks.authorize = allow();
+    assert!(embed(&bundle, hooks, &started).await.is_ok());
     assert!(private.is_dir());
+
+    let open_dir = dir.join("open");
+    std::fs::create_dir(&open_dir).unwrap();
+    std::fs::set_permissions(&open_dir, std::fs::Permissions::from_mode(0o777)).unwrap();
+    let started = blok_mcp::cli::start(&bundle, &argv(&open_dir), json!({}), &dir)
+        .await
+        .unwrap();
+    let hooks = blok_mcp::cli::hooks_of(&started).unwrap();
+    match Mcp::build(bundle.clone(), &started.options, hooks).await {
+        Err(blok_mcp::server::BuildError::Config(message)) => {
+            assert!(message.contains("chmod 700"), "{message}");
+        }
+        Err(other) => panic!("{}", other.message()),
+        Ok(_) => panic!("an open directory was taken"),
+    }
     let _ = std::fs::remove_dir_all(&dir);
 }
 

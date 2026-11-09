@@ -38,7 +38,8 @@
 //!
 //! Privacy: records hold document text, undo steps and principals. On
 //! Windows the store refuses to start: these POSIX checks cannot be made
-//! there. Elsewhere, at start, once: the path is made absolute and a
+//! there. Elsewhere, at start (`open`, or `start` for a store made with
+//! `at`), once: the path is made absolute and a
 //! trailing slash dropped (lstat would follow a link), the directory is made
 //! (0700) if missing, then lstat-checked: it must be a directory, not a
 //! link, with no group or world bits, owned by the effective user id (so
@@ -69,6 +70,9 @@ const RECORD: &str = ".record.json";
 pub struct FilesHandleStore {
     dir: Arc<PathBuf>,
     lease_stale: Duration,
+    owner: Option<u32>,
+    /// The directory was made and checked (`start`).
+    checked: Arc<AtomicBool>,
 }
 
 fn random_hex(bytes: usize) -> String {
@@ -178,12 +182,25 @@ impl FilesHandleStore {
         FilesHandleStore::open_with(dir, cfg!(windows), effective_uid())
     }
 
+    /// The store at `dir`, with nothing made or checked on disk yet: the
+    /// server does that at start (`HandleStore::start`), once its own
+    /// option checks pass. Refuses only Windows.
+    pub fn at(dir: &str) -> Result<FilesHandleStore, String> {
+        FilesHandleStore::at_with(dir, cfg!(windows), effective_uid())
+    }
+
     /// `open` on a given platform and effective user id, for tests.
     pub(crate) fn open_with(
         dir: &str,
         windows: bool,
         owner: Option<u32>,
     ) -> Result<FilesHandleStore, String> {
+        let store = FilesHandleStore::at_with(dir, windows, owner)?;
+        store.check()?;
+        Ok(store)
+    }
+
+    fn at_with(dir: &str, windows: bool, owner: Option<u32>) -> Result<FilesHandleStore, String> {
         if windows {
             return Err(
                 "--handle-store files: is not supported on Windows; use your own store".to_owned(),
@@ -191,8 +208,21 @@ impl FilesHandleStore {
         }
         // Rebuilt from its parts, so a trailing slash cannot make lstat follow a link.
         let absolute = std::path::absolute(dir).unwrap_or_else(|_| PathBuf::from(dir));
-        let path: PathBuf = absolute.components().collect();
-        if let Err(err) = private_dir(&path)
+        Ok(FilesHandleStore {
+            dir: Arc::new(absolute.components().collect()),
+            lease_stale: LEASE_STALE,
+            owner,
+            checked: Arc::default(),
+        })
+    }
+
+    /// Makes the directory if missing and checks it, once: nothing makes it again later.
+    fn check(&self) -> Result<(), String> {
+        if self.checked.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+        let path = &*self.dir;
+        if let Err(err) = private_dir(path)
             && err.kind() != std::io::ErrorKind::AlreadyExists
         {
             return Err(format!(
@@ -206,14 +236,12 @@ impl FilesHandleStore {
                 path.display()
             )
         };
-        let meta = std::fs::symlink_metadata(&path).map_err(|_| refused())?;
-        if meta.file_type().is_symlink() || !meta.is_dir() || !is_private(&meta, owner) {
+        let meta = std::fs::symlink_metadata(path).map_err(|_| refused())?;
+        if meta.file_type().is_symlink() || !meta.is_dir() || !is_private(&meta, self.owner) {
             return Err(refused());
         }
-        Ok(FilesHandleStore {
-            dir: Arc::new(path),
-            lease_stale: LEASE_STALE,
-        })
+        self.checked.store(true, Ordering::SeqCst);
+        Ok(())
     }
 
     /// How long a lease lives without a renew. Default 30 s.
@@ -529,6 +557,10 @@ impl HandleLease for FilesLease {
 }
 
 impl HandleStore for FilesHandleStore {
+    fn start(&self) -> Result<(), String> {
+        self.check()
+    }
+
     fn count(&self, principal: String, idle: Duration) -> BoxFuture<'_, Result<usize, StoreError>> {
         Box::pin(async move { self.count_of(&principal, idle).await })
     }

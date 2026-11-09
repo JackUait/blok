@@ -480,8 +480,8 @@ pub(crate) async fn option_refusal(
     if hooks.page_creator.is_some() {
         checked["createPage"] = Value::Bool(true);
     }
-    // No handleStore here: its stand-in in the bundle's mcpCheckOptions lacks
-    // sweep, so it is always refused; the Rust trait already has every op.
+    // No handleStore here: the bundle only checks that a host store has
+    // count, tryAdd, acquire and sweep, which the Rust trait always has.
     // A host's source is a source: with a ticket URL it still needs a per-document check.
     if custom_source {
         checked["source"] = json!({ "kind": "custom" });
@@ -665,6 +665,10 @@ impl Mcp {
             )))),
             (None, None) => None,
         };
+        // After every option check: the files store makes its directory here.
+        if let Some(store) = &store {
+            store.start().map_err(BuildError::Config)?;
+        }
         let idle_ms = opt(options, "handleIdleMs")
             .cloned()
             .unwrap_or(json!(DEFAULT_IDLE_MS));

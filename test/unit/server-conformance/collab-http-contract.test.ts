@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -349,6 +349,33 @@ suite('collab HTTP routes on a journal', () => {
 
     expect([atCap.status, atCap.headers['blok-doc-sequence']]).toEqual([204, '1']);
   });
+
+  // 1 inserts b, then 200 edits of a: the 200-record cap reads none of b.
+  it('points a narrowed answer cut by the record cap past every record it read', async () => {
+    const doc = '/sync/doc-narrow-cap';
+    const first = await send(base, 'POST', `${doc}/edit`, [[KEY, 'n0']], insertBody('b', 'b'));
+    const narrowLineage = String(first.headers['blok-doc-lineage']);
+
+    await send(base, 'POST', `${doc}/edit`, [[KEY, 'na']], JSON.stringify({
+      ops: [{ op: 'insert', id: 'a', after: 'b', block: { type: 'paragraph', data: { text: 'a' } } }],
+    }));
+
+    for (let index = 1; index < 200; index++) {
+      expect((await send(base, 'POST', `${doc}/edit`, [[KEY, `n${index}`]], updateBody('a', `v${index}`))).status).toBe(204);
+    }
+
+    const cut = JSON.parse((await send(base, 'GET', `${doc}/history/${narrowLineage}/201/changes?block=b`)).body) as {
+      changes: unknown[]; truncated?: boolean; olderEnd?: { sequence: number };
+    };
+
+    expect([cut.changes, cut.truncated, cut.olderEnd?.sequence]).toEqual([[], true, 2]);
+
+    const rest = JSON.parse((await send(base, 'GET', `${doc}/history/${narrowLineage}/1/changes?block=b`)).body) as {
+      changes: { sequence: number }[];
+    };
+
+    expect(rest.changes.map((change) => change.sequence)).toEqual([1]);
+  }, 120_000);
 
   describe('history', () => {
     let lineage = '';
@@ -1430,4 +1457,142 @@ suite('collab working set in S3', () => {
       await bucket.stop();
     }
   }, 60_000);
+});
+
+const ticketFixture = JSON.parse(readFileSync(
+  fileURLToPath(new URL('./fixtures/tickets.json', import.meta.url)),
+  'utf8',
+)) as { secret: string; compatible: string; userTwo: string };
+
+/** Every fixture ticket names this doc. */
+const TICKET_DOC = 'doc-42';
+
+/** A pass for any user, signed with the fixture secret as a host would. */
+const mintTicket = (user: string): string => {
+  const part = (value: Record<string, unknown>): string => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const unsigned = `${part({ alg: 'HS256', typ: 'JWT' })}.${part({ user, doc: TICKET_DOC, write: true, exp: 4102444800 })}`;
+
+  return `${unsigned}.${createHmac('sha256', ticketFixture.secret).update(unsigned).digest('base64url')}`;
+};
+
+suite('collab history attribution: record notes, by=actor, block and stamp authority', () => {
+  let endpoint: FixtureDocEndpoint | undefined;
+  let server: RunningServer | undefined;
+  let directory = '';
+  let base = '';
+  let lineage = '';
+  const spoofed = mintTicket('agent:alice:claude-code');
+
+  const as = (ticket: string): [string, string][] => [['Authorization', `Bearer ${ticket}`], ['Origin', ALLOWED_ORIGIN]];
+  const edit = async (ticket: string, key: string, body: string): Promise<Answer> =>
+    send(base, 'POST', `/sync/${TICKET_DOC}/edit`, [...as(ticket), [KEY, key]], body);
+  const read = async (path: string): Promise<Answer> => send(base, 'GET', `/sync/${TICKET_DOC}${path}`, as(ticketFixture.compatible));
+
+  beforeAll(async () => {
+    directory = await mkdtemp(join(tmpdir(), 'blok-collab-attribution-'));
+    endpoint = await startDocEndpoint();
+    server = await startServer({
+      args: [
+        '--listen', '127.0.0.1:0',
+        '--auth', 'ticket',
+        '--storage-dir', '',
+        '--rate-limit', '0',
+        '--allow-origin', ALLOWED_ORIGIN,
+        '--collab',
+        '--collab-dir', directory,
+        '--doc-endpoint', endpoint.url,
+        '--conformance-journal',
+        '--conformance-record-notes',
+        '--conformance-stamp-authority',
+      ],
+      env: { BLOK_SECRET: ticketFixture.secret },
+    });
+    base = server.baseUrl;
+
+    // 1 u1 inserts b with stamps of its own; 2 u1 edits a; 3 u2 edits a and b;
+    // 4 a person whose id looks like an agent's inserts c.
+    const first = await edit(ticketFixture.compatible, 'a1', JSON.stringify({ ops: [
+      { op: 'insert', id: 'a', block: { type: 'paragraph', data: { text: 'a' } } },
+      { op: 'insert', id: 'b', after: 'a', block: { type: 'paragraph', data: { text: 'b' }, createdAt: 1, createdBy: 'mallory', createdWith: 'agent:x:y', lastEditedAt: 2, lastEditedBy: 'mallory' } },
+    ] }));
+
+    expect(first.status).toBe(204);
+    lineage = String(first.headers['blok-doc-lineage']);
+    expect((await edit(ticketFixture.compatible, 'a2', updateBody('a', 'two'))).status).toBe(204);
+    expect((await edit(ticketFixture.userTwo, 'a3', JSON.stringify({ ops: [
+      { op: 'update', id: 'a', data: { text: 'three' } },
+      { op: 'update', id: 'b', data: { text: 'b2' } },
+    ] }))).status).toBe(204);
+    expect((await edit(spoofed, 'a4', insertBody('c', 'c'))).status).toBe(204);
+  }, 60_000);
+
+  afterAll(async () => {
+    await server?.stop();
+    await endpoint?.stop();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  interface Version { sequence: number; actors: string[]; actorKinds?: { id: string; kind: string; onBehalfOf?: string }[] }
+  interface Row { sequence: number; actor: string | null; actors?: unknown[]; blocks: { id: string }[]; page?: string[] }
+
+  const versions = async (query: string): Promise<Version[]> => {
+    const answer = await read(`/history${query}`);
+
+    expect(answer.status).toBe(200);
+
+    return (JSON.parse(answer.body) as { versions: Version[] }).versions;
+  };
+
+  it('starts a version where the actor changes with by=actor, and ignores any other by', async () => {
+    expect((await versions('?by=actor')).map((version) => [version.sequence, version.actors]))
+      .toEqual([[4, ['agent:alice:claude-code']], [3, ['u2']], [2, ['u1']], [0, []]]);
+
+    for (const ignored of ['', '?by=', '?by=time', '?by=actor&by=actor', '?by=Actor']) {
+      expect((await versions(ignored)).map((version) => version.sequence)).toEqual([4, 0]);
+    }
+  });
+
+  it('gives each version its actors\' kinds, and never reads an agent from the id\'s text', async () => {
+    const [newest] = await versions('');
+
+    expect(Object.keys(newest)).toEqual(['lineage', 'sequence', 'startedAt', 'savedAt', 'actors', 'actorKinds']);
+    expect(newest.actorKinds).toEqual([
+      { id: 'u1', kind: 'person' },
+      { id: 'u2', kind: 'person' },
+      { id: 'agent:alice:claude-code', kind: 'person' },
+    ]);
+  });
+
+  it('narrows both changes routes to one block and gives each row its actor', async () => {
+    const narrowed = JSON.parse((await read(`/history/${lineage}/4/changes?block=b`)).body) as { changes: Row[] };
+
+    expect(narrowed.changes.map((row) => [row.sequence, row.blocks.map((block) => block.id)])).toEqual([[1, ['b']], [3, ['b']]]);
+    expect(Object.keys(narrowed.changes[1])).toEqual(['sequence', 'committedAt', 'actor', 'actors', 'blocks']);
+    expect(narrowed.changes[1].actors).toEqual([{ id: 'u2', kind: 'person' }]);
+
+    const range = JSON.parse((await read('/history/changes?block=b')).body) as { changes: Row[] };
+
+    expect(range.changes.map((row) => row.sequence)).toEqual([3, 1]);
+
+    // Shipped route: a block it cannot read is ignored. New route: refused.
+    for (const query of ['?block=', '?block=b&block=a']) {
+      const all = JSON.parse((await read(`/history/${lineage}/4/changes${query}`)).body) as { changes: Row[] };
+
+      expect(all.changes.map((row) => row.sequence)).toEqual([1, 2, 3, 4]);
+
+      const refused = await read(`/history/changes${query}`);
+
+      expect([refused.status, refused.body]).toEqual([400, 'block must be one block id\n']);
+    }
+  });
+
+  it('stamps an insert and an update as the server sees them, and credits an agent-looking person as itself', async () => {
+    const blocks = (JSON.parse((await read('/state')).body) as { blocks: Record<string, unknown>[] }).blocks;
+    const [a, b, c] = ['a', 'b', 'c'].map((id) => blocks.find((block) => block.id === id) ?? {});
+
+    expect([b.createdBy, b.lastEditedBy, b.createdWith]).toEqual(['u1', 'u2', undefined]);
+    expect(b.createdAt).not.toBe(1);
+    expect([a.lastEditedBy, a.lastEditedWith]).toEqual(['u2', undefined]);
+    expect([c.createdBy, c.createdWith, c.lastEditedWith]).toEqual(['agent:alice:claude-code', undefined, undefined]);
+  });
 });

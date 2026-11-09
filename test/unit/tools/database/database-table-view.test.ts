@@ -1580,6 +1580,27 @@ describe('DatabaseTableView', () => {
       root.querySelector<HTMLElement>('[data-blok-database-table-group][data-group-key="o-idea"] [data-blok-database-table-add-row]')?.click();
       expect(handlers.addRow).toHaveBeenCalledWith('o-idea');
     });
+
+    it('draws no calculation footer in a group while nothing is calculated', () => {
+      const { root } = mount({ groups: groups() });
+
+      expect(root.querySelectorAll('[data-blok-database-table-group] [data-blok-database-table-footer]')).toHaveLength(0);
+    });
+
+    it('draws no group footer for a calculation on a hidden column', () => {
+      const view = tableView({ properties: [{ id: 'p-amount', visible: false }], calculations: [{ id: 'p-amount', fn: 'sum' }] });
+      const { root } = mount({ groups: groups(), view });
+
+      expect(root.querySelectorAll('[data-blok-database-table-group] [data-blok-database-table-footer]')).toHaveLength(0);
+    });
+
+    it('gives each group its footer once a shown column is calculated', () => {
+      const { root } = mount({ groups: groups(), view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
+      const footers = [...root.querySelectorAll('[data-blok-database-table-group] [data-blok-database-table-footer]')];
+
+      expect(footers).toHaveLength(2);
+      expect(footers[0].querySelector('[data-property-id="p-amount"] [data-blok-database-table-calc-value]')?.textContent).toBe('1200');
+    });
   });
 
   describe('row drag', () => {

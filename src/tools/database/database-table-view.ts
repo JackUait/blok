@@ -840,9 +840,18 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (this.editable) {
       fragment.appendChild(this.createAddRow(groupKey));
     }
-    fragment.appendChild(this.createFooter(rows));
+    // A group keeps its footer only while a shown column is calculated; the header menu still sets one.
+    if (group === undefined || this.hasShownCalculation()) {
+      fragment.appendChild(this.createFooter(rows));
+    }
 
     return fragment;
+  }
+
+  private hasShownCalculation(): boolean {
+    const calculations = resolveCalculations(this.options.view, this.shownSchema());
+
+    return this.columns.some((column) => calculations.has(column.property.id));
   }
 
   private createAddRow(groupKey: string): HTMLElement {

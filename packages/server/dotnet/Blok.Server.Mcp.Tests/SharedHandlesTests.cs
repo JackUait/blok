@@ -135,9 +135,17 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
     document["title"] = "Someone else";
     store.Records[handle] = new BlokMcpHandleRecord
     {
-      ContractRevision = record.ContractRevision, Principal = record.Principal, ClientName = record.ClientName, Scopes = record.Scopes,
-      Actor = record.Actor, DocumentId = record.DocumentId, Write = record.Write, Version = record.Version, Stale = record.Stale,
-      Document = document, History = record.History,
+      ContractRevision = record.ContractRevision,
+      Principal = record.Principal,
+      ClientName = record.ClientName,
+      Scopes = record.Scopes,
+      Actor = record.Actor,
+      DocumentId = record.DocumentId,
+      Write = record.Write,
+      Version = record.Version,
+      Stale = record.Stale,
+      Document = document,
+      History = record.History,
     };
     var undone = await UndoAsync(core, caller, handle);
 
@@ -172,8 +180,14 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
 
     store.Records[handle] = new BlokMcpHandleRecord
     {
-      V = 2, ContractRevision = record.ContractRevision, Principal = record.Principal, ClientName = record.ClientName,
-      Actor = record.Actor, DocumentId = record.DocumentId, Document = record.Document, History = record.History,
+      V = 2,
+      ContractRevision = record.ContractRevision,
+      Principal = record.Principal,
+      ClientName = record.ClientName,
+      Actor = record.Actor,
+      DocumentId = record.DocumentId,
+      Document = record.Document,
+      History = record.History,
     };
     Assert.Equal("UNKNOWN_HANDLE", Code(await CallAsync(core, alice, "blok_read", new JsonObject { ["handle"] = handle })));
   }
@@ -264,8 +278,13 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
 
     var record = new BlokMcpHandleRecord
     {
-      ContractRevision = "rev", Principal = "alice", ClientName = "desk", Actor = new JsonObject { ["id"] = "agent:alice:desk" },
-      DocumentId = "doc", Document = new JsonObject { ["blocks"] = new JsonArray() }, History = new JsonObject(),
+      ContractRevision = "rev",
+      Principal = "alice",
+      ClientName = "desk",
+      Actor = new JsonObject { ["id"] = "agent:alice:desk" },
+      DocumentId = "doc",
+      Document = new JsonObject { ["blocks"] = new JsonArray() },
+      History = new JsonObject(),
     };
 
     await store.TryAddAsync("handle-1", record, 8, TimeSpan.FromMinutes(10), CancellationToken.None);
@@ -350,8 +369,13 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
     var shared = Shared(store, renewEvery: TimeSpan.FromMilliseconds(20));
     var record = new BlokMcpHandleRecord
     {
-      ContractRevision = "rev", Principal = "alice", ClientName = "desk", Actor = new JsonObject { ["id"] = "agent:alice:desk" },
-      DocumentId = "doc", Document = new JsonObject { ["blocks"] = new JsonArray() }, History = new JsonObject(),
+      ContractRevision = "rev",
+      Principal = "alice",
+      ClientName = "desk",
+      Actor = new JsonObject { ["id"] = "agent:alice:desk" },
+      DocumentId = "doc",
+      Document = new JsonObject { ["blocks"] = new JsonArray() },
+      History = new JsonObject(),
     };
 
     await store.TryAddAsync("handle-1", record, 8, TimeSpan.FromMinutes(10), CancellationToken.None);

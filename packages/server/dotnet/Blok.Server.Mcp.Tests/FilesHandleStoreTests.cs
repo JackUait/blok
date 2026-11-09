@@ -277,8 +277,16 @@ public sealed class FilesHandleStoreTests : IDisposable
     var none = Record();
     var empty = new BlokMcpHandleRecord
     {
-      ContractRevision = "rev", Principal = "alice", ClientName = "desk", Scopes = [], Actor = new JsonObject { ["id"] = "a" },
-      DocumentId = "doc", Document = new JsonObject { ["blocks"] = new JsonArray() }, History = new JsonObject(), Version = "v1", Stale = true,
+      ContractRevision = "rev",
+      Principal = "alice",
+      ClientName = "desk",
+      Scopes = [],
+      Actor = new JsonObject { ["id"] = "a" },
+      DocumentId = "doc",
+      Document = new JsonObject { ["blocks"] = new JsonArray() },
+      History = new JsonObject(),
+      Version = "v1",
+      Stale = true,
     };
 
     Assert.Null(BlokMcpHandleRecord.FromJson(none.ToJson()).Scopes);

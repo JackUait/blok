@@ -179,7 +179,7 @@ async fn every_door_refuses_an_empty_doc_id_before_any_room_exists() {
         (
             "agent edit",
             manager
-                .agent_edit("", no_plan.clone(), "op", &[], "", None, None, None)
+                .agent_edit("", no_plan.clone(), "op", &[], "", None, None)
                 .await
                 .map(drop),
         ),
@@ -196,7 +196,7 @@ async fn every_door_refuses_an_empty_doc_id_before_any_room_exists() {
     assert!(matches!(&edit, Err(Error::EmptyOperationId)), "edit");
     assert_eq!(edit.err().unwrap().to_string(), operation_id);
     let agent = manager
-        .agent_edit("doc", no_plan, "", &[], "", None, None, None)
+        .agent_edit("doc", no_plan, "", &[], "", None, None)
         .await;
     assert!(matches!(agent, Err(Error::EmptyOperationId)), "agent edit");
     assert_eq!(manager.live_room_count(), 0);

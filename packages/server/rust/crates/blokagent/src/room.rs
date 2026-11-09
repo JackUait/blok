@@ -278,7 +278,7 @@ impl Executor {
         cancel.check()?;
         let edit = live
             .manager
-            .agent_edit(
+            .agent_edit_noted(
                 doc_id,
                 plan,
                 &new_guid(),

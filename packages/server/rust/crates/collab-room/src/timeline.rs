@@ -7,6 +7,7 @@ use crate::RecordNote;
 /// CollabVersion: one version in a document's history. Sequence 0 is a
 /// lineage baseline; both its times are the lineage's created-at.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Version {
     pub lineage: String,
     pub sequence: u64,

@@ -204,16 +204,10 @@ pub(crate) fn new_test_room_on_with(
         Some(wrap) => wrap(real_converter()),
         None => Arc::new(real_converter()),
     };
-    let manager = Manager::new(ManagerOptions {
-        store: sets.clone(),
-        endpoint: docs.clone(),
-        converter,
-        room,
-        log: None,
-        operations,
-        activity: None,
-        notes: None,
-    });
+    let mut o = ManagerOptions::new(sets.clone(), docs.clone(), converter);
+    o.room = room;
+    o.operations = operations;
+    let manager = Manager::new(o);
     let runtime: Arc<dyn Invoker> = Arc::new(SharedPool);
     let runtime = match wrap {
         Some(wrap) => wrap(runtime),

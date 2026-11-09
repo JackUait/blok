@@ -707,18 +707,16 @@ pub async fn start_app(options: AppOptions) -> App {
             hook: Arc::default(),
         })
     });
-    let manager = Manager::new(ManagerOptions {
-        store: Arc::new(LocalStore::new(temp_dir(), None)),
-        endpoint: endpoint.clone(),
-        converter: converter.clone(),
-        room,
-        log: None,
-        operations: journal
-            .clone()
-            .map(|journal| journal as Arc<dyn OperationStore>),
-        activity: None,
-        notes: None,
-    });
+    let mut o = ManagerOptions::new(
+        Arc::new(LocalStore::new(temp_dir(), None)),
+        endpoint.clone(),
+        converter.clone(),
+    );
+    o.room = room;
+    o.operations = journal
+        .clone()
+        .map(|journal| journal as Arc<dyn OperationStore>);
+    let manager = Manager::new(o);
     let rooms = manager.clone();
     let corrupt = Arc::new(Mutex::new(Vec::new()));
     let logged = corrupt.clone();

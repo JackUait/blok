@@ -19,7 +19,9 @@ use crate::{
     ActivityObserver, Converter, Endpoint, Error, OperationStore, Options, WorkingSetStore,
 };
 
-/// CollabRoomManager's constructor arguments.
+/// CollabRoomManager's constructor arguments. Build one with
+/// `ManagerOptions::new`, then set the optional fields.
+#[non_exhaustive]
 pub struct ManagerOptions {
     pub store: Arc<dyn WorkingSetStore>,
     pub endpoint: Arc<dyn Endpoint>,
@@ -31,6 +33,26 @@ pub struct ManagerOptions {
     pub activity: Option<Arc<dyn ActivityObserver>>,
     /// None keeps no record notes: history answers carry no actor kinds.
     pub notes: Option<Arc<dyn crate::RecordNotesStore>>,
+}
+
+impl ManagerOptions {
+    /// The three required seams; every optional one is off.
+    pub fn new(
+        store: Arc<dyn WorkingSetStore>,
+        endpoint: Arc<dyn Endpoint>,
+        converter: Arc<dyn Converter>,
+    ) -> ManagerOptions {
+        ManagerOptions {
+            store,
+            endpoint,
+            converter,
+            room: Options::default(),
+            log: None,
+            operations: None,
+            activity: None,
+            notes: None,
+        }
+    }
 }
 
 struct Cooldown {
@@ -401,10 +423,35 @@ impl Manager {
 
     /// AgentEditAsync: a batch planned against the live doc inside the
     /// lane, after the duplicate and precondition checks, gated to one
-    /// frame. `note`, when given, is the record note in place of one read
-    /// from `actor_id`.
+    /// frame.
     #[allow(clippy::too_many_arguments, reason = "the Go and C# signatures")]
     pub async fn agent_edit(
+        &self,
+        doc_id: &str,
+        plan: PlanOps,
+        operation_id: &str,
+        digest: &[u8],
+        actor_id: &str,
+        expect: Option<Precondition>,
+        applied: Option<Applied>,
+    ) -> Result<EditResult, Error> {
+        self.agent_edit_noted(
+            doc_id,
+            plan,
+            operation_id,
+            digest,
+            actor_id,
+            expect,
+            applied,
+            None,
+        )
+        .await
+    }
+
+    /// `agent_edit` with the record note in place of one read from
+    /// `actor_id`, as the in-process agent executor writes.
+    #[allow(clippy::too_many_arguments, reason = "the Go and C# signatures")]
+    pub async fn agent_edit_noted(
         &self,
         doc_id: &str,
         plan: PlanOps,
@@ -422,6 +469,11 @@ impl Manager {
         let mut request = request(plan, true, operation_id, digest, actor_id, expect, applied);
         request.note = note;
         self.edit_in_room(doc_id, request).await
+    }
+
+    /// The configured clock: what stamps and timestamps read.
+    pub fn now(&self) -> SystemTime {
+        self.0.options.now()
     }
 
     pub(crate) async fn edit_in_room(

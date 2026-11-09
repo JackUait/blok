@@ -316,16 +316,13 @@ impl Inner {
             } else {
                 None
             };
-        Ok(Manager::new(ManagerOptions {
-            store,
-            endpoint: Arc::new(client),
-            converter: Arc::new(converter),
-            room,
-            log,
-            operations,
-            activity: o.collab_activity_observer.clone(),
-            notes: o.collab_record_notes.clone(),
-        }))
+        let mut options = ManagerOptions::new(store, Arc::new(client), Arc::new(converter));
+        options.room = room;
+        options.log = log;
+        options.operations = operations;
+        options.activity = o.collab_activity_observer.clone();
+        options.notes = o.collab_record_notes.clone();
+        Ok(Manager::new(options))
     }
 
     /// The open-routes warning, under the host category: the standalone

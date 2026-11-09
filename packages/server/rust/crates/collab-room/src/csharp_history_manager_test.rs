@@ -1719,7 +1719,7 @@ async fn an_agent_edit_notes_the_agent_and_its_person() {
         Box::pin(async move { Ok(vec![op]) })
     });
     let result = manager
-        .agent_edit(
+        .agent_edit_noted(
             DOC,
             plan,
             &fresh_id(),

@@ -101,21 +101,18 @@ async fn mcp_on_rooms(journal_dir: &std::path::Path) -> Mcp {
     );
     let journal =
         Store::new(journal_dir.to_path_buf(), StoreOptions::default()).expect("a journal");
-    let manager = Manager::new(ManagerOptions {
-        store: Arc::new(MemorySets::default()),
-        endpoint: docs,
-        converter: Arc::new(DocConverter {
+    let mut o = ManagerOptions::new(
+        Arc::new(MemorySets::default()),
+        docs,
+        Arc::new(DocConverter {
             now: Box::new(SystemTime::now),
             html: RuntimeHtmlReader { runtime: pool() },
             fields: None,
             log: None,
         }),
-        room: Default::default(),
-        log: None,
-        operations: Some(Arc::new(LocalJournal(journal))),
-        activity: None,
-        notes: None,
-    });
+    );
+    o.operations = Some(Arc::new(LocalJournal(journal)));
+    let manager = Manager::new(o);
     let executor = Arc::new(Executor::new_on_runtime(pool(), Some(Rooms::new(manager))));
     let options = json!({ "transport": { "kind": "stdio" }, "auth": { "kind": "none" } });
     Mcp::new(

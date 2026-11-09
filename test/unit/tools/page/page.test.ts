@@ -757,6 +757,49 @@ describe('Page tool', () => {
       expect(saved).toEqual({ pageId: 'p1' });
     });
 
+    it('keeps trashed on load and save', () => {
+      const trashed = { at: 1700000999000, by: 'u9', formerParentId: 'toggle-1', formerIndex: 2 };
+      const tool = new PageTool(createOptions({ data: { pageId: 'p1', trashed } }));
+
+      expect(tool.save()).toEqual({ pageId: 'p1', trashed });
+    });
+
+    it('keeps trashed with a null by and a root former parent', () => {
+      const trashed = { at: 7, by: null, formerParentId: null, formerIndex: 0 };
+      const tool = new PageTool(createOptions({ data: { pageId: 'p1', trashed } }));
+
+      expect(tool.save()).toEqual({ pageId: 'p1', trashed });
+    });
+
+    it('takes trashed from setData and drops it when setData has none', () => {
+      const trashed = { at: 5, by: 'u1', formerParentId: null, formerIndex: 1 };
+      const tool = new PageTool(createOptions({ data: { pageId: 'p1' } }));
+
+      tool.setData({ pageId: 'p1', trashed });
+      expect(tool.save()).toEqual({ pageId: 'p1', trashed });
+
+      tool.setData({ pageId: 'p1' });
+      expect(tool.save()).toEqual({ pageId: 'p1' });
+    });
+
+    it('drops a malformed trashed', () => {
+      const bad = [
+        'yes',
+        { by: 'u1', formerParentId: null, formerIndex: 0 },
+        { at: Number.NaN, by: 'u1', formerParentId: null, formerIndex: 0 },
+        { at: 1, by: 3, formerParentId: null, formerIndex: 0 },
+        { at: 1, by: 'u1', formerParentId: 4, formerIndex: 0 },
+        { at: 1, by: 'u1', formerParentId: null, formerIndex: -1 },
+        { at: 1, by: 'u1', formerParentId: null, formerIndex: 0.5 },
+      ];
+
+      for (const trashed of bad) {
+        const tool = new PageTool(createOptions({ data: { pageId: 'p1', trashed } as unknown as PageData }));
+
+        expect(tool.save()).toEqual({ pageId: 'p1' });
+      }
+    });
+
     it('omits an empty cache', () => {
       expect(new PageTool(createOptions({ data: { pageId: 'p1' } })).save()).toEqual({ pageId: 'p1' });
     });

@@ -32,8 +32,29 @@ export interface PageData extends BlockToolData {
    * toolbox entry.
    */
   kind?: 'database';
+  /**
+   * Set when the page went to Trash. With the server option
+   * `CollabRestoreTrashesPages`, a version restore sets it on a sub-page
+   * created after the restored point, instead of deleting the block, so the
+   * page's own document is kept. The block keeps its place, or goes to the
+   * end of the document when the same restore removes its parent. The page
+   * tool keeps the field but does not hide the block.
+   */
+  trashed?: PageTrashed;
   /** @deprecated Written only by pre-release builds; ignored on input and never saved. */
   cache?: PageCache;
+}
+
+/** When, by whom and from where a page went to Trash. */
+export interface PageTrashed {
+  /** Time it went to Trash, in ms since the epoch. */
+  at: number;
+  /** Id of the user who sent it there. `null` when the server had no user. */
+  by: string | null;
+  /** Id of the block it sat under. `null` at the top level of the document. */
+  formerParentId: string | null;
+  /** Its position among that parent's children, from 0. */
+  formerIndex: number;
 }
 
 /** Authorized metadata from the host. Missing fields mean the page has none. */

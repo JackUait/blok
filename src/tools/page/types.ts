@@ -35,8 +35,21 @@ export interface PageData extends BlockToolData {
   backgroundColor?: string;
   /** `'database'`: the page holds a full-page database, so the link shows the table glyph. */
   kind?: 'database';
+  /** Set when the page went to Trash. A server restore with `CollabRestoreTrashesPages` writes it on a later sub-page instead of deleting the block. */
+  trashed?: PageTrashed;
   /** @deprecated Written only by pre-release builds; ignored on input and never saved. */
   cache?: PageCache;
+}
+
+/** When, by whom and from where a page went to Trash. */
+export interface PageTrashed {
+  /** ms since the epoch. */
+  at: number;
+  /** `null` when the server had no user. */
+  by: string | null;
+  /** `null` at the top level. */
+  formerParentId: string | null;
+  formerIndex: number;
 }
 
 /**

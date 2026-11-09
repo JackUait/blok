@@ -93,6 +93,22 @@ const readColors = (data: Partial<PageData> | undefined): BlockColorData => {
 const readKind = (data: Partial<PageData> | undefined): Pick<PageData, 'kind'> =>
   data?.kind === 'database' ? { kind: 'database' } : {};
 
+const isIdOrNull = (value: unknown): value is string | null => value === null || typeof value === 'string';
+
+/** A restore on the server writes it; keep it only when every field has its type. */
+const readTrashed = (data: Partial<PageData> | undefined): Pick<PageData, 'trashed'> => {
+  const trashed: unknown = data?.trashed;
+
+  if (typeof trashed !== 'object' || trashed === null) return {};
+
+  const { at, by, formerParentId, formerIndex } = trashed as Record<string, unknown>;
+
+  if (typeof at !== 'number' || !Number.isFinite(at) || !isIdOrNull(by) || !isIdOrNull(formerParentId)) return {};
+  if (typeof formerIndex !== 'number' || !Number.isInteger(formerIndex) || formerIndex < 0) return {};
+
+  return { trashed: { at, by, formerParentId, formerIndex } };
+};
+
 /**
  * A new full-page database: one database block the database tool seeds on
  * first render. `fullPage` hides its own title, since the page title is it.
@@ -125,7 +141,7 @@ export class PageTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: PageConfig;
-  private data: { pageId: string } & BlockColorData & Pick<PageData, 'kind'>;
+  private data: { pageId: string } & BlockColorData & Pick<PageData, 'kind' | 'trashed'>;
   /** Minted here: this instance is the user's or the API's new page. */
   private readonly isNew: boolean;
   /** Made by `prepareInsert` before the toolbox inserted it: open it, never create it. */
@@ -162,7 +178,7 @@ export class PageTool implements BlockTool {
     this.isPrepared = origin === 'user' && !options.readOnly && preparedPageIds.delete(pageId);
     this.opensWhenCreated = origin === 'user';
     this.isProbe = origin === 'probe';
-    this.data = { pageId: this.isNew ? generateBlockId() : pageId, ...readColors(options.data), ...readKind(options.data) };
+    this.data = { pageId: this.isNew ? generateBlockId() : pageId, ...readColors(options.data), ...readKind(options.data), ...readTrashed(options.data) };
     this.readOnly = Boolean(options.readOnly);
   }
 
@@ -316,7 +332,7 @@ export class PageTool implements BlockTool {
       this.info = undefined;
       this.creating = false;
     }
-    this.data = { pageId, ...readColors(data), ...readKind(data) };
+    this.data = { pageId, ...readColors(data), ...readKind(data), ...readTrashed(data) };
     if (moved && this.started) {
       this.listen();
       void this.refresh();

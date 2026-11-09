@@ -952,6 +952,7 @@
   "a11y.undone": "Vráceno zpět",
   "a11y.redone": "Provedeno znovu",
   "a11y.nothingToRedo": "Není co provést znovu",
+  "a11y.convertedTo": "Převedeno na: {name}",
   "a11y.navigationPosition": "{tool}, {position} z {total}",
   "a11y.navigatedToBlock": "Přešli jste na blok",
   "a11y.dropCreateColumnLeft": "Vytvoří se sloupec vlevo",

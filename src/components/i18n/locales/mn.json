@@ -266,6 +266,7 @@
   "a11y.undone": "Буцаалаа",
   "a11y.redone": "Дахин хийлээ",
   "a11y.nothingToRedo": "Дахин хийх зүйл алга",
+  "a11y.convertedTo": "Хөрвүүлсэн: {name}",
   "a11y.navigationPosition": "{tool}. Байрлал: {position}. Нийт: {total}.",
   "a11y.navigatedToBlock": "Блок руу шилжлээ",
   "a11y.dropCreateColumnLeft": "Зүүн талд багана үүсгэнэ",

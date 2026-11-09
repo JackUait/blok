@@ -950,6 +950,7 @@
   "a11y.undone": "Kumottu",
   "a11y.redone": "Tehty uudelleen",
   "a11y.nothingToRedo": "Ei mitään tehtävää uudelleen",
+  "a11y.convertedTo": "Muunnettu: {name}",
   "a11y.navigationPosition": "{tool}, {position}/{total}",
   "a11y.navigatedToBlock": "Siirryttiin lohkoon",
   "a11y.dropCreateColumnLeft": "Kun pudotat, vasemmalle luodaan sarake",

@@ -950,6 +950,7 @@
   "a11y.undone": "Geri qaytarıldı",
   "a11y.redone": "Təkrarlandı",
   "a11y.nothingToRedo": "Təkrarlanacaq heç nə yoxdur",
+  "a11y.convertedTo": "Çevrildi: {name}",
   "a11y.navigationPosition": "{tool}, {total} içindən {position}",
   "a11y.navigatedToBlock": "Bloka keçildi",
   "a11y.dropCreateColumnLeft": "Solda sütun yaradılacaq",

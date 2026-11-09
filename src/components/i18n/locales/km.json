@@ -950,6 +950,7 @@
   "a11y.undone": "បានមិនធ្វើវិញ",
   "a11y.redone": "បានធ្វើវិញ",
   "a11y.nothingToRedo": "គ្មានអ្វីត្រូវធ្វើវិញទេ",
+  "a11y.convertedTo": "បានបំប្លែងទៅជា {name}",
   "a11y.navigationPosition": "{tool}, {position} នៃ {total}",
   "a11y.navigatedToBlock": "បានផ្លាស់ទីទៅប្លុក",
   "a11y.dropCreateColumnLeft": "នឹងបង្កើតជួរឈរនៅខាងឆ្វេង",

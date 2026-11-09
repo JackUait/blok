@@ -950,6 +950,7 @@
   "a11y.undone": "U zhbë",
   "a11y.redone": "U ribë",
   "a11y.nothingToRedo": "Nuk ka asgjë për të ribërë",
+  "a11y.convertedTo": "U konvertua në: {name}",
   "a11y.navigationPosition": "{tool}, {position} nga {total}",
   "a11y.navigatedToBlock": "U kalua te blloku",
   "a11y.dropCreateColumnLeft": "Do të krijojë një kolonë majtas",

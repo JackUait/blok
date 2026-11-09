@@ -70,6 +70,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
         ['toggle', { settings: {} }],
       ]),
     } as unknown as BlokModules['Tools'],
+    I18n: { t: (key: string) => key, has: () => false } as unknown as BlokModules['I18n'],
     YjsManager: {
       startSubStep: vi.fn(),
       stopCapturing: vi.fn(),

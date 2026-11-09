@@ -950,6 +950,7 @@
   "a11y.undone": "Αναιρέθηκε",
   "a11y.redone": "Επαναλήφθηκε",
   "a11y.nothingToRedo": "Δεν υπάρχει κάτι για επανάληψη",
+  "a11y.convertedTo": "Μετατράπηκε σε: {name}",
   "a11y.navigationPosition": "{tool}, {position} από {total}",
   "a11y.navigatedToBlock": "Μετάβαση στο μπλοκ",
   "a11y.dropCreateColumnLeft": "Θα δημιουργηθεί στήλη στα αριστερά",

@@ -950,6 +950,7 @@
   "a11y.undone": "Ångrat",
   "a11y.redone": "Gjort om",
   "a11y.nothingToRedo": "Inget att göra om",
+  "a11y.convertedTo": "Omvandlat till {name}",
   "a11y.navigationPosition": "{tool}, {position} av {total}",
   "a11y.navigatedToBlock": "Navigerat till blocket",
   "a11y.dropCreateColumnLeft": "En kolumn skapas till vänster när du släpper",

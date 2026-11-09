@@ -3,6 +3,7 @@ import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST
 import { hasUnsafeScheme } from '../../../utils/sanitize-url';
 import { htmlToPlainText } from '../../../utils/plain-text';
 import { isSamePageLink } from '../../../../tools/link/registry';
+import { announceConversion } from '../../../utils/conversion-announcement';
 
 import { BlockEventComposer } from './__base';
 
@@ -256,16 +257,18 @@ export class MarkdownShortcuts extends BlockEventComposer {
       const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
       const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
-      const newBlock = BlockManager.replace(currentBlock, LIST_TOOL_NAME, {
+      const checklistData = {
         text: remainingHtml,
         style: 'checklist',
         checked: isChecked,
         ...(depth > 0 ? { depth } : {}),
-      });
+      };
+      const newBlock = BlockManager.replace(currentBlock, LIST_TOOL_NAME, checklistData);
 
       this.setCaretAfterConversion(newBlock, caretOffset);
 
       this.Blok.YjsManager.stopCapturing();
+      announceConversion(this.Blok.I18n, listTool, checklistData);
 
       return true;
     }
@@ -279,16 +282,18 @@ export class MarkdownShortcuts extends BlockEventComposer {
       const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
       const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
-      const newBlock = BlockManager.replace(currentBlock, LIST_TOOL_NAME, {
+      const unorderedData = {
         text: remainingHtml,
         style: 'unordered',
         checked: false,
         ...(depth > 0 ? { depth } : {}),
-      });
+      };
+      const newBlock = BlockManager.replace(currentBlock, LIST_TOOL_NAME, unorderedData);
 
       this.setCaretAfterConversion(newBlock, caretOffset);
 
       this.Blok.YjsManager.stopCapturing();
+      announceConversion(this.Blok.I18n, listTool, unorderedData);
 
       return true;
     }
@@ -330,6 +335,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
     this.setCaretAfterConversion(newBlock, caretOffset);
 
     this.Blok.YjsManager.stopCapturing();
+    announceConversion(this.Blok.I18n, listTool, listData);
 
     return true;
   }
@@ -596,14 +602,16 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const remainingHtml = this.extractRemainingHtml(currentInput, match.shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - match.shortcutLength;
 
-    const newBlock = BlockManager.replace(currentBlock, HEADER_TOOL_NAME, {
+    const headerData = {
       text: remainingHtml,
       level: match.level,
-    });
+    };
+    const newBlock = BlockManager.replace(currentBlock, HEADER_TOOL_NAME, headerData);
 
     this.setCaretAfterConversion(newBlock, caretOffset);
 
     this.Blok.YjsManager.stopCapturing();
+    announceConversion(this.Blok.I18n, headerTool, headerData);
 
     return true;
   }
@@ -663,11 +671,12 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
-    const newBlock = BlockManager.replace(currentBlock, HEADER_TOOL_NAME, {
+    const toggleHeaderData = {
       text: remainingHtml,
       level,
       isToggleable: true,
-    });
+    };
+    const newBlock = BlockManager.replace(currentBlock, HEADER_TOOL_NAME, toggleHeaderData);
 
     if (caretOffset > 0) {
       this.setCaretAfterConversion(newBlock, caretOffset);
@@ -676,6 +685,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
     }
 
     this.Blok.YjsManager.stopCapturing();
+    announceConversion(this.Blok.I18n, headerTool, toggleHeaderData);
 
     return true;
   }
@@ -727,13 +737,15 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
-    const newBlock = BlockManager.replace(currentBlock, TOGGLE_TOOL_NAME, {
+    const toggleData = {
       text: remainingHtml,
-    });
+    };
+    const newBlock = BlockManager.replace(currentBlock, TOGGLE_TOOL_NAME, toggleData);
 
     this.setCaretAfterConversion(newBlock, caretOffset);
 
     this.Blok.YjsManager.stopCapturing();
+    announceConversion(this.Blok.I18n, toggleTool, toggleData);
 
     return true;
   }
@@ -786,6 +798,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
     Caret.setToBlock(paragraphBlock, Caret.positions.START);
 
     this.Blok.YjsManager.stopCapturing();
+    announceConversion(this.Blok.I18n, dividerTool, {});
 
     return true;
   }
@@ -830,13 +843,15 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
-    const newBlock = BlockManager.replace(currentBlock, QUOTE_TOOL_NAME, {
+    const quoteData = {
       text: remainingHtml,
-    });
+    };
+    const newBlock = BlockManager.replace(currentBlock, QUOTE_TOOL_NAME, quoteData);
 
     this.setCaretAfterConversion(newBlock, caretOffset);
 
     this.Blok.YjsManager.stopCapturing();
+    announceConversion(this.Blok.I18n, quoteTool, quoteData);
 
     return true;
   }
@@ -883,13 +898,15 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
 
     // `code` is a PLAINTEXT field: store the text, not the markup.
-    const newBlock = BlockManager.replace(currentBlock, CODE_TOOL_NAME, {
+    const codeData = {
       code: htmlToPlainText(remainingHtml),
-    });
+    };
+    const newBlock = BlockManager.replace(currentBlock, CODE_TOOL_NAME, codeData);
 
     this.setCaretAfterConversion(newBlock, 0);
 
     this.Blok.YjsManager.stopCapturing();
+    announceConversion(this.Blok.I18n, codeTool, codeData);
 
     return true;
   }

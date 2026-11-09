@@ -950,6 +950,7 @@
   "a11y.undone": "পূর্বাবস্থায় ফেরানো হয়েছে",
   "a11y.redone": "আবার করা হয়েছে",
   "a11y.nothingToRedo": "আবার করার মতো কিছু নেই",
+  "a11y.convertedTo": "রূপান্তরিত হয়েছে: {name}",
   "a11y.navigationPosition": "{tool}, {total}টির মধ্যে {position}",
   "a11y.navigatedToBlock": "ব্লকে পৌঁছেছেন",
   "a11y.dropCreateColumnLeft": "বামে একটি কলাম তৈরি হবে",

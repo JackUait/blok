@@ -950,6 +950,7 @@
   "a11y.undone": "ተቀልብሷል",
   "a11y.redone": "ተደግሟል",
   "a11y.nothingToRedo": "የሚደገም ነገር የለም",
+  "a11y.convertedTo": "ተቀይሯል፦ {name}",
   "a11y.navigationPosition": "{tool}፣ {position} ከ{total}",
   "a11y.navigatedToBlock": "ወደ ብሎክ ተሸጋገረ",
   "a11y.dropCreateColumnLeft": "በግራ በኩል ዓምድ ይፈጠራል",

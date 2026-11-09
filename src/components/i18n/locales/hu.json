@@ -950,6 +950,7 @@
   "a11y.undone": "Visszavonva",
   "a11y.redone": "Újra végrehajtva",
   "a11y.nothingToRedo": "Nincs mit újra végrehajtani",
+  "a11y.convertedTo": "Átalakítva: {name}",
   "a11y.navigationPosition": "{tool}, {position}. pozíció, összesen {total}",
   "a11y.navigatedToBlock": "A blokkra ugrott.",
   "a11y.dropCreateColumnLeft": "Oszlopot hoz létre balra",

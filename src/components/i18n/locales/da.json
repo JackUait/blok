@@ -950,6 +950,7 @@
   "a11y.undone": "Fortrudt",
   "a11y.redone": "Gentaget",
   "a11y.nothingToRedo": "Intet at gentage",
+  "a11y.convertedTo": "Konverteret til {name}",
   "a11y.navigationPosition": "{tool}, {position} af {total}",
   "a11y.navigatedToBlock": "Navigeret til blokken",
   "a11y.dropCreateColumnLeft": "Der oprettes en kolonne til venstre",

@@ -224,6 +224,7 @@
   "a11y.undone": "Anuliuota",
   "a11y.redone": "Perdaryta",
   "a11y.nothingToRedo": "Nėra ką perdaryti",
+  "a11y.convertedTo": "Konvertuota į: {name}",
   "a11y.navigationPosition": "{tool}, {position} iš {total}",
   "a11y.navigatedToBlock": "Pereita prie bloko",
   "a11y.dropCreateColumnLeft": "Bus sukurtas stulpelis kairėje",

@@ -950,6 +950,7 @@
   "a11y.undone": "واپس ڪيو ويو",
   "a11y.redone": "ٻيهر ڪيو ويو",
   "a11y.nothingToRedo": "ٻيهر ڪرڻ لاءِ ڪجهه به ناهي",
+  "a11y.convertedTo": "تبديل ڪيو ويو: {name}",
   "a11y.navigationPosition": "{tool}، {total} مان {position}",
   "a11y.navigatedToBlock": "بلاڪ ڏانھن ويا",
   "a11y.dropCreateColumnLeft": "کاٻي پاسي ھڪ ڪالم ٺاھيو ويندو",

@@ -266,6 +266,7 @@
   "a11y.undone": "پاشگەزکرایەوە",
   "a11y.redone": "دووبارەکرایەوە",
   "a11y.nothingToRedo": "هیچ شتێک نییە بۆ دووبارەکردنەوە",
+  "a11y.convertedTo": "گۆڕدرا بۆ: {name}",
   "a11y.navigationPosition": "{tool}، {position} لە {total}",
   "a11y.navigatedToBlock": "چوو بۆ بلۆک",
   "a11y.dropCreateColumnLeft": "ستوونێک لە لای چەپ دروست دەکرێت",

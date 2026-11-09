@@ -34,6 +34,7 @@ export type BlokMessageKey =
   | 'a11y.blocksDuplicated'
   | 'a11y.blocksMoved'
   | 'a11y.blocksSelected'
+  | 'a11y.convertedTo'
   | 'a11y.dragHandle'
   | 'a11y.dragHandleRole'
   | 'a11y.dragStarted'

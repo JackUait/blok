@@ -950,6 +950,7 @@
   "a11y.undone": "取り消しました",
   "a11y.redone": "やり直しました",
   "a11y.nothingToRedo": "やり直す操作はありません",
+  "a11y.convertedTo": "{name}に変換しました",
   "a11y.navigationPosition": "{tool}、{total}個中{position}番目",
   "a11y.navigatedToBlock": "ブロックに移動しました",
   "a11y.dropCreateColumnLeft": "左に列を作成します",

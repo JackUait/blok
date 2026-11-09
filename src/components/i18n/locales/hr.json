@@ -951,6 +951,7 @@
   "a11y.undone": "Poništeno",
   "a11y.redone": "Ponovljeno",
   "a11y.nothingToRedo": "Nema ničega za ponavljanje",
+  "a11y.convertedTo": "Pretvoreno u: {name}",
   "a11y.navigationPosition": "{tool}, {position} od {total}",
   "a11y.navigatedToBlock": "Prijelaz na blok",
   "a11y.dropCreateColumnLeft": "Stvorit će se stupac s lijeve strane",

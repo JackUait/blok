@@ -950,6 +950,7 @@
   "a11y.undone": "પૂર્વવત્ કર્યું",
   "a11y.redone": "ફરી કર્યું",
   "a11y.nothingToRedo": "ફરી કરવા માટે કંઈ નથી",
+  "a11y.convertedTo": "રૂપાંતરિત કર્યું: {name}",
   "a11y.navigationPosition": "{tool}, {total} માંથી {position}",
   "a11y.navigatedToBlock": "બ્લોક પર ગયા",
   "a11y.dropCreateColumnLeft": "ડાબી બાજુ કૉલમ બનાવશે",

@@ -952,6 +952,7 @@
   "a11y.undone": "Cofnięto",
   "a11y.redone": "Ponowiono",
   "a11y.nothingToRedo": "Nie ma czego ponowić",
+  "a11y.convertedTo": "Zamieniono na: {name}",
   "a11y.navigationPosition": "{tool}, {position} z {total}",
   "a11y.navigatedToBlock": "Przejście do bloku",
   "a11y.dropCreateColumnLeft": "Po upuszczeniu zostanie utworzona kolumna po lewej stronie",

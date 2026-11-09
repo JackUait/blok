@@ -224,6 +224,7 @@
   "a11y.undone": "Atsaukts",
   "a11y.redone": "Atkārtots",
   "a11y.nothingToRedo": "Nav ko atkārtot",
+  "a11y.convertedTo": "Pārvērsts par: {name}",
   "a11y.navigationPosition": "{tool}, {position} no {total}",
   "a11y.navigatedToBlock": "Fokuss pārvietots uz bloku",
   "a11y.dropCreateColumnLeft": "Izveidos kolonnu pa kreisi",

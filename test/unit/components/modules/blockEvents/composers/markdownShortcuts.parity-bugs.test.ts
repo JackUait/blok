@@ -67,6 +67,7 @@ const createBlokModules = (currentBlock: Block, replace = vi.fn(() => currentBlo
         ['code', { settings: {} }],
       ]),
     } as unknown as BlokModules['Tools'],
+    I18n: { t: (key: string) => key, has: () => false } as unknown as BlokModules['I18n'],
     YjsManager: {
       startSubStep: vi.fn(),
       stopCapturing: vi.fn(),

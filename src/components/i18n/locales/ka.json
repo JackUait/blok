@@ -950,6 +950,7 @@
   "a11y.undone": "დაბრუნდა",
   "a11y.redone": "გამეორდა",
   "a11y.nothingToRedo": "გასამეორებელი არაფერია",
+  "a11y.convertedTo": "გარდაიქმნა: {name}",
   "a11y.navigationPosition": "{tool}, {total}-დან {position}",
   "a11y.navigatedToBlock": "ბლოკზე გადახვედით",
   "a11y.dropCreateColumnLeft": "შექმნის სვეტს მარცხნივ",

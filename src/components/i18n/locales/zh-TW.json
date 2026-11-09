@@ -265,6 +265,7 @@
   "a11y.undone": "已還原",
   "a11y.redone": "已重做",
   "a11y.nothingToRedo": "沒有可重做的動作",
+  "a11y.convertedTo": "已轉換為{name}",
   "a11y.navigationPosition": "{tool}，第 {position} 個，共 {total} 個",
   "a11y.navigatedToBlock": "已導覽至區塊",
   "a11y.dropCreateColumnLeft": "將在左側建立一欄",

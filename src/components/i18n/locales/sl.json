@@ -952,6 +952,7 @@
   "a11y.undone": "Razveljavljeno",
   "a11y.redone": "Uveljavljeno",
   "a11y.nothingToRedo": "Ničesar ni za uveljavitev",
+  "a11y.convertedTo": "Pretvorjeno v: {name}",
   "a11y.navigationPosition": "{tool}, {position} od {total}",
   "a11y.navigatedToBlock": "Pomaknili ste se na blok",
   "a11y.dropCreateColumnLeft": "Ustvarjen bo stolpec na levi",

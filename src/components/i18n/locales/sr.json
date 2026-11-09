@@ -951,6 +951,7 @@
   "a11y.undone": "Опозвано",
   "a11y.redone": "Поновљено",
   "a11y.nothingToRedo": "Нема ничега за понављање",
+  "a11y.convertedTo": "Претворено у: {name}",
   "a11y.navigationPosition": "{tool}, {position} од {total}",
   "a11y.navigatedToBlock": "Прешли сте на блок",
   "a11y.dropCreateColumnLeft": "Биће додата колона са леве стране",

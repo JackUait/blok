@@ -951,6 +951,7 @@
   "a11y.undone": "בוטל",
   "a11y.redone": "בוצע שוב",
   "a11y.nothingToRedo": "אין מה לבצע שוב",
+  "a11y.convertedTo": "הומר ל{name}",
   "a11y.navigationPosition": "{tool}, {position} מתוך {total}",
   "a11y.navigatedToBlock": "הניווט לבלוק הושלם",
   "a11y.dropCreateColumnLeft": "תיווצר עמודה משמאל",

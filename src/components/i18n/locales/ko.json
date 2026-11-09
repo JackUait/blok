@@ -266,6 +266,7 @@
   "a11y.undone": "실행 취소됨",
   "a11y.redone": "다시 실행됨",
   "a11y.nothingToRedo": "다시 실행할 항목 없음",
+  "a11y.convertedTo": "{name}(으)로 변환됨",
   "a11y.navigationPosition": "{tool}, {total}개 중 {position}번째",
   "a11y.navigatedToBlock": "블록으로 이동됨",
   "a11y.dropCreateColumnLeft": "왼쪽에 열을 만듭니다",

@@ -219,6 +219,7 @@ const setup = (options: SetupOptions = {}) => {
     Tools: {
       blockTools: new Map<string, ToolEntry>(registered),
     },
+    I18n: { t: (key: string) => key, has: () => false },
     YjsManager: {
       startSubStep,
       stopCapturing,

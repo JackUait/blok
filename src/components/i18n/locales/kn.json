@@ -254,6 +254,7 @@
   "a11y.undone": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
   "a11y.redone": "ಮತ್ತೆ ಮಾಡಲಾಗಿದೆ",
   "a11y.nothingToRedo": "ಮತ್ತೆ ಮಾಡಲು ಏನೂ ಇಲ್ಲ",
+  "a11y.convertedTo": "ಪರಿವರ್ತಿಸಲಾಗಿದೆ: {name}",
   "a11y.navigationPosition": "{tool}, {total} ರಲ್ಲಿ {position}",
   "a11y.navigatedToBlock": "ಬ್ಲಾಕ್‌ಗೆ ನ್ಯಾವಿಗೇಟ್ ಮಾಡಲಾಗಿದೆ",
   "a11y.dropCreateColumnLeft": "ಎಡಭಾಗದಲ್ಲಿ ಕಾಲಮ್ ರಚಿಸಲಾಗುವುದು",

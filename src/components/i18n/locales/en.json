@@ -265,6 +265,7 @@
   "a11y.undone": "Undone",
   "a11y.redone": "Redone",
   "a11y.nothingToRedo": "Nothing to redo",
+  "a11y.convertedTo": "Converted to {name}",
   "a11y.navigationPosition": "{tool}, {position} of {total}",
   "a11y.navigatedToBlock": "Navigated to block",
   "a11y.dropCreateColumnLeft": "Will create a column to the left",

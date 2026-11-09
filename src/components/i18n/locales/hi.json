@@ -950,6 +950,7 @@
   "a11y.undone": "पूर्ववत किया गया",
   "a11y.redone": "फिर से किया गया",
   "a11y.nothingToRedo": "फिर से करने के लिए कुछ नहीं है",
+  "a11y.convertedTo": "इसमें बदला गया: {name}",
   "a11y.navigationPosition": "{tool}, {total} में से {position}",
   "a11y.navigatedToBlock": "ब्लॉक पर पहुँचे",
   "a11y.dropCreateColumnLeft": "बाईं ओर एक कॉलम बनेगा",

@@ -950,6 +950,7 @@
   "a11y.undone": "کالعدم کر دیا گیا",
   "a11y.redone": "دوبارہ کر دیا گیا",
   "a11y.nothingToRedo": "دوبارہ کرنے کے لیے کچھ نہیں",
+  "a11y.convertedTo": "تبدیل کر دیا گیا: {name}",
   "a11y.navigationPosition": "{tool}، {total} میں سے {position}",
   "a11y.navigatedToBlock": "بلاک پر منتقل ہوئے",
   "a11y.dropCreateColumnLeft": "بائیں جانب ایک کالم بنائے گا",

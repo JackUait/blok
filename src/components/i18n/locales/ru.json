@@ -952,6 +952,7 @@
   "a11y.undone": "Отменено",
   "a11y.redone": "Повторено",
   "a11y.nothingToRedo": "Нечего повторять",
+  "a11y.convertedTo": "Преобразовано в: {name}",
   "a11y.navigationPosition": "{tool}, {position} из {total}",
   "a11y.navigatedToBlock": "Вы перешли к блоку",
   "a11y.dropCreateColumnLeft": "Будет создана колонка слева",

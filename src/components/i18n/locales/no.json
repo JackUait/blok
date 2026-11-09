@@ -950,6 +950,7 @@
   "a11y.undone": "Angret",
   "a11y.redone": "Gjort om",
   "a11y.nothingToRedo": "Ingenting å gjøre om",
+  "a11y.convertedTo": "Konvertert til {name}",
   "a11y.navigationPosition": "{tool}, {position} av {total}",
   "a11y.navigatedToBlock": "Navigert til blokken",
   "a11y.dropCreateColumnLeft": "En kolonne opprettes til venstre når du slipper",

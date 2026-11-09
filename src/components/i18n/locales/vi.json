@@ -950,6 +950,7 @@
   "a11y.undone": "Đã hoàn tác",
   "a11y.redone": "Đã làm lại",
   "a11y.nothingToRedo": "Không có gì để làm lại",
+  "a11y.convertedTo": "Đã chuyển sang {name}",
   "a11y.navigationPosition": "{tool}, vị trí {position} trên tổng số {total}",
   "a11y.navigatedToBlock": "Đã điều hướng đến khối",
   "a11y.dropCreateColumnLeft": "Sẽ tạo một cột bên trái",

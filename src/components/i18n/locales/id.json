@@ -950,6 +950,7 @@
   "a11y.undone": "Diurungkan",
   "a11y.redone": "Diulangi",
   "a11y.nothingToRedo": "Tidak ada yang dapat diulangi",
+  "a11y.convertedTo": "Diubah ke {name}",
   "a11y.navigationPosition": "{tool}, {position} dari {total}",
   "a11y.navigatedToBlock": "Berpindah ke blok",
   "a11y.dropCreateColumnLeft": "Akan membuat kolom di kiri",

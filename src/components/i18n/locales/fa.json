@@ -950,6 +950,7 @@
   "a11y.undone": "واگرد شد",
   "a11y.redone": "ازنو انجام شد",
   "a11y.nothingToRedo": "چیزی برای ازنو انجام دادن نیست",
+  "a11y.convertedTo": "به {name} تبدیل شد",
   "a11y.navigationPosition": "{tool}، {position} از {total}",
   "a11y.navigatedToBlock": "به بلوک منتقل شد",
   "a11y.dropCreateColumnLeft": "یک ستون در سمت چپ ایجاد می‌شود",

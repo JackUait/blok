@@ -950,6 +950,7 @@
   "a11y.undone": "අහෝසි කළා",
   "a11y.redone": "නැවත කළා",
   "a11y.nothingToRedo": "නැවත කිරීමට කිසිවක් නැත",
+  "a11y.convertedTo": "පරිවර්තනය කළා: {name}",
   "a11y.navigationPosition": "{tool}, {total}න් {position}",
   "a11y.navigatedToBlock": "බ්ලොක් වෙත ගමන් කළා",
   "a11y.dropCreateColumnLeft": "වම් පස තීරුවක් සෑදෙනු ඇත",

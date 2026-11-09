@@ -951,6 +951,7 @@
   "a11y.undone": "Annullato",
   "a11y.redone": "Ripristinato",
   "a11y.nothingToRedo": "Niente da ripristinare",
+  "a11y.convertedTo": "Convertito in {name}",
   "a11y.navigationPosition": "{tool}, {position} di {total}",
   "a11y.navigatedToBlock": "Blocco raggiunto",
   "a11y.dropCreateColumnLeft": "Creerà una colonna a sinistra",

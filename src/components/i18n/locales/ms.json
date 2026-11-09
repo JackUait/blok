@@ -266,6 +266,7 @@
   "a11y.undone": "Dibuat asal",
   "a11y.redone": "Dibuat semula",
   "a11y.nothingToRedo": "Tiada apa-apa untuk dibuat semula",
+  "a11y.convertedTo": "Ditukar kepada {name}",
   "a11y.navigationPosition": "{tool}, {position} daripada {total}",
   "a11y.navigatedToBlock": "Telah beralih ke blok",
   "a11y.dropCreateColumnLeft": "Akan mencipta lajur di sebelah kiri",

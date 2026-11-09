@@ -212,6 +212,7 @@
   "a11y.undone": "पूर्ववत केले",
   "a11y.redone": "पुन्हा केले",
   "a11y.nothingToRedo": "पुन्हा करण्यासारखे काहीही नाही",
+  "a11y.convertedTo": "रूपांतरित केले: {name}",
   "a11y.navigationPosition": "{tool}, {total} पैकी {position}",
   "a11y.navigatedToBlock": "ब्लॉकवर नेव्हिगेट केले",
   "a11y.dropCreateColumnLeft": "डावीकडे स्तंभ तयार केला जाईल",

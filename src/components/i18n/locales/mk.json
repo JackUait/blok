@@ -266,6 +266,7 @@
   "a11y.undone": "Вратено",
   "a11y.redone": "Повторено",
   "a11y.nothingToRedo": "Нема ништо за повторување",
+  "a11y.convertedTo": "Претворено во: {name}",
   "a11y.navigationPosition": "{tool}, {position} од {total}",
   "a11y.navigatedToBlock": "Преминавте на блокот",
   "a11y.dropCreateColumnLeft": "Ќе се создаде колона од левата страна",

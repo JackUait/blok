@@ -950,6 +950,7 @@
   "a11y.undone": "Tagasi võetud",
   "a11y.redone": "Uuesti tehtud",
   "a11y.nothingToRedo": "Pole midagi uuesti teha",
+  "a11y.convertedTo": "Teisendatud: {name}",
   "a11y.navigationPosition": "{tool}, positsioon {position}, kokku {total}",
   "a11y.navigatedToBlock": "Liiguti plokile",
   "a11y.dropCreateColumnLeft": "Vasakule luuakse veerg",

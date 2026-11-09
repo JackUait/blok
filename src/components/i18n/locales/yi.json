@@ -950,6 +950,7 @@
   "a11y.undone": "אָפּגעטאָן",
   "a11y.redone": "איבערגעטאָן",
   "a11y.nothingToRedo": "גאָרנישט איבערצוטאָן",
+  "a11y.convertedTo": "פֿאַרוואַנדלט צו {name}",
   "a11y.navigationPosition": "{tool}, {position} פֿון {total}",
   "a11y.navigatedToBlock": "נאַוויגירט צום בלאָק",
   "a11y.dropCreateColumnLeft": "וועט שאַפֿן אַ זייַל לינקס",

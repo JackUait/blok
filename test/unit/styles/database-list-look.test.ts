@@ -198,6 +198,12 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row]:hover [data-blok-database-list-row-edit]')).toContain('display: inline-flex');
   });
 
+  // notion-live/listhover.png: "Alpha" ink ends at x 606 and the pencil box starts at 623.
+  // Blok's title box ends ~1px past its ink, so 7px on top of the 8px gap lands the box 16px after the ink.
+  it('sets the Edit pencil 16px after the title ink', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row-edit]')).toContain('margin-inline-start: var(--blok-space-1-75)');
+  });
+
   // notion-motion.md "View tabs, gallery, list": the gutter fades in over 200ms ease-out.
   it('fades the hovered row\'s gutter in over 200ms ease-out, and not under reduced motion', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-gutter]')).toContain('transition: opacity 200ms ease-out');

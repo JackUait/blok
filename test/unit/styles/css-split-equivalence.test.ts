@@ -1558,6 +1558,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GROUPED_TABLE_HEADERS_BYTES = 248;
     // database.css: the calc row's top line and 21px hover box, the select hint and pill offsets, the list glyph and 30x24 pencil.
     const DATABASE_CALC_FOOTER_AND_OFFSETS_BYTES = 958;
+    // database.css: the list pencil sits 16px after the title ink.
+    const DATABASE_LIST_PENCIL_GAP_BYTES = 47;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid and bottom stage.
@@ -1982,7 +1984,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TIMELINE_PANEL_CARD_BYTES
       + DATABASE_DRAG_GHOST_SEE_THROUGH_BYTES
       + DATABASE_GROUPED_TABLE_HEADERS_BYTES
-      + DATABASE_CALC_FOOTER_AND_OFFSETS_BYTES;
+      + DATABASE_CALC_FOOTER_AND_OFFSETS_BYTES
+      + DATABASE_LIST_PENCIL_GAP_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

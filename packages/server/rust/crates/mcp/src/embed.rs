@@ -313,13 +313,16 @@ impl BlokTools {
         internal(FAILED.to_owned())
     }
 
-    /// One prompts/get for a Blok prompt.
+    /// One prompts/get for a Blok prompt. An unexpected failure is logged
+    /// and answered -32603 with fixed words, as in `call_tool`.
     pub async fn get_prompt(
         &self,
         request: GetPromptRequestParams,
         context: RequestContext<RoleServer>,
     ) -> Result<GetPromptResponse, ErrorData> {
-        self.answer_prompt(request, &context, None).await
+        self.answer_prompt(request, &context, None)
+            .await
+            .map_err(|error| self.hidden(error))
     }
 
     /// Stops new opens, waits for the calls in flight (Blok first: their

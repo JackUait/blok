@@ -12,6 +12,8 @@ pub mod create_page;
 mod depth;
 pub mod document_source;
 pub mod embed;
+#[cfg(test)]
+mod embed_tests;
 pub mod errors;
 pub mod files;
 pub mod handle_store;

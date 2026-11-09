@@ -368,7 +368,9 @@ acknowledgement by definition acknowledges a committed operation and `0` is
 reserved for "nothing committed". A type-103 frame carrying `"0"` is malformed
 under rule 12. This is a range rule layered on the grammar, not a change to it:
 `^(0|[1-9][0-9]*)$` still accepts `0`, which stays a legal value of a
-durable-through field, where it means something.
+durable-through field, where it means something. An operation that changes
+nothing is the one exception: it is acknowledged with the current head but
+records nothing (section 7.3).
 
 ### 4.2 Canonical JSON
 
@@ -590,7 +592,9 @@ envelope, which the write rule above forbids.
 The same `operationId` with the same payload digest is a duplicate: the server
 returns the original acknowledgement and neither applies nor records the
 operation twice. The same `operationId` with different bytes is a terminal
-conflict, answered with `operation-id-conflict`.
+conflict, answered with `operation-id-conflict`. An operation that changes
+nothing is the exception: it is never recorded, so neither rule applies to its
+id (section 7.3).
 
 ### 7.3 An operation that changes nothing
 
@@ -612,6 +616,9 @@ the exception to section 8:
 "Changes nothing" is decided by the CRDT engine, not by the bytes: an update
 that integrates no new struct, deletes nothing new and parks nothing new. A
 delete of an item the server has never seen is parked, so it is recorded.
+The parked measure counts covered clocks only, so parked content that changes
+over the same clocks reads as "no change" (see the remarks on C#
+`ApplyResult`). v2 now shares this known blind spot with v1.
 
 ## 8. What an acknowledgement means
 

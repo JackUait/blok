@@ -1558,8 +1558,6 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GROUPED_TABLE_HEADERS_BYTES = 248;
     // database.css: the calc row's top line and 21px hover box, the select hint and pill offsets, the list glyph and 30x24 pencil.
     const DATABASE_CALC_FOOTER_AND_OFFSETS_BYTES = 958;
-    // database.css: the ring of a row the peek steps to starts 70ms late.
-    const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952

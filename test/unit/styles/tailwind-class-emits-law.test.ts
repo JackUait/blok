@@ -56,8 +56,12 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'build', 
  * The Go module's committed runtime bundle is a minified build of src/, which
  * is scanned already. The minifier renames functions on every build, so one
  * can land on a TW_HELPERS name (`tv`) and its plain object reads as classes.
+ * The Rust crate's copy is a symlink to the same bundle.
  */
-const SKIP_FILES = new Set([resolve(REPO_ROOT, 'packages/server/go/internal/jsruntime/blok-server-runtime.js')]);
+const SKIP_FILES = new Set([
+  resolve(REPO_ROOT, 'packages/server/go/internal/jsruntime/blok-server-runtime.js'),
+  resolve(REPO_ROOT, 'packages/server/rust/crates/jsruntime/src/blok-server-runtime.js'),
+]);
 
 /**
  * A token that is SYNTHETIC: it can never be a Tailwind utility and can never be

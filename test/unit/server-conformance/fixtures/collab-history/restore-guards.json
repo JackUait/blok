@@ -1,0 +1,2468 @@
+{
+  "$comment": "CollabRestoreGuards.Of over the exported blocks of current and target, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Mirrors restoreTouchesLocked, unlockedBetween and restoreShares in src/shared/agent/approval.ts.",
+  "cases": [
+    {
+      "name": "a public form comes back",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "calendarSync comes back",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "anonymous answers and submission access come back",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "anonymous": true,
+                  "submissionAccess": "edit"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a closed form wins over public, so closing a public form still asks",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true,
+                  "closed": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a locked database is unlocked",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "unlock",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a locked database becomes another type",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "paragraph",
+          "data": {
+            "text": "d"
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "unlock",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a locked database\u0027s schema is reshaped",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              },
+              {
+                "id": "p",
+                "type": "text"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "lockedReshape",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a locked database\u0027s views change",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "lockedReshape",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a locked database\u0027s automations change",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [],
+            "automations": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "lockedReshape",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a locked database\u0027s field set to null differs from missing",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [],
+            "source": null
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "lockedReshape",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a locked database is removed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "lockedReshape",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a database held by a locked database is reshaped",
+      "current": [
+        {
+          "id": "h",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "c",
+          "type": "database",
+          "parent": "h",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "h",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "c",
+          "type": "database",
+          "parent": "h",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "lockedReshape",
+          "blockId": "c"
+        }
+      ]
+    },
+    {
+      "name": "a locked database\u0027s own fields outside the lock change: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [],
+            "title": "Old"
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [],
+            "title": "New"
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "rows of a locked database change: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "r",
+          "type": "database-row",
+          "parent": "d",
+          "data": {
+            "properties": {
+              "t": "a"
+            }
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "r",
+          "type": "database-row",
+          "parent": "d",
+          "data": {
+            "properties": {
+              "t": "b"
+            }
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "an unlocked database is reshaped: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              },
+              {
+                "id": "p",
+                "type": "text"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a database locked in both is unchanged: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a view goes away: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a new view with default settings: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v2",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a new public view asks against the defaults",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v2",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v2"
+        }
+      ]
+    },
+    {
+      "name": "a public view with no id asks with an empty view id",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": ""
+        }
+      ]
+    },
+    {
+      "name": "a new database comes back with a public form",
+      "current": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "public false against missing reads the same: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": false,
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a calendar sync that gains an unread key reads the same: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "cal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "cal",
+                  "extra": 1
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "an unreadable value that changes fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": "yes"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "an unreadable value that stays the same: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": "yes"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": "yes"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a null form where there was none fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": null
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a null form value fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "closed": null
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "an unknown submission access fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "submissionAccess": "owner"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar sync that is not an object fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": true
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a plain calendar id reads",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team calendar"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team calendar"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a calendar id of 64 code points reads",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\uD83D\uDE00\uD83D\uDE00"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\uD83D\uDE00\uD83D\uDE00"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a calendar id of 65 code points fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "an empty calendar id fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": ""
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": ""
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a leading space fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": " team"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": " team"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a trailing space fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team "
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team "
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a doubled space fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team  cal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team  cal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a line break fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\ncal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\ncal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a tab fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\tcal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\tcal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a no-break space fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u00A0cal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u00A0cal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with an ideographic space fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u3000cal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u3000cal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a bidi override fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u202Ecal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u202Ecal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a zero-width space fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u200Bcal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u200Bcal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a byte order mark fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "\uFEFFteam"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "\uFEFFteam"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a line separator fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u2028cal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u2028cal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a next line fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u0085cal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u0085cal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with a soft hyphen fails closed",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u00ADcal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "team\u00ADcal"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a calendar id with accents and emoji reads",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "\u00E9quipe \uD83D\uDE00 \u65E5\u672C"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "calendarSync": {
+                  "enabled": true,
+                  "calendarId": "\u00E9quipe \uD83D\uDE00 \u65E5\u672C"
+                },
+                "form": {
+                  "closed": false
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    }
+  ]
+}

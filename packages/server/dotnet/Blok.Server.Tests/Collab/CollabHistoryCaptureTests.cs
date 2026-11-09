@@ -42,6 +42,12 @@ public sealed class CollabHistoryCaptureTests
     Check("collab-history/restore-plans.json", await RestorePlans());
   }
 
+  [Fact]
+  public void TheRestoreGuardsMatchTheRules()
+  {
+    Check("collab-history/restore-guards.json", RestoreGuards());
+  }
+
   private static void Check(string relative, JsonObject built)
   {
     var path = RichTextFixtures.PathOf(relative);
@@ -530,6 +536,143 @@ public sealed class CollabHistoryCaptureTests
       ["cases"] = written,
     };
   }
+
+  // ---- restore guards ----
+
+  private const string Locked = """[{ "id": "t", "type": "title", "databaseLocked": true }]""";
+  private const string Unlocked = """[{ "id": "t", "type": "title" }]""";
+
+  private static string Db(string id, string schema = Unlocked, string views = "[]", string? parent = null, string extra = "") =>
+      $$"""{ "id": "{{id}}", "type": "database", {{(parent is null ? "" : $"\"parent\": \"{parent}\", ")}}"data": { "schema": {{schema}}, "views": {{views}}{{extra}} } }""";
+
+  private static string View(string share = "", string id = "v1") =>
+      $$"""{ {{(id == "" ? "" : $"\"id\": \"{id}\", ")}}"type": "table"{{(share == "" ? "" : ", " + share)}} }""";
+
+  private static JsonObject RestoreGuards()
+  {
+    (string Name, string[] Current, string[] Target, string[] Expect)[] cases =
+    [
+      ("a public form comes back",
+          [Db("d", views: $"[{View()}]")], [Db("d", views: $"""[{View("\"form\": { \"public\": true }")}]""")], ["share d v1"]),
+      ("calendarSync comes back",
+          [Db("d", views: $"[{View()}]")],
+          [Db("d", views: $"""[{View("\"calendarSync\": { \"enabled\": true, \"calendarId\": \"team\" }")}]""")], ["share d v1"]),
+      ("anonymous answers and submission access come back",
+          [Db("d", views: $"[{View()}]")],
+          [Db("d", views: $"""[{View("\"form\": { \"anonymous\": true, \"submissionAccess\": \"edit\" }")}]""")], ["share d v1"]),
+      ("a closed form wins over public, so closing a public form still asks",
+          [Db("d", views: $"""[{View("\"form\": { \"public\": true }")}]""")],
+          [Db("d", views: $"""[{View("\"form\": { \"public\": true, \"closed\": true }")}]""")], ["share d v1"]),
+      ("a locked database is unlocked", [Db("d", Locked)], [Db("d")], ["unlock d"]),
+      ("a locked database becomes another type", [Db("d", Locked)], ["""{ "id": "d", "type": "paragraph", "data": { "text": "d" } }"""], ["unlock d"]),
+      ("a locked database's schema is reshaped",
+          [Db("d", """[{ "id": "t", "type": "title", "databaseLocked": true }, { "id": "p", "type": "text" }]""")], [Db("d", Locked)], ["lockedReshape d"]),
+      ("a locked database's views change", [Db("d", Locked, $"[{View()}]")], [Db("d", Locked)], ["lockedReshape d"]),
+      ("a locked database's automations change", [Db("d", Locked, extra: """, "automations": []""")], [Db("d", Locked)], ["lockedReshape d"]),
+      ("a locked database's field set to null differs from missing", [Db("d", Locked)], [Db("d", Locked, extra: """, "source": null""")], ["lockedReshape d"]),
+      ("a locked database is removed", [Db("d", Locked), P("a")], [P("a")], ["lockedReshape d"]),
+      ("a database held by a locked database is reshaped",
+          [Db("h", Locked), Db("c", parent: "h")], [Db("h", Locked), Db("c", Locked, parent: "h")], ["lockedReshape c"]),
+      ("a locked database's own fields outside the lock change: no guard",
+          [Db("d", Locked, extra: """, "title": "Old" """)], [Db("d", Locked, extra: """, "title": "New" """)], []),
+      ("rows of a locked database change: no guard",
+          [Db("d", Locked), """{ "id": "r", "type": "database-row", "parent": "d", "data": { "properties": { "t": "a" } } }"""],
+          [Db("d", Locked), """{ "id": "r", "type": "database-row", "parent": "d", "data": { "properties": { "t": "b" } } }"""], []),
+      ("an unlocked database is reshaped: no guard", [Db("d")], [Db("d", """[{ "id": "t", "type": "title" }, { "id": "p", "type": "text" }]""")], []),
+      ("a database locked in both is unchanged: no guard", [Db("d", Locked)], [Db("d", Locked)], []),
+      ("a view goes away: no guard",
+          [Db("d", views: $"""[{View("\"form\": { \"public\": true }")}]""")], [Db("d")], []),
+      ("a new view with default settings: no guard", [Db("d")], [Db("d", views: $"[{View(id: "v2")}]")], []),
+      ("a new public view asks against the defaults",
+          [Db("d")], [Db("d", views: $"""[{View("\"form\": { \"public\": true }", "v2")}]""")], ["share d v2"]),
+      ("a public view with no id asks with an empty view id",
+          [Db("d")], [Db("d", views: $"""[{View("\"form\": { \"public\": true }", "")}]""")], ["share d "]),
+      ("a new database comes back with a public form",
+          [P("a")], [P("a"), Db("d", views: $"""[{View("\"form\": { \"public\": true }")}]""")], ["share d v1"]),
+      ("public false against missing reads the same: no guard",
+          [Db("d", views: $"[{View()}]")], [Db("d", views: $"""[{View("\"form\": { \"public\": false, \"closed\": false }")}]""")], []),
+      ("a calendar sync that gains an unread key reads the same: no guard",
+          [Db("d", views: $"""[{View("\"calendarSync\": { \"enabled\": true, \"calendarId\": \"cal\" }")}]""")],
+          [Db("d", views: $"""[{View("\"calendarSync\": { \"enabled\": true, \"calendarId\": \"cal\", \"extra\": 1 }")}]""")], []),
+      ("an unreadable value that changes fails closed",
+          [Db("d", views: $"[{View()}]")], [Db("d", views: $"""[{View("\"form\": { \"public\": \"yes\" }")}]""")], ["share d v1"]),
+      ("an unreadable value that stays the same: no guard",
+          [Db("d", views: $"""[{View("\"form\": { \"public\": \"yes\" }")}]""")],
+          [Db("d", views: $"""[{View("\"form\": { \"public\": \"yes\" }")}]""")], []),
+      ("a null form where there was none fails closed",
+          [Db("d", views: $"[{View()}]")], [Db("d", views: $"""[{View("\"form\": null")}]""")], ["share d v1"]),
+      ("a null form value fails closed",
+          [Db("d", views: $"[{View()}]")], [Db("d", views: $"""[{View("\"form\": { \"closed\": null }")}]""")], ["share d v1"]),
+      ("an unknown submission access fails closed",
+          [Db("d", views: $"[{View()}]")], [Db("d", views: $"""[{View("\"form\": { \"submissionAccess\": \"owner\" }")}]""")], ["share d v1"]),
+      ("a calendar sync that is not an object fails closed",
+          [Db("d", views: $"[{View()}]")], [Db("d", views: $"""[{View("\"calendarSync\": true")}]""")], ["share d v1"]),
+    ];
+
+    var written = new JsonArray();
+
+    foreach (var (name, current, target, expect) in cases)
+    {
+      var currentBlocks = new JsonArray([.. current.Select(json => JsonNode.Parse(json))]);
+      var targetBlocks = new JsonArray([.. target.Select(json => JsonNode.Parse(json))]);
+      var guards = CollabRestoreGuards.Of(currentBlocks, targetBlocks);
+
+      Assert.Equal(expect, guards.Select(guard => $"{guard.Kind} {guard.BlockId}{(guard.ViewId is { } view ? " " + view : "")}"));
+      written.Add(new JsonObject
+      {
+        ["name"] = name,
+        ["current"] = currentBlocks,
+        ["target"] = targetBlocks,
+        ["guards"] = new JsonArray([.. guards.Select(guard => (JsonNode)guard.ToJson())]),
+      });
+    }
+
+    foreach (var (name, id, readable) in CalendarIds())
+    {
+      // Another value changes, so only whether the calendar id reads decides.
+      var sync = $$"""{ "enabled": true, "calendarId": {{JsonValue.Create(id)!.ToJsonString()}} }""";
+      var currentBlocks = new JsonArray(JsonNode.Parse(Db("d", views: $"""[{View($"\"calendarSync\": {sync}")}]""")));
+      var targetBlocks = new JsonArray(JsonNode.Parse(Db("d", views: $"""[{View($"\"calendarSync\": {sync}, \"form\": {{ \"closed\": false }}")}]""")));
+      var guards = CollabRestoreGuards.Of(currentBlocks, targetBlocks);
+
+      Assert.Equal(readable ? [] : ["share d v1"], guards.Select(guard => $"{guard.Kind} {guard.BlockId} {guard.ViewId}"));
+      written.Add(new JsonObject
+      {
+        ["name"] = name,
+        ["current"] = currentBlocks,
+        ["target"] = targetBlocks,
+        ["guards"] = new JsonArray([.. guards.Select(guard => (JsonNode)guard.ToJson())]),
+      });
+    }
+
+    return new JsonObject
+    {
+      ["$comment"] = "CollabRestoreGuards.Of over the exported blocks of current and target, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Mirrors restoreTouchesLocked, unlockedBetween and restoreShares in src/shared/agent/approval.ts.",
+      ["cases"] = written,
+    };
+  }
+
+  private static (string Name, string Id, bool Readable)[] CalendarIds() =>
+  [
+    ("a plain calendar id reads", "team calendar", true),
+    ("a calendar id of 64 code points reads", new string('a', 62) + "😀😀", true),
+    ("a calendar id of 65 code points fails closed", new string('a', 65), false),
+    ("an empty calendar id fails closed", "", false),
+    ("a calendar id with a leading space fails closed", " team", false),
+    ("a calendar id with a trailing space fails closed", "team ", false),
+    ("a calendar id with a doubled space fails closed", "team  cal", false),
+    ("a calendar id with a line break fails closed", "team\ncal", false),
+    ("a calendar id with a tab fails closed", "team\tcal", false),
+    ("a calendar id with a no-break space fails closed", "team\u00A0cal", false),
+    ("a calendar id with an ideographic space fails closed", "team\u3000cal", false),
+    ("a calendar id with a bidi override fails closed", "team\u202Ecal", false),
+    ("a calendar id with a zero-width space fails closed", "team\u200Bcal", false),
+    ("a calendar id with a byte order mark fails closed", "\uFEFFteam", false),
+    ("a calendar id with a line separator fails closed", "team\u2028cal", false),
+    ("a calendar id with a next line fails closed", "team\u0085cal", false),
+    ("a calendar id with a soft hyphen fails closed", "team\u00ADcal", false),
+    ("a calendar id with accents and emoji reads", "équipe 😀 日本", true),
+  ];
 
   private static JsonNode OpJson(CollabEditOp op) => op switch
   {

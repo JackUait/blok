@@ -395,7 +395,7 @@ test.describe('timeline', () => {
     await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
 
     const panel = await page.locator('[data-blok-database-timeline-table]').boundingBox();
-    const chevron = await page.locator('[data-blok-database-timeline-table-toggle] > svg').first().boundingBox();
+    const chevron = await page.locator('[data-blok-database-timeline-table-toggle]').evaluate((el) => el.querySelector('svg')?.getBoundingClientRect().toJSON() as { x: number } | undefined ?? null);
     const month = await page.locator('[data-blok-database-timeline-month]').boundingBox();
 
     if (panel === null || chevron === null || month === null) throw new Error('no layout');

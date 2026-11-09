@@ -169,6 +169,18 @@ describe('row page peek modes', () => {
       expect(label('r2')).toBe('Open');
     });
 
+    // notion-motion.md "Side peek top bar": on Next page the new row's halo starts about 70ms after the old one fades.
+    it('marks the row the peek moves to, but not the row it first opens on', async () => {
+      await make(doc());
+      await openRow('r1');
+
+      expect(button('r1')?.getAttribute('data-peeked')).toBe('');
+      await click(q('[data-blok-database-peek-next]'));
+
+      expect(button('r2')?.getAttribute('data-peeked')).toBe('step');
+      expect(button('r1')?.hasAttribute('data-peeked')).toBe(false);
+    });
+
     it('follows a step with the header arrow and with Ctrl+J', async () => {
       await make(doc());
       await openRow('r1');

@@ -8726,6 +8726,11 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
+/* Next page: the new row's ring starts about 70ms after the old one fades (motion-peeknext.json). */
+[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked="step"])::before {
+  transition-delay: 70ms;
+}
+
 [data-blok-database-table-cell] {
   position: relative;
   flex: none;

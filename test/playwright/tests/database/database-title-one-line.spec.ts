@@ -174,6 +174,17 @@ test.describe('Database — a long title stays one line', () => {
     expect(after.scrollLeft).toBe(0);
   });
 
+  test('reached from the keyboard, End and typing land at the end in view', async ({ page }) => {
+    await create(page, { title: LONG_TITLE });
+    await setRowWidth(page, 400);
+    await page.locator(TITLE).focus();
+    await page.keyboard.press('End');
+    await page.keyboard.type('!');
+
+    await expect(page.locator(TITLE)).toHaveText(`${LONG_TITLE}!`);
+    expect((await editBox(page)).scrollLeft).toBeGreaterThan(0);
+  });
+
   // notion-motion.md, Round 8b "Long title with view tabs": the title has its own one-line row.
   test('with several views the title is one line with an ellipsis above the tabs', async ({ page }) => {
     await create(page, {

@@ -1375,7 +1375,8 @@
   vertical-align: top;
   inline-size: 18px;
   block-size: 22.5px;
-  margin-inline-end: var(--blok-space-0-5);
+  /* notion-motion.md, Round 8c: the glyph at x 11 and the name field at x 36 of the card. */
+  margin-inline: var(--blok-space-0-25) var(--blok-space-1-75);
   color: var(--blok-database-card-actions-icon);
 }
 
@@ -1384,9 +1385,12 @@
   block-size: 18px;
 }
 
-[data-blok-database-card-edit-glyph] + [data-blok-database-card-title-input],
 [data-blok-database-page-icon] + [data-blok-database-card-title-input] {
   width: calc(100% - 22px);
+}
+
+[data-blok-database-card-edit-glyph] + [data-blok-database-card-title-input] {
+  width: calc(100% - 26px);
 }
 
 /**
@@ -2565,18 +2569,26 @@
   color: var(--_blok-group-accent, var(--blok-database-column-accent));
   font-size: 15px;
   line-height: 18px;
+  gap: var(--blok-space-2-25);
   transition: background-color 100ms ease-in-out;
 }
 
+/* notion-motion.md, Round 8c: Notion's plus box is 10.5 wide at x 12, so the text starts at x 31.5.
+   The glyph overflows the slot evenly, keeping its centre where Notion's is. */
 [data-blok-database-add-card-icon] {
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  inline-size: 10.5px;
+  margin-inline-start: var(--blok-space-0-5);
 }
 
+/* Round 8c: Notion's plus ink is 10.5 wide. Blok's 20px plus (10 + 1.25 stroke) reaches that at 18.67px. */
 [data-blok-database-add-card-icon] svg {
-  width: 16px;
-  height: 16px;
+  flex-shrink: 0;
+  width: 18.67px;
+  height: 18.67px;
 }
 
 /**
@@ -2918,9 +2930,17 @@ button[data-blok-database-column-count]:hover {
 }
 
 /* notion-motion.md, Round 8b "Board group ⋯ menu": the 20px icon at x 8, the text at x 36. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-icon] {
   width: 20px;
   margin-inline-end: var(--blok-space-2);
+}
+
+/* notion-motion.md, Round 8c "Card ⋯ menu": 14px/16.8 text. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-title] {
+  font-size: 14px;
+  line-height: 16.8px;
+  font-weight: 400;
 }
 
 /* Rows keep a 1px gap below; the last one does not, so the box ends 4px under it (123 tall). */
@@ -3029,6 +3049,11 @@ button[data-blok-database-column-count]:hover {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-menu'] [data-blok-popover-item] {
   height: 29px;
   padding-block: 0;
+}
+
+/* notion-motion.md, Round 8c "Card ⋯ menu": 28px rows at a 29 pitch. After the row menu's 29px. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item] {
+  height: 28px;
 }
 
 [data-blok-database-row-menu-footer] {

@@ -40,7 +40,7 @@ import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
 import { calculationItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
-import type { RowFavorite } from './database-table-menus';
+import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
@@ -8831,7 +8831,7 @@ export class DatabaseTool implements BlockTool {
 
         if (rowId !== null && cardEl instanceof HTMLElement) {
           event.stopPropagation();
-          this.openCardMenu(cardMenuBtn, cardEl, rowId);
+          this.openCardMenu(cardMenuBtn, cardEl, rowId, this.cardMenuPoint(cardMenuBtn, cardEl, event));
         }
 
         return;
@@ -8970,13 +8970,25 @@ export class DatabaseTool implements BlockTool {
    * Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3).
    * A timeline bar has no Comment; its table panel row does (research/22 §11).
    */
-  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string): void {
+  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at']): void {
     const type = this.shownView()?.type;
 
     this.openRowMenu(rowId, anchor, cardEl, {
       viewSettings: type === 'board' || type === 'gallery',
       comment: !cardEl.hasAttribute('data-blok-database-timeline-bar'),
+      ...(at !== undefined ? { at } : {}),
     });
+  }
+
+  /**
+   * notion-motion.md, Round 8c: a board card's ⋯ menu starts at the pointer's x, level with the button.
+   * A key press has no pointer, so it keeps the button. The gallery is unmeasured.
+   */
+  private cardMenuPoint(button: HTMLElement, cardEl: HTMLElement, event: MouseEvent): OpenMenuOptions['at'] {
+    if (event.detail === 0 || !cardEl.matches('[data-blok-database-card]')) return undefined;
+    const box = button.getBoundingClientRect();
+
+    return { position: new DOMRect(event.clientX, box.top, 0, box.height), positionContext: cardEl };
   }
 
   /**
@@ -8984,7 +8996,7 @@ export class DatabaseTool implements BlockTool {
    * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
    * hover buttons while the menu is up.
    */
-  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean }): void {
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at'] }): void {
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
     const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
@@ -9029,6 +9041,7 @@ export class DatabaseTool implements BlockTool {
     }), {
       searchable: true,
       kind: 'card',
+      ...(options.at !== undefined ? { at: options.at } : {}),
       searchPlaceholder: this.api.i18n.t('tools.database.searchActions'),
       onClose: () => {
         card.removeAttribute('data-popover-open');

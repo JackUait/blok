@@ -146,6 +146,8 @@ export interface OpenMenuOptions {
    * a card menu is the same row menu, opened over its "•••".
    */
   kind?: 'header' | 'row' | 'card';
+  /** Where the menu opens instead of the anchor's box; `positionContext` moves it with the page. */
+  at?: { position: DOMRect; positionContext: HTMLElement };
 }
 
 const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS, card: DATABASE_CARD_MENU_CLASS } as const;
@@ -157,20 +159,22 @@ export const openMenu = (
   options: OpenMenuOptions = {}
 ): PopoverDesktop => {
   const menuClass = options.kind === undefined ? DATABASE_MENU_CLASS : MENU_CLASS[options.kind];
-  const popover = new PopoverDesktop({
+  const params = {
     class: menuClass,
     ...(options.kind === 'row' ? { placeLeftOfAnchor: true, viewportMargin: 8 } : {}),
     animateClose: true,
     trigger: anchor,
     items,
-    width: 'auto',
+    width: 'auto' as const,
     minWidth: options.kind === 'card' ? '265px' : '220px',
     // A card's menu opens over its "•••", shifted to stay in the window (feel findings B15, 09-notion-card-menu.png).
     ...(options.kind === 'card' ? { cover: true } : {}),
     autoFocusFirstItem: false,
     ...(options.searchable === true ? { searchable: true } : {}),
     ...(options.searchPlaceholder !== undefined ? { messages: { search: options.searchPlaceholder } } : {}),
-  });
+  };
+  const at = options.at;
+  const popover = new PopoverDesktop(at === undefined ? params : { ...params, position: at.position, positionContext: at.positionContext });
 
   const state = { closed: false };
 

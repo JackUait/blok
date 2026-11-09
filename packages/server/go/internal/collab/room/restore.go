@@ -1,6 +1,7 @@
 package room
 
 import (
+	"math"
 	"sort"
 	"strconv"
 
@@ -15,6 +16,22 @@ import (
 // plain JSON only.
 func PlanRestore(currentBlocks []any, current convert.DocStructure, targetBlocks []any,
 	currentMaps, targetMaps []convert.PageMap) []convert.EditOp {
+	return PlanRestoreTrashing(currentBlocks, current, targetBlocks, currentMaps, targetMaps, nil)
+}
+
+// RestoreTrash is who restores and when, in ms since the epoch. With it, a
+// restore trashes a page pointer the target lacks instead of removing it.
+type RestoreTrash struct {
+	By *string
+	At int64
+}
+
+// PlanRestoreTrashing is PlanRestore with the C# planner's trash argument.
+func PlanRestoreTrashing(currentBlocks []any, current convert.DocStructure, targetBlocks []any,
+	currentMaps, targetMaps []convert.PageMap, trash *RestoreTrash) []convert.EditOp {
+	if trash != nil {
+		targetBlocks = withTrashedPages(currentBlocks, targetBlocks, trash)
+	}
 	ops := planBlocks(currentBlocks, current, targetBlocks)
 	var patches []convert.MapPatch
 	for _, name := range convert.PageMaps {
@@ -149,6 +166,144 @@ func planBlocks(currentBlocks []any, current convert.DocStructure, targetBlocks 
 		ops = append(ops, convert.Insert{ID: id.String(), Block: toNode(insertedBlock(block)), After: after, Parent: parentID})
 	}
 	return ops
+}
+
+type siblingSlot struct {
+	parent string
+	index  int
+}
+
+// withTrashedPages is the target plus every live page pointer it lacks, with
+// trashed set, so the sub-page is not cut off. A pointer keeps its place
+// among its live siblings; one whose parent the target lacks goes to the end
+// of the root. A pointer already trashed keeps its stamps.
+func withTrashedPages(currentBlocks, targetBlocks []any, trash *RestoreTrash) []any {
+	targetIDs := map[string]bool{}
+	for _, item := range targetBlocks {
+		if block, ok := item.(*jsjson.Object); ok {
+			if id := stringOf(block, "id"); id != nil {
+				targetIDs[unitKey(*id)] = true
+			}
+		}
+	}
+	var live []*jsjson.Object
+	slots := map[string]siblingSlot{}
+	counts := map[string]int{}
+	for _, item := range currentBlocks {
+		block, ok := item.(*jsjson.Object)
+		if !ok || stringOf(block, "id") == nil {
+			continue
+		}
+		live = append(live, block)
+		parent := parentKey(parentOf(block))
+		key := unitKey(*stringOf(block, "id"))
+		if _, seen := slots[key]; !seen {
+			slots[key] = siblingSlot{parent, counts[parent]}
+		}
+		counts[parent]++
+	}
+	result := make([]any, len(targetBlocks))
+	for i, item := range targetBlocks {
+		result[i] = deepClone(item)
+	}
+	for _, block := range live {
+		id := *stringOf(block, "id")
+		if kind := typeOf(block); kind == nil || kind.String() != "page" || targetIDs[unitKey(id)] {
+			continue
+		}
+		targetIDs[unitKey(id)] = true
+		former := parentOf(block)
+		slot := slots[unitKey(id)]
+		liveData, _ := block.Get(jsjson.FromString("data"))
+		data, isObject := deepClone(liveData).(*jsjson.Object)
+		if !isObject {
+			data = &jsjson.Object{}
+		}
+		if existing, _ := data.Get(jsjson.FromString("trashed")); !isTrashed(existing) {
+			stamp := &jsjson.Object{}
+			stamp.Set(jsjson.FromString("at"), float64(trash.At))
+			if trash.By != nil {
+				stamp.Set(jsjson.FromString("by"), jsjson.FromString(*trash.By))
+			} else {
+				stamp.Set(jsjson.FromString("by"), nil)
+			}
+			if former != nil {
+				stamp.Set(jsjson.FromString("formerParentId"), *former)
+			} else {
+				stamp.Set(jsjson.FromString("formerParentId"), nil)
+			}
+			stamp.Set(jsjson.FromString("formerIndex"), float64(slot.index))
+			data.Set(jsjson.FromString("trashed"), stamp)
+		}
+		trashed := &jsjson.Object{}
+		for _, member := range block.Members() {
+			switch member.Key.String() {
+			case "parent", "content", "data":
+				continue
+			}
+			trashed.Set(member.Key, deepClone(member.Value))
+		}
+		trashed.Set(jsjson.FromString("data"), data)
+		if former == nil || targetIDs[unitKey(*former)] {
+			if former != nil {
+				trashed.Set(jsjson.FromString("parent"), *former)
+			}
+			at := slotAmongSiblings(result, parentKey(former), slots, slot.index)
+			result = append(result[:at], append([]any{trashed}, result[at:]...)...)
+		} else {
+			result = append(result, trashed)
+		}
+	}
+	return result
+}
+
+// isTrashed is the page tool's readTrashed check, so a value it would drop
+// is stamped afresh here.
+func isTrashed(value any) bool {
+	trashed, ok := value.(*jsjson.Object)
+	if !ok {
+		return false
+	}
+	at, isNumber := memberOf(trashed, "at")
+	if n, ok := at.(float64); !isNumber || !ok || math.IsInf(n, 0) || math.IsNaN(n) {
+		return false
+	}
+	for _, key := range []string{"by", "formerParentId"} {
+		id, present := memberOf(trashed, key)
+		if _, isString := id.(jsjson.Str); !present || (id != nil && !isString) {
+			return false
+		}
+	}
+	index, _ := memberOf(trashed, "formerIndex")
+	position, ok := index.(float64)
+	return ok && position >= 0 && math.Floor(position) == position
+}
+
+// slotAmongSiblings is where in the target list a block goes so that, among
+// the target's children of parent, it follows every one that sat before it live.
+func slotAmongSiblings(target []any, parent string, slots map[string]siblingSlot, index int) int {
+	first, afterLast := -1, -1
+	for position, item := range target {
+		block, ok := item.(*jsjson.Object)
+		if !ok || parentKey(parentOf(block)) != parent {
+			continue
+		}
+		if first < 0 {
+			first = position
+		}
+		if id := stringOf(block, "id"); id != nil {
+			if live, ok := slots[unitKey(*id)]; ok && live.parent == parent && live.index < index {
+				afterLast = position + 1
+			}
+		}
+	}
+	if afterLast >= 0 {
+		return afterLast
+	}
+	if first >= 0 {
+		return first
+	}
+	return len(target)
 }
 
 // NormalizeTarget is the target as a restore reproduces it: a parent naming

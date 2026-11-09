@@ -979,6 +979,99 @@ async fn a_restore_makes_the_live_document_equal_the_point_as_one_journalled_edi
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_preview_with_trash_counts_the_restorer_in_its_frame() {
+    let b = Bench::new();
+    let manager = b.manager(Options {
+        restore_trashes_pages: true,
+        ..Options::default()
+    });
+    blocks(&manager).await;
+    let page = EditOp::Insert {
+        id: Str::from("pg"),
+        block: node(r#"{"type":"page","data":{"pageId":"sub"}}"#),
+        after: Some(Str::from("a")),
+        parent: None,
+    };
+    edit(&manager, page, None).await;
+    let lineage = b.lineage();
+    let frame = async |actor: &str| {
+        let (_, preview, _) = manager
+            .preview_restore(DOC, &lineage, 0, None, actor)
+            .await
+            .expect("preview");
+        preview.expect("a preview").frame_bytes
+    };
+
+    let (short, long) = (frame("u").await, frame(&"u".repeat(200)).await);
+
+    assert!(long > short, "{short} vs {long}");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_restore_removes_a_later_page_pointer_by_default() {
+    let b = Bench::new();
+    let manager = b.manager(Options::default());
+    blocks(&manager).await;
+    let page = EditOp::Insert {
+        id: Str::from("pg"),
+        block: node(r#"{"type":"page","data":{"pageId":"sub"}}"#),
+        after: Some(Str::from("a")),
+        parent: None,
+    };
+    edit(&manager, page, None).await;
+
+    let (_, result) = restore(&manager, &b.lineage(), 0, OP_RESTORE, Some("u9"), None).await;
+
+    let result = result.expect("an edit");
+    assert_eq!(result.status, EditStatus::Applied, "{:?}", result.err);
+    let live = blocks(&manager).await;
+    assert!(!json(&live).contains(r#""id":"pg""#), "{}", json(&live));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_restore_trashes_a_page_pointer_added_after_the_point() {
+    let b = Bench::new();
+    let manager = b.manager(Options {
+        now: Some(Arc::new(|| seconds(1_700_000_999))),
+        restore_trashes_pages: true,
+        ..Options::default()
+    });
+    blocks(&manager).await;
+    let page = EditOp::Insert {
+        id: Str::from("pg"),
+        block: node(r#"{"type":"page","data":{"pageId":"sub"}}"#),
+        after: Some(Str::from("a")),
+        parent: None,
+    };
+    edit(&manager, page, None).await;
+
+    let (_, result) = restore(&manager, &b.lineage(), 0, OP_RESTORE, Some("u9"), None).await;
+
+    let result = result.expect("an edit");
+    assert_eq!(result.status, EditStatus::Applied, "{:?}", result.err);
+    let live = blocks(&manager).await;
+    let Value::Array(items) = &live else {
+        panic!("{}", json(&live))
+    };
+    let pointer = items
+        .iter()
+        .find_map(|item| match item {
+            Value::Object(block) if field(block, "id") == Some(&Value::String(Str::from("pg"))) => {
+                Some(block)
+            }
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("no pointer in {}", json(&live)));
+    let Some(Value::Object(data)) = field(pointer, "data") else {
+        panic!("{}", json(&live))
+    };
+    assert_eq!(
+        field(data, "trashed").map(json).as_deref(),
+        Some(r#"{"at":1700000999000,"by":"u9","formerParentId":null,"formerIndex":1}"#)
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_restore_reaches_a_lineage_a_reset_replaced() {
     let b = Bench::new();
     let manager = b.manager(Options::default());

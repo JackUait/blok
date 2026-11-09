@@ -8,7 +8,7 @@ use blok_yjs::Out;
 
 use crate::room::new_guid;
 use crate::room_test::{insert_batch, ok_in, room_agent};
-use crate::roomharness_test::new_test_room;
+use crate::roomharness_test::{new_local_journal, new_test_room, new_test_room_on_with};
 use crate::test_support::{lookup, must_parse, string_of};
 use crate::{
     Actor, Cancel, Execution, Executor, HostFuture, InvokeFuture, Invoker, Options, PageLocation,
@@ -235,4 +235,72 @@ async fn a_restore_behind_the_room_is_a_retryable_stale() {
     assert_eq!(string_of(lookup(error, "code")).as_deref(), Some("STALE"));
     assert_eq!(lookup(error, "retryable").map(|r| r.kind), Some(Kind::True));
     assert_eq!(execution.revision, r.head("d").await);
+}
+
+// C# BlokAgentVersionHistoryTests.ARestoreHonoursTheHostsTrashOptionForALaterPagePointer.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_restore_honours_the_hosts_trash_option_for_a_later_page_pointer() {
+    for trash in [false, true] {
+        let (journal, dir) = new_local_journal();
+        let r = new_test_room_on_with(
+            Some(Arc::new(journal)),
+            Some(dir),
+            None,
+            None,
+            blok_collab_room::Options {
+                restore_trashes_pages: trash,
+                ..Default::default()
+            },
+        );
+        r.docs.hold(
+            "d",
+            r#"{"blocks":[{"id":"p","type":"paragraph","data":{"text":"P"}}]}"#,
+        );
+        let edit = ok_in(
+            &r,
+            "d",
+            r#"{"commands":[{"name":"text.replace","args":{"id":"p","with":"Changed"}}]}"#,
+        )
+        .await;
+        let lineage = &edit.revision[..edit.revision.rfind(':').expect("a revision")];
+        let page = EditOp::Insert {
+            id: Str::from("pg"),
+            block: blok_jsjson::parse_node(
+                br#"{"type":"page","data":{"pageId":"sub"}}"#,
+                blok_jsjson::Options::default(),
+            )
+            .expect("a block"),
+            after: Some(Str::from("p")),
+            parent: None,
+        };
+        let applied = r
+            .manager
+            .edit("d", vec![page], &new_guid(), &[0u8; 32], "u1", None)
+            .await
+            .expect("edit");
+        assert_eq!(applied.status, EditStatus::Applied, "{trash}: page");
+
+        ok_in(
+            &r,
+            "d",
+            &format!(
+                r#"{{"commands":[{{"name":"history.restore","args":{{"version":"{lineage}:0"}}}}]}}"#
+            ),
+        )
+        .await;
+
+        let exported = r.export("d").await;
+        let blocks = lookup(Some(&exported), "blocks").expect("blocks");
+        let by = blocks
+            .items
+            .iter()
+            .find(|block| string_of(lookup(Some(block), "id")).as_deref() == Some("pg"))
+            .map(|block| string_of(lookup(lookup(lookup(Some(block), "data"), "trashed"), "by")));
+        let want = if trash {
+            Some(Some("agent-cs".to_owned()))
+        } else {
+            None
+        };
+        assert_eq!(by, want, "trash {trash}");
+    }
 }

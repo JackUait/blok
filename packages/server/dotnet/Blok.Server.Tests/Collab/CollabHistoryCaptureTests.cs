@@ -528,10 +528,33 @@ public sealed partial class CollabHistoryCaptureTests
         Doc(Parent("db", "database", ["r"]), Parent("r", "database-row", ["c1"], "db"),
             Comment("c1", "r", "old", 1700000000000))));
 
+    // A history restore passes who restores and when; a page pointer the
+    // target lacks is then trashed in place, not removed.
+    var trash = new CollabRestoreTrash("u9", 1700000999000);
+    var trashedPage = """{ "id": "pg", "type": "page", "data": { "pageId": "sub", "trashed": { "at": 5, "by": "old", "formerParentId": null, "formerIndex": 0 } } }""";
+    var trashCases = new List<(string Name, YDoc Current, YDoc Target, CollabRestoreTrash? Trash)>
+    {
+      ("a later page pointer is removed without trash", Doc(P("a"), Page("pg", "sub"), P("b")), Doc(P("a"), P("b")), null),
+      ("trashes a later page pointer in place", Doc(P("a"), Page("pg", "sub"), P("b")), Doc(P("a"), P("b")), trash),
+      ("a later page pointer keeps its place under a kept parent",
+          Doc(Parent("t", "toggle", ["k1", "pg", "k2"]), P("k1", "t"), Page("pg", "sub", "t"), P("k2", "t")),
+          Doc(Parent("t", "toggle", ["k1", "k2"]), P("k1", "t"), P("k2", "t", "changed")),
+          trash),
+      ("a later page pointer whose parent is also later goes to the root",
+          Doc(P("a"), Parent("t", "toggle", ["pg"]), Page("pg", "sub", "t")), Doc(P("a")), trash),
+      ("an already trashed later page pointer keeps its stamps", Doc(P("a"), trashedPage), Doc(P("a")), trash),
+      ("a trashed page pointer the target holds comes back", Doc(P("a"), trashedPage), Doc(P("a"), Page("pg", "sub")), trash),
+      ("no actor writes a null by", Doc(Page("pg", "sub")), Doc(P("a")), new CollabRestoreTrash(null, 7)),
+      ("a malformed trashed is stamped as the page tool reads it",
+          Doc(P("a"), """{ "id": "pg", "type": "page", "data": { "pageId": "sub", "trashed": { "at": 5, "by": "old", "formerParentId": null, "formerIndex": 0.5 } } }"""),
+          Doc(P("a")),
+          trash),
+    };
+
     var written = new JsonArray();
     var converter = new CollabDocConverter(TimeProvider.System, RichTextRuntime.Reader);
 
-    foreach (var (name, current, target) in cases)
+    foreach (var (name, current, target, caseTrash) in cases.Select(c => (c.Name, c.Current, c.Target, (CollabRestoreTrash?)null)).Concat(trashCases))
     {
       var currentUpdate = current.EncodeStateAsUpdate();
       var targetUpdate = target.EncodeStateAsUpdate();
@@ -540,20 +563,28 @@ public sealed partial class CollabHistoryCaptureTests
           YDocConverter.DescribeStructure(current),
           await Export(converter, target),
           YDocConverter.ReadPageMaps(current),
-          YDocConverter.ReadPageMaps(target));
+          YDocConverter.ReadPageMaps(target),
+          caseTrash);
 
-      written.Add(new JsonObject
+      var entry = new JsonObject
       {
         ["name"] = name,
         ["current"] = Convert.ToBase64String(currentUpdate),
         ["target"] = Convert.ToBase64String(targetUpdate),
-        ["ops"] = new JsonArray([.. ops.Select(OpJson)]),
-      });
+      };
+
+      if (caseTrash is not null)
+      {
+        entry["trash"] = new JsonObject { ["by"] = caseTrash.By, ["at"] = caseTrash.At };
+      }
+
+      entry["ops"] = new JsonArray([.. ops.Select(OpJson)]);
+      written.Add(entry);
     }
 
     return new JsonObject
     {
-      ["$comment"] = "CollabRestorePlanner.Plan over the export, structure and page maps of current and target, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Updates are base64 Yjs v1 updates.",
+      ["$comment"] = "CollabRestorePlanner.Plan over the export, structure and page maps of current and target, as C# answers it. A case with trash passes it as the restorer and the time in ms. Captured by CollabHistoryCaptureTests; do not edit by hand. Updates are base64 Yjs v1 updates.",
       ["cases"] = written,
     };
   }
@@ -819,6 +850,18 @@ public sealed partial class CollabHistoryCaptureTests
       ["type"] = "paragraph",
       ["data"] = new JsonObject { ["text"] = text ?? id },
     };
+
+    if (parent is not null)
+    {
+      block["parent"] = parent;
+    }
+
+    return block.ToJsonString();
+  }
+
+  private static string Page(string id, string pageId, string? parent = null)
+  {
+    var block = new JsonObject { ["id"] = id, ["type"] = "page", ["data"] = new JsonObject { ["pageId"] = pageId } };
 
     if (parent is not null)
     {

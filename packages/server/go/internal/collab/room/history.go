@@ -417,6 +417,19 @@ func (m *Manager) Restore(ctx context.Context, docID, lineage string, sequence u
 
 var errRestoreGuarded = errors.New("collab: the restore needs confirmation")
 
+// restoreTrash is the trash input a restore plans with: nil unless the
+// rooms' RestoreTrashesPages is on.
+func (m *Manager) restoreTrash(actorID string) *RestoreTrash {
+	if !m.options.RestoreTrashesPages {
+		return nil
+	}
+	trash := &RestoreTrash{At: m.options.Now().UnixMilli()}
+	if actorID != "" {
+		trash.By = &actorID
+	}
+	return trash
+}
+
 // RestoreGuarded is Restore with the guards enforced when confirmed is not
 // nil: a guard whose kind it lacks refuses the restore, which then changes
 // nothing and answers the guards with a nil edit. The check runs in the
@@ -469,7 +482,8 @@ func (m *Manager) RestoreGuarded(ctx context.Context, docID, lineage string, seq
 					}
 				}
 			}
-			return PlanRestore(current, structure, target, convert.ReadPageMaps(doc), targetMaps), nil
+			return PlanRestoreTrashing(current, structure, target, convert.ReadPageMaps(doc), targetMaps,
+				m.restoreTrash(actorID)), nil
 		}, true, operationID, digest, actorID, expect, nil)
 	})
 	if errors.Is(err, errRestorePointMissing) {
@@ -503,7 +517,7 @@ type RestorePreview struct {
 // PreviewRestore is a restore's dry run. A refusal before the plan (a
 // stale If-Match, a purge, a room that cannot load) comes back as the edit.
 func (m *Manager) PreviewRestore(ctx context.Context, docID, lineage string, sequence uint64,
-	expect *Precondition) (HistoryStatus, *RestorePreview, *EditResult, error) {
+	expect *Precondition, actorID string) (HistoryStatus, *RestorePreview, *EditResult, error) {
 	p, err := m.readPoint(ctx, docID, lineage, sequence)
 	if err != nil {
 		return 0, nil, nil, err
@@ -523,7 +537,9 @@ func (m *Manager) PreviewRestore(ctx context.Context, docID, lineage string, seq
 			if err != nil {
 				return nil, err
 			}
-			ops := PlanRestore(current, convert.DescribeStructure(doc), target, convert.ReadPageMaps(doc), targetMaps)
+			// The restorer's id is part of the frame the real restore sends.
+			ops := PlanRestoreTrashing(current, convert.DescribeStructure(doc), target, convert.ReadPageMaps(doc), targetMaps,
+				m.restoreTrash(actorID))
 			scratch, frameBytes, err := applyToScratch(ctx, doc, m.converter, ops)
 			if err != nil {
 				return nil, err

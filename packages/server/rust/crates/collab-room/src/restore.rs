@@ -24,6 +24,41 @@ pub fn plan_restore(
     current_maps: &[PageMap],
     target_maps: &[PageMap],
 ) -> Vec<EditOp> {
+    plan_restore_trashing(
+        current_blocks,
+        current,
+        target_blocks,
+        current_maps,
+        target_maps,
+        None,
+    )
+}
+
+/// Who restores and when, in ms since the epoch. With it, a restore trashes
+/// a page pointer the target lacks instead of removing it.
+#[derive(Clone, Debug)]
+pub struct RestoreTrash {
+    pub by: Option<String>,
+    pub at: i64,
+}
+
+/// plan_restore with the C# planner's trash argument.
+pub fn plan_restore_trashing(
+    current_blocks: &[Value],
+    current: &DocStructure,
+    target_blocks: &[Value],
+    current_maps: &[PageMap],
+    target_maps: &[PageMap],
+    trash: Option<&RestoreTrash>,
+) -> Vec<EditOp> {
+    let with_trash;
+    let target_blocks = match trash {
+        Some(trash) => {
+            with_trash = with_trashed_pages(current_blocks, target_blocks, trash);
+            &with_trash[..]
+        }
+        None => target_blocks,
+    };
     let mut ops = plan_blocks(current_blocks, current, target_blocks);
     let mut patches = Vec::new();
     for name in PAGE_MAPS {
@@ -60,6 +95,142 @@ pub fn plan_restore(
         ops.push(EditOp::PatchMaps { patches });
     }
     ops
+}
+
+/// The target plus every live page pointer it lacks, with trashed set, so the
+/// sub-page is not cut off. A pointer keeps its place among its live
+/// siblings; one whose parent the target lacks goes to the end of the root.
+/// A pointer already trashed keeps its stamps.
+fn with_trashed_pages(
+    current_blocks: &[Value],
+    target_blocks: &[Value],
+    trash: &RestoreTrash,
+) -> Vec<Value> {
+    let mut target_ids: HashSet<Str> = target_blocks
+        .iter()
+        .filter_map(|item| match item {
+            Value::Object(block) => string_of(block, "id").cloned(),
+            _ => None,
+        })
+        .collect();
+    let live: Vec<&Object> = current_blocks
+        .iter()
+        .filter_map(|item| match item {
+            Value::Object(block) if string_of(block, "id").is_some() => Some(block),
+            _ => None,
+        })
+        .collect();
+    let mut slots: HashMap<Str, (Option<Str>, usize)> = HashMap::new();
+    let mut counts: HashMap<Option<Str>, usize> = HashMap::new();
+    for block in &live {
+        let parent = parent_of(block).cloned();
+        let count = counts.entry(parent.clone()).or_insert(0);
+        slots
+            .entry(target_id(block).clone())
+            .or_insert((parent, *count));
+        *count += 1;
+    }
+    let mut result: Vec<Value> = target_blocks.to_vec();
+    for block in &live {
+        let id = target_id(block);
+        if type_of(block).is_none_or(|kind| *kind != Str::from("page"))
+            || !target_ids.insert(id.clone())
+        {
+            continue;
+        }
+        let former = parent_of(block).cloned();
+        let index = slots[id].1;
+        let mut data = match data_of(block) {
+            Value::Object(data) => data.clone(),
+            _ => Object::new(),
+        };
+        if !is_trashed(data.get(&Str::from("trashed"))) {
+            let mut stamp = Object::new();
+            stamp.set(Str::from("at"), Value::Number(trash.at as f64));
+            stamp.set(
+                Str::from("by"),
+                trash
+                    .by
+                    .as_deref()
+                    .map_or(Value::Null, |by| Value::String(Str::from(by))),
+            );
+            stamp.set(
+                Str::from("formerParentId"),
+                former.clone().map_or(Value::Null, Value::String),
+            );
+            stamp.set(Str::from("formerIndex"), Value::Number(index as f64));
+            data.set(Str::from("trashed"), Value::Object(stamp));
+        }
+        let mut trashed = Object::new();
+        for member in block.members() {
+            let name = member.key.to_string();
+            if name == "parent" || name == "content" || name == "data" {
+                continue;
+            }
+            trashed.set(member.key.clone(), member.value.clone());
+        }
+        trashed.set(Str::from("data"), Value::Object(data));
+        match former {
+            Some(parent) if !target_ids.contains(&parent) => result.push(Value::Object(trashed)),
+            parent => {
+                if let Some(parent) = &parent {
+                    trashed.set(Str::from("parent"), Value::String(parent.clone()));
+                }
+                let at = slot_among_siblings(&result, parent.as_ref(), &slots, index);
+                result.insert(at, Value::Object(trashed));
+            }
+        }
+    }
+    result
+}
+
+/// The page tool's readTrashed check, so a value it would drop is stamped
+/// afresh here.
+fn is_trashed(value: Option<&Value>) -> bool {
+    let Some(Value::Object(trashed)) = value else {
+        return false;
+    };
+    let id_or_null = |key: &str| {
+        matches!(
+            trashed.get(&Str::from(key)),
+            Some(Value::Null | Value::String(_))
+        )
+    };
+    matches!(trashed.get(&Str::from("at")), Some(Value::Number(at)) if at.is_finite())
+        && id_or_null("by")
+        && id_or_null("formerParentId")
+        && matches!(
+            trashed.get(&Str::from("formerIndex")),
+            Some(Value::Number(index)) if *index >= 0.0 && index.fract() == 0.0
+        )
+}
+
+/// Where in the target list a block goes so that, among the target's
+/// children of parent, it follows every one that sat before it live.
+fn slot_among_siblings(
+    target: &[Value],
+    parent: Option<&Str>,
+    slots: &HashMap<Str, (Option<Str>, usize)>,
+    index: usize,
+) -> usize {
+    let (mut first, mut after_last) = (None, None);
+    for (position, item) in target.iter().enumerate() {
+        let Value::Object(block) = item else {
+            continue;
+        };
+        if parent_of(block) != parent {
+            continue;
+        }
+        first.get_or_insert(position);
+        if let Some(id) = string_of(block, "id")
+            && let Some((live_parent, live_index)) = slots.get(id)
+            && live_parent.as_ref() == parent
+            && *live_index < index
+        {
+            after_last = Some(position + 1);
+        }
+    }
+    after_last.or(first).unwrap_or(target.len())
 }
 
 /// The map's entries in ordinal key order; a later map of the same name wins.

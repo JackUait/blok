@@ -775,6 +775,92 @@ suite('collab restore guards, off by default', () => {
   });
 });
 
+const TRASH_DOC = 'doc-trash';
+
+/** Sequence 1 holds paragraph a; sequence 2 adds a sub-page pointer after it. */
+async function seedPagePointerDoc(base: string): Promise<string> {
+  const first = await send(base, 'POST', `/sync/${TRASH_DOC}/edit`, [[KEY, 't1']], JSON.stringify({
+    ops: [{ op: 'insert', id: 'a', block: { type: 'paragraph', data: { text: 'a' } } }],
+  }));
+
+  expect([first.status, first.body]).toEqual([204, '']);
+
+  const second = await send(base, 'POST', `/sync/${TRASH_DOC}/edit`, [[KEY, 't2']], JSON.stringify({
+    ops: [{ op: 'insert', id: 'pg', after: 'a', block: { type: 'page', data: { pageId: 'sub' } } }],
+  }));
+
+  expect([second.status, second.headers['blok-doc-sequence'], second.body]).toEqual([204, '2', '']);
+
+  return String(second.headers['blok-doc-lineage']);
+}
+
+const pointerAfterRestore = async (base: string, lineage: string): Promise<Record<string, unknown> | undefined> => {
+  const restore = await send(base, 'POST', `/sync/${TRASH_DOC}/history/${lineage}/1/restore`, [[KEY, 'tr1']]);
+
+  expect([restore.status, restore.headers['blok-doc-sequence']]).toEqual([204, '3']);
+
+  const state = JSON.parse((await send(base, 'GET', `/sync/${TRASH_DOC}/state`)).body) as {
+    blocks: { id: string; data: Record<string, unknown> }[];
+  };
+
+  return state.blocks.find((block) => block.id === 'pg')?.data;
+};
+
+suite('collab restore of a later page pointer, off by default', () => {
+  let host: Host | undefined;
+  let base = '';
+  let lineage = '';
+
+  beforeAll(async () => {
+    host = await startHost(true);
+    base = host.server.baseUrl;
+    lineage = await seedPagePointerDoc(base);
+  }, 60_000);
+
+  afterAll(async () => {
+    await stopHost(host);
+  });
+
+  it('removes the pointer, as before', async () => {
+    expect(await pointerAfterRestore(base, lineage)).toBeUndefined();
+  });
+});
+
+suite('collab restore of a later page pointer, trashing on', () => {
+  let host: Host | undefined;
+  let base = '';
+  let lineage = '';
+
+  beforeAll(async () => {
+    host = await startHost(true, undefined, ['--conformance-restore-trashes-pages']);
+    base = host.server.baseUrl;
+    lineage = await seedPagePointerDoc(base);
+  }, 60_000);
+
+  afterAll(async () => {
+    await stopHost(host);
+  });
+
+  it('previews the pointer as changed, not removed', async () => {
+    const answer = await send(base, 'POST', `/sync/${TRASH_DOC}/history/${lineage}/1/restore/preview`);
+    const preview = JSON.parse(answer.body) as { wouldUndo: { blocks: { id: string; kind: string }[] }; fits: boolean };
+
+    expect(answer.status).toBe(200);
+    expect(preview.wouldUndo.blocks.map(({ id, kind }) => ({ id, kind }))).toEqual([{ id: 'pg', kind: 'changed' }]);
+    expect(preview.fits).toBe(true);
+  });
+
+  it('keeps the pointer in place and sets trashed on it', async () => {
+    const data = await pointerAfterRestore(base, lineage);
+    const trashed = data?.trashed as Record<string, unknown> | undefined;
+
+    expect(data?.pageId).toBe('sub');
+    expect(trashed).toMatchObject({ formerParentId: null, formerIndex: 1 });
+    expect(Number.isInteger(trashed?.at)).toBe(true);
+    expect(Object.keys(trashed ?? {}).sort()).toEqual(['at', 'by', 'formerIndex', 'formerParentId']);
+  });
+});
+
 suite('collab restore guards, enforced', () => {
   let host: Host | undefined;
   let base = '';

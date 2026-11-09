@@ -578,6 +578,42 @@ func (d *drainAfterRestoreCheck) Invoke(ctx context.Context, op, input string, t
 	return output, err
 }
 
+// C# ARestoreHonoursTheHostsTrashOptionForALaterPagePointer.
+func TestARestoreHonoursTheHostsTrashOptionForALaterPagePointer(t *testing.T) {
+	for _, trash := range []bool{false, true} {
+		options := room.OptionsWith(func(o *room.Options) { o.RestoreTrashesPages = trash })
+		r := newTestRoomOnWith(t, newLocalJournal(t), nil, nil, options)
+		r.docs.hold("d", `{"blocks":[{"id":"p","type":"paragraph","data":{"text":"P"}}]}`)
+		edit := okIn(t, r, "d", `{"commands":[{"name":"text.replace","args":{"id":"p","with":"Changed"}}]}`)
+		lineage := edit.Revision[:strings.LastIndexByte(edit.Revision, ':')]
+		page, err := jsjson.ParseNode([]byte(`{"type":"page","data":{"pageId":"sub"}}`), jsjson.Options{MaxDepth: 64})
+		if err != nil {
+			t.Fatal(err)
+		}
+		after := "p"
+		ops := []convert.EditOp{convert.Insert{ID: "pg", Block: page, After: &after}}
+		digest, err := convert.CanonicalBodyDigest(ops)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result, err := r.manager.Edit(context.Background(), "d", ops, map[bool]string{false: "000000000000000000000000000000f0", true: "000000000000000000000000000000f1"}[trash], digest, "u1", nil); err != nil || result.Status != room.EditApplied {
+			t.Fatalf("edit %v %v", result.Status, err)
+		}
+
+		okIn(t, r, "d", `{"commands":[{"name":"history.restore","args":{"version":"`+lineage+`:0"}}]}`)
+
+		var by any = "missing"
+		for _, block := range lookup(r.export(t, "d"), "blocks").Items {
+			if id, _ := stringOf(lookup(block, "id")); id == "pg" {
+				by, _ = stringOf(lookup(lookup(lookup(block, "data"), "trashed"), "by"))
+			}
+		}
+		if want := map[bool]any{false: "missing", true: "agent-cs"}[trash]; by != want {
+			t.Fatalf("trash %v: by %v, want %v", trash, by, want)
+		}
+	}
+}
+
 // C# ARestoreTheRoomRefusesIsApplyFailedWithItsStatus (F26).
 func TestARestoreTheRoomRefusesIsApplyFailedWithItsStatus(t *testing.T) {
 	var hook *drainAfterRestoreCheck

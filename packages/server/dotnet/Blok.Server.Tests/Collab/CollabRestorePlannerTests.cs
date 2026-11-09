@@ -411,6 +411,139 @@ public sealed class CollabRestorePlannerTests
     Assert.Equal(state, doc.EncodeStateAsUpdate());
   }
 
+  private static readonly CollabRestoreTrash Trash = new("u9", 1700000999000);
+
+  [Fact]
+  public async Task WithoutTrashALaterPagePointerIsRemoved()
+  {
+    var (ops, after) = await TrashPlan(Doc(P("a"), Page("pg", "page-1"), P("b")), Target(P("a"), P("b")), null);
+
+    Assert.Equal("remove pg", Describe(Assert.Single(ops)));
+    Assert.Equal(["a", "b"], Outline(after));
+  }
+
+  [Fact]
+  public async Task TrashesALaterPagePointerInPlaceInsteadOfRemovingIt()
+  {
+    var (ops, after) = await TrashPlan(
+        Doc(P("a"), Page("pg", "page-1"), P("b")), Target(P("a"), P("b")), Trash);
+
+    var update = Assert.IsType<CollabEditOp.Update>(Assert.Single(ops));
+
+    Assert.Equal("pg", update.Id);
+    Assert.Equal(
+        """{"pageId":"page-1","trashed":{"at":1700000999000,"by":"u9","formerParentId":null,"formerIndex":1}}""",
+        update.Data.ToJsonString());
+    Assert.Equal(["a", "pg", "b"], Outline(after));
+    Assert.Equal("page-1", Block(after, "pg")["data"]?["pageId"]?.GetValue<string>());
+    Assert.Equal("u9", Block(after, "pg")["data"]?["trashed"]?["by"]?.GetValue<string>());
+  }
+
+  [Fact]
+  public async Task ALaterPagePointerKeepsItsPlaceAmongKeptSiblingsUnderAParent()
+  {
+    var (ops, after) = await TrashPlan(
+        Doc(Parent("t", "toggle", ["k1", "pg", "k2"]), P("k1", parent: "t"), Page("pg", "page-1", parent: "t"), P("k2", parent: "t")),
+        Target(Parent("t", "toggle", ["k1", "k2"]), P("k1", parent: "t"), P("k2", parent: "t", text: "changed")),
+        Trash);
+
+    Assert.Equal(["update k2", "update pg"], ops.Select(Describe).Order(StringComparer.Ordinal));
+    Assert.Equal(["t", "k1<t", "pg<t", "k2<t"], Outline(after));
+    Assert.Equal("t", Block(after, "pg")["data"]?["trashed"]?["formerParentId"]?.GetValue<string>());
+    Assert.Equal("1", Block(after, "pg")["data"]?["trashed"]?["formerIndex"]?.ToJsonString());
+  }
+
+  [Fact]
+  public async Task APagePointerWhoseParentIsAlsoLaterIsTrashedAtTheRoot()
+  {
+    var (_, after) = await TrashPlan(
+        Doc(P("a"), Parent("t", "toggle", ["pg"]), Page("pg", "page-1", parent: "t")),
+        Target(P("a")),
+        Trash);
+
+    Assert.Equal(["a", "pg"], Outline(after));
+    Assert.Equal(
+        """{"at":1700000999000,"by":"u9","formerParentId":"t","formerIndex":0}""",
+        Block(after, "pg")["data"]?["trashed"]?.ToJsonString());
+  }
+
+  [Fact]
+  public async Task AnAlreadyTrashedLaterPagePointerKeepsItsStamps()
+  {
+    var trashed = """{ "id": "pg", "type": "page", "data": { "pageId": "page-1", "trashed": { "at": 5, "by": "old", "formerParentId": null, "formerIndex": 0 } } }""";
+    var (ops, after) = await TrashPlan(Doc(P("a"), trashed), Target(P("a")), Trash);
+
+    Assert.Empty(ops);
+    Assert.Equal("old", Block(after, "pg")["data"]?["trashed"]?["by"]?.GetValue<string>());
+  }
+
+  [Theory]
+  [InlineData("""{ "at": "soon", "by": "old", "formerParentId": null, "formerIndex": 0 }""")]
+  [InlineData("""{ "at": 5, "formerParentId": null, "formerIndex": 0 }""")]
+  [InlineData("""{ "at": 5, "by": "old", "formerParentId": 3, "formerIndex": 0 }""")]
+  [InlineData("""{ "at": 5, "by": "old", "formerParentId": null, "formerIndex": -1 }""")]
+  [InlineData("""{ "at": 5, "by": "old", "formerParentId": null, "formerIndex": 0.5 }""")]
+  public async Task AMalformedTrashedCountsAsNotTrashedAndIsStamped(string malformed)
+  {
+    var page = $$"""{ "id": "pg", "type": "page", "data": { "pageId": "page-1", "trashed": {{malformed}} } }""";
+    var (_, after) = await TrashPlan(Doc(P("a"), page), Target(P("a")), Trash);
+
+    Assert.Equal("u9", Block(after, "pg")["data"]?["trashed"]?["by"]?.GetValue<string>());
+  }
+
+  [Fact]
+  public async Task APagePointerInTheTargetIsRestoredAsTheTargetHasIt()
+  {
+    var trashed = """{ "id": "pg", "type": "page", "data": { "pageId": "page-1", "trashed": { "at": 5, "by": "old", "formerParentId": null, "formerIndex": 0 } } }""";
+    var (ops, after) = await TrashPlan(Doc(P("a"), trashed), Target(P("a"), Page("pg", "page-1")), Trash);
+
+    Assert.Equal("update pg", Describe(Assert.Single(ops)));
+    Assert.Null(Block(after, "pg")["data"]?["trashed"]);
+  }
+
+  [Fact]
+  public async Task NoActorWritesANullBy()
+  {
+    var (ops, _) = await TrashPlan(Doc(Page("pg", "page-1")), Target(), new CollabRestoreTrash(null, 7));
+
+    Assert.Equal(
+        """{"pageId":"page-1","trashed":{"at":7,"by":null,"formerParentId":null,"formerIndex":0}}""",
+        Assert.IsType<CollabEditOp.Update>(Assert.Single(ops)).Data.ToJsonString());
+  }
+
+  private static async Task<(IReadOnlyList<CollabEditOp> Ops, JsonArray After)> TrashPlan(
+      YDoc doc, JsonArray target, CollabRestoreTrash? trash)
+  {
+    var converter = Converter();
+    var ops = CollabRestorePlanner.Plan(
+        await Export(converter, doc), YDocConverter.DescribeStructure(doc), target,
+        YDocConverter.ReadPageMaps(doc), YDocConverter.ReadPageMaps(doc), trash);
+
+    await converter.ApplyOpsAsync(doc, ops);
+
+    return (ops, await Export(converter, doc));
+  }
+
+  private static string Describe(CollabEditOp op) => op switch
+  {
+    CollabEditOp.Update update => $"update {update.Id}",
+    CollabEditOp.Remove remove => $"remove {remove.Id}",
+    CollabEditOp.Insert insert => $"insert {insert.Id}",
+    _ => op.GetType().Name,
+  };
+
+  private static string Page(string id, string pageId, string? parent = null)
+  {
+    var block = new JsonObject { ["id"] = id, ["type"] = "page", ["data"] = new JsonObject { ["pageId"] = pageId } };
+
+    if (parent is not null)
+    {
+      block["parent"] = parent;
+    }
+
+    return block.ToJsonString();
+  }
+
   private static async Task<IReadOnlyList<CollabEditOp>> PlanWithMaps(
       CollabDocConverter converter, YDoc doc, YDoc target)
   {

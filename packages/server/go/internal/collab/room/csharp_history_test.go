@@ -1232,6 +1232,43 @@ func histTimes(at ...*time.Time) []string {
 	return out
 }
 
+// A host duplicates a page by seeding a new doc id with the copy's content.
+// The copy gets its own lineage holding only its baseline.
+func TestADuplicatedPageStartsAFreshHistory(t *testing.T) {
+	b := histNewBench(t)
+	manager := b.manager(t, DefaultOptions())
+	histBlocks(t, manager)
+	histEditOps(t, manager, []convert.EditOp{histUpdate(t, "a", "1")}, "u1")
+	histEditOps(t, manager, []convert.EditOp{histUpdate(t, "a", "2")}, "u2")
+	original := b.lineage(t)
+	copied, err := jsjson.Stringify(histBlocks(t, manager))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const copyDoc = "doc-copy"
+	b.endpoint.HoldsDocument(t, copyDoc, `{"blocks":`+copied+`}`, nil)
+
+	state, err := manager.State(context.Background(), copyDoc)
+	if err != nil || state.Status != StateReady {
+		t.Fatalf("state = %v, %v", state.Status, err)
+	}
+	result, err := manager.History(context.Background(), copyDoc, 0)
+
+	if err != nil || result.Status != HistoryReady {
+		t.Fatalf("history = %v, %v", result.Status, err)
+	}
+	if len(result.Lineages) != 1 || result.Lineages[0].Lineage == original || !result.Lineages[0].Current {
+		t.Fatalf("lineages = %+v, original %s", result.Lineages, original)
+	}
+	if len(result.Versions) != 1 || result.Versions[0].Sequence != 0 || result.Versions[0].Lineage != result.Lineages[0].Lineage {
+		t.Fatalf("versions = %+v", result.Versions)
+	}
+	blocks, _ := histParse(t, state.JSON).Get(jsjson.FromString("blocks"))
+	if got, want := histCanonical(t, histWithoutStamps(blocks.([]any))), histCanonical(t, histWithoutStamps(histBlocks(t, manager))); got != want {
+		t.Fatalf("copy = %s, want %s", got, want)
+	}
+}
+
 func TestTheListGroupsEveryLineageNewestFirst(t *testing.T) {
 	b := histNewBench(t)
 	manager := b.manager(t, DefaultOptions())
@@ -1491,6 +1528,70 @@ func TestARestoreMakesTheLiveDocumentEqualThePointAsOneJournalledEdit(t *testing
 	digest := sha256.Sum256([]byte("restore\n" + lineage + "\n1"))
 	if !bytes.Equal(record.Digest, digest[:]) {
 		t.Fatalf("digest = %x", record.Digest)
+	}
+}
+
+// C# APreviewWithTrashCountsTheRestorerInItsFrame.
+func TestAPreviewWithTrashCountsTheRestorerInItsFrame(t *testing.T) {
+	b := histNewBench(t)
+	manager := b.manager(t, OptionsWith(func(o *Options) { o.RestoreTrashesPages = true }))
+	histBlocks(t, manager)
+	after := "a"
+	histEdit(t, manager, convert.Insert{ID: "pg", Block: node(t, `{"type":"page","data":{"pageId":"sub"}}`), After: &after})
+	frame := func(actor string) int64 {
+		_, preview, _, err := manager.PreviewRestore(context.Background(), histDoc, b.lineage(t), 0, nil, actor)
+		if err != nil || preview == nil {
+			t.Fatalf("preview %v %v", preview, err)
+		}
+		return preview.FrameBytes
+	}
+
+	if short, long := frame("u"), frame(strings.Repeat("u", 200)); long <= short {
+		t.Fatalf("frame %d vs %d", short, long)
+	}
+}
+
+func TestARestoreRemovesALaterPagePointerByDefault(t *testing.T) {
+	b := histNewBench(t)
+	manager := b.manager(t, DefaultOptions())
+	histBlocks(t, manager)
+	after := "a"
+	histEdit(t, manager, convert.Insert{ID: "pg", Block: node(t, `{"type":"page","data":{"pageId":"sub"}}`), After: &after})
+
+	_, result := histRestoreAs(t, manager, b.lineage(t), 0, histOpRestore, "u9", nil)
+
+	if result == nil || result.Status != EditApplied {
+		t.Fatalf("restore = %+v", result)
+	}
+	for _, item := range histBlocks(t, manager) {
+		if histString(item.(*jsjson.Object), "id") == "pg" {
+			t.Fatal("the pointer is still there")
+		}
+	}
+}
+
+func TestARestoreTrashesAPagePointerAddedAfterThePoint(t *testing.T) {
+	b := histNewBench(t)
+	manager := b.manager(t, OptionsWith(func(o *Options) { o.RestoreTrashesPages = true }))
+	histBlocks(t, manager)
+	after := "a"
+	histEdit(t, manager, convert.Insert{ID: "pg", Block: node(t, `{"type":"page","data":{"pageId":"sub"}}`), After: &after})
+
+	_, result := histRestoreAs(t, manager, b.lineage(t), 0, histOpRestore, "u9", nil)
+
+	if result == nil || result.Status != EditApplied {
+		t.Fatalf("restore = %+v", result)
+	}
+	var trashed any
+	for _, item := range histBlocks(t, manager) {
+		if block := item.(*jsjson.Object); histString(block, "id") == "pg" {
+			data, _ := block.Get(jsjson.FromString("data"))
+			trashed, _ = data.(*jsjson.Object).Get(jsjson.FromString("trashed"))
+		}
+	}
+	want := `{"at":` + strconv.FormatInt(histNow.UnixMilli(), 10) + `,"by":"u9","formerParentId":null,"formerIndex":1}`
+	if got := histCanonical(t, trashed); got != histCanonical(t, histParse(t, []byte(want))) {
+		t.Fatalf("trashed = %s, want %s", got, want)
 	}
 }
 

@@ -349,7 +349,13 @@ internal static partial class HistoryEndpoint
       return;
     }
 
-    var result = await admitted.Rooms.PreviewRestoreAsync(admitted.Doc, lineage, sequence, expect, context.RequestAborted);
+    var result = await admitted.Rooms.PreviewRestoreAsync(
+        admitted.Doc,
+        lineage,
+        sequence,
+        expect,
+        SyncHandshake.DeriveActor(admitted.TicketUser, admitted.User),
+        context.RequestAborted);
 
     if (result.History != CollabHistoryStatus.Ready)
     {

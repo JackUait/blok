@@ -127,6 +127,13 @@ func newLocalJournal(t *testing.T) room.LocalJournal {
 // newTestRoomOn is rooms over the given journal (nil: none).
 func newTestRoomOn(t *testing.T, operations room.OperationStore, wrap func(invoker) invoker, wrapConverter func(*convert.DocConverter) room.Converter) *testRoom {
 	t.Helper()
+	return newTestRoomOnWith(t, operations, wrap, wrapConverter, room.Options{})
+}
+
+// newTestRoomOnWith is newTestRoomOn with the rooms' own options (zero: C#'s defaults).
+func newTestRoomOnWith(t *testing.T, operations room.OperationStore, wrap func(invoker) invoker,
+	wrapConverter func(*convert.DocConverter) room.Converter, roomOptions room.Options) *testRoom {
+	t.Helper()
 	runtime := sharedExecutor(t).runtime
 	sets := &memorySets{sets: map[string]*workingset.Set{}}
 	docs := &heldDocs{docs: map[string]string{}}
@@ -139,6 +146,7 @@ func newTestRoomOn(t *testing.T, operations room.OperationStore, wrap func(invok
 		Endpoint:   docs,
 		Converter:  converter,
 		Operations: operations,
+		Room:       roomOptions,
 	})
 	t.Cleanup(func() { _ = manager.Drain(context.Background()) })
 	if wrap != nil {

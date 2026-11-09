@@ -2,6 +2,12 @@ namespace Blok.Server.Collab;
 
 internal sealed class CollabRoomOptions
 {
+  /// <summary>
+  /// A history restore, by any path, sets <c>data.trashed</c> on a page
+  /// pointer the restored point lacks instead of removing it.
+  /// </summary>
+  public bool RestoreTrashesPages { get; init; }
+
   /// <summary>Quiet time after the last applied update before an export.</summary>
   public TimeSpan ExportDebounce { get; init; } = TimeSpan.FromSeconds(2);
 

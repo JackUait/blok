@@ -110,6 +110,7 @@ func (s *Server) buildRoomManager() (*room.Manager, error) {
 
 	roomOptions := room.OptionsWith(func(ro *room.Options) {
 		ro.AnnouncedMaxMessageBytes = int64(o.CollabMaxMessageBytes)
+		ro.RestoreTrashesPages = o.CollabRestoreTrashesPages
 		ro.Now = func() time.Time { return s.clock() }
 		if o.Timers != nil {
 			ro.Timers = o.Timers

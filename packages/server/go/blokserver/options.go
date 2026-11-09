@@ -109,6 +109,12 @@ type Options struct {
 	// the default, restores without asking.
 	CollabEnforceRestoreGuards bool
 
+	// CollabRestoreTrashesPages is CollabRestoreTrashesPages: a history
+	// restore sets data.trashed on a page block added after the point instead
+	// of removing it. False, the default, removes it. A host that turns it on
+	// must show such a block as in Trash: the editor does not hide it.
+	CollabRestoreTrashesPages bool
+
 	// Clock is the TimeProvider override: tickets, the rate limit window, S3
 	// signing and the rooms' timestamps (activity, cooldowns, export
 	// deadlines) read it. Nil is the system clock.

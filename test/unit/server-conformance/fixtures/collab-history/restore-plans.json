@@ -1,5 +1,5 @@
 {
-  "$comment": "CollabRestorePlanner.Plan over the export, structure and page maps of current and target, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Updates are base64 Yjs v1 updates.",
+  "$comment": "CollabRestorePlanner.Plan over the export, structure and page maps of current and target, as C# answers it. A case with trash passes it as the restorer and the time in ms. Captured by CollabHistoryCaptureTests; do not edit by hand. Updates are base64 Yjs v1 updates.",
   "cases": [
     {
       "name": "swaps roots",
@@ -542,6 +542,201 @@
             "text": "old",
             "createdAt": 1700000000000,
             "authorId": "u1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a later page pointer is removed without trash",
+      "current": "ARgHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MCcGcBKAAHCAJpZAF3AnBnKAAHCAR0eXBlAXcEcGFnZScABwgEZGF0YQEoAAcLBnBhZ2VJZAF3A3N1YicABwgFdHVuZXMBJwAHCApjb250ZW50SWRzACcBBmJsb2NrcwFiASgABw8CaWQBdwFiKAAHDwR0eXBlAXcJcGFyYWdyYXBoJwAHDwRkYXRhAScABxIEdGV4dAYEAAcTAWInAAcPBXR1bmVzAScABw8KY29udGVudElkcwAIAQRyb290A3cBYXcCcGd3AWIA",
+      "target": "AREHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBYgEoAAcIAmlkAXcBYigABwgEdHlwZQF3CXBhcmFncmFwaCcABwgEZGF0YQEnAAcLBHRleHQGBAAHDAFiJwAHCAV0dW5lcwEnAAcICmNvbnRlbnRJZHMACAEEcm9vdAJ3AWF3AWIA",
+      "ops": [
+        {
+          "op": "remove",
+          "id": "pg"
+        }
+      ]
+    },
+    {
+      "name": "trashes a later page pointer in place",
+      "current": "ARgHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MCcGcBKAAHCAJpZAF3AnBnKAAHCAR0eXBlAXcEcGFnZScABwgEZGF0YQEoAAcLBnBhZ2VJZAF3A3N1YicABwgFdHVuZXMBJwAHCApjb250ZW50SWRzACcBBmJsb2NrcwFiASgABw8CaWQBdwFiKAAHDwR0eXBlAXcJcGFyYWdyYXBoJwAHDwRkYXRhAScABxIEdGV4dAYEAAcTAWInAAcPBXR1bmVzAScABw8KY29udGVudElkcwAIAQRyb290A3cBYXcCcGd3AWIA",
+      "target": "AREHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBYgEoAAcIAmlkAXcBYigABwgEdHlwZQF3CXBhcmFncmFwaCcABwgEZGF0YQEnAAcLBHRleHQGBAAHDAFiJwAHCAV0dW5lcwEnAAcICmNvbnRlbnRJZHMACAEEcm9vdAJ3AWF3AWIA",
+      "trash": {
+        "by": "u9",
+        "at": 1700000999000
+      },
+      "ops": [
+        {
+          "op": "update",
+          "id": "pg",
+          "data": {
+            "pageId": "sub",
+            "trashed": {
+              "at": 1700000999000,
+              "by": "u9",
+              "formerParentId": null,
+              "formerIndex": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "a later page pointer keeps its place under a kept parent",
+      "current": "ASIHACcBBmJsb2NrcwF0ASgABwACaWQBdwF0KAAHAAR0eXBlAXcGdG9nZ2xlJwAHAARkYXRhAScABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgABwUDdwJrMXcCcGd3AmsyJwEGYmxvY2tzAmsxASgABwkCaWQBdwJrMSgABwkEdHlwZQF3CXBhcmFncmFwaCcABwkEZGF0YQEnAAcMBHRleHQGBAAHDQJrMScABwkFdHVuZXMBKAAHCQhwYXJlbnRJZAF3AXQnAAcJCmNvbnRlbnRJZHMAJwEGYmxvY2tzAnBnASgABxMCaWQBdwJwZygABxMEdHlwZQF3BHBhZ2UnAAcTBGRhdGEBKAAHFgZwYWdlSWQBdwNzdWInAAcTBXR1bmVzASgABxMIcGFyZW50SWQBdwF0JwAHEwpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAcbAmlkAXcCazIoAAcbBHR5cGUBdwlwYXJhZ3JhcGgnAAcbBGRhdGEBJwAHHgR0ZXh0BgQABx8CazInAAcbBXR1bmVzASgABxsIcGFyZW50SWQBdwF0JwAHGwpjb250ZW50SWRzAAgBBHJvb3QBdwF0AA==",
+      "target": "ARoHACcBBmJsb2NrcwF0ASgABwACaWQBdwF0KAAHAAR0eXBlAXcGdG9nZ2xlJwAHAARkYXRhAScABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgABwUCdwJrMXcCazInAQZibG9ja3MCazEBKAAHCAJpZAF3AmsxKAAHCAR0eXBlAXcJcGFyYWdyYXBoJwAHCARkYXRhAScABwsEdGV4dAYEAAcMAmsxJwAHCAV0dW5lcwEoAAcICHBhcmVudElkAXcBdCcABwgKY29udGVudElkcwAnAQZibG9ja3MCazIBKAAHEgJpZAF3AmsyKAAHEgR0eXBlAXcJcGFyYWdyYXBoJwAHEgRkYXRhAScABxUEdGV4dAYEAAcWB2NoYW5nZWQnAAcSBXR1bmVzASgABxIIcGFyZW50SWQBdwF0JwAHEgpjb250ZW50SWRzAAgBBHJvb3QBdwF0AA==",
+      "trash": {
+        "by": "u9",
+        "at": 1700000999000
+      },
+      "ops": [
+        {
+          "op": "update",
+          "id": "pg",
+          "data": {
+            "pageId": "sub",
+            "trashed": {
+              "at": 1700000999000,
+              "by": "u9",
+              "formerParentId": "t",
+              "formerIndex": 1
+            }
+          }
+        },
+        {
+          "op": "update",
+          "id": "k2",
+          "data": {
+            "text": [
+              {
+                "text": "changed"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "a later page pointer whose parent is also later goes to the root",
+      "current": "ARgHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBdAEoAAcIAmlkAXcBdCgABwgEdHlwZQF3BnRvZ2dsZScABwgEZGF0YQEnAAcIBXR1bmVzAScABwgKY29udGVudElkcwAIAAcNAXcCcGcnAQZibG9ja3MCcGcBKAAHDwJpZAF3AnBnKAAHDwR0eXBlAXcEcGFnZScABw8EZGF0YQEoAAcSBnBhZ2VJZAF3A3N1YicABw8FdHVuZXMBKAAHDwhwYXJlbnRJZAF3AXQnAAcPCmNvbnRlbnRJZHMACAEEcm9vdAJ3AWF3AXQA",
+      "target": "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBYQA=",
+      "trash": {
+        "by": "u9",
+        "at": 1700000999000
+      },
+      "ops": [
+        {
+          "op": "remove",
+          "id": "t"
+        },
+        {
+          "op": "insert",
+          "id": "pg",
+          "after": "a",
+          "parent": null,
+          "block": {
+            "type": "page",
+            "data": {
+              "pageId": "sub",
+              "trashed": {
+                "at": 1700000999000,
+                "by": "u9",
+                "formerParentId": "t",
+                "formerIndex": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "an already trashed later page pointer keeps its stamps",
+      "current": "ARUHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MCcGcBKAAHCAJpZAF3AnBnKAAHCAR0eXBlAXcEcGFnZScABwgEZGF0YQEoAAcLBnBhZ2VJZAF3A3N1YicABwsHdHJhc2hlZAEoAAcNAmF0AX0FKAAHDQJieQF3A29sZCgABw0OZm9ybWVyUGFyZW50SWQBfigABw0LZm9ybWVySW5kZXgBfQAnAAcIBXR1bmVzAScABwgKY29udGVudElkcwAIAQRyb290AncBYXcCcGcA",
+      "target": "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBYQA=",
+      "trash": {
+        "by": "u9",
+        "at": 1700000999000
+      },
+      "ops": []
+    },
+    {
+      "name": "a trashed page pointer the target holds comes back",
+      "current": "ARUHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MCcGcBKAAHCAJpZAF3AnBnKAAHCAR0eXBlAXcEcGFnZScABwgEZGF0YQEoAAcLBnBhZ2VJZAF3A3N1YicABwsHdHJhc2hlZAEoAAcNAmF0AX0FKAAHDQJieQF3A29sZCgABw0OZm9ybWVyUGFyZW50SWQBfigABw0LZm9ybWVySW5kZXgBfQAnAAcIBXR1bmVzAScABwgKY29udGVudElkcwAIAQRyb290AncBYXcCcGcA",
+      "target": "ARAHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MCcGcBKAAHCAJpZAF3AnBnKAAHCAR0eXBlAXcEcGFnZScABwgEZGF0YQEoAAcLBnBhZ2VJZAF3A3N1YicABwgFdHVuZXMBJwAHCApjb250ZW50SWRzAAgBBHJvb3QCdwFhdwJwZwA=",
+      "trash": {
+        "by": "u9",
+        "at": 1700000999000
+      },
+      "ops": [
+        {
+          "op": "update",
+          "id": "pg",
+          "data": {
+            "pageId": "sub"
+          }
+        }
+      ]
+    },
+    {
+      "name": "no actor writes a null by",
+      "current": "AQgHACcBBmJsb2NrcwJwZwEoAAcAAmlkAXcCcGcoAAcABHR5cGUBdwRwYWdlJwAHAARkYXRhASgABwMGcGFnZUlkAXcDc3ViJwAHAAV0dW5lcwEnAAcACmNvbnRlbnRJZHMACAEEcm9vdAF3AnBnAA==",
+      "target": "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBYQA=",
+      "trash": {
+        "by": null,
+        "at": 7
+      },
+      "ops": [
+        {
+          "op": "update",
+          "id": "pg",
+          "data": {
+            "pageId": "sub",
+            "trashed": {
+              "at": 7,
+              "by": null,
+              "formerParentId": null,
+              "formerIndex": 0
+            }
+          }
+        },
+        {
+          "op": "insert",
+          "id": "a",
+          "after": "pg",
+          "parent": null,
+          "block": {
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "a"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "a malformed trashed is stamped as the page tool reads it",
+      "current": "ARUHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MCcGcBKAAHCAJpZAF3AnBnKAAHCAR0eXBlAXcEcGFnZScABwgEZGF0YQEoAAcLBnBhZ2VJZAF3A3N1YicABwsHdHJhc2hlZAEoAAcNAmF0AX0FKAAHDQJieQF3A29sZCgABw0OZm9ybWVyUGFyZW50SWQBfigABw0LZm9ybWVySW5kZXgBfD8AAAAnAAcIBXR1bmVzAScABwgKY29udGVudElkcwAIAQRyb290AncBYXcCcGcA",
+      "target": "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBYQA=",
+      "trash": {
+        "by": "u9",
+        "at": 1700000999000
+      },
+      "ops": [
+        {
+          "op": "update",
+          "id": "pg",
+          "data": {
+            "pageId": "sub",
+            "trashed": {
+              "at": 1700000999000,
+              "by": "u9",
+              "formerParentId": null,
+              "formerIndex": 1
+            }
           }
         }
       ]

@@ -875,7 +875,10 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
                     structure,
                     target,
                     YDocConverter.ReadPageMaps(doc),
-                    targetMaps);
+                    targetMaps,
+                    options.RestoreTrashesPages
+                      ? new CollabRestoreTrash(string.IsNullOrEmpty(actorId) ? null : actorId, timeProvider.GetUtcNow().ToUnixTimeMilliseconds())
+                      : null);
               },
               operationId,
               digest,
@@ -911,6 +914,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
       string lineage,
       ulong sequence,
       CollabEditPrecondition? expect,
+      string? actorId = null,
       CancellationToken cancellationToken = default)
   {
     var point = await ReadPointAsync(docId, lineage, sequence, cancellationToken);
@@ -938,7 +942,11 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
                   YDocConverter.DescribeStructure(doc),
                   target,
                   YDocConverter.ReadPageMaps(doc),
-                  targetMaps);
+                  targetMaps,
+                  // The restorer's id is part of the frame the real restore sends.
+                  options.RestoreTrashesPages
+                    ? new CollabRestoreTrash(string.IsNullOrEmpty(actorId) ? null : actorId, timeProvider.GetUtcNow().ToUnixTimeMilliseconds())
+                    : null);
               var (scratch, bytes) = await CollabRoom.ApplyToScratchAsync(doc, converter, ops, token);
               var after = (await converter.ExportAsync(scratch, token))["blocks"] as JsonArray ?? [];
 

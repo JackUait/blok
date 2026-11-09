@@ -33,6 +33,9 @@ pub struct Options {
     pub retry_backoff_cap: Duration,
     /// Bounds each store call made with the lane held.
     pub commit_timeout: Duration,
+    /// A history restore, by any path, sets data.trashed on a page pointer
+    /// the point lacks instead of removing it.
+    pub restore_trashes_pages: bool,
     /// SystemTime::now when None.
     pub now: Option<Clock>,
     /// The export, eviction and persist timers and every commit_timeout
@@ -66,6 +69,7 @@ impl Default for Options {
             retry_backoff: Duration::from_secs(2),
             retry_backoff_cap: Duration::from_secs(60),
             commit_timeout: Duration::from_secs(10),
+            restore_trashes_pages: false,
             now: None,
             timers: None,
         }

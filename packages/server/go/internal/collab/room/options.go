@@ -29,6 +29,9 @@ type Options struct {
 	CommitTimeout time.Duration
 	// Now is the room's clock; time.Now when nil.
 	Now func() time.Time
+	// RestoreTrashesPages: a history restore, by any path, sets data.trashed
+	// on a page pointer the point lacks instead of removing it.
+	RestoreTrashesPages bool
 	// Timers is TimeProvider.CreateTimer: the export, eviction and persist
 	// timers and every CommitTimeout bound run on it. Wall time when nil.
 	Timers Timers

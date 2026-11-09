@@ -17,7 +17,7 @@ use crate::manager::Manager;
 use crate::ops::{
     EditResult, EditStatus, PlanOps, Precondition, Receipt, apply_to_scratch, frame_limit,
 };
-use crate::restore::plan_restore;
+use crate::restore::{RestoreTrash, plan_restore_trashing};
 use crate::restore_guards::{RestoreGuard, restore_guards};
 use crate::timeline::{
     LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions,
@@ -518,14 +518,16 @@ impl Manager {
             .doc
             .filter(|_| point.status != HistoryStatus::NotFound);
         let converter = self.0.converter.clone();
+        let trash = Arc::new(self.restore_trash(actor_id));
         let refusal = refused.clone();
         let plan: PlanOps = Arc::new(move |doc: Doc| {
-            let (target, target_doc, converter, confirmed, refusal) = (
+            let (target, target_doc, converter, confirmed, refusal, trash) = (
                 target.clone(),
                 target_doc.clone(),
                 converter.clone(),
                 confirmed.clone(),
                 refusal.clone(),
+                trash.clone(),
             );
             Box::pin(async move {
                 let Some(target_doc) = target_doc else {
@@ -543,12 +545,13 @@ impl Manager {
                         return Err(Error::Other(Box::new(RestoreGuarded)));
                     }
                 }
-                Ok(plan_restore(
+                Ok(plan_restore_trashing(
                     &current,
                     &structure,
                     &target,
                     &read_page_maps(&doc)?,
                     &read_page_maps(&target_doc)?,
+                    trash.as_ref().as_ref(),
                 ))
             })
         });
@@ -601,6 +604,24 @@ pub struct RestorePreview {
 }
 
 impl Manager {
+    /// The trash input a restore plans with: None unless the rooms'
+    /// restore_trashes_pages is on.
+    fn restore_trash(&self, actor_id: &str) -> Option<RestoreTrash> {
+        if !self.0.options.restore_trashes_pages {
+            return None;
+        }
+        let at = self
+            .0
+            .options
+            .now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |since| since.as_millis() as i64);
+        Some(RestoreTrash {
+            by: (!actor_id.is_empty()).then(|| actor_id.to_owned()),
+            at,
+        })
+    }
+
     /// A restore's dry run. A refusal before the plan (a stale If-Match, a
     /// purge, a room that cannot load) comes back as the edit.
     pub async fn preview_restore(
@@ -609,6 +630,7 @@ impl Manager {
         lineage: &str,
         sequence: u64,
         expect: Option<Precondition>,
+        actor_id: &str,
     ) -> Result<(HistoryStatus, Option<RestorePreview>, Option<EditResult>), Error> {
         let point = self.read_point(doc_id, lineage, sequence).await?;
         let (HistoryStatus::Ready, Some(target_doc)) = (point.status, point.doc.clone()) else {
@@ -623,21 +645,25 @@ impl Manager {
         let converter = self.0.converter.clone();
         let preview: Arc<Mutex<RestorePreview>> = Arc::default();
         let filled = preview.clone();
+        // The restorer's id is part of the frame the real restore sends.
+        let trash = Arc::new(self.restore_trash(actor_id));
         let plan: PlanOps = Arc::new(move |doc: Doc| {
-            let (target, target_maps, converter, filled) = (
+            let (target, target_maps, converter, filled, trash) = (
                 target.clone(),
                 target_maps.clone(),
                 converter.clone(),
                 filled.clone(),
+                trash.clone(),
             );
             Box::pin(async move {
                 let current = blocks_of(Some(&converter.export(&doc).await?));
-                let ops = plan_restore(
+                let ops = plan_restore_trashing(
                     &current,
                     &describe_structure(&doc)?,
                     &target,
                     &read_page_maps(&doc)?,
                     &target_maps,
+                    trash.as_ref().as_ref(),
                 );
                 let (scratch, frame_bytes) =
                     apply_to_scratch(&doc, converter.as_ref(), &ops).await?;

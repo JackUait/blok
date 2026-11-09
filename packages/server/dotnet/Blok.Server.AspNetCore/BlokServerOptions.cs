@@ -220,6 +220,14 @@ public sealed class BlokServerOptions
   public bool CollabEnforceRestoreGuards { get; set; }
 
   /// <summary>
+  /// A history restore sets <c>data.trashed</c> on a <c>page</c> block added
+  /// after the restored point, instead of removing it, so the sub-page stays
+  /// reachable. Off, the default, removes the block. A host that turns it on
+  /// must show such a block as in Trash: the editor does not hide it.
+  /// </summary>
+  public bool CollabRestoreTrashesPages { get; set; }
+
+  /// <summary>
   /// WebSocket keep-alive ping interval; zero turns pings off. A socket that
   /// does not answer within twice this is aborted, which is what frees a dead
   /// connection's slot in the per-user cap.

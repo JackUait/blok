@@ -101,6 +101,12 @@ pub struct Options {
     /// default, restores without asking.
     pub collab_enforce_restore_guards: bool,
 
+    /// CollabRestoreTrashesPages: a history restore sets data.trashed on a
+    /// page block added after the point instead of removing it. False, the
+    /// default, removes it. A host that turns it on must show such a block
+    /// as in Trash: the editor does not hide it.
+    pub collab_restore_trashes_pages: bool,
+
     /// The TimeProvider override: tickets, the rate limit window, S3 signing
     /// and the rooms' timestamps (activity, cooldowns, export deadlines) read
     /// it. None is the system clock.
@@ -157,6 +163,7 @@ impl Default for Options {
             collab_operation_store: None,
             collab_activity_observer: None,
             collab_enforce_restore_guards: false,
+            collab_restore_trashes_pages: false,
             clock: None,
             timers: None,
             logger: None,
@@ -238,6 +245,10 @@ impl fmt::Debug for Options {
             .field(
                 "collab_enforce_restore_guards",
                 &self.collab_enforce_restore_guards,
+            )
+            .field(
+                "collab_restore_trashes_pages",
+                &self.collab_restore_trashes_pages,
             )
             .field("clock", &self.clock.is_some())
             .field("logger", &self.logger.is_some())

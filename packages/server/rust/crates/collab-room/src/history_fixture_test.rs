@@ -15,7 +15,7 @@ use blok_yjs::{Doc, Options, Out};
 
 use crate::changes::replay_changes;
 use crate::changes_test::{array, kind_name, member, object, read_repo_json, string};
-use crate::restore::plan_restore;
+use crate::restore::{RestoreTrash, plan_restore_trashing};
 use crate::{Error, LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions};
 
 // The twins of C# CollabHistoryCaptureTests: the same grouping, changes
@@ -356,12 +356,26 @@ fn plan_restore_matches_the_restore_plans_fixture() {
     for c in history_fixture("restore-plans.json") {
         let name = text(&c, "name");
         let (current, target) = (doc_of(&text(&c, "current")), doc_of(&text(&c, "target")));
-        let ops = plan_restore(
+        let trash = c.get(&Str::from("trash")).map(|input| {
+            let input = object(input);
+            RestoreTrash {
+                by: match member(input, "by") {
+                    Value::String(by) => Some(by.to_string()),
+                    _ => None,
+                },
+                at: match member(input, "at") {
+                    Value::Number(at) => *at as i64,
+                    other => panic!("trash.at is {other:?}"),
+                },
+            }
+        });
+        let ops = plan_restore_trashing(
             &exported_blocks(&current),
             &describe_structure(&current).unwrap_or_else(|err| panic!("{err}")),
             &exported_blocks(&target),
             &read_page_maps(&current).unwrap_or_else(|err| panic!("{err}")),
             &read_page_maps(&target).unwrap_or_else(|err| panic!("{err}")),
+            trash.as_ref(),
         );
         let want = array(member(&c, "ops"));
         if ops.len() != want.len() {

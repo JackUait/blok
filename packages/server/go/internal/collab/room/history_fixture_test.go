@@ -359,8 +359,17 @@ func TestPlanRestoreMatchesTheRestorePlansFixture(t *testing.T) {
 	for _, c := range historyFixture(t, "restore-plans.json") {
 		name := text(t, c, "name")
 		current, target := docOf(t, text(t, c, "current")), docOf(t, text(t, c, "target"))
-		ops := PlanRestore(exportedBlocks(t, current), convert.DescribeStructure(current), exportedBlocks(t, target),
-			convert.ReadPageMaps(current), convert.ReadPageMaps(target))
+		var trash *RestoreTrash
+		if raw, ok := c.Get(jsjson.FromString("trash")); ok {
+			input := raw.(*jsjson.Object)
+			trash = &RestoreTrash{At: int64(member(t, input, "at").(float64))}
+			if by, isString := member(t, input, "by").(jsjson.Str); isString {
+				name := by.String()
+				trash.By = &name
+			}
+		}
+		ops := PlanRestoreTrashing(exportedBlocks(t, current), convert.DescribeStructure(current), exportedBlocks(t, target),
+			convert.ReadPageMaps(current), convert.ReadPageMaps(target), trash)
 		want, _ := member(t, c, "ops").([]any)
 		if len(ops) != len(want) {
 			t.Errorf("%s: %d ops, want %d", name, len(ops), len(want))

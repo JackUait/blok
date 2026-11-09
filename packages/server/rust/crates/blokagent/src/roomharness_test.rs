@@ -187,6 +187,17 @@ pub(crate) fn new_test_room_on(
     wrap: Option<Wrap>,
     wrap_converter: Option<WrapConverter>,
 ) -> TestRoom {
+    new_test_room_on_with(operations, dir, wrap, wrap_converter, Default::default())
+}
+
+/// new_test_room_on with the rooms' own options.
+pub(crate) fn new_test_room_on_with(
+    operations: Option<Arc<dyn OperationStore>>,
+    dir: Option<TempDir>,
+    wrap: Option<Wrap>,
+    wrap_converter: Option<WrapConverter>,
+    room: blok_collab_room::Options,
+) -> TestRoom {
     let sets = Arc::new(MemorySets::default());
     let docs = Arc::new(HeldDocs::default());
     let converter: Arc<dyn Converter> = match wrap_converter {
@@ -197,7 +208,7 @@ pub(crate) fn new_test_room_on(
         store: sets.clone(),
         endpoint: docs.clone(),
         converter,
-        room: Default::default(),
+        room,
         log: None,
         operations,
         activity: None,

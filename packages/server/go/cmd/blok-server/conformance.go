@@ -20,6 +20,8 @@ type conformanceArguments struct {
 	journal bool
 	// restoreGuards is CollabEnforceRestoreGuards.
 	restoreGuards bool
+	// restoreTrashesPages is CollabRestoreTrashesPages.
+	restoreTrashesPages bool
 	// keepAlive is CollabKeepAliveInterval, when set.
 	keepAlive *time.Duration
 }
@@ -41,6 +43,10 @@ func parseConformanceArguments(args []string) ([]string, conformanceArguments, s
 		}
 		if argument == "--conformance-restore-guards" {
 			parsed.restoreGuards = true
+			continue
+		}
+		if argument == "--conformance-restore-trashes-pages" {
+			parsed.restoreTrashesPages = true
 			continue
 		}
 		if text, ok := strings.CutPrefix(argument, "--conformance-keep-alive-ms="); ok {
@@ -95,6 +101,7 @@ func applyConformanceOptions(options *blokserver.Options, parsed conformanceArgu
 		options.CollabKeepAliveInterval = parsed.keepAlive
 	}
 	options.CollabEnforceRestoreGuards = parsed.restoreGuards
+	options.CollabRestoreTrashesPages = parsed.restoreTrashesPages
 }
 
 // applyConformance wires the parsed flags into the server.

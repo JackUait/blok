@@ -21,6 +21,8 @@ pub struct ConformanceArguments {
     pub keep_alive_ms: Option<i64>,
     /// CollabEnforceRestoreGuards.
     pub restore_guards: bool,
+    /// CollabRestoreTrashesPages.
+    pub restore_trashes_pages: bool,
 }
 
 /// Takes the two flags out of args, at any place before "--", before the
@@ -45,6 +47,11 @@ pub fn parse_conformance_arguments(
         }
         if argument == "--conformance-restore-guards" {
             parsed.restore_guards = true;
+            i += 1;
+            continue;
+        }
+        if argument == "--conformance-restore-trashes-pages" {
+            parsed.restore_trashes_pages = true;
             i += 1;
             continue;
         }
@@ -111,6 +118,7 @@ pub fn apply_conformance_options(options: &mut Options, parsed: &ConformanceArgu
         options.collab_keep_alive_interval_nanos = ms * 1_000_000;
     }
     options.collab_enforce_restore_guards = parsed.restore_guards;
+    options.collab_restore_trashes_pages = parsed.restore_trashes_pages;
 }
 
 #[cfg(not(feature = "conformance"))]

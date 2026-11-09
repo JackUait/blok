@@ -43,7 +43,7 @@ pub use ops::{
     StateResult, StateStatus, planned_frame_bytes,
 };
 pub use options::{Clock, Options, Timers};
-pub use restore::{normalize_target, plan_restore};
+pub use restore::{RestoreTrash, normalize_target, plan_restore, plan_restore_trashing};
 pub use restore_guards::{
     CONFIRMABLE_GUARDS, GUARD_LOCKED_RESHAPE, GUARD_SHARE, GUARD_UNLOCK, RestoreGuard,
     restore_guards,

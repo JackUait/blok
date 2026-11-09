@@ -51,6 +51,7 @@ if (conformance.KeepAliveMs is { } keepAliveMs)
 }
 
 options.CollabEnforceRestoreGuards = conformance.RestoreGuards;
+options.CollabRestoreTrashesPages = conformance.RestoreTrashesPages;
 #endif
 
 try

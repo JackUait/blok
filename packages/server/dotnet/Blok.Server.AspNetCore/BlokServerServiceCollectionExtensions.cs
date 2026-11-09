@@ -169,6 +169,7 @@ public static class BlokServerServiceCollectionExtensions
           {
             AnnouncedMaxMessageBytes = effectiveOptions.CollabMaxMessageBytes,
             MaxUpdateBytes = source.MaxUpdateBytes,
+            RestoreTrashesPages = effectiveOptions.CollabRestoreTrashesPages,
           },
           timeProvider,
           CollabLog(provider),

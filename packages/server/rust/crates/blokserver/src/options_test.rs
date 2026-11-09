@@ -71,6 +71,7 @@ fn from_csharp(spec: &Node) -> Options {
             "CollabS3Prefix" => o.collab_s3_prefix = text(raw),
             "CollabJournal" => o.collab_journal = boolean(raw),
             "CollabEnforceRestoreGuards" => o.collab_enforce_restore_guards = boolean(raw),
+            "CollabRestoreTrashesPages" => o.collab_restore_trashes_pages = boolean(raw),
             "CollabMaxConnectionsPerUserPerDoc" => {
                 o.collab_max_connections_per_user_per_doc = int(raw);
             }

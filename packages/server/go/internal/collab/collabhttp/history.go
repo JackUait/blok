@@ -396,7 +396,8 @@ func (h *Handlers) HistoryRestorePreview(w http.ResponseWriter, r *http.Request)
 			return
 		}
 	}
-	status, preview, edit, err := a.rooms.PreviewRestore(r.Context(), a.doc, lineage, sequence, expect)
+	status, preview, edit, err := a.rooms.PreviewRestore(r.Context(), a.doc, lineage, sequence, expect,
+		synchttp.DeriveActor(a.ticketUser, a.user, a.hasUser))
 	if err != nil {
 		failed(w, r.Context())
 		return

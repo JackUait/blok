@@ -291,6 +291,7 @@ impl Inner {
         let clock = Arc::clone(&self.clock);
         let mut room = RoomOptions {
             announced_max_message_bytes: o.collab_max_message_bytes,
+            restore_trashes_pages: o.collab_restore_trashes_pages,
             now: Some(Arc::new(move || clock())),
             timers: o.timers.clone(),
             ..RoomOptions::default()

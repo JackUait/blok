@@ -13,6 +13,7 @@
   "CollabMaxConnections": 0,
   "CollabMaxConnectionsPerUserPerDoc": 8,
   "CollabMaxMessageBytes": 1048576,
+  "CollabRestoreTrashesPages": false,
   "CollabS3Prefix": "",
   "DocEndpoint": "",
   "DocEndpointAuth": "",

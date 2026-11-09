@@ -14,6 +14,12 @@ internal sealed record CollabDocStructure(
 internal sealed record CollabPageMaps(IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> Maps);
 
 /// <summary>
+/// Who restores and when, in ms since the epoch. With it, a restore trashes a
+/// page pointer the target lacks instead of removing it.
+/// </summary>
+internal sealed record CollabRestoreTrash(string? By, long At);
+
+/// <summary>
 /// One key of the blocks map. <paramref name="StoredParent"/> is the raw
 /// string parentId of any map entry (null for a non-map), and
 /// <paramref name="ListedChildren"/> the string entries of its contentIds
@@ -39,12 +45,13 @@ internal static class CollabRestorePlanner
       CollabDocStructure current,
       JsonArray targetBlocks,
       CollabPageMaps currentMaps,
-      CollabPageMaps targetMaps)
+      CollabPageMaps targetMaps,
+      CollabRestoreTrash? trash = null)
   {
     ArgumentNullException.ThrowIfNull(currentMaps);
     ArgumentNullException.ThrowIfNull(targetMaps);
 
-    var ops = Plan(currentBlocks, current, targetBlocks).ToList();
+    var ops = Plan(currentBlocks, current, trash is null ? targetBlocks : WithTrashedPages(currentBlocks, targetBlocks, trash)).ToList();
     var patches = new List<CollabMapPatch>();
 
     foreach (var name in YDocConverter.PageMaps)
@@ -137,6 +144,142 @@ internal static class CollabRestorePlanner
     }
 
     return ops;
+  }
+
+  /// <summary>
+  /// The target plus every live page pointer it lacks, with <c>trashed</c>
+  /// set, so the sub-page is not cut off. A pointer keeps its place among
+  /// its live siblings; one whose parent the target lacks goes to the end of
+  /// the root. A pointer already trashed keeps its stamps.
+  /// </summary>
+  internal static JsonArray WithTrashedPages(JsonArray currentBlocks, JsonArray targetBlocks, CollabRestoreTrash trash)
+  {
+    ArgumentNullException.ThrowIfNull(currentBlocks);
+    ArgumentNullException.ThrowIfNull(targetBlocks);
+    ArgumentNullException.ThrowIfNull(trash);
+
+    var targetIds = targetBlocks.OfType<JsonObject>().Select(IdOf).OfType<string>().ToHashSet(StringComparer.Ordinal);
+    var live = currentBlocks.OfType<JsonObject>().Where(block => IdOf(block) is not null).ToList();
+    var siblingIndex = new Dictionary<string, (ParentKey Parent, int Index)>(StringComparer.Ordinal);
+    var siblingCount = new Dictionary<ParentKey, int>();
+
+    foreach (var block in live)
+    {
+      var parent = new ParentKey(ParentOf(block));
+      var index = siblingCount.GetValueOrDefault(parent);
+
+      siblingIndex.TryAdd(IdOf(block)!, (parent, index));
+      siblingCount[parent] = index + 1;
+    }
+
+    var result = targetBlocks.Select(node => node?.DeepClone()).ToList();
+
+    foreach (var block in live)
+    {
+      var id = IdOf(block)!;
+
+      if (TypeOf(block) != "page" || !targetIds.Add(id))
+      {
+        continue;
+      }
+
+      var former = ParentOf(block);
+      var data = block["data"] is JsonObject liveData ? (JsonObject)liveData.DeepClone() : [];
+      var index = siblingIndex[id].Index;
+
+      if (!IsTrashed(data["trashed"]))
+      {
+        data["trashed"] = new JsonObject
+        {
+          ["at"] = trash.At,
+          ["by"] = trash.By,
+          ["formerParentId"] = former,
+          ["formerIndex"] = index,
+        };
+      }
+
+      var trashed = new JsonObject();
+
+      foreach (var (key, value) in block)
+      {
+        if (key is not ("parent" or "content" or "data"))
+        {
+          trashed[key] = value?.DeepClone();
+        }
+      }
+
+      trashed["data"] = data;
+
+      if (former is null || targetIds.Contains(former))
+      {
+        if (former is not null)
+        {
+          trashed["parent"] = former;
+        }
+
+        result.Insert(SlotAmongSiblings(result, new ParentKey(former), siblingIndex, index), trashed);
+      }
+      else
+      {
+        result.Add(trashed);
+      }
+    }
+
+    return new JsonArray([.. result]);
+  }
+
+  /// <summary>
+  /// A <c>trashed</c> the page tool keeps: the same check as its readTrashed,
+  /// so a value it would drop is stamped afresh here.
+  /// </summary>
+  private static bool IsTrashed(JsonNode? node)
+  {
+    return node is JsonObject trashed &&
+        NumberOf(trashed["at"]) is { } at && double.IsFinite(at) &&
+        trashed.ContainsKey("by") && IsIdOrNull(trashed["by"]) &&
+        trashed.ContainsKey("formerParentId") && IsIdOrNull(trashed["formerParentId"]) &&
+        NumberOf(trashed["formerIndex"]) is { } position && position >= 0 && Math.Floor(position) == position;
+  }
+
+  private static double? NumberOf(JsonNode? node)
+  {
+    return node is JsonValue value && value.GetValueKind() == JsonValueKind.Number
+      ? double.Parse(value.ToJsonString(), System.Globalization.CultureInfo.InvariantCulture)
+      : null;
+  }
+
+  private static bool IsIdOrNull(JsonNode? node)
+  {
+    return node is null || (node is JsonValue value && value.GetValueKind() == JsonValueKind.String);
+  }
+
+  /// <summary>
+  /// Where in the target list a block goes so that, among the target's
+  /// children of <paramref name="parent"/>, it follows every one that sat
+  /// before it live.
+  /// </summary>
+  private static int SlotAmongSiblings(
+      List<JsonNode?> target, ParentKey parent, Dictionary<string, (ParentKey Parent, int Index)> siblingIndex, int index)
+  {
+    int? first = null;
+    int? afterLast = null;
+
+    for (var position = 0; position < target.Count; position++)
+    {
+      if (target[position] is not JsonObject block || new ParentKey(ParentOf(block)) != parent)
+      {
+        continue;
+      }
+
+      first ??= position;
+
+      if (IdOf(block) is { } id && siblingIndex.TryGetValue(id, out var live) && live.Parent == parent && live.Index < index)
+      {
+        afterLast = position + 1;
+      }
+    }
+
+    return afterLast ?? first ?? target.Count;
   }
 
   /// <summary>

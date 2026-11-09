@@ -28,10 +28,10 @@ public sealed class BlokAgentVersionHistoryTests
       """)!.AsObject());
   }
 
-  private (BlokAgentExecutor Executor, CollabRoomManager Rooms) Create(ICollabOperationStore? journal)
+  private (BlokAgentExecutor Executor, CollabRoomManager Rooms) Create(ICollabOperationStore? journal, CollabRoomOptions? options = null)
   {
     var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
-    var rooms = new CollabRoomManager(store, endpoint, converter, new CollabRoomOptions(), time, _ => { }, journal);
+    var rooms = new CollabRoomManager(store, endpoint, converter, options ?? new CollabRoomOptions(), time, _ => { }, journal);
 
     return (new BlokAgentExecutor(Runtime.Value, rooms, converter), rooms);
   }
@@ -168,6 +168,36 @@ public sealed class BlokAgentVersionHistoryTests
     Assert.True(Command(JsonNode.Parse(await executor.GetRoomContractAsync())!, "history.restore")["available"]!.GetValue<bool>());
     Assert.Equal("service", Command(JsonNode.Parse(await executor.GetContractAsync())!, "history.restore")["unavailableReason"]!.GetValue<string>());
     Assert.Equal("service", Command(JsonNode.Parse(await plain.GetRoomContractAsync())!, "history.restore")["unavailableReason"]!.GetValue<string>());
+  }
+
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task ARestoreHonoursTheHostsTrashOptionForALaterPagePointer(bool trash)
+  {
+    var (executor, rooms) = Create(operations, new CollabRoomOptions { RestoreTrashesPages = trash });
+    var edit = await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"text.replace","args":{"id":"p","with":"Changed"}}]}""", Actor);
+    var lineage = edit.Revision[..edit.Revision.LastIndexOf(':')];
+    var page = new CollabEditOp.Insert(
+        "pg", new JsonObject { ["type"] = "page", ["data"] = new JsonObject { ["pageId"] = "sub" } }, "q", null);
+    Assert.Equal(CollabEditStatus.Applied, (await rooms.EditAsync(
+        DocId, [page], Guid.NewGuid().ToString("N"), CollabEditOps.CanonicalBodyDigest([page]), "u1")).Status);
+
+    var restored = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"commands":[{"name":"history.restore","args":{"version":"{{{lineage}}}:0"}}]}""", Actor)).ResultJson)!;
+
+    Assert.True(restored["ok"]!.GetValue<bool>(), restored.ToJsonString());
+    var pointer = JsonNode.Parse((await rooms.StateAsync(DocId)).Json!)!["blocks"]!.AsArray()
+        .SingleOrDefault(block => block!["id"]!.GetValue<string>() == "pg");
+    if (trash)
+    {
+      Assert.Equal("agent-cs", pointer?["data"]?["trashed"]?["by"]?.GetValue<string>());
+    }
+    else
+    {
+      Assert.Null(pointer);
+    }
   }
 
   [Fact]

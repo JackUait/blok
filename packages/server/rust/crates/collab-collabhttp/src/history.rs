@@ -458,9 +458,10 @@ impl Handlers {
             return;
         };
         let (rooms, doc, lineage) = (a.rooms.clone(), a.doc.clone(), lineage.to_owned());
+        let actor = derive_actor(&a.ticket_user, &a.user, a.has_user);
         let preview = async move {
             rooms
-                .preview_restore(&doc, &lineage, sequence, expect)
+                .preview_restore(&doc, &lineage, sequence, expect, &actor)
                 .await
         };
         let (status, preview, edit) = match blocking(request, preview).await {

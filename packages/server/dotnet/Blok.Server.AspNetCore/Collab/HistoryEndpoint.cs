@@ -23,7 +23,7 @@ namespace Blok.Server.AspNetCore.Collab;
 /// rate limit, and these handlers add the ticket's doc claim and the
 /// application's gates — read for the GETs, read and write for the rest.
 /// </summary>
-internal static class HistoryEndpoint
+internal static partial class HistoryEndpoint
 {
   private const string LineageHeader = "Blok-History-Lineage";
   private const string SequenceHeader = "Blok-History-Sequence";
@@ -157,7 +157,7 @@ internal static class HistoryEndpoint
 
     // Rows are measured newest first; the newest always goes out, so a reader can page.
     var rows = new List<byte[]>();
-    long size = ChangesEnvelopeBytes;
+    long size = ChangesEnvelopeBytes + OlderEndBytes;
     var truncated = result.Truncated;
 
     for (var index = result.Changes.Count - 1; index >= 0; index--)
@@ -196,7 +196,16 @@ internal static class HistoryEndpoint
       await body.WriteAsync(rows[index], cancel);
     }
 
-    await body.WriteAsync((truncated ? "],\"truncated\":true}"u8 : "]}"u8).ToArray(), cancel);
+    await body.WriteAsync("]"u8.ToArray(), cancel);
+
+    if (truncated)
+    {
+      var oldest = result.Changes[result.Changes.Count - rows.Count];
+
+      await body.WriteAsync(OlderEnd(point.Lineage, oldest.Sequence, oldest.CommittedAt), cancel);
+    }
+
+    await body.WriteAsync("}"u8.ToArray(), cancel);
   }
 
   public static async Task DeleteAsync(HttpContext context)

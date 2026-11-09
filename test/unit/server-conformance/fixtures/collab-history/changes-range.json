@@ -1,0 +1,845 @@
+{
+  "$comment": "CollabHistoryTime.SelectRange as C# answers it. Captured by CollabHistoryTimeCaptureTests; do not edit by hand. Records committed in [from, to), older than before (lineage order, then sequence) when given, newest first, at most maxRecords; truncated when an older one was left out; found false when before names an unknown lineage. Times are .NET UTC ticks.",
+  "cases": [
+    {
+      "name": "the whole range, newest first",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": null,
+      "maxRecords": 200,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "committedAt": "639269714400000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "committedAt": "639269713800000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "committedAt": "639269713200000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "committedAt": "639269712600000000"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "from is inclusive, to is exclusive",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639269713200000000",
+      "to": "639269714400000000",
+      "before": null,
+      "maxRecords": 200,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "committedAt": "639269713800000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "committedAt": "639269713200000000"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "an empty range",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639269713200000000",
+      "to": "639269713200000000",
+      "before": null,
+      "maxRecords": 200,
+      "found": true,
+      "records": [],
+      "truncated": false
+    },
+    {
+      "name": "the record cap cuts the oldest",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": null,
+      "maxRecords": 2,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "committedAt": "639269714400000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "committedAt": "639269713800000000"
+        }
+      ],
+      "truncated": true
+    },
+    {
+      "name": "a cap the range just fills is not a cut",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": null,
+      "maxRecords": 4,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "committedAt": "639269714400000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "committedAt": "639269713800000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "committedAt": "639269713200000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "committedAt": "639269712600000000"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "before is exclusive",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": {
+        "lineage": "L1",
+        "sequence": "3"
+      },
+      "maxRecords": 200,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "committedAt": "639269713200000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "committedAt": "639269712600000000"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "before with the cap pages on",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": {
+        "lineage": "L1",
+        "sequence": "3"
+      },
+      "maxRecords": 1,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "committedAt": "639269713200000000"
+        }
+      ],
+      "truncated": true
+    },
+    {
+      "name": "before the first record leaves nothing",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": {
+        "lineage": "L1",
+        "sequence": "1"
+      },
+      "maxRecords": 200,
+      "found": true,
+      "records": [],
+      "truncated": false
+    },
+    {
+      "name": "before past the head keeps the head",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": {
+        "lineage": "L1",
+        "sequence": "9"
+      },
+      "maxRecords": 200,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "committedAt": "639269714400000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "committedAt": "639269713800000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "committedAt": "639269713200000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "committedAt": "639269712600000000"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "an unknown before lineage",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": {
+        "lineage": "L9",
+        "sequence": "1"
+      },
+      "maxRecords": 200,
+      "found": false,
+      "records": [],
+      "truncated": false
+    },
+    {
+      "name": "two lineages, newest lineage first",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": null,
+      "maxRecords": 200,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "committedAt": "639269749200000000"
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "committedAt": "639269748600000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "committedAt": "639269714400000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "committedAt": "639269713800000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "committedAt": "639269713200000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "committedAt": "639269712600000000"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "a cut that spans lineages",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": null,
+      "maxRecords": 3,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "committedAt": "639269749200000000"
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "committedAt": "639269748600000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "committedAt": "639269714400000000"
+        }
+      ],
+      "truncated": true
+    },
+    {
+      "name": "before in the newer lineage",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": {
+        "lineage": "L2",
+        "sequence": "2"
+      },
+      "maxRecords": 2,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "committedAt": "639269748600000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "committedAt": "639269714400000000"
+        }
+      ],
+      "truncated": true
+    },
+    {
+      "name": "before in the older lineage skips the newer",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": {
+        "lineage": "L1",
+        "sequence": "4"
+      },
+      "maxRecords": 200,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "committedAt": "639269713800000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "committedAt": "639269713200000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "committedAt": "639269712600000000"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "a range inside one lineage of two",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269714400000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269749200000000"
+            }
+          ]
+        }
+      ],
+      "from": "639269748000000000",
+      "to": "639270576000000000",
+      "before": null,
+      "maxRecords": 200,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L2",
+          "sequence": "2",
+          "committedAt": "639269749200000000"
+        },
+        {
+          "lineage": "L2",
+          "sequence": "1",
+          "committedAt": "639269748600000000"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "records outside the range in the middle are skipped",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269717400000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713200000000"
+            }
+          ]
+        }
+      ],
+      "from": "639269712000000000",
+      "to": "639269715000000000",
+      "before": null,
+      "maxRecords": 200,
+      "found": true,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "committedAt": "639269713200000000"
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "committedAt": "639269712600000000"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "no lineages",
+      "lineages": [],
+      "from": "639268848000000000",
+      "to": "639270576000000000",
+      "before": null,
+      "maxRecords": 200,
+      "found": true,
+      "records": [],
+      "truncated": false
+    }
+  ]
+}

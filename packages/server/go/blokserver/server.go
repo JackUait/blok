@@ -200,6 +200,8 @@ func (s *Server) handler(prefix string, protect func(http.Handler) http.Handler)
 		shell(prefix+"/sync/{doc}/history/{lineage}", "DELETE", routes.HistoryDelete)
 		shell(prefix+"/sync/{doc}/history/{lineage}/{sequence}/restore", "POST", routes.HistoryRestore)
 		shell(prefix+"/sync/{doc}/history/{lineage}/{sequence}/changes", "GET", routes.HistoryChanges)
+		shell(prefix+"/sync/{doc}/history/at", "GET", routes.HistoryAt)
+		shell(prefix+"/sync/{doc}/history/changes", "GET", routes.HistoryChangesBetween)
 		if o.Auth == "none" && o.Authorization == nil {
 			s.warnOpenSyncRoutes(prefix)
 		}

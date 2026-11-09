@@ -18,6 +18,9 @@ use crate::edit::{
 };
 use crate::{Handlers, expose, failed, refuse_retry_later};
 
+#[path = "history_time.rs"]
+mod time;
+
 const HISTORY_LINEAGE_HEADER: &str = "Blok-History-Lineage";
 const HISTORY_SEQUENCE_HEADER: &str = "Blok-History-Sequence";
 const NO_SUCH_VERSION: &str = "no such version\n";
@@ -245,7 +248,7 @@ impl Handlers {
         }
         // Rows are measured newest first; the newest always goes out.
         let mut rows: Vec<Vec<u8>> = Vec::new();
-        let mut size = CHANGES_ENVELOPE_BYTES;
+        let mut size = CHANGES_ENVELOPE_BYTES + time::OLDER_END_BYTES;
         let mut truncated = result.truncated;
         for record in result.changes.iter().rev() {
             let Ok(row) = change_row(record) else {
@@ -267,11 +270,12 @@ impl Handlers {
             }
             body.extend_from_slice(row);
         }
+        body.push(b']');
         if truncated {
-            body.extend_from_slice(br#"],"truncated":true}"#);
-        } else {
-            body.extend_from_slice(b"]}");
+            let oldest = &result.changes[result.changes.len() - rows.len()];
+            time::append_older_end(&mut body, &lineage, oldest.sequence, oldest.committed_at);
         }
+        body.push(b'}');
         write_json(&mut response, &body).await;
     }
 

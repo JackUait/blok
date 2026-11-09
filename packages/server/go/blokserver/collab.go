@@ -260,6 +260,8 @@ func (s *Server) warnOpenSyncRoutes(prefix string) {
 		"DELETE " + prefix + "/sync/{doc}/history/{lineage}",
 		"POST " + prefix + "/sync/{doc}/history/{lineage}/{sequence}/restore",
 		"GET " + prefix + "/sync/{doc}/history/{lineage}/{sequence}/changes",
+		"GET " + prefix + "/sync/{doc}/history/at",
+		"GET " + prefix + "/sync/{doc}/history/changes",
 	}
 	sync, reset, edit, state := "GET "+prefix+"/sync/{doc}", "POST "+prefix+"/sync/{doc}/reset",
 		"POST "+prefix+"/sync/{doc}/edit", "GET "+prefix+"/sync/{doc}/state"

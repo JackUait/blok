@@ -194,7 +194,7 @@ internal sealed record CollabRestoreResult(
 /// when they close (eviction, reset, seed failure, drain); a join that races
 /// a closing room simply retries on a fresh one.
 /// </summary>
-internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPurger
+internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDocumentPurger
 {
   private const int MaxJoinAttempts = 16;
 

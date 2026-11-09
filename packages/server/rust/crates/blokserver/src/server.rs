@@ -28,6 +28,8 @@ enum CollabRoute {
     HistoryDelete,
     HistoryRestore,
     HistoryChanges,
+    HistoryAt,
+    HistoryChangesBetween,
 }
 
 impl CollabRoute {
@@ -46,6 +48,10 @@ impl CollabRoute {
             CollabRoute::HistoryDelete => routes.history_delete(request, response).await,
             CollabRoute::HistoryRestore => routes.history_restore(request, response).await,
             CollabRoute::HistoryChanges => routes.history_changes(request, response).await,
+            CollabRoute::HistoryAt => routes.history_at(request, response).await,
+            CollabRoute::HistoryChangesBetween => {
+                routes.history_changes_between(request, response).await
+            }
         }
     }
 }
@@ -392,6 +398,12 @@ impl Server {
                 "/history/{lineage}/{sequence}/changes",
                 "GET",
                 CollabRoute::HistoryChanges,
+            ),
+            ("/history/at", "GET", CollabRoute::HistoryAt),
+            (
+                "/history/changes",
+                "GET",
+                CollabRoute::HistoryChangesBetween,
             ),
         ] {
             let routes = routes.clone();

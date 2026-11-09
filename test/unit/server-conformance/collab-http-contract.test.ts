@@ -235,6 +235,8 @@ suite('collab HTTP routes without a journal', () => {
       ['GET', `/sync/doc-plain/history/${lineage}/0`],
       ['GET', `/sync/doc-plain/history/${lineage}/0/changes`],
       ['DELETE', `/sync/doc-plain/history/${lineage}`],
+      ['GET', '/sync/doc-plain/history/at?time=2026-10-07T12:00:00Z'],
+      ['GET', '/sync/doc-plain/history/changes'],
     ]) {
       const answer = await send(base, method, path);
 
@@ -477,6 +479,111 @@ suite('collab HTTP routes on a journal', () => {
       expect([answer.status, body.changes.map((change) => change.sequence)]).toEqual([200, [2, 3]]);
     });
 
+    const LONG_AGO = '2000-01-01T00:00:00Z';
+    const FAR_AHEAD = '2999-01-01T00:00:00Z';
+
+    it('reads the point at a time as JSON when the caller accepts JSON', async () => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/at?time=${FAR_AHEAD}`, [['Accept', 'text/html, Application/JSON;q=0.9']]);
+      const body = JSON.parse(answer.body) as { lineage: string; sequence: number; committedAt: number };
+
+      expect([answer.status, answer.headers['content-type'], answer.headers['cache-control']])
+        .toEqual([200, 'application/json', 'no-store']);
+      expect(Object.keys(body)).toEqual(['lineage', 'sequence', 'committedAt']);
+      expect([body.lineage, body.sequence, typeof body.committedAt]).toEqual([lineage, 3, 'number']);
+      expect([answer.headers['blok-history-lineage'], answer.headers['blok-history-sequence']]).toEqual([lineage, '3']);
+    });
+
+    it('redirects to the point at a time, relative to the history route', async () => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/at?time=${FAR_AHEAD}`, [['Accept', '*/*']]);
+
+      expect([answer.status, answer.headers.location, answer.body]).toEqual([302, `${lineage}/3`, '']);
+    });
+
+    it('answers 404 not_found as JSON for a time before the history starts', async () => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/at?time=${LONG_AGO}`, [['Accept', 'application/json']]);
+
+      expect([answer.status, answer.headers['content-type'], answer.body])
+        .toEqual([404, 'application/json', '{"reason":"not_found"}']);
+    });
+
+    it('reads the time of a record as that record, and an offset sent as %2B', async () => {
+      const list = await send(base, 'GET', `/sync/doc-history/history/${lineage}/3/changes`);
+      const second = (JSON.parse(list.body) as { changes: { sequence: number; committedAt: number }[] }).changes[1];
+      // committedAt is whole milliseconds; the next millisecond is at or after the record.
+      const at = new Date(second.committedAt + 1).toISOString().replace('Z', '+00:00').replace('+', '%2B');
+      const answer = await send(base, 'GET', `/sync/doc-history/history/at?time=${at}`, [['Accept', 'application/json']]);
+
+      expect(answer.status).toBe(200);
+      expect((JSON.parse(answer.body) as { sequence: number }).sequence).toBeGreaterThanOrEqual(2);
+    });
+
+    it.each([
+      ['no time', ''],
+      ['no offset', '?time=2026-10-07T12:00:00'],
+      ['an offset sent as a raw +, which reads as a space', '?time=2026-10-07T12:00:00+03:00'],
+      ['a repeated time', `?time=${FAR_AHEAD}&time=${FAR_AHEAD}`],
+      ['a number', '?time=1791552000000'],
+    ])('refuses at with %s', async (_name, query) => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/at${query}`);
+
+      expect([answer.status, answer.body]).toEqual([400, 'time must be an ISO 8601 time with an offset\n']);
+    });
+
+    it('lists the changes in a time range newest first, each with its lineage', async () => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/changes?from=${LONG_AGO}&to=${FAR_AHEAD}`);
+      const body = JSON.parse(answer.body) as {
+        changes: { lineage: string; sequence: number; blocks: { id: string; kind: string }[] }[];
+        truncated?: boolean;
+      };
+
+      expect([answer.status, answer.headers['cache-control'], Object.keys(body)]).toEqual([200, 'no-store', ['changes']]);
+      expect(body.changes.map((change) => [change.lineage, change.sequence, change.blocks.map((block) => [block.id, block.kind])]))
+        .toEqual([[lineage, 3, [['b1', 'changed']]], [lineage, 2, [['b2', 'added']]], [lineage, 1, [['b1', 'added']]]]);
+      expect(Object.keys(body.changes[0])).toEqual(['lineage', 'sequence', 'committedAt', 'actor', 'blocks']);
+    });
+
+    it('defaults the range to the last 24 hours', async () => {
+      const answer = await send(base, 'GET', '/sync/doc-history/history/changes');
+      const recent = await send(base, 'GET', `/sync/doc-history/history/changes?to=${LONG_AGO}`);
+
+      expect((JSON.parse(answer.body) as { changes: { sequence: number }[] }).changes.map((change) => change.sequence))
+        .toEqual([3, 2, 1]);
+      expect([recent.status, recent.body]).toEqual([200, '{"changes":[]}']);
+    });
+
+    it('takes before as an exclusive point', async () => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/changes?from=${LONG_AGO}&before=${lineage}:3`);
+
+      expect((JSON.parse(answer.body) as { changes: { sequence: number }[] }).changes.map((change) => change.sequence))
+        .toEqual([2, 1]);
+    });
+
+    it('answers 404 for a before lineage the journal never held', async () => {
+      const answer = await send(base, 'GET', '/sync/doc-history/history/changes?before=ffffffffffffffffffffffffffffffff:1');
+
+      expect([answer.status, answer.body]).toEqual([404, 'no such version\n']);
+    });
+
+    it.each([
+      ['from after to', `?from=${FAR_AHEAD}&to=${LONG_AGO}`],
+      ['from with no offset', '?from=2026-10-07T12:00:00'],
+      ['a repeated to', `?to=${FAR_AHEAD}&to=${FAR_AHEAD}`],
+    ])('refuses a range with %s', async (_name, query) => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/changes${query}`);
+
+      expect([answer.status, answer.body])
+        .toEqual([400, 'from and to must be ISO 8601 times with an offset, from no later than to\n']);
+    });
+
+    it.each(['x', 'not-a-lineage:1', '0123456789abcdef0123456789abcdef', '0123456789abcdef0123456789abcdef:+1'])(
+      'refuses before=%s',
+      async (before) => {
+        const answer = await send(base, 'GET', `/sync/doc-history/history/changes?before=${before}`);
+
+        expect([answer.status, answer.body]).toEqual([400, 'before must be one <lineage>:<sequence>\n']);
+      },
+    );
+
     it('restores a point as one journalled edit, needs the key, and dedupes a retry', async () => {
       const missing = await send(base, 'POST', `/sync/doc-history/history/${lineage}/1/restore`);
 
@@ -652,7 +759,37 @@ suite('collab history past its limits', () => {
 
     expect([answer.status, body.truncated, sequences.length, sequences[0], sequences.at(-1)])
       .toEqual([200, true, 200, 3, 202]);
-    expect(Object.keys(body)).toEqual(['changes', 'truncated']);
+    expect(Object.keys(body)).toEqual(['changes', 'truncated', 'olderEnd']);
+
+    const olderEnd = (body as unknown as { olderEnd: { lineage: string; sequence: number; committedAt: number } }).olderEnd;
+
+    expect([olderEnd.lineage, olderEnd.sequence, typeof olderEnd.committedAt]).toEqual([lineage, 3, 'number']);
+
+    // The rest of the shipped route's window is the point before olderEnd.
+    const rest = await send(base, 'GET', `/sync/doc-many/history/${lineage}/${olderEnd.sequence - 1}/changes`);
+    const restBody = JSON.parse(rest.body) as { changes: { sequence: number }[]; truncated?: boolean };
+
+    expect([restBody.truncated, restBody.changes.map((change) => change.sequence)]).toEqual([undefined, [1, 2]]);
+
+    // Following olderEnd on the range route until it is gone reads every record once.
+    const seen: number[] = [];
+    let query = '?from=2000-01-01T00:00:00Z';
+
+    for (let page = 0; page < 5; page++) {
+      const next = JSON.parse((await send(base, 'GET', `/sync/doc-many/history/changes${query}`)).body) as {
+        changes: { sequence: number }[];
+        olderEnd?: { lineage: string; sequence: number };
+      };
+
+      seen.push(...next.changes.map((change) => change.sequence));
+
+      if (next.olderEnd === undefined) {
+        break;
+      }
+      query = `?from=2000-01-01T00:00:00Z&before=${next.olderEnd.lineage}:${next.olderEnd.sequence}`;
+    }
+
+    expect(seen).toEqual(Array.from({ length: 202 }, (_, index) => 202 - index));
   }, 120_000);
 
   it('keeps the newest records that fit 4 MiB, and always at least one', async () => {
@@ -675,6 +812,7 @@ suite('collab history past its limits', () => {
     expect([answer.status, body.truncated, sequences.at(-1)]).toEqual([200, true, 81]);
     expect(Buffer.byteLength(answer.body)).toBeLessThanOrEqual(4 << 20);
     expect(sequences).toEqual(Array.from({ length: 69 }, (_, index) => 13 + index));
+    expect((body as unknown as { olderEnd: { sequence: number } }).olderEnd.sequence).toBe(13);
 
     const one = await send(base, 'GET', `/sync/doc-wide/history/${lineage}/81/changes?since=80`);
 

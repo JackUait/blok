@@ -117,7 +117,8 @@ func TestWarnsAtRegistrationWhenNothingGuardsTheSyncRoutesInProcess(t *testing.T
 		"State":     "GET /blok/sync/{doc}/state",
 		"History": "GET /blok/sync/{doc}/history, GET /blok/sync/{doc}/history/{lineage}/{sequence}, " +
 			"DELETE /blok/sync/{doc}/history/{lineage}, POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore, " +
-			"GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes",
+			"GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes, GET /blok/sync/{doc}/history/at, " +
+			"GET /blok/sync/{doc}/history/changes",
 	} {
 		if fields[key] != want {
 			t.Errorf("field %s = %q, want %q", key, fields[key], want)

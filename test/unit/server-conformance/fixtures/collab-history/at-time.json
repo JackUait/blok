@@ -1,0 +1,643 @@
+{
+  "$comment": "CollabHistoryTime as C# answers it. Captured by CollabHistoryTimeCaptureTests; do not edit by hand. parse: the time strings the routes take, as .NET UTC ticks, null when refused. cases: the newest point at or before the time; points are records and baselines with a created-at; equal times: the later lineage wins, then the higher sequence; point null answers 404. Times are .NET UTC ticks.",
+  "parse": [
+    {
+      "text": "2026-10-07T12:00:00Z",
+      "ticks": "639269712000000000"
+    },
+    {
+      "text": "2026-10-07T12:00:00.1234567Z",
+      "ticks": "639269712001234567"
+    },
+    {
+      "text": "2026-10-07T12:00:00.5Z",
+      "ticks": "639269712005000000"
+    },
+    {
+      "text": "2026-10-07T15:30:00\u002B03:30",
+      "ticks": "639269712000000000"
+    },
+    {
+      "text": "2026-10-07T08:00:00-04:00",
+      "ticks": "639269712000000000"
+    },
+    {
+      "text": "2026-10-07T12:00:00\u002B14:00",
+      "ticks": "639269208000000000"
+    },
+    {
+      "text": "2026-10-07T12:00:00-14:00",
+      "ticks": "639270216000000000"
+    },
+    {
+      "text": "2024-02-29T00:00:00Z",
+      "ticks": "638447616000000000"
+    },
+    {
+      "text": "0001-01-01T00:00:00Z",
+      "ticks": "0"
+    },
+    {
+      "text": "9999-12-31T23:59:59.9999999Z",
+      "ticks": "3155378975999999999"
+    },
+    {
+      "text": "0001-01-01T00:00:00\u002B00:01",
+      "ticks": null
+    },
+    {
+      "text": "9999-12-31T23:59:59.9999999-00:01",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00.12345678Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00.Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07t12:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:60Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T24:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07 12:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00 03:00",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00\u002B0300",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00\u002B03",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00\u002B14:01",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00\u002B03:60",
+      "ticks": null
+    },
+    {
+      "text": "2025-02-29T00:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-13-01T00:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-00-01T00:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-00T00:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "0000-01-01T00:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "\u002B2026-10-07T12:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00Z ",
+      "ticks": null
+    },
+    {
+      "text": " 2026-10-07T12:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "2026-10-07T12:00:00.1234567\u002B01:00x",
+      "ticks": null
+    },
+    {
+      "text": "2026-1\uFF10-07T12:00:00Z",
+      "ticks": null
+    },
+    {
+      "text": "",
+      "ticks": null
+    },
+    {
+      "text": "1791552000000",
+      "ticks": null
+    }
+  ],
+  "cases": [
+    {
+      "name": "exactly on a record",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269713200000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "2",
+        "committedAt": "639269713200000000"
+      }
+    },
+    {
+      "name": "between two records",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269713500000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "2",
+        "committedAt": "639269713200000000"
+      }
+    },
+    {
+      "name": "one tick before a record reads the one before it",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269713199999999",
+      "point": {
+        "lineage": "L1",
+        "sequence": "1",
+        "committedAt": "639269712600000000"
+      }
+    },
+    {
+      "name": "after the head",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        }
+      ],
+      "time": "639272304000000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "3",
+        "committedAt": "639269713800000000"
+      }
+    },
+    {
+      "name": "before everything",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269711999999999",
+      "point": null
+    },
+    {
+      "name": "exactly on the creation reads the baseline",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269712000000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "0",
+        "committedAt": "639269712000000000"
+      }
+    },
+    {
+      "name": "between the creation and the first record reads the baseline",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269712300000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "0",
+        "committedAt": "639269712000000000"
+      }
+    },
+    {
+      "name": "a lineage with no records reads its baseline",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": []
+        }
+      ],
+      "time": "639270576000000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "0",
+        "committedAt": "639269712000000000"
+      }
+    },
+    {
+      "name": "after a reset, before the new first record, reads the new baseline",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269748300000000",
+      "point": {
+        "lineage": "L2",
+        "sequence": "0",
+        "committedAt": "639269748000000000"
+      }
+    },
+    {
+      "name": "after a reset and its first record",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269749200000000",
+      "point": {
+        "lineage": "L2",
+        "sequence": "1",
+        "committedAt": "639269748600000000"
+      }
+    },
+    {
+      "name": "before a reset reads the old lineage",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748600000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269747999999999",
+      "point": {
+        "lineage": "L1",
+        "sequence": "3",
+        "committedAt": "639269713800000000"
+      }
+    },
+    {
+      "name": "a reset at the same tick as the old last record: the later lineage wins",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713800000000"
+            }
+          ]
+        },
+        {
+          "lineage": "L2",
+          "createdAt": "639269713800000000",
+          "headers": []
+        }
+      ],
+      "time": "639269713800000000",
+      "point": {
+        "lineage": "L2",
+        "sequence": "0",
+        "committedAt": "639269713800000000"
+      }
+    },
+    {
+      "name": "equal record times: the higher sequence wins",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269712600000000"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269713200000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269712600000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "2",
+        "committedAt": "639269712600000000"
+      }
+    },
+    {
+      "name": "a record at the creation tick beats the baseline",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269712000000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "1",
+        "committedAt": "639269712000000000"
+      }
+    },
+    {
+      "name": "a baseline without a created-at is not a point",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": null,
+          "headers": []
+        }
+      ],
+      "time": "639269712000000000",
+      "point": null
+    },
+    {
+      "name": "records still count when the created-at is unknown",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": null,
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269712600000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269712600000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "2",
+        "committedAt": "639269712600000000"
+      }
+    },
+    {
+      "name": "a record older than the one before it",
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269715000000000"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269712600000000"
+            }
+          ]
+        }
+      ],
+      "time": "639269713200000000",
+      "point": {
+        "lineage": "L1",
+        "sequence": "2",
+        "committedAt": "639269712600000000"
+      }
+    },
+    {
+      "name": "no lineages",
+      "lineages": [],
+      "time": "639269712000000000",
+      "point": null
+    }
+  ]
+}

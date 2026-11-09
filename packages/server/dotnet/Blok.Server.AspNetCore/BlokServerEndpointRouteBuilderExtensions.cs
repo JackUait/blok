@@ -18,6 +18,8 @@ public static class BlokServerEndpointRouteBuilderExtensions
     ("DELETE", "/sync/{doc}/history/{lineage}"),
     ("POST", "/sync/{doc}/history/{lineage}/{sequence}/restore"),
     ("GET", "/sync/{doc}/history/{lineage}/{sequence}/changes"),
+    ("GET", "/sync/{doc}/history/at"),
+    ("GET", "/sync/{doc}/history/changes"),
   ];
 
   // {Sync} to {State} shipped in 1.16.1 and are kept as fields; the history
@@ -166,6 +168,8 @@ public static class BlokServerEndpointRouteBuilderExtensions
       "/sync/{doc}/history/{lineage}" => HistoryEndpoint.DeleteAsync,
       "/sync/{doc}/history/{lineage}/{sequence}/restore" => HistoryEndpoint.RestoreAsync,
       "/sync/{doc}/history/{lineage}/{sequence}/changes" => HistoryEndpoint.ChangesAsync,
+      "/sync/{doc}/history/at" => HistoryEndpoint.AtAsync,
+      "/sync/{doc}/history/changes" => HistoryEndpoint.ChangesBetweenAsync,
       _ => UploadByUrlEndpoint.HandleAsync,
     };
 

@@ -9,6 +9,7 @@ mod cancel;
 mod changes;
 mod error;
 mod history;
+mod historytime;
 mod lane;
 mod load;
 mod manager;
@@ -29,6 +30,10 @@ pub use changes::{
 };
 pub use error::{Error, PURGE_UNSUPPORTED, is_cancellation, is_transient};
 pub use history::{HistoryChanges, HistoryList, HistoryRead, HistoryStatus};
+pub use historytime::{
+    DEFAULT_HISTORY_RANGE, HistoryAt, HistoryPoint, HistoryRange, RangeRecord, RangeSelection,
+    parse_history_time, resolve_at, select_range,
+};
 pub use manager::{Manager, ManagerOptions};
 pub use ops::{
     Applied, EditResult, EditStatus, PlanOps, Precondition, Receipt, ResetResult, ResetStatus,
@@ -85,6 +90,8 @@ mod headless_test;
 mod history_fixture_test;
 #[cfg(test)]
 mod history_test;
+#[cfg(test)]
+mod historytime_fixture_test;
 #[cfg(test)]
 mod join_test;
 #[cfg(test)]

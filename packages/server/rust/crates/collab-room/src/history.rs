@@ -134,7 +134,7 @@ fn blocks_of(output: Option<&Object>) -> Vec<Value> {
 /// History reads take no lane and run on the caller's task; the store's
 /// reads block, as Go's do.
 impl Manager {
-    fn history_store(&self) -> Option<&dyn HistoryStore> {
+    pub(crate) fn history_store(&self) -> Option<&dyn HistoryStore> {
         self.0.operations.as_ref().and_then(|o| o.as_history())
     }
 
@@ -143,7 +143,7 @@ impl Manager {
         self.history_store().is_some()
     }
 
-    fn is_purged(
+    pub(crate) fn is_purged(
         &self,
         ctx: &Context,
         history: &dyn HistoryStore,

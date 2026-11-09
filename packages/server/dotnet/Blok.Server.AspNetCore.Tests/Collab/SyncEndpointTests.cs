@@ -119,7 +119,8 @@ public sealed class SyncEndpointTests
     Assert.Equal(
         "GET /blok/sync/{doc}/history, GET /blok/sync/{doc}/history/{lineage}/{sequence}, " +
         "DELETE /blok/sync/{doc}/history/{lineage}, POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore, " +
-        "GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes",
+        "GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes, GET /blok/sync/{doc}/history/at, " +
+        "GET /blok/sync/{doc}/history/changes",
         fields["History"]);
     // The standalone host forwards only this category to stderr, and its
     // none mode is loopback-only by validation: the warning is in-process only.

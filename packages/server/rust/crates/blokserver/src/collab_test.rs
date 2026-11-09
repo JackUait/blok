@@ -102,7 +102,8 @@ async fn the_open_routes_warning_carries_c_sharp_s_fields() {
             "History",
             "GET /blok/sync/{doc}/history, GET /blok/sync/{doc}/history/{lineage}/{sequence}, \
              DELETE /blok/sync/{doc}/history/{lineage}, POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore, \
-             GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes",
+             GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes, GET /blok/sync/{doc}/history/at, \
+             GET /blok/sync/{doc}/history/changes",
         ),
     ]
     .iter()

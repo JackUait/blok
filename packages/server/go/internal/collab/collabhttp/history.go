@@ -186,7 +186,7 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 	}
 	// Rows are measured newest first; the newest always goes out.
 	var rows [][]byte
-	size := int64(changesEnvelopeBytes)
+	size := int64(changesEnvelopeBytes + olderEndBytes)
 	truncated := result.Truncated
 	for index := len(result.Changes) - 1; index >= 0; index-- {
 		row, err := changeRow(result.Changes[index])
@@ -209,12 +209,12 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 		}
 		body = append(body, rows[index]...)
 	}
+	body = append(body, ']')
 	if truncated {
-		body = append(body, `],"truncated":true}`...)
-	} else {
-		body = append(body, "]}"...)
+		oldest := result.Changes[len(result.Changes)-len(rows)]
+		body = appendOlderEnd(body, lineage, oldest.Sequence, oldest.CommittedAt)
 	}
-	writeJSON(w, body)
+	writeJSON(w, append(body, '}'))
 }
 
 var changeKinds = map[room.BlockChangeKind]string{

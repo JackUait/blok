@@ -228,8 +228,10 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 	}
 	// Cut by the room with every row kept, the answer ends at the oldest
 	// record read, so a narrowed answer still moves its cursor.
+	// Counted before the cut below: after it, every index would look like the last row.
+	rowCount := len(rows)
 	olderEndOf := func(oldest int) room.RecordChanges {
-		if oldest == len(rows)-1 && len(result.Changes) > 0 {
+		if oldest == rowCount-1 && len(result.Changes) > 0 {
 			return result.Changes[0]
 		}
 		return shown[oldest]

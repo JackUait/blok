@@ -191,8 +191,10 @@ internal static partial class HistoryEndpoint
 
     // Cut by the room with every row kept, the answer ends at the oldest
     // record read, so a narrowed answer still moves its cursor.
+    // Counted before the cut below: after it, every index would look like the last row.
+    var rowCount = rows.Count;
     CollabRecordChanges OlderEndOf(int oldest) =>
-        oldest == rows.Count - 1 && result.Changes.Count > 0 ? result.Changes[0] : shown[oldest];
+        oldest == rowCount - 1 && result.Changes.Count > 0 ? result.Changes[0] : shown[oldest];
 
     var (kept, truncated) = FitAnswer(rows, result.Truncated, oldest =>
     {

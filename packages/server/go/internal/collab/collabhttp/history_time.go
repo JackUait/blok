@@ -153,8 +153,10 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 		sizes = append(sizes, int64(len(row)))
 	}
 	// As /changes: cut by the room with every row kept, the answer ends at the oldest record read.
+	// Counted before the cut below: after it, every index would look like the last row.
+	rowCount := len(rows)
 	olderEndOf := func(oldest int) room.RangeRecord {
-		if oldest == len(rows)-1 && len(result.Records) > 0 {
+		if oldest == rowCount-1 && len(result.Records) > 0 {
 			return result.Records[len(result.Records)-1]
 		}
 		return shown[oldest]

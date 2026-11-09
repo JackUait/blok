@@ -175,8 +175,10 @@ internal static partial class HistoryEndpoint
     }
 
     // As /changes: cut by the room with every row kept, the answer ends at the oldest record read.
+    // Counted before the cut below: after it, every index would look like the last row.
+    var rowCount = rows.Count;
     CollabRangeRecord OlderEndOf(int oldest) =>
-        oldest == rows.Count - 1 && result.Records.Count > 0 ? result.Records[^1] : shown[oldest];
+        oldest == rowCount - 1 && result.Records.Count > 0 ? result.Records[^1] : shown[oldest];
 
     var (kept, truncated) = FitAnswer(rows, result.Truncated, oldest =>
     {

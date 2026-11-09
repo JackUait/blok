@@ -350,6 +350,30 @@ suite('collab HTTP routes on a journal', () => {
     expect([atCap.status, atCap.headers['blok-doc-sequence']]).toEqual([204, '1']);
   });
 
+  // 1 insert, then 100 updates of about 21 KB: each row carries the text
+  // twice, so the rows pass the 4 MiB answer cap and the HTTP layer cuts them.
+  it('names the oldest row it sent as olderEnd when the byte cap cuts the answer', async () => {
+    const doc = '/sync/doc-byte-cut';
+    const text = (index: number): string => `${String(index).padStart(4, '0')}${'x'.repeat(20900)}`;
+    const first = await send(base, 'POST', `${doc}/edit`, [[KEY, 'c0']], insertBody('b1', text(0)));
+    const cutLineage = String(first.headers['blok-doc-lineage']);
+
+    for (let index = 1; index <= 100; index++) {
+      expect((await send(base, 'POST', `${doc}/edit`, [[KEY, `c${index}`]], updateBody('b1', text(index)))).status).toBe(204);
+    }
+
+    interface Cut { changes: { sequence: number }[]; truncated?: boolean; olderEnd?: { sequence: number } }
+    const version = JSON.parse((await send(base, 'GET', `${doc}/history/${cutLineage}/101/changes`)).body) as Cut;
+
+    expect(version.truncated).toBe(true);
+    expect(version.olderEnd?.sequence).toBe(version.changes[0].sequence);
+
+    const range = JSON.parse((await send(base, 'GET', `${doc}/history/changes?from=2000-01-01T00:00:00Z`)).body) as Cut;
+
+    expect(range.truncated).toBe(true);
+    expect(range.olderEnd?.sequence).toBe(range.changes.at(-1)?.sequence);
+  }, 180_000);
+
   // 1 inserts b, then 200 edits of a: the 200-record cap reads none of b.
   it('points a narrowed answer cut by the record cap past every record it read', async () => {
     const doc = '/sync/doc-narrow-cap';

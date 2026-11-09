@@ -1792,7 +1792,7 @@ editor.emit('custom-event', { message: 'Hello', data: 123 });`,
       {
         name: "history.undo()",
         returnType: "void",
-        description: "Undo the last operation. It does nothing while the editor is read-only, the same as Cmd+Z.",
+        description: "Undo the last operation. It does nothing while the editor is read-only, the same as Cmd+Z. Cmd+Z also tells screen readers \"Undone\". This call says nothing, so an undo button of your own can say what it wants.",
         example: `// Undo last change
 editor.history.undo();
 
@@ -1804,7 +1804,7 @@ for (let i = 0; i < 3; i++) {
       {
         name: "history.redo()",
         returnType: "void",
-        description: "Redo the last undone operation. It does nothing while the editor is read-only, the same as Cmd+Shift+Z.",
+        description: "Redo the last undone operation. It does nothing while the editor is read-only, the same as Cmd+Shift+Z. Cmd+Shift+Z also tells screen readers \"Redone\", or \"Nothing to redo\" when there is nothing left. This call says nothing.",
         example: `// Redo last undone change
 editor.history.redo();
 

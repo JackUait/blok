@@ -1514,6 +1514,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TOOLBAR_MINIMIZE_BYTES = 1071;
     // database.css: with the timeline table shown, « and the month are placed from the panel's width at the view's edge.
     const DATABASE_TIMELINE_TOOLBAR_PLACE_BYTES = 486;
+    // database.css: a hovered timeline bar shows Notion's "–o" connector: a 2px line into an 8px ring.
+    const DATABASE_TIMELINE_CONNECTOR_BYTES = 539;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1910,7 +1912,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TIMELINE_END_CHIP_BYTES
       + DATABASE_SEARCH_CLOSE_BYTES
       + DATABASE_TOOLBAR_MINIMIZE_BYTES
-      + DATABASE_TIMELINE_TOOLBAR_PLACE_BYTES;
+      + DATABASE_TIMELINE_TOOLBAR_PLACE_BYTES
+      + DATABASE_TIMELINE_CONNECTOR_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

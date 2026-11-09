@@ -15654,9 +15654,7 @@ button[data-blok-database-feed-reaction]:hover,
   inline-size: 10px;
   block-size: 10px;
   translate: 0 -50%;
-  border: 1px solid var(--blok-database-dependency-line);
   border-radius: 50%;
-  background-color: var(--blok-bg-primary);
   opacity: 0;
   cursor: crosshair;
 }
@@ -15676,16 +15674,39 @@ button[data-blok-database-feed-reaction]:hover,
   opacity: 0;
 }
 
-/* findings C16: a stub line from the bar's end to the dot. */
+/*
+ * tlhover.png (Gamma): "–o", a 2px line from 1px inside the bar's end into an 8px ring
+ * with a 2px stroke, 5px past the bar. Both draw 1px before this hit box, which starts
+ * where the end resize handle stops; they overlap that handle, so a press there must resize.
+ */
 [data-blok-database-timeline-link-handle]::before {
   content: "";
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-end: 100%;
+  inset-inline-end: calc(100% + 1px);
   inline-size: 6px;
-  border-block-start: 1px solid var(--blok-database-dependency-line);
-  /* It overlaps the end resize handle; a press there must resize. */
+  translate: 0 -50%;
+  border-block-start: 2px solid var(--blok-database-timeline-link-ring);
   pointer-events: none;
+}
+
+[data-blok-database-timeline-link-handle]::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: -1px;
+  box-sizing: border-box;
+  inline-size: 8px;
+  block-size: 8px;
+  translate: 0 -50%;
+  border: 2px solid var(--blok-database-timeline-link-ring);
+  border-radius: 50%;
+  background-color: var(--blok-bg-primary);
+  pointer-events: none;
+}
+
+[data-blok-database-timeline-link-handle]:hover::after {
+  display: none;
 }
 
 [data-blok-database-timeline-link-handle] svg {

@@ -307,6 +307,36 @@ test.describe('dependencies', () => {
     await expect.poll(async () => (await savedRow(page, 'c')).properties).toMatchObject({ 'p-blocked': [{ id: 'b' }] });
     await expect(page.locator('[data-blok-database-timeline-arrow][data-from="b"][data-to="c"]')).toHaveCount(1);
   });
+
+  // tlhover.png (Gamma): a 2px line from the bar's end into an 8px ring with a 2px stroke, ring 5px past the bar.
+  test('a hovered bar shows Notion\'s "–o" connector at its end', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-09T12:00:00'));
+    await mount(page, blocks());
+    await bar(page, 'b').hover();
+    const handle = bar(page, 'b').locator('[data-blok-database-timeline-link-handle]');
+
+    await expect(handle).toHaveCSS('opacity', '1');
+    const drawn = await handle.evaluate((el) => {
+      const ring = getComputedStyle(el, '::after');
+      const line = getComputedStyle(el, '::before');
+      const own = getComputedStyle(el);
+      const end = el.closest('[data-blok-database-timeline-bar]')?.getBoundingClientRect().right ?? Number.NaN;
+
+      return {
+        ring: [ring.width, ring.height, ring.borderTopWidth, ring.borderTopColor, ring.pointerEvents],
+        ringStart: el.getBoundingClientRect().left + parseFloat(ring.left) - end,
+        line: [line.width, line.borderTopWidth, line.borderTopColor, line.pointerEvents],
+        lineStart: el.getBoundingClientRect().right - parseFloat(line.right) - parseFloat(line.width) - end,
+        own: [own.borderTopWidth, own.backgroundColor],
+      };
+    });
+
+    expect(drawn.ring).toEqual(['8px', '8px', '2px', 'rgb(173, 169, 163)', 'none']);
+    expect(drawn.ringStart).toBeCloseTo(5, 0);
+    expect(drawn.line).toEqual(['6px', '2px', 'rgb(173, 169, 163)', 'none']);
+    expect(drawn.lineStart).toBeCloseTo(-1, 0);
+    expect(drawn.own).toEqual(['0px', 'rgba(0, 0, 0, 0)']);
+  });
 });
 
 test.describe('linked view', () => {

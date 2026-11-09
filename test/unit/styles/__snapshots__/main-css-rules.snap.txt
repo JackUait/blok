@@ -18326,9 +18326,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   inline-size: 10px;
   block-size: 10px;
   translate: 0 -50%;
-  border: 1px solid var(--blok-database-dependency-line);
   border-radius: 50%;
-  background-color: var(--blok-bg-primary);
   opacity: 0;
   cursor: crosshair;
 }
@@ -18349,10 +18347,30 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   content: "";
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-end: 100%;
+  inset-inline-end: calc(100% + 1px);
   inline-size: 6px;
-  border-block-start: 1px solid var(--blok-database-dependency-line);
+  translate: 0 -50%;
+  border-block-start: 2px solid var(--blok-database-timeline-link-ring);
   pointer-events: none;
+}
+
+[data-blok-database-timeline-link-handle]::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: -1px;
+  box-sizing: border-box;
+  inline-size: 8px;
+  block-size: 8px;
+  translate: 0 -50%;
+  border: 2px solid var(--blok-database-timeline-link-ring);
+  border-radius: 50%;
+  background-color: var(--blok-bg-primary);
+  pointer-events: none;
+}
+
+[data-blok-database-timeline-link-handle]:hover::after {
+  display: none;
 }
 
 [data-blok-database-timeline-link-handle] svg {

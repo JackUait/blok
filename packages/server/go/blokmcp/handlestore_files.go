@@ -42,8 +42,8 @@ import (
 // check keeps that from losing a save.
 //
 // Sweep deletes idle unleased handles of every principal, and crash
-// leftovers older than the stale time: temp files, .break files, and
-// records or leases no meta names.
+// leftovers older than the stale time: temp files, .break files, records
+// or leases no meta names, and principal locks (through the breaker).
 //
 // Privacy: records hold documents, undo steps and principals. The store is
 // POSIX only: on Windows it refuses to start. At start the path is cleaned
@@ -385,9 +385,10 @@ func (f *FilesHandleStore) Acquire(ctx context.Context, handle string, idle, wai
 		return nil, ErrHandleUnknown
 	}
 	var record HandleRecord
+	// A record that does not read is no handle, as a meta that does not.
 	if err := json.Unmarshal(text, &record); err != nil {
 		f.dropLock(leasePath, token)
-		return nil, err
+		return nil, ErrHandleUnknown
 	}
 	return &filesLease{store: f, handle: handle, path: leasePath, token: token, record: record}, nil
 }
@@ -424,8 +425,15 @@ func (f *FilesHandleStore) Sweep(ctx context.Context, idle time.Duration) error 
 				left = !metaFound
 			}
 		}
-		if info, err := entry.Info(); err == nil && left && !f.fresh(info) {
-			_ = os.Remove(f.path(name))
+		if info, err := entry.Info(); err == nil && !f.fresh(info) {
+			switch {
+			case strings.HasPrefix(name, "principal-") && strings.HasSuffix(name, ".lock"):
+				// Through the breaker, so a TryAdd taking it now keeps it.
+				seen, _, _ := readFile(f.path(name))
+				f.breakStale(f.path(name), string(seen))
+			case left:
+				_ = os.Remove(f.path(name))
+			}
 		}
 	}
 	return nil

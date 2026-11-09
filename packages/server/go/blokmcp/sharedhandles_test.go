@@ -120,10 +120,12 @@ func TestTheSharedCapCountsEveryServer(t *testing.T) {
 // countingStore counts store calls and can fail lease saves or every call.
 type countingStore struct {
 	HandleStore
-	calls    atomic.Int32
-	failSave atomic.Bool
-	failAll  atomic.Bool
-	removed  atomic.Int32
+	calls      atomic.Int32
+	failSave   atomic.Bool
+	failRemove atomic.Bool
+	failAll    atomic.Bool
+	removed    atomic.Int32
+	released   atomic.Int32
 }
 
 func (c *countingStore) fail() error {
@@ -166,7 +168,15 @@ func (l *countingLease) Save(ctx context.Context, record HandleRecord) error {
 
 func (l *countingLease) Remove(ctx context.Context) error {
 	l.store.removed.Add(1)
+	if l.store.failRemove.Load() {
+		return errors.New("the store lost its connection")
+	}
 	return l.HandleLease.Remove(ctx)
+}
+
+func (l *countingLease) Release(ctx context.Context) error {
+	l.store.released.Add(1)
+	return l.HandleLease.Release(ctx)
 }
 
 // A record that cannot be saved after the source save: the answer stands,
@@ -346,31 +356,183 @@ func TestBlokRenewsALeaseWhileACallRuns(t *testing.T) {
 	}
 }
 
-// Shutdown waits for a sweep in flight.
-func TestCloseWaitsForAStoreSweep(t *testing.T) {
+// A failed Remove still releases the lease, so the next call does not
+// wait out the lease time.
+func TestAFailedRemoveStillReleasesTheLease(t *testing.T) {
+	for _, tool := range []string{"blok_execute", "blok_close"} {
+		var counting *countingStore
+		pair := newSharedPair(t, func(inner HandleStore) HandleStore {
+			counting = &countingStore{HandleStore: inner}
+			return counting
+		})
+		handle := openOn(t, pair.a, "alice")
+		counting.failSave.Store(true)
+		counting.failRemove.Store(true)
+		arguments := `{"handle":"` + handle + `"}`
+		if tool == "blok_execute" {
+			arguments = `{"handle":"` + handle + `","commands":` + setTitle + `}`
+		}
+		call(t, pair.b, "alice", "Desktop", tool, arguments)
+		if counting.removed.Load() != 1 || counting.released.Load() != 1 {
+			t.Fatalf("%s: removed %d, released %d", tool, counting.removed.Load(), counting.released.Load())
+		}
+		lease, err := counting.HandleStore.Acquire(context.Background(), handle, time.Minute, 0)
+		if err != nil {
+			t.Fatalf("%s: the lease was kept: %v", tool, err)
+		}
+		_ = lease.Release(context.Background())
+	}
+}
+
+// A record that does not read answers UNKNOWN_HANDLE.
+func TestACorruptRecordIsAnUnknownHandle(t *testing.T) {
+	pair := newSharedPair(t, nil)
+	handle := openOn(t, pair.a, "alice")
+	files, _ := pair.store.(*FilesHandleStore)
+	if err := os.WriteFile(filepath.Join(files.dir, handle+".record.json"), []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if read := call(t, pair.b, "alice", "Desktop", "blok_read", `{"handle":"`+handle+`"}`); errorCode(read) != "UNKNOWN_HANDLE" {
+		t.Fatalf("read %v", read)
+	}
+}
+
+// sweepingStore's Sweep runs sweep, and counts the sweeps at once.
+type sweepingStore struct {
+	HandleStore
+	sweep   func(ctx context.Context)
+	running atomic.Int32
+	most    atomic.Int32
+	sweeps  atomic.Int32
+}
+
+func (s *sweepingStore) Sweep(ctx context.Context, _ time.Duration) error {
+	s.sweeps.Add(1)
+	now := s.running.Add(1)
+	defer s.running.Add(-1)
+	for {
+		most := s.most.Load()
+		if now <= most || s.most.CompareAndSwap(most, now) {
+			break
+		}
+	}
+	s.sweep(ctx)
+	return nil
+}
+
+func sweepingServer(t *testing.T, sweep func(ctx context.Context), idleMs string) (*Server, *sweepingStore) {
+	t.Helper()
 	previous := storeSweepEvery
-	storeSweepEvery = 20 * time.Millisecond
+	storeSweepEvery = 5 * time.Millisecond
 	t.Cleanup(func() { storeSweepEvery = previous })
-	var renewing *renewingStore
-	pair := newSharedPair(t, func(inner HandleStore) HandleStore {
-		renewing = &renewingStore{HandleStore: inner, sweeping: make(chan struct{})}
-		return renewing
-	})
-	time.Sleep(100 * time.Millisecond)
+	files, err := NewFilesHandleStore(filepath.Join(t.TempDir(), "handles"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := &sweepingStore{HandleStore: files, sweep: sweep}
+	options := Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: &Source{Kind: "files", Dir: t.TempDir()}, HandleStore: store}
+	if idleMs != "" {
+		options.HandleIdleMs = json.Number(idleMs)
+	}
+	server, err := New(options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return server, store
+}
+
+func waitFor(t *testing.T, what string, done func() bool) {
+	t.Helper()
+	for deadline := time.Now().Add(5 * time.Second); !done(); time.Sleep(5 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for %s", what)
+		}
+	}
+}
+
+// closingSession is a local handle that says when it closes.
+type closingSession struct {
+	session
+	closed chan struct{}
+}
+
+func (c *closingSession) close() (int, bool) {
+	close(c.closed)
+	return 0, false
+}
+
+// A stuck store sweep runs apart: local handles still expire, and only one
+// sweep runs at a time.
+func TestAStuckStoreSweepDoesNotStopLocalExpiry(t *testing.T) {
+	stuck := make(chan struct{})
+	t.Cleanup(func() { close(stuck) })
+	server, store := sweepingServer(t, func(context.Context) { <-stuck }, "50")
+	t.Cleanup(server.Close)
+	waitFor(t, "a sweep", func() bool { return store.sweeps.Load() > 0 })
+	local := &closingSession{closed: make(chan struct{})}
+	if _, err := server.handles.add("alice", "doc", local); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-local.closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("a local handle did not expire while a store sweep was stuck")
+	}
+	if most := store.most.Load(); most != 1 {
+		t.Fatalf("%d sweeps ran at once", most)
+	}
+}
+
+// A sweep has a deadline, and Close cancels it and returns after it.
+func TestCloseCancelsAStoreSweep(t *testing.T) {
+	saw := make(chan context.Context, 1)
+	server, _ := sweepingServer(t, func(ctx context.Context) {
+		select {
+		case saw <- ctx:
+		default:
+		}
+		<-ctx.Done()
+	}, "")
+	ctx := <-saw
+	if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > storeSweepTimeout {
+		t.Fatalf("deadline %v %v", deadline, ok)
+	}
+	server.Close()
+	if ctx.Err() != context.Canceled {
+		t.Fatalf("after Close: %v", ctx.Err())
+	}
+}
+
+// A sweep that ignores its context does not hold Close.
+func TestCloseDoesNotWaitForAStuckStoreSweep(t *testing.T) {
+	stuck := make(chan struct{})
+	t.Cleanup(func() { close(stuck) })
+	server, store := sweepingServer(t, func(context.Context) { <-stuck }, "")
+	waitFor(t, "a sweep", func() bool { return store.sweeps.Load() > 0 })
 	closed := make(chan struct{})
 	go func() {
-		pair.a.Close()
-		pair.b.Close()
+		server.Close()
 		close(closed)
 	}()
 	select {
 	case <-closed:
-		t.Fatal("Close did not wait for the sweep")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(sweepStopWait + 2*time.Second):
+		t.Fatal("Close waited for a stuck sweep")
 	}
-	close(renewing.sweeping)
-	<-closed
-	if !renewing.sweepDone.Load() {
-		t.Fatal("the sweep did not finish")
-	}
+}
+
+// A sweep past its deadline ends, and the next one runs.
+func TestAStoreSweepTimesOut(t *testing.T) {
+	previous := storeSweepTimeout
+	storeSweepTimeout = 20 * time.Millisecond
+	t.Cleanup(func() { storeSweepTimeout = previous })
+	ended := atomic.Int32{}
+	server, _ := sweepingServer(t, func(ctx context.Context) {
+		<-ctx.Done()
+		if ctx.Err() == context.DeadlineExceeded {
+			ended.Add(1)
+		}
+	}, "")
+	t.Cleanup(server.Close)
+	waitFor(t, "two timed-out sweeps", func() bool { return ended.Load() >= 2 })
 }

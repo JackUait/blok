@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -370,5 +371,50 @@ func TestTheFilesStoreIsPrivate(t *testing.T) {
 	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Fatalf("dir %v", err)
+	}
+}
+
+// A record that does not read is no handle: UNKNOWN_HANDLE, not a store
+// outage the agent would retry forever.
+func TestARecordThatDoesNotReadIsUnknown(t *testing.T) {
+	ctx := context.Background()
+	for _, text := range []string{"not json", `{"v":"1"}`} {
+		store, dir := filesStore(t)
+		if _, err := store.TryAdd(ctx, "h", record("alice", `{"blocks":[]}`), 8, minute); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "h.record.json"), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := store.Acquire(ctx, "h", minute, time.Second); !errors.Is(err, ErrHandleUnknown) {
+			t.Fatalf("%q: %v", text, err)
+		}
+		if _, err := os.Stat(filepath.Join(dir, "h.lease")); !os.IsNotExist(err) {
+			t.Fatalf("%q: the lease was kept: %v", text, err)
+		}
+	}
+}
+
+// Sweep breaks a principal lock left by a crash, and keeps a held one.
+func TestSweepRemovesStalePrincipalLocks(t *testing.T) {
+	ctx := context.Background()
+	store, dir := filesStore(t)
+	stale := filepath.Join(dir, "principal-"+strings.Repeat("a", 64)+".lock")
+	held := filepath.Join(dir, "principal-"+strings.Repeat("b", 64)+".lock")
+	for _, path := range []string{stale, held} {
+		if err := os.WriteFile(path, []byte("token"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ancient := time.Now().Add(-time.Hour)
+	_ = os.Chtimes(stale, ancient, ancient)
+	if err := store.Sweep(ctx, minute); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("stale lock kept: %v", err)
+	}
+	if _, err := os.Stat(held); err != nil {
+		t.Fatalf("held lock removed: %v", err)
 	}
 }

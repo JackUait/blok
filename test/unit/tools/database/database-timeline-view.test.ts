@@ -323,6 +323,37 @@ describe('DatabaseTimelineView', () => {
       expect(handlers.toggleTable).toHaveBeenCalled();
     });
 
+    // timeline.png / tlcollapse.png: the days keep their x when the table toggles.
+    it('hands the toggle where the first day sits, measured from the view\'s start', () => {
+      const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true }) });
+      const el = scroller(root);
+
+      rect(root, 100, 0, 1000, 400);
+      rect(el, 380, 0, 720, 400);
+      el.scrollLeft = 600;
+      root.querySelector<HTMLElement>('[data-blok-database-timeline-table-toggle]')?.click();
+      expect(handlers.toggleTable).toHaveBeenCalledWith({ start: '2026-07-01', at: -320 });
+    });
+
+    it('a draw handed that place scrolls so the first day sits there again', async () => {
+      const { root } = mount({ origin: { start: '2026-07-01', at: -320 } });
+      const el = scroller(root);
+
+      rect(root, 100, 0, 1000, 400);
+      rect(el, 100, 0, 1000, 400);
+      await Promise.resolve();
+      expect(el.scrollLeft).toBe(320);
+    });
+
+    it('a place from another window is ignored: the draw centres as usual', async () => {
+      const handed = mount({ origin: { start: '2026-08-01', at: -320 } }).root;
+      const plain = mount().root;
+
+      await Promise.resolve();
+      expect(scroller(handed).scrollLeft).toBe(scroller(plain).scrollLeft);
+      expect(scroller(handed).scrollLeft).not.toBe(320);
+    });
+
     it('lists the table properties, not the bar properties, with one row per item', () => {
       const { root } = mount({
         view: timelineView({

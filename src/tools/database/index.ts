@@ -76,7 +76,7 @@ import { formatDateValue } from '../../shared/database/date-value';
 import { freePropertyName } from '../../shared/database/schema-ops';
 import { OPTION_GROUP_TYPES, layoutChange } from '../../shared/database/view-changes';
 import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
-import type { TimelineGroup } from './database-timeline-view';
+import type { TimelineGroup, TimelineOrigin } from './database-timeline-view';
 import type { BarWrite } from './timeline-dates';
 import { boardLayoutItems, calendarLayoutItems, galleryLayoutItems, timelineLayoutItems } from './database-layout-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
@@ -734,6 +734,8 @@ export class DatabaseTool implements BlockTool {
   private readonly timelineCenters = new Map<string, string>();
   /** Per timeline view: whether the last draw showed the table, so the next draw knows it was toggled. */
   private readonly timelineTableShown = new Map<string, boolean>();
+  /** Per timeline view: where a table toggle left the days, for the draw it causes. */
+  private readonly timelineOrigins = new Map<string, TimelineOrigin>();
   private reprojectQueued = false;
   private readonly resolvingRows = new Set<string>();
   private readonly resolveAgainRows = new Set<string>();
@@ -6257,6 +6259,9 @@ export class DatabaseTool implements BlockTool {
     const tableSwapped = this.timelineTableShown.has(viewConfig.id) && this.timelineTableShown.get(viewConfig.id) !== tableShown;
 
     this.timelineTableShown.set(viewConfig.id, tableShown);
+    const origin = this.timelineOrigins.get(viewConfig.id);
+
+    this.timelineOrigins.delete(viewConfig.id);
     this.view = new DatabaseTimelineView({
       readOnly: this.readOnly,
       i18n: this.api.i18n,
@@ -6273,6 +6278,7 @@ export class DatabaseTool implements BlockTool {
       today,
       locale: editorLocale(this.api.i18n),
       tableSwapped,
+      ...(origin !== undefined ? { origin } : {}),
       cellContext: this.cellContext(),
       ...this.commentBadgeLever(),
       ...this.calendarLever(this.dataId, viewConfig.id),
@@ -6296,7 +6302,10 @@ export class DatabaseTool implements BlockTool {
           this.setTimelineCenter(viewConfig.id, day);
           this.rerenderView({ keepDrawer: true });
         },
-        toggleTable: () => this.updateActiveView({ showTimelineTable: !resolveShowTimelineTable(viewConfig) }),
+        toggleTable: (keep) => {
+          if (keep !== undefined) this.timelineOrigins.set(viewConfig.id, keep);
+          this.updateActiveView({ showTimelineTable: !resolveShowTimelineTable(viewConfig) });
+        },
         ...(this.readOnly ? {} : { openCalculationMenu: (anchor: HTMLElement, propertyId: string) => this.openTimelineCalculationMenu(anchor, viewConfig, propertyId) }),
         loadMore: (groupKey) => {
           shown.set(groupKey, (shown.get(groupKey) ?? limit) + limit);

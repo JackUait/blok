@@ -71,12 +71,19 @@ export interface TimelineHandlers {
   openZoomMenu: (anchor: HTMLElement) => void;
   /** Redraw centred on `day`. */
   navigate: (day: string) => void;
-  toggleTable: () => void;
+  /** `origin` is where the days sit now, for the next draw to keep. */
+  toggleTable: (origin?: TimelineOrigin) => void;
   loadMore: (groupKey: string) => void;
   /** A link drawn from one bar's handle onto another: `from` now blocks `to`. */
   link?: (fromRowId: string, toRowId: string) => void;
   /** A table panel footer cell was clicked: pick its calculation. */
   openCalculationMenu?: (anchor: HTMLElement, propertyId: string) => void;
+}
+
+/** Where the drawn window's first day sits: px from the view's inline start. */
+export interface TimelineOrigin {
+  start: string;
+  at: number;
 }
 
 export interface DatabaseTimelineViewOptions {
@@ -109,6 +116,8 @@ export interface DatabaseTimelineViewOptions {
   manageInCalendar?: { label: string; onClick: () => void };
   /** This draw follows a table toggle: the old chevron shrinks out over the new one. */
   tableSwapped?: boolean;
+  /** Draw the days here instead of centring on `center`, when the window still starts on `origin.start`. */
+  origin?: TimelineOrigin;
 }
 
 const DRAG_THRESHOLD = 4;
@@ -255,7 +264,17 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     // The tool attaches the view after createView returns; only then has the scroller a width.
     queueMicrotask(() => {
-      if (this.root?.isConnected === true) {
+      if (this.root?.isConnected !== true) {
+        return;
+      }
+      const origin = this.options.origin;
+
+      if (origin?.start === this.window.start) {
+        this.recentring = true;
+        this.scrollStart = Math.max(0, this.chartInset() - origin.at);
+        this.recentring = false;
+        this.refreshOffscreen();
+      } else {
         this.scrollToDay(this.options.center, 'center');
       }
     });
@@ -981,6 +1000,18 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
   }
 
+  /** The scroller's distance from the view's inline start. */
+  private chartInset(): number {
+    const view = this.root?.getBoundingClientRect();
+    const chart = this.scroller?.getBoundingClientRect();
+
+    if (view === undefined || chart === undefined) {
+      return 0;
+    }
+
+    return this.rtl ? view.right - chart.right : chart.left - view.left;
+  }
+
   private scrollToDay(day: string, align: 'center' | 'start' | 'end'): void {
     const offset = daysBetween(this.window.start, day) * this.dayWidth;
     const viewport = this.scroller?.clientWidth ?? 0;
@@ -1091,7 +1122,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     const actions: Array<[string, (el: Element) => void]> = [
-      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable()],
+      ['[data-blok-database-timeline-table-toggle]', () => handlers.toggleTable({ start: this.window.start, at: this.chartInset() - this.scrollStart })],
       ['[data-blok-database-timeline-zoom]', (el) => {
         if (el instanceof HTMLElement) {
           handlers.openZoomMenu(el);

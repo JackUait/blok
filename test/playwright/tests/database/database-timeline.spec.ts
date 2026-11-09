@@ -405,6 +405,21 @@ test.describe('timeline', () => {
     expect(month.x - panelEnd).toBeCloseTo(16, 0);
   });
 
+  // timeline.png and tlcollapse.png: hiding the table leaves every day at the same x (day 13 at 648, day 10 at 528).
+  test('hiding and showing the table leaves the bars where they are', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
+    const x = async (): Promise<number> => (await bar(page, 'r2').boundingBox())?.x ?? Number.NaN;
+    const shown = await x();
+
+    await page.locator('[data-blok-database-timeline-table-toggle]').click();
+    await expect(page.locator('[data-blok-database-timeline-table]')).toHaveCount(0);
+    expect(await x()).toBeCloseTo(shown, 0);
+
+    await page.locator('[data-blok-database-timeline-table-toggle]').click();
+    await expect(page.locator('[data-blok-database-timeline-table]')).toBeVisible();
+    expect(await x()).toBeCloseTo(shown, 0);
+  });
+
   test('"Today" and clicking a bar open the row in a peek', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline' }));
 

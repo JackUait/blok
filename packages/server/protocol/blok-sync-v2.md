@@ -592,10 +592,32 @@ returns the original acknowledgement and neither applies nor records the
 operation twice. The same `operationId` with different bytes is a terminal
 conflict, answered with `operation-id-conflict`.
 
+### 7.3 An operation that changes nothing
+
+The residual diff of step 4 is diffed against a state vector, and a state
+vector carries no deletions. So it always carries the whole delete set, even
+when the server already holds every delete in it. A client cannot tell that
+from a delete the server lacks, so it sends it.
+
+On a journal-backed document, an operation that applies but changes nothing is
+the exception to section 8:
+
+- The server acknowledges it with the current head as its `serverSequence`.
+- It records nothing, relays nothing, and stores nothing under the id.
+- A resend with that id runs again against the document as it is then. The
+  same id with different bytes is not a conflict.
+- With no committed operation on the lineage yet, the head is `0`, which no
+  type-103 frame may carry. That operation is still recorded.
+
+"Changes nothing" is decided by the CRDT engine, not by the bytes: an update
+that integrates no new struct, deletes nothing new and parks nothing new. A
+delete of an item the server has never seen is parked, so it is recorded.
+
 ## 8. What an acknowledgement means
 
 A type-103 frame means all of the following are durable in the server's
-configured operation store:
+configured operation store (an operation that changed nothing is the one
+exception, see section 7.3):
 
 - the document and lineage;
 - the exact operation ID and payload digest;

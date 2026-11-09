@@ -3507,3 +3507,111 @@ async fn a_zero_awareness_client_cap_relays_no_presence() {
     assert!(other.messages().is_empty(), "{:?}", other.messages());
     assert!(sender.closed().is_empty(), "{:?}", sender.closed());
 }
+
+/// Twin of C# CollabNoOpRecordsCaptureTests: v2 operations that change
+/// nothing, from fixtures/collab-history/noop-records.json.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn noop_records_fixture() {
+    use base64::Engine;
+    use base64::engine::general_purpose::STANDARD;
+
+    use crate::changes_test::{array, member, object, read_repo_json, string};
+
+    fn frame_text(message: &Message) -> String {
+        match message {
+            Message::SyncUpdate { .. } => "update".to_owned(),
+            Message::Acknowledgement {
+                operation_id,
+                server_sequence,
+                ..
+            } => format!("ack {operation_id} {server_sequence}"),
+            Message::Rejection {
+                operation_id, code, ..
+            } => format!("reject {operation_id} {code}"),
+            _ => "other".to_owned(),
+        }
+    }
+
+    let fixture = read_repo_json(&[
+        "test",
+        "unit",
+        "server-conformance",
+        "fixtures",
+        "collab-history",
+        "noop-records.json",
+    ]);
+    let seed = string(member(&fixture, "seed"));
+    let cases = array(member(&fixture, "cases"));
+    assert!(cases.len() >= 5, "only {} cases", cases.len());
+    for case in cases {
+        let case = object(case);
+        let name = string(member(case, "name"));
+        let cs = Cs::new();
+        cs.endpoint().holds(TEST_DOC, &seed, None);
+        let manager = cs.journal_manager(quiet());
+        let (writer, other) = (v2(""), self::writer());
+        let (membership, lineage) = joined_lineage(&manager, &writer).await;
+        enter(&manager, &other).await;
+
+        for (index, step) in array(member(case, "steps")).iter().enumerate() {
+            let step = object(step);
+            let update = STANDARD
+                .decode(string(member(step, "update")))
+                .unwrap_or_else(|err| panic!("{err}"));
+            writer.clear();
+            other.clear();
+
+            send(
+                &membership,
+                operation(&lineage, &string(member(step, "operationId")), update),
+            )
+            .await;
+
+            let want: Vec<String> = array(member(step, "frames"))
+                .iter()
+                .map(|frame| {
+                    let frame = object(frame);
+                    match string(member(frame, "type")).as_str() {
+                        "acknowledgement" => format!(
+                            "ack {} {}",
+                            string(member(frame, "operationId")),
+                            string(member(frame, "serverSequence"))
+                        ),
+                        "rejection" => format!(
+                            "reject {} {}",
+                            string(member(frame, "operationId")),
+                            string(member(frame, "code"))
+                        ),
+                        kind => kind.to_owned(),
+                    }
+                })
+                .collect();
+            let got: Vec<String> = writer.messages().iter().map(frame_text).collect();
+            assert_eq!(got, want, "{name}: step {index}");
+            let relayed = matches!(member(step, "relayed"), Value::Bool(true));
+            assert_eq!(
+                !other.messages().is_empty(),
+                relayed,
+                "{name}: step {index} relayed"
+            );
+        }
+
+        let want: Vec<String> = array(member(case, "journal"))
+            .iter()
+            .map(|record| {
+                let record = object(record);
+                format!(
+                    "{}:{}",
+                    string(member(record, "sequence")),
+                    string(member(record, "operationId"))
+                )
+            })
+            .collect();
+        let got: Vec<String> = cs
+            .committed()
+            .iter()
+            .map(|record| format!("{}:{}", record.sequence, record.operation_id))
+            .collect();
+        assert_eq!(got, want, "{name}: journal");
+    }
+}

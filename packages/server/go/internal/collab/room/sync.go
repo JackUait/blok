@@ -141,8 +141,17 @@ func (r *Room) commitFromMemberLocked(membership *Membership, op wire.Operation)
 		r.rejectLocked(membership, op, "operation-id-conflict")
 		return
 	}
-	if _, ok := r.applyRemoteLocked(op.Update); !ok {
+	applied, ok := r.applyRemoteLocked(op.Update)
+	if !ok {
 		r.rejectLocked(membership, op, "invalid-update")
+		return
+	}
+	// A reload's residual round resends the whole delete set (see the v1
+	// path). Ack it at the head and journal nothing. With no head yet an ack
+	// has no sequence to name (it must be at least 1), so that one is still
+	// journalled.
+	if !applied.Changed && r.committedThrough > 0 {
+		r.acknowledgeLocked(membership, op, r.committedThrough)
 		return
 	}
 	sequence, ok := r.appendCommittedLocked(op.OperationID, membership.member.ActorID(), membership.member.ProtocolSource(), op.Update, digest[:])

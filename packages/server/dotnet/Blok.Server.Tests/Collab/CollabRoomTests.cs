@@ -1250,6 +1250,66 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A reload's residual round sends the whole delete set again under a new
+  /// id. The room already holds it, so nothing is journalled or relayed, and
+  /// the ack names the head so the client stops retrying.
+  /// </summary>
+  [Fact]
+  public async Task AV2OperationThatChangesNothingIsAckedAtTheHeadAndNotJournalled()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var delete = YDocs.UpdateDeleting(client, 0, 1);
+    await membership.ReceiveAsync(Operation(membership, OpOne, delete), CancellationToken.None);
+    writer.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpTwo, delete), CancellationToken.None);
+
+    var ack = Assert.IsType<AcknowledgementFrame>(Assert.Single(writer.Received));
+    Assert.Equal(OpTwo, ack.OperationId);
+    Assert.Equal(1UL, ack.ServerSequence);
+    Assert.Empty(other.Received);
+    Assert.Single(operations.Committed(DocId));
+
+    writer.Received.Clear();
+    await membership.ReceiveAsync(
+        Operation(membership, OpThree, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+
+    Assert.Equal(2UL, writer.Received.OfType<AcknowledgementFrame>().Single().ServerSequence);
+    Assert.Equal(2, operations.Committed(DocId).Count);
+    Assert.Equal("ello!", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// An ack must name a committed sequence, and none exists yet, so a no-op
+  /// as the first operation is still journalled.
+  /// </summary>
+  [Fact]
+  public async Task AV2NoOpBeforeAnyCommitIsStillJournalled()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var nothing = client.EncodeStateAsUpdate(client.EncodeStateVector());
+    writer.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, nothing), CancellationToken.None);
+
+    var ack = Assert.IsType<AcknowledgementFrame>(Assert.Single(writer.Received.OfType<AcknowledgementFrame>()));
+    Assert.Equal(1UL, ack.ServerSequence);
+    Assert.Single(operations.Committed(DocId));
+  }
+
+  /// <summary>
   /// The append is awaited inside the room lane, so a slow commit holds the
   /// next one up rather than letting it overtake: what every member sees is
   /// the order the journal recorded.

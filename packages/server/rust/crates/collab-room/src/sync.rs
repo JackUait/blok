@@ -219,8 +219,16 @@ impl Room {
             LookupOutcome::Conflict => return reject("operation-id-conflict"),
             LookupOutcome::NotCommitted => {}
         }
-        if self.apply_remote_locked(st, update).is_none() {
+        let Some(applied) = self.apply_remote_locked(st, update) else {
             return reject("invalid-update");
+        };
+        // A reload's residual round resends the whole delete set (see the v1
+        // path). Ack it at the head and journal nothing. With no head yet an
+        // ack has no sequence to name (it must be at least 1), so that one is
+        // still journalled.
+        if !applied.changed && st.committed_through > 0 {
+            self.acknowledge_locked(st, member.as_ref(), operation_id, st.committed_through);
+            return;
         }
         let Some(sequence) = self
             .append_committed_locked(

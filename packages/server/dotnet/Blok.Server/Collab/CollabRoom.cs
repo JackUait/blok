@@ -2807,9 +2807,20 @@ internal sealed class CollabRoom : IDisposable
         break;
     }
 
-    if (ApplyRemoteLocked(operation.Update) is null)
+    if (ApplyRemoteLocked(operation.Update) is not { } applied)
     {
       RejectLocked(membership, operation, "invalid-update");
+
+      return;
+    }
+
+    // A reload's residual round resends the whole delete set (see the v1
+    // path). Ack it at the head and journal nothing. With no head yet an ack
+    // has no sequence to name (it must be at least 1), so that one is still
+    // journalled.
+    if (!applied.Changed && committedThrough > 0)
+    {
+      AcknowledgeLocked(membership, operation, committedThrough);
 
       return;
     }

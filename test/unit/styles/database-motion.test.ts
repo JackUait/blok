@@ -199,6 +199,15 @@ describe('side peek', () => {
     expect(bar).toContain('transition: margin-inline-end 200ms ease');
   });
 
+  // peek-top.png: with one view the toolbar sits in the title row, and New ⌄ still ends 24px short of the peek.
+  it('keeps a one-view title row toolbar clear of the peek too, and still under reduced motion', () => {
+    const row = '[data-blok-database-peek] [data-blok-database-title-row][data-single-view]:not([data-blok-database-drawer] *)';
+
+    expect(body(outsideReducedMotion, row)).toContain('margin-inline-end: var(--_blok-peek-gap, 0px)');
+    expect(body(outsideReducedMotion, row)).toContain('transition: margin-inline-end 200ms ease');
+    expect(body(reducedMotion, row)).toContain('transition: none');
+  });
+
   it('lets the page follow a resize drag at once', () => {
     expect(body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-resizing]'))
       .toContain('transition: none !important');

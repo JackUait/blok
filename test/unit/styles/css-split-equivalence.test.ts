@@ -1518,6 +1518,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TIMELINE_CONNECTOR_BYTES = 539;
     // database.css: the Filter / Sort picker keeps its 28px field, scrolls only its list and borders the search on focus.
     const DATABASE_PROPERTY_PICKER_BYTES = 891;
+    // database.css: a one-view title row keeps the peek gap, as the view bar does.
+    const DATABASE_PEEK_TITLE_ROW_BYTES = 256;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1916,7 +1918,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TOOLBAR_MINIMIZE_BYTES
       + DATABASE_TIMELINE_TOOLBAR_PLACE_BYTES
       + DATABASE_TIMELINE_CONNECTOR_BYTES
-      + DATABASE_PROPERTY_PICKER_BYTES;
+      + DATABASE_PROPERTY_PICKER_BYTES
+      + DATABASE_PEEK_TITLE_ROW_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

@@ -1897,8 +1897,10 @@
   transition: none !important;
 }
 
-/* The table runs up to the peek; the toolbar stops short of it (notion-live-8/62-close-hover.png). */
-[data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *) {
+/* The table runs up to the peek; the toolbar stops short of it (notion-live-8/62-close-hover.png).
+   With one view the toolbar sits in the title row (peek-top.png). */
+[data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *),
+[data-blok-database-peek] [data-blok-database-title-row][data-single-view]:not([data-blok-database-drawer] *) {
   margin-inline-end: var(--_blok-peek-gap, 0px);
   transition: margin-inline-end 200ms ease;
 }
@@ -6320,7 +6322,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
     transition: none !important;
   }
 
-  [data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *) {
+  [data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *),
+  [data-blok-database-peek] [data-blok-database-title-row][data-single-view]:not([data-blok-database-drawer] *) {
     transition: none;
   }
 

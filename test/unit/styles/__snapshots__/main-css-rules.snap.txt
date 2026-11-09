@@ -5859,7 +5859,7 @@ span[data-blok-slash-search] {
   transition: none !important;
 }
 
-[data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *) {
+[data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *), [data-blok-database-peek] [data-blok-database-title-row][data-single-view]:not([data-blok-database-drawer] *) {
   margin-inline-end: var(--_blok-peek-gap, 0px);
   transition: margin-inline-end 200ms ease;
 }
@@ -9773,7 +9773,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   transition: none !important;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *) {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *), [data-blok-database-peek] [data-blok-database-title-row][data-single-view]:not([data-blok-database-drawer] *) {
   transition: none;
 }
 

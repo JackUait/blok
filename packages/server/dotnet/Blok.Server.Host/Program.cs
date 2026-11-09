@@ -52,6 +52,7 @@ if (conformance.KeepAliveMs is { } keepAliveMs)
 
 options.CollabEnforceRestoreGuards = conformance.RestoreGuards;
 options.CollabRestoreTrashesPages = conformance.RestoreTrashesPages;
+options.CollabStampAuthority = conformance.StampAuthority;
 #endif
 
 try
@@ -101,6 +102,11 @@ if (conformance.Origin is not null)
 if (conformance.Journal)
 {
   blokServer.UseConformanceJournal(options.CollabDirectory);
+}
+
+if (conformance.RecordNotes)
+{
+  blokServer.UseCollabRecordNotes<Blok.Server.Collab.InMemoryCollabRecordNotes>();
 }
 #endif
 

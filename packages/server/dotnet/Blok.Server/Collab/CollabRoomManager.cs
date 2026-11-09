@@ -230,6 +230,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;
   private readonly ICollabActivityObserver? activityObserver;
+  private readonly ICollabRecordNotes? recordNotes;
   private readonly IDocEndpointClient endpoint;
   private readonly ICollabDocConverter converter;
   private readonly CollabRoomOptions options;
@@ -245,7 +246,8 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
       TimeProvider timeProvider,
       Action<string>? log = null,
       ICollabOperationStore? operationStore = null,
-      ICollabActivityObserver? activityObserver = null)
+      ICollabActivityObserver? activityObserver = null,
+      ICollabRecordNotes? recordNotes = null)
   {
     ArgumentNullException.ThrowIfNull(store);
     ArgumentNullException.ThrowIfNull(endpoint);
@@ -261,6 +263,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     this.log = log;
     this.operationStore = operationStore;
     this.activityObserver = activityObserver;
+    this.recordNotes = recordNotes;
   }
 
   internal int LiveRoomCount
@@ -391,7 +394,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   /// <summary>Without a journal, an edit with no ops still persists and schedules an export.</summary>
   internal bool HasJournal => operationStore is not null;
 
-  /// <summary>The journal keeps versions: <see cref="HistoryAsync"/> and <see cref="ReadVersionAsync"/> can answer.</summary>
+  /// <summary>The journal keeps versions: <see cref="HistoryAsync(string, TimeSpan?, bool, CancellationToken)"/> and <see cref="ReadVersionAsync"/> can answer.</summary>
   internal bool HasHistory => operationStore is ICollabOperationHistoryStore;
 
   /// <summary>Block-level HTTP edit with the endpoint's idempotency receipt.</summary>
@@ -431,6 +434,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
       string? actorId,
       CollabEditPrecondition? expect,
       Func<YDoc, CollabEditReceipt?, CancellationToken, ValueTask>? applied = null,
+      CollabRecordNote? note = null,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
@@ -445,7 +449,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
 
     return await EditInRoomAsync(
         docId,
-        room => room.EditAsync(planOps, operationId, digest, actorId, expect, applied, cancellationToken));
+        room => room.EditAsync(planOps, operationId, digest, actorId, expect, applied, note, cancellationToken));
   }
 
   private async ValueTask<CollabEditResult> EditInRoomAsync(
@@ -502,10 +506,21 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   /// Every lineage the journal holds, and its versions newest first. A
   /// <paramref name="group"/> window replaces both default grouping limits.
   /// </summary>
-  internal async ValueTask<CollabHistoryListResult> HistoryAsync(
+  internal ValueTask<CollabHistoryListResult> HistoryAsync(
       string docId,
       TimeSpan? group = null,
-      CancellationToken cancellationToken = default)
+      CancellationToken cancellationToken = default) =>
+      HistoryAsync(docId, group, byActor: false, cancellationToken);
+
+  /// <summary>
+  /// <paramref name="byActor"/> also starts a version where the actor
+  /// changes. With a record notes store, each version carries its actors' kinds.
+  /// </summary>
+  internal async ValueTask<CollabHistoryListResult> HistoryAsync(
+      string docId,
+      TimeSpan? group,
+      bool byActor,
+      CancellationToken cancellationToken)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
 
@@ -551,12 +566,57 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
       return new CollabHistoryListResult(CollabHistoryStatus.Purged, [], []);
     }
 
+    Func<string, ulong, CollabRecordNote?>? noteOf = null;
+
+    if (recordNotes is not null)
+    {
+      var byLineage = new Dictionary<string, IReadOnlyDictionary<ulong, CollabRecordNote>>(StringComparer.Ordinal);
+
+      foreach (var lineage in lineages)
+      {
+        byLineage[lineage.Lineage] = await ReadNotesAsync(docId, lineage.Lineage, cancellationToken) ?? Empty;
+      }
+
+      noteOf = (lineage, sequence) => byLineage[lineage].GetValueOrDefault(sequence);
+    }
+
     return new CollabHistoryListResult(
         CollabHistoryStatus.Ready,
         lineages,
-        group is { } window
-          ? CollabVersionTimeline.Group(withHeaders, window, window)
-          : CollabVersionTimeline.Group(withHeaders));
+        CollabVersionTimeline.Group(
+            withHeaders,
+            group ?? CollabVersionTimeline.IdleGap,
+            group ?? CollabVersionTimeline.MaxSpan,
+            byActor,
+            noteOf));
+  }
+
+  private static readonly IReadOnlyDictionary<ulong, CollabRecordNote> Empty = new Dictionary<ulong, CollabRecordNote>();
+
+  /// <summary>
+  /// The record notes of one lineage; null without a store. A store that
+  /// fails reads as no notes: they are informational.
+  /// </summary>
+  internal async ValueTask<IReadOnlyDictionary<ulong, CollabRecordNote>?> ReadNotesAsync(
+      string docId,
+      string lineage,
+      CancellationToken cancellationToken)
+  {
+    if (recordNotes is null)
+    {
+      return null;
+    }
+
+    try
+    {
+      return await recordNotes.ReadAsync(docId, lineage, cancellationToken);
+    }
+    catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+    {
+      log?.Invoke($"collab: the record notes of \"{docId}\" could not be read: {error.Message}");
+
+      return Empty;
+    }
   }
 
   /// <summary>One point of a lineage as OutputData JSON, read without the room.</summary>
@@ -884,6 +944,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
               digest,
               actorId,
               expect,
+              null,
               null,
               cancellationToken));
     }
@@ -1377,7 +1438,8 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
             timeProvider,
             log,
             operationStore,
-            activityObserver);
+            activityObserver,
+            recordNotes);
         room.Closed += OnRoomClosed;
         rooms[docId] = room;
       }

@@ -121,11 +121,20 @@ internal static class EditEndpoint
     var actorId = SyncHandshake.DeriveActor(
         claims is { } actorTicket ? actorTicket.User : "",
         user);
+    // The digest is of the request as sent, so a retry still matches its receipt.
+    var digest = CollabEditOps.CanonicalBodyDigest(ops);
+
+    if (options.CollabStampAuthority)
+    {
+      var now = context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeMilliseconds();
+      ops = CollabStampAuthority.Apply(ops, actorId, now);
+    }
+
     var result = await rooms.EditAsync(
         doc,
         ops,
         operationId,
-        CollabEditOps.CanonicalBodyDigest(ops),
+        digest,
         actorId,
         expect,
         context.RequestAborted);

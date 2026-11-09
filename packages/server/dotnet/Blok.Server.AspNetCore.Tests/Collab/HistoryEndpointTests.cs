@@ -388,6 +388,183 @@ public sealed class HistoryEndpointTests
   }
 
   [Fact]
+  public async Task ByActorStartsAVersionWhereTheActorChangesAndNotesAddKinds()
+  {
+    await using var history = await HistoryApp.StartAsync(auth: "ticket", recordNotes: new InMemoryCollabRecordNotes());
+    await history.OpenAsync(fixture.Compatible);
+    await history.EditTextAsync("two", fixture.Compatible);
+    await history.EditTextAsync("three", fixture.Compatible);
+    await history.EditTextAsync("four", fixture.UserTwo);
+
+    async Task<JsonArray> VersionsAsync(string query)
+    {
+      using var response = await history.SendAsync(HttpMethod.Get, $"/history{query}", fixture.Compatible);
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+      return JsonNode.Parse(await response.Content.ReadAsStringAsync())!["versions"]!.AsArray();
+    }
+
+    var byActor = await VersionsAsync("?by=actor");
+
+    Assert.Equal([3UL, 2UL, 0UL], byActor.Select(entry => entry!["sequence"]!.GetValue<ulong>()));
+    Assert.Equal(
+        ["lineage", "sequence", "startedAt", "savedAt", "actors", "actorKinds"],
+        byActor[0]!.AsObject().Select(member => member.Key));
+    Assert.Equal("""[{"id":"u2","kind":"person"}]""", byActor[0]!["actorKinds"]!.ToJsonString());
+    Assert.Equal("[]", byActor[2]!["actorKinds"]!.ToJsonString());
+
+    foreach (var ignored in new[] { "", "?by=", "?by=time", "?by=actor&by=actor", "?by=Actor" })
+    {
+      Assert.Equal([3UL, 0UL], (await VersionsAsync(ignored)).Select(entry => entry!["sequence"]!.GetValue<ulong>()));
+    }
+  }
+
+  [Fact]
+  public async Task ChangesNarrowToOneBlockAndCarryActorsWithNotes()
+  {
+    await using var history = await HistoryApp.StartAsync(auth: "ticket", recordNotes: new InMemoryCollabRecordNotes());
+    var lineage = await history.OpenAsync(fixture.Compatible);
+    await history.EditAsync(
+        Guid.NewGuid().ToString("N"),
+        """{ "ops": [ { "op": "insert", "id": "b", "after": "a", "block": { "type": "paragraph", "data": { "text": "b" } } } ] }""",
+        fixture.Compatible);
+    await history.EditTextAsync("two", fixture.Compatible);
+    await history.EditAsync(
+        Guid.NewGuid().ToString("N"),
+        """{ "ops": [ { "op": "update", "id": "a", "data": { "text": "three" } }, { "op": "update", "id": "b", "data": { "text": "b2" } } ] }""",
+        fixture.UserTwo);
+
+    async Task<JsonObject> ChangesAsync(string path)
+    {
+      using var response = await history.SendAsync(HttpMethod.Get, path, fixture.Compatible);
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+      return JsonNode.Parse(await response.Content.ReadAsStringAsync())!.AsObject();
+    }
+
+    var narrowed = (await ChangesAsync($"/history/{lineage}/3/changes?block=b"))["changes"]!.AsArray();
+
+    Assert.Equal([1UL, 3UL], narrowed.Select(entry => entry!["sequence"]!.GetValue<ulong>()));
+    Assert.All(narrowed, entry => Assert.Equal("b", Assert.Single(entry!["blocks"]!.AsArray())!["id"]!.GetValue<string>()));
+    Assert.Equal(
+        ["sequence", "committedAt", "actor", "actors", "blocks"],
+        narrowed[1]!.AsObject().Select(member => member.Key));
+    Assert.Equal("""[{"id":"u2","kind":"person"}]""", narrowed[1]!["actors"]!.ToJsonString());
+
+    var range = (await ChangesAsync("/history/changes?block=b"))["changes"]!.AsArray();
+
+    Assert.Equal([3UL, 1UL], range.Select(entry => entry!["sequence"]!.GetValue<ulong>()));
+    Assert.Equal("""[{"id":"u1","kind":"person"}]""", range[1]!["actors"]!.ToJsonString());
+
+    // Shipped route: a block it cannot read is ignored, as unknown keys always were.
+    foreach (var ignored in new[] { "?block=", "?block=b&block=a" })
+    {
+      var all = (await ChangesAsync($"/history/{lineage}/3/changes{ignored}"))["changes"]!.AsArray();
+
+      Assert.Equal([1UL, 2UL, 3UL], all.Select(entry => entry!["sequence"]!.GetValue<ulong>()));
+    }
+
+    foreach (var refused in new[] { "?block=", "?block=b&block=a" })
+    {
+      using var response = await history.SendAsync(HttpMethod.Get, $"/history/changes{refused}", fixture.Compatible);
+
+      await AssertError(response, HttpStatusCode.BadRequest, "block must be one block id\n");
+    }
+  }
+
+  [Fact]
+  public async Task ANarrowedAnswerCutByTheCapStillPointsPastWhatItRead()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await history.EditAsync(
+        Guid.NewGuid().ToString("N"),
+        """{ "ops": [ { "op": "insert", "id": "b", "after": "a", "block": { "type": "paragraph", "data": { "text": "b" } } } ] }""");
+
+    for (var edit = 1; edit <= CollabRoomManager.MaxChangeRecords; edit++)
+    {
+      await history.EditTextAsync($"v{edit}");
+    }
+
+    var head = CollabRoomManager.MaxChangeRecords + 1;
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/{head}/changes?block=b");
+    var body = JsonNode.Parse(await response.Content.ReadAsStringAsync())!.AsObject();
+
+    Assert.Empty(body["changes"]!.AsArray());
+    Assert.True(body["truncated"]!.GetValue<bool>());
+    Assert.Equal(2UL, body["olderEnd"]!["sequence"]!.GetValue<ulong>());
+
+    using var older = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1/changes?block=b");
+    var rest = JsonNode.Parse(await older.Content.ReadAsStringAsync())!["changes"]!.AsArray();
+
+    Assert.Equal([1UL], rest.Select(entry => entry!["sequence"]!.GetValue<ulong>()));
+  }
+
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task StampAuthorityDecidesWhoAnEditIsCreditedTo(bool authority)
+  {
+    await using var history = await HistoryApp.StartAsync(
+        auth: "ticket",
+        configure: options => options.CollabStampAuthority = authority);
+    await history.OpenAsync(fixture.Compatible);
+    var before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    await history.EditAsync(
+        Guid.NewGuid().ToString("N"),
+        """{ "ops": [ { "op": "insert", "id": "b", "after": "a", "block": { "type": "paragraph", "data": { "text": "b" }, "createdAt": 1, "createdBy": "mallory", "createdWith": "agent:x:y", "lastEditedAt": 2, "lastEditedBy": "mallory" } }, { "op": "update", "id": "a", "data": { "text": "two" } } ] }""",
+        fixture.Compatible);
+
+    var blocks = await history.BlocksAsync(fixture.Compatible);
+    var edited = blocks[0]!.AsObject();
+    var inserted = blocks[1]!.AsObject();
+
+    if (!authority)
+    {
+      Assert.Equal(("mallory", "agent:x:y", 1.0), (
+          inserted["createdBy"]!.GetValue<string>(),
+          inserted["createdWith"]!.GetValue<string>(),
+          inserted["createdAt"]!.GetValue<double>()));
+      Assert.False(edited.ContainsKey("lastEditedBy"));
+
+      return;
+    }
+
+    Assert.Equal(("u1", "u1"), (inserted["createdBy"]!.GetValue<string>(), inserted["lastEditedBy"]!.GetValue<string>()));
+    Assert.False(inserted.ContainsKey("createdWith"));
+    Assert.InRange(inserted["createdAt"]!.GetValue<double>(), before, before + 60_000);
+    Assert.Equal(inserted["createdAt"]!.GetValue<double>(), inserted["lastEditedAt"]!.GetValue<double>());
+    Assert.Equal("u1", edited["lastEditedBy"]!.GetValue<string>());
+    Assert.InRange(edited["lastEditedAt"]!.GetValue<double>(), before, before + 60_000);
+  }
+
+  [Fact]
+  public async Task ARestoreKeepsTheStampsItBringsBackUnderStampAuthority()
+  {
+    await using var history = await HistoryApp.StartAsync(
+        auth: "ticket",
+        configure: options => options.CollabStampAuthority = true);
+    var lineage = await history.OpenAsync(fixture.Compatible);
+    await history.EditAsync(
+        Guid.NewGuid().ToString("N"),
+        """{ "ops": [ { "op": "insert", "id": "b", "after": "a", "block": { "type": "paragraph", "data": { "text": "b" }, "createdBy": "mallory" } } ] }""",
+        fixture.Compatible);
+    var inserted = (await history.BlocksAsync(fixture.Compatible))[1]!.AsObject();
+    await history.EditAsync(Guid.NewGuid().ToString("N"), """{ "ops": [ { "op": "remove", "id": "b" } ] }""", fixture.Compatible);
+
+    using var restore = await history.RestoreAsync(lineage, "1", Guid.NewGuid().ToString("N"), ticket: fixture.UserTwo);
+
+    Assert.Equal(HttpStatusCode.NoContent, restore.StatusCode);
+    Assert.Equal("u1", inserted["createdBy"]!.GetValue<string>());
+    var back = (await history.BlocksAsync(fixture.Compatible))[1]!.AsObject();
+    Assert.Equal(inserted["createdBy"]!.ToJsonString(), back["createdBy"]!.ToJsonString());
+    Assert.Equal(inserted["createdAt"]!.ToJsonString(), back["createdAt"]!.ToJsonString());
+    Assert.Equal(inserted["lastEditedBy"]!.ToJsonString(), back["lastEditedBy"]!.ToJsonString());
+  }
+
+  [Fact]
   public async Task ChangesPastTheCapAreTheNewestAndSayTruncated()
   {
     await using var history = await HistoryApp.StartAsync();
@@ -1026,13 +1203,15 @@ public sealed class HistoryEndpointTests
     internal static async Task<HistoryApp> StartAsync(
         string auth = "none",
         CollabRoomOptions? roomOptions = null,
-        IBlokAuthorization? authorization = null)
+        IBlokAuthorization? authorization = null,
+        ICollabRecordNotes? recordNotes = null,
+        Action<BlokServerOptions>? configure = null)
     {
       var directory = Path.Combine(Path.GetTempPath(), $"blok-history-tests-{Guid.NewGuid():N}");
       var journal = new HistoryJournal(new LocalCollabOperationStore(directory));
       var converter = new FailingConverter(new CollabDocConverter(TimeProvider.System, Reader.Value));
       var logs = new CapturingLoggerProvider();
-      var fakes = new SyncFakes(roomOptions, journal, converter);
+      var fakes = new SyncFakes(roomOptions, journal, converter, recordNotes);
       fakes.Endpoint.HoldsDocument(SyncApp.Doc, new JsonObject
       {
         ["blocks"] = new JsonArray(new JsonObject
@@ -1044,6 +1223,7 @@ public sealed class HistoryEndpointTests
       });
       var app = await SyncApp.StartAsync(
           auth,
+          configure: configure,
           services: collection =>
           {
             collection.AddSingleton<ICollabOperationStore>(journal);

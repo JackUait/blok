@@ -748,7 +748,8 @@ public sealed partial class CollabHistoryManagerTests
   private CollabRoomManager ManagerOver(
       ICollabOperationStore? operationStore,
       CollabRoomOptions? options = null,
-      IRichTextHtmlReader? reader = null)
+      IRichTextHtmlReader? reader = null,
+      ICollabRecordNotes? recordNotes = null)
   {
     return new CollabRoomManager(
         store,
@@ -757,7 +758,8 @@ public sealed partial class CollabHistoryManagerTests
         options ?? new CollabRoomOptions(),
         time,
         log.Add,
-        operationStore);
+        operationStore,
+        recordNotes: recordNotes);
   }
 
   private string Lineage() => operations.Head(DocId)!.Lineage;

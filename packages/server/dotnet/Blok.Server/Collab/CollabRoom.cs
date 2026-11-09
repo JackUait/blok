@@ -159,6 +159,7 @@ internal sealed class CollabRoom : IDisposable
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;
   private readonly ICollabActivityObserver? activityObserver;
+  private readonly ICollabRecordNotes? recordNotes;
   private readonly IDocEndpointClient endpoint;
   private readonly ICollabDocConverter converter;
   private readonly CollabRoomOptions options;
@@ -282,12 +283,14 @@ internal sealed class CollabRoom : IDisposable
       TimeProvider timeProvider,
       Action<string>? log,
       ICollabOperationStore? operationStore = null,
-      ICollabActivityObserver? activityObserver = null)
+      ICollabActivityObserver? activityObserver = null,
+      ICollabRecordNotes? recordNotes = null)
   {
     DocId = docId;
     this.store = store;
     this.operationStore = operationStore;
     this.activityObserver = activityObserver;
+    this.recordNotes = recordNotes;
     this.endpoint = endpoint;
     this.converter = converter;
     this.options = options;
@@ -557,11 +560,12 @@ internal sealed class CollabRoom : IDisposable
       string? actorId,
       CollabEditPrecondition? expect,
       Func<YDoc, CollabEditReceipt?, CancellationToken, ValueTask>? applied,
+      CollabRecordNote? note,
       CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(planOps);
 
-    return EditCoreAsync(planOps, gateFrameSize: true, operationId, digest, actorId, expect, applied, cancellationToken);
+    return EditCoreAsync(planOps, gateFrameSize: true, operationId, digest, actorId, expect, applied, cancellationToken, note: note);
   }
 
   /// <summary>
@@ -618,7 +622,8 @@ internal sealed class CollabRoom : IDisposable
       CollabEditPrecondition? expect,
       Func<YDoc, CollabEditReceipt?, CancellationToken, ValueTask>? applied,
       CancellationToken cancellationToken,
-      bool dryRun = false)
+      bool dryRun = false,
+      CollabRecordNote? note = null)
   {
     return RunAsync<CollabEditResult?>(
         async () =>
@@ -861,7 +866,8 @@ internal sealed class CollabRoom : IDisposable
               actorId,
               CollabOperationSource.HttpEdit,
               update,
-              digest);
+              digest,
+              note);
 
           if (sequence is null)
           {
@@ -2891,6 +2897,31 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
+  /// Stores who wrote the record just journalled. Not atomic with the
+  /// journal: a crash, a timeout or a throw here loses only this note, and
+  /// never fails the edit or closes the room.
+  /// </summary>
+  private async Task WriteNoteLocked(ulong sequence, CollabRecordNote? note)
+  {
+    if (recordNotes is null || note is null)
+    {
+      return;
+    }
+
+    try
+    {
+      using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
+      using var bounded = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, deadline.Token);
+
+      await recordNotes.WriteAsync(DocId, tag.Lineage, sequence, note, bounded.Token);
+    }
+    catch (Exception error)
+    {
+      log?.Invoke($"collab: the record note of {sequence} in \"{DocId}\" was not written: {error.Message}");
+    }
+  }
+
+  /// <summary>
   /// The durable step journal-backed write paths share. It answers the sequence
   /// or closes the room before anything is published.
   /// </summary>
@@ -2899,7 +2930,8 @@ internal sealed class CollabRoom : IDisposable
       string? actorId,
       CollabOperationSource source,
       byte[] update,
-      ReadOnlyMemory<byte> digest)
+      ReadOnlyMemory<byte> digest,
+      CollabRecordNote? note = null)
   {
     CollabOperationAppendResult appended;
 
@@ -2950,6 +2982,8 @@ internal sealed class CollabRoom : IDisposable
     }
 
     committedThrough = appended.ServerSequence;
+
+    await WriteNoteLocked(appended.ServerSequence, note ?? CollabActorKinds.Classify(actorId));
 
     // After the append, never before: an edit is reported once it is durable.
     RecordActivityLocked(actorId, CollabActivityKind.Edited);

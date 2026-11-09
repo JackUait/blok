@@ -40,6 +40,17 @@ internal static class CollabVersionChanges
   private const string ValuesPrefix = "values.";
 
   /// <summary>
+  /// The record narrowed to one block: only that block's changes, and no page
+  /// keys. Null when the record did not touch it.
+  /// </summary>
+  internal static CollabRecordChanges? ForBlock(CollabRecordChanges record, string blockId)
+  {
+    var blocks = record.Blocks.Where(change => string.Equals(change.Id, blockId, StringComparison.Ordinal)).ToList();
+
+    return blocks.Count == 0 ? null : record with { Blocks = blocks, Page = [] };
+  }
+
+  /// <summary>
   /// Replays once from the baseline and diffs every record after
   /// <paramref name="firstBefore"/> (0 = the baseline) against the step
   /// before it. HTML in rich fields is read only for the blocks returned:

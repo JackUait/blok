@@ -15,6 +15,7 @@
   "CollabMaxMessageBytes": 1048576,
   "CollabRestoreTrashesPages": false,
   "CollabS3Prefix": "",
+  "CollabStampAuthority": false,
   "DocEndpoint": "",
   "DocEndpointAuth": "",
   "ListenAddress": "127.0.0.1:4000",

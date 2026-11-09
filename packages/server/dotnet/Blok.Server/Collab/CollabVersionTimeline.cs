@@ -4,14 +4,20 @@ namespace Blok.Server.Collab;
 /// <remarks>
 /// Sequence is the version's last record. Sequence 0 is a lineage baseline;
 /// both its times are the lineage's created-at. Actors are distinct, in
-/// first-seen order.
+/// first-seen order. ActorKinds is null without a record notes store; with
+/// one it holds each actor's first note, in Actors order, skipping actors
+/// that have none.
 /// </remarks>
 internal sealed record CollabVersion(
     string Lineage,
     ulong Sequence,
     DateTimeOffset? StartedAt,
     DateTimeOffset? SavedAt,
-    IReadOnlyList<string> Actors);
+    IReadOnlyList<string> Actors,
+    IReadOnlyList<CollabActorKind>? ActorKinds = null);
+
+/// <summary>One actor of a version and the note of its first record there.</summary>
+internal sealed record CollabActorKind(string Id, CollabRecordNote Note);
 
 /// <summary>Groups journal record headers into versions by time.</summary>
 internal static class CollabVersionTimeline
@@ -26,7 +32,9 @@ internal static class CollabVersionTimeline
   public static IReadOnlyList<CollabVersion> Group(
       IReadOnlyList<(CollabLineageInfo Lineage, IReadOnlyList<CollabRecordHeader> Headers)> lineagesOldestFirst,
       TimeSpan idleGap,
-      TimeSpan maxSpan)
+      TimeSpan maxSpan,
+      bool byActor = false,
+      Func<string, ulong, CollabRecordNote?>? noteOf = null)
   {
     var versions = new List<CollabVersion>();
     for (var i = lineagesOldestFirst.Count - 1; i >= 0; i--)
@@ -36,18 +44,21 @@ internal static class CollabVersionTimeline
       var start = 0;
       for (var r = 1; r <= headers.Count; r++)
       {
-        if (r < headers.Count && !StartsGroup(headers[r], headers[r - 1], headers[start], idleGap, maxSpan))
+        if (r < headers.Count &&
+            !StartsGroup(headers[r], headers[r - 1], headers[start], idleGap, maxSpan) &&
+            !(byActor && !string.Equals(headers[r].ActorId, headers[r - 1].ActorId, StringComparison.Ordinal)))
         {
           continue;
         }
 
-        groups.Add(ToVersion(lineage.Lineage, headers, start, r));
+        groups.Add(ToVersion(lineage.Lineage, headers, start, r, noteOf));
         start = r;
       }
 
       groups.Reverse();
       versions.AddRange(groups);
-      versions.Add(new CollabVersion(lineage.Lineage, 0, lineage.CreatedAt, lineage.CreatedAt, []));
+      versions.Add(new CollabVersion(
+          lineage.Lineage, 0, lineage.CreatedAt, lineage.CreatedAt, [], noteOf is null ? null : []));
     }
 
     return versions;
@@ -68,7 +79,8 @@ internal static class CollabVersionTimeline
       string lineage,
       IReadOnlyList<CollabRecordHeader> headers,
       int start,
-      int end)
+      int end,
+      Func<string, ulong, CollabRecordNote?>? noteOf)
   {
     var actors = new List<string>();
     for (var r = start; r < end; r++)
@@ -79,11 +91,32 @@ internal static class CollabVersionTimeline
       }
     }
 
+    List<CollabActorKind>? kinds = null;
+
+    if (noteOf is not null)
+    {
+      kinds = [];
+
+      foreach (var actor in actors)
+      {
+        for (var r = start; r < end; r++)
+        {
+          if (headers[r].ActorId == actor && noteOf(lineage, headers[r].ServerSequence) is { } note)
+          {
+            kinds.Add(new CollabActorKind(actor, note));
+
+            break;
+          }
+        }
+      }
+    }
+
     return new CollabVersion(
         lineage,
         headers[end - 1].ServerSequence,
         headers[start].CommittedAt,
         headers[end - 1].CommittedAt,
-        actors);
+        actors,
+        kinds);
   }
 }

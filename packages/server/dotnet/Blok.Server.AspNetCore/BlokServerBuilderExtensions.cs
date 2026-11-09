@@ -113,4 +113,28 @@ public static class BlokServerBuilderExtensions
 
     return builder;
   }
+
+  /// <summary>
+  /// Keeps a note of who wrote each journal record: a person or an agent,
+  /// the agent's client and the person it acted for. The history routes then
+  /// return actor kinds. Registered as a singleton.
+  /// </summary>
+  /// <remarks>
+  /// The note is written right after its record, but not atomically with it:
+  /// a crash in between loses that one note. Blok never deletes notes; delete
+  /// a document's notes when you purge it.
+  /// </remarks>
+  /// <typeparam name="T">The application's notes store, or <see cref="InMemoryCollabRecordNotes"/>.</typeparam>
+  /// <param name="builder">The server being built.</param>
+  /// <returns>The same builder, so hooks chain.</returns>
+  public static BlokServerBuilder UseCollabRecordNotes<T>(this BlokServerBuilder builder)
+      where T : class, ICollabRecordNotes
+  {
+    ArgumentNullException.ThrowIfNull(builder);
+
+    builder.Services.RemoveAll<ICollabRecordNotes>();
+    builder.Services.AddSingleton<ICollabRecordNotes, T>();
+
+    return builder;
+  }
 }

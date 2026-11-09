@@ -16,6 +16,7 @@ internal static partial class HistoryEndpoint
   private const string BadRange = "from and to must be ISO 8601 times with an offset, from no later than to\n";
   private const string BadBefore = "before must be one <lineage>:<sequence>\n";
   private const string BadDetail = "detail must be properties\n";
+  private const string BadBlock = "block must be one block id\n";
 
   /// <summary>
   /// The newest point at or before the time: a redirect to it, or the point
@@ -125,6 +126,13 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    if (!TryQueryBlock(context, out var block))
+    {
+      await SyncEndpoint.RefuseAsync(context, StatusCodes.Status400BadRequest, BadBlock);
+
+      return;
+    }
+
     var result = await admitted.Rooms.ChangesBetweenAsync(
         admitted.Doc,
         start,
@@ -140,10 +148,24 @@ internal static partial class HistoryEndpoint
     }
 
     var rows = new List<byte[]>();
+    var shown = new List<CollabRangeRecord>();
+    var notes = new Dictionary<string, IReadOnlyDictionary<ulong, CollabRecordNote>?>(StringComparer.Ordinal);
 
     foreach (var record in result.Records)
     {
-      var row = ChangeRow(record.Changes, detail);
+      if (Narrowed(record.Changes, block) is not { } changes)
+      {
+        continue;
+      }
+
+      if (!notes.TryGetValue(record.Lineage, out var lineageNotes))
+      {
+        lineageNotes = await admitted.Rooms.ReadNotesAsync(admitted.Doc, record.Lineage, context.RequestAborted);
+        notes[record.Lineage] = lineageNotes;
+      }
+
+      shown.Add(record);
+      var row = ChangeRow(changes, detail, lineageNotes);
       var prefix = LineagePrefix(record.Lineage);
       var lineaged = new byte[prefix.Length + row.Length - 1];
 
@@ -152,9 +174,13 @@ internal static partial class HistoryEndpoint
       rows.Add(lineaged);
     }
 
+    // As /changes: cut by the room with every row kept, the answer ends at the oldest record read.
+    CollabRangeRecord OlderEndOf(int oldest) =>
+        oldest == rows.Count - 1 && result.Records.Count > 0 ? result.Records[^1] : shown[oldest];
+
     var (kept, truncated) = FitAnswer(rows, result.Truncated, oldest =>
     {
-      var record = result.Records[oldest];
+      var record = OlderEndOf(oldest);
 
       return OlderEnd(record.Lineage, record.Changes.Sequence, record.Changes.CommittedAt).Length;
     });
@@ -183,7 +209,7 @@ internal static partial class HistoryEndpoint
 
     if (truncated)
     {
-      var oldest = result.Records[rows.Count - 1];
+      var oldest = OlderEndOf(kept - 1);
 
       await body.WriteAsync(OlderEnd(oldest.Lineage, oldest.Changes.Sequence, oldest.Changes.CommittedAt), cancel);
     }

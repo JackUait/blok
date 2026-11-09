@@ -56,9 +56,13 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    // Shipped route: any other by is ignored, as unknown keys always were.
+    var byActor = context.Request.Query.TryGetValue("by", out var by) && by.Count == 1 && by[0] == "actor";
+
     var result = await admitted.Rooms.HistoryAsync(
         admitted.Doc,
         minutes is { } window ? TimeSpan.FromMinutes(window) : null,
+        byActor,
         context.RequestAborted);
 
     if (result.Status != CollabHistoryStatus.Ready)
@@ -78,13 +82,23 @@ internal static partial class HistoryEndpoint
         ["createdAt"] = UnixMilliseconds(lineage.CreatedAt),
         ["current"] = lineage.Current,
       })]),
-      ["versions"] = new JsonArray([.. result.Versions.Select(version => (JsonNode)new JsonObject
+      ["versions"] = new JsonArray([.. result.Versions.Select(version =>
       {
-        ["lineage"] = version.Lineage,
-        ["sequence"] = version.Sequence,
-        ["startedAt"] = UnixMilliseconds(version.StartedAt),
-        ["savedAt"] = UnixMilliseconds(version.SavedAt),
-        ["actors"] = new JsonArray([.. version.Actors.Select(actor => (JsonNode)actor)]),
+        var entry = new JsonObject
+        {
+          ["lineage"] = version.Lineage,
+          ["sequence"] = version.Sequence,
+          ["startedAt"] = UnixMilliseconds(version.StartedAt),
+          ["savedAt"] = UnixMilliseconds(version.SavedAt),
+          ["actors"] = new JsonArray([.. version.Actors.Select(actor => (JsonNode)actor)]),
+        };
+
+        if (version.ActorKinds is { } kinds)
+        {
+          entry["actorKinds"] = new JsonArray([.. kinds.Select(kind => (JsonNode)ActorKindJson(kind.Id, kind.Note))]);
+        }
+
+        return (JsonNode)entry;
       })]),
     };
 
@@ -142,8 +156,9 @@ internal static partial class HistoryEndpoint
       return;
     }
 
-    // v2.1.0 ignored unknown keys here, so a bad detail is ignored, not refused.
+    // v2.1.0 ignored unknown keys here, so a bad detail or block is ignored, not refused.
     var detail = TryQueryDetail(context, out var asked) && asked;
+    TryQueryBlock(context, out var block);
 
     var result = await admitted.Rooms.ChangesAsync(
         admitted.Doc,
@@ -159,17 +174,29 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    var notes = await admitted.Rooms.ReadNotesAsync(admitted.Doc, point.Lineage, context.RequestAborted);
+
     // Rows are measured newest first; the newest always goes out, so a reader can page.
     var rows = new List<byte[]>();
+    var shown = new List<CollabRecordChanges>();
 
     for (var index = result.Changes.Count - 1; index >= 0; index--)
     {
-      rows.Add(ChangeRow(result.Changes[index], detail));
+      if (Narrowed(result.Changes[index], block) is { } record)
+      {
+        rows.Add(ChangeRow(record, detail, notes));
+        shown.Add(record);
+      }
     }
+
+    // Cut by the room with every row kept, the answer ends at the oldest
+    // record read, so a narrowed answer still moves its cursor.
+    CollabRecordChanges OlderEndOf(int oldest) =>
+        oldest == rows.Count - 1 && result.Changes.Count > 0 ? result.Changes[0] : shown[oldest];
 
     var (kept, truncated) = FitAnswer(rows, result.Truncated, oldest =>
     {
-      var record = result.Changes[result.Changes.Count - 1 - oldest];
+      var record = OlderEndOf(oldest);
 
       return OlderEnd(point.Lineage, record.Sequence, record.CommittedAt).Length;
     });
@@ -200,7 +227,7 @@ internal static partial class HistoryEndpoint
 
     if (truncated)
     {
-      var oldest = result.Changes[result.Changes.Count - rows.Count];
+      var oldest = OlderEndOf(kept - 1);
 
       await body.WriteAsync(OlderEnd(point.Lineage, oldest.Sequence, oldest.CommittedAt), cancel);
     }
@@ -614,7 +641,10 @@ internal static partial class HistoryEndpoint
   /// One changes row as UTF-8 JSON. With <paramref name="detail"/>, a changed
   /// database or row also carries what changed inside its data.
   /// </summary>
-  private static byte[] ChangeRow(CollabRecordChanges record, bool detail)
+  private static byte[] ChangeRow(
+      CollabRecordChanges record,
+      bool detail,
+      IReadOnlyDictionary<ulong, CollabRecordNote>? notes)
   {
     var buffer = new ArrayBufferWriter<byte>();
 
@@ -624,6 +654,21 @@ internal static partial class HistoryEndpoint
       writer.WriteNumber("sequence", record.Sequence);
       writer.WriteNumber("committedAt", record.CommittedAt.ToUnixTimeMilliseconds());
       writer.WriteString("actor", record.ActorId);
+
+      // With a record notes store only; a record without a note has none.
+      if (notes is not null)
+      {
+        writer.WritePropertyName("actors");
+        writer.WriteStartArray();
+
+        if (record.ActorId is { } actor && notes.TryGetValue(record.Sequence, out var note))
+        {
+          ActorKindJson(actor, note).WriteTo(writer);
+        }
+
+        writer.WriteEndArray();
+      }
+
       writer.WriteStartArray("blocks");
 
       foreach (var change in record.Blocks)
@@ -683,6 +728,47 @@ internal static partial class HistoryEndpoint
     }
 
     return buffer.WrittenSpan.ToArray();
+  }
+
+  /// <summary>{id, kind, client?, onBehalfOf?}.</summary>
+  private static JsonObject ActorKindJson(string id, CollabRecordNote note)
+  {
+    var json = new JsonObject { ["id"] = id, ["kind"] = note.Kind };
+
+    if (note.Client is { } client)
+    {
+      json["client"] = client;
+    }
+
+    if (note.OnBehalfOf is { } person)
+    {
+      json["onBehalfOf"] = person;
+    }
+
+    return json;
+  }
+
+  private static CollabRecordChanges? Narrowed(CollabRecordChanges record, string? block) =>
+      block is null ? record : CollabVersionChanges.ForBlock(record, block);
+
+  /// <summary>Absent is null; anything but one non-empty value is false.</summary>
+  private static bool TryQueryBlock(HttpContext context, out string? block)
+  {
+    block = null;
+
+    if (!context.Request.Query.TryGetValue("block", out var values))
+    {
+      return true;
+    }
+
+    if (values.Count != 1 || string.IsNullOrEmpty(values[0]))
+    {
+      return false;
+    }
+
+    block = values[0];
+
+    return true;
   }
 
   private static JsonValue? UnixMilliseconds(DateTimeOffset? at)

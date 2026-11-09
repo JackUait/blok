@@ -1109,7 +1109,8 @@ internal sealed class SyncFakes
   internal SyncFakes(
       CollabRoomOptions? roomOptions = null,
       ICollabOperationStore? operationStore = null,
-      ICollabDocConverter? converter = null)
+      ICollabDocConverter? converter = null,
+      ICollabRecordNotes? recordNotes = null)
   {
     Endpoint.Holds(SyncApp.Doc, "seeded");
     Manager = new CollabRoomManager(
@@ -1118,7 +1119,8 @@ internal sealed class SyncFakes
         converter ?? Converter,
         roomOptions ?? new CollabRoomOptions(),
         TimeProvider.System,
-        operationStore: operationStore);
+        operationStore: operationStore,
+        recordNotes: recordNotes);
   }
 }
 

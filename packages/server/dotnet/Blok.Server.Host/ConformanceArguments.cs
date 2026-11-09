@@ -11,7 +11,9 @@ internal sealed record ConformanceParseResult(
     string? Error,
     int? KeepAliveMs = null,
     bool RestoreGuards = false,
-    bool RestoreTrashesPages = false);
+    bool RestoreTrashesPages = false,
+    bool RecordNotes = false,
+    bool StampAuthority = false);
 
 internal static class ConformanceArguments
 {
@@ -29,6 +31,8 @@ internal static class ConformanceArguments
     var journal = false;
     var restoreGuards = false;
     var restoreTrashesPages = false;
+    var recordNotes = false;
+    var stampAuthority = false;
     int? keepAliveMs = null;
 
     for (var index = 0; index < arguments.Length; index++)
@@ -58,6 +62,18 @@ internal static class ConformanceArguments
       if (argument == "--conformance-restore-trashes-pages")
       {
         restoreTrashesPages = true;
+        continue;
+      }
+
+      if (argument == "--conformance-record-notes")
+      {
+        recordNotes = true;
+        continue;
+      }
+
+      if (argument == "--conformance-stamp-authority")
+      {
+        stampAuthority = true;
         continue;
       }
 
@@ -136,7 +152,9 @@ internal static class ConformanceArguments
         null,
         keepAliveMs,
         restoreGuards,
-        restoreTrashesPages);
+        restoreTrashesPages,
+        recordNotes,
+        stampAuthority);
   }
 
   private static ConformanceParseResult Error(string error)

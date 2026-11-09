@@ -562,7 +562,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
           recorded.Lineage = receipt?.Tag.Lineage;
           roomHistory.Add(docId, actor, recorded);
         }
-      }, cancellationToken);
+      }, CollabActorKinds.Classify(actor.Id, agent: true, actor.OnBehalfOf), cancellationToken);
     }
     catch (NoRoomWriteException) when (asked is not null)
     {
@@ -791,7 +791,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         // What the room holds now is what the opposite replay checks against.
         roomHistory.Replayed(docId, actor, step, undo,
             RoomAgentHistory.Project(now, YDocConverter.ReadPageMaps(doc), step.Ids, step.PageKeys));
-      }, cancellationToken);
+      }, CollabActorKinds.Classify(actor.Id, agent: true, actor.OnBehalfOf), cancellationToken);
     }
     catch (HistoryRefusal refusal)
     {

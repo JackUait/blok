@@ -79,7 +79,9 @@ public sealed partial class CollabHistoryCaptureTests
   private sealed record TimelineCase(
       string Name,
       TimeSpan? Window,
-      (string Lineage, DateTimeOffset? CreatedAt, (ulong Sequence, DateTimeOffset At, string? Actor)[] Headers)[] Lineages);
+      (string Lineage, DateTimeOffset? CreatedAt, (ulong Sequence, DateTimeOffset At, string? Actor)[] Headers)[] Lineages,
+      bool ByActor = false,
+      Dictionary<(string Lineage, ulong Sequence), CollabRecordNote>? Notes = null);
 
   private static JsonObject Timeline()
   {
@@ -127,6 +129,32 @@ public sealed partial class CollabHistoryCaptureTests
       new("big sequences and the far ends of time", null,
           [("L1", DateTimeOffset.MinValue, [
               (ulong.MaxValue - 1, DateTimeOffset.MinValue, null), (ulong.MaxValue, DateTimeOffset.MaxValue, null)])]),
+      new("by actor, a new actor starts a group", null,
+          [("L1", T0, [(1, T0, "bob"), (2, T0, "bob"), (3, T0, "alice"), (4, T0, "bob")])], ByActor: true),
+      new("by actor, records without an actor group together", null,
+          [("L1", T0, [(1, T0, null), (2, T0, null), (3, T0, "bob"), (4, T0, null)])], ByActor: true),
+      new("by actor, an empty actor is not a missing one", null,
+          [("L1", T0, [(1, T0, ""), (2, T0, null), (3, T0, "")])], ByActor: true),
+      new("by actor, the time limits still apply", minute,
+          [("L1", T0, [(1, T0, "bob"), (2, T0 + TimeSpan.FromSeconds(30), "bob"), (3, T0 + 2 * minute, "bob"), (4, T0 + 2 * minute, "alice")])],
+          ByActor: true),
+      new("by actor, each lineage groups on its own", null,
+          [("old", T0, [(1, T0, "bob")]), ("new", T0, [(1, T0 + minute, "bob"), (2, T0 + minute, "carol")])], ByActor: true),
+      new("actor kinds are each actor's first note, actors without one left out", null,
+          [("L1", T0, [(1, T0, "bob"), (2, T0, "agent:bob:cursor"), (3, T0, "carol"), (4, T0, "bob"), (5, T0, null)])],
+          Notes: new()
+          {
+            [("L1", 2)] = new CollabRecordNote("agent", "cursor", "bob"),
+            [("L1", 4)] = new CollabRecordNote("person"),
+          }),
+      new("actor kinds follow the actor groups", null,
+          [("L1", T0, [(1, T0, "bob"), (2, T0, "agent:bob:cursor")]), ("L2", T0, [])],
+          ByActor: true,
+          Notes: new()
+          {
+            [("L1", 1)] = new CollabRecordNote("person"),
+            [("L1", 2)] = new CollabRecordNote("agent", "cursor", "bob"),
+          }),
     ];
 
     var written = new JsonArray();
@@ -139,39 +167,82 @@ public sealed partial class CollabHistoryCaptureTests
               Headers: (IReadOnlyList<CollabRecordHeader>)entry.Headers
                   .Select(header => new CollabRecordHeader(header.Sequence, header.At, header.Actor)).ToList()))
           .ToList();
-      var versions = testCase.Window is { } window
-          ? CollabVersionTimeline.Group(lineages, window, window)
-          : CollabVersionTimeline.Group(lineages);
+      var notes = testCase.Notes;
+      Func<string, ulong, CollabRecordNote?>? noteOf = notes is null
+          ? null
+          : (lineage, sequence) => notes.GetValueOrDefault((lineage, sequence));
+      var window = testCase.Window ?? CollabVersionTimeline.IdleGap;
+      var versions = testCase.Window is null && !testCase.ByActor && noteOf is null
+          ? CollabVersionTimeline.Group(lineages)
+          : CollabVersionTimeline.Group(
+              lineages,
+              window,
+              testCase.Window ?? CollabVersionTimeline.MaxSpan,
+              testCase.ByActor,
+              noteOf);
 
-      written.Add(new JsonObject
+      var item = new JsonObject
       {
         ["name"] = testCase.Name,
         ["windowMinutes"] = testCase.Window is { } w ? (int)w.TotalMinutes : null,
-        ["lineages"] = new JsonArray([.. lineages.Select(entry => (JsonNode)new JsonObject
+      };
+
+      if (testCase.ByActor)
+      {
+        item["byActor"] = true;
+      }
+
+      item["lineages"] = new JsonArray([.. lineages.Select(lineage => (JsonNode)new JsonObject
+      {
+        ["lineage"] = lineage.Lineage.Lineage,
+        ["createdAt"] = Ticks(lineage.Lineage.CreatedAt),
+        ["headers"] = new JsonArray([.. lineage.Headers.Select(header =>
         {
-          ["lineage"] = entry.Lineage.Lineage,
-          ["createdAt"] = Ticks(entry.Lineage.CreatedAt),
-          ["headers"] = new JsonArray([.. entry.Headers.Select(header => (JsonNode)new JsonObject
+          var row = new JsonObject
           {
             ["sequence"] = header.ServerSequence.ToString(CultureInfo.InvariantCulture),
             ["committedAt"] = Ticks(header.CommittedAt),
             ["actor"] = header.ActorId,
-          })]),
+          };
+
+          if (notes?.GetValueOrDefault((lineage.Lineage.Lineage, header.ServerSequence)) is { } note)
+          {
+            row["note"] = CollabAttributionCaptureTests.NoteJson(note);
+          }
+
+          return (JsonNode)row;
         })]),
-        ["versions"] = new JsonArray([.. versions.Select(version => (JsonNode)new JsonObject
+      })]);
+      item["versions"] = new JsonArray([.. versions.Select(version =>
+      {
+        var row = new JsonObject
         {
           ["lineage"] = version.Lineage,
           ["sequence"] = version.Sequence.ToString(CultureInfo.InvariantCulture),
           ["startedAt"] = Ticks(version.StartedAt),
           ["savedAt"] = Ticks(version.SavedAt),
           ["actors"] = new JsonArray([.. version.Actors.Select(actor => (JsonNode)actor)]),
-        })]),
-      });
+        };
+
+        if (version.ActorKinds is { } kinds)
+        {
+          row["actorKinds"] = new JsonArray([.. kinds.Select(kind =>
+          {
+            var json = CollabAttributionCaptureTests.NoteJson(kind.Note);
+            json.Insert(0, "id", kind.Id);
+
+            return (JsonNode)json;
+          })]);
+        }
+
+        return (JsonNode)row;
+      })]);
+      written.Add(item);
     }
 
     return new JsonObject
     {
-      ["$comment"] = "CollabVersionTimeline.Group as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Times are .NET UTC ticks; windowMinutes null is the default 2 min gap and 10 min span.",
+      ["$comment"] = "CollabVersionTimeline.Group as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Times are .NET UTC ticks; windowMinutes null is the default 2 min gap and 10 min span. byActor also starts a group when the actor changes. A header note is its record notes entry; actorKinds is written only when a case has notes.",
       ["cases"] = written,
     };
   }

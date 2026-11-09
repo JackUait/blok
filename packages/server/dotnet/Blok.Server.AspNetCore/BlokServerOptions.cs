@@ -228,6 +228,16 @@ public sealed class BlokServerOptions
   public bool CollabRestoreTrashesPages { get; set; }
 
   /// <summary>
+  /// Makes the server the author of block stamps on <c>POST /sync/{doc}/edit</c>.
+  /// An insert's <c>createdAt</c>/<c>By</c>/<c>With</c> and <c>lastEditedAt</c>/<c>By</c>/<c>With</c>
+  /// are replaced, and an update stamps its block's <c>lastEdited*</c>. By is
+  /// the person and With the agent; an agent with no person is By with no
+  /// With. Off, the default, an insert keeps the stamps the caller sent and an
+  /// update stamps nothing. A restore keeps the stamps it brings back either way.
+  /// </summary>
+  public bool CollabStampAuthority { get; set; }
+
+  /// <summary>
   /// WebSocket keep-alive ping interval; zero turns pings off. A socket that
   /// does not answer within twice this is aborted, which is what frees a dead
   /// connection's slot in the per-user cap.

@@ -174,7 +174,8 @@ public static class BlokServerServiceCollectionExtensions
           timeProvider,
           CollabLog(provider),
           source.Store,
-          provider.GetService<ICollabActivityObserver>());
+          provider.GetService<ICollabActivityObserver>(),
+          provider.GetService<ICollabRecordNotes>());
     });
 
     // The endpoints need the concrete manager; the interface is the host's

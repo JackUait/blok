@@ -57,6 +57,10 @@ var (
 // nothing, when it does not. So
 // exclusivity is best effort: correctness then rests on the source's
 // version check.
+//
+// Methods may be called concurrently: Blok calls Renew from its own
+// goroutine while a call runs Save or Remove. A lease over one connection
+// or transaction must lock it.
 type HandleLease interface {
 	// Record is the record as acquired.
 	Record() HandleRecord
@@ -67,7 +71,8 @@ type HandleLease interface {
 	// renewal is logged and the call goes on.
 	Renew(ctx context.Context) error
 	// Release ends the lease and restarts the handle's idle time. It does
-	// nothing once the lease is gone.
+	// nothing once the lease is gone. Blok calls it at the end of every
+	// call, after Remove too, failed or not.
 	Release(ctx context.Context) error
 	// Remove forgets the handle and ends the lease.
 	Remove(ctx context.Context) error
@@ -86,7 +91,9 @@ type HandleStore interface {
 	TryAdd(ctx context.Context, handle string, record HandleRecord, maxPerPrincipal int, idle time.Duration) (bool, error)
 	// Acquire waits up to wait for the handle's lease. ErrHandleUnknown:
 	// no such handle, or it expired. ErrHandleBusy: still leased at the
-	// timeout. A leased handle never expires.
+	// timeout. A leased handle never expires. A record that does not read
+	// is ErrHandleUnknown too, not an error: an error is answered as a
+	// store outage, and the agent would retry it.
 	Acquire(ctx context.Context, handle string, idle, wait time.Duration) (HandleLease, error)
 	// Sweep deletes every handle idle longer than idle and not leased.
 	// Blok calls it on a timer; a store with its own expiry may do nothing.

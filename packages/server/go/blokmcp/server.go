@@ -87,6 +87,11 @@ func buildServer(options, checked Options, runtime invoker) (*Server, error) {
 	if err := s.checkOptions(ctx, checked); err != nil {
 		return nil, err
 	}
+	if store, ok := options.HandleStore.(opener); ok {
+		if err := store.open(); err != nil {
+			return nil, err
+		}
+	}
 	s.flags = map[string]any{
 		"sync":    options.live(),
 		"source":  options.hasSource(),
@@ -157,8 +162,10 @@ func buildServer(options, checked Options, runtime invoker) (*Server, error) {
 	s.handles.lines = s.turns
 	if options.HandleStore != nil {
 		s.shared = &sharedHandles{server: s, store: options.HandleStore, lanes: map[string]*sharedLane{}}
+		s.shared.sweepCtx, s.shared.stopSweeps = context.WithCancel(context.Background())
 	}
-	go s.sweepLoop()
+	// The timers are read here, not in the goroutine: tests swap them.
+	go s.sweepLoop(storeSweepEvery, storeSweepTimeout)
 	return s, nil
 }
 
@@ -213,14 +220,14 @@ type ConfigError struct{ Message string }
 func (e *ConfigError) Error() string { return e.Message }
 
 // sweepLoop expires idle handles every min(idle, 30 s), as Node does.
-func (s *Server) sweepLoop() {
+func (s *Server) sweepLoop(storeEvery, sweepTimeout time.Duration) {
 	every := time.Duration(min(s.idleMs, 30_000) * float64(time.Millisecond))
 	ticker := time.NewTicker(max(every, time.Millisecond))
 	defer ticker.Stop()
 	// A store's expired records go on their own timer.
 	var storeSweeps <-chan time.Time
 	if s.shared != nil {
-		storeTicker := time.NewTicker(storeSweepEvery)
+		storeTicker := time.NewTicker(storeEvery)
 		defer storeTicker.Stop()
 		storeSweeps = storeTicker.C
 	}
@@ -231,7 +238,7 @@ func (s *Server) sweepLoop() {
 		case <-ticker.C:
 			s.handles.sweep(func(sess session) { sess.close() })
 		case <-storeSweeps:
-			s.shared.sweep()
+			s.shared.startSweep(sweepTimeout)
 		}
 	}
 }

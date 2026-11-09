@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -383,5 +384,93 @@ func TestAnUnexpectedErrorIsLoggedAndAnsweredWithFixedWords(t *testing.T) {
 	}
 	if _, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "host_echo", Arguments: map[string]any{"text": "x"}}); err != nil {
 		t.Fatalf("host_echo: %v", err)
+	}
+}
+
+// promptFails runs the real engine but fails Blok's prompts.
+type promptFails struct{ real invoker }
+
+func (p promptFails) Invoke(ctx context.Context, op, input string, timeout *time.Duration) (string, error) {
+	if op == "mcpPrompt" {
+		return "", errors.New("secret-prompt-failure")
+	}
+	return p.real.Invoke(ctx, op, input, timeout)
+}
+
+// An unexpected prompts/get error gets the same fixed words as a tool call.
+func TestAnUnexpectedPromptErrorIsAnsweredWithFixedWords(t *testing.T) {
+	var log strings.Builder
+	previous := logOutput
+	logOutput = &log
+	t.Cleanup(func() { logOutput = previous })
+	pool, err := newPool(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blok, err := embedWith(embedOptions(t), as("alice"), promptFails{real: pool})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(blok.Close)
+	if len(blok.promptNames) == 0 {
+		t.Fatal("Blok serves no prompts")
+	}
+	server := hostServer(blok, "", "")
+	if err := blok.Attach(server); err != nil {
+		t.Fatal(err)
+	}
+	session := connect(t, server)
+	_, err = session.GetPrompt(context.Background(), &mcp.GetPromptParams{Name: blok.promptNames[0]})
+	if wire := wireError(err); wire == nil || wire.Code != jsonrpc.CodeInternalError || wire.Message != "Blok could not run this call." {
+		t.Fatalf("err %v", err)
+	}
+	if !strings.Contains(log.String(), "secret-prompt-failure") {
+		t.Fatalf("log %q", log.String())
+	}
+}
+
+// A caller hook's scopes are checked as the standalone server checks
+// OAuth scopes: [] allows nothing, blok.read allows reads only.
+func TestCallerScopesAreCheckedAsStandaloneScopes(t *testing.T) {
+	standalone, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"}, Source: embedOptions(t).Source})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(standalone.Close)
+	expected := func(scopes []string, tool string, arguments map[string]any) map[string]any {
+		who, err := standalone.actorFor(context.Background(), "alice", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		who.scopes = scopes
+		written, _ := json.Marshal(arguments)
+		ran, err := standalone.dispatch(context.Background(), &toolCall{name: tool, arguments: written, caller: who})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return structured(t, ran.answer)
+	}
+	for _, scopes := range [][]string{{}, {"blok.read"}} {
+		_, session := attachedHost(t, EmbedOptions{Caller: func(context.Context, *mcp.CallToolRequest) (*CallerIdentity, error) {
+			return &CallerIdentity{Principal: "alice", Scopes: scopes}, nil
+		}})
+		read, err := callBlok(t, session, "blok_open", map[string]any{"documentId": "doc"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		write, err := callBlok(t, session, "blok_open", map[string]any{"documentId": "doc", "write": true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(scopes) == 0 {
+			if code := errorCode(read); code == "" || !reflect.DeepEqual(read, expected(scopes, "blok_open", map[string]any{"documentId": "doc"})) {
+				t.Fatalf("[] read %v", read)
+			}
+		} else if _, ok := read["handle"].(string); !ok {
+			t.Fatalf("blok.read read %v", read)
+		}
+		if code := errorCode(write); code == "" || !reflect.DeepEqual(write, expected(scopes, "blok_open", map[string]any{"documentId": "doc", "write": true})) {
+			t.Fatalf("%v write %v", scopes, write)
+		}
 	}
 }

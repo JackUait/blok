@@ -42,8 +42,8 @@ import (
 // check keeps that from losing a save.
 //
 // Sweep deletes idle unleased handles of every principal, and crash
-// leftovers older than the stale time: temp files, .break files, and
-// records or leases no meta names.
+// leftovers older than the stale time: temp files, .break files, records
+// or leases no meta names, and principal locks (through the breaker).
 //
 // Privacy: records hold documents, undo steps and principals. The store is
 // POSIX only: on Windows it refuses to start. At start the path is cleaned
@@ -99,6 +99,51 @@ func newFilesHandleStore(dir string, stale time.Duration) (*FilesHandleStore, er
 		return nil, &ConfigError{Message: fmt.Sprintf("--handle-store directory %s must be a directory (not a link) owned by this user, with no group or world access (chmod 700)", dir)}
 	}
 	return &FilesHandleStore{dir: dir, stale: stale}, nil
+}
+
+// filesStoreAt is --handle-store files:<dir> as parsed. The server opens
+// it after its option checks (opener); used before, it opens on first use.
+type filesStoreAt struct {
+	dir   string
+	once  sync.Once
+	store *FilesHandleStore
+	err   error
+}
+
+// opener is a store that is made at start.
+type opener interface{ open() error }
+
+func (f *filesStoreAt) open() error {
+	f.once.Do(func() { f.store, f.err = NewFilesHandleStore(f.dir) })
+	return f.err
+}
+
+func (f *filesStoreAt) Count(ctx context.Context, principal string, idle time.Duration) (int, error) {
+	if err := f.open(); err != nil {
+		return 0, err
+	}
+	return f.store.Count(ctx, principal, idle)
+}
+
+func (f *filesStoreAt) TryAdd(ctx context.Context, handle string, record HandleRecord, maxPerPrincipal int, idle time.Duration) (bool, error) {
+	if err := f.open(); err != nil {
+		return false, err
+	}
+	return f.store.TryAdd(ctx, handle, record, maxPerPrincipal, idle)
+}
+
+func (f *filesStoreAt) Acquire(ctx context.Context, handle string, idle, wait time.Duration) (HandleLease, error) {
+	if err := f.open(); err != nil {
+		return nil, err
+	}
+	return f.store.Acquire(ctx, handle, idle, wait)
+}
+
+func (f *filesStoreAt) Sweep(ctx context.Context, idle time.Duration) error {
+	if err := f.open(); err != nil {
+		return err
+	}
+	return f.store.Sweep(ctx, idle)
 }
 
 func (f *FilesHandleStore) path(name string) string { return filepath.Join(f.dir, name) }
@@ -385,9 +430,10 @@ func (f *FilesHandleStore) Acquire(ctx context.Context, handle string, idle, wai
 		return nil, ErrHandleUnknown
 	}
 	var record HandleRecord
+	// A record that does not read is no handle, as a meta that does not.
 	if err := json.Unmarshal(text, &record); err != nil {
 		f.dropLock(leasePath, token)
-		return nil, err
+		return nil, ErrHandleUnknown
 	}
 	return &filesLease{store: f, handle: handle, path: leasePath, token: token, record: record}, nil
 }
@@ -424,8 +470,15 @@ func (f *FilesHandleStore) Sweep(ctx context.Context, idle time.Duration) error 
 				left = !metaFound
 			}
 		}
-		if info, err := entry.Info(); err == nil && left && !f.fresh(info) {
-			_ = os.Remove(f.path(name))
+		if info, err := entry.Info(); err == nil && !f.fresh(info) {
+			switch {
+			case strings.HasPrefix(name, "principal-") && strings.HasSuffix(name, ".lock"):
+				// Through the breaker, so a TryAdd taking it now keeps it.
+				seen, _, _ := readFile(f.path(name))
+				f.breakStale(f.path(name), string(seen))
+			case left:
+				_ = os.Remove(f.path(name))
+			}
 		}
 	}
 	return nil

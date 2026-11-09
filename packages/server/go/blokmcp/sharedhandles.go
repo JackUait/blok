@@ -21,7 +21,13 @@ var (
 	// leaseRenewEvery is well inside the 30 s a store may keep an
 	// unrenewed lease, so a few missed renewals do not lose it.
 	leaseRenewEvery = 5 * time.Second
+	// storeSweepTimeout ends a store sweep well before the next one is due.
+	storeSweepTimeout = 30 * time.Second
 )
+
+// sweepStopWait is how long Close waits for a cancelled sweep. A sweep that
+// ignores its context is left behind.
+const sweepStopWait = time.Second
 
 // storeFailed logs a store error in full; the agent sees fixed words. A
 // store outage is transient, so it is no -32603.
@@ -42,8 +48,12 @@ type sharedHandles struct {
 	// here queue instead of polling the store's lease.
 	mu    sync.Mutex
 	lanes map[string]*sharedLane
-	// sweeps is the sweep in flight; shutdown waits for it.
-	sweeps sync.WaitGroup
+	// sweepDone is closed when the sweep in flight ends; nil when none
+	// runs. Under mu.
+	sweepDone chan struct{}
+	// sweepCtx is cancelled at shutdown.
+	sweepCtx   context.Context
+	stopSweeps context.CancelFunc
 }
 
 type sharedLane struct {
@@ -146,14 +156,13 @@ func (h *sharedHandles) leased(ctx context.Context, handle, principal string, fn
 			}
 		}
 	}()
-	released := false
+	// Release runs after Remove too: it is a no-op on an ended lease, and
+	// after a failed Remove it frees the lease for the next call.
 	defer func() {
 		close(stopRenewing)
 		<-renewing
-		if !released {
-			if err := lease.Release(ctx); err != nil {
-				logf("releasing a handle lease failed: %v", err)
-			}
+		if err := lease.Release(ctx); err != nil {
+			logf("releasing a handle lease failed: %v", err)
 		}
 	}()
 	// Checked by Blok, not the store: a store bug must not hand one user's
@@ -161,19 +170,8 @@ func (h *sharedHandles) leased(ctx context.Context, handle, principal string, fn
 	if record := lease.Record(); record.V != 1 || record.Principal != principal {
 		return unknownHandle()
 	}
-	err = fn(lease)
-	var gone *leaseGone
-	if errors.As(err, &gone) {
-		released = true
-		return gone.err
-	}
-	return err
+	return fn(lease)
 }
-
-// leaseGone is fn's answer when it ended the lease itself (removed it).
-type leaseGone struct{ err error }
-
-func (l *leaseGone) Error() string { return "the lease ended" }
 
 func (h *sharedHandles) lane(handle string) *sharedLane {
 	h.mu.Lock()
@@ -222,7 +220,6 @@ func (h *sharedHandles) use(ctx context.Context, handle, principal string, fn fu
 			if removeErr := lease.Remove(ctx); removeErr != nil {
 				logf("removing a handle from the handle store failed: %v", removeErr)
 			}
-			return &leaseGone{err: err}
 		}
 		return err
 	})
@@ -241,34 +238,53 @@ func (h *sharedHandles) close(ctx context.Context, who *caller, handle string) (
 			refusal = surfaceError("FORBIDDEN", "You no longer have access to this document.")
 		}
 		if err := lease.Remove(ctx); err != nil {
-			return &leaseGone{err: storeFailed(err)}
+			return storeFailed(err)
 		}
-		return &leaseGone{}
+		return nil
 	})
 	return refusal, err
 }
 
-// sweep deletes expired records on a timer; errors are only logged.
-// Shutdown waits for it (wait).
-func (h *sharedHandles) sweep() {
+// startSweep deletes expired records apart from the caller, so a stuck
+// store never holds local expiry. One sweep at a time: a tick while one
+// runs is skipped. Errors are only logged.
+func (h *sharedHandles) startSweep(timeout time.Duration) {
 	// Under mu, so no sweep starts once wait began.
 	h.mu.Lock()
-	if h.stopping() {
-		h.mu.Unlock()
+	defer h.mu.Unlock()
+	if h.stopping() || h.sweepDone != nil {
 		return
 	}
-	h.sweeps.Add(1)
-	h.mu.Unlock()
-	defer h.sweeps.Done()
-	if err := h.store.Sweep(context.Background(), h.idle()); err != nil {
-		logf("sweeping the handle store failed: %v", err)
-	}
+	done := make(chan struct{})
+	h.sweepDone = done
+	ctx, cancel := context.WithTimeout(h.sweepCtx, timeout)
+	go func() {
+		defer close(done)
+		defer cancel()
+		if err := h.store.Sweep(ctx, h.idle()); err != nil {
+			logf("sweeping the handle store failed: %v", err)
+		}
+		h.mu.Lock()
+		h.sweepDone = nil
+		h.mu.Unlock()
+	}()
 }
 
-// wait waits for a sweep in flight.
+// wait cancels the sweep in flight and waits for it up to sweepStopWait.
 // Call it after stopped is closed.
 func (h *sharedHandles) wait() {
 	h.mu.Lock()
-	h.mu.Unlock() //nolint:staticcheck // a barrier: a sweep past its check has Added
-	h.sweeps.Wait()
+	done := h.sweepDone
+	h.mu.Unlock()
+	h.stopSweeps()
+	if done == nil {
+		return
+	}
+	timer := time.NewTimer(sweepStopWait)
+	defer timer.Stop()
+	select {
+	case <-done:
+	case <-timer.C:
+		logf("a handle store sweep ignored its cancel; shutting down without it")
+	}
 }

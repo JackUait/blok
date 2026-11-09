@@ -30,11 +30,16 @@
 //! Expiry: a handle expires when it is not leased and its last release is
 //! older than the idle time. acquire and count delete an expired handle under
 //! its lease; sweep deletes every one, and crash leftovers older than the
-//! stale time: temp and `.break` files, records and leases without meta.
+//! stale time: temp and `.break` files, records and leases without meta, and
+//! principal locks.
+//!
+//! A record that does not parse (a newer Blok's, or a corrupt one) is
+//! unknown to acquire, and its files are left until it expires.
 //!
 //! Privacy: records hold document text, undo steps and principals. On
 //! Windows the store refuses to start: these POSIX checks cannot be made
-//! there. Elsewhere, at start, once: the path is made absolute and a
+//! there. Elsewhere, at start (`open`, or `start` for a store made with
+//! `at`), once: the path is made absolute and a
 //! trailing slash dropped (lstat would follow a link), the directory is made
 //! (0700) if missing, then lstat-checked: it must be a directory, not a
 //! link, with no group or world bits, owned by the effective user id (so
@@ -65,6 +70,9 @@ const RECORD: &str = ".record.json";
 pub struct FilesHandleStore {
     dir: Arc<PathBuf>,
     lease_stale: Duration,
+    owner: Option<u32>,
+    /// The directory was made and checked (`start`).
+    checked: Arc<AtomicBool>,
 }
 
 fn random_hex(bytes: usize) -> String {
@@ -174,12 +182,25 @@ impl FilesHandleStore {
         FilesHandleStore::open_with(dir, cfg!(windows), effective_uid())
     }
 
+    /// The store at `dir`, with nothing made or checked on disk yet: the
+    /// server does that at start (`HandleStore::start`), once its own
+    /// option checks pass. Refuses only Windows.
+    pub fn at(dir: &str) -> Result<FilesHandleStore, String> {
+        FilesHandleStore::at_with(dir, cfg!(windows), effective_uid())
+    }
+
     /// `open` on a given platform and effective user id, for tests.
     pub(crate) fn open_with(
         dir: &str,
         windows: bool,
         owner: Option<u32>,
     ) -> Result<FilesHandleStore, String> {
+        let store = FilesHandleStore::at_with(dir, windows, owner)?;
+        store.check()?;
+        Ok(store)
+    }
+
+    fn at_with(dir: &str, windows: bool, owner: Option<u32>) -> Result<FilesHandleStore, String> {
         if windows {
             return Err(
                 "--handle-store files: is not supported on Windows; use your own store".to_owned(),
@@ -187,8 +208,21 @@ impl FilesHandleStore {
         }
         // Rebuilt from its parts, so a trailing slash cannot make lstat follow a link.
         let absolute = std::path::absolute(dir).unwrap_or_else(|_| PathBuf::from(dir));
-        let path: PathBuf = absolute.components().collect();
-        if let Err(err) = private_dir(&path)
+        Ok(FilesHandleStore {
+            dir: Arc::new(absolute.components().collect()),
+            lease_stale: LEASE_STALE,
+            owner,
+            checked: Arc::default(),
+        })
+    }
+
+    /// Makes the directory if missing and checks it, once: nothing makes it again later.
+    fn check(&self) -> Result<(), String> {
+        if self.checked.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+        let path = &*self.dir;
+        if let Err(err) = private_dir(path)
             && err.kind() != std::io::ErrorKind::AlreadyExists
         {
             return Err(format!(
@@ -202,14 +236,12 @@ impl FilesHandleStore {
                 path.display()
             )
         };
-        let meta = std::fs::symlink_metadata(&path).map_err(|_| refused())?;
-        if meta.file_type().is_symlink() || !meta.is_dir() || !is_private(&meta, owner) {
+        let meta = std::fs::symlink_metadata(path).map_err(|_| refused())?;
+        if meta.file_type().is_symlink() || !meta.is_dir() || !is_private(&meta, self.owner) {
             return Err(refused());
         }
-        Ok(FilesHandleStore {
-            dir: Arc::new(path),
-            lease_stale: LEASE_STALE,
-        })
+        self.checked.store(true, Ordering::SeqCst);
+        Ok(())
     }
 
     /// How long a lease lives without a renew. Default 30 s.
@@ -507,12 +539,17 @@ impl HandleLease for FilesLease {
                     return Ok(());
                 }
                 let meta_path = store.meta_path(&handle);
-                if let Some(meta) = parse_meta(read_text(&meta_path)?) {
-                    let text =
-                        json!({ "v": 1, "principal": meta.principal, "lastUsedMs": now_ms() });
-                    store.write_atomic(&meta_path, &text.to_string())?;
-                }
-                remove(&lock)
+                let touched = read_text(&meta_path).and_then(|text| match parse_meta(text) {
+                    Some(meta) => {
+                        let text =
+                            json!({ "v": 1, "principal": meta.principal, "lastUsedMs": now_ms() });
+                        store.write_atomic(&meta_path, &text.to_string())
+                    }
+                    None => Ok(()),
+                });
+                // The lease goes even when the meta could not be touched.
+                remove(&lock)?;
+                touched
             })
             .await
         })
@@ -520,6 +557,10 @@ impl HandleLease for FilesLease {
 }
 
 impl HandleStore for FilesHandleStore {
+    fn start(&self) -> Result<(), String> {
+        self.check()
+    }
+
     fn count(&self, principal: String, idle: Duration) -> BoxFuture<'_, Result<usize, StoreError>> {
         Box::pin(async move { self.count_of(&principal, idle).await })
     }
@@ -615,13 +656,13 @@ impl HandleStore for FilesHandleStore {
                     FilesHandleStore::drop_lock(&lock, &token_now)?;
                     return Ok(None);
                 }
-                match HandleRecord::from_json(&text) {
-                    Ok(record) => Ok(Some(record)),
-                    Err(err) => {
-                        FilesHandleStore::drop_lock(&lock, &token_now)?;
-                        Err(err)
-                    }
+                // A newer Blok's record, or a corrupt one: unknown here, and
+                // left for its writer; it expires as any other.
+                let record = HandleRecord::from_json(&text).ok();
+                if record.is_none() {
+                    FilesHandleStore::drop_lock(&lock, &token_now)?;
                 }
+                Ok(record)
             })
             .await?;
             let Some(record) = read else {
@@ -653,6 +694,15 @@ impl HandleStore for FilesHandleStore {
                 for entry in std::fs::read_dir(&*store.dir)? {
                     let entry = entry?;
                     let name = entry.file_name().to_string_lossy().into_owned();
+                    // A try_add that died: broken as try_add would, never one taken since.
+                    if name.starts_with("principal-") && name.ends_with(".lock") {
+                        let path = entry.path();
+                        if store.fresh(&path) == Some(false) {
+                            let seen = read_text(&path)?;
+                            store.break_stale(&path, seen.as_deref())?;
+                        }
+                        continue;
+                    }
                     let orphan = [RECORD, ".lease"].iter().any(|suffix| {
                         name.strip_suffix(suffix).is_some_and(|handle| {
                             is_store_handle(handle) && !store.meta_path(handle).exists()

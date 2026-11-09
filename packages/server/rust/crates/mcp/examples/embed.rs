@@ -25,6 +25,9 @@
 //!   --example-caller-error <text>          the caller hook fails with this text, as a
 //!                                          host bug would; Blok logs it and answers
 //!                                          "Blok could not run this call."
+//!   --example-caller-scopes <a,b>          the caller hook gives exactly these scopes
+//!                                          ("" is none), so Blok checks blok.read and
+//!                                          blok.write; without it, scopes are unset
 //!
 //! The HTTP side keeps only what an example needs: no Origin checks and no
 //! body cap of its own. Those, like OAuth, belong to your server.
@@ -62,12 +65,13 @@ use http_body_util::{BodyExt, Full};
 use serde_json::{Value, json};
 
 const NAME: &str = "host-example";
-const EXAMPLE_FLAGS: [&str; 5] = [
+const EXAMPLE_FLAGS: [&str; 6] = [
     "--example-host-tool",
     "--example-host-prompt",
     "--example-allow-anonymous",
     "--example-source",
     "--example-caller-error",
+    "--example-caller-scopes",
 ];
 const MODERN: &str = "2026-07-28";
 // How long a stop waits for Blok's calls in flight.
@@ -498,7 +502,8 @@ fn source_of(
 
 /// The host's caller hook. --example-caller-error makes it fail, as a host
 /// bug would; stdio has one local user; over HTTP None takes the default,
-/// the SignedIn the host put on the request.
+/// the SignedIn the host put on the request. --example-caller-scopes puts
+/// its scopes on the same caller.
 fn caller_of(
     example: &HashMap<String, String>,
     stdio: bool,
@@ -509,14 +514,32 @@ fn caller_of(
             Err(text.clone())
         }));
     }
-    stdio.then(|| -> blok_mcp::embed::IdentifyFn {
-        Arc::new(|_: &RequestContext<RoleServer>| {
-            Ok(Some(CallerIdentity {
-                principal: Some("local".to_owned()),
-                scopes: None,
-            }))
-        })
-    })
+    let scopes = example.get("caller-scopes").map(|list| {
+        list.split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect::<Vec<_>>()
+    });
+    if !stdio && scopes.is_none() {
+        return None;
+    }
+    Some(Arc::new(move |context: &RequestContext<RoleServer>| {
+        let principal = if stdio {
+            Some("local".to_owned())
+        } else {
+            // rmcp's HTTP service puts the request's parts in the context.
+            let parts = context.extensions.get::<http::request::Parts>();
+            let Some(user) = parts.and_then(|p| p.extensions.get::<SignedIn>()) else {
+                return Ok(None);
+            };
+            user.subject.clone()
+        };
+        Ok(Some(CallerIdentity {
+            principal,
+            scopes: scopes.clone(),
+        }))
+    }))
 }
 
 /// The signed-in user from the fake headers, as the host's auth layer would put it.

@@ -149,22 +149,25 @@ Per call, Blok:
 3. checks the record: another principal, or a record `v` that is not 1, answers `UNKNOWN_HANDLE`; another tool contract (a rolling deploy) answers `VERSION_SKEW`, and the agent opens again;
 4. rebuilds the session from the record, for its opener (principal, client name, scopes and actor from the record, not the current call);
 5. runs the call, renewing the lease every 5 s; the source save happens here;
-6. saves the record if it changed (`lease.save`), then releases the lease.
+6. saves the record if it changed (`lease.save`), then releases the lease. The release runs on every path, also when `remove` failed.
 
 If the record cannot be saved after the source save, the answer stands, the error is logged, and the handle is removed: the next call answers `UNKNOWN_HANDLE`. Restored undo steps hold only while their revision is the record's document's (the engine checks it); otherwise undo answers `CONFLICT`. Any error from your store is logged in full, and the agent sees `SOURCE_UNAVAILABLE` "The handle store is unavailable. Retry shortly." (retryable).
 
-The cap (`max_handles_per_principal`) counts the store's handles of the principal plus this process's live ones. Blok calls `sweep(idle)` every 60 s; a stop waits for a sweep in flight and starts no more. A stop waits for this process's calls and never clears the store.
+The cap (`max_handles_per_principal`) counts the store's handles of the principal plus this process's live ones. Blok calls `sweep(idle)` every 60 s and drops a sweep that runs over 10 s; a stop waits for a sweep in flight and starts no more. A stop waits for this process's calls and never clears the store.
 
 Your store's duties:
 
 - `try_add` counts and adds as one step per principal (an SQL row lock, a Redis Lua script). A count, then an insert, can pass the cap.
 - A lease is exclusive and time-limited: `save`, `renew`, `remove` and `release` check it is still held, and fail (or, for `release`, do nothing) once it is lost. A holder that stops renewing loses it. So exclusivity is best effort: a paused process can lose its lease while it runs. Correctness then rests on your source's version check (`DOCUMENT_CHANGED` on a stale version). A source that does not check versions can lose writes across processes.
+- `renew` runs while `save` or `remove` is in flight on the same lease. A lease that wraps one connection or transaction must allow that.
 - A handle not leased for longer than the idle time is gone: `acquire` answers `Unknown`, `count` leaves it out, and `sweep` deletes it. A leased handle never expires.
+- A record that does not parse (`HandleRecord::from_json` fails: a newer Blok's, or a corrupt one) answers `Unknown` from `acquire`, not an error: retrying would never help.
+- `start` runs once as the server is built, after Blok's own option checks. Make or check what the store needs there; an `Err` refuses the start (exit 2). The default does nothing.
 - Records are trusted. Anyone who can write the store can forge one (its actor, scopes, document and history). Make it writable by Blok's processes only.
 - Values can be large: a record holds the document and every undo step, with no byte limit. Use a type that takes them (for example `LONGTEXT` or `JSON`, not `TEXT`).
 - Keep `scopes` `None` and an empty list apart.
 
-The files store keeps one directory: `<handle>.record.json`, `<handle>.meta.json`, a `<handle>.lease` lock and a lock per principal. A lock not renewed for 30 s is broken by one waiter at a time (`<lock>.break`), and only if it still is the lock that waiter saw go stale. It makes the directory (0700) at start if missing, then refuses to start (exit 2) unless the directory is not a link, has no group or world access, and belongs to the effective user (root too refuses another user's directory); a trailing slash cannot skip that check. Every file is created 0600. On Windows it refuses to start: use your own store there. `sweep` also deletes crash leftovers older than 30 s. Sharing one directory with another language's store is not supported.
+The files store keeps one directory: `<handle>.record.json`, `<handle>.meta.json`, a `<handle>.lease` lock and a lock per principal. A lock not renewed for 30 s is broken by one waiter at a time (`<lock>.break`), and only if it still is the lock that waiter saw go stale. It makes the directory (0700) at start if missing, only once the option checks pass, then refuses to start (exit 2) unless the directory is not a link, has no group or world access, and belongs to the effective user (root too refuses another user's directory); a trailing slash cannot skip that check. Every file is created 0600. On Windows it refuses to start: use your own store there. `sweep` also deletes crash leftovers older than 30 s, stale principal locks among them. Sharing one directory with another language's store is not supported.
 
 ### Serving it on your own HTTP server
 

@@ -207,6 +207,32 @@ async fn a_restored_handle_acts_for_its_opener() {
     );
 }
 
+// Without a store the handle writes as its opener too, as Node binds the agent at open.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_handle_without_a_store_writes_as_its_opener() {
+    let dir = temp_dir("opener-local");
+    let mcp = Mcp::with_hooks(
+        Arc::new(Bundle::new(1).unwrap()),
+        &options(&dir),
+        Hooks::default(),
+    )
+    .await
+    .unwrap();
+    let handle = open(&mcp).await;
+    let ran = call_as(
+        &mcp,
+        &caller("alice", "Later"),
+        "blok_execute",
+        json!({ "handle": handle, "commands": insert("World") }),
+    )
+    .await;
+    assert_eq!(ran["ok"], true, "{ran}");
+    let saved = std::fs::read_to_string(dir.join("doc.json")).unwrap();
+    assert!(saved.contains("agent:alice:Desk"), "{saved}");
+    assert!(!saved.contains("Later"), "{saved}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A host source that remembers who saved.
 #[derive(Default)]
 struct Recording {
@@ -312,6 +338,25 @@ async fn a_store_that_fails_answers_source_unavailable() {
     );
 }
 
+// A record that does not parse (a newer Blok's, or a corrupt one) is not
+// a store outage: retrying would never help.
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn a_record_that_does_not_parse_answers_unknown_handle() {
+    let dir = temp_dir("unparsable");
+    let store_dir = dir.join("store");
+    let store =
+        blok_mcp::handle_store_files::FilesHandleStore::open(&store_dir.to_string_lossy()).unwrap();
+    let mcp = server(&options(&dir), Arc::new(store)).await;
+    let handle = open(&mcp).await;
+    for text in [r#"{"v":2}"#, "not json"] {
+        std::fs::write(store_dir.join(format!("{handle}.record.json")), text).unwrap();
+        let read = call(&mcp, "blok_read", json!({ "handle": handle })).await;
+        assert_eq!(read["error"]["code"], "UNKNOWN_HANDLE", "{read}");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 // The source already has the batch: the answer stands, and the record that
 // would save with an old version is dropped.
 #[tokio::test(flavor = "multi_thread")]
@@ -335,6 +380,36 @@ async fn a_record_that_cannot_be_saved_after_the_source_save_closes_the_handle()
     store.fail_save.store(false, Ordering::SeqCst);
     let gone = call(&p.a, "blok_read", json!({ "handle": handle })).await;
     assert_eq!(gone["error"]["code"], "UNKNOWN_HANDLE", "{gone}");
+}
+
+// A remove that fails still gives the lease back: the next call gets in at
+// once instead of waiting out the lease.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_failed_remove_still_releases_the_lease() {
+    let store = Arc::new(Counting::new(MemoryHandleStore::new()));
+    let p = pair("remove-fails", store.clone()).await;
+    let handle = open(&p.a).await;
+    store.fail_remove.store(true, Ordering::SeqCst);
+    let closed = call(&p.b, "blok_close", json!({ "handle": handle })).await;
+    assert_eq!(closed["error"]["code"], "SOURCE_UNAVAILABLE", "{closed}");
+    store.fail_save.store(true, Ordering::SeqCst);
+    let ran = call(
+        &p.b,
+        "blok_execute",
+        json!({ "handle": handle, "commands": insert("World") }),
+    )
+    .await;
+    assert_eq!(ran["ok"], true, "{ran}");
+    store.fail_save.store(false, Ordering::SeqCst);
+    store.fail_remove.store(false, Ordering::SeqCst);
+    let read = tokio::time::timeout(
+        Duration::from_secs(3),
+        call(&p.a, "blok_read", json!({ "handle": handle })),
+    )
+    .await
+    .expect("the lease was kept after the failed remove");
+    // The record still holds the document as it was before the batch.
+    assert_eq!(texts(&read), vec!["Hello"]);
 }
 
 // Steps whose revision is not the record's document's never undo onto it.
@@ -397,6 +472,7 @@ struct Counting {
     acquires: AtomicUsize,
     fail_acquire: std::sync::atomic::AtomicBool,
     fail_save: Arc<std::sync::atomic::AtomicBool>,
+    fail_remove: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl Counting {
@@ -406,6 +482,7 @@ impl Counting {
             acquires: AtomicUsize::new(0),
             fail_acquire: std::sync::atomic::AtomicBool::new(false),
             fail_save: Arc::default(),
+            fail_remove: Arc::default(),
         }
     }
 }
@@ -413,6 +490,7 @@ impl Counting {
 struct FailingSave {
     inner: Box<dyn HandleLease>,
     fail: Arc<std::sync::atomic::AtomicBool>,
+    fail_remove: Arc<std::sync::atomic::AtomicBool>,
     _held: Mutex<()>,
 }
 
@@ -430,6 +508,9 @@ impl HandleLease for FailingSave {
         self.inner.renew()
     }
     fn remove(&self) -> BoxFuture<'_, Result<(), StoreError>> {
+        if self.fail_remove.load(Ordering::SeqCst) {
+            return Box::pin(async { Err(StoreError("deadlock".to_owned())) });
+        }
         self.inner.remove()
     }
     fn release(&self) -> BoxFuture<'_, Result<(), StoreError>> {
@@ -460,12 +541,13 @@ impl HandleStore for Counting {
         if self.fail_acquire.load(Ordering::SeqCst) {
             return Box::pin(async { Err(StoreError("connection refused".to_owned())) });
         }
-        let fail = self.fail_save.clone();
+        let (fail, fail_remove) = (self.fail_save.clone(), self.fail_remove.clone());
         Box::pin(async move {
             Ok(match self.inner.acquire(handle, idle, timeout).await? {
                 Acquired::Lease(inner) => Acquired::Lease(Box::new(FailingSave {
                     inner,
                     fail,
+                    fail_remove,
                     _held: Mutex::new(()),
                 })),
                 other => other,
@@ -477,17 +559,30 @@ impl HandleStore for Counting {
     }
 }
 
-// The CLI takes --handle-store files:<dir> as the files store, made and
-// checked at start: a refusal is a config error (exit 2), never ignored.
+async fn embed(
+    bundle: &Arc<Bundle>,
+    hooks: Hooks,
+    started: &blok_mcp::cli::Started,
+) -> Result<blok_mcp::embed::BlokTools, blok_mcp::cli::StartError> {
+    blok_mcp::embed::BlokTools::new(
+        bundle.clone(),
+        &started.options,
+        hooks,
+        blok_mcp::embed::EmbedHooks::default(),
+    )
+    .await
+}
+
+// The CLI takes --handle-store files:<dir> as the files store. Its
+// directory is made and checked only once Blok's own option checks pass: a
+// start refused for another reason leaves no directory behind, and a
+// refused directory is a config error (exit 2), never ignored.
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread")]
-async fn the_cli_makes_the_files_store_and_refuses_an_open_directory() {
+async fn the_cli_makes_the_files_store_only_after_the_option_checks() {
     use std::os::unix::fs::PermissionsExt;
-    let bundle = Bundle::new(1).unwrap();
+    let bundle = Arc::new(Bundle::new(1).unwrap());
     let dir = temp_dir("cli");
-    let open_dir = dir.join("open");
-    std::fs::create_dir(&open_dir).unwrap();
-    std::fs::set_permissions(&open_dir, std::fs::Permissions::from_mode(0o777)).unwrap();
     let argv = |store: &std::path::Path| -> Vec<String> {
         vec![
             "--source".to_owned(),
@@ -496,23 +591,42 @@ async fn the_cli_makes_the_files_store_and_refuses_an_open_directory() {
             format!("files:{}", store.display()),
         ]
     };
-    let started = blok_mcp::cli::start(&bundle, &argv(&open_dir), json!({}), &dir)
-        .await
-        .unwrap();
-    match blok_mcp::cli::hooks_of(&started) {
-        Err(blok_mcp::cli::StartError::Config(message)) => {
-            assert!(message.contains("chmod 700"), "{message}");
-        }
-        Err(other) => panic!("{other:?}"),
-        Ok(_) => panic!("an open directory was taken"),
-    }
+    let allow = || -> Option<Arc<dyn blok_mcp::authorize::Authorize>> {
+        Some(Arc::new(|_: String, _: String, _: bool| async { true }))
+    };
+
+    // Refused for another reason: no authorize hook on a host's server.
     let private = dir.join("private");
-    let started = blok_mcp::cli::start(&bundle, &argv(&private), json!({}), &dir)
+    let started = blok_mcp::cli::parse(&bundle, &argv(&private), json!({}), &dir)
         .await
         .unwrap();
     let hooks = blok_mcp::cli::hooks_of(&started).unwrap();
-    assert!(hooks.handle_store.is_some());
+    assert!(!private.exists(), "made while parsing");
+    assert!(matches!(
+        embed(&bundle, hooks, &started).await,
+        Err(blok_mcp::cli::StartError::Config(_))
+    ));
+    assert!(!private.exists(), "made by a refused start");
+
+    let mut hooks = blok_mcp::cli::hooks_of(&started).unwrap();
+    hooks.authorize = allow();
+    assert!(embed(&bundle, hooks, &started).await.is_ok());
     assert!(private.is_dir());
+
+    let open_dir = dir.join("open");
+    std::fs::create_dir(&open_dir).unwrap();
+    std::fs::set_permissions(&open_dir, std::fs::Permissions::from_mode(0o777)).unwrap();
+    let started = blok_mcp::cli::start(&bundle, &argv(&open_dir), json!({}), &dir)
+        .await
+        .unwrap();
+    let hooks = blok_mcp::cli::hooks_of(&started).unwrap();
+    match Mcp::build(bundle.clone(), &started.options, hooks).await {
+        Err(blok_mcp::server::BuildError::Config(message)) => {
+            assert!(message.contains("chmod 700"), "{message}");
+        }
+        Err(other) => panic!("{}", other.message()),
+        Ok(_) => panic!("an open directory was taken"),
+    }
     let _ = std::fs::remove_dir_all(&dir);
 }
 

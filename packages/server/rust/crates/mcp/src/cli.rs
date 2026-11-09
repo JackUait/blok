@@ -40,14 +40,15 @@ pub struct Started {
 }
 
 /// The hooks the flags name: the `--authorize` and `--create-page`
-/// webhooks and the `--handle-store` files store, which is made and checked
-/// here, so a refused directory stops the start (exit code 2).
+/// webhooks and the `--handle-store` files store. Its directory is made and
+/// checked when the server is built, after the option checks; only Windows
+/// is refused here (exit code 2).
 pub fn hooks_of(started: &Started) -> Result<crate::options::Hooks, StartError> {
     use std::sync::Arc;
     let handle_store = match &started.handle_store {
         None => None,
         Some(dir) => Some(Arc::new(
-            crate::handle_store_files::FilesHandleStore::open(dir).map_err(StartError::Config)?,
+            crate::handle_store_files::FilesHandleStore::at(dir).map_err(StartError::Config)?,
         ) as Arc<dyn crate::handle_store::HandleStore>),
     };
     Ok(crate::options::Hooks {
@@ -96,8 +97,8 @@ pub async fn start(
     if started.create_page.is_some() {
         checked_options["createPage"] = Value::Bool(true);
     }
-    // No handleStore here: its stand-in in the bundle's mcpCheckOptions lacks
-    // sweep, so it is always refused; the Rust trait already has every op.
+    // No handleStore here: the bundle only checks that a host store has
+    // count, tryAdd, acquire and sweep, which the Rust trait always has.
     let checked = bundle
         .call(
             "mcpCheckOptions",

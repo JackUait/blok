@@ -450,9 +450,9 @@ describe('CI critical-path law', () => {
       { part: 'rust 2/3', target: 'rust', suites: '--suite embed' },
       { part: 'rust 3/3', target: 'rust', suites: '--suite protocol --suite tool-args --suite corpus --suite files-source --suite endpoint-source --suite cli --suite http --suite approvals --suite tickets --suite pages --suite handles --suite handles-shared --suite shutdown --suite timeouts' },
       { part: 'csharp 1/5', target: 'csharp', suites: '--suite live' },
-      { part: 'csharp 2/5', target: 'csharp', suites: '--suite corpus --suite tool-args --suite handles --suite handles-shared --suite pages' },
+      { part: 'csharp 2/5', target: 'csharp', suites: '--suite corpus --suite tool-args --suite handles --suite pages' },
       { part: 'csharp 3/5', target: 'csharp', suites: '--suite protocol --suite tickets --suite approvals --suite http' },
-      { part: 'csharp 4/5', target: 'csharp', suites: '--suite embed' },
+      { part: 'csharp 4/5', target: 'csharp', suites: '--suite embed --suite handles-shared' },
       { part: 'csharp 5/5', target: 'csharp', suites: '--suite shutdown --suite cli --suite timeouts --suite files-source --suite endpoint-source' },
     ]);
     expectOrderedSteps('ci.mcp-conformance', mcp, [
@@ -492,10 +492,17 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Test packed MCP NuGets',
-        if: "matrix.part == 'csharp 3/4'",
+        if: "matrix.part == 'csharp 3/5'",
         run: 'node scripts/test-server-packages.mjs --packages mcp',
       },
     ]);
+    // A step gated on a part name that no longer exists is skipped without a word.
+    const parts = (mcp.strategy?.matrix?.include ?? []).map((entry: { part: string }) => entry.part);
+    for (const step of mcp.steps ?? []) {
+      for (const [, part] of String(step.if ?? '').matchAll(/matrix\.part == '([^']+)'/g)) {
+        expect(parts, step.name).toContain(part);
+      }
+    }
   });
 
   // The Go gates ride in Server Security, so they take no extra job slot under

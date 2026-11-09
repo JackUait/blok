@@ -23,9 +23,9 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
     Directory.Delete(dir, recursive: true);
   }
 
-  private McpServerCore Core(IBlokMcpHandleStore store, string? pageTitles = null, double maxHandles = 8)
+  private McpServerCore Core(IBlokMcpHandleStore store, string? pageTitles = null, double maxHandles = 8, McpBundle? bundle = null)
   {
-    return new McpServerCore(fixture.Host.Bundle, new McpConfig
+    return new McpServerCore(bundle ?? fixture.Host.Bundle, new McpConfig
     {
       Source = new McpSourceConfig.Files(dir),
       HandleStore = store,
@@ -280,6 +280,130 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
     Assert.Contains(logged, entry => entry.Message.Contains("renew", StringComparison.Ordinal));
   }
 
+  [Fact]
+  public async Task AnOpenThatFailsAfterTheHandleWasAddedRemovesItFromTheStore()
+  {
+    var store = new MemoryStore();
+    var runtime = new FaultyRuntime(fixture.Host.Bundle.Runtime) { Throws = (operation, _) => operation == "mcpOpenAnswer" };
+    await using var core = Core(store, bundle: new McpBundle(runtime));
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+
+    await Assert.ThrowsAnyAsync<Exception>(() => core.CallToolAsync("blok_open", new JsonObject { ["documentId"] = "doc" }, caller, null, CancellationToken.None));
+
+    Assert.Empty(store.Records);
+    Assert.Equal(store.Acquires, store.Releases);
+  }
+
+  [Fact]
+  public async Task ACorruptRecordIsAnUnknownHandle()
+  {
+    var storeDir = Path.Combine(dir, "store");
+    await using var core = Core(FilesHandleStore.Open(storeDir));
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(core, caller);
+
+    await File.WriteAllTextAsync(Path.Combine(storeDir, $"{handle}.record.json"), "{");
+    var read = await CallAsync(core, caller, "blok_read", new JsonObject { ["handle"] = handle });
+
+    Assert.Equal("UNKNOWN_HANDLE", Code(read));
+    Assert.False(File.Exists(Path.Combine(storeDir, $"{handle}.lease")));
+  }
+
+  [Fact]
+  public async Task TheLeaseIsReleasedEvenWhenRemovingTheHandleFails()
+  {
+    var store = new MemoryStore();
+    await using var core = Core(store);
+    var caller = await core.CallerAsync("alice", "desk", null, CancellationToken.None);
+    var handle = await OpenAsync(core, caller);
+
+    store.FailRemoves = true;
+    var closed = await CallAsync(core, caller, "blok_close", new JsonObject { ["handle"] = handle });
+    store.FailNextSave = true;
+    await SetTitleAsync(core, caller, handle, "Saved");
+
+    Assert.Equal("SOURCE_UNAVAILABLE", Code(closed));
+    Assert.Equal(store.Acquires, store.Releases);
+  }
+
+  private SharedHandles Shared(MemoryStore store, TimeSpan? renewEvery = null, TimeSpan? sweepTimeout = null)
+  {
+    return new SharedHandles(
+        new HandleRegistry<IHandleSession>(600_000, 8, _ => Task.CompletedTask), store, TimeSpan.FromMinutes(10), 8,
+        () => Task.FromResult("rev"), _ => throw new InvalidOperationException("not restored"), (message, error) =>
+        {
+          lock (logged)
+          {
+            logged.Add((message, error));
+          }
+        })
+    {
+      RenewEvery = renewEvery ?? TimeSpan.FromSeconds(5),
+      SweepTimeout = sweepTimeout ?? TimeSpan.FromSeconds(30),
+    };
+  }
+
+  [Fact]
+  public async Task ARenewalInFlightEndsBeforeTheLeaseIsReleased()
+  {
+    var store = new MemoryStore { RenewTakes = TimeSpan.FromMilliseconds(150) };
+    var shared = Shared(store, renewEvery: TimeSpan.FromMilliseconds(20));
+    var record = new BlokMcpHandleRecord
+    {
+      ContractRevision = "rev", Principal = "alice", ClientName = "desk", Actor = new JsonObject { ["id"] = "agent:alice:desk" },
+      DocumentId = "doc", Document = new JsonObject { ["blocks"] = new JsonArray() }, History = new JsonObject(),
+    };
+
+    await store.TryAddAsync("handle-1", record, 8, TimeSpan.FromMinutes(10), CancellationToken.None);
+    await shared.PeekAsync("handle-1", "alice", _ => Task.Delay(100));
+
+    Assert.True(store.Renews >= 1, "never renewed");
+    Assert.Equal(0, store.RenewingAtRelease);
+    Assert.Equal(1, store.MostRenewsAtOnce);
+  }
+
+  [Fact]
+  public async Task AStoreSweepNeverOverlapsItselfAndTimesOut()
+  {
+    var store = new MemoryStore { Sweep = _ => Task.Delay(Timeout.Infinite, CancellationToken.None) };
+    var shared = Shared(store, sweepTimeout: TimeSpan.FromMilliseconds(100));
+
+    var first = shared.SweepStoreAsync();
+    var second = shared.SweepStoreAsync();
+
+    await second.WaitAsync(TimeSpan.FromSeconds(5));
+    await first.WaitAsync(TimeSpan.FromSeconds(5));
+    await shared.SweepStoreAsync().WaitAsync(TimeSpan.FromSeconds(5));
+
+    // The store ignored the timeout and still runs, so no new sweep starts on top of it.
+    Assert.Equal(1, store.Sweeps);
+    Assert.Contains(logged, entry => entry.Message == "blok-mcp: sweeping the handle store timed out");
+  }
+
+  [Fact]
+  public async Task StopCancelsAStoreSweepAndDoesNotWaitForIt()
+  {
+    var cancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var store = new MemoryStore
+    {
+      Sweep = async token =>
+      {
+        await using (token.Register(() => cancelled.TrySetResult()))
+        {
+          await Task.Delay(Timeout.Infinite, CancellationToken.None);
+        }
+      },
+    };
+    var shared = Shared(store);
+    var sweep = shared.SweepStoreAsync();
+
+    await shared.CloseAllAsync(_ => Task.CompletedTask).WaitAsync(TimeSpan.FromSeconds(5));
+    await sweep.WaitAsync(TimeSpan.FromSeconds(5));
+    await cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+    Assert.DoesNotContain(logged, entry => entry.Message.Contains("sweep", StringComparison.Ordinal));
+  }
+
   /// <summary>The store contract in memory, with switches for faults.</summary>
   internal sealed class MemoryStore : IBlokMcpHandleStore
   {
@@ -298,6 +422,22 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
     internal bool Down { get; set; }
 
     internal int Acquires { get; private set; }
+
+    internal int Releases { get; private set; }
+
+    internal bool FailRemoves { get; set; }
+
+    internal TimeSpan RenewTakes { get; set; }
+
+    internal int RenewingAtRelease { get; private set; } = -1;
+
+    internal int MostRenewsAtOnce { get; private set; }
+
+    internal int Sweeps { get; private set; }
+
+    internal Func<CancellationToken, Task>? Sweep { get; set; }
+
+    private int renewing;
 
     public ValueTask<int> CountAsync(string principal, TimeSpan idleTimeout, CancellationToken cancellationToken)
     {
@@ -350,7 +490,9 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
 
     public ValueTask SweepAsync(TimeSpan idleTimeout, CancellationToken cancellationToken)
     {
-      return ValueTask.CompletedTask;
+      Sweeps++;
+
+      return Sweep is null ? ValueTask.CompletedTask : new ValueTask(Sweep(cancellationToken));
     }
 
     private void ThrowIfDown()
@@ -377,18 +519,36 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
         return ValueTask.CompletedTask;
       }
 
-      public ValueTask RenewAsync(CancellationToken cancellationToken)
+      public async ValueTask RenewAsync(CancellationToken cancellationToken)
       {
-        store.Renews++;
+        var now = Interlocked.Increment(ref store.renewing);
 
-        return store.FailRenews ? throw new IOException("renew refused") : ValueTask.CompletedTask;
+        lock (store.leased)
+        {
+          store.Renews++;
+          store.MostRenewsAtOnce = Math.Max(store.MostRenewsAtOnce, now);
+        }
+        try
+        {
+          await Task.Delay(store.RenewTakes, CancellationToken.None);
+          if (store.FailRenews)
+          {
+            throw new IOException("renew refused");
+          }
+        }
+        finally
+        {
+          Interlocked.Decrement(ref store.renewing);
+        }
       }
 
       public ValueTask ReleaseAsync(CancellationToken cancellationToken)
       {
-        store.RenewsAtRelease = store.Renews;
         lock (store.leased)
         {
+          store.RenewsAtRelease = store.Renews;
+          store.RenewingAtRelease = Volatile.Read(ref store.renewing);
+          store.Releases++;
           store.leased.Remove(handle);
         }
 
@@ -397,9 +557,18 @@ public sealed class SharedHandlesTests : IClassFixture<BundleFixture>, IDisposab
 
       public ValueTask RemoveAsync(CancellationToken cancellationToken)
       {
-        store.Records.Remove(handle);
+        if (store.FailRemoves)
+        {
+          throw new IOException("remove refused");
+        }
+        // The lease ends with the handle; Blok still calls ReleaseAsync, which counts.
+        lock (store.leased)
+        {
+          store.Records.Remove(handle);
+          store.leased.Remove(handle);
+        }
 
-        return ReleaseAsync(cancellationToken);
+        return ValueTask.CompletedTask;
       }
     }
   }

@@ -1,3 +1,4 @@
+using Blok.Server.Mcp.Core;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -42,6 +43,25 @@ public sealed class LibraryOptionsTests : IDisposable
     await app.StartAsync();
 
     return (app, app.GetTestClient());
+  }
+
+  [Fact]
+  public void RefusesTheEmbedOnlyCallerOptions()
+  {
+    var services = new ServiceCollection();
+    var caller = Assert.Throws<BlokMcpConfigException>(() => services.AddBlokMcp(options =>
+    {
+      options.AllowEveryCallerEveryDocument = true;
+      options.Caller = (_, _) => ValueTask.FromResult<BlokMcpCallerIdentity?>(new BlokMcpCallerIdentity("alice"));
+    }));
+    var anonymous = Assert.Throws<BlokMcpConfigException>(() => services.AddBlokMcp(options =>
+    {
+      options.AllowEveryCallerEveryDocument = true;
+      options.AnonymousPrincipal = "guest";
+    }));
+
+    Assert.Equal("BlokMcpOptions.Caller works only on a host's server (WithBlok); AddBlokMcp names callers from its own sign-in and Principal", caller.Message);
+    Assert.Equal("BlokMcpOptions.AnonymousPrincipal works only on a host's server (WithBlok); AddBlokMcp serves anonymous callers as Principal", anonymous.Message);
   }
 
   private static async Task<JsonNode> RpcAsync(HttpClient client, string method, JsonObject parameters)

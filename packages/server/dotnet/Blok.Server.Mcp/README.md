@@ -68,8 +68,17 @@ app.MapMcp("/mcp").RequireAuthorization();
 
 - `BlokMcpOptions` are the same as for `AddBlokMcp`. `BlokMcpCommandLine.ParseAsync(args)` reads the `blok-mcp` flags into them (`ApplyTo`).
 - The per-document check is required as for `AddBlokMcp`: `Authorize`, or a registered `IBlokAuthorization`, or `AllowEveryCallerEveryDocument`.
-- Refused at start, because your server owns them: `OAuth`, `Principal`, `AllowedOrigins`, `AllowedHosts` and `TrustRemoteCallers`.
-- Who calls: the user your auth signed in, named by its `sub` claim, else `NameIdentifier`. Set `Caller` to name callers yourself. An anonymous caller gets the protocol error `-32600` "Blok needs a signed-in caller."; a signed-in caller with no name gets "Blok needs a named caller (sub or NameIdentifier).". `AnonymousPrincipal` serves anonymous callers as that principal instead. They all share it, and its handle limit: pick a name no real user has.
+- Refused at start, because your server owns them: `OAuth`, `Principal`, `AllowedOrigins`, `AllowedHosts` and `TrustRemoteCallers`. Calling `WithBlok` twice is refused too.
+- Your server's `AddAuthorizationFilters()` and `[Authorize]` on your own tools keep working beside Blok's tools. Blok's tools are not SDK tool objects, so those filters never hide or refuse them: Blok's per-document check guards them.
+- Who calls: the user your auth signed in, named by its `sub` claim, else `NameIdentifier`. Set `Caller` to name callers yourself, for example from your own id claim:
+
+  ```csharp
+  options.Caller = (context, _) => ValueTask.FromResult(
+    context.User?.FindFirst("k:i")?.Value is { } id ? new BlokMcpCallerIdentity(id) : null);
+  ```
+
+  With `Caller` set, a registered `IBlokAuthorization` gets the signed-in user with all its claims; `Authorize` gets the principal `Caller` named.
+  `Caller` and `AnonymousPrincipal` are for `WithBlok` only: `AddBlokMcp` refuses them at registration. An anonymous caller gets the protocol error `-32600` "Blok needs a signed-in caller."; a signed-in caller with no name gets "Blok needs a named caller (sub or NameIdentifier).". `AnonymousPrincipal` serves anonymous callers as that principal instead. They all share it, and its handle limit: pick a name no real user has.
 - Scopes: Blok ignores the user's scope claims, since your server owns sign-in. Make read-only agents in `Authorize`. When `Caller` returns `Scopes`, Blok checks `blok.read` and `blok.write` as the standalone server does.
 - A handle belongs to the caller that opened it. Another principal gets `UNKNOWN_HANDLE`.
 - A tool or prompt of yours with a Blok name stops the app at start. A list handler of yours that returns a Blok name fails that list. Other names reach your own tools, handlers and prompts.

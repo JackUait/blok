@@ -102,8 +102,9 @@ internal static class StoredFaults
   internal static JsonObject InsertPage(string id) => Command("block.insert", new JsonObject { ["type"] = "page", ["id"] = id });
 
   /// <summary>A page-map pages port whose create runs <paramref name="create"/>.</summary>
-  internal static PagePorts Pages(Func<McpCaller, CancellationToken, Task<string>> create) => new()
+  internal static PagePorts Pages(Func<McpCaller, CancellationToken, Task<string>> create, Action<string, Exception>? log = null) => new()
   {
+    LogError = log,
     Create = (caller, _, cancellationToken) => create(caller, cancellationToken),
     Open = (_, _, _) => throw new InvalidOperationException("No page target."),
     TrackClose = _ => { },

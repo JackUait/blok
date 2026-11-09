@@ -36,6 +36,12 @@ public static class BlokMcpServerBuilderExtensions
     CheckEmbedded(options);
     var services = builder.Services;
 
+    // A second call would add a second set of filters, and every tools/list would then clash with itself.
+    if (services.Any(service => service.ServiceType == typeof(McpEmbedding)))
+    {
+      throw new BlokMcpConfigException("WithBlok was already called on this app: call it once");
+    }
+
     services.AddBlokShell(options, embedded: true);
     services.AddSingleton(provider => new McpEmbedding(provider, options));
     services.AddOptions<McpServerOptions>().Configure<McpEmbedding>((server, blok) => blok.Install(server));

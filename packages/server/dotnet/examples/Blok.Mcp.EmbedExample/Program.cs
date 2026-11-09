@@ -23,6 +23,9 @@
 //   --example-caller-error <text>          the host's caller hook throws with this text, as a broken
 //                                          sign-in would. Blok logs it and answers -32603
 //                                          "Blok could not run this call."
+//   --example-caller-scopes <a,b>          the host's caller hook names the caller as above and gives
+//                                          exactly these scopes ("" = none), which Blok then enforces.
+//                                          Without it the hook gives no scopes and Blok checks none.
 //
 // The HTTP side keeps only what an example needs: no Origin or Host checks of its own. Those,
 // like OAuth, belong to your server.
@@ -104,6 +107,10 @@ static async Task<int> RunAsync(string[] args)
           {
             options.Caller = (_, _) => ValueTask.FromResult<BlokMcpCallerIdentity?>(new BlokMcpCallerIdentity("local"));
           }
+          if (example.GetValueOrDefault("caller-scopes") is { } scopes)
+          {
+            options.Caller = (context, _) => ValueTask.FromResult(CallerWithScopes(context.User, stdio, scopes));
+          }
           if (example.GetValueOrDefault("caller-error") is { } callerError)
           {
             options.Caller = (_, _) => throw new InvalidOperationException(callerError);
@@ -149,6 +156,17 @@ static async Task<int> RunAsync(string[] args)
   return 0;
 }
 
+// The caller the default would name (stdio: "local"; HTTP: the signed-in user's sub, else
+// NameIdentifier), with the scopes --example-caller-scopes lists.
+static BlokMcpCallerIdentity? CallerWithScopes(System.Security.Claims.ClaimsPrincipal? user, bool stdio, string scopes)
+{
+  var named = stdio ? "local" : user?.FindFirst("sub")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+  return stdio || user?.Identity?.IsAuthenticated == true
+      ? new BlokMcpCallerIdentity(named) { Scopes = scopes.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) }
+      : null;
+}
+
 // --example-source as BlokMcpOptions.DocumentSource.
 static ExampleStore SourceOf(string source, BlokMcpOptions options)
 {
@@ -167,7 +185,7 @@ static ExampleStore SourceOf(string source, BlokMcpOptions options)
 // Splits this example's own flags from the blok-mcp ones. Each example flag takes a value.
 static (Dictionary<string, string> Example, List<string> Blok) SplitArgs(string[] args)
 {
-  string[] flags = ["--example-host-tool", "--example-host-prompt", "--example-allow-anonymous", "--example-source", "--example-caller-error"];
+  string[] flags = ["--example-host-tool", "--example-host-prompt", "--example-allow-anonymous", "--example-source", "--example-caller-error", "--example-caller-scopes"];
   var example = new Dictionary<string, string>(StringComparer.Ordinal);
   var blok = new List<string>();
 

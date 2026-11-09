@@ -10,7 +10,7 @@ namespace Blok.Server.Mcp.Tests;
 internal static class McpTestRpc
 {
   /// <summary>The whole answer: its result or its error.</summary>
-  internal static async Task<JsonObject> SendAsync(HttpClient client, string method, JsonObject parameters, string? user = null, bool signedIn = false)
+  internal static async Task<JsonObject> SendAsync(HttpClient client, string method, JsonObject parameters, string? user = null, bool signedIn = false, string? claims = null)
   {
     using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
     {
@@ -29,6 +29,10 @@ internal static class McpTestRpc
     {
       request.Headers.Add("X-Test-Signed-In", "true");
     }
+    if (claims is not null)
+    {
+      request.Headers.Add("X-Test-Claims", claims);
+    }
     using var response = await client.SendAsync(request);
     var text = await response.Content.ReadAsStringAsync();
     var data = text.Split('\n').FirstOrDefault(line => line.StartsWith("data:", StringComparison.Ordinal));
@@ -36,7 +40,7 @@ internal static class McpTestRpc
     return (JsonObject)JsonNode.Parse(data is null ? text : data[5..])!;
   }
 
-  internal static Task<JsonObject> CallAsync(HttpClient client, string tool, JsonObject arguments, string? user = null, JsonObject? meta = null)
+  internal static Task<JsonObject> CallAsync(HttpClient client, string tool, JsonObject arguments, string? user = null, JsonObject? meta = null, string? claims = null)
   {
     var parameters = new JsonObject { ["name"] = tool, ["arguments"] = arguments };
 
@@ -45,19 +49,22 @@ internal static class McpTestRpc
       parameters["_meta"] = meta;
     }
 
-    return SendAsync(client, "tools/call", parameters, user);
+    return SendAsync(client, "tools/call", parameters, user, claims: claims);
   }
 
   /// <summary>The structured answer of a tool call that is not a protocol error.</summary>
-  internal static async Task<JsonObject> ToolAsync(HttpClient client, string tool, JsonObject arguments, string? user = null, JsonObject? meta = null)
+  internal static async Task<JsonObject> ToolAsync(HttpClient client, string tool, JsonObject arguments, string? user = null, JsonObject? meta = null, string? claims = null)
   {
-    var answer = await CallAsync(client, tool, arguments, user, meta);
+    var answer = await CallAsync(client, tool, arguments, user, meta, claims);
 
     return answer["result"]?["structuredContent"] as JsonObject
         ?? throw new InvalidOperationException($"{tool} gave no structuredContent: {answer.ToJsonString()}");
   }
 
-  /// <summary>Signs a request in from X-Test-User (named) or X-Test-Signed-In (no name), as a host's own auth would.</summary>
+  /// <summary>
+  /// Signs a request in from X-Test-User (named), X-Test-Signed-In (no name) or X-Test-Claims
+  /// ("type=value,type=value": only those claims), as a host's own auth would.
+  /// </summary>
   internal static void UseTestSignIn(this WebApplication app)
   {
     app.Use((context, next) =>
@@ -65,6 +72,11 @@ internal static class McpTestRpc
       if (context.Request.Headers["X-Test-User"].ToString() is { Length: > 0 } user)
       {
         context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", user), new Claim("scope", "other")], "test"));
+      }
+      else if (context.Request.Headers["X-Test-Claims"].ToString() is { Length: > 0 } claims)
+      {
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(
+            claims.Split(',').Select(pair => pair.Split('=', 2)).Select(pair => new Claim(pair[0], pair[1])), "test"));
       }
       else if (context.Request.Headers["X-Test-Signed-In"] == "true")
       {

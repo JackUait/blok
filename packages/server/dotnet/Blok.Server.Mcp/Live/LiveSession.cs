@@ -315,7 +315,7 @@ internal sealed class LiveSession : IHandleSession
         throw;
       }
 
-      return new McpExecuteOutcome(await PagePorts.StrandedAnswerAsync(bundle, error, unlinked), null);
+      return new McpExecuteOutcome(await Pages!.StrandedAnswerAsync(bundle, error, unlinked), null);
     }
     finally
     {
@@ -472,7 +472,7 @@ internal sealed class LiveSession : IHandleSession
     }
     catch (Exception error)
     {
-      await Console.Error.WriteLineAsync($"blok-mcp: the room could not be read after a batch failed, so no page is reported: {error.Message}");
+      await Pages!.LogAsync("blok-mcp: the room could not be read after a batch failed, so no page is reported", error);
 
       return [];
     }

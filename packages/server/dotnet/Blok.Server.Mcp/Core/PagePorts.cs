@@ -24,6 +24,21 @@ internal sealed class PagePorts
   /// <summary>Holds a page session's close, which nobody waits for, until stop.</summary>
   internal required Action<Task> TrackClose { get; init; }
 
+  /// <summary>The host's logger (BlokMcpOptions' app logging); stderr when null.</summary>
+  internal Action<string, Exception>? LogError { get; init; }
+
+  /// <summary>Logs a failure in full: the host's logger, else stderr (stdout may carry the protocol).</summary>
+  internal async Task LogAsync(string message, Exception error)
+  {
+    if (LogError is { } log)
+    {
+      log(message, error);
+
+      return;
+    }
+    await Console.Error.WriteLineAsync($"{message}: {error}");
+  }
+
   internal static bool HasPageAction(JsonNode? batch)
   {
     return batch is JsonObject envelope && envelope["commands"] is JsonArray commands
@@ -92,13 +107,13 @@ internal sealed class PagePorts
    * was written. The answer names the pages to clean up, in Blok.Server's shape
    * (BlokAgentExecutor.StoppedAfterCreating). It is built without the token: a cancel would stop it too.
    */
-  internal static async Task<JsonObject> StrandedAnswerAsync(McpBundle bundle, Exception error, JsonArray created)
+  internal async Task<JsonObject> StrandedAnswerAsync(McpBundle bundle, Exception error, JsonArray created)
   {
     var cancelled = error is OperationCanceledException;
 
     if (!cancelled)
     {
-      await Console.Error.WriteLineAsync($"blok-mcp: a batch failed after it made pages: {error}");
+      await LogAsync("blok-mcp: a batch failed after it made pages", error);
     }
     var cause = cancelled ? Cancelled : ServerStop;
     var orphaned = new JsonArray([.. created.Select(pageId => (JsonNode)new JsonObject

@@ -8,7 +8,9 @@ namespace Blok.Server.Mcp;
 /// Where stored-mode handles live (<see cref="BlokMcpOptions.HandleStore"/>), so any replica that
 /// shares the store can serve any call. Live handles hold sockets and never go here. Blok passes
 /// only handles of 1-128 characters of <c>[A-Za-z0-9_-]</c>. Any throw is logged in full and the
-/// agent sees SOURCE_UNAVAILABLE, which it may retry.
+/// agent sees SOURCE_UNAVAILABLE, which it may retry; a <see cref="System.Text.Json.JsonException"/>
+/// from <see cref="AcquireAsync"/> (a record <see cref="BlokMcpHandleRecord.FromJson"/> cannot read)
+/// answers UNKNOWN_HANDLE instead, as that handle can never be used again.
 /// </summary>
 /// <remarks>
 /// Your duties: count-and-add must be one atomic step per principal (a row lock, a Lua script);
@@ -44,10 +46,11 @@ public interface IBlokMcpHandleStore
 
   /// <summary>
   /// Deletes every handle, of every principal, idle longer than <paramref name="idleTimeout"/> that
-  /// nobody leases. Blok calls it on a timer. A store that expires records itself may do nothing.
+  /// nobody leases. Blok calls it every 60 s, never while the last sweep still runs. A store that
+  /// expires records itself may do nothing.
   /// </summary>
   /// <param name="idleTimeout">As in <see cref="CountAsync"/>.</param>
-  /// <param name="cancellationToken">Cancels the sweep.</param>
+  /// <param name="cancellationToken">Cancelled after 30 s and when Blok stops; Blok does not wait for a sweep that ignores it.</param>
   /// <returns>When done.</returns>
   ValueTask SweepAsync(TimeSpan idleTimeout, CancellationToken cancellationToken);
 }
@@ -58,6 +61,13 @@ public interface IBlokMcpHandleStore
 /// 5 s while a call runs; the store needs no timer of its own. Each operation checks that this lease
 /// still holds the handle; once it does not, renew, save and remove throw and change nothing.
 /// </summary>
+/// <remarks>
+/// Concurrency: <see cref="RenewAsync"/> runs on Blok's timer, so it may run at the same time as
+/// <see cref="SaveAsync"/> or <see cref="RemoveAsync"/>, and must not break them. It never runs
+/// alongside another renewal, and never during or after <see cref="ReleaseAsync"/>: Blok waits for
+/// the renewal in progress before it releases. Blok always calls ReleaseAsync last, even after a
+/// remove, or a save or remove that threw.
+/// </remarks>
 public interface IBlokMcpHandleLease
 {
   /// <summary>The record as the store holds it.</summary>

@@ -59,8 +59,6 @@ internal static partial class McpCommandLine
       authorize = LoadAuthorize(spec, host);
     }
     var pageCreator = McpJson.String(files["createPage"]) is string createPage ? CreatePageWebhook.Create(createPage, host.Http) : null;
-    // Made and checked now: a directory others can reach refuses to start.
-    var handleStore = McpJson.String(files["handleStore"]) is string handleDir ? FilesHandleStore.Open(handleDir) : null;
     JsonNode? manifest = null;
     JsonNode? overrides = null;
 
@@ -95,6 +93,8 @@ internal static partial class McpCommandLine
     {
       throw new BlokMcpConfigException("OAuth authentication needs the HTTP transport (--http)");
     }
+    // Made and checked last, so a refused command line leaves no directory; one others can reach refuses to start.
+    var handleStore = McpJson.String(files["handleStore"]) is string handleDir ? FilesHandleStore.Open(handleDir) : null;
 
     return new McpConfig
     {

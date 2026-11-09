@@ -34,6 +34,10 @@ const leaveCategory = async (button: Locator): Promise<void> => {
   await button.dispatchEvent('mouseleave');
 };
 
+/**
+ * The popover picker names its chips in text, so they carry no hover hint.
+ * The inline ":" picker keeps icon-only categories with hints; its unit tests cover them.
+ */
 const openPicker = async (page: Page): Promise<void> => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -74,108 +78,30 @@ test.beforeEach(async ({ page }) => {
   await openPicker(page);
 });
 
-for (const category of ['callout', 'people', 'nature', 'foods', 'activity', 'places', 'objects', 'symbols', 'flags']) {
-  test(`delays the ${category} category hint and dismisses it when clicked`, async ({ page }) => {
-    const picker = page.getByRole('dialog', { name: 'Edit icon' });
-    const buttons = picker.locator('[data-emoji-nav]');
-    const button = picker.locator(`[data-emoji-nav="${category}"]`);
-    const tooltip = page.getByRole('tooltip');
+const CHIPS = [
+  ['callout', 'Callout'], ['people', 'Smileys'], ['nature', 'Nature'], ['foods', 'Food'], ['activity', 'Activity'],
+  ['places', 'Travel'], ['objects', 'Objects'], ['symbols', 'Symbols'], ['flags', 'Flags'],
+] as const;
 
-    await expect(buttons).toHaveCount(9);
-    await installPausedClock(page);
-    await page.clock.runFor(400);
-    await enterCategory(button);
-    await page.clock.runFor(299);
-    await expect(tooltip).not.toBeVisible();
-    await page.clock.runFor(1);
-    await expect(tooltip).toBeVisible();
-    await expect(tooltip).toHaveText(await button.getAttribute('aria-label') ?? '');
-    await expect(button).not.toHaveAttribute('title');
-    await button.click();
-    await expect(tooltip).not.toBeVisible();
-    await expect(picker).toBeVisible();
-  });
-}
-
-for (const elapsed of [250, 299]) {
-  test(`cancels a category hint when the pointer leaves at ${elapsed}ms`, async ({ page }) => {
-    const category = page.getByRole('dialog', { name: 'Edit icon' }).locator('[data-emoji-nav]').first();
-    const tooltip = page.getByRole('tooltip');
-
-    await installPausedClock(page);
-    await page.clock.runFor(400);
-    await enterCategory(category);
-    await page.clock.runFor(elapsed);
-    await leaveCategory(category);
-    await page.clock.runFor(300 - elapsed);
-    await expect(tooltip).not.toBeVisible();
-    await page.clock.runFor(1000);
-    await expect(tooltip).not.toBeVisible();
-    await expect(category).not.toHaveAttribute('aria-describedby');
-  });
-}
-
-test('shows no category hint on keyboard focus, since hints are hover-only', async ({ page }) => {
-  const picker = page.getByRole('dialog', { name: 'Edit icon' });
-  const category = picker.locator('[data-emoji-nav]').last();
-
-  await installPausedClock(page);
-  await page.mouse.move(0, 0);
-  await picker.getByRole('searchbox').focus();
-  await page.keyboard.press('Shift+Tab');
-  await expect(category).toBeFocused();
-  // Longer than any hint delay, so a focus-driven hint would have opened by now.
-  await page.clock.runFor(1000);
-  await expect(page.getByRole('tooltip')).not.toBeVisible();
-  await expect(category).not.toHaveAttribute('aria-describedby');
-});
-
-test('keeps category hints attached and inside the viewport at each corner', async ({ page }) => {
+test('names every category chip in text, keeping the full name for assistive tech', async ({ page }) => {
   const picker = page.getByRole('dialog', { name: 'Edit icon' });
 
-  for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right']) {
-    await page.mouse.move(0, 0);
-    await picker.evaluate((element, position) => {
-      element.style.setProperty('position', 'fixed');
-      element.style.setProperty('left', position.endsWith('left') ? '8px' : 'auto');
-      element.style.setProperty('right', position.endsWith('right') ? '8px' : 'auto');
-      element.style.setProperty('top', position.startsWith('top') ? '8px' : 'auto');
-      element.style.setProperty('bottom', position.startsWith('bottom') ? '8px' : 'auto');
-    }, corner);
-    const category = picker.locator('[data-emoji-nav]').nth(corner.endsWith('left') ? 0 : 8);
-    const anchor = await category.boundingBox();
+  for (const [category, label] of CHIPS) {
+    const chip = picker.locator(`[data-emoji-nav="${category}"]`);
 
-    if (anchor === null) {
-      throw new Error('Category button has no box');
-    }
-    await page.mouse.move(anchor.x + anchor.width / 2, anchor.y + anchor.height / 2);
-    const tooltip = page.getByRole('tooltip');
-
-    await expect(tooltip).toBeVisible();
-    await expect.poll(async () => tooltip.evaluate((element) => {
-      const rect = element.getBoundingClientRect();
-
-      return rect.left >= 0 && rect.top >= 0
-        && rect.right <= window.innerWidth && rect.bottom <= window.innerHeight;
-    })).toBe(true);
-    const bubble = await tooltip.boundingBox();
-
-    if (bubble === null) {
-      throw new Error('Category hint has no box');
-    }
-    expect(Math.min(Math.abs(bubble.y + bubble.height - anchor.y), Math.abs(anchor.y + anchor.height - bubble.y))).toBeLessThan(24);
-    await category.click();
-    await expect(tooltip).not.toBeVisible();
+    await expect(chip).toBeVisible();
+    await expect(chip.locator('[data-emoji-nav-label]')).toHaveText(label);
+    await expect(chip).toHaveAttribute('aria-label', /.+/);
   }
 });
 
-test('does not reveal a pending hint after the picker closes', async ({ page }) => {
+test('shows no hint on a category chip, even after the hover delay', async ({ page }) => {
   await installPausedClock(page);
-  await page.clock.runFor(400);
-  await enterCategory(page.getByRole('dialog', { name: 'Edit icon' }).locator('[data-emoji-nav]').last());
-  await page.clock.runFor(100);
-  await page.keyboard.press('Escape');
-  await page.clock.runFor(400);
-  await expect(page.getByRole('dialog', { name: 'Edit icon' })).not.toBeVisible();
+  const chip = page.getByRole('dialog', { name: 'Edit icon' }).locator('[data-emoji-nav="people"]');
+
+  await enterCategory(chip);
+  await page.clock.runFor(1000);
+
   await expect(page.getByRole('tooltip')).not.toBeVisible();
+  await leaveCategory(chip);
 });

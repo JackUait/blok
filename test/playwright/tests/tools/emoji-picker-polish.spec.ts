@@ -81,6 +81,7 @@ test.beforeEach(async ({ page }) => {
   await gotoTestPage(page);
 });
 
+// While searching, the grid takes the hidden chip row's 41px.
 test('keeps search, empty results, and restored results the same size within narrow viewports', async ({ page }) => {
   const picker = await openCalloutPicker(page);
   const search = picker.getByRole('searchbox', { name: 'Search emojis…' });
@@ -103,7 +104,7 @@ test('keeps search, empty results, and restored results the same size within nar
     await search.fill('bulb');
     await expect(body.locator('[data-emoji-native]')).not.toHaveCount(0);
     await expect.poll(() => picker.evaluate((element) => element.getBoundingClientRect().height)).toBe(initial.height);
-    await expect.poll(() => body.evaluate((element) => element.getBoundingClientRect().height)).toBe(bodyHeight + 46);
+    await expect.poll(() => body.evaluate((element) => element.getBoundingClientRect().height)).toBe(bodyHeight + 41);
 
     await search.fill('zzzznoemojimatcheszzzz');
     await expect(body.locator('[data-emoji-native]')).toHaveCount(0);
@@ -113,7 +114,7 @@ test('keeps search, empty results, and restored results the same size within nar
     expect(announcement?.width).toBeLessThanOrEqual(1);
     expect(announcement?.height).toBeLessThanOrEqual(1);
     await expect.poll(() => picker.evaluate((element) => element.getBoundingClientRect().height)).toBe(initial.height);
-    await expect.poll(() => body.evaluate((element) => element.getBoundingClientRect().height)).toBe(bodyHeight + 46);
+    await expect.poll(() => body.evaluate((element) => element.getBoundingClientRect().height)).toBe(bodyHeight + 41);
     await expect.poll(() => picker.evaluate((element) => element.getBoundingClientRect().width)).toBe(initial.width);
 
     await search.clear();
@@ -152,20 +153,20 @@ test('curls only inner glyphs at both clipped edges and leaves the center and hi
   await expect.poll(() => readGlyph(emoji)).toMatchObject({ transformed: false, buttonTransformed: false, clipped: false });
 });
 
-test('scrolls emoji directly beneath the search field without a blank header stripe', async ({ page }) => {
+test('scrolls emoji directly beneath the category chips without a blank stripe', async ({ page }) => {
   const picker = await openCalloutPicker(page);
   const emoji = picker.locator('[data-emoji-native]').nth(80);
 
   await scrollEmojiTo(emoji, 'top');
   const gap = await picker.evaluate((root) => {
-    const field = root.querySelector('[data-emoji-picker-search]');
+    const chips = root.querySelector('[data-emoji-picker-footer]');
     const body = root.querySelector('[data-emoji-picker-body]');
 
-    if (field === null || body === null) {
+    if (chips === null || body === null) {
       throw new Error('Missing picker layout');
     }
 
-    return body.getBoundingClientRect().top - field.getBoundingClientRect().bottom;
+    return body.getBoundingClientRect().top - chips.getBoundingClientRect().bottom;
   });
 
   expect(gap).toBeLessThanOrEqual(1);
@@ -214,7 +215,8 @@ test('names emoji buttons and supports search-to-grid arrow navigation and keybo
   const search = picker.getByRole('searchbox', { name: 'Search emojis…' });
   const first = picker.locator('[data-emoji-native="💡"]');
   const second = picker.locator('[data-emoji-native="👉"]');
-  const nextRow = picker.locator('[data-emoji-native="🚫"]');
+  // Nine columns: the tenth Callout emoji opens the second row.
+  const nextRow = picker.locator('[data-emoji-native="❓"]');
 
   await expect(first).toHaveAccessibleName(/light bulb/i);
   await expect(second).toHaveAccessibleName(/right/i);
@@ -249,8 +251,8 @@ test('cycles Tab through picker controls without editor interception or arrow fo
   const controls = [
     picker.getByRole('button', { name: 'Pick a random emoji', exact: true }),
     picker.getByRole('button', { name: 'Remove icon', exact: true }),
-    picker.locator('[data-emoji-native]').first(),
     ...await picker.locator('[data-emoji-nav]').all(),
+    picker.locator('[data-emoji-native]').first(),
     search,
   ];
 
@@ -259,8 +261,9 @@ test('cycles Tab through picker controls without editor interception or arrow fo
     await expect(control).toBeFocused();
   }
 
+  // The grid follows the chips, so Shift+Tab from the search wraps to it.
   await page.keyboard.press('Shift+Tab');
-  await expect(picker.getByRole('button', { name: 'Flags', exact: true })).toBeFocused();
+  await expect(picker.locator('[data-emoji-native]').first()).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(picker).not.toBeVisible();
   await expect(page.getByTestId('callout-emoji-btn')).toBeFocused();

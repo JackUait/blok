@@ -4293,16 +4293,6 @@ span[data-blok-slash-search] {
   border-bottom: 1px solid var(--blok-popover-border);
 }
 
-[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-search] {
-  min-height: 34px;
-  font-size: 15px;
-}
-
-[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-search]::before {
-  width: 18px;
-  height: 18px;
-}
-
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-footer] {
   flex: 0 0 auto;
   border-top: 0;

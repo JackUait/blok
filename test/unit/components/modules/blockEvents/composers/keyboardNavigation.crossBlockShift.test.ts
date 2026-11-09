@@ -54,7 +54,7 @@ interface Setup {
  * Two text blocks. `navigateVerticalNext` moves a collapsed caret into the second
  * block at offset 4, the way the real Caret module does on the last line.
  */
-const setup = (options: { insideTableCell?: boolean; next?: boolean } = {}): Setup => {
+const setup = (options: { insideTableCell?: boolean; next?: boolean; selectableAcross?: boolean } = {}): Setup => {
   const first = line('b1', 'Alpha one');
   const second = line('b2', 'Beta two');
 
@@ -72,6 +72,7 @@ const setup = (options: { insideTableCell?: boolean; next?: boolean } = {}): Set
     setCurrentBlockByChildNode: vi.fn((node: Node) => {
       blockManager.currentBlock = second.input.contains(node) ? second.block : first.block;
     }),
+    getBlockByChildNode: (node: Node): Block => (second.input.contains(node) ? second.block : first.block),
   };
   const navigateVerticalNext = vi.fn(() => {
     collapseAt(second.text, 4);
@@ -86,7 +87,10 @@ const setup = (options: { insideTableCell?: boolean; next?: boolean } = {}): Set
     InlineToolbar: { close: vi.fn(), tryToShow: vi.fn(() => Promise.resolve()) },
     UI: { someToolbarOpened: false, nodes: {} },
     BlockSelection: { anyBlockSelected: false, clearSelection: vi.fn(), selectBlock: vi.fn() },
-    CrossBlockSelection: { toggleBlockSelectedState: vi.fn() },
+    CrossBlockSelection: {
+      toggleBlockSelectedState: vi.fn(),
+      canSelectTextAcross: vi.fn(() => options.selectableAcross ?? true),
+    },
   } as unknown as BlokModules;
 
   return { nav: new KeyboardNavigation(blok), first, second, navigateVerticalNext };
@@ -173,6 +177,20 @@ describe('Shift+ArrowDown from inside a block\'s text', () => {
       focus: [first.text, 6],
     });
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('only moves the caret when the next block is in another container', () => {
+    const { nav, first, second } = setup({ selectableAcross: false });
+
+    collapseAt(first.text, 6);
+    vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+
+    nav.handleArrowRightAndDown(shiftDown());
+
+    expect(selectionPoints()).toEqual({
+      anchor: [second.text, 4],
+      focus: [second.text, 4],
+    });
   });
 
   it('does not move at all when no block follows', () => {

@@ -1412,7 +1412,7 @@ export class CrossBlockSelection extends Module {
    * @param anchorBlock - block the gesture started in
    * @param targetBlock - block the pointer is over
    */
-  private canSelectTextAcross(anchorBlock: Block, targetBlock: Block): boolean {
+  public canSelectTextAcross(anchorBlock: Block, targetBlock: Block): boolean {
     const ownsKeyboard = (block: Block): boolean => {
       return block.holder.closest(`[${DATA_ATTR.keyboardOwner}]`) !== null;
     };

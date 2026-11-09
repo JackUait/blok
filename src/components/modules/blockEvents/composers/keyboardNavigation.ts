@@ -1459,6 +1459,19 @@ export class KeyboardNavigation extends BlockEventComposer {
       return true;
     }
 
+    const anchorBlock = BlockManager.getBlockByChildNode(anchor.node);
+    const targetBlock = BlockManager.getBlockByChildNode(moved.focusNode);
+
+    /** Same rule as a mouse drag: no text range out of a container. The caret just moves. */
+    if (
+      anchorBlock !== undefined &&
+      targetBlock !== undefined &&
+      anchorBlock !== targetBlock &&
+      !this.Blok.CrossBlockSelection.canSelectTextAcross(anchorBlock, targetBlock)
+    ) {
+      return true;
+    }
+
     applySpanningSelection(anchor, { node: moved.focusNode, offset: moved.focusOffset });
 
     return true;

@@ -297,6 +297,18 @@ describe('minimized database toolbar', () => {
     expect(body(database, `${EXPAND}:focus-visible`)).toContain('opacity: 1');
   });
 
+  // motion-search.json t1217, motion-minimize.json t1190: Notion's 28px » and « fade in over 200ms ease.
+  it('fades » and « in over 200ms ease when they appear, keeping the hover fill', () => {
+    const MINIMIZE = '[data-blok-database-toolbar-minimize]';
+    const pair = `${TOOLBAR} > :is(${MINIMIZE}, ${EXPAND})`;
+
+    // Must outrank `${TOOLBAR} > button`, which sets only the hover fill.
+    expect(body(outsideReducedMotion, pair)).toContain('transition: background-color 0.1s ease-in-out, opacity 0.2s ease');
+    expect(body(startStyle, `${TOOLBAR} > ${MINIMIZE}`)).toContain('opacity: 0');
+    expect(body(startStyle, `:is([data-blok-database-title-row], [data-blok-database-view-bar]):hover ${EXPAND}`)).toContain('opacity: 0');
+    expect(body(reducedMotion, pair)).toContain('transition: none');
+  });
+
   it('draws « as a mirrored »', () => {
     expect(body(database, `${EXPAND} svg`)).toContain('transform: scaleX(-1)');
   });

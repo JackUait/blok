@@ -10085,6 +10085,26 @@ textarea[data-blok-database-cell-input] {
   transform: none;
 }
 
+/* » and « fade in over 200ms ease as they appear (motion-search.json, motion-minimize.json).
+   Must outrank `[data-blok-database-view-toolbar] > button`, which sets only the hover fill. */
+[data-blok-database-view-toolbar] > :is([data-blok-database-toolbar-minimize], [data-blok-database-toolbar-expand]) {
+  transition: background-color 0.1s ease-in-out, opacity 0.2s ease;
+}
+
+/* « starts from its hover rule's selector: a weaker one would lose to that rule's opacity 1. */
+@starting-style {
+  [data-blok-database-view-toolbar] > [data-blok-database-toolbar-minimize],
+  :is([data-blok-database-title-row], [data-blok-database-view-bar]):hover [data-blok-database-toolbar-expand] {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-database-view-toolbar] > :is([data-blok-database-toolbar-minimize], [data-blok-database-toolbar-expand]) {
+    transition: none;
+  }
+}
+
 /* « brings the controls back with a 200ms fade. */
 [data-blok-database-view-toolbar][data-expanding] > * {
   transition: opacity 0.2s ease;

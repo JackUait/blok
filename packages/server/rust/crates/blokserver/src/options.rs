@@ -94,6 +94,13 @@ pub struct Options {
     /// UseCollabActivityObserver<T>. None makes no calls.
     pub collab_activity_observer: Option<Arc<dyn blok_collab_room::ActivityObserver>>,
 
+    /// CollabEnforceRestoreGuards: a history restore that would change who
+    /// can see or fill out a view, or unlock or reshape a locked database,
+    /// is refused 409 until the request confirms each kind
+    /// (X-Blok-Restore-Confirm or a body {"confirm":[...]}). False, the
+    /// default, restores without asking.
+    pub collab_enforce_restore_guards: bool,
+
     /// The TimeProvider override: tickets, the rate limit window, S3 signing
     /// and the rooms' timestamps (activity, cooldowns, export deadlines) read
     /// it. None is the system clock.
@@ -149,6 +156,7 @@ impl Default for Options {
             authorization: None,
             collab_operation_store: None,
             collab_activity_observer: None,
+            collab_enforce_restore_guards: false,
             clock: None,
             timers: None,
             logger: None,
@@ -226,6 +234,10 @@ impl fmt::Debug for Options {
             .field(
                 "collab_activity_observer",
                 &self.collab_activity_observer.is_some(),
+            )
+            .field(
+                "collab_enforce_restore_guards",
+                &self.collab_enforce_restore_guards,
             )
             .field("clock", &self.clock.is_some())
             .field("logger", &self.logger.is_some())

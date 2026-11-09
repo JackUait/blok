@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use blok_collab_convert::{
@@ -13,6 +14,7 @@ use crate::error::{is_cancellation, is_corrupt, is_transient};
 use crate::manager::Manager;
 use crate::ops::{EditResult, EditStatus, PlanOps, Precondition};
 use crate::restore::plan_restore;
+use crate::restore_guards::{RestoreGuard, restore_guards};
 use crate::timeline::{
     LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions,
 };
@@ -466,20 +468,61 @@ impl Manager {
         actor_id: &str,
         expect: Option<Precondition>,
     ) -> Result<(HistoryStatus, Option<EditResult>), Error> {
+        let (status, edit, _) = self
+            .restore_guarded(
+                doc_id,
+                lineage,
+                sequence,
+                operation_id,
+                actor_id,
+                expect,
+                None,
+            )
+            .await?;
+        Ok((status, edit))
+    }
+
+    /// restore with the guards enforced when `confirmed` is Some: a guard
+    /// whose kind it lacks refuses the restore, which changes nothing and
+    /// answers the guards with no edit. The check runs in the lane after the
+    /// duplicate check, so a refusal consumes no key and a committed retry
+    /// still gets its receipt.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "restore's arguments and the confirmed kinds"
+    )]
+    pub async fn restore_guarded(
+        &self,
+        doc_id: &str,
+        lineage: &str,
+        sequence: u64,
+        operation_id: &str,
+        actor_id: &str,
+        expect: Option<Precondition>,
+        confirmed: Option<HashSet<String>>,
+    ) -> Result<(HistoryStatus, Option<EditResult>, Vec<RestoreGuard>), Error> {
         let point = self.read_point(doc_id, lineage, sequence).await?;
         // A missing point still goes to the room: a retry whose lineage was
         // deleted since gets its first receipt from the duplicate check.
         if point.status != HistoryStatus::Ready && point.status != HistoryStatus::NotFound {
-            return Ok((point.status, None));
+            return Ok((point.status, None, Vec::new()));
         }
+        let refused: Arc<Mutex<Vec<RestoreGuard>>> = Arc::default();
+        let confirmed = Arc::new(confirmed);
         let target = Arc::new(blocks_of(point.output.as_ref()));
         let target_doc = point
             .doc
             .filter(|_| point.status != HistoryStatus::NotFound);
         let converter = self.0.converter.clone();
+        let refusal = refused.clone();
         let plan: PlanOps = Arc::new(move |doc: Doc| {
-            let (target, target_doc, converter) =
-                (target.clone(), target_doc.clone(), converter.clone());
+            let (target, target_doc, converter, confirmed, refusal) = (
+                target.clone(),
+                target_doc.clone(),
+                converter.clone(),
+                confirmed.clone(),
+                refusal.clone(),
+            );
             Box::pin(async move {
                 let Some(target_doc) = target_doc else {
                     return Err(Error::RestorePointMissing);
@@ -487,6 +530,15 @@ impl Manager {
                 let structure = describe_structure(&doc)?;
                 let exported = converter.export(&doc).await?;
                 let current = blocks_of(Some(&exported));
+                if let Some(confirmed) = confirmed.as_ref() {
+                    let guards = restore_guards(&current, &target);
+                    if guards.iter().any(|guard| !confirmed.contains(guard.kind)) {
+                        *refusal
+                            .lock()
+                            .unwrap_or_else(|poisoned| poisoned.into_inner()) = guards;
+                        return Err(Error::Other(Box::new(RestoreGuarded)));
+                    }
+                }
                 Ok(plan_restore(
                     &current,
                     &structure,
@@ -509,15 +561,38 @@ impl Manager {
             applied: None,
         };
         let edit = match self.edit_in_room(doc_id, request).await {
-            Err(Error::RestorePointMissing) => return Ok((HistoryStatus::NotFound, None)),
+            Err(Error::RestorePointMissing) => {
+                return Ok((HistoryStatus::NotFound, None, Vec::new()));
+            }
+            Err(Error::Other(err)) if err.is::<RestoreGuarded>() => {
+                let guards = std::mem::take(
+                    &mut *refused
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner()),
+                );
+                return Ok((HistoryStatus::Ready, None, guards));
+            }
             other => other?,
         };
         if edit.status == EditStatus::Applied {
             self.0.document_replaced(doc_id);
         }
-        Ok((HistoryStatus::Ready, Some(edit)))
+        Ok((HistoryStatus::Ready, Some(edit), Vec::new()))
     }
 }
+
+/// A restore's planner refused: a guard is present the request did not
+/// confirm. Carried in Error::Other so Error keeps its variants.
+#[derive(Debug)]
+struct RestoreGuarded;
+
+impl std::fmt::Display for RestoreGuarded {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("collab: the restore needs confirmation")
+    }
+}
+
+impl std::error::Error for RestoreGuarded {}
 
 fn replay_point(
     ctx: &Context,

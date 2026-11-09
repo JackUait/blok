@@ -218,7 +218,10 @@ pub(crate) enum ReadError {
 }
 
 /// Counts while it reads, in 8 KiB chunks; Content-Length is not trusted.
-async fn read_body(request: &mut Request, max_bytes: usize) -> Result<Vec<u8>, ReadError> {
+pub(crate) async fn read_body(
+    request: &mut Request,
+    max_bytes: usize,
+) -> Result<Vec<u8>, ReadError> {
     let mut buffer = Vec::new();
     let Some(body) = request.body_mut() else {
         return Ok(buffer);

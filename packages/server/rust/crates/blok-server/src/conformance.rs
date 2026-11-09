@@ -19,6 +19,8 @@ pub struct ConformanceArguments {
     pub journal: bool,
     /// CollabKeepAliveInterval in milliseconds, when set.
     pub keep_alive_ms: Option<i64>,
+    /// CollabEnforceRestoreGuards.
+    pub restore_guards: bool,
 }
 
 /// Takes the two flags out of args, at any place before "--", before the
@@ -38,6 +40,11 @@ pub fn parse_conformance_arguments(
         }
         if argument == "--conformance-journal" || argument == "-conformance-journal" {
             parsed.journal = true;
+            i += 1;
+            continue;
+        }
+        if argument == "--conformance-restore-guards" {
+            parsed.restore_guards = true;
             i += 1;
             continue;
         }
@@ -103,6 +110,7 @@ pub fn apply_conformance_options(options: &mut Options, parsed: &ConformanceArgu
     if let Some(ms) = parsed.keep_alive_ms {
         options.collab_keep_alive_interval_nanos = ms * 1_000_000;
     }
+    options.collab_enforce_restore_guards = parsed.restore_guards;
 }
 
 #[cfg(not(feature = "conformance"))]

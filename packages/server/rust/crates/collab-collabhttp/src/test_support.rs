@@ -731,6 +731,7 @@ pub async fn start_app(options: AppOptions) -> App {
         corrupt_log: Some(Arc::new(move |doc: &str| {
             logged.lock().unwrap().push(doc.to_owned());
         })),
+        enforce_restore_guards: false,
     });
     let mut router = Router::new();
     for (pattern, method, which) in [

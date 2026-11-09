@@ -1,20 +1,22 @@
+use std::collections::HashSet;
 use std::future::Future;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use blok_auth::User;
 use blok_collab_journal::LineageDeleteOutcome;
 use blok_collab_room::{
-    BlockChangeKind, Error, HistoryStatus, MAX_CHANGE_BYTES, MAX_CHANGE_RECORDS, Manager,
-    RecordChanges, describe_database_change,
+    BlockChangeKind, CONFIRMABLE_GUARDS, Error, HistoryStatus, MAX_CHANGE_BYTES,
+    MAX_CHANGE_RECORDS, Manager, RecordChanges, RestoreGuard, describe_database_change,
 };
 use blok_collab_synchttp::{derive_actor, refuse};
 use blok_collab_workingset::is_lineage;
 use blok_dotnet::{parse_uint64_none, query_all};
 use blok_http::{Request, ResponseWriter};
-use blok_jsjson::{Value, append_quoted};
+use blok_jsjson::{Object, Str, Value, append_quoted, parse, stringify, to_string_lossy};
 
 use crate::edit::{
-    BAD_IF_MATCH, KEY_REQUIRED, operation_id, precondition, while_connected, write_edit_result,
+    BAD_IF_MATCH, KEY_REQUIRED, operation_id, precondition, read_body, while_connected,
+    write_edit_result,
 };
 use crate::{Handlers, expose, failed, refuse_retry_later};
 
@@ -76,6 +78,62 @@ fn append_millis(body: &mut Vec<u8>, at: Option<SystemTime>) {
         None => body.extend_from_slice(b"null"),
         Some(at) => body.extend_from_slice(unix_milli(at).to_string().as_bytes()),
     }
+}
+
+/// Lists the guard kinds a restore confirms; a body {"confirm":[...]} adds to it.
+pub const RESTORE_CONFIRM_HEADER: &str = "X-Blok-Restore-Confirm";
+
+/// Marks a guard's 409, which the key-reuse 409 lacks.
+pub const RESTORE_REFUSAL_HEADER: &str = "X-Blok-Restore-Refusal";
+
+/// The kinds from every header line and comma item, then a body
+/// {"confirm":[...]}. Unknown kinds and a body that does not parse or is
+/// over the cap confirm nothing.
+async fn restore_confirms(request: &mut Request, max_bytes: usize) -> HashSet<String> {
+    let mut confirmed = HashSet::new();
+    let mut add = |kind: &str| {
+        if CONFIRMABLE_GUARDS.contains(&kind) {
+            confirmed.insert(kind.to_owned());
+        }
+    };
+    for line in request.headers().get_all(RESTORE_CONFIRM_HEADER) {
+        for item in line.split(',') {
+            add(item.trim_matches([' ', '\t']));
+        }
+    }
+    let Ok(body) = read_body(request, max_bytes).await else {
+        return confirmed;
+    };
+    if let Ok(Value::Object(object)) = parse(&body)
+        && let Some(Value::Array(items)) = object.get(&Str::from_utf8(b"confirm"))
+    {
+        for item in items {
+            if let Value::String(kind) = item {
+                add(&to_string_lossy(kind.units()));
+            }
+        }
+    }
+    confirmed
+}
+
+/// The guard's 409: JSON {error, guards} and the refusal header, so a client
+/// never mistakes it for a reused key.
+async fn refuse_restore(response: &mut ResponseWriter, reason: &str, guards: &[RestoreGuard]) {
+    let mut body = Object::new();
+    body.set(
+        Str::from_utf8(b"error"),
+        Value::String(Str::from_utf8(reason.as_bytes())),
+    );
+    body.set(
+        Str::from_utf8(b"guards"),
+        Value::Array(guards.iter().map(RestoreGuard::json).collect()),
+    );
+    let text = stringify(&Value::Object(body)).unwrap_or_default();
+    let headers = response.headers_mut();
+    headers.set("Content-Type", "application/json");
+    headers.set(RESTORE_REFUSAL_HEADER, reason);
+    blok_route::start_stream(response, 409).await;
+    let _ = response.write(text.as_bytes()).await;
 }
 
 async fn write_json(response: &mut ResponseWriter, body: &[u8]) {
@@ -331,7 +389,7 @@ impl Handlers {
 
     /// POST .../restore: the key is required, If-Match is optional, and it
     /// answers like an edit.
-    pub async fn history_restore(&self, request: Request, mut response: ResponseWriter) {
+    pub async fn history_restore(&self, mut request: Request, mut response: ResponseWriter) {
         let Some(a) = self.admit_history(&request, &mut response, true).await else {
             return;
         };
@@ -346,14 +404,27 @@ impl Handlers {
             refuse(&mut response, 400, BAD_IF_MATCH).await;
             return;
         };
+        let confirmed = if self.config.enforce_restore_guards {
+            Some(restore_confirms(&mut request, self.config.max_message_bytes).await)
+        } else {
+            None
+        };
         let actor = derive_actor(&a.ticket_user, &a.user, a.has_user);
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
         let restore = async move {
             rooms
-                .restore(&doc, &lineage, sequence, &operation_id, &actor, expect)
+                .restore_guarded(
+                    &doc,
+                    &lineage,
+                    sequence,
+                    &operation_id,
+                    &actor,
+                    expect,
+                    confirmed,
+                )
                 .await
         };
-        let (status, edit) = match blocking(&request, restore).await {
+        let (status, edit, refused) = match blocking(&request, restore).await {
             Some(Ok(result)) => result,
             _ => {
                 failed(&request, &mut response).await;
@@ -363,6 +434,9 @@ impl Handlers {
         match edit {
             Some(edit) if status == HistoryStatus::Ready => {
                 write_edit_result(&mut response, &edit, a.rooms.retry_after()).await;
+            }
+            None if status == HistoryStatus::Ready => {
+                refuse_restore(&mut response, "confirmation_required", &refused).await;
             }
             _ => self.refuse_history(&mut response, &a, status).await,
         }

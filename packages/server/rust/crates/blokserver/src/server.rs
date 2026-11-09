@@ -377,6 +377,7 @@ impl Server {
             rooms: Arc::new(move || rooms.rooms()),
             max_message_bytes: usize::try_from(o.collab_max_message_bytes).unwrap_or(0),
             corrupt_log: Some(Arc::new(move |doc: &str| corrupt.corrupt_log(doc))),
+            enforce_restore_guards: o.collab_enforce_restore_guards,
         });
         for (path, method, route) in [
             ("/reset", "POST", CollabRoute::Reset),

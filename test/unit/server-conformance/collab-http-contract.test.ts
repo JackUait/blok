@@ -1595,4 +1595,21 @@ suite('collab history attribution: record notes, by=actor, block and stamp autho
     expect([a.lastEditedBy, a.lastEditedWith]).toEqual(['u2', undefined]);
     expect([c.createdBy, c.createdWith, c.lastEditedWith]).toEqual(['agent:alice:claude-code', undefined, undefined]);
   });
+
+  it('keeps the stamps a restore brings back, with stamp authority on', async () => {
+    const stateBlocks = async (): Promise<Record<string, unknown>[]> =>
+      (JSON.parse((await read('/state')).body) as { blocks: Record<string, unknown>[] }).blocks;
+    const before = (await stateBlocks()).find((block) => block.id === 'b') ?? {};
+    // A restorer seen nowhere else: no stamp may name it.
+    const restore = await send(base, 'POST', `/sync/${TICKET_DOC}/history/${lineage}/1/restore`, [...as(mintTicket('u3')), [KEY, 'r1']]);
+
+    expect(restore.status).toBe(204);
+
+    const blocks = await stateBlocks();
+    const b = blocks.find((block) => block.id === 'b') ?? {};
+
+    expect(blocks.map((block) => block.id)).toEqual(['a', 'b']);
+    expect([b.createdBy, b.createdAt]).toEqual([before.createdBy, before.createdAt]);
+    expect(blocks.flatMap((block) => [block.createdBy, block.lastEditedBy])).not.toContain('u3');
+  });
 });

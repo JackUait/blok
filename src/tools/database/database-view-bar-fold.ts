@@ -68,8 +68,11 @@ export const planViewBarFold = (parts: ViewBarParts): ViewBarFold => {
  * Notion folds a one-view title row at fixed widths of the database block, not
  * by what fits: Filter, Sort, Automations, AI Autofill and Search go together
  * below 480 even with room to spare, New below 320, and the title truncates
- * instead (notion-motion.md, Round 6 "Toolbar fold points"). The width is the
- * block from the title to the toolbar's end.
+ * instead (notion-motion.md, Round 6 "Toolbar fold points"). Notion's width is
+ * the database block's box, which ends 8px past its last button. Blok's row
+ * content box is the same block box but ends at its last button, so these map
+ * by block width, not by button span as NEW_FOLD_WIDTH does: a database of the
+ * same width folds at the same point.
  */
 export const TITLE_ROW_ICON_FOLD_WIDTH = 480;
 export const TITLE_ROW_NEW_FOLD_WIDTH = 320;

@@ -1074,7 +1074,20 @@ export interface DatabaseData extends BlockToolData {
   icon?: DatabaseIcon;
   /** The Suggested template this database was made from. Removed by "Undo … database". */
   starter?: DatabaseStarterId;
+  /**
+   * Deleted properties, newest last. Row values stay in the rows until a
+   * permanent delete, so a restore shows them again.
+   */
+  deletedProperties?: DeletedPropertyDefinition[];
 }
+
+/** A deleted property: its definition as it was, plus when and by whom. */
+export type DeletedPropertyDefinition = PropertyDefinition & {
+  /** Epoch milliseconds. */
+  deletedAt: number;
+  /** The person id, when known. */
+  deletedBy?: string;
+};
 
 /** A database icon: one of Blok's glyphs on a tinted tile. */
 export interface DatabaseIcon {

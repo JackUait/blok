@@ -3,6 +3,7 @@ import type {
   DatabaseData,
   DatabaseRow,
   DatabaseViewConfig,
+  DeletedPropertyDefinition,
   GroupSettings,
   PageLayoutFields,
   PropertyConfig,
@@ -73,6 +74,7 @@ export interface GroupOptions {
 
 export class DatabaseModel {
   private schema: PropertyDefinition[];
+  private deletedProperties: DeletedPropertyDefinition[];
   private rows: DatabaseRow[] = [];
   private views: DatabaseViewConfig[];
   private activeViewId: string;
@@ -103,6 +105,8 @@ export class DatabaseModel {
     } else {
       this.schema = seed?.schema ?? createDefaultSchema(DatabaseModel.idMinter(options.idSeed));
     }
+
+    this.deletedProperties = structuredClone(data?.deletedProperties ?? []);
 
     if (data?.views !== undefined && data.views.length > 0) {
       this.views = structuredClone(data.views);
@@ -200,8 +204,56 @@ export class DatabaseModel {
     this.schema = this.schema.map((p) => (p.id === next.id ? structuredClone(next) : p));
   }
 
+  /** Drops a property with no trace: for undoing a property this session just made. */
   deleteProperty(propertyId: string): void {
     this.schema = this.schema.filter((p) => p.id !== propertyId);
+  }
+
+  /** Deleted properties a restore can bring back. A live property wins over an entry with its id. */
+  getDeletedProperties(): DeletedPropertyDefinition[] {
+    const live = new Set(this.schema.map((p) => p.id));
+
+    return this.deletedProperties.filter((p) => !live.has(p.id));
+  }
+
+  /** Moves a property to the deleted list. Row values are not the model's: they stay. The title cannot go. */
+  trashProperty(propertyId: string, deletedBy?: string): DeletedPropertyDefinition | undefined {
+    const property = this.getProperty(propertyId);
+
+    if (property === undefined || property.type === 'title') return undefined;
+    const deleted: DeletedPropertyDefinition = {
+      ...structuredClone(property),
+      deletedAt: this.now().getTime(),
+      ...(deletedBy !== undefined ? { deletedBy } : {}),
+    };
+
+    this.schema = this.schema.filter((p) => p.id !== propertyId);
+    this.deletedProperties = [...this.deletedProperties.filter((p) => p.id !== propertyId), deleted];
+
+    return deleted;
+  }
+
+  /** Puts a deleted property back where it was. A name a live property took meanwhile gets a free one. */
+  restoreProperty(propertyId: string): PropertyDefinition | undefined {
+    const deleted = this.getDeletedProperties().find((p) => p.id === propertyId);
+
+    if (deleted === undefined) return undefined;
+    const { deletedAt: _deletedAt, deletedBy: _deletedBy, ...property } = structuredClone(deleted);
+    const restored: PropertyDefinition = { ...property, name: freePropertyName(this.schema.map((p) => p.name), property.name) };
+
+    this.deletedProperties = this.deletedProperties.filter((p) => p.id !== propertyId);
+    this.schema = [...this.schema, restored].sort((a, b) => (a.position < b.position ? -1 : 1));
+
+    return restored;
+  }
+
+  /** Removes a deleted property from the list for good. The caller strips the row values. */
+  purgeProperty(propertyId: string): DeletedPropertyDefinition | undefined {
+    const deleted = this.getDeletedProperties().find((p) => p.id === propertyId);
+
+    if (deleted !== undefined) this.deletedProperties = this.deletedProperties.filter((p) => p.id !== propertyId);
+
+    return deleted;
   }
 
   /** The lock lives on the title property; see `PropertyDefinition.databaseLocked`. */
@@ -584,19 +636,24 @@ export class DatabaseModel {
    * Takes schema and views from the document, as undo or a peer left them.
    * Rows stay: they are child blocks and re-sync on their own.
    */
-  replaceDefinition(data: Pick<DatabaseData, 'schema' | 'views'>): void {
+  replaceDefinition(data: Pick<DatabaseData, 'schema' | 'views' | 'deletedProperties'>): void {
     this.schema = structuredClone(data.schema);
     this.views = structuredClone(data.views);
+    // Absent means "not this caller's concern": most callers pass the schema and views only.
+    if (data.deletedProperties !== undefined) this.deletedProperties = structuredClone(data.deletedProperties);
     this.locallyAdded.clear();
   }
 
   // ─── Snapshot ───
 
   snapshot(): DatabaseData {
+    const deletedProperties = this.getDeletedProperties();
+
     return {
       schema: structuredClone(this.schema),
       views: structuredClone(this.views),
       activeViewId: this.activeViewId,
+      ...(deletedProperties.length > 0 ? { deletedProperties: structuredClone(deletedProperties) } : {}),
     };
   }
 

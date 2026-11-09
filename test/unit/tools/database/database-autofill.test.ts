@@ -240,7 +240,7 @@ describe('DatabaseTool — config.ai.autofill', () => {
     expect(doc.rows.get('a')?.data.properties.summary).toBe('Generated');
   });
 
-  describe('deleting a property that Only specific properties watches', () => {
+  describe('permanently deleting a property that Only specific properties watches', () => {
     const watching = (ids: string[]): PropertyDefinition[] => [
       { id: 'title', name: 'Name', type: 'title', position: 'a0' },
       { id: 'notes', name: 'Notes', type: 'text', position: 'a1' },
@@ -258,11 +258,21 @@ describe('DatabaseTool — config.ai.autofill', () => {
     };
     const summaryAutofill = (tool: DatabaseTool): PropertyDefinition['autofill'] => tool.save(document.createElement('div')).schema.find((property) => property.id === 'summary')?.autofill;
 
-    it('drops the deleted id and keeps the rest, in the delete\'s one write', () => {
+    it('keeps the watch while the property is only deleted, so a restore brings it back whole', () => {
+      const { tool } = build(['notes', 'tags']);
+
+      tool.deleteProperty('notes');
+      expect(summaryAutofill(tool)).toEqual({ mode: 'summary', onCreate: true, onEdit: true, onEditProperties: ['notes', 'tags'] });
+      tool.restoreProperty('notes');
+      expect(summaryAutofill(tool)).toEqual({ mode: 'summary', onCreate: true, onEdit: true, onEditProperties: ['notes', 'tags'] });
+    });
+
+    it('drops the deleted id and keeps the rest, in the permanent delete\'s one write', () => {
       const { tool, dispatchChange } = build(['notes', 'tags']);
 
-      dispatchChange.mockClear();
       tool.deleteProperty('notes');
+      dispatchChange.mockClear();
+      tool.deletePropertyPermanently('notes');
 
       expect(summaryAutofill(tool)).toEqual({ mode: 'summary', onCreate: true, onEdit: true, onEditProperties: ['tags'] });
       expect(dispatchChange).toHaveBeenCalledTimes(1);
@@ -271,8 +281,9 @@ describe('DatabaseTool — config.ai.autofill', () => {
     it('with none left, the trigger falls back to None, as unticking the last box does', () => {
       const { tool, dispatchChange } = build(['notes']);
 
-      dispatchChange.mockClear();
       tool.deleteProperty('notes');
+      dispatchChange.mockClear();
+      tool.deletePropertyPermanently('notes');
 
       expect(summaryAutofill(tool)).toEqual({ mode: 'summary', onCreate: true });
       expect(dispatchChange).toHaveBeenCalledTimes(1);

@@ -218,7 +218,7 @@ describe('AI Autofill cell button', () => {
     expect(field.isConnected).toBe(true);
   });
 
-  it('deleting the one watched property sets the trigger to None, and one undo brings both back', async () => {
+  it('a deleted watched property keeps the watch; deleting it permanently sets the trigger to None, and one undo brings it back', async () => {
     await mount({ settings: { mode: 'summary', onEdit: true, onEditProperties: ['notes'] } });
     if (editor === undefined) throw new Error('Missing ready editor');
     const history = (editor as unknown as { history: { undo: () => void } }).history;
@@ -226,6 +226,7 @@ describe('AI Autofill cell button', () => {
       (await editor?.save())?.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
     const textAutofill = async (): Promise<AutofillSettings | undefined> =>
       (await saved())?.schema.find((property) => property.id === 'text')?.autofill;
+    const watching = { mode: 'summary', onEdit: true, onEditProperties: ['notes'] };
 
     await quiet();
     if (holder === undefined) throw new Error('Missing editor holder');
@@ -234,11 +235,18 @@ describe('AI Autofill cell button', () => {
     fireEvent.click(await findByRole(document.body, 'menuitem', { name: 'Delete this property?' }));
     await quiet();
     await vi.waitFor(async () => expect((await saved())?.schema.some((property) => property.id === 'notes')).toBe(false));
+    // A restore must bring the watch back whole, so a plain delete leaves it.
+    expect(await textAutofill()).toEqual(watching);
+
+    (editor as unknown as { module: { yjsManager: { stopCapturing: () => void } } }).module.yjsManager.stopCapturing();
+    editor.blocks.getById('db')?.call('deletePropertyPermanently', 'notes' as never);
+    await quiet();
+    await vi.waitFor(async () => expect((await saved())?.deletedProperties).toBeUndefined());
     expect(await textAutofill()).toEqual({ mode: 'summary' });
 
     history.undo();
-    await vi.waitFor(async () => expect((await saved())?.schema.some((property) => property.id === 'notes')).toBe(true));
-    expect(await textAutofill()).toEqual({ mode: 'summary', onEdit: true, onEditProperties: ['notes'] });
+    await vi.waitFor(async () => expect((await saved())?.deletedProperties?.map((property) => property.id)).toEqual(['notes']));
+    expect(await textAutofill()).toEqual(watching);
   });
 
   it('the header sparkle sits beside the header button, not inside it', async () => {

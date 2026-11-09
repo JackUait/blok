@@ -436,7 +436,7 @@ const deletedBackendRowsOf = (adapter: DatabaseAdapter | undefined, databaseId: 
 const BACKLINKS_SETTLE_MS = 300;
 
 // `icon` and `starter` stay in the passthrough: a value this client cannot draw (a newer glyph) is saved back as it came.
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'deletedProperties', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
   const source = data?.source as unknown;
@@ -2605,9 +2605,13 @@ export class DatabaseTool implements BlockTool {
     // A linked view's title element shows the source's name, not its own.
     const currentTitle = this.linked ? this.title : this.titleElement?.textContent ?? this.title;
 
+    const { deletedProperties, ...snapshot } = this.model.snapshot();
+
     return {
       ...structuredClone(this.unknown),
-      ...this.model.snapshot(),
+      ...snapshot,
+      // A linked view's deleted properties live on its source.
+      ...(deletedProperties !== undefined && this.source === undefined ? { deletedProperties } : {}),
       // Written even when empty: two peers that each create this key keep only one (serializer.ts objectToYMap).
       automations: structuredClone(this.savedAutomations ?? DATABASE_EMPTY_AUTOMATIONS),
       // Linked: a reference, never a copy of the source's schema.
@@ -2780,7 +2784,8 @@ export class DatabaseTool implements BlockTool {
       this.model.replaceDefinition({ schema: this.model.getSchema(), views: data.views });
       this.pullLinkedSchema();
     } else {
-      this.model.replaceDefinition(data);
+      // Undo of the first delete brings back data with no list: it must empty, not stay.
+      this.model.replaceDefinition({ ...data, deletedProperties: data.deletedProperties ?? [] });
     }
     void this.watchRemoteSource();
 
@@ -3538,7 +3543,7 @@ export class DatabaseTool implements BlockTool {
 
   /** Called by a database discarding a relation that "Add new relation" made: its mirror here goes too. */
   deleteMirrorProperty(param: { propertyId: string }): void {
-    this.deleteProperty(param.propertyId);
+    this.dropProperty(param.propertyId);
   }
 
   /** Discard of "Add new relation": the relation and its mirror go, in one undo step. */
@@ -3549,7 +3554,7 @@ export class DatabaseTool implements BlockTool {
     this.madeTabRelations.delete(propertyId);
     if (this.readOnly) return;
     const write = (): void => {
-      this.deleteProperty(propertyId);
+      this.dropProperty(propertyId);
       if (mirror !== undefined) this.api.blocks.getById(mirror.databaseId)?.call('deleteMirrorProperty', { propertyId: mirror.propertyId });
     };
 
@@ -9581,7 +9586,8 @@ export class DatabaseTool implements BlockTool {
           return onAdded?.(created.id, ownSetup);
         }),
         onDeleteProperty: (propertyId) => {
-          this.deleteProperty(propertyId);
+          // Only a discarded draft calls this: what it made leaves no deleted entry.
+          this.dropProperty(propertyId);
           this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
         },
         hasPeople: this.hasPeople,
@@ -11491,8 +11497,103 @@ export class DatabaseTool implements BlockTool {
     return copy;
   }
 
-  /** Removes a property from the schema. Row values stay (D9). The title cannot be deleted. */
+  /**
+   * Moves a property to `deletedProperties`. Row values stay (D9), so a
+   * restore shows them again. The title cannot be deleted.
+   */
   deleteProperty(propertyId: string): void {
+    if (this.forwardToSource('delete', propertyId)) return;
+    const property = this.model.getProperty(propertyId);
+
+    if (this.readOnly || this.destroyed || property === undefined || property.type === 'title') return;
+    this.model.trashProperty(propertyId, this.config.people?.me?.() ?? undefined);
+    this.autofillDrafts.delete(propertyId);
+    void this.sync.syncDeleteProperty({ propertyId });
+    this.commitSchema();
+  }
+
+  /** Brings a deleted property back with its row values. Null when there is none to restore. */
+  restoreProperty(propertyId: string): PropertyDefinition | null {
+    if (this.forwardToSource('restore', propertyId)) return this.model.getProperty(propertyId) ?? null;
+    if (this.readOnly || this.destroyed) return null;
+    const restored = this.model.restoreProperty(propertyId);
+
+    if (restored === undefined) return null;
+    const { id, name, type, position, config, ...settings } = restored;
+
+    void this.sync.syncCreateProperty({ ...settings, id, name, type, position, ...(config !== undefined ? { config } : {}) });
+    // The backend dropped the property on delete, so it may have lost the values too.
+    for (const row of this.model.getOrderedRows()) {
+      const value = row.properties[propertyId];
+
+      if (value !== undefined && value !== null) this.sync.syncUpdateRow({ rowId: row.id, properties: { [propertyId]: value } });
+    }
+    this.commitSchema();
+
+    return restored;
+  }
+
+  /**
+   * Removes a deleted property for good: its entry, and its value, reminder
+   * and kept original in every row and template, as one undo step.
+   */
+  deletePropertyPermanently(propertyId: string): boolean {
+    if (this.forwardToSource('purge', propertyId)) return this.model.getDeletedProperties().every((p) => p.id !== propertyId);
+    if (this.readOnly || this.destroyed || this.model.getDeletedProperties().every((p) => p.id !== propertyId)) return false;
+    const write = (): void => {
+      this.model.purgeProperty(propertyId);
+      for (const child of this.api.blocks.getChildren(this.dataId).filter((block) => block.name === 'database-row')) {
+        const live: DatabaseRowData[] = [];
+
+        child.call('readData', { receive: (data: DatabaseRowData) => live.push(data) });
+        const data = live[0] ?? child.preservedData as DatabaseRowData;
+        const holds = (map: unknown): boolean => typeof map === 'object' && map !== null && Object.hasOwn(map, propertyId);
+
+        if (!holds(data.properties) && !holds(data.reminders) && !holds(data.convertedValues)) continue;
+        const { [propertyId]: _gone, ...properties } = data.properties;
+
+        child.call('replaceProperties', { properties });
+        if (holds(data.reminders)) child.call('updateReminders', { [propertyId]: null });
+        if (holds(data.convertedValues)) child.call('updateConvertedValues', { [propertyId]: null });
+        child.dispatchChange();
+      }
+      this.pruneAutofillWatch(propertyId);
+      this.writeSchema();
+    };
+
+    if (this.api.blocks.transact !== undefined) this.api.blocks.transact(write);
+    else write();
+    this.syncRowsFromBlocks();
+    this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    this.rerenderView({ keepDrawer: true });
+
+    return true;
+  }
+
+  /**
+   * A linked view in this document has no rows or schema of its own: the
+   * property operation runs on its source. Returns whether it forwarded.
+   */
+  private forwardToSource(op: 'delete' | 'restore' | 'purge', propertyId: string): boolean {
+    if (this.source === undefined || this.source.documentId !== undefined || this.destroyed) return false;
+    this.api.blocks.getById(this.source.databaseId)?.call('runLinkedPropertyOp', { op, propertyId });
+    this.pullLinkedSchema();
+    this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+    this.rerenderView({ keepDrawer: true });
+
+    return true;
+  }
+
+  /** Called on a source database by one of its linked views. */
+  runLinkedPropertyOp(param: { op: 'delete' | 'restore' | 'purge'; propertyId: string }): void {
+    if (this.linked) return;
+    if (param.op === 'delete') this.deleteProperty(param.propertyId);
+    else if (param.op === 'restore') this.restoreProperty(param.propertyId);
+    else this.deletePropertyPermanently(param.propertyId);
+  }
+
+  /** Drops a property this session just made, with no deleted entry: a discarded draft or relation. */
+  private dropProperty(propertyId: string): void {
     const property = this.model.getProperty(propertyId);
 
     if (this.readOnly || this.destroyed || property === undefined || property.type === 'title') return;

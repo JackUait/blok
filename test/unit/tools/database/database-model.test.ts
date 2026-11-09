@@ -182,6 +182,94 @@ describe('DatabaseModel', () => {
       expect(model.getProperty('p1')).toBeUndefined();
       expect(model.getSchema()).toHaveLength(1);
     });
+
+    describe('deleted properties (H50)', () => {
+      const titleProp = makeProperty({ id: 'pt', name: 'Title', type: 'title', position: 'a0' });
+      const notes = makeProperty({ id: 'p1', name: 'Notes', type: 'text', position: 'a1' });
+      const at = new Date(Date.UTC(2026, 10, 9, 12));
+
+      it('trashProperty moves the entry to the deleted list with when and by whom', () => {
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }), { now: () => at });
+
+        model.trashProperty('p1', 'u1');
+
+        expect(model.getProperty('p1')).toBeUndefined();
+        expect(model.getDeletedProperties()).toEqual([{ ...notes, deletedAt: at.getTime(), deletedBy: 'u1' }]);
+        expect(model.snapshot().deletedProperties).toEqual([{ ...notes, deletedAt: at.getTime(), deletedBy: 'u1' }]);
+      });
+
+      it('leaves deletedBy out when the person is not known', () => {
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }), { now: () => at });
+
+        model.trashProperty('p1');
+
+        expect(model.getDeletedProperties()[0]).not.toHaveProperty('deletedBy');
+      });
+
+      it('saves no deletedProperties key while the list is empty', () => {
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }));
+
+        expect(model.snapshot()).not.toHaveProperty('deletedProperties');
+      });
+
+      it('restoreProperty puts the definition back at its place, without the stamps', () => {
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }), { now: () => at });
+
+        model.trashProperty('p1', 'u1');
+        const restored = model.restoreProperty('p1');
+
+        expect(restored).toEqual(notes);
+        expect(model.getSchema()).toEqual([titleProp, notes]);
+        expect(model.getDeletedProperties()).toEqual([]);
+        expect(model.snapshot()).not.toHaveProperty('deletedProperties');
+      });
+
+      it('restoreProperty gives a free name when a live property took the old one', () => {
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }));
+
+        model.trashProperty('p1');
+        model.addProperty('Notes', 'text');
+
+        expect(model.restoreProperty('p1')?.name).toBe('Notes 1');
+      });
+
+      it('purgeProperty removes the entry for good', () => {
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }));
+
+        model.trashProperty('p1');
+
+        expect(model.purgeProperty('p1')?.id).toBe('p1');
+        expect(model.getDeletedProperties()).toEqual([]);
+        expect(model.restoreProperty('p1')).toBeUndefined();
+      });
+
+      it('never trashes the title, and restore and purge of an unknown id do nothing', () => {
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }));
+
+        expect(model.trashProperty('pt')).toBeUndefined();
+        expect(model.getProperty('pt')).toBeDefined();
+        expect(model.restoreProperty('nope')).toBeUndefined();
+        expect(model.purgeProperty('nope')).toBeUndefined();
+      });
+
+      it('reads a saved list, and a live property wins over a deleted entry with its id', () => {
+        const gone = { ...makeProperty({ id: 'p2', name: 'Old', position: 'a2' }), deletedAt: 5 };
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes], deletedProperties: [gone, { ...notes, deletedAt: 6 }] }));
+
+        expect(model.getDeletedProperties()).toEqual([gone]);
+      });
+
+      it('replaceDefinition keeps the list when the caller does not name it, and takes it when it does', () => {
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }));
+
+        model.trashProperty('p1');
+        model.replaceDefinition({ schema: model.getSchema(), views: model.getViews() });
+        expect(model.getDeletedProperties().map((p) => p.id)).toEqual(['p1']);
+
+        model.replaceDefinition({ schema: [titleProp, notes], views: model.getViews(), deletedProperties: [] });
+        expect(model.getDeletedProperties()).toEqual([]);
+      });
+    });
   });
 
   describe('row projection', () => {

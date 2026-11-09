@@ -7078,6 +7078,109 @@ describe('DatabaseTool — property operations', () => {
     expect(schemaOf(tool).map((p) => p.id)).toContain('prop-title');
   });
 
+  describe('deleted properties (H50)', () => {
+    const people: DatabaseConfig['people'] = { list: () => Promise.resolve([]), me: () => 'u1' };
+    const savedOf = (tool: DatabaseTool): DatabaseData => tool.save(document.createElement('div'));
+
+    it('keeps a deleted property in deletedProperties, stamped with when and by whom', () => {
+      const one = realRow('r1', { 'prop-title': 'A', 'prop-n': 5 });
+      const { tool, options } = build([one], { people });
+
+      vi.mocked(options.block.dispatchChange).mockClear();
+      tool.deleteProperty('prop-n');
+
+      const deleted = savedOf(tool).deletedProperties ?? [];
+
+      expect(deleted.map((p) => p.id)).toEqual(['prop-n']);
+      expect(deleted[0]).toMatchObject({ name: 'Amount', type: 'number', position: 'a2', deletedBy: 'u1' });
+      expect(typeof deleted[0]?.deletedAt).toBe('number');
+      expect(savedOf(tool).schema.map((p) => p.id)).toEqual(['prop-title', 'prop-note']);
+      expect(one.tool.getProperties()['prop-n']).toBe(5);
+      expect(options.block.dispatchChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('restores a deleted property, and its row values show again', () => {
+      const one = realRow('r1', { 'prop-title': 'A', 'prop-n': 5 });
+      const { tool } = build([one]);
+
+      tool.deleteProperty('prop-n');
+      const restored = tool.restoreProperty('prop-n');
+
+      expect(restored).toMatchObject({ id: 'prop-n', name: 'Amount', type: 'number' });
+      expect(restored).not.toHaveProperty('deletedAt');
+      expect(savedOf(tool).schema.map((p) => p.id)).toEqual(['prop-title', 'prop-note', 'prop-n']);
+      expect(savedOf(tool)).not.toHaveProperty('deletedProperties');
+      expect((tool as unknown as { model: DatabaseModel }).model.getRow('r1')?.properties['prop-n']).toBe(5);
+    });
+
+    it('deletes permanently: the entry goes and every row loses the value, reminder and kept original', () => {
+      const one = realRow('r1', { 'prop-title': 'A', 'prop-n': 5, 'prop-note': 'x' });
+      const two = realRow('r2', { 'prop-title': 'B' });
+      const { tool } = build([one, two]);
+
+      one.tool.updateReminders({ 'prop-n': { remind: 'on_day_of_event' } });
+      one.tool.updateConvertedValues({ 'prop-n': { type: 'text', value: 'five' } });
+      tool.deleteProperty('prop-n');
+
+      expect(tool.deletePropertyPermanently('prop-n')).toBe(true);
+      expect(savedOf(tool)).not.toHaveProperty('deletedProperties');
+      expect(one.tool.getProperties()).toEqual({ 'prop-title': 'A', 'prop-note': 'x' });
+      expect(one.tool.save(document.createElement('div'))).not.toHaveProperty('reminders');
+      expect(one.tool.save(document.createElement('div'))).not.toHaveProperty('convertedValues');
+      expect(two.tool.getProperties()).toEqual({ 'prop-title': 'B' });
+      expect(tool.restoreProperty('prop-n')).toBeNull();
+    });
+
+    it('never deletes a live property permanently', () => {
+      const one = realRow('r1', { 'prop-title': 'A', 'prop-n': 5 });
+      const { tool } = build([one]);
+
+      expect(tool.deletePropertyPermanently('prop-n')).toBe(false);
+      expect(schemaOf(tool).map((p) => p.id)).toContain('prop-n');
+      expect(one.tool.getProperties()['prop-n']).toBe(5);
+    });
+
+    it('does nothing read-only', () => {
+      const { tool } = build([]);
+
+      tool.deleteProperty('prop-n');
+      tool.setReadOnly(true);
+
+      expect(tool.restoreProperty('prop-n')).toBeNull();
+      expect(tool.deletePropertyPermanently('prop-n')).toBe(false);
+      expect(savedOf(tool).deletedProperties?.map((p) => p.id)).toEqual(['prop-n']);
+    });
+
+    it('drops a discarded "Add new relation" mirror without a deleted entry', () => {
+      const { tool } = build([]);
+
+      tool.deleteMirrorProperty({ propertyId: 'prop-n' });
+
+      expect(schemaOf(tool).map((p) => p.id)).not.toContain('prop-n');
+      expect(savedOf(tool)).not.toHaveProperty('deletedProperties');
+    });
+
+    it('tells the adapter on restore: the property again, then the row values it holds', async () => {
+      const adapter = {
+        loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
+        createRow: vi.fn(), updateRow: vi.fn().mockResolvedValue(undefined), moveRow: vi.fn(), deleteRow: vi.fn(),
+        createProperty: vi.fn().mockResolvedValue(undefined), updateProperty: vi.fn(), deleteProperty: vi.fn().mockResolvedValue(undefined),
+        createView: vi.fn(), updateView: vi.fn(), deleteView: vi.fn(),
+      };
+      const one = realRow('r1', { 'prop-title': 'A', 'prop-n': 5 });
+      const { tool } = build([one], { adapter });
+
+      tool.deleteProperty('prop-n');
+      tool.restoreProperty('prop-n');
+      (tool as unknown as { sync: { flushPendingUpdates: () => void } }).sync.flushPendingUpdates();
+      await Promise.resolve();
+
+      expect(adapter.deleteProperty).toHaveBeenCalledWith({ propertyId: 'prop-n' });
+      expect(adapter.createProperty).toHaveBeenCalledWith({ id: 'prop-n', name: 'Amount', type: 'number', position: 'a2' });
+      expect(adapter.updateRow).toHaveBeenCalledWith({ rowId: 'r1', properties: { 'prop-n': 5 } });
+    });
+  });
+
   it('saves property settings and renames', () => {
     const { tool, options } = build([]);
 

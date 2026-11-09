@@ -225,6 +225,7 @@ export {
   DatabaseSetup,
   SubItemsDisplay,
   SubItemsFilter,
+  DeletedPropertyDefinition,
 } from './tools/database';
 export { BlockId } from './data-formats/block-id';
 export {

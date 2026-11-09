@@ -473,6 +473,16 @@ describe('cell editor CSS', () => {
       expect(declared(`${TABLE} [data-blok-database-select-editor] [data-blok-database-select-hint]`, 'line-height')).toEqual(['14.4px']);
     });
 
+    // sweep9a/pixel-scans.txt vs notion-live/selectcell.png: Notion's hint ink sits 5px lower and 4px further in,
+    // and its first pill 9px lower and 4px further in, than Blok's did.
+    it('pad the hint 11px over, 12px in and 8px under', () => {
+      expect(declared(`${TABLE} [data-blok-database-select-editor] [data-blok-database-select-hint]`, 'padding')).toEqual(['var(--blok-space-2-75) var(--blok-space-3) var(--blok-space-2)']);
+    });
+
+    it('leave 8px between an option\'s handle and its pill', () => {
+      expect(declared(`${TABLE} [data-blok-database-select-editor="select"] [data-blok-database-select-option]`, 'gap')).toEqual(['var(--blok-space-2)']);
+    });
+
     it('draw the option "⋯" 24x24', () => {
       expect(declared(`${TABLE} [data-blok-database-select-option-menu]`, 'width')).toEqual(['24px']);
       expect(declared(`${TABLE} [data-blok-database-select-option-menu]`, 'height')).toEqual(['24px']);

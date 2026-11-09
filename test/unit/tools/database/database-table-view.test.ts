@@ -592,6 +592,21 @@ describe('DatabaseTableView', () => {
       expect(footerCell('p-notes')?.hasAttribute('data-empty')).toBe(true);
     });
 
+    // research/21 §1d: the hover fills a 70x21 box around the label and value, not the cell.
+    it('puts a footer cell\'s label and value, or its Calculate prompt, in one box', () => {
+      const { root } = mount({ view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
+      const box = (id: string): Element | null | undefined =>
+        root.querySelector(`[data-blok-database-table-calc][data-property-id="${id}"]`)?.firstElementChild;
+
+      expect(box('p-amount')?.hasAttribute('data-blok-database-table-calc-box')).toBe(true);
+      expect([...(box('p-amount')?.children ?? [])].map((el) => el.getAttributeNames().find((name) => name.startsWith('data-blok')))).toEqual([
+        'data-blok-database-table-calc-label',
+        'data-blok-database-table-calc-value',
+      ]);
+      expect(box('p-notes')?.hasAttribute('data-blok-database-table-calc-box')).toBe(true);
+      expect(box('p-notes')?.firstElementChild?.hasAttribute('data-blok-database-table-calc-placeholder')).toBe(true);
+    });
+
     it('read-only: no gutter, no new page row, no editor on click', () => {
       const { root } = mount({ readOnly: true });
 

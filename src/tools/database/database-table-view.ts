@@ -210,13 +210,18 @@ export const fillCalculationCell = (cell: HTMLElement, { fn, property, shown, ro
   if (property.type === 'button') {
     return;
   }
+  // research/21 §1d: the hover fills this box, not the cell.
+  const box = document.createElement('span');
+
+  box.setAttribute('data-blok-database-table-calc-box', '');
+  cell.appendChild(box);
   if (fn === undefined) {
     const placeholder = document.createElement('span');
 
     cell.setAttribute('data-empty', '');
     placeholder.setAttribute('data-blok-database-table-calc-placeholder', '');
     placeholder.textContent = i18n.t('tools.database.tableCalculate');
-    cell.appendChild(placeholder);
+    box.appendChild(placeholder);
 
     return;
   }
@@ -228,7 +233,7 @@ export const fillCalculationCell = (cell: HTMLElement, { fn, property, shown, ro
   label.textContent = i18n.t(CALCULATION_LABEL_KEYS[fn]);
   value.setAttribute('data-blok-database-table-calc-value', '');
   value.textContent = calculationText(fn, rows, property, shown, locale, capCounts);
-  cell.append(label, value);
+  box.append(label, value);
 };
 
 /** One calculation over `rows`, formatted as the footer shows it. The board's group calculation shares it. */

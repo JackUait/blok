@@ -185,12 +185,13 @@ describe('list row hover chrome (findings-listgallery L03, L04)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-add]')).toContain('height: 24px');
   });
 
-  it('shows the white 26x20 Edit pencil only while the row is hovered', () => {
+  // notion-live/motion-listhover.json: the pencil's box is 30x24 at (623,345); listhover.png rings it 1px outside.
+  it('shows the white 30x24 Edit pencil only while the row is hovered', () => {
     const body = ruleBody(database, '[data-blok-database-list-row-edit]');
 
     expect(body).toContain('display: none');
-    expect(body).toContain('width: 26px');
-    expect(body).toContain('height: 20px');
+    expect(body).toContain('width: 30px');
+    expect(body).toContain('height: 24px');
     expect(body).toContain('border-radius: var(--blok-radius-control)');
     expect(body).toContain('background: var(--blok-database-card-actions-bg)');
     expect(body).toContain('box-shadow: var(--blok-database-card-actions-shadow)');
@@ -229,6 +230,11 @@ describe('list title edit (findings-listgallery L05)', () => {
   // notion-spec-2 §21.8 (list-row.png): a title after the page glyph starts where one after an emoji does.
   it('spaces the page glyph from the title as the emoji is', () => {
     expect(ruleBody(database, '[data-blok-database-list-row] > [data-blok-database-page-icon-placeholder]')).toContain('margin-inline-end: var(--blok-space-1)');
+  });
+
+  // sweep9a/pixel-scans.txt (LIST ROW): Notion's glyph ink starts 8px into the row and its title 31px; Blok's were 6 and 34.
+  it('moves the glyph or emoji 2px in and the title 3px back', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder])')).toContain('margin-inline: var(--blok-space-0-5) -1px');
   });
 });
 

@@ -360,3 +360,27 @@ describe('database table checkbox hover', () => {
     expect(css).toMatch(/--blok-database-checkbox-hover-bg:\s*rgba\(66, 35, 3, 0\.047\)/);
   });
 });
+
+// research/21 §1d: a 1px top line over the calculation row; the hover fills a 70x21 box with 6px corners.
+// research/08 (shot 66): that box is padded 0 6px and fades its fill over 0.2s.
+describe('database table calculation footer', () => {
+  it('rules a 1px line over the row in the table border colour, keeping the 35px row', () => {
+    expect(ruleBody('[data-blok-database-table-footer]')).toMatch(/box-shadow:\s*inset 0 1px 0 var\(--blok-database-table-border\)/);
+  });
+
+  it('fills a 21px box around the value on hover, not the whole cell', () => {
+    const box = ruleBody('[data-blok-database-table-calc-box]');
+
+    expect(box).toMatch(/padding:\s*0 var\(--blok-space-1-5\)/);
+    expect(box).toMatch(/line-height:\s*21px/);
+    expect(box).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
+    expect(box).toMatch(/transition:\s*background-color 200ms/);
+    expect(ruleBody('[data-blok-database-table-calc]:hover > [data-blok-database-table-calc-box]')).toMatch(/background-color:\s*var\(--blok-database-table-header-hover-bg\)/);
+    expect(ruleBody('[data-blok-database-table-calc]:hover')).toBe('');
+  });
+
+  // Shot 66: the value ends 11px short of the column edge; the box's 6px plus the cell's 4px.
+  it('pads the cell 4px so the box keeps the value 10px from the column edge', () => {
+    expect(ruleBody('[data-blok-database-table-calc]')).toMatch(/padding:\s*0 var\(--blok-space-1\)/);
+  });
+});

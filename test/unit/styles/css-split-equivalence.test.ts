@@ -1556,6 +1556,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_DRAG_GHOST_SEE_THROUGH_BYTES = 156;
     // database.css: a grouped table's filled caret and the per-group header row.
     const DATABASE_GROUPED_TABLE_HEADERS_BYTES = 248;
+    // database.css: the calc row's top line and 21px hover box, the select hint and pill offsets, the list glyph and 30x24 pencil.
+    const DATABASE_CALC_FOOTER_AND_OFFSETS_BYTES = 958;
     // database.css: the ring of a row the peek steps to starts 70ms late.
     const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
@@ -1978,7 +1980,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_VIEW_SETTINGS_OFFSETS_BYTES
       + DATABASE_TIMELINE_PANEL_CARD_BYTES
       + DATABASE_DRAG_GHOST_SEE_THROUGH_BYTES
-      + DATABASE_GROUPED_TABLE_HEADERS_BYTES;
+      + DATABASE_GROUPED_TABLE_HEADERS_BYTES
+      + DATABASE_CALC_FOOTER_AND_OFFSETS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

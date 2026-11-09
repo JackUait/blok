@@ -327,5 +327,8 @@
     "minimatch@^10.2.6": "11.0.4",
     "minimatch@~10.2.4": "11.0.4",
     "cytoscape-cose-bilkent@npm:^4.1.0": "patch:cytoscape-cose-bilkent@npm%3A4.1.0#~/.yarn/patches/cytoscape-cose-bilkent-npm-4.1.0-30566f1cf4.patch"
+  },
+  "dependencies": {
+    "lucide": "^1.70.0"
   }
 }

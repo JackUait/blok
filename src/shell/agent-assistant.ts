@@ -5,6 +5,7 @@
  */
 
 import type { AgentModel, AgentModelMessage, AgentModelResponse } from '../../types/api';
+import { createChatActivity } from './agent-chat';
 import { createCliAgentModel, inspectCli, providerLabel, type CliCommand, type CliStatus } from './agent-model';
 import { readAgentSettings, subscribeAgentSettings } from './agent-settings';
 import './agent-assistant.css';
@@ -451,11 +452,9 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
       article.append(question, who);
 
       if (turn.pending) {
-        const running = document.createElement('p');
+        const running = createChatActivity(runningLabel(turn.command)).element;
 
         running.setAttribute('data-blok-agent-running', '');
-        running.setAttribute('aria-live', 'polite');
-        running.textContent = runningLabel(turn.command);
         article.append(running);
       } else if (turn.answer !== '') {
         const answer = document.createElement('p');

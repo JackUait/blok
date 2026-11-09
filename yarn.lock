@@ -1295,6 +1295,7 @@ __metadata:
     jscpd: "npm:5.4.2"
     jsdom: "npm:29.1.1"
     katex: "npm:0.18.10"
+    lucide: "npm:^1.70.0"
     maplibre-gl: "npm:6.16.0"
     mediabunny: "npm:1.64.0"
     mermaid: "npm:12.2.0"
@@ -11022,6 +11023,13 @@ __metadata:
   dependencies:
     yallist: "npm:^3.0.2"
   checksum: 10c0/89b2ef2ef45f543011e38737b8a8622a2f8998cddf0e5437174ef8f1f70a8b9d14a918ab3e232cb3ba343b7abddffa667f0b59075b2b80e6b4d63c3de6127482
+  languageName: node
+  linkType: hard
+
+"lucide@npm:^1.70.0":
+  version: 1.70.0
+  resolution: "lucide@npm:1.70.0"
+  checksum: 10c0/a641cc5f2d400b6ae2b361228c58c57d3641838b21e87f98d06104397f075fc5ecdd9f0b5f563175c13b2eab3912a5cbc918b8c72117d14ec28ff689cba70392
   languageName: node
   linkType: hard
 

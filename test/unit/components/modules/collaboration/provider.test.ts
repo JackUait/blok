@@ -3268,6 +3268,99 @@ describe('createCollabProvider', () => {
     });
 
     /**
+     * Q24: what a reload sends. The residual round diffs against the server's
+     * state vector, and a state vector carries no deletions, so yjs writes the
+     * whole delete set. The client cannot tell that from a delete the server
+     * lacks, so it sends it, and the server must not journal it.
+     */
+    describe('a reload of a document the server already holds', () => {
+      /** A server copy that has seen a delete, so its delete set is not empty. */
+      const serverWithHistory = (): DocumentStore => {
+        const peer = newPeer();
+
+        peer.addBlock({ id: 'kept', type: 'paragraph', data: { text: 'kept' } });
+        peer.addBlock({ id: 'gone', type: 'paragraph', data: { text: 'gone' } });
+        peer.removeBlock('gone');
+
+        return peer;
+      };
+
+      /** The whole v2 boot: first sync, then the residual round the empty outbox asks for. */
+      const reload = async (harness: Harness, socket: MockSocket, peer: DocumentStore): Promise<void> => {
+        serverFirstSync(harness, socket, peer);
+        await settle();
+        socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+        await settle();
+      };
+
+      /** The one operation a reload sends: no structs, only a delete set the server already holds. */
+      const expectOnlyHeldDeletes = (socket: MockSocket, peer: DocumentStore): void => {
+        const frames = operationFrames(socket);
+
+        expect(frames).toHaveLength(1);
+
+        const decoded = Y.decodeUpdate(frames[0].update);
+
+        expect(decoded.structs).toEqual([]);
+        expect(decoded.ds.clients.size).toBeGreaterThan(0);
+
+        const before = peer.encodeStateAsUpdate();
+
+        peer.applyRemoteUpdate(frames[0].update, {});
+        expect(peer.encodeStateAsUpdate()).toEqual(before);
+      };
+
+      it('sends one delete-set-only operation when the tab boots with no local copy', async () => {
+        const outbox = new FakeOutbox(LINEAGE_A);
+        const peer = serverWithHistory();
+        const { harness, socket } = v2Handshake(outbox);
+
+        await reload(harness, socket, peer);
+
+        expect(harness.store.toJSON().map((block) => block.id)).toEqual(['kept']);
+        expectOnlyHeldDeletes(socket, peer);
+      });
+
+      it('sends one delete-set-only operation when the tab boots from a local copy equal to the server', async () => {
+        const outbox = new FakeOutbox(LINEAGE_A);
+        const peer = serverWithHistory();
+        const harness = createHarness({ outbox });
+
+        harness.store.applyRemoteUpdate(peer.encodeStateAsUpdate(), {});
+
+        const socket = connectAndHandshake(harness, PROTOCOL_V2);
+
+        await reload(harness, socket, peer);
+
+        expectOnlyHeldDeletes(socket, peer);
+      });
+
+      it('still envelopes a local delete the server lacks', async () => {
+        const outbox = new FakeOutbox(LINEAGE_A);
+        const peer = newPeer();
+
+        peer.addBlock({ id: 'kept', type: 'paragraph', data: { text: 'kept' } });
+        peer.addBlock({ id: 'gone', type: 'paragraph', data: { text: 'gone' } });
+
+        const harness = createHarness({ outbox });
+
+        harness.store.applyRemoteUpdate(peer.encodeStateAsUpdate(), {});
+        // Made offline under an earlier v1 session, so no outbox row covers it.
+        harness.store.removeBlock('gone');
+
+        const socket = connectAndHandshake(harness, PROTOCOL_V2);
+
+        await reload(harness, socket, peer);
+
+        const frames = operationFrames(socket);
+
+        expect(frames, 'a delete the server lacks never went up').toHaveLength(1);
+        peer.applyRemoteUpdate(frames[0].update, {});
+        expect(peer.toJSON().map((block) => block.id)).toEqual(['kept']);
+      });
+    });
+
+    /**
      * Compile-time only; `lint:types` is what checks it. The Collaboration
      * module hands the real store straight to the provider, so the seam has to
      * stay a structural subset of `OperationStore`.

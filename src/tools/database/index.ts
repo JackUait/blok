@@ -2227,6 +2227,8 @@ export class DatabaseTool implements BlockTool {
     const viewBar = document.createElement('div');
 
     viewBar.setAttribute('data-blok-database-view-bar', '');
+    // Chrome: its fold rewrites tabs on every resize. View edits made here dispatch their own change.
+    viewBar.setAttribute(DATA_ATTR.mutationFree, 'true');
     viewBar.append(this.tabBar.render(), this.controls.toolbar);
     wrapper.append(viewBar, this.controls.filterBar);
     this.syncTitleRowAddBtn();
@@ -4697,6 +4699,7 @@ export class DatabaseTool implements BlockTool {
     if (this.structureLocked()) return;
     this.model.updateView(viewId, { name });
     void this.sync.syncUpdateView({ viewId, changes: { name } });
+    this.block.dispatchChange();
   }
 
   duplicateView(viewId: string): void {
@@ -4808,6 +4811,7 @@ export class DatabaseTool implements BlockTool {
     } else {
       this.rebuildTabBar();
     }
+    this.block.dispatchChange();
   }
 
   reorderView(viewId: string, newPosition: string): void {
@@ -4815,6 +4819,7 @@ export class DatabaseTool implements BlockTool {
     this.model.updateView(viewId, { position: newPosition });
     void this.sync.syncUpdateView({ viewId, changes: { position: newPosition } });
     this.rebuildTabBar();
+    this.block.dispatchChange();
   }
 
   private rebuildTabBar(): void {
@@ -4893,8 +4898,9 @@ export class DatabaseTool implements BlockTool {
 
     this.titleRowFold?.disconnect();
     this.titleRowFold = null;
-    row?.removeAttribute('data-blok-database-fold-icons');
-    row?.removeAttribute('data-blok-database-fold-new');
+    // Inert: the toolbar is mutation-free. The view bar keeps its own marks.
+    this.controls.toolbar.removeAttribute('data-blok-database-fold-icons');
+    this.controls.toolbar.removeAttribute('data-blok-database-fold-new');
     if (!single || row === null) return;
     foldTitleRow(row);
     if (typeof ResizeObserver === 'undefined') return;

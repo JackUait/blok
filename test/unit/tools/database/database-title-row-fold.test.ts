@@ -29,6 +29,7 @@ describe('planTitleRowFold', () => {
 describe('foldTitleRow', () => {
   let row: HTMLElement;
   let wrapper: HTMLElement;
+  let toolbar: HTMLElement;
 
   const sized = <T extends HTMLElement>(el: T, width: () => number, prop: 'offsetWidth' | 'scrollWidth' = 'offsetWidth'): T => {
     Object.defineProperty(el, prop, { configurable: true, get: width });
@@ -44,12 +45,12 @@ describe('foldTitleRow', () => {
     // The title is squeezed to 80 in the row; its text needs 156.
     const title = sized(sized(document.createElement('div'), () => 80), () => 156, 'scrollWidth');
     const add = sized(document.createElement('button'), () => 24);
-    // The icon group hides under the row's mark, unless a probe says otherwise.
-    const toolbar: HTMLElement = document.createElement('div');
+    // The icon group hides under the toolbar's mark, unless a probe says otherwise.
+    toolbar = document.createElement('div');
 
     sized(toolbar, () => {
       const probe = toolbar.getAttribute('data-blok-database-fold-probe');
-      const folded = probe === null ? row.hasAttribute('data-blok-database-fold-icons') : probe === 'no-icons';
+      const folded = probe === null ? toolbar.hasAttribute('data-blok-database-fold-icons') : probe === 'no-icons';
 
       return folded ? 103 : 243;
     });
@@ -78,8 +79,8 @@ describe('foldTitleRow', () => {
     mount(358);
     foldTitleRow(row);
 
-    expect(row.hasAttribute('data-blok-database-fold-icons')).toBe(true);
-    expect(row.hasAttribute('data-blok-database-fold-new')).toBe(false);
+    expect(toolbar.hasAttribute('data-blok-database-fold-icons')).toBe(true);
+    expect(toolbar.hasAttribute('data-blok-database-fold-new')).toBe(false);
   });
 
   // The selection bar lies over the row (position absolute) while rows are picked; it takes no room.
@@ -91,7 +92,7 @@ describe('foldTitleRow', () => {
     row.insertBefore(bar, row.lastElementChild);
     foldTitleRow(row);
 
-    expect(row.hasAttribute('data-blok-database-fold-icons')).toBe(false);
+    expect(toolbar.hasAttribute('data-blok-database-fold-icons')).toBe(false);
   });
 
   it('clears the marks once the row is wide again', () => {
@@ -100,8 +101,8 @@ describe('foldTitleRow', () => {
     Object.defineProperty(row, 'clientWidth', { configurable: true, get: () => 474 });
     foldTitleRow(row);
 
-    expect(row.hasAttribute('data-blok-database-fold-icons')).toBe(false);
-    expect(row.hasAttribute('data-blok-database-fold-new')).toBe(false);
+    expect(toolbar.hasAttribute('data-blok-database-fold-icons')).toBe(false);
+    expect(toolbar.hasAttribute('data-blok-database-fold-new')).toBe(false);
   });
 
   // A resize that keeps the fold (the side peek sliding) must save nothing.
@@ -120,5 +121,27 @@ describe('foldTitleRow', () => {
     observer.disconnect();
 
     expect(new MutationHandler(() => wrapper, null, () => undefined).handleMutation(records).shouldFireUpdate).toBe(false);
+  });
+
+  // Crossing the switch point folds the toolbar for real; that is chrome too.
+  it.each([
+    ['folds', 474, 358],
+    ['unfolds', 358, 474],
+  ])('a row that %s on a resize is not a block change', (_change, from, to) => {
+    mount(from);
+    foldTitleRow(row);
+    const before = toolbar.hasAttribute('data-blok-database-fold-icons');
+
+    Object.defineProperty(row, 'clientWidth', { configurable: true, get: () => to });
+    const observer = new MutationObserver(() => undefined);
+
+    observer.observe(wrapper, { subtree: true, attributes: true, childList: true, characterData: true });
+    foldTitleRow(row);
+    const records = observer.takeRecords();
+
+    observer.disconnect();
+
+    expect(new MutationHandler(() => wrapper, null, () => undefined).handleMutation(records).shouldFireUpdate).toBe(false);
+    expect(toolbar.hasAttribute('data-blok-database-fold-icons')).toBe(!before);
   });
 });

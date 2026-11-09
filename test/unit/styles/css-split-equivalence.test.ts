@@ -1528,6 +1528,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ROW_GUTTER_EASE_BYTES = 251;
     // database.css: the title row fold probes on the toolbar, so a refold saves nothing.
     const DATABASE_TITLE_ROW_FOLD_PROBE_BYTES = 271;
+    // database.css: the title row's fold marks sit on its toolbar, so a real fold saves nothing.
+    const DATABASE_TITLE_ROW_TOOLBAR_MARKS_BYTES = 283;
     // database.css: the ring of a row the peek steps to starts 70ms late.
     const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
@@ -1937,7 +1939,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES
       + DATABASE_PEEK_STEP_HALO_BYTES
       + DATABASE_ROW_GUTTER_EASE_BYTES
-      + DATABASE_TITLE_ROW_FOLD_PROBE_BYTES;
+      + DATABASE_TITLE_ROW_FOLD_PROBE_BYTES
+      + DATABASE_TITLE_ROW_TOOLBAR_MARKS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

@@ -217,11 +217,22 @@ public sealed class CollabHistoryTimeCaptureTests
       ("no lineages", [], all, end, null, 200),
     ];
 
-    var written = new JsonArray();
+    Lineage three = new("L3", later + TimeSpan.FromHours(1), [(1, later + TimeSpan.FromHours(1) + Minute)]);
 
-    foreach (var (name, lineages, from, to, before, max) in cases)
+    (string Name, Lineage[] Lineages, int MaxLineages)[] lineageCases =
+    [
+      ("the lineage cap stops before the next lineage", [one, two, three], 2),
+      ("one lineage at most", [one, two, three], 1),
+      ("the lineage cap a range just fills is not a cut", [one, two, three], 3),
+    ];
+
+    var written = new JsonArray();
+    var all8 = cases.Select(c => (c.Name, c.Lineages, c.From, c.To, c.Before, c.Max, MaxLineages: CollabHistoryTime.MaxRangeLineages));
+    var capped = lineageCases.Select(c => (c.Name, c.Lineages, From: all, To: end, Before: ((string, ulong)?)null, Max: 200, c.MaxLineages));
+
+    foreach (var (name, lineages, from, to, before, max, maxLineages) in all8.Concat(capped))
     {
-      var selection = CollabHistoryTime.SelectRange(Build(lineages), from, to, before, max);
+      var selection = CollabHistoryTime.SelectRange(Build(lineages), from, to, before, max, maxLineages);
 
       written.Add(new JsonObject
       {
@@ -233,6 +244,7 @@ public sealed class CollabHistoryTimeCaptureTests
           ? new JsonObject { ["lineage"] = point.Item1, ["sequence"] = point.Item2.ToString(CultureInfo.InvariantCulture) }
           : null,
         ["maxRecords"] = max,
+        ["maxLineages"] = maxLineages,
         ["found"] = selection.Status == CollabHistoryStatus.Ready,
         ["records"] = new JsonArray([.. selection.Records.Select(Point)]),
         ["truncated"] = selection.Truncated,
@@ -241,8 +253,38 @@ public sealed class CollabHistoryTimeCaptureTests
 
     return new JsonObject
     {
-      ["$comment"] = "CollabHistoryTime.SelectRange as C# answers it. Captured by CollabHistoryTimeCaptureTests; do not edit by hand. Records committed in [from, to), older than before (lineage order, then sequence) when given, newest first, at most maxRecords; truncated when an older one was left out; found false when before names an unknown lineage. Times are .NET UTC ticks.",
+      ["$comment"] = "CollabHistoryTime.SelectRange as C# answers it. Captured by CollabHistoryTimeCaptureTests; do not edit by hand. Records committed in [from, to), older than before (lineage order, then sequence) when given, newest first, at most maxRecords from at most maxLineages lineages; truncated when an older one was left out; found false when before names an unknown lineage. fit: how many rows, newest first across lineages, one answer keeps under the byte cap; the first row always goes out. Times are .NET UTC ticks.",
       ["cases"] = written,
+      ["fit"] = Fit(),
     };
+  }
+
+  /// <summary>Rows newest first across lineages, with their byte sizes, against the byte cap.</summary>
+  private static JsonArray Fit()
+  {
+    const long cap = 4 * 1024 * 1024;
+    (string Name, (string Lineage, ulong Sequence, long Bytes)[] Rows, long MaxBytes)[] cases =
+    [
+      ("everything fits", [("L2", 2, 10), ("L2", 1, 10), ("L1", 3, 10)], cap),
+      ("several lineages whose rows together pass the cap",
+          [("L3", 1, 3_000_000), ("L2", 2, 1_000_000), ("L2", 1, 500_000), ("L1", 9, 3_000_000), ("L1", 8, 10)], cap),
+      ("a row exactly at the cap fits", [("L2", 1, cap - 10), ("L1", 1, 10), ("L1", 0, 1)], cap),
+      ("the first row goes out even past the cap", [("L2", 1, cap + 1), ("L1", 1, 1)], cap),
+      ("a first row of a later lineage that would pass the cap stays out", [("L2", 1, 10), ("L1", 5, cap)], cap),
+      ("no rows", [], cap),
+    ];
+
+    return [.. cases.Select(c => (JsonNode)new JsonObject
+    {
+      ["name"] = c.Name,
+      ["rows"] = new JsonArray([.. c.Rows.Select(row => (JsonNode)new JsonObject
+      {
+        ["lineage"] = row.Lineage,
+        ["sequence"] = row.Sequence.ToString(CultureInfo.InvariantCulture),
+        ["bytes"] = row.Bytes.ToString(CultureInfo.InvariantCulture),
+      })]),
+      ["maxBytes"] = c.MaxBytes.ToString(CultureInfo.InvariantCulture),
+      ["kept"] = CollabHistoryTime.FitRows([.. c.Rows.Select(row => row.Bytes)], c.MaxBytes),
+    })];
   }
 }

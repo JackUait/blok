@@ -110,9 +110,19 @@ internal sealed partial class CollabRoomManager
 
     var records = new List<CollabRangeRecord>();
     var truncated = selection.Truncated;
+    // One record and byte budget for the whole answer: each lineage replays
+    // with what the newer ones left.
+    long consumed = 0;
 
     for (var start = 0; start < selection.Records.Count;)
     {
+      if (records.Count > 0 && consumed >= maxBytes)
+      {
+        truncated = true;
+
+        break;
+      }
+
       var lineage = selection.Records[start].Lineage;
       var end = start;
       var picked = new HashSet<ulong>();
@@ -128,8 +138,8 @@ internal sealed partial class CollabRoomManager
           lineage,
           selection.Records[start].Sequence,
           selection.Records[end - 1].Sequence - 1,
-          maxRecords,
-          maxBytes,
+          maxRecords - records.Count,
+          (int)Math.Max(1, maxBytes - consumed),
           cancellationToken);
 
       if (result.Status != CollabHistoryStatus.Ready)
@@ -139,10 +149,20 @@ internal sealed partial class CollabRoomManager
 
       for (var i = result.Changes.Count - 1; i >= 0; i--)
       {
-        if (picked.Contains(result.Changes[i].Sequence))
+        if (!picked.Contains(result.Changes[i].Sequence))
         {
-          records.Add(new CollabRangeRecord(lineage, result.Changes[i]));
+          continue;
         }
+
+        var size = CollabVersionChanges.RecordBytes(result.Changes[i]);
+
+        if (!CollabHistoryTime.Fits(records.Count, consumed, size, maxBytes))
+        {
+          return new CollabHistoryRangeResult(CollabHistoryStatus.Ready, records, true);
+        }
+
+        records.Add(new CollabRangeRecord(lineage, result.Changes[i]));
+        consumed += size;
       }
 
       // Older records were dropped inside this lineage: anything older still is past the cut.

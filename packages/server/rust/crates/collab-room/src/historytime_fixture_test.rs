@@ -6,7 +6,8 @@ use blok_jsjson::{Object, Value};
 
 use crate::changes_test::{array, member, object, read_repo_json};
 use crate::{
-    HistoryPoint, HistoryStatus, LineageHeaders, parse_history_time, resolve_at, select_range,
+    HistoryPoint, HistoryStatus, LineageHeaders, fit_rows, parse_history_time, resolve_at,
+    select_range,
 };
 
 // The twins of C# CollabHistoryTimeCaptureTests.
@@ -150,12 +151,16 @@ fn select_range_matches_the_changes_range_fixture() {
         let Value::Number(max) = member(&c, "maxRecords") else {
             panic!("maxRecords")
         };
+        let Value::Number(max_lineages) = member(&c, "maxLineages") else {
+            panic!("maxLineages")
+        };
         let got = select_range(
             &lineages(&c),
             at(&c, "from").unwrap(),
             at(&c, "to").unwrap(),
             before.as_ref(),
             *max as usize,
+            *max_lineages as usize,
         );
         let got_text: Vec<String> = got.records.iter().map(|p| point_text(Some(p))).collect();
         let want_text: Vec<String> = array(member(&c, "records"))
@@ -172,6 +177,25 @@ fn select_range_matches_the_changes_range_fixture() {
                 "{name}: {got_text:?} {} {:?}",
                 got.truncated, got.status
             ));
+        }
+    }
+    assert!(failures.is_empty(), "{failures:#?}");
+}
+
+#[test]
+fn fit_rows_matches_the_changes_range_fixture() {
+    let mut failures = Vec::new();
+    for c in cases(&fixture("changes-range.json"), "fit") {
+        let sizes: Vec<i64> = array(member(&c, "rows"))
+            .iter()
+            .map(|row| text(object(row), "bytes").parse().unwrap())
+            .collect();
+        let got = fit_rows(&sizes, text(&c, "maxBytes").parse().unwrap());
+        let Value::Number(want) = member(&c, "kept") else {
+            panic!("kept")
+        };
+        if got != *want as usize {
+            failures.push(format!("{}: kept {got}, want {want}", text(&c, "name")));
         }
     }
     assert!(failures.is_empty(), "{failures:#?}");

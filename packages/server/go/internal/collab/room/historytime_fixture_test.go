@@ -78,7 +78,8 @@ func TestSelectRangeMatchesTheChangesRangeFixture(t *testing.T) {
 			before = &HistoryPoint{Lineage: text(t, o, "lineage"), Sequence: number(t, o, "sequence")}
 		}
 		maxRecords := int(member(t, c, "maxRecords").(float64))
-		got := SelectRange(fixtureLineages(t, c), *ticks(t, c, "from"), *ticks(t, c, "to"), before, maxRecords)
+		maxLineages := int(member(t, c, "maxLineages").(float64))
+		got := SelectRange(fixtureLineages(t, c), *ticks(t, c, "from"), *ticks(t, c, "to"), before, maxRecords, maxLineages)
 		if found := member(t, c, "found").(bool); found != (got.Status == HistoryReady) {
 			t.Errorf("%s: status %v, want found %v", name, got.Status, found)
 		}
@@ -92,6 +93,24 @@ func TestSelectRangeMatchesTheChangesRangeFixture(t *testing.T) {
 			if g, w := pointText(&got.Records[i]), wantPointText(t, record); g != w {
 				t.Errorf("%s: record %d is %s, want %s", name, i, g, w)
 			}
+		}
+	}
+}
+
+func TestFitRowsMatchesTheChangesRangeFixture(t *testing.T) {
+	fixture := readRepoJSON(t, "test", "unit", "server-conformance", "fixtures", "collab-history", "changes-range.json")
+	cases := objects(t, member(t, fixture, "fit"))
+	if len(cases) < 5 {
+		t.Fatalf("only %d fit cases", len(cases))
+	}
+	for _, c := range cases {
+		var sizes []int64
+		for _, row := range objects(t, member(t, c, "rows")) {
+			sizes = append(sizes, int64(number(t, row, "bytes")))
+		}
+		got := FitRows(sizes, int64(number(t, c, "maxBytes")))
+		if want := int(member(t, c, "kept").(float64)); got != want {
+			t.Errorf("%s: kept %d, want %d", text(t, c, "name"), got, want)
 		}
 	}
 }

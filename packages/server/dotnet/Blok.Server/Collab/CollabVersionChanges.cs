@@ -127,6 +127,14 @@ internal static class CollabVersionChanges
     return changes;
   }
 
+  /// <summary>A row's size as the byte cap counts it: its blocks' before and after JSON.</summary>
+  internal static long RecordBytes(CollabRecordChanges record)
+  {
+    var buffer = new ArrayBufferWriter<byte>();
+
+    return record.Blocks.Sum(change => JsonBytes(change.Before, buffer) + JsonBytes(change.After, buffer));
+  }
+
   private static long JsonBytes(JsonObject? block, ArrayBufferWriter<byte> buffer)
   {
     if (block is null)

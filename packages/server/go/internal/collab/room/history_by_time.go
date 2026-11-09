@@ -89,12 +89,19 @@ func (m *Manager) ChangesBetween(ctx context.Context, docID string, from, to tim
 	if err != nil || status != HistoryReady {
 		return HistoryRange{Status: status}, err
 	}
-	selection := SelectRange(lineages, from, to, before, maxRecords)
+	selection := SelectRange(lineages, from, to, before, maxRecords, MaxRangeLineages)
 	if selection.Status != HistoryReady {
 		return HistoryRange{Status: selection.Status}, nil
 	}
 	out := HistoryRange{Status: HistoryReady, Records: []RangeRecord{}, Truncated: selection.Truncated}
+	// One record and byte budget for the whole answer: each lineage replays
+	// with what the newer ones left.
+	var consumed int64
 	for start := 0; start < len(selection.Records); {
+		if len(out.Records) > 0 && consumed >= maxBytes {
+			out.Truncated = true
+			break
+		}
 		lineage := selection.Records[start].Lineage
 		end := start
 		picked := map[uint64]bool{}
@@ -103,14 +110,21 @@ func (m *Manager) ChangesBetween(ctx context.Context, docID string, from, to tim
 			end++
 		}
 		through, oldest := selection.Records[start].Sequence, selection.Records[end-1].Sequence
-		result, err := m.Changes(ctx, docID, lineage, through, oldest-1, maxRecords, maxBytes)
+		result, err := m.Changes(ctx, docID, lineage, through, oldest-1, maxRecords-len(out.Records), max(1, maxBytes-consumed))
 		if err != nil || result.Status != HistoryReady {
 			return HistoryRange{Status: result.Status}, err
 		}
 		for i := len(result.Changes) - 1; i >= 0; i-- {
-			if picked[result.Changes[i].Sequence] {
-				out.Records = append(out.Records, RangeRecord{Lineage: lineage, RecordChanges: result.Changes[i]})
+			if !picked[result.Changes[i].Sequence] {
+				continue
 			}
+			size := RecordBytes(result.Changes[i])
+			if !Fits(len(out.Records), consumed, size, maxBytes) {
+				out.Truncated = true
+				return out, nil
+			}
+			out.Records = append(out.Records, RangeRecord{Lineage: lineage, RecordChanges: result.Changes[i]})
+			consumed += size
 		}
 		// Older records were dropped inside this lineage: anything older still is past the cut.
 		if result.Truncated {
@@ -120,4 +134,14 @@ func (m *Manager) ChangesBetween(ctx context.Context, docID string, from, to tim
 		start = end
 	}
 	return out, nil
+}
+
+// RecordBytes is a row's size as the byte cap counts it: its blocks' before
+// and after JSON.
+func RecordBytes(record RecordChanges) int64 {
+	var size int64
+	for _, change := range record.Blocks {
+		size += jsonBytes(change.Before) + jsonBytes(change.After)
+	}
+	return size
 }

@@ -28,6 +28,10 @@ pub struct RangeSelection {
 /// The changes-by-time route's default range.
 pub const DEFAULT_HISTORY_RANGE: Duration = Duration::from_secs(24 * 60 * 60);
 
+/// The most lineages one changes-by-time answer replays; each replay starts
+/// at its baseline.
+pub const MAX_RANGE_LINEAGES: usize = 8;
+
 const TICKS_PER_SECOND: i64 = 10_000_000;
 const TICKS_PER_DAY: i64 = 86_400 * TICKS_PER_SECOND;
 const MAX_TICKS: i64 = 3_155_378_975_999_999_999;
@@ -158,13 +162,14 @@ pub fn resolve_at(
 
 /// CollabHistoryTime.SelectRange: the records committed in [from, to),
 /// older than `before` when given, newest first by lineage then sequence, at
-/// most `max_records`.
+/// most `max_records` from at most `max_lineages` lineages.
 pub fn select_range(
     lineages_oldest_first: &[LineageHeaders],
     from: SystemTime,
     to: SystemTime,
     before: Option<&HistoryPoint>,
     max_records: usize,
+    max_lineages: usize,
 ) -> RangeSelection {
     let count = lineages_oldest_first.len();
     let (before_lineage, before_sequence) = match before {
@@ -184,7 +189,8 @@ pub fn select_range(
             }
         },
     };
-    let mut picked = Vec::new();
+    let mut picked: Vec<HistoryPoint> = Vec::new();
+    let mut lineages = 0;
     for i in (0..count.min(before_lineage + 1)).rev() {
         let entry = &lineages_oldest_first[i];
         for header in entry.headers.iter().rev() {
@@ -194,12 +200,18 @@ pub fn select_range(
             {
                 continue;
             }
-            if picked.len() == max_records {
+            let opens = picked
+                .last()
+                .is_none_or(|last| last.lineage != entry.lineage.lineage);
+            if picked.len() == max_records || (opens && lineages == max_lineages) {
                 return RangeSelection {
                     status: HistoryStatus::Ready,
                     records: picked,
                     truncated: true,
                 };
+            }
+            if opens {
+                lineages += 1;
             }
             picked.push(HistoryPoint {
                 lineage: entry.lineage.lineage.clone(),
@@ -318,14 +330,21 @@ impl Manager {
         if status != HistoryStatus::Ready {
             return Ok(empty(status));
         }
-        let selection = select_range(&lineages, from, to, before, max_records);
+        let selection = select_range(&lineages, from, to, before, max_records, MAX_RANGE_LINEAGES);
         if selection.status != HistoryStatus::Ready {
             return Ok(empty(selection.status));
         }
         let mut records = Vec::new();
         let mut truncated = selection.truncated;
+        // One record and byte budget for the whole answer: each lineage
+        // replays with what the newer ones left.
+        let mut consumed = 0i64;
         let mut start = 0;
-        while start < selection.records.len() {
+        'lineages: while start < selection.records.len() {
+            if !records.is_empty() && consumed >= max_bytes {
+                truncated = true;
+                break;
+            }
             let lineage = &selection.records[start].lineage;
             let mut end = start;
             let mut picked = HashSet::new();
@@ -339,20 +358,27 @@ impl Manager {
                     lineage,
                     selection.records[start].sequence,
                     selection.records[end - 1].sequence - 1,
-                    max_records,
-                    max_bytes,
+                    max_records - records.len(),
+                    (max_bytes - consumed).max(1),
                 )
                 .await?;
             if result.status != HistoryStatus::Ready {
                 return Ok(empty(result.status));
             }
             for changes in result.changes.into_iter().rev() {
-                if picked.contains(&changes.sequence) {
-                    records.push(RangeRecord {
-                        lineage: lineage.clone(),
-                        changes,
-                    });
+                if !picked.contains(&changes.sequence) {
+                    continue;
                 }
+                let size = record_bytes(&changes);
+                if !fits(records.len(), consumed, size, max_bytes) {
+                    truncated = true;
+                    break 'lineages;
+                }
+                consumed += size;
+                records.push(RangeRecord {
+                    lineage: lineage.clone(),
+                    changes,
+                });
             }
             // Older records were dropped inside this lineage: anything older
             // still is past the cut.
@@ -368,4 +394,38 @@ impl Manager {
             truncated,
         })
     }
+}
+
+/// CollabHistoryTime.Fits: whether the next row, newest first, still fits
+/// the byte cap. The first row of an answer always goes out.
+pub fn fits(kept: usize, consumed: i64, size: i64, max_bytes: i64) -> bool {
+    kept == 0 || consumed + size <= max_bytes
+}
+
+/// How many of the rows, newest first, one answer keeps.
+pub fn fit_rows(sizes_newest_first: &[i64], max_bytes: i64) -> usize {
+    let mut consumed = 0;
+    let mut kept = 0;
+    while kept < sizes_newest_first.len()
+        && fits(kept, consumed, sizes_newest_first[kept], max_bytes)
+    {
+        consumed += sizes_newest_first[kept];
+        kept += 1;
+    }
+    kept
+}
+
+/// A row's size as the byte cap counts it: its blocks' before and after JSON.
+pub fn record_bytes(record: &RecordChanges) -> i64 {
+    let size = |block: &Option<blok_jsjson::Object>| {
+        block.as_ref().map_or(0, |block| {
+            blok_collab_docendpoint::serialize(&blok_jsjson::Value::Object(block.clone()))
+                .map_or(0, |encoded| encoded.len() as i64)
+        })
+    };
+    record
+        .blocks
+        .iter()
+        .map(|change| size(&change.before) + size(&change.after))
+        .sum()
 }

@@ -22,6 +22,9 @@ internal static class CollabHistoryTime
   /// <summary>The default range of the changes-by-time route.</summary>
   public static readonly TimeSpan DefaultRange = TimeSpan.FromHours(24);
 
+  /// <summary>The most lineages one changes-by-time answer replays; each replay starts at its baseline.</summary>
+  public const int MaxRangeLineages = 8;
+
   private const long TicksPerSecond = TimeSpan.TicksPerSecond;
   private const long TicksPerDay = TimeSpan.TicksPerDay;
 
@@ -184,14 +187,16 @@ internal static class CollabHistoryTime
   /// <summary>
   /// The records committed in [<paramref name="from"/>, <paramref name="to"/>),
   /// older than <paramref name="before"/> when given, newest first by
-  /// lineage then sequence, at most <paramref name="maxRecords"/>.
+  /// lineage then sequence, at most <paramref name="maxRecords"/> from at
+  /// most <paramref name="maxLineages"/> lineages.
   /// </summary>
   public static CollabRangeSelection SelectRange(
       IReadOnlyList<(CollabLineageInfo Lineage, IReadOnlyList<CollabRecordHeader> Headers)> lineagesOldestFirst,
       DateTimeOffset from,
       DateTimeOffset to,
       (string Lineage, ulong Sequence)? before,
-      int maxRecords)
+      int maxRecords,
+      int maxLineages = MaxRangeLineages)
   {
     var beforeLineage = lineagesOldestFirst.Count;
     var beforeSequence = ulong.MaxValue;
@@ -220,6 +225,7 @@ internal static class CollabHistoryTime
     }
 
     var picked = new List<CollabHistoryPoint>();
+    var lineages = 0;
 
     for (var i = Math.Min(beforeLineage, lineagesOldestFirst.Count - 1); i >= 0; i--)
     {
@@ -235,15 +241,41 @@ internal static class CollabHistoryTime
           continue;
         }
 
-        if (picked.Count == maxRecords)
+        var opens = picked.Count == 0 || picked[^1].Lineage != lineage.Lineage;
+
+        if (picked.Count == maxRecords || (opens && lineages == maxLineages))
         {
           return new CollabRangeSelection(CollabHistoryStatus.Ready, picked, true);
         }
+
+        lineages += opens ? 1 : 0;
 
         picked.Add(new CollabHistoryPoint(lineage.Lineage, header.ServerSequence, header.CommittedAt));
       }
     }
 
     return new CollabRangeSelection(CollabHistoryStatus.Ready, picked, false);
+  }
+
+  /// <summary>
+  /// Whether the next row, newest first, still fits the byte cap. The first
+  /// row of an answer always goes out, so a caller can page past it.
+  /// </summary>
+  public static bool Fits(int kept, long consumed, long size, long maxBytes) =>
+      kept == 0 || consumed + size <= maxBytes;
+
+  /// <summary>How many of the rows, newest first, one answer keeps.</summary>
+  public static int FitRows(IReadOnlyList<long> sizesNewestFirst, long maxBytes)
+  {
+    long consumed = 0;
+    var kept = 0;
+
+    while (kept < sizesNewestFirst.Count && Fits(kept, consumed, sizesNewestFirst[kept], maxBytes))
+    {
+      consumed += sizesNewestFirst[kept];
+      kept++;
+    }
+
+    return kept;
   }
 }

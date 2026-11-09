@@ -24,6 +24,10 @@ type RangeSelection struct {
 // DefaultHistoryRange is the changes-by-time route's default range.
 const DefaultHistoryRange = 24 * time.Hour
 
+// MaxRangeLineages is the most lineages one changes-by-time answer replays;
+// each replay starts at its baseline.
+const MaxRangeLineages = 8
+
 const (
 	ticksPerSecond = int64(10_000_000)
 	ticksPerDay    = 86_400 * ticksPerSecond
@@ -155,8 +159,9 @@ func ResolveAt(lineagesOldestFirst []LineageHeaders, at time.Time) *HistoryPoint
 
 // SelectRange is CollabHistoryTime.SelectRange: the records committed in
 // [from, to), older than before when given, newest first by lineage then
-// sequence, at most maxRecords.
-func SelectRange(lineagesOldestFirst []LineageHeaders, from, to time.Time, before *HistoryPoint, maxRecords int) RangeSelection {
+// sequence, at most maxRecords from at most maxLineages lineages.
+func SelectRange(lineagesOldestFirst []LineageHeaders, from, to time.Time, before *HistoryPoint,
+	maxRecords, maxLineages int) RangeSelection {
 	beforeLineage, beforeSequence := len(lineagesOldestFirst), ^uint64(0)
 	if before != nil {
 		beforeLineage = -1
@@ -173,6 +178,7 @@ func SelectRange(lineagesOldestFirst []LineageHeaders, from, to time.Time, befor
 		beforeSequence = before.Sequence
 	}
 	picked := []HistoryPoint{}
+	lineages := 0
 	for i := min(beforeLineage, len(lineagesOldestFirst)-1); i >= 0; i-- {
 		entry := lineagesOldestFirst[i]
 		for r := len(entry.Headers) - 1; r >= 0; r-- {
@@ -181,12 +187,33 @@ func SelectRange(lineagesOldestFirst []LineageHeaders, from, to time.Time, befor
 				header.CommittedAt.Before(from) || !header.CommittedAt.Before(to) {
 				continue
 			}
-			if len(picked) == maxRecords {
+			opens := len(picked) == 0 || picked[len(picked)-1].Lineage != entry.Lineage.Lineage
+			if len(picked) == maxRecords || (opens && lineages == maxLineages) {
 				return RangeSelection{Status: HistoryReady, Records: picked, Truncated: true}
+			}
+			if opens {
+				lineages++
 			}
 			committed := header.CommittedAt
 			picked = append(picked, HistoryPoint{Lineage: entry.Lineage.Lineage, Sequence: header.Sequence, CommittedAt: &committed})
 		}
 	}
 	return RangeSelection{Status: HistoryReady, Records: picked}
+}
+
+// Fits is CollabHistoryTime.Fits: whether the next row, newest first, still
+// fits the byte cap. The first row of an answer always goes out.
+func Fits(kept int, consumed, size, maxBytes int64) bool {
+	return kept == 0 || consumed+size <= maxBytes
+}
+
+// FitRows is how many of the rows, newest first, one answer keeps.
+func FitRows(sizesNewestFirst []int64, maxBytes int64) int {
+	var consumed int64
+	kept := 0
+	for kept < len(sizesNewestFirst) && Fits(kept, consumed, sizesNewestFirst[kept], maxBytes) {
+		consumed += sizesNewestFirst[kept]
+		kept++
+	}
+	return kept
 }

@@ -45,7 +45,7 @@ pub(crate) fn no_html_converter() -> DocConverter<NoHtml> {
     }
 }
 
-fn history_fixture(name: &str) -> Vec<Object> {
+pub(crate) fn history_fixture(name: &str) -> Vec<Object> {
     let fixture = read_repo_json(&[
         "test",
         "unit",

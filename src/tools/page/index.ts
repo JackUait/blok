@@ -649,7 +649,10 @@ export class PageTool implements BlockTool {
     if (!element.isConnected) {
       document.body.appendChild(element);
     }
-    void this.emojiPicker.open(anchor, undefined, handlers);
+    const icon = this.info?.icon;
+    const current = icon?.type === 'emoji' ? icon.value : '';
+
+    void this.emojiPicker.open(anchor, undefined, { ...handlers, current });
   }
 
   private async createPage(): Promise<void> {

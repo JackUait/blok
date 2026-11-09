@@ -62,11 +62,16 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost): { re
   const showPicker = (Picker: typeof EmojiPicker, anchor: HTMLElement): void => {
     const { i18n, locale } = host.picker();
 
+    const handlers = {
+      onSelect: (native: string): void => host.setIcon({ type: 'emoji', value: native }),
+      onRemove: (): void => host.setIcon(null),
+    };
+    const icon = host.getIcon();
+
     if (slot.picker === null || slot.locale !== locale) {
       slot.picker?.getElement().remove();
       slot.picker = new Picker({
-        onSelect: (native) => host.setIcon({ type: 'emoji', value: native }),
-        onRemove: () => host.setIcon(null),
+        ...handlers,
         i18n,
         locale,
         curated: false,
@@ -89,7 +94,7 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost): { re
     });
     anchor.setAttribute('aria-expanded', 'true');
     slot.watch.observe(element, { attributes: true, attributeFilter: ['hidden'] });
-    void slot.picker.open(anchor);
+    void slot.picker.open(anchor, undefined, { ...handlers, current: icon?.type === 'emoji' ? icon.value : '' });
   };
 
   const closePicker = (): void => {

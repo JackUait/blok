@@ -854,7 +854,7 @@ export class DatabasePropertyMenu {
     // The top layer paints in show order: shown again, it lands above the menu and any peek under it.
     removeFromTopLayer(layer);
     promoteToTopLayer(layer);
-    void this.emojiPicker.open(anchor, undefined, handlers);
+    void this.emojiPicker.open(anchor, undefined, { ...handlers, current: property.icon ?? '' });
   }
 
   private entry(

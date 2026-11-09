@@ -1619,7 +1619,9 @@ export class DatabaseCardDrawer {
     if (!element.isConnected) {
       overlayMountFor(anchor).appendChild(element);
     }
-    void this.emojiPicker.open(anchor, undefined, handlers);
+    const current = this.currentRowId === rowId ? this.currentRow?.icon ?? '' : '';
+
+    void this.emojiPicker.open(anchor, undefined, { ...handlers, current });
   }
 
   /** "Properties" with a caret that folds the section away. */

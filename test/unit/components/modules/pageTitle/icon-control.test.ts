@@ -5,7 +5,7 @@ import { createIconControl, type IconControlHost } from '../../../../../src/comp
 import { loadEmojiGrid } from '../../../../../src/components/utils/emoji/emoji-data';
 import type { PageIcon } from '../../../../../types/tools/page';
 
-const open = vi.fn(async (_anchor: HTMLElement) => undefined);
+const open = vi.fn(async (_anchor: HTMLElement, _rect?: DOMRect, _handlers?: { current?: string }) => undefined);
 const close = vi.fn();
 let lastOptions: { onSelect(native: string): void; onRemove(): void } | null = null;
 
@@ -22,9 +22,9 @@ vi.mock('../../../../../src/tools/callout/emoji-picker', () => ({
     public isOpen(): boolean {
       return this.opened;
     }
-    public open = async (anchor: HTMLElement): Promise<void> => {
+    public open = async (anchor: HTMLElement, rect?: DOMRect, handlers?: { current?: string }): Promise<void> => {
       this.opened = true;
-      await open(anchor);
+      await open(anchor, rect, handlers);
     };
     public close = (): void => {
       this.opened = false;
@@ -101,6 +101,15 @@ describe('createIconControl', () => {
 
     await vi.waitFor(() => expect(open).toHaveBeenCalled());
     expect(host.setIcon).not.toHaveBeenCalled();
+  });
+
+  it('hands the page\'s emoji to the picker, so its stage shows the current icon', async () => {
+    const { row } = setup({ type: 'emoji', value: '🛖' });
+
+    row.querySelector<HTMLButtonElement>(`[${DATA_ATTR.pageIcon}]`)?.click();
+
+    await vi.waitFor(() => expect(open).toHaveBeenCalled());
+    expect(open.mock.calls[0]?.[2]).toMatchObject({ current: '🛖' });
   });
 
   it('picker select and remove write the icon', async () => {

@@ -824,12 +824,28 @@ export class EmojiPicker {
     }
 
     const [glyphEl, text] = this._stage.children;
+    const changed = glyphEl.textContent !== glyph;
 
     glyphEl.textContent = glyph;
     text.children[0].textContent = kicker;
     text.children[1].textContent = name;
     this._stage.toggleAttribute('data-emoji-picker-stage-empty', glyph === '');
     this._stage.style.setProperty('--emoji-stage-wash', emojiColor(glyph) ?? 'transparent');
+
+    const still = !this._open || glyph === '' || typeof glyphEl.animate !== 'function'
+      || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (changed && !still) {
+      glyphEl.animate([{ transform: 'translateY(3px) scale(.8)', opacity: 0.4 }, { transform: 'none', opacity: 1 }], { duration: 220, easing: 'cubic-bezier(.34, 1.56, .64, 1)' });
+      text.animate([{ transform: 'translateX(-6px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 180, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+    }
+  }
+
+  /** The stage names an emoji like a title: "Kissing face", not the label's "kissing face". */
+  private stageName(emoji: ProcessedEmoji | undefined): string {
+    const name = emoji === undefined ? '' : this.getDisplayName(emoji);
+
+    return name.charAt(0).toLocaleUpperCase(this._locale) + name.slice(1);
   }
 
   private showStageIdle(): void {
@@ -838,7 +854,7 @@ export class EmojiPicker {
     this.setStage(
       this._current,
       this._current === '' ? '' : this.i18n.t(CURRENT_ICON_KEY),
-      emoji === undefined ? '' : this.getDisplayName(emoji)
+      this.stageName(emoji)
     );
   }
 
@@ -849,7 +865,7 @@ export class EmojiPicker {
     this.setStage(
       button.firstElementChild?.textContent ?? '',
       section?.textContent ?? '',
-      emoji === undefined ? '' : this.getDisplayName(emoji)
+      this.stageName(emoji)
     );
   }
 

@@ -1012,7 +1012,9 @@ export class TabsTool implements BlockTool, TabsHandle {
     if (!element.isConnected) {
       document.body.appendChild(element);
     }
-    void this.emojiPicker.open(pill, undefined, handlers);
+    const current = pill.querySelector(`[${TABS_ATTR.pillIcon}]`)?.textContent ?? '';
+
+    void this.emojiPicker.open(pill, undefined, { ...handlers, current });
   }
 }
 

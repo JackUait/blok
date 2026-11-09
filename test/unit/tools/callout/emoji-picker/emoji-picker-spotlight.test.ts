@@ -139,7 +139,7 @@ describe('EmojiPicker Spotlight + Showcase layout', () => {
   it('shows the current icon on the stage while nothing is pointed at', async () => {
     await picker.open(anchor, undefined, { onSelect, onRemove: vi.fn(), current: '😀' });
 
-    expect(stageText()).toEqual({ glyph: '😀', kicker: CURRENT_ICON_KEY, name: 'grinning face' });
+    expect(stageText()).toEqual({ glyph: '😀', kicker: CURRENT_ICON_KEY, name: 'Grinning face' });
   });
 
   it('shows the emoji under the pointer with its section, then returns to the current icon', async () => {
@@ -147,7 +147,7 @@ describe('EmojiPicker Spotlight + Showcase layout', () => {
 
     emojiButton('👋').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
 
-    expect(stageText()).toEqual({ glyph: '👋', kicker: EMOJI_CATEGORY_PEOPLE_KEY, name: 'waving hand' });
+    expect(stageText()).toEqual({ glyph: '👋', kicker: EMOJI_CATEGORY_PEOPLE_KEY, name: 'Waving hand' });
 
     query('[data-emoji-picker-body]').dispatchEvent(new PointerEvent('pointerleave'));
 

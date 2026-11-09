@@ -151,7 +151,7 @@ describe('EmojiPicker progressive locale', () => {
 
     expect(bulb.getAttribute('aria-label')).toBe('лампочка');
     bulb.dispatchEvent(new Event('pointerover', { bubbles: true }));
-    expect(root.querySelector('[data-emoji-picker-stage-name]')?.textContent).toBe('лампочка');
+    expect(root.querySelector('[data-emoji-picker-stage-name]')?.textContent).toBe('Лампочка');
     expect(button(root, '✅').getAttribute('aria-label')).toBe('check mark');
   });
 
@@ -195,7 +195,7 @@ describe('EmojiPicker progressive locale', () => {
 
     expect(bulb.getAttribute('aria-label')).toBe('light bulb');
     bulb.dispatchEvent(new Event('pointerover', { bubbles: true }));
-    expect(picker.getElement().querySelector('[data-emoji-picker-stage-name]')?.textContent).toBe('light bulb');
+    expect(picker.getElement().querySelector('[data-emoji-picker-stage-name]')?.textContent).toBe('Light bulb');
   });
 
   it('does not load a locale for English', async () => {

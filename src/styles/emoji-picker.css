@@ -618,6 +618,7 @@
 
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage-glyph] {
   flex: none;
+  filter: drop-shadow(0 3px 6px color-mix(in srgb, var(--emoji-stage-wash) 45%, transparent));
   display: grid;
   place-items: center;
   width: 36px;
@@ -640,8 +641,9 @@
 
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage-kicker] {
   color: var(--blok-text-secondary);
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   line-height: 14px;
   text-transform: uppercase;
 }
@@ -649,8 +651,9 @@
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage-name] {
   overflow: hidden;
   color: var(--blok-text-primary);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;

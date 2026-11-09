@@ -798,7 +798,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
   }
 
   /**
-   * Check if current block content is exactly "---" and convert to divider.
+   * Check if current block content is exactly "---" or "\u2014-" and convert to divider.
    * Unlike other shortcuts, this triggers on the third hyphen keystroke — no space needed.
    */
   private handleDividerShortcut(): boolean {

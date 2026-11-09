@@ -99,10 +99,9 @@ export const TOGGLE_PATTERN = /^>\s([\s\S]*)$/;
 export const DIVIDER_TOOL_NAME = 'divider';
 
 /**
- * Regex pattern for detecting divider shortcuts.
- * Matches exactly three hyphens with no other content.
+ * Regex pattern for detecting divider shortcuts: "---" or "\u2014-" as the
+ * whole text. "\u2014-" is what typed "---" becomes once "--" turns into an em dash.
  */
-// "\u2014-" is what "---" becomes once "--" autoreplaces to an em dash.
 export const DIVIDER_PATTERN = /^(?:-{3}|\u2014-)$/;
 
 /**

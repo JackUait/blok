@@ -92,6 +92,16 @@ export const Galerie: Story = {
   },
 };
 
+export const DomainePublic: Story = {
+  render: () => page('met-great-wave'),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: 'Changer la couverture' }));
+    expect(canvas.getByRole('button', { name: 'La Grande Vague · Hokusai' }).getAttribute('aria-pressed')).toBe('true');
+    expect(canvas.getByRole('region', { name: 'Paysages · The Met' })).toBeTruthy();
+  },
+};
+
 export const Repositionnement: Story = {
   render: () => page('earth'),
   play: async ({ canvasElement }) => {

@@ -1,6 +1,12 @@
 import earth from './assets/covers/nasa_the_blue_marble.jpg';
 import desert from './assets/covers/nasa_great_sandy_desert_australia.jpg';
 import nebula from './assets/covers/webb1.jpg';
+import oxbow from './assets/covers/met_oxbow.jpg';
+import lakeGeorge from './assets/covers/met_lake_george.jpg';
+import rockyMountains from './assets/covers/met_rocky_mountains.jpg';
+import aegeanSea from './assets/covers/met_aegean_sea.jpg';
+import greatWave from './assets/covers/met_great_wave.jpg';
+import seteWave from './assets/covers/met_sete_wave.jpg';
 
 export const COVER_GROUPS = [
   { label: 'Couleurs et dégradés', items: [
@@ -15,6 +21,16 @@ export const COVER_GROUPS = [
     { id: 'earth', label: 'La Terre', background: `url("${earth}")` },
     { id: 'desert', label: 'Désert australien', background: `url("${desert}")` },
     { id: 'nebula', label: 'Nébuleuse', background: `url("${nebula}")` },
+  ] },
+  { label: 'Paysages · The Met', items: [
+    { id: 'met-oxbow', label: 'The Oxbow · Thomas Cole', background: `url("${oxbow}")` },
+    { id: 'met-lake-george', label: 'Lake George · John Frederick Kensett', background: `url("${lakeGeorge}")` },
+    { id: 'met-rocky-mountains', label: 'Rocky Mountains · Albert Bierstadt', background: `url("${rockyMountains}")` },
+    { id: 'met-aegean-sea', label: 'The Aegean Sea · Frederic Edwin Church', background: `url("${aegeanSea}")` },
+  ] },
+  { label: 'Vagues · The Met', items: [
+    { id: 'met-great-wave', label: 'La Grande Vague · Hokusai', background: `url("${greatWave}")` },
+    { id: 'met-sete-wave', label: 'La Grande Vague, Sète · Gustave Le Gray', background: `url("${seteWave}")` },
   ] },
 ] as const;
 

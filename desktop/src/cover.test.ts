@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createAddCoverButton, createPageCover } from './cover';
+import { createAddCoverButton, createPageCover, isCoverId } from './cover';
 
 describe('desktop page cover', () => {
   it('offers a cover, allows replacing it, and allows removing it', () => {
@@ -12,6 +12,9 @@ describe('desktop page cover', () => {
       .find((button) => button.textContent === 'Changer la couverture')!.click();
     covered.querySelector<HTMLButtonElement>('[data-cover-id="ocean"]')!.click();
     expect(change).toHaveBeenCalledWith('ocean');
+    expect(isCoverId('met-great-wave')).toBe(true);
+    covered.querySelector<HTMLButtonElement>('[data-cover-id="met-great-wave"]')!.click();
+    expect(change).toHaveBeenCalledWith('met-great-wave');
     covered.querySelector<HTMLButtonElement>('[data-desktop-cover-gallery-head] button')!.click();
     expect(change).toHaveBeenCalledWith(undefined);
     [...covered.querySelectorAll<HTMLButtonElement>('[data-desktop-cover-actions] > button')]

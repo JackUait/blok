@@ -102,11 +102,13 @@ describe('database table view styles', () => {
     expect(exactRule('[data-blok-database-table-row][data-dragging]::after')).toContain('opacity: 0');
   });
 
-  // notion-motion.md "Column header drag": coldrag-mid.png samples rgb(232,232,231), the pressed fill on white.
-  it('draws the column ghost as the header in its pressed fill, opaque and unshadowed, and slides the other headers over 200ms ease', () => {
+  // notion-motion.md "Column header drag": coldrag-mid.png samples rgb(232,232,231), the pressed fill on white,
+  // and the next header's icon and "S" show through the ghost.
+  it('draws the column ghost as the header in its see-through pressed fill, unshadowed, and slides the other headers over 200ms ease', () => {
     const ghost = exactRule('[data-blok-database-table-column-ghost]');
 
     expect(ghost).toContain('opacity: 1');
+    expect(ghost).toContain('background-color: transparent');
     expect(ghost).toContain('background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg))');
     expect(ghost).toContain('box-shadow: none');
     expect(exactRule('[data-blok-database-table-column-header][data-dragging]')).toContain('visibility: hidden');

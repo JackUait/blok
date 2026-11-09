@@ -12887,6 +12887,7 @@ textarea[data-blok-database-cell-input] {
   align-items: center;
   opacity: 1;
   color: var(--blok-database-table-header-text);
+  background-color: transparent;
   background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg));
   box-shadow: none;
 }

@@ -444,9 +444,9 @@ test.describe('drag ghosts look like their source', () => {
     await dragBy(page, header, 120, 0);
     const ghost = await boxOf(page, '[data-blok-database-table-column-ghost]');
 
-    // Notion's column ghost is the header in its pressed fill, opaque (notion-motion.md "Column header drag").
+    // Notion's column ghost is the header's see-through pressed fill: the next header shows through (coldrag-mid.png).
     expect(ghost?.opacity).toBe('1');
-    expect(ghost?.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(ghost?.backgroundColor).toBe('rgba(0, 0, 0, 0)');
     expect(ghost?.backgroundImage).toMatch(/^linear-gradient\(/);
     expect(ghost?.fontFamily).toBe(source?.fontFamily);
     expect(ghost?.height).toBe(source?.height);

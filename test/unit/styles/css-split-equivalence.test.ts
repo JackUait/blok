@@ -1542,6 +1542,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PANEL_MENU_RADIUS_BYTES = 125;
     // database.css: every database title clamps, spans its row beside tabs, and scrolls sideways while edited.
     const DATABASE_TITLE_EDIT_ONE_LINE_BYTES = 478;
+    // database.css: the board group menu's icon and text offsets and its 4px bottom.
+    const DATABASE_GROUP_MENU_ROWS_BYTES = 507;
     // database.css: the ring of a row the peek steps to starts 70ms late.
     const DATABASE_PEEK_STEP_HALO_BYTES = 265;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
@@ -1958,7 +1960,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CARD_HUE_TINTS_BYTES
       + DATABASE_TITLE_ONE_LINE_BYTES
       + DATABASE_PANEL_MENU_RADIUS_BYTES
-      + DATABASE_TITLE_EDIT_ONE_LINE_BYTES;
+      + DATABASE_TITLE_EDIT_ONE_LINE_BYTES
+      + DATABASE_GROUP_MENU_ROWS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

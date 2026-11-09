@@ -62,7 +62,7 @@ import { UNORDERED_VIEW_TYPES } from '../../shared/database/row-order';
 import { openDatabaseChoice, openDatabaseConfirm } from './database-confirm-dialog';
 import { draftOf, openAutofillSetup, presetDraft } from './database-autofill-setup';
 import type { AutofillDraft } from './database-autofill-setup';
-import { DATABASE_MENU_CLASS, groupMenuItems } from './database-group-menu';
+import { DATABASE_GROUP_MENU_CLASS, DATABASE_MENU_CLASS, groupMenuItems } from './database-group-menu';
 import { groupCalculationHint, groupCalculationItems, groupCalculationText } from './database-board-calculation';
 import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
@@ -9054,15 +9054,16 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** `owner` keeps `data-popover-open` while the menu is up, so its hover-only buttons stay shown. */
-  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement } = {}): void {
+  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement; class?: string; offset?: number } = {}): void {
     this.groupMenuPopover?.destroy();
 
     const popover = new PopoverDesktop({
-      class: DATABASE_MENU_CLASS,
+      class: layout.class ?? DATABASE_MENU_CLASS,
       animateClose: true,
       trigger: anchor,
       width: 'auto',
       minWidth: layout.minWidth ?? '220px',
+      ...(layout.offset !== undefined ? { offset: layout.offset } : {}),
       autoFocusFirstItem: false,
       items,
       ...(layout.scopeElement !== undefined ? { scopeElement: layout.scopeElement } : {}),
@@ -9105,7 +9106,12 @@ export class DatabaseTool implements BlockTool {
       onHide: () => this.toggleGroupHidden(groupId),
       onTrash: () => this.trashGroup(groupId),
       onRecolor: (color) => this.recolorGroup(groupId, color),
-    }), anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined);
+    }), anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined, {
+      // notion-motion.md, Round 8b "Board group ⋯ menu": 180 wide, flush under the button.
+      minWidth: '180px',
+      offset: 0,
+      class: DATABASE_GROUP_MENU_CLASS,
+    });
   }
 
   /** The count's calculation menu. The pick is the view's, so every column shows it. */

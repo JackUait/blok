@@ -4246,7 +4246,8 @@ describe('DatabaseTool', () => {
 
       openMenu(element, 'opt-todo');
 
-      expect(queryByData(document.body, 'data-mock-popover-class', 'blok-database-menu')).not.toBeNull();
+      // The group menu adds the header menu's 28px rows and its own offsets on top.
+      expect(queryByData(document.body, 'data-mock-popover-class', 'blok-database-menu blok-database-header-menu blok-database-group-menu')).not.toBeNull();
 
       queryAllByData(document.body, 'data-mock-popover').forEach((el) => el.remove());
       queryByData(element, 'data-blok-database-card-menu')?.click();

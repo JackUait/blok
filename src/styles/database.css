@@ -2920,6 +2920,17 @@ button[data-blok-database-column-count]:hover {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
 }
 
+/* notion-motion.md, Round 8b "Board group ⋯ menu": the 20px icon at x 8, the text at x 36. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon] {
+  width: 20px;
+  margin-inline-end: var(--blok-space-2);
+}
+
+/* Rows keep a 1px gap below; the last one does not, so the box ends 4px under it (123 tall). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item]:last-child {
+  margin-bottom: 0;
+}
+
 /* notion-live-8/80-menu-number.png, 83-menu-name.png: dividers 12px in from the box sides and 8px
    tall in all, and the first row 44 under the box top. The ">" steps keep the submenus (the line
    under Sort) out. */

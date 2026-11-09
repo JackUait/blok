@@ -10,6 +10,9 @@ import { OPTION_COLORS, optionColorLabelKey, optionSwatch, type OptionColor } fr
  */
 export const DATABASE_MENU_CLASS = 'blok-database-menu';
 
+/** The board column's group menu: the header menu's 28px rows plus its own icon and text offsets (database.css). */
+export const DATABASE_GROUP_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-header-menu blok-database-group-menu`;
+
 export interface GroupMenuParams {
   i18n: I18n;
   /** The no-value group has no option, so it has no color. */

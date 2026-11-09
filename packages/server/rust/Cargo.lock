@@ -116,7 +116,7 @@ dependencies = [
 
 [[package]]
 name = "blok-blokagent"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "blok-blokdocs",
  "blok-collab",
@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "blok-blokdocs"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "blok-jsjson",
  "blok-jsruntime",
@@ -186,7 +186,7 @@ dependencies = [
 
 [[package]]
 name = "blok-blokserver-ticket"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "base64 0.22.1",
  "blok-jsjson",
@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "blok-collab"
-version = "0.0.0"
+version = "2.1.0"
 
 [[package]]
 name = "blok-collab-collabhttp"
@@ -233,7 +233,7 @@ dependencies = [
 
 [[package]]
 name = "blok-collab-convert"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "base64 0.22.1",
  "blok-collab-collabtest",
@@ -250,7 +250,7 @@ dependencies = [
 
 [[package]]
 name = "blok-collab-docendpoint"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "blok-dotnet",
  "blok-jsjson",
@@ -260,7 +260,7 @@ dependencies = [
 
 [[package]]
 name = "blok-collab-journal"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "blok-collab-operation",
  "blok-collab-workingset",
@@ -271,11 +271,11 @@ dependencies = [
 
 [[package]]
 name = "blok-collab-operation"
-version = "0.0.0"
+version = "2.1.0"
 
 [[package]]
 name = "blok-collab-room"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "base64 0.22.1",
  "blok-collab",
@@ -318,7 +318,7 @@ dependencies = [
 
 [[package]]
 name = "blok-collab-wire"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "blok-jsjson",
  "blok-yjs",
@@ -326,7 +326,7 @@ dependencies = [
 
 [[package]]
 name = "blok-collab-workingset"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "getrandom 0.4.3",
  "sha2 0.10.9",
@@ -335,7 +335,7 @@ dependencies = [
 
 [[package]]
 name = "blok-dotnet"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "blok-jsjson",
  "idna_adapter",
@@ -354,7 +354,7 @@ dependencies = [
 
 [[package]]
 name = "blok-http"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "blok-ws",
  "socket2",
@@ -363,11 +363,11 @@ dependencies = [
 
 [[package]]
 name = "blok-jsjson"
-version = "0.0.0"
+version = "2.1.0"
 
 [[package]]
 name = "blok-jsruntime"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "icu_collator",
  "rquickjs",
@@ -377,14 +377,14 @@ dependencies = [
 
 [[package]]
 name = "blok-lib0"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "blok-jsjson",
 ]
 
 [[package]]
 name = "blok-mcp"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "base64 0.22.1",
  "blok-blokagent",
@@ -419,11 +419,11 @@ dependencies = [
 
 [[package]]
 name = "blok-mediatype"
-version = "0.0.0"
+version = "2.1.0"
 
 [[package]]
 name = "blok-outbound"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "base64 0.22.1",
  "blok-dotnet",
@@ -469,7 +469,7 @@ dependencies = [
 
 [[package]]
 name = "blok-ticket"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "base64 0.22.1",
  "blok-jsjson",
@@ -500,7 +500,7 @@ dependencies = [
 
 [[package]]
 name = "blok-yjs"
-version = "0.0.0"
+version = "2.1.0"
 dependencies = [
  "base64 0.22.1",
  "blok-jsjson",

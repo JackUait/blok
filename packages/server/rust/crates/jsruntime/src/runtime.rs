@@ -4,8 +4,9 @@ use crate::worker::Worker;
 
 /// The bundle C# embeds too. scripts/build-server-runtime.mjs writes Go's
 /// committed copy; a vitest law fails when it drifts from a fresh build.
-pub(crate) const BUNDLE: &str =
-    include_str!("../../../../go/internal/jsruntime/blok-server-runtime.js");
+/// The file here is a symlink to Go's copy: `cargo publish` packs only files
+/// inside the crate, and it packs a symlink's target.
+pub(crate) const BUNDLE: &str = include_str!("blok-server-runtime.js");
 
 /// Which host limit stopped a call.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

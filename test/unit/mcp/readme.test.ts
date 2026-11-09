@@ -79,7 +79,7 @@ describe('@bloklabs/mcp README', () => {
   it('lists the C#, Go and Rust builds and where they differ on purpose', () => {
     const section = readme.slice(readme.indexOf('## Other builds: C#, Go and Rust'), readme.indexOf('## Limits'));
 
-    for (const name of ['Blok.Mcp', 'AddBlokMcp', 'MapBlokMcp', 'blokmcp.New', 'blok_mcp::Embedded::new', 'cargo build --release -p blok-mcp']) {
+    for (const name of ['Blok.Mcp', 'AddBlokMcp', 'MapBlokMcp', 'blokmcp.New', 'blok_mcp::Embedded::new', 'cargo install blok-mcp']) {
       expect(section, name).toContain(name);
     }
     expect(section).toMatch(/60 second limit per call/);

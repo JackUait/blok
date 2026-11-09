@@ -2,13 +2,14 @@
 
 Blok's MCP server in Rust, built on the official Rust MCP SDK (`rmcp`). It takes the same flags and environment variables as the Node server, `@bloklabs/mcp`.
 
-It ships nothing yet, like the Rust server. Build it from this repository:
+Install it from crates.io. It needs Rust 1.99 or later.
 
 ```sh
-cd packages/server/rust
-cargo build --release -p blok-mcp
-./target/release/blok-mcp --source files:./docs
+cargo install blok-mcp
+blok-mcp --source files:./docs
 ```
+
+To embed it, run `cargo add blok-mcp`. The `blok-*` crates it pulls in are its own parts, not a stable API. They share its version.
 
 CI checks it against the Node server with the shared suite:
 

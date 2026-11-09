@@ -97,6 +97,7 @@ func (m *Manager) ChangesBetween(ctx context.Context, docID string, from, to tim
 	// One record and byte budget for the whole answer: each lineage replays
 	// with what the newer ones left.
 	var consumed int64
+	var sizes []int64
 	for start := 0; start < len(selection.Records); {
 		if len(out.Records) > 0 && consumed >= maxBytes {
 			out.Truncated = true
@@ -115,15 +116,18 @@ func (m *Manager) ChangesBetween(ctx context.Context, docID string, from, to tim
 			return HistoryRange{Status: result.Status}, err
 		}
 		for i := len(result.Changes) - 1; i >= 0; i-- {
-			if !picked[result.Changes[i].Sequence] {
-				continue
+			if picked[result.Changes[i].Sequence] {
+				out.Records = append(out.Records, RangeRecord{Lineage: lineage, RecordChanges: result.Changes[i]})
+				sizes = append(sizes, RecordBytes(result.Changes[i]))
 			}
-			size := RecordBytes(result.Changes[i])
-			if !Fits(len(out.Records), consumed, size, maxBytes) {
-				out.Truncated = true
-				return out, nil
-			}
-			out.Records = append(out.Records, RangeRecord{Lineage: lineage, RecordChanges: result.Changes[i]})
+		}
+		// The fixture's FitRows decides the cut, over every row so far.
+		if kept := FitRows(sizes, maxBytes); kept < len(out.Records) {
+			out.Records, out.Truncated = out.Records[:kept], true
+			return out, nil
+		}
+		consumed = 0
+		for _, size := range sizes {
 			consumed += size
 		}
 		// Older records were dropped inside this lineage: anything older still is past the cut.

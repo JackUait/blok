@@ -10,7 +10,7 @@ use blok_dotnet::{parse_uint64_none, query_all, ticks, time_from_ticks};
 use blok_http::{Request, ResponseWriter};
 
 use super::{
-    BAD_DETAIL, CHANGES_ENVELOPE_BYTES, append_millis, blocking, change_row, query_detail, quoted,
+    CHANGES_ENVELOPE_BYTES, append_millis, blocking, change_row, query_detail, quoted,
     write_history_head, write_json,
 };
 use crate::{Handlers, failed};
@@ -19,8 +19,7 @@ const BAD_TIME: &str = "time must be an ISO 8601 time with an offset\n";
 const BAD_RANGE: &str =
     "from and to must be ISO 8601 times with an offset, from no later than to\n";
 const BAD_BEFORE: &str = "before must be one <lineage>:<sequence>\n";
-/// The longest ,"olderEnd":{...} an answer adds.
-pub(super) const OLDER_END_BYTES: i64 = 125;
+const BAD_DETAIL: &str = "detail must be properties\n";
 
 impl Handlers {
     /// GET /sync/{doc}/history/at?time=: the newest point at or before the
@@ -60,11 +59,23 @@ impl Handlers {
             self.refuse_history(&mut response, &a, result.status).await;
             return;
         };
+        // The lineage goes into a Location: anything not shaped like one is a
+        // broken store.
+        if !is_lineage(&point.lineage) {
+            self.refuse_history(&mut response, &a, HistoryStatus::Corrupt)
+                .await;
+            return;
+        }
         write_history_head(&mut response, &point.lineage, point.sequence);
         if !accepts_json(&request) {
-            // Relative, so it keeps the mount prefix and the doc as sent.
+            // Relative, so it keeps the mount prefix and the doc as sent. With
+            // a trailing slash the base is .../at/, one level deeper.
+            let mut location = format!("{}/{}", point.lineage, point.sequence);
+            if request.path().ends_with('/') {
+                location = format!("../{location}");
+            }
             let headers = response.headers_mut();
-            headers.set("Location", format!("{}/{}", point.lineage, point.sequence));
+            headers.set("Location", location);
             headers.set("Content-Length", "0");
             response.set_status(302);
             return;
@@ -130,8 +141,6 @@ impl Handlers {
             return;
         }
         let mut rows: Vec<Vec<u8>> = Vec::new();
-        let mut size = CHANGES_ENVELOPE_BYTES + OLDER_END_BYTES;
-        let mut truncated = result.truncated;
         for record in &result.records {
             let Ok(row) = change_row(&record.changes, detail) else {
                 failed(&request, &mut response).await;
@@ -141,13 +150,20 @@ impl Handlers {
             quoted(&mut lineaged, &record.lineage);
             lineaged.push(b',');
             lineaged.extend_from_slice(&row[1..]);
-            if !rows.is_empty() && size + lineaged.len() as i64 + 1 > MAX_CHANGE_BYTES {
-                truncated = true;
-                break;
-            }
-            size += lineaged.len() as i64 + 1;
             rows.push(lineaged);
         }
+        let (kept, truncated) = fit_answer(&rows, result.truncated, |oldest| {
+            let record = &result.records[oldest];
+            let mut older_end = Vec::new();
+            append_older_end(
+                &mut older_end,
+                &record.lineage,
+                record.changes.sequence,
+                record.changes.committed_at,
+            );
+            older_end.len() as i64
+        });
+        rows.truncate(kept);
         let mut body = br#"{"changes":["#.to_vec();
         for (i, row) in rows.iter().enumerate() {
             if i > 0 {
@@ -168,6 +184,31 @@ impl Handlers {
         body.push(b'}');
         write_json(&mut response, &body).await;
     }
+}
+
+/// How many rows, newest first, one answer keeps under the byte cap, and
+/// whether it was cut. Rows count against the plain envelope; only a cut
+/// answer also pays for its olderEnd, and drops rows until that fits. The
+/// newest row always goes out.
+pub(super) fn fit_answer(
+    rows: &[Vec<u8>],
+    cut: bool,
+    older_end: impl Fn(usize) -> i64,
+) -> (usize, bool) {
+    let mut size = CHANGES_ENVELOPE_BYTES;
+    let mut kept = 0;
+    while kept < rows.len() && (kept == 0 || size + (rows[kept].len() as i64) < MAX_CHANGE_BYTES) {
+        size += rows[kept].len() as i64 + 1;
+        kept += 1;
+    }
+    if kept == rows.len() && !cut {
+        return (kept, false);
+    }
+    while kept > 1 && size + older_end(kept - 1) > MAX_CHANGE_BYTES {
+        kept -= 1;
+        size -= rows[kept].len() as i64 + 1;
+    }
+    (kept, true)
 }
 
 /// Writes ,"truncated":true,"olderEnd":{...}: the oldest record in the

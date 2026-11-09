@@ -1,5 +1,6 @@
+using System.Buffers;
 using System.Globalization;
-using System.Text;
+using System.Text.Json;
 using Blok.Server.Collab;
 using Microsoft.AspNetCore.Http;
 
@@ -15,9 +16,6 @@ internal static partial class HistoryEndpoint
   private const string BadRange = "from and to must be ISO 8601 times with an offset, from no later than to\n";
   private const string BadBefore = "before must be one <lineage>:<sequence>\n";
   private const string BadDetail = "detail must be properties\n";
-
-  /// <summary>The longest ,"olderEnd":{...} an answer adds.</summary>
-  private const int OlderEndBytes = 125;
 
   /// <summary>
   /// The newest point at or before the time: a redirect to it, or the point
@@ -57,13 +55,25 @@ internal static partial class HistoryEndpoint
 
     var point = result.Point!;
 
+    // The lineage goes into a Location: anything not shaped like one is a broken store.
+    if (!CollabWorkingSetTag.IsLineage(point.Lineage))
+    {
+      await RefuseAsync(context, admitted, CollabHistoryStatus.Corrupt);
+
+      return;
+    }
+
     WriteHistoryHead(context, point.Lineage, point.Sequence);
 
     if (!AcceptsJson(context))
     {
-      // Relative, so it keeps the mount prefix and the doc as sent.
+      // Relative, so it keeps the mount prefix and the doc as sent. With a
+      // trailing slash the base is .../at/, one level deeper.
+      var location = $"{point.Lineage}/{point.Sequence.ToString(CultureInfo.InvariantCulture)}";
+
       context.Response.StatusCode = StatusCodes.Status302Found;
-      context.Response.Headers.Location = $"{point.Lineage}/{point.Sequence.ToString(CultureInfo.InvariantCulture)}";
+      context.Response.Headers.Location =
+          context.Request.Path.Value?.EndsWith('/') == true ? "../" + location : location;
       context.Response.ContentLength = 0;
 
       return;
@@ -130,28 +140,26 @@ internal static partial class HistoryEndpoint
     }
 
     var rows = new List<byte[]>();
-    long size = ChangesEnvelopeBytes + OlderEndBytes;
-    var truncated = result.Truncated;
 
     foreach (var record in result.Records)
     {
       var row = ChangeRow(record.Changes, detail);
-      var prefix = Encoding.UTF8.GetBytes($"{{\"lineage\":\"{record.Lineage}\",");
+      var prefix = LineagePrefix(record.Lineage);
       var lineaged = new byte[prefix.Length + row.Length - 1];
 
       prefix.CopyTo(lineaged, 0);
       row.AsSpan(1).CopyTo(lineaged.AsSpan(prefix.Length));
-
-      if (rows.Count > 0 && size + lineaged.Length + 1 > CollabRoomManager.MaxChangeBytes)
-      {
-        truncated = true;
-
-        break;
-      }
-
       rows.Add(lineaged);
-      size += lineaged.Length + 1;
     }
+
+    var (kept, truncated) = FitAnswer(rows, result.Truncated, oldest =>
+    {
+      var record = result.Records[oldest];
+
+      return OlderEnd(record.Lineage, record.Changes.Sequence, record.Changes.CommittedAt).Length;
+    });
+
+    rows = rows[..kept];
 
     context.Response.StatusCode = StatusCodes.Status200OK;
     context.Response.ContentType = "application/json";
@@ -187,10 +195,74 @@ internal static partial class HistoryEndpoint
   private static byte[] OlderEnd(string lineage, ulong sequence, DateTimeOffset committedAt) =>
       [.. ",\"truncated\":true,\"olderEnd\":"u8, .. Point(lineage, sequence, committedAt)];
 
-  // Lineages are 32 hex digits, so they need no escaping.
-  private static byte[] Point(string lineage, ulong sequence, DateTimeOffset? at) => Encoding.UTF8.GetBytes(
-      $"{{\"lineage\":\"{lineage}\",\"sequence\":{sequence.ToString(CultureInfo.InvariantCulture)}," +
-      $"\"committedAt\":{(at is { } value ? value.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture) : "null")}}}");
+  private static byte[] Point(string lineage, ulong sequence, DateTimeOffset? at)
+  {
+    var buffer = new ArrayBufferWriter<byte>();
+
+    using (var writer = new Utf8JsonWriter(buffer))
+    {
+      writer.WriteStartObject();
+      writer.WriteString("lineage", lineage);
+      writer.WriteNumber("sequence", sequence);
+
+      if (at is { } value)
+      {
+        writer.WriteNumber("committedAt", value.ToUnixTimeMilliseconds());
+      }
+      else
+      {
+        writer.WriteNull("committedAt");
+      }
+
+      writer.WriteEndObject();
+    }
+
+    return buffer.WrittenSpan.ToArray();
+  }
+
+  /// <summary>{"lineage":"...", escaped as the rest of the row is.</summary>
+  private static byte[] LineagePrefix(string lineage)
+  {
+    var buffer = new ArrayBufferWriter<byte>();
+
+    using (var writer = new Utf8JsonWriter(buffer))
+    {
+      writer.WriteStringValue(lineage);
+    }
+
+    return [.. "{\"lineage\":"u8, .. buffer.WrittenSpan, .. ","u8];
+  }
+
+  /// <summary>
+  /// How many rows, newest first, one answer keeps under the byte cap, and
+  /// whether it was cut. Rows count against the plain envelope; only a cut
+  /// answer also pays for its olderEnd, and drops rows until that fits. The
+  /// newest row always goes out.
+  /// </summary>
+  private static (int Kept, bool Truncated) FitAnswer(List<byte[]> rows, bool cut, Func<int, int> olderEnd)
+  {
+    long size = ChangesEnvelopeBytes;
+    var kept = 0;
+
+    while (kept < rows.Count && (kept == 0 || size + rows[kept].Length + 1 <= CollabRoomManager.MaxChangeBytes))
+    {
+      size += rows[kept].Length + 1;
+      kept++;
+    }
+
+    if (kept == rows.Count && !cut)
+    {
+      return (kept, false);
+    }
+
+    while (kept > 1 && size + olderEnd(kept - 1) > CollabRoomManager.MaxChangeBytes)
+    {
+      kept--;
+      size -= rows[kept].Length + 1;
+    }
+
+    return (kept, true);
+  }
 
   /// <summary>Absent is null; a repeated value or one the time format refuses is false.</summary>
   private static bool TryQueryTime(HttpContext context, string name, out DateTimeOffset? value)

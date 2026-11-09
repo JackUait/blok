@@ -113,6 +113,7 @@ internal sealed partial class CollabRoomManager
     // One record and byte budget for the whole answer: each lineage replays
     // with what the newer ones left.
     long consumed = 0;
+    var sizes = new List<long>();
 
     for (var start = 0; start < selection.Records.Count;)
     {
@@ -149,21 +150,22 @@ internal sealed partial class CollabRoomManager
 
       for (var i = result.Changes.Count - 1; i >= 0; i--)
       {
-        if (!picked.Contains(result.Changes[i].Sequence))
+        if (picked.Contains(result.Changes[i].Sequence))
         {
-          continue;
+          records.Add(new CollabRangeRecord(lineage, result.Changes[i]));
+          sizes.Add(CollabVersionChanges.RecordBytes(result.Changes[i]));
         }
-
-        var size = CollabVersionChanges.RecordBytes(result.Changes[i]);
-
-        if (!CollabHistoryTime.Fits(records.Count, consumed, size, maxBytes))
-        {
-          return new CollabHistoryRangeResult(CollabHistoryStatus.Ready, records, true);
-        }
-
-        records.Add(new CollabRangeRecord(lineage, result.Changes[i]));
-        consumed += size;
       }
+
+      // The fixture's FitRows decides the cut, over every row so far.
+      var kept = CollabHistoryTime.FitRows(sizes, maxBytes);
+
+      if (kept < records.Count)
+      {
+        return new CollabHistoryRangeResult(CollabHistoryStatus.Ready, records[..kept], true);
+      }
+
+      consumed = sizes.Sum();
 
       // Older records were dropped inside this lineage: anything older still is past the cut.
       if (result.Truncated)

@@ -339,6 +339,7 @@ impl Manager {
         // One record and byte budget for the whole answer: each lineage
         // replays with what the newer ones left.
         let mut consumed = 0i64;
+        let mut sizes = Vec::new();
         let mut start = 0;
         'lineages: while start < selection.records.len() {
             if !records.is_empty() && consumed >= max_bytes {
@@ -366,20 +367,22 @@ impl Manager {
                 return Ok(empty(result.status));
             }
             for changes in result.changes.into_iter().rev() {
-                if !picked.contains(&changes.sequence) {
-                    continue;
+                if picked.contains(&changes.sequence) {
+                    sizes.push(record_bytes(&changes));
+                    records.push(RangeRecord {
+                        lineage: lineage.clone(),
+                        changes,
+                    });
                 }
-                let size = record_bytes(&changes);
-                if !fits(records.len(), consumed, size, max_bytes) {
-                    truncated = true;
-                    break 'lineages;
-                }
-                consumed += size;
-                records.push(RangeRecord {
-                    lineage: lineage.clone(),
-                    changes,
-                });
             }
+            // The fixture's fit_rows decides the cut, over every row so far.
+            let kept = fit_rows(&sizes, max_bytes);
+            if kept < records.len() {
+                records.truncate(kept);
+                truncated = true;
+                break 'lineages;
+            }
+            consumed = sizes.iter().sum();
             // Older records were dropped inside this lineage: anything older
             // still is past the cut.
             if result.truncated {

@@ -8,7 +8,7 @@ using Xunit;
 namespace Blok.Server.Tests.Collab;
 
 /// <summary>History list, read, delete and restore through the room manager, on the real converter.</summary>
-public sealed class CollabHistoryManagerTests
+public sealed partial class CollabHistoryManagerTests
 {
   private const string DocId = "doc-1";
   private readonly FakeWorkingSetStore store = new();

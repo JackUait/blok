@@ -141,12 +141,8 @@ internal static partial class HistoryEndpoint
       return;
     }
 
-    if (!TryQueryDetail(context, out var detail))
-    {
-      await SyncEndpoint.RefuseAsync(context, StatusCodes.Status400BadRequest, BadDetail);
-
-      return;
-    }
+    // v2.1.0 ignored unknown keys here, so a bad detail is ignored, not refused.
+    var detail = TryQueryDetail(context, out var asked) && asked;
 
     var result = await admitted.Rooms.ChangesAsync(
         admitted.Doc,
@@ -164,24 +160,20 @@ internal static partial class HistoryEndpoint
 
     // Rows are measured newest first; the newest always goes out, so a reader can page.
     var rows = new List<byte[]>();
-    long size = ChangesEnvelopeBytes + OlderEndBytes;
-    var truncated = result.Truncated;
 
     for (var index = result.Changes.Count - 1; index >= 0; index--)
     {
-      var row = ChangeRow(result.Changes[index], detail);
-
-      if (rows.Count > 0 && size + row.Length + 1 > CollabRoomManager.MaxChangeBytes)
-      {
-        truncated = true;
-
-        break;
-      }
-
-      rows.Add(row);
-      size += row.Length + 1;
+      rows.Add(ChangeRow(result.Changes[index], detail));
     }
 
+    var (kept, truncated) = FitAnswer(rows, result.Truncated, oldest =>
+    {
+      var record = result.Changes[result.Changes.Count - 1 - oldest];
+
+      return OlderEnd(point.Lineage, record.Sequence, record.CommittedAt).Length;
+    });
+
+    rows = rows[..kept];
     rows.Reverse();
 
     WriteHistoryHead(context, point.Lineage, point.Sequence);

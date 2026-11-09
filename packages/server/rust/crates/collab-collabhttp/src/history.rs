@@ -24,7 +24,6 @@ mod time;
 const HISTORY_LINEAGE_HEADER: &str = "Blok-History-Lineage";
 const HISTORY_SEQUENCE_HEADER: &str = "Blok-History-Sequence";
 const NO_SUCH_VERSION: &str = "no such version\n";
-const BAD_DETAIL: &str = "detail must be properties\n";
 /// {"changes":[ and ],"truncated":true}.
 const CHANGES_ENVELOPE_BYTES: i64 = 32;
 
@@ -223,10 +222,9 @@ impl Handlers {
                 return;
             }
         };
-        let Ok(detail) = query_detail(&request) else {
-            refuse(&mut response, 400, BAD_DETAIL).await;
-            return;
-        };
+        // v2.1.0 ignored unknown keys here, so a bad detail is ignored, not
+        // refused.
+        let detail = query_detail(&request) == Ok(true);
         let (rooms, doc, at) = (a.rooms.clone(), a.doc.clone(), lineage.clone());
         let changes = async move {
             rooms
@@ -253,20 +251,25 @@ impl Handlers {
         }
         // Rows are measured newest first; the newest always goes out.
         let mut rows: Vec<Vec<u8>> = Vec::new();
-        let mut size = CHANGES_ENVELOPE_BYTES + time::OLDER_END_BYTES;
-        let mut truncated = result.truncated;
         for record in result.changes.iter().rev() {
             let Ok(row) = change_row(record, detail) else {
                 failed(&request, &mut response).await;
                 return;
             };
-            if !rows.is_empty() && size + row.len() as i64 + 1 > MAX_CHANGE_BYTES {
-                truncated = true;
-                break;
-            }
-            size += row.len() as i64 + 1;
             rows.push(row);
         }
+        let (kept, truncated) = time::fit_answer(&rows, result.truncated, |oldest| {
+            let record = &result.changes[result.changes.len() - 1 - oldest];
+            let mut older_end = Vec::new();
+            time::append_older_end(
+                &mut older_end,
+                &lineage,
+                record.sequence,
+                record.committed_at,
+            );
+            older_end.len() as i64
+        });
+        rows.truncate(kept);
         write_history_head(&mut response, &lineage, sequence);
         let mut body = br#"{"changes":["#.to_vec();
         for (i, row) in rows.iter().rev().enumerate() {

@@ -1441,3 +1441,105 @@ async fn a_delete_refuses_the_current_lineage_and_removes_an_old_one() {
     let listed = manager.history(DOC, Duration::ZERO).await.expect("list");
     assert!(listed.lineages.iter().all(|l| l.lineage != old));
 }
+
+// Changes by time range: one budget across lineages.
+
+fn whole_time() -> (std::time::SystemTime, std::time::SystemTime) {
+    (
+        blok_dotnet::time_from_ticks(0),
+        blok_dotnet::time_from_ticks(3_155_378_975_999_999_999),
+    )
+}
+
+// Two lineages whose rows together pass the byte cap: the older lineage
+// replays with what the newer one left, so the answer stops at the cap.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn changes_between_keeps_one_byte_budget_across_lineages() {
+    let b = Bench::new();
+    let manager = b.manager(Options::default());
+    blocks(&manager).await;
+    edit(&manager, update("a", "old one"), None).await;
+    edit(&manager, update("a", "old two"), None).await;
+    reset(&manager).await;
+    blocks(&manager).await;
+    edit(&manager, update("a", "new one"), None).await;
+    let current = b.lineage();
+    let (from, to) = whole_time();
+    let all = manager
+        .changes_between(DOC, from, to, None, MAX_CHANGE_RECORDS, MAX_CHANGE_BYTES)
+        .await
+        .expect("all");
+    assert_eq!((all.records.len(), all.truncated), (3, false));
+    let budget = record_bytes(&all.records[0].changes) + record_bytes(&all.records[1].changes) / 2;
+
+    let result = manager
+        .changes_between(DOC, from, to, None, MAX_CHANGE_RECORDS, budget)
+        .await
+        .expect("cut");
+
+    assert!(result.truncated);
+    let lineages: Vec<&str> = result.records.iter().map(|r| r.lineage.as_str()).collect();
+    assert_eq!(lineages, [current.as_str()]);
+}
+
+// A lineage cut by its own replay ends the answer: an older lineage that
+// would still fit must not follow it, or the cut rows would be skipped.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn changes_between_stops_at_a_lineage_its_own_replay_cut() {
+    let b = Bench::new();
+    let manager = b.manager(Options::default());
+    blocks(&manager).await;
+    edit(&manager, update("a", "s"), None).await;
+    reset(&manager).await;
+    blocks(&manager).await;
+    edit(&manager, update("a", &"x".repeat(1000)), None).await;
+    edit(&manager, update("a", &"y".repeat(1000)), None).await;
+    let current = b.lineage();
+    let (from, to) = whole_time();
+    let all = manager
+        .changes_between(DOC, from, to, None, MAX_CHANGE_RECORDS, MAX_CHANGE_BYTES)
+        .await
+        .expect("all");
+    assert_eq!(all.records.len(), 3);
+    let budget = record_bytes(&all.records[0].changes) + record_bytes(&all.records[2].changes);
+
+    let result = manager
+        .changes_between(DOC, from, to, None, MAX_CHANGE_RECORDS, budget)
+        .await
+        .expect("cut");
+
+    assert!(result.truncated);
+    let rows: Vec<(&str, u64)> = result
+        .records
+        .iter()
+        .map(|r| (r.lineage.as_str(), r.changes.sequence))
+        .collect();
+    assert_eq!(rows, [(current.as_str(), 2)]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn changes_between_reads_at_most_eight_lineages() {
+    let b = Bench::new();
+    let manager = b.manager(Options::default());
+    blocks(&manager).await;
+    let mut lineages = Vec::new();
+    for i in 0..=MAX_RANGE_LINEAGES {
+        if i > 0 {
+            reset(&manager).await;
+            blocks(&manager).await;
+        }
+        edit(&manager, update("a", &format!("v{i}")), None).await;
+        lineages.push(b.lineage());
+    }
+    let (from, to) = whole_time();
+
+    let result = manager
+        .changes_between(DOC, from, to, None, MAX_CHANGE_RECORDS, MAX_CHANGE_BYTES)
+        .await
+        .expect("range");
+
+    assert!(result.truncated);
+    let got: Vec<&str> = result.records.iter().map(|r| r.lineage.as_str()).collect();
+    let want: Vec<&str> = lineages[1..].iter().rev().map(String::as_str).collect();
+    assert_eq!(got, want);
+}

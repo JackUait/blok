@@ -171,11 +171,9 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 		synchttp.Refuse(w, http.StatusBadRequest, "since must be a whole number no greater than the sequence\n")
 		return
 	}
+	// v2.1.0 ignored unknown keys here, so a bad detail is ignored, not refused.
 	detail, ok := queryDetail(r)
-	if !ok {
-		synchttp.Refuse(w, http.StatusBadRequest, badDetail)
-		return
-	}
+	detail = detail && ok
 	var from uint64
 	if since != nil {
 		from = *since
@@ -191,21 +189,21 @@ func (h *Handlers) HistoryChanges(w http.ResponseWriter, r *http.Request) {
 	}
 	// Rows are measured newest first; the newest always goes out.
 	var rows [][]byte
-	size := int64(changesEnvelopeBytes + olderEndBytes)
-	truncated := result.Truncated
+	var sizes []int64
 	for index := len(result.Changes) - 1; index >= 0; index-- {
 		row, err := changeRow(result.Changes[index], detail)
 		if err != nil {
 			failed(w, r.Context())
 			return
 		}
-		if len(rows) > 0 && size+int64(len(row))+1 > room.MaxChangeBytes {
-			truncated = true
-			break
-		}
 		rows = append(rows, row)
-		size += int64(len(row)) + 1
+		sizes = append(sizes, int64(len(row)))
 	}
+	kept, truncated := fitAnswer(sizes, result.Truncated, func(oldest int) int64 {
+		record := result.Changes[len(result.Changes)-1-oldest]
+		return int64(len(appendOlderEnd(nil, lineage, record.Sequence, record.CommittedAt)))
+	})
+	rows = rows[:kept]
 	writeHistoryHead(w, lineage, sequence)
 	body := []byte(`{"changes":[`)
 	for index := len(rows) - 1; index >= 0; index-- {

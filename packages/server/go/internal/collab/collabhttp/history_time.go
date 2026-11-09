@@ -19,8 +19,6 @@ const (
 	badRange  = "from and to must be ISO 8601 times with an offset, from no later than to\n"
 	badBefore = "before must be one <lineage>:<sequence>\n"
 	badDetail = "detail must be properties\n"
-	// olderEndBytes is the longest ,"olderEnd":{...} an answer adds.
-	olderEndBytes = 125
 )
 
 // HistoryAt is GET /sync/{doc}/history/at?time=: the newest point at or
@@ -52,10 +50,21 @@ func (h *Handlers) HistoryAt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	point := result.Point
+	// The lineage goes into a Location: anything not shaped like one is a
+	// broken store.
+	if !workingset.IsLineage(point.Lineage) {
+		h.refuseHistory(w, a, room.HistoryCorrupt)
+		return
+	}
 	writeHistoryHead(w, point.Lineage, point.Sequence)
 	if !acceptsJSON(r) {
-		// Relative, so it keeps the mount prefix and the doc as sent.
-		w.Header().Set("Location", point.Lineage+"/"+strconv.FormatUint(point.Sequence, 10))
+		// Relative, so it keeps the mount prefix and the doc as sent. With a
+		// trailing slash the base is .../at/, one level deeper.
+		location := point.Lineage + "/" + strconv.FormatUint(point.Sequence, 10)
+		if strings.HasSuffix(r.URL.EscapedPath(), "/") {
+			location = "../" + location
+		}
+		w.Header().Set("Location", location)
 		w.Header().Set("Content-Length", "0")
 		w.WriteHeader(http.StatusFound)
 		return
@@ -109,8 +118,7 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var rows [][]byte
-	size := int64(changesEnvelopeBytes + olderEndBytes)
-	truncated := result.Truncated
+	var sizes []int64
 	for _, record := range result.Records {
 		row, err := changeRow(record.RecordChanges, detail)
 		if err != nil {
@@ -119,13 +127,14 @@ func (h *Handlers) HistoryChangesBetween(w http.ResponseWriter, r *http.Request)
 		}
 		lineaged := jsjson.AppendQuoted([]byte(`{"lineage":`), jsjson.FromString(record.Lineage))
 		row = append(append(lineaged, ','), row[1:]...)
-		if len(rows) > 0 && size+int64(len(row))+1 > room.MaxChangeBytes {
-			truncated = true
-			break
-		}
 		rows = append(rows, row)
-		size += int64(len(row)) + 1
+		sizes = append(sizes, int64(len(row)))
 	}
+	kept, truncated := fitAnswer(sizes, result.Truncated, func(oldest int) int64 {
+		record := result.Records[oldest]
+		return int64(len(appendOlderEnd(nil, record.Lineage, record.Sequence, record.CommittedAt)))
+	})
+	rows = rows[:kept]
 	body := []byte(`{"changes":[`)
 	for i, row := range rows {
 		if i > 0 {
@@ -213,4 +222,25 @@ func queryDetail(r *http.Request) (bool, bool) {
 		return false, true
 	}
 	return true, len(values) == 1 && values[0] == "properties"
+}
+
+// fitAnswer is how many rows, newest first, one answer keeps under the
+// byte cap, and whether it was cut. Rows count against the plain envelope;
+// only a cut answer also pays for its olderEnd, and drops rows until that
+// fits. The newest row always goes out.
+func fitAnswer(sizes []int64, cut bool, olderEnd func(oldest int) int64) (int, bool) {
+	size := int64(changesEnvelopeBytes)
+	kept := 0
+	for kept < len(sizes) && (kept == 0 || size+sizes[kept]+1 <= room.MaxChangeBytes) {
+		size += sizes[kept] + 1
+		kept++
+	}
+	if kept == len(sizes) && !cut {
+		return kept, false
+	}
+	for kept > 1 && size+olderEnd(kept-1) > room.MaxChangeBytes {
+		kept--
+		size -= sizes[kept] + 1
+	}
+	return kept, true
 }

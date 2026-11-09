@@ -729,7 +729,7 @@ const moveOption: ToolActionImpl<OptionArgs & Placement> = {
 const holds = (value: unknown, optionId: string): boolean => (Array.isArray(value) ? value.includes(optionId) : value === optionId);
 
 /**
- * The editor (handleOptionDelete, clearRemovedOptions) keeps the rows and empties the value:
+ * The editor (clearRemovedOptions) keeps the rows and empties the value:
  * null for a single value, the array without the option for a multi-select. `rows: 'delete'`
  * deletes those rows instead.
  */

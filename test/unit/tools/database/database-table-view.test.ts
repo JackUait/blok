@@ -4,7 +4,7 @@ import { DatabaseTableView, createTableState } from '../../../../src/tools/datab
 import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } from '../../../../src/tools/database/database-table-view';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
-import { IconInfo, IconPeekSide, IconRowGrip } from '../../../../src/components/icons';
+import { IconInfo, IconPeekSide, IconPlayerPlay, IconRowGrip } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
@@ -1561,6 +1561,16 @@ describe('DatabaseTableView', () => {
       expect(sections.map((el) => el.getAttribute('data-group-key'))).toEqual(['o-idea', '__none__']);
       expect(sections[1].querySelector('[data-blok-database-table-group-count]')?.textContent).toBe('2');
       expect(sections[1].querySelectorAll('[data-blok-database-table-row]')).toHaveLength(2);
+    });
+
+    it('draws the group caret as a filled triangle, like Notion (research/07:85)', () => {
+      const { root } = mount({ groups: groups() });
+      const caret = root.querySelector<HTMLElement>('[data-blok-database-table-group-toggle]');
+
+      const expected = document.createElement('span');
+
+      expected.innerHTML = IconPlayerPlay;
+      expect(caret?.innerHTML).toBe(expected.innerHTML);
     });
 
     it('collapsing a group removes its rows at once and remembers it', () => {

@@ -45,7 +45,7 @@ import { propertyTypeMeta } from './database-property-types';
 import type { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
-  IconChevronDown,
+  IconPlayerPlay,
   IconChevronRight,
   IconRowGrip,
   IconPlus,
@@ -1248,7 +1248,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     caret.setAttribute('data-blok-database-table-group-toggle', '');
     caret.setAttribute('aria-expanded', String(!collapsed));
     caret.setAttribute('aria-label', this.t(collapsed ? 'tools.database.tableExpandGroup' : 'tools.database.tableCollapseGroup'));
-    caret.innerHTML = IconChevronDown;
+    caret.innerHTML = IconPlayerPlay;
 
     const label = document.createElement('span');
 

@@ -9741,6 +9741,14 @@ textarea[data-blok-database-cell-input] {
   transition: transform 200ms ease-out;
 }
 
+/* Notion's filled caret (research/07:85): IconPlayerPlay points right, so
+   `rotate` turns it down. `transform` stays free for the collapse turn. */
+[data-blok-database-table-group-toggle] svg {
+  width: 20px;
+  height: 20px;
+  rotate: 90deg;
+}
+
 [data-blok-database-table-group-toggle]:hover,
 [data-blok-database-board-lane-toggle]:hover {
   background-color: var(--blok-database-table-header-hover-bg);

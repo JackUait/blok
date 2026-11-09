@@ -12842,6 +12842,12 @@ textarea[data-blok-database-cell-input] {
   transition: transform 200ms ease-out;
 }
 
+[data-blok-database-table-group-toggle] svg {
+  width: 20px;
+  height: 20px;
+  rotate: 90deg;
+}
+
 [data-blok-database-table-group-toggle]:hover, [data-blok-database-board-lane-toggle]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }

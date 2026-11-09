@@ -487,6 +487,78 @@ func (m *Manager) RestoreGuarded(ctx context.Context, docID, lineage string, seq
 	return HistoryReady, &edit, nil, nil
 }
 
+// RestorePreview is a restore planned and measured against the live doc,
+// with nothing applied: the blocks and page keys it would change, its
+// guards, and its frame size against the one-update limit.
+type RestorePreview struct {
+	Blocks     []BlockChange
+	Page       []string
+	Guards     []RestoreGuard
+	FrameBytes int64
+	LimitBytes int64
+	// Head is the revision it planned against, for the real call's If-Match.
+	Head Receipt
+}
+
+// PreviewRestore is a restore's dry run. A refusal before the plan (a
+// stale If-Match, a purge, a room that cannot load) comes back as the edit.
+func (m *Manager) PreviewRestore(ctx context.Context, docID, lineage string, sequence uint64,
+	expect *Precondition) (HistoryStatus, *RestorePreview, *EditResult, error) {
+	p, err := m.readPoint(ctx, docID, lineage, sequence)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	if p.status != HistoryReady {
+		return p.status, nil, nil, nil
+	}
+	var target []any
+	if blocks, ok := p.output.Get(jsjson.FromString("blocks")); ok {
+		target, _ = blocks.([]any)
+	}
+	targetMaps := convert.ReadPageMaps(p.doc)
+	preview := &RestorePreview{LimitBytes: frameLimit(m.options)}
+	edit, err := m.editInRoom(docID, func(r *Room) (*EditResult, error) {
+		return r.preview(ctx, func(ctx context.Context, doc *yjs.Doc) ([]convert.EditOp, error) {
+			current, err := liveBlocks(ctx, m.converter, doc)
+			if err != nil {
+				return nil, err
+			}
+			ops := PlanRestore(current, convert.DescribeStructure(doc), target, convert.ReadPageMaps(doc), targetMaps)
+			scratch, frameBytes, err := applyToScratch(ctx, doc, m.converter, ops)
+			if err != nil {
+				return nil, err
+			}
+			after, err := liveBlocks(ctx, m.converter, scratch)
+			if err != nil {
+				return nil, err
+			}
+			preview.Blocks = DiffBlocks(current, after)
+			preview.Page = DiffPage(PageFields(doc), PageFields(scratch))
+			preview.Guards = RestoreGuards(current, target)
+			preview.FrameBytes = frameBytes
+			return ops, nil
+		}, expect)
+	})
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	if edit.Status != EditPreviewed {
+		return HistoryReady, nil, &edit, nil
+	}
+	preview.Head = *edit.Receipt
+	return HistoryReady, preview, nil, nil
+}
+
+func liveBlocks(ctx context.Context, converter Converter, doc *yjs.Doc) ([]any, error) {
+	exported, err := converter.Export(ctx, doc)
+	if err != nil {
+		return nil, err
+	}
+	blocks, _ := exported.Get(jsjson.FromString("blocks"))
+	list, _ := blocks.([]any)
+	return list, nil
+}
+
 func itoa64(n uint64) string { return strconv.FormatUint(n, 10) }
 
 // String is the C# CollabHistoryStatus name, which agent answers print.

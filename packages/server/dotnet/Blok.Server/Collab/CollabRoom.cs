@@ -594,6 +594,21 @@ internal sealed class CollabRoom : IDisposable
         cancellationToken);
   }
 
+  /// <summary>
+  /// Runs <paramref name="planOps"/> in the lane after the precondition check, then stops: no op-id
+  /// lookup, nothing applied or journalled. A plan that ran answers
+  /// <see cref="CollabEditStatus.Previewed"/> with the head it planned against.
+  /// </summary>
+  internal Task<CollabEditResult?> PreviewAsync(
+      Func<YDoc, CancellationToken, ValueTask<IReadOnlyList<CollabEditOp>>> planOps,
+      CollabEditPrecondition? expect,
+      CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(planOps);
+
+    return EditCoreAsync(planOps, gateFrameSize: false, "", default, null, expect, null, cancellationToken, dryRun: true);
+  }
+
   private Task<CollabEditResult?> EditCoreAsync(
       Func<YDoc, CancellationToken, ValueTask<IReadOnlyList<CollabEditOp>>> planOps,
       bool gateFrameSize,
@@ -602,7 +617,8 @@ internal sealed class CollabRoom : IDisposable
       string? actorId,
       CollabEditPrecondition? expect,
       Func<YDoc, CollabEditReceipt?, CancellationToken, ValueTask>? applied,
-      CancellationToken cancellationToken)
+      CancellationToken cancellationToken,
+      bool dryRun = false)
   {
     return RunAsync<CollabEditResult?>(
         async () =>
@@ -639,7 +655,7 @@ internal sealed class CollabRoom : IDisposable
             return new CollabEditResult(CollabEditStatus.Purged, null);
           }
 
-          if (session is not null)
+          if (session is not null && !dryRun)
           {
             CollabOperationLookup committed;
 
@@ -675,7 +691,10 @@ internal sealed class CollabRoom : IDisposable
 
                 return new CollabEditResult(CollabEditStatus.Conflict, null);
             }
+          }
 
+          if (session is not null)
+          {
             if (expect is not null &&
                 (!string.Equals(expect.Lineage, tag.Lineage, StringComparison.Ordinal) ||
                  expect.Sequence != committedThrough))
@@ -722,6 +741,13 @@ internal sealed class CollabRoom : IDisposable
             UpdateEvictionLocked();
 
             throw;
+          }
+
+          if (dryRun)
+          {
+            UpdateEvictionLocked();
+
+            return new CollabEditResult(CollabEditStatus.Previewed, null, new CollabEditReceipt(tag, committedThrough));
           }
 
           localUpdates.Clear();
@@ -867,6 +893,12 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private async Task<bool> FitsOneFrameLocked(IReadOnlyList<CollabEditOp> ops)
   {
+    return await PlannedFrameBytesAsync(doc!, converter, ops, lifetime.Token) <= FrameLimit(options);
+  }
+
+  /// <summary>The most bytes one planned update's frames may take.</summary>
+  internal static long FrameLimit(CollabRoomOptions options)
+  {
     // 0 means unset, as in the options. With no announced limit, 1 MiB, the
     // local store's default, stands in. A custom store's own limit is unknown.
     var limit = options.AnnouncedMaxMessageBytes is > 0 ? options.AnnouncedMaxMessageBytes.Value : 1 << 20;
@@ -878,7 +910,7 @@ internal sealed class CollabRoom : IDisposable
       limit = Math.Min(limit, storeLimit);
     }
 
-    return await PlannedFrameBytesAsync(doc!, converter, ops, lifetime.Token) <= limit;
+    return limit;
   }
 
   /// <summary>
@@ -886,6 +918,18 @@ internal sealed class CollabRoom : IDisposable
   /// <paramref name="live"/> would broadcast, measured on a scratch copy.
   /// </summary>
   internal static async Task<long> PlannedFrameBytesAsync(
+      YDoc live,
+      ICollabDocConverter converter,
+      IReadOnlyList<CollabEditOp> ops,
+      CancellationToken cancellationToken)
+  {
+    return (await ApplyToScratchAsync(live, converter, ops, cancellationToken)).FrameBytes;
+  }
+
+  /// <summary>
+  /// Applies <paramref name="ops"/> to a copy of <paramref name="live"/> and counts the frames it would broadcast.
+  /// </summary>
+  internal static async Task<(YDoc Scratch, long FrameBytes)> ApplyToScratchAsync(
       YDoc live,
       ICollabDocConverter converter,
       IReadOnlyList<CollabEditOp> ops,
@@ -909,7 +953,7 @@ internal sealed class CollabRoom : IDisposable
 
     await converter.ApplyOpsAsync(scratch, ops, cancellationToken);
 
-    return frameBytes;
+    return (scratch, frameBytes);
   }
 
   /// <summary>

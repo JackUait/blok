@@ -337,6 +337,11 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// Exactly dryRun=1; any other value is today's restore.
+	if values := dotnet.QueryAll(r.URL.RawQuery, "dryRun"); len(values) == 1 && values[0] == "1" {
+		h.restorePreview(w, r, a, lineage, sequence)
+		return
+	}
 	keys := r.Header.Values(IdempotencyKeyHeader)
 	var operationID string
 	if len(keys) == 1 {
@@ -374,6 +379,72 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	WriteEditResult(w, *edit, a.rooms.RetryAfter())
+}
+
+// restorePreview is POST .../restore?dryRun=1: the restore planned and
+// measured, nothing written, no key needed. If-Match is checked as the
+// restore would.
+func (h *Handlers) restorePreview(w http.ResponseWriter, r *http.Request, a *admitted, lineage string, sequence uint64) {
+	var expect *room.Precondition
+	if values, present := r.Header["If-Match"]; present {
+		var ok bool
+		if expect, ok = parseEntityTag(values); !ok {
+			synchttp.Refuse(w, http.StatusBadRequest, "If-Match must be one quoted \"<lineage>:<sequence>\" tag\n")
+			return
+		}
+	}
+	status, preview, edit, err := a.rooms.PreviewRestore(r.Context(), a.doc, lineage, sequence, expect)
+	if err != nil {
+		failed(w, r.Context())
+		return
+	}
+	if status != room.HistoryReady {
+		h.refuseHistory(w, a, status)
+		return
+	}
+	if preview == nil {
+		WriteEditResult(w, *edit, a.rooms.RetryAfter())
+		return
+	}
+	blocks := make([]any, 0, len(preview.Blocks))
+	for _, change := range preview.Blocks {
+		row := &jsjson.Object{}
+		row.Set(jsjson.FromString("id"), change.ID)
+		if change.Type == nil {
+			row.Set(jsjson.FromString("type"), nil)
+		} else {
+			row.Set(jsjson.FromString("type"), *change.Type)
+		}
+		row.Set(jsjson.FromString("kind"), jsjson.FromString(changeKinds[change.Kind]))
+		blocks = append(blocks, row)
+	}
+	page := make([]any, 0, len(preview.Page))
+	for _, key := range preview.Page {
+		page = append(page, jsjson.FromString(key))
+	}
+	guards := make([]any, 0, len(preview.Guards))
+	for _, guard := range preview.Guards {
+		guards = append(guards, guard.JSON())
+	}
+	undo := &jsjson.Object{}
+	undo.Set(jsjson.FromString("blocks"), blocks)
+	undo.Set(jsjson.FromString("page"), page)
+	body := &jsjson.Object{}
+	body.Set(jsjson.FromString("wouldUndo"), undo)
+	body.Set(jsjson.FromString("guards"), guards)
+	body.Set(jsjson.FromString("fits"), preview.FrameBytes <= preview.LimitBytes)
+	body.Set(jsjson.FromString("frameBytes"), float64(preview.FrameBytes))
+	body.Set(jsjson.FromString("limitBytes"), float64(preview.LimitBytes))
+	body.Set(jsjson.FromString("expectRevision"),
+		jsjson.FromString(preview.Head.Tag.Lineage+":"+strconv.FormatUint(preview.Head.ServerSequence, 10)))
+	text, err := jsjson.Stringify(body)
+	if err != nil {
+		internalError(w)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(text))
 }
 
 // RestoreConfirmHeader lists the guard kinds a restore confirms; the body's

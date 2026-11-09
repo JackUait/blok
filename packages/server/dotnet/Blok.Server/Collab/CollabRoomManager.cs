@@ -85,6 +85,9 @@ internal enum CollabEditStatus
   /// head to check it against. The endpoint answers 428.
   /// </summary>
   PreconditionRequired,
+
+  /// <summary>A dry run planned the edit and applied nothing; the receipt is the head it planned against.</summary>
+  Previewed,
 }
 
 /// <summary>The journal head an HTTP edit expects, from its If-Match header.</summary>
@@ -184,7 +187,22 @@ internal sealed record CollabHistoryChangesResult(
     IReadOnlyList<CollabRecordChanges> Changes,
     bool Truncated);
 
-/// <summary><paramref name="Edit"/> is set only when <paramref name="History"/> is Ready.</summary>
+/// <summary>A restore planned and measured against the live document, with nothing applied.</summary>
+internal sealed record CollabRestorePreview(
+    IReadOnlyList<CollabBlockChange> Blocks,
+    IReadOnlyList<string> Page,
+    IReadOnlyList<CollabRestoreGuard> Guards,
+    long FrameBytes,
+    long LimitBytes,
+    CollabEditReceipt Head);
+
+/// <summary>A dry run's answer: the preview, or the edit result that refused before the plan.</summary>
+internal sealed record CollabRestorePreviewResult(
+    CollabHistoryStatus History,
+    CollabRestorePreview? Preview,
+    CollabEditResult? Edit);
+
+/// <summary><paramref name="Edit"/> is set only when <paramref name="History"/> is Ready. <paramref name="Refused"/> is set when a guard refused it.</summary>
 internal sealed record CollabRestoreResult(
     CollabHistoryStatus History,
     CollabEditResult? Edit,
@@ -881,6 +899,65 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     }
 
     return new CollabRestoreResult(CollabHistoryStatus.Ready, edit);
+  }
+
+  /// <summary>
+  /// A restore's dry run: planned in the lane against the live document, measured on a scratch copy,
+  /// and never applied. A refusal before the plan (a stale If-Match, a purge, a room that cannot load)
+  /// comes back as the edit.
+  /// </summary>
+  internal async ValueTask<CollabRestorePreviewResult> PreviewRestoreAsync(
+      string docId,
+      string lineage,
+      ulong sequence,
+      CollabEditPrecondition? expect,
+      CancellationToken cancellationToken = default)
+  {
+    var point = await ReadPointAsync(docId, lineage, sequence, cancellationToken);
+
+    if (point.Status != CollabHistoryStatus.Ready || point.Doc is not { } replayed)
+    {
+      return new CollabRestorePreviewResult(point.Status == CollabHistoryStatus.Ready ? CollabHistoryStatus.NotFound : point.Status, null, null);
+    }
+
+    var target = point.Output?["blocks"] as JsonArray ?? [];
+    var targetMaps = YDocConverter.ReadPageMaps(replayed);
+    IReadOnlyList<CollabBlockChange> blocks = [];
+    IReadOnlyList<string> page = [];
+    IReadOnlyList<CollabRestoreGuard> guards = [];
+    long frameBytes = 0;
+
+    var edit = await EditInRoomAsync(
+        docId,
+        room => room.PreviewAsync(
+            async (doc, token) =>
+            {
+              var current = (await converter.ExportAsync(doc, token))["blocks"] as JsonArray ?? [];
+              var ops = CollabRestorePlanner.Plan(
+                  current,
+                  YDocConverter.DescribeStructure(doc),
+                  target,
+                  YDocConverter.ReadPageMaps(doc),
+                  targetMaps);
+              var (scratch, bytes) = await CollabRoom.ApplyToScratchAsync(doc, converter, ops, token);
+              var after = (await converter.ExportAsync(scratch, token))["blocks"] as JsonArray ?? [];
+
+              blocks = CollabVersionChanges.Blocks(current, after);
+              page = CollabVersionChanges.Page(CollabVersionChanges.PageFields(doc), CollabVersionChanges.PageFields(scratch));
+              guards = CollabRestoreGuards.Of(current, target);
+              frameBytes = bytes;
+
+              return ops;
+            },
+            expect,
+            cancellationToken));
+
+    return edit.Status == CollabEditStatus.Previewed && edit.Receipt is { } head
+      ? new CollabRestorePreviewResult(
+          CollabHistoryStatus.Ready,
+          new CollabRestorePreview(blocks, page, guards, frameBytes, CollabRoom.FrameLimit(options), head),
+          null)
+      : new CollabRestorePreviewResult(CollabHistoryStatus.Ready, null, edit);
   }
 
   private async ValueTask<bool> IsPurgedAsync(

@@ -869,6 +869,105 @@ suite('collab restore guards, enforced', () => {
   });
 });
 
+interface Preview {
+  wouldUndo: { blocks: { id: string; type: string | null; kind: string }[]; page: string[] };
+  guards: { kind: string; blockId: string; viewId?: string }[];
+  fits: boolean;
+  frameBytes: number;
+  limitBytes: number;
+  expectRevision: string;
+}
+
+suite('collab restore dry run', () => {
+  let host: Host | undefined;
+  let base = '';
+  let lineage = '';
+  const DOC = 'doc-preview';
+
+  beforeAll(async () => {
+    host = await startHost(true);
+    base = host.server.baseUrl;
+    await send(base, 'POST', `/sync/${DOC}/edit`, [[KEY, 'p1']], insertBody('a', 'first'));
+    await send(base, 'POST', `/sync/${DOC}/edit`, [[KEY, 'p2']], insertBody('b', 'second'));
+
+    const third = await send(base, 'POST', `/sync/${DOC}/edit`, [[KEY, 'p3']], updateBody('a', 'first, edited'));
+
+    expect([third.status, third.headers['blok-doc-sequence']]).toEqual([204, '3']);
+    lineage = String(third.headers['blok-doc-lineage']);
+  }, 60_000);
+
+  afterAll(async () => {
+    await stopHost(host);
+  });
+
+  const head = async (): Promise<string | undefined> =>
+    (await send(base, 'GET', `/sync/${DOC}/state`)).headers['blok-doc-sequence'];
+
+  it('answers the plan, its guards, its size and the head, writes nothing, and needs no key', async () => {
+    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore?dryRun=1`);
+
+    expect(answer.status).toBe(200);
+    expect(answer.headers['content-type']).toBe('application/json');
+    expect(answer.headers['cache-control']).toBe('no-store');
+
+    const preview = JSON.parse(answer.body) as Preview;
+
+    expect(preview.wouldUndo).toEqual({
+      blocks: [{ id: 'a', type: 'paragraph', kind: 'changed' }, { id: 'b', type: 'paragraph', kind: 'removed' }],
+      page: [],
+    });
+    expect(preview.guards).toEqual([]);
+    expect(preview.fits).toBe(true);
+    expect(preview.frameBytes).toBeGreaterThan(0);
+    expect(preview.limitBytes).toBe(MAX_MESSAGE_BYTES);
+    expect(preview.expectRevision).toBe(`${lineage}:3`);
+    expect(Object.keys(preview)).toEqual(['wouldUndo', 'guards', 'fits', 'frameBytes', 'limitBytes', 'expectRevision']);
+    expect(await head()).toBe('3');
+  });
+
+  it('names the same blocks and kinds the real restore journals', async () => {
+    const preview = JSON.parse((await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore?dryRun=1`)).body) as Preview;
+    const restore = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore`,
+      [[KEY, 'p-restore'], ['If-Match', `"${preview.expectRevision}"`]]);
+
+    expect([restore.status, restore.headers['blok-doc-sequence']]).toEqual([204, '4']);
+
+    const changes = JSON.parse((await send(base, 'GET', `/sync/${DOC}/history/${lineage}/4/changes?since=3`)).body) as
+      { changes: { blocks: { id: string; type: string | null; kind: string }[]; page?: string[] }[] };
+
+    expect(changes.changes).toHaveLength(1);
+    expect(changes.changes[0].blocks.map(({ id, type, kind }) => ({ id, type, kind }))).toEqual(preview.wouldUndo.blocks);
+    expect(changes.changes[0].page ?? []).toEqual(preview.wouldUndo.page);
+  });
+
+  it('answers the guards it would raise, enforced or not', async () => {
+    const seeded = await seedGuardedDoc(base);
+    const answer = await send(base, 'POST', `/sync/${GUARDED_DOC}/history/${seeded}/1/restore?dryRun=1`);
+
+    expect(answer.status).toBe(200);
+    expect((JSON.parse(answer.body) as Preview).guards).toEqual(UNLOCK_AND_SHARE);
+  });
+
+  it('answers 412 with the head when If-Match is stale', async () => {
+    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore?dryRun=1`,
+      [['If-Match', `"${lineage}:1"`]]);
+
+    expect([answer.status, answer.headers['blok-doc-sequence']]).toEqual([412, '4']);
+  });
+
+  it('answers 404 for a point that is not there', async () => {
+    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/99/restore?dryRun=1`);
+
+    expect([answer.status, answer.body]).toEqual([404, 'no such version\n']);
+  });
+
+  it.each(['dryRun=0', 'dryRun=true', 'dryRun=1&dryRun=1'])('treats %s as a real restore, which needs a key', async (query) => {
+    const answer = await send(base, 'POST', `/sync/${DOC}/history/${lineage}/1/restore?${query}`);
+
+    expect([answer.status, answer.body]).toEqual([400, `a valid ${KEY} header is required\n`]);
+  });
+});
+
 /** One journal record's header is 38 bytes: int32 body length, version, source, SHA-256. */
 const RECORD_HEADER_BYTES = 38;
 
@@ -1165,6 +1264,14 @@ suite('collab history past its limits', () => {
       JSON.stringify({ ops: ids.map((id) => ({ op: 'remove', id })) }));
 
     expect(removeAll.status).toBe(204);
+
+    const preview = await send(base, 'POST', `/sync/doc-huge/history/${lineage}/${sequence}/restore?dryRun=1`);
+    const planned = JSON.parse(preview.body) as { fits: boolean; frameBytes: number; limitBytes: number };
+
+    expect(preview.status).toBe(200);
+    expect(planned.fits).toBe(false);
+    expect(planned.limitBytes).toBe(MAX_MESSAGE_BYTES);
+    expect(planned.frameBytes).toBeGreaterThan(planned.limitBytes);
 
     const restore = await send(base, 'POST', `/sync/doc-huge/history/${lineage}/${sequence}/restore`, [[KEY, 'r1']]);
 

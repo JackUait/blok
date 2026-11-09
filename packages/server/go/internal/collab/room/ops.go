@@ -32,6 +32,9 @@ const (
 	EditUnavailable
 	EditPreconditionFailed
 	EditPreconditionRequired
+	// EditPreviewed: a dry run planned the edit and applied nothing. The
+	// receipt is the head it planned against.
+	EditPreviewed
 )
 
 // Precondition is the journal head an edit expects (If-Match).
@@ -71,14 +74,25 @@ func (r *Room) edit(ctx context.Context, plan PlanOps, gateFrameSize bool, opera
 	actorID string, expect *Precondition, applied Applied) (*EditResult, error) {
 	var result *EditResult
 	err := r.run(ctx, func() (err error) {
-		result, err = r.editLocked(plan, gateFrameSize, operationID, digest, actorID, expect, applied)
+		result, err = r.editLocked(plan, gateFrameSize, operationID, digest, actorID, expect, applied, false)
+		return err
+	})
+	return result, err
+}
+
+// preview runs plan in the lane after the precondition check, then stops:
+// no duplicate lookup, nothing applied or journalled.
+func (r *Room) preview(ctx context.Context, plan PlanOps, expect *Precondition) (*EditResult, error) {
+	var result *EditResult
+	err := r.run(ctx, func() (err error) {
+		result, err = r.editLocked(plan, false, "", nil, "", expect, nil, true)
 		return err
 	})
 	return result, err
 }
 
 func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, digest []byte,
-	actorID string, expect *Precondition, applied Applied) (*EditResult, error) {
+	actorID string, expect *Precondition, applied Applied, dryRun bool) (*EditResult, error) {
 	if r.purgeRequested.Load() {
 		return &EditResult{Status: EditPurged}, nil
 	}
@@ -103,21 +117,23 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 	}
 
 	if r.session != nil {
-		ctx, cancel := r.boundedLocked()
-		committed, err := r.session.FindCommitted(ctx, operationID, digest)
-		cancel()
-		if err != nil {
-			r.failCommitLocked("look up an operation id", err)
-			return &EditResult{Status: EditUnavailable}, nil
-		}
-		// A room this request loaded has no member to arm its eviction.
-		switch committed.Outcome {
-		case operation.LookupDuplicate:
-			r.updateEvictionLocked(-1)
-			return &EditResult{Status: EditApplied, Receipt: &Receipt{r.tag, committed.Sequence}}, nil
-		case operation.LookupConflict:
-			r.updateEvictionLocked(-1)
-			return &EditResult{Status: EditConflict}, nil
+		if !dryRun {
+			ctx, cancel := r.boundedLocked()
+			committed, err := r.session.FindCommitted(ctx, operationID, digest)
+			cancel()
+			if err != nil {
+				r.failCommitLocked("look up an operation id", err)
+				return &EditResult{Status: EditUnavailable}, nil
+			}
+			// A room this request loaded has no member to arm its eviction.
+			switch committed.Outcome {
+			case operation.LookupDuplicate:
+				r.updateEvictionLocked(-1)
+				return &EditResult{Status: EditApplied, Receipt: &Receipt{r.tag, committed.Sequence}}, nil
+			case operation.LookupConflict:
+				r.updateEvictionLocked(-1)
+				return &EditResult{Status: EditConflict}, nil
+			}
 		}
 		if expect != nil && (expect.Lineage != r.tag.Lineage || expect.Sequence != r.committedThrough) {
 			r.updateEvictionLocked(-1)
@@ -144,6 +160,11 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 			return &EditResult{Status: EditOverloaded, Err: err}, nil
 		}
 		return nil, err
+	}
+
+	if dryRun {
+		r.updateEvictionLocked(-1)
+		return &EditResult{Status: EditPreviewed, Receipt: &Receipt{r.tag, r.committedThrough}}, nil
 	}
 
 	r.localUpdates = nil
@@ -236,30 +257,43 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 // fitsOneFrameLocked: the limit is the announced cap (1 MiB when none),
 // lowered to the store's append limit when known.
 func (r *Room) fitsOneFrameLocked(ops []convert.EditOp) (bool, error) {
-	limit := int64(1 << 20)
-	if r.options.AnnouncedMaxMessageBytes > 0 {
-		limit = r.options.AnnouncedMaxMessageBytes
-	}
-	if r.options.MaxUpdateBytes > 0 && r.options.MaxUpdateBytes < limit {
-		limit = r.options.MaxUpdateBytes
-	}
 	planned, err := PlannedFrameBytes(r.lifetime, r.doc, r.converter, ops)
 	if err != nil {
 		return false, err
 	}
-	return planned <= limit, nil
+	return planned <= frameLimit(r.options), nil
+}
+
+// frameLimit is the announced cap (1 MiB when none), lowered to the store's
+// append limit when known.
+func frameLimit(options Options) int64 {
+	limit := int64(1 << 20)
+	if options.AnnouncedMaxMessageBytes > 0 {
+		limit = options.AnnouncedMaxMessageBytes
+	}
+	if options.MaxUpdateBytes > 0 && options.MaxUpdateBytes < limit {
+		limit = options.MaxUpdateBytes
+	}
+	return limit
 }
 
 // PlannedFrameBytes is what applying ops to live would broadcast, measured
 // on a scratch copy with the same client id.
 func PlannedFrameBytes(ctx context.Context, live *yjs.Doc, converter Converter, ops []convert.EditOp) (int64, error) {
+	_, frameBytes, err := applyToScratch(ctx, live, converter, ops)
+	return frameBytes, err
+}
+
+// applyToScratch applies ops to a copy of live and counts the frames it
+// would broadcast.
+func applyToScratch(ctx context.Context, live *yjs.Doc, converter Converter, ops []convert.EditOp) (*yjs.Doc, int64, error) {
 	scratch := yjs.NewDoc(yjs.Options{})
 	whole, err := live.EncodeStateAsUpdate(nil)
 	if err != nil {
-		return 0, err
+		return nil, 0, err
 	}
 	if _, err := scratch.ApplyUpdate(whole); err != nil {
-		return 0, err
+		return nil, 0, err
 	}
 	scratch.AdoptClientID(live.ClientID())
 	var frameBytes int64
@@ -272,9 +306,9 @@ func PlannedFrameBytes(ctx context.Context, live *yjs.Doc, converter Converter, 
 	})
 	defer unsubscribe()
 	if err := converter.ApplyOps(ctx, scratch, ops); err != nil {
-		return 0, err
+		return nil, 0, err
 	}
-	return frameBytes, nil
+	return scratch, frameBytes, nil
 }
 
 // StateStatus is CollabStateStatus.

@@ -262,6 +262,14 @@ internal static partial class HistoryEndpoint
       return;
     }
 
+    // Exactly dryRun=1; any other value is today's restore.
+    if (context.Request.Query.TryGetValue("dryRun", out var dryRun) && dryRun is [ "1" ])
+    {
+      await PreviewAsync(context, admitted, point.Lineage, point.Sequence);
+
+      return;
+    }
+
     var header = EditEndpoint.IdempotencyKeyHeader;
 
     if (!context.Request.Headers.TryGetValue(header, out var keys) ||
@@ -321,6 +329,77 @@ internal static partial class HistoryEndpoint
 
     await EditEndpoint.WriteResultAsync(context, edit, admitted.Rooms.RetryAfter);
   }
+
+  /// <summary>
+  /// <c>POST .../restore?dryRun=1</c>: the restore planned and measured, nothing written, no key needed.
+  /// If-Match is checked as the restore would.
+  /// </summary>
+  private static async Task PreviewAsync(HttpContext context, Admitted admitted, string lineage, ulong sequence)
+  {
+    CollabEditPrecondition? expect = null;
+
+    if (context.Request.Headers.ContainsKey(HeaderNames.IfMatch) &&
+        !EditEndpoint.TryParseEntityTag(context.Request.Headers.IfMatch, out expect))
+    {
+      await SyncEndpoint.RefuseAsync(
+          context,
+          StatusCodes.Status400BadRequest,
+          "If-Match must be one quoted \"<lineage>:<sequence>\" tag\n");
+
+      return;
+    }
+
+    var result = await admitted.Rooms.PreviewRestoreAsync(admitted.Doc, lineage, sequence, expect, context.RequestAborted);
+
+    if (result.History != CollabHistoryStatus.Ready)
+    {
+      await RefuseAsync(context, admitted, result.History);
+
+      return;
+    }
+
+    if (result.Preview is not { } preview)
+    {
+      var edit = result.Edit ?? throw new UnreachableException("a preview that did not run carries its edit");
+
+      await EditEndpoint.WriteResultAsync(context, edit, admitted.Rooms.RetryAfter);
+
+      return;
+    }
+
+    var body = new JsonObject
+    {
+      ["wouldUndo"] = new JsonObject
+      {
+        ["blocks"] = new JsonArray([.. preview.Blocks.Select(change => (JsonNode)new JsonObject
+        {
+          ["id"] = change.Id,
+          ["type"] = change.Type,
+          ["kind"] = KindName(change.Kind),
+        })]),
+        ["page"] = new JsonArray([.. preview.Page.Select(key => (JsonNode)key)]),
+      },
+      ["guards"] = new JsonArray([.. preview.Guards.Select(guard => (JsonNode)guard.ToJson())]),
+      ["fits"] = preview.FrameBytes <= preview.LimitBytes,
+      ["frameBytes"] = preview.FrameBytes,
+      ["limitBytes"] = preview.LimitBytes,
+      ["expectRevision"] = string.Create(
+          CultureInfo.InvariantCulture,
+          $"{preview.Head.Tag.Lineage}:{preview.Head.ServerSequence}"),
+    };
+
+    context.Response.StatusCode = StatusCodes.Status200OK;
+    context.Response.ContentType = "application/json";
+    await context.Response.WriteAsync(body.ToJsonString(), context.RequestAborted);
+  }
+
+  private static string KindName(CollabBlockChangeKind kind) => kind switch
+  {
+    CollabBlockChangeKind.Added => "added",
+    CollabBlockChangeKind.Removed => "removed",
+    CollabBlockChangeKind.Changed => "changed",
+    _ => "moved",
+  };
 
   /// <summary>Lists the guard kinds a restore confirms; a body <c>{"confirm":[...]}</c> adds to it.</summary>
   internal const string RestoreConfirmHeader = "X-Blok-Restore-Confirm";
@@ -546,13 +625,7 @@ internal static partial class HistoryEndpoint
         writer.WriteStartObject();
         writer.WriteString("id", change.Id);
         writer.WriteString("type", change.Type);
-        writer.WriteString("kind", change.Kind switch
-        {
-          CollabBlockChangeKind.Added => "added",
-          CollabBlockChangeKind.Removed => "removed",
-          CollabBlockChangeKind.Changed => "changed",
-          _ => "moved",
-        });
+        writer.WriteString("kind", KindName(change.Kind));
 
         if (change.Before is { } before)
         {

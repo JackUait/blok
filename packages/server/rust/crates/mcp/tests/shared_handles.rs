@@ -338,6 +338,25 @@ async fn a_store_that_fails_answers_source_unavailable() {
     );
 }
 
+// A record that does not parse (a newer Blok's, or a corrupt one) is not
+// a store outage: retrying would never help.
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn a_record_that_does_not_parse_answers_unknown_handle() {
+    let dir = temp_dir("unparsable");
+    let store_dir = dir.join("store");
+    let store =
+        blok_mcp::handle_store_files::FilesHandleStore::open(&store_dir.to_string_lossy()).unwrap();
+    let mcp = server(&options(&dir), Arc::new(store)).await;
+    let handle = open(&mcp).await;
+    for text in [r#"{"v":2}"#, "not json"] {
+        std::fs::write(store_dir.join(format!("{handle}.record.json")), text).unwrap();
+        let read = call(&mcp, "blok_read", json!({ "handle": handle })).await;
+        assert_eq!(read["error"]["code"], "UNKNOWN_HANDLE", "{read}");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 // The source already has the batch: the answer stands, and the record that
 // would save with an old version is dropped.
 #[tokio::test(flavor = "multi_thread")]
@@ -361,6 +380,36 @@ async fn a_record_that_cannot_be_saved_after_the_source_save_closes_the_handle()
     store.fail_save.store(false, Ordering::SeqCst);
     let gone = call(&p.a, "blok_read", json!({ "handle": handle })).await;
     assert_eq!(gone["error"]["code"], "UNKNOWN_HANDLE", "{gone}");
+}
+
+// A remove that fails still gives the lease back: the next call gets in at
+// once instead of waiting out the lease.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_failed_remove_still_releases_the_lease() {
+    let store = Arc::new(Counting::new(MemoryHandleStore::new()));
+    let p = pair("remove-fails", store.clone()).await;
+    let handle = open(&p.a).await;
+    store.fail_remove.store(true, Ordering::SeqCst);
+    let closed = call(&p.b, "blok_close", json!({ "handle": handle })).await;
+    assert_eq!(closed["error"]["code"], "SOURCE_UNAVAILABLE", "{closed}");
+    store.fail_save.store(true, Ordering::SeqCst);
+    let ran = call(
+        &p.b,
+        "blok_execute",
+        json!({ "handle": handle, "commands": insert("World") }),
+    )
+    .await;
+    assert_eq!(ran["ok"], true, "{ran}");
+    store.fail_save.store(false, Ordering::SeqCst);
+    store.fail_remove.store(false, Ordering::SeqCst);
+    let read = tokio::time::timeout(
+        Duration::from_secs(3),
+        call(&p.a, "blok_read", json!({ "handle": handle })),
+    )
+    .await
+    .expect("the lease was kept after the failed remove");
+    // The record still holds the document as it was before the batch.
+    assert_eq!(texts(&read), vec!["Hello"]);
 }
 
 // Steps whose revision is not the record's document's never undo onto it.
@@ -423,6 +472,7 @@ struct Counting {
     acquires: AtomicUsize,
     fail_acquire: std::sync::atomic::AtomicBool,
     fail_save: Arc<std::sync::atomic::AtomicBool>,
+    fail_remove: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl Counting {
@@ -432,6 +482,7 @@ impl Counting {
             acquires: AtomicUsize::new(0),
             fail_acquire: std::sync::atomic::AtomicBool::new(false),
             fail_save: Arc::default(),
+            fail_remove: Arc::default(),
         }
     }
 }
@@ -439,6 +490,7 @@ impl Counting {
 struct FailingSave {
     inner: Box<dyn HandleLease>,
     fail: Arc<std::sync::atomic::AtomicBool>,
+    fail_remove: Arc<std::sync::atomic::AtomicBool>,
     _held: Mutex<()>,
 }
 
@@ -456,6 +508,9 @@ impl HandleLease for FailingSave {
         self.inner.renew()
     }
     fn remove(&self) -> BoxFuture<'_, Result<(), StoreError>> {
+        if self.fail_remove.load(Ordering::SeqCst) {
+            return Box::pin(async { Err(StoreError("deadlock".to_owned())) });
+        }
         self.inner.remove()
     }
     fn release(&self) -> BoxFuture<'_, Result<(), StoreError>> {
@@ -486,12 +541,13 @@ impl HandleStore for Counting {
         if self.fail_acquire.load(Ordering::SeqCst) {
             return Box::pin(async { Err(StoreError("connection refused".to_owned())) });
         }
-        let fail = self.fail_save.clone();
+        let (fail, fail_remove) = (self.fail_save.clone(), self.fail_remove.clone());
         Box::pin(async move {
             Ok(match self.inner.acquire(handle, idle, timeout).await? {
                 Acquired::Lease(inner) => Acquired::Lease(Box::new(FailingSave {
                     inner,
                     fail,
+                    fail_remove,
                     _held: Mutex::new(()),
                 })),
                 other => other,

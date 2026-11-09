@@ -30,7 +30,11 @@
 //! Expiry: a handle expires when it is not leased and its last release is
 //! older than the idle time. acquire and count delete an expired handle under
 //! its lease; sweep deletes every one, and crash leftovers older than the
-//! stale time: temp and `.break` files, records and leases without meta.
+//! stale time: temp and `.break` files, records and leases without meta, and
+//! principal locks.
+//!
+//! A record that does not parse (a newer Blok's, or a corrupt one) is
+//! unknown to acquire, and its files are left until it expires.
 //!
 //! Privacy: records hold document text, undo steps and principals. On
 //! Windows the store refuses to start: these POSIX checks cannot be made
@@ -507,12 +511,17 @@ impl HandleLease for FilesLease {
                     return Ok(());
                 }
                 let meta_path = store.meta_path(&handle);
-                if let Some(meta) = parse_meta(read_text(&meta_path)?) {
-                    let text =
-                        json!({ "v": 1, "principal": meta.principal, "lastUsedMs": now_ms() });
-                    store.write_atomic(&meta_path, &text.to_string())?;
-                }
-                remove(&lock)
+                let touched = read_text(&meta_path).and_then(|text| match parse_meta(text) {
+                    Some(meta) => {
+                        let text =
+                            json!({ "v": 1, "principal": meta.principal, "lastUsedMs": now_ms() });
+                        store.write_atomic(&meta_path, &text.to_string())
+                    }
+                    None => Ok(()),
+                });
+                // The lease goes even when the meta could not be touched.
+                remove(&lock)?;
+                touched
             })
             .await
         })
@@ -615,13 +624,13 @@ impl HandleStore for FilesHandleStore {
                     FilesHandleStore::drop_lock(&lock, &token_now)?;
                     return Ok(None);
                 }
-                match HandleRecord::from_json(&text) {
-                    Ok(record) => Ok(Some(record)),
-                    Err(err) => {
-                        FilesHandleStore::drop_lock(&lock, &token_now)?;
-                        Err(err)
-                    }
+                // A newer Blok's record, or a corrupt one: unknown here, and
+                // left for its writer; it expires as any other.
+                let record = HandleRecord::from_json(&text).ok();
+                if record.is_none() {
+                    FilesHandleStore::drop_lock(&lock, &token_now)?;
                 }
+                Ok(record)
             })
             .await?;
             let Some(record) = read else {
@@ -653,6 +662,15 @@ impl HandleStore for FilesHandleStore {
                 for entry in std::fs::read_dir(&*store.dir)? {
                     let entry = entry?;
                     let name = entry.file_name().to_string_lossy().into_owned();
+                    // A try_add that died: broken as try_add would, never one taken since.
+                    if name.starts_with("principal-") && name.ends_with(".lock") {
+                        let path = entry.path();
+                        if store.fresh(&path) == Some(false) {
+                            let seen = read_text(&path)?;
+                            store.break_stale(&path, seen.as_deref())?;
+                        }
+                        continue;
+                    }
                     let orphan = [RECORD, ".lease"].iter().any(|suffix| {
                         name.strip_suffix(suffix).is_some_and(|handle| {
                             is_store_handle(handle) && !store.meta_path(handle).exists()

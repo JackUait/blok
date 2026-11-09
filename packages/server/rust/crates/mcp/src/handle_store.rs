@@ -69,6 +69,8 @@ impl HandleRecord {
         serde_json::to_string(self).unwrap_or_default()
     }
 
+    /// A store answers `Acquired::Unknown` for a record this fails on (a
+    /// newer Blok's, or a corrupt one), not a `StoreError`: retrying never helps.
     pub fn from_json(text: &str) -> Result<HandleRecord, StoreError> {
         serde_json::from_str(text).map_err(|err| StoreError(format!("a bad handle record: {err}")))
     }
@@ -78,6 +80,10 @@ impl HandleRecord {
 /// while a call runs, and a holder that stops renewing can lose it. Every
 /// operation is checked against the lease: once lost, `save`, `renew` and
 /// `remove` fail and `release` does nothing.
+///
+/// `renew` runs while `save` or `remove` is in flight on the same lease, so
+/// a lease that wraps one connection or transaction must allow that.
+/// `release` comes last, after the others are done, also when `remove` failed.
 pub trait HandleLease: Send + Sync {
     fn record(&self) -> &HandleRecord;
     /// Replaces the record. Blok calls it after the source save.
@@ -92,7 +98,7 @@ pub trait HandleLease: Send + Sync {
 
 pub enum Acquired {
     Lease(Box<dyn HandleLease>),
-    /// No such handle, or it expired.
+    /// No such handle, it expired, or its record does not parse.
     Unknown,
     /// Still leased when the wait ended.
     Busy,

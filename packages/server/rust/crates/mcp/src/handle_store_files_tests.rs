@@ -386,3 +386,65 @@ async fn windows_and_a_directory_another_user_owns_are_refused() {
     assert!(refused.contains("owned by this user"), "{refused}");
     let _ = std::fs::remove_dir_all(&base);
 }
+
+// A record from a newer Blok, or a corrupt one, is unknown here: its files
+// stay for the server that wrote it, and the lease is given back.
+#[tokio::test]
+async fn a_record_that_does_not_parse_is_unknown_and_keeps_its_files() {
+    let base = root("unparsable");
+    let dir = base.join("hs");
+    let store = FilesHandleStore::open(&dir.to_string_lossy()).unwrap();
+    store
+        .try_add("h".into(), record("a"), 8, IDLE)
+        .await
+        .unwrap();
+    for text in [r#"{"v":2}"#, "not json"] {
+        std::fs::write(dir.join("h.record.json"), text).unwrap();
+        assert!(matches!(
+            store
+                .acquire("h".into(), IDLE, Duration::ZERO)
+                .await
+                .unwrap(),
+            Acquired::Unknown
+        ));
+        assert_eq!(names(&dir), vec!["h.meta.json", "h.record.json"]);
+    }
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+// The lease file goes even when the meta file cannot be rewritten, so the
+// next call does not wait out the stale time.
+#[tokio::test]
+async fn release_drops_the_lease_when_the_meta_cannot_be_written() {
+    let base = root("release-meta");
+    let dir = base.join("hs");
+    let store = FilesHandleStore::open(&dir.to_string_lossy()).unwrap();
+    store
+        .try_add("h".into(), record("a"), 8, IDLE)
+        .await
+        .unwrap();
+    let held = lease(&store, "h").await;
+    std::fs::remove_file(dir.join("h.meta.json")).unwrap();
+    std::fs::create_dir(dir.join("h.meta.json")).unwrap();
+    assert!(held.release().await.is_err());
+    assert!(!dir.join("h.lease").exists(), "{:?}", names(&dir));
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+// A try_add that died leaves its principal lock; sweep breaks an old one only.
+#[tokio::test]
+async fn sweep_breaks_a_stale_principal_lock_only() {
+    let base = root("principal-lock");
+    let dir = base.join("hs");
+    let store = FilesHandleStore::open(&dir.to_string_lossy())
+        .unwrap()
+        .with_lease_stale(Duration::from_millis(100));
+    let old = format!("principal-{}.lock", "0".repeat(64));
+    let new = format!("principal-{}.lock", "1".repeat(64));
+    std::fs::write(dir.join(&old), "token").unwrap();
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    std::fs::write(dir.join(&new), "token").unwrap();
+    store.sweep(IDLE).await.unwrap();
+    assert_eq!(names(&dir), vec![new]);
+    let _ = std::fs::remove_dir_all(&base);
+}

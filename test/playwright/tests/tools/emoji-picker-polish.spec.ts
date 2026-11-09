@@ -123,36 +123,6 @@ test('keeps search, empty results, and restored results the same size within nar
   }
 });
 
-test('curls only inner glyphs at both clipped edges and leaves the center and hit targets stable', async ({ page }) => {
-  const picker = await openCalloutPicker(page);
-  const emoji = picker.locator('[data-emoji-native]').nth(80);
-
-  await scrollEmojiTo(emoji, 'center');
-  await expect.poll(() => readGlyph(emoji)).toMatchObject({ transformed: false, buttonTransformed: false, clipped: false });
-  const center = await readGlyph(emoji);
-
-  await scrollEmojiTo(emoji, 'top');
-  await expect.poll(() => readGlyph(emoji)).toMatchObject({ transformed: true, buttonTransformed: false, clipped: true });
-  const top = await readGlyph(emoji);
-
-  await scrollEmojiTo(emoji, 'bottom');
-  await expect.poll(() => readGlyph(emoji)).toMatchObject({ transformed: true, buttonTransformed: false, clipped: true });
-  const bottom = await readGlyph(emoji);
-
-  expect(top?.tilt).toBeGreaterThan(30);
-  expect(top?.tilt).toBeLessThan(42);
-  expect(bottom?.tilt).toBeGreaterThan(30);
-  expect(bottom?.tilt).toBeLessThan(42);
-  expect(bottom?.transform).not.toBe(top?.transform);
-  expect(top?.width).toBe(center?.width);
-  expect(top?.height).toBe(center?.height);
-  expect(bottom?.width).toBe(center?.width);
-  expect(bottom?.height).toBe(center?.height);
-
-  await scrollEmojiTo(emoji, 'center');
-  await expect.poll(() => readGlyph(emoji)).toMatchObject({ transformed: false, buttonTransformed: false, clipped: false });
-});
-
 test('scrolls emoji directly beneath the category chips without a blank stripe', async ({ page }) => {
   const picker = await openCalloutPicker(page);
   const emoji = picker.locator('[data-emoji-native]').nth(80);
@@ -188,7 +158,7 @@ test('keeps emoji hit targets still when hovering and pressing the glyph', async
   await page.mouse.up();
 });
 
-test('reduced motion disables edge curl and opening and empty-state animations', async ({ page }) => {
+test('reduced motion keeps scrolled emoji still and disables opening and empty-state animations', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const picker = await openCalloutPicker(page);
   const emoji = picker.locator('[data-emoji-native]').nth(80);
@@ -419,7 +389,7 @@ test('announces skin-tone expansion, restores focus, and removes the icon with t
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(tones).toBeVisible();
   await tones.getByRole('button', { name: 'Skin tone 4', exact: true }).click();
-  await expect(toggle).toHaveText('✋🏽');
+  await expect(toggle).toHaveAttribute('data-emoji-skin-current', '3');
   await expect(picker.locator('[data-emoji-native="👉"]')).toHaveText('👉🏽');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(toggle).toBeFocused();

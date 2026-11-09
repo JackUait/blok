@@ -100,14 +100,12 @@ describe('emoji picker', () => {
     expect(radius(css, '[data-emoji-picker-body]::-webkit-scrollbar-thumb')).toBe('var(--blok-radius-control-sm)');
   });
 
-  it('skin tray is a surface and nests its 36px tones inside its 1px border + 5px padding', () => {
-    const tray = `${scope} [data-emoji-picker-skin-tone]`;
+  it('skin dial is no surface: each tone takes its shape from its segment clip, not a radius', () => {
+    const dial = `${scope} [data-emoji-picker-skin-tone]`;
 
-    expect(radius(css, tray)).toBe('var(--blok-radius-surface)');
-    expect(prop(css, tray, '--blok-radius-inner'))
-      .toBe('max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1-25)))');
-    expect(radius(css, `${tray} button`)).toBe(inner('control-lg'));
-    expect(radius(css, `${scope} [data-emoji-skin-indicator]`)).toBe(inner('control-lg'));
+    expect(radius(css, dial)).toBeNull();
+    expect(prop(css, `${dial} button`, 'clip-path')).toBe('var(--emoji-tone-shape)');
+    expect(radius(css, `${dial} button`)).toBeNull();
   });
 
   it('category nav nests inside the card border + its 4px block padding', () => {

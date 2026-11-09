@@ -350,7 +350,7 @@ describe('EmojiPicker', () => {
       expect(options[1].getAttribute('aria-pressed')).toBe('true');
     });
 
-    it('renders the toggle outside the search wrapper, showing the default hand', async () => {
+    it('renders the toggle outside the search wrapper, showing the default tone', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
       const el = picker.getElement();
@@ -361,10 +361,10 @@ describe('EmojiPicker', () => {
 
       expect(toggle).not.toBeNull();
       expect(searchWrapper.contains(toggle)).toBe(false);
-      expect(toggle.textContent).toBe('✋');
+      expect(toggle).toHaveAttribute('data-emoji-skin-current', '0');
     });
 
-    it('opens a popover with 6 hand variants when toggle is clicked', async () => {
+    it('opens a dial of 6 tones when toggle is clicked', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
       container.appendChild(picker.getElement());
@@ -398,7 +398,7 @@ describe('EmojiPicker', () => {
       // Select second skin tone (light)
       options[1].click();
 
-      expect(toggle.textContent).toBe('✋🏻');
+      expect(toggle).toHaveAttribute('data-emoji-skin-current', '1');
       expect(popover.hidden).toBe(true);
 
       const emojiButtons = Array.from(picker.getElement().querySelectorAll('[data-emoji-native]'));
@@ -416,16 +416,14 @@ describe('EmojiPicker', () => {
 
       const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
 
-      // No active state initially
-      expect(toggle.classList.contains('bg-neutral-100')).toBe(false);
+      // The active fill is CSS keyed off aria-expanded.
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
-      // Open popover — toggle gets active background
       toggle.click();
-      expect(toggle.classList.contains('bg-neutral-100')).toBe(true);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
-      // Close popover — active state removed
       toggle.click();
-      expect(toggle.classList.contains('bg-neutral-100')).toBe(false);
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
     });
 
     describe('localStorage persistence', () => {
@@ -465,7 +463,7 @@ describe('EmojiPicker', () => {
 
         const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
 
-        expect(toggle.textContent).toBe('✋🏼');
+        expect(toggle).toHaveAttribute('data-emoji-skin-current', '2');
       });
 
       it('restores skin tone from localStorage when picker opens', async () => {
@@ -479,7 +477,7 @@ describe('EmojiPicker', () => {
         // Toggle should show medium-light hand
         const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
 
-        expect(toggle.textContent).toBe('✋🏼');
+        expect(toggle).toHaveAttribute('data-emoji-skin-current', '2');
 
         // Thumbs up should have medium-light skin tone applied
         const emojiButtons = Array.from(picker.getElement().querySelectorAll('[data-emoji-native]'));
@@ -496,7 +494,7 @@ describe('EmojiPicker', () => {
 
         const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
 
-        expect(toggle.textContent).toBe('✋');
+        expect(toggle).toHaveAttribute('data-emoji-skin-current', '0');
       });
 
       it('defaults to neutral (0) when localStorage contains an invalid value', async () => {
@@ -509,7 +507,7 @@ describe('EmojiPicker', () => {
 
         const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
 
-        expect(toggle.textContent).toBe('✋');
+        expect(toggle).toHaveAttribute('data-emoji-skin-current', '0');
       });
 
       it('handles localStorage being unavailable without crashing', async () => {
@@ -528,7 +526,7 @@ describe('EmojiPicker', () => {
           // Should default to neutral without throwing
           const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
 
-          expect(toggle.textContent).toBe('✋');
+          expect(toggle).toHaveAttribute('data-emoji-skin-current', '0');
 
           // Selecting a skin tone should not throw either
           toggle.click();

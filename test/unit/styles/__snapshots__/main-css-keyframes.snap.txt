@@ -267,11 +267,6 @@
   to { transform: translateY(0) scale(1) }
 }
 
-@keyframes blok-emoji-tones-in {
-  from { opacity: 0; transform: translateY(-5px) scale(0.82, 0.94) }
-  to { opacity: 1; transform: translateY(0) scale(1) }
-}
-
 @keyframes blok-file-bar-sheen {
   from { transform: translateX(-100%) }
   to { transform: translateX(100%) }

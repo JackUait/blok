@@ -75,22 +75,10 @@ const scrollTo = async (item: Locator, edge: 'center' | 'top' | 'bottom'): Promi
     const offset = { center: viewport.height / 2, top: 6, bottom: viewport.height - 6 }[position];
 
     body.scrollTop += rect.top + rect.height / 2 - viewport.top - offset;
-    // The scroll handler schedules its reel update on the next frame.
+    // The scroll handler updates the category nav on the next frame.
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   }, edge);
 };
-
-const readCurl = async (title: Locator) => title.evaluate((element) => {
-  const transformed = [element, ...element.querySelectorAll('*')]
-    .map((node) => new DOMMatrixReadOnly(getComputedStyle(node).transform))
-    .find((matrix) => Math.abs(matrix.m23) > 0.001);
-
-  return {
-    tilt: transformed?.m23 ?? 0,
-    width: element instanceof HTMLElement ? element.offsetWidth : 0,
-    height: element instanceof HTMLElement ? element.offsetHeight : 0,
-  };
-});
 
 const selectToneAndPause = async (tone: Locator) => tone.evaluate(async (button) => {
   const root = button.closest('[data-blok-emoji-picker]');
@@ -114,9 +102,14 @@ const selectToneAndPause = async (tone: Locator) => tone.evaluate(async (button)
     }];
   }));
 
-  // Capture real browser animations before a fast transition can finish.
+  // The grid takes the tone when the dial's circle lands; capture its swaps as they start.
+  const waveText = wave.textContent;
+  const started = performance.now();
+
   button.click();
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  do {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  } while (wave.textContent === waveText && performance.now() - started < 1500);
   const animations = root.getAnimations({ subtree: true }).filter((animation) => animation.playState !== 'finished');
 
   animations.forEach((animation) => animation.pause());
@@ -209,7 +202,7 @@ test('animates tone selection and visible glyph swaps without moving or replacin
   await expect(wave.locator('[data-emoji-glyph]')).toHaveText('👋🏽');
   await expect(picker.locator('[data-emoji-native="👉"] [data-emoji-glyph]')).toHaveText('👉🏽');
   await expect(picker.locator('[data-emoji-native="😀"] [data-emoji-glyph]')).toHaveText('😀');
-  await expect(picker.locator('[data-emoji-picker-skin-toggle]')).toHaveText('✋🏽');
+  await expect(picker.locator('[data-emoji-picker-skin-toggle]')).toHaveAttribute('data-emoji-skin-current', '3');
   await expect(tray).toBeHidden();
   await wave.click();
   await expect(page.getByTestId('callout-emoji-btn')).toHaveText('👋🏽');
@@ -271,28 +264,6 @@ test('keeps the colon tone control beside the first section title at 320px in da
   await wave.click();
   await expect(page.locator('[data-blok-component="paragraph"]')).toHaveText('👋🏽');
   await expect(picker).toBeHidden();
-});
-
-test('curls section titles at both scroll edges without changing their layout size', async ({ page }) => {
-  const picker = await openPicker(page);
-  const title = picker.locator('[data-emoji-section-title]').nth(2);
-
-  await scrollTo(title, 'center');
-  await expect.poll(async () => (await readCurl(title)).tilt).toBe(0);
-  const center = await readCurl(title);
-
-  await scrollTo(title, 'top');
-  await expect.poll(async () => Math.abs((await readCurl(title)).tilt)).toBeGreaterThan(0.05);
-  const top = await readCurl(title);
-
-  await scrollTo(title, 'bottom');
-  await expect.poll(async () => (await readCurl(title)).tilt * top.tilt).toBeLessThan(0);
-  const bottom = await readCurl(title);
-
-  expect({ width: top.width, height: top.height }).toEqual({ width: center.width, height: center.height });
-  expect({ width: bottom.width, height: bottom.height }).toEqual({ width: center.width, height: center.height });
-  await scrollTo(title, 'center');
-  await expect.poll(async () => (await readCurl(title)).tilt).toBe(0);
 });
 
 test('keeps decorative Callout empty results and the clear action usable at 320px in dark mode', async ({ page }) => {
@@ -361,12 +332,6 @@ test('reduced motion changes tone and clears empty results without running decor
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const picker = await openPicker(page);
   const wave = picker.locator('[data-emoji-native="👋"]');
-  const title = picker.locator('[data-emoji-section-title]').nth(2);
-
-  for (const edge of ['top', 'bottom'] as const) {
-    await scrollTo(title, edge);
-    await expect.poll(async () => (await readCurl(title)).tilt).toBe(0);
-  }
   await scrollTo(wave, 'center');
   await picker.locator('[data-emoji-picker-skin-toggle]').click();
   await expectNoMotion(picker.locator('[data-emoji-picker-skin-tone]'));

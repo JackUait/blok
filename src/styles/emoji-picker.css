@@ -1,3 +1,10 @@
+/* Registered so the stage glow can crossfade from one emoji's colour to the next. */
+@property --emoji-stage-wash {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+
 /* Body-mounted controls do not inherit the editor's element resets. */
 :where([data-blok-emoji-picker]) :where(button, input) {
   appearance: none;
@@ -84,7 +91,8 @@
 }
 
 [data-blok-emoji-picker] [data-emoji-picker-skin-toggle] {
-  font-size: 19px;
+  display: grid;
+  place-items: center;
 }
 
 [data-blok-emoji-picker] :is([data-emoji-picker-random], [data-emoji-picker-remove]) > svg {
@@ -121,81 +129,93 @@
   background: var(--blok-item-hover-bg);
 }
 
-/* Anchor the tray to the header, so all six tones fit on narrow screens. */
+/* The toggle shows the current tone as a dot. */
+[data-blok-emoji-picker] [data-emoji-skin-dot] {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--emoji-skin-dot, #ffcc4d);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-text-primary) 14%, transparent);
+}
+
+/* The dial hangs centred under the toggle. Its 140×88 box and the ring
+   centre (70, 16) must match SKIN_DIAL in emoji-picker/index.ts. */
 [data-blok-emoji-picker] [data-emoji-picker-header] > div:has(> [data-emoji-picker-skin-toggle]) {
-  position: static;
+  position: relative;
 }
 
 [data-blok-emoji-picker] [data-emoji-picker-skin-tone] {
-  top: calc(100% - 4px);
-  inset-inline-end: 12px;
-  width: min(236px, calc(100% - 24px));
-  box-sizing: border-box;
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  padding: var(--blok-space-1-25);
-  gap: 0;
-  border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-surface);
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1-25)));
-  background: var(--blok-popover-bg);
-  box-shadow: var(--blok-popover-box-shadow);
-  transform-origin: right top;
-  animation: blok-emoji-tones-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* The picker root carries `dir` (syncPortalDirection): the tray grows from its end corner. */
-[data-blok-emoji-picker][dir="rtl"] [data-emoji-picker-skin-tone] {
-  transform-origin: left top;
-}
-
-[data-blok-emoji-picker] [data-emoji-picker-skin-tone] button {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  min-width: 0;
-  height: 36px;
-  border: 1px solid transparent;
-  border-radius: var(--blok-radius-inner, var(--blok-radius-control-lg));
-  font-size: 22px;
-  box-shadow: none;
-  transition: transform 140ms ease-out;
-}
-
-[data-blok-emoji-picker] [data-emoji-picker-skin-tone] button[aria-pressed='true'] {
-  background: transparent;
-}
-
-[data-blok-emoji-picker] [data-emoji-skin-indicator] {
   position: absolute;
-  top: 5px;
-  inset-inline-start: 5px;
-  width: calc((100% - 10px) / 6);
-  height: 36px;
-  box-sizing: border-box;
-  border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-inner, var(--blok-radius-control-lg));
-  background: var(--blok-item-hover-bg);
-  transform: translateX(calc(var(--emoji-skin-index, 0) * 100%));
-  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
+  z-index: 30;
+  --emoji-skin-dial: 140px;
+  top: 100%;
+  left: 50%;
+  width: var(--emoji-skin-dial);
+  height: 88px;
+  margin: 0 0 0 calc(var(--emoji-skin-dial) / -2);
+  padding: 0;
+  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--blok-text-primary) 18%, transparent));
 }
 
-/* Tones run right to left in RTL, so the highlight steps leftward. */
-[data-blok-emoji-picker][dir="rtl"] [data-emoji-skin-indicator] {
-  transform: translateX(calc(var(--emoji-skin-index, 0) * -100%));
+/* The ring opens from the dot's left in LTR and from its right in RTL. */
+[data-blok-emoji-picker][dir="rtl"] [data-emoji-picker-skin-tone] {
+  transform: scaleX(-1);
+}
+
+/* Each tone is a whole-box button clipped to its segment, so only the segment takes clicks. */
+[data-blok-emoji-picker] [data-emoji-picker-skin-tone] button {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--emoji-tone-color);
+  clip-path: var(--emoji-tone-shape);
+  transition: clip-path 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-blok-emoji-picker] [data-emoji-picker-skin-tone] button:focus-visible {
+  outline: none;
+}
+
+@media (hover: hover) {
+  [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button:hover {
+    clip-path: var(--emoji-tone-shape-hover);
+  }
+}
+
+/* The chosen tone reaches a little further out instead of carrying a mark. */
+[data-blok-emoji-picker] [data-emoji-picker-skin-tone] button[aria-pressed='true'] {
+  clip-path: var(--emoji-tone-shape-on);
+}
+
+[data-blok-emoji-picker] [data-emoji-skin-focus] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--blok-focus-ring);
+  stroke-width: 2;
+}
+
+/* The landing circle reaches up from the dial to the toggle dot. */
+[data-blok-emoji-picker] [data-emoji-skin-blob] {
+  position: absolute;
+  top: -60px;
+  left: 0;
+  width: var(--emoji-skin-dial);
+  height: calc(100% + 60px);
+  background: var(--emoji-tone-color);
+  pointer-events: none;
 }
 
 [data-blok-emoji-picker] [data-emoji-skin-glyph] {
   display: block;
   transform-origin: center;
   backface-visibility: hidden;
-}
-
-[data-blok-emoji-picker] [data-emoji-picker-skin-tone] [data-emoji-skin-glyph] {
-  animation: blok-emoji-empty-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: calc(var(--emoji-tone-order, 0) * 20ms);
 }
 
 [data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-picker-header] {
@@ -214,12 +234,6 @@
 
 [data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-picker-skin-toggle] {
   background: var(--blok-icon-bg);
-}
-
-[data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-picker-skin-tone] {
-  top: calc(100% + 2px);
-  inset-inline-end: 0;
-  width: min(236px, 100%);
 }
 
 [data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-section-title]:has([data-emoji-picker-header]) {
@@ -603,6 +617,7 @@
   overflow: hidden;
   border-top: 1px solid var(--blok-popover-border);
   --emoji-stage-wash: transparent;
+  transition: --emoji-stage-wash 380ms ease-out;
 }
 
 /* The emoji's own colour, sampled in script, glows behind it. */

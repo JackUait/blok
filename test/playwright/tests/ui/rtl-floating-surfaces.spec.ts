@@ -38,13 +38,13 @@ const settle = async (target: Locator): Promise<void> => {
   });
 };
 
-const box = async (target: Locator): Promise<{ left: number; right: number }> => {
+const box = async (target: Locator): Promise<{ left: number; right: number; top: number; bottom: number }> => {
   await settle(target);
 
   return target.evaluate((element) => {
     const rect = element.getBoundingClientRect();
 
-    return { left: rect.left, right: rect.right };
+    return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
   });
 };
 
@@ -232,21 +232,21 @@ for (const direction of DIRECTIONS) {
       expect(Math.abs((startOf(direction, pickerBox) - startOf(direction, triggerBox)) * outward - 8)).toBeLessThanOrEqual(1);
     });
 
-    test('the skin-tone tray hangs from the picker end edge', async ({ page }) => {
+    test('the skin-tone dial hangs centred under its toggle', async ({ page }) => {
       await createBlok(page, direction, [{ type: 'callout', data: { emoji: '💡', color: 'default' } }]);
       await page.getByTestId('callout-emoji-btn').click();
       const picker = page.getByRole('dialog', { name: 'Edit icon' });
+      const toggle = picker.getByRole('button', { name: 'Skin tone', exact: true });
 
       await expect(picker).toBeVisible();
-      await picker.getByRole('button', { name: 'Skin tone', exact: true }).click();
-      const tray = picker.getByRole('group', { name: 'Skin tone', exact: true });
+      await toggle.click();
+      const dial = picker.getByRole('group', { name: 'Skin tone', exact: true });
 
-      await expect(tray).toBeVisible();
-      const [pickerBox, trayBox] = await Promise.all([box(picker), box(tray)]);
-      const fromEnd = direction === 'rtl' ? trayBox.left - pickerBox.left : pickerBox.right - trayBox.right;
+      await expect(dial).toBeVisible();
+      const [toggleBox, dialBox] = await Promise.all([box(toggle), box(dial)]);
 
-      // 12px inset from the header's end, plus the picker's 1px border.
-      expect(Math.abs(fromEnd - 13)).toBeLessThanOrEqual(1);
+      expect(Math.abs((dialBox.left + dialBox.right) / 2 - (toggleBox.left + toggleBox.right) / 2)).toBeLessThanOrEqual(1);
+      expect(Math.abs(dialBox.top - toggleBox.bottom)).toBeLessThanOrEqual(1);
     });
 
     test('the link field card lines up with the link button start edge', async ({ page }) => {

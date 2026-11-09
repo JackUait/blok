@@ -154,6 +154,23 @@ describe('EmojiPicker Spotlight + Showcase layout', () => {
     expect(stageText().glyph).toBe('😀');
   });
 
+  it('springs a new emoji onto the stage from small and tilted, and swaps the name in place', async () => {
+    const animate = vi.fn(() => ({ finished: Promise.resolve(), cancel: vi.fn() }));
+
+    Element.prototype.animate = animate as unknown as Element['animate'];
+    await picker.open(anchor, undefined, { onSelect, onRemove: vi.fn(), current: '😀' });
+    emojiButton('👋').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+
+    const animated = animate.mock.contexts as Element[];
+
+    expect(animated).toEqual([query('[data-emoji-picker-stage-glyph]')]);
+    expect(animate).toHaveBeenCalledWith(
+      [{ transform: 'scale(.6) rotate(-10deg)', opacity: 0.4 }, { transform: 'none', opacity: 1 }],
+      expect.objectContaining({ duration: 360 })
+    );
+    Reflect.deleteProperty(Element.prototype, 'animate');
+  });
+
   it('shows the focused emoji on the stage for keyboard users', async () => {
     await picker.open(anchor, undefined, { onSelect, onRemove: vi.fn(), current: '😀' });
 

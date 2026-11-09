@@ -189,18 +189,15 @@ describe('EmojiPicker polish', () => {
     expect(picker.isOpen()).toBe(true);
   });
 
-  it('rolls edge glyphs visibly before clipping, leaving hit targets and central emoji still', async () => {
+  it('scrolls emoji flat to the clipped edges, with no curl, tilt or fade', async () => {
     await picker.open(anchor);
     const body = get('[data-emoji-picker-body]');
-    const buttons = Array.from(body.querySelectorAll<HTMLElement>('[data-emoji-native]'));
-    const glyphs = Array.from(body.querySelectorAll<HTMLElement>('[data-emoji-native] [data-emoji-glyph]'));
+    const glyphs = Array.from(body.querySelectorAll<HTMLElement>('[data-emoji-native] [data-emoji-glyph], [data-emoji-section-title] > span'));
 
     Object.defineProperties(body, {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 160 },
     });
-    // The reel only reads inside sections whose box meets the view, and jsdom
-    // gives every box a zero height. The body's rect sits at 0.
     const firstSection = get('[data-emoji-section]');
 
     Object.defineProperty(firstSection, 'offsetHeight', { configurable: true, value: 160 });
@@ -212,34 +209,14 @@ describe('EmojiPicker polish', () => {
         value: () => new DOMRect(0, index * 40 - body.scrollTop, 0, 40),
       });
     });
-    body.scrollTop = 20;
-    body.dispatchEvent(new Event('scroll'));
-    frame();
 
-    const topGlyph = get('[data-emoji-native="😀"] [data-emoji-glyph]');
-    const middleGlyph = get('[data-emoji-native="👋"] [data-emoji-glyph]');
+    for (const top of [20, 10, 0, 60]) {
+      body.scrollTop = top;
+      body.dispatchEvent(new Event('scroll'));
+      frame();
 
-    expect(topGlyph.style.transform).toContain('rotateX(50.00deg) scaleX(0.910) scaleY(0.750)');
-    expect(topGlyph.style.opacity).toBe('0.68');
-    expect(middleGlyph.style.transform).toBe('');
-    expect(buttons[0]?.style.transform).toBe('');
-
-    body.scrollTop = 10;
-    body.dispatchEvent(new Event('scroll'));
-    frame();
-    expect(topGlyph.style.transform).toContain('rotateX(37.50deg)');
-
-    body.scrollTop = 0;
-    body.dispatchEvent(new Event('scroll'));
-    frame();
-    expect(topGlyph.style.transform).toBe('');
-    expect(get('[data-emoji-native="😄"] [data-emoji-glyph]').style.transform).toContain('rotateX(-50.00deg)');
-
-    reducedMotion = true;
-    body.dispatchEvent(new Event('scroll'));
-    frame();
-    expect(topGlyph.style.transform).toBe('');
-    expect(get('[data-emoji-native="😄"] [data-emoji-glyph]').style.transform).toBe('');
+      expect(glyphs.map(glyph => glyph.style.transform + glyph.style.opacity)).toEqual(glyphs.map(() => ''));
+    }
   });
 
   it('marks the active category and skips smooth category scrolling with reduced motion', async () => {

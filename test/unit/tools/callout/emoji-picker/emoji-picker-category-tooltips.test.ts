@@ -26,7 +26,8 @@ function requireElement<T extends Element>(root: ParentNode, selector: string): 
   return element;
 }
 
-describe('EmojiPicker category tooltips', () => {
+// The popover picker names its chips in text; only the inline ":" picker keeps icon-only categories with hints.
+describe('EmojiPicker category tooltips (inline picker)', () => {
   let picker: EmojiPicker;
   let container: HTMLElement;
   let anchor: HTMLButtonElement;
@@ -60,6 +61,8 @@ describe('EmojiPicker category tooltips', () => {
       onRemove: vi.fn(),
       i18n: { t: (key: string) => `[translated:${key}]` },
       locale: 'en',
+      inline: true,
+      curated: true,
     });
     container.append(anchor, picker.getElement());
     document.body.appendChild(container);
@@ -78,9 +81,9 @@ describe('EmojiPicker category tooltips', () => {
   });
 
   it.each([
-    ['callout', 'IconEmojiSparkles'], ['people', 'IconEmojiWink'], ['nature', 'IconEmojiSprout'],
-    ['foods', 'IconEmojiBowl'], ['activity', 'IconEmojiGamepad'], ['places', 'IconEmojiMap'],
-    ['objects', 'IconEmojiLightbulb'], ['symbols', 'IconEmojiHearts'], ['flags', 'IconEmojiFlag'],
+    ['callout', 'IconEmojiNavSparkles'], ['people', 'IconEmojiNavSmile'], ['nature', 'IconEmojiNavCat'],
+    ['foods', 'IconEmojiNavBurger'], ['activity', 'IconEmojiNavBall'], ['places', 'IconEmojiNavCar'],
+    ['objects', 'IconEmojiNavBulb'], ['symbols', 'IconEmojiNavHeart'], ['flags', 'IconEmojiNavFlag'],
   ])('pairs the %s category with its distinct pictogram', (id, name) => {
     const markup = Object.entries(icons).find(([key]) => key === name)?.[1];
 

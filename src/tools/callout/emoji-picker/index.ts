@@ -6,13 +6,15 @@ import { loadEmojiLocale, type EmojiLocaleData } from '../../../components/utils
 import { prefetchEmojiPickerData } from '../../../components/utils/emoji/emoji-prefetch';
 import { hide as hideTooltip, onHover } from '../../../components/utils/tooltip';
 import { DATA_ATTR } from '../../../components/constants';
+import { emojiColor } from '../../../components/utils/emoji/emoji-color';
 import { getElementDirection, logicalArrow } from '../../../components/utils/direction';
 import { syncPortalDirection } from '../../../components/utils/portal-direction';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { createPositionTracker, type PositionTracker } from '../../../components/utils/popover/anchored-position';
 import {
   REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, EMOJI_SEARCH_RESULTS_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY,
-  EDIT_ICON_KEY,
+  EDIT_ICON_KEY, EMOJI_CHIP_PEOPLE_KEY, EMOJI_CHIP_NATURE_KEY, EMOJI_CHIP_FOOD_KEY, EMOJI_CHIP_TRAVEL_KEY,
+  RECENT_EMOJIS_KEY, CURRENT_ICON_KEY,
   EMOJI_CATEGORY_PEOPLE_KEY, EMOJI_CATEGORY_NATURE_KEY, EMOJI_CATEGORY_FOOD_KEY, EMOJI_CATEGORY_ACTIVITY_KEY,
   EMOJI_CATEGORY_TRAVEL_KEY, EMOJI_CATEGORY_OBJECTS_KEY, EMOJI_CATEGORY_SYMBOLS_KEY, EMOJI_CATEGORY_FLAGS_KEY,
 } from '../constants';
@@ -33,15 +35,15 @@ import {
   IconCross,
   IconTrash,
   IconEmojiDice,
-  IconEmojiSparkles,
-  IconEmojiWink,
-  IconEmojiSprout,
-  IconEmojiBowl,
-  IconEmojiGamepad,
-  IconEmojiMap,
-  IconEmojiLightbulb,
-  IconEmojiHearts,
-  IconEmojiFlag,
+  IconEmojiNavSparkles,
+  IconEmojiNavSmile,
+  IconEmojiNavCat,
+  IconEmojiNavBurger,
+  IconEmojiNavBall,
+  IconEmojiNavCar,
+  IconEmojiNavBulb,
+  IconEmojiNavHeart,
+  IconEmojiNavFlag,
 } from '../../../components/icons';
 
 interface I18n {
@@ -49,7 +51,8 @@ interface I18n {
 }
 
 interface EmojiPickerOptions {
-  onSelect: (native: string) => void;
+  /** `origin` is the picked glyph's rect, so the host can animate from it. */
+  onSelect: (native: string, origin?: DOMRect) => void;
   onRemove: () => void;
   i18n: I18n;
   locale: string;
@@ -88,18 +91,40 @@ const REEL_DISTORTION = {
   perspective: 400,
 };
 
-/** SVG icon for each emoji category (display order). */
-const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string]> = [
-  ['callout', IconEmojiSparkles],
-  ['people', IconEmojiWink],
-  ['nature', IconEmojiSprout],
-  ['foods', IconEmojiBowl],
-  ['activity', IconEmojiGamepad],
-  ['places', IconEmojiMap],
-  ['objects', IconEmojiLightbulb],
-  ['symbols', IconEmojiHearts],
-  ['flags', IconEmojiFlag],
+/** Icon and short chip label for each emoji category (display order). */
+const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string, chipKey?: string]> = [
+  ['callout', IconEmojiNavSparkles],
+  ['people', IconEmojiNavSmile, EMOJI_CHIP_PEOPLE_KEY],
+  ['nature', IconEmojiNavCat, EMOJI_CHIP_NATURE_KEY],
+  ['foods', IconEmojiNavBurger, EMOJI_CHIP_FOOD_KEY],
+  ['activity', IconEmojiNavBall],
+  ['places', IconEmojiNavCar, EMOJI_CHIP_TRAVEL_KEY],
+  ['objects', IconEmojiNavBulb],
+  ['symbols', IconEmojiNavHeart],
+  ['flags', IconEmojiNavFlag],
 ];
+
+const RECENT_STORAGE_KEY = 'blok-emoji-recent';
+/** One grid row. */
+const RECENT_LIMIT = 9;
+
+function loadRecent(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY) ?? '[]');
+
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(0, RECENT_LIMIT) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(list: string[]): void {
+  try {
+    localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    // Storage full or blocked: the row simply does not persist.
+  }
+}
 
 /** Raised-hand emoji for each skin tone (default + 5 Fitzpatrick modifiers). */
 const SKIN_TONE_HANDS: readonly string[] = [
@@ -147,7 +172,7 @@ export function preloadEmojiData(locale = 'en'): void {
 }
 
 export class EmojiPicker {
-  private onSelect: (native: string) => void;
+  private onSelect: (native: string, origin?: DOMRect) => void;
   private onRemove: () => void;
   private readonly i18n: I18n;
   private readonly _locale: string;
@@ -170,6 +195,12 @@ export class EmojiPicker {
   private _filterInput: HTMLInputElement;
   private _announcer: HTMLElement;
   private _clearSearchButton: HTMLButtonElement;
+  private _stage: HTMLElement | null = null;
+  /** The host's current emoji, shown on the stage while nothing is pointed at. */
+  private _current = '';
+  /** Natives the rendered Recent row holds, to know when a reopen must rebuild it. */
+  private _renderedRecent = '';
+  private _byNative = new Map<string, ProcessedEmoji>();
   private _open = false;
   private _allEmojis: ProcessedEmoji[] = [];
   private _skinTone = 0;
@@ -288,7 +319,7 @@ export class EmojiPicker {
   public async open(
     anchor: HTMLElement,
     anchorRect?: DOMRect,
-    handlers?: Pick<EmojiPickerOptions, 'onSelect' | 'onRemove'>
+    handlers?: Pick<EmojiPickerOptions, 'onSelect' | 'onRemove'> & { current?: string }
   ): Promise<void> {
     const active = document.activeElement;
 
@@ -296,6 +327,8 @@ export class EmojiPicker {
       this.onSelect = handlers.onSelect;
       this.onRemove = handlers.onRemove;
     }
+
+    this._current = handlers?.current ?? '';
 
     // Focus inside the picker means it is being reopened for another anchor:
     // close() must then fall back to that anchor, not to the hidden picker.
@@ -341,6 +374,12 @@ export class EmojiPicker {
       this._allEmojis = await loadEmojiGrid();
     }
     if (!this._open) return;
+
+    if (this._hasFullGrid && this._renderedRecent !== this.recentEmojis().map(emoji => emoji.native).join(' ')) {
+      this._hasFullGrid = false;
+    }
+
+    this.showStageIdle();
 
     if (this._hasFullGrid) {
       // Identical markup to what a rebuild would produce — only the tone (which
@@ -414,6 +453,7 @@ export class EmojiPicker {
       .then(emojis => {
         this._hasKeywords = true;
         this._allEmojis = emojis;
+        this._byNative.clear();
         this.refilterWhileTyping();
       })
       .catch(() => undefined)
@@ -622,13 +662,10 @@ export class EmojiPicker {
       removeBtn.hidden = true;
     }
 
-    // Scrollable body
     const body = document.createElement('div');
     body.setAttribute('data-emoji-picker-body', '');
     body.className = 'overflow-y-auto max-h-[260px] px-1.5 pb-2';
-    el.appendChild(body);
 
-    // Category navigation bar (below emoji grid)
     const nav = document.createElement('div');
     nav.setAttribute('data-emoji-picker-nav', '');
     nav.className = [
@@ -639,7 +676,13 @@ export class EmojiPicker {
 
     footer.setAttribute('data-emoji-picker-footer', '');
     footer.appendChild(nav);
-    el.appendChild(footer);
+
+    if (this._inline) {
+      el.append(body, footer);
+    } else {
+      // The chips sit under the search, in DOM order too, so Tab follows what you see.
+      el.append(footer, body, this.buildStage(body));
+    }
 
     const announcer = document.createElement('div');
     announcer.setAttribute('data-emoji-picker-announcer', '');
@@ -715,6 +758,133 @@ export class EmojiPicker {
     });
 
     return el;
+  }
+
+  /**
+   * The strip under the grid: the host's current icon at rest, or the emoji
+   * under the pointer or the focus, lit in its own colour.
+   * @param body - the grid's scroll container, whose pointer and focus it follows
+   */
+  private buildStage(body: HTMLElement): HTMLElement {
+    const stage = document.createElement('div');
+    const glyph = document.createElement('span');
+    const text = document.createElement('span');
+    const kicker = document.createElement('span');
+    const name = document.createElement('span');
+
+    stage.setAttribute('data-emoji-picker-stage', '');
+    // The buttons carry the names; this strip only shows them again.
+    stage.setAttribute('aria-hidden', 'true');
+    glyph.setAttribute('data-emoji-picker-stage-glyph', '');
+    text.setAttribute('data-emoji-picker-stage-text', '');
+    kicker.setAttribute('data-emoji-picker-stage-kicker', '');
+    name.setAttribute('data-emoji-picker-stage-name', '');
+    text.append(kicker, name);
+    stage.append(glyph, text);
+    this._stage = stage;
+
+    const emojiAt = (target: EventTarget | null): HTMLElement | null =>
+      target instanceof Element ? target.closest<HTMLElement>('[data-emoji-native]') : null;
+
+    body.addEventListener('pointerover', (event) => {
+      const button = emojiAt(event.target);
+
+      if (button !== null) {
+        this.showOnStage(button);
+      }
+    });
+    body.addEventListener('pointerleave', () => {
+      const focused = emojiAt(document.activeElement);
+
+      if (focused !== null && body.contains(focused)) {
+        this.showOnStage(focused);
+      } else {
+        this.showStageIdle();
+      }
+    });
+    body.addEventListener('focusin', (event) => {
+      const button = emojiAt(event.target);
+
+      if (button !== null) {
+        this.showOnStage(button);
+      }
+    });
+    body.addEventListener('focusout', (event) => {
+      if (emojiAt(event.relatedTarget) === null) {
+        this.showStageIdle();
+      }
+    });
+
+    return stage;
+  }
+
+  private setStage(glyph: string, kicker: string, name: string): void {
+    if (this._stage === null) {
+      return;
+    }
+
+    const [glyphEl, text] = this._stage.children;
+
+    glyphEl.textContent = glyph;
+    text.children[0].textContent = kicker;
+    text.children[1].textContent = name;
+    this._stage.toggleAttribute('data-emoji-picker-stage-empty', glyph === '');
+    this._stage.style.setProperty('--emoji-stage-wash', emojiColor(glyph) ?? 'transparent');
+  }
+
+  private showStageIdle(): void {
+    const emoji = this.emojiByNative(this._current);
+
+    this.setStage(
+      this._current,
+      this._current === '' ? '' : this.i18n.t(CURRENT_ICON_KEY),
+      emoji === undefined ? '' : this.getDisplayName(emoji)
+    );
+  }
+
+  private showOnStage(button: HTMLElement): void {
+    const emoji = this.emojiByNative(button.getAttribute('data-emoji-native') ?? '');
+    const section = button.closest('[data-emoji-section]')?.querySelector('[data-emoji-section-title] > span');
+
+    this.setStage(
+      button.firstElementChild?.textContent ?? '',
+      section?.textContent ?? '',
+      emoji === undefined ? '' : this.getDisplayName(emoji)
+    );
+  }
+
+  /** Finds an emoji by its base glyph or any of its skin-tone glyphs. */
+  private emojiByNative(native: string): ProcessedEmoji | undefined {
+    if (this._byNative.size === 0) {
+      this._byNative = new Map(this._allEmojis.flatMap(emoji =>
+        [emoji.native, ...emoji.skins].map(glyph => [glyph, emoji] as const)));
+    }
+
+    return this._byNative.get(native);
+  }
+
+  /** Recent picks that still exist in the data, newest first. Never in inline mode. */
+  private recentEmojis(): ProcessedEmoji[] {
+    if (this._inline) {
+      return [];
+    }
+
+    return loadRecent()
+      .map(native => this.emojiByNative(native))
+      .filter((emoji): emoji is ProcessedEmoji => emoji !== undefined);
+  }
+
+  /**
+   * Hands a pick to the host and remembers it for the Recent row.
+   * @param emoji - the picked emoji
+   * @param origin - where its glyph was on screen
+   */
+  private select(emoji: ProcessedEmoji, origin: DOMRect | undefined): void {
+    if (!this._inline) {
+      saveRecent([emoji.native, ...loadRecent().filter(native => native !== emoji.native)].slice(0, RECENT_LIMIT));
+    }
+
+    this.onSelect(this.getSkinnedNative(emoji), origin);
   }
 
   private handleEmojiKeydown(event: KeyboardEvent): void {
@@ -1013,7 +1183,7 @@ export class EmojiPicker {
       return;
     }
 
-    this.onSelect(this.getSkinnedNative(emoji));
+    this.select(emoji, this._element.querySelector('[data-emoji-picker-random]')?.getBoundingClientRect());
   }
 
   private scheduleScrollEffects(): void {
@@ -1200,7 +1370,7 @@ export class EmojiPicker {
     this._navButtons.clear();
     this._activeNavId = '';
 
-    for (const [catId, catIcon] of CATEGORY_NAV) {
+    for (const [catId, catIcon, chipKey] of CATEGORY_NAV) {
       if (!visibleCategories.has(catId)) {
         continue;
       }
@@ -1209,7 +1379,17 @@ export class EmojiPicker {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.innerHTML = catIcon;
-      onHover(btn, catLabel, { placement: 'top', delay: 300 });
+
+      if (this._inline) {
+        onHover(btn, catLabel, { placement: 'top', delay: 300 });
+      } else {
+        const chip = document.createElement('span');
+
+        chip.setAttribute('data-emoji-nav-label', '');
+        chip.textContent = chipKey === undefined ? catLabel : this.i18n.t(chipKey);
+        btn.appendChild(chip);
+      }
+
       btn.setAttribute('aria-label', catLabel);
       btn.setAttribute('data-emoji-nav', catId);
       btn.className = [
@@ -1385,6 +1565,17 @@ export class EmojiPicker {
     this._showingEmptyState = false;
 
     const visibleCategories = new Set<string>();
+    const recent = this.recentEmojis();
+
+    this._renderedRecent = recent.map(emoji => emoji.native).join(' ');
+
+    if (recent.length > 0) {
+      // Outside _sectionEls: it has no chip, and the first chip stays current over it.
+      const section = this.buildSection(this.i18n.t(RECENT_EMOJIS_KEY), recent);
+
+      section.setAttribute('data-emoji-section', 'recent');
+      this._body.appendChild(section);
+    }
 
     if (this._curated) {
       const calloutEmojis = CURATED_CALLOUT_EMOJIS
@@ -1513,8 +1704,9 @@ export class EmojiPicker {
     section.appendChild(this.buildGrid(emojis));
 
     if (this._sectionEls.size > 0) {
-      // Must match the 8-column grid's media query in emoji-picker.css.
-      const columns = window.matchMedia('(max-width: 380px)').matches ? 8 : 10;
+      // Must match the grid columns and the 8-column media query in emoji-picker.css.
+      const wideColumns = this._inline ? 10 : 9;
+      const columns = window.matchMedia('(max-width: 380px)').matches ? 8 : wideColumns;
 
       section.setAttribute('data-emoji-section-deferred', '');
       section.style.setProperty('--emoji-rows', String(Math.ceil(emojis.length / columns)));
@@ -1579,7 +1771,10 @@ export class EmojiPicker {
       const name = this.getDisplayName(emoji);
 
       button.setAttribute('aria-label', name);
-      onHover(button, name, { placement: 'bottom' });
+
+      if (this._inline) {
+        onHover(button, name, { placement: 'bottom' });
+      }
     }
   }
 
@@ -1619,10 +1814,14 @@ export class EmojiPicker {
         'transition-transform duration-75',
       ].join(' ');
       btn.addEventListener('click', () => {
-        this.onSelect(this.getSkinnedNative(emoji));
+        this.select(emoji, glyph.getBoundingClientRect());
         this.close();
       });
-      onHover(btn, this.getDisplayName(emoji), { placement: 'bottom' });
+
+      // The stage names the emoji under the pointer; inline mode has no stage.
+      if (this._inline) {
+        onHover(btn, this.getDisplayName(emoji), { placement: 'bottom' });
+      }
       grid.appendChild(btn);
     }
 

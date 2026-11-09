@@ -577,6 +577,23 @@ for (const [locale, keys] of Object.entries(DATABASE_TABLE_COGNATE_RETENTIONS)) 
 }
 
 /**
+ * Emoji picker chip cognates: the short chip label is the native loanword
+ * spelled as in English. Each entry needs a matching ledger retention row.
+ */
+const EMOJI_CHIP_COGNATE_RETENTIONS: Record<string, string[]> = {
+  da: ['tools.callout.emojiChipPeople'],
+  de: ['tools.callout.emojiChipPeople'],
+  fr: ['tools.callout.emojiChipPeople', 'tools.callout.emojiChipNature'],
+  nl: ['tools.callout.emojiChipPeople'],
+  sv: ['tools.callout.emojiChipPeople'],
+};
+
+for (const [locale, keys] of Object.entries(EMOJI_CHIP_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+/**
  * Database property system cognates and loanwords: the native word (or the
  * CLDR currency name) is spelled the same as English in these locales. Each
  * entry needs a matching ledger retention row.

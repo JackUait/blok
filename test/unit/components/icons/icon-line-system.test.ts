@@ -60,7 +60,9 @@ describe('Blok Line authoring contract', () => {
     if (name.match(/^Icon(?:Toggle)?H[1-6]$/) !== null || ['IconSuperscript', 'IconSubscript'].includes(name)) {
       allowed = [1.25, 1.1, 1.05];
     } else if (name === 'IconListNumbered') {
-      allowed = [1.25, 1.05];
+      allowed = [1.25, 1.05];    } else if (name.startsWith('IconEmojiNav')) {
+      // The emoji picker's category row is read at 18-20 px only; 1.25 smudges there.
+      allowed = [1.5];
     }
 
     const solidControls = [

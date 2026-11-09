@@ -130,7 +130,8 @@ describe('CalloutTool shares one emoji picker per editor', () => {
     await openFrom(b.button);
 
     expect(pickers()).toHaveLength(1);
-    expect(gridButtons(document.body, '😀')).toHaveLength(1);
+    // Once in its category; the Recent row adds the second.
+    expect(gridButtons(document.body, '😀').filter(button => button.closest('[data-emoji-section="recent"]') === null)).toHaveLength(1);
   });
 
   it('sends the picked emoji to the callout that opened the picker last', async () => {

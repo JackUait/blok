@@ -906,6 +906,75 @@ export const IconEmojiFlag = `
 </svg>
 `;
 
+export const IconEmojiNavSparkles = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M8 6Q8.6 10.9 13.5 11.5Q8.6 12.1 8 17Q7.4 12.1 2.5 11.5Q7.4 10.9 8 6Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14.5 2.25Q14.8 4.7 17.25 5Q14.8 5.3 14.5 7.75Q14.2 5.3 11.75 5Q14.2 4.7 14.5 2.25Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="4.5" cy="4.5" r="1" fill="currentColor"/>
+</svg>
+`;
+
+export const IconEmojiNavSmile = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="10" cy="10" r="7.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.9 11.6C7.6 13.25 8.7 14 10 14C11.3 14 12.4 13.25 13.1 11.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="7.6" cy="8.35" rx="1.05" ry="1.3" fill="currentColor"/>
+  <ellipse cx="12.4" cy="8.35" rx="1.05" ry="1.3" fill="currentColor"/>
+</svg>
+`;
+
+export const IconEmojiNavCat = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.9 7.4L4.5 3.6C4.6 3 5.2 2.8 5.6 3.2L8.1 5.3C9.3 5 10.7 5 11.9 5.3L14.4 3.2C14.8 2.8 15.4 3 15.5 3.6L16.1 7.4C16.85 8.5 17.25 9.75 17.25 11.1C17.25 14.4 14.1 16.75 10 16.75C5.9 16.75 2.75 14.4 2.75 11.1C2.75 9.75 3.15 8.5 3.9 7.4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="7.4" cy="10.5" rx="1" ry="1.25" fill="currentColor"/>
+  <ellipse cx="12.6" cy="10.5" rx="1" ry="1.25" fill="currentColor"/>
+  <ellipse cx="10" cy="13.2" rx="0.9" ry="0.65" fill="currentColor"/>
+</svg>
+`;
+
+export const IconEmojiNavBurger = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.5 8.25C3.5 5.1 6.4 3 10 3C13.6 3 16.5 5.1 16.5 8.25Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2.75 11H17.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.5 13.75H16.5V14.6C16.5 15.85 15.6 16.75 14.4 16.75H5.6C4.4 16.75 3.5 15.85 3.5 14.6Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconEmojiNavBall = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="10" cy="10" r="7.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5.2 4.9C7.9 7.6 7.9 12.4 5.2 15.1M14.8 4.9C12.1 7.6 12.1 12.4 14.8 15.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconEmojiNavCar = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.85 13.25H2.75V11.3C2.75 10.4 3.35 9.75 4.2 9.6L6.2 6.05C6.55 5.45 7.15 5.1 7.85 5.1H12.05C12.75 5.1 13.35 5.45 13.7 6.05L15.6 9.5C16.6 9.65 17.25 10.35 17.25 11.3V13.25H16.15M8.15 13.25H11.85M4.2 9.6H15.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="6" cy="13.75" r="1.85" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="14" cy="13.75" r="1.85" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconEmojiNavBulb = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M10 2.5C12.9 2.5 15 4.65 15 7.35C15 9.15 14.1 10.25 13.2 11.15C12.6 11.75 12.4 12.25 12.4 13H7.6C7.6 12.25 7.4 11.75 6.8 11.15C5.9 10.25 5 9.15 5 7.35C5 4.65 7.1 2.5 10 2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.75 15.4H12.25M8.9 17.6H11.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconEmojiNavHeart = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M10 16.75C6.2 14.4 2.75 11.6 2.75 7.95C2.75 5.5 4.55 3.75 6.75 3.75C8.2 3.75 9.35 4.5 10 5.7C10.65 4.5 11.8 3.75 13.25 3.75C15.45 3.75 17.25 5.5 17.25 7.95C17.25 11.6 13.8 14.4 10 16.75Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconEmojiNavFlag = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4.75 17.5V3.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.75 3.75C6.6 2.75 8.4 2.75 10.2 3.75C12 4.75 13.8 4.75 15.75 3.75V11.25C13.8 12.25 12 12.25 10.2 11.25C8.4 10.25 6.6 10.25 4.75 11.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 export const IconEmojiGlobe = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>

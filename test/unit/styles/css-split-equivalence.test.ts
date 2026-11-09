@@ -1560,6 +1560,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALC_FOOTER_AND_OFFSETS_BYTES = 958;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
+    // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid and bottom stage.
+    const EMOJI_PICKER_SPOTLIGHT_SHOWCASE_BYTES = 4_345;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1963,6 +1965,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FULL_PAGE_INSET_BYTES
       + DATABASE_TITLE_ROW_FOLD_BYTES
       + DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES
+      + EMOJI_PICKER_SPOTLIGHT_SHOWCASE_BYTES
       + DATABASE_ROW_GUTTER_EASE_BYTES
       + DATABASE_TITLE_ROW_FOLD_PROBE_BYTES
       + DATABASE_TITLE_ROW_TOOLBAR_MARKS_BYTES

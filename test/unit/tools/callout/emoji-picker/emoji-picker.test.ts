@@ -151,7 +151,7 @@ describe('EmojiPicker', () => {
     expect(emojiButton).not.toBeNull();
     emojiButton.click();
 
-    expect(onSelect).toHaveBeenCalledWith(emojiButton.dataset.emojiNative);
+    expect(onSelect).toHaveBeenCalledWith(emojiButton.dataset.emojiNative, expect.objectContaining({ width: expect.any(Number), height: expect.any(Number) }));
   });
 
   it('calls onRemove when remove button is clicked', async () => {
@@ -660,7 +660,7 @@ describe('EmojiPicker', () => {
     expect(mockOnHover).toHaveBeenCalledWith(removeBtn, expect.any(String), { placement: 'bottom' });
   });
 
-  it('attaches JS tooltips to emoji buttons via onHover with placement bottom', async () => {
+  it('leaves emoji names to the stage instead of hover hints on every button', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
     container.appendChild(picker.getElement());
@@ -671,7 +671,7 @@ describe('EmojiPicker', () => {
     expect(emojiButtons.length).toBeGreaterThan(0);
 
     for (const btn of Array.from(emojiButtons)) {
-      expect(mockOnHover).toHaveBeenCalledWith(btn, expect.any(String), { placement: 'bottom' });
+      expect(mockOnHover).not.toHaveBeenCalledWith(btn, expect.anything(), expect.anything());
     }
   });
 
@@ -1080,8 +1080,8 @@ describe('EmojiPicker', () => {
       const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
 
       expect(bulbBtn).toBeDefined();
-      // Name is shown via JS tooltip (onHover), not browser title attribute
-      expect(mockOnHover).toHaveBeenCalledWith(bulbBtn, 'ampoule', { placement: 'bottom' });
+      // The name is the button's label; the stage shows it on hover.
+      expect(bulbBtn?.getAttribute('aria-label')).toBe('ampoule');
     });
 
     it('falls back to English name in lowercase when translated name is not available', async () => {
@@ -1102,7 +1102,7 @@ describe('EmojiPicker', () => {
       const thumbsBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '👍');
 
       expect(thumbsBtn).toBeDefined();
-      expect(mockOnHover).toHaveBeenCalledWith(thumbsBtn, 'thumbs up', { placement: 'bottom' });
+      expect(thumbsBtn?.getAttribute('aria-label')).toBe('thumbs up');
     });
 
     it('displays English emoji names in lowercase', async () => {
@@ -1117,7 +1117,7 @@ describe('EmojiPicker', () => {
       const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
 
       expect(bulbBtn).toBeDefined();
-      expect(mockOnHover).toHaveBeenCalledWith(bulbBtn, 'light bulb', { placement: 'bottom' });
+      expect(bulbBtn?.getAttribute('aria-label')).toBe('light bulb');
       expect(mockLoadEmojiLocale).not.toHaveBeenCalled();
     });
 
@@ -1136,7 +1136,7 @@ describe('EmojiPicker', () => {
       const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
 
       expect(bulbBtn).toBeDefined();
-      expect(mockOnHover).toHaveBeenCalledWith(bulbBtn, 'ampoule électrique', { placement: 'bottom' });
+      expect(bulbBtn?.getAttribute('aria-label')).toBe('ampoule électrique');
     });
   });
 });

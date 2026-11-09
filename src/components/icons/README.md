@@ -44,6 +44,11 @@ Existing exports keep their sizing contracts:
 - Heading and script numerals may use 1.1 or 1.05; numbered-list markers use 1.05.
   These small counters need more space than full-size letters.
 
+One family has its own weight: the emoji picker's category row
+(`IconEmojiNav*`) uses a 1.5 stroke. The row is read at 18 and 20 px with no
+labels, and a 1.25 stroke smudges there. Each of those icons is one silhouette
+with no second detail. Do not use the 1.5 weight anywhere else.
+
 Do not copy a micro-icon's thicker proportional stroke into a normal menu
 icon. Do not change a published icon's intrinsic dimensions to fix a drawing.
 Adjust its geometry instead.

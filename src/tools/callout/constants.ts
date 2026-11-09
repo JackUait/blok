@@ -24,6 +24,14 @@ export const EMOJI_CATEGORY_OBJECTS_KEY = 'tools.callout.emojiCategoryObjects';
 export const EMOJI_CATEGORY_SYMBOLS_KEY = 'tools.callout.emojiCategorySymbols';
 export const EMOJI_CATEGORY_FLAGS_KEY = 'tools.callout.emojiCategoryFlags';
 
+/** Short chip labels for the picker's category row; the rest reuse the category name. */
+export const EMOJI_CHIP_PEOPLE_KEY = 'tools.callout.emojiChipPeople';
+export const EMOJI_CHIP_NATURE_KEY = 'tools.callout.emojiChipNature';
+export const EMOJI_CHIP_FOOD_KEY = 'tools.callout.emojiChipFood';
+export const EMOJI_CHIP_TRAVEL_KEY = 'tools.callout.emojiChipTravel';
+export const RECENT_EMOJIS_KEY = 'tools.callout.recentEmojis';
+export const CURRENT_ICON_KEY = 'tools.callout.currentIcon';
+
 // Defaults
 export const DEFAULT_EMOJI = '💡';
 

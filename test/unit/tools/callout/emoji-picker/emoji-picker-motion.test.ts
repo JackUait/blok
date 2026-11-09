@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiPicker } from '../../../../../src/tools/callout/emoji-picker';
 import { loadEmojiData } from '../../../../../src/components/utils/emoji/emoji-data';
-import { IconEmojiHearts, IconHash } from '../../../../../src/components/icons';
+import { IconEmojiNavHeart, IconHash } from '../../../../../src/components/icons';
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
   onHover: vi.fn(),
@@ -114,7 +114,7 @@ describe('EmojiPicker motion', () => {
     // A hash is a letterform among pictograms: it is the only nav icon a
     // reader sees as text, so it reads as a foreign mark in the row.
     expect(symbols.querySelector('svg')?.innerHTML).not.toBe(drawing(IconHash));
-    expect(symbols.querySelector('svg')?.innerHTML).toBe(drawing(IconEmojiHearts));
+    expect(symbols.querySelector('svg')?.innerHTML).toBe(drawing(IconEmojiNavHeart));
     expect(symbols).toHaveAttribute('aria-label', 'tools.callout.emojiCategorySymbols');
   });
 

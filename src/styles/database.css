@@ -2201,10 +2201,14 @@
   flex-shrink: 0;
 }
 
-/* Shown while the head or the title under it is hovered; :has stays on the small head, not the page. */
+/* Shown while the head or the title under it is hovered; :has stays on the small head, not the page.
+   In a peek, while the pointer is anywhere over it, with the top bar's mode and arrows (notion-motion.md "Side peek top bar"). */
 [data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-icon],
 [data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-cover],
 [data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-customize],
+[data-blok-database-drawer]:not([data-peek-mode="full"]):hover [data-blok-database-drawer-add-icon],
+[data-blok-database-drawer]:not([data-peek-mode="full"]):hover [data-blok-database-drawer-add-cover],
+[data-blok-database-drawer]:not([data-peek-mode="full"]):hover [data-blok-database-drawer-customize],
 [data-blok-database-drawer-add-icon]:focus-visible,
 [data-blok-database-drawer-add-cover]:focus-visible,
 [data-blok-database-drawer-customize]:focus-visible {

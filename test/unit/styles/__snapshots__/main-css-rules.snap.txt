@@ -6118,7 +6118,7 @@ span[data-blok-slash-search] {
   flex-shrink: 0;
 }
 
-[data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-icon], [data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-cover], [data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-customize], [data-blok-database-drawer-add-icon]:focus-visible, [data-blok-database-drawer-add-cover]:focus-visible, [data-blok-database-drawer-customize]:focus-visible {
+[data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-icon], [data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-cover], [data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-customize], [data-blok-database-drawer]:not([data-peek-mode="full"]):hover [data-blok-database-drawer-add-icon], [data-blok-database-drawer]:not([data-peek-mode="full"]):hover [data-blok-database-drawer-add-cover], [data-blok-database-drawer]:not([data-peek-mode="full"]):hover [data-blok-database-drawer-customize], [data-blok-database-drawer-add-icon]:focus-visible, [data-blok-database-drawer-add-cover]:focus-visible, [data-blok-database-drawer-customize]:focus-visible {
   opacity: 1;
 }
 

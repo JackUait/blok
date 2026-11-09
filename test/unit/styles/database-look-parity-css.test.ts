@@ -491,6 +491,13 @@ describe('row page header hover row', () => {
 
     expect(database.includes(shown)).toBe(true);
   });
+
+  // notion-motion.md "Side peek top bar": in a peek the row shows while the pointer is anywhere over the peek.
+  it('shows in a side or center peek while the peek is hovered', () => {
+    for (const button of buttons) {
+      expect(database.includes(`[data-blok-database-drawer]:not([data-peek-mode="full"]):hover ${button}`)).toBe(true);
+    }
+  });
 });
 
 // feel/findings-rowpage R29, R32: a row page file chip is at most 200 wide; its name ends in "…" and is not underlined.

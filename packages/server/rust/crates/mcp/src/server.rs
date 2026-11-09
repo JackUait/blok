@@ -160,6 +160,8 @@ pub struct Mcp {
     store_sweep_limit: Duration,
     /// Held while the store is swept, so a stop can wait for a sweep.
     sweeping: Arc<tokio::sync::Mutex<()>>,
+    /// Set by a stop; cancels the sweep in flight.
+    stop_sweeps: tokio::sync::watch::Sender<bool>,
     live: Option<Live>,
     live_shared: Option<Arc<LiveShared>>,
     rooms: Option<Rooms>,
@@ -171,8 +173,10 @@ const LEASE_WAIT: Duration = Duration::from_secs(30);
 // Well inside the files store's 30 s lease, so a slow call keeps its lease.
 const LEASE_RENEW_EVERY: Duration = Duration::from_secs(5);
 const STORE_SWEEP_EVERY: Duration = Duration::from_secs(60);
-// A stop waits for a sweep in flight; this keeps that wait well inside the stop's 45 s drain.
-const STORE_SWEEP_LIMIT: Duration = Duration::from_secs(10);
+// Ends a sweep well before the next is due, as Go and C# do.
+const STORE_SWEEP_LIMIT: Duration = Duration::from_secs(30);
+// How long a stop waits for a cancelled sweep; one that will not end is left behind.
+const SWEEP_STOP_WAIT: Duration = Duration::from_secs(1);
 const STORE_DOWN: &str = "The handle store is unavailable. Retry shortly.";
 
 /// A store failure: logged in full, and retryable for the agent, since a
@@ -702,6 +706,7 @@ impl Mcp {
             store_sweep_every: STORE_SWEEP_EVERY,
             store_sweep_limit: STORE_SWEEP_LIMIT,
             sweeping: Arc::default(),
+            stop_sweeps: tokio::sync::watch::Sender::new(false),
             calls: Arc::default(),
             reserved: std::sync::Mutex::default(),
             uploads,
@@ -749,7 +754,12 @@ impl Mcp {
                 if mcp.handles.is_closed() {
                     return;
                 }
-                match tokio::time::timeout(limit, store.sweep(mcp.idle)).await {
+                let mut stop = mcp.stop_sweeps.subscribe();
+                let outcome = tokio::select! {
+                    outcome = tokio::time::timeout(limit, store.sweep(mcp.idle)) => outcome,
+                    _ = stop.wait_for(|stopped| *stopped) => return,
+                };
+                match outcome {
                     Ok(Ok(())) => {}
                     Ok(Err(err)) => {
                         eprintln!("blok-mcp: sweeping the handle store failed: {err}");
@@ -765,14 +775,22 @@ impl Mcp {
 
     /// Node's stop: each handle closes once its calls are done, so a room
     /// gets its presence departure and close frame. Gives up after `limit`.
-    /// A sweep of the handle store in flight is waited for (it has its own
-    /// time limit); none starts after.
+    /// A sweep of the handle store in flight is cancelled and waited for up
+    /// to 1 s; none starts after.
     pub async fn close_all(&self, limit: Duration) {
         let mut closing = tokio::task::JoinSet::new();
         let sessions = self.handles.take_all();
+        self.stop_sweeps.send_replace(true);
         let sweeping = self.sweeping.clone();
         closing.spawn(async move {
-            drop(sweeping.lock().await);
+            if tokio::time::timeout(SWEEP_STOP_WAIT, sweeping.lock())
+                .await
+                .is_err()
+            {
+                eprintln!(
+                    "blok-mcp: a handle store sweep ignored its cancel; shutting down without it"
+                );
+            }
         });
         for session in sessions {
             closing.spawn(async move {
@@ -2861,12 +2879,19 @@ pub(crate) mod tests {
         );
     }
 
+    enum Sweeping {
+        Takes(Duration),
+        Hangs,
+        /// Blocks its thread, so dropping it cannot end it.
+        BlocksThread(Duration),
+    }
+
     /// A store whose sweep is slow (or never ends), and counts its runs.
     struct SlowSweep {
         inner: crate::handle_store::MemoryHandleStore,
         started: std::sync::atomic::AtomicUsize,
         finished: std::sync::atomic::AtomicUsize,
-        hangs: bool,
+        sweeping: Sweeping,
     }
 
     impl HandleStore for SlowSweep {
@@ -2898,81 +2923,126 @@ pub(crate) mod tests {
             use std::sync::atomic::Ordering;
             Box::pin(async move {
                 self.started.fetch_add(1, Ordering::SeqCst);
-                if self.hangs {
-                    std::future::pending::<()>().await;
+                match self.sweeping {
+                    Sweeping::Takes(took) => tokio::time::sleep(took).await,
+                    Sweeping::Hangs => std::future::pending::<()>().await,
+                    Sweeping::BlocksThread(took) => std::thread::sleep(took),
                 }
-                tokio::time::sleep(Duration::from_millis(300)).await;
                 self.finished.fetch_add(1, Ordering::SeqCst);
                 Ok(())
             })
         }
     }
 
-    // Shutdown waits for a sweep in flight, and no sweep starts after it.
-    #[tokio::test(flavor = "multi_thread")]
-    async fn a_stop_awaits_the_store_sweep_and_ends_it() {
-        use std::sync::atomic::Ordering;
-        let store = Arc::new(SlowSweep {
-            inner: crate::handle_store::MemoryHandleStore::new(),
-            started: Default::default(),
-            finished: Default::default(),
-            hangs: false,
-        });
+    /// An Mcp on `store` that sweeps it every 20 ms, with its sweeper running.
+    async fn sweeping_mcp(store: Arc<SlowSweep>, limit: Option<Duration>) -> Arc<Mcp> {
         let options = json!({ "transport": { "kind": "stdio" }, "auth": { "kind": "none" } });
         let hooks = Hooks {
-            handle_store: Some(store.clone()),
+            handle_store: Some(store),
             ..Hooks::default()
         };
         let mut mcp = Mcp::build(Arc::new(Bundle::new(1).unwrap()), &options, hooks)
             .await
             .unwrap();
         mcp.store_sweep_every = Duration::from_millis(20);
+        if let Some(limit) = limit {
+            mcp.store_sweep_limit = limit;
+        }
         let mcp = Arc::new(mcp);
         mcp.spawn_sweeper();
-        while store.started.load(Ordering::SeqCst) == 0 {
+        mcp
+    }
+
+    fn slow_sweep(sweeping: Sweeping) -> Arc<SlowSweep> {
+        Arc::new(SlowSweep {
+            inner: crate::handle_store::MemoryHandleStore::new(),
+            started: Default::default(),
+            finished: Default::default(),
+            sweeping,
+        })
+    }
+
+    // Polls off the runtime: its timers can stall while a sweep blocks a worker.
+    fn until_a_sweep_starts(store: &SlowSweep) {
+        while store.started.load(std::sync::atomic::Ordering::SeqCst) == 0 {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
+    // Go and C# give a store sweep 30 s.
+    #[tokio::test]
+    async fn a_store_sweep_may_run_30_seconds() {
+        let store = slow_sweep(Sweeping::Takes(Duration::ZERO));
+        let mcp = sweeping_mcp(store, None).await;
+        assert_eq!(mcp.store_sweep_limit, Duration::from_secs(30));
+    }
+
+    // A hung sweep is dropped at its time limit, so the next one runs.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_hung_store_sweep_is_cut_off_by_its_time_limit() {
+        use std::sync::atomic::Ordering;
+        let store = slow_sweep(Sweeping::Hangs);
+        let mcp = sweeping_mcp(store.clone(), Some(Duration::from_millis(100))).await;
+        let waiting = std::time::Instant::now();
+        while store.started.load(Ordering::SeqCst) < 2 {
+            assert!(
+                waiting.elapsed() < Duration::from_secs(5),
+                "no second sweep"
+            );
             tokio::time::sleep(Duration::from_millis(5)).await;
         }
         mcp.close_all(Duration::from_secs(5)).await;
-        assert_eq!(
-            store.finished.load(Ordering::SeqCst),
-            store.started.load(Ordering::SeqCst)
-        );
-        let after = store.started.load(Ordering::SeqCst);
-        tokio::time::sleep(Duration::from_millis(100)).await;
-        assert_eq!(store.started.load(Ordering::SeqCst), after);
     }
 
-    // A sweep that hangs is cut off by its time limit, so a stop never waits on it.
+    // A stop cancels the sweep in flight rather than waiting it out, and no
+    // sweep starts after it.
     #[tokio::test(flavor = "multi_thread")]
-    async fn a_hung_store_sweep_never_holds_up_a_stop() {
+    async fn a_stop_cancels_the_store_sweep_and_ends_it() {
         use std::sync::atomic::Ordering;
-        let store = Arc::new(SlowSweep {
-            inner: crate::handle_store::MemoryHandleStore::new(),
-            started: Default::default(),
-            finished: Default::default(),
-            hangs: true,
-        });
-        let options = json!({ "transport": { "kind": "stdio" }, "auth": { "kind": "none" } });
-        let hooks = Hooks {
-            handle_store: Some(store.clone()),
-            ..Hooks::default()
-        };
-        let mut mcp = Mcp::build(Arc::new(Bundle::new(1).unwrap()), &options, hooks)
-            .await
-            .unwrap();
-        mcp.store_sweep_every = Duration::from_millis(20);
-        mcp.store_sweep_limit = Duration::from_millis(100);
-        let mcp = Arc::new(mcp);
-        mcp.spawn_sweeper();
-        while store.started.load(Ordering::SeqCst) == 0 {
-            tokio::time::sleep(Duration::from_millis(5)).await;
-        }
+        let store = slow_sweep(Sweeping::Takes(Duration::from_secs(5)));
+        let mcp = sweeping_mcp(store.clone(), None).await;
+        until_a_sweep_starts(&store);
         let stopping = std::time::Instant::now();
         mcp.close_all(Duration::from_secs(30)).await;
         assert!(
             stopping.elapsed() < Duration::from_secs(2),
             "{:?}",
             stopping.elapsed()
+        );
+        assert_eq!(store.finished.load(Ordering::SeqCst), 0);
+        let after = store.started.load(Ordering::SeqCst);
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert_eq!(store.started.load(Ordering::SeqCst), after);
+    }
+
+    // A hung sweep is cancelled by a stop well before its time limit.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_hung_store_sweep_never_holds_up_a_stop() {
+        let store = slow_sweep(Sweeping::Hangs);
+        let mcp = sweeping_mcp(store.clone(), None).await;
+        until_a_sweep_starts(&store);
+        let stopping = std::time::Instant::now();
+        mcp.close_all(Duration::from_secs(30)).await;
+        assert!(
+            stopping.elapsed() < Duration::from_secs(2),
+            "{:?}",
+            stopping.elapsed()
+        );
+    }
+
+    // A sweep that cannot be cancelled holds up a stop for about 1 s, then
+    // the stop goes on without it.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_stop_waits_at_most_a_second_for_a_sweep_that_ignores_its_cancel() {
+        let store = slow_sweep(Sweeping::BlocksThread(Duration::from_secs(4)));
+        let mcp = sweeping_mcp(store.clone(), None).await;
+        until_a_sweep_starts(&store);
+        let stopping = std::time::Instant::now();
+        mcp.close_all(Duration::from_secs(30)).await;
+        let took = stopping.elapsed();
+        assert!(
+            took >= Duration::from_millis(900) && took < Duration::from_secs(2),
+            "{took:?}"
         );
     }
 }

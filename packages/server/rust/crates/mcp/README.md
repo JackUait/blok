@@ -153,7 +153,7 @@ Per call, Blok:
 
 If the record cannot be saved after the source save, the answer stands, the error is logged, and the handle is removed: the next call answers `UNKNOWN_HANDLE`. Restored undo steps hold only while their revision is the record's document's (the engine checks it); otherwise undo answers `CONFLICT`. Any error from your store is logged in full, and the agent sees `SOURCE_UNAVAILABLE` "The handle store is unavailable. Retry shortly." (retryable).
 
-The cap (`max_handles_per_principal`) counts the store's handles of the principal plus this process's live ones. Blok calls `sweep(idle)` every 60 s and drops a sweep that runs over 10 s; a stop waits for a sweep in flight and starts no more. A stop waits for this process's calls and never clears the store.
+The cap (`max_handles_per_principal`) counts the store's handles of the principal plus this process's live ones. Blok calls `sweep(idle)` every 60 s and drops a sweep that runs over 30 s; a stop cancels a sweep in flight, waits for it at most 1 s, and starts no more. A stop waits for this process's calls and never clears the store.
 
 Your store's duties:
 

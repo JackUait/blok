@@ -25,7 +25,7 @@ export interface TableRowDragOptions {
 
 /**
  * Row drag from the ⋮⋮ handle, Notion's model (research/08): a ghost row at
- * opacity 0.4, a 4px drop line between rows, no reflow animation. A press
+ * opacity 0.4 that follows the pointer both ways, a 4px drop line between rows, no reflow animation. A press
  * that never moves stays a click, which opens the row menu.
  */
 export class DatabaseTableRowDrag {
@@ -33,7 +33,7 @@ export class DatabaseTableRowDrag {
   private readonly state: TableState;
   private readonly onDrop: (result: TableRowDropResult) => void;
   private readonly onPress: ((rowId: string) => void) | undefined;
-  private press: { rowEl: HTMLElement; x: number; y: number; offsetY: number } | null = null;
+  private press: { rowEl: HTMLElement; x: number; y: number; offsetX: number; offsetY: number } | null = null;
   private ghost: HTMLElement | null = null;
   private line: HTMLElement | null = null;
   private target: { before: HTMLElement | null; after: HTMLElement | null; groupKey: string } | null = null;
@@ -63,7 +63,7 @@ export class DatabaseTableRowDrag {
     event.preventDefault();
     const rect = rowEl.getBoundingClientRect();
 
-    this.press = { rowEl, x: event.clientX, y: event.clientY, offsetY: event.clientY - rect.top };
+    this.press = { rowEl, x: event.clientX, y: event.clientY, offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top };
     document.addEventListener('pointermove', this.handleMove);
     document.addEventListener('pointerup', this.handleUp);
     document.addEventListener('pointercancel', this.handleCancel);
@@ -85,6 +85,7 @@ export class DatabaseTableRowDrag {
     }
     event.preventDefault();
     if (this.ghost !== null) {
+      this.ghost.style.left = `${event.clientX - press.offsetX}px`;
       this.ghost.style.top = `${event.clientY - press.offsetY}px`;
     }
     this.track(event.clientY);

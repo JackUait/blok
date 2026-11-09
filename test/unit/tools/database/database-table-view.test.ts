@@ -1643,6 +1643,23 @@ describe('DatabaseTableView', () => {
       expect(document.querySelector('[data-blok-database-table-row-ghost]')).toBeNull();
     });
 
+    // Notion's row ghost moves sideways with the pointer (notion-live/rowdrag-mid.png: +74px).
+    it('moves the row ghost sideways with the pointer, keeping the press offset', () => {
+      const { root } = mount();
+      const rowEls = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+
+      rowEls.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({ ...rect(i * 37), left: 40, x: 40 }));
+      rowEls[0].querySelector<HTMLElement>('[data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 50, clientY: 10, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 200, clientY: 60 }));
+
+      const ghost = document.querySelector<HTMLElement>('[data-blok-database-table-row-ghost]');
+
+      expect(ghost?.style.left).toBe('190px');
+      expect(ghost?.style.top).toBe('50px');
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 200, clientY: 60 }));
+    });
+
     // notion-motion.md "Table row drag": pressing ⋮⋮ selects the row, so the selection bar shows during the drag.
     it('selects the row on a press of ⋮⋮, before it moves', () => {
       const { root } = mount();

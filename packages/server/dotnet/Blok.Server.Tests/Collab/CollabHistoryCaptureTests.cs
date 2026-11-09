@@ -514,6 +514,20 @@ public sealed partial class CollabHistoryCaptureTests
       cases.Add(("strays the structure does not reach", current, Doc(P("a"), P("r"), P("o"), P("n"))));
     }
 
+    // Comments are blocks under a row (a reply under its thread), so a
+    // restore treats them like any other block.
+    cases.Add(("removes comments added after the point",
+        Doc(Parent("db", "database", ["r"]), Parent("r", "database-row", ["c1", "c2"], "db"),
+            Comment("c1", "r", "old", 1700000000000, content: ["c3"]), Comment("c2", "r", "new", 1700000100000),
+            Comment("c3", "c1", "reply", 1700000200000)),
+        Doc(Parent("db", "database", ["r"]), Parent("r", "database-row", ["c1"], "db"),
+            Comment("c1", "r", "old", 1700000000000))));
+    cases.Add(("reverts later edits and resolves on older comments",
+        Doc(Parent("db", "database", ["r"]), Parent("r", "database-row", ["c1"], "db"),
+            Comment("c1", "r", "edited", 1700000000000, editedAt: 1700000300000, resolved: true)),
+        Doc(Parent("db", "database", ["r"]), Parent("r", "database-row", ["c1"], "db"),
+            Comment("c1", "r", "old", 1700000000000))));
+
     var written = new JsonArray();
     var converter = new CollabDocConverter(TimeProvider.System, RichTextRuntime.Reader);
 
@@ -809,6 +823,31 @@ public sealed partial class CollabHistoryCaptureTests
     if (parent is not null)
     {
       block["parent"] = parent;
+    }
+
+    return block.ToJsonString();
+  }
+
+  private static string Comment(
+      string id, string parent, string text, long createdAt, long? editedAt = null, bool resolved = false, string[]? content = null)
+  {
+    var data = new JsonObject { ["text"] = text, ["createdAt"] = createdAt, ["authorId"] = "u1" };
+
+    if (editedAt is { } edited)
+    {
+      data["editedAt"] = edited;
+    }
+
+    if (resolved)
+    {
+      data["resolved"] = true;
+    }
+
+    var block = new JsonObject { ["id"] = id, ["type"] = "database-comment", ["data"] = data, ["parent"] = parent };
+
+    if (content is not null)
+    {
+      block["content"] = new JsonArray([.. content.Select(child => (JsonNode?)child)]);
     }
 
     return block.ToJsonString();

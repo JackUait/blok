@@ -5,7 +5,10 @@
  */
 
 import type { AgentModel, AgentModelMessage, AgentModelResponse } from '../../types/api';
-import { createChatActivity } from './agent-chat';
+import blokMascot from '../../docs/public/logo-no-sign.png';
+import { createChatActivity, createChatComposer, createChatMessage, createChatSuggestions, type ChatSuggestion } from './agent-chat';
+import { chatIcon, type ChatIcon } from './agent-chat/icons';
+import './agent-chat/styles.css';
 import { createCliAgentModel, inspectCli, providerLabel, type CliCommand, type CliStatus } from './agent-model';
 import { readAgentSettings, subscribeAgentSettings } from './agent-settings';
 import './agent-assistant.css';
@@ -18,7 +21,7 @@ export interface AgentAssistantOptions {
   /** Host-specific provider inspection, e.g. Tauri's native CLI bridge. */
   inspectProvider?: (command: CliCommand, signal: AbortSignal) => Promise<CliStatus>;
   /** Host-specific model, leaving the Node CLI adapter as the default. */
-  modelFor?: (command: CliCommand) => AgentModel;
+  modelFor?: (command: CliCommand, onProgress: (status: string) => void) => AgentModel;
   /** Preferred connected provider when this panel opens. */
   preferredProvider?: () => CliCommand | null;
 }
@@ -39,6 +42,9 @@ interface Turn {
   command: CliCommand;
   answer: string;
   pending: boolean;
+  error?: boolean;
+  cancelled?: boolean;
+  status?: string;
 }
 
 interface Conversation {
@@ -51,11 +57,11 @@ const MIN_WIDTH = 320;
 const MAX_WIDTH = 720;
 const START_WIDTH = 392;
 
-const SUGGESTIONS = [
-  'Résumer cette page',
-  'Trouver les points clés',
-  'Que manque-t-il dans cette page ?',
-] as const;
+const SUGGESTIONS: readonly ChatSuggestion[] = [
+  { id: 'summary', label: 'Résumer cette page', icon: 'summary' },
+  { id: 'insight', label: 'Trouver les points clés', icon: 'insight' },
+  { id: 'question', label: 'Que manque-t-il dans cette page ?', icon: 'question' },
+];
 
 const MODES: readonly { id: PanelMode; label: string }[] = [
   { id: 'side', label: 'Panneau latéral' },
@@ -120,46 +126,10 @@ const makeButton = (label: string): HTMLButtonElement => {
   return node;
 };
 
-const iconButton = (node: HTMLButtonElement, label: string, paths: string[]): void => {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-
-  svg.setAttribute('viewBox', '0 0 20 20');
-  svg.setAttribute('width', '18');
-  svg.setAttribute('height', '18');
-  svg.setAttribute('aria-hidden', 'true');
-  paths.forEach((d) => {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-
-    path.setAttribute('d', d);
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', 'currentColor');
-    path.setAttribute('stroke-width', '1.6');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    svg.append(path);
-  });
+const iconButton = (node: HTMLButtonElement, label: string, icon: ChatIcon): void => {
   node.setAttribute('aria-label', label);
   node.setAttribute('title', label);
-  node.replaceChildren(svg);
-};
-
-const sendGlyph = (running: boolean): SVGSVGElement => {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-
-  svg.setAttribute('viewBox', '0 0 20 20');
-  svg.setAttribute('width', '18');
-  svg.setAttribute('height', '18');
-  svg.setAttribute('aria-hidden', 'true');
-  path.setAttribute('d', running ? 'M5.5 5.5h9v9h-9z' : 'M10 16V4m-5 5 5-5 5 5');
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', 'currentColor');
-  path.setAttribute('stroke-width', '1.8');
-  path.setAttribute('stroke-linecap', 'round');
-  path.setAttribute('stroke-linejoin', 'round');
-  svg.append(path);
-
-  return svg;
+  node.replaceChildren(chatIcon(icon));
 };
 
 /**
@@ -177,6 +147,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   const panel = document.createElement('div');
   const header = document.createElement('div');
   const title = document.createElement('h2');
+  const titleIcon = document.createElement('img');
   const historyButton = makeButton('Nouvelle conversation');
   const freshButton = makeButton('Nouvelle conversation');
   const modeButton = makeButton('Changer le mode du chat');
@@ -185,12 +156,8 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   const historyMenu = document.createElement('div');
   const modeMenu = document.createElement('div');
   const transcript = document.createElement('div');
-  const composer = document.createElement('form');
-  const field = document.createElement('textarea');
-  const pageLabel = document.createElement('label');
-  const pageBox = document.createElement('input');
-  const providersHost = document.createElement('div');
-  const sendButton = makeButton('Envoyer');
+  const composerSlot = document.createElement('div');
+  const providerHint = document.createElement('p');
   const fullSuggestions = document.createElement('div');
   const resize = document.createElement('div');
   const session = {
@@ -202,10 +169,26 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     active: 0,
     picked: null as CliCommand | null,
     statuses: [] as CliStatus[],
+    includePage: true,
     run: null as AbortController | null,
     token: { id: 0 },
     inspect: null as AbortController | null,
   };
+  const composerHandle = createChatComposer({
+    providers: [],
+    includePage: session.includePage,
+    sendLabel: 'Envoyer à l\'assistant IA',
+    onSend: (message, provider, includePage) => {
+      session.picked = provider === 'claude' ? 'claude' : 'codex';
+      session.includePage = includePage;
+      send(message);
+    },
+    onStop: () => { stopRun(); render(); },
+    onProviderChange: (provider) => { session.picked = provider === 'claude' ? 'claude' : 'codex'; },
+    onContextChange: (includePage) => { session.includePage = includePage; },
+  });
+  const composer = composerHandle.element;
+  const sendButton = composerHandle.submit;
 
   shell.setAttribute('data-blok-agent-shell', '');
   bar.setAttribute('data-blok-agent-bar', '');
@@ -225,11 +208,14 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   header.setAttribute('data-blok-agent-header', '');
   title.id = titleId;
   title.textContent = 'Assistant IA';
-  iconButton(historyButton, 'Historique', ['M10 3.2a6.8 6.8 0 1 1-6.5 8.8', 'M3.5 4.3v4h4', 'M10 6v4l2.8 1.7']);
-  iconButton(freshButton, 'Nouvelle conversation', ['M10 4v12', 'M4 10h12']);
-  iconButton(modeButton, 'Changer le mode du chat', ['M3.2 4.2h13.6v11.6H3.2z', 'M12.3 4.2v11.6']);
-  iconButton(settingsButton, 'Réglages de l\'assistant IA', ['M10 3.2v1.4m0 10.8v1.4M3.2 10h1.4m10.8 0h1.4M5.2 5.2l1 1m7.6 7.6 1 1m0-9.6-1 1m-7.6 7.6-1 1', 'M10 7.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z']);
-  iconButton(closeButton, 'Fermer', ['M4.5 4.5 15.5 15.5', 'M15.5 4.5 4.5 15.5']);
+  titleIcon.src = blokMascot;
+  titleIcon.alt = '';
+  titleIcon.setAttribute('data-blok-agent-title-icon', '');
+  iconButton(historyButton, 'Historique', 'history');
+  iconButton(freshButton, 'Nouvelle conversation', 'plus');
+  iconButton(modeButton, 'Changer le mode du chat', 'panel');
+  iconButton(settingsButton, 'Réglages de l\'assistant IA', 'settings');
+  iconButton(closeButton, 'Fermer', 'close');
   historyButton.setAttribute('data-blok-agent-history', '');
   historyButton.setAttribute('aria-haspopup', 'menu');
   historyButton.setAttribute('aria-expanded', 'false');
@@ -243,18 +229,13 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   modeMenu.setAttribute('role', 'menu');
   modeMenu.setAttribute('hidden', '');
   transcript.setAttribute('data-blok-agent-transcript', '');
-  composer.setAttribute('data-blok-agent-composer', '');
-  field.setAttribute('aria-label', 'Demander à l\'assistant IA');
-  field.setAttribute('placeholder', 'Demander à l\'assistant…');
-  field.rows = 2;
-  pageBox.type = 'checkbox';
-  pageBox.checked = true;
-  pageLabel.setAttribute('data-blok-agent-page-context', '');
-  pageLabel.append(pageBox, document.createTextNode(' Cette page'));
-  providersHost.setAttribute('data-blok-agent-providers', '');
+  composerSlot.setAttribute('data-blok-agent-composer', '');
+  providerHint.setAttribute('data-blok-agent-providers-empty', '');
+  providerHint.textContent = 'Connecte et active un provider dans les réglages.';
+  providerHint.hidden = true;
+  composerSlot.append(composer, providerHint);
   fullSuggestions.setAttribute('data-blok-agent-suggestions', '');
   fullSuggestions.hidden = true;
-  sendButton.setAttribute('aria-label', 'Envoyer à l\'assistant IA');
   sendButton.setAttribute('data-blok-agent-send', '');
   resize.setAttribute('data-blok-agent-resize', '');
   resize.setAttribute('role', 'separator');
@@ -263,9 +244,8 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   resize.setAttribute('aria-valuemin', String(MIN_WIDTH));
   resize.setAttribute('aria-valuemax', String(MAX_WIDTH));
   resize.tabIndex = 0;
-  header.append(title, historyButton, freshButton, modeButton, settingsButton, closeButton, historyMenu, modeMenu);
-  composer.append(field, pageLabel, providersHost, sendButton);
-  panel.append(resize, header, transcript, composer, fullSuggestions);
+  header.append(titleIcon, title, historyButton, freshButton, modeButton, settingsButton, closeButton, historyMenu, modeMenu);
+  panel.append(resize, header, transcript, composerSlot, fullSuggestions);
   body.append(editorSlot, panel);
   bar.append(toggle);
   shell.append(bar, body);
@@ -290,9 +270,6 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
   });
 
   const current = (): Conversation | undefined => session.conversations[session.active];
-  const updateSendState = (): void => {
-    sendButton.disabled = session.run === null && (field.value.trim() === '' || session.picked === null);
-  };
 
   const stopRun = (): void => {
     session.token = { id: session.token.id + 1 };
@@ -302,42 +279,15 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     const conversation = current();
     const last = conversation?.turns[conversation.turns.length - 1];
 
-    if (last !== undefined && last.pending) last.pending = false;
+    if (last !== undefined && last.pending) {
+      last.pending = false;
+      last.cancelled = true;
+    }
   };
 
   const paintProviders = (usable: CliCommand[]): void => {
-    providersHost.replaceChildren();
-
-    if (usable.length === 0) {
-      const empty = document.createElement('p');
-
-      empty.setAttribute('data-blok-agent-providers-empty', '');
-      empty.textContent = 'Connecte et active un provider dans les réglages.';
-      providersHost.append(empty);
-      updateSendState();
-
-      return;
-    }
-
-    usable.forEach((command) => {
-      const choice = document.createElement('button');
-      const mark = document.createElement('span');
-      const pressed = command === session.picked;
-
-      choice.type = 'button';
-      choice.setAttribute('data-blok-agent-provider', command);
-      choice.setAttribute('aria-pressed', pressed ? 'true' : 'false');
-      mark.setAttribute('aria-hidden', 'true');
-      mark.setAttribute('data-blok-agent-check', '');
-      mark.textContent = pressed ? '✓' : '';
-      choice.append(mark, document.createTextNode(providerLabel(command)));
-      choice.addEventListener('click', () => {
-        session.picked = command;
-        paintProviders(usable);
-      });
-      providersHost.append(choice);
-    });
-    updateSendState();
+    composerHandle.setProviders(usable.map((command) => ({ id: command, label: providerLabel(command) })), session.picked ?? undefined);
+    providerHint.hidden = usable.length > 0;
   };
 
   const refreshProviders = async (): Promise<void> => {
@@ -415,65 +365,62 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     if (turns.length === 0) {
       const empty = document.createElement('div');
       const mark = document.createElement('span');
+      const mascot = document.createElement('img');
       const prompt = document.createElement('p');
       const intro = document.createElement('span');
+      const ideas = createChatSuggestions(SUGGESTIONS, (suggestion) => send(suggestion.label));
 
       empty.setAttribute('data-blok-agent-empty', '');
       mark.setAttribute('data-blok-agent-empty-mark', '');
       mark.setAttribute('aria-hidden', 'true');
-      mark.textContent = '✦';
+      mascot.src = blokMascot;
+      mascot.alt = '';
+      mark.append(mascot);
       prompt.textContent = 'Comment puis-je t\'aider ?';
       intro.setAttribute('data-blok-agent-empty-intro', '');
       intro.textContent = 'Une question sur ta page ? Commence par une idée.';
       empty.append(mark, prompt, intro);
-      SUGGESTIONS.forEach((suggestion) => {
-        const idea = makeButton(suggestion);
-
-        idea.addEventListener('click', () => {
-          send(suggestion);
-        });
-        (fullWelcome ? fullSuggestions : empty).append(idea);
-      });
+      (fullWelcome ? fullSuggestions : empty).append(ideas);
       transcript.append(empty);
 
       return;
     }
 
     turns.forEach((turn) => {
-      const article = document.createElement('article');
-      const question = document.createElement('p');
-      const who = document.createElement('p');
+      const article = document.createElement('div');
 
       article.setAttribute('data-blok-agent-turn', '');
-      question.setAttribute('data-blok-agent-question', '');
-      question.textContent = turn.question;
-      who.setAttribute('data-blok-agent-who', '');
-      who.textContent = providerLabel(turn.command);
-      article.append(question, who);
+      article.append(createChatMessage({ kind: 'user', text: turn.question }));
 
       if (turn.pending) {
-        const running = createChatActivity(runningLabel(turn.command)).element;
+        const running = createChatActivity(turn.status ?? runningLabel(turn.command)).element;
 
         running.setAttribute('data-blok-agent-running', '');
         article.append(running);
+      } else if (turn.error) {
+        article.append(createChatMessage({
+          kind: 'error',
+          text: turn.answer,
+          onRetry: () => send(turn.question),
+        }));
       } else if (turn.answer !== '') {
-        const answer = document.createElement('p');
-        const copy = makeButton('Copier la réponse');
+        article.append(createChatMessage({
+          kind: 'assistant',
+          text: turn.answer,
+          provider: providerLabel(turn.command),
+          onCopy: () => {
+            const clipboard = navigator.clipboard;
 
-        answer.setAttribute('data-blok-agent-answer', '');
-        answer.textContent = turn.answer;
-        copy.addEventListener('click', () => {
-          const clipboard = navigator.clipboard;
-
-          if (clipboard === undefined) return;
-
-          void clipboard.writeText(turn.answer).catch(() => undefined);
-        });
-        article.append(answer, copy);
+            if (clipboard) void clipboard.writeText(turn.answer).catch(() => undefined);
+          },
+        }));
+      } else if (turn.cancelled) {
+        article.append(createChatActivity('Réponse arrêtée', false).element);
       }
 
       transcript.append(article);
     });
+    transcript.scrollTop = transcript.scrollHeight;
   };
 
   const render = (): void => {
@@ -514,19 +461,13 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
       if (mark !== null) mark.textContent = selected ? '✓' : '';
     });
 
-    const sending = session.run !== null;
-    const sendLabel = document.createElement('span');
-
-    sendLabel.textContent = sending ? 'Arrêter la réponse' : 'Envoyer';
-    sendButton.replaceChildren(sendGlyph(sending), sendLabel);
-    sendButton.setAttribute('aria-label', sending ? 'Arrêter la réponse' : 'Envoyer à l\'assistant IA');
-    updateSendState();
+    composerHandle.setRunning(session.run !== null);
     paintHistory();
     paintMessages();
   };
 
   const composed = (question: string): string => {
-    if (!pageBox.checked) return question;
+    if (!session.includePage) return question;
 
     const page = options.getPageText().trim();
 
@@ -541,7 +482,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     if (text === '' || session.run !== null || command === null || conversation === undefined) return;
 
     const sent = composed(text);
-    const turn: Turn = { question: text, sent, command, answer: '', pending: true };
+    const turn: Turn = { question: text, sent, command, answer: '', pending: true, status: runningLabel(command) };
     const prior: AgentModelMessage[] = conversation.turns.flatMap((item) => (
       item.pending || item.answer === ''
         ? []
@@ -557,10 +498,15 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     session.run = controller;
     session.token = token;
     session.menu = null;
-    field.value = '';
+    composerHandle.setText('');
     render();
 
-    const model = options.modelFor?.(command) ?? createCliAgentModel({ command });
+    const model = options.modelFor?.(command, (status) => {
+      if (session.token !== token || !turn.pending || turn.status === status) return;
+
+      turn.status = status;
+      paintMessages();
+    }) ?? createCliAgentModel({ command });
     void model({
       system: SYSTEM,
       messages: [...prior, { role: 'user', content: sent }],
@@ -571,13 +517,17 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
 
       turn.answer = answerOf(response);
       turn.pending = false;
+      turn.error = false;
       session.run = null;
       render();
     }, (error: unknown) => {
       if (session.token !== token) return;
 
       turn.pending = false;
-      if (!controller.signal.aborted) turn.answer = error instanceof Error ? error.message : String(error);
+      if (!controller.signal.aborted) {
+        turn.answer = error instanceof Error ? error.message : String(error);
+        turn.error = true;
+      }
       session.run = null;
       render();
     });
@@ -588,7 +538,7 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     session.picked = null;
     render();
     void refreshProviders();
-    field.focus();
+    composerHandle.focus();
   };
 
   const close = (): void => {
@@ -626,37 +576,6 @@ export const mountAgentAssistant = (options: AgentAssistantOptions): AgentAssist
     close();
     options.openSettings();
   });
-  composer.addEventListener('submit', (event) => {
-    event.preventDefault();
-    if (session.run !== null) {
-      stopRun();
-      render();
-
-      return;
-    }
-
-    send(field.value);
-  });
-  field.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
-
-    event.preventDefault();
-    if (session.run !== null) return;
-
-    send(field.value);
-  });
-  field.addEventListener('input', updateSendState);
-  sendButton.addEventListener('click', () => {
-    if (session.run !== null) {
-      stopRun();
-      render();
-
-      return;
-    }
-
-    send(field.value);
-  });
-
   const onPointerDown = (event: PointerEvent): void => {
     if (session.mode !== 'side' || !session.open) return;
 

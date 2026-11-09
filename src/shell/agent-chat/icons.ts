@@ -5,14 +5,19 @@ import {
   ChevronDown,
   CircleHelp,
   Copy,
+  History,
   Lightbulb,
   List,
+  PanelRight,
+  Plus,
   RotateCcw,
+  Settings2,
   Square,
+  X,
   createElement,
 } from 'lucide';
 
-export type ChatIcon = 'send' | 'stop' | 'copy' | 'retry' | 'chevron' | 'check' | 'summary' | 'insight' | 'question' | 'arrow';
+export type ChatIcon = 'send' | 'stop' | 'copy' | 'retry' | 'chevron' | 'check' | 'summary' | 'insight' | 'question' | 'arrow' | 'history' | 'plus' | 'panel' | 'settings' | 'close';
 
 const icons = {
   send: ArrowUp,
@@ -25,6 +30,11 @@ const icons = {
   insight: Lightbulb,
   question: CircleHelp,
   arrow: ArrowUpRight,
+  history: History,
+  plus: Plus,
+  panel: PanelRight,
+  settings: Settings2,
+  close: X,
 };
 
 export const chatIcon = (name: ChatIcon, size = 18): SVGSVGElement => createElement(icons[name], {

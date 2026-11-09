@@ -9,6 +9,7 @@ export interface ChatComposerOptions {
   providers: readonly ChatProvider[];
   selectedProvider?: string;
   includePage?: boolean;
+  sendLabel?: string;
   onSend: (message: string, provider: string, includePage: boolean) => void;
   onStop?: () => void;
   onProviderChange?: (provider: string) => void;
@@ -18,7 +19,9 @@ export interface ChatComposerOptions {
 export interface ChatComposerHandle {
   element: HTMLFormElement;
   field: HTMLTextAreaElement;
+  submit: HTMLButtonElement;
   setRunning: (running: boolean) => void;
+  setProviders: (providers: readonly ChatProvider[], selectedProvider?: string) => void;
   setText: (text: string) => void;
   focus: () => void;
 }
@@ -46,21 +49,24 @@ export const createChatComposer = (options: ChatComposerOptions): ChatComposerHa
   page.append(chatIcon('check', 14), document.createTextNode('Cette page'));
   providerWrap.setAttribute('data-blok-chat-provider', '');
   provider.setAttribute('aria-label', 'Moteur IA');
-  options.providers.forEach((item) => {
-    const choice = document.createElement('option');
+  const fillProviders = (providers: readonly ChatProvider[], selected?: string): void => {
+    provider.replaceChildren();
+    providers.forEach((item) => {
+      const choice = document.createElement('option');
 
-    choice.value = item.id;
-    choice.textContent = item.label;
-    provider.append(choice);
-  });
-  if (options.selectedProvider && options.providers.some((item) => item.id === options.selectedProvider)) {
-    provider.value = options.selectedProvider;
-  }
-  provider.disabled = options.providers.length === 0;
+      choice.value = item.id;
+      choice.textContent = item.label;
+      provider.append(choice);
+    });
+    if (selected && providers.some((item) => item.id === selected)) provider.value = selected;
+    provider.disabled = providers.length === 0;
+  };
+
+  fillProviders(options.providers, options.selectedProvider);
   providerWrap.append(provider, chatIcon('chevron', 14));
   submit.type = 'submit';
   submit.setAttribute('data-blok-chat-submit', '');
-  submit.setAttribute('aria-label', 'Envoyer');
+  submit.setAttribute('aria-label', options.sendLabel ?? 'Envoyer');
   submit.append(chatIcon('send'));
   controls.append(page, providerWrap, submit);
   element.append(field, controls);
@@ -72,7 +78,7 @@ export const createChatComposer = (options: ChatComposerOptions): ChatComposerHa
   };
   const sync = (): void => {
     submit.disabled = state.running ? options.onStop === undefined : field.value.trim() === '' || provider.disabled;
-    submit.setAttribute('aria-label', state.running ? 'Arrêter la réponse' : 'Envoyer');
+    submit.setAttribute('aria-label', state.running ? 'Arrêter la réponse' : options.sendLabel ?? 'Envoyer');
     submit.replaceChildren(chatIcon(state.running ? 'stop' : 'send'));
   };
 
@@ -110,10 +116,15 @@ export const createChatComposer = (options: ChatComposerOptions): ChatComposerHa
   return {
     element,
     field,
+    submit,
     setRunning: (next) => {
       state.running = next;
       field.disabled = next;
       element.toggleAttribute('data-running', next);
+      sync();
+    },
+    setProviders: (providers, selected) => {
+      fillProviders(providers, selected ?? provider.value);
       sync();
     },
     setText: (text) => {

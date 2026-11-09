@@ -327,21 +327,18 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
   --blok-bg-light: var(--desktop-hover);
   --blok-icon-active-bg: var(--desktop-hover);
   --blok-focus-ring: #2e8cff;
+  --blok-chat-focus-ring: #2e8cff;
   height: 100%; min-height: 0;
 }
 [data-desktop-workspace] [data-blok-agent-bar] { display: none; }
-[data-desktop-workspace] [data-blok-agent-editor] { height: 100%; }
+[data-desktop-workspace] [data-blok-agent-editor] {
+  height: 100%;
+  scrollbar-width: none;
+}
+[data-desktop-workspace] [data-blok-agent-editor]::-webkit-scrollbar { display: none; }
 [data-desktop-workspace] [data-blok-agent-panel][data-blok-agent-mode="floating"] {
   height: min(720px, calc(100vh - 144px));
   max-height: calc(100dvh - 144px);
-}
-[data-desktop-workspace] [data-blok-agent-header] h2::before {
-  content: ''; display: inline-block; width: 20px; height: 20px; margin-right: 8px;
-  vertical-align: -4px; background: url('../../docs/public/logo-no-sign.png') center / contain no-repeat;
-}
-[data-desktop-workspace] [data-blok-agent-empty-mark] {
-  background: url('../../docs/public/logo-no-sign.png') center / contain no-repeat;
-  color: transparent; font-size: 0;
 }
 [data-desktop-switcher]:focus-visible, [data-desktop-menu-item]:focus-visible,
 [data-desktop-settings-dialog] button:focus-visible, [data-desktop-settings-theme]:focus-visible {

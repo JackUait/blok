@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Tämä parantaa suurten tietokantojen suorituskykyä.",
   "tools.database.calcCountAll": "Laske kaikki",
   "tools.database.calcCountValues": "Laske arvot",
+  "tools.database.calcFooterCountValues": "Arvot",
   "tools.database.calcCountUnique": "Laske yksilölliset arvot",
   "tools.database.calcCountEmpty": "Laske tyhjät",
   "tools.database.calcCountNotEmpty": "Laske ei-tyhjät",

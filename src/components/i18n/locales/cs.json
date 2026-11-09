@@ -1154,6 +1154,7 @@
   "tools.database.calcShowLargeCountsHint": "Zlepší to výkon u velkých databází.",
   "tools.database.calcCountAll": "Počet všech",
   "tools.database.calcCountValues": "Počet hodnot",
+  "tools.database.calcFooterCountValues": "Hodnoty",
   "tools.database.calcCountUnique": "Počet jedinečných hodnot",
   "tools.database.calcCountEmpty": "Počet prázdných",
   "tools.database.calcCountNotEmpty": "Počet neprázdných",

@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Ова ги подобрува перформансите на големите бази на податоци.",
   "tools.database.calcCountAll": "Број на сите",
   "tools.database.calcCountValues": "Број на вредности",
+  "tools.database.calcFooterCountValues": "Вредности",
   "tools.database.calcCountUnique": "Број на уникатни вредности",
   "tools.database.calcCountEmpty": "Број на празни",
   "tools.database.calcCountNotEmpty": "Број на непразни",

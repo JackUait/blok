@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Điều này cải thiện hiệu suất cho cơ sở dữ liệu lớn.",
   "tools.database.calcCountAll": "Đếm tất cả",
   "tools.database.calcCountValues": "Đếm giá trị",
+  "tools.database.calcFooterCountValues": "Giá trị",
   "tools.database.calcCountUnique": "Đếm giá trị duy nhất",
   "tools.database.calcCountEmpty": "Đếm ô trống",
   "tools.database.calcCountNotEmpty": "Đếm ô không trống",

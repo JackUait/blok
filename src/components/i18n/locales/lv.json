@@ -1151,6 +1151,7 @@
   "tools.database.calcShowLargeCountsHint": "Tas uzlabo lielu datubāzu veiktspēju.",
   "tools.database.calcCountAll": "Skaitīt visu",
   "tools.database.calcCountValues": "Skaitīt vērtības",
+  "tools.database.calcFooterCountValues": "Vērtības",
   "tools.database.calcCountUnique": "Skaitīt unikālās vērtības",
   "tools.database.calcCountEmpty": "Skaitīt tukšās",
   "tools.database.calcCountNotEmpty": "Skaitīt netukšās",

@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Hii huboresha utendaji wa hifadhidata kubwa.",
   "tools.database.calcCountAll": "Hesabu zote",
   "tools.database.calcCountValues": "Hesabu thamani",
+  "tools.database.calcFooterCountValues": "Thamani",
   "tools.database.calcCountUnique": "Hesabu thamani za kipekee",
   "tools.database.calcCountEmpty": "Hesabu tupu",
   "tools.database.calcCountNotEmpty": "Hesabu zisizo tupu",

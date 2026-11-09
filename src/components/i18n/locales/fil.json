@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Pinapabuti nito ang performance ng malalaking database.",
   "tools.database.calcCountAll": "Bilangin lahat",
   "tools.database.calcCountValues": "Bilangin ang mga halaga",
+  "tools.database.calcFooterCountValues": "Mga halaga",
   "tools.database.calcCountUnique": "Bilangin ang natatanging halaga",
   "tools.database.calcCountEmpty": "Bilangin ang walang laman",
   "tools.database.calcCountNotEmpty": "Bilangin ang may laman",

@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Det forbedrer ydeevnen for store databaser.",
   "tools.database.calcCountAll": "Tæl alle",
   "tools.database.calcCountValues": "Tæl værdier",
+  "tools.database.calcFooterCountValues": "Værdier",
   "tools.database.calcCountUnique": "Tæl unikke værdier",
   "tools.database.calcCountEmpty": "Tæl tomme",
   "tools.database.calcCountNotEmpty": "Tæl ikke-tomme",

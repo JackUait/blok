@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "ეს აუმჯობესებს დიდი მონაცემთა ბაზების წარმადობას.",
   "tools.database.calcCountAll": "ყველას დათვლა",
   "tools.database.calcCountValues": "მნიშვნელობების დათვლა",
+  "tools.database.calcFooterCountValues": "მნიშვნელობები",
   "tools.database.calcCountUnique": "უნიკალური მნიშვნელობების დათვლა",
   "tools.database.calcCountEmpty": "ცარიელების დათვლა",
   "tools.database.calcCountNotEmpty": "არაცარიელების დათვლა",

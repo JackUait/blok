@@ -1151,6 +1151,7 @@
   "tools.database.calcShowLargeCountsHint": "Astfel se îmbunătățește performanța bazelor de date mari.",
   "tools.database.calcCountAll": "Număr total",
   "tools.database.calcCountValues": "Număr de valori",
+  "tools.database.calcFooterCountValues": "Valori",
   "tools.database.calcCountUnique": "Număr de valori unice",
   "tools.database.calcCountEmpty": "Număr de goale",
   "tools.database.calcCountNotEmpty": "Număr de completate",

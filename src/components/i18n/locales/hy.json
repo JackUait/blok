@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Սա բարելավում է մեծ տվյալների բազաների արտադրողականությունը։",
   "tools.database.calcCountAll": "Հաշվել բոլորը",
   "tools.database.calcCountValues": "Հաշվել արժեքները",
+  "tools.database.calcFooterCountValues": "Արժեքներ",
   "tools.database.calcCountUnique": "Հաշվել եզակի արժեքները",
   "tools.database.calcCountEmpty": "Հաշվել դատարկները",
   "tools.database.calcCountNotEmpty": "Հաշվել ոչ դատարկները",

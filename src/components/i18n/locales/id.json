@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Ini meningkatkan performa untuk database besar.",
   "tools.database.calcCountAll": "Hitung semua",
   "tools.database.calcCountValues": "Hitung nilai",
+  "tools.database.calcFooterCountValues": "Nilai",
   "tools.database.calcCountUnique": "Hitung nilai unik",
   "tools.database.calcCountEmpty": "Hitung kosong",
   "tools.database.calcCountNotEmpty": "Hitung tidak kosong",

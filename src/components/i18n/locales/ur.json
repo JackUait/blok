@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "اس سے بڑے ڈیٹا بیسز کی کارکردگی بہتر ہوتی ہے۔",
   "tools.database.calcCountAll": "سب گنیں",
   "tools.database.calcCountValues": "اقدار گنیں",
+  "tools.database.calcFooterCountValues": "اقدار",
   "tools.database.calcCountUnique": "منفرد اقدار گنیں",
   "tools.database.calcCountEmpty": "خالی گنیں",
   "tools.database.calcCountNotEmpty": "غیر خالی گنیں",

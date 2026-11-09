@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Ez javítja a nagy adatbázisok teljesítményét.",
   "tools.database.calcCountAll": "Összes megszámlálása",
   "tools.database.calcCountValues": "Értékek megszámlálása",
+  "tools.database.calcFooterCountValues": "Értékek",
   "tools.database.calcCountUnique": "Egyedi értékek megszámlálása",
   "tools.database.calcCountEmpty": "Üresek megszámlálása",
   "tools.database.calcCountNotEmpty": "Nem üresek megszámlálása",

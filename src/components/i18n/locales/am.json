@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "ይህ ለትላልቅ የውሂብ ጎታዎች አፈጻጸምን ያሻሽላል።",
   "tools.database.calcCountAll": "የሁሉም ቆጠራ",
   "tools.database.calcCountValues": "የእሴቶች ቆጠራ",
+  "tools.database.calcFooterCountValues": "እሴቶች",
   "tools.database.calcCountUnique": "የልዩ እሴቶች ቆጠራ",
   "tools.database.calcCountEmpty": "የባዶዎች ቆጠራ",
   "tools.database.calcCountNotEmpty": "የባዶ ያልሆኑ ቆጠራ",

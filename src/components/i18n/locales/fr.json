@@ -1151,6 +1151,7 @@
   "tools.database.calcShowLargeCountsHint": "Cela améliore les performances des grandes bases de données.",
   "tools.database.calcCountAll": "Tout compter",
   "tools.database.calcCountValues": "Compter les valeurs",
+  "tools.database.calcFooterCountValues": "Valeurs",
   "tools.database.calcCountUnique": "Compter les valeurs uniques",
   "tools.database.calcCountEmpty": "Compter les vides",
   "tools.database.calcCountNotEmpty": "Compter les non vides",

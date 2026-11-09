@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "دا د لویو ډیټابیسونو کارکردګي ښه کوي.",
   "tools.database.calcCountAll": "ټول وشمېرئ",
   "tools.database.calcCountValues": "ارزښتونه وشمېرئ",
+  "tools.database.calcFooterCountValues": "ارزښتونه",
   "tools.database.calcCountUnique": "بې‌ساري ارزښتونه وشمېرئ",
   "tools.database.calcCountEmpty": "تش وشمېرئ",
   "tools.database.calcCountNotEmpty": "ناتش وشمېرئ",

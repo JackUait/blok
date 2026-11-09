@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "這可提升大型資料庫的效能。",
   "tools.database.calcCountAll": "全部計數",
   "tools.database.calcCountValues": "值計數",
+  "tools.database.calcFooterCountValues": "值",
   "tools.database.calcCountUnique": "唯一值計數",
   "tools.database.calcCountEmpty": "空白計數",
   "tools.database.calcCountNotEmpty": "非空白計數",

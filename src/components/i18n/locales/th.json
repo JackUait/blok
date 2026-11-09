@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "ช่วยเพิ่มประสิทธิภาพสำหรับฐานข้อมูลขนาดใหญ่",
   "tools.database.calcCountAll": "นับทั้งหมด",
   "tools.database.calcCountValues": "นับค่า",
+  "tools.database.calcFooterCountValues": "ค่า",
   "tools.database.calcCountUnique": "นับค่าที่ไม่ซ้ำ",
   "tools.database.calcCountEmpty": "นับค่าว่าง",
   "tools.database.calcCountNotEmpty": "นับค่าที่ไม่ว่าง",

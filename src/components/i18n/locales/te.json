@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "ఇది పెద్ద డేటాబేస్‌ల పనితీరును మెరుగుపరుస్తుంది.",
   "tools.database.calcCountAll": "అన్నింటి గణన",
   "tools.database.calcCountValues": "విలువల గణన",
+  "tools.database.calcFooterCountValues": "విలువలు",
   "tools.database.calcCountUnique": "ప్రత్యేక విలువల గణన",
   "tools.database.calcCountEmpty": "ఖాళీల గణన",
   "tools.database.calcCountNotEmpty": "ఖాళీ కాని వాటి గణన",

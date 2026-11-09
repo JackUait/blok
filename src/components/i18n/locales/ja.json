@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "大規模なデータベースのパフォーマンスが向上します。",
   "tools.database.calcCountAll": "すべてカウント",
   "tools.database.calcCountValues": "値をカウント",
+  "tools.database.calcFooterCountValues": "値",
   "tools.database.calcCountUnique": "一意の値をカウント",
   "tools.database.calcCountEmpty": "空をカウント",
   "tools.database.calcCountNotEmpty": "空以外をカウント",

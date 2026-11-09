@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "ഇത് വലിയ ഡാറ്റാബേസുകളുടെ പ്രകടനം മെച്ചപ്പെടുത്തുന്നു.",
   "tools.database.calcCountAll": "എല്ലാറ്റിന്റെയും എണ്ണം",
   "tools.database.calcCountValues": "മൂല്യങ്ങളുടെ എണ്ണം",
+  "tools.database.calcFooterCountValues": "മൂല്യങ്ങൾ",
   "tools.database.calcCountUnique": "അദ്വിതീയ മൂല്യങ്ങളുടെ എണ്ണം",
   "tools.database.calcCountEmpty": "ശൂന്യമായവയുടെ എണ്ണം",
   "tools.database.calcCountNotEmpty": "ശൂന്യമല്ലാത്തവയുടെ എണ്ണം",

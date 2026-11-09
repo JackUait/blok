@@ -592,6 +592,14 @@ describe('DatabaseTableView', () => {
       expect(footerCell('p-notes')?.hasAttribute('data-empty')).toBe(true);
     });
 
+    // research/21 §1d: Notion's footer labels Count values "VALUES", while its menu item keeps "Count values".
+    it('labels a Count values footer "Values", not with the menu item name', () => {
+      const { root } = mount({ view: tableView({ calculations: [{ id: 'p-notes', fn: 'count_values' }] }) });
+      const label = root.querySelector('[data-blok-database-table-calc][data-property-id="p-notes"] [data-blok-database-table-calc-label]');
+
+      expect(label?.textContent).toBe('tools.database.calcFooterCountValues');
+    });
+
     // research/21 §1d: the hover fills a 70x21 box around the label and value, not the cell.
     it('puts a footer cell\'s label and value, or its Calculate prompt, in one box', () => {
       const { root } = mount({ view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });

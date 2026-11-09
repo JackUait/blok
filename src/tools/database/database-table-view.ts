@@ -194,6 +194,11 @@ interface Column {
   frozenAt?: number;
 }
 
+/** research/21 §1d: footer labels that differ from the menu item name. Unrecorded ones keep the menu name. */
+const FOOTER_LABEL_KEYS: Partial<Record<CalculationFn, string>> = {
+  count_values: 'tools.database.calcFooterCountValues',
+};
+
 /** A footer cell's content: "Calculate" when no function is set, else its label and result. The timeline's table panel shares it. */
 export const fillCalculationCell = (cell: HTMLElement, { fn, property, shown, rows, i18n, locale, capCounts = false }: {
   fn: CalculationFn | undefined;
@@ -230,7 +235,7 @@ export const fillCalculationCell = (cell: HTMLElement, { fn, property, shown, ro
   const value = document.createElement('span');
 
   label.setAttribute('data-blok-database-table-calc-label', '');
-  label.textContent = i18n.t(CALCULATION_LABEL_KEYS[fn]);
+  label.textContent = i18n.t(FOOTER_LABEL_KEYS[fn] ?? CALCULATION_LABEL_KEYS[fn]);
   value.setAttribute('data-blok-database-table-calc-value', '');
   value.textContent = calculationText(fn, rows, property, shown, locale, capCounts);
   box.append(label, value);

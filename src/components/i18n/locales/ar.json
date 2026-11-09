@@ -1160,6 +1160,7 @@
   "tools.database.calcShowLargeCountsHint": "يؤدي هذا إلى تحسين الأداء في قواعد البيانات الكبيرة.",
   "tools.database.calcCountAll": "عدّ الكل",
   "tools.database.calcCountValues": "عدّ القيم",
+  "tools.database.calcFooterCountValues": "القيم",
   "tools.database.calcCountUnique": "عدّ القيم الفريدة",
   "tools.database.calcCountEmpty": "عدّ الفارغ",
   "tools.database.calcCountNotEmpty": "عدّ غير الفارغ",

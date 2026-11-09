@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "این کار عملکرد پایگاه‌های داده بزرگ را بهبود می‌دهد.",
   "tools.database.calcCountAll": "شمارش همه",
   "tools.database.calcCountValues": "شمارش مقادیر",
+  "tools.database.calcFooterCountValues": "مقادیر",
   "tools.database.calcCountUnique": "شمارش مقادیر یکتا",
   "tools.database.calcCountEmpty": "شمارش خالی‌ها",
   "tools.database.calcCountNotEmpty": "شمارش غیرخالی‌ها",

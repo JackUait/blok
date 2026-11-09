@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "بۇ چوڭ ساندانلارنىڭ ئۈنۈمىنى ياخشىلايدۇ.",
   "tools.database.calcCountAll": "ھەممىسىنى ساناش",
   "tools.database.calcCountValues": "قىممەتلەرنى ساناش",
+  "tools.database.calcFooterCountValues": "قىممەتلەر",
   "tools.database.calcCountUnique": "ئۆزگىچە قىممەتلەرنى ساناش",
   "tools.database.calcCountEmpty": "بوشلارنى ساناش",
   "tools.database.calcCountNotEmpty": "بوش ئەمەسلەرنى ساناش",

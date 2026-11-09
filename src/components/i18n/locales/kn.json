@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "ಇದು ದೊಡ್ಡ ಡೇಟಾಬೇಸ್‌ಗಳ ಕಾರ್ಯಕ್ಷಮತೆಯನ್ನು ಸುಧಾರಿಸುತ್ತದೆ.",
   "tools.database.calcCountAll": "ಎಲ್ಲದರ ಎಣಿಕೆ",
   "tools.database.calcCountValues": "ಮೌಲ್ಯಗಳ ಎಣಿಕೆ",
+  "tools.database.calcFooterCountValues": "ಮೌಲ್ಯಗಳು",
   "tools.database.calcCountUnique": "ಅನನ್ಯ ಮೌಲ್ಯಗಳ ಎಣಿಕೆ",
   "tools.database.calcCountEmpty": "ಖಾಲಿಗಳ ಎಣಿಕೆ",
   "tools.database.calcCountNotEmpty": "ಖಾಲಿಯಲ್ಲದವುಗಳ ಎಣಿಕೆ",

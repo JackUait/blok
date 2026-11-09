@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Dit verbetert de prestaties van grote databases.",
   "tools.database.calcCountAll": "Alles tellen",
   "tools.database.calcCountValues": "Waarden tellen",
+  "tools.database.calcFooterCountValues": "Waarden",
   "tools.database.calcCountUnique": "Unieke waarden tellen",
   "tools.database.calcCountEmpty": "Lege tellen",
   "tools.database.calcCountNotEmpty": "Niet-lege tellen",

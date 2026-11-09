@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Αυτό βελτιώνει την απόδοση σε μεγάλες βάσεις δεδομένων.",
   "tools.database.calcCountAll": "Πλήθος όλων",
   "tools.database.calcCountValues": "Πλήθος τιμών",
+  "tools.database.calcFooterCountValues": "Τιμές",
   "tools.database.calcCountUnique": "Πλήθος μοναδικών τιμών",
   "tools.database.calcCountEmpty": "Πλήθος κενών",
   "tools.database.calcCountNotEmpty": "Πλήθος μη κενών",

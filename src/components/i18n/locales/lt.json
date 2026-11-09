@@ -1154,6 +1154,7 @@
   "tools.database.calcShowLargeCountsHint": "Tai pagerina didelių duomenų bazių našumą.",
   "tools.database.calcCountAll": "Skaičiuoti visus",
   "tools.database.calcCountValues": "Skaičiuoti reikšmes",
+  "tools.database.calcFooterCountValues": "Reikšmės",
   "tools.database.calcCountUnique": "Skaičiuoti unikalias reikšmes",
   "tools.database.calcCountEmpty": "Skaičiuoti tuščius",
   "tools.database.calcCountNotEmpty": "Skaičiuoti netuščius",

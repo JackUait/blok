@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "דאָס פֿאַרבעסערט די פּערפֿאָרמאַנס פֿון גרויסע דאַטנבאַזעס.",
   "tools.database.calcCountAll": "ציילן אַלץ",
   "tools.database.calcCountValues": "ציילן ווערטן",
+  "tools.database.calcFooterCountValues": "ווערטן",
   "tools.database.calcCountUnique": "ציילן יחידישע ווערטן",
   "tools.database.calcCountEmpty": "ציילן ליידיקע",
   "tools.database.calcCountNotEmpty": "ציילן ניט־ליידיקע",

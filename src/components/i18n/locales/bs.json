@@ -1151,6 +1151,7 @@
   "tools.database.calcShowLargeCountsHint": "Ovo poboljšava performanse velikih baza podataka.",
   "tools.database.calcCountAll": "Broj svih",
   "tools.database.calcCountValues": "Broj vrijednosti",
+  "tools.database.calcFooterCountValues": "Vrijednosti",
   "tools.database.calcCountUnique": "Broj jedinstvenih vrijednosti",
   "tools.database.calcCountEmpty": "Broj praznih",
   "tools.database.calcCountNotEmpty": "Broj nepraznih",

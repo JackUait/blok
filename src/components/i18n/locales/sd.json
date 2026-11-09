@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "هي وڏن ڊيٽابيسن جي ڪارڪردگي بهتر ڪري ٿو.",
   "tools.database.calcCountAll": "سڀ ڳڻيو",
   "tools.database.calcCountValues": "قدر ڳڻيو",
+  "tools.database.calcFooterCountValues": "قدر",
   "tools.database.calcCountUnique": "منفرد قدر ڳڻيو",
   "tools.database.calcCountEmpty": "خالي ڳڻيو",
   "tools.database.calcCountNotEmpty": "غير خالي ڳڻيو",

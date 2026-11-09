@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "ਇਸ ਨਾਲ ਵੱਡੇ ਡੇਟਾਬੇਸਾਂ ਦੀ ਕਾਰਗੁਜ਼ਾਰੀ ਬਿਹਤਰ ਹੁੰਦੀ ਹੈ।",
   "tools.database.calcCountAll": "ਸਾਰਿਆਂ ਦੀ ਗਿਣਤੀ",
   "tools.database.calcCountValues": "ਮੁੱਲਾਂ ਦੀ ਗਿਣਤੀ",
+  "tools.database.calcFooterCountValues": "ਮੁੱਲ",
   "tools.database.calcCountUnique": "ਵਿਲੱਖਣ ਮੁੱਲਾਂ ਦੀ ਗਿਣਤੀ",
   "tools.database.calcCountEmpty": "ਖਾਲੀ ਦੀ ਗਿਣਤੀ",
   "tools.database.calcCountNotEmpty": "ਗੈਰ-ਖਾਲੀ ਦੀ ਗਿਣਤੀ",

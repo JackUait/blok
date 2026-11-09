@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "މިއީ ބޮޑެތި ޑޭޓާބޭސްތަކުގައި ޕަރފޯމަންސް ރަނގަޅުކުރާ ކަމެކެވެ.",
   "tools.database.calcCountAll": "ހުރިހާ އެއްޗެއް ގުނާ",
   "tools.database.calcCountValues": "އަގުތައް ގުނާ",
+  "tools.database.calcFooterCountValues": "އަގުތައް",
   "tools.database.calcCountUnique": "ތަފާތު އަގުތައް ގުނާ",
   "tools.database.calcCountEmpty": "ހުސްތައް ގުނާ",
   "tools.database.calcCountNotEmpty": "ހުސްނޫންތައް ގުނާ",

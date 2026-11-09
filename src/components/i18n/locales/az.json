@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Bu, böyük verilənlər bazalarında performansı yaxşılaşdırır.",
   "tools.database.calcCountAll": "Hamısını say",
   "tools.database.calcCountValues": "Dəyərləri say",
+  "tools.database.calcFooterCountValues": "Dəyərlər",
   "tools.database.calcCountUnique": "Unikal dəyərləri say",
   "tools.database.calcCountEmpty": "Boşları say",
   "tools.database.calcCountNotEmpty": "Boş olmayanları say",

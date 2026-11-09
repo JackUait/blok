@@ -603,6 +603,7 @@ export type BlokMessageKey =
   | 'tools.database.calcDate'
   | 'tools.database.calcDateRange'
   | 'tools.database.calcEarliestDate'
+  | 'tools.database.calcFooterCountValues'
   | 'tools.database.calcLatestDate'
   | 'tools.database.calcMax'
   | 'tools.database.calcMedian'

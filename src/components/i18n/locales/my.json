@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "၎င်းသည် ဒေတာဘေ့စ်ကြီးများ၏ စွမ်းဆောင်ရည်ကို မြှင့်တင်ပေးသည်။",
   "tools.database.calcCountAll": "အားလုံး ရေတွက်",
   "tools.database.calcCountValues": "တန်ဖိုးများ ရေတွက်",
+  "tools.database.calcFooterCountValues": "တန်ဖိုးများ",
   "tools.database.calcCountUnique": "ထူးခြားသော တန်ဖိုးများ ရေတွက်",
   "tools.database.calcCountEmpty": "ဗလာများ ရေတွက်",
   "tools.database.calcCountNotEmpty": "ဗလာမဟုတ်သည်များ ရေတွက်",

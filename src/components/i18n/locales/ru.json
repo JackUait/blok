@@ -1154,6 +1154,7 @@
   "tools.database.calcShowLargeCountsHint": "Это ускоряет работу больших баз данных.",
   "tools.database.calcCountAll": "Количество всех",
   "tools.database.calcCountValues": "Количество значений",
+  "tools.database.calcFooterCountValues": "Значения",
   "tools.database.calcCountUnique": "Количество уникальных значений",
   "tools.database.calcCountEmpty": "Количество пустых",
   "tools.database.calcCountNotEmpty": "Количество непустых",

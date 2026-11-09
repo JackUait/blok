@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "এটি বড় ডেটাবেসে পারফরম্যান্স উন্নত করে।",
   "tools.database.calcCountAll": "সবের গণনা",
   "tools.database.calcCountValues": "মানের গণনা",
+  "tools.database.calcFooterCountValues": "মান",
   "tools.database.calcCountUnique": "অনন্য মানের গণনা",
   "tools.database.calcCountEmpty": "খালির গণনা",
   "tools.database.calcCountNotEmpty": "অ-খালির গণনা",

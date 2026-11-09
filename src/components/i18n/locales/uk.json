@@ -1154,6 +1154,7 @@
   "tools.database.calcShowLargeCountsHint": "Це прискорює роботу великих баз даних.",
   "tools.database.calcCountAll": "Кількість усіх",
   "tools.database.calcCountValues": "Кількість значень",
+  "tools.database.calcFooterCountValues": "Значення",
   "tools.database.calcCountUnique": "Кількість унікальних значень",
   "tools.database.calcCountEmpty": "Кількість порожніх",
   "tools.database.calcCountNotEmpty": "Кількість непорожніх",

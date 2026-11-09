@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Bu, büyük veritabanlarında performansı artırır.",
   "tools.database.calcCountAll": "Tümünü say",
   "tools.database.calcCountValues": "Değerleri say",
+  "tools.database.calcFooterCountValues": "Değerler",
   "tools.database.calcCountUnique": "Benzersiz değerleri say",
   "tools.database.calcCountEmpty": "Boşları say",
   "tools.database.calcCountNotEmpty": "Boş olmayanları say",

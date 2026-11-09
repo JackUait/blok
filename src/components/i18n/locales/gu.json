@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "આ મોટા ડેટાબેઝનું પ્રદર્શન સુધારે છે.",
   "tools.database.calcCountAll": "બધાની ગણતરી",
   "tools.database.calcCountValues": "મૂલ્યોની ગણતરી",
+  "tools.database.calcFooterCountValues": "મૂલ્યો",
   "tools.database.calcCountUnique": "અનન્ય મૂલ્યોની ગણતરી",
   "tools.database.calcCountEmpty": "ખાલીની ગણતરી",
   "tools.database.calcCountNotEmpty": "ખાલી ન હોય તેની ગણતરી",

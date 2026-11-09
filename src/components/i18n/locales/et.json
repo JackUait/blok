@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "See parandab suurte andmebaaside jõudlust.",
   "tools.database.calcCountAll": "Loenda kõik",
   "tools.database.calcCountValues": "Loenda väärtused",
+  "tools.database.calcFooterCountValues": "Väärtused",
   "tools.database.calcCountUnique": "Loenda unikaalsed väärtused",
   "tools.database.calcCountEmpty": "Loenda tühjad",
   "tools.database.calcCountNotEmpty": "Loenda mittetühjad",

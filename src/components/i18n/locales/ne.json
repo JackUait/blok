@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "यसले ठूला डेटाबेसको कार्यसम्पादन सुधार्छ।",
   "tools.database.calcCountAll": "सबैको गणना",
   "tools.database.calcCountValues": "मानहरूको गणना",
+  "tools.database.calcFooterCountValues": "मानहरू",
   "tools.database.calcCountUnique": "अद्वितीय मानहरूको गणना",
   "tools.database.calcCountEmpty": "खालीको गणना",
   "tools.database.calcCountNotEmpty": "खाली नभएकाको गणना",

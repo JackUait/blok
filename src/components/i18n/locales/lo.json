@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "ອັນນີ້ຊ່ວຍປັບປຸງປະສິດທິພາບຂອງຖານຂໍ້ມູນຂະໜາດໃຫຍ່.",
   "tools.database.calcCountAll": "ນັບທັງໝົດ",
   "tools.database.calcCountValues": "ນັບຄ່າ",
+  "tools.database.calcFooterCountValues": "ຄ່າ",
   "tools.database.calcCountUnique": "ນັບຄ່າທີ່ບໍ່ຊ້ຳ",
   "tools.database.calcCountEmpty": "ນັບຄ່າຫວ່າງ",
   "tools.database.calcCountNotEmpty": "ນັບຄ່າທີ່ບໍ່ຫວ່າງ",

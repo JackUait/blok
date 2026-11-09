@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Det förbättrar prestandan för stora databaser.",
   "tools.database.calcCountAll": "Räkna alla",
   "tools.database.calcCountValues": "Räkna värden",
+  "tools.database.calcFooterCountValues": "Värden",
   "tools.database.calcCountUnique": "Räkna unika värden",
   "tools.database.calcCountEmpty": "Räkna tomma",
   "tools.database.calcCountNotEmpty": "Räkna icke-tomma",

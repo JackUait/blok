@@ -1154,6 +1154,7 @@
   "tools.database.calcShowLargeCountsHint": "Poprawia to wydajność dużych baz danych.",
   "tools.database.calcCountAll": "Policz wszystko",
   "tools.database.calcCountValues": "Policz wartości",
+  "tools.database.calcFooterCountValues": "Wartości",
   "tools.database.calcCountUnique": "Policz unikalne wartości",
   "tools.database.calcCountEmpty": "Policz puste",
   "tools.database.calcCountNotEmpty": "Policz niepuste",

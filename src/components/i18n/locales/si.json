@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "මෙය විශාල දත්ත සමුදායන්හි කාර්ය සාධනය වැඩි දියුණු කරයි.",
   "tools.database.calcCountAll": "සියල්ලේ ගණන",
   "tools.database.calcCountValues": "අගයන් ගණන",
+  "tools.database.calcFooterCountValues": "අගයන්",
   "tools.database.calcCountUnique": "අනන්‍ය අගයන් ගණන",
   "tools.database.calcCountEmpty": "හිස් ගණන",
   "tools.database.calcCountNotEmpty": "හිස් නොවන ගණන",

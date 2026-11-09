@@ -1151,6 +1151,7 @@
   "tools.database.calcShowLargeCountsHint": "זה משפר את הביצועים במסדי נתונים גדולים.",
   "tools.database.calcCountAll": "ספור הכול",
   "tools.database.calcCountValues": "ספור ערכים",
+  "tools.database.calcFooterCountValues": "ערכים",
   "tools.database.calcCountUnique": "ספור ערכים ייחודיים",
   "tools.database.calcCountEmpty": "ספור ריקים",
   "tools.database.calcCountNotEmpty": "ספור לא ריקים",

@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Энэ нь том өгөгдлийн сангийн гүйцэтгэлийг сайжруулна.",
   "tools.database.calcCountAll": "Бүгдийг тоолох",
   "tools.database.calcCountValues": "Утгуудыг тоолох",
+  "tools.database.calcFooterCountValues": "Утгууд",
   "tools.database.calcCountUnique": "Давтагдашгүй утгуудыг тоолох",
   "tools.database.calcCountEmpty": "Хоосныг тоолох",
   "tools.database.calcCountNotEmpty": "Хоосон бусыг тоолох",

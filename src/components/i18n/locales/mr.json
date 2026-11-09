@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "यामुळे मोठ्या डेटाबेसची कार्यक्षमता सुधारते.",
   "tools.database.calcCountAll": "सर्वांची गणना",
   "tools.database.calcCountValues": "मूल्यांची गणना",
+  "tools.database.calcFooterCountValues": "मूल्ये",
   "tools.database.calcCountUnique": "अद्वितीय मूल्यांची गणना",
   "tools.database.calcCountEmpty": "रिक्तांची गणना",
   "tools.database.calcCountNotEmpty": "रिक्त नसलेल्यांची गणना",

@@ -1148,6 +1148,7 @@
   "tools.database.calcShowLargeCountsHint": "Ini meningkatkan prestasi pangkalan data yang besar.",
   "tools.database.calcCountAll": "Kira semua",
   "tools.database.calcCountValues": "Kira nilai",
+  "tools.database.calcFooterCountValues": "Nilai",
   "tools.database.calcCountUnique": "Kira nilai unik",
   "tools.database.calcCountEmpty": "Kira kosong",
   "tools.database.calcCountNotEmpty": "Kira tidak kosong",

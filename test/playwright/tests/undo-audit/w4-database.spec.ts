@@ -105,6 +105,15 @@ const redo = async (page: Page): Promise<void> => {
   await wait(page, SETTLE_MS);
 };
 
+/** Deletes a board column's option from its option menu in a card's peek; the column header has no delete control. */
+const deleteOption = async (page: Page, rowId: string, optionId: string): Promise<void> => {
+  await page.locator(`[data-blok-database-card][data-row-id="${rowId}"]`).click();
+  await page.locator('[data-blok-database-drawer-prop-value][data-property-id="prop-status"]').click();
+  await page.locator(`[data-blok-database-select-option="${optionId}"] [data-blok-database-select-option-menu]`).click();
+  await page.locator('[data-blok-database-option-delete]').click();
+  await page.locator('[data-blok-database-option-delete-confirm]').click();
+};
+
 /** What the database shows: title, tabs, board columns with cards, list rows. */
 const screen = (page: Page): Promise<Record<string, unknown>> => page.evaluate(() => {
   const txt = (el: Element | null): string => (el?.textContent ?? '').trim();
@@ -309,12 +318,8 @@ const GESTURES: Gesture[] = [
     await input.fill('Backlog');
     await input.press('Enter');
   } },
-  { id: 'W4D-C3', name: 'deleting a board column with its card', run: async (page) => {
-    const col = page.locator('[data-blok-database-column][data-option-id="opt-done"]');
-
-    await col.hover();
-    await col.locator('[data-blok-database-delete-column]').click();
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
+  { id: 'W4D-C3', name: 'deleting a board column\'s option with its card', run: async (page) => {
+    await deleteOption(page, 'row-2', 'opt-done');
   } },
   { id: 'W4D-C4', name: 'dragging a board column before another', run: async (page) => {
     const s = await page.locator('[data-blok-database-column][data-option-id="opt-done"] [data-blok-database-column-count]').boundingBox();
@@ -389,15 +394,11 @@ test.describe('W4D database-level gestures (work)', () => {
 });
 
 test.describe('W4D column delete keeps rows', () => {
-  test('W4D-C3b: deleting a column clears its rows, and one undo restores the option and every value', async ({ page }) => {
+  test('W4D-C3b: deleting a column\'s option clears its rows, and one undo restores the option and every value', async ({ page }) => {
     await mount(page);
     await gap(page);
 
-    const col = page.locator('[data-blok-database-column][data-option-id="opt-done"]');
-
-    await col.hover();
-    await col.locator('[data-blok-database-delete-column]').click();
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
+    await deleteOption(page, 'row-2', 'opt-done');
     await gap(page);
 
     const options = async (): Promise<string[]> => {

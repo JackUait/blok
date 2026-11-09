@@ -9713,19 +9713,6 @@ export class DatabaseTool implements BlockTool {
       this.columnControls = new DatabaseColumnControls({
         i18n: this.api.i18n,
         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
-        onDelete: (optionId) => {
-          void openDatabaseConfirm({
-            title: this.api.i18n.t('tools.database.optionDeleteConfirm'),
-            confirmLabel: this.api.i18n.t('tools.database.optionDelete'),
-            cancelLabel: this.api.i18n.t('tools.database.optionDeleteCancel'),
-            destructive: true,
-            directionSource: this.element,
-          }).then((confirmed) => {
-            if (confirmed && !this.destroyed && !this.readOnly) {
-              this.handleOptionDelete(optionId);
-            }
-          });
-        },
         onRenameInput: (optionId, label) => {
           // Instant local save — update the model immediately so save() captures latest value
           this.handleOptionRename(optionId, label);
@@ -9819,7 +9806,6 @@ export class DatabaseTool implements BlockTool {
 
       if (optId !== null && optId !== undefined && optId !== NO_VALUE_GROUP_KEY) {
         this.columnControls.makePillTitleEditable(header, optId);
-        this.columnControls.appendDeleteButton(header, optId);
       }
     }
   }
@@ -10245,40 +10231,6 @@ export class DatabaseTool implements BlockTool {
     const options = prop.config.options.map((o) => o.id === optionId ? { ...o, label } : o);
     this.model.updateProperty(groupByPropId, { config: { options } });
     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options } } });
-  }
-
-  private handleOptionDelete(optionId: string): void {
-    const viewConfig = this.shownView();
-    const groupByPropId = viewConfig?.groupBy;
-
-    if (groupByPropId === undefined || this.structureLocked()) {
-      return;
-    }
-
-    const prop = this.model.getProperty(groupByPropId);
-
-    if (prop?.config === undefined) {
-      return;
-    }
-
-    if (prop.config.options.length <= 1) {
-      return;
-    }
-
-    const rowsInGroup = this.model.getRowsGroupedBy(groupByPropId).get(optionId) ?? [];
-
-    for (const row of rowsInGroup) {
-      const current = row.properties[groupByPropId];
-      const value = Array.isArray(current) ? personIdsOf(current).filter((id) => id !== optionId) : null;
-
-      this.updateRowBlock(row.id, { [groupByPropId]: value });
-      this.sync.syncUpdateRow({ rowId: row.id, properties: { [groupByPropId]: value } });
-    }
-
-    const filteredOptions = prop.config.options.filter((o) => o.id !== optionId);
-    this.model.updateProperty(groupByPropId, { config: { options: filteredOptions } });
-    this.rerenderView();
-    void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: filteredOptions } } });
   }
 
   /** A deleted option leaves its rows in place with the value emptied, as Notion does (research/08, D9). */

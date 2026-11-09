@@ -5485,28 +5485,6 @@ span[data-blok-slash-search] {
   border-radius: var(--blok-radius-control-lg);
 }
 
-[data-blok-database-delete-column] {
-  opacity: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--blok-database-delete-text);
-  font-size: 14px;
-  line-height: 1;
-  padding: var(--blok-space-0-5) var(--blok-space-1);
-  border-radius: var(--blok-radius-control-sm);
-  flex-shrink: 0;
-  transition: opacity 120ms ease, color 120ms ease;
-}
-
-[data-blok-database-column-header]:hover [data-blok-database-delete-column] {
-  opacity: 1;
-}
-
-[data-blok-database-delete-column]:hover {
-  color: var(--blok-database-delete-hover-text);
-}
-
 [data-blok-database-column-actions] {
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseColumnControls } from '../../../../src/tools/database/database-column-controls';
-import { simulateChange, simulateInput, simulateKeydown } from '../../../helpers/simulate';
+import { simulateInput, simulateKeydown } from '../../../helpers/simulate';
 import type { I18n } from '../../../../types';
 
 const createMockI18n = (): I18n => ({
@@ -9,17 +9,6 @@ const createMockI18n = (): I18n => ({
   getEnglishTranslation: vi.fn(() => ''),
   getLocale: vi.fn(() => 'en'),
 });
-
-const makeHeaderEl = (title = 'My Column'): HTMLElement => {
-  const header = document.createElement('div');
-  const titleEl = document.createElement('div');
-
-  titleEl.setAttribute('data-blok-database-column-title', '');
-  titleEl.textContent = title;
-  header.appendChild(titleEl);
-
-  return header;
-};
 
 const makePillHeaderEl = (title = 'BACKLOG'): HTMLElement => {
   const header = document.createElement('div');
@@ -36,7 +25,6 @@ const makePillHeaderEl = (title = 'BACKLOG'): HTMLElement => {
 describe('DatabaseColumnControls', () => {
   let i18n: I18n;
   let onRename: ReturnType<typeof vi.fn<(optionId: string, label: string) => void>>;
-  let onDelete: ReturnType<typeof vi.fn<(optionId: string) => void>>;
   let onRenameInput: ReturnType<typeof vi.fn<(optionId: string, label: string) => void>>;
   let onRenameCommit: ReturnType<typeof vi.fn<(optionId: string, label: string) => void>>;
   let controls: DatabaseColumnControls;
@@ -45,73 +33,13 @@ describe('DatabaseColumnControls', () => {
     vi.clearAllMocks();
     i18n = createMockI18n();
     onRename = vi.fn<(optionId: string, label: string) => void>();
-    onDelete = vi.fn<(optionId: string) => void>();
     onRenameInput = vi.fn<(optionId: string, label: string) => void>();
     onRenameCommit = vi.fn<(optionId: string, label: string) => void>();
-    controls = new DatabaseColumnControls({ i18n, onRename, onDelete, onRenameInput, onRenameCommit });
+    controls = new DatabaseColumnControls({ i18n, onRename, onRenameInput, onRenameCommit });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-  });
-
-  describe('makeEditable', () => {
-    it('calls onRename when title input fires change event', () => {
-      const headerEl = makeHeaderEl('My Column');
-
-      controls.makeEditable(headerEl, 'opt-1');
-
-      const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]');
-
-      expect(input).not.toBeNull();
-
-      if (input) {
-        input.value = 'Renamed Column';
-        simulateChange(input);
-      }
-
-      expect(onRename).toHaveBeenCalledWith('opt-1', 'Renamed Column');
-    });
-
-    it('calls onDelete with option ID when delete button is clicked', () => {
-      const headerEl = makeHeaderEl('My Column');
-
-      controls.makeEditable(headerEl, 'opt-2');
-
-      const deleteBtn = headerEl.querySelector<HTMLButtonElement>('[data-blok-database-delete-column]');
-
-      expect(deleteBtn).not.toBeNull();
-
-      deleteBtn?.click();
-
-      expect(onDelete).toHaveBeenCalledWith('opt-2');
-    });
-
-    describe('accessibility', () => {
-      it('delete button has aria-label with translated text', () => {
-        const headerEl = makeHeaderEl('My Column');
-
-        controls.makeEditable(headerEl, 'opt-1');
-
-        const deleteBtn = headerEl.querySelector<HTMLButtonElement>('[data-blok-database-delete-column]');
-
-        expect(deleteBtn).not.toBeNull();
-        expect(deleteBtn?.getAttribute('aria-label')).toBe('tools.database.deleteColumn');
-        expect(i18n.t).toHaveBeenCalledWith('tools.database.deleteColumn');
-      });
-
-      it('rename input has aria-label with translated text', () => {
-        const headerEl = makeHeaderEl('My Column');
-
-        controls.makeEditable(headerEl, 'opt-1');
-
-        const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]');
-
-        expect(input).not.toBeNull();
-        expect(input?.getAttribute('aria-label')).toBe('tools.database.renameColumn');
-        expect(i18n.t).toHaveBeenCalledWith('tools.database.renameColumn');
-      });
-    });
   });
 
   describe('makePillTitleEditable', () => {
@@ -225,28 +153,6 @@ describe('DatabaseColumnControls', () => {
       input.dispatchEvent(new Event('blur'));
 
       expect(onRenameCommit).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('appendDeleteButton', () => {
-    it('appends a delete button with correct data attribute and aria-label', () => {
-      const headerEl = document.createElement('div');
-      controls.appendDeleteButton(headerEl, 'opt-5');
-
-      const btn = headerEl.querySelector<HTMLButtonElement>('[data-blok-database-delete-column]');
-      expect(btn).not.toBeNull();
-      expect(btn?.getAttribute('data-option-id')).toBe('opt-5');
-      expect(btn?.getAttribute('aria-label')).toBe('tools.database.deleteColumn');
-    });
-
-    it('calls onDelete when delete button is clicked', () => {
-      const headerEl = document.createElement('div');
-      controls.appendDeleteButton(headerEl, 'opt-5');
-
-      const btn = headerEl.querySelector<HTMLButtonElement>('[data-blok-database-delete-column]')!;
-      btn.click();
-
-      expect(onDelete).toHaveBeenCalledWith('opt-5');
     });
   });
 });

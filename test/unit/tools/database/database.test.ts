@@ -620,6 +620,31 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      it('deleting an option also empties it on a row a filter hides', () => {
+        const shown = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Shown', 'prop-status': 'opt-a' }, position: 'a0' });
+        const hidden = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Hidden', 'prop-status': 'opt-a' }, position: 'a1' });
+        const options = createDatabaseOptions({
+          schema: SCHEMA,
+          views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
+            filters: [{ propertyId: 'prop-title', operator: 'equals', value: 'shown' }] }],
+        }, {}, { childBlocks: [shown, hidden] });
+        const tool = new DatabaseTool(options);
+        const element = tool.render();
+
+        document.body.appendChild(element);
+        tool.rendered();
+        expect(queryAllByData(element, 'data-blok-database-card')).toHaveLength(1);
+        queryByData(element, 'data-blok-database-card')?.click();
+        openValue(element, 'prop-status');
+        document.querySelector<HTMLElement>('[data-blok-database-select-option="opt-a"] [data-blok-database-select-option-menu]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-option-delete]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-option-delete-confirm]')?.click();
+
+        expect(propertyWrites(hidden)).toContainEqual({ 'prop-status': null });
+        expect(options.api.blocks.delete).not.toHaveBeenCalled();
+        tool.destroy();
+      });
+
       it('deleting a multi-select option drops just that id from every row', () => {
         const first = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-tags': ['tag-y'] }, position: 'a0' });
         const second = createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Two', 'prop-tags': ['tag-x', 'tag-y'] }, position: 'a1' });
@@ -4091,97 +4116,19 @@ describe('DatabaseTool', () => {
     });
   });
 
-  // GATED ON USER DECISION D9: rows keep existing when their column is deleted.
-  describe('deleting a board column', () => {
-    const liveRowBlock = (id: string, properties: Record<string, PropertyValue>, position: string): BlockAPI => {
-      const block = createMockRowBlock({ id, properties, position });
-      const data = block.preservedData as DatabaseRowData;
-
-      vi.mocked(block.call).mockImplementation((method: string, params?: unknown) => {
-        if (method === 'updateProperties') Object.assign(data.properties, params);
-      });
-
-      return block;
-    };
-
-    const clickDelete = async (element: HTMLElement, optionId: string): Promise<void> => {
-      queryAllByData(element, 'data-blok-database-delete-column')
-        .find((el) => el.getAttribute('data-option-id') === optionId)
-        ?.click();
-      document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]')?.click();
-      await Promise.resolve();
-    };
-
-    it('asks "Are you sure you want to delete this option?" and deletes nothing on Cancel', async () => {
-      const childBlocks = [liveRowBlock('row-1', { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, 'a0')];
-      const options = createDatabaseOptions({}, {}, { childBlocks });
-      const tool = new DatabaseTool(options);
+  // r8: Notion's column header has no delete control. An option is deleted from its own option menu.
+  describe('a board column header', () => {
+    it('holds no delete button, only the count, ⋯ and +', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [] }));
       const element = tool.render();
 
       tool.rendered();
-      queryAllByData(element, 'data-blok-database-delete-column')
-        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')
-        ?.click();
+      const header = queryAllByData(element, 'data-blok-database-column-header')
+        .find((el) => el.closest('[data-option-id="opt-todo"]') !== null);
 
-      expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.optionDeleteConfirm');
-      expect(childBlocks[0].call).not.toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
-
-      document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="cancel"]')?.click();
-      await Promise.resolve();
-
-      expect(childBlocks[0].call).not.toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
-      expect(queryAllByData(element, 'data-blok-database-column').some((el) => el.getAttribute('data-option-id') === 'opt-todo')).toBe(true);
-
-      tool.destroy();
-    });
-
-    it('keeps the rows and moves them to the no-value group', async () => {
-      const childBlocks = [
-        liveRowBlock('row-1', { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, 'a0'),
-        liveRowBlock('row-2', { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, 'a1'),
-      ];
-      const options = createDatabaseOptions({}, {}, { childBlocks });
-      const tool = new DatabaseTool(options);
-      const element = tool.render();
-
-      tool.rendered();
-      await clickDelete(element, 'opt-todo');
-
-      expect(options.api.blocks.delete).not.toHaveBeenCalled();
-      expect(childBlocks[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
-      expect(childBlocks[1].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
-
-      const noValue = queryByData(element, 'data-blok-database-no-value-group');
-      const cardIds = queryAllByData(noValue ?? element, 'data-blok-database-card').map((c) => c.getAttribute('data-row-id'));
-
-      expect(cardIds).toEqual(['row-1', 'row-2']);
-      expect(queryAllByData(element, 'data-option-id', 'opt-todo')).toHaveLength(0);
-
-      tool.destroy();
-    });
-
-    it('removes only the deleted option from a multiSelect row', async () => {
-      const row = liveRowBlock('row-1', { 'prop-title': 'Task', 'prop-tags': ['opt-a', 'opt-b'] }, 'a0');
-      const options = createDatabaseOptions({
-        schema: [
-          { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
-          { id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: {
-            options: [
-              { id: 'opt-a', label: 'A', position: 'a0' },
-              { id: 'opt-b', label: 'B', position: 'a1' },
-            ],
-          }},
-        ],
-        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-tags', sorts: [], filters: [], visibleProperties: [] }],
-      }, {}, { childBlocks: [row] });
-      const tool = new DatabaseTool(options);
-      const element = tool.render();
-
-      tool.rendered();
-      await clickDelete(element, 'opt-a');
-
-      expect(options.api.blocks.delete).not.toHaveBeenCalled();
-      expect(row.call).toHaveBeenCalledWith('updateProperties', { 'prop-tags': ['opt-b'] });
+      expect(queryAllByData(element, 'data-blok-database-delete-column')).toHaveLength(0);
+      expect(Array.from(header?.querySelectorAll('button') ?? []).map((b) => b.getAttribute('aria-label') ?? 'count'))
+        .toEqual(['count', 'tools.database.groupMenuLabel', 'tools.database.newPage']);
 
       tool.destroy();
     });
@@ -4469,30 +4416,6 @@ describe('DatabaseTool', () => {
       tool.rendered();
 
       expect(titlesIn(element, 'data-blok-database-list-row-title')).toEqual(['Apple', 'Banana', 'Cherry']);
-    });
-
-    it('still clears the group of a row a filter hides when its column is deleted', async () => {
-      const childBlocks = [
-        createMockRowBlock({ id: 'row-shown', properties: { 'prop-title': 'Shown', 'prop-status': 'opt-todo' }, position: 'a0' }),
-        createMockRowBlock({ id: 'row-hidden', properties: { 'prop-title': 'Hidden', 'prop-status': 'opt-todo' }, position: 'a1' }),
-      ];
-      const data = makeDefaultData({
-        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], visibleProperties: [],
-          filters: [{ propertyId: 'prop-title', operator: 'equals', value: 'shown' }] }],
-      });
-      const options = createDatabaseOptions(data, {}, { childBlocks });
-      const tool = new DatabaseTool(options);
-      const element = tool.render();
-
-      tool.rendered();
-      queryAllByData(element, 'data-blok-database-delete-column')
-        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')!
-        .click();
-      document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-action="confirm"]')?.click();
-      await Promise.resolve();
-
-      expect(childBlocks[1].call).toHaveBeenCalledWith('updateProperties', { 'prop-status': null });
-      expect(options.api.blocks.delete).not.toHaveBeenCalled();
     });
   });
 

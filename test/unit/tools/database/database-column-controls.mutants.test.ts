@@ -5,7 +5,6 @@ import type { I18n } from '../../../../types';
 
 interface Callbacks {
   onRename: Mock<(optionId: string, label: string) => void>;
-  onDelete: Mock<(optionId: string) => void>;
   onRenameInput: Mock<(optionId: string, label: string) => void>;
   onRenameCommit: Mock<(optionId: string, label: string) => void>;
 }
@@ -20,7 +19,6 @@ const i18n = (): I18n => ({
 
 const callbacks = (): Callbacks => ({
   onRename: vi.fn<(optionId: string, label: string) => void>(),
-  onDelete: vi.fn<(optionId: string) => void>(),
   onRenameInput: vi.fn<(optionId: string, label: string) => void>(),
   onRenameCommit: vi.fn<(optionId: string, label: string) => void>(),
 });
@@ -76,15 +74,14 @@ const press = (host: HTMLElement, key: string): void => {
 };
 
 /**
- * Three survivors are equivalent.
+ * Two survivors are equivalent.
  *
- * Two are the `?? ''` fallback on `titleEl.textContent`, once in makeEditable
- * and once in the pill click handler. `titleEl` comes from `querySelector`, so
- * its only non-null value is an Element, and `Element.textContent` is always a
- * string — null is reserved for the document and doctype nodes. The fallback
- * never runs.
+ * One is the `?? ''` fallback on `titleEl.textContent` in the pill click
+ * handler. `titleEl` comes from `querySelector`, so its only non-null value is
+ * an Element, and `Element.textContent` is always a string — null is reserved
+ * for the document and doctype nodes. The fallback never runs.
  *
- * The third is `div.style.cursor` inside restoreDiv. Both the commit and the
+ * The other is `div.style.cursor` inside restoreDiv. Both the commit and the
  * cancel path re-enter makePillTitleEditable on the restored div in the same
  * synchronous turn, and that sets the same cursor again. The assertion in the
  * commit test still holds with the line blanked, which is the measurement.
@@ -104,7 +101,6 @@ describe('DatabaseColumnControls mutants', () => {
     new DatabaseColumnControls({
       i18n: i18n(),
       onRename: cb.onRename,
-      onDelete: cb.onDelete,
       onRenameInput: cb.onRenameInput,
       onRenameCommit: cb.onRenameCommit,
       ...overrides,
@@ -121,53 +117,6 @@ describe('DatabaseColumnControls mutants', () => {
     window.removeEventListener('error', captureError);
     document.body.replaceChildren();
     vi.restoreAllMocks();
-  });
-
-  describe('makeEditable', () => {
-    it('swaps the title for a text input carrying its text, marker and width', () => {
-      const host = header('Status');
-
-      build().makeEditable(host, 'c1');
-
-      const input = inputIn(host);
-
-      expect(input.getAttribute('type')).toBe('text');
-      expect(input.value).toBe('Status');
-      expect(input.getAttribute('data-blok-database-column-title-input')).toBe('');
-      expect(input.size).toBe(6);
-      expect(host.querySelector('[data-blok-database-column-title]')).toBeNull();
-    });
-
-    it('widens the input on every keystroke', () => {
-      const host = header('Status');
-
-      build().makeEditable(host, 'c1');
-
-      type(host, 'Much longer');
-
-      expect(inputIn(host).size).toBe(11);
-    });
-
-    it('appends the delete button even when there is no title to edit', () => {
-      const host = header(null);
-
-      expect(() => build().makeEditable(host, 'c1')).not.toThrow();
-      expect(host.querySelector('input')).toBeNull();
-      expect(host.querySelector('[data-blok-database-delete-column]')).not.toBeNull();
-    });
-  });
-
-  describe('appendDeleteButton', () => {
-    it('stamps the button with an empty marker and deletes the column it names', () => {
-      const host = header();
-
-      build().appendDeleteButton(host, 'c1');
-
-      const button = host.querySelector('button');
-
-      expect(button?.getAttribute('data-blok-database-delete-column')).toBe('');
-      expect(button?.getAttribute('data-option-id')).toBe('c1');
-    });
   });
 
   describe('makePillTitleEditable', () => {

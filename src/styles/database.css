@@ -1423,6 +1423,7 @@
  * Column header "New page" (+) and "More group options" (⋯), 24px, shown on
  * column hover (research/36 §1.1). Sub-grouped heads sit outside the column, so header hover stays.
  * Opacity, not visibility: a hidden button leaves the tab order and :focus-visible never reveals it.
+ * Notion's hidden buttons take no clicks, so the pointer is off until they show.
  */
 [data-blok-database-column-actions] {
   display: flex;
@@ -1430,6 +1431,7 @@
   gap: var(--blok-space-0-5);
   margin-inline-start: auto;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 100ms ease-in-out;
 }
 
@@ -1438,6 +1440,7 @@
 [data-blok-database-column-header][data-popover-open] [data-blok-database-column-actions],
 [data-blok-database-column-actions]:has(:focus-visible) {
   opacity: 1;
+  pointer-events: auto;
 }
 
 [data-blok-database-column-actions] button {

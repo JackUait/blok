@@ -39,6 +39,20 @@ describe('board column header actions', () => {
     expect(ruleBody(database, '[data-blok-database-column-header][data-popover-open] [data-blok-database-column-actions]')).toContain('opacity: 1');
   });
 
+  // motion-carddrag.json: Notion fades visibility with opacity, so a hidden button takes no clicks.
+  // Blok keeps opacity so Tab still reaches them, and drops only the pointer while hidden.
+  it('takes no pointer while hidden and takes it back whenever shown', () => {
+    expect(ruleBody(database, '[data-blok-database-column-actions]')).toContain('pointer-events: none');
+    for (const shown of [
+      '[data-blok-database-column]:hover [data-blok-database-column-actions]',
+      '[data-blok-database-column-header]:hover [data-blok-database-column-actions]',
+      '[data-blok-database-column-header][data-popover-open] [data-blok-database-column-actions]',
+      '[data-blok-database-column-actions]:has(:focus-visible)',
+    ]) {
+      expect(ruleBody(database, shown)).toContain('pointer-events: auto');
+    }
+  });
+
   // research/36 §1.1, §11: the glyph takes the column's count ink; the hover is the neutral tint in every column.
   it('draws them in the column\'s count ink with the neutral hover', () => {
     expect(ruleBody(database, '[data-blok-database-column-actions] button')).toContain('color: var(--_blok-group-accent, var(--blok-database-column-accent))');

@@ -5491,11 +5491,13 @@ span[data-blok-slash-search] {
   gap: var(--blok-space-0-5);
   margin-inline-start: auto;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 100ms ease-in-out;
 }
 
 [data-blok-database-column]:hover [data-blok-database-column-actions], [data-blok-database-column-header]:hover [data-blok-database-column-actions], [data-blok-database-column-header][data-popover-open] [data-blok-database-column-actions], [data-blok-database-column-actions]:has(:focus-visible) {
   opacity: 1;
+  pointer-events: auto;
 }
 
 [data-blok-database-column-actions] button {

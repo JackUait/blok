@@ -43,6 +43,8 @@ var submissionAccess = []string{"none", "view", "comment", "edit", "full"}
 // The agent's question names the calendar in full: a longer id is not one it can show.
 const maxCalendarID = 64
 
+// indexedBlocks keys blocks by unitKey, as the planner does: two ids with
+// different lone surrogates are two blocks.
 type indexedBlocks struct {
 	order []string
 	byID  map[string]*jsjson.Object
@@ -53,8 +55,9 @@ type indexedBlocks struct {
 // current's order, then share guards in target's. The oracle is
 // fixtures/collab-history/restore-guards.json.
 func RestoreGuards(currentBlocks, targetBlocks []any) []RestoreGuard {
+	// The blocks the planner writes: its normalized target, and the first copy of a repeated id.
 	now := indexBlocks(currentBlocks)
-	target := indexBlocks(targetBlocks)
+	target := indexBlocks(NormalizeTarget(targetBlocks))
 	lockedNow := lockedIn(now)
 	lockedTarget := lockedIn(target)
 	var guards []RestoreGuard
@@ -71,7 +74,7 @@ func RestoreGuards(currentBlocks, targetBlocks []any) []RestoreGuard {
 		if lockedNow[id] && kept && !lockedTarget[id] {
 			kind = GuardUnlock
 		}
-		guards = append(guards, RestoreGuard{Kind: kind, BlockID: id})
+		guards = append(guards, RestoreGuard{Kind: kind, BlockID: textOf(block, "id")})
 	}
 	for _, id := range target.order {
 		after := target.byID[id]
@@ -82,26 +85,28 @@ func RestoreGuards(currentBlocks, targetBlocks []any) []RestoreGuard {
 		if before, ok := now.byID[id]; ok && textOf(before, "type") == "database" {
 			// Last wins, as a Map built from entries does.
 			for _, view := range viewsIn(before) {
-				if viewID, ok := stringAt(view, "id"); ok {
-					was[viewID] = view
+				if viewID := stringOf(view, "id"); viewID != nil {
+					was[unitKey(*viewID)] = view
 				}
 			}
 		}
+		blockID := textOf(after, "id")
 		for _, view := range viewsIn(after) {
-			viewID, _ := stringAt(view, "id")
 			var previous *jsjson.Object
-			if viewID != "" {
-				previous = was[viewID]
+			if viewID := stringOf(view, "id"); viewID != nil && len(*viewID) > 0 {
+				previous = was[unitKey(*viewID)]
 			}
 			if shareChanges(previous, view) {
-				guards = append(guards, RestoreGuard{Kind: GuardShare, BlockID: id, ViewID: &viewID})
+				viewID := textOf(view, "id")
+				guards = append(guards, RestoreGuard{Kind: GuardShare, BlockID: blockID, ViewID: &viewID})
 			}
 		}
 	}
 	return guards
 }
 
-// indexBlocks: the blocks by id in first-seen order; a later repeat wins.
+// indexBlocks: the blocks by id in first-seen order. The first copy of an
+// id wins and "" is an id, as in the planner.
 func indexBlocks(blocks []any) indexedBlocks {
 	index := indexedBlocks{byID: map[string]*jsjson.Object{}}
 	for _, item := range blocks {
@@ -109,14 +114,14 @@ func indexBlocks(blocks []any) indexedBlocks {
 		if !ok {
 			continue
 		}
-		id, ok := stringAt(block, "id")
-		if !ok || id == "" {
+		id := stringOf(block, "id")
+		if id == nil {
 			continue
 		}
-		if _, seen := index.byID[id]; !seen {
-			index.order = append(index.order, id)
+		if _, seen := index.byID[unitKey(*id)]; !seen {
+			index.order = append(index.order, unitKey(*id))
+			index.byID[unitKey(*id)] = block
 		}
-		index.byID[id] = block
 	}
 	return index
 }
@@ -179,8 +184,12 @@ func lockedOrHeld(blocks indexedBlocks, id string, locked, seen map[string]bool)
 	if locked[id] {
 		return true
 	}
-	parent, ok := stringAt(blocks.byID[id], "parent")
-	if !ok || parent == id || seen[parent] {
+	named := stringOf(blocks.byID[id], "parent")
+	if named == nil {
+		return false
+	}
+	parent := unitKey(*named)
+	if parent == id || seen[parent] {
 		return false
 	}
 	holder, ok := blocks.byID[parent]

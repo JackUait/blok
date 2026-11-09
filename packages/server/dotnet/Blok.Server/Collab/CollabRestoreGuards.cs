@@ -49,8 +49,9 @@ internal static class CollabRestoreGuards
 
   internal static IReadOnlyList<CollabRestoreGuard> Of(JsonArray currentBlocks, JsonArray targetBlocks)
   {
+    // The blocks the planner writes: its normalized target, and the first copy of a repeated id.
     var now = Index(currentBlocks);
-    var target = Index(targetBlocks);
+    var target = Index(CollabRestorePlanner.NormalizeTarget(targetBlocks));
     var guards = new List<CollabRestoreGuard>();
     var lockedNow = LockedIn(now);
     var lockedTarget = LockedIn(target);
@@ -111,16 +112,16 @@ internal static class CollabRestoreGuards
     return guards;
   }
 
-  /// <summary>The blocks by id, in order; a later repeat of an id wins.</summary>
+  /// <summary>The blocks by id, in order; the first copy of an id wins and "" is an id, as in the planner.</summary>
   private static Dictionary<string, JsonObject> Index(JsonArray blocks)
   {
     var index = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
 
     foreach (var node in blocks)
     {
-      if (node is JsonObject block && Text(block["id"]) is { Length: > 0 } id)
+      if (node is JsonObject block && Text(block["id"]) is { } id)
       {
-        index[id] = block;
+        index.TryAdd(id, block);
       }
     }
 

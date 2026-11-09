@@ -1642,6 +1642,463 @@
       ]
     },
     {
+      "name": "a repeated id: the first copy shares a form, the second does not",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "d",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
+      "name": "a repeated id: the second copy shares a form, the first does not: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        },
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a repeated id: the first copy unlocks a locked database, the second keeps it",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "unlock",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a repeated id: the second copy unlocks a locked database, the first keeps it: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a repeated current id: the first copy is the locked one",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "unlock",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a repeated current id: the second copy is the locked one: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "ids with different lone surrogates are two blocks: no guard",
+      "current": [
+        {
+          "id": "\uD800",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "\uD800",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "\uDC00",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "an empty id is a block the restore writes, so it asks too",
+      "current": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        },
+        {
+          "id": "",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "share",
+          "blockId": "",
+          "viewId": "v1"
+        }
+      ]
+    },
+    {
       "name": "a plain calendar id reads",
       "current": [
         {

@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Blok.Server.Collab;
 using Blok.Server.Yjs;
 using Xunit;
@@ -19,7 +20,7 @@ namespace Blok.Server.Tests.Collab;
 /// one-tick cases survive a double. Set BLOK_WRITE_COLLAB_HISTORY=1 to rewrite
 /// the files after an intended change.
 /// </summary>
-public sealed class CollabHistoryCaptureTests
+public sealed partial class CollabHistoryCaptureTests
 {
   private static readonly DateTimeOffset T0 = new(2026, 10, 7, 12, 0, 0, TimeSpan.Zero);
   private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
@@ -45,13 +46,19 @@ public sealed class CollabHistoryCaptureTests
   [Fact]
   public void TheRestoreGuardsMatchTheRules()
   {
-    Check("collab-history/restore-guards.json", RestoreGuards());
+    // The writer turns a lone surrogate into U+FFFD, so the ids go out as placeholders and are escaped here.
+    Check("collab-history/restore-guards.json", RestoreGuards(), text => LonePlaceholder().Replace(text, "\"\\u$1\""));
   }
 
-  private static void Check(string relative, JsonObject built)
+  [GeneratedRegex("\"lone-([0-9A-F]{4})\"")]
+  private static partial Regex LonePlaceholder();
+
+  private static void Check(string relative, JsonObject built, Func<string, string>? finish = null)
   {
     var path = RichTextFixtures.PathOf(relative);
     var text = built.ToJsonString(Indented) + "\n";
+
+    text = finish?.Invoke(text) ?? text;
 
     if (Environment.GetEnvironmentVariable("BLOK_WRITE_COLLAB_HISTORY") == "1")
     {
@@ -618,22 +625,42 @@ public sealed class CollabHistoryCaptureTests
           [Db("d", views: $"[{View()}]")], [Db("d", views: $"""[{View("\"form\": { \"submissionAccess\": \"owner\" }")}]""")], ["share d v1"]),
       ("a calendar sync that is not an object fails closed",
           [Db("d", views: $"[{View()}]")], [Db("d", views: $"""[{View("\"calendarSync\": true")}]""")], ["share d v1"]),
+      // The planner writes the first copy of a repeated id, so the guards check that copy.
+      ("a repeated id: the first copy shares a form, the second does not",
+          [Db("d", views: $"[{View()}]")],
+          [Db("d", views: $"""[{View("\"form\": { \"public\": true }")}]"""), Db("d", views: $"[{View()}]")], ["share d v1"]),
+      ("a repeated id: the second copy shares a form, the first does not: no guard",
+          [Db("d", views: $"[{View()}]")],
+          [Db("d", views: $"[{View()}]"), Db("d", views: $"""[{View("\"form\": { \"public\": true }")}]""")], []),
+      ("a repeated id: the first copy unlocks a locked database, the second keeps it",
+          [Db("d", Locked)], [Db("d"), Db("d", Locked)], ["unlock d"]),
+      ("a repeated id: the second copy unlocks a locked database, the first keeps it: no guard",
+          [Db("d", Locked)], [Db("d", Locked), Db("d")], []),
+      ("a repeated current id: the first copy is the locked one",
+          [Db("d", Locked), Db("d")], [Db("d")], ["unlock d"]),
+      ("a repeated current id: the second copy is the locked one: no guard",
+          [Db("d"), Db("d", Locked)], [Db("d")], []),
+      // Two different lone surrogates are two ids to the planner; read as one, the second copy would ask.
+      ("ids with different lone surrogates are two blocks: no guard",
+          [Db("lone-D800", views: $"""[{View("\"form\": { \"public\": true }")}]""")],
+          [Db("lone-D800", views: $"""[{View("\"form\": { \"public\": true }")}]"""), Db("lone-DC00", views: $"[{View()}]")], []),
+      ("an empty id is a block the restore writes, so it asks too",
+          [P("a")], [P("a"), Db("", views: $"""[{View("\"form\": { \"public\": true }")}]""")], ["share  v1"]),
     ];
 
     var written = new JsonArray();
 
     foreach (var (name, current, target, expect) in cases)
     {
-      var currentBlocks = new JsonArray([.. current.Select(json => JsonNode.Parse(json))]);
-      var targetBlocks = new JsonArray([.. target.Select(json => JsonNode.Parse(json))]);
-      var guards = CollabRestoreGuards.Of(currentBlocks, targetBlocks);
+      var guards = CollabRestoreGuards.Of(
+          new JsonArray([.. current.Select(ParseBlock)]), new JsonArray([.. target.Select(ParseBlock)]));
 
       Assert.Equal(expect, guards.Select(guard => $"{guard.Kind} {guard.BlockId}{(guard.ViewId is { } view ? " " + view : "")}"));
       written.Add(new JsonObject
       {
         ["name"] = name,
-        ["current"] = currentBlocks,
-        ["target"] = targetBlocks,
+        ["current"] = new JsonArray([.. current.Select(json => JsonNode.Parse(json))]),
+        ["target"] = new JsonArray([.. target.Select(json => JsonNode.Parse(json))]),
         ["guards"] = new JsonArray([.. guards.Select(guard => (JsonNode)guard.ToJson())]),
       });
     }
@@ -661,6 +688,19 @@ public sealed class CollabHistoryCaptureTests
       ["$comment"] = "CollabRestoreGuards.Of over the exported blocks of current and target, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Mirrors restoreTouchesLocked, unlockedBetween and restoreShares in src/shared/agent/approval.ts.",
       ["cases"] = written,
     };
+  }
+
+  /// <summary>System.Text.Json cannot read an escaped lone surrogate, so an id "lone-D800" becomes that one UTF-16 unit.</summary>
+  private static JsonNode? ParseBlock(string json)
+  {
+    var block = JsonNode.Parse(json);
+
+    if (block?["id"]?.GetValue<string>() is { } id && id.StartsWith("lone-", StringComparison.Ordinal))
+    {
+      block["id"] = ((char)int.Parse(id[5..], NumberStyles.HexNumber, CultureInfo.InvariantCulture)).ToString();
+    }
+
+    return block;
   }
 
   private static (string Name, string Id, bool Readable)[] CalendarIds() =>

@@ -2,7 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use blok_jsjson::{Object, Str, Value, to_string_lossy};
 
-use crate::changes::same_data;
+use crate::changes::{same_data, string_of};
+use crate::restore::normalize_target;
 
 /// One reason a restore needs a person's yes (C# CollabRestoreGuard).
 /// `view_id` is set for a share guard only.
@@ -81,9 +82,11 @@ fn key(text: &str) -> Str {
     Str::from_utf8(text.as_bytes())
 }
 
+/// Keyed by the raw UTF-16 id, as the planner keys blocks: two ids with
+/// different lone surrogates are two blocks.
 struct Indexed<'a> {
-    order: Vec<String>,
-    by_id: HashMap<String, &'a Object>,
+    order: Vec<&'a Str>,
+    by_id: HashMap<&'a Str, &'a Object>,
 }
 
 /// C# CollabRestoreGuards.Of: the guards a restore of `target` over
@@ -91,12 +94,14 @@ struct Indexed<'a> {
 /// current's order, then share guards in target's. The oracle is
 /// fixtures/collab-history/restore-guards.json.
 pub fn restore_guards(current_blocks: &[Value], target_blocks: &[Value]) -> Vec<RestoreGuard> {
+    // The blocks the planner writes: its normalized target, and the first copy of a repeated id.
     let now = index(current_blocks);
-    let target = index(target_blocks);
+    let normalized = normalize_target(target_blocks);
+    let target = index(&normalized);
     let locked_now = locked_in(&now);
     let locked_target = locked_in(&target);
     let mut guards = Vec::new();
-    for id in &now.order {
+    for &id in &now.order {
         let block = now.by_id[id];
         if text(block, "type").as_deref() != Some("database")
             || !locked_or_held(&now, id, &locked_now, &HashSet::new())
@@ -119,38 +124,35 @@ pub fn restore_guards(current_blocks: &[Value], target_blocks: &[Value]) -> Vec<
             } else {
                 GUARD_LOCKED_RESHAPE
             },
-            block_id: id.clone(),
+            block_id: to_string_lossy(id.units()),
             view_id: None,
         });
     }
-    for id in &target.order {
+    for &id in &target.order {
         let after = target.by_id[id];
         if text(after, "type").as_deref() != Some("database") {
             continue;
         }
-        let mut was: HashMap<String, &Object> = HashMap::new();
+        let mut was: HashMap<&Str, &Object> = HashMap::new();
         if let Some(before) = now.by_id.get(id)
             && text(before, "type").as_deref() == Some("database")
         {
             // Last wins, as a Map built from entries does.
             for view in views_in(before) {
-                if let Some(view_id) = text(view, "id") {
+                if let Some(view_id) = string_of(view, "id") {
                     was.insert(view_id, view);
                 }
             }
         }
         for view in views_in(after) {
-            let view_id = text(view, "id").unwrap_or_default();
-            let previous = if view_id.is_empty() {
-                None
-            } else {
-                was.get(&view_id).copied()
-            };
+            let previous = string_of(view, "id")
+                .filter(|view_id| !view_id.units().is_empty())
+                .and_then(|view_id| was.get(view_id).copied());
             if share_changes(previous, view) {
                 guards.push(RestoreGuard {
                     kind: GUARD_SHARE,
-                    block_id: id.clone(),
-                    view_id: Some(view_id),
+                    block_id: to_string_lossy(id.units()),
+                    view_id: Some(text(view, "id").unwrap_or_default()),
                 });
             }
         }
@@ -158,7 +160,8 @@ pub fn restore_guards(current_blocks: &[Value], target_blocks: &[Value]) -> Vec<
     guards
 }
 
-/// The blocks by id in first-seen order; a later repeat wins.
+/// The blocks by id in first-seen order. The first copy of an id wins and
+/// "" is an id, as in the planner.
 fn index(blocks: &[Value]) -> Indexed<'_> {
     let mut indexed = Indexed {
         order: Vec::new(),
@@ -166,13 +169,13 @@ fn index(blocks: &[Value]) -> Indexed<'_> {
     };
     for item in blocks {
         let Value::Object(block) = item else { continue };
-        let Some(id) = text(block, "id").filter(|id| !id.is_empty()) else {
+        let Some(id) = string_of(block, "id") else {
             continue;
         };
-        if !indexed.by_id.contains_key(&id) {
-            indexed.order.push(id.clone());
+        if !indexed.by_id.contains_key(id) {
+            indexed.order.push(id);
+            indexed.by_id.insert(id, block);
         }
-        indexed.by_id.insert(id, block);
     }
     indexed
 }
@@ -211,7 +214,7 @@ fn object_in<'a>(object: Option<&'a Object>, name: &str) -> Option<&'a Object> {
 }
 
 /// Blocks of any type whose schema has a title property with databaseLocked true.
-fn locked_in(blocks: &Indexed<'_>) -> HashSet<String> {
+fn locked_in<'a>(blocks: &Indexed<'a>) -> HashSet<&'a Str> {
     blocks
         .order
         .iter()
@@ -227,35 +230,35 @@ fn locked_in(blocks: &Indexed<'_>) -> HashSet<String> {
                 _ => false,
             },
         )
-        .cloned()
+        .copied()
         .collect()
 }
 
 /// Its own lock, or a locked database up its chain of database parents.
-fn locked_or_held(
-    blocks: &Indexed<'_>,
-    id: &str,
-    locked: &HashSet<String>,
-    seen: &HashSet<String>,
+fn locked_or_held<'a>(
+    blocks: &Indexed<'a>,
+    id: &'a Str,
+    locked: &HashSet<&'a Str>,
+    seen: &HashSet<&'a Str>,
 ) -> bool {
     if locked.contains(id) {
         return true;
     }
-    let Some(parent) = text(blocks.by_id[id], "parent") else {
+    let Some(parent) = string_of(blocks.by_id[id], "parent") else {
         return false;
     };
-    if parent == id || seen.contains(&parent) {
+    if parent == id || seen.contains(parent) {
         return false;
     }
-    let Some(holder) = blocks.by_id.get(&parent) else {
+    let Some(holder) = blocks.by_id.get(parent) else {
         return false;
     };
     if text(holder, "type").as_deref() != Some("database") {
         return false;
     }
     let mut next = seen.clone();
-    next.insert(id.to_owned());
-    locked_or_held(blocks, &parent, locked, &next)
+    next.insert(id);
+    locked_or_held(blocks, parent, locked, &next)
 }
 
 /// Missing and null differ, as undefined and null do.

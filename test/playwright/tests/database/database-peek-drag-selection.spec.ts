@@ -533,3 +533,27 @@ test.describe('a drag with the caret in a paragraph below', () => {
     });
   }
 });
+
+test.describe('a press on a row handle', () => {
+  test('closes the open add-property menu, as a press anywhere outside it does', async ({ page }) => {
+    await mount(page, blocks());
+    await page.locator('[data-blok-database-table-add-property]').click();
+    const menu = page.locator('[data-blok-database-property-type-popover]');
+
+    await expect(menu).toBeVisible();
+
+    // The menu covers the row's middle, so hover its left edge with the mouse.
+    const row = await tableRow(page, 'r1').boundingBox();
+
+    if (row === null) throw new Error('no row');
+    await page.mouse.move(row.x + 20, row.y + row.height / 2);
+    const handle = await tableRow(page, 'r1').locator('[data-blok-database-table-row-handle]').boundingBox();
+
+    if (handle === null) throw new Error('no handle');
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+
+    await expect(menu).toHaveCount(0);
+    await page.mouse.up();
+  });
+});

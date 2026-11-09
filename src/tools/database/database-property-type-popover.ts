@@ -212,7 +212,8 @@ export class DatabasePropertyTypePopover {
       }
     };
 
-    document.addEventListener('mousedown', this.boundOutsideClick);
+    // pointerdown, not mousedown: drag handles prevent pointerdown, so no mousedown follows a press on them.
+    document.addEventListener('pointerdown', this.boundOutsideClick);
     nameField?.focus();
     // notion-spec-2 §19.11: the grid opens with its first row highlighted.
     if (this.grid) body.querySelector(ROWS)?.setAttribute(OPTION_ACTIVE, '');
@@ -361,7 +362,7 @@ export class DatabasePropertyTypePopover {
     this.positionTracker?.detach();
     this.positionTracker = null;
     if (this.boundOutsideClick !== null) {
-      document.removeEventListener('mousedown', this.boundOutsideClick);
+      document.removeEventListener('pointerdown', this.boundOutsideClick);
       this.boundOutsideClick = null;
     }
     if (popover === null) return;

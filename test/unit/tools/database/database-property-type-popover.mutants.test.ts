@@ -167,7 +167,7 @@ describe('database property type popover mutants', () => {
       const { popover, anchor } = build();
 
       popover.open(anchor);
-      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
 
       expect(panel()).toBeNull();
     });
@@ -179,7 +179,7 @@ describe('database property type popover mutants', () => {
 
       const heading = document.body.querySelector('[data-blok-database-property-type-heading]');
 
-      heading?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      heading?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
 
       expect(panel()).not.toBeNull();
     });
@@ -188,7 +188,7 @@ describe('database property type popover mutants', () => {
       const { popover, anchor } = build();
 
       popover.open(anchor);
-      anchor.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      anchor.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
 
       expect(panel()).not.toBeNull();
     });
@@ -199,7 +199,7 @@ describe('database property type popover mutants', () => {
       popover.open(anchor);
       popover.close();
 
-      expect(() => document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))).not.toThrow();
+      expect(() => document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))).not.toThrow();
       expect(onSelect).not.toHaveBeenCalled();
     });
 

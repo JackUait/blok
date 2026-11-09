@@ -314,20 +314,19 @@ impl Room {
                 LookupOutcome::NotCommitted => {}
             }
         }
-        if st.session.is_some() {
-            if let Some(expect) = &request.expect
-                && (expect.lineage != st.tag.lineage || expect.sequence != st.committed_through)
-            {
-                self.update_eviction_locked(st, None);
-                return Ok(Some(EditResult {
-                    status: EditStatus::PreconditionFailed,
-                    err: None,
-                    receipt: Some(Receipt {
-                        tag: st.tag.clone(),
-                        server_sequence: st.committed_through,
-                    }),
-                }));
-            }
+        if st.session.is_some()
+            && let Some(expect) = &request.expect
+            && (expect.lineage != st.tag.lineage || expect.sequence != st.committed_through)
+        {
+            self.update_eviction_locked(st, None);
+            return Ok(Some(EditResult {
+                status: EditStatus::PreconditionFailed,
+                err: None,
+                receipt: Some(Receipt {
+                    tag: st.tag.clone(),
+                    server_sequence: st.committed_through,
+                }),
+            }));
         }
 
         let doc = st.doc();

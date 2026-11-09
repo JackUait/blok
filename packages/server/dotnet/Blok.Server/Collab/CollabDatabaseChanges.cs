@@ -11,6 +11,12 @@ namespace Blok.Server.Collab;
 internal static class CollabDatabaseChanges
 {
   /// <summary>
+  /// The most schema or view entries one side may hold for a breakdown. Past
+  /// it the list is left out, so one changes call stays cheap.
+  /// </summary>
+  public const int MaxEntries = 500;
+
+  /// <summary>
   /// The extra row fields for one changed block: <c>properties</c> for a
   /// database row, <c>schema</c> and <c>views</c> for a database. Each is
   /// left out when empty, so other blocks get an empty object.
@@ -91,12 +97,21 @@ internal static class CollabDatabaseChanges
     return changes;
   }
 
-  /// <summary>Entries keyed by a string id, the first of a repeated id kept; after's order, then the deleted ones.</summary>
+  /// <summary>
+  /// Entries keyed by a string id, the first of a repeated id kept; after's
+  /// order, then the deleted ones. Empty when either side is past the cap.
+  /// </summary>
   private static JsonArray Entries(JsonArray? before, JsonArray? after, bool withName)
   {
-    var old = ById(before);
-    var now = ById(after);
     var changes = new JsonArray();
+
+    if ((before?.Count ?? 0) > MaxEntries || (after?.Count ?? 0) > MaxEntries)
+    {
+      return changes;
+    }
+
+    var (oldOrder, old) = ById(before);
+    var (nowOrder, now) = ById(after);
 
     void Add(string id, JsonObject named, string action)
     {
@@ -111,46 +126,45 @@ internal static class CollabDatabaseChanges
       changes.Add(entry);
     }
 
-    foreach (var (id, entry) in now)
+    foreach (var id in nowOrder)
     {
-      var previous = old.Find(item => item.Id == id).Entry;
-
-      if (previous is null)
+      if (!old.TryGetValue(id, out var previous))
       {
-        Add(id, entry, "created");
+        Add(id, now[id], "created");
       }
-      else if (!JsonNode.DeepEquals(previous, entry))
+      else if (!JsonNode.DeepEquals(previous, now[id]))
       {
-        Add(id, entry, "updated");
+        Add(id, now[id], "updated");
       }
     }
 
-    foreach (var (id, entry) in old)
+    foreach (var id in oldOrder)
     {
-      if (!now.Exists(item => item.Id == id))
+      if (!now.ContainsKey(id))
       {
-        Add(id, entry, "deleted");
+        Add(id, old[id], "deleted");
       }
     }
 
     return changes;
   }
 
-  private static List<(string Id, JsonObject Entry)> ById(JsonArray? entries)
+  private static (List<string> Order, Dictionary<string, JsonObject> ById) ById(JsonArray? entries)
   {
-    var list = new List<(string Id, JsonObject Entry)>();
+    var order = new List<string>();
+    var byId = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
 
     foreach (var item in entries ?? [])
     {
       if (item is JsonObject entry &&
           entry["id"] is JsonValue value &&
           value.TryGetValue<string>(out var id) &&
-          !list.Exists(seen => seen.Id == id))
+          byId.TryAdd(id, entry))
       {
-        list.Add((id, entry));
+        order.Add(id);
       }
     }
 
-    return list;
+    return (order, byId);
   }
 }

@@ -36,6 +36,9 @@ public sealed class CollabDatabaseChangesCaptureTests
       "{\"id\":\"db\",\"type\":\"database\",\"data\":{\"schema\":" + schema +
       (views is null ? "" : ",\"views\":" + views) + ",\"activeViewId\":\"v1\"}}";
 
+  private static string Many(int count, string name) =>
+      "[" + string.Join(",", Enumerable.Range(0, count).Select(i => $"{{\"id\":\"p{i}\",\"name\":\"{name}\"}}")) + "]";
+
   private const string Title = """{"id":"title","name":"Name","type":"title","position":"a"}""";
   private const string Status = """{"id":"st","name":"Status","type":"status","position":"b"}""";
   private const string View = """{"id":"v1","name":"Table","type":"table","position":"a","sorts":[],"filters":[]}""";
@@ -106,6 +109,21 @@ public sealed class CollabDatabaseChangesCaptureTests
       ("entries without a string id are skipped, a repeated id keeps the first", "database",
           Db($$"""[{{Title}},{"id":7,"name":"n"},"x",{"id":"st","name":"A"},{"id":"st","name":"B"}]""", "[]"),
           Db($$"""[{{Title}},{"id":"st","name":"A"},{"name":"no id"}]""", "[]")),
+      ("a repeated id keeps the first entry on both sides", "database",
+          Db("""[{"id":"st","name":"A"},{"id":"st","name":"B"}]""", "[]"),
+          Db("""[{"id":"st","name":"B"},{"id":"st","name":"A"}]""", "[]")),
+      ("a repeated id after the first is ignored", "database",
+          Db("""[{"id":"st","name":"A"}]""", "[]"),
+          Db("""[{"id":"st","name":"A"},{"id":"st","name":"B"}]""", "[]")),
+      ("a schema past the entry cap has no breakdown, views still do", "database",
+          Db(Many(CollabDatabaseChanges.MaxEntries + 1, "a"), $"[{View}]"),
+          Db(Many(CollabDatabaseChanges.MaxEntries + 1, "b"), "[]")),
+      ("a schema at the entry cap still has one", "database",
+          Db(Many(CollabDatabaseChanges.MaxEntries, "a"), "[]"),
+          Db(Many(CollabDatabaseChanges.MaxEntries, "a").Replace("\"p0\",\"name\":\"a\"", "\"p0\",\"name\":\"b\"", StringComparison.Ordinal), "[]")),
+      ("views past the entry cap on one side have no breakdown", "database",
+          Db($"[{Title}]", "[]"),
+          Db($"[{Title}]", Many(CollabDatabaseChanges.MaxEntries + 1, "v"))),
       ("a name that is not a string is left out", "database",
           Db("""[{"id":"p","name":1}]""", "[]"),
           Db("""[{"id":"p","name":2}]""", "[]")),
@@ -139,7 +157,7 @@ public sealed class CollabDatabaseChangesCaptureTests
 
     return new JsonObject
     {
-      ["$comment"] = "CollabDatabaseChanges.Describe as C# answers it. Captured by CollabDatabaseChangesCaptureTests; do not edit by hand. fields are what a changes row adds to one block with detail=properties: properties [{id, before?, after?}] for a database-row, schema [{id, name?, action}] and views [{id, action}] for a database; each left out when empty. A side is left out when the key is absent; null is a value.",
+      ["$comment"] = "CollabDatabaseChanges.Describe as C# answers it. Captured by CollabDatabaseChangesCaptureTests; do not edit by hand. fields are what a changes row adds to one block with detail=properties: properties [{id, before?, after?}] for a database-row, schema [{id, name?, action}] and views [{id, action}] for a database; each left out when empty, and left out when either side holds more than MaxEntries (500) entries. A repeated id keeps its first entry. A side is left out when the key is absent; null is a value.",
       ["cases"] = written,
     };
   }

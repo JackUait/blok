@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use blok_jsjson::{Object, Str, Value};
 
 use crate::changes::same_data;
@@ -102,24 +104,35 @@ fn property_changes(before: Option<&Object>, after: Option<&Object>) -> Vec<Valu
     changes
 }
 
-/// Entries with a string id, the first of a repeated id kept.
-fn by_id(entries: &[Value]) -> Vec<(&Str, &Object)> {
-    let mut list: Vec<(&Str, &Object)> = Vec::new();
+/// The most schema or view entries one side may hold for a breakdown. Past
+/// it the list is left out, so one changes call stays cheap.
+pub const MAX_DATABASE_ENTRIES: usize = 500;
+
+/// Entries with a string id, the first of a repeated id kept, in order.
+fn by_id(entries: &[Value]) -> (Vec<&Str>, HashMap<&Str, &Object>) {
+    let mut order = Vec::new();
+    let mut index = HashMap::new();
     for item in entries {
         if let Value::Object(entry) = item
             && let Some(Value::String(id)) = entry.get(&Str::from("id"))
-            && !list.iter().any(|(seen, _)| *seen == id)
+            && !index.contains_key(id)
         {
-            list.push((id, entry));
+            index.insert(id, entry);
+            order.push(id);
         }
     }
-    list
+    (order, index)
 }
 
-/// After's order, then the deleted ones.
+/// After's order, then the deleted ones. Empty when either side is past the
+/// cap.
 fn entry_changes(before: &[Value], after: &[Value], with_name: bool) -> Vec<Value> {
-    let (old, now) = (by_id(before), by_id(after));
     let mut changes = Vec::new();
+    if before.len() > MAX_DATABASE_ENTRIES || after.len() > MAX_DATABASE_ENTRIES {
+        return changes;
+    }
+    let (old_order, old) = by_id(before);
+    let (now_order, now) = by_id(after);
     let mut add = |id: &Str, named: &Object, action: &str| {
         let mut entry = Object::new();
         entry.set(Str::from("id"), Value::String(id.clone()));
@@ -129,22 +142,23 @@ fn entry_changes(before: &[Value], after: &[Value], with_name: bool) -> Vec<Valu
         entry.set(Str::from("action"), Value::String(Str::from(action)));
         changes.push(Value::Object(entry));
     };
-    for (id, entry) in &now {
-        match old.iter().find(|(seen, _)| seen == id) {
+    for id in &now_order {
+        let entry = now[id];
+        match old.get(id) {
             None => add(id, entry, "created"),
-            Some((_, previous)) => {
+            Some(previous) => {
                 if !same_data(
                     &Value::Object((*previous).clone()),
-                    &Value::Object((*entry).clone()),
+                    &Value::Object(entry.clone()),
                 ) {
                     add(id, entry, "updated");
                 }
             }
         }
     }
-    for (id, entry) in &old {
-        if !now.iter().any(|(seen, _)| seen == id) {
-            add(id, entry, "deleted");
+    for id in &old_order {
+        if !now.contains_key(id) {
+            add(id, old[id], "deleted");
         }
     }
     changes

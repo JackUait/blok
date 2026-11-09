@@ -86,14 +86,15 @@ func propertyChanges(before, after *jsjson.Object) []any {
 	return changes
 }
 
-type idEntry struct {
-	id    jsjson.Str
-	entry *jsjson.Object
-}
+// MaxDatabaseEntries is the most schema or view entries one side may hold
+// for a breakdown. Past it the list is left out, so one changes call stays
+// cheap.
+const MaxDatabaseEntries = 500
 
-// byID: entries with a string id, the first of a repeated id kept.
-func byID(entries []any) []idEntry {
-	var list []idEntry
+// byID: entries with a string id, the first of a repeated id kept, in order.
+func byID(entries []any) ([]jsjson.Str, map[string]*jsjson.Object) {
+	var order []jsjson.Str
+	index := map[string]*jsjson.Object{}
 	for _, item := range entries {
 		entry, ok := item.(*jsjson.Object)
 		if !ok {
@@ -101,27 +102,36 @@ func byID(entries []any) []idEntry {
 		}
 		raw, _ := entry.Get(jsjson.FromString("id"))
 		id, ok := raw.(jsjson.Str)
-		if !ok || findID(list, id) != nil {
+		if !ok {
 			continue
 		}
-		list = append(list, idEntry{id, entry})
-	}
-	return list
-}
-
-func findID(list []idEntry, id jsjson.Str) *jsjson.Object {
-	for _, item := range list {
-		if jsjson.Compare(item.id, id) == 0 {
-			return item.entry
+		key := string(utf16Key(id))
+		if _, seen := index[key]; seen {
+			continue
 		}
+		index[key] = entry
+		order = append(order, id)
 	}
-	return nil
+	return order, index
 }
 
-// entryChanges: after's order, then the deleted ones.
+func utf16Key(id jsjson.Str) []byte {
+	b := make([]byte, 0, 2*len(id))
+	for _, unit := range id {
+		b = append(b, byte(unit>>8), byte(unit))
+	}
+	return b
+}
+
+// entryChanges: after's order, then the deleted ones. Empty when either
+// side is past the cap.
 func entryChanges(before, after []any, withName bool) []any {
-	old, now := byID(before), byID(after)
 	changes := []any{}
+	if len(before) > MaxDatabaseEntries || len(after) > MaxDatabaseEntries {
+		return changes
+	}
+	oldOrder, old := byID(before)
+	nowOrder, now := byID(after)
 	add := func(id jsjson.Str, named *jsjson.Object, action string) {
 		entry := &jsjson.Object{}
 		entry.Set(jsjson.FromString("id"), id)
@@ -135,18 +145,19 @@ func entryChanges(before, after []any, withName bool) []any {
 		entry.Set(jsjson.FromString("action"), jsjson.FromString(action))
 		changes = append(changes, entry)
 	}
-	for _, item := range now {
-		previous := findID(old, item.id)
+	for _, id := range nowOrder {
+		entry := now[string(utf16Key(id))]
+		previous, had := old[string(utf16Key(id))]
 		switch {
-		case previous == nil:
-			add(item.id, item.entry, "created")
-		case !sameData(previous, item.entry):
-			add(item.id, item.entry, "updated")
+		case !had:
+			add(id, entry, "created")
+		case !sameData(previous, entry):
+			add(id, entry, "updated")
 		}
 	}
-	for _, item := range old {
-		if findID(now, item.id) == nil {
-			add(item.id, item.entry, "deleted")
+	for _, id := range oldOrder {
+		if _, has := now[string(utf16Key(id))]; !has {
+			add(id, old[string(utf16Key(id))], "deleted")
 		}
 	}
 	return changes

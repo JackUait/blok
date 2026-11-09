@@ -259,6 +259,21 @@ describe('DatabaseViewControls', () => {
     expect(saved.view.filterTree).toBeUndefined();
   });
 
+  it('shows the filter bar only once the advanced filter gets its first rule', () => {
+    const { controls } = setup();
+
+    click('database-toolbar-filter');
+    click('database-filter-picker-advanced');
+
+    expect(controls.filterBar.hidden).toBe(true);
+
+    document.querySelector<HTMLElement>('[data-blok-testid="database-advanced-filter"] [data-blok-testid^="database-filter-add-rule-"]')?.click();
+    click('database-pick-property-num');
+
+    expect(controls.filterBar.hidden).toBe(false);
+    expect(q('database-advanced-pill')).not.toBeNull();
+  });
+
   it('gives "+ Sort" no advanced footer', () => {
     setup();
     click('database-toolbar-sort');

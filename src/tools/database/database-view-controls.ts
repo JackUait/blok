@@ -609,10 +609,17 @@ export class DatabaseViewControls {
     });
   }
 
+  /** The bar shows once the first rule is written, as "+ Filter" does with a pick. */
   private openAdvanced(anchor: HTMLElement): void {
-    this.barOpen = true;
-    this.refresh();
-    this.panel = openAdvancedFilter(anchor, this.settingsContext(), (escape) => this.panelClosed(anchor, escape));
+    const ctx: ViewSettingsContext = {
+      ...this.settingsContext(),
+      updatePersonal: (patch) => {
+        this.barOpen = true;
+        this.updatePersonal(patch);
+      },
+    };
+
+    this.panel = openAdvancedFilter(anchor, ctx, (escape) => this.panelClosed(anchor, escape));
     anchor.setAttribute('data-popover-open', '');
   }
 

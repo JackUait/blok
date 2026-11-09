@@ -7117,8 +7117,9 @@ textarea[data-blok-database-property-description][data-blok-field] {
   padding: 0;
 }
 
-/* research/26 §1a: view settings, docked at the window's end edge, radius 10px. */
-[data-blok-popover-custom-class~='blok-database-docked-panel'] [data-blok-popover-container] {
+/* Panels are menus, not cell editors: radius 10px (research/08 "View settings panel", research/21 §1a).
+   View settings is one of them (research/26 §1a). Must stay after the cell editor rule: same specificity. */
+[data-blok-popover-custom-class~='blok-database-panel'] [data-blok-popover-container] {
   border-radius: var(--blok-radius-surface);
 }
 

@@ -60,6 +60,7 @@ export class DatabasePanel {
     this.popover = new CellPopover({
       anchor: options.anchor,
       content: this.element,
+      panel: true,
       ...(options.docked === true ? { docked: true } : {}),
       onEscape: () => this.back(true),
       onDismiss: () => this.finish(),

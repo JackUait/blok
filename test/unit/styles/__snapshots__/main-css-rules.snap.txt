@@ -10542,7 +10542,7 @@ textarea[data-blok-database-property-description][data-blok-field] {
   padding: 0;
 }
 
-[data-blok-popover-custom-class~='blok-database-docked-panel'] [data-blok-popover-container] {
+[data-blok-popover-custom-class~='blok-database-panel'] [data-blok-popover-container] {
   border-radius: var(--blok-radius-surface);
 }
 

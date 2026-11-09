@@ -13,6 +13,8 @@ export interface CellPopoverOptions {
   below?: boolean;
   /** Dock at the window's end edge, top level with the anchor, like Notion's view settings (research/26 §1a). */
   docked?: boolean;
+  /** A menu-like panel (DatabasePanel), not a cell editor: Notion's menu corner (database.css). */
+  panel?: boolean;
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
   onEscape: () => void;
   /** The popover closed itself: an outside press, or focus moved away. */
@@ -88,6 +90,7 @@ export const coverMinWidth = (anchor: HTMLElement, cover: boolean | 'value' | un
 /** research/26 §1a: the panel ends at x 1500 of a 1512 window. */
 const DOCK_VIEWPORT_MARGIN = 12;
 const DOCKED_CLASS = 'blok-database-docked-panel';
+const PANEL_CLASS = 'blok-database-panel';
 
 /**
  * Cover placement from a zero-size rect past the window's end: the clamp
@@ -125,7 +128,7 @@ export class CellPopover {
   }
 
   show(): void {
-    const { anchor, cover, docked } = this.options;
+    const { anchor, cover, docked, panel } = this.options;
     const base: PopoverParams = {
       items: [{ type: PopoverItemType.Html, element: this.options.content }],
       trigger: anchor,
@@ -134,7 +137,7 @@ export class CellPopover {
       autoFocusFirstItem: false,
       // Fades out like the database menus; an editor with no motion (database.css) still goes at once.
       animateClose: true,
-      class: [CELL_EDITOR_CLASS, ...(docked === true ? [DOCKED_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
+      class: [CELL_EDITOR_CLASS, ...(panel === true ? [PANEL_CLASS] : []), ...(docked === true ? [DOCKED_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
     const coverOrFit = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : fitPlacement(anchor);

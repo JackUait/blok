@@ -40,7 +40,6 @@ import type { TemplateRepeatHost } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
-import { isEscapeConsumed } from '../../components/utils/consumed-escape';
 import { CALC_MENU_MIN_WIDTH, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
@@ -714,6 +713,8 @@ export class DatabaseTool implements BlockTool {
   private cardMenuPopover: PopoverDesktop | null = null;
   /** The ⌘/ menu of picked board or gallery cards. */
   private selectionMenu: PopoverDesktop | null = null;
+  /** Escapes pressed while that menu was up: they close it and keep the pick. */
+  private readonly selectionMenuEscapes = new WeakSet<KeyboardEvent>();
   private reactionPicker: EmojiPicker | null = null;
   private stopComments: (() => void) | undefined;
   /** Comments in the document, used only when the host gives no `comments` hook. */
@@ -10646,6 +10647,12 @@ export class DatabaseTool implements BlockTool {
     const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
 
     this.selectionMenu?.destroy();
+    // Window capture runs before the popover registry's document listener, which closes the menu first.
+    const noteEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') this.selectionMenuEscapes.add(event);
+    };
+
+    window.addEventListener('keydown', noteEscape, true);
     const menu = openMenu(point, selectionMenuItems({
       i18n: this.api.i18n,
       properties: bulkEditableProperties(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => visible.includes(p.id))),
@@ -10658,6 +10665,7 @@ export class DatabaseTool implements BlockTool {
       searchPlaceholder: this.api.i18n.t('tools.database.searchActions'),
       onClose: () => {
         point.remove();
+        window.removeEventListener('keydown', noteEscape, true);
         if (this.selectionMenu === menu) this.selectionMenu = null;
       },
     });
@@ -10737,8 +10745,7 @@ export class DatabaseTool implements BlockTool {
 
     if (key === 'escape') {
       // notion-motion.md Round 12: the first Escape closes the ⌘/ menu and keeps the pick.
-      // The popover registry may close it first, in its own capture listener.
-      if (this.selectionMenu !== null || isEscapeConsumed(event)) return;
+      if (this.selectionMenu !== null || this.selectionMenuEscapes.has(event)) return;
       act(() => this.clearRowSelection());
     } else if (mod && event.shiftKey && (key === 'm' || key === 'p') && this.rowSelection.size === 1) {
       this.rowShortcut([...this.rowSelection][0], key === 'm' ? 'comment' : 'moveTo', act);

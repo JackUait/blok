@@ -219,6 +219,19 @@ describe('board and gallery selection: ⌘/ action menu (notion-motion.md Round 
     expect(await savedRows()).toHaveLength(4);
   });
 
+  // Only the ⌘/ menu's Escape keeps the pick: a list bar's "…" closes with the pick, as before.
+  it('list: Escape with the bar\'s "…" menu open closes it and clears the pick', async () => {
+    await make(doc({ type: 'list' }));
+    await pick('[data-blok-database-list-row]', 'r1');
+    await click(q('[data-blok-database-table-selection-more]'));
+
+    expect(openMenu()).not.toBeNull();
+    await key({ key: 'Escape' }, document.body);
+
+    expect(openMenu()).toBeNull();
+    expect(selectedIds()).toEqual([]);
+  });
+
   it.each([
     ['table', {}, ''],
     ['list', { type: 'list' }, '[data-blok-database-list-row]'],

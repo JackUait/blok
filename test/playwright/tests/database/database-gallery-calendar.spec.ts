@@ -479,6 +479,8 @@ test.describe('gallery', () => {
       await page.keyboard.press('Escape');
       await expect(page.getByPlaceholder('Search actions…')).toHaveCount(0);
       expect(await selectedIds(page)).toEqual(['r1', 'r2', 'r3']);
+      await page.keyboard.press('Escape');
+      expect(await selectedIds(page)).toEqual([]);
     });
 
     for (const modifier of ['Shift', 'ControlOrMeta'] as const) {

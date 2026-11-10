@@ -265,6 +265,29 @@ describe('EmojiPicker skin-tone Arc', () => {
     expect(toggle().getAttribute('data-emoji-skin-current')).toBe('2');
   });
 
+  it('folds the dial shut on a click elsewhere in the picker, instead of vanishing', async () => {
+    stubMotion(false);
+    const animate = vi.fn(fakeAnimate);
+
+    Element.prototype.animate = animate as unknown as Element['animate'];
+    toggle().click();
+    await settle();
+    animate.mockClear();
+    query('[data-emoji-picker-body]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+    expect(dial().hidden).toBe(false);
+    expect(animate.mock.contexts).toEqual(segments());
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+
+    query('[data-emoji-picker-body]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+    expect(animate).toHaveBeenCalledTimes(6);
+
+    await settle();
+
+    expect(dial().hidden).toBe(true);
+  });
+
   it('reopens cleanly when the toggle is clicked during the closing fold', async () => {
     stubMotion(false);
     Element.prototype.animate = vi.fn(fakeAnimate) as unknown as Element['animate'];

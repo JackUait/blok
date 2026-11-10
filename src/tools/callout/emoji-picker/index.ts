@@ -720,10 +720,12 @@ export class EmojiPicker {
         e.preventDefault();
       }
 
+      // A dial that is already folding shut finishes its fold; a tone in flight lands at once.
       if (!this._skinTonePopover.hidden
+        && this._skinToneCloseAnimation === null
         && !this._skinTonePopover.contains(target)
         && !this._skinToneToggle.contains(target)) {
-        this.closeSkinTonePopover();
+        this.closeSkinTonePopover(!this._skinTonePending);
       }
     });
 
@@ -1250,8 +1252,8 @@ export class EmojiPicker {
   }
 
   /**
-   * Hides the dial. Animated, the fan folds shut onto the first tone first.
-   * Unanimated (picker close, outside click), it stops every motion at once.
+   * Hides the dial. Animated (toggle, click elsewhere in the picker), the fan folds shut
+   * onto the first tone first. Unanimated (picker close, Escape), it stops every motion at once.
    * @param animate - fold before hiding
    */
   private closeSkinTonePopover(animate = false): void {

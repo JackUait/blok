@@ -691,8 +691,8 @@ suite('collab HTTP routes on a journal', () => {
       const title = { id: 'title', name: 'Name', type: 'title', position: 'a' };
       const status = { id: 'st', name: 'Status', type: 'status', position: 'b' };
       const view = { id: 'v1', name: 'Table', type: 'table', position: 'a', sorts: [], filters: [] };
-      const database = (schema: object[], views: object[]): object => ({ schema, views, activeViewId: 'v1' });
-      const edit = async (key: string, ops: object[]): Promise<string> => {
+      const database = (schema: Record<string, unknown>[], views: Record<string, unknown>[]): Record<string, unknown> => ({ schema, views, activeViewId: 'v1' });
+      const edit = async (key: string, ops: Record<string, unknown>[]): Promise<string> => {
         const answer = await send(base, 'POST', '/sync/doc-database/edit', [[KEY, key]], JSON.stringify({ ops }));
 
         expect(answer.status).toBe(204);
@@ -1318,7 +1318,7 @@ suite('collab history past its limits', () => {
 
   it('answers rows that fit 4 MiB whole, with no room kept for an olderEnd it does not need', async () => {
     const MAX = 4 << 20;
-    const block = (record: number, index: number, length: number): object =>
+    const block = (record: number, index: number, length: number): Record<string, unknown> =>
       ({ op: 'insert', id: `r${record}b${String(index).padStart(2, '0')}`, block: { type: 'paragraph', data: { text: 'x'.repeat(length) } } });
     const insert = async (record: number, lengths: number[]): Promise<string> => {
       const answer = await send(base, 'POST', '/sync/doc-edge/edit', [[KEY, `e${record}`]],
@@ -1337,7 +1337,7 @@ suite('collab history past its limits', () => {
     }
 
     const before = await send(base, 'GET', `/sync/doc-edge/history/${lineage}/7/changes`);
-    const rows = (JSON.parse(before.body) as { changes: { blocks: object[] }[]; truncated?: boolean });
+    const rows = (JSON.parse(before.body) as { changes: { blocks: Record<string, unknown>[] }[]; truncated?: boolean });
 
     expect(rows.truncated).toBeUndefined();
 

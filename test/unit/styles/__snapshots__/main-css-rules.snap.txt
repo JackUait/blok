@@ -14893,6 +14893,23 @@ input[data-blok-database-picker-search]:focus {
   margin-block-start: var(--blok-space-0-25);
 }
 
+[data-blok-database-panel-page="group"] > [data-blok-database-panel-separator] {
+  margin-inline: var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="group"] > [data-blok-database-panel-separator]:has(+ [data-blok-database-property-visibility-header]) {
+  margin-block-start: 9px;
+}
+
+[data-blok-database-panel-page="group"] > [data-blok-database-property-visibility-header] {
+  min-block-size: 24px;
+  margin-block: var(--blok-space-2) 9px;
+}
+
+[data-blok-database-panel-page="group"] > [data-blok-database-property-visibility-header] > [data-blok-database-panel-section] {
+  padding-block: 0;
+}
+
 [data-blok-database-layout-tiles] {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

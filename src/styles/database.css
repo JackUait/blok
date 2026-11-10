@@ -11832,6 +11832,25 @@ input[data-blok-database-picker-search]:focus {
   margin-block-start: var(--blok-space-0-25);
 }
 
+/* Round 10 (r10-vs-group-table.raw, r10-vs-group-board.raw): the line 9px under the last switch row, x+12;
+   the 24px Groups header 12px under it; the first group 9px under the header. */
+[data-blok-database-panel-page="group"] > [data-blok-database-panel-separator] {
+  margin-inline: var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="group"] > [data-blok-database-panel-separator]:has(+ [data-blok-database-property-visibility-header]) {
+  margin-block-start: 9px;
+}
+
+[data-blok-database-panel-page="group"] > [data-blok-database-property-visibility-header] {
+  min-block-size: 24px;
+  margin-block: var(--blok-space-2) 9px;
+}
+
+[data-blok-database-panel-page="group"] > [data-blok-database-property-visibility-header] > [data-blok-database-panel-section] {
+  padding-block: 0;
+}
+
 /* findings V13 (11-notion-layout.png): 3 columns of 83x56 tiles, a 20px glyph over the label. */
 [data-blok-database-layout-tiles] {
   display: grid;

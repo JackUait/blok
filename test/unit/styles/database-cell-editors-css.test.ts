@@ -800,6 +800,19 @@ describe('cell editor CSS', () => {
       expect(declared(`${PAGE} > [data-blok-database-panel-header] + [data-blok-database-panel-row]`, 'margin-block-start')).toEqual(['var(--blok-space-1-75)']);
       expect(declared(`${PAGE} > [data-blok-database-panel-row] + [data-blok-database-panel-row]`, 'margin-block-start')).toEqual(['var(--blok-space-0-25)']);
     });
+
+    // Round 10 (r10-vs-group-table.raw, r10-vs-group-board.raw): the line sits 9px under the last switch row,
+    // 266 wide at x+12; the 24px "Groups" header 12px under it, its label text centred; the first group 9px lower.
+    it('places the Groups line and header as Notion does', () => {
+      const SEP = `${PAGE} > [data-blok-database-panel-separator]`;
+      const HEADER = `${PAGE} > [data-blok-database-property-visibility-header]`;
+
+      expect(declared(SEP, 'margin-inline')).toEqual(['var(--blok-space-2)']);
+      expect(declared(`${SEP}:has(+ [data-blok-database-property-visibility-header])`, 'margin-block-start')).toEqual(['9px']);
+      expect(declared(HEADER, 'min-block-size')).toEqual(['24px']);
+      expect(declared(HEADER, 'margin-block')).toEqual(['var(--blok-space-2) 9px']);
+      expect(declared(`${HEADER} > [data-blok-database-panel-section]`, 'padding-block')).toEqual(['0']);
+    });
   });
 });
 

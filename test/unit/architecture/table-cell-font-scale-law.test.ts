@@ -106,6 +106,11 @@ const EXEMPT_SINKS: FontSizeSink[] = [
     reason: 'text-edit textarea in a body-mounted image dialog, not cell body text; its size follows image zoom',
   },
   {
+    file: 'src/tools/callout/emoji-landing.ts',
+    match: 'ghost.style.fontSize',
+    reason: 'flying emoji in the body-mounted landing overlay, removed when its animation ends; never inside a cell',
+  },
+  {
     file: 'src/tools/file/pptx/renderer/ImageRenderer.ts',
     match: 'fontSize',
     reason: PPTX_SLIDE_TEXT,

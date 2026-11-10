@@ -72,6 +72,7 @@ const createBlokModulesMock = (): {
       }),
       setBlockParent: setBlockParentMock,
       getBlockById: vi.fn((id: string) => blockLookup.get(id)),
+      removeBlock: vi.fn(() => Promise.resolve()),
       transactForTool: transactForToolMock,
     },
     Caret: {
@@ -586,6 +587,39 @@ describe('BlokDataHandler', () => {
 
       // Table must NOT replace the current block — children.length > 0 disables replace
       expect(insertedBlocks[2].replace).toBe(false);
+    });
+
+    it('removes the empty caret block a table paste lands after, in the same undo step', async () => {
+      const { modules, transactForToolMock } = createBlokModulesMock();
+      const target = modules.BlockManager.currentBlock as Block;
+      const removed: Array<{ block: Block; inTransaction: boolean }> = [];
+      const inTransaction = { value: false };
+
+      transactForToolMock.mockImplementation((fn: () => void) => {
+        inTransaction.value = true;
+        fn();
+        inTransaction.value = false;
+      });
+      Object.assign(modules.BlockManager, {
+        removeBlock: vi.fn((block: Block) => {
+          removed.push({ block, inTransaction: inTransaction.value });
+
+          return Promise.resolve();
+        }),
+      });
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      await handler.handle(JSON.stringify([
+        { id: 'table-1', tool: 'table', data: { content: [[{ blocks: ['child-1'] }]] }, parentId: null, contentIds: ['child-1'] },
+        { id: 'child-1', tool: 'paragraph', data: { text: 'Cell A' }, parentId: 'table-1', contentIds: [] },
+      ]), { canReplaceCurrentBlock: true });
+
+      expect(removed).toEqual([{ block: target, inTransaction: true }]);
     });
 
     it('restores hierarchy when pasting a flat-array table whose children have no parent field', async () => {

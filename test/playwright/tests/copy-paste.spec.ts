@@ -1180,6 +1180,58 @@ test.describe('copy and paste', () => {
     }
   });
 
+  test.describe('a table pasted into an empty paragraph', () => {
+    const payload = [
+      { id: 'xt', tool: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['xta'] }, { blocks: ['xtb'] }]] }, parentId: null, contentIds: ['xta', 'xtb'], tunes: {} },
+      { id: 'xta', tool: 'paragraph', data: { text: 'Cell A' }, parentId: 'xt', contentIds: [], tunes: {} },
+      { id: 'xtb', tool: 'paragraph', data: { text: 'Cell B' }, parentId: 'xt', contentIds: [], tunes: {} },
+    ];
+    const targets: Record<string, { doc: OutputData['blocks']; parent: string | undefined }> = {
+      'the root': { doc: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }], parent: undefined },
+      'a callout': {
+        doc: [
+          { id: 'co', type: 'callout', data: { emoji: '💡' }, content: ['tgt'] },
+          { id: 'tgt', type: 'paragraph', parent: 'co', data: { text: '' } },
+        ],
+        parent: 'co',
+      },
+      'a toggle': {
+        doc: [
+          { id: 'tg', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: ['tgt'] },
+          { id: 'tgt', type: 'paragraph', parent: 'tg', data: { text: '' } },
+        ],
+        parent: 'tg',
+      },
+    };
+
+    for (const [targetName, { doc, parent }] of Object.entries(targets)) {
+      test(`replaces the paragraph in ${targetName}`, async ({ page }) => {
+        await createBlokWithElements(page, doc);
+        await openFixtureToggles(page, { blocks: doc });
+
+        await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+        await paste(page, page.locator(':focus'), { 'application/x-blok': JSON.stringify(payload), 'text/plain': 'Cell A Cell B' });
+
+        const shape = async (): Promise<{ hasTarget: boolean; tableParent: string | undefined; containerHoldsOnlyTable: boolean }> => {
+          const { blocks } = await saveBlok(page);
+          const pastedTable = blocks.find((b) => b.type === 'table');
+
+          return {
+            hasTarget: blocks.some((b) => b.id === 'tgt'),
+            tableParent: pastedTable?.parent,
+            containerHoldsOnlyTable: parent === undefined || JSON.stringify(blocks.find((b) => b.id === parent)?.content) === JSON.stringify([pastedTable?.id]),
+          };
+        };
+
+        await expect.poll(shape).toEqual({
+          hasTarget: false,
+          tableParent: parent,
+          containerHoldsOnlyTable: true,
+        });
+      });
+    }
+  });
+
   test.describe('a range across a column layout', () => {
     const doc: OutputData['blocks'] = [
       { id: 'pre', type: 'paragraph', data: { text: 'Before' } },

@@ -582,6 +582,10 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       (isTableCellChild(original) ? tableCells : documentFlow).push({ sanitized: sanitizedBlock, original });
     });
 
+    // Table cells go in after the caret block, so a replace on the first flow
+    // block would hit a cell. The empty caret block is removed after the inserts.
+    const blockToRemove = shouldReplaceFirst && tableCells.length > 0 ? BlockManager.currentBlock : undefined;
+
     /**
      * Map from original (old) block ID to the newly inserted Block instance.
      * Used to remap data and restore hierarchy after both passes.
@@ -702,6 +706,10 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         // bypass every one of those and reintroduce the callout paste
         // ejection bug family.
         BlockManager.setBlockParent(newBlock, parentEntry.newBlock.id);
+      }
+
+      if (blockToRemove !== undefined) {
+        void BlockManager.removeBlock(blockToRemove, false);
       }
     };
 

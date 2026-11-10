@@ -156,6 +156,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
 
         return createBlock(insertOptions.tool);
       },
+      removeBlock: (): Promise<void> => Promise.resolve(),
       paste: (tool: string, event: FakePasteEvent, replace: boolean): Promise<FakeBlock> => {
         pastes.push({ tool,
           event,

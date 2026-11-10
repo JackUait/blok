@@ -219,6 +219,28 @@ test.describe('undo audit: splits, soft breaks and merges in the typing window',
     expect(caretAfter).toEqual({ blockId: 'b1', offset: 5 });
   });
 
+  test('U098 shape: a merge and the Backspace after it in the block above are one step', async ({ page }) => {
+    await create(page, [
+      { id: 'b1', type: 'paragraph', data: { text: 'Alpha' } },
+      { id: 'b2', type: 'paragraph', data: { text: 'Beta' } },
+    ]);
+    await placeCaret(page, 'b2', 0);
+
+    await fastRun(page, async () => {
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+    });
+    expect(await saved(page)).toEqual(['b1 paragraph:AlphBeta']);
+
+    await press(page, UNDO);
+    expect(await saved(page)).toEqual(['b1 paragraph:Alpha', 'b2 paragraph:Beta']);
+    expect(await caret(page)).toEqual({ blockId: 'b2', offset: 0 });
+
+    await press(page, REDO);
+    expect(await saved(page)).toEqual(['b1 paragraph:AlphBeta']);
+    expect(await caret(page)).toEqual({ blockId: 'b1', offset: 4 });
+  });
+
   test('U098: two fast Backspaces at a heading start are one step', async ({ page }) => {
     await create(page, [
       { id: 'b1', type: 'paragraph', data: { text: 'Alpha' } },

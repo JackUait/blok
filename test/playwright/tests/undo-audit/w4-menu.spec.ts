@@ -15,7 +15,7 @@ const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 // Yjs capture window is 500ms; wait past it so gestures stay separate undo steps.
-const CAPTURE_GAP = 700;
+const CAPTURE_GAP = 800;
 const HANDLE = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
 const TUNES_POPOVER = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 const NESTED_POPOVER = '[data-blok-nested="true"] [data-blok-testid="popover-container"]';

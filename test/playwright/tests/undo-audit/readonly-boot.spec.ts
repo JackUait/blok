@@ -12,7 +12,7 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
-const CAPTURE_GAP_MS = 700;
+const CAPTURE_GAP_MS = 800;
 
 declare global {
   interface Window {

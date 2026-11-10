@@ -18,8 +18,8 @@ const ROW_SELECTOR = '[data-blok-table-row]';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 
-// Wait for Yjs captureTimeout (500ms) plus small buffer
-const YJS_CAPTURE_TIMEOUT = 600;
+// Wait for Yjs captureTimeout (~709 ms) plus small buffer
+const YJS_CAPTURE_TIMEOUT = 800;
 
 type SerializableToolConfig = {
   className?: string;
@@ -835,7 +835,7 @@ test.describe('Table Undo/Redo', () => {
   test('Undo preserves focus when table was created empty and text typed immediately', async ({ page }) => {
     // Scenario: user creates a new empty table, types in a cell, then undoes.
     // The cell initialization happens in rendered() via rAF.
-    // If the user types within the Yjs captureTimeout (500ms), the text change
+    // If the user types within the Yjs captureTimeout (~709 ms), the text change
     // could be batched with the table creation, causing undo to remove everything.
 
     // 1. Create an empty table (simulates "insert table from toolbox")

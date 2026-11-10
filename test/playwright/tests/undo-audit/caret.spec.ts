@@ -10,7 +10,7 @@ const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+a' : 'Control+a';
-const YJS_CAPTURE_TIMEOUT = 600;
+const YJS_CAPTURE_TIMEOUT = 800;
 
 declare global {
   interface Window {

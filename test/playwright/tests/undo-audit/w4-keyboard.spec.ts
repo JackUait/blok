@@ -10,7 +10,7 @@ import type { ShownRun } from '../helpers/shown-look';
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
-const CAPTURE_GAP_MS = 700;
+const CAPTURE_GAP_MS = 800;
 
 declare global {
   interface Window {

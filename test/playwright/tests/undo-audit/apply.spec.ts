@@ -9,8 +9,8 @@ const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 const SETTINGS_BUTTON = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const TUNES_POPOVER = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
-// Yjs captureTimeout is 500ms; wait past it so gestures are separate undo steps.
-const CAPTURE_WINDOW = 700;
+// Yjs captureTimeout is ~709 ms; wait past it so gestures are separate undo steps.
+const CAPTURE_WINDOW = 800;
 const VIDEO_URL = 'https://example.com/clip.mp4';
 
 declare global {

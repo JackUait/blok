@@ -16,8 +16,8 @@ const SINGLETON_TOOLTIP_SELECTOR = '[data-blok-interface="tooltip"]';
 
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 
-// Wait for Yjs captureTimeout (500ms) plus small buffer
-const YJS_CAPTURE_TIMEOUT = 600;
+// Wait for Yjs captureTimeout (~709 ms) plus small buffer
+const YJS_CAPTURE_TIMEOUT = 800;
 
 const assertBoundingBox = (
   box: { x: number; y: number; width: number; height: number } | null,

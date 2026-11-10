@@ -7,7 +7,7 @@ import { savedAsHtml } from '../helpers/saved-as-html';
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 // Yjs capture window is 500ms; wait past it so gestures stay separate undo steps.
-const CAPTURE_WINDOW = 600;
+const CAPTURE_WINDOW = 800;
 
 declare global {
   interface Window {

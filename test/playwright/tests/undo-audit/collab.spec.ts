@@ -21,7 +21,7 @@ const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const UNDO = `${MOD}+z`;
 const REDO = `${MOD}+Shift+z`;
 /** Yjs capture window is 500ms; wait past it so gestures stay separate undo steps. */
-const CAPTURE_GAP = 700;
+const CAPTURE_GAP = 800;
 
 const newDoc = (): string => `undo-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 

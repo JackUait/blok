@@ -9,8 +9,8 @@ const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const SETTINGS_BUTTON = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const TUNES_POPOVER = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 const NESTED_POPOVER = '[data-blok-nested="true"] [data-blok-testid="popover-container"]';
-// Yjs captureTimeout is 500ms; wait past it so gestures are separate undo steps.
-const CAPTURE_WINDOW = 700;
+// Yjs captureTimeout is ~709 ms; wait past it so gestures are separate undo steps.
+const CAPTURE_WINDOW = 800;
 
 declare global {
   interface Window {

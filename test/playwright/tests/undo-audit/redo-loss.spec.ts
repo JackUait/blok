@@ -19,7 +19,7 @@ const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+
 const MOVE_DOWN_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+ArrowDown' : 'Control+Shift+ArrowDown';
 const MOVE_UP_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+ArrowUp' : 'Control+Shift+ArrowUp';
 // Yjs capture window is 500ms; wait past it so gestures stay separate undo steps.
-const CAPTURE_GAP = 700;
+const CAPTURE_GAP = 800;
 // Longer than the 400ms write-buffer window, so deferred write-backs have landed.
 const SETTLE = 1200;
 const IMAGE_URL = 'http://localhost:4444/test/playwright/fixtures/image/shot.png';

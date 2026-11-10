@@ -18,7 +18,7 @@ const UNDO = `${MOD}+z`;
 const MOVE_UP = `${MOD}+Shift+ArrowUp`;
 const MOVE_DOWN = `${MOD}+Shift+ArrowDown`;
 // Yjs capture window is 500ms; wait past it so gestures stay separate undo steps.
-const CAPTURE_GAP = 700;
+const CAPTURE_GAP = 800;
 
 declare global {
   interface Window {

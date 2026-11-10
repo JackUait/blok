@@ -9,8 +9,8 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
-// Yjs captureTimeout (500ms) plus a buffer: waiting this long closes the current undo entry.
-const CAPTURE = 700;
+// Yjs captureTimeout (~709 ms) plus a buffer: waiting this long closes the current undo entry.
+const CAPTURE = 800;
 
 type Blocks = OutputData['blocks'];
 

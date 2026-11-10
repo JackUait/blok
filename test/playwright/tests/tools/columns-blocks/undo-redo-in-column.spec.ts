@@ -23,7 +23,7 @@ const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 // Yjs UndoManager coalesces edits within a 500ms capture window. Pace past it
 // so each user action becomes a distinct, independently-undoable operation.
-const YJS_CAPTURE_TIMEOUT = 600;
+const YJS_CAPTURE_TIMEOUT = 800;
 
 const waitForDelay = async (page: Page, delayMs: number): Promise<void> => {
   await page.evaluate(

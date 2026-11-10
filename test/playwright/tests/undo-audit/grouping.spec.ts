@@ -6,8 +6,8 @@ import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
-// Yjs captureTimeout (500ms) plus a buffer: waiting this long closes the current undo entry.
-const CAPTURE = 600;
+// Yjs captureTimeout (~709 ms) plus a buffer: waiting this long closes the current undo entry.
+const CAPTURE = 800;
 
 declare global {
   interface Window {

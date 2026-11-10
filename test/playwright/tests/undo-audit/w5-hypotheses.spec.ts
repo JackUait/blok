@@ -17,7 +17,7 @@ const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const UNDO = `${MOD}+z`;
 const REDO = `${MOD}+Shift+z`;
 // Yjs capture window is 500ms; wait past it so gestures stay separate undo steps.
-const CAPTURE_GAP = 700;
+const CAPTURE_GAP = 800;
 const HANDLE = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
 const TUNES_POPOVER = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 const AUDIO_FIXTURE = join(process.cwd(), 'test/playwright/fixtures/audio/sample.mp3');

@@ -20,7 +20,7 @@ const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 const MOVE_DOWN = process.platform === 'darwin' ? 'Meta+Shift+ArrowDown' : 'Control+Shift+ArrowDown';
 // Yjs capture window is 500ms; wait past it so gestures stay separate undo steps.
-const CAPTURE_GAP = 700;
+const CAPTURE_GAP = 800;
 const HANDLE = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
 const TUNES_POPOVER = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 

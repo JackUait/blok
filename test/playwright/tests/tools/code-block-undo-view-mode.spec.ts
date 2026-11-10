@@ -23,8 +23,8 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 
-/** Wait for Yjs captureTimeout (500 ms) plus small buffer. */
-const YJS_CAPTURE_TIMEOUT = 600;
+/** Wait for Yjs captureTimeout (~709 ms) plus small buffer. */
+const YJS_CAPTURE_TIMEOUT = 800;
 
 declare global {
   interface Window {

@@ -9,7 +9,7 @@ import type { ShownRun } from '../helpers/shown-look';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
-const CAPTURE_GAP_MS = 700;
+const CAPTURE_GAP_MS = 800;
 const TOOLBAR = '[data-blok-testid=inline-toolbar]';
 
 declare global {

@@ -8,7 +8,7 @@ import { blocksAsHtml } from '../helpers/saved-as-html';
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const UNDO = `${MOD}+z`;
 const REDO = `${MOD}+Shift+z`;
-const CAPTURE_GAP_MS = 700;
+const CAPTURE_GAP_MS = 800;
 
 declare global {
   interface Window {

@@ -8,8 +8,8 @@ const HOLDER_ID = 'blok';
 const TITLE_ID = 'host-title';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
-// Yjs captureTimeout is 500ms.
-const PAST_CAPTURE = 600;
+// Yjs captureTimeout is ~709 ms.
+const PAST_CAPTURE = 800;
 
 declare global {
   interface Window {

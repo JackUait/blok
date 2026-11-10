@@ -5,7 +5,7 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
-const CAPTURE_GAP_MS = 700;
+const CAPTURE_GAP_MS = 800;
 
 declare global {
   interface Window {

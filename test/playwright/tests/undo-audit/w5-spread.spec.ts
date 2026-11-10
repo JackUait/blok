@@ -19,7 +19,7 @@ import type { ShownRun } from '../helpers/shown-look';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
-const CAPTURE_GAP_MS = 700;
+const CAPTURE_GAP_MS = 800;
 const HANDLE = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
 const TUNES_POPOVER = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 const NESTED_POPOVER = '[data-blok-nested="true"] [data-blok-testid="popover-container"]';

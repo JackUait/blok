@@ -5,7 +5,7 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
-const CAPTURE_GAP_MS = 700;
+const CAPTURE_GAP_MS = 800;
 const SETTLE_MS = 800;
 
 declare global {

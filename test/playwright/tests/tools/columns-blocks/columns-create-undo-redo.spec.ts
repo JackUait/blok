@@ -21,7 +21,7 @@ import {
  */
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
-const CAPTURE = 600;
+const CAPTURE = 800;
 const TOOLBOX_CONTAINER = '[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-container"]';
 const toolboxItem = (name: string): string =>
   `[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-item"][data-blok-item-name="${name}"]`;

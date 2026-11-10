@@ -6,7 +6,7 @@ import { blocksAsHtml } from '../helpers/saved-as-html';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
-const CAPTURE_GAP_MS = 700;
+const CAPTURE_GAP_MS = 800;
 const IMAGE_URL = 'http://localhost:4444/test/playwright/fixtures/image/shot.png';
 
 declare global {

@@ -28,8 +28,8 @@ const PARAGRAPH_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-componen
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 
-/** Yjs captureTimeout is 500 ms; wait a bit longer for reliability. */
-const YJS_CAPTURE_TIMEOUT_MS = 600;
+/** Yjs captureTimeout is ~709 ms; wait a bit longer for reliability. */
+const YJS_CAPTURE_TIMEOUT_MS = 800;
 
 declare global {
   interface Window {

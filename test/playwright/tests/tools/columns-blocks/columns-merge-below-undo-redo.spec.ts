@@ -9,7 +9,7 @@ import {
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
-const CAPTURE = 600;
+const CAPTURE = 800;
 
 const wait = async (page: Page, ms: number): Promise<void> => {
   await page.evaluate(async (t) => new Promise<void>((r) => window.setTimeout(r, t)), ms);

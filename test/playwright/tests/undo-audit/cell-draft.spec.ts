@@ -112,6 +112,13 @@ test.describe('undo from code with a database cell draft open', () => {
 
     await expect.poll(() => notesOf(page, 'r2')).toBe('beta note');
     await expect.poll(() => page.evaluate(() => window.blokInstance?.history.canUndo())).toBe(false);
+
+    await page.evaluate(() => {
+      window.blokInstance?.history.redo();
+      window.blokInstance?.history.redo();
+    });
+
+    await expect.poll(() => notesOf(page, 'r2')).toBe('beta note X DRAFT');
   });
 
   test('Cmd+Z in the field stays the field\'s own undo and leaves Blok history alone', async ({ page }) => {

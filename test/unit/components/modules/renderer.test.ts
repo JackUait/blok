@@ -480,7 +480,7 @@ describe('Renderer module', () => {
     expect(stubData.savedData.type).toBe(failingTool);
   });
 
-  it('derives stub title from the unavailable tools registry when available', () => {
+  it('derives stub title from the unavailable tools registry when available', async () => {
     const customTitle = 'Custom tool title';
 
     const toolsOverrides: Partial<MockTools> = {
@@ -489,15 +489,15 @@ describe('Renderer module', () => {
       ]),
     };
 
-    const { renderer, tools } = createRenderer({
+    const { renderer, tools, blockManager } = createRenderer({
       tools: toolsOverrides,
     });
 
-    const composeStubDataForTool = (renderer as unknown as {
-      composeStubDataForTool: (tool: string, data: OutputBlockData['data'], id?: string) => StubData;
-    }).composeStubDataForTool.bind(renderer);
+    vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
 
-    const stubData = composeStubDataForTool('missing', { payload: true }, 'id-1');
+    await renderer.render([{ id: 'id-1', type: 'missing', data: { payload: true } }]);
+
+    const stubData = blockManager.composeBlock.mock.calls[0][0].data as StubData;
 
     expect(stubData.title).toBe(customTitle);
     expect(stubData.savedData).toEqual({
@@ -938,14 +938,13 @@ describe('Renderer module', () => {
     expect(hookOrder).toBeGreaterThan(emitOrder);
   });
 
-  it('falls back to the tool name when toolbox metadata is missing', () => {
-    const { renderer } = createRenderer();
+  it('falls back to the tool name when toolbox metadata is missing', async () => {
+    const { renderer, blockManager } = createRenderer();
 
-    const composeStubDataForTool = (renderer as unknown as {
-      composeStubDataForTool: (tool: string, data: OutputBlockData['data'], id?: string) => StubData;
-    }).composeStubDataForTool.bind(renderer);
+    vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+    await renderer.render([{ id: 'block-id', type: 'fallback', data: { value: 1 } }]);
 
-    const stubData = composeStubDataForTool('fallback', { value: 1 }, 'block-id');
+    const stubData = blockManager.composeBlock.mock.calls[0][0].data as StubData;
 
     expect(stubData.title).toBe('fallback');
     expect(stubData.savedData).toEqual({

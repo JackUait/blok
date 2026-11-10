@@ -175,11 +175,8 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     },
     Tools: {
       blockTools: {
-        get: (name: string): { sanitizeConfig: SanitizerConfig } | undefined => {
-          const config = options.sanitizeConfigs?.[name];
-
-          return config === undefined ? undefined : { sanitizeConfig: config };
-        },
+        // Every tool is registered; only the listed ones declare a sanitize config.
+        get: (name: string): { sanitizeConfig: SanitizerConfig | undefined } => ({ sanitizeConfig: options.sanitizeConfigs?.[name] }),
       },
     },
   } as unknown as BlokModules;

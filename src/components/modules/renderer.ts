@@ -1,5 +1,4 @@
-import type { BlockId, BlockToolData, OutputBlockData } from '../../../types';
-import type { StubData } from '../../tools/stub';
+import type { BlockToolData, OutputBlockData } from '../../../types';
 import { Module } from '../__module';
 import type { Block } from '../block';
 import type { BlockToolAdapter } from '../tools/block';
@@ -18,6 +17,7 @@ import { migrateBlocks } from '../migration/block-migrations';
 import { richTextInputToHtml } from '../utils/rich-text-input';
 import { applyLinkConfig } from '../utils/apply-link-config';
 import { DATA_ATTR } from '../constants';
+import { composeStubData, resolveBlockTool } from '../utils/stub-tool';
 import { BlocksRendered } from '../events';
 import { SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
 
@@ -98,13 +98,7 @@ const toDepthFirstOrder = (blocks: OutputBlockData[]): OutputBlockData[] => {
     return extra === undefined ? block : { ...block, content: [...(block.content ?? []), ...extra] };
   });
 };
-/**
- * Map of legacy EditorJS tool names to their Blok equivalents.
- * Used during rendering to transparently migrate old article data.
- */
-export const TOOL_ALIASES: Readonly<Record<string, string>> = {
-  delimiter: 'divider',
-};
+export { TOOL_ALIASES } from '../utils/stub-tool';
 
 /**
  * Module that responsible for rendering Blocks on blok initialization
@@ -348,30 +342,11 @@ export class Renderer extends Module {
 
       const blockToolData = isValidBlockData(blockData.data) ? blockData.data : {};
 
-      const availabilityResult = (() => {
-        if (Tools.available.has(originalTool)) {
-          return {
-            tool: originalTool,
-            data: blockToolData,
-          };
-        }
+      const availabilityResult = resolveBlockTool(Tools, (name) => Tools.available.has(name), originalTool, blockToolData, id);
 
-        const aliasTarget = TOOL_ALIASES[originalTool];
-
-        if (aliasTarget !== undefined && Tools.available.has(aliasTarget)) {
-          return {
-            tool: aliasTarget,
-            data: blockToolData,
-          };
-        }
-
+      if (availabilityResult.tool === Tools.stubTool && originalTool !== Tools.stubTool) {
         logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Blok config.`, 'warn');
-
-        return {
-          tool: Tools.stubTool,
-          data: this.composeStubDataForTool(originalTool, blockToolData, id),
-        };
-      })();
+      }
 
       const buildBlock = (tool: string, data: BlockToolData): Block => {
         try {
@@ -401,7 +376,7 @@ export class Renderer extends Module {
           /**
            * If tool throws an error during render, we should render stub instead of it
            */
-          const stubData = this.composeStubDataForTool(tool, data, id);
+          const stubData = composeStubData(Tools, tool, data, id);
 
           return BlockManager.composeBlock({
             id,
@@ -529,38 +504,5 @@ export class Renderer extends Module {
     // stays opt-in per tool). Also rebuilds the data containers, so stored
     // caller-owned objects are never retained by reference.
     return stripUnsafeUrlsDeep(sanitized.data, Tools.blockTools.get(tool)?.sanitizeConfig);
-  }
-
-  /**
-   * Create data for the Stub Tool that will be used instead of unavailable tool
-   * @param tool - unavailable tool name to stub
-   * @param data - data of unavailable block
-   * @param [id] - id of unavailable block
-   */
-  private composeStubDataForTool(tool: string, data: BlockToolData, id?: BlockId): StubData {
-    const { Tools } = this.Blok;
-
-    const title = (() => {
-      if (!Tools.unavailable.has(tool)) {
-        return tool;
-      }
-
-      const toolboxSettings = (Tools.unavailable.get(tool) as BlockToolAdapter).toolbox;
-
-      if (toolboxSettings !== undefined && toolboxSettings[0].title !== undefined) {
-        return toolboxSettings[0].title;
-      }
-
-      return tool;
-    })();
-
-    return {
-      savedData: {
-        id,
-        type: tool,
-        data,
-      },
-      title,
-    };
   }
 }

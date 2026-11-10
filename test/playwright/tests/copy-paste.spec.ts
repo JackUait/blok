@@ -943,6 +943,83 @@ test.describe('copy and paste', () => {
     }
   });
 
+  test.describe('blocks of a tool the pasting editor lacks', () => {
+    const doc: OutputData['blocks'] = [
+      { id: 'p1', type: 'paragraph', data: { text: 'Before toggle' } },
+      { id: 't', type: 'toggle', data: { text: 'Toggle title', isOpen: true }, content: ['tc'] },
+      { id: 'tc', type: 'paragraph', parent: 't', data: { text: 'Toggle child' } },
+      { id: 'p2', type: 'paragraph', data: { text: 'After toggle' } },
+    ];
+
+    const createParagraphOnlyBlok = async (page: Page): Promise<void> => {
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.BlokOriginal({ holder, tools: { paragraph: { class: window.BlokParagraph } } });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+    };
+
+    const copyAllBlocks = async (page: Page, text: string): Promise<Record<string, string>> => {
+      const editable = page.getByText(text, { exact: true });
+      const commandModifier = await getCommandModifierKey(page);
+
+      await editable.click();
+      await page.keyboard.press(`${commandModifier}+A`);
+      await page.keyboard.press(`${commandModifier}+A`);
+      await page.keyboard.press(`${commandModifier}+A`);
+
+      const clipboardData = await copyFromElement(editable);
+
+      expect(clipboardData['application/x-blok']).toBeDefined();
+
+      return clipboardData;
+    };
+
+    /** Tree shape without ids: each block with its type, text and its parent's text. */
+    const tree = (output: OutputData): Array<{ type: string; text: unknown; under?: unknown }> => {
+      const textOf = new Map(output.blocks.map((block) => [block.id, block.data.text]));
+
+      return output.blocks.map((block) => ({
+        type: block.type,
+        text: block.data.text,
+        ...(block.parent !== undefined && { under: textOf.get(block.parent) }),
+      }));
+    };
+
+    test('arrive as a stub that keeps the rest of the paste, and come back whole', async ({ page }) => {
+      const errors: string[] = [];
+
+      page.on('pageerror', (error) => errors.push(error.message));
+
+      await createBlok(page, { data: { blocks: doc } });
+      const source = await saveBlok(page);
+      const fromDefault = await copyAllBlocks(page, 'Before toggle');
+
+      await createParagraphOnlyBlok(page);
+      await paste(page, getParagraphByIndex(page, 0), fromDefault);
+
+      // This editor does not know the toggle's rich fields, so the stub keeps the copied HTML.
+      const saveWithStub = async (): Promise<OutputData> => savedAsHtml(
+        await page.evaluate(async () => await window.blokInstance?.save()),
+        { allowHtml: true }
+      ) ?? { blocks: [] };
+
+      await expect.poll(async () => tree(await saveWithStub())).toEqual(tree(source));
+      await expect(page.locator('[data-blok-stub]')).toHaveCount(1);
+
+      const fromParagraphOnly = await copyAllBlocks(page, 'Before toggle');
+
+      await createBlok(page);
+      await paste(page, getParagraphByIndex(page, 0), fromParagraphOnly);
+
+      await expect.poll(async () => tree(await saveBlok(page))).toEqual(tree(source));
+      await expect(page.locator('[data-blok-stub]')).toHaveCount(0);
+      expect(errors).toEqual([]);
+    });
+  });
+
   test.describe('cutting', () => {
     test('should cut inline fragment', async ({ page }) => {
       await createBlok(page);
@@ -1640,6 +1717,8 @@ declare global {
   interface Window {
     blokInstance?: Blok;
     Blok: new (...args: unknown[]) => Blok;
+    BlokOriginal: new (...args: unknown[]) => Blok;
+    BlokParagraph: unknown;
     blockToolPasteEvents?: Array<{ defaultPrevented: boolean }>;
     __lastPastedFile?: { name: string; type: string; size: number } | null;
     __maliciousPasteExecuted?: boolean;

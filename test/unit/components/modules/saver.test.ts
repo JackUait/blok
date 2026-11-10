@@ -305,9 +305,34 @@ describe('Saver module', () => {
           data: { text: 'Hello' },
           tunes: paragraphBlock.savedData.tunes,
         },
-        preservedData,
+        { ...preservedData, id: 'block-2' },
       ],
     });
+  });
+
+  it('saves a stub with its live id, its children and its tunes', async () => {
+    const stub = createBlockMock({
+      id: 'live-t',
+      tool: 'stub',
+      data: { id: 'copied-t', type: 'toggle', data: { text: 'Toggle' } },
+      tunes: { alignment: 'left' },
+      contentIds: ['c'],
+    });
+    const child = createBlockMock({
+      id: 'c',
+      tool: 'paragraph',
+      data: { text: 'Child' },
+      parentId: 'live-t',
+    });
+
+    const { saver } = createSaver({ blocks: [stub.block, child.block], toolSanitizeConfigs: { paragraph: {} } });
+
+    const result = await saver.save();
+
+    expect(result?.blocks).toEqual([
+      { id: 'live-t', type: 'toggle', data: { text: 'Toggle' }, tunes: { alignment: 'left' }, content: ['c'] },
+      { id: 'c', type: 'paragraph', data: { text: 'Child' }, parent: 'live-t' },
+    ]);
   });
 
   it('returns an empty blocks array for a single empty default block', async () => {

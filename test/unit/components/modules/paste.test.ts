@@ -133,6 +133,15 @@ type PasteMocks = {
   holder: HTMLElement;
 };
 
+/** Pasted Blok blocks of a tool the editor lacks become stubs, so register the ones a test pastes. */
+const registerBlockTools = (tools: ToolsMock, names: string[]): void => {
+  names.forEach(name => {
+    if (!tools.blockTools.has(name)) {
+      tools.blockTools.set(name, { name } as unknown as BlockToolAdapter);
+    }
+  });
+};
+
 const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: PasteMocks } => {
   const holder = document.createElement('div');
   const defaultBlockName = options?.defaultBlock ?? 'paragraph';
@@ -1243,6 +1252,7 @@ describe('Paste module', () => {
       const { paste, mocks } = createPaste();
 
       await paste.prepare();
+      registerBlockTools(mocks.Tools, ['image', 'paragraph']);
 
       const sanitizeBlocksSpy = vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
         {
@@ -1328,6 +1338,7 @@ describe('Paste module', () => {
       mocks.Tools.blockTools.set('embed', patternTool);
 
       await paste.prepare();
+      registerBlockTools(mocks.Tools, ['paragraph']);
 
       mocks.BlockManager.currentBlock = {
         tool: {
@@ -1393,6 +1404,7 @@ describe('Paste module', () => {
       mocks.Tools.blockTools.set('embed', patternTool);
 
       await paste.prepare();
+      registerBlockTools(mocks.Tools, ['paragraph']);
 
       mocks.BlockManager.currentBlock = {
         tool: {
@@ -1454,6 +1466,7 @@ describe('Paste module', () => {
       mocks.Tools.blockTools.set('embed', patternTool);
 
       await paste.prepare();
+      registerBlockTools(mocks.Tools, ['paragraph']);
 
       mocks.BlockManager.currentBlock = {
         tool: {
@@ -2885,6 +2898,7 @@ describe('Paste module', () => {
       it('handles Blok data with missing required fields gracefully', async () => {
         const { paste, mocks } = createPaste();
         await paste.prepare();
+        registerBlockTools(mocks.Tools, ['paragraph']);
 
         const malformedBlocks = [
           { id: '1', tool: 'paragraph', data: {} },
@@ -3208,6 +3222,7 @@ describe('Paste module', () => {
       const { paste, mocks } = createPaste();
 
       await paste.prepare();
+      registerBlockTools(mocks.Tools, ['paragraph']);
       mocks.BlockManager.insert.mockReturnValue({ id: 'new-a' });
 
       const dataTransfer = new MockDataTransfer({
@@ -3253,6 +3268,7 @@ describe('Paste module', () => {
       const { paste, mocks } = createPaste();
 
       await paste.prepare();
+      registerBlockTools(mocks.Tools, ['paragraph']);
       mocks.BlockManager.insert.mockReturnValue({ id: 'new-x' });
 
       const dataTransfer = new MockDataTransfer({

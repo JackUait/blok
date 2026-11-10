@@ -6,6 +6,8 @@ import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
 import { convertBlockDataToString, convertStringToBlockData } from '../../../utils/blocks';
 import { generateBlockId } from '../../../utils/id-generator';
+import { log } from '../../../utils/logger';
+import { composeStubData, resolveBlockTool } from '../../../utils/stub-tool';
 import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link';
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import { safeHref } from '../../../utils/sanitize-url';
@@ -283,6 +285,32 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * The entry with the tool this editor builds it with: a copied stub unwraps
+   * to its own tool when registered here, and a missing tool becomes a stub.
+   * @param entry - a clipboard entry
+   */
+  private withResolvedTool(entry: BlokClipboardBlock): BlokClipboardBlock {
+    const { Tools } = this.Blok;
+    const isStub = entry.tool === Tools.stubTool;
+    const payload = entry.data as { type?: unknown; data?: unknown } | undefined;
+
+    if (isStub && (typeof payload?.type !== 'string' || typeof payload.data !== 'object' || payload.data === null)) {
+      return entry;
+    }
+
+    const type = isStub ? payload?.type as string : entry.tool;
+    const data = (isStub ? payload?.data : entry.data) as BlockToolData;
+    const resolved = resolveBlockTool(
+      Tools,
+      (name) => name !== Tools.stubTool && Tools.blockTools.get(name) !== undefined,
+      type,
+      data
+    );
+
+    return { ...entry, tool: resolved.tool, data: resolved.data };
+  }
+
+  /**
    * The table enclosing the caret cell, when the batch holds a tool barred from cells.
    * @param blocks - the clipboard entries, nested ones included
    */
@@ -329,12 +357,13 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     // on the children themselves. Backfill parentId before classification so
     // those children get adopted by the table during the two-pass insert
     // instead of becoming detached top-level paragraphs.
-    const blocks = backfillTableChildParents(this.linksForSingletons(rawBlocks));
+    const blocks = backfillTableChildParents(this.linksForSingletons(rawBlocks.map(entry => this.withResolvedTool(entry))));
+    // A stub only keeps its payload and never renders it; the tool sanitizes it once registered.
     const sanitizedBlocks = sanitizeBlocks(
       blocks,
       (name) => Tools.blockTools.get(name)?.sanitizeConfig ?? {},
       this.config.sanitizer
-    );
+    ).map((sanitized, i) => (sanitized.tool === Tools.stubTool ? { ...sanitized, data: blocks[i].data } : sanitized));
 
     // A tool barred from cells sends the whole batch out of the table, right
     // after its subtree, as BasePasteHandler.redirectToTableParentIfNeeded does.
@@ -422,11 +451,25 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     // so that one Cmd+Z removes the whole pasted set. Without this wrapper
     // each BlockManager.insert and setBlockParent lands on its own undo
     // stack item, and the user has to press undo N times to clear a paste.
+    // A tool that throws while building its block becomes a stub, so the rest of the paste still lands.
+    const insertOrStub = (options: Parameters<typeof BlockManager.insert>[0] & { tool: string; data: BlockToolData }): Block => {
+      try {
+        return BlockManager.insert(options);
+      } catch (error) {
+        if (options.tool === Tools.stubTool) {
+          throw error;
+        }
+        log(`Pasted block «${options.tool}» replaced with a stub because of a plugin error`, 'error', { error });
+
+        return BlockManager.insert({ ...options, tool: Tools.stubTool, data: composeStubData(Tools, options.tool, options.data) });
+      }
+    };
+
     const runInsertPasses = (): void => {
       // Pass 1: insert table cells first so they exist with new IDs before the
       // owning table block is inserted with its (remapped) content references.
       tableCells.forEach(({ sanitized, original }) => {
-        const block = BlockManager.insert({ tool: sanitized.tool,
+        const block = insertOrStub({ tool: sanitized.tool,
           data: remapDatabaseViewIds(sanitized.tool, original.id, sanitized.data, copiedViewIds),
           origin: 'paste' });
 
@@ -452,7 +495,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
           : ownViews;
         const id = copiedRefIds.get(original.id);
 
-        const block = BlockManager.insert({
+        const block = insertOrStub({
           tool: sanitized.tool,
           data: remapDatabaseRefs(sanitized.tool, remappedData, copiedRefIds),
           replace: idx === 0 && shouldReplaceFirst && tableCells.length === 0,

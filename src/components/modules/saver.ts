@@ -1197,27 +1197,24 @@ export class Saver extends Module {
         return;
       }
 
-      /** If it was stub Block, get original data */
-      if (tool === this.Blok.Tools.stubTool && this.isStubSavedData(data)) {
-        extractedBlocks.push(data);
+      const isStub = tool === this.Blok.Tools.stubTool;
 
-        return;
-      }
-
-      if (tool === this.Blok.Tools.stubTool) {
+      if (isStub && !this.isStubSavedData(data)) {
         log('Stub block data is malformed and was skipped');
 
         return;
       }
+
+      // A stub saves the block it stands for, placed where the stub lives now.
+      const block = isStub && this.isStubSavedData(data) ? data : { type: tool, data };
 
       const isTunesEmpty = tunes === undefined || isEmpty(tunes);
       const hasLastEdited = lastEditedAt !== undefined;
       const hasLastEditedBy = lastEditedBy !== undefined && lastEditedBy !== null;
 
       const output: OutputData['blocks'][number] = {
+        ...block,
         id,
-        type: tool,
-        data,
         ...!isTunesEmpty && {
           tunes,
         },

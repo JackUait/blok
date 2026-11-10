@@ -878,3 +878,128 @@ describe('BlokDataHandler', () => {
     });
   });
 });
+
+describe('BlokDataHandler — tools the pasting editor does not have', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * Editor with only the given block tools. Inserting any other tool throws,
+   * as the block factory does.
+   */
+  const setup = (registered: string[], options: { throwsOnInsert?: string } = {}): {
+    handler: BlokDataHandler;
+    inserted: Array<{ tool: string; data: Record<string, unknown> }>;
+    blocks: Array<Block & { parentId: string | null; contentIds: string[] }>;
+  } => {
+    const tools = new Set([...registered, 'stub']);
+    const inserted: Array<{ tool: string; data: Record<string, unknown> }> = [];
+    const blocks: Array<Block & { parentId: string | null; contentIds: string[] }> = [];
+    const byId = new Map<string, Block & { parentId: string | null; contentIds: string[] }>();
+
+    const modules = {
+      BlockManager: {
+        currentBlock: undefined,
+        insert: vi.fn((opts: { tool: string; data: Record<string, unknown> }) => {
+          if (!tools.has(opts.tool)) {
+            throw new Error(`Could not compose Block. Tool «${opts.tool}» not found.`);
+          }
+          if (opts.tool === options.throwsOnInsert) {
+            throw new Error('tool constructor failed');
+          }
+          inserted.push(opts);
+
+          const block = { id: `new-${blocks.length}`, name: opts.tool, parentId: null, contentIds: [] } as unknown as Block & { parentId: string | null; contentIds: string[] };
+
+          blocks.push(block);
+          byId.set(block.id, block);
+
+          return block;
+        }),
+        setBlockParent: vi.fn((block: Block, parentId: string | null) => {
+          const child = byId.get(block.id);
+
+          if (child !== undefined) {
+            child.parentId = parentId;
+          }
+          if (parentId !== null) {
+            byId.get(parentId)?.contentIds.push(block.id);
+          }
+        }),
+        transactForTool: vi.fn((fn: () => void) => fn()),
+      },
+      Caret: { setToBlock: vi.fn(), positions: { END: 'end' } },
+      Tools: {
+        stubTool: 'stub',
+        unavailable: new Map(),
+        blockTools: {
+          get: vi.fn((name: string) => (tools.has(name) ? { sanitizeConfig: {} } : undefined)),
+        },
+      },
+      YjsManager: { stopCapturing: vi.fn() },
+    } as unknown as BlokModules;
+
+    const handler = new BlokDataHandler(modules, createToolRegistryMock(), createSanitizerBuilderMock(), { sanitizer: {} });
+
+    return { handler, inserted, blocks };
+  };
+
+  it('pastes every block when one tool is missing, the missing one as a stub that keeps its children', async () => {
+    const { handler, inserted, blocks } = setup(['paragraph']);
+
+    await handler.handle(JSON.stringify([
+      { id: 'b', tool: 'paragraph', data: { text: 'Before' } },
+      { id: 't', tool: 'toggle', data: { text: '<b>Toggle</b>' }, contentIds: ['c'] },
+      { id: 'c', tool: 'paragraph', data: { text: 'Child' }, parentId: 't' },
+      { id: 'a', tool: 'paragraph', data: { text: 'After' } },
+    ]), { canReplaceCurrentBlock: false });
+
+    expect(inserted.map(entry => entry.tool)).toEqual(['paragraph', 'stub', 'paragraph', 'paragraph']);
+    expect(inserted[1].data).toEqual({
+      savedData: { type: 'toggle', data: { text: '<b>Toggle</b>' } },
+      title: 'toggle',
+    });
+    expect(blocks[2].parentId).toBe(blocks[1].id);
+    expect(inserted[3].data).toEqual({ text: 'After' });
+  });
+
+  it('unwraps a copied stub whose tool this editor has', async () => {
+    const { handler, inserted } = setup(['paragraph', 'toggle']);
+
+    await handler.handle(JSON.stringify([
+      { id: 't', tool: 'stub', data: { id: 't', type: 'toggle', data: { text: 'Toggle' } } },
+    ]), { canReplaceCurrentBlock: false });
+
+    expect(inserted).toEqual([expect.objectContaining({ tool: 'toggle', data: { text: 'Toggle' } })]);
+  });
+
+  it('pastes a copied stub whose tool is still missing as one stub, not a stub of a stub', async () => {
+    const { handler, inserted } = setup(['paragraph']);
+
+    await handler.handle(JSON.stringify([
+      { id: 't', tool: 'stub', data: { id: 't', type: 'toggle', data: { text: 'Toggle' } } },
+    ]), { canReplaceCurrentBlock: false });
+
+    expect(inserted).toEqual([expect.objectContaining({
+      tool: 'stub',
+      data: { savedData: { type: 'toggle', data: { text: 'Toggle' } }, title: 'toggle' },
+    })]);
+  });
+
+  it('pastes a block whose tool throws on insert as a stub and keeps going', async () => {
+    const { handler, inserted } = setup(['paragraph', 'callout'], { throwsOnInsert: 'callout' });
+
+    await handler.handle(JSON.stringify([
+      { id: 'co', tool: 'callout', data: { emoji: 'x' } },
+      { id: 'a', tool: 'paragraph', data: { text: 'After' } },
+    ]), { canReplaceCurrentBlock: false });
+
+    expect(inserted.map(entry => entry.tool)).toEqual(['stub', 'paragraph']);
+    expect(inserted[0].data).toEqual(expect.objectContaining({ savedData: { type: 'callout', data: { emoji: 'x' } } }));
+  });
+});

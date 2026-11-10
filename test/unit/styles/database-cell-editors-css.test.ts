@@ -758,8 +758,8 @@ describe('cell editor CSS', () => {
     const HEADER = '[data-blok-database-panel][data-docked] > [data-blok-database-panel-header]:has(> [data-blok-database-panel-back])';
 
     it('drops 7px and puts Back 10px in, the title 8px after it, the × 16px from the edge', () => {
-      expect(declared(HEADER, 'margin-block-start')).toEqual(['7px']);
-      expect(declared(HEADER, 'padding-inline')).toEqual(['10px var(--blok-space-3)']);
+      expect(declared(HEADER, 'margin-block-start')).toEqual(['var(--blok-space-1-75)']);
+      expect(declared(HEADER, 'padding-inline')).toEqual(['var(--blok-space-2-5) var(--blok-space-3)']);
       expect(declared(HEADER, 'gap')).toEqual(['var(--blok-space-2)']);
     });
   });

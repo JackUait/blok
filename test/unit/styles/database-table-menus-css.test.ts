@@ -406,3 +406,14 @@ describe('Color list (notion-spec-2 §12)', () => {
     expect(declared(`${COLOR} [data-blok-popover-item-value] > [data-blok-database-option-swatch]`, 'margin-inline')).toEqual(['var(--blok-space-0-25)']);
   });
 });
+
+// notion-motion.md Round 9 "Edit property from a column header" (r9-header-menu-select.raw, r9-editprop-flyout.raw):
+// in the column menu and its Edit property flyout the 20px icon sits 8px into the row, the text 36px in.
+describe('column menu row icon', () => {
+  it('draws the icon 20px wide with 8px after it', () => {
+    const COLUMN = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-popover-item-icon]";
+
+    expect(declared(COLUMN, 'width')).toEqual(['20px']);
+    expect(declared(COLUMN, 'margin-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+});

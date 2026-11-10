@@ -6853,7 +6853,7 @@ button[data-blok-database-column-count]:hover {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-icon] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-item-icon], [data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] [data-blok-popover-item-icon] {
   width: 20px;
   margin-inline-end: var(--blok-space-2);
 }
@@ -13059,7 +13059,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-group-label] {
-  padding-inline: 3px;
+  padding-inline: var(--blok-space-0-75);
   font-weight: 500;
 }
 
@@ -13698,8 +13698,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-panel][data-docked] > [data-blok-database-panel-header]:has(> [data-blok-database-panel-back]) {
-  margin-block-start: 7px;
-  padding-inline: 10px var(--blok-space-3);
+  margin-block-start: var(--blok-space-1-75);
+  padding-inline: var(--blok-space-2-5) var(--blok-space-3);
   gap: var(--blok-space-2);
 }
 

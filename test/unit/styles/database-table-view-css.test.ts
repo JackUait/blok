@@ -391,7 +391,7 @@ describe('database table calculation footer', () => {
     it('is 26px tall with its pill at x+27', () => {
       expect(ruleBody('[data-blok-database-table-group-header]')).toMatch(/height:\s*26px/);
       expect(ruleBody('[data-blok-database-table-group-header]')).toMatch(/gap:\s*0[;\s]/);
-      expect(ruleBody('[data-blok-database-table-group-label]')).toMatch(/padding-inline:\s*3px/);
+      expect(ruleBody('[data-blok-database-table-group-label]')).toMatch(/padding-inline:\s*var\(--blok-space-0-75\)/);
     });
 
     it('spaces an open group 8px under its header and 20px over the next one', () => {

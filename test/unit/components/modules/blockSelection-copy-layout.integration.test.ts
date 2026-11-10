@@ -63,10 +63,24 @@ class LockedParagraph extends Paragraph {
   }
 }
 
+/** A layout whose children are user content, like a database row and its page body. */
+class PageShell extends Paragraph {
+  public static get isLayout(): boolean {
+    return true;
+  }
+}
+
+const pageDoc = (): OutputBlockData[] => [
+  P('pre', 'Before'),
+  { id: 'page', type: 'page_shell', data: { text: 'Title' }, content: ['b1', 'b2'] },
+  P('b1', 'Body one', 'page'),
+  P('b2', 'Body two', 'page'),
+];
+
 const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, locked: LockedParagraph, column_list: ColumnList, column: Column, tabs: TabsTool, tab: TabTool },
+    tools: { paragraph: Paragraph, locked: LockedParagraph, page_shell: PageShell, column_list: ColumnList, column: Column, tabs: TabsTool, tab: TabTool },
     data: { blocks },
   }) as unknown as TestEditor;
 
@@ -246,6 +260,29 @@ describe('delete of a range across a column layout', () => {
         ['c2p', 'c2', undefined],
         ['post', null, undefined],
       ]);
+    });
+  });
+});
+
+describe('a layout whose children are user content', () => {
+  it('is not copied when its whole body is selected', async () => {
+    const instance = await boot(pageDoc());
+    const written = await copySelected(instance, [block(instance, 'b1'), block(instance, 'b2')]);
+
+    expect(payload(written).map((entry) => entry.id)).toEqual(['b1', 'b2']);
+  });
+
+  it('is not deleted when its whole body is deleted', async () => {
+    const instance = await boot(pageDoc());
+    const { blockManager } = instance.module;
+
+    block(instance, 'b1').selected = true;
+    block(instance, 'b2').selected = true;
+    blockManager.deleteSelectedBlocksAndInsertReplacement();
+
+    await vi.waitFor(() => {
+      expect(blockManager.blocks.map((live) => live.id).slice(0, 2)).toEqual(['pre', 'page']);
+      expect(blockManager.getBlockById('b1')).toBeUndefined();
     });
   });
 });

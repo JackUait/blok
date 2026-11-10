@@ -360,7 +360,9 @@ export class BlockRepository {
    * A selection never holds a layout block, so copy and delete use this to act
    * on the layout instead of leaving it behind, empty or missing. A layout
    * whose parent owns its children (a column, a tab) is a part of that parent
-   * and never stands in alone.
+   * and never stands in alone. Nor does a layout whose children are user
+   * content (a database row and its page body): deleting the body would
+   * delete the row.
    * @param blocks - selected blocks, in document order
    */
   public withCoveredLayouts(blocks: Block[]): Block[] {
@@ -380,7 +382,8 @@ export class BlockRepository {
       return layouts.reverse().find((layout) => {
         const units = unitsOf(layout);
 
-        return parentOf(layout)?.tool.ownsChildren !== true
+        return layout.tool.ownsChildren
+          && parentOf(layout)?.tool.ownsChildren !== true
           && units.length > 0
           && units.every((unit) => selected.has(unit));
       });

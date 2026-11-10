@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "ከአንድ ወር በኋላ",
   "tools.database.filterUpdatesWithDate": "ማጣሪያው ከአሁኑ ቀን ጋር ይዘምናል",
   "tools.database.sortAdd": "ድርደራ አክል",
+  "tools.database.sortNew": "አዲስ ድርደራ",
   "tools.database.sortRemove": "ድርደራ አስወግድ",
   "tools.database.sortDeleteAll": "ድርደራ ሰርዝ",
   "tools.database.sortLowHigh": "ደርድር፦ ዝቅተኛ → ከፍተኛ",

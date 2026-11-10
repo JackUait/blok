@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "මාසයකින්",
   "tools.database.filterUpdatesWithDate": "පෙරහන වත්මන් දිනය සමඟ යාවත්කාලීන වේ",
   "tools.database.sortAdd": "වර්ග කිරීමක් එක් කරන්න",
+  "tools.database.sortNew": "නව වර්ග කිරීමක්",
   "tools.database.sortRemove": "වර්ග කිරීම ඉවත් කරන්න",
   "tools.database.sortDeleteAll": "වර්ග කිරීම මකන්න",
   "tools.database.sortLowHigh": "වර්ග කරන්න: අඩු → වැඩි",

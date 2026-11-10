@@ -323,6 +323,46 @@ describe('view settings panel', () => {
       expect(exists('database-sort-add')).toBe(true);
     });
 
+    // notion-motion.md Round 9 (r9-vs-filter.raw, r9-vs-sort.raw): "Add filter" over "Filter by…", "New sort" over "Sort by…".
+    const title = (): string => document.querySelector('[data-blok-database-panel-header]')?.textContent ?? '';
+    const search = (): HTMLInputElement | null => document.querySelector<HTMLInputElement>('[data-blok-testid="database-property-picker-search"]');
+    const page = (): string | null | undefined => document.querySelector('[data-blok-testid="database-view-settings"]')?.getAttribute('data-blok-database-panel-page');
+
+    it('an empty Filter page reads "Add filter" over a "Filter by…" search, and reads "Filter" once a filter exists', () => {
+      harness().open();
+      click('database-settings-filter');
+
+      expect(title()).toContain('tools.database.filterAdd');
+      expect(search()?.placeholder).toBe('tools.database.filterByPlaceholder');
+      expect(search()?.getAttribute('aria-label')).toBe('tools.database.filterByPlaceholder');
+      expect(page()).toBe('pick');
+      click('database-pick-property-num');
+      click('database-panel-back');
+      expect(title()).toContain('tools.database.settingsFilter');
+      expect(title()).not.toContain('tools.database.filterAdd');
+      expect(page()).not.toBe('pick');
+    });
+
+    it('an empty Sort page reads "New sort" over a "Sort by…" search, and reads "Sort" once a sort exists', () => {
+      harness().open();
+      click('database-settings-sort');
+
+      expect(title()).toContain('tools.database.sortNew');
+      expect(search()?.placeholder).toBe('tools.database.sortByPlaceholder');
+      expect(search()?.getAttribute('aria-label')).toBe('tools.database.sortByPlaceholder');
+      expect(page()).toBe('pick');
+      click('database-pick-property-due');
+      expect(title()).toContain('tools.database.settingsSort');
+      expect(title()).not.toContain('tools.database.sortNew');
+      expect(page()).not.toBe('pick');
+    });
+
+    it('the Group page carries its page name for its measured offsets', () => {
+      harness().open();
+      click('database-settings-group');
+      expect(page()).toBe('group');
+    });
+
     it('Group lists None (checked), then Name, then A→Z; a pick groups', () => {
       const h = harness();
 

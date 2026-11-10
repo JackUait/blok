@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "ಈಗಿನಿಂದ ಒಂದು ತಿಂಗಳ ನಂತರ",
   "tools.database.filterUpdatesWithDate": "ಪ್ರಸ್ತುತ ದಿನಾಂಕದೊಂದಿಗೆ ಫಿಲ್ಟರ್ ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತದೆ",
   "tools.database.sortAdd": "ವಿಂಗಡಣೆ ಸೇರಿಸಿ",
+  "tools.database.sortNew": "ಹೊಸ ವಿಂಗಡಣೆ",
   "tools.database.sortRemove": "ವಿಂಗಡಣೆ ತೆಗೆದುಹಾಕಿ",
   "tools.database.sortDeleteAll": "ವಿಂಗಡಣೆ ಅಳಿಸಿ",
   "tools.database.sortLowHigh": "ವಿಂಗಡಿಸಿ: ಕಡಿಮೆ → ಹೆಚ್ಚು",

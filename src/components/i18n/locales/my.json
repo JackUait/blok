@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "ယခုမှ တစ်လအကြာ",
   "tools.database.filterUpdatesWithDate": "စစ်ထုတ်မှုသည် လက်ရှိရက်စွဲနှင့်အညီ အပ်ဒိတ်ဖြစ်ပါမည်",
   "tools.database.sortAdd": "စီမှု ထည့်ရန်",
+  "tools.database.sortNew": "စီမှုအသစ်",
   "tools.database.sortRemove": "စီမှု ဖယ်ရှားရန်",
   "tools.database.sortDeleteAll": "စီမှု ဖျက်ရန်",
   "tools.database.sortLowHigh": "နိမ့် → မြင့် စီရန်",

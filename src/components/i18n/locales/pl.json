@@ -1312,6 +1312,7 @@
   "tools.database.filterDateOneMonthFromNow": "Za miesiąc",
   "tools.database.filterUpdatesWithDate": "Filtr będzie aktualizowany zgodnie z bieżącą datą",
   "tools.database.sortAdd": "Dodaj sortowanie",
+  "tools.database.sortNew": "Nowe sortowanie",
   "tools.database.sortRemove": "Usuń sortowanie",
   "tools.database.sortDeleteAll": "Usuń sortowanie",
   "tools.database.sortLowHigh": "Sortuj: niskie → wysokie",

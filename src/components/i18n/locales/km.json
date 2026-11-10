@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "មួយខែទៀត",
   "tools.database.filterUpdatesWithDate": "តម្រងនឹងធ្វើបច្ចុប្បន្នភាពតាមកាលបរិច្ឆេទបច្ចុប្បន្ន",
   "tools.database.sortAdd": "បន្ថែមការតម្រៀប",
+  "tools.database.sortNew": "ការតម្រៀបថ្មី",
   "tools.database.sortRemove": "ដកការតម្រៀបចេញ",
   "tools.database.sortDeleteAll": "លុបការតម្រៀប",
   "tools.database.sortLowHigh": "តម្រៀប ទាប → ខ្ពស់",

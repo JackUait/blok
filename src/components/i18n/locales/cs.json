@@ -1312,6 +1312,7 @@
   "tools.database.filterDateOneMonthFromNow": "Za měsíc",
   "tools.database.filterUpdatesWithDate": "Filtr se bude aktualizovat podle aktuálního data",
   "tools.database.sortAdd": "Přidat řazení",
+  "tools.database.sortNew": "Nové řazení",
   "tools.database.sortRemove": "Odebrat řazení",
   "tools.database.sortDeleteAll": "Smazat řazení",
   "tools.database.sortLowHigh": "Seřadit: nízké → vysoké",

@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Bir ay sonra",
   "tools.database.filterUpdatesWithDate": "Filtr cari tarixə uyğun yenilənəcək",
   "tools.database.sortAdd": "Sıralama əlavə et",
+  "tools.database.sortNew": "Yeni sıralama",
   "tools.database.sortRemove": "Sıralamanı çıxar",
   "tools.database.sortDeleteAll": "Sıralamanı sil",
   "tools.database.sortLowHigh": "Sırala: aşağı → yuxarı",

@@ -1318,6 +1318,7 @@
   "tools.database.filterDateOneMonthFromNow": "بعد شهر",
   "tools.database.filterUpdatesWithDate": "سيتم تحديث عامل التصفية وفقًا للتاريخ الحالي",
   "tools.database.sortAdd": "إضافة فرز",
+  "tools.database.sortNew": "فرز جديد",
   "tools.database.sortRemove": "إزالة الفرز",
   "tools.database.sortDeleteAll": "حذف الفرز",
   "tools.database.sortLowHigh": "فرز أدنى ← أعلى",

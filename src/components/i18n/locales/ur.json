@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "ایک مہینے بعد",
   "tools.database.filterUpdatesWithDate": "فلٹر موجودہ تاریخ کے ساتھ اپ ڈیٹ ہوگا",
   "tools.database.sortAdd": "ترتیب شامل کریں",
+  "tools.database.sortNew": "نئی ترتیب",
   "tools.database.sortRemove": "ترتیب ہٹائیں",
   "tools.database.sortDeleteAll": "ترتیب حذف کریں",
   "tools.database.sortLowHigh": "کم ← زیادہ ترتیب دیں",

@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "ഇപ്പോൾ മുതൽ ഒരു മാസം കഴിഞ്ഞ്",
   "tools.database.filterUpdatesWithDate": "നിലവിലെ തീയതിക്കനുസരിച്ച് ഫിൽട്ടർ അപ്‌ഡേറ്റ് ചെയ്യും",
   "tools.database.sortAdd": "അടുക്കൽ ചേർക്കുക",
+  "tools.database.sortNew": "പുതിയ അടുക്കൽ",
   "tools.database.sortRemove": "അടുക്കൽ നീക്കം ചെയ്യുക",
   "tools.database.sortDeleteAll": "അടുക്കൽ ഇല്ലാതാക്കുക",
   "tools.database.sortLowHigh": "അടുക്കുക: കുറവ് → കൂടുതൽ",

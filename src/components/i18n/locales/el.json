@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Σε έναν μήνα",
   "tools.database.filterUpdatesWithDate": "Το φίλτρο θα ενημερώνεται με την τρέχουσα ημερομηνία",
   "tools.database.sortAdd": "Προσθήκη ταξινόμησης",
+  "tools.database.sortNew": "Νέα ταξινόμηση",
   "tools.database.sortRemove": "Κατάργηση ταξινόμησης",
   "tools.database.sortDeleteAll": "Διαγραφή ταξινόμησης",
   "tools.database.sortLowHigh": "Ταξινόμηση: χαμηλό → υψηλό",

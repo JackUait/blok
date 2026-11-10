@@ -1309,6 +1309,7 @@
   "tools.database.filterDateOneMonthFromNow": "Peste o lună",
   "tools.database.filterUpdatesWithDate": "Filtrul se va actualiza în funcție de data curentă",
   "tools.database.sortAdd": "Adaugă sortare",
+  "tools.database.sortNew": "Sortare nouă",
   "tools.database.sortRemove": "Elimină sortarea",
   "tools.database.sortDeleteAll": "Șterge sortarea",
   "tools.database.sortLowHigh": "Sortează mic → mare",

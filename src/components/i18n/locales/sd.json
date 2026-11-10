@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "هڪ مهيني کانپوءِ",
   "tools.database.filterUpdatesWithDate": "فلٽر موجوده تاريخ سان اپڊيٽ ٿيندو",
   "tools.database.sortAdd": "ترتيب شامل ڪريو",
+  "tools.database.sortNew": "نئين ترتيب",
   "tools.database.sortRemove": "ترتيب هٽايو",
   "tools.database.sortDeleteAll": "ترتيب ختم ڪريو",
   "tools.database.sortLowHigh": "گهٽ ← وڌ ترتيب ڏيو",

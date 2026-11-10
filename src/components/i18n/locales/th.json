@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "หนึ่งเดือนจากนี้",
   "tools.database.filterUpdatesWithDate": "ตัวกรองจะอัปเดตตามวันที่ปัจจุบัน",
   "tools.database.sortAdd": "เพิ่มการเรียงลำดับ",
+  "tools.database.sortNew": "การเรียงลำดับใหม่",
   "tools.database.sortRemove": "นำการเรียงลำดับออก",
   "tools.database.sortDeleteAll": "ลบการเรียงลำดับ",
   "tools.database.sortLowHigh": "เรียงจากน้อย → มาก",

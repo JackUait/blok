@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Isang buwan mula ngayon",
   "tools.database.filterUpdatesWithDate": "Mag-a-update ang filter batay sa kasalukuyang petsa",
   "tools.database.sortAdd": "Magdagdag ng sort",
+  "tools.database.sortNew": "Bagong sort",
   "tools.database.sortRemove": "Alisin ang sort",
   "tools.database.sortDeleteAll": "Tanggalin ang sort",
   "tools.database.sortLowHigh": "I-sort mababa → mataas",

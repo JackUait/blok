@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "ਹੁਣ ਤੋਂ ਇੱਕ ਮਹੀਨੇ ਬਾਅਦ",
   "tools.database.filterUpdatesWithDate": "ਫਿਲਟਰ ਮੌਜੂਦਾ ਤਾਰੀਖ ਨਾਲ ਅੱਪਡੇਟ ਹੋਵੇਗਾ",
   "tools.database.sortAdd": "ਕ੍ਰਮ ਜੋੜੋ",
+  "tools.database.sortNew": "ਨਵਾਂ ਕ੍ਰਮ",
   "tools.database.sortRemove": "ਕ੍ਰਮ ਹਟਾਓ",
   "tools.database.sortDeleteAll": "ਕ੍ਰਮ ਮਿਟਾਓ",
   "tools.database.sortLowHigh": "ਕ੍ਰਮਬੱਧ ਕਰੋ: ਘੱਟ → ਵੱਧ",

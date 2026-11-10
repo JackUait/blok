@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "一個月後",
   "tools.database.filterUpdatesWithDate": "篩選器將隨目前日期更新",
   "tools.database.sortAdd": "新增排序",
+  "tools.database.sortNew": "新排序",
   "tools.database.sortRemove": "移除排序",
   "tools.database.sortDeleteAll": "刪除排序",
   "tools.database.sortLowHigh": "排序：低 → 高",

@@ -1668,6 +1668,7 @@ export type BlokMessageKey =
   | 'tools.database.sortDescending'
   | 'tools.database.sortHighLow'
   | 'tools.database.sortLowHigh'
+  | 'tools.database.sortNew'
   | 'tools.database.sortNewOld'
   | 'tools.database.sortOldNew'
   | 'tools.database.sortRemove'

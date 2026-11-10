@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Om en månad",
   "tools.database.filterUpdatesWithDate": "Filtret uppdateras med dagens datum",
   "tools.database.sortAdd": "Lägg till sortering",
+  "tools.database.sortNew": "Ny sortering",
   "tools.database.sortRemove": "Ta bort sortering",
   "tools.database.sortDeleteAll": "Radera sortering",
   "tools.database.sortLowHigh": "Sortera låg → hög",

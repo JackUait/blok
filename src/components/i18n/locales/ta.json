@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "ஒரு மாதத்தில்",
   "tools.database.filterUpdatesWithDate": "தற்போதைய தேதியுடன் வடிகட்டி புதுப்பிக்கப்படும்",
   "tools.database.sortAdd": "வரிசைப்படுத்தலைச் சேர்",
+  "tools.database.sortNew": "புதிய வரிசைப்படுத்தல்",
   "tools.database.sortRemove": "வரிசைப்படுத்தலை அகற்று",
   "tools.database.sortDeleteAll": "வரிசைப்படுத்தலை நீக்கு",
   "tools.database.sortLowHigh": "வரிசைப்படுத்து: குறைவு → அதிகம்",

@@ -1452,9 +1452,11 @@ export class ViewSettingsPages {
     query: QueryState,
     types: readonly PropertyType[],
     onPick: (property: PropertyDefinition) => void,
-    options: { leading?: () => HTMLElement[]; disabled?: boolean } = {}
+    options: { leading?: () => HTMLElement[]; disabled?: boolean; placeholder?: string } = {}
   ): HTMLElement[] {
     const list = document.createElement('div');
+
+    list.setAttribute('data-blok-database-property-picker-list', '');
     const fill = (): void => {
       const needle = query.get().trim().toLowerCase();
       const choices = this.ctx.schema()
@@ -1469,10 +1471,11 @@ export class ViewSettingsPages {
         onClick: () => onPick(property),
       })));
     };
+    const placeholder = options.placeholder ?? this.t('settingsSearchProperty');
     const search = panelInput({
       value: query.get(),
-      placeholder: this.t('settingsSearchProperty'),
-      label: this.t('settingsSearchProperty'),
+      placeholder,
+      label: placeholder,
       testId: 'database-property-picker-search',
       onInput: (value) => {
         query.set(value);
@@ -1491,9 +1494,17 @@ export class ViewSettingsPages {
   /** The Filter page: simple filters (reorderable), then the advanced filter. */
   filters(): PanelPage {
     const pickState = queryState();
+    const empty = (): boolean => this.ctx.view().filters.length === 0 && countFilterRules(this.ctx.view().filterTree) === 0;
+    const t = (key: string): string => this.t(key);
 
+    // notion-motion.md Round 9 (r9-vs-filter.raw): with no filter yet the page reads "Add filter".
     return {
-      title: this.t('settingsFilter'),
+      get title() {
+        return t(empty() ? 'filterAdd' : 'settingsFilter');
+      },
+      get name() {
+        return empty() ? 'pick' : undefined;
+      },
       build: (panel) => {
         const view = this.ctx.view();
         const schema = this.ctx.schema();
@@ -1507,7 +1518,7 @@ export class ViewSettingsPages {
 
               this.ctx.updatePersonal({ filters: [filter] });
               panel.push(this.simpleFilter(filter.id));
-            }),
+            }, { placeholder: this.t('filterByPlaceholder') }),
             panelSeparator(),
             panelRow({
               label: this.t('filterAdvanced'),
@@ -2003,9 +2014,17 @@ export class ViewSettingsPages {
 
   sorts(): PanelPage {
     const pickState = queryState();
+    const empty = (): boolean => this.ctx.view().sorts.length === 0;
+    const t = (key: string): string => this.t(key);
 
+    // notion-motion.md Round 9 (r9-vs-sort.raw): with no sort yet the page reads "New sort".
     return {
-      title: this.t('settingsSort'),
+      get title() {
+        return t(empty() ? 'sortNew' : 'settingsSort');
+      },
+      get name() {
+        return empty() ? 'pick' : undefined;
+      },
       build: (panel) => {
         const schema = this.ctx.schema();
         const sorts = withEntryIds(this.ctx.view().sorts);
@@ -2016,7 +2035,7 @@ export class ViewSettingsPages {
 
         // findings V15: with no sort yet, the page is the property picker.
         if (sorts.length === 0) {
-          return this.propertyPicker(pickState, GROUPABLE_TYPES, (property) => write([{ id: nanoid(), propertyId: property.id, direction: 'asc' }]));
+          return this.propertyPicker(pickState, GROUPABLE_TYPES, (property) => write([{ id: nanoid(), propertyId: property.id, direction: 'asc' }]), { placeholder: this.t('sortByPlaceholder') });
         }
         const items = sorts.flatMap((sort) => {
           const property = schema.find((p) => p.id === sort.propertyId);
@@ -2108,6 +2127,7 @@ export class ViewSettingsPages {
 
     return {
       title: this.t(sub ? 'settingsSubGroup' : 'settingsGroup'),
+      ...(sub ? {} : { name: 'group' }),
       build: (panel) => {
         const view = this.ctx.view();
         const property = this.property(sub ? view.subGroupBy : view.groupBy);

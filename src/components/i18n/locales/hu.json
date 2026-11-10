@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Egy hónap múlva",
   "tools.database.filterUpdatesWithDate": "A szűrő az aktuális dátummal együtt frissül",
   "tools.database.sortAdd": "Rendezés hozzáadása",
+  "tools.database.sortNew": "Új rendezés",
   "tools.database.sortRemove": "Rendezés eltávolítása",
   "tools.database.sortDeleteAll": "Rendezés törlése",
   "tools.database.sortLowHigh": "Rendezés: alacsony → magas",

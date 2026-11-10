@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Over een maand",
   "tools.database.filterUpdatesWithDate": "Het filter wordt bijgewerkt met de huidige datum",
   "tools.database.sortAdd": "Sortering toevoegen",
+  "tools.database.sortNew": "Nieuwe sortering",
   "tools.database.sortRemove": "Sortering verwijderen",
   "tools.database.sortDeleteAll": "Sortering wissen",
   "tools.database.sortLowHigh": "Sorteren laag → hoog",

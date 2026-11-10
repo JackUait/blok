@@ -1312,6 +1312,7 @@
   "tools.database.filterDateOneMonthFromNow": "Čez en mesec",
   "tools.database.filterUpdatesWithDate": "Filter se bo posodabljal s trenutnim datumom",
   "tools.database.sortAdd": "Dodaj razvrščanje",
+  "tools.database.sortNew": "Novo razvrščanje",
   "tools.database.sortRemove": "Odstrani razvrščanje",
   "tools.database.sortDeleteAll": "Izbriši razvrščanje",
   "tools.database.sortLowHigh": "Razvrsti: nizko → visoko",

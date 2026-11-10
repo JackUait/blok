@@ -1309,6 +1309,7 @@
   "tools.database.filterDateOneMonthFromNow": "בעוד חודש",
   "tools.database.filterUpdatesWithDate": "המסנן יתעדכן לפי התאריך הנוכחי",
   "tools.database.sortAdd": "הוסף מיון",
+  "tools.database.sortNew": "מיון חדש",
   "tools.database.sortRemove": "הסר מיון",
   "tools.database.sortDeleteAll": "מחק מיון",
   "tools.database.sortLowHigh": "מיין נמוך ← גבוה",

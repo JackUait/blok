@@ -1312,6 +1312,7 @@
   "tools.database.filterDateOneMonthFromNow": "Через месяц",
   "tools.database.filterUpdatesWithDate": "Фильтр будет обновляться по текущей дате",
   "tools.database.sortAdd": "Добавить сортировку",
+  "tools.database.sortNew": "Новая сортировка",
   "tools.database.sortRemove": "Удалить сортировку",
   "tools.database.sortDeleteAll": "Удалить сортировку",
   "tools.database.sortLowHigh": "Сортировать: меньше → больше",

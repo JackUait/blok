@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "1개월 후",
   "tools.database.filterUpdatesWithDate": "필터가 현재 날짜에 맞춰 업데이트됩니다",
   "tools.database.sortAdd": "정렬 추가",
+  "tools.database.sortNew": "새 정렬",
   "tools.database.sortRemove": "정렬 제거",
   "tools.database.sortDeleteAll": "정렬 삭제",
   "tools.database.sortLowHigh": "정렬: 낮음 → 높음",

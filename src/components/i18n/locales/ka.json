@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "ერთ თვეში",
   "tools.database.filterUpdatesWithDate": "ფილტრი განახლდება მიმდინარე თარიღის მიხედვით",
   "tools.database.sortAdd": "დალაგების დამატება",
+  "tools.database.sortNew": "ახალი დალაგება",
   "tools.database.sortRemove": "დალაგების მოხსნა",
   "tools.database.sortDeleteAll": "დალაგების წაშლა",
   "tools.database.sortLowHigh": "დალაგება: დაბალი → მაღალი",

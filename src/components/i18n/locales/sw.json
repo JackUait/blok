@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Mwezi mmoja kuanzia sasa",
   "tools.database.filterUpdatesWithDate": "Kichujio kitasasishwa kulingana na tarehe ya sasa",
   "tools.database.sortAdd": "Ongeza upangaji",
+  "tools.database.sortNew": "Upangaji mpya",
   "tools.database.sortRemove": "Ondoa upangaji",
   "tools.database.sortDeleteAll": "Futa upangaji",
   "tools.database.sortLowHigh": "Panga chini → juu",

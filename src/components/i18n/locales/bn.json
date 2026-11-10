@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "এখন থেকে এক মাস পরে",
   "tools.database.filterUpdatesWithDate": "বর্তমান তারিখের সাথে ফিল্টার আপডেট হবে",
   "tools.database.sortAdd": "সাজানোর নিয়ম যোগ করুন",
+  "tools.database.sortNew": "নতুন সাজানোর নিয়ম",
   "tools.database.sortRemove": "সাজানোর নিয়ম সরান",
   "tools.database.sortDeleteAll": "সাজানো মুছুন",
   "tools.database.sortLowHigh": "সাজান: কম → বেশি",

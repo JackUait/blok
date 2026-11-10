@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Kuukauden päästä",
   "tools.database.filterUpdatesWithDate": "Suodatin päivittyy nykyisen päivämäärän mukaan",
   "tools.database.sortAdd": "Lisää lajittelu",
+  "tools.database.sortNew": "Uusi lajittelu",
   "tools.database.sortRemove": "Poista lajittelu",
   "tools.database.sortDeleteAll": "Tyhjennä lajittelu",
   "tools.database.sortLowHigh": "Lajittele pienin → suurin",

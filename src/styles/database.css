@@ -7895,6 +7895,16 @@ textarea[data-blok-database-cell-input] {
   padding-inline: var(--blok-space-2) var(--blok-space-1-5);
 }
 
+/* notion-motion.md Round 9 (r9-editprop-flyout.raw), Select: "Options" and its "+" 5px higher in the same 30px,
+   and the option text at box x+40. Status and Multi-select are unmeasured. */
+[data-blok-database-options-editor="select"] [data-blok-database-options-heading] {
+  padding-block: var(--blok-space-0-25) var(--blok-space-2-25);
+}
+
+[data-blok-database-options-editor="select"] [data-blok-database-select-option-label] {
+  margin-inline-start: var(--blok-space-0-5);
+}
+
 /* Select and Multi-select show every handle at rest (feel/findings-table T18, notion-spec-2 §19.14). Status shows none. */
 [data-blok-database-select-editor="select"] [data-blok-database-select-option-handle],
 [data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option-handle] {
@@ -11793,6 +11803,33 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-panel-page="properties"] [data-blok-database-panel-list-item] {
   margin-inline: var(--blok-space-1);
+}
+
+/* notion-motion.md Round 9 (r9-vs-filter.raw, r9-vs-sort.raw): the empty Filter and Sort pages put the search
+   box at y+54, the first option at y+94, options 29px apart with the name at x+44. */
+[data-blok-database-panel-page="pick"] > [data-blok-database-panel-input] {
+  margin-block-start: 15px;
+}
+
+[data-blok-database-panel-page="pick"] > [data-blok-database-property-picker-list] {
+  margin-block-start: var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-0-25);
+}
+
+[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] {
+  padding-inline-start: var(--blok-space-3);
+}
+
+/* notion-motion.md Round 9 (r9-vs-group.raw): grouped, Group by sits at y+46 and the rows are 29px apart. */
+[data-blok-database-panel-page="group"] > [data-blok-database-panel-header] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-1-75);
+}
+
+[data-blok-database-panel-page="group"] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-0-25);
 }
 
 /* findings V13 (11-notion-layout.png): 3 columns of 83x56 tiles, a 20px glyph over the label. */

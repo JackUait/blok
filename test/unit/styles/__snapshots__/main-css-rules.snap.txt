@@ -11312,6 +11312,14 @@ textarea[data-blok-database-cell-input] {
   padding-inline: var(--blok-space-2) var(--blok-space-1-5);
 }
 
+[data-blok-database-options-editor="select"] [data-blok-database-options-heading] {
+  padding-block: var(--blok-space-0-25) var(--blok-space-2-25);
+}
+
+[data-blok-database-options-editor="select"] [data-blok-database-select-option-label] {
+  margin-inline-start: var(--blok-space-0-5);
+}
+
 [data-blok-database-select-editor="select"] [data-blok-database-select-option-handle], [data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option-handle] {
   opacity: 1;
 }
@@ -14841,6 +14849,30 @@ input[data-blok-database-picker-search]:focus {
 
 [data-blok-database-panel-page="properties"] [data-blok-database-panel-list-item] {
   margin-inline: var(--blok-space-1);
+}
+
+[data-blok-database-panel-page="pick"] > [data-blok-database-panel-input] {
+  margin-block-start: 15px;
+}
+
+[data-blok-database-panel-page="pick"] > [data-blok-database-property-picker-list] {
+  margin-block-start: var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-0-25);
+}
+
+[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] {
+  padding-inline-start: var(--blok-space-3);
+}
+
+[data-blok-database-panel-page="group"] > [data-blok-database-panel-header] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-1-75);
+}
+
+[data-blok-database-panel-page="group"] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+  margin-block-start: var(--blok-space-0-25);
 }
 
 [data-blok-database-layout-tiles] {

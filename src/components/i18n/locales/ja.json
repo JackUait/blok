@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "1か月後",
   "tools.database.filterUpdatesWithDate": "フィルターは現在の日付に合わせて更新されます",
   "tools.database.sortAdd": "並べ替えを追加",
+  "tools.database.sortNew": "新しい並べ替え",
   "tools.database.sortRemove": "並べ替えを解除",
   "tools.database.sortDeleteAll": "並べ替えを削除",
   "tools.database.sortLowHigh": "並べ替え：低 → 高",

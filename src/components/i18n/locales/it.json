@@ -1309,6 +1309,7 @@
   "tools.database.filterDateOneMonthFromNow": "Tra un mese",
   "tools.database.filterUpdatesWithDate": "Il filtro si aggiornerà con la data corrente",
   "tools.database.sortAdd": "Aggiungi ordinamento",
+  "tools.database.sortNew": "Nuovo ordinamento",
   "tools.database.sortRemove": "Rimuovi ordinamento",
   "tools.database.sortDeleteAll": "Elimina ordinamento",
   "tools.database.sortLowHigh": "Ordina basso → alto",

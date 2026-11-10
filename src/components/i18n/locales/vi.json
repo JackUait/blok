@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Một tháng nữa",
   "tools.database.filterUpdatesWithDate": "Bộ lọc sẽ cập nhật theo ngày hiện tại",
   "tools.database.sortAdd": "Thêm sắp xếp",
+  "tools.database.sortNew": "Sắp xếp mới",
   "tools.database.sortRemove": "Gỡ sắp xếp",
   "tools.database.sortDeleteAll": "Xóa sắp xếp",
   "tools.database.sortLowHigh": "Sắp xếp thấp → cao",

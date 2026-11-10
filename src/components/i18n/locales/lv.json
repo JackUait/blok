@@ -1309,6 +1309,7 @@
   "tools.database.filterDateOneMonthFromNow": "Pēc mēneša",
   "tools.database.filterUpdatesWithDate": "Filtrs tiks atjaunināts atbilstoši pašreizējam datumam",
   "tools.database.sortAdd": "Pievienot kārtošanu",
+  "tools.database.sortNew": "Jauna kārtošana",
   "tools.database.sortRemove": "Noņemt kārtošanu",
   "tools.database.sortDeleteAll": "Dzēst kārtošanu",
   "tools.database.sortLowHigh": "Kārtot zems → augsts",

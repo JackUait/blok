@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Нэг сарын дараа",
   "tools.database.filterUpdatesWithDate": "Шүүлтүүр одоогийн огноогоор шинэчлэгдэнэ",
   "tools.database.sortAdd": "Эрэмбэлэлт нэмэх",
+  "tools.database.sortNew": "Шинэ эрэмбэлэлт",
   "tools.database.sortRemove": "Эрэмбэлэлт хасах",
   "tools.database.sortDeleteAll": "Эрэмбэлэлт устгах",
   "tools.database.sortLowHigh": "Эрэмбэлэх: бага → их",

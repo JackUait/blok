@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "अबदेखि एक महिनापछि",
   "tools.database.filterUpdatesWithDate": "फिल्टर हालको मितिअनुसार अद्यावधिक हुनेछ",
   "tools.database.sortAdd": "क्रम थप्नुहोस्",
+  "tools.database.sortNew": "नयाँ क्रम",
   "tools.database.sortRemove": "क्रम हटाउनुहोस्",
   "tools.database.sortDeleteAll": "क्रम मेटाउनुहोस्",
   "tools.database.sortLowHigh": "क्रमबद्ध गर्नुहोस्: कम → धेरै",

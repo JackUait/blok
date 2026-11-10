@@ -1309,6 +1309,7 @@
   "tools.database.filterDateOneMonthFromNow": "Za mjesec dana",
   "tools.database.filterUpdatesWithDate": "Filtar će se ažurirati prema trenutačnom datumu",
   "tools.database.sortAdd": "Dodaj sortiranje",
+  "tools.database.sortNew": "Novo sortiranje",
   "tools.database.sortRemove": "Ukloni sortiranje",
   "tools.database.sortDeleteAll": "Izbriši sortiranje",
   "tools.database.sortLowHigh": "Sortiraj: niže → više",

@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "ఒక నెలలో",
   "tools.database.filterUpdatesWithDate": "ప్రస్తుత తేదీతో ఫిల్టర్ అప్‌డేట్ అవుతుంది",
   "tools.database.sortAdd": "క్రమబద్ధీకరణను జోడించు",
+  "tools.database.sortNew": "కొత్త క్రమబద్ధీకరణ",
   "tools.database.sortRemove": "క్రమబద్ధీకరణను తీసివేయి",
   "tools.database.sortDeleteAll": "క్రమబద్ధీకరణను తొలగించు",
   "tools.database.sortLowHigh": "క్రమబద్ధీకరించు: తక్కువ → ఎక్కువ",

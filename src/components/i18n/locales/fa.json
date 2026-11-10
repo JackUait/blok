@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "یک ماه بعد",
   "tools.database.filterUpdatesWithDate": "فیلتر با تاریخ فعلی به‌روزرسانی می‌شود",
   "tools.database.sortAdd": "افزودن مرتب‌سازی",
+  "tools.database.sortNew": "مرتب‌سازی جدید",
   "tools.database.sortRemove": "برداشتن مرتب‌سازی",
   "tools.database.sortDeleteAll": "حذف مرتب‌سازی",
   "tools.database.sortLowHigh": "مرتب‌سازی کم ← زیاد",

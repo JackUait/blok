@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "За еден месец",
   "tools.database.filterUpdatesWithDate": "Филтерот ќе се ажурира според тековниот датум",
   "tools.database.sortAdd": "Додај сортирање",
+  "tools.database.sortNew": "Ново сортирање",
   "tools.database.sortRemove": "Отстрани сортирање",
   "tools.database.sortDeleteAll": "Избриши сортирање",
   "tools.database.sortLowHigh": "Сортирај: ниско → високо",

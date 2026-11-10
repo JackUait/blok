@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "بىر ئايدىن كېيىن",
   "tools.database.filterUpdatesWithDate": "سۈزگۈچ نۆۋەتتىكى چېسلاغا ئەگىشىپ يېڭىلىنىدۇ",
   "tools.database.sortAdd": "رەتلەش قوشۇش",
+  "tools.database.sortNew": "يېڭى رەتلەش",
   "tools.database.sortRemove": "رەتلەشنى چىقىرىۋېتىش",
   "tools.database.sortDeleteAll": "رەتلەشنى ئۆچۈرۈش",
   "tools.database.sortLowHigh": "رەتلەش تۆۋەن ← يۇقىرى",

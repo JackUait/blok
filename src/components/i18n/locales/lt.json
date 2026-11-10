@@ -1312,6 +1312,7 @@
   "tools.database.filterDateOneMonthFromNow": "Po mėnesio",
   "tools.database.filterUpdatesWithDate": "Filtras bus atnaujinamas pagal dabartinę datą",
   "tools.database.sortAdd": "Pridėti rikiavimą",
+  "tools.database.sortNew": "Naujas rikiavimas",
   "tools.database.sortRemove": "Pašalinti rikiavimą",
   "tools.database.sortDeleteAll": "Ištrinti rikiavimą",
   "tools.database.sortLowHigh": "Rikiuoti mažas → didelis",

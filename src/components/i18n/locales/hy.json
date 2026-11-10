@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Մեկ ամսից",
   "tools.database.filterUpdatesWithDate": "Զտիչը կթարմացվի ընթացիկ ամսաթվին համապատասխան",
   "tools.database.sortAdd": "Ավելացնել տեսակավորում",
+  "tools.database.sortNew": "Նոր տեսակավորում",
   "tools.database.sortRemove": "Հեռացնել տեսակավորումը",
   "tools.database.sortDeleteAll": "Ջնջել տեսակավորումը",
   "tools.database.sortLowHigh": "Տեսակավորել՝ ցածր → բարձր",

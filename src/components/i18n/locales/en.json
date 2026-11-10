@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "One month from now",
   "tools.database.filterUpdatesWithDate": "Filter will update with the current date",
   "tools.database.sortAdd": "Add sort",
+  "tools.database.sortNew": "New sort",
   "tools.database.sortRemove": "Remove sort",
   "tools.database.sortDeleteAll": "Delete sort",
   "tools.database.sortLowHigh": "Sort low → high",

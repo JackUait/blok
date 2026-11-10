@@ -1309,6 +1309,7 @@
   "tools.database.filterDateOneMonthFromNow": "Dans un mois",
   "tools.database.filterUpdatesWithDate": "Le filtre sera mis à jour avec la date du jour",
   "tools.database.sortAdd": "Ajouter un tri",
+  "tools.database.sortNew": "Nouveau tri",
   "tools.database.sortRemove": "Retirer le tri",
   "tools.database.sortDeleteAll": "Supprimer le tri",
   "tools.database.sortLowHigh": "Trier petit → grand",

@@ -1309,6 +1309,7 @@
   "tools.database.filterDateOneMonthFromNow": "Daqui a um mês",
   "tools.database.filterUpdatesWithDate": "O filtro será atualizado com a data atual",
   "tools.database.sortAdd": "Adicionar classificação",
+  "tools.database.sortNew": "Nova classificação",
   "tools.database.sortRemove": "Remover classificação",
   "tools.database.sortDeleteAll": "Excluir classificação",
   "tools.database.sortLowHigh": "Classificar menor → maior",

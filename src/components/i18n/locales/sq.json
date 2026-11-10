@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Pas një muaji",
   "tools.database.filterUpdatesWithDate": "Filtri do të përditësohet me datën aktuale",
   "tools.database.sortAdd": "Shto renditje",
+  "tools.database.sortNew": "Renditje e re",
   "tools.database.sortRemove": "Hiq renditjen",
   "tools.database.sortDeleteAll": "Fshi renditjen",
   "tools.database.sortLowHigh": "Rendit: e ulët → e lartë",

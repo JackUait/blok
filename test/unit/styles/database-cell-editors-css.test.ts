@@ -613,6 +613,18 @@ describe('cell editor CSS', () => {
     it('starts "Options" 8px in and ends its "+" 6px from the list edge', () => {
       expect(declared(`${LIST} [data-blok-database-options-heading]`, 'padding-inline')).toEqual(['var(--blok-space-2) var(--blok-space-1-5)']);
     });
+
+    // notion-motion.md Round 9 (r9-editprop-flyout.raw), Select only: "Options" text at box y+51.8 and its "+" at y+49,
+    // 5px above Blok's; the option text at box x+40, so the 6px-padded pill starts 2px after the ⋮⋮ slot.
+    const SELECT = '[data-blok-database-options-editor="select"]';
+
+    it('lifts the Select "Options" heading 5px and keeps it 30 tall', () => {
+      expect(declared(`${SELECT} [data-blok-database-options-heading]`, 'padding-block')).toEqual(['var(--blok-space-0-25) var(--blok-space-2-25)']);
+    });
+
+    it('starts a Select option\'s text at box x+40', () => {
+      expect(declared(`${SELECT} [data-blok-database-select-option-label]`, 'margin-inline-start')).toEqual(['var(--blok-space-0-5)']);
+    });
   });
 
   // notion-spec-2 §18.3 (b4-rel-dlg.txt): head 33 tall, "Select a page" 16px in, rows 544x32 one pixel apart.
@@ -761,6 +773,32 @@ describe('cell editor CSS', () => {
       expect(declared(HEADER, 'margin-block-start')).toEqual(['var(--blok-space-1-75)']);
       expect(declared(HEADER, 'padding-inline')).toEqual(['var(--blok-space-2-5) var(--blok-space-3)']);
       expect(declared(HEADER, 'gap')).toEqual(['var(--blok-space-2)']);
+    });
+  });
+
+  // notion-motion.md Round 9 (r9-vs-filter.raw, r9-vs-sort.raw): the empty Filter and Sort pages put the search box
+  // 266x28 at x+12, y+54, the first option at y+94, options on a 29px step with the name at x+44.
+  describe('view settings property picker page', () => {
+    const PAGE = '[data-blok-database-panel-page="pick"]';
+
+    it('drops the search box to y+54 and the first option to y+94', () => {
+      expect(declared(`${PAGE} > [data-blok-database-panel-input]`, 'margin-block-start')).toEqual(['15px']);
+      expect(declared(`${PAGE} > [data-blok-database-property-picker-list]`, 'margin-block-start')).toEqual(['var(--blok-space-2)']);
+    });
+
+    it('steps the options 29px and starts their names at x+44', () => {
+      expect(declared(`${PAGE} [data-blok-database-property-picker-list] > [data-blok-database-panel-row] + [data-blok-database-panel-row]`, 'margin-block-start')).toEqual(['var(--blok-space-0-25)']);
+      expect(declared(`${PAGE} [data-blok-database-property-picker-list] > [data-blok-database-panel-row]`, 'padding-inline-start')).toEqual(['var(--blok-space-3)']);
+    });
+  });
+
+  // notion-motion.md Round 9 (r9-vs-group.raw, table grouped by Select): Group by at y+46, Sort at y+75, Hide empty groups at y+104.
+  describe('view settings Group page', () => {
+    const PAGE = '[data-blok-database-panel-page="group"]';
+
+    it('drops the first row to y+46 and steps the rows 29px', () => {
+      expect(declared(`${PAGE} > [data-blok-database-panel-header] + [data-blok-database-panel-row]`, 'margin-block-start')).toEqual(['var(--blok-space-1-75)']);
+      expect(declared(`${PAGE} > [data-blok-database-panel-row] + [data-blok-database-panel-row]`, 'margin-block-start')).toEqual(['var(--blok-space-0-25)']);
     });
   });
 });

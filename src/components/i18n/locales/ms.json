@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "Sebulan dari sekarang",
   "tools.database.filterUpdatesWithDate": "Penapis akan dikemas kini mengikut tarikh semasa",
   "tools.database.sortAdd": "Tambah isihan",
+  "tools.database.sortNew": "Isihan baharu",
   "tools.database.sortRemove": "Alih keluar isihan",
   "tools.database.sortDeleteAll": "Padam isihan",
   "tools.database.sortLowHigh": "Isih rendah → tinggi",

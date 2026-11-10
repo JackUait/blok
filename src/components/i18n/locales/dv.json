@@ -1306,6 +1306,7 @@
   "tools.database.filterDateOneMonthFromNow": "މަހެއް ފަހުން",
   "tools.database.filterUpdatesWithDate": "ފިލްޓަރު މިހާރުގެ ތާރީޚާއެކު އަޕްޑޭޓް ވާނެ",
   "tools.database.sortAdd": "ތަރުތީބެއް އިތުރުކުރޭ",
+  "tools.database.sortNew": "އައު ތަރުތީބެއް",
   "tools.database.sortRemove": "ތަރުތީބު ނަގާލާ",
   "tools.database.sortDeleteAll": "ތަރުތީބު ފޮހެލާ",
   "tools.database.sortLowHigh": "ތަރުތީބުކުރޭ ދަށް ← މަތި",

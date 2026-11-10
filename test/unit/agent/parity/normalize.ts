@@ -234,6 +234,14 @@ export const normalizeForParity = (
     const minted = Object.prototype.hasOwnProperty.call(TOOL_MINTED, block.type) ? TOOL_MINTED[block.type] : undefined;
     const stripped = minted === undefined ? block.data : minted.strip(block.data);
     let data = options.answerRows === true ? stripped : withoutLoadDefaults(block.type, stripped);
+
+    // A database's empty deletedProperties slot depends on how it was born, not on the batch.
+    // The Go, C# and Rust normalizers drop it too.
+    if (options.answerRows !== true && block.type === 'database' && isRecord(data.deletedProperties) && Object.keys(data.deletedProperties).length === 0) {
+      const { deletedProperties: _empty, ...rest } = data;
+
+      data = rest;
+    }
     const content = data.content;
 
     if (block.type === 'table' && isArray(content)) {

@@ -7170,7 +7170,7 @@ describe('DatabaseTool — property operations', () => {
       tool.deleteMirrorProperty({ propertyId: 'prop-n' });
 
       expect(schemaOf(tool).map((p) => p.id)).not.toContain('prop-n');
-      expect(savedOf(tool).deletedProperties).toEqual({});
+      expect(savedOf(tool)).not.toHaveProperty('deletedProperties');
     });
 
     it('tells the adapter on restore: the property again, then the row values it holds', async () => {

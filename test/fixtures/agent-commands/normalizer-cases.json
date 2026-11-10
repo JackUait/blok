@@ -975,6 +975,71 @@
           }
         ]
       }
+    },
+    {
+      "name": "drops the empty deletedProperties slot a database is born with",
+      "keepIds": [
+        "d"
+      ],
+      "input": {
+        "blocks": [
+          {
+            "id": "d",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "t1",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "a0"
+                }
+              ],
+              "views": [
+                {
+                  "id": "v1",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "a0"
+                }
+              ],
+              "activeViewId": "v1",
+              "automations": {
+                "version": 1,
+                "definitions": []
+              },
+              "deletedProperties": {}
+            }
+          }
+        ]
+      },
+      "expected": {
+        "blocks": [
+          {
+            "id": "d",
+            "type": "database",
+            "data": {
+              "schema": [
+                {
+                  "id": "dbid1",
+                  "name": "Title",
+                  "type": "title",
+                  "position": "pos:0"
+                }
+              ],
+              "views": [
+                {
+                  "id": "dbid2",
+                  "name": "Table",
+                  "type": "table",
+                  "position": "pos:0"
+                }
+              ],
+              "activeViewId": "dbid2"
+            }
+          }
+        ]
+      }
     }
   ]
 }

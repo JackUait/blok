@@ -1076,8 +1076,9 @@ export interface DatabaseData extends BlockToolData {
   starter?: DatabaseStarterId;
   /**
    * Deleted properties by id. Row values stay in the rows until a permanent
-   * delete, so a restore shows them again. Saved even when empty, so two
-   * people's first deletes merge into one map.
+   * delete, so a restore shows them again. A database made from the toolbox
+   * saves it empty from the start; an older one gains it on its first delete
+   * and keeps it, empty or not, from then on.
    */
   deletedProperties?: Record<string, DeletedPropertyDefinition>;
 }

@@ -183,6 +183,9 @@ test.describe('Table full screen', () => {
   });
 
   test.beforeEach(async ({ page }) => {
+    // The page is shared within this file and keeps a viewport an earlier test set.
+    // Tests here measure against the modal's height, so each starts from the default.
+    await page.setViewportSize({ width: 1280, height: 720 });
     await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });

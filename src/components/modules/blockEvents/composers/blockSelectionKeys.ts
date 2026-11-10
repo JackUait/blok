@@ -13,6 +13,19 @@ import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-si
 import { isChildToolAllowed } from '../../../utils/child-tools';
 import { carriesReadOnly } from '../../../utils/read-only-blocks';
 
+const EDITING_HOST_SELECTOR = '[contenteditable]:not([contenteditable="false"])';
+
+/**
+ * The editing host around a node. A `contenteditable="false"` chip inside a
+ * host is skipped, so a range ending in a mention still finds the host.
+ * @param node - a range boundary
+ */
+const editingHostOf = (node: Node): HTMLElement | null => {
+  const element = node instanceof Element ? node : node.parentElement;
+
+  return element?.closest<HTMLElement>(EDITING_HOST_SELECTOR) ?? null;
+};
+
 /**
  * BlockSelectionKeys Composer handles keyboard interactions when blocks are selected.
  *
@@ -669,12 +682,51 @@ export class BlockSelectionKeys extends BlockEventComposer {
 
       if (covered.length > 0) {
         void BlockSelection.copySelectedBlocks(event, { blocks: covered });
+
+        return;
+      }
+
+      const inHost = this.singleHostSelection(event);
+
+      if (inHost !== null) {
+        BlockSelection.copyHostTextSelection(event, inHost.range, inHost.host);
       }
 
       return;
     }
 
     void BlockSelection.copySelectedBlocks(event);
+  }
+
+  /**
+   * A text selection inside ONE editing host of this editor: a block's input
+   * or the page title.
+   * @param event - the copy or cut event; one an inner handler took is skipped
+   */
+  private singleHostSelection(event: ClipboardEvent): { range: Range; host: HTMLElement } | null {
+    const { BlockManager, PageTitle } = this.Blok;
+    const selection = SelectionUtils.get();
+    const active = document.activeElement;
+
+    if (event.defaultPrevented || selection === null || selection.rangeCount === 0) {
+      return null;
+    }
+
+    // A native input keeps its own selection, which the page selection does not show.
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    const host = editingHostOf(range.startContainer);
+
+    if (range.collapsed || host === null || host !== editingHostOf(range.endContainer)) {
+      return null;
+    }
+
+    const ours = host === PageTitle.titleElement || BlockManager.getBlockByChildNode(host) !== undefined;
+
+    return ours ? { range, host } : null;
   }
 
   /**
@@ -718,6 +770,13 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     if (!BlockSelection.anyBlockSelected) {
+      const inHost = this.singleHostSelection(event);
+
+      if (inHost !== null) {
+        BlockSelection.copyHostTextSelection(event, inHost.range, inHost.host);
+        this.deleteHostRange(inHost.range, inHost.host);
+      }
+
       return;
     }
 
@@ -737,5 +796,22 @@ export class BlockSelectionKeys extends BlockEventComposer {
       .catch(() => {
         // Handle copy operation failure silently
       });
+  }
+
+  /**
+   * Delete what a cut took from one editing host. The cut's default was
+   * prevented, so the browser deletes nothing and fires no `input`; the
+   * `input` here is what tools and the page title sync their data from.
+   * @param range - the cut range
+   * @param host - the editing host holding it
+   */
+  private deleteHostRange(range: Range, host: HTMLElement): void {
+    const selection = SelectionUtils.get();
+
+    range.deleteContents();
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    host.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteByCut' }));
   }
 }

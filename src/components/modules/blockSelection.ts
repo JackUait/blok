@@ -673,6 +673,43 @@ export class BlockSelection extends Module {
   }
 
   /**
+   * Copy a selection inside one editing host as its inline markup and text.
+   * The browser's own copy wraps it in the host element and adds computed
+   * styles: on paste the host becomes a new block and the styles become marks.
+   * @param event - the copy or cut event
+   * @param range - the selection, inside `host`
+   * @param host - the editing host that holds the whole range
+   */
+  public copyHostTextSelection(event: ClipboardEvent, range: Range, host: HTMLElement): void {
+    event.preventDefault();
+
+    const clipboardData = event.clipboardData;
+
+    if (!clipboardData) {
+      return;
+    }
+
+    const plainText = rangeToPlainText(range);
+    const markup = $.make('div');
+
+    /**
+     * A plain-text host (code) has no markup: its spans are syntax highlight.
+     * Its newlines become `<br>`, since a bare newline in html is a space.
+     */
+    if (host.getAttribute('contenteditable') === 'plaintext-only') {
+      markup.textContent = plainText;
+      markup.innerHTML = markup.innerHTML.replace(/\n/g, '<br>');
+    } else {
+      markup.appendChild(range.cloneContents());
+      markup.innerHTML = clean(markup.innerHTML, this.sanitizerConfig);
+      resolvePresetColors(markup);
+    }
+
+    clipboardData.setData('text/plain', plainText);
+    clipboardData.setData('text/html', markup.innerHTML);
+  }
+
+  /**
    * Fold per-host sub-ranges into clipboard segments, coalescing consecutive
    * fully-covered blocks into one run so list grouping can see them together.
    * @param subRanges - the selection's per-host sub-ranges, in DOM order

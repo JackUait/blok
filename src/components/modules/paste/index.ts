@@ -564,11 +564,10 @@ export class Paste extends Module {
    * Check if browser behavior suits better.
    */
   private isNativeBehaviour(element: EventTarget): boolean {
-    return dom$.isNativeInput(element) ||
-      (element instanceof HTMLElement && (
-        element.contentEditable === 'plaintext-only' ||
-        element.getAttribute('contenteditable') === 'plaintext-only'
-      ));
+    // The target can be a highlight span inside a plain-text host (code), so read the host.
+    const host = element instanceof Element ? element.closest('[contenteditable]') : null;
+
+    return dom$.isNativeInput(element) || host?.getAttribute('contenteditable') === 'plaintext-only';
   }
 
   /**

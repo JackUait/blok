@@ -909,6 +909,17 @@ describe('Paste module', () => {
       expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(codeEl)).toBe(true);
     });
 
+    it('treats a highlight span inside a plaintext-only host as native behaviour', () => {
+      const { paste } = createPaste();
+      const codeEl = document.createElement('code');
+      const token = document.createElement('span');
+
+      codeEl.setAttribute('contenteditable', 'plaintext-only');
+      codeEl.appendChild(token);
+
+      expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(token)).toBe(true);
+    });
+
     it('does not intercept paste when target is a plaintext-only contenteditable element', async () => {
       const { paste, mocks } = createPaste();
 

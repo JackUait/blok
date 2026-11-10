@@ -782,7 +782,7 @@ test.describe('copy and paste', () => {
 
       const clipboardData = await copyFromElement(paragraph);
 
-      expect(clipboardData).toStrictEqual({});
+      expect(clipboardData).toStrictEqual({ 'text/plain': 'Some text', 'text/html': 'Some text' });
     });
 
     test('should copy several blocks', async ({ page }) => {
@@ -820,6 +820,164 @@ test.describe('copy and paste', () => {
       expect(data[0]?.data?.text).toMatch(/First block(<br>)?/);
       expect(data[1]?.tool).toBe('paragraph');
       expect(data[1]?.data?.text).toMatch(/Second block(<br>)?/);
+    });
+  });
+
+  test.describe('copying text inside one block', () => {
+    const selectIn = async (page: Page, selector: string, from?: string, to?: string): Promise<void> => {
+      await page.locator(selector).first().click();
+      await page.locator(selector).first().evaluate((host, bounds) => {
+        const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+        const nodes: Text[] = [];
+
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+          nodes.push(node as Text);
+        }
+        const locate = (needle: string | undefined, atEnd: boolean): [Text, number] => {
+          let offset = 0;
+          const full = nodes.map((n) => n.data).join('');
+          const edge = atEnd ? full.length : 0;
+          const index = needle === undefined ? edge : full.indexOf(needle) + (atEnd ? needle.length : 0);
+
+          for (const n of nodes) {
+            if (index <= offset + n.data.length) {
+              return [n, index - offset];
+            }
+            offset += n.data.length;
+          }
+          throw new Error('offset out of range');
+        };
+        const [startNode, startOffset] = locate(bounds.from, false);
+        const [endNode, endOffset] = locate(bounds.to, true);
+        const range = document.createRange();
+
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+        window.getSelection()?.removeAllRanges();
+        window.getSelection()?.addRange(range);
+        document.dispatchEvent(new Event('selectionchange'));
+      }, { from, to });
+    };
+
+    const caretBefore = async (page: Page, id: string, needle: string): Promise<void> => {
+      const editable = page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`);
+
+      await editable.click();
+      await editable.evaluate((host, text) => {
+        const node = host.firstChild;
+        const index = node?.textContent?.indexOf(text) ?? -1;
+
+        if (!(node instanceof Text) || index < 0) {
+          throw new Error(`no "${text}" to put the caret before`);
+        }
+        window.getSelection()?.collapse(node, index);
+      }, needle);
+    };
+
+    const outline = async (page: Page): Promise<string[]> => {
+      const { blocks } = await saveBlok(page);
+
+      return blocks.map((b) => `${b.type}:${String((b.data as { text?: unknown; code?: unknown }).text ?? (b.data as { code?: unknown }).code)}`);
+    };
+
+    test('a heading copies its inline text, without the heading or computed styles', async ({ page }) => {
+      await createBlokWithElements(page, [
+        { id: 'h', type: 'header', data: { text: 'Head <b>B</b> text', level: 2 } },
+        { id: 't', type: 'paragraph', data: { text: 'Target text here' } },
+      ]);
+      await selectIn(page, '[data-blok-id="h"] [contenteditable="true"]');
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="h"] [contenteditable="true"]'));
+
+      expect(clipboard).toStrictEqual({ 'text/plain': 'Head B text', 'text/html': 'Head <strong>B</strong> text' });
+
+      await caretBefore(page, 't', 'text here');
+      await paste(page, page.locator(':focus'), clipboard);
+
+      await expect.poll(() => outline(page)).toEqual(['header:Head <strong>B</strong> text', 'paragraph:Target Head <strong>B</strong> texttext here']);
+    });
+
+    test('code lines copy with their line break and without highlight markup', async ({ page }) => {
+      await createBlokWithElements(page, [
+        { id: 'c', type: 'code', data: { code: 'const a = 1;\nconst b = 2;', language: 'javascript' } },
+        { id: 't', type: 'paragraph', data: { text: '' } },
+        { id: 'o', type: 'paragraph', data: { text: 'Other' } },
+      ]);
+      await selectIn(page, '[data-blok-id="c"] [contenteditable]', 'a =', 'b =');
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="c"] [contenteditable]').first());
+
+      expect(clipboard).toStrictEqual({ 'text/plain': 'a = 1;\nconst b =', 'text/html': 'a = 1;<br>const b =' });
+
+      await page.locator('[data-blok-id="t"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), clipboard);
+
+      await expect.poll(async () => (await outline(page)).join('|')).not.toContain('paragraph:|');
+      const saved = await outline(page);
+
+      expect(saved[0]).toBe('code:const a = 1;\nconst b = 2;');
+      expect(saved.filter((line) => line.startsWith('code:'))).toHaveLength(1);
+      expect(saved.slice(1, -1).join('\n').replace(/<br>/g, '\n').replace(/paragraph:/g, '')).toBe('a = 1;\nconst b =');
+    });
+
+    test('code lines copied with real keys and pasted into another code block stay in it', async ({ page }) => {
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      await createBlokWithElements(page, [
+        { id: 'c', type: 'code', data: { code: 'const a = 1;\nconst b = 2;', language: 'javascript' } },
+        { id: 'd', type: 'code', data: { code: 'let x;', language: 'javascript' } },
+      ]);
+      await selectIn(page, '[data-blok-id="c"] [contenteditable]');
+
+      const modifier = await getCommandModifierKey(page);
+
+      await page.keyboard.press(`${modifier}+c`);
+      // The caret ends inside a highlight span, not on the code element itself.
+      await selectIn(page, '[data-blok-id="d"] [contenteditable]', 'let x;', 'let x;');
+      await page.evaluate(() => window.getSelection()?.collapseToEnd());
+      await page.keyboard.press(`${modifier}+v`);
+
+      await expect.poll(() => outline(page)).toEqual(['code:const a = 1;\nconst b = 2;', 'code:let x;const a = 1;\nconst b = 2;']);
+    });
+
+    test('the page title copies as its plain text and pastes inline', async ({ page }) => {
+      await createBlok(page, {
+        pageTitle: true,
+        data: { title: 'My page name', blocks: [{ id: 't', type: 'paragraph', data: { text: 'Target text here' } }] },
+      } as CreateBlokOptions);
+      await selectIn(page, '[data-blok-page-title]');
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-page-title]'));
+
+      expect(clipboard).toStrictEqual({ 'text/plain': 'My page name', 'text/html': 'My page name' });
+
+      await caretBefore(page, 't', 'text here');
+      await paste(page, page.locator(':focus'), clipboard);
+
+      await expect.poll(() => outline(page)).toEqual(['paragraph:Target My page nametext here']);
+    });
+
+    test('cutting part of a heading removes it, pastes it inline, and undo brings it back', async ({ page }) => {
+      await createBlokWithElements(page, [
+        { id: 'h', type: 'header', data: { text: 'Head <b>B</b> text', level: 2 } },
+        { id: 't', type: 'paragraph', data: { text: 'Target text here' } },
+      ]);
+      await selectIn(page, '[data-blok-id="h"] [contenteditable="true"]', 'ad', 'B');
+
+      const clipboard = await cutFromElement(page.locator('[data-blok-id="h"] [contenteditable="true"]'));
+
+      expect(clipboard).toStrictEqual({ 'text/plain': 'ad B', 'text/html': 'ad <strong>B</strong>' });
+      await expect.poll(() => outline(page)).toEqual(['header:He text', 'paragraph:Target text here']);
+
+      await caretBefore(page, 't', 'text here');
+      await paste(page, page.locator(':focus'), clipboard);
+      await expect.poll(() => outline(page)).toEqual(['header:He text', 'paragraph:Target ad <strong>B</strong>text here']);
+
+      await page.locator('[data-blok-id="h"] [contenteditable="true"]').click();
+      const modifier = await getCommandModifierKey(page);
+
+      await page.keyboard.press(`${modifier}+z`);
+      await page.keyboard.press(`${modifier}+z`);
+      await expect.poll(() => outline(page)).toEqual(['header:Head <strong>B</strong> text', 'paragraph:Target text here']);
     });
   });
 
@@ -1761,7 +1919,8 @@ test.describe('copy and paste', () => {
 
       const clipboardData = await cutFromElement(paragraph);
 
-      expect(clipboardData).toStrictEqual({});
+      expect(clipboardData).toStrictEqual({ 'text/plain': 'Some text', 'text/html': 'Some text' });
+      await expect(paragraph).toHaveText('');
     });
 
     test('should cut several blocks', async ({ page }) => {

@@ -121,10 +121,9 @@ test.describe('Native copy paste diagnostic', () => {
       return store;
     });
 
-    // Since hasNativeTextSelection()=true, Blok should NOT intercept
-    expect(Object.keys(blokCopyResult)).toHaveLength(0);
-     
-    console.log('Blok copy result (should be empty):', JSON.stringify(blokCopyResult));
+    // The table's cell-range copy stands down for a text selection; Blok's own
+    // in-block copy writes the text without the cell's computed styles.
+    expect(blokCopyResult).toStrictEqual({ 'text/plain': 'Hello World', 'text/html': 'Hello World' });
 
     // Now press Ctrl+C for real — Chrome writes to the actual system clipboard
     await page.keyboard.press('ControlOrMeta+c');
@@ -163,10 +162,8 @@ test.describe('Native copy paste diagnostic', () => {
       window.__diagClipboard = clipData;
     }, nativeClipboard);
 
-    // The key assertion: what does Chrome produce?
-    // Based on empirical testing, Chrome produces a <span> with inline styles
-    // (NOT a <table> wrapper) when copying from a contenteditable inside a <td>.
     expect(plainContent).toBe('Hello World');
+    expect(htmlContent).toBe('Hello World');
 
     // Now test what happens when we paste this into another cell
     const targetCellEditable = table.locator('[data-blok-table-cell]').filter({ hasText: 'Target Cell' }).locator('[contenteditable="true"]');

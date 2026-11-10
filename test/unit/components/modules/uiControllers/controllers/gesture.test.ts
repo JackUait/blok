@@ -10,6 +10,7 @@ describe('GestureController', () => {
   let yjs: { beginGesture: ReturnType<typeof vi.fn>; holdCapture: ReturnType<typeof vi.fn>; releaseCapture: ReturnType<typeof vi.fn> };
   let selectedBlocks: boolean;
   let lineBreaks: boolean;
+  let blockMenu: HTMLElement | null;
 
   const key = (init: KeyboardEventInit): void => {
     input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ...init }));
@@ -28,6 +29,7 @@ describe('GestureController', () => {
     vi.clearAllMocks();
     selectedBlocks = false;
     lineBreaks = false;
+    blockMenu = null;
     wrapper = document.createElement('div');
     wrapper.setAttribute('data-blok-editor', '');
     input = document.createElement('div');
@@ -44,6 +46,7 @@ describe('GestureController', () => {
         return selectedBlocks;
       } },
       BlockManager: { getBlockByChildNode: () => ({ inputs: [input], tool: { isLineBreaksEnabled: lineBreaks } }) },
+      BlockSettings: { contains: (node: HTMLElement) => blockMenu?.contains(node) === true },
     } as unknown as BlokModules;
     controller.setWrapperElement(wrapper);
     controller.enable();
@@ -261,6 +264,45 @@ describe('GestureController', () => {
 
     expect(yjs.beginGesture).not.toHaveBeenCalled();
     popover.remove();
+  });
+
+  describe('in the block menu, mounted on the body while its block is selected', () => {
+    let search: HTMLInputElement;
+    let item: HTMLElement;
+
+    beforeEach(() => {
+      blockMenu = document.createElement('div');
+      search = document.createElement('input');
+      item = document.createElement('div');
+      blockMenu.append(search, item);
+      document.body.appendChild(blockMenu);
+      selectedBlocks = true;
+      window.getSelection()?.removeAllRanges();
+    });
+
+    afterEach(() => {
+      blockMenu?.remove();
+    });
+
+    it('starts a gesture when an item is pressed, so the step starts from the block selection', () => {
+      item.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+      expect(yjs.beginGesture).toHaveBeenCalledWith('discrete');
+      expect(yjs.holdCapture).not.toHaveBeenCalled();
+    });
+
+    it('starts a gesture when an item is picked with Enter', () => {
+      search.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+
+      expect(yjs.beginGesture).toHaveBeenCalledWith('discrete');
+    });
+
+    it('starts none for a letter typed into its search field', () => {
+      search.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'a' }));
+      search.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: 'a' }));
+
+      expect(yjs.beginGesture).not.toHaveBeenCalled();
+    });
   });
 
   describe('with another editor nested inside (a database card page)', () => {

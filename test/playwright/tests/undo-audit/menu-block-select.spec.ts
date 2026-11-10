@@ -11,6 +11,7 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
+const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 // Past the capture window, so gestures stay separate steps.
 const CAPTURE_GAP = 800;
 const HANDLE = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
@@ -414,5 +415,111 @@ test.describe('block menu actions leave a block selection (D3)', () => {
     await expect.poll(async () => (await saved(page))[0]).toBe('header:');
     expect(await selectedIds(page)).toEqual([]);
     expect(await hasCaret(page)).toBe(true);
+  });
+});
+
+const ids = async (page: Page): Promise<string[]> => page.evaluate(async () =>
+  ((await window.blokInstance?.save())?.blocks ?? []).map((block) => block.id ?? ''));
+
+test.describe('undo and redo after a block menu action (FR1, FR2 with D3)', () => {
+  test.describe.configure({ timeout: 30_000 });
+  test.beforeAll(ensureBlokBundleBuilt);
+
+  test.beforeEach(async ({ page }) => {
+    await gotoTestPage(page);
+  });
+
+  test('U104: undo of Delete from the block menu gives the block back selected; redo selects nothing', async ({ page }) => {
+    await createBlok(page, BASE);
+    await editable(page, 'p2').click();
+    await page.keyboard.press('End');
+    await gap(page);
+    await openTunes(page, 'p2');
+    await tune(page, 'delete').click();
+    await expect.poll(() => ids(page)).toEqual(['p-before', 'p1', 'p-after']);
+    await gap(page);
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => ids(page)).toEqual(['p-before', 'p1', 'p2', 'p-after']);
+    await expect.poll(() => selectedIds(page)).toEqual(['p2']);
+    expect(await hasCaret(page)).toBe(false);
+    await gap(page, 300);
+
+    await page.keyboard.press(REDO);
+    await expect.poll(() => ids(page)).toEqual(['p-before', 'p1', 'p-after']);
+    expect(await selectedIds(page)).toEqual([]);
+    await gap(page, 300);
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => selectedIds(page)).toEqual(['p2']);
+    expect(await hasCaret(page)).toBe(false);
+  });
+
+  // The restored selection is in navigation mode, as after Escape, so the key types at the block's end.
+  test('U104: a key typed over the restored selection is one step that undo fully restores', async ({ page }) => {
+    await createBlok(page, BASE);
+    await editable(page, 'p2').click();
+    await gap(page);
+    await openTunes(page, 'p2');
+    await tune(page, 'delete').click();
+    await expect.poll(() => ids(page)).toEqual(['p-before', 'p1', 'p-after']);
+    await gap(page);
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => selectedIds(page)).toEqual(['p2']);
+    await gap(page);
+
+    await page.keyboard.press('x');
+    await expect.poll(async () => (await saved(page)).join('|').match(/x/g)?.length ?? 0).toBe(1);
+    await gap(page);
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => saved(page)).toEqual(['paragraph:before', 'paragraph:Alpha', 'paragraph:Beta', 'paragraph:after']);
+    expect(await ids(page)).toEqual(['p-before', 'p1', 'p2', 'p-after']);
+  });
+
+  test('U084: undo and redo of Turn into keep the block selected, with no caret', async ({ page }) => {
+    await createBlok(page, BASE);
+    await editable(page, 'p1').click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('ArrowLeft');
+    await gap(page);
+    await convert(page, 'p1', 'Heading 1');
+    await expect.poll(() => selectedIds(page)).toEqual(['p1']);
+    await gap(page);
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => saved(page)).toEqual(['paragraph:before', 'paragraph:Alpha', 'paragraph:Beta', 'paragraph:after']);
+    await expect.poll(() => selectedIds(page)).toEqual(['p1']);
+    expect(await hasCaret(page)).toBe(false);
+    await gap(page, 300);
+
+    await page.keyboard.press(REDO);
+    await expect.poll(() => saved(page)).toEqual(['paragraph:before', 'header:Alpha', 'paragraph:Beta', 'paragraph:after']);
+    await expect.poll(() => selectedIds(page)).toEqual(['p1']);
+    expect(await hasCaret(page)).toBe(false);
+  });
+
+  test('U105: undo of Duplicate selects the original, redo selects the copy', async ({ page }) => {
+    await createBlok(page, BASE);
+    await editable(page, 'p1').click();
+    await gap(page);
+    await openTunes(page, 'p1');
+    await tune(page, 'duplicate').click();
+    await expect.poll(() => selectedIds(page)).toHaveLength(1);
+    const [copy] = await selectedIds(page);
+
+    expect(copy).not.toBe('p1');
+    await gap(page);
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => ids(page)).toEqual(['p-before', 'p1', 'p2', 'p-after']);
+    await expect.poll(() => selectedIds(page)).toEqual(['p1']);
+    expect(await hasCaret(page)).toBe(false);
+    await gap(page, 300);
+
+    await page.keyboard.press(REDO);
+    await expect.poll(() => ids(page)).toEqual(['p-before', 'p1', copy, 'p2', 'p-after']);
+    await expect.poll(() => selectedIds(page)).toEqual([copy]);
+    expect(await hasCaret(page)).toBe(false);
   });
 });

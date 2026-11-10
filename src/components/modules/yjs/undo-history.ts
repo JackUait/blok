@@ -2315,8 +2315,8 @@ export class UndoHistory {
   }
 
   /**
-   * Put back the caret the last undo or redo restored, when it was in
-   * `blockId` or inside it. A replay can rebuild that block after the restore
+   * Put back the caret or block selection the last undo or redo restored,
+   * when it was in `blockId` or inside it. A replay can rebuild that block after the restore
    * (a tool that cannot take the data in place), and the rebuild drops focus
    * to the body.
    * @param blockId - the rebuilt block
@@ -2324,11 +2324,15 @@ export class UndoHistory {
   public reapplyCaretAfterRebuild(blockId: string): void {
     const snapshot = this.restoredCaret;
 
-    if (snapshot === null || snapshot.blocks !== undefined || snapshot.title === true || !this.isSelfOrInside(snapshot.blockId, blockId)) {
+    if (snapshot === null || snapshot.title === true) {
       return;
     }
 
-    this.restoreCaretSnapshot(snapshot);
+    const restored = snapshot.blocks ?? [snapshot.blockId];
+
+    if (restored.some((id) => this.isSelfOrInside(id, blockId))) {
+      this.restoreCaretSnapshot(snapshot);
+    }
   }
 
   /**
@@ -3682,6 +3686,8 @@ export class UndoHistory {
     });
 
     // A focused input gets its caret back after the replay's DOM writes.
+    // Focus goes to the body, as after Escape: that is Blok's block-selection
+    // focus model. "Never drop focus to the body" (FR4) is for caret steps.
     const active = document.activeElement;
 
     if (active instanceof HTMLElement && BlockManager.getBlockByChildNode(active) !== undefined) {

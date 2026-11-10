@@ -37,7 +37,7 @@ export class GestureController extends Controller {
   private composing = false;
 
   private readonly keydownHandler = (event: Event): void => {
-    if (!(event instanceof KeyboardEvent) || event.isComposing || this.isToolboxOpen() || !(this.owns(event) || this.ownsNavigationKey(event))) {
+    if (!(event instanceof KeyboardEvent) || event.isComposing || this.isToolboxOpen() || !(this.owns(event) || this.ownsNavigationKey(event) || this.ownsMenuPick(event))) {
       return;
     }
 
@@ -65,7 +65,7 @@ export class GestureController extends Controller {
   private readonly pointerdownHandler = (event: Event): void => {
     const insideToolbox = this.isToolboxOpen() && event.target instanceof Element && event.target.closest('[data-blok-popover]') !== null;
 
-    if (insideToolbox || !this.owns(event)) {
+    if (insideToolbox || !(this.owns(event) || this.inBlockMenu(event.target))) {
       return;
     }
 
@@ -265,6 +265,24 @@ export class GestureController extends Controller {
    */
   private ownsNavigationKey(event: Event): boolean {
     return event.target === document.body && this.Blok.BlockSelection.anyBlockSelected;
+  }
+
+  /**
+   * The block menu is mounted on the body and its block is selected, so the
+   * caret is not in the editor. A pick there must still start the step, or
+   * its caret-before is the caret from before the menu opened.
+   * @param target - the event target
+   */
+  private inBlockMenu(target: EventTarget | null): boolean {
+    return target instanceof HTMLElement && this.Blok.BlockSettings.contains(target);
+  }
+
+  /**
+   * A key that picks in the block menu. A letter typed into its search does not.
+   * @param event - the keydown
+   */
+  private ownsMenuPick(event: KeyboardEvent): boolean {
+    return (event.key ?? '').length > 1 && this.inBlockMenu(event.target);
   }
 
   /**

@@ -319,9 +319,9 @@ test.describe('W4M defects', () => {
     expect(r.redone.data).toEqual(r.after.data);
   });
 
-  // Turn into leaves the block selected (Notion U084); undo puts the caret back where it was.
-  // What redo restores is a block selection, which FR2 owns.
-  test('W4M-4: turn into quote leaves the block selected, and undo puts the caret back', async ({ page }) => {
+  // Turn into leaves the block selected (Notion U084-U089). Undo and redo keep it selected, with
+  // no caret: redo restores the selection live at the matching undo press (FR1), never offset 0.
+  test('W4M-4: turn into quote keeps the block selected through undo and redo', async ({ page }) => {
     await createBlok(page, wrap(P('x', 'Plain text')));
     await gap(page);
     await editable(page, 'x').click();
@@ -337,7 +337,15 @@ test.describe('W4M defects', () => {
     await page.keyboard.press(UNDO);
     await gap(page, 500);
 
-    expect(await caret(page), 'caret after undo').toEqual({ blockId: 'x', offset: 8 });
+    expect(await caret(page), 'no caret after undo').toEqual({ blockId: null, offset: null });
+    await expect(page.locator('[data-blok-id="x"]')).toHaveAttribute('data-blok-selected', 'true');
+
+    await page.keyboard.press(REDO);
+    await gap(page, 500);
+
+    expect(await caret(page), 'no caret after redo').toEqual({ blockId: null, offset: null });
+    await expect(page.locator('[data-blok-id="x"]')).toHaveAttribute('data-blok-selected', 'true');
+    await expect(page.locator('[data-blok-id="x"]')).toHaveAttribute('data-blok-component', 'quote');
   });
 });
 
@@ -368,8 +376,8 @@ test.describe('W4M controls: duplicate from the block menu', () => {
     });
   }
 
-  // The copy is left selected (Notion U105). What redo restores is a block selection, which FR2 owns.
-  test('W4M control: duplicate paragraph: the copy is selected, and undo puts the caret in the original', async ({ page }) => {
+  // The copy is left selected; undo selects the original and redo the copy, with no caret (Notion U105).
+  test('W4M control: duplicate paragraph: undo selects the original, redo selects the copy', async ({ page }) => {
     await createBlok(page, wrap(P('x', 'Plain text')));
     await gap(page);
     await editable(page, 'x').click();
@@ -377,13 +385,26 @@ test.describe('W4M controls: duplicate from the block menu', () => {
     await duplicate(page, 'x');
     await gap(page);
 
+    const selected = page.locator('[data-blok-testid="block-wrapper"][data-blok-selected="true"]');
+
     expect(await caret(page)).toEqual({ blockId: null, offset: null });
-    await expect(page.locator('[data-blok-testid="block-wrapper"][data-blok-selected="true"]')).toHaveCount(1);
-    await expect(page.locator('[data-blok-id="x"]')).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(selected).toHaveCount(1);
+    const copy = await page.evaluate(() =>
+      document.querySelector('[data-blok-testid="block-wrapper"][data-blok-selected="true"]')?.getAttribute('data-blok-id'));
+
+    expect(copy).not.toBe('x');
 
     await page.keyboard.press(UNDO);
     await gap(page, 500);
-    expect(await caret(page)).toEqual({ blockId: 'x', offset: 10 });
+    expect(await caret(page)).toEqual({ blockId: null, offset: null });
+    await expect(selected).toHaveCount(1);
+    await expect(page.locator('[data-blok-id="x"]')).toHaveAttribute('data-blok-selected', 'true');
+
+    await page.keyboard.press(REDO);
+    await gap(page, 500);
+    expect(await caret(page)).toEqual({ blockId: null, offset: null });
+    await expect(selected).toHaveCount(1);
+    await expect(page.locator(`[data-blok-id="${copy ?? ''}"]`)).toHaveAttribute('data-blok-selected', 'true');
   });
 });
 

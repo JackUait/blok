@@ -258,6 +258,26 @@ describe('UndoHistory: the selection at the undo press', () => {
     expect(caret.setToInput).toHaveBeenLastCalledWith(blocks[1].inputs[0], 'default', 4);
   });
 
+  it('selects a block again when the replay rebuilt it after its block selection was restored', () => {
+    window.getSelection()?.removeAllRanges();
+    blocks[1].selected = true;
+    history.beginGesture('discrete');
+    write('turned into a heading');
+    history.undo();
+    expect(blocks[1].selected).toBe(true);
+
+    // The rebuild swaps in a new, unselected block with the same id.
+    const rebuilt = makeBlock('b', 'Beta');
+
+    blocks[1].holder.remove();
+    blocks[1] = rebuilt;
+
+    history.reapplyCaretAfterRebuild('b');
+
+    expect(rebuilt.selected).toBe(true);
+    expect(caret.setToInput).not.toHaveBeenCalled();
+  });
+
   it('leaves the caret alone after a rebuild when the user has moved it', () => {
     putCaret(blocks[0], 5);
     history.beginGesture('typing');

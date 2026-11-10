@@ -174,14 +174,14 @@ describe('agent warnings', () => {
 });
 
 describe('command names', () => {
-  it('lists exactly the 23 core commands', () => {
+  it('lists exactly the 24 core commands', () => {
     const expected = [
       'doc.read', 'doc.find', 'doc.setTitle', 'doc.setIcon',
       'block.insert', 'block.update', 'block.delete', 'block.move', 'block.convert', 'block.duplicate',
       'text.insert', 'text.delete', 'text.replace', 'text.format',
       'markdown.insert', 'markdown.export', 'html.insert',
       'history.undo', 'history.redo',
-      'history.versions', 'history.read', 'history.changes', 'history.restore',
+      'history.versions', 'history.read', 'history.changes', 'history.restore', 'history.previewRestore',
     ] satisfies readonly CoreCommandName[];
 
     expect(CORE_COMMAND_NAMES).toStrictEqual(expected);

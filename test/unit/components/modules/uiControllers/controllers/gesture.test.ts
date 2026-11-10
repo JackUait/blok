@@ -88,6 +88,18 @@ describe('GestureController', () => {
       expect(yjs.beginGesture).not.toHaveBeenCalled();
     });
 
+    it('starts none for a key typed into a field mounted on the body (a menu search)', () => {
+      const field = document.createElement('input');
+
+      document.body.appendChild(field);
+      selectedBlocks = true;
+      window.getSelection()?.removeAllRanges();
+      field.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'a' }));
+      field.remove();
+
+      expect(yjs.beginGesture).not.toHaveBeenCalled();
+    });
+
     it('leaves a key from another editor to that editor', () => {
       const other = document.createElement('div');
       const otherInput = document.createElement('div');

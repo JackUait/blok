@@ -243,14 +243,12 @@ export class GestureController extends Controller {
 
   /**
    * In navigation mode focus sits on the page body with no caret, and the keys
-   * act on this editor's selected blocks. Keys only: a click outside the
-   * editor must not close the step.
+   * act on this editor's selected blocks. Only a key aimed at the body: one
+   * typed into a menu field must not close the step, nor may a click.
    * @param event - the keydown
    */
   private ownsNavigationKey(event: Event): boolean {
-    const target = event.target instanceof Element ? event.target : null;
-
-    return this.Blok.BlockSelection.anyBlockSelected && (target === null || target.closest(`[${DATA_ATTR.editor}]`) === null);
+    return event.target === document.body && this.Blok.BlockSelection.anyBlockSelected;
   }
 
   /**

@@ -57,6 +57,14 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
         case "history.changes":
           versions = [McpJson.String(args["from"]) ?? string.Empty, McpJson.String(args["to"]) ?? string.Empty];
           break;
+        case "history.previewRestore":
+          loaded ??= [];
+          // A preview asks its own route and reads nothing else.
+          if (await LoadPreviewAsync(args, loaded, cancellationToken) is { } failed)
+          {
+            return failed;
+          }
+          continue;
         default:
           continue;
       }
@@ -82,6 +90,48 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
     }
 
     return loaded;
+  }
+
+  /// <summary>
+  /// Posts the preview route for a history.previewRestore and keeps its answer under
+  /// <c>previews</c>, null for a 404. Arguments the bundle refuses ask nothing.
+  /// </summary>
+  private async Task<JsonObject?> LoadPreviewAsync(JsonObject args, JsonObject loaded, CancellationToken cancellationToken)
+  {
+    var previews = loaded["previews"] as JsonObject ?? [];
+
+    loaded["previews"] = previews;
+    if (McpJson.String(args["version"]) is not { Length: > 0 } version)
+    {
+      return null;
+    }
+    var query = string.Empty;
+
+    if (args.ContainsKey("databases"))
+    {
+      var databases = McpJson.String(args["databases"]);
+
+      if (databases is not ("keep" or "restore"))
+      {
+        return null;
+      }
+      query = $"?databases={databases}";
+    }
+    if (PointPath(version) is not { } path)
+    {
+      previews[version] = null;
+      return null;
+    }
+    var preview = await GetAsync($"{historyBase}/{path}/restore/preview{query}", cancellationToken, notFoundIsNull: true, method: "POST");
+
+    if (preview.Failed is not null)
+    {
+      return preview.Failed;
+    }
+    // As Node's: the bundle refuses a body that is no preview, so it is passed on as it came.
+    previews[version] = preview.Body;
+
+    return null;
   }
 
   /// <summary>
@@ -170,16 +220,17 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
 
   private const string NodeFetchError = "fetch failed";
 
-  private async Task<(JsonNode? Body, JsonObject? Failed)> GetAsync(string url, CancellationToken cancellationToken, bool notFoundIsNull = false)
+  private async Task<(JsonNode? Body, JsonObject? Failed)> GetAsync(
+      string url, CancellationToken cancellationToken, bool notFoundIsNull = false, string method = "GET")
   {
     McpHttpResponse response;
 
     try
     {
-      response = await SendAsync("GET", url, [], false, cancellationToken);
+      response = await SendAsync(method, url, [], false, cancellationToken);
       if (response.Status == 401 && tickets is not null)
       {
-        response = await SendAsync("GET", url, [], true, cancellationToken);
+        response = await SendAsync(method, url, [], true, cancellationToken);
       }
     }
     // No answer at all: the network may come back. "fetch failed" is Node's fetch error.

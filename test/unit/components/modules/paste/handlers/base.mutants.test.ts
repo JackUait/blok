@@ -148,6 +148,8 @@ interface HarnessConfig {
   withOperations?: boolean;
   /** parentId every freshly pasted block reports. */
   pastedBlockParentId?: string | null;
+  /** Block tools the editor knows, by name. */
+  blockTools?: Record<string, { conversionConfig?: { export?: unknown; import?: unknown }; richTextFields: string[] }>;
 }
 
 const createHarness = (config: HarnessConfig = {}): {
@@ -270,6 +272,7 @@ const createHarness = (config: HarnessConfig = {}): {
 
   const blok = {
     BlockManager: blockManager,
+    Tools: { blockTools: new Map(Object.entries(config.blockTools ?? {})) },
     Caret: {
       setToBlock,
       positions: { END: endPosition, START: Symbol('caret-start') },
@@ -1021,6 +1024,104 @@ describe('BasePasteHandler — parent wiring of pasted blocks', () => {
   });
 });
 
+describe('BasePasteHandler — caret split of pasted text blocks', () => {
+  const textTool = { conversionConfig: { export: 'text', import: 'text' }, richTextFields: ['text'] };
+  const blockTools = { paragraph: textTool, header: textTool, image: { richTextFields: [] } };
+  const tailFragment = (): DocumentFragment => {
+    const fragment = document.createDocumentFragment();
+
+    fragment.append(document.createTextNode('Tail'));
+
+    return fragment;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** A block in the document with the caret inside its input. */
+  const blockWithCaret = (): MockBlock => {
+    const block = createMockBlock();
+
+    block.currentInput?.append(document.createTextNode('HelloWorld'));
+    document.body.append(block.holder);
+    window.getSelection()?.collapse(block.currentInput?.firstChild ?? null, 5);
+
+    return block;
+  };
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('merges the first block at the caret and carries the post-caret text onto the last', async () => {
+    const { handler, pasteCalls, insertContentAtCaretPosition, extractFragmentFromCaretPosition } =
+      createHarness({ currentBlock: blockWithCaret(), blockTools });
+
+    extractFragmentFromCaretPosition.mockReturnValue(tailFragment());
+    const data = [blockItem('paragraph', 'First'), blockItem('header', 'Second')];
+
+    await handler.callInsertPasteData(data, false);
+
+    expect(data[1].content.textContent).toBe('SecondTail');
+    expect(insertContentAtCaretPosition).toHaveBeenCalledTimes(1);
+    expect(insertContentAtCaretPosition).toHaveBeenCalledWith('First');
+    expect(pasteCalls.map((call) => call.tool)).toEqual(['header']);
+  });
+
+  it('does NOT caret-split when the caret is outside the current block', async () => {
+    const elsewhere = document.createElement('p');
+
+    elsewhere.textContent = 'Elsewhere';
+    document.body.append(elsewhere);
+    const { handler, pasteCalls, extractFragmentFromCaretPosition } = createHarness({ currentBlock: createMockBlock(), blockTools });
+
+    window.getSelection()?.collapse(elsewhere.firstChild, 2);
+    await handler.callInsertPasteData([blockItem('paragraph', 'First'), blockItem('paragraph', 'Second')], false);
+
+    expect(extractFragmentFromCaretPosition).not.toHaveBeenCalled();
+    expect(pasteCalls).toHaveLength(2);
+  });
+
+  it('does NOT caret-split when the last block is not a text block', async () => {
+    const { handler, pasteCalls, extractFragmentFromCaretPosition } = createHarness({ currentBlock: createMockBlock(), blockTools });
+
+    await handler.callInsertPasteData([blockItem('paragraph', 'First'), blockItem('image', '')], false);
+
+    expect(extractFragmentFromCaretPosition).not.toHaveBeenCalled();
+    expect(pasteCalls).toHaveLength(2);
+  });
+
+  it('does NOT caret-split when a pasted block nests under another', async () => {
+    const { handler, pasteCalls, extractFragmentFromCaretPosition } = createHarness({ currentBlock: createMockBlock(), blockTools });
+
+    await handler.callInsertPasteData([
+      blockItem('paragraph', 'Parent'),
+      createItem('paragraph', textContent('Child'), true, { parentPasteIndex: 0 }),
+    ], false);
+
+    expect(extractFragmentFromCaretPosition).not.toHaveBeenCalled();
+    expect(pasteCalls).toHaveLength(2);
+  });
+
+  it('does NOT caret-split a block in a table cell', async () => {
+    const currentBlock = createMockBlock();
+    const cell = document.createElement('div');
+
+    cell.setAttribute('data-blok-table-cell-blocks', '');
+    cell.append(currentBlock.holder);
+    const { handler, extractFragmentFromCaretPosition } = createHarness({ currentBlock, blockTools });
+
+    await handler.callInsertPasteData([blockItem('paragraph', 'First'), blockItem('paragraph', 'Second')], false);
+
+    expect(extractFragmentFromCaretPosition).not.toHaveBeenCalled();
+  });
+});
+
 describe('BasePasteHandler — caret split of a multi-line plain-text paste', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1064,7 +1165,7 @@ describe('BasePasteHandler — caret split of a multi-line plain-text paste', ()
     expect(data[1].content.textContent).toBe('Second');
   });
 
-  it('does NOT caret-split a multi-item paste of BLOCK content', async () => {
+  it('does NOT caret-split a multi-item paste of BLOCK content whose tool has no text field', async () => {
     const currentBlock = createMockBlock({ isEmpty: false });
     const { handler, pasteCalls, insertContentAtCaretPosition } = createHarness({ currentBlock });
 

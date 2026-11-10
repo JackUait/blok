@@ -1303,6 +1303,118 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('blocks pasted at a caret inside text', () => {
+    const blokPayload = (blocks: Array<{ id: string; tool: string; data: Record<string, unknown>; parentId?: string | null; contentIds?: string[] }>): string =>
+      JSON.stringify(blocks.map((b) => ({ parentId: null, contentIds: [], tunes: {}, ...b })));
+    const twoParagraphs = blokPayload([
+      { id: 'pa', tool: 'paragraph', data: { text: 'First' } },
+      { id: 'pb', tool: 'paragraph', data: { text: 'Second' } },
+    ]);
+    const flavors: Record<string, Record<string, string>> = {
+      'a Blok block copy': { 'application/x-blok': twoParagraphs, 'text/html': '<p>First</p><p>Second</p>', 'text/plain': 'First\n\nSecond' },
+      'html only': { 'text/html': '<p>First</p><p>Second</p>', 'text/plain': 'First\n\nSecond' },
+    };
+
+    const placeCaret = async (page: Page, id: string, start: number, end = start): Promise<void> => {
+      await page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).click();
+      await page.evaluate(({ blockId, from, to }) => {
+        const editable = document.querySelector(`[data-blok-id="${blockId}"] [contenteditable="true"]`);
+        const text = editable?.firstChild;
+        const selection = window.getSelection();
+
+        if (!text || !selection) {
+          throw new Error('no text node to place the caret in');
+        }
+        const range = document.createRange();
+
+        range.setStart(text, from);
+        range.setEnd(text, to);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }, { blockId: id, from: start, to: end });
+    };
+
+    const texts = async (page: Page): Promise<string[]> => {
+      const { blocks } = await saveBlok(page);
+
+      return blocks.map((b) => `${b.type}:${String((b.data as { text?: unknown }).text)}${b.parent === undefined ? '' : ` in ${b.parent}`}`);
+    };
+
+    for (const [flavor, clipboard] of Object.entries(flavors)) {
+      test(`${flavor} splits the paragraph at the caret`, async ({ page }) => {
+        await createBlokWithElements(page, [{ id: 't', type: 'paragraph', data: { text: 'HelloWorld' } }]);
+        await placeCaret(page, 't', 5);
+        await paste(page, page.locator(':focus'), clipboard);
+
+        await expect.poll(() => texts(page)).toEqual(['paragraph:HelloFirst', 'paragraph:SecondWorld']);
+      });
+
+      test(`${flavor} at the start of a paragraph goes before its text`, async ({ page }) => {
+        await createBlokWithElements(page, [{ id: 't', type: 'paragraph', data: { text: 'Omega' } }]);
+        await placeCaret(page, 't', 0);
+        await paste(page, page.locator(':focus'), clipboard);
+
+        await expect.poll(() => texts(page)).toEqual(['paragraph:First', 'paragraph:SecondOmega']);
+      });
+
+      test(`${flavor} replaces the selected word`, async ({ page }) => {
+        await createBlokWithElements(page, [{ id: 't', type: 'paragraph', data: { text: 'Hello World' } }]);
+        await placeCaret(page, 't', 6, 11);
+        await paste(page, page.locator(':focus'), clipboard);
+
+        await expect.poll(() => texts(page)).toEqual(['paragraph:Hello First', 'paragraph:Second']);
+      });
+
+      test(`${flavor} split undoes in one step`, async ({ page }) => {
+        await createBlokWithElements(page, [{ id: 't', type: 'paragraph', data: { text: 'HelloWorld' } }]);
+        await placeCaret(page, 't', 5);
+        await paste(page, page.locator(':focus'), clipboard);
+        await expect.poll(() => texts(page)).toEqual(['paragraph:HelloFirst', 'paragraph:SecondWorld']);
+
+        await page.keyboard.press(`${await getCommandModifierKey(page)}+z`);
+
+        await expect.poll(() => texts(page)).toEqual(['paragraph:HelloWorld']);
+      });
+    }
+
+    test('a Blok block copy ending in a header keeps the header level', async ({ page }) => {
+      await createBlokWithElements(page, [{ id: 't', type: 'paragraph', data: { text: 'HelloWorld' } }]);
+      await placeCaret(page, 't', 5);
+      await paste(page, page.locator(':focus'), {
+        'application/x-blok': blokPayload([
+          { id: 'pa', tool: 'paragraph', data: { text: 'First' } },
+          { id: 'ph', tool: 'header', data: { text: 'Second', level: 3 } },
+        ]),
+        'text/plain': 'First\n\n### Second',
+      });
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.map((b) => [b.type, b.data])).toEqual([
+        ['paragraph', { text: 'HelloFirst' }],
+        ['header', { text: 'SecondWorld', level: 3 }],
+      ]);
+    });
+
+    test('a Blok block copy holding a toggle with a child lands after the paragraph whole', async ({ page }) => {
+      await createBlokWithElements(page, [{ id: 't', type: 'paragraph', data: { text: 'HelloWorld' } }]);
+      await placeCaret(page, 't', 5);
+      await paste(page, page.locator(':focus'), {
+        'application/x-blok': blokPayload([
+          { id: 'pa', tool: 'paragraph', data: { text: 'First' } },
+          { id: 'tg', tool: 'toggle', data: { text: 'Toggle' }, contentIds: ['tc'] },
+          { id: 'tc', tool: 'paragraph', data: { text: 'Child' }, parentId: 'tg' },
+        ]),
+        'text/plain': 'First\n\nToggle\n\nChild',
+      });
+
+      await expect.poll(async () => {
+        const { blocks } = await saveBlok(page);
+        const toggle = blocks.find((b) => b.type === 'toggle');
+
+        return blocks.map((b) => `${b.type}:${String((b.data as { text?: unknown }).text)}${b.parent === toggle?.id && b.parent !== undefined ? ' in toggle' : ''}`);
+      }).toEqual(['paragraph:HelloWorld', 'paragraph:First', 'toggle:Toggle', 'paragraph:Child in toggle']);
+    });
+  });
+
   test('block tune data survives a block copy and paste', async ({ page }) => {
     const noteTuneSource = `class NoteTune {
       static get isTune() { return true; }

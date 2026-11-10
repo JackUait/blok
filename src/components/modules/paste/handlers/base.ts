@@ -3,6 +3,7 @@ import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { protectPageReferenceAnchor } from '../../../../shared/page-reference';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import { Dom } from '../../../dom';
+import { SelectionUtils } from '../../../selection/index';
 import { clean } from '../../../utils/sanitizer';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
@@ -103,8 +104,104 @@ export abstract class BasePasteHandler implements PasteHandler {
   }
 
   /**
-   * Insert paste data as blocks.
+   * Whether the caret sits in a container's title: the block owns a
+   * [data-blok-toggle-children] region and the caret is outside it.
    */
+  protected caretIsInContainerTitle(): boolean {
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+    const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
+
+    return childContainer !== null && !childContainer.contains(currentBlock?.currentInput ?? null);
+  }
+
+  /**
+   * Whether a paste may split the current block at the caret: it has text and
+   * an input, and it is neither a container title nor a container child. There
+   * the pasted lines belong in the container's children, not in the title.
+   */
+  protected canSplitAtCaret(): boolean {
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+
+    if (!currentBlock || currentBlock.isEmpty || currentBlock.currentInput == null) {
+      return false;
+    }
+
+    const isInContainerChild = currentBlock.holder?.closest('[data-blok-toggle-children]') != null;
+
+    return !this.caretIsInContainerTitle() && !isInContainerChild;
+  }
+
+  /**
+   * The one rich text field a tool converts through, like a paragraph's `text`.
+   * Only such a tool can take the head of a split or carry its tail.
+   * @param toolName - the tool to check
+   */
+  protected textFieldOf(toolName: string): string | undefined {
+    const tool = this.Blok.Tools?.blockTools.get(toolName);
+    const conversion = tool?.conversionConfig;
+    const field = conversion?.export;
+
+    if (tool === undefined || typeof field !== 'string' || conversion?.import !== field) {
+      return undefined;
+    }
+
+    const fields = tool.richTextFields;
+
+    return fields.length === 1 && fields[0] === field ? field : undefined;
+  }
+
+  /**
+   * Whether pasted blocks may split the current block at the caret: the first
+   * merges into the text before the caret and the last takes the text after it.
+   * Text blocks only, in a contenteditable outside a table cell. The range must
+   * sit in that input: the first block's text goes in at the caret, and with no
+   * caret there it would be lost.
+   * @param firstTool - the first pasted block's tool
+   * @param lastTool - the last pasted block's tool
+   */
+  protected canSplitBlocksAtCaret(firstTool: string, lastTool: string): boolean {
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+    const input = currentBlock?.currentInput;
+    const range = SelectionUtils.range;
+
+    return this.canSplitAtCaret() &&
+      currentBlock !== undefined &&
+      input != null &&
+      !Dom.isNativeInput(input) &&
+      range !== null &&
+      input.contains(range.startContainer) &&
+      input.contains(range.endContainer) &&
+      currentBlock.holder?.closest('[data-blok-table-cell-blocks]') == null &&
+      this.textFieldOf(currentBlock.name) !== undefined &&
+      this.textFieldOf(firstTool) !== undefined &&
+      this.textFieldOf(lastTool) !== undefined;
+  }
+
+  /**
+   * Insert HTML at the caret, cleaned with the current block's inline rules.
+   * Inline-tool rules have no `br`. Keep it, like the block path does: the
+   * field's own sanitize still decides on save.
+   * @param html - the HTML to insert
+   */
+  protected insertHtmlAtCaret(html: string): void {
+    const { BlockManager, Caret } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (currentBlock === undefined) {
+      return;
+    }
+
+    const baseConfig = currentBlock.tool.baseSanitizeConfig;
+    const anchorRule = baseConfig.a;
+    const ordinaryAnchorRule = typeof anchorRule === 'string' ? false : anchorRule ?? false;
+
+    Caret.insertContentAtCaretPosition(clean(html, {
+      ...baseConfig,
+      a: protectPageReferenceAnchor(ordinaryAnchorRule),
+      br: {},
+    }));
+  }
+
   /**
    * Caret-split for a multi-line plain-text paste into a NON-EMPTY block: extract
    * the current block's post-caret remainder, merge the FIRST pasted line inline at
@@ -200,16 +297,7 @@ export abstract class BasePasteHandler implements PasteHandler {
       // remainder rides with the LAST pasted segment.
       const isInlineMultiline = data.every((item) => !item.isBlock);
 
-      // Container context: the caret is either in a container's title (the block
-      // owns the [data-blok-toggle-children] region but the caret is outside it)
-      // or inside a container child (the block's holder lives within that region).
-      // A caret-split would wrongly merge the first line into the title/child, so
-      // it must be suppressed — the pasted lines belong in the container's children.
-      const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
-      const isInContainerTitle = childContainer !== null &&
-        !childContainer.contains(currentBlock?.currentInput ?? null);
-      const isInContainerChild = currentBlock?.holder?.closest('[data-blok-toggle-children]') != null;
-      const isContainerContext = isInContainerTitle || isInContainerChild;
+      const isInContainerTitle = this.caretIsInContainerTitle();
 
       // A newline-prefixed paste has an empty first segment: there is no real
       // inline first line to merge, so suppress the caret-split and drop the
@@ -217,12 +305,13 @@ export abstract class BasePasteHandler implements PasteHandler {
       const firstSegmentIsEmpty = isInlineMultiline &&
         (data[0]?.content?.textContent ?? '').trim() === '';
 
-      const canCaretSplit = isInlineMultiline &&
-        currentBlock !== undefined &&
-        !currentBlock.isEmpty &&
-        currentBlock.currentInput != null &&
-        !isContainerContext &&
-        !firstSegmentIsEmpty;
+      // Block items split only as a flat run of text blocks: a nested item
+      // points at its parent by index, and the first item is merged away.
+      const canSplitBlocks = !isInlineMultiline &&
+        data.every((item) => item.parentPasteIndex === undefined) &&
+        this.canSplitBlocksAtCaret(data[0].tool, data[data.length - 1].tool);
+
+      const canCaretSplit = (isInlineMultiline && this.canSplitAtCaret() && !firstSegmentIsEmpty) || canSplitBlocks;
 
       // One undo group from the caret split to the last pasted block: the
       // split edits the current block before the first insert, and one Cmd+Z
@@ -403,7 +492,7 @@ export abstract class BasePasteHandler implements PasteHandler {
    * Process paste to single Block.
    */
   protected async processInlinePaste(dataToInsert: PasteData, canReplaceCurrentBlock: boolean): Promise<void> {
-    const { BlockManager, Caret } = this.Blok;
+    const { BlockManager } = this.Blok;
     const { content } = dataToInsert;
     const currentBlock = BlockManager.currentBlock;
 
@@ -413,16 +502,6 @@ export abstract class BasePasteHandler implements PasteHandler {
       return;
     }
 
-    // Inline-tool rules have no `br`. Keep it, like the block path does:
-    // the field's own sanitize still decides on save.
-    const baseConfig = currentBlock.tool.baseSanitizeConfig;
-    const anchorRule = baseConfig.a;
-    const ordinaryAnchorRule = typeof anchorRule === 'string' ? false : anchorRule ?? false;
-
-    Caret.insertContentAtCaretPosition(clean(content.innerHTML, {
-      ...baseConfig,
-      a: protectPageReferenceAnchor(ordinaryAnchorRule),
-      br: {},
-    }));
+    this.insertHtmlAtCaret(content.innerHTML);
   }
 }

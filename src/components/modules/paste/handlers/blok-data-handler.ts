@@ -446,11 +446,8 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
    */
   private caretParentId(): string | null {
     const currentBlock = this.Blok.BlockManager.currentBlock;
-    const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
-    const isInContainerTitle = childContainer !== null &&
-      !childContainer.contains(currentBlock?.currentInput ?? null);
 
-    return isInContainerTitle
+    return this.caretIsInContainerTitle()
       ? (currentBlock?.id ?? null)
       : (currentBlock?.parentId ?? null);
   }
@@ -629,7 +626,49 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       }
     };
 
+    // A flat run of text blocks splits the caret block, as a plain-text paste does.
+    const splitsAtCaret = tableCells.length === 0 &&
+      redirectTable === undefined &&
+      leavePlacement === undefined &&
+      !shouldReplaceFirst &&
+      documentFlow.length > 1 &&
+      documentFlow.every(({ original }) => !(typeof original.parentId === 'string' && pastedIds.has(original.parentId))) &&
+      this.canSplitBlocksAtCaret(documentFlow[0].sanitized.tool, documentFlow[documentFlow.length - 1].sanitized.tool);
+
+    /**
+     * The text before the caret takes the first block's text, and the text
+     * after it rides on the last block. Runs before any insert moves the caret.
+     */
+    const splitCaretBlock = (): void => {
+      const first = documentFlow[0].sanitized;
+      const last = documentFlow[documentFlow.length - 1];
+      const firstField = this.textFieldOf(first.tool);
+      const lastField = this.textFieldOf(last.sanitized.tool);
+      const tail = Caret.extractFragmentFromCaretPosition();
+
+      if (firstField !== undefined) {
+        this.insertHtmlAtCaret(textOf(first.data[firstField]));
+      }
+      documentFlow.shift();
+
+      if (tail === undefined || lastField === undefined) {
+        return;
+      }
+
+      const tailHtml = document.createElement('div');
+
+      tailHtml.append(tail);
+      last.sanitized = {
+        ...last.sanitized,
+        data: { ...last.sanitized.data, [lastField]: `${textOf(last.sanitized.data[lastField])}${tailHtml.innerHTML}` },
+      };
+    };
+
     const runInsertPasses = (): void => {
+      if (splitsAtCaret) {
+        splitCaretBlock();
+      }
+
       // Pass 1: insert table cells first so they exist with new IDs before the
       // owning table block is inserted with its (remapped) content references.
       // At the root: a cell left in the caret's container slot, or under its column,
@@ -722,6 +761,8 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     }
   }
 }
+
+const textOf = (value: unknown): string => (typeof value === 'string' ? value : '');
 
 /** Any page can write this payload, so a carried url must be a safe href. */
 const isCopyLink = (value: unknown): value is CopyLink =>

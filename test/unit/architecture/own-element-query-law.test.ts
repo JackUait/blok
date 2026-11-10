@@ -87,11 +87,6 @@ const EXEMPT_SITES: ExemptSite[] = [
     reason: 'the own slot comes first; the caret-in-slot check that follows separates title from child',
   },
   {
-    file: 'src/components/modules/paste/handlers/blok-data-handler.ts',
-    snippet: "currentBlock?.holder?.querySelector('[data-blok-toggle-children]')",
-    reason: 'the own slot comes first; the caret-in-slot check that follows separates title from child',
-  },
-  {
     file: 'src/components/modules/paste/handlers/base.ts',
     snippet: "currentBlock?.holder?.querySelector('[data-blok-toggle-children]')",
     reason: 'the own slot comes first; the caret-in-slot check that follows separates title from child',

@@ -1311,7 +1311,7 @@ describe('Paste module', () => {
       expect(mocks.Caret.setToBlock).toHaveBeenNthCalledWith(2, { id: 'paragraph-id' }, mocks.Caret.positions.END);
     });
 
-    it('checks patterns when pasting Blok data containing pattern-matching text', async () => {
+    it('inserts Blok data even when its plain text matches a tool pattern', async () => {
       const { paste, mocks } = createPaste();
 
       const patternTool = {
@@ -1339,7 +1339,14 @@ describe('Paste module', () => {
         currentInput: document.createElement('div'),
       };
 
-      mocks.BlockManager.paste.mockReturnValue({ id: 'embed-block' });
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
+        {
+          tool: 'paragraph',
+          data: { text: 'https://example.com' },
+        },
+      ]);
+
+      mocks.BlockManager.insert.mockReturnValue({ id: 'paragraph-id' });
 
       // Simulate pasting Blok data that contains a URL
       const dataTransfer = new MockDataTransfer(
@@ -1360,20 +1367,13 @@ describe('Paste module', () => {
 
       await paste.processDataTransfer(dataTransfer);
 
-      // Should trigger pattern paste
-      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
-
-      const [tool, event] = mocks.BlockManager.paste.mock.calls[0];
-
-      expect(tool).toBe('embed');
-      expect(event).toBeInstanceOf(CustomEvent);
-      expect(event.type).toBe('pattern');
-      if (event instanceof CustomEvent && event.detail) {
-        const detail = event.detail as { data: unknown };
-        expect(detail.data).toBe('https://example.com');
-      } else {
-        throw new Error('Event.detail is not accessible');
-      }
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+      expect(mocks.BlockManager.insert).toHaveBeenCalledWith({
+        tool: 'paragraph',
+        data: { text: 'https://example.com' },
+        replace: true,
+        origin: 'paste',
+      });
     });
 
     it('uses Blok data directly when no pattern matches', async () => {

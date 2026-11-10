@@ -821,6 +821,62 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('blok clipboard wins over tool patterns', () => {
+    // Blok's own text/plain is Markdown, so a block copy can read as exactly one tool pattern.
+    const cases: Array<{ name: string; blocks: OutputData['blocks'] }> = [
+      {
+        name: 'a URL paragraph next to an empty paragraph (bookmark pattern)',
+        blocks: [
+          { type: 'paragraph', data: { text: 'https://example.com/page' } },
+          { type: 'paragraph', data: { text: '' } },
+        ],
+      },
+      {
+        name: 'spacer, divider and an empty paragraph (divider pattern)',
+        blocks: [
+          { type: 'spacer', data: { height: 96 } },
+          { type: 'divider', data: {} },
+          { type: 'paragraph', data: { text: '' } },
+        ],
+      },
+      {
+        name: 'a bare codepen URL paragraph (embed pattern)',
+        blocks: [ { type: 'paragraph', data: { text: 'https://codepen.io/team/pen/abc123' } } ],
+      },
+      {
+        name: 'a bare png URL paragraph (image pattern)',
+        blocks: [ { type: 'paragraph', data: { text: 'https://example.com/picture.png' } } ],
+      },
+    ];
+
+    for (const { name, blocks } of cases) {
+      test(`pastes ${name} back as the same blocks`, async ({ page }) => {
+        await createBlokWithElements(page, blocks);
+
+        const source = await saveBlok(page);
+        const editable = page.locator(`${BLOCK_SELECTOR} [contenteditable="true"]`).first();
+        const commandModifier = await getCommandModifierKey(page);
+
+        await editable.click();
+        await page.keyboard.press(`${commandModifier}+A`);
+        await page.keyboard.press(`${commandModifier}+A`);
+        await page.keyboard.press(`${commandModifier}+A`);
+
+        const clipboardData = await copyFromElement(editable);
+
+        expect(clipboardData['application/x-blok']).toBeDefined();
+
+        await createBlok(page);
+        await paste(page, getParagraphByIndex(page, 0), clipboardData);
+
+        const shape = (output: OutputData): Array<{ type: string; data: unknown }> =>
+          output.blocks.map(({ type, data }) => ({ type, data }));
+
+        await expect.poll(async () => shape(await saveBlok(page))).toEqual(shape(source));
+      });
+    }
+  });
+
   test.describe('cutting', () => {
     test('should cut inline fragment', async ({ page }) => {
       await createBlok(page);

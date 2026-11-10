@@ -16,11 +16,10 @@ import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import { enclosingCellTable } from '../../../utils/enclosing-cell-table';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
-import type { HandlerContext, PatternMatch } from '../types';
+import type { HandlerContext } from '../types';
 
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
-import { PatternHandler } from './pattern-handler';
 
 /**
  * Shape of a block in the Blok clipboard data.
@@ -41,8 +40,6 @@ interface BlokClipboardBlock extends Pick<SavedData, 'id' | 'data' | 'tool'> {
  * Handles internal Blok JSON data.
  */
 export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
-  private patternHandler?: PatternHandler;
-
   constructor(
     Blok: BlokModules,
     toolRegistry: ToolRegistry,
@@ -70,75 +67,11 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
-    const parsedBlokData = JSON.parse(data) as BlokClipboardBlock[];
-
-    // Check if we should try pattern matching first (for URL pasting within editor)
-    const hasPatterns = this.toolRegistry.toolsPatterns.length > 0;
-    const plainData = context.plainData;
-
-    if (!hasPatterns || !plainData) {
-      this.insertBlokBlocks(parsedBlokData, context.canReplaceCurrentBlock);
-
-      return true;
-    }
-
-    const patternResult = await this.tryPatternMatch(plainData);
-
-    if (patternResult) {
-      await this.insertPatternMatch(patternResult, context.canReplaceCurrentBlock);
-
-      return true;
-    }
-
-    this.insertBlokBlocks(parsedBlokData, context.canReplaceCurrentBlock);
+    // No pattern pass here: Blok's own text/plain is the Markdown of these
+    // blocks and can read as one tool pattern (a bare URL, `---`).
+    this.insertBlokBlocks(JSON.parse(data) as BlokClipboardBlock[], context.canReplaceCurrentBlock);
 
     return true;
-  }
-
-  /**
-   * Try pattern matching before inserting Blok JSON.
-   */
-  private async tryPatternMatch(plainData: string): Promise<PatternMatch | undefined> {
-    if (!this.patternHandler) {
-      this.patternHandler = new PatternHandler(
-        this.Blok,
-        this.toolRegistry,
-        this.sanitizerBuilder
-      );
-    }
-
-    if (plainData.length > PatternHandler.PATTERN_PROCESSING_MAX_LENGTH) {
-      return;
-    }
-
-    const pattern = this.toolRegistry.findToolForPattern(plainData);
-
-    if (!pattern) {
-      return;
-    }
-
-    const event = this.composePasteEvent('pattern', {
-      key: pattern.key,
-      data: plainData,
-    });
-
-    return {
-      key: pattern.key,
-      data: plainData,
-      tool: pattern.tool.name,
-      event,
-    };
-  }
-
-  /**
-   * Insert a matched pattern as a new block.
-   */
-  private async insertPatternMatch(patternResult: PatternMatch, canReplace: boolean): Promise<void> {
-    const { BlockManager, Caret } = this.Blok;
-
-    const insertedBlock = await BlockManager.paste(patternResult.tool, patternResult.event, canReplace);
-
-    Caret.setToBlock(insertedBlock, Caret.positions.END);
   }
 
   /**

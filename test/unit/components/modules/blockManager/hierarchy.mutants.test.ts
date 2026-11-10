@@ -6,6 +6,7 @@ import { BlockHierarchy } from '../../../../../src/components/modules/blockManag
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
 import { isInstrumented } from '../../../helpers/instrumented';
+import { REPARENT_IN_PLACE } from '../../../../../src/components/utils/index-move-neighbours';
 
 /*
  * Mutants of hierarchy.ts that no test can kill, and why. Each is a real
@@ -728,6 +729,7 @@ describe('BlockHierarchy — mutation coverage', () => {
       expect(li.call).toHaveBeenCalledWith('moved', {
         fromIndex: 1,
         toIndex: 1,
+        [REPARENT_IN_PLACE]: true,
       });
     });
   });

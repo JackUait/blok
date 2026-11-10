@@ -48,6 +48,7 @@ import { BlockYjsSync } from './yjs-sync';
 import { carriesReadOnly } from '../../utils/read-only-blocks';
 import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-store';
 import { agentAttribution, type Attribution } from '../../../shared/agent/attribution';
+import { REPARENT_IN_PLACE } from '../../utils/index-move-neighbours';
 
 interface AgentScopeInput {
   ids: ReadonlySet<string>;
@@ -1637,6 +1638,7 @@ export class BlockManager extends Module {
       block.call(BlockToolAPI.MOVED, {
         fromIndex: index,
         toIndex: index,
+        [REPARENT_IN_PLACE]: true,
       });
     }
 

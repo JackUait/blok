@@ -15,6 +15,7 @@ import { BlockAddedMutationType } from '../../../../../types/events/block/BlockA
 import { BlockChangedMutationType } from '../../../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../../../types/events/block/BlockMoved';
 import { BlockShortcuts } from '../../../../../src/components/modules/blockManager/shortcuts';
+import { REPARENT_IN_PLACE } from '../../../../../src/components/utils/index-move-neighbours';
 
 type BlockStubOptions = {
   id: string;
@@ -1800,7 +1801,7 @@ describe('BlockManager.setBlockParent', () => {
     expect(harness.mutations[0]?.type).toBe(BlockMovedMutationType);
     expect(harness.mutations[0]?.fromIndex).toBe(0);
     expect(harness.mutations[0]?.toIndex).toBe(0);
-    expect(block.call).toHaveBeenCalledWith(expect.anything(), { fromIndex: 0, toIndex: 0 });
+    expect(block.call).toHaveBeenCalledWith(expect.anything(), { fromIndex: 0, toIndex: 0, [REPARENT_IN_PLACE]: true });
   });
 
   it('emits nothing when the parent did not actually change', () => {

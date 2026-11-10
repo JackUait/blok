@@ -15,6 +15,7 @@ import type { Blocks } from '../../blocks';
 
 import { hideUnderCollapsedParent, isHiddenByCollapsedParent } from './new-block-placement';
 import type { BlockRepository } from './repository';
+import { REPARENT_IN_PLACE } from '../../utils/index-move-neighbours';
 
 /**
  * Inline channel for a block's indentation multiplier. main.css renders the
@@ -925,6 +926,7 @@ export class BlockHierarchy {
       block.call('moved', {
         fromIndex: this.repository.getBlockIndex(block),
         toIndex: this.repository.getBlockIndex(block),
+        [REPARENT_IN_PLACE]: true,
       });
     }
 

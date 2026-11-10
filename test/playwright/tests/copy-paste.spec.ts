@@ -1168,6 +1168,106 @@ test.describe('copy and paste', () => {
     }
   });
 
+  test.describe('list items placed under a table or container', () => {
+    const LI = (id: string, text: string, depth: number, parent?: string): OutputData['blocks'][number] =>
+      ({ id, type: 'list', data: { text, style: 'unordered', depth }, ...(parent === undefined ? {} : { parent }) });
+    const table = (id: string, cellIds: string[]): OutputData['blocks'][number] =>
+      ({ id, type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: cellIds }]] }, content: cellIds });
+    const source: OutputData['blocks'] = [
+      table('t1', ['l1', 'l2', 'l3']),
+      LI('l1', 'one', 0, 't1'),
+      LI('l2', 'nested', 1, 't1'),
+      LI('l3', 'done', 0, 't1'),
+    ];
+
+    /** Text and depth of every list item the paste added. */
+    const pastedDepths = async (page: Page, before: Set<string | undefined>): Promise<string[]> => {
+      const { blocks } = await saveBlok(page);
+
+      return blocks
+        .filter((b) => b.type === 'list' && !before.has(b.id))
+        .map((b) => `${String(b.data.text)}:${String((b.data as { depth?: number }).depth ?? 0)}`);
+    };
+
+    /** Range-select the one cell of the first table and copy it. */
+    const copyFirstCell = async (page: Page): Promise<Record<string, string>> => {
+      const cell = page.locator('[data-blok-id="t1"] [data-blok-table-cell]').first();
+      const box = await cell.boundingBox();
+
+      if (box === null) {
+        throw new Error('The source cell has no box');
+      }
+
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 + 2, box.y + box.height / 2 + 2, { steps: 3 });
+      await page.mouse.up();
+      await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(1);
+
+      return copyFromElement(cell);
+    };
+
+    test('a cell range pasted into another table keeps each item depth', async ({ page }) => {
+      await createBlokWithElements(page, [
+        ...source,
+        table('t2', ['t2a']),
+        { id: 't2a', type: 'paragraph', parent: 't2', data: { text: 'z' } },
+      ]);
+      const before = new Set((await saveBlok(page)).blocks.map((b) => b.id));
+      const clipboardData = await copyFirstCell(page);
+
+      await page.locator('[data-blok-id="t2a"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), clipboardData);
+
+      await expect.poll(() => pastedDepths(page, before)).toEqual(['one:0', 'nested:1', 'done:0']);
+    });
+
+    test('a cell range pasted into a toggle keeps each item depth', async ({ page }) => {
+      const doc: OutputData['blocks'] = [
+        ...source,
+        { id: 'tg', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: ['tgt'] },
+        { id: 'tgt', type: 'paragraph', parent: 'tg', data: { text: '' } },
+      ];
+
+      await createBlokWithElements(page, doc);
+      await openFixtureToggles(page, { blocks: doc });
+      const before = new Set((await saveBlok(page)).blocks.map((b) => b.id));
+      const clipboardData = await copyFirstCell(page);
+
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), clipboardData);
+
+      await expect.poll(() => pastedDepths(page, before)).toEqual(['one:0', 'nested:1', 'done:0']);
+    });
+
+    test('a whole table pasted as Blok blocks keeps each cell item depth', async ({ page }) => {
+      await createBlokWithElements(page, [{ id: 'tail', type: 'paragraph', data: { text: '' } }]);
+      const payload = [
+        { id: 'xt', tool: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['x1', 'x2', 'x3'] }]] }, parentId: null, contentIds: ['x1', 'x2', 'x3'], tunes: {} },
+        { id: 'x1', tool: 'list', data: { text: 'one', style: 'unordered', depth: 0 }, parentId: 'xt', contentIds: [], tunes: {} },
+        { id: 'x2', tool: 'list', data: { text: 'nested', style: 'unordered', depth: 1 }, parentId: 'xt', contentIds: [], tunes: {} },
+        { id: 'x3', tool: 'list', data: { text: 'done', style: 'unordered', depth: 0 }, parentId: 'xt', contentIds: [], tunes: {} },
+      ];
+
+      await page.locator('[data-blok-id="tail"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'application/x-blok': JSON.stringify(payload), 'text/plain': 'one nested done' });
+
+      await expect.poll(() => pastedDepths(page, new Set())).toEqual(['one:0', 'nested:1', 'done:0']);
+    });
+
+    test('nested plain-text bullets pasted into a callout keep each depth', async ({ page }) => {
+      await createBlokWithElements(page, [
+        { id: 'cal', type: 'callout', data: { emoji: '💡' }, content: ['cal-in'] },
+        { id: 'cal-in', type: 'paragraph', parent: 'cal', data: { text: '' } },
+      ]);
+
+      await page.locator('[data-blok-id="cal-in"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/plain': '- Bullet one\n  - Bullet two\n    - Bullet three\n      - Bullet four' });
+
+      await expect.poll(() => pastedDepths(page, new Set())).toEqual(['Bullet one:0', 'Bullet two:1', 'Bullet three:2', 'Bullet four:3']);
+    });
+  });
+
   test.describe('a tabs block pasted into a tab', () => {
     const doc: OutputData['blocks'] = [
       { id: 'pre', type: 'paragraph', data: { text: 'Before' } },

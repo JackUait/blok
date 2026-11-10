@@ -6,6 +6,7 @@ import type { I18nDictionary } from '../../../types/configs';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { analyzeDataFormat, expandToHierarchical, collapseToLegacy } from '../../../src/components/utils/data-model-transform';
 import type { OutputBlockData } from '../../../types';
+import { REPARENT_IN_PLACE } from '../../../src/components/utils/index-move-neighbours';
 
 /**
  * Creates a mock API object for testing with custom dictionary
@@ -1068,5 +1069,31 @@ describe('List Tool - moved() marker refresh', () => {
     expect(marker.textContent).toBe('a.');
     // data.depth stays in sync so drag and serialization keep working.
     expect(list.save().depth).toBe(1);
+  });
+
+  it('keeps its depth on a reparent in place, even after a deeper flat item', () => {
+    // A paste into a table cell or a callout reparents each item without moving it.
+    const neighbors = [makeListBlock(0), makeListBlock(1)];
+    const api = createMockAPI();
+
+    api.blocks.getById = () => null;
+    api.blocks.getBlockByIndex = (index: number) => neighbors[index] as never;
+    api.blocks.getBlockIndex = () => 2;
+    api.blocks.getCurrentBlockIndex = () => 2;
+    api.blocks.getBlocksCount = () => 3;
+
+    const list = new List({
+      data: { text: 'done', style: 'unordered', depth: 0 },
+      config: {},
+      api,
+      readOnly: false,
+      block: { id: 'done' } as never,
+    });
+    const element = list.render();
+
+    list.moved({ fromIndex: 2, toIndex: 2, [REPARENT_IN_PLACE]: true });
+
+    expect(list.save().depth ?? 0).toBe(0);
+    expect(element.getAttribute('data-list-depth')).toBe('0');
   });
 });

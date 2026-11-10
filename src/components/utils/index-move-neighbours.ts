@@ -19,3 +19,11 @@ export interface IndexMoveNeighbours {
   previous?: IndexMoveNeighbour;
   next?: IndexMoveNeighbour;
 }
+
+/**
+ * Core sets this key on a moved() event from a reparent that keeps the block's
+ * place in the flat order. A list item keeps its carried depth then: the drag
+ * depth rules would read the flat neighbours, which mean nothing to a paste
+ * into a table cell or a container.
+ */
+export const REPARENT_IN_PLACE: unique symbol = Symbol.for('blok.reparentInPlace');

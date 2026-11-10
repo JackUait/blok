@@ -12,7 +12,7 @@ import { describeList } from '../../shared/tool-descriptions/list';
 import type { MoveEvent } from '../../../types/tools/hook-events';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { setupPlaceholder } from '../../components/utils/placeholder';
-import { INDEX_MOVE_NEIGHBOURS, type IndexMoveNeighbours } from '../../components/utils/index-move-neighbours';
+import { INDEX_MOVE_NEIGHBOURS, REPARENT_IN_PLACE, type IndexMoveNeighbours } from '../../components/utils/index-move-neighbours';
 
 import {
   rerenderListItem,
@@ -48,7 +48,7 @@ import type { ListItemStyle, ListItemConfig, StyleConfig, ListItemData } from '.
 import { overrideStatic } from '../../components/utils/override-static';
 
 /** A moved() event that may carry the neighbours of an index move core no longer makes. */
-type IndexMoveEvent = MoveEvent & { [INDEX_MOVE_NEIGHBOURS]?: IndexMoveNeighbours };
+type IndexMoveEvent = MoveEvent & { [INDEX_MOVE_NEIGHBOURS]?: IndexMoveNeighbours; [REPARENT_IN_PLACE]?: true };
 
 export class ListItem implements BlockTool {
   // Feeds only the agent planner; in-editor conversion still runs conversionConfig's functions.
@@ -315,7 +315,9 @@ export class ListItem implements BlockTool {
       this.adjustDepthTo(derivedDepth);
       this.updateMarkerForDepth(derivedDepth, this._data.style);
       this.wasStructurallyNested = structuralDepth !== null;
-    } else {
+    } else if (event[REPARENT_IN_PLACE] !== true) {
+      // A reparent in place keeps the carried depth: the drag rules below read
+      // flat neighbours, which say nothing about a list pasted into a cell.
       this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove, undefined, event[INDEX_MOVE_NEIGHBOURS]);
     }
 

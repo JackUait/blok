@@ -746,8 +746,8 @@ func TestNormalizerMatchesTheTypeScriptNormalizer(t *testing.T) {
 			}
 		})
 	}
-	if ran != 8 {
-		t.Fatalf("ran %d normalizer cases, want the 8 C# runs", ran)
+	if ran != 9 {
+		t.Fatalf("ran %d normalizer cases, want the 9 C# runs", ran)
 	}
 }
 

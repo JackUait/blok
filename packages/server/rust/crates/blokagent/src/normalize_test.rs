@@ -849,7 +849,7 @@ fn normalizer_matches_the_type_script_normalizer() {
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
-    assert_eq!(ran, 8, "ran {ran} normalizer cases, want the 8 C# runs");
+    assert_eq!(ran, 9, "ran {ran} normalizer cases, want the 9 C# runs");
 }
 
 #[test]

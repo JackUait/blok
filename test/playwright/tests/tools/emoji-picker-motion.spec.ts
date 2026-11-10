@@ -209,42 +209,13 @@ test('animates tone selection and visible glyph swaps without moving or replacin
   await expect(picker).toBeHidden();
 });
 
-test('keeps the colon tone control beside the first section title at 320px in dark mode', async ({ page }) => {
+test('keeps the skin-tone dial inside the picker at 320px in dark mode', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await page.emulateMedia({ colorScheme: 'dark' });
-  const picker = await openPicker(page, 'colon');
-  const toggle = picker.locator('[data-emoji-picker-skin-toggle]');
+  const picker = await openPicker(page);
 
   await expect(picker).toHaveAttribute('data-theme', 'dark');
-  await expect(picker.getByRole('searchbox')).toBeHidden();
-  await expect(picker.getByRole('button', { name: 'Pick a random emoji', exact: true })).toBeHidden();
-  await expect(picker.getByRole('button', { name: 'Remove icon', exact: true })).toBeHidden();
-  await expect(picker.locator('[data-emoji-section="callout"], [data-emoji-nav="callout"]')).toHaveCount(0);
-  const layout = await picker.evaluate((root) => {
-    const body = root.querySelector('[data-emoji-picker-body]');
-    const title = root.querySelector('[data-emoji-section-title]');
-    const control = root.querySelector('[data-emoji-picker-skin-toggle]');
-
-    if (body === null || title === null || control === null) {
-      throw new Error('Missing colon picker layout');
-    }
-
-    const pickerRect = root.getBoundingClientRect();
-    const titleRect = (title.firstElementChild ?? title).getBoundingClientRect();
-    const toggleRect = control.getBoundingClientRect();
-
-    return {
-      topGap: body.getBoundingClientRect().top - pickerRect.top,
-      sameRow: toggleRect.top < titleRect.bottom && toggleRect.bottom > titleRect.top,
-      titleBeforeControl: titleRect.right <= toggleRect.left,
-      inside: pickerRect.left >= 0 && pickerRect.right <= innerWidth,
-    };
-  });
-
-  expect(layout).toMatchObject({ sameRow: true, titleBeforeControl: true, inside: true });
-  expect(layout.topGap).toBeLessThanOrEqual(12);
-  await toggle.click();
-  await expect(page.locator('[data-blok-tool="paragraph"][contenteditable="true"]')).toBeFocused();
+  await picker.locator('[data-emoji-picker-skin-toggle]').click();
   const tray = picker.locator('[data-emoji-picker-skin-tone]');
 
   await expect(tray).toBeVisible();
@@ -252,8 +223,10 @@ test('keeps the colon tone control beside the first section title at 320px in da
   // Each tone is clipped to its dial segment, and visibility checks count only the segment, so check the boxes.
   const viewport = page.viewportSize();
   const pickerBox = await picker.boundingBox();
+  const tones = await tray.getByRole('button').all();
 
-  for (const tone of await tray.getByRole('button').all()) {
+  expect(tones.length).toBeGreaterThan(1);
+  for (const tone of tones) {
     const toneBox = await tone.boundingBox();
 
     expect(toneBox).not.toBeNull();
@@ -265,15 +238,47 @@ test('keeps the colon tone control beside the first section title at 320px in da
     expect(toneBox.x + toneBox.width).toBeLessThanOrEqual(Math.min(viewport.width, pickerBox.x + pickerBox.width) + 1);
     expect(toneBox.y + toneBox.height).toBeLessThanOrEqual(viewport.height);
   }
-  await tray.getByRole('button', { name: 'Skin tone 4', exact: true }).click();
-  await expect(page.locator('[data-blok-tool="paragraph"][contenteditable="true"]')).toBeFocused();
-  await finishAnimations(picker);
+});
+
+test('the colon menu has no tone control at 320px in dark mode and uses the tone picked in the full picker', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  const full = await openPicker(page);
+
+  await full.locator('[data-emoji-picker-skin-toggle]').click();
+  await full.locator('[data-emoji-picker-skin-tone]').getByRole('button', { name: 'Skin tone 4', exact: true }).click();
+  await expect(full.locator('[data-emoji-picker-skin-toggle]')).toHaveAttribute('data-emoji-skin-current', '3');
+
+  const picker = await openPicker(page, 'colon');
+
+  await expect(picker.locator('[data-emoji-picker-skin-toggle], [data-emoji-picker-skin-tone]')).toHaveCount(0);
+  await expect(picker).toHaveAttribute('data-theme', 'dark');
+  await expect(picker.getByRole('searchbox')).toBeHidden();
+  await expect(picker.getByRole('button', { name: 'Pick a random emoji', exact: true })).toBeHidden();
+  await expect(picker.getByRole('button', { name: 'Remove icon', exact: true })).toBeHidden();
+  await expect(picker.locator('[data-emoji-section="callout"], [data-emoji-nav="callout"]')).toHaveCount(0);
+  const layout = await picker.evaluate((root) => {
+    const body = root.querySelector('[data-emoji-picker-body]');
+
+    if (body === null) {
+      throw new Error('Missing colon picker layout');
+    }
+
+    const pickerRect = root.getBoundingClientRect();
+
+    return {
+      topGap: body.getBoundingClientRect().top - pickerRect.top,
+      inside: pickerRect.left >= 0 && pickerRect.right <= innerWidth,
+    };
+  });
+
+  expect(layout.inside).toBe(true);
+  expect(layout.topGap).toBeLessThanOrEqual(12);
   const wave = picker.locator('[data-emoji-native="👋"]');
 
   expect(await picker.locator('[data-emoji-picker-body]').evaluate((body) => body.scrollHeight > body.clientHeight)).toBe(true);
   await expect(wave).toHaveCount(1);
   await scrollTo(wave, 'center');
-  await expect(toggle).not.toBeInViewport();
   await wave.click();
   await expect(page.locator('[data-blok-component="paragraph"]')).toHaveText('👋🏽');
   await expect(picker).toBeHidden();

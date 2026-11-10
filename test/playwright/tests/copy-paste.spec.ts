@@ -1771,6 +1771,44 @@ test.describe('copy and paste', () => {
       expect(blokBlocksOf(clipboard).map((block) => block.id)).toEqual(['h', 'p', 'l1', 't', 'tc', 'last']);
     });
 
+    test('blocks selected by Cmd+A stay read-only', async ({ page, browserName }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      // Read-only refuses save(). The toolbar mounts inside a holder, so read only the content.
+      const rendered = async (): Promise<string[]> => page.locator('[data-blok-id]').evaluateAll((holders) => {
+        return holders.map((holder) => `${holder.getAttribute('data-blok-id') ?? ''}:${holder.querySelector(':scope > [data-blok-element-content]')?.textContent ?? ''}`);
+      });
+      const before = await rendered();
+      const modifier = await getCommandModifierKey(page);
+      const selectAll = async (): Promise<void> => {
+        await page.getByText('RO-END', { exact: true }).click();
+        await page.keyboard.press(`${modifier}+A`);
+        await expect(page.locator('[data-blok-id="h"][data-blok-selected="true"]')).toBeVisible();
+      };
+
+      // WebKit treats Backspace on a page with no focused field as history back.
+      const keys = browserName === 'webkit' ? ['Delete', 'x', 'Enter', `${modifier}+X`] : ['Backspace', 'Delete', 'x', 'Enter', `${modifier}+X`];
+
+      for (const key of keys) {
+        await selectAll();
+        await page.keyboard.press(key);
+      }
+      await selectAll();
+      await cutFromElement(page.locator('[data-blok-id="h"]'));
+
+      expect(await rendered()).toEqual(before);
+    });
+
+    test('a click after Cmd+A clears the block selection', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await page.getByText('RO-END', { exact: true }).click();
+      await page.keyboard.press(`${await getCommandModifierKey(page)}+A`);
+      await expect(page.locator('[data-blok-id="h"][data-blok-selected="true"]')).toBeVisible();
+
+      await page.getByText('RO heading', { exact: true }).click();
+
+      await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
+    });
+
     test('Cmd+A in a text field outside the editor is not taken over', async ({ page }) => {
       await createBlok(page, { data: { blocks: doc }, readOnly: true });
       await page.getByText('RO-END', { exact: true }).click();

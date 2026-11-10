@@ -300,6 +300,42 @@ test.describe('undo audit: the selection undo and redo restore', () => {
     expect(await caret(page)).toBe('k1:4');
   });
 
+  test('U050: undo of Backspace over a cross-block range brings the range back, with the toolbar', async ({ page }) => {
+    await createBlok(page, [P('b1', 'Alpha one'), P('b2', 'Beta two')]);
+    await clickEnd(page, editable(page, 'b1'));
+    for (let i = 0; i < 3; i++) {
+      await page.keyboard.press('ArrowLeft');
+    }
+    await page.keyboard.press('Shift+ArrowDown');
+    await wait(page, 200);
+    const range = await page.evaluate(() => window.getSelection()?.toString() ?? '');
+
+    await page.keyboard.press('Backspace');
+    await wait(page, STEP_GAP_MS);
+
+    await press(page, UNDO);
+    expect(await savedTexts(page)).toEqual(['b1=Alpha one', 'b2=Beta two']);
+    expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe(range);
+    await expect(page.locator(TOOLBAR)).toBeVisible();
+  });
+
+  test('Delete over an undo-restored block selection is one undo step', async ({ page }) => {
+    await createBlok(page, ABC);
+    await clickEnd(page, editable(page, 'b2'));
+    await press(page, 'Escape');
+    await press(page, 'Backspace');
+    await wait(page, STEP_GAP_MS);
+    await press(page, UNDO);
+    expect(await selectedBlocks(page)).toEqual(['b2']);
+
+    await press(page, 'Delete');
+    expect(await savedTexts(page)).toEqual(['b1=Alpha', 'b3=Gamma']);
+    await wait(page, STEP_GAP_MS);
+
+    await press(page, UNDO);
+    expect(await savedTexts(page)).toEqual(['b1=Alpha', 'b2=Beta', 'b3=Gamma']);
+  });
+
   test('U038: a range brought back by undo shows the inline toolbar', async ({ page }) => {
     await createBlok(page, [P('b1', 'Hello brave world')]);
     await clickEnd(page, editable(page, 'b1'));

@@ -14,14 +14,6 @@ pub fn format_double(value: f64) -> String {
     if value == 0.0 {
         return format!("{sign}0");
     }
-    // .NET prints these two powers of two with 16 digits that do not
-    // round-trip (measured on .NET 10.0.11 over every power of two).
-    if value == 2f64.powi(-958) {
-        return format!("{sign}4.104536801298376E-289");
-    }
-    if value == 2f64.powi(-25) {
-        return format!("{sign}2.980232238769531E-08");
-    }
     let (digits, exponent) = shortest_digits(value);
     if !(-4..=16).contains(&exponent) {
         let mut out = digits[..1].to_string();

@@ -1577,12 +1577,13 @@ describe('DatabaseTableView', () => {
       { key: '__none__', label: 'No Stage', rows: [rows()[1], rows()[2]] },
     ];
 
-    it('draws one section per group with its count and rows', () => {
+    // notion-motion.md Round 9 (r9-group-header-open.raw): Notion's table group header shows no count.
+    it('draws one section per group with its rows and no count', () => {
       const { root } = mount({ groups: groups() });
       const sections = [...root.querySelectorAll('[data-blok-database-table-group]')];
 
       expect(sections.map((el) => el.getAttribute('data-group-key'))).toEqual(['o-idea', '__none__']);
-      expect(sections[1].querySelector('[data-blok-database-table-group-count]')?.textContent).toBe('2');
+      expect(sections[1].querySelector('[data-blok-database-table-group-header]')?.textContent?.trim()).toBe('No Stage');
       expect(sections[1].querySelectorAll('[data-blok-database-table-row]')).toHaveLength(2);
     });
 

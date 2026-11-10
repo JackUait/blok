@@ -1279,11 +1279,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     } else {
       label.textContent = group.label;
     }
-    const count = document.createElement('span');
-
-    count.setAttribute('data-blok-database-table-group-count', '');
-    count.textContent = String(group.rows.length);
-    header.append(caret, label, count);
+    header.append(caret, label);
     section.appendChild(header);
 
     const content = document.createElement('div');

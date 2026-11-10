@@ -13006,14 +13006,18 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-group] {
-  margin-block-end: var(--blok-space-3);
+  margin-block-end: var(--blok-space-4);
+}
+
+[data-blok-database-table-group]:not([data-collapsed]) > [data-blok-database-table-group-content] {
+  padding-block: var(--blok-space-2) var(--blok-space-1);
 }
 
 [data-blok-database-table-group-header] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1);
-  height: 42px;
+  gap: 0;
+  height: 26px;
 }
 
 [data-blok-database-table-group-toggle], [data-blok-database-board-lane-toggle] {
@@ -13055,12 +13059,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-group-label] {
-  font-weight: 500;
-}
-
-[data-blok-database-table-group-count] {
-  padding-inline: var(--blok-space-2);
-  color: var(--blok-database-table-muted-text);
+  padding-inline: 3px;
   font-weight: 500;
 }
 

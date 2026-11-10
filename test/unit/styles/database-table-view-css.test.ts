@@ -383,4 +383,20 @@ describe('database table calculation footer', () => {
   it('pads the cell 4px so the box keeps the value 10px from the column edge', () => {
     expect(ruleBody('[data-blok-database-table-calc]')).toMatch(/padding:\s*0 var\(--blok-space-1\)/);
   });
+
+  // notion-motion.md Round 9 "Collapsed group header" (r9-group-header-open.raw, r9-grouped-after.png pixel rows):
+  // header 26 tall, the caret box at x+0, the pill 3px into its slot (x+27); the column header row 8px under it,
+  // the next header 20px under the footer, and 16px under a collapsed header.
+  describe('grouped table header', () => {
+    it('is 26px tall with its pill at x+27', () => {
+      expect(ruleBody('[data-blok-database-table-group-header]')).toMatch(/height:\s*26px/);
+      expect(ruleBody('[data-blok-database-table-group-header]')).toMatch(/gap:\s*0[;\s]/);
+      expect(ruleBody('[data-blok-database-table-group-label]')).toMatch(/padding-inline:\s*3px/);
+    });
+
+    it('spaces an open group 8px under its header and 20px over the next one', () => {
+      expect(ruleBody('[data-blok-database-table-group]')).toMatch(/margin-block-end:\s*var\(--blok-space-4\)/);
+      expect(ruleBody('[data-blok-database-table-group]:not([data-collapsed]) > [data-blok-database-table-group-content]')).toMatch(/padding-block:\s*var\(--blok-space-2\) var\(--blok-space-1\)/);
+    });
+  });
 });

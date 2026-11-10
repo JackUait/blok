@@ -405,6 +405,10 @@ suite('collab HTTP routes on a journal', () => {
     let lineage = '';
 
     beforeAll(async () => {
+      // Reading the state seeds the lineage. The pause puts its createdAt a few
+      // milliseconds before record 1, which the baseline-at-a-time test needs.
+      await send(base, 'GET', '/sync/doc-history/state');
+      await new Promise((resolveWait) => setTimeout(resolveWait, 10));
       await send(base, 'POST', '/sync/doc-history/edit', [[KEY, 'h1']], insertBody('b1', 'first'));
       await send(base, 'POST', '/sync/doc-history/edit', [[KEY, 'h2']], insertBody('b2', 'second'));
 

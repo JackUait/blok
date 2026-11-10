@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { BlokConfig, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { historyKeys } from './helpers/history-keys';
 import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -1371,7 +1372,7 @@ test.describe('copy and paste', () => {
         await paste(page, page.locator(':focus'), clipboard);
         await expect.poll(() => texts(page)).toEqual(['paragraph:HelloFirst', 'paragraph:SecondWorld']);
 
-        await page.keyboard.press(`${await getCommandModifierKey(page)}+z`);
+        await page.keyboard.press((await historyKeys(page)).undo);
 
         await expect.poll(() => texts(page)).toEqual(['paragraph:HelloWorld']);
       });

@@ -40,7 +40,7 @@ internal sealed record CollabRestoreGuard(string Kind, string BlockId, string? V
 internal static class CollabRestoreGuards
 {
   /// <summary>Everything a database lock freezes (LOCK_PROTECTED_FIELDS in src/shared/tool-actions/database.ts).</summary>
-  private static readonly string[] LockProtectedFields = ["schema", "views", "automations", "source", "hideDataSourceTitles", "starter"];
+  private static readonly string[] LockProtectedFields = ["schema", "views", "automations", "source", "hideDataSourceTitles", "starter", "deletedProperties"];
 
   private static readonly string[] SubmissionAccess = ["none", "view", "comment", "edit", "full"];
 
@@ -187,8 +187,23 @@ internal static class CollabRestoreGuards
     var had = before is not null && before.TryGetPropertyValue(field, out _);
     var has = after is not null && after.TryGetPropertyValue(field, out _);
 
-    return had == has && (!had || JsonNode.DeepEquals(before![field], after![field]));
+    if (had != has)
+    {
+      // A missing slot reads as its empty default (approval.ts withEmptySlots).
+      return IsEmptySlot(field, had ? before![field] : after![field]);
+    }
+
+    return !had || JsonNode.DeepEquals(before![field], after![field]);
   }
+
+  private static bool IsEmptySlot(string field, JsonNode? value) => field switch
+  {
+    "deletedProperties" => value is JsonObject { Count: 0 },
+    "automations" => value is JsonObject { Count: 2 } slot
+        && slot["version"] is JsonValue version && version.TryGetValue<double>(out var number) && number == 1
+        && slot["definitions"] is JsonArray { Count: 0 },
+    _ => false,
+  };
 
   private static IEnumerable<JsonObject> ViewsIn(JsonObject block) =>
       (block["data"] as JsonObject)?["views"] is JsonArray views ? views.OfType<JsonObject>() : [];

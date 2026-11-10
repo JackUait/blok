@@ -36,7 +36,7 @@ const (
 var ConfirmableGuards = []string{GuardShare, GuardUnlock, GuardLockedReshape}
 
 // lockProtectedFields is LOCK_PROTECTED_FIELDS in src/shared/tool-actions/database.ts.
-var lockProtectedFields = []string{"schema", "views", "automations", "source", "hideDataSourceTitles", "starter"}
+var lockProtectedFields = []string{"schema", "views", "automations", "source", "hideDataSourceTitles", "starter", "deletedProperties"}
 
 var submissionAccess = []string{"none", "view", "comment", "edit", "full"}
 
@@ -207,11 +207,41 @@ func lockedOrHeld(blocks indexedBlocks, id string, locked, seen map[string]bool)
 // null differ, as undefined and null do.
 func sameProtected(before, after *jsjson.Object) bool {
 	for _, field := range lockProtectedFields {
-		if !sameMember(before, after, field) {
+		if !sameSlot(before, after, field) {
 			return false
 		}
 	}
 	return true
+}
+
+// sameSlot is sameMember, but a missing slot reads as its empty default (withEmptySlots in approval.ts).
+func sameSlot(before, after *jsjson.Object, field string) bool {
+	a, hadA := memberOf(before, field)
+	b, hadB := memberOf(after, field)
+	if hadA != hadB {
+		if hadA {
+			return isEmptySlot(field, a)
+		}
+		return isEmptySlot(field, b)
+	}
+	return sameMember(before, after, field)
+}
+
+func isEmptySlot(field string, value any) bool {
+	object, ok := value.(*jsjson.Object)
+	if !ok {
+		return false
+	}
+	switch field {
+	case "deletedProperties":
+		return object.Len() == 0
+	case "automations":
+		version, _ := memberOf(object, "version")
+		definitions, _ := memberOf(object, "definitions")
+		list, isList := definitions.([]any)
+		return object.Len() == 2 && sameData(version, float64(1)) && isList && len(list) == 0
+	}
+	return false
 }
 
 func sameMember(left, right *jsjson.Object, key string) bool {

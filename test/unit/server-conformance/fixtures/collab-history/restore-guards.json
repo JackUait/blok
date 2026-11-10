@@ -684,6 +684,133 @@
       ]
     },
     {
+      "name": "a locked database\u0027s deleted properties change",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [],
+            "deletedProperties": {
+              "p": {
+                "id": "p",
+                "name": "P",
+                "type": "text",
+                "position": "a1",
+                "deletedAt": 1
+              }
+            }
+          }
+        }
+      ],
+      "guards": [
+        {
+          "kind": "lockedReshape",
+          "blockId": "d"
+        }
+      ]
+    },
+    {
+      "name": "a locked database without automations matches the empty slot: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [],
+            "automations": {
+              "version": 1,
+              "definitions": []
+            }
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "a locked database without deleted properties matches the empty slot: no guard",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": [],
+            "deletedProperties": {}
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
       "name": "a locked database\u0027s field set to null differs from missing",
       "current": [
         {

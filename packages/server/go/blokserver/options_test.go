@@ -94,6 +94,10 @@ func fromCSharp(t *testing.T, spec map[string]json.RawMessage) Options {
 			var ms int64
 			read(raw, &ms)
 			o.CollabKeepAliveInterval = new(time.Duration(ms) * time.Millisecond)
+		case "CollabChangeSignalWindowMs":
+			var ms int64
+			read(raw, &ms)
+			o.CollabChangeSignalWindow = new(time.Duration(ms) * time.Millisecond)
 		case "CollabInboundFramesPerSecond":
 			read(raw, &o.CollabInboundFramesPerSecond)
 		case "CollabInboundBurstFrames":

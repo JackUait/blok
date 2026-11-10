@@ -493,7 +493,8 @@ func (h *Handlers) HistoryDelete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	status, outcome, err := a.rooms.DeleteLineage(r.Context(), a.doc, lineage)
+	status, outcome, err := a.rooms.DeleteLineageBy(r.Context(), a.doc, lineage,
+		synchttp.DeriveActor(a.ticketUser, a.user, a.hasUser))
 	if err != nil {
 		failed(w, r.Context())
 		return

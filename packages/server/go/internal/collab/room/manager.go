@@ -47,6 +47,7 @@ type Manager struct {
 	operations OperationStore
 	activity   ActivityObserver
 	notes      RecordNotes
+	signals    *signalHub
 
 	mu         sync.Mutex
 	rooms      map[string]*Room
@@ -60,7 +61,7 @@ type Manager struct {
 
 // NewManager builds the manager; nothing is loaded until a doc is used.
 func NewManager(o ManagerOptions) *Manager {
-	return &Manager{
+	m := &Manager{
 		store:      o.Store,
 		endpoint:   o.Endpoint,
 		converter:  o.Converter,
@@ -73,6 +74,8 @@ func NewManager(o ManagerOptions) *Manager {
 		purgeLanes: map[string]*lane{},
 		cooldowns:  map[string]cooldown{},
 	}
+	m.signals = newSignalHub(o.Activity, m)
+	return m
 }
 
 // OnDocumentReplaced registers a DocumentReplaced listener: it fires on a
@@ -406,6 +409,8 @@ func (m *Manager) Purge(ctx context.Context, docID string, authorize func(contex
 	if err := m.store.Delete(ctx, docID); err != nil {
 		return 0, err
 	}
+	m.signals.forget(docID)
+	m.signals.event(AuditEvent{Type: AuditDocumentPurged, DocID: docID, At: m.options.Now()})
 	return journal.Purged, nil
 }
 
@@ -458,6 +463,7 @@ func (m *Manager) Settle() {
 	for _, r := range m.liveRooms() {
 		r.settle()
 	}
+	m.signals.settle()
 }
 
 func (m *Manager) liveRooms() []*Room {

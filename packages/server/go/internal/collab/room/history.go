@@ -436,6 +436,12 @@ func sameSequences(changes []RecordChanges, window []uint64) bool {
 
 // DeleteLineage removes one superseded lineage.
 func (m *Manager) DeleteLineage(ctx context.Context, docID, lineage string) (HistoryStatus, journal.LineageDeleteOutcome, error) {
+	return m.DeleteLineageBy(ctx, docID, lineage, "")
+}
+
+// DeleteLineageBy is DeleteLineage by a known actor ("" for none), named in
+// its history.lineageDeleted event.
+func (m *Manager) DeleteLineageBy(ctx context.Context, docID, lineage, actorID string) (HistoryStatus, journal.LineageDeleteOutcome, error) {
 	history, ok := m.history()
 	if !ok {
 		return HistoryNone, 0, nil
@@ -449,6 +455,13 @@ func (m *Manager) DeleteLineage(ctx context.Context, docID, lineage string) (His
 	}
 	if outcome == journal.LineagePurged || m.isPurging(docID) {
 		return HistoryPurged, journal.LineagePurged, nil
+	}
+	if outcome == journal.LineageDeletedOutcome {
+		var actor *AuditActor
+		if note := ClassifyActor(actorID, false, ""); note != nil {
+			actor = &AuditActor{ID: actorID, Kind: note.Kind, OnBehalfOf: note.OnBehalfOf}
+		}
+		m.signals.event(AuditEvent{Type: AuditLineageDeleted, DocID: docID, At: m.options.Now(), Actor: actor, Lineage: lineage})
 	}
 	return HistoryReady, outcome, nil
 }

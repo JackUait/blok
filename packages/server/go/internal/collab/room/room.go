@@ -85,6 +85,7 @@ type Room struct {
 	operations OperationStore
 	activity   ActivityObserver
 	notes      RecordNotes
+	signals    *signalHub
 	endpoint   Endpoint
 	converter  Converter
 	options    Options
@@ -161,6 +162,7 @@ func newRoom(docID string, m *Manager) *Room {
 		operations:     m.operations,
 		activity:       m.activity,
 		notes:          m.notes,
+		signals:        m.signals,
 		endpoint:       m.endpoint,
 		converter:      m.converter,
 		options:        m.options,

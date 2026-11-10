@@ -115,6 +115,12 @@ type Options struct {
 	// must show such a block as in Trash: the editor does not hide it.
 	CollabRestoreTrashesPages bool
 
+	// CollabChangeSignalWindow is CollabChangeSignalWindow: how long one
+	// change window runs from a document's first journalled write before a
+	// room.ChangeObserver is told what changed. Nil is 60 s; zero or less
+	// uses 60 s too.
+	CollabChangeSignalWindow *time.Duration
+
 	// CollabRecordNotes is UseCollabRecordNotes<T>: a note of who wrote each
 	// journal record, kept beside the journal. The history routes then carry
 	// actor kinds. Nil keeps none.
@@ -152,6 +158,7 @@ func DefaultOptions() Options {
 		CollabMaxConnectionsPerUserPerDoc:    &d.CollabMaxConnectionsPerUserPerDoc,
 		CollabMaxMessageBytes:                &d.CollabMaxMessageBytes,
 		CollabKeepAliveInterval:              &d.CollabKeepAliveInterval,
+		CollabChangeSignalWindow:             &d.CollabChangeSignalWindow,
 		CollabInboundFramesPerSecond:         &d.CollabInboundFramesPerSecond,
 		CollabInboundBurstFrames:             &d.CollabInboundBurstFrames,
 		CollabInboundResyncsPerMinute:        &d.CollabInboundResyncsPerMinute,
@@ -170,6 +177,7 @@ type settings struct {
 	CollabMaxConnectionsPerUserPerDoc    int
 	CollabMaxMessageBytes                int
 	CollabKeepAliveInterval              time.Duration
+	CollabChangeSignalWindow             time.Duration
 	CollabInboundFramesPerSecond         int
 	CollabInboundBurstFrames             int
 	CollabInboundResyncsPerMinute        int
@@ -186,6 +194,7 @@ func defaults() settings {
 		CollabMaxConnectionsPerUserPerDoc:    8,
 		CollabMaxMessageBytes:                1 << 20,
 		CollabKeepAliveInterval:              15 * time.Second,
+		CollabChangeSignalWindow:             60 * time.Second,
 		CollabInboundFramesPerSecond:         50,
 		CollabInboundBurstFrames:             100,
 		CollabInboundResyncsPerMinute:        60,
@@ -212,6 +221,7 @@ func (o *Options) resolve() settings {
 		CollabMaxConnectionsPerUserPerDoc:    pick(o.CollabMaxConnectionsPerUserPerDoc, d.CollabMaxConnectionsPerUserPerDoc),
 		CollabMaxMessageBytes:                pick(o.CollabMaxMessageBytes, d.CollabMaxMessageBytes),
 		CollabKeepAliveInterval:              pick(o.CollabKeepAliveInterval, d.CollabKeepAliveInterval),
+		CollabChangeSignalWindow:             pick(o.CollabChangeSignalWindow, d.CollabChangeSignalWindow),
 		CollabInboundFramesPerSecond:         pick(o.CollabInboundFramesPerSecond, d.CollabInboundFramesPerSecond),
 		CollabInboundBurstFrames:             pick(o.CollabInboundBurstFrames, d.CollabInboundBurstFrames),
 		CollabInboundResyncsPerMinute:        pick(o.CollabInboundResyncsPerMinute, d.CollabInboundResyncsPerMinute),

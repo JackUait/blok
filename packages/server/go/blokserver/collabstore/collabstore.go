@@ -139,3 +139,38 @@ const (
 	ActivityEdited = room.ActivityEdited
 	ActivityLeft   = room.ActivityLeft
 )
+
+// ChangeObserver is ICollabActivityObserver.OnChangesAsync. An
+// ActivityObserver that also implements it is told what changed in each
+// window, by id only. Without it the room keeps no windows.
+type ChangeObserver = room.ChangeObserver
+
+// ChangeSignal is CollabChangeSignal. Signals can be lost: reconcile
+// through /history/changes and olderEnd.
+type ChangeSignal = room.ChangeSignal
+
+// SignalBlock, SignalProperties, SignalSchema and SignalAuthor are the
+// parts of a ChangeSignal.
+type (
+	SignalBlock      = room.SignalBlock
+	SignalProperties = room.SignalProperties
+	SignalSchema     = room.SignalSchema
+	SignalAuthor     = room.SignalAuthor
+)
+
+// AuditObserver is ICollabActivityObserver.OnEventAsync. An
+// ActivityObserver that also implements it is told each typed audit event.
+type AuditObserver = room.AuditObserver
+
+// AuditEvent and AuditActor are CollabAuditEvent and CollabAuditActor.
+type (
+	AuditEvent = room.AuditEvent
+	AuditActor = room.AuditActor
+)
+
+// The audit event types: CollabAuditEventTypes.
+const (
+	AuditContentEdited  = room.AuditContentEdited
+	AuditLineageDeleted = room.AuditLineageDeleted
+	AuditDocumentPurged = room.AuditDocumentPurged
+)

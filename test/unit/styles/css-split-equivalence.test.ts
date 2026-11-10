@@ -1585,8 +1585,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALCFOOT_BYTES = 373;
     // Round 11 lane footlbl: the footer's real 36px border-top row, tabular numbers, pointer and fill on the editable button only, 12px under the table.
     const DATABASE_FOOTLBL_BYTES = 358;
-    // Calculation menus: the last row's gap dropped; the New page row 37 tall.
-    const DATABASE_CALCMENU_BYTES = 279;
+    // Calculation menus: the last row's gap dropped, the 99+ hint row unclipped; the New page row 37 tall, the blank line and empty state unchanged.
+    const DATABASE_CALCMENU_BYTES = 800;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // Round 11 lane aggr: the table group header's "Show aggregation" count.

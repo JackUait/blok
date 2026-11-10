@@ -3002,6 +3002,11 @@ button[data-blok-database-column-count]:hover {
   margin-block-end: 0;
 }
 
+/* The header menu's 28px rows would clip the board's 99+ hint line. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name='database-group-calc-cap-counts'] {
+  height: auto;
+}
+
 /* notion-live-8/80-menu-number.png, 83-menu-name.png: dividers 12px in from the box sides and 8px
    tall in all, and the first row 44 under the box top. The ">" steps keep the submenus (the line
    under Sort) out. */
@@ -9751,6 +9756,12 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-blank-row] {
   display: flex;
+}
+
+/* The blank line is 37 with its border, and the filtered empty state centres the button: both keep 4px. */
+[data-blok-database-table-blank-cell] > [data-blok-database-table-add-row],
+[data-blok-database-table-empty] [data-blok-database-table-add-row] {
+  margin-block: var(--blok-space-1);
 }
 
 [data-blok-database-table-blank-cell] {

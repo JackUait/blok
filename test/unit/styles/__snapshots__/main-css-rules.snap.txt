@@ -6966,6 +6966,10 @@ button[data-blok-database-column-count]:hover {
   margin-block-end: 0;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name='database-group-calc-cap-counts'] {
+  height: auto;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
   padding-inline: var(--blok-space-2);
@@ -13026,6 +13030,10 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-blank-row] {
   display: flex;
+}
+
+[data-blok-database-table-blank-cell] > [data-blok-database-table-add-row], [data-blok-database-table-empty] [data-blok-database-table-add-row] {
+  margin-block: var(--blok-space-1);
 }
 
 [data-blok-database-table-blank-cell] {

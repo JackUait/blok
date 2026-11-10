@@ -75,6 +75,26 @@ const selectBlocks = async (page: Page, ids: string[]): Promise<void> => {
   }, ids);
 };
 
+const HANDLE = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
+const TUNES_POPOVER = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
+const NESTED_POPOVER = '[data-blok-nested="true"] [data-blok-testid="popover-container"]';
+
+const tune = (page: Page, name: string): Locator =>
+  page.locator(`${TUNES_POPOVER} [data-blok-testid="popover-item"][data-blok-item-name="${name}"]`);
+
+/** Open the block menu from the handle of block `id`; with blocks already selected, the menu is theirs. */
+const openTunes = async (page: Page, id: string): Promise<void> => {
+  await page.locator(`[data-blok-id="${id}"] [data-blok-element-content]`).first().hover();
+  await page.locator(HANDLE).click();
+  await expect(page.locator(TUNES_POPOVER)).toBeVisible();
+};
+
+const turnInto = async (page: Page, id: string, to: string): Promise<void> => {
+  await openTunes(page, id);
+  await tune(page, 'convert-to').click();
+  await page.locator(NESTED_POPOVER).getByRole('menuitem', { name: to, exact: true }).click();
+};
+
 const savedBlocks = async (page: Page): Promise<string[]> => {
   const blocks = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []);
 
@@ -154,6 +174,133 @@ test.describe('undo audit — undo and redo announcements', () => {
     }));
 
     await expect(status).toHaveText('');
+  });
+
+  // Notion U084 / U086: Turn into says what the block became.
+  test('Turn into from the block menu says Converted to Heading 1', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [P('a', 'Above'), P('b', 'Text body')]);
+    await turnInto(page, 'b', 'Heading 1');
+
+    await expect(status).toHaveText('Converted to Heading 1');
+    await expect.poll(() => savedBlocks(page)).toEqual(['paragraph:Above', 'header:Text body']);
+  });
+
+  // Notion U123: a multi-block Turn into counts the blocks.
+  test('Turn into on two selected blocks says 2 blocks converted to Heading 2', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [P('a', 'one'), P('b', 'two')]);
+    await selectBlocks(page, ['a', 'b']);
+    await turnInto(page, 'a', 'Heading 2');
+
+    await expect(status).toHaveText('2 blocks converted to Heading 2');
+    await expect.poll(() => savedBlocks(page)).toEqual(['header:one', 'header:two']);
+  });
+
+  // Notion U095: Enter on an empty bullet turns it into text in place.
+  test('Enter on an empty bullet says Converted to Text', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [
+      { id: 'l1', type: 'list', data: { text: 'one', style: 'unordered' } },
+      { id: 'l2', type: 'list', data: { text: '', style: 'unordered' } },
+    ]);
+    await editableOf(page, 'l2').click();
+    await page.keyboard.press('Enter');
+
+    await expect(status).toHaveText('Converted to Text');
+    await expect.poll(() => savedBlocks(page)).toEqual(['list:one', 'paragraph:']);
+  });
+
+  // Notion U099 / U144: Backspace at the start of a top-level item turns it into text.
+  test('Backspace at the start of a numbered item says Converted to Text', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [
+      { id: 'l1', type: 'list', data: { text: 'one', style: 'ordered' } },
+      { id: 'l2', type: 'list', data: { text: 'two', style: 'ordered' } },
+    ]);
+    await editableOf(page, 'l2').click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Backspace');
+
+    await expect(status).toHaveText('Converted to Text');
+    await expect.poll(() => savedBlocks(page)).toEqual(['list:one', 'paragraph:two']);
+  });
+
+  // Notion U106 / U047: deleting a selected block counts it.
+  test('Backspace on a selected block says 1 block deleted', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [P('a', 'Alpha'), P('b', 'Beta'), P('c', 'Gamma')]);
+    await editableOf(page, 'b').click();
+    await selectBlocks(page, ['b']);
+    await page.keyboard.press('Backspace');
+
+    await expect(status).toHaveText('1 block deleted');
+    await expect.poll(() => savedBlocks(page)).toEqual(['paragraph:Alpha', 'paragraph:Gamma']);
+  });
+
+  test('Delete on two selected blocks says 2 blocks deleted', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [P('a', 'Alpha'), P('b', 'Beta'), P('c', 'Gamma')]);
+    await editableOf(page, 'a').click();
+    await selectBlocks(page, ['a', 'b']);
+    await page.keyboard.press('Delete');
+
+    await expect(status).toHaveText('2 blocks deleted');
+    await expect.poll(() => savedBlocks(page)).toEqual(['paragraph:Gamma']);
+  });
+
+  // Notion U135: a toggle's children are not counted.
+  test('deleting a selected toggle with two children says 1 block deleted', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [
+      P('a', 'Alpha'),
+      { id: 'tg', type: 'toggle', data: { text: 'Tog', isOpen: true }, content: ['k1', 'k2'] },
+      P('k1', 'kid one', 'tg'),
+      P('k2', 'kid two', 'tg'),
+    ]);
+    await editableOf(page, 'a').click();
+    await selectBlocks(page, ['tg']);
+    await page.keyboard.press('Backspace');
+
+    await expect(status).toHaveText('1 block deleted');
+    await expect.poll(() => savedBlocks(page)).toEqual(['paragraph:Alpha']);
+  });
+
+  // Notion U104: Delete from the block menu.
+  test('Delete from the block menu says 1 block deleted', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [P('a', 'Alpha'), P('b', 'Beta')]);
+    await openTunes(page, 'b');
+    await tune(page, 'delete').click();
+
+    await expect(status).toHaveText('1 block deleted');
+    await expect.poll(() => savedBlocks(page)).toEqual(['paragraph:Alpha']);
+  });
+
+  test('Delete from the block menu of two selected blocks says 2 blocks deleted', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [P('a', 'Alpha'), P('b', 'Beta'), P('c', 'Gamma')]);
+    await selectBlocks(page, ['a', 'b']);
+    await openTunes(page, 'a');
+    // A pointer click on this item deletes nothing (an existing bug outside this test), so use the keyboard.
+    const deleteItem = tune(page, 'delete');
+
+    while (await deleteItem.getAttribute('data-blok-focused') === null) {
+      await page.keyboard.press('ArrowDown');
+    }
+    await page.keyboard.press('Enter');
+
+    await expect(status).toHaveText('2 blocks deleted');
+    await expect.poll(() => savedBlocks(page)).toEqual(['paragraph:Gamma']);
   });
 
   // Notion's live region after a markdown shortcut (scenarios U074, U077, U080, U083).

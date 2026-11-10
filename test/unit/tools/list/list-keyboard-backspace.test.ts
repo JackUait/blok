@@ -92,6 +92,7 @@ describe('handleBackspace — nested item outdents, top-level converts to a para
         setToBlock: vi.fn(),
         updateLastCaretAfterPosition: vi.fn(),
       },
+      tools: { getBlockTools: () => [] },
     } as unknown as KeyboardContext['api'];
 
     const contentEl = buildContentWithCaretAtStart('nested item');
@@ -136,6 +137,7 @@ describe('handleBackspace — nested item outdents, top-level converts to a para
         setToBlock: vi.fn(),
         updateLastCaretAfterPosition: vi.fn(),
       },
+      tools: { getBlockTools: () => [] },
     } as unknown as KeyboardContext['api'];
 
     const contentEl = buildContentWithCaretAtStart('flat item');
@@ -175,6 +177,7 @@ describe('handleBackspace — nested item outdents, top-level converts to a para
         setToBlock: vi.fn(),
         updateLastCaretAfterPosition: vi.fn(),
       },
+      tools: { getBlockTools: () => [] },
     } as unknown as KeyboardContext['api'];
 
     const contentEl = buildContentWithCaretAtStart('top item');
@@ -249,6 +252,7 @@ describe('handleBackspace — partial selection at offset 0 deletes normally (BU
         update,
       },
       caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+      tools: { getBlockTools: () => [] },
     } as unknown as KeyboardContext['api'];
 
     // Select just "hello" out of "hello world" (offsets 0..5).
@@ -286,6 +290,7 @@ describe('handleBackspace — partial selection at offset 0 deletes normally (BU
         update: vi.fn(),
       },
       caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+      tools: { getBlockTools: () => [] },
     } as unknown as KeyboardContext['api'];
 
     const contentEl = buildContentWithCaretAtStart('hello world');
@@ -325,6 +330,7 @@ describe('handleBackspace — m-10 modifier-held Backspace bails (marker intact)
         update,
       },
       caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+      tools: { getBlockTools: () => [] },
     } as unknown as KeyboardContext['api'];
 
     const contentEl = buildContentWithCaretAtStart('hello');

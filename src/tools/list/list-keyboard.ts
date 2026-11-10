@@ -6,6 +6,7 @@
 
 import type { API } from '../../../types';
 
+import { announceToolConversion } from '../../components/utils/conversion-announcement';
 import { runConvert } from '../../components/utils/convert-refusal';
 
 import { setCaretToBlockContent, setCaretToBlockContentOffset, getCaretOffsetWithin } from './caret-manager';
@@ -172,6 +173,8 @@ const exitListOrOutdent = async (
     return;
   }
 
+  announceToolConversion(api, 'paragraph', { text: '' });
+
   setCaretToBlockContent(api, newBlock, 'start');
 };
 
@@ -275,6 +278,8 @@ export const handleBackspace = async(
   if (newBlock === null) {
     return;
   }
+
+  announceToolConversion(api, 'paragraph', { text: currentContent });
 
   setCaretToBlockContent(api, newBlock, 'start');
 };

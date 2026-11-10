@@ -213,6 +213,10 @@ const deriveLifecycle = (): {
   addDynamic('toolNames.database');
   // The page picker calls tools.page.moreResults with a count; the plural rule adds the suffix.
   for (const category of ['one', 'other']) addDynamic(`tools.page.moreResults_${category}`);
+  // A multi-block Turn into calls a11y.blocksConvertedTo with a count.
+  for (const category of ['one', 'other']) addDynamic(`a11y.blocksConvertedTo_${category}`);
+  // Deleting selected blocks calls a11y.blocksDeleted with a count.
+  for (const category of ['one', 'other']) addDynamic(`a11y.blocksDeleted_${category}`);
 
   for (const key of literal) dynamic.delete(key);
 
@@ -276,7 +280,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2071 + 138 + 527 + 4 closure for all 2740 keys', () => {
+  it('rebuilds a disjoint 2071 + 142 + 527 + 4 closure for all 2744 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -290,7 +294,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2740);
+    expect(lifecycle.size).toBe(2744);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -515,7 +519,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +9: the Ask AI action labels, assistant.action.<skill id>.
       // +1: toolNames.databaseFullPage (f6d462a0).
       // +2: the picker's tools.page.moreResults_one/_other, a plural of one literal call.
-      'finite-dynamic': 138,
+      // +2: a11y.blocksConvertedTo_one/_other, a plural of the multi-block Turn into call.
+      // +2: a11y.blocksDeleted_one/_other, a plural of the selected-block delete call.
+      'finite-dynamic': 142,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.

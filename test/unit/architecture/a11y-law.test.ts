@@ -517,7 +517,10 @@ describe('Accessibility Law', () => {
   });
 
   describe('a11y i18n ledger', () => {
-    const declared = new Set(Object.keys(parseLocale(EN_LOCALE_FILE)).filter((key) => key.startsWith('a11y.')));
+    // A call with { count } reads key_one / key_other, so plural forms count under their base key.
+    const declared = new Set(Object.keys(parseLocale(EN_LOCALE_FILE))
+      .filter((key) => key.startsWith('a11y.'))
+      .map((key) => key.replace(/_(zero|one|two|few|many|other)$/, '')));
     const referenced = referencedA11yKeys();
 
     it('has both sides of the ledger to compare (self-check)', () => {

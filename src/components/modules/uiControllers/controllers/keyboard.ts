@@ -8,6 +8,7 @@ import { markEscapeConsumed } from '../../../utils/consumed-escape';
 import { runConvert } from '../../../utils/convert-refusal';
 import { hasEscapeLayer } from '../../../utils/dismissable-layer';
 import { announceHistoryPress } from '../../../utils/history-announcement';
+import { announceDeletedRoots, selectionRoots } from '../../../utils/selection-roots';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
@@ -794,9 +795,13 @@ export class KeyboardController extends Controller {
       return;
     }
 
-    const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
+    const selected = BlockManager.blocks.filter((block) => block.selected);
+    const nestedContainer = findCommonNestedContainer(selected);
+    const roots = selectionRoots(selected);
 
     const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
+
+    announceDeletedRoots(this.Blok.I18n, roots, (id) => BlockManager.getBlockById(id) !== undefined);
 
     if (insertedBlock) {
       Caret.setToBlock(insertedBlock, Caret.positions.START);

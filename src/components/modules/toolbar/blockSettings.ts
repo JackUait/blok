@@ -17,6 +17,8 @@ import { getCaretOffset } from '../../utils/caret/selection';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../utils/nested-container-caret';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
 import { buildConvertMenuEntries, buildConvertMenuItems } from '../../utils/convert-menu';
+import { announceConversion } from '../../utils/conversion-announcement';
+import { announceDeletedRoots, selectionRoots } from '../../utils/selection-roots';
 import { runConvert } from '../../utils/convert-refusal';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
@@ -561,6 +563,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         Toolbar.close();
 
         if (newBlock) {
+          announceConversion(this.Blok.I18n, tool, entry.data ?? {}, hasMultipleBlocksSelected ? selectionRoots(selectedBlocks).length : 1);
+
           // Only a single-block conversion has a caret offset to preserve.
           if (hasMultipleBlocksSelected) {
             Caret.setToBlock(newBlock, Caret.positions.END);
@@ -721,9 +725,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         onActivate: () => {
           const { BlockManager, Caret, Toolbar } = this.Blok;
 
-          const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
+          const selected = BlockManager.blocks.filter((block) => block.selected);
+          const nestedContainer = findCommonNestedContainer(selected);
+          const roots = selectionRoots(selected);
 
           const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
+
+          announceDeletedRoots(this.Blok.I18n, roots, (id) => BlockManager.getBlockById(id) !== undefined);
 
           if (insertedBlock) {
             Caret.setToBlock(insertedBlock, Caret.positions.END);

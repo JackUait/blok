@@ -7,6 +7,7 @@
 import type { API } from '../../../types';
 
 import { isCaretAtStartOfInput } from '../../components/utils/caret';
+import { announceToolConversion } from '../../components/utils/conversion-announcement';
 import { runConvert } from '../../components/utils/convert-refusal';
 
 import { TOOL_NAME } from './constants';
@@ -154,7 +155,11 @@ export const handleToggleBackspace = async (
 
   event.preventDefault();
 
-  await runConvert(api, () => api.blocks.convert(blockId, 'paragraph', { text }));
+  const newBlock = await runConvert(api, () => api.blocks.convert(blockId, 'paragraph', { text }));
+
+  if (newBlock !== null) {
+    announceToolConversion(api, 'paragraph', { text });
+  }
 };
 
 /**

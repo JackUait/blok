@@ -18,6 +18,7 @@ import {
 import { isEscapeConsumed } from '../../../../../../src/components/utils/consumed-escape';
 import { registerLayer } from '../../../../../../src/components/utils/dismissable-layer';
 import { deliverOnSubmit } from '../../../../../../src/components/utils/on-submit';
+import { announce } from '../../../../../../src/components/utils/announcer';
 import type { PopoverAbstract } from '../../../../../../src/components/utils/popover/popover-abstract';
 import { PopoverRegistry } from '../../../../../../src/components/utils/popover/popover-registry';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
@@ -36,6 +37,8 @@ vi.mock('../../../../../../src/components/utils/browser', async (importOriginal)
     },
   };
 });
+
+vi.mock('../../../../../../src/components/utils/announcer', () => ({ announce: vi.fn() }));
 
 vi.mock('../../../../../../src/components/utils/on-submit', () => ({
   deliverOnSubmit: vi.fn(),
@@ -159,6 +162,7 @@ const createHarness = (options?: {
       unsetCurrentBlock: vi.fn(),
       deleteSelectedBlocksAndInsertReplacement: vi.fn(() => undefined),
       getBlock: vi.fn(() => undefined),
+      getBlockById: vi.fn((id: string) => state.blocks.find((block) => block.id === id)),
       convert: vi.fn(() => Promise.resolve(makeBlock('converted'))),
     },
     BlockSelection: {
@@ -224,7 +228,7 @@ const createHarness = (options?: {
       },
     },
     // Undo and redo key presses announce their result.
-    I18n: { t: (key: string) => key },
+    I18n: { t: (key: string, vars?: { count?: number }) => (vars?.count === undefined ? key : `${key}:${vars.count}`) },
     YjsManager: {
       markCaretBeforeChange: vi.fn(() => {
         order.push('controller');
@@ -1149,6 +1153,43 @@ describe('KeyboardController — mutation coverage', () => {
       expect(harness.blok.BlockSelection.clearSelection).toHaveBeenCalledWith(event);
       expect(event.defaultPrevented).toBe(true);
       expect(reachedLaterDocumentListener).toBe(false);
+    });
+
+    // Notion U106 / U135: the live region counts the deleted blocks, children not included.
+    it('says how many selected blocks Backspace deleted, not counting children', () => {
+      const harness = enabledHarness();
+      const toggle = makeBlock('tg');
+      const child = Object.assign(makeBlock('kid'), { parentId: 'tg' });
+      const other = makeBlock('b');
+
+      [toggle, child, other].forEach((block) => Object.assign(block, { selected: true, parentId: block.parentId ?? null }));
+      harness.state.blocks = [toggle, child, other, makeBlock('c')];
+      harness.state.anyBlockSelected = true;
+      noNativeSelection();
+      vi.mocked(harness.blok.BlockManager.deleteSelectedBlocksAndInsertReplacement).mockImplementation(() => {
+        harness.state.blocks = harness.state.blocks.filter((block) => !block.selected);
+
+        return undefined;
+      });
+
+      harness.press(document.body, { key: 'Backspace' });
+
+      expect(vi.mocked(announce)).toHaveBeenCalledWith('a11y.blocksDeleted:2');
+      expect(vi.mocked(announce)).toHaveBeenCalledTimes(1);
+      expect(harness.blok.BlockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
+    });
+
+    it('says nothing when Backspace deleted none of the selected blocks', () => {
+      const harness = enabledHarness();
+      const locked = Object.assign(makeBlock('locked'), { selected: true, parentId: null });
+
+      harness.state.blocks = [locked];
+      harness.state.anyBlockSelected = true;
+      noNativeSelection();
+
+      harness.press(document.body, { key: 'Backspace' });
+
+      expect(vi.mocked(announce)).not.toHaveBeenCalled();
     });
 
     it('removes the selected blocks on Delete too', () => {

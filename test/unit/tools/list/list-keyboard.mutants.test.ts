@@ -58,6 +58,7 @@ const makeApi = ({ currentIndex = 3, indexOf = (): number | undefined => undefin
         update: vi.fn(async () => inserted),
       },
       caret: { setToBlock, updateLastCaretAfterPosition: vi.fn() },
+      tools: { getBlockTools: () => [] },
     } as unknown as API,
     insert,
     splitBlock,
@@ -505,6 +506,7 @@ describe('list-keyboard mutants', () => {
         }),
       },
       caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+      tools: { getBlockTools: () => [] },
     } as unknown as API;
 
     return {

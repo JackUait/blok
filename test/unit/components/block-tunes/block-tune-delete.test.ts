@@ -4,9 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DeleteTune } from '../../../../src/components/block-tunes/block-tune-delete';
 import { beautifyShortcut } from '../../../../src/components/utils/string';
+import { announce } from '../../../../src/components/utils/announcer';
 import type * as StringModule from '../../../../src/components/utils/string';
 import type { API } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
+
+vi.mock('../../../../src/components/utils/announcer', () => ({ announce: vi.fn() }));
 
 vi.mock('../../../../src/components/utils/string', async (importOriginal) => {
   const actual = await importOriginal<typeof StringModule>();
@@ -18,20 +21,26 @@ vi.mock('../../../../src/components/utils/string', async (importOriginal) => {
 });
 
 type BlocksMocks = {
-  delete: Mock<() => void>;
+  delete: Mock<() => Promise<void>>;
+  getCurrentBlockIndex: Mock<() => number>;
+  getBlockByIndex: Mock<(index: number) => { id: string } | undefined>;
+  getById: Mock<(id: string) => { id: string } | null>;
 };
 
 type I18nMocks = {
-  t: Mock<(text: string) => string>;
+  t: Mock<(text: string, vars?: Record<string, string | number>) => string>;
 };
 
 const createApiMocks = (): { api: API; blocks: BlocksMocks; i18n: I18nMocks } => {
   const blocks: BlocksMocks = {
-    delete: vi.fn(),
+    delete: vi.fn(() => Promise.resolve()),
+    getCurrentBlockIndex: vi.fn(() => 0),
+    getBlockByIndex: vi.fn(() => ({ id: 'b1' })),
+    getById: vi.fn(() => null),
   };
 
   const i18n: I18nMocks = {
-    t: vi.fn((text: string) => text),
+    t: vi.fn((text: string, vars?: Record<string, string | number>) => (vars?.count === undefined ? text : `${text}:${vars.count}`)),
   };
 
   return {
@@ -83,13 +92,33 @@ describe('DeleteTune', () => {
     expect(config.secondaryLabel).toBe('Del');
   });
 
-  it('deletes current block when handler is triggered', () => {
+  it('deletes current block when handler is triggered', async () => {
     const { api, blocks } = createApiMocks();
     const tune = new DeleteTune({ api });
 
-    tune.handleClick();
+    await tune.handleClick();
 
     // Verify the blocks.delete method was called with no arguments
     expect(blocks.delete).toHaveBeenCalledWith();
+  });
+
+  // Notion U104: Delete from the block menu says 1 block deleted.
+  it('announces one deleted block once the block is gone', async () => {
+    const { api } = createApiMocks();
+    const tune = new DeleteTune({ api });
+
+    await tune.handleClick();
+
+    expect(vi.mocked(announce)).toHaveBeenCalledWith('a11y.blocksDeleted:1');
+  });
+
+  it('says nothing when the block is still there', async () => {
+    const { api, blocks } = createApiMocks();
+    const tune = new DeleteTune({ api });
+
+    blocks.getById.mockReturnValue({ id: 'b1' });
+    await tune.handleClick();
+
+    expect(vi.mocked(announce)).not.toHaveBeenCalled();
   });
 });

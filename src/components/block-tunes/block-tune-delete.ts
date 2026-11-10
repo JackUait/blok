@@ -7,6 +7,7 @@ import { BUILT_IN_TUNE_DESCRIPTIONS } from '../../shared/tool-descriptions/inlin
 import type { API, BlockTune } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { IconTrash } from '../icons';
+import { announceDeletedRoots } from '../utils/selection-roots';
 import { beautifyShortcut } from '../utils/string';
 
 /**
@@ -44,14 +45,22 @@ export class DeleteTune implements BlockTune {
       name: 'delete',
       isDestructive: true,
       secondaryLabel: beautifyShortcut('DELETE'),
-      onActivate: (): void => this.handleClick(),
+      onActivate: (): void => {
+        void this.handleClick();
+      },
     };
   }
 
   /**
    * Delete block conditions passed
    */
-  public handleClick(): void {
-    void this.api.blocks.delete();
+  public async handleClick(): Promise<void> {
+    const id = this.api.blocks.getBlockByIndex(this.api.blocks.getCurrentBlockIndex())?.id;
+
+    await this.api.blocks.delete();
+
+    if (id !== undefined) {
+      announceDeletedRoots(this.api.i18n, [{ id, parentId: null }], (blockId) => this.api.blocks.getById(blockId) !== null);
+    }
   }
 }

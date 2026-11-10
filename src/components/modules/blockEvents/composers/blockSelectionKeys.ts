@@ -5,6 +5,7 @@ import { SelectionUtils } from '../../../selection/index';
 import { areBlocksMergeable } from '../../../utils/blocks';
 import { focus } from '../../../utils/caret/index';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
+import { announceDeletedRoots, selectionRoots } from '../../../utils/selection-roots';
 import { LIST_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
@@ -474,9 +475,13 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return false;
     }
 
-    const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
+    const selected = BlockManager.blocks.filter((block) => block.selected);
+    const nestedContainer = findCommonNestedContainer(selected);
+    const roots = selectionRoots(selected);
 
     const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
+
+    announceDeletedRoots(this.Blok.I18n, roots, (id) => BlockManager.getBlockById(id) !== undefined);
 
     if (insertedBlock) {
       Caret.setToBlock(insertedBlock, Caret.positions.START);

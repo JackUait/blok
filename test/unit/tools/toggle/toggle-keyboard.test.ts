@@ -32,6 +32,7 @@ const createMockContext = (overrides: Partial<ToggleKeyboardContext> = {}): Togg
       caret: {
         setToBlock: vi.fn(),
       },
+      tools: { getBlockTools: () => [] },
     } as unknown as API,
     blockId: 'test-block-id',
     data: { text: '' },

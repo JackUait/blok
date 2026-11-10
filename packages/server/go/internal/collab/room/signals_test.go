@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -21,6 +22,10 @@ type signalObserver struct {
 	events  []AuditEvent
 	failure error
 	gate    chan struct{}
+	// hangFirst: the first OnChanges never returns; entered closes when it starts.
+	hangFirst bool
+	entered   chan struct{}
+	calls     int
 }
 
 func (o *signalObserver) Record(context.Context, string, string, time.Time, ActivityKind) error {
@@ -28,6 +33,14 @@ func (o *signalObserver) Record(context.Context, string, string, time.Time, Acti
 }
 
 func (o *signalObserver) OnChanges(_ context.Context, signal ChangeSignal) error {
+	o.mu.Lock()
+	o.calls++
+	first := o.calls == 1
+	o.mu.Unlock()
+	if o.hangFirst && first {
+		close(o.entered)
+		select {}
+	}
 	if o.gate != nil {
 		<-o.gate
 	}
@@ -266,5 +279,104 @@ func TestDeletingALineageAndPurgingAreEvents(t *testing.T) {
 		!reflect.DeepEqual(got[0].Actor, &AuditActor{ID: "u9", Kind: "person"}) ||
 		got[1].Type != AuditDocumentPurged || got[1].Actor != nil {
 		t.Fatalf("events = %+v", got)
+	}
+}
+
+func TestAHungObserverCallTimesOutAndLaterSignalsStillFlow(t *testing.T) {
+	observer := &signalObserver{hangFirst: true, entered: make(chan struct{})}
+	b := newSignalBench(t, observer, 0)
+	histEdit(t, b.manager, histUpdate(t, "a", "two"))
+	b.clock.Advance(time.Minute)
+	b.timers.Advance(time.Minute)
+	select {
+	case <-observer.entered:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the first signal never reached the observer")
+	}
+	b.clock.Advance(30 * time.Second)
+	b.timers.Advance(30 * time.Second)
+	b.manager.Settle()
+
+	histEdit(t, b.manager, histUpdate(t, "a", "three"))
+	b.advance(time.Minute)
+
+	got := observer.gotSignals()
+	if len(got) != 1 || got[0].FromSequence != 2 || got[0].ToSequence != 2 {
+		t.Fatalf("signals = %+v", got)
+	}
+	b.logMu.Lock()
+	defer b.logMu.Unlock()
+	if !strings.Contains(strings.Join(b.logged, "\n"), "ran past") {
+		t.Fatalf("log = %v", b.logged)
+	}
+}
+
+func TestAWindowPastOneReadNamesOnlyTheRecordsItFolded(t *testing.T) {
+	observer := &signalObserver{}
+	b := newSignalBench(t, observer, 0)
+	for i := 0; i <= MaxChangeRecords; i++ {
+		histEdit(t, b.manager, histUpdate(t, "a", "edit "+strconv.Itoa(i)))
+	}
+	b.advance(time.Minute)
+
+	got := observer.gotSignals()
+	if len(got) != 1 || !got[0].Truncated || got[0].FromSequence != 2 || got[0].ToSequence != 201 {
+		t.Fatalf("signals = %+v", got)
+	}
+}
+
+func TestAWindowPastTheLongestRunsOneDay(t *testing.T) {
+	observer := &signalObserver{}
+	b := newSignalBench(t, observer, 60*24*time.Hour)
+	histEdit(t, b.manager, histUpdate(t, "a", "two"))
+	b.advance(24 * time.Hour)
+
+	got := observer.gotSignals()
+	if len(got) != 1 || got[0].WindowEnd.Sub(got[0].WindowStart) != 24*time.Hour {
+		t.Fatalf("signals = %+v", got)
+	}
+}
+
+type auditOnly struct {
+	mu     sync.Mutex
+	events []AuditEvent
+}
+
+func (o *auditOnly) Record(context.Context, string, string, time.Time, ActivityKind) error {
+	return nil
+}
+
+func (o *auditOnly) OnEvent(_ context.Context, event AuditEvent) error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.events = append(o.events, event)
+	return nil
+}
+
+// A heartbeat that silences the next Edited must not silence the audit
+// event for a real edit.
+func TestAnActiveFrameThenAnEditStillSendsContentEdited(t *testing.T) {
+	k := newRb2Kit()
+	k.host.Holds(t, testDoc, "hello", nil)
+	audit := &auditOnly{}
+	o := DefaultOptions()
+	o.Now = k.clock.Now
+	manager := NewManager(ManagerOptions{Store: k.disk, Endpoint: k.host, Converter: k.knob, Room: o, Log: k.logf,
+		Operations: k.journal, Activity: audit})
+	t.Cleanup(func() { _ = manager.Drain(context.Background()) })
+	member := rb2V2("user-1")
+	membership := rb2Enter(t, manager, member)
+	client := syncedClient(t, manager, testDoc, "hello")
+
+	rb2Heartbeat(t, membership)
+	k.clock.Advance(20 * time.Second)
+	sendOperation(t, membership, member, opOne, updateAppending(client, "a"))
+	manager.Settle()
+
+	audit.mu.Lock()
+	defer audit.mu.Unlock()
+	if len(audit.events) != 1 || audit.events[0].Type != AuditContentEdited || audit.events[0].Actor == nil ||
+		audit.events[0].Actor.ID != "user-1" {
+		t.Fatalf("events = %+v", audit.events)
 	}
 }

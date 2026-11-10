@@ -201,9 +201,9 @@ func (r *Room) appendCommittedLocked(operationID, actorID string, source collab.
 		note = ClassifyActor(actorID, false, "")
 	}
 	r.writeNoteLocked(appended.Sequence, note)
-	r.signals.committed(r.docID, r.tag.Lineage, appended.Sequence, note)
+	r.signals.committed(r.docID, r.tag.Lineage, appended.Sequence, actorID, note)
 	// After the append: an edit is reported once it is durable.
-	r.recordEditedLocked(actorID, note)
+	r.recordActivityLocked(actorID, ActivityEdited)
 	r.operationsSinceCheckpoint++
 	r.bytesSinceCheckpoint += int64(len(update))
 	if r.operationsSinceCheckpoint >= r.options.CheckpointOperationThreshold ||

@@ -231,7 +231,8 @@ public sealed class BlokServerOptions
   /// How long one change window runs from a document's first journalled
   /// write before <see cref="Blok.Server.Collab.ICollabActivityObserver.OnChangesAsync"/>
   /// is told what changed in it. Used only when the registered observer
-  /// overrides that member. Default 60 seconds; zero or less uses the default.
+  /// overrides that member. Default 60 seconds; zero or less uses the
+  /// default. At most one day: <see cref="Validate"/> refuses a longer one.
   /// </summary>
   public TimeSpan CollabChangeSignalWindow { get; set; } = TimeSpan.FromSeconds(60);
 
@@ -465,6 +466,12 @@ public sealed class BlokServerOptions
       throw new InvalidOperationException(
           $"CollabMaxMessageBytes must be a positive number of bytes (got {CollabMaxMessageBytes}): " +
           "a zero cap closes every sync connection on its first frame");
+    }
+
+    if (CollabChangeSignalWindow > TimeSpan.FromDays(1))
+    {
+      throw new InvalidOperationException(
+          $"CollabChangeSignalWindow must be at most one day (got {CollabChangeSignalWindow})");
     }
 
     if (CollabKeepAliveInterval < TimeSpan.Zero)

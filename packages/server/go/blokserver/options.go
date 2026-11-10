@@ -118,7 +118,7 @@ type Options struct {
 	// CollabChangeSignalWindow is CollabChangeSignalWindow: how long one
 	// change window runs from a document's first journalled write before a
 	// room.ChangeObserver is told what changed. Nil is 60 s; zero or less
-	// uses 60 s too.
+	// uses 60 s too. More than one day is refused.
 	CollabChangeSignalWindow *time.Duration
 
 	// CollabRecordNotes is UseCollabRecordNotes<T>: a note of who wrote each
@@ -333,6 +333,8 @@ func (o *settings) validateCollab() error {
 		return fail("CollabMaxConnections must be zero (no ceiling) or greater (got %d)", o.CollabMaxConnections)
 	case o.CollabMaxMessageBytes <= 0:
 		return fail("CollabMaxMessageBytes must be a positive number of bytes (got %d): a zero cap closes every sync connection on its first frame", o.CollabMaxMessageBytes)
+	case o.CollabChangeSignalWindow > 24*time.Hour:
+		return fail("CollabChangeSignalWindow must be at most one day (got %s)", formatTimeSpan(o.CollabChangeSignalWindow))
 	case o.CollabKeepAliveInterval < 0:
 		return fail("CollabKeepAliveInterval must be zero (off) or greater (got %s)", formatTimeSpan(o.CollabKeepAliveInterval))
 	case o.CollabInboundFramesPerSecond < 0:

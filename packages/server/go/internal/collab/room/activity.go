@@ -9,16 +9,6 @@ import (
 // host's observer. The decision needs the lane; the call runs off it, so a
 // slow observer never stalls the document.
 func (r *Room) recordActivityLocked(actorID string, kind ActivityKind) {
-	r.recordActivityNotedLocked(actorID, kind, nil)
-}
-
-// recordEditedLocked is Edited, and the content.edited event at the same
-// moment, with the record's note.
-func (r *Room) recordEditedLocked(actorID string, note *RecordNote) {
-	r.recordActivityNotedLocked(actorID, ActivityEdited, note)
-}
-
-func (r *Room) recordActivityNotedLocked(actorID string, kind ActivityKind, note *RecordNote) {
 	// No verified identity, no call of any kind.
 	if actorID == "" || r.activity == nil {
 		return
@@ -33,13 +23,6 @@ func (r *Room) recordActivityNotedLocked(actorID string, kind ActivityKind, note
 		}
 		// Stamped only where a call is made, or a busy actor stays silenced.
 		r.activityStamps[actorID] = at
-	}
-	if kind == ActivityEdited {
-		actor := &AuditActor{ID: actorID}
-		if note != nil {
-			actor.Kind, actor.OnBehalfOf = note.Kind, note.OnBehalfOf
-		}
-		r.signals.event(AuditEvent{Type: AuditContentEdited, DocID: r.docID, At: at, Actor: actor})
 	}
 
 	var dropped *pendingActivity

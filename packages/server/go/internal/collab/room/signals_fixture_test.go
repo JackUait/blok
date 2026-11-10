@@ -47,10 +47,9 @@ type fixtureProperties struct {
 }
 
 type fixtureSchema struct {
-	DatabaseID string  `json:"databaseId"`
-	ID         string  `json:"id"`
-	Name       *string `json:"name"`
-	Action     string  `json:"action"`
+	DatabaseID string `json:"databaseId"`
+	ID         string `json:"id"`
+	Action     string `json:"action"`
 }
 
 type fixtureSignal struct {
@@ -108,7 +107,7 @@ func TestSignalsFixture(t *testing.T) {
 					record.Properties = append(record.Properties, SignalProperties{RowID: p.RowID, IDs: p.IDs})
 				}
 				for _, s := range r.Schema {
-					record.Schema = append(record.Schema, SignalSchema{DatabaseID: s.DatabaseID, ID: s.ID, Name: s.Name, Action: s.Action})
+					record.Schema = append(record.Schema, SignalSchema{DatabaseID: s.DatabaseID, ID: s.ID, Action: s.Action})
 				}
 				records[i] = record
 			}
@@ -144,7 +143,7 @@ func signalFixtureOf(signal ChangeSignal) fixtureSignal {
 		out.Properties = append(out.Properties, fixtureProperties{RowID: p.RowID, IDs: p.IDs})
 	}
 	for _, s := range signal.Schema {
-		out.Schema = append(out.Schema, fixtureSchema{DatabaseID: s.DatabaseID, ID: s.ID, Name: s.Name, Action: s.Action})
+		out.Schema = append(out.Schema, fixtureSchema{DatabaseID: s.DatabaseID, ID: s.ID, Action: s.Action})
 	}
 	out.Authors = make([]struct {
 		ID   string  `json:"id"`

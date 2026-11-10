@@ -5929,6 +5929,64 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// content.edited keeps its own stamps: a heartbeat that silences the next
+  /// Edited must not silence the audit event for a real edit.
+  /// </summary>
+  [Fact]
+  public async Task AnActiveFrameThenAnEditStillSendsContentEdited()
+  {
+    endpoint.Holds(DocId, "hello");
+    var audit = new AuditOnlyObserver();
+    var manager = new CollabRoomManager(store, endpoint, converter, new CollabRoomOptions(), time, log.Add, operations, audit);
+    var membership = await Join(manager, V2Member("user-1"));
+    var client = await SyncedClientAsync(manager, "hello");
+
+    await membership.ReceiveAsync(SyncWire.Encode(new ActivityFrame()), CancellationToken.None);
+    time.Advance(TimeSpan.FromSeconds(20));
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "a")),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    var edited = Assert.Single(audit.Events);
+    Assert.Equal(CollabAuditEventTypes.ContentEdited, edited.Type);
+    Assert.Equal("user-1", edited.Actor?.Id);
+  }
+
+  private sealed class AuditOnlyObserver : ICollabActivityObserver
+  {
+    private readonly List<CollabAuditEvent> events = [];
+
+    internal IReadOnlyList<CollabAuditEvent> Events
+    {
+      get
+      {
+        lock (events)
+        {
+          return [.. events];
+        }
+      }
+    }
+
+    public ValueTask RecordAsync(
+        string documentId,
+        string actorId,
+        DateTimeOffset at,
+        CollabActivityKind kind,
+        CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
+    public ValueTask OnEventAsync(CollabAuditEvent auditEvent, CancellationToken cancellationToken = default)
+    {
+      lock (events)
+      {
+        events.Add(auditEvent);
+      }
+
+      return ValueTask.CompletedTask;
+    }
+  }
+
+  /// <summary>
   /// One window, shared: an edit and a heartbeat in the same minute are one
   /// report. The suppressed edit at +30s must NOT re-stamp, or the edit at
   /// +60s would be silenced too and a busy actor would never be reported.

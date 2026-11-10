@@ -278,10 +278,10 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     this.recordNotes = recordNotes;
     signalHub = CollabChangeSignalHub.For(
         activityObserver,
-        // A negative due time throws from CreateTimer, inside the room's lane.
-        options.ChangeSignalWindow > TimeSpan.Zero ? options.ChangeSignalWindow : TimeSpan.FromSeconds(60),
+        options.ChangeSignalWindow,
         timeProvider,
-        (doc, lineage, sequence, since, maxRecords) => ChangesAsync(doc, lineage, sequence, since, maxRecords),
+        (doc, lineage, sequence, since, maxRecords, token) =>
+            ChangesAsync(doc, lineage, sequence, since, maxRecords, cancellationToken: token),
         log);
   }
 

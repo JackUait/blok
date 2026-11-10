@@ -1293,7 +1293,7 @@
       ]
     },
     {
-      "name": "schema entries per database: created then deleted is gone, created then updated is created",
+      "name": "schema entries per database, ids only: created then deleted is gone, created then updated is created",
       "windowMs": 60000,
       "records": [
         {
@@ -1314,25 +1314,21 @@
             {
               "databaseId": "db",
               "id": "p1",
-              "name": "Due",
               "action": "created"
             },
             {
               "databaseId": "db",
               "id": "p2",
-              "name": "Status",
               "action": "updated"
             },
             {
               "databaseId": "db",
               "id": "p3",
-              "name": "Tags",
               "action": "created"
             },
             {
               "databaseId": "db",
               "id": "p4",
-              "name": "Owner",
               "action": "updated"
             }
           ]
@@ -1359,31 +1355,26 @@
             {
               "databaseId": "db",
               "id": "p1",
-              "name": "Due date",
               "action": "updated"
             },
             {
               "databaseId": "db",
               "id": "p2",
-              "name": null,
               "action": "deleted"
             },
             {
               "databaseId": "db",
               "id": "p3",
-              "name": "Tags",
               "action": "deleted"
             },
             {
               "databaseId": "db",
               "id": "p4",
-              "name": null,
               "action": "updated"
             },
             {
               "databaseId": "db2",
               "id": "p1",
-              "name": "Due",
               "action": "created"
             }
           ]
@@ -1413,25 +1404,21 @@
             {
               "databaseId": "db",
               "id": "p1",
-              "name": "Due date",
               "action": "created"
             },
             {
               "databaseId": "db",
               "id": "p2",
-              "name": "Status",
               "action": "deleted"
             },
             {
               "databaseId": "db",
               "id": "p4",
-              "name": "Owner",
               "action": "updated"
             },
             {
               "databaseId": "db2",
               "id": "p1",
-              "name": "Due",
               "action": "created"
             }
           ],

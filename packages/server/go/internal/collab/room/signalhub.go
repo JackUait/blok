@@ -2,6 +2,7 @@ package room
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"sync"
 	"time"
@@ -40,8 +41,34 @@ type AuditEvent struct {
 	Lineage string
 }
 
-// signalQueueLimit: jobs waiting for the pump. Past it the oldest is dropped.
-const signalQueueLimit = 1024
+const (
+	// signalQueueLimit: jobs waiting for the pump. Past it the oldest is dropped.
+	signalQueueLimit = 1024
+	// DefaultSignalWindow is the window when none or a non-positive one is set.
+	DefaultSignalWindow = 60 * time.Second
+	// MaxSignalWindow is the longest window: C#'s timers cannot be armed
+	// past about 49.7 days, and every backend keeps the same bound.
+	MaxSignalWindow = 24 * time.Hour
+	// SignalCallTimeout bounds one journal read or one observer call on the pump.
+	SignalCallTimeout = 30 * time.Second
+	// editedWindow: content.edited at most once per this per document and actor.
+	editedWindow     = 55 * time.Second
+	editedStampLimit = 4096
+)
+
+var errSignalCallTimeout = errors.New("ran past " + strconv.Itoa(int(SignalCallTimeout/time.Second)) + " seconds")
+
+// SignalWindowOf is the window a setting runs: zero or less is the default,
+// and it never passes MaxSignalWindow.
+func SignalWindowOf(setting time.Duration) time.Duration {
+	switch {
+	case setting <= 0:
+		return DefaultSignalWindow
+	case setting > MaxSignalWindow:
+		return MaxSignalWindow
+	}
+	return setting
+}
 
 type signalWindow struct {
 	lineage  string
@@ -52,6 +79,8 @@ type signalWindow struct {
 	notes    map[uint64]RecordNote
 }
 
+type editedKey struct{ doc, actor string }
+
 // signalHub is CollabChangeSignalHub: each document's open window, and one
 // pump that reads, folds and calls the observer off every room's lane.
 type signalHub struct {
@@ -60,11 +89,12 @@ type signalHub struct {
 	length  time.Duration
 	now     func() time.Time
 	timers  Timers
-	read    func(docID, lineage string, sequence, since uint64, maxRecords int) (HistoryChanges, error)
+	read    func(ctx context.Context, docID, lineage string, sequence, since uint64, maxRecords int) (HistoryChanges, error)
 	logf    func(string)
 
-	mu   sync.Mutex
-	open map[string]*signalWindow
+	mu     sync.Mutex
+	open   map[string]*signalWindow
+	edited map[editedKey]time.Time
 
 	queueMu sync.Mutex
 	queue   []func()
@@ -84,20 +114,35 @@ func newSignalHub(observer ActivityObserver, m *Manager) *signalHub {
 		return nil
 	}
 	return &signalHub{
-		changes: changes, audit: audit, length: m.options.ChangeSignalWindow, now: m.options.Now,
-		timers: m.options.Timers, logf: m.logf, open: map[string]*signalWindow{},
-		read: func(docID, lineage string, sequence, since uint64, maxRecords int) (HistoryChanges, error) {
-			return m.Changes(context.Background(), docID, lineage, sequence, since, maxRecords, MaxChangeBytes)
+		changes: changes, audit: audit, length: SignalWindowOf(m.options.ChangeSignalWindow), now: m.options.Now,
+		timers: m.options.Timers, logf: m.logf, open: map[string]*signalWindow{}, edited: map[editedKey]time.Time{},
+		read: func(ctx context.Context, docID, lineage string, sequence, since uint64, maxRecords int) (HistoryChanges, error) {
+			return m.Changes(ctx, docID, lineage, sequence, since, maxRecords, MaxChangeBytes)
 		},
 	}
 }
 
-// committed: a record was journalled. Called on the room's lane.
-func (h *signalHub) committed(docID, lineage string, sequence uint64, note *RecordNote) {
-	if h == nil || h.changes == nil {
+// committed: a record was journalled. Called on the room's lane. It never
+// panics out: the record is durable, and a hub failure must not fail it.
+func (h *signalHub) committed(docID, lineage string, sequence uint64, actorID string, note *RecordNote) {
+	if h == nil {
 		return
 	}
-	var closed *signalWindow
+	defer func() {
+		if recover() != nil {
+			h.logSafe(`collab: the change signal for "` + docID + `" lost a record`)
+		}
+	}()
+	if h.changes != nil {
+		h.window(docID, lineage, sequence, note)
+	}
+	if h.audit != nil && actorID != "" {
+		h.editedEvent(docID, actorID, note)
+	}
+}
+
+func (h *signalHub) window(docID, lineage string, sequence uint64, note *RecordNote) {
+	var closed, opened *signalWindow
 	h.mu.Lock()
 	window := h.open[docID]
 	if window != nil && window.lineage != lineage {
@@ -105,7 +150,6 @@ func (h *signalHub) committed(docID, lineage string, sequence uint64, note *Reco
 		window.closed = true
 		closed, window = window, nil
 	}
-	var opened *signalWindow
 	if window == nil {
 		window = &signalWindow{lineage: lineage, from: sequence, start: h.now(), notes: map[uint64]RecordNote{}}
 		h.open[docID] = window
@@ -126,6 +170,32 @@ func (h *signalHub) committed(docID, lineage string, sequence uint64, note *Reco
 		opened.stop = stop
 		h.mu.Unlock()
 	}
+}
+
+// editedEvent is content.edited, throttled on its own stamps: a presence
+// heartbeat never mutes it.
+func (h *signalHub) editedEvent(docID, actorID string, note *RecordNote) {
+	at := h.now()
+	key := editedKey{docID, actorID}
+	h.mu.Lock()
+	if len(h.edited) > editedStampLimit {
+		for k, stamp := range h.edited {
+			if at.Sub(stamp) >= editedWindow {
+				delete(h.edited, k)
+			}
+		}
+	}
+	if last, ok := h.edited[key]; ok && at.Sub(last) < editedWindow {
+		h.mu.Unlock()
+		return
+	}
+	h.edited[key] = at
+	h.mu.Unlock()
+	actor := &AuditActor{ID: actorID}
+	if note != nil {
+		actor.Kind, actor.OnBehalfOf = note.Kind, note.OnBehalfOf
+	}
+	h.event(AuditEvent{Type: AuditContentEdited, DocID: docID, At: at, Actor: actor})
 }
 
 // forget drops a purged document's open window: its records are gone.
@@ -149,10 +219,35 @@ func (h *signalHub) event(event AuditEvent) {
 		return
 	}
 	h.enqueue(func() {
-		if err := h.audit.OnEvent(context.Background(), event); err != nil {
+		if err := h.bounded(func(ctx context.Context) error { return h.audit.OnEvent(ctx, event) }); err != nil {
 			h.logSafe(`collab: the activity observer failed on an audit event: ` + err.Error())
 		}
 	})
+}
+
+// bounded runs call, giving up after SignalCallTimeout on the room's timers.
+// A call that ignores its context keeps running, unawaited.
+func (h *signalHub) bounded(call func(ctx context.Context) error) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		defer func() {
+			if failure := recover(); failure != nil {
+				done <- errors.New(panicMessage(failure))
+			}
+		}()
+		done <- call(ctx)
+	}()
+	expired := make(chan struct{})
+	stop := h.timers.AfterFunc(SignalCallTimeout, func() { close(expired) })
+	defer stop()
+	select {
+	case err := <-done:
+		return err
+	case <-expired:
+		return errSignalCallTimeout
+	}
 }
 
 func (h *signalHub) close(docID string, window *signalWindow) {
@@ -181,17 +276,19 @@ func (h *signalHub) deliver(docID string, window *signalWindow) {
 
 func (h *signalHub) signal(docID string, window *signalWindow) {
 	span := strconv.FormatUint(window.from, 10) + ".." + strconv.FormatUint(window.to, 10)
-	result, err := h.read(docID, window.lineage, window.to, window.from-1, int(min(window.to-window.from+1, 1<<31-1)))
-	if err != nil || result.Status != HistoryReady {
-		reason := result.Status.String()
-		if err != nil {
-			reason = err.Error()
-		}
-		h.logSafe(`collab: the change signal for ` + span + ` of "` + docID + `" was dropped: ` + reason)
-		return
+	count := int(min(window.to-window.from+1, uint64(MaxChangeRecords)))
+	var result HistoryChanges
+	err := h.bounded(func(ctx context.Context) error {
+		var readErr error
+		result, readErr = h.read(ctx, docID, window.lineage, window.to, window.from-1, count)
+		return readErr
+	})
+	if err == nil && result.Status != HistoryReady {
+		err = errors.New("the history is " + result.Status.String())
 	}
-	if result.Truncated {
-		h.logSafe(`collab: the change signal for ` + span + ` of "` + docID + `" lists only the newest records that fit one read`)
+	if err != nil {
+		h.logSafe(`collab: the change signal for ` + span + ` of "` + docID + `" was dropped: ` + err.Error())
+		return
 	}
 	records := make([]SignalRecord, len(result.Changes))
 	for i, record := range result.Changes {
@@ -205,8 +302,14 @@ func (h *signalHub) signal(docID string, window *signalWindow) {
 	if signal == nil {
 		return
 	}
-	signal.FromSequence = window.from
-	if err := h.changes.OnChanges(context.Background(), *signal); err != nil {
+	// A cut read names only the records it folded; the host reads the rest
+	// through /history/changes.
+	if result.Truncated {
+		signal.Truncated = true
+	} else {
+		signal.FromSequence = window.from
+	}
+	if err := h.bounded(func(ctx context.Context) error { return h.changes.OnChanges(ctx, *signal) }); err != nil {
 		h.logSafe(`collab: the activity observer failed on a change signal: ` + err.Error())
 	}
 }

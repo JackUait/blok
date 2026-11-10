@@ -48,6 +48,9 @@ public sealed class OptionsValidateFixtureTests
         case "CollabKeepAliveIntervalMs":
           options.CollabKeepAliveInterval = TimeSpan.FromMilliseconds(value!.GetValue<long>());
           break;
+        case "CollabChangeSignalWindowMs":
+          options.CollabChangeSignalWindow = TimeSpan.FromMilliseconds(value!.GetValue<long>());
+          break;
         default:
           var property = typeof(BlokServerOptions).GetProperty(name) ??
               throw new InvalidOperationException($"no option {name}");

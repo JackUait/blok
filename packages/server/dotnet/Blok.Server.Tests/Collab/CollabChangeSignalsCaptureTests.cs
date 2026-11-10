@@ -148,22 +148,22 @@ public sealed class CollabChangeSignalsCaptureTests
             properties: [new("r1", ["st"]), new("r2", ["st"])]),
         R(3, 20, "u1", Blocks(("r1", "removed"))),
       ]),
-      ("schema entries per database: created then deleted is gone, created then updated is created", Minute,
+      ("schema entries per database, ids only: created then deleted is gone, created then updated is created", Minute,
       [
         R(1, 0, "u1", Blocks(("db", "changed")), schema:
         [
-          new("db", "p1", "Due", "created"),
-          new("db", "p2", "Status", "updated"),
-          new("db", "p3", "Tags", "created"),
-          new("db", "p4", "Owner", "updated"),
+          new("db", "p1", "created"),
+          new("db", "p2", "updated"),
+          new("db", "p3", "created"),
+          new("db", "p4", "updated"),
         ]),
         R(2, 10, "u1", Blocks(("db", "changed"), ("db2", "changed")), schema:
         [
-          new("db", "p1", "Due date", "updated"),
-          new("db", "p2", null, "deleted"),
-          new("db", "p3", "Tags", "deleted"),
-          new("db", "p4", null, "updated"),
-          new("db2", "p1", "Due", "created"),
+          new("db", "p1", "updated"),
+          new("db", "p2", "deleted"),
+          new("db", "p3", "deleted"),
+          new("db", "p4", "updated"),
+          new("db2", "p1", "created"),
         ]),
       ]),
       ("a longer window from the host", TimeSpan.FromMinutes(5),
@@ -247,7 +247,6 @@ public sealed class CollabChangeSignalsCaptureTests
       {
         ["databaseId"] = entry.DatabaseId,
         ["id"] = entry.Id,
-        ["name"] = entry.Name,
         ["action"] = entry.Action,
       })]);
 }

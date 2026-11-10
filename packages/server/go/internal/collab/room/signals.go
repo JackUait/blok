@@ -21,12 +21,12 @@ type SignalProperties struct {
 }
 
 // SignalSchema is CollabSignalSchema: one schema entry of one database,
-// created, updated or deleted over the window.
+// created, updated or deleted over the window. No name: a property name is
+// content.
 type SignalSchema struct {
-	DatabaseID string  `json:"databaseId"`
-	ID         string  `json:"id"`
-	Name       *string `json:"name"`
-	Action     string  `json:"action"`
+	DatabaseID string `json:"databaseId"`
+	ID         string `json:"id"`
+	Action     string `json:"action"`
 }
 
 // SignalAuthor is CollabSignalAuthor. Kind is nil when no note was written.
@@ -47,6 +47,9 @@ type ChangeSignal struct {
 	Properties               []SignalProperties
 	Schema                   []SignalSchema
 	Authors                  []SignalAuthor
+	// Truncated: the window held more records than one read takes. The
+	// signal names only the newest of them, from FromSequence on.
+	Truncated bool
 }
 
 // SignalRecord is one journal record as the change signals read it.
@@ -226,9 +229,6 @@ func combineSignalSchema(older, newer SignalSchema) *SignalSchema {
 		action = "deleted"
 	}
 	combined := newer
-	if combined.Name == nil {
-		combined.Name = older.Name
-	}
 	combined.Action = action
 	return &combined
 }
@@ -266,12 +266,8 @@ func signalRecordOf(lineage string, record RecordChanges, note *RecordNote) Sign
 		if entries, ok := fields.Get(jsjson.FromString("schema")); ok {
 			for _, item := range entries.([]any) {
 				entry := item.(*jsjson.Object)
-				schema := SignalSchema{DatabaseID: id, ID: entryText(entry, "id"), Action: entryText(entry, "action")}
-				if _, named := entry.Get(jsjson.FromString("name")); named {
-					name := entryText(entry, "name")
-					schema.Name = &name
-				}
-				out.Schema = append(out.Schema, schema)
+				out.Schema = append(out.Schema,
+					SignalSchema{DatabaseID: id, ID: entryText(entry, "id"), Action: entryText(entry, "action")})
 			}
 		}
 	}

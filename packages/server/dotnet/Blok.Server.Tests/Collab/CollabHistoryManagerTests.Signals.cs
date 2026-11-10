@@ -145,7 +145,7 @@ public sealed partial class CollabHistoryManagerTests
         new RecordingActivityObserver(),
         SignalWindow,
         time,
-        (_, _, _, _, _) => throw new InvalidOperationException("no history read"),
+        (_, _, _, _, _, _) => throw new InvalidOperationException("no history read"),
         null));
   }
 
@@ -193,6 +193,62 @@ public sealed partial class CollabHistoryManagerTests
         });
   }
 
+  [Fact]
+  public async Task AHungObserverCallTimesOutAndLaterSignalsStillFlow()
+  {
+    var observer = new SignalObserver { HangFirst = true };
+    var manager = SignalManager(observer);
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "two"));
+    time.Advance(SignalWindow);
+    await observer.Entered.Task.WaitAsync(TimeSpan.FromSeconds(30));
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync().WaitAsync(TimeSpan.FromSeconds(60));
+
+    await EditAsync(manager, Update("a", "three"));
+    time.Advance(SignalWindow);
+    await manager.SettleAsync();
+
+    var signal = Assert.Single(observer.Signals);
+    Assert.Equal((2UL, 2UL), (signal.FromSequence, signal.ToSequence));
+    Assert.Contains(log, line => line.Contains("ran past", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  public async Task AWindowPastOneReadNamesOnlyTheRecordsItFolded()
+  {
+    var observer = new SignalObserver();
+    var manager = SignalManager(observer);
+    await LoadAsync(manager);
+
+    for (var i = 0; i <= CollabRoomManager.MaxChangeRecords; i++)
+    {
+      await EditAsync(manager, Update("a", $"edit {i}"));
+    }
+
+    time.Advance(SignalWindow);
+    await manager.SettleAsync();
+
+    var signal = Assert.Single(observer.Signals);
+    Assert.True(signal.Truncated);
+    Assert.Equal((2UL, 201UL), (signal.FromSequence, signal.ToSequence));
+  }
+
+  [Fact]
+  public async Task AWindowPastTheLongestStillCommitsAndRunsOneDay()
+  {
+    var observer = new SignalObserver();
+    var manager = SignalManager(observer, TimeSpan.FromDays(60));
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "two"));
+    await EditAsync(manager, Update("a", "three"));
+    time.Advance(TimeSpan.FromDays(1));
+    await manager.SettleAsync();
+
+    var signal = Assert.Single(observer.Signals);
+    Assert.Equal(TimeSpan.FromDays(1), signal.WindowEnd - signal.WindowStart);
+  }
+
   private CollabRoomManager SignalManager(ICollabActivityObserver observer, TimeSpan? window = null) =>
       new(
           store,
@@ -212,6 +268,12 @@ public sealed partial class CollabHistoryManagerTests
     internal Exception? Failure { get; init; }
 
     internal TaskCompletionSource? Gate { get; init; }
+
+    internal bool HangFirst { get; init; }
+
+    internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private int calls;
 
     internal IReadOnlyList<CollabChangeSignal> Signals
     {
@@ -244,6 +306,12 @@ public sealed partial class CollabHistoryManagerTests
 
     public async ValueTask OnChangesAsync(CollabChangeSignal signal, CancellationToken cancellationToken = default)
     {
+      if (HangFirst && Interlocked.Increment(ref calls) == 1)
+      {
+        Entered.TrySetResult();
+        await new TaskCompletionSource().Task;
+      }
+
       if (Gate is { } gate)
       {
         await gate.Task;

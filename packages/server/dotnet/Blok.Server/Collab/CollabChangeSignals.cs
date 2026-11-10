@@ -19,6 +19,10 @@ namespace Blok.Server.Collab;
 /// <param name="Properties">Changed property ids, per database row.</param>
 /// <param name="Schema">Changed schema entries, per database.</param>
 /// <param name="Authors">Who wrote the window's records, first seen first.</param>
+/// <param name="Truncated">
+/// True when the window held more records than one read takes. The signal
+/// then names only the newest of them, from <paramref name="FromSequence"/> on.
+/// </param>
 public sealed record CollabChangeSignal(
     string DocumentId,
     string Lineage,
@@ -30,7 +34,8 @@ public sealed record CollabChangeSignal(
     IReadOnlyList<string> Page,
     IReadOnlyList<CollabSignalProperties> Properties,
     IReadOnlyList<CollabSignalSchema> Schema,
-    IReadOnlyList<CollabSignalAuthor> Authors);
+    IReadOnlyList<CollabSignalAuthor> Authors,
+    bool Truncated = false);
 
 /// <summary>One block: <c>added</c>, <c>removed</c>, <c>changed</c> or <c>moved</c> over the window.</summary>
 public sealed record CollabSignalBlock(string Id, string Kind);
@@ -38,8 +43,11 @@ public sealed record CollabSignalBlock(string Id, string Kind);
 /// <summary>The property ids that changed on one database row.</summary>
 public sealed record CollabSignalProperties(string RowId, IReadOnlyList<string> Ids);
 
-/// <summary>One schema entry of one database: <c>created</c>, <c>updated</c> or <c>deleted</c> over the window.</summary>
-public sealed record CollabSignalSchema(string DatabaseId, string Id, string? Name, string Action);
+/// <summary>
+/// One schema entry of one database: <c>created</c>, <c>updated</c> or
+/// <c>deleted</c> over the window. No name: a property name is content.
+/// </summary>
+public sealed record CollabSignalSchema(string DatabaseId, string Id, string Action);
 
 /// <summary>One author. Kind is the record note's kind, null when no note was written.</summary>
 public sealed record CollabSignalAuthor(string Id, string? Kind);
@@ -256,7 +264,7 @@ internal static class CollabChangeSignals
       ? newer.Action == "deleted" ? null : "created"
       : newer.Action == "deleted" ? "deleted" : "updated";
 
-    return action is null ? null : newer with { Name = newer.Name ?? older.Name, Action = action };
+    return action is null ? null : newer with { Action = action };
   }
 
   /// <summary>One record of a changes read, as the signals read it.</summary>
@@ -284,7 +292,6 @@ internal static class CollabChangeSignals
         schema.AddRange(entries.Select(entry => new CollabSignalSchema(
             block.Id,
             entry!["id"]!.GetValue<string>(),
-            entry["name"]?.GetValue<string>(),
             entry["action"]!.GetValue<string>())));
       }
     }

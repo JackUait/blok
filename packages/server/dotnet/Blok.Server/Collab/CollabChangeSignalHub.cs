@@ -10,12 +10,28 @@ namespace Blok.Server.Collab;
 /// <remarks>
 /// The room calls in from its lane and only touches a small lock here. The
 /// journal read, the fold and the observer calls run on one pump, one at a
-/// time, so a slow observer delays only later signals, never a room.
+/// time, each bounded by <see cref="CallTimeout"/>, so a slow observer
+/// delays only later signals, never a room.
 /// </remarks>
 internal sealed class CollabChangeSignalHub
 {
   /// <summary>Jobs waiting for the pump. Past it the oldest is dropped and logged.</summary>
   internal const int QueueLimit = 1024;
+
+  /// <summary>The window when none or a non-positive one is set.</summary>
+  internal static readonly TimeSpan DefaultWindow = TimeSpan.FromSeconds(60);
+
+  /// <summary>The longest window. Past about 49.7 days a timer cannot be armed at all.</summary>
+  internal static readonly TimeSpan MaxWindow = TimeSpan.FromDays(1);
+
+  /// <summary>How long one journal read or one observer call may take before the pump moves on.</summary>
+  internal static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(30);
+
+  /// <summary>content.edited arrives at most once per this per document and actor.</summary>
+  internal static readonly TimeSpan EditedWindow = TimeSpan.FromSeconds(55);
+
+  /// <summary>Past this many throttle stamps, the ones the window no longer covers are swept.</summary>
+  private const int EditedStampLimit = 4096;
 
   /// <summary>Reads (since, sequence] of one lineage, at most maxRecords of them.</summary>
   internal delegate ValueTask<CollabHistoryChangesResult> ReadChanges(
@@ -23,7 +39,8 @@ internal sealed class CollabChangeSignalHub
       string lineage,
       ulong sequence,
       ulong since,
-      int maxRecords);
+      int maxRecords,
+      CancellationToken cancellationToken);
 
   private sealed class Window(string lineage, ulong from, DateTimeOffset start)
   {
@@ -44,6 +61,7 @@ internal sealed class CollabChangeSignalHub
   private readonly ReadChanges read;
   private readonly Action<string>? log;
   private readonly Dictionary<string, Window> open = new(StringComparer.Ordinal);
+  private readonly Dictionary<(string Doc, string Actor), DateTimeOffset> edited = [];
   private readonly LinkedList<Func<Task>> queue = new();
   private bool pumping;
   private Task dispatch = Task.CompletedTask;
@@ -66,6 +84,10 @@ internal sealed class CollabChangeSignalHub
     this.log = log;
   }
 
+  /// <summary>The window a host's setting runs: zero or less is the default, and it never passes <see cref="MaxWindow"/>.</summary>
+  internal static TimeSpan WindowOf(TimeSpan setting) =>
+      setting <= TimeSpan.Zero ? DefaultWindow : setting > MaxWindow ? MaxWindow : setting;
+
   /// <summary>Null unless the observer overrides one of the two members.</summary>
   internal static CollabChangeSignalHub? For(
       ICollabActivityObserver? observer,
@@ -87,18 +109,39 @@ internal sealed class CollabChangeSignalHub
     var signals = Overrides(nameof(ICollabActivityObserver.OnChangesAsync));
     var events = Overrides(nameof(ICollabActivityObserver.OnEventAsync));
 
-    return signals || events ? new CollabChangeSignalHub(observer, signals, events, length, time, read, log) : null;
+    return signals || events
+      ? new CollabChangeSignalHub(observer, signals, events, WindowOf(length), time, read, log)
+      : null;
   }
 
-  /// <summary>A record was journalled. Call from the room's lane.</summary>
-  internal void Committed(string documentId, string lineage, ulong sequence, CollabRecordNote? note)
+  /// <summary>
+  /// A record was journalled. Call from the room's lane. Never throws: the
+  /// record is already durable, and a hub failure must not fail its commit.
+  /// </summary>
+  internal void Committed(string documentId, string lineage, ulong sequence, string? actorId, CollabRecordNote? note)
   {
-    if (!signals)
+    try
     {
-      return;
-    }
+      if (signals)
+      {
+        OpenOrExtend(documentId, lineage, sequence, note);
+      }
 
+      if (events && !string.IsNullOrEmpty(actorId))
+      {
+        Edited(documentId, actorId, note);
+      }
+    }
+    catch (Exception error)
+    {
+      Log($"collab: the change signal for \"{documentId}\" lost a record: {error.Message}");
+    }
+  }
+
+  private void OpenOrExtend(string documentId, string lineage, ulong sequence, CollabRecordNote? note)
+  {
     Window? closed = null;
+    Window? opened = null;
 
     lock (open)
     {
@@ -115,8 +158,7 @@ internal sealed class CollabChangeSignalHub
       {
         window = new Window(lineage, sequence, time.GetUtcNow());
         open[documentId] = window;
-        var opened = window;
-        window.Timer = time.CreateTimer(_ => Close(documentId, opened), null, length, Timeout.InfiniteTimeSpan);
+        opened = window;
       }
 
       window.To = sequence;
@@ -131,6 +173,50 @@ internal sealed class CollabChangeSignalHub
     {
       Deliver(documentId, closed);
     }
+
+    if (opened is not null)
+    {
+      // Armed outside the lock: a timer that fires at once takes it.
+      var timer = time.CreateTimer(_ => Close(documentId, opened), null, length, Timeout.InfiniteTimeSpan);
+
+      lock (open)
+      {
+        opened.Timer = timer;
+      }
+    }
+  }
+
+  /// <summary>content.edited, throttled on its own stamps: a presence heartbeat never mutes it.</summary>
+  private void Edited(string documentId, string actorId, CollabRecordNote? note)
+  {
+    var at = time.GetUtcNow();
+
+    lock (edited)
+    {
+      if (edited.Count > EditedStampLimit)
+      {
+        foreach (var (key, stamp) in edited)
+        {
+          if (at - stamp >= EditedWindow)
+          {
+            edited.Remove(key);
+          }
+        }
+      }
+
+      if (edited.TryGetValue((documentId, actorId), out var last) && at - last < EditedWindow)
+      {
+        return;
+      }
+
+      edited[(documentId, actorId)] = at;
+    }
+
+    Event(new CollabAuditEvent(
+        CollabAuditEventTypes.ContentEdited,
+        documentId,
+        at,
+        new CollabAuditActor(actorId, note?.Kind, note?.OnBehalfOf)));
   }
 
   /// <summary>A purged document's open window is dropped: its records are gone.</summary>
@@ -150,7 +236,7 @@ internal sealed class CollabChangeSignalHub
   {
     if (events)
     {
-      Enqueue(() => observer.OnEventAsync(auditEvent, CancellationToken.None).AsTask(), auditEvent.Type);
+      Enqueue(() => BoundedAsync(token => observer.OnEventAsync(auditEvent, token).AsTask()), auditEvent.Type);
     }
   }
 
@@ -185,27 +271,40 @@ internal sealed class CollabChangeSignalHub
 
   private void Deliver(string documentId, Window window)
   {
-    window.Timer?.Dispose();
+    lock (open)
+    {
+      window.Timer?.Dispose();
+    }
+
     Enqueue(() => SignalAsync(documentId, window), "change signal");
+  }
+
+  /// <summary>Runs one call, giving up after <see cref="CallTimeout"/>. A call that ignores its token keeps running, unawaited.</summary>
+  private async Task<T> BoundedAsync<T>(Func<CancellationToken, Task<T>> call)
+  {
+    using var deadline = new CancellationTokenSource(CallTimeout, time);
+
+    return await call(deadline.Token).WaitAsync(CallTimeout, time);
+  }
+
+  private async Task BoundedAsync(Func<CancellationToken, Task> call)
+  {
+    using var deadline = new CancellationTokenSource(CallTimeout, time);
+
+    await call(deadline.Token).WaitAsync(CallTimeout, time);
   }
 
   private async Task SignalAsync(string documentId, Window window)
   {
-    var count = (int)Math.Min(window.To - window.From + 1, int.MaxValue);
-    var result = await read(documentId, window.Lineage, window.To, window.From - 1, count);
+    var count = (int)Math.Min(window.To - window.From + 1, CollabRoomManager.MaxChangeRecords);
+    var result = await BoundedAsync(token =>
+        read(documentId, window.Lineage, window.To, window.From - 1, count, token).AsTask());
 
     if (result.Status != CollabHistoryStatus.Ready)
     {
-      log?.Invoke(
-          $"collab: the change signal for {window.From}..{window.To} of \"{documentId}\" was dropped: the history is {result.Status}");
+      Log($"collab: the change signal for {window.From}..{window.To} of \"{documentId}\" was dropped: the history is {result.Status}");
 
       return;
-    }
-
-    if (result.Truncated)
-    {
-      log?.Invoke(
-          $"collab: the change signal for {window.From}..{window.To} of \"{documentId}\" lists only the newest records that fit one read");
     }
 
     var records = result.Changes
@@ -215,10 +314,17 @@ internal sealed class CollabChangeSignalHub
             window.Notes.GetValueOrDefault(record.Sequence)))
         .ToList();
 
-    if (CollabChangeSignals.Collapse(documentId, window.Start, window.Start + length, records) is { } signal)
+    if (CollabChangeSignals.Collapse(documentId, window.Start, window.Start + length, records) is not { } signal)
     {
-      await observer.OnChangesAsync(signal with { FromSequence = window.From }, CancellationToken.None);
+      return;
     }
+
+    // A cut read names only the records it folded; the host reads the rest through /history/changes.
+    signal = result.Truncated
+      ? signal with { Truncated = true }
+      : signal with { FromSequence = window.From };
+
+    await BoundedAsync(token => observer.OnChangesAsync(signal, token).AsTask());
   }
 
   private void Enqueue(Func<Task> job, string what)
@@ -270,6 +376,10 @@ internal sealed class CollabChangeSignalHub
       try
       {
         await next();
+      }
+      catch (TimeoutException)
+      {
+        Log($"collab: a change signal or audit event was dropped: a journal read or an observer call ran past {CallTimeout.TotalSeconds} seconds");
       }
       catch (Exception error)
       {

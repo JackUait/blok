@@ -1089,12 +1089,9 @@ test.describe('Table cell copy/paste', () => {
     ).toHaveText('B');
   });
 
-  test('should not intercept copy when user has text selected inside a single cell block', async ({ page }) => {
-    // Regression test: when a user selects text within a cell's contenteditable and presses
-    // Cmd+C, the table cell selection handler must NOT override the native copy.
-    // Previously, because hasSelection=true after any cell click, the handler would
-    // always intercept Cmd+C and write the whole cell structure to the clipboard instead
-    // of the user's text selection.
+  test('copies only the selected text, not the cell structure, when text is selected inside a single cell block', async ({ page }) => {
+    // After a click in a cell the table has a cell selection, but a text selection
+    // inside the cell wins: the cell-range copy must stand down.
     await createBlok(page, {
       tools: defaultTools,
       data: {
@@ -1124,21 +1121,12 @@ test.describe('Table cell copy/paste', () => {
     // Select all text in the cell using keyboard (Ctrl+A / Cmd+A within the contenteditable)
     await page.keyboard.press('ControlOrMeta+a');
 
-    // Now perform a copy event and capture what the handler writes to clipboardData.
-    // If the bug is present, the table cell handler will intercept and write the full
-    // cell structure (HTML containing <table>).
-    // If the fix is correct, the handler should NOT intercept (no setData calls),
-    // leaving the dataStore empty (the native selection copy takes over).
     const { html, plain } = await performCopyAndCapture(page);
 
-    // The table cell handler must NOT have intercepted this copy.
-    // It should NOT write a <table> structure — that would mean it stole the native copy
-    // and replaced the user's text selection with the whole cell block structure.
-    expect(html).not.toContain('<table');
-
-    // The plain text captured by the intercepting handler should also be empty —
-    // native copy is responsible for the actual clipboard content.
-    expect(plain).toBe('');
+    // Blok's in-block copy writes the selected text alone: no <table> around it
+    // and none of the cell's computed styles.
+    expect(html).toBe('Hello World');
+    expect(plain).toBe('Hello World');
   });
 
   test('copies a merged range with an image and pastes it back with full fidelity', async ({ page }) => {

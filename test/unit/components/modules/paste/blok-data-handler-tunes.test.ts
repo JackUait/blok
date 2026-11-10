@@ -27,7 +27,12 @@ const setup = (): { handler: BlokDataHandler; inserted: Inserted[] } => {
     Tools: {
       stubTool: 'stub',
       unavailable: new Map(),
-      blockTools: { get: vi.fn(() => ({ sanitizeConfig: {} })) },
+      blockTools: {
+        get: vi.fn(() => ({
+          sanitizeConfig: {},
+          tunes: new Map([['noteTune', { name: 'noteTune', sanitizeConfig: { note: { b: true } } }]]),
+        })),
+      },
     },
     YjsManager: { stopCapturing: vi.fn() },
   } as unknown as BlokModules;
@@ -84,6 +89,26 @@ describe('BlokDataHandler — block tunes', () => {
       ['paragraph', { noteTune: { note: 'cell note' } }],
       ['table', { noteTune: { note: 'table note' } }],
     ]);
+  });
+
+  it('drops a tune the pasted block\'s tool does not enable', async () => {
+    const { handler, inserted } = setup();
+
+    await handler.handle(JSON.stringify([
+      { id: 'a', tool: 'paragraph', data: { text: 'A' }, tunes: { noteTune: { note: 'keep' }, forgedTune: { x: 1 } } },
+    ]), { canReplaceCurrentBlock: false });
+
+    expect(inserted[0].tunes).toEqual({ noteTune: { note: 'keep' } });
+  });
+
+  it('cleans tune data with the tune\'s sanitize rules', async () => {
+    const { handler, inserted } = setup();
+
+    await handler.handle(JSON.stringify([
+      { id: 'a', tool: 'paragraph', data: { text: 'A' }, tunes: { noteTune: { note: '<img src="x" onerror="alert(1)"><b>ok</b>' } } },
+    ]), { canReplaceCurrentBlock: false });
+
+    expect(inserted[0].tunes).toEqual({ noteTune: { note: '<b>ok</b>' } });
   });
 
   it('drops tunes that are not an object', async () => {

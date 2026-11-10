@@ -337,6 +337,35 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * The entry's tunes as insert options. The clipboard JSON can be forged, so
+   * only tunes the tool enables are kept, each cleaned with its own rules.
+   * @param tool - the tool the block is inserted with
+   * @param entry - the clipboard entry
+   */
+  private tunesOf(tool: string, entry: BlokClipboardBlock): { tunes?: { [name: string]: BlockTuneData } } {
+    const { tunes } = entry;
+    const enabled = this.Blok.Tools.blockTools.get(tool)?.tunes;
+
+    if (typeof tunes !== 'object' || tunes === null || Array.isArray(tunes) || enabled === undefined) {
+      return {};
+    }
+
+    const kept = Object.entries(tunes).flatMap(([name, value]): Array<[string, BlockTuneData]> => {
+      const tune = enabled.get(name);
+
+      if (tune === undefined) {
+        return [];
+      }
+
+      const [cleaned] = sanitizeBlocks([{ tool: name, data: { value } }], { value: tune.sanitizeConfig }, this.config.sanitizer);
+
+      return [[name, (cleaned.data as { value: BlockTuneData }).value]];
+    });
+
+    return kept.length > 0 ? { tunes: Object.fromEntries(kept) } : {};
+  }
+
+  /**
    * The table enclosing the caret cell, when the batch holds a tool barred from cells.
    * @param blocks - the clipboard entries, nested ones included
    */
@@ -497,7 +526,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         const block = insertOrStub({ tool: sanitized.tool,
           data: remapDatabaseViewIds(sanitized.tool, original.id, sanitized.data, copiedViewIds),
           origin: 'paste',
-          ...tunesOf(original) });
+          ...this.tunesOf(sanitized.tool, original) });
 
         oldIdToEntry.set(original.id, { newBlock: block, original });
         Caret.setToBlock(block, Caret.positions.END);
@@ -527,7 +556,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
           replace: idx === 0 && shouldReplaceFirst && tableCells.length === 0,
           origin: 'paste',
           ...(id !== undefined && { id }),
-          ...tunesOf(original),
+          ...this.tunesOf(sanitized.tool, original),
         });
 
         // A root of the paste joins the caret's container. A copied parent that is
@@ -576,17 +605,6 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     }
   }
 }
-
-/**
- * The entry's tunes as insert options. Like a load, tunes this editor lacks are
- * kept as they are; anything but a plain object is dropped, since the block
- * reads tunes with Object.entries.
- */
-const tunesOf = (entry: BlokClipboardBlock): { tunes?: { [name: string]: BlockTuneData } } => {
-  const { tunes } = entry;
-
-  return typeof tunes === 'object' && tunes !== null && !Array.isArray(tunes) ? { tunes } : {};
-};
 
 /** Any page can write this payload, so a carried url must be a safe href. */
 const isCopyLink = (value: unknown): value is CopyLink =>

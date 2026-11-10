@@ -3226,6 +3226,29 @@ describe('Paste module', () => {
       );
     });
 
+    it('keeps the tool pattern route for a Notion payload whose plain text matches it', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('embed', {
+        name: 'embed',
+        pasteConfig: { patterns: { url: /^https:\/\/example\.com$/ } },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter);
+
+      await paste.prepare();
+      mocks.BlockManager.paste.mockReturnValue({ id: 'embed-block' });
+
+      await paste.processDataTransfer(new MockDataTransfer({
+        'text/_notion-blocks-v3-production': notionV3,
+        'text/plain': 'https://example.com',
+      }));
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+      expect(mocks.BlockManager.paste.mock.calls[0][0]).toBe('embed');
+      expect(mocks.BlockManager.insert).not.toHaveBeenCalled();
+    });
+
     it('prefers native application/x-blok data over the Notion flavor', async () => {
       const { paste, mocks } = createPaste();
 

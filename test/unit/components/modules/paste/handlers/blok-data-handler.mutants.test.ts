@@ -1,11 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BlokDataHandler } from '../../../../../../src/components/modules/paste/handlers/blok-data-handler';
+import { PatternHandler } from '../../../../../../src/components/modules/paste/handlers/pattern-handler';
+import type * as PatternHandlerModule from '../../../../../../src/components/modules/paste/handlers/pattern-handler';
 import type { SanitizerConfigBuilder } from '../../../../../../src/components/modules/paste/sanitizer-config';
 import type { ToolRegistry } from '../../../../../../src/components/modules/paste/tool-registry';
 import type { PatternSubstitute } from '../../../../../../src/components/modules/paste/types';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 import type { SanitizerConfig } from '../../../../../../types/configs/sanitizer-config';
+
+const patternHandlerBuilds = vi.hoisted(() => ({ count: 0 }));
+
+/**
+ * BlokDataHandler never CALLS the pattern handler it lazily builds — it only
+ * constructs it once. Counting constructions is the only way to observe that,
+ * and the max length is copied off the real class so the fixture below cannot
+ * drift away from the production constant.
+ */
+vi.mock('../../../../../../src/components/modules/paste/handlers/pattern-handler', async (importOriginal) => {
+  const actual = await importOriginal<typeof PatternHandlerModule>();
+
+  return {
+    PatternHandler: class {
+      public static readonly PATTERN_PROCESSING_MAX_LENGTH = actual.PatternHandler.PATTERN_PROCESSING_MAX_LENGTH;
+
+      public constructor() {
+        patternHandlerBuilds.count += 1;
+      }
+    },
+  };
+});
 
 interface FakeBlock {
   id: string;
@@ -196,6 +220,7 @@ const createHandler = (harness: Harness, registry: ToolRegistry = createRegistry
 describe('BlokDataHandler — mutation coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    patternHandlerBuilds.count = 0;
   });
 
   afterEach(() => {
@@ -581,9 +606,9 @@ describe('BlokDataHandler — mutation coverage', () => {
     });
   });
 
-  describe('Blok JSON over tool patterns', () => {
-    // Blok's own text/plain is Markdown of the copied blocks, so it can read as one pattern.
-    it('inserts the JSON blocks even when the plain text matches a tool pattern', async () => {
+  describe('pattern matching before Blok JSON', () => {
+    // Blok's own text/plain is the Markdown of the copied blocks, so it can read as one pattern.
+    it('inserts the JSON blocks from the Blok clipboard even when the plain text matches a tool pattern', async () => {
       const harness = createHarness();
       const handler = createHandler(harness, createRegistry([linkPattern], linkPattern));
 
@@ -595,12 +620,127 @@ describe('BlokDataHandler — mutation coverage', () => {
           tool: 'paragraph',
           data: { text: '' } },
       ]), { canReplaceCurrentBlock: true,
-        plainData: 'https://example.com' });
+        plainData: 'https://example.com',
+        fromBlokClipboard: true });
 
       expect(harness.pastes).toEqual([]);
       expect(result).toBe(true);
       expect(harness.inserts.map(insert => insert.data.text)).toEqual(['https://example.com', '']);
       expect(harness.inserts.map(insert => insert.replace)).toEqual([true, false]);
+    });
+
+    it('pastes the matched pattern instead of converted foreign JSON blocks', async () => {
+      const harness = createHarness();
+      const handler = createHandler(harness, createRegistry([linkPattern], linkPattern));
+
+      const result = await handler.handle(JSON.stringify([
+        { id: 'b1',
+          tool: 'paragraph',
+          data: { text: 'JSON fallback' } },
+      ]), { canReplaceCurrentBlock: true,
+        plainData: 'https://example.com' });
+
+      expect(result).toBe(true);
+      expect(harness.inserts).toEqual([]);
+      expect(harness.pastes).toHaveLength(1);
+      expect(harness.pastes[0].tool).toBe('link');
+      expect(harness.pastes[0].replace).toBe(true);
+      expect(harness.pastes[0].event.type).toBe('pattern');
+      expect(harness.pastes[0].event.detail).toEqual({ key: 'link',
+        data: 'https://example.com' });
+      expect(harness.caretCalls).toEqual([
+        { blockId: harness.blocks[0].id,
+          position: 'end' },
+      ]);
+    });
+
+    it('builds the pattern handler once across repeated pattern pastes', async () => {
+      const harness = createHarness();
+      const handler = createHandler(harness, createRegistry([linkPattern], linkPattern));
+      const context = { canReplaceCurrentBlock: false,
+        plainData: 'https://example.com' };
+      const json = JSON.stringify([{ id: 'b1',
+        tool: 'paragraph',
+        data: { text: 'JSON fallback' } }]);
+
+      await handler.handle(json, context);
+      await handler.handle(json, context);
+
+      expect(patternHandlerBuilds.count).toBe(1);
+    });
+
+    it('inserts the JSON blocks when the paste carries no plain text', async () => {
+      const harness = createHarness();
+      const handler = createHandler(harness, createRegistry([linkPattern], linkPattern));
+
+      const result = await handler.handle(JSON.stringify([
+        { id: 'b1',
+          tool: 'paragraph',
+          data: { text: 'JSON' } },
+      ]), { canReplaceCurrentBlock: false });
+
+      expect(result).toBe(true);
+      expect(harness.pastes).toEqual([]);
+      expect(harness.inserts.map(insert => insert.data.text)).toEqual(['JSON']);
+    });
+
+    it('inserts the JSON blocks when no tool claims the plain text', async () => {
+      const harness = createHarness();
+      const handler = createHandler(harness, createRegistry([linkPattern]));
+
+      const result = await handler.handle(JSON.stringify([
+        { id: 'b1',
+          tool: 'paragraph',
+          data: { text: 'JSON' } },
+      ]), { canReplaceCurrentBlock: false,
+        plainData: 'plain words' });
+
+      expect(result).toBe(true);
+      expect(harness.pastes).toEqual([]);
+      expect(harness.inserts.map(insert => insert.data.text)).toEqual(['JSON']);
+    });
+
+    it('skips pattern matching when no tool registered a pattern', async () => {
+      const harness = createHarness();
+      // A registry with no patterns still answers findToolForPattern; the
+      // emptiness of toolsPatterns is what must gate the pattern pass.
+      const handler = createHandler(harness, createRegistry([], linkPattern));
+
+      await handler.handle(JSON.stringify([
+        { id: 'b1',
+          tool: 'paragraph',
+          data: { text: 'JSON' } },
+      ]), { canReplaceCurrentBlock: false,
+        plainData: 'https://example.com' });
+
+      expect(harness.pastes).toEqual([]);
+      expect(harness.inserts.map(insert => insert.data.text)).toEqual(['JSON']);
+    });
+
+    it('pattern-matches text at the length limit and skips it beyond', async () => {
+      const atLimit = 'h'.repeat(PatternHandler.PATTERN_PROCESSING_MAX_LENGTH);
+      const overLimit = 'h'.repeat(PatternHandler.PATTERN_PROCESSING_MAX_LENGTH + 1);
+      const json = JSON.stringify([{ id: 'b1',
+        tool: 'paragraph',
+        data: { text: 'JSON' } }]);
+
+      const atLimitHarness = createHarness();
+      const atLimitHandler = createHandler(atLimitHarness, createRegistry([linkPattern], linkPattern));
+
+      await atLimitHandler.handle(json, { canReplaceCurrentBlock: false,
+        plainData: atLimit });
+
+      expect(atLimitHarness.pastes).toHaveLength(1);
+      expect(atLimitHarness.inserts).toEqual([]);
+
+      const overLimitHarness = createHarness();
+      const overLimitHandler = createHandler(overLimitHarness, createRegistry([linkPattern], linkPattern));
+
+      await overLimitHandler.handle(json, { canReplaceCurrentBlock: false,
+        plainData: overLimit });
+
+      expect(overLimitHarness.pastes).toEqual([]);
+      expect(overLimitHarness.inserts.map(insert => insert.data.text)).toEqual(['JSON']);
     });
   });
 });

@@ -857,7 +857,14 @@ test.describe('copy and paste', () => {
         const editable = page.locator(`${BLOCK_SELECTOR} [contenteditable="true"]`).first();
         const commandModifier = await getCommandModifierKey(page);
 
-        await editable.click();
+        const box = await editable.boundingBox();
+
+        if (box === null) {
+          throw new Error('The editable has no box');
+        }
+
+        // Firefox hangs on a click into URL text, so click past its end.
+        await editable.click({ position: { x: box.width - 4, y: box.height / 2 } });
         await page.keyboard.press(`${commandModifier}+A`);
         await page.keyboard.press(`${commandModifier}+A`);
         await page.keyboard.press(`${commandModifier}+A`);

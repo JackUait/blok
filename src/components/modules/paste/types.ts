@@ -60,6 +60,8 @@ export interface HandlerContext {
   plainData?: string;
   /** The DOM element that was the target of the paste event. */
   pasteTarget?: Element;
+  /** The block data came from `application/x-blok`, not a converted foreign flavour. */
+  fromBlokClipboard?: boolean;
 }
 
 /**

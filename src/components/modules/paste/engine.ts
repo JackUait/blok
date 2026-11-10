@@ -123,13 +123,14 @@ export class PasteEngine {
     // carry full block state (checked, language, nesting, colour…) that the
     // HTML flavour cannot. We translate them into the Blok clipboard shape so
     // they flow through the existing BlokDataHandler two-pass hierarchy builder.
+    const nativeBlokData = dataTransfer.getData(BLOK_MIME_TYPE);
     const blokData =
-      dataTransfer.getData(BLOK_MIME_TYPE) ||
+      nativeBlokData ||
       this.readNotionBlocksV3(dataTransfer) ||
       this.readNextSpaceBlocks(dataTransfer);
 
     // Route to handlers based on data type
-    const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData, pasteTarget);
+    const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData, pasteTarget, nativeBlokData !== '');
 
     if (handled) {
       return;
@@ -218,7 +219,8 @@ export class PasteEngine {
     plainData: string,
     rawHtmlData: string,
     blokData: string,
-    pasteTarget?: Element
+    pasteTarget?: Element,
+    fromBlokClipboard = false
   ): Promise<boolean> {
     const { BlockManager } = this.Blok;
     const currentBlock = BlockManager.currentBlock;
@@ -235,6 +237,7 @@ export class PasteEngine {
       currentBlock: currentBlock ?? undefined,
       plainData,
       pasteTarget,
+      fromBlokClipboard,
     };
 
     // Try handlers in priority order

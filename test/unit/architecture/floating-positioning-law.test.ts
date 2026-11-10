@@ -263,7 +263,7 @@ const TRACKED_VIRTUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-property-menu.ts': 'The type list takes the closed panel\'s corner rect, which then moves with the property anchor that opened the panel.',
   'tools/database/database-rollup-setup.ts': 'The rollup setup menu covers its cell 2px above the row: the corner rect tracks the cell element.',
   'tools/database/database-table-menus.ts': 'openMenu passes the caller\'s point and its live element through to the popover.',
-  'tools/database/index.ts': 'A board card\'s ⋯ menu opens at the click x level with the button: the point tracks the card.',
+  'tools/database/index.ts': 'A board or gallery card\'s ⋯ menu opens at the click point: the point tracks the card.',
   'tools/link/paste-menu/controller.ts': 'Link-end rectangles track the inserted link block holder while open.',
 };
 

@@ -22,7 +22,7 @@ const GROUPS = [
   { id: 'complete', kind: 'complete', name: 'Complete', color: 'green', position: 'a2' },
 ];
 
-const blocks = (): OutputBlockData[] => [
+const blocks = (layout: 'board' | 'gallery' = 'board'): OutputBlockData[] => [
   {
     id: 'db-1',
     type: 'database',
@@ -43,7 +43,7 @@ const blocks = (): OutputBlockData[] => [
           },
         },
       ],
-      views: [{ id: 'v1', name: 'Board', type: 'board', position: 'a0', groupBy: 'st', sorts: [], filters: [], properties: [] }],
+      views: [{ id: 'v1', name: 'Board', type: layout, position: 'a0', groupBy: 'st', sorts: [], filters: [], properties: [] }],
       activeViewId: 'v1',
     },
     content: ['r1'],
@@ -51,7 +51,7 @@ const blocks = (): OutputBlockData[] => [
   { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { t: 'Alpha', st: 's1' } } },
 ];
 
-const mount = async (page: Page): Promise<void> => {
+const mount = async (page: Page, layout: 'board' | 'gallery' = 'board'): Promise<void> => {
   await page.evaluate(async (data) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -65,7 +65,7 @@ const mount = async (page: Page): Promise<void> => {
     document.body.appendChild(holder);
     window.blokInstance = new window.Blok({ holder, data: { blocks: data } });
     await window.blokInstance.isReady;
-  }, blocks());
+  }, blocks(layout));
 };
 
 const column = (page: Page, optionId: string): ReturnType<Page['locator']> =>
@@ -183,3 +183,43 @@ test('a card\'s ⋯ menu opens at the click point, with Notion\'s rows and its s
     expect(row.font).toBe('14px/16.8px 400');
   }
 });
+
+/** notion-motion.md, Round 9: the menu's top-left is the click point, 1px down, on board and gallery cards. */
+const menuCorner = async (page: Page, button: ReturnType<Page['locator']>, dx: number, dy: number): Promise<{ click: { x: number; y: number }; box: { x: number; y: number } }> => {
+  const anchor = await button.boundingBox();
+  const click = { x: (anchor?.x ?? 0) + dx, y: (anchor?.y ?? 0) + dy };
+
+  await page.mouse.click(click.x, click.y);
+  await expect(page.getByPlaceholder('Search actions…')).toBeFocused();
+  const menu = page.locator('[data-blok-popover-custom-class~="blok-database-card-menu"] [data-blok-popover-container]').last();
+
+  await expect.poll(() => menu.evaluate((el) => el.getAnimations().length)).toBe(0);
+  const box = await menu.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+
+    return { x: rect.left, y: rect.top };
+  });
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByPlaceholder('Search actions…')).toHaveCount(0);
+
+  return { click, box };
+};
+
+for (const layout of ['board', 'gallery'] as const) {
+  test(`a ${layout} card's ⋯ menu opens with its top-left at the click point, 1px down`, async ({ page }) => {
+    // Tall enough that the menu is not pushed up to stay in the window, as Notion was measured.
+    await page.setViewportSize({ width: 1512, height: 1100 });
+    await mount(page, layout);
+    const card = page.locator(layout === 'board' ? '[data-blok-database-card]' : '[data-blok-database-gallery-card]').first();
+    const button = card.locator('[data-blok-database-card-menu]');
+
+    for (const [dx, dy] of [[5, 5], [17, 20]] as const) {
+      await card.hover();
+      const { click, box } = await menuCorner(page, button, dx, dy);
+
+      expect(box.y).toBeCloseTo(click.y + 1, 0);
+      expect(box.x).toBeCloseTo(click.x, 0);
+    }
+  });
+}

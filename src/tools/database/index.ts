@@ -759,6 +759,8 @@ export class DatabaseTool implements BlockTool {
   private bulkEditor: CellEditorHandle | null = null;
   /** The board/list selection bar, when shown. */
   private rowSelectionBar: HTMLElement | null = null;
+  /** A new board card left unnamed by Escape: selected alone, it shows no bar. Any other selection drops it. */
+  private barlessRowId: string | null = null;
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
@@ -8831,7 +8833,7 @@ export class DatabaseTool implements BlockTool {
 
         if (rowId !== null && cardEl instanceof HTMLElement) {
           event.stopPropagation();
-          this.openCardMenu(cardMenuBtn, cardEl, rowId, this.cardMenuPoint(cardMenuBtn, cardEl, event));
+          this.openCardMenu(cardMenuBtn, cardEl, rowId, this.cardMenuPoint(cardEl, event));
         }
 
         return;
@@ -8981,14 +8983,13 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * notion-motion.md, Round 8c: a board card's ⋯ menu starts at the pointer's x, level with the button.
-   * A key press has no pointer, so it keeps the button. The gallery is unmeasured.
+   * notion-motion.md, Round 9: a board or gallery card's ⋯ menu opens with its top-left at the click point, 1px down.
+   * A key press has no pointer, so it keeps the button. List, feed and timeline are unmeasured.
    */
-  private cardMenuPoint(button: HTMLElement, cardEl: HTMLElement, event: MouseEvent): OpenMenuOptions['at'] {
-    if (event.detail === 0 || !cardEl.matches('[data-blok-database-card]')) return undefined;
-    const box = button.getBoundingClientRect();
+  private cardMenuPoint(cardEl: HTMLElement, event: MouseEvent): OpenMenuOptions['at'] {
+    if (event.detail === 0 || !cardEl.matches('[data-blok-database-card], [data-blok-database-gallery-card]')) return undefined;
 
-    return { position: new DOMRect(event.clientX, box.top, 0, box.height), positionContext: cardEl };
+    return { position: new DOMRect(event.clientX, event.clientY + 1, 0, 0), positionContext: cardEl };
   }
 
   /**
@@ -9344,7 +9345,10 @@ export class DatabaseTool implements BlockTool {
       if (this.view instanceof DatabaseBoardView) {
         this.view.editTitle(rowData.id, {
           onEnter: () => this.handleAddRow(optionId, this.boardContainer ?? boardEl, subKey),
-          onEscapeEmpty: () => this.selectRows([rowData.id]),
+          onEscapeEmpty: () => {
+            this.barlessRowId = rowData.id;
+            this.selectRows([rowData.id]);
+          },
         });
       }
     };
@@ -10430,6 +10434,9 @@ export class DatabaseTool implements BlockTool {
     const present = new Set(this.model.getOrderedRows().map((row) => row.id));
 
     [...this.rowSelection].filter((id) => !present.has(id)).forEach((id) => this.rowSelection.delete(id));
+    if (this.barlessRowId !== null && (this.rowSelection.size !== 1 || !this.rowSelection.has(this.barlessRowId))) {
+      this.barlessRowId = null;
+    }
     container.querySelectorAll<HTMLElement>('[data-blok-database-list-row], [data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-timeline-row], [data-blok-database-timeline-table-row], [data-blok-database-calendar-event]').forEach((el) => {
       const selected = this.rowSelection.has(el.getAttribute('data-row-id') ?? '');
 
@@ -10454,7 +10461,8 @@ export class DatabaseTool implements BlockTool {
     const view = this.shownView();
 
     // research/22 §1: Notion shows no bulk bar for picked calendar events.
-    if (view?.type === 'calendar') {
+    // notion-motion.md, Round 9: nor for a new board card left unnamed by Escape.
+    if (view?.type === 'calendar' || this.barlessRowId !== null) {
       return;
     }
     const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());

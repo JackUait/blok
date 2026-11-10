@@ -311,6 +311,7 @@ const createHarness = (options: HarnessOptions): Harness => {
     resolveToSelectableBlock: (block: Block): Block => block,
     isSelectionUnit: (): boolean => true,
     getSelectionSiblingRange: (): Block[] => [],
+    withCoveredLayouts: (selected: Block[]): Block[] => selected,
     isBlokEmpty: (): boolean => store.length === 0,
     ...options.repository,
   };

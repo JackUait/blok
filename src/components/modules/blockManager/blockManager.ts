@@ -1145,9 +1145,10 @@ export class BlockManager extends Module {
    */
   public deleteSelectedBlocksAndInsertReplacement(forceReplacement = false): Block | undefined {
     // Collect selected blocks, expanded to include each one's flat-indent
-    // followers (Notion deletes a Tab-nested parent together with its children),
-    // then attach indices sorted descending for safe removal.
-    const expandedBlocks = this.withFlatIndentFollowers(this.blocks.filter((block) => block.selected))
+    // followers (Notion deletes a Tab-nested parent together with its children)
+    // and to the layouts they fill, so no empty column_list is left behind.
+    // Then attach indices sorted descending for safe removal.
+    const expandedBlocks = this.withFlatIndentFollowers(this.withCoveredLayouts(this.blocks.filter((block) => block.selected)))
       .filter((block) => !carriesReadOnly(block, (id) => this.getBlockById(id)));
     const selectedBlockEntries = expandedBlocks
       .map((block) => ({ block, index: this.blocks.indexOf(block) }))
@@ -1491,6 +1492,15 @@ export class BlockManager extends Module {
    */
   public getSelectionSiblingRange(anchor: Block, target: Block): Block[] {
     return this.repository.getSelectionSiblingRange(anchor, target);
+  }
+
+  /**
+   * See {@link BlockRepository.withCoveredLayouts}.
+   * @param blocks - selected blocks, in document order
+   * @returns {Block[]} the blocks, with covered layouts in place of their units
+   */
+  public withCoveredLayouts(blocks: Block[]): Block[] {
+    return this.repository.withCoveredLayouts(blocks);
   }
 
   /**

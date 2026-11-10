@@ -985,7 +985,7 @@ export class BlockSelection extends Module {
       }
     };
 
-    for (const block of blocks) {
+    for (const block of this.Blok.BlockManager.withCoveredLayouts(blocks)) {
       collect(block);
     }
 

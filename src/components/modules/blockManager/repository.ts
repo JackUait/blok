@@ -355,6 +355,41 @@ export class BlockRepository {
   }
 
   /**
+   * The blocks with every layout block (column_list, column) whose selection
+   * units are all among them standing in for those units, at its own place.
+   * A selection never holds a layout block, so copy and delete use this to act
+   * on the layout instead of leaving it behind, empty or missing. A layout
+   * whose parent owns its children (a column, a tab) is a part of that parent
+   * and never stands in alone.
+   * @param blocks - selected blocks, in document order
+   */
+  public withCoveredLayouts(blocks: Block[]): Block[] {
+    const selected = new Set(blocks);
+    const parentOf = (block: Block): Block | undefined => block.parentId === null ? undefined : this.getBlockById(block.parentId);
+
+    const unitsOf = (block: Block): Block[] => block.contentIds
+      .map((id) => this.getBlockById(id))
+      .filter((child): child is Block => child !== undefined)
+      .flatMap((child) => this.isSelectionUnit(child) ? [child] : unitsOf(child));
+
+    const coveredLayout = (block: Block): Block | undefined => {
+      const ancestors = this.ancestorChain(block).slice(1);
+      const firstNonLayout = ancestors.findIndex((ancestor) => !BlockRepository.isLayoutBlock(ancestor));
+      const layouts = firstNonLayout === -1 ? ancestors : ancestors.slice(0, firstNonLayout);
+
+      return layouts.reverse().find((layout) => {
+        const units = unitsOf(layout);
+
+        return parentOf(layout)?.tool.ownsChildren !== true
+          && units.length > 0
+          && units.every((unit) => selected.has(unit));
+      });
+    };
+
+    return [...new Set(blocks.map((block) => coveredLayout(block) ?? block))];
+  }
+
+  /**
    * The block on `chain` that is a direct child of `commonAncestor` (or the
    * chain's outermost block when the two endpoints share no ancestor).
    * @param chain - a block's ancestor chain, innermost first

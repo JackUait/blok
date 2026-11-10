@@ -943,6 +943,77 @@ test.describe('copy and paste', () => {
     }
   });
 
+  test.describe('a range across a column layout', () => {
+    const doc: OutputData['blocks'] = [
+      { id: 'pre', type: 'paragraph', data: { text: 'Before' } },
+      { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+      { id: 'c1', type: 'column', data: { widthRatio: 2 }, parent: 'cl', content: ['c1p'] },
+      { id: 'c1p', type: 'paragraph', parent: 'c1', data: { text: 'Left col' } },
+      { id: 'c2', type: 'column', data: { widthRatio: 1 }, parent: 'cl', content: ['c2p'] },
+      { id: 'c2p', type: 'paragraph', parent: 'c2', data: { text: 'Right col' } },
+      { id: 'post', type: 'paragraph', data: { text: 'After' } },
+      { id: 'tgt', type: 'paragraph', data: { text: '' } },
+    ];
+
+    /** The copied column_lists (any column_list but the source) as [columns' data, columns' texts]. */
+    const pastedLayouts = async (page: Page): Promise<unknown[]> => {
+      const { blocks } = await saveBlok(page);
+      const byId = new Map(blocks.map((b) => [b.id, b]));
+
+      return blocks
+        .filter((b) => b.type === 'column_list' && b.id !== 'cl')
+        .map((list) => (list.content ?? []).map((columnId) => {
+          const column = byId.get(columnId);
+
+          return [column?.type, column?.data, (column?.content ?? []).map((id) => byId.get(id)?.data.text)];
+        }));
+    };
+
+    const selectRange = async (page: Page): Promise<void> => {
+      await page.locator('[data-blok-id="pre"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="post"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="post"][data-blok-selected="true"]')).toBeVisible();
+    };
+
+    const pasteIntoTarget = async (page: Page, clipboardData: Record<string, string>): Promise<void> => {
+      await page.keyboard.press('Escape');
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), clipboardData);
+    };
+
+    test('pastes the column_list and its columns when copied', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc } });
+      await selectRange(page);
+
+      const clipboardData = await copyFromElement(page.locator('[data-blok-id="pre"]'));
+
+      await pasteIntoTarget(page, clipboardData);
+
+      await expect.poll(() => pastedLayouts(page)).toEqual([[
+        ['column', { widthRatio: 2 }, ['Left col']],
+        ['column', {}, ['Right col']],
+      ]]);
+    });
+
+    test('leaves no empty layout behind when cut, and pastes it back whole', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc } });
+      await selectRange(page);
+
+      const clipboardData = await cutFromElement(page.locator('[data-blok-id="pre"]'));
+
+      // A lone empty paragraph saves as nothing, so read the live blocks.
+      await expect.poll(() => page.locator(BLOCK_SELECTOR).evaluateAll((holders) => holders.map((h) => h.getAttribute('data-blok-id'))))
+        .toEqual(['tgt']);
+
+      await pasteIntoTarget(page, clipboardData);
+
+      await expect.poll(() => pastedLayouts(page)).toEqual([[
+        ['column', { widthRatio: 2 }, ['Left col']],
+        ['column', {}, ['Right col']],
+      ]]);
+    });
+  });
+
   test('block tune data survives a block copy and paste', async ({ page }) => {
     const noteTuneSource = `class NoteTune {
       static get isTune() { return true; }

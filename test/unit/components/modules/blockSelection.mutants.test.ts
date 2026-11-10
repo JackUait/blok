@@ -46,6 +46,7 @@ type BlockManagerStub = {
   currentBlock: Block | null;
   currentBlockIndex: number;
   getBlockByIndex: ReturnType<typeof vi.fn>;
+  withCoveredLayouts: (selected: Block[]) => Block[];
   getBlock: ReturnType<typeof vi.fn>;
   getBlockById: ReturnType<typeof vi.fn>;
   getBlockDepth: ReturnType<typeof vi.fn>;
@@ -131,6 +132,7 @@ const createSetup = (options: { blocks?: Block[]; currentBlock?: Block | null } 
     currentBlock: options.currentBlock === undefined ? blocks[0] : options.currentBlock,
     currentBlockIndex: 0,
     getBlockByIndex: vi.fn((index: number) => blocks[index]),
+    withCoveredLayouts: (selected: Block[]): Block[] => selected,
     getBlock: vi.fn((element: HTMLElement) => blocks.find((block) => block.holder === element) ?? null),
     getBlockById: vi.fn((id: string) => blocks.find((block) => block.id === id) ?? undefined),
     getBlockDepth: vi.fn(() => 0),

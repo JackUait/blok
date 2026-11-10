@@ -1579,8 +1579,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // and the group menu's Colors label, line and check (2350).
     const DATABASE_GRPMENU_BYTES = 828 + 2350;
     // Round 10 lane pickers: Multi-select and Status Edit property geometry, the DEFAULT tag, the Sort/Filter
-    // picker layout, the Group by "None" row and the row handle menu's centre origin.
-    const DATABASE_PICKERS_BYTES = 2449;
+    // picker layout, the Group by "None" row, the row handle menu's centre origin, the unscaled Edit property flyout and the 200ms submenu fade.
+    const DATABASE_PICKERS_BYTES = 2995;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid, bottom stage and skin-tone dial.

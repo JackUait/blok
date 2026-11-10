@@ -239,7 +239,13 @@ export class PopoverDesktop extends PopoverAbstract {
   private static readonly NESTED_OPEN_INTENT_DELAY_MS = 100;
 
   /**
-   * Pending pointer open-intent timer (see {@link NESTED_OPEN_INTENT_DELAY_MS}).
+   * How long a pointer hover waits before opening a submenu. A root menu may
+   * set its own before a submenu opens; its submenus inherit it.
+   */
+  public nestedOpenDelay = PopoverDesktop.NESTED_OPEN_INTENT_DELAY_MS;
+
+  /**
+   * Pending pointer open-intent timer (see {@link nestedOpenDelay}).
    * Null when no open is pending.
    */
   private nestedOpenIntentTimer: number | null = null;
@@ -1402,7 +1408,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedOpenIntentTimer = window.setTimeout(() => {
       this.nestedOpenIntentTimer = null;
       this.openNestedForHoveredItem(item);
-    }, PopoverDesktop.NESTED_OPEN_INTENT_DELAY_MS);
+    }, this.nestedOpenDelay);
   }
 
   /**
@@ -1567,7 +1573,10 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
     this.nestedPopover.hide();
     this.nestedPopover.destroy();
-    elementToRemove.remove();
+    // A fading submenu removes itself once its close motion ends.
+    if (!this.nestedPopover.isClosing) {
+      elementToRemove.remove();
+    }
     this.nestedPopover = null;
     this.flipper?.activate(this.flippableElements);
 
@@ -1625,9 +1634,12 @@ export class PopoverDesktop extends PopoverAbstract {
       class: item.childrenClass,
       handleContentEditableNavigation: handleContentEditable,
       autoFocusFirstItem: this.params.autoFocusFirstItem,
+      // A menu that fades out fades its submenus out too.
+      ...(this.params.animateClose === true ? { animateClose: true } : {}),
     });
 
     this.nestedPopover.arrowLeftClosesSubmenu = this.arrowLeftClosesSubmenu;
+    this.nestedPopover.nestedOpenDelay = this.nestedOpenDelay;
     item.onChildrenOpen();
 
     /**

@@ -376,6 +376,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   private closing: { settle: () => void; removeWhenSettled: boolean } | null = null;
 
+  /** True while a close motion still plays after {@link hide}. */
+  public get isClosing(): boolean {
+    return this.closing !== null;
+  }
+
   /**
    * Waits for the card's close transitions, then takes it out of the top layer.
    * A card with no running transition (no CSS for it, reduced motion, jsdom)

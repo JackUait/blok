@@ -323,4 +323,57 @@ describe('PopoverDesktop close motion (animateClose)', () => {
     vi.advanceTimersByTime(1);
     expect(isInTopLayer(popover)).toBe(false);
   });
+
+  // notion-motion.md Round 10 "Edit property flyout": a submenu of a fading menu fades out too when it closes.
+  describe('a submenu', () => {
+    const openWithSubmenu = (animateClose: boolean): { root: PopoverDesktop; nested: HTMLElement } => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+      const root = new PopoverDesktop({
+        trigger,
+        animateClose,
+        items: [{ title: 'More', name: 'more', children: { items: items() } }],
+      });
+
+      root.show();
+      root.escapeClosesSubmenuFirst = true;
+      root.activateItemByName('more');
+      const nested = root.getElement().querySelector<HTMLElement>('[data-blok-nested]');
+
+      if (nested === null) throw new Error('submenu missing');
+
+      return { root, nested };
+    };
+    const stubNested = (nested: HTMLElement, animations: Animation[]): void => {
+      const container = nested.querySelector<HTMLElement>('[data-blok-popover-container]');
+
+      if (container === null) throw new Error('submenu container missing');
+      Object.defineProperty(container, 'getAnimations', { configurable: true, value: () => animations });
+    };
+
+    it('stays painted while its close motion plays when the menu fades, then goes', async () => {
+      const { root, nested } = openWithSubmenu(true);
+      const motion = controllableAnimation();
+
+      stubNested(nested, [motion.animation]);
+      root.closeSubmenuOnEscape();
+
+      expect(nested.isConnected).toBe(true);
+      expect(nested.getAttribute('data-state')).toBe('closed');
+
+      await motion.end();
+
+      expect(nested.isConnected).toBe(false);
+    });
+
+    it('goes at once when the menu does not fade', () => {
+      const { root, nested } = openWithSubmenu(false);
+
+      stubNested(nested, [controllableAnimation().animation]);
+      root.closeSubmenuOnEscape();
+
+      expect(nested.isConnected).toBe(false);
+    });
+  });
 });

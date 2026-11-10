@@ -621,6 +621,9 @@ export class DatabasePropertyMenu {
 
     // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
     popover.escapeClosesSubmenuFirst = true;
+    // notion-motion.md Round 10: Notion mounts the Edit property flyout about 130ms after the row lights.
+    // Blok spends about 6ms more between the hover and the timer.
+    popover.nestedOpenDelay = 125;
     this.popover = popover;
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover === popover) {
@@ -879,7 +882,8 @@ export class DatabasePropertyMenu {
           // research/27 §7: 300 wide. The all-views note wraps rather than widening it.
           // The submenu's rows mount right after onOpen.
           // notion-spec-2 §25.6: the submenu's top is the row's top; a divider follows Sort.
-          children: { items: ruleAfterSort(this.editItems(property, update)), align: 'start', minWidth: '300px', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
+          // database.css: the class fades it with no scale (notion-motion.md Round 10).
+          children: { items: ruleAfterSort(this.editItems(property, update)), align: 'start', minWidth: '300px', class: 'blok-database-edit-property', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
         };
       case 'showFullUrl': {
         // notion-spec-2 §19.21: a click on the row toggles it. The row's icon was not measured: Blok draws URL's type icon.

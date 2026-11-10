@@ -339,6 +339,14 @@ describe('DatabasePropertyMenu', () => {
     expect(params?.animateClose).toBe(true);
   });
 
+  // notion-motion.md Round 10 "Edit property flyout": it opens about 130ms after the row lights, and fades with no scale.
+  it('opens its submenus after 125ms and marks Edit property, which fades with no scale (database.css)', () => {
+    open(prop('select'));
+
+    expect(byName(lastItems(), 'editProperty').children?.class).toBe('blok-database-edit-property');
+    expect((captured.instances.at(-1) as unknown as { nestedOpenDelay?: number }).nestedOpenDelay).toBe(125);
+  });
+
   // notion-live/motion-header.json + header.png: the Name cell spans x 539..818, its menu box starts at x 533, y 296 (the cell's bottom).
   it('opens the header menu 6px left of its cell, at the cell\'s bottom', () => {
     const anchor = document.body.appendChild(document.createElement('div'));

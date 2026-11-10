@@ -1724,6 +1724,25 @@ describe('PopoverDesktop — nested submenu lifecycle', () => {
 });
 
 describe('PopoverDesktop — hover open/close intents', () => {
+  // notion-motion.md Round 10 "Edit property flyout": a database menu opens its submenus about 130ms after the row lights.
+  it('waits the root menu\'s own submenu delay, and its submenus inherit it', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    popover.nestedOpenDelay = 125;
+    instance.handleHover(hoverOn(parentElement as Element));
+    vi.advanceTimersByTime(124);
+
+    expect(instance.nestedPopover).toBeFalsy();
+
+    vi.advanceTimersByTime(1);
+
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    expect((instance.nestedPopover as PopoverDesktop).nestedOpenDelay).toBe(125);
+  });
+
   it('cancels the deferred open when the pointer settles on chrome', () => {
     vi.useFakeTimers();
     const popover = createPopover({

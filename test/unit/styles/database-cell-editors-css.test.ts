@@ -660,6 +660,17 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-motion.md Round 10 "Edit property flyout": opacity only, no scale.
+  it('fades the Edit property flyout with no scale', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-edit-property'] > [data-blok-popover-container]", 'transform')).toEqual(['none']);
+  });
+
+  // A submenu of a database menu fades out over 200ms; the shared 120ms display step would cut it short.
+  it('keeps a database submenu painted for its whole 200ms fade', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover][data-blok-nested][popover]", 'transition'))
+      .toEqual(['display 200ms allow-discrete, overlay 200ms allow-discrete']);
+  });
+
   // notion-motion.md Round 10 "List view row menu anchor": the handle menu scales in from its centre.
   it('scales the row handle menu from its centre', () => {
     expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-handle-menu'] > [data-blok-popover-container]", 'transform-origin')).toEqual(['center']);

@@ -122,8 +122,22 @@ describe('tab row sizes (V26, V32, V33)', () => {
 
     expect(plus).toMatch(/width: 28px/);
     expect(plus).toMatch(/height: 28px/);
-    expect(plus).toMatch(/margin-inline-start: var\(--blok-border-width-hairline\)/);
+    // The bar's 1px gap is the whole space after the last tab (notion-motion.md Round 9: x 831.6 after 830.6).
+    expect(plus).not.toMatch(/margin-inline-start/);
     expect(rule('[data-blok-database-add-view] svg')).toMatch(/width: 16px; height: 16px/);
+  });
+
+  // notion-motion.md Round 9 "View tab bar +": round, 142,139,134 glyph, fades in over 200ms ease.
+  it('the tab-bar "+" is round with the header icon ink and fades in over 200ms ease', () => {
+    const plus = rule('[data-blok-database-tab-bar] > [data-blok-database-add-view]');
+
+    expect(plus).toMatch(/border-radius: var\(--blok-radius-pill\)/);
+    expect(plus).toMatch(/color: var\(--blok-database-table-header-icon\)/);
+    expect(plus).toMatch(/transition: background-color 100ms ease-in-out, opacity 200ms ease/);
+  });
+
+  it('a keyboard user tabbing to the "+" sees it', () => {
+    expect(rule('[data-blok-database-tab-bar] > [data-blok-database-add-view]:focus-visible')).toMatch(/opacity: 1/);
   });
 
   // motion-addview.json: the "+" hover fill is Notion's icon-button 100ms ease-in-out.

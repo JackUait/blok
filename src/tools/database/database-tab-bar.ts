@@ -8,6 +8,7 @@ import { planViewBarFold } from './database-view-bar-fold';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { startInlineRename } from '../../components/utils/inline-rename';
+import { onHover } from '../../components/utils/tooltip';
 import { rovingRadioGroup, type RovingRadioGroup } from '../../components/utils/roving-radio-group';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { API } from '../../../types';
@@ -165,6 +166,7 @@ export class DatabaseTabBar {
     addBtn.setAttribute('data-blok-database-add-view', '');
     addBtn.setAttribute('aria-label', this.t('tools.database.addView', 'Add view'));
     addBtn.innerHTML = IconPlus;
+    onHover(addBtn, this.t('tools.database.addNewView', 'Add a new view'));
     addBtn.addEventListener('click', () => {
       this.openViewPopover(addBtn);
     });
@@ -310,9 +312,9 @@ export class DatabaseTabBar {
       ? bar.clientWidth - padding
       : viewBar.clientWidth - (Number.parseFloat(barStyle.paddingLeft) || 0) - (Number.parseFloat(barStyle.paddingRight) || 0) - padding;
     const gap = full > 0 ? Number.parseFloat(barStyle?.columnGap ?? '') || 0 : 0;
-    // The 28px "+", its 1px margin, and the 1px gaps before it and before "N more…";
+    // The 28px "+" and the 1px gaps before it and before "N more…";
     // each tab pays the 1px gap before it (database.css).
-    const add = this.addBtnEl !== null && bar.contains(this.addBtnEl) ? 31 : 0;
+    const add = this.addBtnEl !== null && bar.contains(this.addBtnEl) ? 30 : 0;
     // "N more…" is measured with the widest count it can show.
     const probe = this.placeMoreButton(tabs.length);
     const more = probe.offsetWidth;

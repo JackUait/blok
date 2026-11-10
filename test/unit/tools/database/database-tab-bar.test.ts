@@ -145,6 +145,8 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';
 import { IconChart, IconGallery, IconTable, IconViewCalendar, IconViewFeed } from '../../../../src/components/icons';
 import { resyncPortalDirections } from '../../../../src/components/utils/portal-direction';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 import type { API } from '../../../../types';
 
@@ -208,6 +210,29 @@ describe('DatabaseTabBar', () => {
       api,
     });
   };
+
+  // notion-motion.md Round 9: the "+" hints "Add a new view"; Blok keeps its 500ms hover delay.
+  describe('the tab-bar "+" hint', () => {
+    afterEach(() => {
+      destroyTooltip();
+      vi.useRealTimers();
+    });
+
+    it('shows "Add a new view" after the hover delay', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      const view = makeView({ type: 'table' });
+      const el = createTabBar([view], view.id).render();
+
+      document.body.appendChild(el);
+      hover(el.querySelector('[data-blok-database-add-view]'));
+      vi.advanceTimersByTime(HINT_DELAY - 1);
+      expect(shownHint()).toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(shownHint()?.text).toBe('Add a new view');
+      el.remove();
+    });
+  });
 
   describe('render()', () => {
     it('gives a table view tab the table icon', () => {

@@ -122,6 +122,8 @@ describe('database tabs and menus', () => {
 
   it('tab buttons are controls', () => {
     expect(radiusOf('database.css', '[data-blok-database-add-view]')).toEqual([role('control')]);
+    // notion-motion.md Round 9: the tab-bar "+" is round (radius 9999).
+    expect(radiusOf('database.css', '[data-blok-database-tab-bar] > [data-blok-database-add-view]')).toEqual([role('pill')]);
     expect(radiusOf('database.css', '[data-blok-database-tab-more]')).toEqual([role('control')]);
   });
 

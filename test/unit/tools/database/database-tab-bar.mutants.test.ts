@@ -936,15 +936,15 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
         expect(queryOne(el, '[data-blok-database-tab-more]').textContent).toBe('5 more…');
       });
 
-      it('budgets the 28px "+" with its margin and gaps, and 1px between tabs, while every tab shows (feel/findings-toolbar V26, V33)', () => {
+      it('budgets the 28px "+" with its gaps, and 1px between tabs, while every tab shows (feel/findings-toolbar V26, V33)', () => {
         const { el } = mount(threeViews(), 'v1');
 
-        // 31 (add) + 3 × 101 = 334: every tab fits exactly.
-        layOutForOverflow(el, 334);
+        // 30 (add) + 3 × 101 = 333: every tab fits exactly.
+        layOutForOverflow(el, 333);
         lastResizeProbe().fire();
         expect(el.querySelector('[data-blok-database-tab-more]')).toBeNull();
 
-        layOutForOverflow(el, 333);
+        layOutForOverflow(el, 332);
         lastResizeProbe().fire();
         expect(el.querySelector('[data-blok-database-tab-more]')?.textContent).toBe('1 more…');
       });

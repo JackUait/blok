@@ -227,7 +227,18 @@ export class GestureController extends Controller {
 
     const anchor = window.getSelection()?.anchorNode ?? null;
 
-    return anchor !== null && this.isInsideWrapper(anchor);
+    return (anchor !== null && this.isInsideWrapper(anchor)) || this.isInsideOutsideTitle(event.target);
+  }
+
+  /**
+   * The page title can be mounted outside the wrapper (`pageTitle.holder`).
+   * Without its own gesture, a title step takes its caret-before after the edit.
+   * @param target - the event target
+   */
+  private isInsideOutsideTitle(target: EventTarget | null): boolean {
+    const title = this.Blok.PageTitle?.titleElement ?? null;
+
+    return title !== null && target instanceof Node && title.contains(target) && this.wrapperElement?.contains(title) !== true;
   }
 
   /**

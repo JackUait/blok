@@ -259,6 +259,35 @@ describe('GestureController', () => {
     expect(yjs.beginGesture.mock.calls).toEqual([['discrete'], ['discrete']]);
   });
 
+  it('starts a gesture in its page title when the title is mounted outside the editor', () => {
+    const title = document.createElement('div');
+
+    title.contentEditable = 'true';
+    title.textContent = 'Lab';
+    document.body.appendChild(title);
+    controller.state = {
+      YjsManager: yjs,
+      BlockSelection: { anyBlockSelected: false },
+      BlockManager: { getBlockByChildNode: () => undefined },
+      PageTitle: { titleElement: title },
+    } as unknown as BlokModules;
+
+    try {
+      const text = title.firstChild;
+
+      if (text === null) {
+        throw new Error('empty title');
+      }
+      window.getSelection()?.collapse(text, 1);
+      title.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'X' }));
+      title.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    } finally {
+      title.remove();
+    }
+
+    expect(yjs.beginGesture.mock.calls).toEqual([['typing'], ['discrete']]);
+  });
+
   it('releases a hold when disabled mid-press', () => {
     input.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     controller.disable();

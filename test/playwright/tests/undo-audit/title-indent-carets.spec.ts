@@ -190,6 +190,37 @@ test.describe('undo audit: title and indent carets', () => {
     expect(await caret(page)).toBe(`${newId}:0`);
   });
 
+  test('a title mounted outside the editor undoes to the edit', async ({ page }) => {
+    await page.evaluate(async () => {
+      document.getElementById('outside-title')?.remove();
+      const outside = document.createElement('div');
+
+      outside.id = 'outside-title';
+      document.body.prepend(outside);
+      const container = document.createElement('div');
+
+      container.id = 'blok';
+      document.body.appendChild(container);
+      const blok = new window.Blok({ holder: 'blok', pageTitle: { holder: '#outside-title' }, data: { blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'Body' } }] } });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+      await blok.title.set('Lab notes', { record: false });
+      blok.history.clear();
+    });
+    await clickEnd(page, page.getByTestId('page-header-title'));
+    for (const _ of [1, 2, 3, 4, 5, 6]) {
+      await page.keyboard.press('ArrowLeft');
+    }
+
+    await page.keyboard.type('X');
+    await wait(page, 800);
+
+    await press(page, UNDO);
+    expect(await page.evaluate(() => window.blokInstance?.title.get())).toBe('Lab notes');
+    expect(await caret(page)).toBe('title:3');
+  });
+
   test('fast typing in the title is one undo step', async ({ page }) => {
     await createBlok(page, [{ id: 'b1', type: 'paragraph', data: { text: 'Body' } }], 'Lab');
     await clickEnd(page, page.getByTestId('page-header-title'));

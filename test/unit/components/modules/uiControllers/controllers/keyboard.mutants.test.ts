@@ -21,11 +21,15 @@ import { deliverOnSubmit } from '../../../../../../src/components/utils/on-submi
 import { announce } from '../../../../../../src/components/utils/announcer';
 import type { PopoverAbstract } from '../../../../../../src/components/utils/popover/popover-abstract';
 import { PopoverRegistry } from '../../../../../../src/components/utils/popover/popover-registry';
+import { Shortcuts } from '../../../../../../src/components/utils/shortcuts';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 import type { API, BlokConfig, OutputData } from '../../../../../../types';
 
 /** Flipped per test so the iOS Shift+Enter exception can be exercised. */
 const iosDevice = vi.hoisted(() => ({ value: false }));
+
+/** Flipped per test: macOS uses Notion's history keys. */
+const macOS = vi.hoisted(() => ({ value: false }));
 
 vi.mock('../../../../../../src/components/utils/browser', async (importOriginal) => {
   const actual = await importOriginal<typeof BrowserModule>();
@@ -35,6 +39,7 @@ vi.mock('../../../../../../src/components/utils/browser', async (importOriginal)
     get isIosDevice() {
       return iosDevice.value;
     },
+    getUserOS: () => ({ win: !macOS.value, mac: macOS.value, x11: false, linux: false }),
   };
 });
 
@@ -308,6 +313,7 @@ describe('KeyboardController — mutation coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     iosDevice.value = false;
+    macOS.value = false;
     PopoverRegistry.resetForTests();
     vi.spyOn(Selection, 'isSelectionExists', 'get').mockReturnValue(true);
     vi.spyOn(Selection, 'isCollapsed', 'get').mockReturnValue(false);
@@ -1854,7 +1860,7 @@ describe('KeyboardController — mutation coverage', () => {
       expect(harness.blok.BlockManager.unsetCurrentBlock).toHaveBeenCalledTimes(1);
     });
 
-    it('ignores Cmd+Y, which is not the redo alias', () => {
+    it('ignores Meta+Y on Windows and Linux, where it is not the redo alias', () => {
       const harness = enabledHarness();
 
       harness.press(harness.outside, { key: 'y', code: 'KeyY', metaKey: true });
@@ -2312,6 +2318,177 @@ describe('KeyboardController — mutation coverage', () => {
       harness.press(dialogOwner(), { key: 'z', code: 'KeyZ', metaKey: true });
 
       expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('undo and redo on macOS (Notion keys)', () => {
+    beforeEach(() => {
+      macOS.value = true;
+    });
+
+    it('redoes on Cmd+Y and swallows the keystroke', () => {
+      const harness = enabledHarness();
+
+      const { event, reachedTarget } = harness.press(harness.inside, { key: 'y', code: 'KeyY', metaKey: true });
+
+      expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+      expect(reachedTarget).toBe(false);
+    });
+
+    it('redoes on Cmd+Y on a non-Latin layout', () => {
+      const harness = enabledHarness();
+
+      harness.press(harness.inside, { key: 'н', code: 'KeyY', metaKey: true });
+
+      expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+    });
+
+    it('still undoes on Cmd+Z and redoes on Cmd+Shift+Z', () => {
+      const harness = enabledHarness();
+
+      harness.press(harness.inside, { key: 'z', code: 'KeyZ', metaKey: true });
+      harness.press(harness.inside, { key: 'z', code: 'KeyZ', metaKey: true, shiftKey: true });
+
+      expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+      expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves Cmd+Shift+Y to the tool shortcut listener', () => {
+      const harness = enabledHarness();
+
+      const { event, reachedTarget } = harness.press(harness.inside, { key: 'y', code: 'KeyY', metaKey: true, shiftKey: true });
+
+      expect(harness.blok.YjsManager.redo).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+      expect(reachedTarget).toBe(true);
+    });
+
+    // The default is cancelled so the browser's own undo cannot rewind the DOM behind Yjs.
+    it.each([
+      ['Ctrl+Z', { key: 'z', code: 'KeyZ', ctrlKey: true }],
+      ['Ctrl+Shift+Z', { key: 'z', code: 'KeyZ', ctrlKey: true, shiftKey: true }],
+      ['Ctrl+Cmd+Z', { key: 'z', code: 'KeyZ', ctrlKey: true, metaKey: true }],
+      ['Ctrl+Y', { key: 'y', code: 'KeyY', ctrlKey: true }],
+    ] as const)('does not walk history on %s, and cancels its default', (_name, init) => {
+      const harness = enabledHarness();
+
+      const { event, reachedTarget } = harness.press(harness.inside, init);
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+      expect(harness.blok.YjsManager.redo).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+      expect(reachedTarget).toBe(false);
+    });
+
+    it('leaves Ctrl+Z on a host page editable outside the editor alone', () => {
+      const harness = enabledHarness();
+      const field = document.createElement('div');
+
+      field.setAttribute('contenteditable', 'true');
+      document.body.appendChild(field);
+
+      const { event, reachedTarget } = harness.press(field, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+      expect(reachedTarget).toBe(true);
+    });
+
+    it('leaves Ctrl+Z in a text input to the input', () => {
+      const harness = enabledHarness();
+      const input = document.createElement('input');
+
+      harness.redactor.appendChild(input);
+
+      const { event } = harness.press(input, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('redoes on Cmd+Y inside a keyboard owner, after the subtree has seen the key', () => {
+      const harness = enabledHarness();
+      const owner = document.createElement('div');
+      const field = document.createElement('button');
+
+      owner.setAttribute('data-blok-keyboard-owner', '');
+      owner.appendChild(field);
+      harness.redactor.appendChild(owner);
+
+      const { event, reachedTarget } = harness.press(field, { key: 'y', code: 'KeyY', metaKey: true });
+
+      expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+      expect(reachedTarget).toBe(true);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('does not walk history on Ctrl+Z inside a keyboard owner', () => {
+      const harness = enabledHarness();
+      const owner = document.createElement('div');
+      const field = document.createElement('button');
+
+      owner.setAttribute('data-blok-keyboard-owner', '');
+      owner.appendChild(field);
+      harness.redactor.appendChild(owner);
+
+      harness.press(field, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('swallows Cmd+Y while a drag is in progress', () => {
+      const harness = enabledHarness();
+
+      harness.state.isDragging = true;
+
+      const { event } = harness.press(harness.inside, { key: 'y', code: 'KeyY', metaKey: true });
+
+      expect(harness.blok.YjsManager.redo).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    // Same as Ctrl+Y on Windows and Linux: redo wins over a tool's CMD+Y shortcut.
+    it('redoes on Cmd+Y instead of running a tool CMD+Y shortcut', () => {
+      const harness = enabledHarness();
+      const toolShortcut = vi.fn();
+
+      Shortcuts.add({ name: 'CMD+Y', on: harness.redactor, handler: toolShortcut });
+
+      try {
+        harness.press(harness.inside, { key: 'y', code: 'KeyY', metaKey: true });
+      } finally {
+        Shortcuts.remove(harness.redactor, 'CMD+Y');
+      }
+
+      expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+      expect(toolShortcut).not.toHaveBeenCalled();
+    });
+
+    it('runs a tool CMD+SHIFT+Y shortcut on Cmd+Shift+Y', () => {
+      const harness = enabledHarness();
+      const toolShortcut = vi.fn();
+
+      Shortcuts.add({ name: 'CMD+SHIFT+Y', on: harness.redactor, handler: toolShortcut });
+
+      try {
+        harness.press(harness.inside, { key: 'y', code: 'KeyY', metaKey: true, shiftKey: true });
+      } finally {
+        Shortcuts.remove(harness.redactor, 'CMD+SHIFT+Y');
+      }
+
+      expect(toolShortcut).toHaveBeenCalledTimes(1);
+      expect(harness.blok.YjsManager.redo).not.toHaveBeenCalled();
+    });
+
+    it('still undoes from the browser Edit menu', () => {
+      const harness = enabledHarness();
+      const event = new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'historyUndo' });
+
+      harness.inside.dispatchEvent(event);
+
+      expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
     });
   });
 });

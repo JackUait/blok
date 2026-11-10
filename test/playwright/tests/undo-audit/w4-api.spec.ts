@@ -6,6 +6,7 @@ import { blocksAsHtml, htmlOf } from '../helpers/saved-as-html';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
+const REDO_ALIAS = process.platform === 'darwin' ? 'Meta+y' : 'Control+y';
 const CAPTURE_GAP_MS = 800;
 
 declare global {
@@ -384,19 +385,15 @@ test.describe('undo audit W4A: public API, events, history engine', () => {
 
   // ---------- keyboard ----------
 
-  test('W4A-c8: Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y and Cmd+Shift+Z all route to history', async ({ page }) => {
+  // The full key matrix per platform lives in mac-history-keys.spec.ts.
+  test('W4A-c8: the platform undo, redo and redo alias all route to history', async ({ page }) => {
     await mount(page, [P('a', 'alpha')]);
     await typeAtEnd(page, 'alpha', 'X');
     await gap(page);
-    await page.keyboard.press('Control+z');
+    await page.keyboard.press(UNDO);
     await gap(page);
     expect(await texts(page)).toEqual(['alpha']);
-    await page.keyboard.press('Control+y');
-    await gap(page);
-    expect(await texts(page)).toEqual(['alphaX']);
-    await page.keyboard.press('Control+z');
-    await gap(page);
-    await page.keyboard.press('Control+Shift+z');
+    await page.keyboard.press(REDO_ALIAS);
     await gap(page);
     expect(await texts(page)).toEqual(['alphaX']);
     await page.keyboard.press(UNDO);

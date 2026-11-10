@@ -1,11 +1,44 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DatabaseKeyboard } from '../../../../src/tools/database/database-keyboard';
+import { DatabaseKeyboard, isHistoryKey } from '../../../../src/tools/database/database-keyboard';
+import type * as BrowserModule from '../../../../src/components/utils/browser';
 import type { DatabaseKeyboardOptions } from '../../../../src/tools/database/database-keyboard';
 
 const createOptions = (overrides: Partial<DatabaseKeyboardOptions> = {}): DatabaseKeyboardOptions => ({
   wrapper: document.createElement('div'),
   onEscape: vi.fn(() => true),
   ...overrides,
+});
+
+const macOS = vi.hoisted(() => ({ value: false }));
+
+vi.mock('../../../../src/components/utils/browser', async (importOriginal) => {
+  const actual = await importOriginal<typeof BrowserModule>();
+
+  return { ...actual, getUserOS: () => ({ win: !macOS.value, mac: macOS.value, x11: false, linux: false }) };
+});
+
+describe('isHistoryKey (the keys a drag holds back from the editor)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    macOS.value = false;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const keydown = (init: KeyboardEventInit): KeyboardEvent => new KeyboardEvent('keydown', init);
+
+  it('on macOS includes Cmd+Y, which redoes', () => {
+    macOS.value = true;
+
+    expect(isHistoryKey(keydown({ key: 'y', code: 'KeyY', metaKey: true }))).toBe(true);
+  });
+
+  it('on Windows and Linux excludes Meta+Y', () => {
+    expect(isHistoryKey(keydown({ key: 'y', code: 'KeyY', metaKey: true }))).toBe(false);
+    expect(isHistoryKey(keydown({ key: 'y', code: 'KeyY', ctrlKey: true }))).toBe(true);
+  });
 });
 
 describe('DatabaseKeyboard', () => {

@@ -5,6 +5,15 @@ import type { FormulaEditorOptions } from '../../../../src/tools/database/databa
 import { compileFormula } from '../../../../src/tools/database/formula';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 import { pressOutside } from './cells/helpers';
+import type * as BrowserModule from '../../../../src/components/utils/browser';
+
+const macOS = vi.hoisted(() => ({ value: false }));
+
+vi.mock('../../../../src/components/utils/browser', async (importOriginal) => {
+  const actual = await importOriginal<typeof BrowserModule>();
+
+  return { ...actual, getUserOS: () => ({ win: !macOS.value, mac: macOS.value, x11: false, linux: false }) };
+});
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -171,6 +180,32 @@ describe('formula editor', () => {
 
       input().dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
       expect(input().lastChild?.textContent).toBe(' * ');
+    });
+
+    it('on macOS uses the editor keys: Cmd+Y redoes, Ctrl+Z only has its default cancelled', () => {
+      macOS.value = true;
+      try {
+        open();
+        type('prop("Amount")');
+        document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="*"]')?.click();
+
+        const ctrlZ = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true });
+
+        input().dispatchEvent(ctrlZ);
+        expect(ctrlZ.defaultPrevented).toBe(true);
+        expect(input().lastChild?.textContent).toBe(' * ');
+
+        input().dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true, cancelable: true }));
+        expect(input().childNodes).toHaveLength(1);
+
+        const cmdY = new KeyboardEvent('keydown', { key: 'y', metaKey: true, bubbles: true, cancelable: true });
+
+        input().dispatchEvent(cmdY);
+        expect(cmdY.defaultPrevented).toBe(true);
+        expect(input().lastChild?.textContent).toBe(' * ');
+      } finally {
+        macOS.value = false;
+      }
     });
 
     it('pastes plain text, turning references into tokens', () => {

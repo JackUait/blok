@@ -1,3 +1,5 @@
+import { historyKeyOf } from '../../components/utils/history-keys';
+
 export interface DatabaseKeyboardOptions {
   wrapper: HTMLElement;
   onEscape: () => boolean;
@@ -34,10 +36,10 @@ export class DatabaseKeyboard {
   }
 }
 
-/** Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z or Ctrl+Y: the keys the editor's undo and redo listen for. */
+/** The keys the editor's undo and redo listen for on this platform, blocked chords included. */
 export const isHistoryKey = (event: KeyboardEvent): boolean => {
   const isZ = event.code === 'KeyZ' || event.key.toLowerCase() === 'z';
   const isY = event.code === 'KeyY' || event.key.toLowerCase() === 'y';
 
-  return ((event.metaKey || event.ctrlKey) && isZ) || (event.ctrlKey && !event.shiftKey && isY);
+  return (isZ || isY) && historyKeyOf(event, isZ ? 'z' : 'y') !== null;
 };

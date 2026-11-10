@@ -1,3 +1,4 @@
+import { historyKeyOf } from '../../components/utils/history-keys';
 import type { PropertyDefinition } from './types';
 import { propertyTypeMeta } from './database-property-types';
 import { tokenize } from './formula/tokenizer';
@@ -308,13 +309,13 @@ export class FormulaField {
 
   private handleKey(event: KeyboardEvent): void {
     if (event.isComposing) return;
-    const key = event.key.toLowerCase();
     const mod = event.metaKey || event.ctrlKey;
+    const history = historyKeyOf(event, event.key);
 
-    if (mod && (key === 'z' || (key === 'y' && event.ctrlKey && !event.metaKey))) {
+    if (history !== null) {
       event.preventDefault();
-      if (key === 'z' && !event.shiftKey) this.step(this.past, this.future);
-      else this.step(this.future, this.past);
+      if (history === 'undo') this.step(this.past, this.future);
+      else if (history === 'redo') this.step(this.future, this.past);
 
       return;
     }

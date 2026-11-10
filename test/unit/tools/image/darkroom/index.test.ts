@@ -6,6 +6,15 @@ import { cameraToRect, fitFrame } from '../../../../../src/tools/image/darkroom/
 import { resolveFilters } from '../../../../../src/tools/image/adjust';
 import { coverCrop } from '../../../../../src/tools/image/geometry';
 import { fakeFrameClock } from '../../../helpers/fake-frame-clock';
+import type * as BrowserModule from '../../../../../src/components/utils/browser';
+
+const macOS = vi.hoisted(() => ({ value: false }));
+
+vi.mock('../../../../../src/components/utils/browser', async (importOriginal) => {
+  const actual = await importOriginal<typeof BrowserModule>();
+
+  return { ...actual, getUserOS: () => ({ win: !macOS.value, mac: macOS.value, x11: false, linux: false }) };
+});
 
 // jsdom lacks the Popover API that promoteToTopLayer calls.
 const stubPopover = (): void => {
@@ -817,6 +826,48 @@ describe('openDarkroom fix round 1', () => {
       advance(3000);
 
       expect(circle?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    describe('on macOS (the editor\'s Notion keys)', () => {
+      afterEach(() => {
+        macOS.value = false;
+      });
+
+      it('Cmd+Y redoes an undone shape change and keeps the key from the editor', () => {
+        macOS.value = true;
+        const { advance } = open();
+        const circle = document.querySelector<HTMLButtonElement>('[data-ratio="circle"]');
+
+        circle?.click();
+        advance(3000);
+        key(dialog(), { key: 'z', metaKey: true });
+        advance(3000);
+        const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'y', metaKey: true });
+
+        dialog()?.dispatchEvent(event);
+
+        advance(3000);
+
+        expect(circle?.getAttribute('aria-checked')).toBe('true');
+        expect(event.defaultPrevented).toBe(true);
+      });
+
+      it('Ctrl+Z does not undo, and its default is cancelled', () => {
+        macOS.value = true;
+        const { advance } = open();
+        const circle = document.querySelector<HTMLButtonElement>('[data-ratio="circle"]');
+
+        circle?.click();
+        advance(3000);
+        const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'z', ctrlKey: true });
+
+        dialog()?.dispatchEvent(event);
+
+        advance(3000);
+
+        expect(circle?.getAttribute('aria-checked')).toBe('true');
+        expect(event.defaultPrevented).toBe(true);
+      });
     });
 
     it('Reset is an undo entry: Cmd+Z brings back the crop it cleared', () => {

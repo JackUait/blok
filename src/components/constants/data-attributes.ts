@@ -429,7 +429,8 @@ export const DATA_ATTR = {
    *  keyboard semantics (Tab between sub-fields, Escape to cancel an edit, arrows
    *  to walk a suggestion list), which is exactly what this attribute is for.
    *
-   *  Undo and redo (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z, Ctrl+Y) still reach the
+   *  Undo and redo (Cmd+Z, Cmd+Shift+Z, Cmd+Y on macOS; Ctrl+Z, Ctrl+Shift+Z,
+   *  Ctrl+Y elsewhere) still reach the
    *  editor's history after the event bubbles. Call preventDefault to keep
    *  them. Text inputs and contenteditables inside keep their native undo.
    *  Public authoring hook. */

@@ -8,6 +8,7 @@ import { markEscapeConsumed } from '../../../utils/consumed-escape';
 import { runConvert } from '../../../utils/convert-refusal';
 import { hasEscapeLayer } from '../../../utils/dismissable-layer';
 import { announceHistoryPress } from '../../../utils/history-announcement';
+import { historyKeyOf, type HistoryKey } from '../../../utils/history-keys';
 import { announceDeletedRoots, selectionRoots } from '../../../utils/selection-roots';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
@@ -78,10 +79,6 @@ const shortcutLetter = (event: KeyboardEvent): string => {
 
 const isInsideEditable = (target: EventTarget | null): boolean =>
   target instanceof Element && target.closest('[contenteditable]:not([contenteditable="false"])') !== null;
-
-const isHistoryKey = (event: KeyboardEvent, letter: string): boolean =>
-  ((event.metaKey || event.ctrlKey) && letter.toLowerCase() === 'z')
-  || (event.ctrlKey && !event.shiftKey && letter.toLowerCase() === 'y');
 
 /**
  * KeyboardController handles all document-level keyboard events.
@@ -176,11 +173,7 @@ export class KeyboardController extends Controller {
       return;
     }
 
-    if (shortcutLetter(event).toLowerCase() === 'z') {
-      this.handleZ(event);
-    } else {
-      this.handleY(event);
-    }
+    this.handleHistoryKey(event, historyKeyOf(event, shortcutLetter(event)));
   };
 
   private readonly markActiveHandler = (): void => {
@@ -362,7 +355,8 @@ export class KeyboardController extends Controller {
 
     const target = event.target;
     const key = shortcutLetter(event);
-    const historyKey = isHistoryKey(event, key);
+    const history = historyKeyOf(event, key);
+    const historyKey = history !== null;
 
     /**
      * A Tool can claim the whole keyboard for a subtree it renders by marking it
@@ -376,7 +370,9 @@ export class KeyboardController extends Controller {
      * which keeps its native undo.
      */
     if (isInsideKeyboardOwner(target)) {
-      this.pendingOwnerHistoryKey = historyKey && !isTextEntry(target) && !isInsideEditable(target) ? event : null;
+      const walksHistory = history === 'undo' || history === 'redo';
+
+      this.pendingOwnerHistoryKey = walksHistory && !isTextEntry(target) && !isInsideEditable(target) ? event : null;
 
       return;
     }
@@ -454,12 +450,13 @@ export class KeyboardController extends Controller {
 
       case 'z':
       case 'Z':
-        this.handleZ(event);
-        break;
-
       case 'y':
       case 'Y':
-        this.handleY(event);
+        if (history === null) {
+          this.handleDefault(event);
+        } else {
+          this.handleHistoryKey(event, history);
+        }
         break;
 
       default:
@@ -495,7 +492,7 @@ export class KeyboardController extends Controller {
     }
 
     // Don't replay the conversion while a drag is in progress (mirrors the
-    // undo/redo guard in handleZ — mutating the tree under the drag is unsafe).
+    // undo/redo guard in handleHistoryKey — mutating the tree under the drag is unsafe).
     if (this.Blok.DragManager.isDragging) {
       event.preventDefault();
       event.stopPropagation();
@@ -1180,15 +1177,12 @@ export class KeyboardController extends Controller {
   }
 
   /**
-   * Handle Cmd/Ctrl+Z (undo) and Cmd/Ctrl+Shift+Z (redo)
+   * Handle an undo, redo or blocked history key (see `historyKeyOf`).
    * @param event - keyboard event
+   * @param history - what the key does to history
    */
-  private handleZ(event: KeyboardEvent): void {
-    const isMeta = event.metaKey || event.ctrlKey;
-
-    if (!isMeta) {
-      this.handleDefault(event);
-
+  private handleHistoryKey(event: KeyboardEvent, history: HistoryKey): void {
+    if (history === null) {
       return;
     }
 
@@ -1204,8 +1198,11 @@ export class KeyboardController extends Controller {
      * The Escape handler already guards on `DragManager.isDragging` (see
      * handleEscape above). Mirror that here: swallow the keystroke so the
      * drag completes cleanly, then the user can undo.
+     *
+     * A blocked key is swallowed the same way: its default could be the
+     * browser's own undo, which would rewind block DOM behind Yjs.
      */
-    if (this.Blok.DragManager.isDragging) {
+    if (history === 'blocked' || this.Blok.DragManager.isDragging) {
       event.preventDefault();
       event.stopPropagation();
 
@@ -1222,7 +1219,7 @@ export class KeyboardController extends Controller {
     event.preventDefault();
     event.stopPropagation();
 
-    this.runHistory(event.shiftKey ? 'redo' : 'undo');
+    this.runHistory(history);
   }
 
   /**
@@ -1247,45 +1244,6 @@ export class KeyboardController extends Controller {
     }
 
     announceHistoryPress((key) => I18n.t(key), direction, applied);
-  }
-
-  /**
-   * Handle Ctrl+Y (redo) — the Windows/Linux redo alias. Notion accepts both
-   * Ctrl+Shift+Z and Ctrl+Y for redo; the latter is routed here. Uses the same
-   * drag guard and double-fire dedup as handleZ so a single press redoes once.
-   *
-   * The redo alias is Ctrl+Y WITHOUT Shift. Ctrl+Shift+Y is a distinct combo
-   * (e.g. a block tool's "CMD+SHIFT+Y" insert shortcut), so when Shift is held
-   * we must fall through to default handling and let the event keep propagating
-   * to the tool-shortcut listener — otherwise the stopPropagation below swallows
-   * it and a spurious redo fires.
-   * @param event - keyboard event
-   */
-  private handleY(event: KeyboardEvent): void {
-    if (!event.ctrlKey || event.shiftKey) {
-      this.handleDefault(event);
-
-      return;
-    }
-
-    if (this.Blok.DragManager.isDragging) {
-      event.preventDefault();
-      event.stopPropagation();
-
-      return;
-    }
-
-    if (event === this.lastHistoryEvent) {
-      event.preventDefault();
-
-      return;
-    }
-    this.lastHistoryEvent = event;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    this.runHistory('redo');
   }
 
   /**

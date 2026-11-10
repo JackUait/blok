@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { bindTitleKeyboard, type TitleKeyboardHost } from '../../../../../src/components/modules/pageTitle/title-keyboard';
+import type * as BrowserModule from '../../../../../src/components/utils/browser';
+
+const macOS = vi.hoisted(() => ({ value: false }));
+
+vi.mock('../../../../../src/components/utils/browser', async (importOriginal) => {
+  const actual = await importOriginal<typeof BrowserModule>();
+
+  return { ...actual, getUserOS: () => ({ win: !macOS.value, mac: macOS.value, x11: false, linux: false }) };
+});
 
 type HostSpy = { [K in keyof TitleKeyboardHost]: ReturnType<typeof vi.fn> };
 
@@ -30,6 +39,7 @@ const press = (el: HTMLElement, init: KeyboardEventInit): KeyboardEvent => {
 describe('bindTitleKeyboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    macOS.value = false;
   });
 
   afterEach(() => {
@@ -92,5 +102,27 @@ describe('bindTitleKeyboard', () => {
 
     expect(press(title, { key, metaKey: true }).defaultPrevented).toBe(true);
     expect(press(title, { key, ctrlKey: true }).defaultPrevented).toBe(true);
+  });
+
+  it('on macOS, Cmd+Y redoes (Notion keys)', () => {
+    macOS.value = true;
+    const { title, host } = setup('Hi', 2);
+
+    expect(press(title, { key: 'y', metaKey: true }).defaultPrevented).toBe(true);
+    expect(host.redo).toHaveBeenCalledTimes(1);
+  });
+
+  // The default is cancelled so the browser's own undo cannot rewind the title behind Yjs.
+  it.each([
+    ['Ctrl+Z', { key: 'z', ctrlKey: true }],
+    ['Ctrl+Shift+Z', { key: 'z', ctrlKey: true, shiftKey: true }],
+    ['Ctrl+Y', { key: 'y', ctrlKey: true }],
+  ] as const)('on macOS, %s does not walk history and cancels its default', (_name, init) => {
+    macOS.value = true;
+    const { title, host } = setup('Hi', 2);
+
+    expect(press(title, init).defaultPrevented).toBe(true);
+    expect(host.undo).not.toHaveBeenCalled();
+    expect(host.redo).not.toHaveBeenCalled();
   });
 });

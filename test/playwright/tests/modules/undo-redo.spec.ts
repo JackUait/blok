@@ -187,7 +187,7 @@ test.describe('yjs undo/redo', () => {
     await expect(paragraphInput).toContainText('Original text added');
   });
 
-  test('redoes text input with Ctrl+Y alias', async ({ page }) => {
+  test('redoes text input with the redo alias (Cmd+Y on macOS, Ctrl+Y elsewhere)', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -212,8 +212,8 @@ test.describe('yjs undo/redo', () => {
     await expect(paragraphInput).toContainText('Original text');
     await expect(paragraphInput).not.toContainText('added');
 
-    // Redo via the Ctrl+Y alias (Windows/Linux redo shortcut; also accepted on Mac)
-    await page.keyboard.press('Control+y');
+    // Redo via the alias: Cmd+Y on macOS, Ctrl+Y on Windows and Linux
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+y' : 'Control+y');
     await waitForDelay(page, 200);
 
     await expect(paragraphInput).toContainText('Original text added');

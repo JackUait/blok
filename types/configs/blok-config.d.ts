@@ -608,7 +608,8 @@ export interface BlokMountOptions {
 
   /**
    * Enable document-level undo/redo shortcuts.
-   * When true, Cmd+Z / Ctrl+Z and Cmd+Shift+Z / Ctrl+Shift+Z work even when
+   * When true, the undo and redo keys (Cmd+Z, Cmd+Shift+Z, Cmd+Y on macOS;
+   * Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y elsewhere) work even when
    * the editor is not focused (e.g., after dragging a block).
    * @default true
    */

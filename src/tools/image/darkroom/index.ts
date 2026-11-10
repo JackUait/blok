@@ -2,6 +2,7 @@ import type { ImageAdjust, ImageCrop, ImageCropShape, ImageMarkup } from '../../
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { IconFlipHorizontal, IconRotateLeft } from '../../../components/icons';
 import { openModalDialog, type ModalDialogHandle } from '../../../components/utils/modal-dialog';
+import { historyKeyOf } from '../../../components/utils/history-keys';
 import { rovingRadioGroup } from '../../../components/utils/roving-radio-group';
 import { beautifyShortcut } from '../../../components/utils/string';
 import { createSpring, prefersReducedMotion, type SpringClock } from '../../../components/utils/spring';
@@ -1197,9 +1198,9 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const nonLatin = e.key.length === 1 && !/^[\x20-\x7e]$/.test(e.key) && !e.altKey;
     const isLetter = (letter: string): boolean =>
       e.key.toLowerCase() === letter || (nonLatin && e.code === `Key${letter.toUpperCase()}`);
-    // Same history keys as the editor's KeyboardController: Ctrl+Y redoes on Windows and Linux.
-    const redoY = e.ctrlKey && !e.shiftKey && isLetter('y');
-    const isHistory = (mod && isLetter('z')) || redoY;
+    // Same history keys as the editor's KeyboardController, so none reaches the editor behind the darkroom.
+    const history = historyKeyOf(e, ['z', 'y'].find(isLetter) ?? '');
+    const isHistory = history !== null;
 
     // The sheet's own Escape closes it; nothing else may edit the photo behind it.
     // preventDefault, or the editor undoes the document behind the darkroom.
@@ -1211,8 +1212,10 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
     if (isHistory) {
       e.preventDefault();
-      flushAll();
-      restore(e.shiftKey || redoY ? hist.stack.redo() : hist.stack.undo());
+      if (history !== 'blocked') {
+        flushAll();
+        restore(history === 'redo' ? hist.stack.redo() : hist.stack.undo());
+      }
 
       return;
     }

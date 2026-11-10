@@ -2084,7 +2084,7 @@ export class BlockSelection extends Module {
      * Prevent the browser from ALSO inserting this character natively. A
      * cross-block mouse drag can leave a collapsed caret inside a still-focused
      * block, so without preventing the default the character would be typed
-     * twice: once natively into that block and once by the deferred
+     * twice: once natively into that block and once by
      * `insertContentAtCaretPosition` below into the fresh replacement block.
      */
     event.preventDefault();

@@ -18,6 +18,10 @@ internal sealed class McpAnswerTracker
   // The tools/call ids seen, whose answers stdin's end silences.
   private readonly ConcurrentDictionary<string, bool> toolCalls = new(StringComparer.Ordinal);
 
+  // Cancels seen before the request they name: the SDK runs each line on the pool, in any order.
+  // Without this the request opens after its cancel, is never answered, and stop waits the whole drain.
+  private readonly HashSet<string> cancelledEarly = new(StringComparer.Ordinal);
+
   /// <summary>
   /// First in the list, so it is the outermost filter and sees every request. With a core, a
   /// tools/call answer due after stdin ended is not written: Node closes its transport at the
@@ -29,18 +33,31 @@ internal sealed class McpAnswerTracker
     {
       if (context.JsonRpcMessage is JsonRpcRequest request)
       {
-        reached[request.Id.ToString()] = true;
         if (request.Method == RequestMethods.ToolsCall)
         {
           toolCalls[request.Id.ToString()] = true;
         }
-        open.TryAdd(request.Id.ToString(), new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
+        lock (cancelledEarly)
+        {
+          reached[request.Id.ToString()] = true;
+          if (!cancelledEarly.Remove(request.Id.ToString()))
+          {
+            open.TryAdd(request.Id.ToString(), new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
+          }
+        }
       }
       // A cancelled request gets no answer.
       else if (context.JsonRpcMessage is JsonRpcNotification { Method: NotificationMethods.CancelledNotification } cancelled
           && cancelled.Params?["requestId"]?.ToString() is string id)
       {
-        Done(id);
+        lock (cancelledEarly)
+        {
+          // An id already reached was answered or cancelled before: this cancel names nothing to come.
+          if (!Done(id) && !reached.ContainsKey(id))
+          {
+            cancelledEarly.Add(id);
+          }
+        }
       }
       await next(context, cancellationToken);
     });
@@ -82,11 +99,14 @@ internal sealed class McpAnswerTracker
     await Task.WhenAny(Task.WhenAll(pending), Task.Delay(limit));
   }
 
-  private void Done(string id)
+  private bool Done(string id)
   {
-    if (open.TryRemove(id, out var waiter))
+    if (!open.TryRemove(id, out var waiter))
     {
-      waiter.TrySetResult();
+      return false;
     }
+    waiter.TrySetResult();
+
+    return true;
   }
 }

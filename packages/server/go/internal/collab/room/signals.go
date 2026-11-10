@@ -8,27 +8,31 @@ import (
 
 // SignalBlock is CollabSignalBlock: one block, added, removed, changed or
 // moved over the window.
-type SignalBlock struct{ ID, Kind string }
+type SignalBlock struct {
+	ID   string `json:"id"`
+	Kind string `json:"kind"`
+}
 
 // SignalProperties is CollabSignalProperties: the property ids that changed
 // on one database row.
 type SignalProperties struct {
-	RowID string
-	IDs   []string
+	RowID string   `json:"rowId"`
+	IDs   []string `json:"ids"`
 }
 
 // SignalSchema is CollabSignalSchema: one schema entry of one database,
 // created, updated or deleted over the window.
 type SignalSchema struct {
-	DatabaseID, ID string
-	Name           *string
-	Action         string
+	DatabaseID string  `json:"databaseId"`
+	ID         string  `json:"id"`
+	Name       *string `json:"name"`
+	Action     string  `json:"action"`
 }
 
 // SignalAuthor is CollabSignalAuthor. Kind is nil when no note was written.
 type SignalAuthor struct {
-	ID   string
-	Kind *string
+	ID   string  `json:"id"`
+	Kind *string `json:"kind"`
 }
 
 // ChangeSignal is CollabChangeSignal: what changed in one document during

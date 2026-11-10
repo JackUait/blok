@@ -96,6 +96,9 @@ const EXEMPTIONS: Record<string, Exemption> = {
   'tools/file/pptx/renderer/TextRenderer.ts': {
     reason: 'pptx paragraph root is parked off-screen on body (inline fixed/hidden styles) for one measurement, then moved back synchronously',
   },
+  'tools/callout/emoji-landing.ts': {
+    reason: 'landing overlay and its ghosts and dots are styled 100% inline (cssText and style properties); no class, no utilities, no tokens',
+  },
   'tools/spacer/alignment-guide.ts': {
     reason: 'guide line styled 100% inline (accent color resolved to a literal beforehand)',
   },

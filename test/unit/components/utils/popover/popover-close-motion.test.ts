@@ -367,6 +367,26 @@ describe('PopoverDesktop close motion (animateClose)', () => {
       expect(nested.isConnected).toBe(false);
     });
 
+    it('reopened while the old one still fades: one live submenu, and the faded one goes when its motion ends', async () => {
+      const { root, nested } = openWithSubmenu(true);
+      const motion = controllableAnimation();
+
+      stubNested(nested, [motion.animation]);
+      root.closeSubmenuOnEscape();
+      root.activateItemByName('more');
+
+      const live = (): HTMLElement[] => [...root.getElement().querySelectorAll<HTMLElement>('[data-blok-nested]')]
+        .filter((el) => !el.hasAttribute('inert') && el.hasAttribute(OPENED));
+
+      expect(live()).toHaveLength(1);
+      expect(live()[0]).not.toBe(nested);
+
+      await motion.end();
+
+      expect(nested.isConnected).toBe(false);
+      expect(live()).toHaveLength(1);
+    });
+
     it('goes at once when the menu does not fade', () => {
       const { root, nested } = openWithSubmenu(false);
 

@@ -4223,8 +4223,9 @@ export class DatabaseTool implements BlockTool {
     this.unlinkDeletedRow(rowId);
     const blockIndex = this.api.blocks.getBlockIndex(rowId);
 
+    // false: Blok would put the caret in its current block, this database, which focuses the title.
     if (blockIndex !== undefined) {
-      void this.api.blocks.delete(blockIndex);
+      void this.api.blocks.delete(blockIndex, false);
     }
   }
 

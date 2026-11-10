@@ -368,7 +368,7 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     openMenu(el, 'board');
     menuItem('database-row-delete')?.click();
 
-    expect(doc.api.blocks.delete).toHaveBeenCalledWith(0);
+    expect(doc.api.blocks.delete).toHaveBeenCalledWith(0, false);
   });
 
   describe('Comment ⌘⇧M and Move to ⌘⇧P on one picked row', () => {

@@ -1058,7 +1058,7 @@ describe('DatabaseTool', () => {
       deleteAction.click();
 
       expect(options.api.blocks.getBlockIndex).toHaveBeenCalledWith('row-1');
-      expect(options.api.blocks.delete).toHaveBeenCalledWith(1);
+      expect(options.api.blocks.delete).toHaveBeenCalledWith(1, false);
 
       // Cleanup mock popover
       queryByData(document.body, 'data-mock-popover')?.remove();

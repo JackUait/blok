@@ -78,4 +78,35 @@ describe('Escape on a new empty table row', () => {
     expect(el.querySelector('[data-blok-database-table-row][data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('true');
     expect(selectedCells(el)).toEqual([]);
   });
+
+  // notion-motion.md Round 12 "Escape on a new empty row, grouped table": in an empty group the row is removed,
+  // nothing is selected, and focus goes to body.
+  it('in an empty group, removes the row, selects nothing and leaves the caret alone', async () => {
+    const doc = seed();
+    const grouped: DatabaseData = {
+      schema: [
+        { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'tag', name: 'Tag', type: 'select', position: 'a1', config: { options: [{ id: 'red', label: 'Red', color: 'red', position: 'a0' }, { id: 'blue', label: 'Blue', color: 'blue', position: 'a1' }] } },
+      ],
+      views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['title', 'tag'], groupBy: 'tag' }],
+      activeViewId: 'v',
+    };
+
+    doc.row('r1').properties.tag = 'red';
+    doc.row('r2').properties.tag = 'red';
+    const { el } = buildDatabase(doc, 'db', grouped);
+
+    el.querySelector<HTMLElement>('[data-blok-database-table-add-row][data-group-key="blue"]')?.click();
+    await flush();
+    const field = document.querySelector<HTMLElement>('[data-blok-database-cell-editor] [data-blok-database-cell-input]');
+
+    expect(field).not.toBeNull();
+    press(field ?? document.body, 'Escape');
+    await flush();
+
+    expect(rowIds(el)).toEqual(['r1', 'r2']);
+    expect(selectedCells(el)).toEqual([]);
+    expect(el.querySelector('[data-blok-database-table-row][aria-selected="true"]')).toBeNull();
+    expect(doc.api.blocks.delete).toHaveBeenCalledWith(expect.any(Number), false);
+  });
 });

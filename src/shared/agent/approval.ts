@@ -290,6 +290,9 @@ export interface RestoreScope { databases?: 'keep' | 'restore' }
  * Databases locked now (their own lock or a holder's) that the restored version removes, turns into
  * something else, or changes in any field the lock protects. A new id never stands in for an old one.
  */
+const withEmptySlots = (data: Record<string, unknown>): Record<string, unknown> =>
+  ({ deletedProperties: {}, ...normalizeDatabase(data) });
+
 export const restoreTouchesLocked = (now: DocSnapshot, target: OutputData, scope: RestoreScope = {}): string[] => {
   if (scope.databases === 'keep') {
     return [];
@@ -301,9 +304,9 @@ export const restoreTouchesLocked = (now: DocSnapshot, target: OutputData, scope
   return now.ids().filter(id => now.get(id)?.type === 'database' && lockedOrHeld(now, id, locked)).filter((id) => {
     const after = restored.get(id);
     const before = now.get(id);
-    // Load defaults filled on both sides: a version saved before a slot existed still matches its empty slot.
-    const data = normalizeDatabase(typeof after?.data === 'object' && after.data !== null ? after.data : {});
-    const was = normalizeDatabase(before?.data ?? {});
+    // A missing slot counts as its empty default: a version saved before it existed still matches.
+    const data = withEmptySlots(typeof after?.data === 'object' && after.data !== null ? after.data : {});
+    const was = withEmptySlots(before?.data ?? {});
 
     return after === undefined || after.type !== 'database'
       || LOCK_PROTECTED_FIELDS.some(field => !deepEqual(was[field], data[field]));

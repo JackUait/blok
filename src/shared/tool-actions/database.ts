@@ -1964,6 +1964,10 @@ const deletedEntry = (ctx: ToolActionContext, block: TargetBlock, state: Databas
 const deleteProperty: ToolActionImpl<{ propertyId: string }> = {
   run: (ctx, args) => {
     const { block, state } = openDatabase(ctx);
+
+    if (isRecord(block.data.source)) {
+      return ctx.fail('PRECONDITION_FAILED', 'This is a linked view: its properties live on its source database.');
+    }
     const index = propertyAt(ctx, state, args.propertyId);
     const property = state.schema[index];
 

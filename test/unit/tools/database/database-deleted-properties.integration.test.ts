@@ -6,6 +6,7 @@ import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
 import type { DatabaseData, DatabaseViewConfig } from '../../../../src/tools/database/types';
+import { equalsOutputData } from '../../../../src/shared/output-data';
 
 /** H50: a deleted property waits in deletedProperties until a restore or a permanent delete. */
 interface TestEditor {
@@ -114,6 +115,20 @@ describe('deleted database properties (H50)', { timeout: 30000 }, () => {
     editor = undefined;
     holder?.remove();
     vi.restoreAllMocks();
+  });
+
+  it('a database saved before deleted properties existed saves back unchanged', async () => {
+    const first = await make();
+    // What a pre-branch editor saved for this database: no deletedProperties key.
+    const before = await first.save();
+
+    first.destroy();
+    editor = undefined;
+    const second = await make(before.blocks);
+    const after = await second.save();
+
+    expect(after.blocks.find((block) => block.id === 'db')?.data).not.toHaveProperty('deletedProperties');
+    expect(equalsOutputData(before, after)).toBe(true);
   });
 
   it('delete keeps the row values; undo brings the property back, redo deletes it again', async () => {

@@ -206,8 +206,16 @@ describe('DatabaseModel', () => {
         expect(model.getDeletedProperties()[0]).not.toHaveProperty('deletedBy');
       });
 
-      it('saves an empty deletedProperties map while nothing is deleted, so two peers\' first deletes merge', () => {
+      it('saves no slot for a database loaded without one, and keeps an empty one it was loaded with', () => {
+        expect(new DatabaseModel(makeData({ schema: [titleProp, notes] })).snapshot()).not.toHaveProperty('deletedProperties');
+        expect(new DatabaseModel(makeData({ schema: [titleProp, notes], deletedProperties: {} })).snapshot().deletedProperties).toEqual({});
+      });
+
+      it('keeps an empty slot once its last entry is restored, so a peer\'s delete still merges into it', () => {
         const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }));
+
+        model.trashProperty('p1');
+        model.restoreProperty('p1');
 
         expect(model.snapshot().deletedProperties).toEqual({});
       });

@@ -70,12 +70,16 @@ describe('deleted properties: two peers at once', () => {
     return built;
   };
 
-  /** Two stores holding one database, each peer's first save already synced. */
+  /**
+   * Two stores holding one database that already has the slot, as one made
+   * from the toolbox does. Without it, two first deletes at once can still
+   * lose one (the same limit automations has).
+   */
   const twoPeers = (): { storeA: DocumentStore; storeB: DocumentStore; a: ReturnType<typeof peer>; b: ReturnType<typeof peer> } => {
     const storeA = createStore(1);
     const storeB = createStore(2);
 
-    storeA.fromJSON([{ id: 'db', type: 'database', data: tableData(SCHEMA) }]);
+    storeA.fromJSON([{ id: 'db', type: 'database', data: { ...tableData(SCHEMA), deletedProperties: {} } }]);
     sync(storeA, storeB);
     const a = peer(dataOf(storeA));
     const b = peer(dataOf(storeB));
@@ -110,6 +114,38 @@ describe('deleted properties: two peers at once', () => {
     expect(deletedIds(storeA)).toEqual(['p1', 'p2']);
     expect(deletedIds(storeB)).toEqual(['p1', 'p2']);
     expect(schemaIds(storeA)).toEqual(['p0', 'title']);
+  });
+
+  it.each([[1, 2], [2, 1]])('an untouched save never clobbers a first delete on a database saved without the slot (clients %i/%i)', (idA, idB) => {
+    const storeA = createStore(idA);
+    const storeB = createStore(idB);
+
+    storeA.fromJSON([{ id: 'db', type: 'database', data: tableData(SCHEMA) }]);
+    sync(storeA, storeB);
+    const a = peer(dataOf(storeA));
+    const b = peer(dataOf(storeB));
+
+    // A saves for an unrelated reason while B makes the first delete.
+    a.tool.renameProperty('p0', 'Zero renamed');
+    persist(a.tool, a.el, storeA);
+    b.tool.deleteProperty('p2');
+    persist(b.tool, b.el, storeB);
+    sync(storeA, storeB);
+
+    expect(deletedIds(storeA)).toEqual(['p2']);
+    expect(deletedIds(storeB)).toEqual(['p2']);
+  });
+
+  it('a database made from the toolbox is born with an empty slot, so its peers\' first deletes merge', () => {
+    const { tool, el } = peer({ initialView: 'table' } as unknown as DatabaseData);
+
+    expect(tool.save(el).deletedProperties).toEqual({});
+  });
+
+  it('an untouched database saved without the slot saves without it', () => {
+    const { tool, el } = peer(tableData(SCHEMA));
+
+    expect(tool.save(el)).not.toHaveProperty('deletedProperties');
   });
 
   it('keeps a peer\'s delete when the other restores the last entry at once', () => {

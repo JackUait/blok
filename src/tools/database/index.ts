@@ -812,6 +812,8 @@ export class DatabaseTool implements BlockTool {
     this.model = new DatabaseModel(data, seedLayout !== undefined
       ? { defaultViewType: seedLayout, idSeed: block.id, me, page, databaseId: this.dataId, viewRowOrder }
       : { me, page, databaseId: this.dataId, viewRowOrder });
+    // Born with the block: one peer creates the slot, so later first deletes merge into it.
+    if (this.seeded) this.model.bearDeletedProperties();
     this.computedValues = new ComputedProperties(this.dataId);
     this.pullLinkedSchema();
     this.model.setValueProperty((property) => this.computedValues.valueProperty(property));
@@ -2618,8 +2620,10 @@ export class DatabaseTool implements BlockTool {
     return {
       ...structuredClone(this.unknown),
       ...snapshot,
-      // Written even when empty, like automations: two peers' first deletes then merge into one map.
-      deletedProperties: this.source === undefined ? deletedProperties ?? {} : structuredClone(this.stubDeleted ?? {}),
+      // Kept as loaded: absent stays absent until the first delete (DatabaseModel.deletedSlot).
+      ...(this.source === undefined
+        ? deletedProperties === undefined ? {} : { deletedProperties }
+        : this.stubDeleted === undefined ? {} : { deletedProperties: structuredClone(this.stubDeleted) }),
       // Written even when empty: two peers that each create this key keep only one (serializer.ts objectToYMap).
       automations: structuredClone(this.savedAutomations ?? DATABASE_EMPTY_AUTOMATIONS),
       // Linked: a reference, never a copy of the source's schema.
@@ -2794,7 +2798,8 @@ export class DatabaseTool implements BlockTool {
       this.pullLinkedSchema();
     } else {
       // Undo of the first delete brings back data with no list: it must empty, not stay.
-      this.model.replaceDefinition({ ...data, deletedProperties: data.deletedProperties ?? {} });
+      this.model.replaceDefinition(data);
+      this.model.replaceDeletedProperties(data.deletedProperties);
     }
     void this.watchRemoteSource();
 

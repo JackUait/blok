@@ -216,6 +216,16 @@ describe('database deleted properties (H50)', () => {
     expect(() => run(doc, id, 'deletePropertyPermanently', { propertyId: status.id })).toThrow(/linked/);
   });
 
+  it('deleteProperty refuses a linked view: its properties live on its source', () => {
+    const { doc, id, schema, data } = make();
+    const ctx = createFakeCtx(doc, id);
+
+    ctx.update(id, { ...data(), source: { databaseId: 'elsewhere' } });
+    expect(() => run(doc, id, 'deleteProperty', { propertyId: schema()[1].id })).toThrow(/linked/);
+    expect(schema().map(property => property.id)).toContain(schema()[1].id);
+    expect(data().deletedProperties ?? {}).toEqual({});
+  });
+
   it('deletePropertyPermanently prunes AI Autofill watch lists, as the editor does', () => {
     const { doc, id, schema } = make();
     const [title, status] = schema();

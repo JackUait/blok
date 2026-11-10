@@ -75,6 +75,13 @@ export interface GroupOptions {
 export class DatabaseModel {
   private schema: PropertyDefinition[];
   private deletedProperties: Record<string, DeletedPropertyDefinition>;
+  /**
+   * Whether the saved data carries the deletedProperties slot. A database
+   * saved without it keeps saving without it until its first delete: an
+   * unrelated save that wrote an empty slot could replace a peer's first
+   * delete made at the same time.
+   */
+  private deletedSlot: boolean;
   private rows: DatabaseRow[] = [];
   private views: DatabaseViewConfig[];
   private activeViewId: string;
@@ -107,6 +114,7 @@ export class DatabaseModel {
     }
 
     this.deletedProperties = structuredClone(data?.deletedProperties ?? {});
+    this.deletedSlot = data?.deletedProperties !== undefined;
 
     if (data?.views !== undefined && data.views.length > 0) {
       this.views = structuredClone(data.views);
@@ -231,6 +239,7 @@ export class DatabaseModel {
 
     this.schema = this.schema.filter((p) => p.id !== propertyId);
     this.deletedProperties = { ...this.deletedProperties, [propertyId]: deleted };
+    this.deletedSlot = true;
 
     return deleted;
   }
@@ -649,6 +658,17 @@ export class DatabaseModel {
     this.views = structuredClone(data.views);
     // Absent means "not this caller's concern": most callers pass the schema and views only.
     if (data.deletedProperties !== undefined) this.deletedProperties = structuredClone(data.deletedProperties);
+  }
+
+  /** Takes the slot from the document as undo or a peer left it: present, or absent. */
+  replaceDeletedProperties(deleted: Record<string, DeletedPropertyDefinition> | undefined): void {
+    this.deletedProperties = structuredClone(deleted ?? {});
+    this.deletedSlot = deleted !== undefined;
+  }
+
+  /** Writes the empty slot from now on: a new database is born with it, so peers' first deletes merge. */
+  bearDeletedProperties(): void {
+    this.deletedSlot = true;
     this.locallyAdded.clear();
   }
 
@@ -659,7 +679,7 @@ export class DatabaseModel {
       schema: structuredClone(this.schema),
       views: structuredClone(this.views),
       activeViewId: this.activeViewId,
-      deletedProperties: Object.fromEntries(this.getDeletedProperties().map((p) => [p.id, structuredClone(p)])),
+      ...(this.deletedSlot ? { deletedProperties: Object.fromEntries(this.getDeletedProperties().map((p) => [p.id, structuredClone(p)])) } : {}),
     };
   }
 

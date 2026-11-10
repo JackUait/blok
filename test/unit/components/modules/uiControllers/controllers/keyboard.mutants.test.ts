@@ -1640,6 +1640,31 @@ describe('KeyboardController — mutation coverage', () => {
       expect(reachedTarget).toBe(false);
     });
 
+    // Notion U178: one undo takes back "/tod" and the menu closes; redo leaves it closed.
+    it.each([
+      ['undo', { key: 'z', ctrlKey: true }],
+      ['redo', { key: 'z', ctrlKey: true, shiftKey: true }],
+    ] as const)('closes an open slash menu before the %s walks history', (direction, init) => {
+      const harness = enabledHarness();
+      const walk = harness.blok.YjsManager[direction];
+
+      harness.state.toolboxOpened = true;
+
+      harness.press(harness.outside, init);
+
+      expect(harness.blok.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(harness.blok.Toolbar.toolbox.close).mock.invocationCallOrder[0])
+        .toBeLessThan(vi.mocked(walk).mock.invocationCallOrder[0]);
+    });
+
+    it('leaves a closed toolbox alone on undo', () => {
+      const harness = enabledHarness();
+
+      harness.press(harness.outside, { key: 'z', ctrlKey: true });
+
+      expect(harness.blok.Toolbar.toolbox.close).not.toHaveBeenCalled();
+    });
+
     it('undoes on Cmd+Z', () => {
       const harness = enabledHarness();
 

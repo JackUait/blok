@@ -351,6 +351,45 @@ export class BlockSelection extends Module {
       },
       on: this.Blok.UI.nodes.redactor,
     });
+
+    /**
+     * Read-only text takes no focus, so after a click Cmd+A lands on <body>
+     * and never reaches the redactor shortcut above.
+     */
+    this.listeners.on(document, 'keydown', (event: Event) => {
+      this.handleReadOnlyCommandA(event as KeyboardEvent);
+    });
+  }
+
+  /**
+   * Cmd+A in read-only when the keydown missed the redactor. Acts only when the
+   * page selection sits in this editor, so other editors and fields keep theirs.
+   * @param event - keydown on the document
+   */
+  private handleReadOnlyCommandA(event: KeyboardEvent): void {
+    const isCommandA = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.code === 'KeyA';
+
+    if (!isCommandA || !this.Blok.ReadOnly.isEnabled) {
+      return;
+    }
+
+    const redactor = this.Blok.UI.nodes.redactor;
+    const target = event.target;
+    const targetIsField = target instanceof HTMLElement
+      && (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT');
+
+    if (target instanceof Node && redactor.contains(target)) {
+      return;
+    }
+
+    const anchor = SelectionUtils.get()?.anchorNode ?? null;
+
+    if (targetIsField || anchor === null || !redactor.contains(anchor)) {
+      return;
+    }
+
+    event.preventDefault();
+    this.selectAllBlocks();
   }
 
   /**
@@ -459,9 +498,10 @@ export class BlockSelection extends Module {
    * @param {ClipboardEvent} e - copy/cut event
    * @param options - `cut` when the blocks are about to be deleted
    * @param options.cut - a `copyAsLink` block may then come back once anywhere
+   * @param options.blocks - blocks to copy instead of the selected ones
    * @returns {Promise<void>}
    */
-  public async copySelectedBlocks(e: ClipboardEvent, options: { cut?: boolean } = {}): Promise<void> {
+  public async copySelectedBlocks(e: ClipboardEvent, options: { cut?: boolean; blocks?: Block[] } = {}): Promise<void> {
     /**
      * Prevent default copy
      */
@@ -487,7 +527,7 @@ export class BlockSelection extends Module {
      * (e.g. when a collapsed toggle is copied — its hidden children must travel with it
      * so paste can restore the full toggle with its children).
      */
-    const allBlocks = this.collectBlocksForClipboard(this.selectedBlocks);
+    const allBlocks = this.collectBlocksForClipboard(options.blocks ?? this.selectedBlocks);
     const links = this.copyLinksOf(allBlocks);
     // A linked block stands alone: its descendants are not part of the link.
     const copiedBlocks = this.withoutLinkedDescendants(allBlocks, links);

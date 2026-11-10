@@ -1675,6 +1675,122 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('copying in read-only mode', () => {
+    const doc: OutputData['blocks'] = [
+      { id: 'h', type: 'header', data: { text: 'RO heading', level: 2 } },
+      { id: 'p', type: 'paragraph', data: { text: 'RO <b>bold</b> para' } },
+      { id: 'l1', type: 'list', data: { text: 'RO item', style: 'unordered', depth: 0 } },
+      { id: 't', type: 'toggle', data: { text: 'RO toggle', isOpen: true }, content: ['tc'] },
+      { id: 'tc', type: 'paragraph', data: { text: 'RO child' }, parent: 't' },
+      { id: 'last', type: 'paragraph', data: { text: 'RO-END' } },
+    ];
+
+    const blokBlocksOf = (clipboard: Record<string, string>): Array<{ id?: string; tool: string }> => {
+      return JSON.parse(clipboard['application/x-blok'] ?? '[]') as Array<{ id?: string; tool: string }>;
+    };
+
+    /** Select from the start of one block's text to the end of another's, as a mouse drag would. */
+    const selectTextAcross = async (page: Page, fromId: string, toId: string): Promise<void> => {
+      await page.evaluate(({ from, to }) => {
+        const textNodesOf = (id: string): Node[] => {
+          const holder = document.querySelector(`[data-blok-id="${id}"]`);
+          const walker = document.createTreeWalker(holder as Node, NodeFilter.SHOW_TEXT, {
+            acceptNode: (n) => ((n.textContent ?? '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+          });
+          const nodes: Node[] = [];
+
+          for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+            nodes.push(n);
+          }
+
+          return nodes;
+        };
+        const start = textNodesOf(from)[0];
+        const endNodes = textNodesOf(to);
+        const end = endNodes[endNodes.length - 1];
+        const range = document.createRange();
+
+        range.setStart(start, 0);
+        range.setEnd(end, (end.textContent ?? '').length);
+        window.getSelection()?.removeAllRanges();
+        window.getSelection()?.addRange(range);
+        document.dispatchEvent(new Event('selectionchange'));
+      }, { from: fromId, to: toId });
+    };
+
+    test('a text selection across blocks copies those blocks losslessly', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await selectTextAcross(page, 'h', 'last');
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="h"]'));
+
+      expect(blokBlocksOf(clipboard).map((block) => block.tool)).toEqual(['header', 'paragraph', 'list', 'toggle', 'paragraph', 'paragraph']);
+      expect(clipboard['text/plain']).toMatch(/RO-END/);
+    });
+
+    test('the copied blocks paste back with their types', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await selectTextAcross(page, 'h', 'last');
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="h"]'));
+
+      await createBlok(page, { data: { blocks: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }] } });
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), clipboard);
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.map((block) => [block.type, block.parent ?? null]))
+        .toEqual([
+          ['header', null],
+          ['paragraph', null],
+          ['list', null],
+          ['toggle', null],
+          ['paragraph', expect.any(String)],
+          ['paragraph', null],
+        ]);
+    });
+
+    test('a text selection inside one block is left to the browser', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await selectTextAcross(page, 'p', 'p');
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="p"]'));
+
+      expect(clipboard).toEqual({});
+    });
+
+    test('Cmd+A after clicking a block selects every block and copy carries them', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await page.getByText('RO-END', { exact: true }).click();
+      await page.keyboard.press(`${await getCommandModifierKey(page)}+A`);
+
+      await expect(page.locator('[data-blok-id="last"][data-blok-selected="true"]')).toBeVisible();
+      await expect(page.locator('[data-blok-id="h"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="h"]'));
+
+      expect(blokBlocksOf(clipboard).map((block) => block.id)).toEqual(['h', 'p', 'l1', 't', 'tc', 'last']);
+    });
+
+    test('Cmd+A in a text field outside the editor is not taken over', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, readOnly: true });
+      await page.getByText('RO-END', { exact: true }).click();
+      await page.evaluate(() => {
+        const input = document.createElement('input');
+
+        input.setAttribute('aria-label', 'outside field');
+        input.value = 'outside';
+        document.body.appendChild(input);
+      });
+      const outside = page.getByRole('textbox', { name: 'outside field' });
+
+      await outside.focus();
+      await page.keyboard.press(`${await getCommandModifierKey(page)}+A`);
+
+      await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
+      await outside.evaluate((element) => element.remove());
+    });
+  });
+
   test.describe('paste in read-only mode', () => {
     test('should not allow paste when editor is read-only', async ({ page }) => {
       await createBlok(page, {

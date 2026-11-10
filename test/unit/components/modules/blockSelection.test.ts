@@ -1599,6 +1599,57 @@ describe('BlockSelection', () => {
     });
   });
 
+  describe('Cmd+A in read-only that lands outside the redactor', () => {
+    const pressCommandA = (target: EventTarget): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { code: 'KeyA', key: 'a', metaKey: true, bubbles: true, cancelable: true });
+
+      target.dispatchEvent(event);
+
+      return event;
+    };
+
+    const setup = (): ReturnType<typeof createBlockSelection> => {
+      const setupResult = createBlockSelection();
+
+      Object.defineProperty(setupResult.modules.ReadOnly, 'isEnabled', { value: true, configurable: true });
+      setupResult.redactor.textContent = 'read-only text';
+      document.body.appendChild(setupResult.redactor);
+      vi.spyOn(Shortcuts, 'add').mockImplementation(() => undefined);
+      setupResult.blockSelection.prepare();
+
+      return setupResult;
+    };
+
+    const teardown = (blockSelection: BlockSelection): void => {
+      (blockSelection as unknown as { listeners: { removeAll: () => void } }).listeners.removeAll();
+    };
+
+    it('selects every block when the page selection is in this editor', () => {
+      const { blockSelection, blocks, redactor } = setup();
+
+      window.getSelection()?.collapse(redactor.firstChild, 2);
+      const event = pressCommandA(document.body);
+
+      expect(blocks.every((block) => block.selected)).toBe(true);
+      expect(event.defaultPrevented).toBe(true);
+      teardown(blockSelection);
+    });
+
+    it('leaves the page alone when the selection is in another editor', () => {
+      const { blockSelection, blocks } = setup();
+      const other = document.createElement('div');
+
+      other.textContent = 'another editor';
+      document.body.appendChild(other);
+      window.getSelection()?.collapse(other.firstChild, 2);
+      const event = pressCommandA(document.body);
+
+      expect(blocks.some((block) => block.selected)).toBe(false);
+      expect(event.defaultPrevented).toBe(false);
+      teardown(blockSelection);
+    });
+  });
+
   describe('destroy', () => {
     it('removes the CMD+A shortcut', () => {
       const { blockSelection, modules } = createBlockSelection();

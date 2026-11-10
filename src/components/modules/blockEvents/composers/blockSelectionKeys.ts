@@ -665,10 +665,41 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     if (!BlockSelection.anyBlockSelected) {
+      const covered = this.blocksUnderReadOnlyTextSelection();
+
+      if (covered.length > 0) {
+        void BlockSelection.copySelectedBlocks(event, { blocks: covered });
+      }
+
       return;
     }
 
     void BlockSelection.copySelectedBlocks(event);
+  }
+
+  /**
+   * The blocks a read-only text selection spans, when it crosses a block edge.
+   * Read-only inputs are not contenteditable, so the cross-block text selection
+   * never resolves there. The browser's own copy of the rendered DOM loses
+   * lists and toggles, so these blocks are copied whole instead.
+   */
+  private blocksUnderReadOnlyTextSelection(): Block[] {
+    const { BlockManager, ReadOnly } = this.Blok;
+    const selection = SelectionUtils.get();
+
+    if (!ReadOnly.isEnabled || selection === null || selection.rangeCount === 0) {
+      return [];
+    }
+
+    const range = selection.getRangeAt(0);
+    const start = BlockManager.getBlockByChildNode(range.startContainer);
+    const end = BlockManager.getBlockByChildNode(range.endContainer);
+
+    if (range.collapsed || start === undefined || end === undefined || start === end) {
+      return [];
+    }
+
+    return BlockManager.getSelectionSiblingRange(start, end);
   }
 
   /**

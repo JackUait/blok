@@ -100,6 +100,9 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       positions: { START: 'start', END: 'end', DEFAULT: 'default' },
       setToBlock: vi.fn(),
     } as unknown as BlokModules['Caret'],
+    ReadOnly: {
+      isEnabled: false,
+    } as unknown as BlokModules['ReadOnly'],
   };
 
   const mergedState: Partial<BlokModules> = { ...defaults };
@@ -291,6 +294,73 @@ describe('BlockSelectionKeys', () => {
       blockSelectionKeys.handleCopy(event);
 
       expect(copySelectedBlocks).toHaveBeenCalledWith(event);
+    });
+
+    describe('a read-only text selection across blocks', () => {
+      const first = createBlock({ id: 'first' });
+      const second = createBlock({ id: 'second' });
+      const foreign = document.createElement('p');
+      const page = document.createElement('div');
+
+      foreign.textContent = 'another editor';
+      // A range across nodes of different trees collapses.
+      page.append(first.holder, second.holder, foreign);
+      first.firstInput?.append('one');
+      second.firstInput?.append('two');
+
+      const selectFrom = (start: Node, end: Node): void => {
+        const range = document.createRange();
+
+        range.setStart(start, 0);
+        range.setEnd(end, 1);
+        vi.spyOn(SelectionUtilsModule.SelectionUtils, 'get').mockReturnValue({
+          rangeCount: 1,
+          getRangeAt: () => range,
+        } as unknown as Selection);
+      };
+
+      const setup = (isEnabled: boolean): { blockSelectionKeys: BlockSelectionKeys; copySelectedBlocks: ReturnType<typeof vi.fn> } => {
+        const copySelectedBlocks = vi.fn(() => Promise.resolve());
+        const owner = new Map<Node, Block>([[first.firstInput as Node, first], [second.firstInput as Node, second]]);
+        const blok = createBlokModules({
+          BlockSelection: { anyBlockSelected: false, copySelectedBlocks } as unknown as BlokModules['BlockSelection'],
+          BlockManager: {
+            getBlockByChildNode: vi.fn((node: Node) => owner.get(node.parentNode as Node)),
+            getSelectionSiblingRange: vi.fn(() => [first, second]),
+          } as unknown as BlokModules['BlockManager'],
+          ReadOnly: { isEnabled } as unknown as BlokModules['ReadOnly'],
+        });
+
+        return { blockSelectionKeys: new BlockSelectionKeys(blok), copySelectedBlocks };
+      };
+
+      it('copies the blocks the selection spans', () => {
+        const { blockSelectionKeys, copySelectedBlocks } = setup(true);
+        const event = createClipboardEvent();
+
+        selectFrom(first.firstInput?.firstChild as Node, second.firstInput?.firstChild as Node);
+        blockSelectionKeys.handleCopy(event);
+
+        expect(copySelectedBlocks).toHaveBeenCalledWith(event, { blocks: [first, second] });
+      });
+
+      it('leaves a selection that ends in another editor alone', () => {
+        const { blockSelectionKeys, copySelectedBlocks } = setup(true);
+
+        selectFrom(first.firstInput?.firstChild as Node, foreign.firstChild as Node);
+        blockSelectionKeys.handleCopy(createClipboardEvent());
+
+        expect(copySelectedBlocks).not.toHaveBeenCalled();
+      });
+
+      it('leaves an editable editor to the cross-block text copy', () => {
+        const { blockSelectionKeys, copySelectedBlocks } = setup(false);
+
+        selectFrom(first.firstInput?.firstChild as Node, second.firstInput?.firstChild as Node);
+        blockSelectionKeys.handleCopy(createClipboardEvent());
+
+        expect(copySelectedBlocks).not.toHaveBeenCalled();
+      });
     });
   });
 

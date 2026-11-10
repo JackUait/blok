@@ -417,3 +417,32 @@ describe('column menu row icon', () => {
     expect(declared(COLUMN, 'margin-inline-end')).toEqual(['var(--blok-space-2)']);
   });
 });
+
+// notion-motion.md Round 11: every calculation menu is 200x123: four 28px rows on a 29 pitch, 4px padding.
+describe('calculation menu', () => {
+  it('drops the last row\'s 1px gap, so four rows make 123', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-popover-item]:last-child", 'margin-block-end')).toEqual(['0']);
+  });
+});
+
+// r11-gap-nocalc.raw: the New page row is 37 tall, its 28px button 4.5 from the top.
+describe('"+ New page" row', () => {
+  it('keeps 4.5px above and below the 28px button', () => {
+    expect(declared('[data-blok-database-table-add-row]', 'height')).toEqual(['28px']);
+    expect(declared('[data-blok-database-table-add-row]', 'margin-block')).toEqual(['calc(var(--blok-space-2-25) / 2)']);
+  });
+});
+
+// research/22 §5: the board's 99+ row holds a hint line, so the calc menu's 28px row height must not clip it.
+describe('board count menu 99+ row', () => {
+  it('grows to fit its hint', () => {
+    expect(declared("[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name='database-group-calc-cap-counts']", 'height')).toEqual(['auto']);
+  });
+});
+
+// The empty grid's blank line is 37 with its border, so the button keeps 4px margins there.
+describe('"+ New page" in the empty grid', () => {
+  it('keeps the blank line 37 tall', () => {
+    expect(declared('[data-blok-database-table-blank-cell] > [data-blok-database-table-add-row]', 'margin-block')).toEqual(['var(--blok-space-1)']);
+  });
+});

@@ -191,6 +191,15 @@ describe('column header menu glyphs', () => {
     expect(chevron('database-header-group')).toBeUndefined();
   });
 
+  // notion-motion.md Round 11, r11-calc-submenu-number.png: the Calculate submenu is the footer's 200-wide menu.
+  it('opens Calculate as the 200-wide calculation menu', () => {
+    const calculate = headerViewItems(ctx('number')).find((item) => 'title' in item && item.title === 'tools.database.tableCalculate');
+    const children = calculate !== undefined && 'children' in calculate ? calculate.children : undefined;
+
+    expect(children?.minWidth).toBe('200px');
+    expect(children?.class).toBe('blok-database-calc-menu');
+  });
+
   // notion-live-8/80-menu-number.png: Group is a dot grid; Insert left and right push an arrow into a bar.
   it('draws Notion\'s Group and Insert glyphs', () => {
     const items = headerViewItems(ctx('text'));

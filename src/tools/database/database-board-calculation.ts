@@ -2,7 +2,7 @@ import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { CALCULATIONS_FOR_TYPE } from './database-calculations';
-import { CALCULATION_LABEL_KEYS, COUNT_FNS, DATE_FNS, NUMBER_FNS, PERCENT_FNS } from './database-table-menus';
+import { CALC_COUNT_LIST_WIDTH, CALCULATION_LABEL_KEYS, COUNT_FNS, DATE_FNS, NUMBER_FNS, PERCENT_FNS } from './database-table-menus';
 import { calculationText } from './database-table-view';
 import type { CalculationFn, DatabaseRow, PropertyDefinition } from './types';
 import type { ResolvedGroupCalculation } from './view-settings';
@@ -79,7 +79,7 @@ export const groupCalculationItems = (params: GroupCalculationMenuParams): Popov
       type: PopoverItemType.Default,
       title: t(titleKey),
       isActive: fns.includes(current.fn),
-      children: { items: [...lead, ...leaves] },
+      children: { items: [...lead, ...leaves], ...(fns === COUNT_FNS ? { width: CALC_COUNT_LIST_WIDTH } : {}) },
     };
   };
 

@@ -40,7 +40,7 @@ import type { TemplateRepeatHost } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
-import { calculationItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
+import { CALC_MENU_MIN_WIDTH, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
@@ -9231,8 +9231,10 @@ export class DatabaseTool implements BlockTool {
         this.groupMenuPopover?.hide();
         this.updateActiveView({ groupCalculation: groupCalculationCapped(current, cap, titleId) });
       },
-    }), tableHeader ?? anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined, tableHeader === undefined ? {} : {
-      minWidth: '200px',
+    }), tableHeader ?? anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined, {
+      // notion-motion.md Round 11: the footer's menu, 200x123, its top on the count's bottom.
+      class: `${DATABASE_HEADER_MENU_CLASS} ${DATABASE_CALC_MENU_CLASS}`,
+      minWidth: CALC_MENU_MIN_WIDTH,
       offset: 0,
     });
   }

@@ -356,12 +356,18 @@ test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)',
     await mount(page, undefined, ledgerBlocks());
   });
 
-  test('"+ New page" row: 36px row, 8px start pad, 14px/20px tertiary ink, 16px icon at 1px/7px; the hover fills the 28px button only (research/08:262, research/22 §12)', async ({ page }) => {
+  test('"+ New page" row: 37px row, 8px start pad, 14px/20px tertiary ink, 16px icon at 1px/7px; the hover fills the 28px button only (notion-motion.md Round 11, research/22 §12)', async ({ page }) => {
     const add = page.locator('[data-blok-database-table-add-row]').first();
     const box = await add.boundingBox();
 
     expect(box?.height).toBe(28);
-    expect(await style(add, ['margin-top', 'margin-bottom', 'border-radius'])).toEqual({ 'margin-top': '4px', 'margin-bottom': '4px', 'border-radius': '6px' });
+    // r11-gap-nocalc.raw: the row is 37, the button 4.5 under the last body row and 4.5 over the footer.
+    expect(await add.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+
+      return [rect.top - (el.previousElementSibling?.getBoundingClientRect().bottom ?? NaN), (el.nextElementSibling?.getBoundingClientRect().top ?? NaN) - rect.bottom];
+    })).toEqual([4.5, 4.5]);
+    expect(await style(add, ['border-radius'])).toEqual({ 'border-radius': '6px' });
     expect(await style(add, ['padding-left', 'font-size', 'line-height', 'color'])).toEqual({
       'padding-left': '8px',
       'font-size': '14px',

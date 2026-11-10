@@ -6742,7 +6742,6 @@ export class DatabaseTool implements BlockTool {
     });
     // research/35 §14, research/36 §3.1: in a template's "…" submenu only Escape closes it, one level.
     if (this.groupMenuPopover !== null) {
-      this.groupMenuPopover.escapeClosesSubmenuFirst = true;
       this.groupMenuPopover.arrowLeftClosesSubmenu = false;
       this.groupMenuPopover.getElement().setAttribute('data-blok-database-template-menu', '');
     }
@@ -9154,6 +9153,8 @@ export class DatabaseTool implements BlockTool {
       ...(layout.scopeElement !== undefined ? { scopeElement: layout.scopeElement } : {}),
     });
 
+    // Escape closes only the open submenu, as measured on Notion's other menus (research/23:33, 26:78, 27:299, 35:418).
+    popover.escapeClosesSubmenuFirst = true;
     owner?.setAttribute('data-popover-open', '');
     popover.on(PopoverEvent.Closed, () => {
       owner?.removeAttribute('data-popover-open');

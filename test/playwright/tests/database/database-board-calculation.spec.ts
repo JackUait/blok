@@ -198,6 +198,8 @@ test('Escape closes one menu layer at a time', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(anyItem(page, 'Sum')).toHaveCount(0);
   await expect(menuItem(page, 'More options')).toBeVisible();
+  // A closing menu stays visible while it fades, but it is inert.
+  expect(await menuItem(page, 'More options').evaluate((el) => el.closest('[inert]') === null)).toBe(true);
 
   await page.keyboard.press('Escape');
   await expect(anyItem(page, 'More options')).toHaveCount(0);

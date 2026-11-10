@@ -1413,6 +1413,46 @@ test.describe('copy and paste', () => {
         return blocks.map((b) => `${b.type}:${String((b.data as { text?: unknown }).text)}${b.parent === toggle?.id && b.parent !== undefined ? ' in toggle' : ''}`);
       }).toEqual(['paragraph:HelloWorld', 'paragraph:First', 'toggle:Toggle', 'paragraph:Child in toggle']);
     });
+
+    test('a text range cut across paragraphs pastes back as the original paragraphs', async ({ page }) => {
+      await createBlokWithElements(page, [
+        { id: 'a', type: 'paragraph', data: { text: 'Alpha start' } },
+        { id: 'm', type: 'paragraph', data: { text: 'Middle' } },
+        { id: 'z', type: 'paragraph', data: { text: 'Zeta end' } },
+      ]);
+      const firstBox = await page.locator('[data-blok-id="a"] [contenteditable="true"]').boundingBox();
+      // Drag ends on the right edge of "Ze", measured so the font does not matter.
+      const end = await page.evaluate(() => {
+        const text = document.querySelector('[data-blok-id="z"] [contenteditable="true"]')?.firstChild;
+
+        if (!text) {
+          throw new Error('no text node in the last paragraph');
+        }
+        const range = document.createRange();
+
+        range.setStart(text, 0);
+        range.setEnd(text, 2);
+        const rect = range.getBoundingClientRect();
+
+        return { x: rect.right, y: rect.top + rect.height / 2 };
+      });
+
+      if (firstBox === null) {
+        throw new Error('first paragraph has no box');
+      }
+      await page.mouse.move(firstBox.x + 1, firstBox.y + firstBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(end.x, end.y, { steps: 15 });
+      await page.mouse.up();
+
+      const clipboard = await cutFromElement(page.locator(':focus'));
+
+      await expect.poll(() => texts(page)).toEqual(['paragraph:ta end']);
+
+      await paste(page, page.locator(':focus'), clipboard);
+
+      await expect.poll(() => texts(page)).toEqual(['paragraph:Alpha start', 'paragraph:Middle', 'paragraph:Zeta end']);
+    });
   });
 
   test('block tune data survives a block copy and paste', async ({ page }) => {

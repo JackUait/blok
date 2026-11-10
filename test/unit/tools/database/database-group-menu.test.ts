@@ -64,13 +64,6 @@ describe('groupMenuItems', () => {
     expect(heading.element?.hasAttribute('data-blok-database-group-menu-heading')).toBe(true);
   });
 
-  // The table's group header has no count to show or hide, so its menu leaves the toggle out.
-  it('leaves the count toggle out where the group shows no count', () => {
-    const names = (groupMenuItems(params({ hasAggregation: false })) as Item[]).map((item) => item.name ?? item.type);
-
-    expect(names.slice(0, 3)).toEqual(['edit-groups', 'hide-group', 'move-to-trash']);
-  });
-
   it('marks the current color with a check mark, and no other', () => {
     const items = groupMenuItems(params({ color: 'yellow' }));
 

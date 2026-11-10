@@ -480,5 +480,25 @@ describe('database table calculation footer', () => {
       expect(button).toMatch(/height:\s*24px/);
       expect(button).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
     });
+
+    // notion-motion.md Round 11 "Group header with Show aggregation" (r11-group-hdr-aggon.raw): a 24-tall count,
+    // padding 0 8px, radius 6, 14px/16.8px 500, 3px after the pill, the ⋯ and + right after it; hover fill
+    // rgba(33,27,23,0.051) over 0.1s ease-in-out. Notion's ink rgb(161,158,153) is below AA: Blok keeps its muted ink.
+    it('draws the "Show aggregation" count as a 24px button with the ⋯ and + right after it', () => {
+      const count = ruleBody('[data-blok-database-table-group-count]');
+
+      expect(count).toMatch(/height:\s*24px/);
+      expect(count).toMatch(/padding:\s*0 var\(--blok-space-2\)/);
+      expect(count).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
+      expect(count).toMatch(/font-size:\s*14px/);
+      expect(count).toMatch(/line-height:\s*16\.8px/);
+      expect(count).toMatch(/font-weight:\s*500/);
+      expect(count).toMatch(/color:\s*var\(--blok-database-table-muted-text\)/);
+      expect(count).toMatch(/transition:\s*background 100ms ease-in-out/);
+      expect(count).not.toMatch(/margin/);
+      expect(ruleBody('button[data-blok-database-table-group-count]:hover')).toMatch(/background-color:\s*var\(--blok-database-hover-bg\)/);
+      expect(ruleBody('button[data-blok-database-table-group-count]')).toMatch(/cursor:\s*pointer/);
+      expect(ruleBody('[data-blok-database-table-group-count] + [data-blok-database-table-group-actions]')).toMatch(/margin-inline-start:\s*0/);
+    });
   });
 });

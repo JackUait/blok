@@ -13246,6 +13246,35 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   height: 16px;
 }
 
+[data-blok-database-table-group-count] {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-table-muted-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 16.8px;
+  font-weight: 500;
+  transition: background 100ms ease-in-out;
+}
+
+button[data-blok-database-table-group-count] {
+  cursor: pointer;
+}
+
+button[data-blok-database-table-group-count]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-table-group-count] + [data-blok-database-table-group-actions] {
+  margin-inline-start: 0;
+}
+
 [data-blok-database-table-row-ghost], [data-blok-database-table-column-ghost] {
   z-index: 1000;
   display: flex;

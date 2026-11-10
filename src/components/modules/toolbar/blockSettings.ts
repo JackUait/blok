@@ -157,6 +157,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    */
   private closeKeptSelection = false;
 
+  /** Stops watching for focus that would leave a kept selection under a field. */
+  private stopFocusWatch: () => void = () => undefined;
+
   /**
    * Panel with block settings with 2 sections:
    *  - Tool's Settings
@@ -242,6 +245,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * the flag stays true and the toolbar permanently stops appearing on hover.
      */
     this.isOpening = true;
+    this.stopFocusWatch();
 
     try {
       /**
@@ -965,8 +969,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     blocks.forEach((block) => this.Blok.BlockSelection.selectBlock(block));
     this.releaseFocus();
+    this.letGoOnFocus(blocks);
 
-    // Some UIs take focus or open a modal a frame after the tune ran.
+    // Some UIs open a modal a frame after the tune ran.
     requestAnimationFrame(() => {
       if (document.activeElement === document.body && !isModalOpen()) {
         return;
@@ -988,6 +993,27 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     BlockSelection.clearSelection();
     blocks.forEach((block) => BlockSelection.selectBlock(block));
     this.releaseFocus();
+    this.letGoOnFocus(blocks);
+  }
+
+  /**
+   * Unselects `blocks` when focus next lands anywhere, at any delay. A key
+   * typed in a field focused under the selection would replace the blocks.
+   * @param blocks - the blocks left selected
+   */
+  private letGoOnFocus(blocks: Block[]): void {
+    this.stopFocusWatch();
+
+    const onFocus = (): void => {
+      this.stopFocusWatch();
+      blocks.filter((block) => block.selected).forEach((block) => this.Blok.BlockSelection.unselectBlock(block));
+    };
+
+    document.addEventListener('focusin', onFocus, true);
+    this.stopFocusWatch = () => {
+      document.removeEventListener('focusin', onFocus, true);
+      this.stopFocusWatch = () => undefined;
+    };
   }
 
   /**

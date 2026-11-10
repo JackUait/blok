@@ -25,8 +25,9 @@ declare global {
 
 type SavedBlock = OutputData['blocks'][number];
 
-const createBlok = async (page: Page, blocks: SavedBlock[]): Promise<void> => {
-  await page.evaluate(async ({ holder, initial }) => {
+/** `classCode` maps a tool name to its class source, run in the page. */
+const createBlok = async (page: Page, blocks: SavedBlock[], classCode: Record<string, string> = {}): Promise<void> => {
+  await page.evaluate(async ({ holder, initial, sources }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -39,11 +40,18 @@ const createBlok = async (page: Page, blocks: SavedBlock[]): Promise<void> => {
     container.setAttribute('data-blok-testid', holder);
     document.body.appendChild(container);
 
-    const blok = new window.Blok({ holder, data: { blocks: initial } });
+    const tools = Object.fromEntries(Object.entries(sources).map(([name, code]) => {
+      // eslint-disable-next-line no-new-func -- the tool class arrives as source text
+      const makeToolClass = new Function(`return (${code});`) as () => unknown;
+      const toolClass = makeToolClass();
+
+      return [name, { class: toolClass }];
+    }));
+    const blok = new window.Blok({ holder, data: { blocks: initial }, tools });
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, initial: blocks });
+  }, { holder: HOLDER_ID, initial: blocks, sources: classCode });
 };
 
 /** Each top-level block as `type:text`, in saved order. */
@@ -333,6 +341,42 @@ test.describe('block menu actions leave a block selection (D3)', () => {
 
     expect(await page.locator('[data-blok-id="co"]').count()).toBe(1);
     expect(await page.locator('[data-blok-id="k1"]').textContent()).toContain('Note');
+  });
+
+  test('keys typed in a field a tune focuses after a timer never reach a kept selection', async ({ page }) => {
+    const lateFocus = `class LateFocus {
+      constructor({ data }) { this.data = data; }
+      render() {
+        this.root = document.createElement('div');
+        this.root.innerHTML = '<div contenteditable="true">' + this.data.text + '</div><input aria-label="Late field">';
+
+        return this.root;
+      }
+      save(root) { return { text: root.querySelector('[contenteditable]').innerHTML }; }
+      renderSettings() {
+        return [{
+          name: 'late-focus',
+          title: 'Late focus',
+          icon: '<svg></svg>',
+          closeOnActivate: true,
+          onActivate: () => { setTimeout(() => this.root.querySelector('input').focus(), 50); },
+        }];
+      }
+    }`;
+
+    await createBlok(page, [P('p-before', 'before'), { id: 'late', type: 'late', data: { text: 'Late block' } }, P('p-after', 'after')], { late: lateFocus });
+    await editable(page, 'p-before').click();
+    await gap(page);
+
+    await openTunes(page, 'late');
+    await tune(page, 'late-focus').click();
+    await expect(page.getByRole('textbox', { name: 'Late field' })).toBeFocused();
+
+    await page.keyboard.type('ab');
+    await page.keyboard.press('Backspace');
+
+    expect(await saved(page)).toEqual(['paragraph:before', 'late:Late block', 'paragraph:after']);
+    await expect(page.getByRole('textbox', { name: 'Late field' })).toHaveValue('a');
   });
 
   test('a markdown shortcut conversion keeps the caret (U073)', async ({ page }) => {

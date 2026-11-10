@@ -1092,6 +1092,31 @@ describe('BlockSettings', () => {
       raf.mockRestore();
     });
 
+    it('lets go of the block when the action takes focus after a timer, past the first frame', async () => {
+      const frames: FrameRequestCallback[] = [];
+      const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+        frames.push(callback);
+
+        return frames.length;
+      });
+      const field = document.createElement('input');
+
+      document.body.appendChild(field);
+
+      const { block, activate } = await openWithTune(vi.fn());
+
+      activate();
+      Object.assign(block, { selected: true });
+      frames.forEach((callback) => callback(0));
+      expect(blokMock.BlockSelection.unselectBlock).not.toHaveBeenCalled();
+
+      // A key typed in this field would otherwise replace the selected block.
+      field.focus();
+
+      expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
+      raf.mockRestore();
+    });
+
     it('still clears the selection when the menu is dismissed', async () => {
       const { block } = await openWithTune(vi.fn());
 

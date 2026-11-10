@@ -94,14 +94,17 @@ public interface ICollabActivityObserver
   /// <para>
   /// A window starts at a document's first journalled write and lasts
   /// <c>BlokServerOptions.CollabChangeSignalWindow</c> (60 seconds by
-  /// default). A block added and removed inside one window is left out, and a
-  /// window that is left with nothing sends no signal.
+  /// default, at most one day). A block added and removed inside one window
+  /// is left out, and a window that is left with nothing sends no signal.
+  /// One signal reads at most 200 records; a busier window is marked
+  /// <see cref="CollabChangeSignal.Truncated"/>.
   /// </para>
   /// <para>
   /// Best effort, like every call here: a signal is lost when the server
-  /// stops inside its window, when the journal cannot be read, or when the
-  /// call throws. A host that must not miss a change reconciles through
-  /// <c>GET /sync/{doc}/history/changes</c> and its <c>olderEnd</c>.
+  /// stops inside its window, when the journal cannot be read, when the call
+  /// throws or runs past 30 seconds, or when more than 1024 signals and
+  /// events are waiting. A host that must not miss a change reconciles
+  /// through <c>GET /sync/{doc}/history/changes</c> and its <c>olderEnd</c>.
   /// </para>
   /// </remarks>
   ValueTask OnChangesAsync(CollabChangeSignal signal, CancellationToken cancellationToken = default) =>
@@ -109,7 +112,8 @@ public interface ICollabActivityObserver
 
   /// <summary>
   /// Told one typed audit event. Off unless an implementation overrides it.
-  /// Best effort: a call that throws is logged and dropped.
+  /// Best effort: a call that throws or runs past 30 seconds is logged and
+  /// dropped.
   /// </summary>
   /// <param name="auditEvent">What happened, when, and who did it when known.</param>
   /// <param name="cancellationToken">The caller's token.</param>

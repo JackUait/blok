@@ -582,6 +582,17 @@ describe('DatabaseTableView', () => {
       expect(value('p-notes')).toBe('3');
     });
 
+    // notion-motion.md Round 10 (r10-calc-none-*.raw): with no calculation set there is no footer row at all;
+    // the column header menu sets the first one.
+    it('draws no footer row while no shown column is calculated, with rows or without', () => {
+      expect(mount().root.querySelector('[data-blok-database-table-footer]')).toBeNull();
+      expect(mount({ rows: [] }).root.querySelector('[data-blok-database-table-footer]')).toBeNull();
+      expect(mount({ view: tableView({ properties: [{ id: 'p-amount', visible: false }], calculations: [{ id: 'p-amount', fn: 'sum' }] }) })
+        .root.querySelector('[data-blok-database-table-footer]')).toBeNull();
+      expect(mount({ rows: [], view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) })
+        .root.querySelector('[data-blok-database-table-footer]')).not.toBeNull();
+    });
+
     it('renders a calculation footer and leaves empty footer cells marked', () => {
       const view = tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] });
       const { root } = mount({ view });
@@ -1866,7 +1877,7 @@ describe('DatabaseTableView', () => {
 
   describe('calculation menu', () => {
     it('closes its open menu when the table is torn down, so a redraw leaves no stray popover', async () => {
-      const { root, view } = mount();
+      const { root, view } = mount({ view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
 
       root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-amount"]')?.click();
       expect(document.querySelector('[data-blok-popover-opened], [data-blok-popover]')).not.toBeNull();
@@ -1925,7 +1936,7 @@ describe('DatabaseTableView', () => {
 
     it('a button column has no footer menu: Notion offers no Calculate there', () => {
       const withButton: PropertyDefinition[] = [...schema, { id: 'p-act', name: 'Act', type: 'button', position: 'a5' }];
-      const { root } = mount({ schema: withButton });
+      const { root } = mount({ schema: withButton, view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
       const cell = root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-act"]');
 
       expect(cell).not.toBeNull();

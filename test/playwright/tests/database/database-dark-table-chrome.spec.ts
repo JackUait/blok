@@ -156,8 +156,9 @@ for (const path of paths) {
       const calc = page.locator('[data-blok-database-table-calc][data-property-id="p-amount"]');
 
       await expect(calc.locator('[data-blok-database-table-calc-label]')).toHaveCSS('color', 'rgb(143, 140, 135)');
-      await calc.hover();
-      await expect(calc).toHaveCSS('background-color', HOVER_FILL);
+      await calc.locator('[data-blok-database-table-calc-box]').hover();
+      await expect(calc.locator('[data-blok-database-table-calc-box]')).toHaveCSS('background-color', HOVER_FILL);
+      await expect(calc).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     });
 
     test('view tabs and toolbar icons: dark ink, the measured tab hover (§1b)', async ({ page }) => {

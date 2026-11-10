@@ -13084,7 +13084,7 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 200ms;
 }
 
-[data-blok-database-table-calc]:hover > [data-blok-database-table-calc-box] {
+[data-blok-database-table-calc-box]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
@@ -13108,7 +13108,7 @@ textarea[data-blok-database-cell-input] {
   transition: opacity 200ms ease;
 }
 
-[data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder], [data-blok-database-timeline-table-footer]:hover [data-blok-database-table-calc-placeholder], [data-blok-database-table-calc]:focus-visible [data-blok-database-table-calc-placeholder] {
+[data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder], [data-blok-database-table-calc]:focus-visible [data-blok-database-table-calc-placeholder] {
   opacity: 1;
 }
 
@@ -16129,6 +16129,10 @@ input[data-blok-database-picker-search]:focus {
   font-size: 14px;
   white-space: nowrap;
   border-block-end: 1px solid var(--blok-database-timeline-grid-line);
+}
+
+[data-blok-database-timeline-table-footer] {
+  padding-inline: 0;
 }
 
 [data-blok-database-timeline-table-header] {

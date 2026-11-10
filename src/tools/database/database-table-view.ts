@@ -849,7 +849,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         fragment.appendChild(this.createBlankLine(this.createAddRow(groupKey)));
       }
       fragment.append(this.createBlankLine(null), this.createBlankLine(null));
-      fragment.appendChild(this.createFooter(rows));
+      if (this.hasShownCalculation()) {
+        fragment.appendChild(this.createFooter(rows));
+      }
 
       return fragment;
     }
@@ -865,8 +867,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (this.editable) {
       fragment.appendChild(this.createAddRow(groupKey));
     }
-    // A group keeps its footer only while a shown column is calculated; the header menu still sets one.
-    if (group === undefined || this.hasShownCalculation()) {
+    // notion-motion.md Round 10: no footer row until a shown column is calculated; the header menu sets the first one.
+    if (this.hasShownCalculation()) {
       fragment.appendChild(this.createFooter(rows));
     }
 

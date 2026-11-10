@@ -88,13 +88,16 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('table calculation row (research/21 §1d, research/08 shot 66)', () => {
-  test('rules a 1px line over the row and fills only a 21px box around the value on hover', async ({ page }) => {
+  // r10-calc-hover-numcell.raw / r10-calc-hover-textbtn.raw: the pointer in the cell but off the box leaves it clear.
+  test('rules a 1px line over the row and fills only a 21px box around the value, under the pointer', async ({ page }) => {
     await mount(page);
     const calc = page.locator('[data-blok-database-table-calc][data-property-id="p-amount"]');
     const patch = calc.locator('[data-blok-database-table-calc-box]');
 
     await expect(patch).toBeVisible();
-    await calc.hover();
+    await calc.hover({ position: { x: 4, y: 17 } });
+    await expect(patch).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await patch.hover();
     await expect(patch).toHaveCSS('background-color', 'rgba(33, 27, 23, 0.05)');
     await expect(calc).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(patch).toHaveCSS('border-top-left-radius', '6px');

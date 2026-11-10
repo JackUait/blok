@@ -1581,6 +1581,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 10 lane pickers: Multi-select and Status Edit property geometry, the DEFAULT tag, the Sort/Filter
     // picker layout, the Group by "None" row, the row handle menu's centre origin, the unscaled Edit property flyout and the 200ms submenu fade.
     const DATABASE_PICKERS_BYTES = 2995;
+    // Round 10 lane calcfoot: the calc fill only under the pointer, per-cell "Calculate" in the timeline, its full-width footer cell.
+    const DATABASE_CALCFOOT_BYTES = 140;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid, bottom stage and skin-tone dial.
@@ -2017,7 +2019,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TABCALC_BYTES
       + DATABASE_VSUB_BYTES
       + DATABASE_GRPMENU_BYTES
-      + DATABASE_PICKERS_BYTES;
+      + DATABASE_PICKERS_BYTES
+      + DATABASE_CALCFOOT_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

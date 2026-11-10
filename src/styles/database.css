@@ -9848,7 +9848,8 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 200ms;
 }
 
-[data-blok-database-table-calc]:hover > [data-blok-database-table-calc-box] {
+/* r10-calc-hover-numcell.raw, r10-calc-hover-numbtn.raw: only the pointer on the button fills it. */
+[data-blok-database-table-calc-box]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
@@ -9874,7 +9875,6 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder],
-[data-blok-database-timeline-table-footer]:hover [data-blok-database-table-calc-placeholder],
 [data-blok-database-table-calc]:focus-visible [data-blok-database-table-calc-placeholder] {
   opacity: 1;
 }
@@ -13188,6 +13188,11 @@ input[data-blok-database-picker-search]:focus {
   font-size: 14px;
   white-space: nowrap;
   border-block-end: 1px solid var(--blok-database-timeline-grid-line);
+}
+
+/* r10-timeline-calc-edge.raw: one cell the panel's full width, its button 4px from the edge. */
+[data-blok-database-timeline-table-footer] {
+  padding-inline: 0;
 }
 
 [data-blok-database-timeline-table-header] {

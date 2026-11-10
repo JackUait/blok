@@ -384,8 +384,14 @@ describe('database table calculation footer', () => {
     expect(box).toMatch(/line-height:\s*21px/);
     expect(box).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
     expect(box).toMatch(/transition:\s*background-color 200ms/);
-    expect(ruleBody('[data-blok-database-table-calc]:hover > [data-blok-database-table-calc-box]')).toMatch(/background-color:\s*var\(--blok-database-table-header-hover-bg\)/);
     expect(ruleBody('[data-blok-database-table-calc]:hover')).toBe('');
+  });
+
+  // notion-motion.md Round 10 (r10-calc-hover-numcell.raw, r10-calc-hover-numbtn.raw, r10-calc-hover-textbtn.raw):
+  // the pointer in the cell but off the button leaves it clear; only the pointer on the button fills it.
+  it('fills the button only while the pointer is on it, not anywhere in its cell', () => {
+    expect(ruleBody('[data-blok-database-table-calc-box]:hover')).toMatch(/background-color:\s*var\(--blok-database-table-header-hover-bg\)/);
+    expect(ruleBody('[data-blok-database-table-calc]:hover > [data-blok-database-table-calc-box]')).toBe('');
   });
 
   // r9-calc-footer.raw: the Text column's footer cell is justify-content: flex-end, the same as Number's.
@@ -400,12 +406,20 @@ describe('database table calculation footer', () => {
     expect(ruleBody('[data-blok-database-table-calc-placeholder]')).toMatch(/transition:\s*opacity 200ms ease/);
     expect(ruleBody('[data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder]')).toMatch(/opacity:\s*1/);
     expect(ruleBody('[data-blok-database-table-footer]:hover [data-blok-database-table-calc-placeholder]')).toBe('');
+    // r10-timeline-calc-hovercell.raw: the timeline footer reveals it per cell too, not on the whole row.
+    expect(ruleBody('[data-blok-database-timeline-table-footer]:hover [data-blok-database-table-calc-placeholder]')).toBe('');
     expect(tableCss).toMatch(/\[data-blok-database-table-calc-placeholder\][^{]*\{\s*transition: none/);
   });
 
   // Shot 66: the value ends 11px short of the column edge; the box's 6px plus the cell's 4px.
   it('pads the cell 4px so the box keeps the value 10px from the column edge', () => {
     expect(ruleBody('[data-blok-database-table-calc]')).toMatch(/padding:\s*0 var\(--blok-space-1\)/);
+  });
+
+  // r10-timeline-calc-edge.raw: the timeline footer cell is the panel's full width, so its top-left corner reveals
+  // "Calculate" and the button ends 4px from the panel edge, like the table's Name footer cell.
+  it('runs the timeline footer cell edge to edge of the panel', () => {
+    expect(exactRule('[data-blok-database-timeline-table-footer]')).toMatch(/padding-inline:\s*0/);
   });
 
   // notion-motion.md Round 9 "Collapsed group header" (r9-group-header-open.raw, r9-grouped-after.png pixel rows):

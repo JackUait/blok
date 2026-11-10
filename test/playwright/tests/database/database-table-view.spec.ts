@@ -439,11 +439,14 @@ test.describe('columns', () => {
 });
 
 test.describe('calculations', () => {
-  test('Sum from the footer menu writes the calculation and shows the value', async ({ page }) => {
+  // notion-motion.md Round 10: no footer until a calculation is set, so the first one comes from the header menu.
+  test('Sum from the header menu writes the calculation and shows the value', async ({ page }) => {
     await mount(page, blocks());
     const footer = page.locator('[data-blok-database-table-calc][data-property-id="p-amount"]');
 
-    await footer.click();
+    await expect(page.locator('[data-blok-database-table-footer]')).toHaveCount(0);
+    await header(page, 'p-amount').click();
+    await page.getByRole('menuitem', { name: 'Calculate' }).click();
     // Calculation rows mark the current choice, so they are menuitemcheckbox.
     await page.getByRole('menuitemcheckbox', { name: 'More options' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Sum' }).click();

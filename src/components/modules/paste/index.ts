@@ -1,6 +1,7 @@
 import { Module } from '../../__module';
 import { Dom as dom$ } from '../../dom';
 import { findOwn } from '../../utils/own-element';
+import { carriesReadOnly } from '../../utils/read-only-blocks';
 import { recordPasteHandling } from '../../utils/paste-continuation';
 import { log } from '../../utils/logger';
 import { waitAtMost } from '../../utils/lazy-styles';
@@ -669,7 +670,17 @@ export class Paste extends Module {
    */
   private async pasteOverBlockSelection(clipboard: DataTransfer | null, loadedAtEvent: boolean): Promise<void> {
     const { BlockManager, BlockSelection, Caret, Toolbar } = this.Blok;
-    const replacement = BlockManager.deleteSelectedBlocksAndInsertReplacement(true);
+    const first = BlockManager.blocks.find(block => block.selected);
+    const defaultTool = this.config.defaultBlock;
+    // The shared replacement goes to the root, so a nested selection swaps its
+    // first block in place instead: the paste then stays in the toggle or cell.
+    const nested = first !== undefined && first.parentId !== null && defaultTool !== undefined &&
+      !carriesReadOnly(first, id => BlockManager.getBlockById(id));
+    const replacement = nested ? BlockManager.replace(first, defaultTool, {}) : BlockManager.deleteSelectedBlocksAndInsertReplacement(true);
+
+    if (nested) {
+      BlockManager.deleteSelectedBlocksAndInsertReplacement();
+    }
 
     BlockSelection.clearSelection();
 

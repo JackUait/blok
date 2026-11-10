@@ -1102,6 +1102,61 @@ test.describe('copy and paste', () => {
       await expect.poll(() => texts(page)).toEqual(['First', 'Second', 'First', 'Second', 'Tail']);
       expect(prevented).toBe(true);
     });
+
+    test('a selection inside a toggle is replaced inside the toggle', async ({ page }) => {
+      const nested: OutputData['blocks'] = [
+        ...doc.slice(0, 2),
+        { id: 't', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: ['c1', 'c2', 'c3'] },
+        { id: 'c1', type: 'paragraph', parent: 't', data: { text: 'C1' } },
+        { id: 'c2', type: 'paragraph', parent: 't', data: { text: 'C2' } },
+        { id: 'c3', type: 'paragraph', parent: 't', data: { text: 'C3' } },
+        { id: 'z', type: 'paragraph', data: { text: 'Zulu' } },
+      ];
+
+      await createBlok(page, { data: { blocks: nested }, dataModel: 'hierarchical' });
+      await openFixtureToggles(page, { blocks: nested });
+      const clipboardData = await copyFirstTwo(page);
+
+      await editable(page, 'c1').click();
+      await editable(page, 'c2').click({ modifiers: ['Shift'] });
+      expect(await selectedIds(page)).toEqual(['c1', 'c2']);
+
+      await pasteAtFocus(page, clipboardData);
+
+      const childTexts = async (): Promise<unknown[]> => (await saveBlok(page)).blocks.filter((b) => b.parent === 't').map((b) => b.data.text);
+
+      await expect.poll(childTexts).toEqual(['First', 'Second', 'C3']);
+      expect((await saveBlok(page)).blocks.filter((b) => b.parent === undefined).map((b) => b.id)).toEqual(['a', 'b', 't', 'z']);
+    });
+
+    test('a selected line in a table cell is replaced inside the cell', async ({ page }) => {
+      await createBlokWithElements(page, [
+        ...doc.slice(0, 2),
+        { id: 'tbl', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [['A1', 'B1'], ['A2', 'B2']] } },
+        { id: 'z', type: 'paragraph', data: { text: 'Zulu' } },
+      ]);
+      const clipboardData = await copyFirstTwo(page);
+      const cell = page.locator('[data-blok-id="tbl"] [data-blok-table-cell]').first();
+
+      await cell.locator('[contenteditable="true"]').first().click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('A1b');
+      const commandModifier = await getCommandModifierKey(page);
+
+      // Cmd+A twice in a cell line selects that line as a block.
+      await page.keyboard.press(`${commandModifier}+A`);
+      await page.keyboard.press(`${commandModifier}+A`);
+      const cellIds = await cell.locator('[data-blok-id]').evaluateAll((els) => els.map((el) => el.getAttribute('data-blok-id') ?? ''));
+
+      expect(await selectedIds(page)).toEqual([cellIds[1]]);
+
+      await pasteAtFocus(page, clipboardData);
+
+      // An empty line left next to a paste in a cell is not this test's business.
+      await expect.poll(async () => (await cell.locator('[contenteditable="true"]').allInnerTexts()).filter((text) => text.trim() !== '')).toEqual(['A1', 'First', 'Second']);
+      expect((await saveBlok(page)).blocks.filter((b) => b.parent === undefined).map((b) => b.id)).toEqual(['a', 'b', 'tbl', 'z']);
+    });
   });
 
   test.describe('blocks of a tool the pasting editor lacks', () => {

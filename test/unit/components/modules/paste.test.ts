@@ -99,6 +99,9 @@ type BlockManagerMock = {
   setCurrentBlockByChildNode: ReturnType<typeof vi.fn<(node: HTMLElement) => unknown>>;
   setBlockParent: ReturnType<typeof vi.fn<(block: unknown, parentId: string | null) => void>>;
   deleteSelectedBlocksAndInsertReplacement: ReturnType<typeof vi.fn<(forceReplacement?: boolean) => unknown>>;
+  replace: ReturnType<typeof vi.fn<(block: unknown, tool: string, data: Record<string, unknown>) => unknown>>;
+  getBlockById: ReturnType<typeof vi.fn<(id: string) => unknown>>;
+  blocks: Array<{ id: string; selected: boolean; parentId: string | null }>;
 };
 
 type BlockSelectionMock = {
@@ -178,6 +181,9 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     setCurrentBlockByChildNode: vi.fn<(node: HTMLElement) => unknown>(),
     setBlockParent: vi.fn<(block: unknown, parentId: string | null) => void>(),
     deleteSelectedBlocksAndInsertReplacement: vi.fn<(forceReplacement?: boolean) => unknown>(),
+    replace: vi.fn<(block: unknown, tool: string, data: Record<string, unknown>) => unknown>(),
+    getBlockById: vi.fn<(id: string) => unknown>(),
+    blocks: [],
   };
 
   const blockSelection: BlockSelectionMock = {
@@ -1082,6 +1088,22 @@ describe('Paste module', () => {
         expect(mocks.BlockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledWith(true);
         expect(mocks.BlockSelection.clearSelection).toHaveBeenCalled();
         expect(mocks.BlockManager.setCurrentBlockByChildNode).not.toHaveBeenCalled();
+      });
+
+      it('swaps the first selected block in place when the selection is nested', async () => {
+        const { mocks, replacementInput, processSpy } = await setUp();
+        const child = { id: 'c1', selected: true, parentId: 'toggle' };
+        const swapped = { name: 'paragraph', tool: { isDefault: true }, isEmpty: true, currentInput: replacementInput };
+
+        mocks.BlockManager.blocks = [{ id: 'toggle', selected: false, parentId: null }, child];
+        mocks.BlockManager.replace.mockReturnValue(swapped);
+        document.body.appendChild(mocks.holder);
+
+        document.body.dispatchEvent(pasteEvent());
+
+        await vi.waitFor(() => expect(processSpy).toHaveBeenCalledWith(expect.anything(), replacementInput, expect.any(Boolean)));
+        expect(mocks.BlockManager.replace).toHaveBeenCalledWith(child, 'paragraph', {});
+        expect(mocks.BlockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledWith();
       });
 
       it('handles a paste fired at body while blocks are selected', async () => {

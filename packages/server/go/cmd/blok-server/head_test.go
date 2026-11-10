@@ -431,10 +431,9 @@ func TestContentLengthSignsFollowKestrel(t *testing.T) {
 	}
 }
 
-// Measured on the C# host: System.Uri drops an absolute target's fragment,
-// and Kestrel routes a control byte or a bad escape in its path (to a 404),
-// a control byte in its query, and anything in its fragment but NUL and
-// bytes over 0x7F.
+// Measured on the C# host: Kestrel routes a control byte or a bad escape in
+// an absolute target's path (to a 404), and a control byte in its query.
+// Since .NET 10.0.15 it refuses a "#" anywhere in the target.
 func TestAnAbsoluteTargetRoutesItsPathAndQuery(t *testing.T) {
 	router := &route.Router{}
 	router.Handle("/health", nil, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -442,24 +441,23 @@ func TestAnAbsoluteTargetRoutesItsPathAndQuery(t *testing.T) {
 	}))
 	address := startHost(t, router, time.Minute)
 	cases := map[string]string{
-		"http://x/health#f":     `"/health" "" "http://x/health#f"`,
-		"http://x/health#":      `"/health" "" "http://x/health#"`,
-		"http://x/health?a=1#f": `"/health" "a=1" "http://x/health?a=1#f"`,
-		"http://x/health#/nope": `"/health" "" "http://x/health#/nope"`,
-		"http://x/health#?a":    `"/health" "" "http://x/health#?a"`,
-		"http://x/health#a#b":   `"/health" "" "http://x/health#a#b"`,
-		"http://x/health#%zz":   `"/health" "" "http://x/health#%zz"`,
-		"http://x/health#\x01":  `"/health" "" "http://x/health#\x01"`,
+		"http://x/health?a=1":   `"/health" "a=1" "http://x/health?a=1"`,
 		"http://x/health?a\x01": `"/health" "a\x01" "http://x/health?a\x01"`,
 		"http://x/health?\x7f":  `"/health" "\x7f" "http://x/health?\x7f"`,
-		"http://x/health?%zz#f": `"/health" "%zz" "http://x/health?%zz#f"`,
+		"http://x/health?%zz":   `"/health" "%zz" "http://x/health?%zz"`,
+		"http://x/health?%23":   `"/health" "%23" "http://x/health?%23"`,
+		"http://x/health#f":     kestrel400,
+		"http://x/health#":      kestrel400,
+		"http://x/health?a=1#f": kestrel400,
+		"http://x/health#\x01":  kestrel400,
+		"http://x#f":            kestrel400,
+		"http://x:80#f":         kestrel400,
+		"http://x":              "404",
 		"http://x/hea\x01lth":   "404",
 		"http://x/hea\tlth":     "404",
 		"http://x/hea\rlth":     "404",
 		"http://x/health\x7f":   "404",
 		"http://x/health%zz":    "404",
-		"http://x#f":            "404",
-		"http://x:80#f":         "404",
 		"http://x/hea\x00lth":   kestrel400,
 		"http://x/health?a\x00": kestrel400,
 		"http://x/health#a\x00": kestrel400,
@@ -480,6 +478,28 @@ func TestAnAbsoluteTargetRoutesItsPathAndQuery(t *testing.T) {
 		if got != want && !(want == "404" && strings.HasPrefix(got, "404 ")) {
 			t.Errorf("%q: got %q, want %q", target, got, want)
 		}
+	}
+}
+
+// Measured on the C# host with .NET 10.0.15: a "#" in any target is a 400
+// from the request line alone, after the line's length and version.
+func TestATargetWithAFragmentIsRefused(t *testing.T) {
+	address := startHost(t, echoTarget, time.Minute)
+	for request, want := range map[string]string{
+		"GET /health#f HTTP/1.1\r\n":                           kestrel400,
+		"GET /health?a#f HTTP/1.1\r\n":                         kestrel400,
+		"GET /# HTTP/1.0\r\n":                                  kestrel400,
+		"CONNECT /health#f HTTP/1.1\r\n":                       kestrel400,
+		"GET /health#f HTTP/1.2\r\n":                           kestrel505,
+		"GET /#" + strings.Repeat("a", 8192) + " HTTP/1.1\r\n": kestrel414,
+	} {
+		if got := rawAnswer(t, address, request); got != want {
+			t.Errorf("%.40q: got %q, want %q", request, got, want)
+		}
+	}
+	got := rawAnswer(t, address, "GET /health?a=%23 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+	if status := answerStatus(got); status != "HTTP/1.1 200 OK" {
+		t.Errorf("an escaped mark: got %q", status)
 	}
 }
 

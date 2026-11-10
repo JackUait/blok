@@ -317,6 +317,10 @@ fn parse_request_line(line: &[u8]) -> Result<RequestLine, Refusal> {
 
 /// The form, then the path and the query (with its '?') Kestrel routes on.
 fn target_form(method: &str, target: &str) -> Result<(TargetForm, String, String), Refusal> {
+    // Measured: Kestrel refuses a '#' anywhere in a target (since .NET 10.0.15).
+    if target.contains('#') {
+        return Err(BAD_REQUEST);
+    }
     if target.starts_with('/') {
         let (path, query) = split_query(target);
         return Ok((TargetForm::Origin, path.to_owned(), query.to_owned()));
@@ -331,15 +335,12 @@ fn target_form(method: &str, target: &str) -> Result<(TargetForm, String, String
         .strip_prefix("http://")
         .or_else(|| target.strip_prefix("https://"))
     {
-        let authority_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+        let authority_end = rest.find(['/', '?']).unwrap_or(rest.len());
         let (host, _, _) = split_authority(&rest[..authority_end]).ok_or(BAD_REQUEST)?;
         if host.is_empty() || host.contains('%') {
             return Err(BAD_REQUEST);
         }
-        let rest = &rest[authority_end..];
-        // A fragment is not part of an absolute target's path or query.
-        let rest = &rest[..rest.find('#').unwrap_or(rest.len())];
-        let (path, query) = split_query(rest);
+        let (path, query) = split_query(&rest[authority_end..]);
         let path = if path.is_empty() { "/" } else { path };
         return Ok((TargetForm::Absolute, path.to_owned(), query.to_owned()));
     }
@@ -400,7 +401,7 @@ fn absolute_matches_host(target: &str, host_header: &str) -> bool {
         Some(rest) => (80, rest),
         None => (443, target.strip_prefix("https://").unwrap_or(target)),
     };
-    let authority_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let authority_end = rest.find(['/', '?']).unwrap_or(rest.len());
     let Some((host, port, _)) = split_authority(&rest[..authority_end]) else {
         return false;
     };
@@ -577,7 +578,10 @@ mod tests {
             (b"GET %41 HTTP/1.1", "400"),
             (b"GET /% HTTP/1.1", "ok"),
             (b"GET /health?x HTTP/1.1", "ok"),
-            (b"GET /health#frag HTTP/1.1", "ok"),
+            (b"GET /health#frag HTTP/1.1", "400"),
+            (b"GET /health?x#frag HTTP/1.1", "400"),
+            (b"GET /health?x=%23 HTTP/1.1", "ok"),
+            (b"GET /health#frag HTTP/1.2", "505"),
             (b"GET /h\xc3\xa9 HTTP/1.1", "400"),
             (b"GET /health\x00 HTTP/1.1", "400"),
             (b"GET /health?\x00 HTTP/1.1", "400"),
@@ -611,7 +615,8 @@ mod tests {
             (b"GET http://[::1]/ HTTP/1.1", "400"),
             (b"GET http://x/a%zz HTTP/1.1", "ok"),
             (b"GET http://x/a\x01 HTTP/1.1", "ok"),
-            (b"CONNECT http://x/health?q#f HTTP/1.1", "ok"),
+            (b"CONNECT http://x/health?q HTTP/1.1", "ok"),
+            (b"CONNECT http://x/health?q#f HTTP/1.1", "400"),
             (b"PRI * HTTP/2.0", "goaway"),
         ];
         for (request_line, want) in cases {
@@ -629,7 +634,7 @@ mod tests {
     #[test]
     fn single_bytes_follow_kestrels_sweep() {
         let ok_method = |b: u8| is_token_byte(b);
-        let ok_path = |b: u8| b != 0 && b != b'\n' && b < 0x80;
+        let ok_path = |b: u8| b != 0 && b != b'\n' && b != b'#' && b < 0x80;
         let ok_name = |b: u8| !matches!(b, 0 | b'\t' | b'\n' | b'\r' | b' ') && b < 0x80;
         let ok_value = |b: u8| !matches!(b, 0 | b'\n' | b'\r') && b < 0x80;
         let ok_host = |b: u8| b.is_ascii_alphanumeric() || b"!$&'()-._~".contains(&b);

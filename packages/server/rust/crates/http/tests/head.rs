@@ -770,10 +770,9 @@ async fn content_length_signs_follow_kestrel() {
     report(failures);
 }
 
-// Measured on the C# host: System.Uri drops an absolute target's fragment,
-// and Kestrel routes a control byte or a bad escape in its path (to a 404),
-// a control byte in its query, and anything in its fragment but NUL and
-// bytes over 0x7F.
+// Measured on the C# host: Kestrel routes a control byte or a bad escape in
+// an absolute target's path (to a 404), and a control byte in its query.
+// Since .NET 10.0.15 it refuses a '#' anywhere in the target.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_absolute_target_routes_its_path_and_query() {
     let server = start(
@@ -793,32 +792,10 @@ async fn an_absolute_target_routes_its_path_and_query() {
         Config::default(),
     )
     .await;
-    let cases: [(&[u8], &str); 24] = [
-        (b"http://x/health#f", r#""/health" "" "http://x/health#f""#),
-        (b"http://x/health#", r#""/health" "" "http://x/health#""#),
+    let cases: [(&[u8], &str); 23] = [
         (
-            b"http://x/health?a=1#f",
-            r#""/health" "a=1" "http://x/health?a=1#f""#,
-        ),
-        (
-            b"http://x/health#/nope",
-            r#""/health" "" "http://x/health#/nope""#,
-        ),
-        (
-            b"http://x/health#?a",
-            r#""/health" "" "http://x/health#?a""#,
-        ),
-        (
-            b"http://x/health#a#b",
-            r#""/health" "" "http://x/health#a#b""#,
-        ),
-        (
-            b"http://x/health#%zz",
-            r#""/health" "" "http://x/health#%zz""#,
-        ),
-        (
-            b"http://x/health#\x01",
-            r#""/health" "" "http://x/health#\x01""#,
+            b"http://x/health?a=1",
+            r#""/health" "a=1" "http://x/health?a=1""#,
         ),
         (
             b"http://x/health?a\x01",
@@ -829,16 +806,25 @@ async fn an_absolute_target_routes_its_path_and_query() {
             r#""/health" "\x7f" "http://x/health?\x7f""#,
         ),
         (
-            b"http://x/health?%zz#f",
-            r#""/health" "%zz" "http://x/health?%zz#f""#,
+            b"http://x/health?%zz",
+            r#""/health" "%zz" "http://x/health?%zz""#,
         ),
+        (
+            b"http://x/health?%23",
+            r#""/health" "%23" "http://x/health?%23""#,
+        ),
+        (b"http://x/health#f", KESTREL400),
+        (b"http://x/health#", KESTREL400),
+        (b"http://x/health?a=1#f", KESTREL400),
+        (b"http://x/health#\x01", KESTREL400),
+        (b"http://x#f", KESTREL400),
+        (b"http://x:80#f", KESTREL400),
+        (b"http://x", "404"),
         (b"http://x/hea\x01lth", "404"),
         (b"http://x/hea\tlth", "404"),
         (b"http://x/hea\rlth", "404"),
         (b"http://x/health\x7f", "404"),
         (b"http://x/health%zz", "404"),
-        (b"http://x#f", "404"),
-        (b"http://x:80#f", "404"),
         (b"http://x/hea\x00lth", KESTREL400),
         (b"http://x/health?a\x00", KESTREL400),
         (b"http://x/health#a\x00", KESTREL400),

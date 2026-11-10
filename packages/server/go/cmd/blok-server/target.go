@@ -400,11 +400,14 @@ func lineRefusal(line []byte) int {
 }
 
 // targetRefusal is Kestrel's check of the target's form, measured on the C#
-// host. An absolute target (http:// or https://, in lower case) must parse;
+// host. A '#' anywhere is a 400 (since .NET 10.0.15). An absolute target (http:// or https://, in lower case) must parse;
 // endHead checks its authority against Host. "*" is only for OPTIONS. Any
 // other target is authority-form: off CONNECT a 405, or a 400 for a byte
 // that is not a letter, a digit or one of "-.:@[]".
 func targetRefusal(method, target []byte) int {
+	if bytes.IndexByte(target, '#') >= 0 {
+		return http.StatusBadRequest
+	}
 	switch {
 	case len(target) == 0 || target[0] == '/':
 		return 0
@@ -446,7 +449,7 @@ func absoluteAuthority(target string) (authority, defaultPort string, ok bool) {
 	if scheme == "https" {
 		defaultPort = "443"
 	}
-	if end := strings.IndexAny(rest, "/?#"); end >= 0 {
+	if end := strings.IndexAny(rest, "/?"); end >= 0 {
 		rest = rest[:end]
 	}
 	if at := strings.LastIndexByte(rest, '@'); at >= 0 {
@@ -1093,27 +1096,24 @@ func swapRequestLine(line []byte) queuedTarget {
 }
 
 // swapAbsoluteTargetBytes makes an absolute target one url.ParseRequestURI
-// takes, after its authority: the fragment's '#' becomes a '?' (ParseRequestURI
-// keeps a fragment in the path), and control bytes and bad escapes in the
-// path become '_'. NUL stays: the router refuses it, as Kestrel does.
+// takes, after its authority: control bytes and bad escapes in the path
+// become '_'. NUL stays: the router refuses it, as Kestrel does.
 // restoreTarget routes the path and query as System.Uri reads them.
 func swapAbsoluteTargetBytes(target []byte) {
 	if !isAbsoluteTarget(target) {
 		return
 	}
 	scheme := bytes.Index(target, []byte("://")) + len("://")
-	start := bytes.IndexAny(target[scheme:], "/?#")
+	start := bytes.IndexAny(target[scheme:], "/?")
 	if start < 0 {
 		return
 	}
-	query, fragment := false, false
+	query := false
 	for i := scheme + start; i < len(target); i++ {
 		switch b := target[i]; {
 		case b == 0:
 		case b < 0x20 || b == 0x7f:
 			target[i] = '_'
-		case b == '#' && !fragment:
-			target[i], query, fragment = '?', true, true
 		case b == '?':
 			query = true
 		case b == '%' && !query && (i+2 >= len(target) || !isHex(target[i+1]) || !isHex(target[i+2])):
@@ -1127,9 +1127,9 @@ func isAbsoluteTarget(target []byte) bool {
 }
 
 // absolutePathAndQuery is what Kestrel routes for an absolute target: the
-// path ("/" when there is none) and the query, without the fragment.
+// path ("/" when there is none) and the query. A target with a '#' never
+// gets here (targetRefusal).
 func absolutePathAndQuery(target string) (path, query string) {
-	target, _, _ = strings.Cut(target, "#")
 	_, rest, _ := strings.Cut(target, "://")
 	start := strings.IndexAny(rest, "/?")
 	if start < 0 {

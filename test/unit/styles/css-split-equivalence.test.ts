@@ -1571,7 +1571,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: the tab bar "+" is round, header-icon ink, a 200ms fade, and shows on keyboard focus,
     // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink,
     // plus 233 for the right-aligned calculations and the 26px "Calculate" box that fades in on its own cell.
-    const DATABASE_TABCALC_BYTES = 371 + 124 + 233;
+    // plus 294 to keep the (i) and button warning after the name at 16px.
+    const DATABASE_TABCALC_BYTES = 371 + 124 + 233 + 294;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid, bottom stage and skin-tone dial.

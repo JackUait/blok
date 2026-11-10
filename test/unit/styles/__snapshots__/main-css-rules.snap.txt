@@ -12071,13 +12071,23 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-column-icon] {
   display: inline-flex;
   flex: none;
-  align-items: center;
-  width: 18px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   color: var(--blok-database-table-header-icon);
 }
 
 [data-blok-database-table-column-icon] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-table-column-icon][data-type] {
+  align-items: center;
+  width: 18px;
+  height: 24px;
+}
+
+[data-blok-database-table-column-icon][data-type] svg {
   width: 19.2px;
   height: 19.2px;
   flex: none;

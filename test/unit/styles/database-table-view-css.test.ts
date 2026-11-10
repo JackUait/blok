@@ -128,15 +128,21 @@ describe('database table view styles', () => {
   });
 
   // r9-header-offsets.raw: every column's glyph is 19.2px at x+6.4, y+8.4 in an 18x24 slot at x+8; the name starts at x+32.
-  it('draws every header glyph at 19.2px, 1.6px past the start of an 18x24 slot', () => {
-    const slot = ruleBody('[data-blok-database-table-column-icon]');
-    const glyph = ruleBody('[data-blok-database-table-column-icon] svg');
+  it('draws every header type glyph at 19.2px, 1.6px past the start of an 18x24 slot', () => {
+    const slot = ruleBody('[data-blok-database-table-column-icon][data-type]');
+    const glyph = ruleBody('[data-blok-database-table-column-icon][data-type] svg');
 
     expect(slot).toMatch(/width: 18px;\s*height: 24px;/);
     expect(slot).toMatch(/align-items: center/);
     expect(glyph).toMatch(/width: 19\.2px;\s*height: 19\.2px;/);
     expect(glyph).toMatch(/margin-inline-start: -1\.6px/);
     expect(ruleBody('[data-blok-database-table-column-icon][data-type="title"] svg')).toBe('');
+  });
+
+  // research/31 §1: the description (i) after the name is a small 12x16 icon, so it stays at 16px with the button warning.
+  it('keeps the (i) and warning icons after the name at 16px', () => {
+    expect(ruleBody('[data-blok-database-table-column-icon]')).toMatch(/width: 16px;\s*height: 16px;/);
+    expect(ruleBody('[data-blok-database-table-column-icon] svg')).toMatch(/width: 16px;\s*height: 16px;/);
   });
 
   it('marks a checked row checkbox with primary ink on a gray fill', () => {

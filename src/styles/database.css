@@ -8737,17 +8737,28 @@ textarea[data-blok-database-cell-input] {
   padding-inline: var(--blok-space-2);
 }
 
-/* r9-header-offsets.raw: every glyph is 19.2px at x+6.4 in an 18x24 slot at x+8, so the name starts at x+32. */
+/* The (i) and the button warning after the name share this size and ink (research/31 §1: a small 12x16 icon). */
 [data-blok-database-table-column-icon] {
   display: inline-flex;
   flex: none;
-  align-items: center;
-  width: 18px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   color: var(--blok-database-table-header-icon);
 }
 
 [data-blok-database-table-column-icon] svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* r9-header-offsets.raw: the type glyph is 19.2px at x+6.4 in an 18x24 slot at x+8, so the name starts at x+32. */
+[data-blok-database-table-column-icon][data-type] {
+  align-items: center;
+  width: 18px;
+  height: 24px;
+}
+
+[data-blok-database-table-column-icon][data-type] svg {
   width: 19.2px;
   height: 19.2px;
   flex: none;

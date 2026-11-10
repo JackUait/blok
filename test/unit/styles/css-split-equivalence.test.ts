@@ -1569,8 +1569,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Round 9 lane mselect: multi-select editor radii and Create row, group header, row drag, view settings.
     const DATABASE_MSELECT_BYTES = 1658;
     // database.css: the tab bar "+" is round, header-icon ink, a 200ms fade, and shows on keyboard focus,
-    // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink.
-    const DATABASE_TABCALC_BYTES = 371 + 124;
+    // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink,
+    // plus 233 for the right-aligned calculations and the 26px "Calculate" box that fades in on its own cell.
+    const DATABASE_TABCALC_BYTES = 371 + 124 + 233;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid, bottom stage and skin-tone dial.

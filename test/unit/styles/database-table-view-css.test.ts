@@ -382,6 +382,21 @@ describe('database table calculation footer', () => {
     expect(ruleBody('[data-blok-database-table-calc]:hover')).toBe('');
   });
 
+  // r9-calc-footer.raw: the Text column's footer cell is justify-content: flex-end, the same as Number's.
+  it('right-aligns every column\'s calculation, not only numbers', () => {
+    expect(ruleBody('[data-blok-database-table-calc]')).toMatch(/justify-content:\s*flex-end/);
+    expect(ruleBody('[data-blok-database-table-calc][data-type="number"]')).toBe('');
+  });
+
+  // r9-calc-numhover.raw: "Calculate" is a 26px button; its label fades 0 to 1 over 200ms ease, only in the hovered cell.
+  it('shows "Calculate" in a 26px box, fading in 200ms only on its own cell', () => {
+    expect(ruleBody('[data-blok-database-table-calc][data-empty] > [data-blok-database-table-calc-box]')).toMatch(/height:\s*26px/);
+    expect(ruleBody('[data-blok-database-table-calc-placeholder]')).toMatch(/transition:\s*opacity 200ms ease/);
+    expect(ruleBody('[data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder]')).toMatch(/opacity:\s*1/);
+    expect(ruleBody('[data-blok-database-table-footer]:hover [data-blok-database-table-calc-placeholder]')).toBe('');
+    expect(tableCss).toMatch(/\[data-blok-database-table-calc-placeholder\][^{]*\{\s*transition: none/);
+  });
+
   // Shot 66: the value ends 11px short of the column edge; the box's 6px plus the cell's 4px.
   it('pads the cell 4px so the box keeps the value 10px from the column edge', () => {
     expect(ruleBody('[data-blok-database-table-calc]')).toMatch(/padding:\s*0 var\(--blok-space-1\)/);

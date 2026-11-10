@@ -9729,7 +9729,8 @@ textarea[data-blok-database-cell-input] {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  /* r9-calc-footer.raw: every column's calculation sits at the cell's end, text ones too. */
+  justify-content: flex-end;
   min-height: 35px;
   padding: 0 var(--blok-space-1);
   border: none;
@@ -9741,10 +9742,6 @@ textarea[data-blok-database-cell-input] {
   overflow: hidden;
   white-space: nowrap;
   cursor: pointer;
-}
-
-[data-blok-database-table-calc][data-type="number"] {
-  justify-content: flex-end;
 }
 
 /* research/21 §1d: the hover fills a 70x21 box, radius 6; research/08: padded 0 6px, 0.2s. */
@@ -9772,13 +9769,18 @@ textarea[data-blok-database-cell-input] {
   text-transform: uppercase;
 }
 
-/* The "Calculate" placeholder hides until the footer is hovered. */
+/* r9-calc-numhover.raw: "Calculate" is a 26px button, and its label fades in 200ms ease on its own cell only. */
+[data-blok-database-table-calc][data-empty] > [data-blok-database-table-calc-box] {
+  height: 26px;
+}
+
 [data-blok-database-table-calc-placeholder] {
   color: var(--blok-database-table-muted-text);
   opacity: 0;
+  transition: opacity 200ms ease;
 }
 
-[data-blok-database-table-footer]:hover [data-blok-database-table-calc-placeholder],
+[data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder],
 [data-blok-database-timeline-table-footer]:hover [data-blok-database-table-calc-placeholder],
 [data-blok-database-table-calc]:focus-visible [data-blok-database-table-calc-placeholder] {
   opacity: 1;
@@ -10041,6 +10043,7 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-table-drop-line],
   [data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header],
   [data-blok-database-table-calc-box],
+  [data-blok-database-table-calc-placeholder],
   [data-blok-database-table-column-header],
   [data-blok-database-table-open],
   [data-blok-database-table-add-property] {

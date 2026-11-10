@@ -12962,7 +12962,7 @@ textarea[data-blok-database-cell-input] {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   min-height: 35px;
   padding: 0 var(--blok-space-1);
   border: none;
@@ -12974,10 +12974,6 @@ textarea[data-blok-database-cell-input] {
   overflow: hidden;
   white-space: nowrap;
   cursor: pointer;
-}
-
-[data-blok-database-table-calc][data-type="number"] {
-  justify-content: flex-end;
 }
 
 [data-blok-database-table-calc-box] {
@@ -13004,12 +13000,17 @@ textarea[data-blok-database-cell-input] {
   text-transform: uppercase;
 }
 
+[data-blok-database-table-calc][data-empty] > [data-blok-database-table-calc-box] {
+  height: 26px;
+}
+
 [data-blok-database-table-calc-placeholder] {
   color: var(--blok-database-table-muted-text);
   opacity: 0;
+  transition: opacity 200ms ease;
 }
 
-[data-blok-database-table-footer]:hover [data-blok-database-table-calc-placeholder], [data-blok-database-timeline-table-footer]:hover [data-blok-database-table-calc-placeholder], [data-blok-database-table-calc]:focus-visible [data-blok-database-table-calc-placeholder] {
+[data-blok-database-table-calc]:hover [data-blok-database-table-calc-placeholder], [data-blok-database-timeline-table-footer]:hover [data-blok-database-table-calc-placeholder], [data-blok-database-table-calc]:focus-visible [data-blok-database-table-calc-placeholder] {
   opacity: 1;
 }
 
@@ -13224,7 +13225,7 @@ textarea[data-blok-database-cell-input] {
   cursor: ns-resize;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-database-table-row]::before, [data-blok-database-table-row]::after, [data-blok-database-table-resize], [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all], [data-blok-database-table-row-add], [data-blok-database-table-row-handle], [data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg, [data-blok-database-table-drop-line], [data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header], [data-blok-database-table-calc-box], [data-blok-database-table-column-header], [data-blok-database-table-open], [data-blok-database-table-add-property] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-database-table-row]::before, [data-blok-database-table-row]::after, [data-blok-database-table-resize], [data-blok-database-table-row-checkbox], [data-blok-database-table-select-all], [data-blok-database-table-row-add], [data-blok-database-table-row-handle], [data-blok-database-table-group-toggle] svg, [data-blok-database-board-lane-toggle] svg, [data-blok-database-table-drop-line], [data-blok-database-table-grid][data-column-dragging] [data-blok-database-table-column-header], [data-blok-database-table-calc-box], [data-blok-database-table-calc-placeholder], [data-blok-database-table-column-header], [data-blok-database-table-open], [data-blok-database-table-add-property] {
   transition: none;
 }
 

@@ -343,8 +343,18 @@ export class DatabaseTableGrid {
     }
 
     if (key === 'Escape' && ref.rowId === this.state.freshRowId && this.isBlankRow(ref.rowId)) {
+      // notion-motion.md Round 11: the Name cell of the row above is selected, so a second Escape selects that row.
+      const above = this.rowAbove(ref.rowId);
+      const target = above === undefined ? null : { rowId: above, propertyId: this.titlePropertyId };
+
       this.state.freshRowId = undefined;
-      this.state.selection = null;
+      this.state.selection = target === null ? null : { kind: 'cell', anchor: target, focus: target };
+      this.paint();
+      if (target !== null) {
+        // The delete redraws the table; restore() moves focus to the new grid only when this is set.
+        this.root.focus({ preventScroll: true });
+        this.state.focused = true;
+      }
       this.callbacks.deleteRows([ref.rowId]);
       this.callbacks.editEnded();
 
@@ -367,6 +377,19 @@ export class DatabaseTableGrid {
       this.root.focus({ preventScroll: true });
     }
     this.callbacks.editEnded();
+  }
+
+  /** The row drawn just above, in the same group. Notion's grouped case is unmeasured, so a group's first row has none. */
+  private rowAbove(rowId: string): string | undefined {
+    const rows = [...this.root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+    const index = rows.findIndex((row) => row.getAttribute('data-row-id') === rowId);
+    const above = index > 0 ? rows[index - 1] : undefined;
+
+    if (above === undefined || above.getAttribute('data-group-key') !== rows[index].getAttribute('data-group-key')) {
+      return undefined;
+    }
+
+    return above.getAttribute('data-row-id') ?? undefined;
   }
 
   private isBlankRow(rowId: string): boolean {

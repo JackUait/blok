@@ -30,7 +30,7 @@ import { cellText } from './database-table-clipboard';
 import type { CellChange, TableState } from './database-table-grid';
 import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
 
-import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
+import { CALCULATION_LABEL_KEYS, calcMenuAt, calculationItems, headerViewItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap, OpenMenuOptions, RowFavorite } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize } from './database-table-resize';
@@ -1834,7 +1834,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const calc = closest('button[data-blok-database-table-calc]');
 
     if (calc !== null) {
-      this.openCalculationMenu(calc, calc.hasAttribute('data-empty') ? calc : calc.querySelector<HTMLElement>('[data-blok-database-table-calc-box]') ?? calc);
+      this.openCalculationMenu(calc);
 
       return;
     }
@@ -1939,8 +1939,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     this.menu = menu;
   }
 
-  /** notion-motion.md Round 11: a set value's menu opens from its button; the unset cell's anchor is unmeasured. */
-  private openCalculationMenu(cell: HTMLElement, anchor: HTMLElement): void {
+  private openCalculationMenu(cell: HTMLElement): void {
     const propertyId = cell.getAttribute('data-property-id') ?? '';
     const property = this.columns.find((c) => c.property.id === propertyId)?.property;
 
@@ -1949,9 +1948,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     const current = resolveCalculations(this.options.view, this.shownSchema()).get(propertyId);
 
-    this.showMenu(anchor, calculationItems(this.shown(property), current, this.options.i18n, (fn: CalculationFn | null) => {
+    this.showMenu(cell, calculationItems(this.shown(property), current, this.options.i18n, (fn: CalculationFn | null) => {
       this.handlers?.updateView({ calculations: withCalculation(this.options.view, propertyId, fn) });
-    }, this.countCap(propertyId)), { kind: 'calc' });
+    }, this.countCap(propertyId)), { kind: 'calc', at: calcMenuAt(cell) });
   }
 
   private countCap(propertyId: string): CountCap {

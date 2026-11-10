@@ -440,6 +440,24 @@ describe('board count menu 99+ row', () => {
   });
 });
 
+// notion-motion.md Round 12: the table's Count list has the board's 99+ row, 72.4 tall,
+// and Count all starts 9px under it (1px row gap + an 8px divider).
+describe('calculation Count list 99+ row', () => {
+  const CALC = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu']";
+
+  it('grows the table\'s 99+ row to 72.4 and drops the one-line cap', () => {
+    expect(declared(`${CALC} [data-blok-item-name='database-calc-cap-counts']`, 'height')).toEqual(['auto']);
+    expect(declared(`${CALC} [data-blok-item-name='database-calc-cap-counts']`, 'padding-block')).toEqual(['10.2px']);
+    expect(declared(`${CALC} [data-blok-item-name='database-group-calc-cap-counts']`, 'padding-block')).toEqual(['10.2px']);
+    expect(declared('[data-blok-item-name="database-calc-cap-counts"]', 'max-height')).toEqual(['none']);
+  });
+
+  it('makes the divider under it 8 tall, 12px in from the box sides', () => {
+    expect(declared(`${CALC} [data-blok-popover-item-separator]`, 'padding-block')).toEqual(['var(--blok-space-0-75) var(--blok-space-1)']);
+    expect(declared(`${CALC} [data-blok-popover-item-separator]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
+  });
+});
+
 // The empty grid's blank line is 37 with its border, so the button keeps 4px margins there.
 describe('"+ New page" in the empty grid', () => {
   it('keeps the blank line 37 tall', () => {

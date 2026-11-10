@@ -70,8 +70,38 @@ const CHECKBOX_PERCENT_FNS: readonly CalculationFn[] = ['percent_checked', 'perc
 export const DATABASE_CALC_MENU_CLASS = 'blok-database-calc-menu';
 /** notion-motion.md Round 11: the calculation menu is 200 wide. */
 export const CALC_MENU_MIN_WIDTH = '200px';
-/** r11-calc-count-sub.png, r11-group-agg-menu.raw: the Count list is 250 wide. */
-export const CALC_COUNT_LIST_WIDTH = '250px';
+/** notion-motion.md Round 12 "Calculation submenu sizes": every calculation list is 250 wide. */
+export const CALC_LIST_WIDTH = '250px';
+
+/**
+ * The Count list's "Show large counts as 99+" row with its hint line, then the divider under it
+ * (research/22 §5, r11-calc-count-sub.png). The table and the board share it.
+ */
+export const capCountsItems = (
+  t: (key: string) => string,
+  row: { name: string; isActive: boolean; onActivate: () => void; closeOnActivate?: boolean }
+): PopoverItemParams[] => {
+  const title = document.createElement('span');
+  const hint = document.createElement('span');
+
+  title.setAttribute('data-blok-database-calc-cap', '');
+  hint.setAttribute('data-blok-database-calc-hint', '');
+  hint.textContent = t('tools.database.calcShowLargeCountsHint');
+  title.append(t('tools.database.calcShowLargeCounts'), hint);
+
+  return [
+    {
+      type: PopoverItemType.Default,
+      name: row.name,
+      title: t('tools.database.calcShowLargeCounts'),
+      titleEl: title,
+      isActive: row.isActive,
+      ...(row.closeOnActivate === true ? { closeOnActivate: true } : {}),
+      onActivate: row.onActivate,
+    },
+    { type: PopoverItemType.Separator },
+  ];
+};
 
 /** The column's "Show large counts as 99+" state and its toggle. */
 export interface CountCap {
@@ -102,19 +132,17 @@ export const calculationItems = (
     type: PopoverItemType.Default,
     title: i18n.t(titleKey),
     isActive: current !== undefined && fns.includes(current),
-    children: { items: [...lead, ...fns.map(leaf)], ...(fns === COUNT_FNS ? { width: CALC_COUNT_LIST_WIDTH } : {}) },
+    children: { items: [...lead, ...fns.map(leaf)], width: CALC_LIST_WIDTH },
   });
   const checkbox = property.type === 'checkbox';
   const offered = CALCULATIONS_FOR_TYPE[property.type] ?? [];
-  const capToggle: PopoverItemParams[] = cap === undefined || checkbox
+  const capToggle: PopoverItemParams[] = cap === undefined
     ? []
-    : [{
-      type: PopoverItemType.Default,
+    : capCountsItems((key) => i18n.t(key), {
       name: 'database-calc-cap-counts',
-      title: i18n.t('tools.database.calcShowLargeCounts'),
       isActive: cap.capCounts,
       onActivate: () => cap.onCapCounts(!cap.capCounts),
-    }];
+    });
   const items: PopoverItemParams[] = [
     {
       type: PopoverItemType.Default,
@@ -135,6 +163,16 @@ export const calculationItems = (
   }
 
   return items;
+};
+
+/**
+ * Where a footer cell's calculation menu opens: on its value or "Calculate" box, left edges
+ * and the box's bottom (notion-motion.md Rounds 11-12). The cell stays the trigger, so Escape focuses it.
+ */
+export const calcMenuAt = (cell: HTMLElement): OpenMenuOptions['at'] => {
+  const box = cell.querySelector<HTMLElement>('[data-blok-database-table-calc-box]') ?? cell;
+
+  return { position: box.getBoundingClientRect(), positionContext: box };
 };
 
 /** A column header menu: 28px rows and no 400px cap (database.css). */
@@ -200,6 +238,11 @@ export const openMenu = (
   };
   const at = options.at;
   const popover = new PopoverDesktop(at === undefined ? params : { ...params, position: at.position, positionContext: at.positionContext });
+
+  // notion-motion.md Round 12: Escape closes one layer of a calculation menu at a time.
+  if (options.kind === 'calc') {
+    popover.escapeClosesSubmenuFirst = true;
+  }
 
   const state = { closed: false };
 

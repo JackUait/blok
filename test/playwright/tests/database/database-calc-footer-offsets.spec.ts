@@ -148,6 +148,61 @@ test.describe('table calculation row (research/21 §1d, research/08 shot 66)', (
 
     expect(cellBox.x + cellBox.width - (valueBox.x + valueBox.width)).toBeCloseTo(10, 0);
   });
+
+  // notion-motion.md Round 12 "Unset Calculate menu placement": 200x94, on the button's left edge and bottom.
+  test('opens an unset column\'s menu on its Calculate button, not the cell', async ({ page }) => {
+    await mount(page);
+    const calc = page.locator('[data-blok-database-table-calc][data-property-id="p-stage"]');
+    const patch = calc.locator('[data-blok-database-table-calc-box]');
+
+    await calc.hover();
+    const patchBox = await box(patch);
+
+    expect(patchBox.x).toBeGreaterThan((await box(calc)).x + 20);
+    await patch.click();
+    const container = page.locator('[data-blok-popover][data-blok-popover-opened="true"] [data-blok-popover-container]').first();
+
+    await expect(container).toBeVisible();
+    await settled(container);
+    const menuBox = await box(container);
+
+    expect(menuBox.width).toBe(200);
+    expect(menuBox.height).toBe(94);
+    expect(menuBox.x).toBeCloseTo(patchBox.x, 0);
+    expect(menuBox.y).toBeCloseTo(patchBox.y + patchBox.height, 0);
+  });
+
+  // notion-motion.md Round 12 "Calculation submenu sizes": 250 wide, centred on the row, More options 181 tall,
+  // Count 233.4 with its 72.4 99+ row. "Escape in calculation menus": one layer per Escape, then the footer button.
+  test('opens 250-wide lists centred on their row; Escape closes the list, then the menu, back to the button', async ({ page }) => {
+    await mount(page);
+    const calc = page.locator('[data-blok-database-table-calc][data-property-id="p-amount"]');
+    const menus = page.locator('[data-blok-popover][data-blok-popover-opened="true"] [data-blok-popover-container]');
+    const row = (title: string): Locator => menus.first().locator('[data-blok-popover-item]', { hasText: title }).first();
+
+    await calc.locator('[data-blok-database-table-calc-box]').click();
+    await settled(menus.first());
+
+    for (const [title, first, height] of [['More options', 'Sum', 181], ['Count', 'Count all', 233.4]] as const) {
+      await row(title).hover();
+      const nested = menus.filter({ hasText: first }).last();
+
+      await expect(nested).toBeVisible();
+      await settled(nested);
+      const list = await box(nested);
+      const rowBox = await box(row(title));
+
+      expect(list.width).toBe(250);
+      expect(list.height).toBeCloseTo(height, 0);
+      expect(list.y + list.height / 2).toBeCloseTo(rowBox.y + rowBox.height / 2, 0);
+    }
+
+    await page.keyboard.press('Escape');
+    await expect(menus).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(menus).toHaveCount(0);
+    await expect(calc).toBeFocused();
+  });
 });
 
 test('the header menu opens 6px left of its cell, on its bottom edge (notion-live/header.png)', async ({ page }) => {

@@ -40,7 +40,7 @@ import type { TemplateRepeatHost } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
-import { CALC_MENU_MIN_WIDTH, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
+import { CALC_MENU_MIN_WIDTH, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
@@ -6400,7 +6400,7 @@ export class DatabaseTool implements BlockTool {
     }, {
       capCounts: resolveCountCaps(viewConfig).has(propertyId),
       onCapCounts: (cap) => this.updateActiveView({ calculations: withCalculationCap(viewConfig, propertyId, cap) }),
-    }));
+    }), { kind: 'calc', at: calcMenuAt(anchor) });
   }
 
   /** "+ New": a row with the new bar's dates, plus what the view's filters and group ask for. */

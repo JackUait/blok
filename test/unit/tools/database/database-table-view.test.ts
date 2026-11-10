@@ -1919,17 +1919,38 @@ describe('DatabaseTableView', () => {
       expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
     });
 
-    // notion-motion.md Round 11: a set value's menu is 200 wide, its left edge the button's, its top the button's bottom.
-    it('opens a set value\'s menu 200 wide from the value button, not the cell', () => {
+    // notion-motion.md Round 11: a set value's menu is 200 wide. Its place on the box is checked in
+    // database-calc-footer-offsets.spec.ts; the footer button is the trigger, so Escape can focus it.
+    it('opens a set value\'s menu 200 wide, with the footer button as its trigger', () => {
       const { root } = mount({ view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
       const calc = root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-amount"]');
       const box = calc?.querySelector<HTMLElement>('[data-blok-database-table-calc-box]');
 
       box?.click();
 
-      expect(box?.hasAttribute('data-popover-open')).toBe(true);
-      expect(calc?.hasAttribute('data-popover-open')).toBe(false);
+      expect(calc?.hasAttribute('data-popover-open')).toBe(true);
       expect(document.querySelector<HTMLElement>('[data-blok-popover-custom-class~="blok-database-header-menu"]')?.style.getPropertyValue('--width')).toBe('200px');
+    });
+
+    // notion-motion.md Round 12 "Escape in calculation menus": Escape 1 closes the submenu, Escape 2 the menu,
+    // and focus goes back to the footer button.
+    it('Escape closes the open submenu first, then the menu, and hands focus back to the footer button', () => {
+      const { root } = mount({ view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
+      const calc = root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-amount"]');
+      const opened = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened="true"]')];
+
+      calc?.querySelector<HTMLElement>('[data-blok-database-table-calc-box]')?.click();
+      [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item]')].find((el) => el.textContent?.includes('tools.database.calcMoreOptions'))?.click();
+      expect(document.querySelector('[data-blok-nested] [data-blok-popover-item]')?.textContent).toContain('tools.database.calcSum');
+      document.querySelector<HTMLElement>('[data-blok-nested] [data-blok-popover-item]')?.focus();
+
+      PopoverRegistry.instance.closeTopmost();
+      expect(document.querySelector('[data-blok-nested] [data-blok-popover-item]')).toBeNull();
+      expect(opened()).toHaveLength(1);
+
+      PopoverRegistry.instance.closeTopmost();
+      expect(opened()).toHaveLength(0);
+      expect(calc).toHaveFocus();
     });
 
     // notion-motion.md Round 11: 200x123. The calc class drops the last row's 1px gap (database.css).
@@ -1984,6 +2005,7 @@ describe('DatabaseTableView', () => {
 
       expect(count.map((item) => item.title)).toEqual([
         'tools.database.calcShowLargeCounts',
+        undefined,
         'tools.database.calcCountAll',
         'tools.database.calcCountValues',
         'tools.database.calcCountUnique',
@@ -1995,11 +2017,39 @@ describe('DatabaseTableView', () => {
       expect(onCap).toHaveBeenCalledWith(true);
     });
 
-    it('has no 99+ toggle on a checkbox column (research/08)', () => {
+    // notion-motion.md Round 12 (r12-sub-count-checkbox.raw): a checkbox's Count list starts with the 99+ row too.
+    it('starts a checkbox column\'s Count list with the 99+ toggle', () => {
       const items = calculationItems({ type: 'checkbox' }, undefined, { t: (key: string) => key }, vi.fn(), { capCounts: false, onCapCounts: vi.fn() }) as Array<{ title?: string; children?: { items?: Array<{ title?: string }> } }>;
       const count = items.find((item) => item.title === 'tools.database.calcCount');
 
-      expect(count?.children?.items?.map((item) => item.title)).not.toContain('tools.database.calcShowLargeCounts');
+      expect(count?.children?.items?.map((item) => item.title)).toEqual([
+        'tools.database.calcShowLargeCounts',
+        undefined,
+        'tools.database.calcCountAll',
+        'tools.database.calcChecked',
+        'tools.database.calcUnchecked',
+      ]);
+    });
+
+    // notion-motion.md Round 12 "Calculation submenu sizes": every list is 250 wide.
+    it('opens every calculation list 250 wide', () => {
+      const widths = (type: PropertyDefinition['type']): Array<string | undefined> =>
+        (calculationItems({ type }, undefined, { t: (key: string) => key }, vi.fn()) as Array<{ children?: { width?: string } }>)
+          .filter((item) => item.children !== undefined)
+          .map((item) => item.children?.width);
+
+      expect(widths('number')).toEqual(['250px', '250px', '250px']);
+      expect(widths('date')).toEqual(['250px', '250px', '250px']);
+      expect(widths('checkbox')).toEqual(['250px', '250px']);
+    });
+
+    // r11-calc-count-sub.png, notion-motion.md Round 12: the 99+ row carries its hint line, and a divider sits under it.
+    it('gives the 99+ row its hint line and a divider under it', () => {
+      const items = calculationItems({ type: 'number' }, undefined, { t: (key: string) => key }, vi.fn(), { capCounts: false, onCapCounts: vi.fn() }) as Array<{ title?: string; children?: { items?: Array<{ type?: string; titleEl?: HTMLElement }> } }>;
+      const count = items.find((item) => item.title === 'tools.database.calcCount')?.children?.items ?? [];
+
+      expect(count[0].titleEl?.querySelector('[data-blok-database-calc-hint]')?.textContent).toBe('tools.database.calcShowLargeCountsHint');
+      expect(count[1].type).toBe('separator');
     });
 
     it('a button column has no footer menu: Notion offers no Calculate there', () => {

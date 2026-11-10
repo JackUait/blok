@@ -3003,8 +3003,18 @@ button[data-blok-database-column-count]:hover {
 }
 
 /* The header menu's 28px rows would clip the board's 99+ hint line. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name='database-group-calc-cap-counts'] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name='database-group-calc-cap-counts'],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-item-name='database-calc-cap-counts'] {
   height: auto;
+  /* notion-motion.md Round 12: the row is 72.4 tall with its two hint lines. */
+  padding-block: 10.2px;
+}
+
+/* r11-calc-count-sub.png, notion-motion.md Round 12: the line under the 99+ row is 12px in, and Count all
+   starts 9px under that row. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-popover-item-separator] {
+  padding-block: var(--blok-space-0-75) var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
 }
 
 /* notion-live-8/80-menu-number.png, 83-menu-name.png: dividers 12px in from the box sides and 8px
@@ -12115,7 +12125,8 @@ input[data-blok-database-picker-search]:focus {
 /* research/22 §5 (shot 27): a gray hint under the 99+ switch. Width is read off the
    shot; a set width is needed because the popover sizes to min-content. */
 /* The popover caps an item at one line; this item has two. */
-[data-blok-item-name="database-group-calc-cap-counts"] {
+[data-blok-item-name="database-group-calc-cap-counts"],
+[data-blok-item-name="database-calc-cap-counts"] {
   max-height: none;
 }
 

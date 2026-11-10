@@ -6346,6 +6346,23 @@ describe('DatabaseTool', () => {
         queryByData(document.body, 'data-mock-popover')?.remove();
       });
 
+      // notion-motion.md Round 12 "Timeline calculation menu": the table's 200-wide menu, flush under its button,
+      // one layer per Escape.
+      it('opens the table panel\'s calculation menu as the table footer\'s', () => {
+        const { tool, element } = timelineTool({ showTimelineTable: true });
+
+        queryByData(element, 'data-blok-database-timeline-table-footer')?.querySelector<HTMLElement>('[data-property-id="prop-title"]')?.click();
+        const menu = queryByData(document.body, 'data-mock-popover');
+
+        expect(menu?.getAttribute('data-mock-popover-class')?.split(' ')).toContain('blok-database-calc-menu');
+        expect(menu?.getAttribute('data-mock-popover-min-width')).toBe('200px');
+        expect(menu?.getAttribute('data-mock-popover-offset')).toBe('0');
+        expect(menu?.hasAttribute('data-mock-popover-escape-submenu-first')).toBe(true);
+
+        tool.destroy();
+        menu?.remove();
+      });
+
       it('lists every zoom level in the zoom menu and stores a pick', () => {
         const { tool, element } = timelineTool();
 

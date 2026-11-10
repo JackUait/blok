@@ -109,11 +109,11 @@ describe('board column calculation', () => {
       expect(count.children?.width).toBe('250px');
     });
 
-    it('starts Count with the 99+ switch, then Count all and the per-property counts', () => {
+    it('starts Count with the 99+ switch and its divider, then Count all and the per-property counts', () => {
       const count = titled(groupCalculationItems(menu()), 'tools.database.calcCount');
 
       expect(titles(count.children?.items)).toEqual([
-        'tools.database.calcShowLargeCounts', 'tools.database.calcCountAll', 'tools.database.calcCountValues',
+        'tools.database.calcShowLargeCounts', undefined, 'tools.database.calcCountAll', 'tools.database.calcCountValues',
         'tools.database.calcCountUnique', 'tools.database.calcCountEmpty', 'tools.database.calcCountNotEmpty',
       ]);
     });
@@ -145,6 +145,22 @@ describe('board column calculation', () => {
 
       expect(titleEl?.querySelector('[data-blok-database-calc-hint]')?.textContent).toBe('tools.database.calcShowLargeCountsHint');
       expect(titleEl?.firstChild?.textContent).toBe('tools.database.calcShowLargeCounts');
+    });
+
+    // notion-motion.md Round 12: every list is 250 wide, and a divider sits under the 99+ row (r11-calc-count-sub.png).
+    it('opens every list 250 wide, with a divider under the 99+ row', () => {
+      const items = groupCalculationItems(menu()) as Item[];
+      const count = titled(items, 'tools.database.calcCount');
+
+      expect(items.map((item) => item.children?.width)).toEqual(['250px', '250px', '250px', '250px']);
+      expect(count.children?.items?.[1]?.type).toBe('separator');
+    });
+
+    // notion-motion.md Round 12 (r12-board-count-menu.raw): a board with only a title and a status shows Count and Percent.
+    it('offers only Count and Percent on a board with a title and a status', () => {
+      const items = groupCalculationItems(menu({ schema: [SCHEMA[0], SCHEMA[4]] }));
+
+      expect(titles(items)).toEqual(['tools.database.calcCount', 'tools.database.calcPercent']);
     });
 
     it('lists only number properties under Sum', () => {

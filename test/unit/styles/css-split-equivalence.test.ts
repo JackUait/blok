@@ -1587,6 +1587,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FOOTLBL_BYTES = 358;
     // Calculation menus: the last row's gap dropped, the 99+ hint row unclipped; the New page row 37 tall, the blank line and empty state unchanged.
     const DATABASE_CALCMENU_BYTES = 800;
+    // Round 12 lane calcsub: the table's 99+ row 72.4 tall like the board's, and an 8px divider under it.
+    const DATABASE_CALCSUB_BYTES = 644;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2041,7 +2043,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + BLOCK_CONTROL_GREY_BYTES
       + TABLE_HELD_GRIP_UNDER_SIZE_CARD_BYTES
       + DATABASE_AGGR_BYTES
-      + DATABASE_CALCMENU_BYTES;
+      + DATABASE_CALCMENU_BYTES
+      + DATABASE_CALCSUB_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

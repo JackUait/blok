@@ -2,7 +2,7 @@ import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { CALCULATIONS_FOR_TYPE } from './database-calculations';
-import { CALC_COUNT_LIST_WIDTH, CALCULATION_LABEL_KEYS, COUNT_FNS, DATE_FNS, NUMBER_FNS, PERCENT_FNS } from './database-table-menus';
+import { CALC_LIST_WIDTH, CALCULATION_LABEL_KEYS, capCountsItems, COUNT_FNS, DATE_FNS, NUMBER_FNS, PERCENT_FNS } from './database-table-menus';
 import { calculationText } from './database-table-view';
 import type { CalculationFn, DatabaseRow, PropertyDefinition } from './types';
 import type { ResolvedGroupCalculation } from './view-settings';
@@ -79,31 +79,19 @@ export const groupCalculationItems = (params: GroupCalculationMenuParams): Popov
       type: PopoverItemType.Default,
       title: t(titleKey),
       isActive: fns.includes(current.fn),
-      children: { items: [...lead, ...leaves], ...(fns === COUNT_FNS ? { width: CALC_COUNT_LIST_WIDTH } : {}) },
+      children: { items: [...lead, ...leaves], width: CALC_LIST_WIDTH },
     };
   };
 
-  // research/22 §5: Notion prints this hint under the switch's name.
-  const capTitle = document.createElement('span');
-  const capHint = document.createElement('span');
-
-  capTitle.setAttribute('data-blok-database-calc-cap', '');
-  capHint.setAttribute('data-blok-database-calc-hint', '');
-  capHint.textContent = t('tools.database.calcShowLargeCountsHint');
-  capTitle.append(t('tools.database.calcShowLargeCounts'), capHint);
-
-  const capToggle: PopoverItemParams = {
-    type: PopoverItemType.Default,
+  const capToggle = capCountsItems(t, {
     name: 'database-group-calc-cap-counts',
-    title: t('tools.database.calcShowLargeCounts'),
-    titleEl: capTitle,
     isActive: current.capCounts,
     closeOnActivate: true,
     onActivate: () => params.onCapCounts(!current.capCounts),
-  };
+  });
 
   return [
-    group('tools.database.calcCount', COUNT_FNS, [capToggle]),
+    group('tools.database.calcCount', COUNT_FNS, capToggle),
     group('tools.database.calcPercent', PERCENT_FNS),
     group('tools.database.calcMoreOptions', NUMBER_FNS),
     group('tools.database.calcDate', DATE_FNS),

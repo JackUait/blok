@@ -975,10 +975,10 @@ test.describe('copy and paste', () => {
       await expect.poll(() => outline(page)).toEqual(['header:He text', 'paragraph:Target ad <strong>B</strong>text here']);
 
       await page.locator('[data-blok-id="h"] [contenteditable="true"]').click();
-      const modifier = await getCommandModifierKey(page);
+      const { undo } = await historyKeys(page);
 
-      await page.keyboard.press(`${modifier}+z`);
-      await page.keyboard.press(`${modifier}+z`);
+      await page.keyboard.press(undo);
+      await page.keyboard.press(undo);
       await expect.poll(() => outline(page)).toEqual(['header:Head <strong>B</strong> text', 'paragraph:Target text here']);
     });
   });

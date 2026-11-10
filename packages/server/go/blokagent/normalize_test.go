@@ -296,6 +296,10 @@ func canonicalDatabases(blocks []*jsjson.Node) []*jsjson.Node {
 		if kind == "database" && deepEquals(lookup(relabelled, "automations"), emptyAutomations()) {
 			relabelled.Remove("automations")
 		}
+		// The editor also saves an empty deletedProperties map on every database.
+		if kind == "database" && deepEquals(lookup(relabelled, "deletedProperties"), jsjson.NewObject()) {
+			relabelled.Remove("deletedProperties")
+		}
 		setMember(block, "data", relabelled)
 	}
 	return blocks

@@ -343,6 +343,15 @@ fn canonical_databases(mut blocks: Vec<Node>) -> Vec<Node> {
         {
             relabelled.remove("automations");
         }
+        // The editor also saves an empty deletedProperties map on every database.
+        if kind == "database"
+            && deep_equals(
+                lookup(Some(&relabelled), "deletedProperties"),
+                Some(&new_object(Vec::new())),
+            )
+        {
+            relabelled.remove("deletedProperties");
+        }
         set_member(block, "data", relabelled);
     }
     blocks

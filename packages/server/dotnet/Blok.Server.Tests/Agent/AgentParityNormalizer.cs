@@ -195,6 +195,12 @@ internal static class AgentParityNormalizer
           relabelled.Remove("automations");
         }
 
+        // It also saves an empty deletedProperties map on every database.
+        if (TypeOf(block) == "database" && relabelled["deletedProperties"] is JsonObject { Count: 0 })
+        {
+          relabelled.Remove("deletedProperties");
+        }
+
         block["data"] = relabelled;
       }
 

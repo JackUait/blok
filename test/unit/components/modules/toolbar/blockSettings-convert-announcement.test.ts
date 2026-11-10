@@ -107,6 +107,7 @@ const buildSettings = (options: { refuse?: boolean; selectTwo?: boolean; refuseS
       isControlsHidden: false },
     BlockSelection: { selectedBlocks,
       selectBlock: vi.fn(),
+      clearSelection: vi.fn(),
       clearCache: vi.fn(),
       unselectBlock: vi.fn() },
     BlockManager: { currentBlock: block,

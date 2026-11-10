@@ -231,4 +231,27 @@ describe('BlockSettings — Duplicate menu item (BUG #8)', () => {
 
     expect(dragManager.duplicateBlocksInPlace).toHaveBeenCalledWith(block);
   });
+
+  it('selects the block before duplicating, so the copy is left selected instead of a caret', async () => {
+    const block = createBlock();
+
+    getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+    const items = await (blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }).getTunesItems(block, [{ name: 'delete', title: 'Delete', onActivate: vi.fn() }]);
+
+    const duplicate = items.find(
+      (item): item is PopoverItemParams & { name?: string; onActivate?: () => void } =>
+        'name' in item && item.name === 'duplicate'
+    );
+
+    duplicate?.onActivate?.(duplicate as PopoverItemParams, { event: new MouseEvent('click') } as never);
+
+    const selection = blokMock.BlockSelection as { selectBlock: Mock };
+    const dragManager = blokMock.DragManager as { duplicateBlocksInPlace: Mock };
+
+    expect(selection.selectBlock).toHaveBeenCalledWith(block);
+    expect(selection.selectBlock.mock.invocationCallOrder[0]).toBeLessThan(dragManager.duplicateBlocksInPlace.mock.invocationCallOrder[0]);
+  });
 });

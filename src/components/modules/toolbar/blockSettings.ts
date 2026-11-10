@@ -28,6 +28,7 @@ import { prepareImportString } from '../blockManager/block-mutation';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
+import { DATA_ATTR } from '../../constants';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 
@@ -142,6 +143,16 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * focus to it when the popover is dismissed and focus would otherwise be lost.
    */
   private settingsTrigger: HTMLElement | null = null;
+
+  /**
+   * Blocks a tune that closes the menu acted on. close() leaves them selected.
+   */
+  private actedBlocks: Block[] | null = null;
+
+  /**
+   * True when the last close() left a block selection, which then owns the keyboard.
+   */
+  private closeKeptSelection = false;
 
   /**
    * Panel with block settings with 2 sections:
@@ -264,7 +275,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       };
 
       /** Get tool-specific tunes and common tunes (delete, move, etc.) */
-      const { toolTunes, commonTunes } = block.getTunes(renderContext);
+      const tunes = block.getTunes(renderContext);
+      const actedOn = hasMultipleBlocksSelected ? [...selectedBlocks] : [block];
+      const commonTunes = this.noteActions(tunes.commonTunes, actedOn);
+      const toolTunes = tunes.toolTunes === undefined ? undefined : this.noteActions(tunes.toolTunes, actedOn);
+
+      this.actedBlocks = null;
 
       const items = await this.getTunesItems(block, commonTunes, toolTunes, caretOffset);
 
@@ -413,6 +429,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     this.opened = false;
     this.isOpening = false; // Clear isOpening flag when closing
 
+    const kept = this.keepActedSelection();
+
+    this.closeKeptSelection = kept;
+
     /**
      * If selection is at blok on Block Settings closing,
      * it means that caret placed at some editable element inside the Block Settings.
@@ -420,7 +440,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      *
      * So, we need to restore selection back to Block after closing the Block Settings
      */
-    if (!SelectionUtils.isAtBlok) {
+    if (!kept && !SelectionUtils.isAtBlok) {
       this.selection.restore();
     }
 
@@ -432,7 +452,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * Remove highlighted content of Blocks we are working with
      * Handle both single and multiple block selection
      */
-    this.clearBlockSelectionOnClose();
+    if (!kept) {
+      this.clearBlockSelectionOnClose();
+    }
 
     /** Tell to subscribers that block settings is closed */
     this.eventsDispatcher.emit(this.events.closed);
@@ -566,9 +588,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         if (converted !== null && newBlock !== null) {
           announceConversion(this.Blok.I18n, tool, entry.data ?? {}, converted.count);
 
-          // Only a single-block conversion has a caret offset to preserve.
-          if (hasMultipleBlocksSelected) {
-            Caret.setToBlock(newBlock, Caret.positions.END);
+          // Notion leaves the result selected. A list exploded into separate
+          // blocks has no Notion measurement, so it keeps the caret.
+          if (converted.selected.length > 0) {
+            this.selectResult(converted.selected);
           } else {
             Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
           }
@@ -671,12 +694,20 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       onActivate: () => {
         const { BlockSelection, DragManager, Toolbar } = this.Blok;
 
+        // A selected source makes the duplicate select its copies, as in Notion.
         if (duplicateSelected.length > 1) {
           BlockSelection.clearSelection();
           duplicateSelected.forEach((selected) => BlockSelection.selectBlock(selected));
+        } else {
+          BlockSelection.selectBlock(currentBlock);
         }
 
-        void DragManager?.duplicateBlocksInPlace(currentBlock);
+        // The menu's restored caret can leave its field focused under the selected copy.
+        void DragManager?.duplicateBlocksInPlace(currentBlock).then((copies) => {
+          if (copies.some((copy) => copy.selected)) {
+            this.releaseFocus();
+          }
+        });
 
         Toolbar.close();
       },
@@ -868,6 +899,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   private onPopoverClose = (): void => {
     const trigger = this.settingsTrigger;
 
+    this.closeKeptSelection = false;
     this.close();
 
     /**
@@ -876,10 +908,86 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * opened the menu — but only when focus was actually lost, so we never
      * steal it from a caret an activated item just placed inside a block.
      */
-    if (trigger !== null && document.activeElement === document.body) {
+    if (trigger !== null && !this.closeKeptSelection && document.activeElement === document.body) {
       trigger.focus();
     }
   };
+
+  /**
+   * Makes each tune that closes the menu note the blocks it acted on.
+   * @param tunes - tunes to wrap
+   * @param blocks - blocks the menu acts on
+   */
+  private noteActions(tunes: MenuConfigItem[], blocks: Block[]): MenuConfigItem[] {
+    type ClosingTune = MenuConfigItem & { closeOnActivate: true; onActivate: (item: PopoverItemParams, event?: PointerEvent) => void };
+    const isClosing = (tune: MenuConfigItem): tune is ClosingTune =>
+      'closeOnActivate' in tune && tune.closeOnActivate === true && 'onActivate' in tune && typeof tune.onActivate === 'function';
+
+    return tunes.map((tune) => {
+      if (!isClosing(tune)) {
+        return tune;
+      }
+
+      const run = tune.onActivate;
+
+      return {
+        ...tune,
+        onActivate: (item: PopoverItemParams, event?: PointerEvent): void => {
+          this.actedBlocks = blocks;
+          run(item, event);
+        },
+      };
+    });
+  }
+
+  /**
+   * After a tune closes the menu, Notion leaves its block selected. Not when
+   * the tune removed the block or put focus somewhere else.
+   * @returns true when the blocks were left selected
+   */
+  private keepActedSelection(): boolean {
+    const blocks = (this.actedBlocks ?? []).filter((block) => block.holder.isConnected);
+    const active = document.activeElement;
+    const focusFree = active === null
+      || active === document.body
+      || active === this.settingsTrigger
+      || this.popover?.getElement().contains(active) === true;
+
+    this.actedBlocks = null;
+
+    if (blocks.length === 0 || !focusFree) {
+      return false;
+    }
+
+    blocks.forEach((block) => this.Blok.BlockSelection.selectBlock(block));
+    this.releaseFocus();
+
+    return true;
+  }
+
+  /**
+   * Leaves `blocks` block-selected with no caret, as Notion does after a menu action.
+   * @param blocks - blocks to select
+   */
+  private selectResult(blocks: Block[]): void {
+    const { BlockSelection } = this.Blok;
+
+    BlockSelection.clearSelection();
+    blocks.forEach((block) => BlockSelection.selectBlock(block));
+    this.releaseFocus();
+  }
+
+  /**
+   * Blurs what the editor holds focused, like navigation mode, so the next
+   * key reaches the block selection instead of a field or the menu button.
+   */
+  private releaseFocus(): void {
+    const active = document.activeElement;
+
+    if (active instanceof HTMLElement && active.closest(`[${DATA_ATTR.editor}]`) !== null) {
+      active.blur();
+    }
+  }
 
   /**
    * Clears block selection when block settings is closed
@@ -913,7 +1021,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param blocks - array of blocks to convert
    * @param targetToolName - name of the tool to convert to
    * @param toolboxData - optional data overrides for the new blocks
-   * @returns the resulting block (merged or last converted) or null if all conversions failed, and how many selected blocks converted
+   * @returns the resulting block (merged or last converted) or null if all conversions failed, how many selected blocks converted, and the blocks to leave selected
    */
   private async convertBlock(
     currentBlock: Block,
@@ -921,7 +1029,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     hasMultipleBlocksSelected: boolean,
     tool: BlockToolAdapter,
     toolboxData?: Record<string, unknown>
-  ): Promise<{ block: Block | null; count: number }> {
+  ): Promise<{ block: Block | null; count: number; selected: Block[] }> {
     const { BlockManager } = this.Blok;
 
     if (hasMultipleBlocksSelected) {
@@ -939,7 +1047,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       ? await this.convertMultiItemBlockToSeparateBlocks(currentBlock, tool.name, toolboxData)
       : await BlockManager.convert(currentBlock, tool.name, toolboxData);
 
-    return { block, count: 1 };
+    return { block, count: 1, selected: block === null || shouldExplode ? [] : [block] };
   }
 
   /**
@@ -949,17 +1057,17 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param blocks - array of blocks to convert
    * @param targetToolName - name of the tool to convert to
    * @param toolboxData - optional data overrides for the new blocks
-   * @returns the resulting block (merged or last converted) or null if all conversions failed, and how many blocks converted
+   * @returns the resulting block (merged or last converted) or null if all conversions failed, how many blocks converted, and the blocks to leave selected
    */
   private async convertMultipleBlocks(
     blocks: Block[],
     targetToolName: string,
     toolboxData?: Record<string, unknown>
-  ): Promise<{ block: Block | null; count: number }> {
+  ): Promise<{ block: Block | null; count: number; selected: Block[] }> {
     const { Tools } = this.Blok;
 
     if (blocks.length === 0) {
-      return { block: null, count: 0 };
+      return { block: null, count: 0, selected: [] };
     }
 
     /**
@@ -983,7 +1091,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     });
 
     if (convertibleBlocks.length === 0) {
-      return { block: null, count: 0 };
+      return { block: null, count: 0, selected: [] };
     }
 
     /**
@@ -997,7 +1105,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     if (shouldMergeIntoSingleBlock) {
       const merged = await this.convertBlocksToSingleMergedBlock(convertibleBlocks, targetToolName, toolboxData);
 
-      return { block: merged, count: merged === null ? 0 : convertibleBlocks.length };
+      return merged === null
+        ? { block: null, count: 0, selected: [] }
+        : { block: merged, count: convertibleBlocks.length, selected: [merged] };
     }
 
     /**
@@ -1005,7 +1115,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      */
     const converted = await this.convertBlocksIndividually(convertibleBlocks, targetToolName, toolboxData);
 
-    return { block: converted.at(-1) ?? null, count: converted.length };
+    return { block: converted.at(-1) ?? null, count: converted.length, selected: converted };
   }
 
   /**

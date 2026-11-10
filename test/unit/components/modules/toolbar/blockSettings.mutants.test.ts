@@ -243,7 +243,7 @@ type BlokMock = {
     deleteSelectedBlocksAndInsertReplacement: Mock<() => Block | null>;
   };
   CrossBlockSelection: { isCrossBlockSelectionStarted: boolean };
-  DragManager?: { duplicateBlocksInPlace: Mock<(block: Block) => Promise<void>> };
+  DragManager?: { duplicateBlocksInPlace: Mock<(block: Block) => Promise<Block[]>> };
   Toolbar: { close: Mock<() => void>; isDockedPhysicallyRight: boolean };
   Caret: {
     positions: { START: string; END: string; DEFAULT: string };
@@ -284,7 +284,7 @@ const createBlokMock = (config: BlokConfig): BlokMock => ({
     deleteSelectedBlocksAndInsertReplacement: vi.fn(() => null),
   },
   CrossBlockSelection: { isCrossBlockSelectionStarted: false },
-  DragManager: { duplicateBlocksInPlace: vi.fn(async () => undefined) },
+  DragManager: { duplicateBlocksInPlace: vi.fn(async (): Promise<Block[]> => []) },
   Toolbar: { close: vi.fn(), isDockedPhysicallyRight: false },
   Caret: {
     positions: { START: 'start', END: 'end', DEFAULT: 'default' },
@@ -1394,6 +1394,7 @@ describe('BlockSettings — mutation coverage', () => {
       const block = createBlockStub();
       const items = await openSingleWith([textTool, headerTool], block);
 
+      blok.BlockSelection.selectBlock.mockClear();
       await activatable(childrenOf(items, 'convert-to'), 'header').onActivate({});
 
       // The SECOND tool must win — the entry names the tool, not its position.
@@ -1402,8 +1403,9 @@ describe('BlockSettings — mutation coverage', () => {
       expect(blok.BlockManager.convert.mock.calls[0][1]).toBe('header');
       expect(blok.BlockManager.convert.mock.calls[0][2]).toStrictEqual({ level: 1 });
       expect(blok.Toolbar.close).toHaveBeenCalledTimes(1);
-      // The caret offset captured before the block was highlighted is restored.
-      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(asBlock(converted), 'default', 3);
+      // Like Notion, the result is left block-selected with no caret.
+      expect(blok.BlockSelection.selectBlock.mock.calls).toStrictEqual([[asBlock(converted)]]);
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
 
       window.getSelection()?.removeAllRanges();
       editable.remove();
@@ -1420,7 +1422,7 @@ describe('BlockSettings — mutation coverage', () => {
       expect(blok.Toolbar.close).toHaveBeenCalledTimes(1);
     });
 
-    it('converts every selected block separately and lands the caret at the end of the last one', async () => {
+    it('converts every selected block separately and leaves them all selected', async () => {
       const first = createBlockStub();
       const second = createBlockStub();
       const firstConverted = createBlockStub();
@@ -1435,14 +1437,15 @@ describe('BlockSettings — mutation coverage', () => {
 
       await activatable(childrenOf(items, 'convert-to'), 'text').onActivate({});
 
+      // Asserted first: both results stay selected, with no caret.
+      expect(blok.BlockSelection.selectBlock.mock.calls).toStrictEqual([[asBlock(firstConverted)], [asBlock(secondConverted)]]);
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
       expect(blok.BlockManager.convert).toHaveBeenCalledTimes(2);
       expect(blok.BlockManager.convert.mock.calls[0][0]).toBe(asBlock(first));
       expect(blok.BlockManager.convert.mock.calls[1][0]).toBe(asBlock(second));
       // Each block becomes its own block, so none may adopt a following section.
       expect(blok.BlockManager.convert.mock.calls[0][3]).toStrictEqual({ skipSectionAdoption: true });
       expect(blok.BlockManager.replace).not.toHaveBeenCalled();
-      // A multi-block conversion has no caret offset to preserve.
-      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(asBlock(secondConverted), 'end');
     });
 
     it('merges the selection into one block when the target tool accepts multi-line content', async () => {
@@ -1470,7 +1473,8 @@ describe('BlockSettings — mutation coverage', () => {
       expect(blok.BlockManager.removeBlock).toHaveBeenCalledTimes(1);
       expect(blok.BlockManager.removeBlock.mock.calls[0][0]).toBe(asBlock(second));
       expect(blok.BlockManager.removeBlock.mock.calls[0][1]).toBe(false);
-      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(asBlock(merged), 'end');
+      expect(blok.BlockSelection.selectBlock.mock.calls).toStrictEqual([[asBlock(merged)]]);
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
     });
 
     it('abandons the merge when not one block could export itself', async () => {
@@ -1630,7 +1634,7 @@ describe('BlockSettings — mutation coverage', () => {
       expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
     });
 
-    it('warns about a failing conversion and keeps the caret on the last success', async () => {
+    it('warns about a failing conversion and selects only the successes', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const first = createBlockStub();
       const second = createBlockStub();
@@ -1647,10 +1651,10 @@ describe('BlockSettings — mutation coverage', () => {
 
       expect(warn).toHaveBeenCalledTimes(1);
       expect(String(warn.mock.calls[0][0])).toContain(second.id);
-      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(asBlock(converted), 'end');
+      expect(blok.BlockSelection.selectBlock.mock.calls).toStrictEqual([[asBlock(converted)]]);
     });
 
-    it('places no caret when a later conversion produced nothing', async () => {
+    it('selects only the blocks that converted when a later conversion produced nothing', async () => {
       const converted = createBlockStub();
 
       registerBlockTool('text', textTool);
@@ -1662,8 +1666,8 @@ describe('BlockSettings — mutation coverage', () => {
 
       await activatable(childrenOf(items, 'convert-to'), 'text').onActivate({});
 
-      expect(blok.Caret.setToBlock).toHaveBeenCalledTimes(1);
-      expect(blok.Caret.setToBlock.mock.calls[0][0]).toBe(asBlock(converted));
+      expect(blok.BlockSelection.selectBlock.mock.calls).toStrictEqual([[asBlock(converted)]]);
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
     });
 
     it('places no caret when no conversion succeeded at all', async () => {

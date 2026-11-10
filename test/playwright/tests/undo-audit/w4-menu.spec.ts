@@ -319,9 +319,9 @@ test.describe('W4M defects', () => {
     expect(r.redone.data).toEqual(r.after.data);
   });
 
-  // Redo of a turn-into puts the caret where the turn-into left it. The next gesture start
-  // records that caret as the step's caret-after.
-  test('W4M-4: redo of "turn into quote" puts the caret back where the turn-into left it', async ({ page }) => {
+  // Turn into leaves the block selected (Notion U084); undo puts the caret back where it was.
+  // What redo restores is a block selection, which FR2 owns.
+  test('W4M-4: turn into quote leaves the block selected, and undo puts the caret back', async ({ page }) => {
     await createBlok(page, wrap(P('x', 'Plain text')));
     await gap(page);
     await editable(page, 'x').click();
@@ -330,18 +330,14 @@ test.describe('W4M defects', () => {
     await page.keyboard.press('ArrowLeft');
     await convert(page, 'x', 'Quote');
     await gap(page);
-    const afterGesture = await caret(page);
+
+    expect(await caret(page), 'no caret after turn into').toEqual({ blockId: null, offset: null });
+    await expect(page.locator('[data-blok-id="x"]')).toHaveAttribute('data-blok-selected', 'true');
 
     await page.keyboard.press(UNDO);
     await gap(page, 500);
-    const afterUndo = await caret(page);
 
-    await page.keyboard.press(REDO);
-    await gap(page, 500);
-
-    expect(await caret(page), 'caret after redo').toEqual(afterGesture);
-    expect(afterGesture).toEqual({ blockId: 'x', offset: 8 });
-    expect(afterUndo).toEqual({ blockId: 'x', offset: 8 });
+    expect(await caret(page), 'caret after undo').toEqual({ blockId: 'x', offset: 8 });
   });
 });
 
@@ -372,21 +368,22 @@ test.describe('W4M controls: duplicate from the block menu', () => {
     });
   }
 
-  test('W4M control: duplicate paragraph: undo and redo put the caret in the original and in the copy', async ({ page }) => {
+  // The copy is left selected (Notion U105). What redo restores is a block selection, which FR2 owns.
+  test('W4M control: duplicate paragraph: the copy is selected, and undo puts the caret in the original', async ({ page }) => {
     await createBlok(page, wrap(P('x', 'Plain text')));
     await gap(page);
     await editable(page, 'x').click();
     await page.keyboard.press('End');
     await duplicate(page, 'x');
     await gap(page);
-    const afterGesture = await caret(page);
+
+    expect(await caret(page)).toEqual({ blockId: null, offset: null });
+    await expect(page.locator('[data-blok-testid="block-wrapper"][data-blok-selected="true"]')).toHaveCount(1);
+    await expect(page.locator('[data-blok-id="x"]')).not.toHaveAttribute('data-blok-selected', 'true');
 
     await page.keyboard.press(UNDO);
     await gap(page, 500);
     expect(await caret(page)).toEqual({ blockId: 'x', offset: 10 });
-    await page.keyboard.press(REDO);
-    await gap(page, 500);
-    expect(await caret(page)).toEqual(afterGesture);
   });
 });
 

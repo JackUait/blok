@@ -181,6 +181,7 @@ const createBlock = (): Block => ({
 type BlokMock = {
   BlockSelection: {
     selectBlock: Mock<(block: Block) => void>;
+    clearSelection: Mock<() => void>;
     clearCache: Mock<() => void>;
     unselectBlock: Mock<(block: Block) => void>;
     selectedBlocks: Block[];
@@ -243,6 +244,7 @@ const createBlokMock = (config: Partial<BlokConfig> = {}): BlokMock => {
   const redactor = document.createElement('div');
   const blockSelection = {
     selectBlock: vi.fn(),
+    clearSelection: vi.fn(),
     clearCache: vi.fn(),
     unselectBlock: vi.fn(),
     selectedBlocks: [] as Block[],
@@ -688,7 +690,7 @@ describe('BlockSettings', () => {
     confirmSpy.mockRestore();
   });
 
-  it('preserves the caret offset when turning a block into another type (Notion parity)', async () => {
+  it('leaves the converted block selected with no caret (Notion parity)', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -736,9 +738,11 @@ describe('BlockSettings', () => {
     const convertToItem = items?.find(item => (item as PopoverItemParams & { name?: string }).name === 'convert-to');
     const childItems = (convertToItem as { children?: { items?: PopoverItemParams[] } } | undefined)?.children?.items ?? [];
 
+    blokMock.BlockSelection.selectBlock.mockClear();
     await (childItems[0] as unknown as { onActivate: () => Promise<void> }).onActivate();
 
-    expect(blokMock.Caret.setToBlock).toHaveBeenCalledWith(convertedBlock, 'default', 5);
+    expect(blokMock.BlockSelection.selectBlock.mock.calls).toStrictEqual([[convertedBlock]]);
+    expect(blokMock.Caret.setToBlock).not.toHaveBeenCalled();
 
     editable.remove();
   });
@@ -975,6 +979,89 @@ describe('BlockSettings', () => {
       .map((item) => item.name);
 
     expect(tuneNames).toEqual(['move-up', 'move-down', 'edit-metadata']);
+  });
+
+  describe('an item that closes the menu (Notion parity)', () => {
+    const openWithTune = async (onActivate: () => void): Promise<{ block: Block; trigger: HTMLButtonElement; activate: () => void }> => {
+      blockSettings.make();
+
+      const block = createBlock();
+
+      document.body.appendChild(block.holder);
+      blokMock.BlockManager.currentBlock = block;
+      (block.getTunes as Mock).mockReturnValue({
+        toolTunes: [{ name: 'header-row', title: 'Header row', closeOnActivate: true, onActivate }],
+        commonTunes: [],
+      });
+      getConvertibleToolsForBlockMock.mockResolvedValue([]);
+      (blockSettings as unknown as { selection: unknown }).selection = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+      await blockSettings.open(block, trigger);
+
+      const items = (getLastPopover()?.params as { items: PopoverItemParams[] }).items;
+      const item = items.find((candidate) => 'name' in candidate && candidate.name === 'header-row') as unknown as { onActivate: () => void };
+
+      blokMock.BlockSelection.selectBlock.mockClear();
+
+      // The popover calls onActivate, hides, then reports Closed.
+      return {
+        block,
+        trigger,
+        activate: () => {
+          item.onActivate();
+          (blockSettings as unknown as { onPopoverClose: () => void }).onPopoverClose();
+        },
+      };
+    };
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('leaves the block selected and does not focus the menu button', async () => {
+      const { block, trigger, activate } = await openWithTune(vi.fn());
+
+      activate();
+
+      expect(blokMock.BlockSelection.unselectBlock).not.toHaveBeenCalled();
+      expect(blokMock.BlockSelection.selectBlock).toHaveBeenCalledWith(block);
+      expect(trigger).not.toHaveFocus();
+    });
+
+    it('lets go of the block when the action removed it', async () => {
+      const { block, activate } = await openWithTune(() => block.holder.remove());
+
+      activate();
+
+      expect(blokMock.BlockSelection.selectBlock).not.toHaveBeenCalled();
+      expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
+    });
+
+    it('lets go of the block when the action moved focus somewhere else', async () => {
+      const field = document.createElement('input');
+
+      document.body.appendChild(field);
+
+      const { block, activate } = await openWithTune(() => field.focus());
+
+      activate();
+
+      expect(blokMock.BlockSelection.selectBlock).not.toHaveBeenCalled();
+      expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
+      expect(field).toHaveFocus();
+    });
+
+    it('still clears the selection when the menu is dismissed', async () => {
+      const { block } = await openWithTune(vi.fn());
+
+      (blockSettings as unknown as { onPopoverClose: () => void }).onPopoverClose();
+
+      expect(blokMock.BlockSelection.selectBlock).not.toHaveBeenCalled();
+      expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
+    });
   });
 
   it('forwards popover close event to block settings close', () => {

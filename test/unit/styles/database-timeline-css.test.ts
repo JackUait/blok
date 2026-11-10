@@ -36,6 +36,7 @@ const TOKENS = [
   '--blok-database-timeline-canvas-bg',
   '--blok-database-timeline-panel-bg',
   '--blok-database-timeline-panel-shadow',
+  '--blok-database-timeline-header-text',
 ];
 
 describe('database timeline styles', () => {
@@ -289,6 +290,13 @@ describe('timeline in dark (research/21 §1i)', () => {
     ['--blok-database-timeline-arrow-hover-bg', 'rgb(230, 229, 227)'],
   ])('%s is %s in both dark blocks', (token, value) => {
     expect(darkValues(token)).toEqual([value, value]);
+  });
+
+  // r9-timeline-dark.raw: the panel shadow and the "Name" header ink.
+  it('draws the dark panel with Notion\'s dark shadow and a brighter "Name" header', () => {
+    expect(darkValues('--blok-database-timeline-panel-shadow')).toEqual(['rgba(25, 25, 25, 0.08) 0 2px 4px 0', 'rgba(25, 25, 25, 0.08) 0 2px 4px 0']);
+    expect(darkValues('--blok-database-timeline-header-text')).toEqual(['rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+    expect(ruleBody('[data-blok-database-timeline-table-header]')).toContain('color: var(--blok-database-timeline-header-text)');
   });
 
   // The dark icon ink is unmeasured. White on the measured chip is 2.3:1, under the 3:1 icon minimum; page ink is 7.5:1.

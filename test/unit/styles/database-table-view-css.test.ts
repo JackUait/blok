@@ -127,13 +127,16 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-list-row-handle] svg')).toMatch(/width: 20px;\s*height: 20px/);
   });
 
-  // Notion's title "Aa" inks 18x12 in the same slot as its 16px glyphs (m38-table.png).
-  it('draws the title column\'s "Aa" at 20px, centred over the 16px icon slot', () => {
-    const aa = ruleBody('[data-blok-database-table-column-icon][data-type="title"] svg');
+  // r9-header-offsets.raw: every column's glyph is 19.2px at x+6.4, y+8.4 in an 18x24 slot at x+8; the name starts at x+32.
+  it('draws every header glyph at 19.2px, 1.6px past the start of an 18x24 slot', () => {
+    const slot = ruleBody('[data-blok-database-table-column-icon]');
+    const glyph = ruleBody('[data-blok-database-table-column-icon] svg');
 
-    expect(aa).toMatch(/width: 20px;\s*height: 20px;\s*margin: -2px/);
-    // Preflight caps svg at max-height 100%, which would squash it back to the 16px slot.
-    expect(aa).toMatch(/max-height: none/);
+    expect(slot).toMatch(/width: 18px;\s*height: 24px;/);
+    expect(slot).toMatch(/align-items: center/);
+    expect(glyph).toMatch(/width: 19\.2px;\s*height: 19\.2px;/);
+    expect(glyph).toMatch(/margin-inline-start: -1\.6px/);
+    expect(ruleBody('[data-blok-database-table-column-icon][data-type="title"] svg')).toBe('');
   });
 
   it('marks a checked row checkbox with primary ink on a gray fill', () => {

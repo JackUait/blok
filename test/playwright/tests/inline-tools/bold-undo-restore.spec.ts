@@ -1,8 +1,8 @@
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { historyKeys } from '../helpers/history-keys';
 
-const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 
 declare global {
   interface Window {
@@ -68,7 +68,7 @@ test.describe('stored <b> bold', () => {
     await page.keyboard.press('Backspace');
     await expect(page.locator('[data-blok-id="b"]')).toHaveCount(0);
 
-    await page.keyboard.press(UNDO);
+    await page.keyboard.press((await historyKeys(page)).undo);
     await expect(editable(page, 'b')).toHaveText('ld tail');
 
     expect(await savedText(page, 'b')).toEqual(BOLD_LD_TAIL);

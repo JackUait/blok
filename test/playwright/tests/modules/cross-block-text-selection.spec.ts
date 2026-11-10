@@ -7,6 +7,7 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { dragBetweenCharacters, pointAtCharacter, readTextSelectionState, seamBetweenInputs } from '../helpers/text-drag';
 import type { TextSelectionState } from '../helpers/text-drag';
 import { savedAsHtml } from '../helpers/saved-as-html';
+import { historyKeys } from '../helpers/history-keys';
 
 const HOLDER_ID = 'blok';
 const MODIFIER = process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -536,7 +537,7 @@ test.describe('cross-block text selection', () => {
     await page.keyboard.press('Backspace');
     await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
 
-    await page.keyboard.press(`${MODIFIER}+z`);
+    await page.keyboard.press((await historyKeys(page)).undo);
 
     await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
     expect(await saveTexts(page)).toStrictEqual(texts);

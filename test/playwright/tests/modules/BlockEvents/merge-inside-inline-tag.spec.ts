@@ -4,10 +4,9 @@ import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { openFixtureToggles } from '../../helpers/toggle-open';
 import { blocksAsHtml } from '../../helpers/saved-as-html';
+import { historyKeys } from '../../helpers/history-keys';
 
 const HOLDER_ID = 'blok';
-const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
-const REDO = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 // Firefox and WebKit on macOS do not move the caret on Home.
 const LINE_START = process.platform === 'darwin' ? 'Meta+ArrowLeft' : 'Home';
 
@@ -188,10 +187,10 @@ test.describe('merging with the caret inside a leading or trailing inline tag', 
 
       expect(texts).toEqual([`${c.a}:first<strong>ld</strong> tail`]);
 
-      await page.keyboard.press(UNDO);
+      await page.keyboard.press((await historyKeys(page)).undo);
       await expect.poll(() => saved(page)).toEqual(before);
 
-      await page.keyboard.press(REDO);
+      await page.keyboard.press((await historyKeys(page)).redo);
       await expect.poll(() => saved(page)).toEqual(merged);
     });
 
@@ -250,10 +249,10 @@ test.describe('merging with the caret inside a leading or trailing inline tag', 
 
       expect(merged).toEqual(['a:first<strong>ld</strong> tail']);
 
-      await page.keyboard.press(UNDO);
+      await page.keyboard.press((await historyKeys(page)).undo);
       await expect.poll(() => saved(page)).toEqual(before);
 
-      await page.keyboard.press(REDO);
+      await page.keyboard.press((await historyKeys(page)).redo);
       await expect.poll(() => saved(page)).toEqual(merged);
     } finally {
       await release();

@@ -5,6 +5,7 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
 import { dragBetweenCharacters, readTextSelectionState } from '../helpers/text-drag';
+import { historyKeys } from '../helpers/history-keys';
 
 /**
  * Regression guard for the CLASS of bug fixed for table cells in
@@ -285,7 +286,7 @@ test.describe('nested containers — selecting several lines inside one containe
      * (transactMoves/reparent-replay): the removals and the merge must come back
      * as ONE undo entry.
      */
-    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z');
+    await page.keyboard.press((await historyKeys(page)).undo);
 
     await expect(callout).toContainText('Line one');
     await expect(callout).toContainText('Line two');

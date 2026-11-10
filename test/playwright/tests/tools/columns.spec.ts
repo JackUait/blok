@@ -4,6 +4,7 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { openFixtureToggles } from '../helpers/toggle-open';
 import { savedAsHtml } from '../helpers/saved-as-html';
+import { historyKeys } from '../helpers/history-keys';
 
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
@@ -771,8 +772,6 @@ test.describe('Columns tool', () => {
   // order, so no variant of this model-vs-DOM divergence can slip back in.
   for (const side of ['left', 'right'] as const) {
     test(`undo of a drag-beside column creation (${side}) keeps the moved block in its original DOM slot`, async ({ page }) => {
-      const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
-      const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
       const ORIGINAL = ['h1', 'i1', 'i2', 'i3', 'h2', 'o1', 'o2', 'o3'];
 
       const domOrder = (): Promise<(string | null)[]> => page.evaluate(() =>
@@ -807,7 +806,7 @@ test.describe('Columns tool', () => {
       await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 
       // Undo -> back to plain blocks in the original order (model AND DOM).
-      await page.keyboard.press(UNDO_SHORTCUT);
+      await page.keyboard.press((await historyKeys(page)).undo);
       await page.waitForFunction(
         () => window.blokInstance !== undefined &&
           window.blokInstance.blocks.getBlockIndex('h2') !== undefined &&
@@ -828,7 +827,7 @@ test.describe('Columns tool', () => {
       // back-to-back) was swallowed by the double-fire debounce and silently did
       // nothing — the columns never came back. The guard is now keyed per action,
       // so a distinct redo right after an undo always fires.
-      await page.keyboard.press(REDO_SHORTCUT);
+      await page.keyboard.press((await historyKeys(page)).redo);
       await page.waitForFunction(
         () => document.querySelector('[data-blok-columns]') !== null,
         { timeout: 2000 }

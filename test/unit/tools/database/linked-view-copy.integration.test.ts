@@ -583,3 +583,149 @@ describe('copying a database gives the copy its own view ids', () => {
     expect(viewRefsOf(blocks, 'a').widgets).toEqual({ wb: 'v' });
   });
 });
+
+/** `db` relates to itself two ways and keeps a manual row order. */
+const relationsDoc = (): OutputBlockData[] => [
+  { id: 'before', type: 'paragraph', data: { text: 'Before' } },
+  {
+    id: 'db',
+    type: 'database',
+    data: {
+      schema: [
+        TITLE,
+        { id: 'next', name: 'Next', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'prev' } },
+        { id: 'prev', name: 'Prev', type: 'relation', position: 'a2', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'next' } },
+      ],
+      views: [{ ...VIEW, rowOrder: { r1: 'a1', r2: 'a0' } }],
+      activeViewId: 'v',
+    },
+    content: ['r1', 'r2'],
+  },
+  { id: 'r1', type: 'database-row', parent: 'db', data: { properties: { t: 'One', next: [{ id: 'r2' }] }, position: 'a0' } },
+  { id: 'r2', type: 'database-row', parent: 'db', data: { properties: { t: 'Two', prev: [{ id: 'r1' }] }, position: 'a1' } },
+];
+
+interface RelationsShape {
+  targets: unknown[];
+  rowOrder: unknown;
+  next: unknown;
+  prev: unknown;
+}
+
+/** The copy's relations and row order, written with its own row ids. */
+const relationsOf = (blocks: OutputBlockData[], databaseId: string): RelationsShape => {
+  const database = blocks.find((block) => block.id === databaseId);
+  const data = database?.data as { schema: Array<{ relation?: { targetDatabaseId?: unknown } }>; views: Array<{ rowOrder?: unknown }> };
+  const rows = blocks.filter((block) => block.parent === databaseId && block.type === 'database-row');
+  const byTitle = (title: string): OutputBlockData | undefined => rows.find((block) => (block.data as { properties: { t?: unknown } }).properties.t === title);
+  const one = byTitle('One');
+  const two = byTitle('Two');
+
+  return {
+    targets: data.schema.flatMap((property) => (property.relation === undefined ? [] : [property.relation.targetDatabaseId])),
+    rowOrder: data.views[0].rowOrder,
+    next: (one?.data as { properties: { next?: unknown } }).properties.next,
+    prev: (two?.data as { properties: { prev?: unknown } }).properties.prev,
+  };
+};
+
+const expectOwnRelations = (blocks: OutputBlockData[], copy: string | undefined): void => {
+  expect(copy).toBeDefined();
+  const rows = blocks.filter((block) => block.parent === copy && block.type === 'database-row');
+  const idOf = (title: string): string | undefined => rows.find((block) => (block.data as { properties: { t?: unknown } }).properties.t === title)?.id;
+  const one = idOf('One') ?? '';
+  const two = idOf('Two') ?? '';
+
+  expect(relationsOf(blocks, copy ?? '')).toEqual({
+    targets: [copy, copy],
+    rowOrder: { [one]: 'a1', [two]: 'a0' },
+    next: [{ id: two }],
+    prev: [{ id: one }],
+  });
+  expect([one, two]).not.toContain('r1');
+  expect([one, two]).not.toContain('r2');
+};
+
+const ORIGINAL_RELATIONS: RelationsShape = { targets: ['db', 'db'], rowOrder: { r1: 'a1', r2: 'a0' }, next: [{ id: 'r2' }], prev: [{ id: 'r1' }] };
+
+describe('copying a database re-points its relations and row order at the copy', () => {
+  it('Duplicate: the copy relates its own rows and orders them', async () => {
+    const instance = await make(relationsDoc());
+
+    await instance.module.dragManager.duplicateBlocksInPlace(blockOf(instance, 'db'));
+    await quiet();
+
+    const blocks = (await instance.save()).blocks;
+
+    expectOwnRelations(blocks, copyId(blocks));
+    expect(relationsOf(blocks, 'db')).toEqual(ORIGINAL_RELATIONS);
+  });
+
+  it('copy and paste: the pasted database relates its own rows and orders them', async () => {
+    const instance = await make(relationsDoc());
+
+    await paste(instance, await copyDatabase(instance, false));
+
+    const blocks = (await instance.save()).blocks;
+
+    expectOwnRelations(blocks, copyId(blocks));
+    expect(relationsOf(blocks, 'db')).toEqual(ORIGINAL_RELATIONS);
+  });
+
+  it('cut and paste: the relations and row order name the pasted rows, not the removed ones', async () => {
+    const instance = await make(relationsDoc());
+    const written = await copyDatabase(instance, true);
+
+    await instance.blocks.delete(instance.blocks.getBlockIndex('db'));
+    await quiet();
+    await paste(instance, written);
+
+    const blocks = (await instance.save()).blocks;
+
+    expect(blocks.some((block) => block.id === 'db')).toBe(false);
+    expectOwnRelations(blocks, copyId(blocks));
+  });
+
+  it('copy and paste of two related databases: each copy relates the other copy and its rows', async () => {
+    const instance = await make([
+      { id: 'before', type: 'paragraph', data: { text: 'Before' } },
+      { id: 'tg', type: 'toggle', data: { text: 'Group' }, content: ['p', 't'] },
+      {
+        id: 'p', type: 'database', parent: 'tg',
+        data: { schema: [TITLE, { id: 'pt', name: 'Tasks', type: 'relation', position: 'a1', relation: { targetDatabaseId: 't', twoWay: true, syncedPropertyId: 'tp' } }], views: [VIEW], activeViewId: 'v' },
+        content: ['p1'],
+      },
+      { id: 'p1', type: 'database-row', parent: 'p', data: { properties: { t: 'P', pt: [{ id: 't1' }] }, position: 'a0' } },
+      {
+        id: 't', type: 'database', parent: 'tg',
+        data: { schema: [TITLE, { id: 'tp', name: 'Projects', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'p', twoWay: true, syncedPropertyId: 'pt' } }], views: [VIEW], activeViewId: 'v' },
+        content: ['t1'],
+      },
+      { id: 't1', type: 'database-row', parent: 't', data: { properties: { t: 'T', tp: [{ id: 'p1' }] }, position: 'a0' } },
+    ]);
+    const written = new Map<string, string>();
+    const { blockSelection } = instance.module;
+
+    blockSelection.selectBlock(blockOf(instance, 'tg'));
+    await blockSelection.copySelectedBlocks({
+      preventDefault: () => undefined,
+      clipboardData: { setData: (type: string, value: string): void => void written.set(type, value) },
+    } as unknown as ClipboardEvent, { cut: false });
+    blockSelection.clearSelection();
+    await paste(instance, written);
+
+    const blocks = (await instance.save()).blocks;
+    const toggleCopy = blocks.find((block) => block.type === 'toggle' && block.id !== 'tg');
+    const [pCopy, tCopy] = blocks.filter((block) => block.type === 'database' && block.parent === toggleCopy?.id);
+    const rowOf = (database: OutputBlockData | undefined): OutputBlockData | undefined => blocks.find((block) => block.parent === database?.id);
+    const relationOf = (database: OutputBlockData | undefined): unknown => (database?.data as { schema: Array<{ relation?: { targetDatabaseId?: unknown } }> }).schema[1].relation?.targetDatabaseId;
+    const valuesOf = (database: OutputBlockData | undefined, key: string): unknown => (rowOf(database)?.data as { properties: Record<string, unknown> }).properties[key];
+
+    expect(tCopy).toBeDefined();
+    expect(relationOf(pCopy)).toBe(tCopy?.id);
+    expect(relationOf(tCopy)).toBe(pCopy?.id);
+    expect(valuesOf(pCopy, 'pt')).toEqual([{ id: rowOf(tCopy)?.id }]);
+    expect(valuesOf(tCopy, 'tp')).toEqual([{ id: rowOf(pCopy)?.id }]);
+    expect(valuesOf(blocks.find((block) => block.id === 'p'), 'pt')).toEqual([{ id: 't1' }]);
+  });
+});

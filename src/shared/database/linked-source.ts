@@ -1,6 +1,7 @@
 /**
  * A database block names other blocks by id: its linked source, its Tabbed
- * layout's tabs block, view data sources and dashboard widget databases. A
+ * layout's tabs block, view data sources, dashboard widget databases,
+ * relation targets and its views' row order; a row names its related rows. A
  * copy that carries both must re-point the reference at the copy. A reference
  * to a block that is not copied keeps its id.
  *
@@ -10,6 +11,7 @@
 import { cloneRecord } from '../agent/snapshot';
 
 const DATABASE = 'database';
+const DATABASE_ROW = 'database-row';
 
 type LocalSource = Record<string, unknown> & { databaseId: string };
 
@@ -106,8 +108,42 @@ export const databaseBlockRefs = (type: string, data: unknown): BlockRef[] => {
   return refs;
 };
 
+const remote = (relation: Fields): boolean => typeof relation.targetDocumentId === 'string' && relation.targetDocumentId !== '';
+
 /**
- * New ids for the copied blocks that a copied database names. The copy
+ * Block ids a copy in the editor re-points, beyond `databaseBlockRefs`: each
+ * relation's target database and each related row of a `database-row`. Kept
+ * out of `databaseBlockRefs`, which also drives the server's page copy.
+ * A relation to another document names that document's database: never mapped.
+ * @param type - the block's tool name
+ * @param data - the block's data
+ */
+const relationRefs = (type: string, data: unknown): BlockRef[] => {
+  if (!isFields(data)) return [];
+  const named = (holder: Fields, key: string): boolean => typeof holder[key] === 'string' && holder[key] !== '';
+
+  if (type === DATABASE) {
+    return fieldsIn(data.schema)
+      .map((property) => property.relation)
+      .filter(isFields)
+      .filter((relation) => !remote(relation) && named(relation, 'targetDatabaseId'))
+      .map((holder) => ({ holder, key: 'targetDatabaseId' }));
+  }
+  if (type !== DATABASE_ROW || !isFields(data.properties)) return [];
+
+  // The row has no schema, so every `[{id}]` value counts; only copied ids map.
+  return Object.values(data.properties).flatMap(fieldsIn).filter((item) => named(item, 'id')).map((holder) => ({ holder, key: 'id' }));
+};
+
+const copyRefs = (type: string, data: unknown): BlockRef[] => [...databaseBlockRefs(type, data), ...relationRefs(type, data)];
+
+/** Each view's manual order: row ids are its KEYS. */
+const rowOrdersOf = (type: string, data: unknown): Fields[] => (type === DATABASE && isFields(data)
+  ? fieldsIn(data.views).map((view) => view.rowOrder).filter(isFields)
+  : []);
+
+/**
+ * New ids for the copied blocks that a copied database or row names. The copy
  * inserts each such block under its new id, so the database's copy can name
  * it whether it lands before or after it. A block not copied keeps its id.
  * @param copies - each copied block's original id, tool name and data
@@ -120,7 +156,10 @@ export const mintDatabaseRefIds = (
   const copied = new Set(copies.map((copy) => copy.id));
   const minted = new Map<string, string>();
 
-  const named = copies.flatMap((copy) => databaseBlockRefs(copy.type, copy.data).map(({ holder, key }) => holder[key] as string));
+  const named = copies.flatMap((copy) => [
+    ...copyRefs(copy.type, copy.data).map(({ holder, key }) => holder[key] as string),
+    ...rowOrdersOf(copy.type, copy.data).flatMap((order) => Object.keys(order)),
+  ]);
 
   for (const id of named) {
     if (copied.has(id) && !minted.has(id)) minted.set(id, mint());
@@ -130,20 +169,28 @@ export const mintDatabaseRefIds = (
 };
 
 /**
- * `data` with every block id it names re-pointed through `ids`. A copy when
+ * `data` with every block id it or its row order names re-pointed through `ids`. A copy when
  * anything maps, else the same object.
  * @param type - the block's tool name
  * @param data - the block's data
  * @param ids - old block id to new block id
  */
 export const remapDatabaseRefs = <T>(type: string, data: T, ids: ReadonlyMap<string, string>): T => {
-  if (!databaseBlockRefs(type, data).some(({ holder, key }) => ids.has(holder[key] as string))) return data;
+  const touched = copyRefs(type, data).some(({ holder, key }) => ids.has(holder[key] as string))
+    || rowOrdersOf(type, data).some((order) => Object.keys(order).some((rowId) => ids.has(rowId)));
+
+  if (!touched) return data;
   const next = cloneRecord(data as Record<string, unknown>) as T;
 
-  for (const { holder, key } of databaseBlockRefs(type, next)) {
+  for (const { holder, key } of copyRefs(type, next)) {
     const mapped = ids.get(holder[key] as string);
 
     if (mapped !== undefined) holder[key] = mapped;
+  }
+  for (const view of type === DATABASE && isFields(next) ? fieldsIn(next.views) : []) {
+    if (isFields(view.rowOrder)) {
+      view.rowOrder = Object.fromEntries(Object.entries(view.rowOrder).map(([rowId, position]) => [ids.get(rowId) ?? rowId, position]));
+    }
   }
 
   return next;

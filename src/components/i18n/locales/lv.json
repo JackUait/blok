@@ -223,6 +223,7 @@
   "a11y.navigationModeExited": "Navigācijas režīms izslēgts",
   "a11y.undone": "Atsaukts",
   "a11y.redone": "Atkārtots",
+  "a11y.nothingToUndo": "Nav ko atsaukt",
   "a11y.nothingToRedo": "Nav ko atkārtot",
   "a11y.convertedTo": "Pārvērsts par: {name}",
   "a11y.navigationPosition": "{tool}, {position} no {total}",

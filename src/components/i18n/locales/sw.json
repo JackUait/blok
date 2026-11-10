@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Umetoka kwenye hali ya usogezaji",
   "a11y.undone": "Imetenduliwa",
   "a11y.redone": "Imerudiwa",
+  "a11y.nothingToUndo": "Hakuna cha kutendua",
   "a11y.nothingToRedo": "Hakuna cha kurudia",
   "a11y.convertedTo": "Imebadilishwa kuwa {name}",
   "a11y.navigationPosition": "{tool}, {position} kati ya {total}",

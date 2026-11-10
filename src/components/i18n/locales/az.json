@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Naviqasiya rejimindən çıxıldı",
   "a11y.undone": "Geri qaytarıldı",
   "a11y.redone": "Təkrarlandı",
+  "a11y.nothingToUndo": "Geri qaytarılacaq heç nə yoxdur",
   "a11y.nothingToRedo": "Təkrarlanacaq heç nə yoxdur",
   "a11y.convertedTo": "Çevrildi: {name}",
   "a11y.navigationPosition": "{tool}, {total} içindən {position}",

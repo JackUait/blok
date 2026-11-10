@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Gezinme modundan çıkıldı",
   "a11y.undone": "Geri alındı",
   "a11y.redone": "Yinelendi",
+  "a11y.nothingToUndo": "Geri alınacak bir şey yok",
   "a11y.nothingToRedo": "Yinelenecek bir şey yok",
   "a11y.convertedTo": "Dönüştürüldü: {name}",
   "a11y.navigationPosition": "{tool}, {total} içinde {position}",

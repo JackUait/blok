@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "از حالت پیمایش خارج شد",
   "a11y.undone": "واگرد شد",
   "a11y.redone": "ازنو انجام شد",
+  "a11y.nothingToUndo": "چیزی برای واگرد نیست",
   "a11y.nothingToRedo": "چیزی برای ازنو انجام دادن نیست",
   "a11y.convertedTo": "به {name} تبدیل شد",
   "a11y.navigationPosition": "{tool}، {position} از {total}",

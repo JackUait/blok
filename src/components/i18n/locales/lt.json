@@ -223,6 +223,7 @@
   "a11y.navigationModeExited": "Išėjote iš naršymo režimo",
   "a11y.undone": "Anuliuota",
   "a11y.redone": "Perdaryta",
+  "a11y.nothingToUndo": "Nėra ką anuliuoti",
   "a11y.nothingToRedo": "Nėra ką perdaryti",
   "a11y.convertedTo": "Konvertuota į: {name}",
   "a11y.navigationPosition": "{tool}, {position} iš {total}",

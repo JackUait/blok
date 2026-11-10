@@ -265,6 +265,7 @@
   "a11y.navigationModeExited": "탐색 모드 종료됨",
   "a11y.undone": "실행 취소됨",
   "a11y.redone": "다시 실행됨",
+  "a11y.nothingToUndo": "실행 취소할 항목 없음",
   "a11y.nothingToRedo": "다시 실행할 항목 없음",
   "a11y.convertedTo": "{name}(으)로 변환됨",
   "a11y.navigationPosition": "{tool}, {total}개 중 {position}번째",

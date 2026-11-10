@@ -211,6 +211,7 @@
   "a11y.navigationModeExited": "नेभिगेसन मोडबाट बाहिरियो",
   "a11y.undone": "पूर्ववत् गरियो",
   "a11y.redone": "फेरि गरियो",
+  "a11y.nothingToUndo": "पूर्ववत् गर्नुपर्ने केही छैन",
   "a11y.nothingToRedo": "फेरि गर्नुपर्ने केही छैन",
   "a11y.convertedTo": "रूपान्तरण गरियो: {name}",
   "a11y.navigationPosition": "{tool}, कुल {total} मध्ये स्थान {position}",

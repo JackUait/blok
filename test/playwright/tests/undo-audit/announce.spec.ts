@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
@@ -31,6 +31,48 @@ const create = async (page: Page): Promise<void> => {
     await blok.isReady;
     blok.history.clear();
   }, { holder: HOLDER_ID });
+};
+
+type SavedBlock = { id: string; type: string; data: Record<string, unknown>; parent?: string; content?: string[] };
+
+const createWith = async (page: Page, blocks: SavedBlock[]): Promise<void> => {
+  await page.evaluate(async ({ holder, initial }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
+    }
+    document.getElementById(holder)?.remove();
+    const container = document.createElement('div');
+
+    container.id = holder;
+    document.body.appendChild(container);
+    const blok = new window.Blok({ holder, data: { blocks: initial } });
+
+    window.blokInstance = blok;
+    await blok.isReady;
+    blok.history.clear();
+  }, { holder: HOLDER_ID, initial: blocks });
+};
+
+const P = (id: string, text: string, parent?: string): SavedBlock =>
+  parent === undefined ? { id, type: 'paragraph', data: { text } } : { id, type: 'paragraph', data: { text }, parent };
+
+const editableOf = (page: Page, id: string): Locator => page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first();
+
+/** Select blocks through the blockSelection module, as gestures.spec does. */
+const selectBlocks = async (page: Page, ids: string[]): Promise<void> => {
+  await page.evaluate((blockIds) => {
+    const bs = (window.blokInstance as unknown as { module: { blockSelection: { selectBlockByIndex: (i: number) => void } } }).module.blockSelection;
+
+    for (const id of blockIds) {
+      const index = window.blokInstance?.blocks.getBlockIndex(id);
+
+      if (index === undefined) {
+        throw new Error(`no block ${id}`);
+      }
+      bs.selectBlockByIndex(index);
+    }
+  }, ids);
 };
 
 const savedBlocks = async (page: Page): Promise<string[]> => {
@@ -86,11 +128,25 @@ test.describe('undo audit — undo and redo announcements', () => {
     await expect.poll(() => savedText(page)).toBe('AlphaX');
   });
 
-  test('an undo press with nothing to undo says nothing', async ({ page }) => {
+  // Notion RM8 / U003: an empty undo with the caret in the page says so.
+  test('an undo press with nothing to undo says Nothing to undo', async ({ page }) => {
     const status = page.locator('[data-blok-announcer][role="status"]');
     const editable = page.locator(`#${HOLDER_ID} [contenteditable="true"]`).first();
 
     await editable.click();
+    await page.keyboard.press(UNDO);
+
+    await expect(status).toHaveText('Nothing to undo');
+    await expect.poll(() => savedText(page)).toBe('Alpha');
+  });
+
+  // Notion U121: with blocks block-selected an empty undo says nothing.
+  test('an empty undo with blocks selected says nothing', async ({ page }) => {
+    const status = page.locator('[data-blok-announcer][role="status"]');
+
+    await createWith(page, [P('a', 'Alpha'), P('b', 'Beta')]);
+    await editableOf(page, 'a').click();
+    await selectBlocks(page, ['a', 'b']);
     await page.keyboard.press(UNDO);
     // Give the announcer's next-task write time to land before reading the region.
     await page.evaluate(() => new Promise<void>((resolve) => {

@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "ނެވިގޭޝަން މޯޑުން ނުކުމެއްޖެ",
   "a11y.undone": "އަންޑޫ ކުރެވިއްޖެ",
   "a11y.redone": "ރީޑޫ ކުރެވިއްޖެ",
+  "a11y.nothingToUndo": "އަންޑޫ ކުރާނެ އެއްވެސް ކަމެއް ނެތް",
   "a11y.nothingToRedo": "ރީޑޫ ކުރާނެ އެއްވެސް ކަމެއް ނެތް",
   "a11y.convertedTo": "ބަދަލުކުރެވިއްޖެ: {name}",
   "a11y.navigationPosition": "{tool}، {total} ގެ ތެރެއިން {position} ވަނަ ޕޮޒިޝަންގައި",

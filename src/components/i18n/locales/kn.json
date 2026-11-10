@@ -253,6 +253,7 @@
   "a11y.navigationModeExited": "ನ್ಯಾವಿಗೇಶನ್ ಮೋಡ್‌ನಿಂದ ನಿರ್ಗಮಿಸಲಾಗಿದೆ",
   "a11y.undone": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
   "a11y.redone": "ಮತ್ತೆ ಮಾಡಲಾಗಿದೆ",
+  "a11y.nothingToUndo": "ರದ್ದುಗೊಳಿಸಲು ಏನೂ ಇಲ್ಲ",
   "a11y.nothingToRedo": "ಮತ್ತೆ ಮಾಡಲು ಏನೂ ಇಲ್ಲ",
   "a11y.convertedTo": "ಪರಿವರ್ತಿಸಲಾಗಿದೆ: {name}",
   "a11y.navigationPosition": "{tool}, {total} ರಲ್ಲಿ {position}",

@@ -951,6 +951,7 @@
   "a11y.navigationModeExited": "Modo de navegação encerrado",
   "a11y.undone": "Desfeito",
   "a11y.redone": "Refeito",
+  "a11y.nothingToUndo": "Nada para desfazer",
   "a11y.nothingToRedo": "Nada para refazer",
   "a11y.convertedTo": "Convertido para {name}",
   "a11y.navigationPosition": "{tool}, {position} de {total}",

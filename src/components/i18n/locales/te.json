@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "నావిగేషన్ మోడ్ నుండి నిష్క్రమించారు",
   "a11y.undone": "చర్య రద్దు చేయబడింది",
   "a11y.redone": "మళ్లీ చేయబడింది",
+  "a11y.nothingToUndo": "రద్దు చేయడానికి ఏమీ లేదు",
   "a11y.nothingToRedo": "మళ్లీ చేయడానికి ఏమీ లేదు",
   "a11y.convertedTo": "మార్చబడింది: {name}",
   "a11y.navigationPosition": "{tool}, {total}లో {position}",

@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Đã thoát chế độ điều hướng",
   "a11y.undone": "Đã hoàn tác",
   "a11y.redone": "Đã làm lại",
+  "a11y.nothingToUndo": "Không có gì để hoàn tác",
   "a11y.nothingToRedo": "Không có gì để làm lại",
   "a11y.convertedTo": "Đã chuyển sang {name}",
   "a11y.navigationPosition": "{tool}, vị trí {position} trên tổng số {total}",

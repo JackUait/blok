@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "បានចាកចេញពីរបៀបរុករក",
   "a11y.undone": "បានមិនធ្វើវិញ",
   "a11y.redone": "បានធ្វើវិញ",
+  "a11y.nothingToUndo": "គ្មានអ្វីត្រូវមិនធ្វើវិញទេ",
   "a11y.nothingToRedo": "គ្មានអ្វីត្រូវធ្វើវិញទេ",
   "a11y.convertedTo": "បានបំប្លែងទៅជា {name}",
   "a11y.navigationPosition": "{tool}, {position} នៃ {total}",

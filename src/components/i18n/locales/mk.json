@@ -265,6 +265,7 @@
   "a11y.navigationModeExited": "Излеговте од режимот на навигација",
   "a11y.undone": "Вратено",
   "a11y.redone": "Повторено",
+  "a11y.nothingToUndo": "Нема ништо за враќање",
   "a11y.nothingToRedo": "Нема ништо за повторување",
   "a11y.convertedTo": "Претворено во: {name}",
   "a11y.navigationPosition": "{tool}, {position} од {total}",

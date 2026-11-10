@@ -951,6 +951,7 @@
   "a11y.navigationModeExited": "Ați ieșit din modul de navigare",
   "a11y.undone": "Anulat",
   "a11y.redone": "Refăcut",
+  "a11y.nothingToUndo": "Nimic de anulat",
   "a11y.nothingToRedo": "Nimic de refăcut",
   "a11y.convertedTo": "Convertit în {name}",
   "a11y.navigationPosition": "{tool}, {position} din {total}",

@@ -951,6 +951,7 @@
   "a11y.navigationModeExited": "Изашли сте из режима навигације",
   "a11y.undone": "Опозвано",
   "a11y.redone": "Поновљено",
+  "a11y.nothingToUndo": "Нема ничега за опозив",
   "a11y.nothingToRedo": "Нема ничега за понављање",
   "a11y.convertedTo": "Претворено у: {name}",
   "a11y.navigationPosition": "{tool}, {position} од {total}",

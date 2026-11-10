@@ -253,6 +253,7 @@
   "a11y.navigationModeExited": "നാവിഗേഷൻ മോഡിൽ നിന്ന് പുറത്തുകടന്നു",
   "a11y.undone": "പഴയപടിയാക്കി",
   "a11y.redone": "വീണ്ടും ചെയ്തു",
+  "a11y.nothingToUndo": "പഴയപടിയാക്കാൻ ഒന്നുമില്ല",
   "a11y.nothingToRedo": "വീണ്ടും ചെയ്യാൻ ഒന്നുമില്ല",
   "a11y.convertedTo": "മാറ്റി: {name}",
   "a11y.navigationPosition": "{tool}, {total}-ൽ {position}",

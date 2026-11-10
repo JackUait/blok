@@ -951,6 +951,7 @@
   "a11y.navigationModeExited": "Uscita dalla modalità di navigazione",
   "a11y.undone": "Annullato",
   "a11y.redone": "Ripristinato",
+  "a11y.nothingToUndo": "Niente da annullare",
   "a11y.nothingToRedo": "Niente da ripristinare",
   "a11y.convertedTo": "Convertito in {name}",
   "a11y.navigationPosition": "{tool}, {position} di {total}",

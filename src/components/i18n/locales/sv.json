@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Navigeringsläget avslutades",
   "a11y.undone": "Ångrat",
   "a11y.redone": "Gjort om",
+  "a11y.nothingToUndo": "Inget att ångra",
   "a11y.nothingToRedo": "Inget att göra om",
   "a11y.convertedTo": "Omvandlat till {name}",
   "a11y.navigationPosition": "{tool}, {position} av {total}",

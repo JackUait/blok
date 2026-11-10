@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Navigationsmodus beendet",
   "a11y.undone": "Widerrufen",
   "a11y.redone": "Wiederholt",
+  "a11y.nothingToUndo": "Nichts zu widerrufen",
   "a11y.nothingToRedo": "Nichts zu wiederholen",
   "a11y.convertedTo": "In {name} umgewandelt",
   "a11y.navigationPosition": "{tool}, {position} von {total}",

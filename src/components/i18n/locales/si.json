@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "සංචලන ප්‍රකාරයෙන් ඉවත් විය",
   "a11y.undone": "අහෝසි කළා",
   "a11y.redone": "නැවත කළා",
+  "a11y.nothingToUndo": "අහෝසි කිරීමට කිසිවක් නැත",
   "a11y.nothingToRedo": "නැවත කිරීමට කිසිවක් නැත",
   "a11y.convertedTo": "පරිවර්තනය කළා: {name}",
   "a11y.navigationPosition": "{tool}, {total}න් {position}",

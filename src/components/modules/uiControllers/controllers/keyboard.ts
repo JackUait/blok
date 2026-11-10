@@ -1225,7 +1225,7 @@ export class KeyboardController extends Controller {
    * @param direction - which history to walk
    */
   private runHistory(direction: 'undo' | 'redo'): void {
-    const { YjsManager, I18n, Toolbar } = this.Blok;
+    const { YjsManager, I18n, Toolbar, BlockSelection } = this.Blok;
 
     // Notion closes the slash menu on undo and redo, and redo does not reopen it (U178).
     if (Toolbar.toolbox.opened) {
@@ -1233,6 +1233,11 @@ export class KeyboardController extends Controller {
     }
 
     const applied = direction === 'undo' ? YjsManager.undo() : YjsManager.redo();
+
+    // Notion stays silent on an empty undo with blocks block-selected (U121).
+    if (!applied && direction === 'undo' && BlockSelection.anyBlockSelected) {
+      return;
+    }
 
     announceHistoryPress((key) => I18n.t(key), direction, applied);
   }

@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "يول باشلاش ھالىتىدىن چېكىندى",
   "a11y.undone": "يېنىۋېلىندى",
   "a11y.redone": "قايتا قىلىندى",
+  "a11y.nothingToUndo": "يېنىۋالىدىغان ھېچنېمە يوق",
   "a11y.nothingToRedo": "قايتا قىلىدىغان ھېچنېمە يوق",
   "a11y.convertedTo": "ئايلاندۇرۇلدى: {name}",
   "a11y.navigationPosition": "{tool}، {total} نىڭ {position}",

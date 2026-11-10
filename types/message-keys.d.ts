@@ -52,6 +52,7 @@ export type BlokMessageKey =
   | 'a11y.navigationModeExited'
   | 'a11y.navigationPosition'
   | 'a11y.nothingToRedo'
+  | 'a11y.nothingToUndo'
   | 'a11y.redone'
   | 'a11y.searchResults'
   | 'a11y.textFormatting'

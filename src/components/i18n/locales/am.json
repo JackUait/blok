@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "ከአሰሳ ሁነታ ወጥቷል",
   "a11y.undone": "ተቀልብሷል",
   "a11y.redone": "ተደግሟል",
+  "a11y.nothingToUndo": "የሚቀለበስ ነገር የለም",
   "a11y.nothingToRedo": "የሚደገም ነገር የለም",
   "a11y.convertedTo": "ተቀይሯል፦ {name}",
   "a11y.navigationPosition": "{tool}፣ {position} ከ{total}",

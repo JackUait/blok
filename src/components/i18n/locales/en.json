@@ -264,6 +264,7 @@
   "a11y.navigationModeExited": "Exited navigation mode",
   "a11y.undone": "Undone",
   "a11y.redone": "Redone",
+  "a11y.nothingToUndo": "Nothing to undo",
   "a11y.nothingToRedo": "Nothing to redo",
   "a11y.convertedTo": "Converted to {name}",
   "a11y.navigationPosition": "{tool}, {position} of {total}",

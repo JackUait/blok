@@ -265,6 +265,7 @@
   "a11y.navigationModeExited": "Навигацийн горимоос гарлаа",
   "a11y.undone": "Буцаалаа",
   "a11y.redone": "Дахин хийлээ",
+  "a11y.nothingToUndo": "Буцаах зүйл алга",
   "a11y.nothingToRedo": "Дахин хийх зүйл алга",
   "a11y.convertedTo": "Хөрвүүлсэн: {name}",
   "a11y.navigationPosition": "{tool}. Байрлал: {position}. Нийт: {total}.",

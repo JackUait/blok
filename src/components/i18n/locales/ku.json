@@ -265,6 +265,7 @@
   "a11y.navigationModeExited": "لە دۆخی ڕێدۆزی دەرچوو",
   "a11y.undone": "پاشگەزکرایەوە",
   "a11y.redone": "دووبارەکرایەوە",
+  "a11y.nothingToUndo": "هیچ شتێک نییە بۆ پاشگەزبوونەوە",
   "a11y.nothingToRedo": "هیچ شتێک نییە بۆ دووبارەکردنەوە",
   "a11y.convertedTo": "گۆڕدرا بۆ: {name}",
   "a11y.navigationPosition": "{tool}، {position} لە {total}",

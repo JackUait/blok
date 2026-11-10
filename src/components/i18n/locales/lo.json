@@ -211,6 +211,7 @@
   "a11y.navigationModeExited": "ອອກຈາກໂໝດການນຳທາງແລ້ວ",
   "a11y.undone": "ຍ້ອນກັບແລ້ວ",
   "a11y.redone": "ເຮັດຊ້ຳແລ້ວ",
+  "a11y.nothingToUndo": "ບໍ່ມີຫຍັງໃຫ້ຍ້ອນກັບ",
   "a11y.nothingToRedo": "ບໍ່ມີຫຍັງໃຫ້ເຮັດຊ້ຳ",
   "a11y.convertedTo": "ປ່ຽນເປັນ {name} ແລ້ວ",
   "a11y.navigationPosition": "{tool}, {position} ຈາກ {total}",

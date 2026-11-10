@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "নেভিগেশন মোড থেকে বের হয়েছেন",
   "a11y.undone": "পূর্বাবস্থায় ফেরানো হয়েছে",
   "a11y.redone": "আবার করা হয়েছে",
+  "a11y.nothingToUndo": "পূর্বাবস্থায় ফেরানোর মতো কিছু নেই",
   "a11y.nothingToRedo": "আবার করার মতো কিছু নেই",
   "a11y.convertedTo": "রূপান্তরিত হয়েছে: {name}",
   "a11y.navigationPosition": "{tool}, {total}টির মধ্যে {position}",

@@ -954,6 +954,7 @@
   "a11y.navigationModeExited": "تم الخروج من وضع التنقل",
   "a11y.undone": "تم التراجع",
   "a11y.redone": "تمت الإعادة",
+  "a11y.nothingToUndo": "لا يوجد ما يمكن التراجع عنه",
   "a11y.nothingToRedo": "لا يوجد ما تتم إعادته",
   "a11y.convertedTo": "تم التحويل إلى {name}",
   "a11y.navigationPosition": "{tool}، {position} من {total}",

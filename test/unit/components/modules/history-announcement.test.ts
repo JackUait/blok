@@ -7,8 +7,7 @@ import type { Blok as PublicBlok, BlokConfig } from '../../../../types';
 
 /**
  * An undo or redo key press says what it did in the polite live region, like
- * Notion: "Undone", "Redone", "Nothing to redo". An undo press with nothing to
- * undo says nothing (Notion's text there was never measured).
+ * Notion: "Undone", "Redone", "Nothing to undo", "Nothing to redo".
  */
 describe('undo and redo announcements', () => {
   let holder: HTMLDivElement;
@@ -105,11 +104,35 @@ describe('undo and redo announcements', () => {
     expect(await announced()).toBe('Redone');
   });
 
-  it('says nothing for an undo press with nothing to undo', async () => {
+  // Notion RM8: an empty undo with the caret in the page says so.
+  it('says Nothing to undo for an undo press with nothing to undo', async () => {
     await boot();
 
     press(blockHolder(), { key: 'z', metaKey: true });
+    expect(await announced()).toBe('Nothing to undo');
+  });
+
+  // Notion U121: with blocks block-selected the same press is silent.
+  it('says nothing for an empty undo while blocks are selected', async () => {
+    const booted = await boot();
+
+    (booted as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } })
+      .module.blockSelection.selectBlockByIndex(0);
+
+    press(blockHolder(), { key: 'z', metaKey: true });
     expect(await announced()).toBe('');
+  });
+
+  it('says Nothing to undo for an empty undo in the page title', async () => {
+    await boot({ pageTitle: true });
+    const title = holder.querySelector(`[${DATA_ATTR.pageTitle}]`);
+
+    if (!(title instanceof HTMLElement)) {
+      throw new Error('no title');
+    }
+
+    press(title, { key: 'z', metaKey: true });
+    expect(await announced()).toBe('Nothing to undo');
   });
 
   it('announces the browser Edit menu undo and redo too', async () => {

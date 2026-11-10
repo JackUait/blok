@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "已退出导航模式",
   "a11y.undone": "已撤销",
   "a11y.redone": "已重做",
+  "a11y.nothingToUndo": "没有可撤销的操作",
   "a11y.nothingToRedo": "没有可重做的操作",
   "a11y.convertedTo": "已转换为{name}",
   "a11y.navigationPosition": "{tool}，第 {position} 个，共 {total} 个",

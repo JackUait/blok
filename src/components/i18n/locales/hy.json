@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Դուրս եկաք նավիգացիայի ռեժիմից",
   "a11y.undone": "Հետարկվեց",
   "a11y.redone": "Կրկնվեց",
+  "a11y.nothingToUndo": "Հետարկելու բան չկա",
   "a11y.nothingToRedo": "Կրկնելու բան չկա",
   "a11y.convertedTo": "Փոխարկվեց՝ {name}",
   "a11y.navigationPosition": "{tool}, {position} {total}-ից",

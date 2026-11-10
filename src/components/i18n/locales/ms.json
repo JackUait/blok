@@ -265,6 +265,7 @@
   "a11y.navigationModeExited": "Telah keluar daripada mod navigasi",
   "a11y.undone": "Dibuat asal",
   "a11y.redone": "Dibuat semula",
+  "a11y.nothingToUndo": "Tiada apa-apa untuk dibuat asal",
   "a11y.nothingToRedo": "Tiada apa-apa untuk dibuat semula",
   "a11y.convertedTo": "Ditukar kepada {name}",
   "a11y.navigationPosition": "{tool}, {position} daripada {total}",

@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "வழிசெலுத்தல் பயன்முறை முடிந்தது",
   "a11y.undone": "செயல்தவிர்க்கப்பட்டது",
   "a11y.redone": "மீண்டும் செய்யப்பட்டது",
+  "a11y.nothingToUndo": "செயல்தவிர்க்க எதுவும் இல்லை",
   "a11y.nothingToRedo": "மீண்டும் செய்ய எதுவும் இல்லை",
   "a11y.convertedTo": "மாற்றப்பட்டது: {name}",
   "a11y.navigationPosition": "{tool}. நிலை: {position}. மொத்தம்: {total}.",

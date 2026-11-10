@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "ออกจากโหมดนำทางแล้ว",
   "a11y.undone": "เลิกทำแล้ว",
   "a11y.redone": "ทำซ้ำแล้ว",
+  "a11y.nothingToUndo": "ไม่มีอะไรให้เลิกทำ",
   "a11y.nothingToRedo": "ไม่มีอะไรให้ทำซ้ำ",
   "a11y.convertedTo": "แปลงเป็น {name} แล้ว",
   "a11y.navigationPosition": "{tool}, {position} จาก {total}",

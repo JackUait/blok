@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Έξοδος από τη λειτουργία πλοήγησης",
   "a11y.undone": "Αναιρέθηκε",
   "a11y.redone": "Επαναλήφθηκε",
+  "a11y.nothingToUndo": "Δεν υπάρχει κάτι για αναίρεση",
   "a11y.nothingToRedo": "Δεν υπάρχει κάτι για επανάληψη",
   "a11y.convertedTo": "Μετατράπηκε σε: {name}",
   "a11y.navigationPosition": "{tool}, {position} από {total}",

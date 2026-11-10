@@ -253,6 +253,7 @@
   "a11y.navigationModeExited": "လမ်းညွှန်မုဒ်မှ ထွက်ပြီးပါပြီ",
   "a11y.undone": "နောက်ပြန်ပြီးပါပြီ",
   "a11y.redone": "ပြန်လုပ်ပြီးပါပြီ",
+  "a11y.nothingToUndo": "နောက်ပြန်စရာ မရှိပါ",
   "a11y.nothingToRedo": "ပြန်လုပ်စရာ မရှိပါ",
   "a11y.convertedTo": "{name} သို့ ပြောင်းပြီးပါပြီ",
   "a11y.navigationPosition": "{tool}၊ စုစုပေါင်း {total} ခုအနက် အနေအထား {position}",

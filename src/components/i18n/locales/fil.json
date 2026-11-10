@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Lumabas sa navigation mode",
   "a11y.undone": "Na-undo",
   "a11y.redone": "Na-redo",
+  "a11y.nothingToUndo": "Walang ia-undo",
   "a11y.nothingToRedo": "Walang ire-redo",
   "a11y.convertedTo": "Na-convert sa {name}",
   "a11y.navigationPosition": "{tool}, posisyon {position} sa kabuuang {total}",

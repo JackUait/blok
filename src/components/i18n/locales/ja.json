@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "ナビゲーションモードを終了しました",
   "a11y.undone": "取り消しました",
   "a11y.redone": "やり直しました",
+  "a11y.nothingToUndo": "元に戻す操作はありません",
   "a11y.nothingToRedo": "やり直す操作はありません",
   "a11y.convertedTo": "{name}に変換しました",
   "a11y.navigationPosition": "{tool}、{total}個中{position}番目",

@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "د نیویګیشن له حالته ووتئ",
   "a11y.undone": "بېرته وګرځول شو",
   "a11y.redone": "بیا وشو",
+  "a11y.nothingToUndo": "د بېرته ګرځولو لپاره هیڅ نشته",
   "a11y.nothingToRedo": "د بیا کولو لپاره هیڅ نشته",
   "a11y.convertedTo": "واړول شو: {name}",
   "a11y.navigationPosition": "{tool}، له {total} څخه {position}",

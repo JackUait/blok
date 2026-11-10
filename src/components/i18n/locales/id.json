@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Keluar dari mode navigasi",
   "a11y.undone": "Diurungkan",
   "a11y.redone": "Diulangi",
+  "a11y.nothingToUndo": "Tidak ada yang dapat diurungkan",
   "a11y.nothingToRedo": "Tidak ada yang dapat diulangi",
   "a11y.convertedTo": "Diubah ke {name}",
   "a11y.navigationPosition": "{tool}, {position} dari {total}",

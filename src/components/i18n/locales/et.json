@@ -950,6 +950,7 @@
   "a11y.navigationModeExited": "Navigeerimisrežiimist väljutud",
   "a11y.undone": "Tagasi võetud",
   "a11y.redone": "Uuesti tehtud",
+  "a11y.nothingToUndo": "Pole midagi tagasi võtta",
   "a11y.nothingToRedo": "Pole midagi uuesti teha",
   "a11y.convertedTo": "Teisendatud: {name}",
   "a11y.navigationPosition": "{tool}, positsioon {position}, kokku {total}",

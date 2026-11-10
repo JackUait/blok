@@ -627,6 +627,9 @@ export class BlockManager extends Module {
         replaceBlock: (index, newBlock) => {
           this.blocksStore.replace(index, newBlock);
         },
+        reindentSubtree: (block) => {
+          this.hierarchy.reindentSubtree(block);
+        },
         onBlockRemoved: (block, index, replaySource) => {
           this.operations.forgetCurrentBlock(block);
           this.Blok.BlockSelection.forgetRemovedBlock(block);

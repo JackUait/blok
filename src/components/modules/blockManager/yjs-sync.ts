@@ -94,6 +94,8 @@ export interface SyncHandlers {
   placeBlock: (block: Block, placement: TreePlacement) => void;
   /** Called to replace a block at a specific index with a new block instance */
   replaceBlock: (index: number, newBlock: Block) => void;
+  /** Re-apply depth and indent to a block and its descendants, without moving them */
+  reindentSubtree?: (block: Block) => void;
   /** Called when a block is removed during undo/redo (before DOM removal) */
   onBlockRemoved: (block: Block, index: number, replaySource?: 'history' | 'remote') => void;
   /** Called when a block is added during undo/redo (after insertion) */
@@ -1580,6 +1582,12 @@ export class BlockYjsSync {
     // fired; a second call lets the container see them.
     if (this.reconcileOrphanedChildren(target.id)) {
       newBlock.call(BlockToolAPI.RENDERED);
+    }
+
+    // A new tool brings a fresh holder with no depth, and may mount the
+    // children in its own slot after they were indented for the old one.
+    if (record.tool !== target.name) {
+      this.handlers.reindentSubtree?.(newBlock);
     }
   }
 

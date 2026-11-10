@@ -303,6 +303,31 @@ test.describe('undo audit: the kind of block a split or merge leaves', () => {
     await expect(page.getByText('kid', { exact: true })).toBeVisible();
   });
 
+  test('U137 nested: undo puts a toggle inside a toggle back at its depth, child indent unchanged', async ({ page }) => {
+    await create(page, [
+      { id: 't1', type: 'toggle', data: { text: 'Outer' }, content: ['t2'] },
+      { id: 't2', type: 'toggle', data: { text: 'Inner' }, content: ['k1'], parent: 't1' },
+      { id: 'k1', type: 'paragraph', data: { text: 'kid' }, parent: 't2' },
+    ]);
+    await openToggle(page, 't1');
+    await openToggle(page, 't2');
+    const kidLeft = await textLeft(page, 'k1');
+
+    await placeCaret(page, 't2', 0);
+    await press(page, 'Backspace');
+    expect(await saved(page)).toEqual(['t1 toggle:Outer', 't2 paragraph:Inner ^t1', 'k1 paragraph:kid ^t2']);
+    await expectSaveMatchesDom(page);
+
+    await press(page, UNDO);
+    expect(await saved(page)).toEqual(['t1 toggle:Outer', 't2 toggle:Inner ^t1', 'k1 paragraph:kid ^t2']);
+    await expectSaveMatchesDom(page);
+    expect(await textLeft(page, 'k1')).toBe(kidLeft);
+
+    await press(page, REDO);
+    expect(await saved(page)).toEqual(['t1 toggle:Outer', 't2 paragraph:Inner ^t1', 'k1 paragraph:kid ^t2']);
+    await expectSaveMatchesDom(page);
+  });
+
   test('U093: Enter in the middle of a heading puts the second half in a text block', async ({ page }) => {
     await create(page, [{ id: 'b1', type: 'header', data: { text: 'Big title', level: 1 } }]);
     await placeCaret(page, 'b1', 3);

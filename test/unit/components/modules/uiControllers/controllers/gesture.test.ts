@@ -69,6 +69,40 @@ describe('GestureController', () => {
     expect(yjs.beginGesture).toHaveBeenCalledWith('discrete');
   });
 
+  describe('a key on the page body in navigation mode (focus left the editor)', () => {
+    const bodyKey = (init: KeyboardEventInit): void => {
+      window.getSelection()?.removeAllRanges();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ...init }));
+    };
+
+    it('starts a gesture when this editor has blocks selected', () => {
+      selectedBlocks = true;
+      bodyKey({ key: 'Backspace' });
+
+      expect(yjs.beginGesture).toHaveBeenCalledWith('discrete');
+    });
+
+    it('starts none when this editor has no blocks selected', () => {
+      bodyKey({ key: 'Backspace' });
+
+      expect(yjs.beginGesture).not.toHaveBeenCalled();
+    });
+
+    it('leaves a key from another editor to that editor', () => {
+      const other = document.createElement('div');
+      const otherInput = document.createElement('div');
+
+      other.setAttribute('data-blok-editor', '');
+      other.appendChild(otherInput);
+      wrapper.appendChild(other);
+      selectedBlocks = true;
+      window.getSelection()?.removeAllRanges();
+      otherInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Backspace' }));
+
+      expect(yjs.beginGesture).not.toHaveBeenCalled();
+    });
+  });
+
   it('treats a shortcut as discrete', () => {
     key({ key: 'b', metaKey: true });
 

@@ -427,6 +427,38 @@ test.describe('CON columns', () => {
     ]);
     expect(await save(page)).toEqual(before);
   });
+
+  test('U142 one undo of Backspace on the block-selected last block of a column restores the block and the layout', async ({ page }) => {
+    await createBlok(page, COLUMNS_DOC);
+    const before = await save(page);
+
+    await gap(page);
+    await page.locator('[data-blok-id="p2"] [contenteditable="true"]').click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-id="p2"]')).toHaveAttribute('data-blok-selected', 'true');
+    await page.keyboard.press('Backspace');
+    await gap(page);
+    const unwrapped = await save(page);
+
+    expect(unwrapped.map(b => b.id), 'blocks after the delete').toEqual(['p-before', 'p1a', 'p1b', 'p-after']);
+
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await gap(page, 500);
+
+    expect(await save(page), 'one undo restores the block and both columns').toEqual(before);
+    expect(await domTree(page), 'DOM tree after one undo').toEqual([
+      ['p-before', null], ['cl1', null], ['c1', 'cl1'], ['p1a', 'c1'], ['p1b', 'c1'], ['c2', 'cl1'], ['p2', 'c2'], ['p-after', null],
+    ]);
+
+    await page.keyboard.press(REDO_SHORTCUT);
+    await gap(page, 500);
+    expect(await save(page), 'one redo deletes and unwraps again').toEqual(unwrapped);
+    expect(await page.evaluate(() => window.blokInstance?.history.canRedo()), 'nothing left to redo').toBe(false);
+
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await gap(page, 500);
+    expect(await save(page), 'undo after redo restores the layout again').toEqual(before);
+  });
 });
 
 test.describe('CON toggle / callout', () => {

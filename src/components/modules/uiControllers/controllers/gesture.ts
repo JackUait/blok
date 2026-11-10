@@ -36,7 +36,7 @@ export class GestureController extends Controller {
   private composing = false;
 
   private readonly keydownHandler = (event: Event): void => {
-    if (!(event instanceof KeyboardEvent) || event.isComposing || this.isToolboxOpen() || !this.owns(event)) {
+    if (!(event instanceof KeyboardEvent) || event.isComposing || this.isToolboxOpen() || !(this.owns(event) || this.ownsNavigationKey(event))) {
       return;
     }
 
@@ -239,6 +239,18 @@ export class GestureController extends Controller {
     const title = this.Blok.PageTitle?.titleElement ?? null;
 
     return title !== null && target instanceof Node && title.contains(target) && this.wrapperElement?.contains(title) !== true;
+  }
+
+  /**
+   * In navigation mode focus sits on the page body with no caret, and the keys
+   * act on this editor's selected blocks. Keys only: a click outside the
+   * editor must not close the step.
+   * @param event - the keydown
+   */
+  private ownsNavigationKey(event: Event): boolean {
+    const target = event.target instanceof Element ? event.target : null;
+
+    return this.Blok.BlockSelection.anyBlockSelected && (target === null || target.closest(`[${DATA_ATTR.editor}]`) === null);
   }
 
   /**

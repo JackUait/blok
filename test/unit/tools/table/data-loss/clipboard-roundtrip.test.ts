@@ -255,6 +255,57 @@ describe('clipboard data loss: Blok cells copied and pasted back', { timeout: 60
     ]);
   });
 
+  it('a single copied list cell pasted at the caret of a filled cell lands after the caret block and keeps the cell', async () => {
+    const editor = await boot([
+      { id: 'src', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['l1'] }, { blocks: ['c2'] }]] } },
+      { id: 'l1', type: 'list', data: { text: 'item', style: 'checklist', checked: true }, parent: 'src' },
+      { id: 'c2', type: 'paragraph', data: { text: 'x' }, parent: 'src' },
+      { id: 'dst', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['d1'] }, { blocks: ['keep', 'tail'] }]] } },
+      { id: 'd1', type: 'paragraph', data: { text: '' }, parent: 'dst' },
+      { id: 'keep', type: 'paragraph', data: { text: 'keep' }, parent: 'dst' },
+      { id: 'tail', type: 'paragraph', data: { text: 'tail' }, parent: 'dst' },
+    ]);
+
+    await paste(cellEditable('dst', 0, 1), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 }));
+    const saved = savedAsHtml(await editor.save());
+    const dst = saved.blocks.find(block => block.id === 'dst');
+
+    if (dst === undefined) {
+      throw new Error('no dst');
+    }
+
+    expect(blocksIn(saved, cellOf(dst, 0, 1)).map(block => [block.type, block.data])).toStrictEqual([
+      ['paragraph', expect.objectContaining({ text: 'keep' })],
+      ['list', expect.objectContaining({ text: 'item', style: 'checklist', checked: true })],
+      ['paragraph', expect.objectContaining({ text: 'tail' })],
+    ]);
+  });
+
+  it('a single copied colored cell pasted into a filled cell keeps both the target text and the color', async () => {
+    const editor = await boot([
+      { id: 'src', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['c1'] }, { blocks: ['c2'] }]] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'red', textColor: 'red' }, parent: 'src' },
+      { id: 'c2', type: 'paragraph', data: { text: 'x' }, parent: 'src' },
+      { id: 'dst', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['d1'] }, { blocks: ['keep'] }]] } },
+      { id: 'd1', type: 'paragraph', data: { text: '' }, parent: 'dst' },
+      { id: 'keep', type: 'paragraph', data: { text: 'keep' }, parent: 'dst' },
+    ]);
+
+    await paste(cellEditable('dst', 0, 1), copyRange('src', { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 }));
+    const saved = savedAsHtml(await editor.save());
+    const dst = saved.blocks.find(block => block.id === 'dst');
+
+    if (dst === undefined) {
+      throw new Error('no dst');
+    }
+
+    expect(blocksIn(saved, cellOf(dst, 0, 1)).map(block => block.data)).toStrictEqual([
+      expect.objectContaining({ text: 'keep' }),
+      expect.objectContaining({ text: 'red', textColor: 'red' }),
+    ]);
+    expect(saved.blocks.filter(block => block.type === 'table')).toHaveLength(2);
+  });
+
   it('control: a single copied plain cell is inserted inline into the target paragraph', async () => {
     const editor = await boot([
       { id: 'src', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['c1'] }, { blocks: ['c2'] }]] } },

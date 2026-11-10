@@ -1851,9 +1851,17 @@ export class TableSubsystems {
       block => block.tool === 'paragraph' && isTextSerializable(block)
     );
 
+    // A 1x1 block paste at a caret in a filled cell adds its blocks there,
+    // like a block paste outside a table; it never clears the cell.
+    const caretBlockId = payload.rows === 1 && payload.cols === 1 && !isTextOnlySingleCell
+      ? this.caretBlockToPasteAfter(targetCell, activeElement)
+      : null;
+
     const pasteCells = (): void => {
       if (isTextOnlySingleCell) {
         this.insertSingleCellPayloadInline(payload.cells[0][0]);
+      } else if (caretBlockId !== null) {
+        this.insertCellPayloadAfter(targetCell, targetRowIndex, targetColIndex, caretBlockId, payload.cells[0][0]);
       } else {
         this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
       }
@@ -2009,6 +2017,69 @@ export class TableSubsystems {
 
     selection.removeAllRanges();
     selection.addRange(newRange);
+  }
+
+  /**
+   * The cell's top-level block holding a collapsed caret, or null when the
+   * paste should replace the cell: a box over several cells, a selected text
+   * range, or a cell that holds only one empty paragraph.
+   */
+  private caretBlockToPasteAfter(cell: HTMLElement, activeElement: HTMLElement): string | null {
+    const selection = window.getSelection();
+    const range = this.cellSelection?.getSelectedRange() ?? null;
+    // A caret boxes its own cell, so only a box over several cells is a range.
+    const isCellRange = range !== null && (range.minRow !== range.maxRow || range.minCol !== range.maxCol);
+
+    if (isCellRange || selection === null || selection.rangeCount === 0 || !selection.getRangeAt(0).collapsed) {
+      return null;
+    }
+
+    const holder = Array.from(cell.querySelector(`[${CELL_BLOCKS_ATTR}]`)?.children ?? [])
+      .find(child => child.contains(activeElement));
+    const id = holder?.getAttribute('data-blok-id') ?? null;
+    const ids = this.host.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
+    const only = ids.length === 1 ? this.host.api.blocks.getById(ids[0]) : null;
+
+    if (only?.name === 'paragraph' && only.isEmpty) {
+      return null;
+    }
+
+    return id;
+  }
+
+  /**
+   * Insert one clipboard cell's blocks into `cell` right after `afterId`,
+   * keeping the blocks already there.
+   */
+  private insertCellPayloadAfter(
+    cell: HTMLElement,
+    row: number,
+    col: number,
+    afterId: string,
+    payloadCell: { blocks: ClipboardBlockData[] },
+  ): void {
+    const cellBlocks = this.host.cellBlocks;
+    const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (!cellBlocks || !container || payloadCell.blocks.length === 0) {
+      return;
+    }
+
+    const lastId = this.host.runTransactedStructuralOp(() => payloadCell.blocks.reduce((previousId, blockData) => {
+      const previous = this.host.api.blocks.getById(previousId)?.holder ?? null;
+      // After the previous block's subtree, so the table's children stay in
+      // cell order (see mountTextBlocks).
+      const block = cellBlocks.insertClipboardBlock(blockData, cellBlocks.indexAfterSubtreeOf(previousId));
+
+      container.insertBefore(block.holder, previous?.nextSibling ?? null);
+      this.host.api.blocks.setBlockParent(block.id, this.host.blockId ?? '');
+      cellBlocks.insertClipboardChildren(block.id, blockData.children);
+
+      return block.id;
+    }, afterId));
+
+    this.host.model.setCellBlocks(row, col, cellBlocks.getBlockIdsFromCells([cell]));
+    this.host.api.caret?.setToBlock(lastId, 'end');
   }
 
   /**

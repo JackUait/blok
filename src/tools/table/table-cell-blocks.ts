@@ -672,7 +672,7 @@ export class TableCellBlocks {
    * The flat index right after `blockId` and its descendants.
    * @param blockId - the block
    */
-  private indexAfterSubtreeOf(blockId: string): number {
+  public indexAfterSubtreeOf(blockId: string): number {
     const count = this.api.blocks.getBlocksCount();
     const rootIndex = this.api.blocks.getBlockIndex(blockId);
 

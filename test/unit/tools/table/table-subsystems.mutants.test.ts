@@ -519,6 +519,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     fillEmptyCells,
     focusClearedCell,
     indexAfterTableSubtree: (): number => order.length,
+    indexAfterSubtreeOf: (id: string): number => order.indexOf(id) + 1,
     insertClipboardBlock: (block: ClipboardBlockData): BlockAPI =>
       api.blocks.insert(block.tool, block.data, {}, order.length, false, false, undefined, block.tunes),
     insertClipboardChildren: vi.fn(),
@@ -1011,7 +1012,7 @@ describe('grid paste — single cell', () => {
 
     expect(harness.insertCalls).toHaveLength(1);
     expect(harness.insertCalls[0].tool).toBe('image');
-    expect(harness.idsOf(0, 0)).toHaveLength(1);
+    expect(harness.idsOf(0, 0)).toStrictEqual(['b-0-0', 'ins-1']);
   });
 
   it('recreates a paragraph whose text is not a string as a real block', () => {

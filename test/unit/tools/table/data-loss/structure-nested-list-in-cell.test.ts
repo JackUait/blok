@@ -261,11 +261,12 @@ describe('a nested list item in a table cell', () => {
       .toEqual({ two: 2, three: 2 });
 
     const content = (out.blocks.find(b => b.id === 'tbl')?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
-    const [copiedL1] = content[1][1].blocks;
+    // The target cell keeps its own block 'd'; the copy lands after it.
+    const [kept, copiedL1] = content[1][1].blocks;
     const copiedL2 = out.blocks.find(b => b.id !== 'l2' && (b.data as { text?: string }).text === 'two');
 
-    expect({ refs: content[1][1].blocks.length, l2Parent: copiedL2?.parent })
-      .toEqual({ refs: 1, l2Parent: copiedL1 });
+    expect({ kept, refs: content[1][1].blocks.length, l2Parent: copiedL2?.parent })
+      .toEqual({ kept: 'd', refs: 2, l2Parent: copiedL1 });
   }, 30_000);
 
   it('comes back in its cell, under its parent, when its row delete is undone', async () => {

@@ -16131,8 +16131,12 @@ input[data-blok-database-picker-search]:focus {
   border-block-end: 1px solid var(--blok-database-timeline-grid-line);
 }
 
-[data-blok-database-timeline-table-footer] {
-  padding-inline: 0;
+[data-blok-database-timeline-table-footer] > :first-child {
+  margin-inline-start: calc(-1 * var(--blok-space-2));
+}
+
+[data-blok-database-timeline-table-footer] > :last-child {
+  margin-inline-end: calc(-1 * var(--blok-space-2));
 }
 
 [data-blok-database-timeline-table-header] {

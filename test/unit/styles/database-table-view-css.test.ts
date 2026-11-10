@@ -418,8 +418,11 @@ describe('database table calculation footer', () => {
 
   // r10-timeline-calc-edge.raw: the timeline footer cell is the panel's full width, so its top-left corner reveals
   // "Calculate" and the button ends 4px from the panel edge, like the table's Name footer cell.
-  it('runs the timeline footer cell edge to edge of the panel', () => {
-    expect(exactRule('[data-blok-database-timeline-table-footer]')).toMatch(/padding-inline:\s*0/);
+  // The row keeps its padding so inner cells stay on the header's columns; only the outer cells reach the edges.
+  it('runs the timeline footer\'s outer cells to the panel edges, keeping inner cells on the header columns', () => {
+    expect(exactRule('[data-blok-database-timeline-table-footer]')).not.toMatch(/padding-inline/);
+    expect(exactRule('[data-blok-database-timeline-table-footer] > :first-child')).toMatch(/margin-inline-start:\s*calc\(-1 \* var\(--blok-space-2\)\)/);
+    expect(exactRule('[data-blok-database-timeline-table-footer] > :last-child')).toMatch(/margin-inline-end:\s*calc\(-1 \* var\(--blok-space-2\)\)/);
   });
 
   // notion-motion.md Round 9 "Collapsed group header" (r9-group-header-open.raw, r9-grouped-after.png pixel rows):

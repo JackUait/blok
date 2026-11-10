@@ -1582,7 +1582,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // picker layout, the Group by "None" row, the row handle menu's centre origin, the unscaled Edit property flyout and the 200ms submenu fade.
     const DATABASE_PICKERS_BYTES = 2995;
     // Round 10 lane calcfoot: the calc fill only under the pointer, per-cell "Calculate" in the timeline, its full-width footer cell.
-    const DATABASE_CALCFOOT_BYTES = 140;
+    const DATABASE_CALCFOOT_BYTES = 373;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid, bottom stage and skin-tone dial.

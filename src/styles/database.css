@@ -13190,9 +13190,14 @@ input[data-blok-database-picker-search]:focus {
   border-block-end: 1px solid var(--blok-database-timeline-grid-line);
 }
 
-/* r10-timeline-calc-edge.raw: one cell the panel's full width, its button 4px from the edge. */
-[data-blok-database-timeline-table-footer] {
-  padding-inline: 0;
+/* r10-timeline-calc-edge.raw: the outer cells reach the panel edges, the button 4px in.
+   The row keeps its padding so inner cells stay on the header's columns. */
+[data-blok-database-timeline-table-footer] > :first-child {
+  margin-inline-start: calc(-1 * var(--blok-space-2));
+}
+
+[data-blok-database-timeline-table-footer] > :last-child {
+  margin-inline-end: calc(-1 * var(--blok-space-2));
 }
 
 [data-blok-database-timeline-table-header] {

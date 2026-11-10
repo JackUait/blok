@@ -549,7 +549,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         // runConvert never rejects: the popover invokes this handler inside a
         // SYNCHRONOUS try/catch, so a rejection would escape unhandled and
         // Toolbar.close() below would never run.
-        const newBlock = await runConvert(
+        const converted = await runConvert(
           this.Blok.API.methods,
           () => this.convertBlock(
             currentBlock,
@@ -559,11 +559,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
             entry.data
           )
         );
+        const newBlock = converted?.block ?? null;
 
         Toolbar.close();
 
-        if (newBlock) {
-          announceConversion(this.Blok.I18n, tool, entry.data ?? {}, hasMultipleBlocksSelected ? selectionRoots(selectedBlocks).length : 1);
+        if (converted !== null && newBlock !== null) {
+          announceConversion(this.Blok.I18n, tool, entry.data ?? {}, converted.count);
 
           // Only a single-block conversion has a caret offset to preserve.
           if (hasMultipleBlocksSelected) {
@@ -912,7 +913,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param blocks - array of blocks to convert
    * @param targetToolName - name of the tool to convert to
    * @param toolboxData - optional data overrides for the new blocks
-   * @returns the resulting block (merged or last converted) or null if all conversions failed
+   * @returns the resulting block (merged or last converted) or null if all conversions failed, and how many selected blocks converted
    */
   private async convertBlock(
     currentBlock: Block,
@@ -920,7 +921,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     hasMultipleBlocksSelected: boolean,
     tool: BlockToolAdapter,
     toolboxData?: Record<string, unknown>
-  ): Promise<Block | null> {
+  ): Promise<{ block: Block | null; count: number }> {
     const { BlockManager } = this.Blok;
 
     if (hasMultipleBlocksSelected) {
@@ -934,11 +935,11 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const explodableItems = await this.getExplodableItems(currentBlock);
     const shouldExplode = !this.canToolMergeMultipleItems(tool) && explodableItems !== null;
 
-    if (shouldExplode) {
-      return this.convertMultiItemBlockToSeparateBlocks(currentBlock, tool.name, toolboxData);
-    }
+    const block = shouldExplode
+      ? await this.convertMultiItemBlockToSeparateBlocks(currentBlock, tool.name, toolboxData)
+      : await BlockManager.convert(currentBlock, tool.name, toolboxData);
 
-    return BlockManager.convert(currentBlock, tool.name, toolboxData);
+    return { block, count: 1 };
   }
 
   /**
@@ -948,17 +949,17 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param blocks - array of blocks to convert
    * @param targetToolName - name of the tool to convert to
    * @param toolboxData - optional data overrides for the new blocks
-   * @returns the resulting block (merged or last converted) or null if all conversions failed
+   * @returns the resulting block (merged or last converted) or null if all conversions failed, and how many blocks converted
    */
   private async convertMultipleBlocks(
     blocks: Block[],
     targetToolName: string,
     toolboxData?: Record<string, unknown>
-  ): Promise<Block | null> {
+  ): Promise<{ block: Block | null; count: number }> {
     const { Tools } = this.Blok;
 
     if (blocks.length === 0) {
-      return null;
+      return { block: null, count: 0 };
     }
 
     /**
@@ -982,7 +983,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     });
 
     if (convertibleBlocks.length === 0) {
-      return null;
+      return { block: null, count: 0 };
     }
 
     /**
@@ -994,13 +995,17 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const shouldMergeIntoSingleBlock = targetTool && this.canToolMergeMultipleItems(targetTool);
 
     if (shouldMergeIntoSingleBlock) {
-      return this.convertBlocksToSingleMergedBlock(convertibleBlocks, targetToolName, toolboxData);
+      const merged = await this.convertBlocksToSingleMergedBlock(convertibleBlocks, targetToolName, toolboxData);
+
+      return { block: merged, count: merged === null ? 0 : convertibleBlocks.length };
     }
 
     /**
      * Convert each block individually, maintaining them as separate blocks
      */
-    return this.convertBlocksIndividually(convertibleBlocks, targetToolName, toolboxData);
+    const converted = await this.convertBlocksIndividually(convertibleBlocks, targetToolName, toolboxData);
+
+    return { block: converted.at(-1) ?? null, count: converted.length };
   }
 
   /**
@@ -1111,13 +1116,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param blocks - blocks to convert
    * @param targetToolName - name of the tool to convert to
    * @param toolboxData - optional data overrides
-   * @returns the last converted block or null if all conversions failed
+   * @returns the converted blocks, in order; a block that failed to convert is left out
    */
   private async convertBlocksIndividually(
     blocks: Block[],
     targetToolName: string,
     toolboxData?: Record<string, unknown>
-  ): Promise<Block | null> {
+  ): Promise<Block[]> {
     const { BlockManager } = this.Blok;
     const convertedBlocks: Block[] = [];
 
@@ -1134,9 +1139,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       }
     }
 
-    return convertedBlocks.length > 0
-      ? convertedBlocks[convertedBlocks.length - 1]
-      : null;
+    return convertedBlocks;
   }
 
   /**

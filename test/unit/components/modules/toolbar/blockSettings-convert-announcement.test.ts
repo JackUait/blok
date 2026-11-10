@@ -20,7 +20,7 @@ vi.mock('../../../../../src/components/utils/announcer', () => ({ announce: vi.f
 const messages: Record<string, string> = en;
 const settingsInstances: BlockSettings[] = [];
 
-const buildSettings = (options: { refuse?: boolean; selectTwo?: boolean } = {}) => {
+const buildSettings = (options: { refuse?: boolean; selectTwo?: boolean; refuseSecond?: boolean } = {}) => {
   const i18n = {
     t: (key: string, vars?: Record<string, string | number>) => {
       const count = vars?.count;
@@ -92,7 +92,7 @@ const buildSettings = (options: { refuse?: boolean; selectTwo?: boolean } = {}) 
   const second = { ...block, id: 'q' } as unknown as Block;
   const selectedBlocks = options.selectTwo === true ? [block, second] : [];
   const convert = vi.fn(async (target: Block) => {
-    if (options.refuse === true) {
+    if (options.refuse === true || (options.refuseSecond === true && target.id === 'q')) {
       throw new Error('Could not convert Block «p»: it is being edited by someone else. Nothing was changed.');
     }
 
@@ -184,6 +184,17 @@ describe('block settings "Turn into" announces the conversion', () => {
     await clickConversion(settings, block);
     await vi.waitFor(() => expect(vi.mocked(announce)).toHaveBeenCalledWith('2 blocks converted to Heading 1'));
     expect(convert).toHaveBeenCalledTimes(2);
+  });
+
+  it('counts only the blocks that converted', async () => {
+    const { settings, block, convert } = buildSettings({ selectTwo: true, refuseSecond: true });
+
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await clickConversion(settings, block);
+    await vi.waitFor(() => expect(convert).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(vi.mocked(announce)).toHaveBeenCalled());
+
+    expect(vi.mocked(announce)).toHaveBeenCalledWith('Converted to Heading 1');
   });
 
   it('says nothing when the conversion is refused', async () => {

@@ -1239,8 +1239,10 @@ export class KeyboardController extends Controller {
 
     const applied = direction === 'undo' ? YjsManager.undo() : YjsManager.redo();
 
-    // Notion stays silent on an empty undo with blocks block-selected (U121).
-    if (!applied && direction === 'undo' && BlockSelection.anyBlockSelected) {
+    // Notion says "Nothing to undo" only with the caret in the page (RM8), not with blocks block-selected (U121).
+    const caretInEditor = this.wrapperElement?.contains(window.getSelection()?.anchorNode ?? null) === true;
+
+    if (!applied && direction === 'undo' && (BlockSelection.anyBlockSelected || !caretInEditor)) {
       return;
     }
 

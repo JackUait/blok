@@ -1698,6 +1698,36 @@ describe('KeyboardController — mutation coverage', () => {
         .toBeLessThan(vi.mocked(walk).mock.invocationCallOrder[0]);
     });
 
+    // Notion RM8 says "Nothing to undo" only with the caret in the page.
+    it('says Nothing to undo for an empty undo with the caret in the editor', () => {
+      const harness = enabledHarness();
+      const range = document.createRange();
+
+      vi.mocked(harness.blok.YjsManager.undo).mockReturnValue(false);
+      range.setStart(harness.inside.firstChild ?? harness.inside, 0);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      harness.press(harness.inside, { key: 'z', ctrlKey: true });
+
+      expect(vi.mocked(announce)).toHaveBeenCalledWith('a11y.nothingToUndo');
+    });
+
+    it('says nothing for an empty undo with the caret outside the editor', () => {
+      const harness = enabledHarness();
+      const range = document.createRange();
+
+      vi.mocked(harness.blok.YjsManager.undo).mockReturnValue(false);
+      range.setStart(harness.outside.firstChild ?? harness.outside, 0);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      harness.press(harness.outside, { key: 'z', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(announce)).not.toHaveBeenCalled();
+    });
+
     it('leaves a closed toolbox alone on undo', () => {
       const harness = enabledHarness();
 

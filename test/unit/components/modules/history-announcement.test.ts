@@ -107,6 +107,12 @@ describe('undo and redo announcements', () => {
   // Notion RM8: an empty undo with the caret in the page says so.
   it('says Nothing to undo for an undo press with nothing to undo', async () => {
     await boot();
+    const range = document.createRange();
+
+    range.selectNodeContents(blockHolder());
+    range.collapse(false);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
 
     press(blockHolder(), { key: 'z', metaKey: true });
     expect(await announced()).toBe('Nothing to undo');

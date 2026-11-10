@@ -204,6 +204,10 @@ export class SelectionController extends Controller {
       return;
     }
 
+    if (this.Blok.InlineToolbar.opened && this.Blok.InlineToolbar.isRestoredRange(Selection.range)) {
+      return;
+    }
+
     const previousRange = this.pointerSelection;
     const range = Selection.range;
 

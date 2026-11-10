@@ -899,6 +899,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     });
   }
 
+  /** Read every item's active state again, after the document changed under it. */
+  public refreshActiveStates(): void {
+    this.itemsDefault.forEach(item => this.refreshItemActiveState(item));
+  }
+
   /**
    * Refreshes the item's active state based on its isActive callback.
    * This is useful for items that determine their active state dynamically (e.g., inline tools).

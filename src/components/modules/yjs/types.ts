@@ -138,6 +138,8 @@ export interface CaretSnapshot {
   endIn?: { blockId: string; inputIndex: number; offset: number };
   /** The caret was in the page title. `blockId` is then empty. */
   title?: true;
+  /** Block-selected ids, with no caret. `blockId` is then the first of them. */
+  blocks?: string[];
 }
 
 /**

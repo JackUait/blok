@@ -1398,6 +1398,10 @@ export class BlockYjsSync {
             replaySource: replaySourceOf(origin),
           });
         });
+        // The undo history set its caret in the old block before the await.
+        if (replaySource === 'history') {
+          this.dependencies.YjsManager.reapplyCaretAfterRebuild(blockId);
+        }
       }
     }, { extendThroughRAF: true, blockId });
   }

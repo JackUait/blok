@@ -34,7 +34,7 @@ const createMockBlok = (): BlokModules => {
   return {
     BlockManager: blockManager as unknown as BlokModules['BlockManager'],
     BlockSelection: { clearSelection: vi.fn() } as unknown as BlokModules['BlockSelection'],
-    InlineToolbar: { opened: false, close: vi.fn() } as unknown as BlokModules['InlineToolbar'],
+    InlineToolbar: { opened: false, close: vi.fn(), tryToShow: vi.fn(), followRestoredRange: vi.fn() } as unknown as BlokModules['InlineToolbar'],
     Caret: caret as unknown as BlokModules['Caret'],
   } as unknown as BlokModules;
 };
@@ -267,7 +267,8 @@ describe('UndoHistory', () => {
         blockManager.currentBlock = { id, currentInputIndex: 0, currentInput: undefined, inputs: [] };
       };
 
-      blockManager.getBlockById.mockImplementation((id: string) => ({ id, inputs: [], parentId: null }));
+      // Detached holders: a block that is not on the page is not selected instead.
+      blockManager.getBlockById.mockImplementation((id: string) => ({ id, inputs: [], parentId: null, holder: document.createElement('div') }));
 
       const label = (entries: CaretHistoryEntry[]): string[] =>
         entries.map((entry) => `${entry.kind}:${entry.before?.blockId ?? '-'}`);
@@ -835,7 +836,7 @@ describe('UndoHistory', () => {
     });
 
     it('falls back to block start when input no longer exists', () => {
-      const block = { id: 'b1', inputs: [], parentId: null };
+      const block = { id: 'b1', inputs: [document.createElement('div')], parentId: null };
       const snapshot = { blockId: 'b1', inputIndex: 5, offset: 10 }; // input at index 5 doesn't exist
 
       (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);

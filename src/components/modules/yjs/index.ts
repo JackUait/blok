@@ -1229,6 +1229,11 @@ export class YjsManager extends Module {
     this.undoHistory.holdCapture();
   }
 
+  /** See {@link UndoHistory.reapplyCaretAfterRebuild}. */
+  public reapplyCaretAfterRebuild(blockId: string): void {
+    this.undoHistory.reapplyCaretAfterRebuild(blockId);
+  }
+
   /** See {@link UndoHistory.rebaseCaretSnapshots}. */
   public rebaseCaretSnapshots(blockId: string, rebase: (snapshot: CaretSnapshot) => CaretSnapshot): void {
     this.undoHistory.rebaseCaretSnapshots(blockId, rebase);

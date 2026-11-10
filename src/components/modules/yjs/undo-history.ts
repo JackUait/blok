@@ -354,6 +354,14 @@ export class UndoHistory {
 
   /** Set when an undo/redo placed a caret, for {@link restoreScrollIfJumped} to reveal. */
   private caretJustRestored = false;
+  /** The selection live at the undo press in progress. */
+  private selectionAtUndoPress: CaretSnapshot | null = null;
+  /** The caret the last undo or redo restored, until the next gesture. */
+  private restoredCaret: CaretSnapshot | null = null;
+  /** A block's own control (a to-do checkbox) focused at the press in progress. */
+  private controlAtPress: { control: HTMLElement; blockId: string } | null = null;
+  /** The selection live when each step was last undone. Its redo restores it. */
+  private readonly selectionAtUndo = new WeakMap<CaretHistoryEntry, CaretSnapshot | null>();
 
   private readonly selectionChangeHandler = (): void => this.dropPendingCaretIfMoved();
 
@@ -1765,6 +1773,10 @@ export class UndoHistory {
       return false;
     }
 
+    // Before the replay moves it.
+    this.selectionAtUndoPress = this.liveCaretSnapshot();
+    this.controlAtPress = this.focusedBlockControl();
+
     // Save scroll position before DOM manipulation. Removing focused elements
     // from the DOM (e.g., undoing an Enter in a table cell removes cell paragraph
     // blocks) can cause the browser to scroll to the top. We restore scroll after
@@ -1791,6 +1803,7 @@ export class UndoHistory {
     if (!applied && expectedToken === undefined && !this.holdsReadOnlyStep()) {
       this.nothingUndoable = true;
     }
+    this.selectionAtUndoPress = null;
     this.restoreScrollIfJumped(savedScrollY);
 
     return applied;
@@ -2126,6 +2139,8 @@ export class UndoHistory {
     // Save scroll position before DOM manipulation (same rationale as undo).
     const savedScrollY = window.scrollY;
 
+    this.controlAtPress = this.focusedBlockControl();
+
     // Mirror undo(): the caret redo stack's top entry tells us whether the next
     // redo is a move or a Yjs edit, so they replay in the same chronological order
     // they were undone.
@@ -2249,8 +2264,33 @@ export class UndoHistory {
 
     stack.push(entry);
 
+    if (position === 'before') {
+      this.selectionAtUndo.set(entry, this.selectionAtUndoPress);
+    }
+
     if (entry.outsideEditor === true) {
       this.caretJustRestored = false;
+
+      return;
+    }
+
+    // Redo lands where the selection was at the matching undo press. With
+    // none (an API undo) or one that is gone, it lands at the step's own end.
+    const atUndo = position === 'after' ? this.selectionAtUndo.get(entry) ?? null : null;
+    const target = atUndo ?? (position === 'before' ? entry.before ?? entry.after : entry.after ?? entry.before);
+    const pressed = this.controlAtPress;
+
+    // A step undone from a block's own control keeps focus there.
+    if (pressed !== null && target !== null && target.blockId === pressed.blockId && pressed.control.isConnected) {
+      pressed.control.focus({ preventScroll: true });
+      this.caretJustRestored = false;
+
+      return;
+    }
+
+    if (atUndo !== null && this.restoreCaretSnapshot(atUndo)) {
+      this.caretJustRestored = true;
+      this.restoredCaret = atUndo;
 
       return;
     }
@@ -2265,6 +2305,38 @@ export class UndoHistory {
       : entry.after ?? entry.before;
 
     this.caretJustRestored = this.restoreCaretSnapshot(snapshot);
+    this.restoredCaret = this.caretJustRestored ? snapshot : null;
+  }
+
+  /**
+   * Put back the caret the last undo or redo restored, when it was in
+   * `blockId` or inside it. A replay can rebuild that block after the restore
+   * (a tool that cannot take the data in place), and the rebuild drops focus
+   * to the body.
+   * @param blockId - the rebuilt block
+   */
+  public reapplyCaretAfterRebuild(blockId: string): void {
+    const snapshot = this.restoredCaret;
+
+    if (snapshot === null || snapshot.blocks !== undefined || snapshot.title === true || !this.isSelfOrInside(snapshot.blockId, blockId)) {
+      return;
+    }
+
+    this.restoreCaretSnapshot(snapshot);
+  }
+
+  /**
+   * @param id - the block to look up
+   * @param ancestorId - the block it may be or sit inside
+   */
+  private isSelfOrInside(id: string, ancestorId: string, seen = new Set<string>()): boolean {
+    if (id === ancestorId) {
+      return true;
+    }
+
+    const parentId = this.blok.BlockManager.getBlockById(id)?.parentId ?? null;
+
+    return parentId !== null && !seen.has(id) && this.isSelfOrInside(parentId, ancestorId, seen.add(id));
   }
 
   /**
@@ -2672,6 +2744,7 @@ export class UndoHistory {
     }
 
     this.beforeGestureHook();
+    this.restoredCaret = null;
     this.gestures++;
     this.gesturesDriveSteps = true;
     this.openGestureTask();
@@ -2905,6 +2978,12 @@ export class UndoHistory {
    * would invent an offset from a selection that lives elsewhere.
    */
   private liveCaretSnapshot(): CaretSnapshot | null {
+    const selected = this.blockSelectionSnapshot();
+
+    if (selected !== null) {
+      return selected;
+    }
+
     const anchorNode = window.getSelection()?.anchorNode ?? null;
 
     if (anchorNode === null) {
@@ -2915,6 +2994,36 @@ export class UndoHistory {
     }
 
     return this.captureCaretSnapshot();
+  }
+
+  /**
+   * The focused element, when it is a control of one of this editor's blocks
+   * and not a place to type: a checkbox or a button.
+   */
+  private focusedBlockControl(): { control: HTMLElement; blockId: string } | null {
+    const control = document.activeElement;
+    const holder = control instanceof HTMLElement ? control.closest('[data-blok-id]') : null;
+    const blockId = holder?.getAttribute('data-blok-id') ?? null;
+    const isControl = control instanceof HTMLButtonElement
+      || (control instanceof HTMLInputElement && (control.type === 'checkbox' || control.type === 'radio'));
+
+    if (!isControl || blockId === null || this.blok?.BlockManager?.getBlockById(blockId)?.holder !== holder) {
+      return null;
+    }
+
+    return { control, blockId };
+  }
+
+  /**
+   * The block selection, when blocks are selected. Kept out of
+   * {@link captureCaretSnapshot}: that also reads a step's caret-after in the
+   * middle of the step's writes, while the selection is still being cleared.
+   */
+  private blockSelectionSnapshot(): CaretSnapshot | null {
+    const ids = (this.blok?.BlockSelection?.selectedBlocks ?? []).map((block) => block.id);
+    const [first] = ids;
+
+    return first === undefined ? null : { blockId: first, inputIndex: 0, offset: 0, blocks: ids };
   }
 
   /**
@@ -3415,6 +3524,9 @@ export class UndoHistory {
     for (const entry of [...this.caretUndoStack, ...this.caretRedoStack]) {
       entry.before = apply(entry.before);
       entry.after = apply(entry.after);
+      if (this.selectionAtUndo.has(entry)) {
+        this.selectionAtUndo.set(entry, apply(this.selectionAtUndo.get(entry) ?? null));
+      }
     }
     this.pendingCaretBefore = apply(this.pendingCaretBefore);
   }
@@ -3462,6 +3574,10 @@ export class UndoHistory {
       return false;
     }
 
+    if (snapshot.blocks !== undefined) {
+      return this.selectBlocks(snapshot.blocks);
+    }
+
     if (snapshot.title === true) {
       return this.blok.PageTitle.focusAt(snapshot.offset, snapshot.end);
     }
@@ -3484,6 +3600,11 @@ export class UndoHistory {
     hiddenAncestors(block, id => BlockManager.getBlockById(id))
       .reverse()
       .forEach(parent => parent.call('expand'));
+
+    // No caret can go into a block with no text (a callout's own colour): select it.
+    if (block.inputs.length === 0 && block.holder.isConnected) {
+      return this.selectBlocks([block.id]);
+    }
 
     // Get the specific input within the block
     const input = block.inputs[snapshot.inputIndex];
@@ -3531,6 +3652,41 @@ export class UndoHistory {
 
 
   /**
+   * Select the blocks that still exist, with no caret: the state Escape
+   * leaves. One block also takes the arrow keys, as after Escape.
+   * @param ids - the blocks to select
+   * @returns false when none of them exists
+   */
+  private selectBlocks(ids: readonly string[]): boolean {
+    const { BlockManager, BlockSelection } = this.blok;
+    const found = ids.flatMap((id) => BlockManager.getBlockById(id) ?? []);
+
+    if (found.length === 0) {
+      return false;
+    }
+
+    BlockSelection.clearSelection();
+    // The next edit and the toolbar follow the current block.
+    BlockManager.currentBlock = found[0];
+    found.forEach((block) => {
+      hiddenAncestors(block, id => BlockManager.getBlockById(id))
+        .reverse()
+        .forEach(parent => parent.call('expand'));
+      BlockSelection.selectBlock(block);
+    });
+
+    // A focused input gets its caret back after the replay's DOM writes.
+    const active = document.activeElement;
+
+    if (active instanceof HTMLElement && BlockManager.getBlockByChildNode(active) !== undefined) {
+      active.blur();
+    }
+    BlockSelection.adoptSelectionIntoNavigationMode();
+
+    return true;
+  }
+
+  /**
    * Re-select a range the snapshot recorded (collapsed carets have no `end`)
    * @param input - the restored input
    * @param snapshot - the snapshot being restored
@@ -3546,16 +3702,61 @@ export class UndoHistory {
       return;
     }
 
-    // An open inline toolbar still shows the marks from before the replay.
-    if (this.blok.InlineToolbar.opened) {
-      this.blok.InlineToolbar.close();
-    }
-
-    const start = resolveCaretRange(input, snapshot.offset);
+    const start = UndoHistory.rangeStart(input, snapshot.offset);
     const end = resolveCaretRange(input, snapshot.end);
 
     if (start !== null && end !== null) {
       window.getSelection()?.setBaseAndExtent(start.startContainer, start.startOffset, end.startContainer, end.startOffset);
+      this.showToolbarForRange();
+    }
+  }
+
+  /**
+   * Where a range starting at `offset` starts. At the end of a text node it
+   * starts in the next one instead, so a range over a marked word sits inside
+   * the mark and the toolbar shows that mark pressed.
+   * @param input - the input the range starts in
+   * @param offset - the text offset
+   */
+  private static rangeStart(input: HTMLElement, offset: number): Range | null {
+    const range = resolveCaretRange(input, offset);
+    const node = range?.startContainer;
+
+    if (range === null || !(node instanceof Text) || range.startOffset < node.length) {
+      return range;
+    }
+
+    const walker = document.createTreeWalker(input, NodeFilter.SHOW_TEXT);
+
+    walker.currentNode = node;
+
+    const nextText = (): Node | null => {
+      const candidate = walker.nextNode();
+
+      return candidate === null || (candidate instanceof Text && candidate.length > 0) ? candidate : nextText();
+    };
+    const next = nextText();
+
+    if (next !== null) {
+      range.setStart(next, 0);
+      range.collapse(true);
+    }
+
+    return range;
+  }
+
+  /**
+   * Show the inline toolbar over a restored range. An open one stays open,
+   * with its sub-menu, but its pressed states still show the marks from
+   * before the replay, so they are read again.
+   */
+  private showToolbarForRange(): void {
+    const { InlineToolbar } = this.blok;
+
+    if (InlineToolbar.opened) {
+      InlineToolbar.followRestoredRange();
+    } else {
+      void InlineToolbar.tryToShow();
     }
   }
 
@@ -3572,11 +3773,7 @@ export class UndoHistory {
       return;
     }
 
-    if (this.blok.InlineToolbar.opened) {
-      this.blok.InlineToolbar.close();
-    }
-
-    const start = resolveCaretRange(input, snapshot.offset);
+    const start = UndoHistory.rangeStart(input, snapshot.offset);
     const end = resolveCaretRange(endInput, endIn.offset);
 
     if (start !== null && end !== null) {
@@ -3584,6 +3781,7 @@ export class UndoHistory {
         { node: start.startContainer, offset: start.startOffset },
         { node: end.startContainer, offset: end.startOffset }
       );
+      this.showToolbarForRange();
     }
   }
 
@@ -3626,6 +3824,7 @@ export class UndoHistory {
     this.replayStackItem = null;
     this.poppedStackItem = null;
     this.openEntry = null;
+    this.restoredCaret = null;
     this.typingInputKey = null;
     this.nothingUndoable = false;
     // Holds are left alone: each holder still owns its release.

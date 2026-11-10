@@ -25,6 +25,7 @@ const createBlokStub = (): BlokModules => {
       containsNode: vi.fn(() => false),
       hasFlipperFocus: false,
       hasNestedPopoverOpen: false,
+      isRestoredRange: vi.fn(() => false),
     },
   } as unknown as BlokModules;
 };
@@ -759,6 +760,26 @@ describe('SelectionController', () => {
 
       expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
       expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+    });
+
+    it('keeps the toolbar and its open sub-menu over a range an undo put back', () => {
+      const { controller, blok, wrapper } = createSelectionController();
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      blockContent.textContent = 'Selected text';
+      wrapper.appendChild(blockContent);
+      blok.InlineToolbar.opened = true;
+      Object.assign(blok.InlineToolbar, { hasNestedPopoverOpen: true });
+      vi.mocked(blok.InlineToolbar.isRestoredRange).mockReturnValue(true);
+      controller.enable();
+
+      window.getSelection()?.selectAllChildren(blockContent);
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.runAllTimers();
+
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+      expect(blok.InlineToolbar.close).not.toHaveBeenCalled();
     });
 
     it('does not close toolbar when nested popover is open', async () => {

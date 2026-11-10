@@ -61,6 +61,8 @@ function destroyToolInstance(instance: IInlineTool): void {
   }
 }
 
+type RangePoints = Pick<Range, 'startContainer' | 'startOffset' | 'endContainer' | 'endOffset'>;
+
 /**
  * Inline toolbar with actions that modifies selected text fragment
  *
@@ -79,12 +81,10 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
    * Boundary points of the selection the user dismissed the toolbar for.
    * Cleared as soon as the selection becomes anything else.
    */
-  private dismissedRange: {
-    startContainer: Node;
-    startOffset: number;
-    endContainer: Node;
-    endOffset: number;
-  } | null = null;
+  private dismissedRange: RangePoints | null = null;
+
+  /** The range an undo or redo put back under the open toolbar. */
+  private restoredRange: RangePoints | null = null;
 
   /**
    * Returns true if a nested popover (like convert-to dropdown) is currently open
@@ -314,6 +314,33 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
+   * Stay open over a range an undo or redo put back, with an open sub-menu,
+   * and read the pressed states again: the marks under them changed.
+   */
+  public followRestoredRange(): void {
+    const range = SelectionUtils.range;
+
+    this.restoredRange = range === null
+      ? null
+      : {
+        startContainer: range.startContainer,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer,
+        endOffset: range.endOffset,
+      };
+    this.popover?.refreshActiveStates();
+  }
+
+  /**
+   * Whether `range` is the one {@link followRestoredRange} kept the toolbar
+   * open for. Its selectionchange must not close and rebuild the toolbar.
+   * @param range - the live range
+   */
+  public isRestoredRange(range: Range | null): boolean {
+    return range !== null && this.restoredRange !== null && InlineToolbar.samePoints(range, this.restoredRange);
+  }
+
+  /**
    * Open the Link tool's editing menu for a given anchor, prefilled with its
    * href. Selects the anchor contents first so the Link tool resolves the
    * existing <a> and mirrors the CMD+K shortcut path. Used by the link hover
@@ -384,10 +411,14 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       return false;
     }
 
-    return range.startContainer === dismissed.startContainer
-      && range.startOffset === dismissed.startOffset
-      && range.endContainer === dismissed.endContainer
-      && range.endOffset === dismissed.endOffset;
+    return InlineToolbar.samePoints(range, dismissed);
+  }
+
+  private static samePoints(range: RangePoints, other: RangePoints): boolean {
+    return range.startContainer === other.startContainer
+      && range.startOffset === other.startOffset
+      && range.endContainer === other.endContainer
+      && range.endOffset === other.endOffset;
   }
 
   /**
@@ -409,6 +440,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       this.directMenuChildren = null;
     }
     this.directToolName = null;
+    this.restoredRange = null;
 
     this.destroyToolsInstances();
     this.opened = false;

@@ -49,6 +49,7 @@ import { TableScrollHaze } from './table-scroll-haze';
 import { scrollToInlineEnd } from './table-direction';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
 import { movePlacementWithMotion } from './table-cell-placement-motion';
+import { BLOK_MIME_TYPE } from '../../components/modules/paste/constants';
 import { preprocessPastedHtml } from '../../components/modules/paste/preprocess-pasted-html';
 import { findOwn } from '../../components/utils/own-element';
 import { markPasteContinuation, pasteContinuationSettled } from '../../components/utils/paste-continuation';
@@ -1778,6 +1779,13 @@ export class TableSubsystems {
 
     const html = e.clipboardData.getData('text/html');
     const blokPayload = parseClipboardHtml(html, tool => this.toolSanitizeConfig(tool));
+
+    // A block copy holds whole blocks (a table in a toggle, a table block).
+    // Its HTML table is only their rendering, so the editor paste places them.
+    if (blokPayload === null && e.clipboardData.getData(BLOK_MIME_TYPE) !== '') {
+      return;
+    }
+
     // Raw clipboard HTML skips the paste module's pre-passes.
     const preprocessed = blokPayload === null && html !== '' ? preprocessPastedHtml(html, { keepTables: true }) : '';
     const externalPayload = blokPayload === null ? parseGenericHtmlTable(preprocessed) : null;

@@ -4191,6 +4191,26 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
+    it('leaves a Blok block copy that holds a table to the editor paste', () => {
+      const { element, mockInsert } = createPasteTable([['', 'B1'], ['A2', 'B2']]);
+
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+      mockInsert.mockClear();
+
+      const pasteEvent = createPasteEvent('<p>Toggle with table</p><table><tr><td>Cell A</td><td>Cell B</td></tr></table>');
+
+      pasteEvent.clipboardData?.setData('application/x-blok', JSON.stringify([{ id: 'tog', tool: 'toggle', data: { text: 'Toggle with table' } }]));
+      gridEl.dispatchEvent(pasteEvent);
+
+      expect(pasteEvent.defaultPrevented).toBe(false);
+      expect(mockInsert).not.toHaveBeenCalled();
+
+      document.body.removeChild(element);
+    });
+
     it('distributes generic HTML table cells across the grid', () => {
       const { element, mockInsert } = createPasteTable([['A', 'B'], ['C', 'D']]);
 

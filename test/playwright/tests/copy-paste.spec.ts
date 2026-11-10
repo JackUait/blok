@@ -1006,6 +1006,59 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test('a copied toggle holding a table, pasted into a table cell, lands after that table whole', async ({ page }) => {
+    const doc: OutputData['blocks'] = [
+      { id: 'tog', type: 'toggle', data: { text: 'Toggle with table', isOpen: true }, content: ['ttable'] },
+      { id: 'ttable', type: 'table', parent: 'tog', data: { withHeadings: false, withHeadingColumn: false, content: [['Cell A', 'Cell B']] } },
+      { id: 'dest', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [['', 'B1'], ['A2', 'B2']] } },
+    ];
+
+    await createBlok(page, { data: { blocks: doc }, dataModel: 'hierarchical' });
+    await openFixtureToggles(page, { blocks: doc });
+
+    const modifier = await getCommandModifierKey(page);
+
+    await page.locator('[data-blok-id="tog"] [contenteditable="true"]').first().click();
+    await page.keyboard.press(`${modifier}+A`);
+    await page.keyboard.press(`${modifier}+A`);
+    await expect(page.locator('[data-blok-id="tog"][data-blok-selected="true"]')).toBeVisible();
+
+    const clipboardData = await copyFromElement(page.locator('[data-blok-id="tog"]'));
+
+    expect(clipboardData['application/x-blok']).toBeDefined();
+    expect(clipboardData['text/html']).toContain('<table');
+
+    await page.keyboard.press('Escape');
+    await page.locator('[data-blok-id="dest"] [data-blok-table-cell]').first().locator('[contenteditable="true"]').first().click();
+    await paste(page, page.locator(':focus'), clipboardData);
+
+    /** The saved roots as nested [type, text, children]; a table gives its child count and its cells' texts. */
+    const tree = async (): Promise<unknown[]> => {
+      const { blocks } = await saveBlok(page);
+      const byId = new Map(blocks.map((b) => [b.id, b]));
+      const shape = (id: string): unknown[] => {
+        const block = byId.get(id);
+
+        if (block?.type === 'table') {
+          const rows = (block.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+          return ['table', (block.content ?? []).length, rows.map((row) => row.map((cell) => cell.blocks.map((cellId) => byId.get(cellId)?.parent === id ? byId.get(cellId)?.data.text : 'STRAY')))];
+        }
+
+        return [block?.type, block?.data.text ?? null, (block?.content ?? []).map(shape)];
+      };
+
+      return blocks.filter((b) => b.parent === undefined).map((b) => shape(b.id ?? ''));
+    };
+    const toggle = ['toggle', 'Toggle with table', [['table', 2, [[['Cell A'], ['Cell B']]]]]];
+
+    await expect.poll(tree).toEqual([
+      toggle,
+      ['table', 4, [[[''], ['B1']], [['A2'], ['B2']]]],
+      toggle,
+    ]);
+  });
+
   test.describe('a table pasted into a container child', () => {
     const table = { id: 'xt', tool: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['xta'] }, { blocks: ['xtb'] }]] }, parentId: null, contentIds: ['xta', 'xtb'], tunes: {} };
     const cells = [

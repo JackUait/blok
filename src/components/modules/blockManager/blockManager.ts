@@ -1311,9 +1311,10 @@ export class BlockManager extends Module {
 
   /**
    * Split current Block
+   * @param tailTool - tool for the second half; the current block's tool when omitted
    */
-  public split(): Block {
-    return this.operations.split(this.blocksStore);
+  public split(tailTool?: string): Block {
+    return this.operations.split(this.blocksStore, tailTool);
   }
 
   /**

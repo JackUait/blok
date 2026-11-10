@@ -404,10 +404,11 @@ export class BlockOperations implements OperationsContext {
   /**
    * Split current Block
    * @param blocksStore - The blocks store to modify
+   * @param tailTool - tool for the second half; the current block's tool when omitted
    * @returns Split block
    */
-  public split(blocksStore: BlocksStore): Block {
-    return this.runOperation('split', () => this.insertion.split(blocksStore));
+  public split(blocksStore: BlocksStore, tailTool?: string): Block {
+    return this.runOperation('split', () => this.insertion.split(blocksStore, tailTool));
   }
 
   /**

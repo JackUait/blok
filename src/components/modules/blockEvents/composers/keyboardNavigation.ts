@@ -807,8 +807,14 @@ export class KeyboardNavigation extends BlockEventComposer {
       return newBlock;
     }
 
-    // Case 3: Caret in middle - split block
-    return this.Blok.BlockManager.split();
+    /**
+     * Case 3: caret in the middle - split. A heading or quote leaves its second
+     * half as a text block (Notion U093, U145). Toggle headings keep their kind;
+     * their own keydown handles Enter.
+     */
+    const tailTool = resetsToTextOnEmptyEnter && !isToggleHeading ? this.Blok.Tools.defaultTool.name : undefined;
+
+    return this.Blok.BlockManager.split(tailTool);
   }
 
   /**
@@ -959,7 +965,19 @@ export class KeyboardNavigation extends BlockEventComposer {
     const isToggleHeading = currentBlock.holder.querySelector('[data-blok-toggle-open]') !== null;
     const resetsToTextOnBackspace = currentBlock.name === HEADER_TOOL_NAME || currentBlock.name === QUOTE_TOOL_NAME;
 
-    if (resetsToTextOnBackspace && !isToggleHeading) {
+    /**
+     * A heading with text merges straight into a non-empty text block above
+     * (Notion U098). With no block above, an empty one, or one that cannot take
+     * the text, it still resets to text first: Notion has no entry for those.
+     */
+    const headingMergesUp = currentBlock.name === HEADER_TOOL_NAME &&
+      !currentBlock.isEmpty &&
+      previousBlock !== null &&
+      !previousBlock.isEmpty &&
+      !this.isReadOnly(previousBlock) &&
+      areBlocksMergeable(previousBlock, currentBlock);
+
+    if (resetsToTextOnBackspace && !isToggleHeading && !headingMergesUp) {
       const defaultToolName = this.Blok.Tools.defaultTool.name;
       const text = currentBlock.currentInput.innerHTML;
       const newBlock = BlockManager.replace(currentBlock, defaultToolName, { text });

@@ -1035,7 +1035,7 @@ test.describe('backspace keydown', () => {
     await expectToolbarClosed(page);
   });
 
-  test('should reset header to paragraph then merge into previous paragraph on a second Backspace', async ({ page }) => {
+  test('should merge a header straight into the previous paragraph (Notion U098)', async ({ page }) => {
     await createBlokWithSimpleHeader(page, [
       {
         id: 'block1',
@@ -1057,34 +1057,11 @@ test.describe('backspace keydown', () => {
     await setCaret(targetBlockContentEditable, 0, 0);
     await targetBlock.press('Backspace');
 
-    /**
-     * Notion-parity step 1: Backspace at the start of a styled header converts it
-     * to a plain paragraph in place (text preserved), instead of merging into the
-     * previous block. See keyboardNavigation.ts handleBackspace lines 610-621
-     * (resetsToTextOnBackspace branch); BlockManager.replace mints a fresh block id
-     * (block-mutation.ts line 158) so the converted block is no longer 'block2'.
-     */
-    const afterFirstBackspace = await saveBlok(page);
-
-    expect(afterFirstBackspace.blocks).toHaveLength(2);
-    expect(afterFirstBackspace.blocks[0].id).toBe('block1');
-    expect(afterFirstBackspace.blocks[1].type).toBe('paragraph');
-    expect((afterFirstBackspace.blocks[1].data as { text: string }).text).toBe('Second block heading');
-
-    /**
-     * Step 2: the caret is left at the start of the freshly converted paragraph
-     * (Caret.setToBlock START, keyboardNavigation.ts line 618). A second Backspace
-     * now runs the normal merge logic and merges it into the previous paragraph.
-     */
-    const convertedParagraph = await getParagraphLocator(page, 'last');
-
-    await setCaret(convertedParagraph, 0, 0);
-    await convertedParagraph.press('Backspace');
-
     const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block1');
+    expect(blocks[0].type).toBe('paragraph');
     expect((blocks[0].data as { text: string }).text).toBe('First block paragraphSecond block heading');
 
     const firstBlockWrapper = await getBlockWrapperLocator(page, 'first');

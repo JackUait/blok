@@ -2949,6 +2949,26 @@ describe('BlockOperations', () => {
       // ...while `text` is the extracted tail, not the source's original text.
       expect(newBlockArg?.data?.text).toBe('World');
     });
+
+    it('U093: gives a tail of another tool only the extracted text', () => {
+      (dependencies.YjsManager.getBlockDataObject as ReturnType<typeof vi.fn>).mockReturnValue({
+        text: 'HelloWorld',
+        level: 2,
+      });
+
+      const fragment = document.createDocumentFragment();
+      fragment.appendChild(document.createTextNode('World'));
+      (dependencies.Caret.extractFragmentFromCaretPosition as ReturnType<typeof vi.fn>).mockReturnValue(fragment);
+
+      operations.currentBlockIndexValue = 0;
+      const newBlock = operations.split(blocksStore, 'paragraph');
+
+      expect(dependencies.YjsManager.addBlockAt).toHaveBeenCalledWith(
+        expect.objectContaining({ id: newBlock.id, type: 'paragraph', data: { text: 'World' } }),
+        expect.anything()
+      );
+      expect(newBlock.name).toBe('paragraph');
+    });
   });
 
   describe('splitBlockWithData', () => {

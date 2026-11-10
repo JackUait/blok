@@ -4294,20 +4294,14 @@ test.describe('yjs undo/redo', () => {
     });
 
     test('undo of consecutive heading splits reverts one split per press with caret at the junction', async ({ page }) => {
-      // Regression: splitting a header (a tool whose data has keys beyond `text`,
-      // e.g. `level`) used to create the new block in Yjs with only `{ text }`.
-      // The missing `level` key was then written by a deferred
-      // didMutated→syncBlockDataToYjs in a SEPARATE Yjs transaction, producing a
-      // spurious no-op undo entry. That polluted the undo stack (the first undo
-      // appeared to do nothing) and desynced caret restoration, so undoing a
-      // heading split landed the caret at the block START instead of the split
-      // junction. A paragraph has only `text`, so its split was never affected —
-      // hence "unify the heading behaviour with the regular text block".
+      // Each split must be one undo entry with the caret back at the junction.
+      // A heading split leaves its second half as a paragraph (Notion U093),
+      // so the later splits run in those paragraphs.
       await createBlokWithBlocks(page, [
         { type: 'header', data: { text: 'Heading level 1', level: 1 } },
       ]);
 
-      const editSel = `${HEADER_SELECTOR} [contenteditable="true"]`;
+      const editSel = '[data-blok-element] [contenteditable="true"]';
       const nthInput = (i: number): Locator => page.locator(`:nth-match(${editSel}, ${i + 1})`);
 
       const setCaret = async (index: number, charOffset: number): Promise<void> => {
@@ -4337,38 +4331,34 @@ test.describe('yjs undo/redo', () => {
       await page.keyboard.press('Enter');
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // All four pieces stay headers and the new pieces inherit level 1 (the
-      // partial-data write previously reset them to the default level).
-      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(4);
       const savedAfterSplits = await saveBlok(page);
-      const headerLevels = savedAfterSplits.blocks
-        .filter(b => b.type === 'header')
-        .map(b => (b.data as { level: number }).level);
 
-      expect(headerLevels).toEqual([1, 1, 1, 1]);
+      expect(savedAfterSplits.blocks.map(b => b.type)).toEqual(['header', 'paragraph', 'paragraph', 'paragraph']);
+      expect((savedAfterSplits.blocks[0].data as { level: number }).level).toBe(1);
 
       // First undo must revert exactly ONE split (4 -> 3), not be swallowed by a
       // spurious no-op entry.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 250);
-      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(3);
+      await expect(page.locator(editSel)).toHaveCount(3);
 
-      // Caret lands at the split junction (" lev" + "el 1" -> " level 1", offset 4),
-      // not at the start of the merged block.
+      // Caret lands at the split junction (" lev" + "el 1" -> " level 1", offset 4).
       const merged = nthInput(2);
 
       expect(await isFocused(merged)).toBe(true);
       expect(await getCaretOffset(merged)).toBe(4);
 
-      // Remaining undos also revert one split each, back to the single heading.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 250);
-      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(2);
+      await expect(page.locator(editSel)).toHaveCount(2);
 
+      // The heading's own split: one press, caret at its junction.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 250);
+      await expect(page.locator(editSel)).toHaveCount(1);
       await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
       await expect(nthInput(0)).toHaveText('Heading level 1');
+      expect(await getCaretOffset(nthInput(0))).toBe(5);
     });
 
     test('redo after undoing list item deletion restores deleted items', async ({ page }) => {

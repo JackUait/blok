@@ -807,9 +807,10 @@ export class BlockInsertion {
    *
    * Uses atomic Yjs transaction to ensure split is a single undo entry.
    * @param blocksStore - The blocks store to modify
+   * @param tailTool - tool for the second half; the current block's tool when omitted
    * @returns Split block
    */
-  public split(blocksStore: BlocksStore): Block {
+  public split(blocksStore: BlocksStore, tailTool?: string): Block {
     const currentBlock = this.ctx.currentBlock;
 
     if (currentBlock === undefined) {
@@ -850,20 +851,22 @@ export class BlockInsertion {
       const truncatedText = currentBlock.holder
         .querySelector('[contenteditable="true"]:not([data-blok-mutation-free])')?.innerHTML ?? '';
 
-      // New block carries the source block's full data with only `text` replaced
-      // by the extracted content, so it is complete in a single transaction.
-      const newBlockData = { ...sourceData, text: extractedText };
+      // Same tool: the source block's full data with only `text` replaced, so it
+      // is complete in a single transaction. A named tail tool starts from
+      // `text` alone; a heading's `level` means nothing to a paragraph.
+      const newBlockType = tailTool ?? currentBlock.name;
+      const newBlockData = tailTool === undefined ? { ...sourceData, text: extractedText } : { text: extractedText };
 
       // Atomic Yjs transaction: update original + add new (single undo entry)
       this.dependencies.YjsManager.transact(() => {
         this.dependencies.YjsManager.updateBlockData(currentBlock.id, 'text', truncatedText);
-        this.addSplitTailToYjs({ id: newBlockId, type: currentBlock.name, data: newBlockData }, currentBlock, placement, insertIndex);
+        this.addSplitTailToYjs({ id: newBlockId, type: newBlockType, data: newBlockData }, currentBlock, placement, insertIndex);
       });
 
       // Insert DOM block (skip Yjs sync - already done above)
       const newBlock = this.ctx.insert({
         id: newBlockId,
-        tool: currentBlock.name,
+        tool: newBlockType,
         data: newBlockData,
         needToFocus: false,
         skipYjsSync: true,

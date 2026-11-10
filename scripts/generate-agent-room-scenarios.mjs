@@ -218,7 +218,7 @@ export const generate = () => {
   { options: { pageTitles: true, target: 'plain' }, pages: { 'page-2': { room: 'agent-room' } } });
 
   // BlokAgentVersionHistoryTests
-  const CMDS = { 'history.versions': { available: true }, 'history.read': { available: true }, 'history.changes': { available: true }, 'history.restore': { available: true } };
+  const CMDS = { 'history.versions': { available: true }, 'history.read': { available: true }, 'history.changes': { available: true }, 'history.restore': { available: true }, 'history.previewRestore': { available: true } };
   const UNAV = Object.fromEntries(Object.keys(CMDS).map((key) => [key, { unavailableReason: 'service' }]));
   scen('version-contract-room', VER_SEED, [{ run: 'contract:room', expect: { commands: CMDS } }, { run: 'contract:plain', expect: { commands: UNAV } }]);
   scen('version-contract-room-without-journal', VER_SEED, [{ run: 'contract:room', expect: { commands: UNAV } }], { journal: false });
@@ -249,6 +249,22 @@ export const generate = () => {
     room(b([c('history.restore', { version: '{lineage}:99' })]), { ok: false, code: 'VERSION_NOT_FOUND', committed: 0, revision: '@head' })]);
   scen('version-restore-stale', VER_SEED, [room(setTitle('One'), { ok: true }), room(setTitle('Two'), { ok: true }),
     room(b([c('history.restore', { version: '{lineage}:0' })], { expectRevision: '{rev:0}' }), { ok: false, code: 'STALE', committed: 0, revision: '@head', result: { '/error/details/revision': '@head' } })]);
+  // A preview plans the restore at the head and writes nothing.
+  scen('version-preview-restore', VER_SEED, [
+    room(replace('p', 'Changed'), { ok: true }),
+    room(b([c('history.previewRestore', { version: '{lineage}:0' })]), { ok: true, committed: 0, revision: '@head',
+      result: { '/results/0/version': '{lineage}:0', '/results/0/expectRevision': '@head', '/results/0/fits': true,
+        '/results/0/wouldUndo/blocks': { length: 1 }, '/results/0/wouldUndo/blocks/0/id': 'p', '/results/0/wouldUndo/blocks/0/kind': 'changed',
+        '/results/0/wouldUndo/page': { length: 0 }, '/results/0/guards': { length: 0 } },
+      state: { '/blocks/0/data/text/0/text': 'Changed' } }),
+    room(b([c('history.previewRestore', { version: '{lineage}:0', databases: 'keep' })]), { ok: true, committed: 0,
+      result: { '/results/0/wouldUndo/blocks/0/id': 'p' } }),
+    room(b([c('history.previewRestore', { version: '{lineage}:0', databases: 'all' })]), { ok: false, code: 'INVALID_ARGS', committed: 0 })]);
+  scen('version-preview-restore-unknown', VER_SEED, [room(setTitle('One'), { ok: true }),
+    room(b([c('history.previewRestore', { version: '{lineage}:99' })]), { ok: false, code: 'VERSION_NOT_FOUND', committed: 0, revision: '@head',
+      result: { '/error/path': '/commands/0/args/version' } })]);
+  scen('version-preview-restore-stale', VER_SEED, [room(setTitle('One'), { ok: true }), room(setTitle('Two'), { ok: true }),
+    room(b([c('history.previewRestore', { version: '{lineage}:0' })], { expectRevision: '{rev:0}' }), { ok: false, code: 'STALE', committed: 0, revision: '@head' })]);
   scen('version-undo-after-restore', VER_SEED, [room(replace('p', 'Changed'), { ok: true }),
     room(b([c('history.restore', { version: '{lineage}:0' })]), { ok: true }),
     room(UNDO, { ok: false, code: 'NOTHING_TO_UNDO', committed: 0, state: { '/blocks/0/data/text/0/text': 'Hello world' } })]);

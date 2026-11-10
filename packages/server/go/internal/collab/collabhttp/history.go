@@ -623,6 +623,19 @@ func (h *Handlers) HistoryRestorePreview(w http.ResponseWriter, r *http.Request)
 		WriteEditResult(w, *edit, a.rooms.RetryAfter())
 		return
 	}
+	text, err := RestorePreviewJSON(preview)
+	if err != nil {
+		internalError(w)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(text))
+}
+
+// RestorePreviewJSON is the preview route's body. The agent's
+// history.previewRestore answers the same body.
+func RestorePreviewJSON(preview *room.RestorePreview) (string, error) {
 	blocks := make([]any, 0, len(preview.Blocks))
 	for _, change := range preview.Blocks {
 		row := &jsjson.Object{}
@@ -654,14 +667,7 @@ func (h *Handlers) HistoryRestorePreview(w http.ResponseWriter, r *http.Request)
 	body.Set(jsjson.FromString("limitBytes"), float64(preview.LimitBytes))
 	body.Set(jsjson.FromString("expectRevision"),
 		jsjson.FromString(preview.Head.Tag.Lineage+":"+strconv.FormatUint(preview.Head.ServerSequence, 10)))
-	text, err := jsjson.Stringify(body)
-	if err != nil {
-		internalError(w)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(text))
+	return jsjson.Stringify(body)
 }
 
 // RestoreConfirmHeader lists the guard kinds a restore confirms; the body's

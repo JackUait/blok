@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/collabhttp"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/room"
 	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
@@ -38,7 +39,11 @@ func (e *Executor) runVersionRead(ctx context.Context, docID string, input *jsjs
 		window = hidden
 		versions := refused
 		// A restore reads the version it writes, so the read hook refuses it too.
-		if refused == nil {
+		if refused == nil && name == "history.previewRestore" {
+			if versions, err = e.loadPreview(ctx, docID, args, input, window); err != nil {
+				return Execution{}, err
+			}
+		} else if refused == nil {
 			if versions, err = e.loadVersions(ctx, docID, name, args, window); err != nil {
 				return Execution{}, err
 			}
@@ -138,6 +143,82 @@ func (e *Executor) restore(ctx context.Context, docID, version string, result, i
 	}
 	return failure("APPLY_FAILED", "The room refused the restore ("+edit.Status.String()+"). Nothing was written.",
 		retryableEdit(edit.Status), jsjson.NewObject(member("status", str(edit.Status.String()))), head)
+}
+
+// loadPreview is what history.previewRestore needs: the preview route's
+// body for its version, or null when there is none or the window hides it.
+// The batch's expectRevision was checked already, so it plans at the head.
+func (e *Executor) loadPreview(ctx context.Context, docID string, args, input *jsjson.Node, window *historyWindow) (*jsjson.Node, error) {
+	previews := jsjson.NewObject()
+	loaded := jsjson.NewObject(member("previews", previews))
+	value, err := field(args, "version")
+	if err != nil {
+		return nil, err
+	}
+	version, ok, err := text(value)
+	if err != nil || !ok {
+		// The bundle refuses the arguments before it reads the preview.
+		return loaded, err
+	}
+	keep := false
+	if databases, err := field(args, "databases"); err != nil {
+		return nil, err
+	} else if databases != nil {
+		named, ok, err := text(databases)
+		if err != nil {
+			return nil, err
+		}
+		if !ok || (named != "keep" && named != "restore") {
+			return loaded, nil
+		}
+		keep = named == "keep"
+	}
+	colon := lastColon(version)
+	sequence, ok := uint64(0), false
+	if colon > 0 {
+		sequence, ok = parseSequence(version[colon+1:])
+	}
+	if !ok || window.hides(version[:colon], sequence) {
+		previews.Members = append(previews.Members, member(version, jsjson.NewNull()))
+		return loaded, nil
+	}
+	actorNode, err := field(input, "actor")
+	if err != nil {
+		return nil, err
+	}
+	idNode, err := field(actorNode, "id")
+	if err != nil {
+		return nil, err
+	}
+	actorID, err := stringValue(idNode)
+	if err != nil {
+		return nil, err
+	}
+	status, preview, edit, err := e.rooms.manager.PreviewRestoreWith(ctx, docID, version[:colon], sequence, nil, actorID,
+		room.RestoreOptions{KeepDatabases: keep})
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case status == room.HistoryNotFound:
+		previews.Members = append(previews.Members, member(version, jsjson.NewNull()))
+		return loaded, nil
+	case status != room.HistoryReady:
+		return versionFailure("The restore could not be previewed ("+status.String()+").", status), nil
+	case preview == nil:
+		return jsjson.NewObject(member("failed", str("The restore could not be previewed ("+edit.Status.String()+").")),
+			member("retryable", jsjson.NewBool(retryableEdit(edit.Status)))), nil
+	}
+	body, err := collabhttp.RestorePreviewJSON(preview)
+	if err != nil {
+		return nil, err
+	}
+	parsed, err := parse(body)
+	if err != nil {
+		return nil, err
+	}
+	previews.Members = append(previews.Members, member(version, parsed))
+	return loaded, nil
 }
 
 // loadVersions is what one read needs: the version list, or the documents

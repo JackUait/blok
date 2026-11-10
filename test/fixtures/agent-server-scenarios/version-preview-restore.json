@@ -1,0 +1,134 @@
+{
+  "name": "version-preview-restore",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "text.replace",
+            "args": {
+              "id": "p",
+              "with": "Changed"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.previewRestore",
+            "args": {
+              "version": "{lineage}:0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "committed": 0,
+        "revision": "@head",
+        "result": {
+          "/results/0/version": "{lineage}:0",
+          "/results/0/expectRevision": "@head",
+          "/results/0/fits": true,
+          "/results/0/wouldUndo/blocks": {
+            "length": 1
+          },
+          "/results/0/wouldUndo/blocks/0/id": "p",
+          "/results/0/wouldUndo/blocks/0/kind": "changed",
+          "/results/0/wouldUndo/page": {
+            "length": 0
+          },
+          "/results/0/guards": {
+            "length": 0
+          }
+        },
+        "state": {
+          "/blocks/0/data/text/0/text": "Changed"
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.previewRestore",
+            "args": {
+              "version": "{lineage}:0",
+              "databases": "keep"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "committed": 0,
+        "result": {
+          "/results/0/wouldUndo/blocks/0/id": "p"
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.previewRestore",
+            "args": {
+              "version": "{lineage}:0",
+              "databases": "all"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "INVALID_ARGS",
+        "committed": 0
+      }
+    }
+  ]
+}

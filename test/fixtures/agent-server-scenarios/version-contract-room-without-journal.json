@@ -37,6 +37,9 @@
           },
           "history.restore": {
             "unavailableReason": "service"
+          },
+          "history.previewRestore": {
+            "unavailableReason": "service"
           }
         }
       }

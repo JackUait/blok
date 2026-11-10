@@ -29,8 +29,8 @@ type Rooms struct {
 func NewRooms(manager *room.Manager) *Rooms { return &Rooms{manager: manager} }
 
 // HistoryAccess is what the host's history hooks allow one agent call.
-// CanRead false refuses history.versions, history.read, history.changes
-// and history.restore;
+// CanRead false refuses history.versions, history.read, history.changes,
+// history.restore and history.previewRestore;
 // Window nil shows the whole history.
 type HistoryAccess struct {
 	CanRead bool
@@ -527,7 +527,7 @@ func versionCommand(batch *jsjson.Node) (string, *jsjson.Node, error) {
 		return "", nil, err
 	}
 	switch value {
-	case "history.versions", "history.read", "history.changes", "history.restore":
+	case "history.versions", "history.read", "history.changes", "history.restore", "history.previewRestore":
 	default:
 		return "", nil, nil
 	}

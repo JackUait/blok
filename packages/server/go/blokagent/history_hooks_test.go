@@ -95,6 +95,12 @@ func TestAWindowHidesOlderVersionsFromAnAgent(t *testing.T) {
 	if r.head(t, "d") != head {
 		t.Fatal("the hidden restore wrote")
 	}
+	if previewed, code := runIn(t, r, "d", `{"commands":[{"name":"history.previewRestore","args":{"version":"`+lineage+`:1"}}]}`, roomAgent); code != "VERSION_NOT_FOUND" {
+		t.Fatalf("preview: %s", previewed.ResultJSON)
+	}
+	if previewed, code := runIn(t, r, "d", `{"commands":[{"name":"history.previewRestore","args":{"version":"`+lineage+`:2"}}]}`, roomAgent); code != "" {
+		t.Fatalf("visible preview: %s", previewed.ResultJSON)
+	}
 	if len(*asked) == 0 || (*asked)[0] != "agent-cs d" {
 		t.Fatalf("asked %v", *asked)
 	}
@@ -116,6 +122,9 @@ func TestAReadHookThatSaysNoRefusesAnAgentsListReadAndRestore(t *testing.T) {
 	}
 	if r.head(t, "d") != head {
 		t.Fatal("the refused restore wrote")
+	}
+	if previewed, code := runIn(t, r, "d", `{"commands":[{"name":"history.previewRestore","args":{"version":"`+lineage+`:0"}}]}`, roomAgent); code != "TOOL_ACTION_FAILED" {
+		t.Fatalf("preview: %s", previewed.ResultJSON)
 	}
 }
 

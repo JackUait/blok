@@ -2172,6 +2172,57 @@ impl Room {
         })
     }
 
+    /// The preview route's answer for a history.previewRestore, keyed by its
+    /// version (null for a 404). Arguments the bundle refuses ask nothing.
+    async fn history_preview(&self, args: &Value) -> Result<Value, (String, Option<u16>)> {
+        let mut previews = Map::new();
+        let Some(version) = args
+            .get("version")
+            .and_then(Value::as_str)
+            .filter(|v| !v.is_empty())
+        else {
+            return Ok(Value::Object(previews));
+        };
+        let query = match args.get("databases") {
+            None => String::new(),
+            Some(Value::String(databases)) if databases == "keep" || databases == "restore" => {
+                format!("?databases={databases}")
+            }
+            Some(_) => return Ok(Value::Object(previews)),
+        };
+        let Some(path) = point_path(version) else {
+            previews.insert(version.to_owned(), Value::Null);
+            return Ok(Value::Object(previews));
+        };
+        let url = format!("{}/{path}/restore/preview{query}", self.history_base());
+        let answer = self
+            .history_send("POST", &url, Vec::new())
+            .await
+            .map_err(|m| (m, None))?;
+        if answer.status == 404 {
+            previews.insert(version.to_owned(), Value::Null);
+            return Ok(Value::Object(previews));
+        }
+        if !(200..=299).contains(&answer.status) {
+            return Err((
+                format!(
+                    "The sync server answered {}: {}",
+                    answer.status,
+                    String::from_utf8_lossy(&answer.body).trim()
+                ),
+                Some(answer.status),
+            ));
+        }
+        let Ok(body) = serde_json::from_slice::<Value>(&answer.body) else {
+            return Err((
+                "The sync server sent a restore preview it could not read.".to_owned(),
+                None,
+            ));
+        };
+        previews.insert(version.to_owned(), body);
+        Ok(Value::Object(previews))
+    }
+
     /// The versionHistory input for a history command: the list and the
     /// documents the command names, or `failed` with the reason.
     async fn load_versions(&self, name: &str, batch: &Value) -> Value {
@@ -2191,6 +2242,13 @@ impl Room {
             out
         };
         let mut out = json!({});
+        if name == "history.previewRestore" {
+            // A preview asks its own route and reads nothing else.
+            return match self.history_preview(&args).await {
+                Ok(previews) => json!({ "previews": previews }),
+                Err(err) => failed(err),
+            };
+        }
         if name == "history.versions" || name == "history.restore" {
             match self.history_versions(args.get("group")).await {
                 Ok(versions) => out["versions"] = versions,

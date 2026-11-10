@@ -1006,6 +1006,73 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('a table pasted into a container child', () => {
+    const table = { id: 'xt', tool: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['xta'] }, { blocks: ['xtb'] }]] }, parentId: null, contentIds: ['xta', 'xtb'], tunes: {} };
+    const cells = [
+      { id: 'xta', tool: 'paragraph', data: { text: 'Cell A' }, parentId: 'xt', contentIds: [], tunes: {} },
+      { id: 'xtb', tool: 'paragraph', data: { text: 'Cell B' }, parentId: 'xt', contentIds: [], tunes: {} },
+    ];
+    const payloads = {
+      'a table': [table, ...cells],
+      'a toggle holding a table': [
+        { id: 'xg', tool: 'toggle', data: { text: 'Tog' }, parentId: null, contentIds: ['xt'], tunes: {} },
+        { ...table, parentId: 'xg' },
+        ...cells,
+      ],
+    };
+    const targets: Record<string, OutputData['blocks']> = {
+      toggle: [
+        { id: 'tg', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: ['tgt'] },
+        { id: 'tgt', type: 'paragraph', parent: 'tg', data: { text: '' } },
+      ],
+      callout: [
+        { id: 'co', type: 'callout', data: { emoji: '💡' }, content: ['tgt'] },
+        { id: 'tgt', type: 'paragraph', parent: 'co', data: { text: '' } },
+      ],
+      column: [
+        { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['tgt'] },
+        { id: 'tgt', type: 'paragraph', parent: 'c1', data: { text: '' } },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['p2'] },
+        { id: 'p2', type: 'paragraph', parent: 'c2', data: { text: 'Right' } },
+      ],
+    };
+
+    for (const [payloadName, payload] of Object.entries(payloads)) {
+      for (const [targetName, doc] of Object.entries(targets)) {
+        test(`${payloadName} keeps one block per cell when pasted into a ${targetName}`, async ({ page }) => {
+          await createBlokWithElements(page, doc);
+          await openFixtureToggles(page, { blocks: doc });
+          const before = new Set((await saveBlok(page)).blocks.map((b) => b.id));
+
+          await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+          await paste(page, page.locator(':focus'), { 'application/x-blok': JSON.stringify(payload), 'text/plain': 'Cell A Cell B' });
+
+          /** The pasted table as its child texts and its cells' texts. */
+          const pasted = async (): Promise<{ children: unknown[]; cells: unknown[]; added: number }> => {
+            const { blocks } = await saveBlok(page);
+            const byId = new Map(blocks.map((b) => [b.id, b]));
+            const fresh = blocks.filter((b) => !before.has(b.id));
+            const pastedTable = fresh.find((b) => b.type === 'table');
+            const content = (pastedTable?.data as { content?: Array<Array<{ blocks?: string[] }>> } | undefined)?.content ?? [];
+
+            return {
+              children: (pastedTable?.content ?? []).map((id) => byId.get(id)?.data.text),
+              cells: content.map((row) => row.map((cell) => (cell.blocks ?? []).map((id) => byId.get(id)?.data.text))),
+              added: fresh.length,
+            };
+          };
+
+          await expect.poll(pasted).toEqual({
+            children: ['Cell A', 'Cell B'],
+            cells: [[['Cell A'], ['Cell B']]],
+            added: payload.length,
+          });
+        });
+      }
+    }
+  });
+
   test.describe('a range across a column layout', () => {
     const doc: OutputData['blocks'] = [
       { id: 'pre', type: 'paragraph', data: { text: 'Before' } },

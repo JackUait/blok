@@ -573,9 +573,12 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     const runInsertPasses = (): void => {
       // Pass 1: insert table cells first so they exist with new IDs before the
       // owning table block is inserted with its (remapped) content references.
+      // At the root: a cell left in the caret's container slot, or under its column,
+      // is copied by the table as another owner's block, and the original lands in a cell too.
       tableCells.forEach(({ sanitized, original }) => {
         const block = insertOrStub({ tool: sanitized.tool,
           data: remapDatabaseViewIds(sanitized.tool, original.id, sanitized.data, copiedViewIds),
+          forceTopLevel: true,
           origin: 'paste',
           ...this.tunesOf(sanitized.tool, original) });
 

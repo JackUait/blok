@@ -321,11 +321,12 @@ impl Room {
                 &self.doc_id,
                 &st.tag.lineage,
                 appended.sequence,
+                actor_id,
                 note.clone(),
             );
         }
         // After the append: an edit is reported once it is durable.
-        self.record_edited_locked(st, actor_id, note);
+        self.record_activity_locked(st, actor_id, ActivityKind::Edited);
         st.operations_since_checkpoint += 1;
         st.bytes_since_checkpoint += update.len() as i64;
         if st.operations_since_checkpoint >= self.options.checkpoint_operation_threshold

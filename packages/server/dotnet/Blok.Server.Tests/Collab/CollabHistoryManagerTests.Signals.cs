@@ -76,6 +76,8 @@ public sealed partial class CollabHistoryManagerTests
     await ResetAsync(manager);
     await EditAsync(manager, Update("a", "three"));
     var second = Lineage();
+    // The first window closed early; let it go out before time passes its call timeout.
+    await manager.SettleAsync();
     time.Advance(SignalWindow);
     await manager.SettleAsync();
 
@@ -133,6 +135,13 @@ public sealed partial class CollabHistoryManagerTests
 
     Assert.Equal(6, operations.Committed(DocId).Count);
     observer.Gate.SetResult();
+
+    // Before the next advance, which would also pass the call timeout.
+    for (var wait = 0; wait < 2000 && observer.Signals.Count == 0; wait++)
+    {
+      await Task.Delay(1);
+    }
+
     time.Advance(SignalWindow);
     await manager.SettleAsync();
     Assert.Equal(2, observer.Signals.Count);

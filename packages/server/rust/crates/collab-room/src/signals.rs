@@ -14,7 +14,7 @@ use crate::database_changes::describe_database_change;
 use crate::error::Error;
 use crate::manager::{Manager, Shared};
 use crate::notes::RecordNote;
-use crate::{ActivityObserver, HistoryStatus, MAX_CHANGE_BYTES};
+use crate::{ActivityObserver, HistoryStatus, MAX_CHANGE_BYTES, MAX_CHANGE_RECORDS};
 
 /// CollabSignalBlock: one block, added, removed, changed or moved over the
 /// window.
@@ -32,12 +32,11 @@ pub struct SignalProperties {
 }
 
 /// CollabSignalSchema: one schema entry of one database, created, updated
-/// or deleted over the window.
+/// or deleted over the window. No name: a property name is content.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignalSchema {
     pub database_id: String,
     pub id: String,
-    pub name: Option<String>,
     pub action: String,
 }
 
@@ -64,6 +63,9 @@ pub struct ChangeSignal {
     pub properties: Vec<SignalProperties>,
     pub schema: Vec<SignalSchema>,
     pub authors: Vec<SignalAuthor>,
+    /// The window held more records than one read takes. The signal names
+    /// only the newest of them, from `from_sequence` on.
+    pub truncated: bool,
 }
 
 /// One journal record as the change signals read it.
@@ -257,6 +259,7 @@ pub fn collapse_signal(
                 kind: kinds[id].clone(),
             })
             .collect(),
+        truncated: false,
     };
     let empty = signal.blocks.is_empty()
         && signal.page.is_empty()
@@ -294,7 +297,6 @@ fn combine_schema(older: &SignalSchema, newer: &SignalSchema) -> Option<SignalSc
         "updated"
     };
     Some(SignalSchema {
-        name: newer.name.clone().or_else(|| older.name.clone()),
         action: action.to_owned(),
         ..newer.clone()
     })
@@ -371,7 +373,6 @@ pub(crate) fn signal_record_of(
             out.schema.push(SignalSchema {
                 database_id: id.clone(),
                 id: text_of(&entry, "id").unwrap_or_default(),
-                name: text_of(&entry, "name"),
                 action: text_of(&entry, "action").unwrap_or_default(),
             });
         }
@@ -381,6 +382,45 @@ pub(crate) fn signal_record_of(
 
 /// Jobs waiting for the pump. Past it the oldest is dropped.
 const QUEUE_LIMIT: usize = 1024;
+
+/// The window when a non-positive one is set.
+pub const DEFAULT_SIGNAL_WINDOW: Duration = Duration::from_secs(60);
+
+/// The longest window. C#'s timers cannot be armed past about 49.7 days,
+/// and every backend keeps the same bound.
+pub const MAX_SIGNAL_WINDOW: Duration = Duration::from_secs(86_400);
+
+/// How long one journal read or one observer call on the pump may take.
+pub const SIGNAL_CALL_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// content.edited at most once per this per document and actor.
+const EDITED_WINDOW: Duration = Duration::from_secs(55);
+const EDITED_STAMP_LIMIT: usize = 4096;
+
+/// The window a setting runs: zero is the default, and it never passes
+/// MAX_SIGNAL_WINDOW.
+pub fn signal_window_of(setting: Duration) -> Duration {
+    if setting.is_zero() {
+        DEFAULT_SIGNAL_WINDOW
+    } else {
+        setting.min(MAX_SIGNAL_WINDOW)
+    }
+}
+
+/// Runs `call`, giving up after SIGNAL_CALL_TIMEOUT on the room's timers.
+async fn bounded<T>(
+    manager: &Manager,
+    call: impl Future<Output = Result<T, Error>>,
+) -> Result<T, Error> {
+    let expired = manager.0.options.sleep(SIGNAL_CALL_TIMEOUT);
+    tokio::select! {
+        result = call => result,
+        () = expired => Err(Error::message(format!(
+            "ran past {} seconds",
+            SIGNAL_CALL_TIMEOUT.as_secs()
+        ))),
+    }
+}
 
 struct Window {
     lineage: String,
@@ -405,7 +445,9 @@ pub(crate) struct SignalHub {
     observer: Arc<dyn ActivityObserver>,
     changes: bool,
     audit: bool,
+    length: Duration,
     open: Mutex<HashMap<String, Arc<Mutex<Window>>>>,
+    edited: Mutex<HashMap<(String, String), SystemTime>>,
     queue: Mutex<Queue>,
     idle: Notify,
     closed: AtomicUsize,
@@ -418,7 +460,10 @@ fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 impl SignalHub {
     /// None unless the observer hands out a change or audit observer, so a
     /// host that does not pays nothing.
-    pub(crate) fn for_observer(observer: Option<&Arc<dyn ActivityObserver>>) -> Option<SignalHub> {
+    pub(crate) fn for_observer(
+        observer: Option<&Arc<dyn ActivityObserver>>,
+        window: Duration,
+    ) -> Option<SignalHub> {
         let observer = observer?;
         let changes = observer.changes().is_some();
         let audit = observer.audit().is_some();
@@ -426,7 +471,9 @@ impl SignalHub {
             observer: observer.clone(),
             changes,
             audit,
+            length: signal_window_of(window),
             open: Mutex::new(HashMap::new()),
+            edited: Mutex::new(HashMap::new()),
             queue: Mutex::new(Queue::default()),
             idle: Notify::new(),
             closed: AtomicUsize::new(0),
@@ -440,14 +487,18 @@ impl SignalHub {
         doc_id: &str,
         lineage: &str,
         sequence: u64,
+        actor_id: &str,
         note: Option<RecordNote>,
     ) {
-        if !self.changes {
-            return;
-        }
         let Some(manager) = shared.upgrade() else {
             return;
         };
+        if self.audit && !actor_id.is_empty() {
+            self.edited_event(&manager, doc_id, actor_id, note.as_ref());
+        }
+        if !self.changes {
+            return;
+        }
         let mut closed = None;
         let mut opened = None;
         {
@@ -486,7 +537,7 @@ impl SignalHub {
             self.deliver(&manager, doc_id, window);
         }
         if let Some(window) = opened {
-            let sleep = manager.options.sleep(manager.options.change_signal_window);
+            let sleep = manager.options.sleep(self.length);
             let weak = Arc::downgrade(&manager);
             let doc_id = doc_id.to_owned();
             tokio::spawn(async move {
@@ -498,6 +549,47 @@ impl SignalHub {
                 }
             });
         }
+    }
+
+    /// content.edited, throttled on its own stamps: a presence heartbeat
+    /// never mutes it.
+    fn edited_event(
+        &self,
+        manager: &Arc<Shared>,
+        doc_id: &str,
+        actor_id: &str,
+        note: Option<&RecordNote>,
+    ) {
+        let at = manager.options.now();
+        let within = |stamp: &SystemTime| {
+            at.duration_since(*stamp)
+                .map_or(true, |gap| gap < EDITED_WINDOW)
+        };
+        {
+            let mut edited = locked(&self.edited);
+            if edited.len() > EDITED_STAMP_LIMIT {
+                edited.retain(|_, stamp| within(stamp));
+            }
+            let key = (doc_id.to_owned(), actor_id.to_owned());
+            if edited.get(&key).is_some_and(within) {
+                return;
+            }
+            edited.insert(key, at);
+        }
+        self.event(
+            manager,
+            AuditEvent {
+                event_type: AUDIT_CONTENT_EDITED.to_owned(),
+                doc_id: doc_id.to_owned(),
+                at,
+                actor: Some(AuditActor {
+                    id: actor_id.to_owned(),
+                    kind: note.map(|note| note.kind.clone()),
+                    on_behalf_of: note.and_then(|note| note.on_behalf_of.clone()),
+                }),
+                lineage: None,
+            },
+        );
     }
 
     /// A purged document's open window is dropped: its records are gone.
@@ -519,7 +611,7 @@ impl SignalHub {
                     let Some(audit) = observer.audit() else {
                         return;
                     };
-                    if let Err(err) = audit.on_event(&event).await {
+                    if let Err(err) = bounded(&manager, audit.on_event(&event)).await {
                         manager.0.logf(&format!(
                             "collab: the activity observer failed on an audit event: {err}"
                         ));
@@ -556,10 +648,11 @@ impl SignalHub {
     fn deliver(&self, manager: &Arc<Shared>, doc_id: &str, window: Arc<Mutex<Window>>) {
         let observer = self.observer.clone();
         let doc_id = doc_id.to_owned();
+        let length = self.length;
         self.enqueue(
             manager,
             Box::new(move |manager: Manager| {
-                Box::pin(async move { signal(manager, observer, doc_id, window).await })
+                Box::pin(async move { signal(manager, observer, doc_id, window, length).await })
             }),
         );
         self.closed.fetch_add(1, Ordering::SeqCst);
@@ -633,6 +726,7 @@ async fn signal(
     observer: Arc<dyn ActivityObserver>,
     doc_id: String,
     window: Arc<Mutex<Window>>,
+    length: Duration,
 ) {
     let (lineage, from, to, start, notes) = {
         let window = locked(&window);
@@ -644,10 +738,14 @@ async fn signal(
             window.notes.clone(),
         )
     };
-    let count = usize::try_from(to - from + 1).unwrap_or(usize::MAX);
-    let result = manager
-        .changes(&doc_id, &lineage, to, from - 1, count, MAX_CHANGE_BYTES)
-        .await;
+    let count = usize::try_from(to - from + 1)
+        .unwrap_or(usize::MAX)
+        .min(MAX_CHANGE_RECORDS);
+    let result = bounded(
+        &manager,
+        manager.changes(&doc_id, &lineage, to, from - 1, count, MAX_CHANGE_BYTES),
+    )
+    .await;
     let result = match result {
         Ok(result) if result.status == HistoryStatus::Ready => result,
         Ok(result) => {
@@ -664,25 +762,25 @@ async fn signal(
             return;
         }
     };
-    if result.truncated {
-        manager.0.logf(&format!(
-            "collab: the change signal for {from}..{to} of \"{doc_id}\" lists only the newest records that fit one read"
-        ));
-    }
     let records: Vec<SignalRecord> = result
         .changes
         .iter()
         .map(|record| signal_record_of(&lineage, record, notes.get(&record.sequence).cloned()))
         .collect();
-    let length = manager.0.options.change_signal_window;
     let Some(mut signal) = collapse_signal(&doc_id, start, start + length, &records) else {
         return;
     };
-    signal.from_sequence = from;
+    // A cut read names only the records it folded; the host reads the rest
+    // through /history/changes.
+    if result.truncated {
+        signal.truncated = true;
+    } else {
+        signal.from_sequence = from;
+    }
     let Some(changes) = observer.changes() else {
         return;
     };
-    if let Err(err) = changes.on_changes(&signal).await {
+    if let Err(err) = bounded(&manager, changes.on_changes(&signal)).await {
         manager.0.logf(&format!(
             "collab: the activity observer failed on a change signal: {err}"
         ));

@@ -109,7 +109,8 @@ pub struct Options {
 
     /// CollabChangeSignalWindow: how long one change window runs from a
     /// document's first journalled write before a ChangeObserver is told
-    /// what changed. 60 s by default; zero uses 60 s too.
+    /// what changed. 60 s by default; zero or less uses 60 s too. More than
+    /// one day is refused.
     pub collab_change_signal_window_nanos: i64,
 
     /// UseCollabRecordNotes<T>: a note of who wrote each journal record,
@@ -461,6 +462,12 @@ impl Options {
             return fail(format!(
                 "CollabMaxMessageBytes must be a positive number of bytes (got {}): a zero cap closes every sync connection on its first frame",
                 self.collab_max_message_bytes
+            ));
+        }
+        if self.collab_change_signal_window_nanos > 86_400_000_000_000 {
+            return fail(format!(
+                "CollabChangeSignalWindow must be at most one day (got {})",
+                format_time_span(self.collab_change_signal_window_nanos)
             ));
         }
         if self.collab_keep_alive_interval_nanos < 0 {

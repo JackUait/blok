@@ -15,6 +15,7 @@ pub trait Timers: Send + Sync {
 /// CollabRoomOptions. Default is C#'s defaults; an explicit zero stays zero,
 /// as a C# init property does.
 #[derive(Clone)]
+#[non_exhaustive]
 pub struct Options {
     pub export_debounce: Duration,
     pub export_max_delay: Duration,
@@ -42,7 +43,8 @@ pub struct Options {
     /// bound wait on it. Wall time when None.
     pub timers: Option<Arc<dyn Timers>>,
     /// How long one change window runs from a document's first journalled
-    /// write. Used only with a ChangeObserver.
+    /// write. Used only with a ChangeObserver. Zero is 60 s, and it never
+    /// passes one day.
     pub change_signal_window: Duration,
 }
 

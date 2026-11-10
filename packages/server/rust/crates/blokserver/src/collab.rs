@@ -289,17 +289,14 @@ impl Inner {
         };
 
         let clock = Arc::clone(&self.clock);
-        let mut room = RoomOptions {
-            announced_max_message_bytes: o.collab_max_message_bytes,
-            restore_trashes_pages: o.collab_restore_trashes_pages,
-            change_signal_window: match u64::try_from(o.collab_change_signal_window_nanos) {
-                Ok(nanos) if nanos > 0 => std::time::Duration::from_nanos(nanos),
-                _ => std::time::Duration::from_secs(60),
-            },
-            now: Some(Arc::new(move || clock())),
-            timers: o.timers.clone(),
-            ..RoomOptions::default()
-        };
+        // RoomOptions is non_exhaustive: set fields on its default.
+        let mut room = RoomOptions::default();
+        room.announced_max_message_bytes = o.collab_max_message_bytes;
+        room.restore_trashes_pages = o.collab_restore_trashes_pages;
+        room.change_signal_window = u64::try_from(o.collab_change_signal_window_nanos)
+            .map_or(std::time::Duration::ZERO, std::time::Duration::from_nanos);
+        room.now = Some(Arc::new(move || clock()));
+        room.timers = o.timers.clone();
         let operations: Option<Arc<dyn OperationStore>> =
             if let Some(store) = &o.collab_operation_store {
                 // Only the built-in journal states its append limit.

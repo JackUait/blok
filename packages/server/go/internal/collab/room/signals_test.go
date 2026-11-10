@@ -181,6 +181,8 @@ func TestALineageChangeClosesTheWindow(t *testing.T) {
 	histReset(t, b.manager)
 	histEdit(t, b.manager, histUpdate(t, "a", "three"))
 	second := b.lineage(t)
+	// The first window closed early; let it go out before time passes its call timeout.
+	b.manager.Settle()
 	b.advance(time.Minute)
 
 	got := observer.gotSignals()
@@ -235,6 +237,10 @@ func TestASlowObserverNeverHoldsTheRoom(t *testing.T) {
 		t.Fatalf("committed = %d", got)
 	}
 	close(observer.gate)
+	// Before the next advance, which would also pass the call timeout.
+	for wait := 0; wait < 2000 && len(observer.gotSignals()) == 0; wait++ {
+		time.Sleep(time.Millisecond)
+	}
 	b.advance(time.Minute)
 	if got := observer.gotSignals(); len(got) != 2 {
 		t.Fatalf("signals = %+v", got)

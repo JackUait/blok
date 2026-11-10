@@ -68,8 +68,9 @@ pub use room::{Log, Membership};
 pub use seams::*;
 pub use signals::{
     AUDIT_CONTENT_EDITED, AUDIT_DOCUMENT_PURGED, AUDIT_LINEAGE_DELETED, AuditActor, AuditEvent,
-    AuditObserver, ChangeObserver, ChangeSignal, SignalAuthor, SignalBlock, SignalProperties,
-    SignalRecord, SignalSchema, collapse_signal, fold_signals,
+    AuditObserver, ChangeObserver, ChangeSignal, DEFAULT_SIGNAL_WINDOW, MAX_SIGNAL_WINDOW,
+    SIGNAL_CALL_TIMEOUT, SignalAuthor, SignalBlock, SignalProperties, SignalRecord, SignalSchema,
+    collapse_signal, fold_signals, signal_window_of,
 };
 pub use timeline::{
     ActorKind, LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions,

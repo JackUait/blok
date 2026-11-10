@@ -61,7 +61,6 @@ fn schema(value: &Value) -> Vec<SignalSchema> {
             SignalSchema {
                 database_id: text(entry, "databaseId"),
                 id: text(entry, "id"),
-                name: optional_text(entry, "name"),
                 action: text(entry, "action"),
             }
         })
@@ -110,6 +109,7 @@ fn signal(item: &Value) -> ChangeSignal {
                 kind: optional_text(object(author), "kind"),
             })
             .collect(),
+        truncated: false,
     }
 }
 

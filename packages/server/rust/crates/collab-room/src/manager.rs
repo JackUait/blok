@@ -230,6 +230,7 @@ pub(crate) fn time_span(d: std::time::Duration) -> String {
 impl Manager {
     /// Builds the manager; nothing is loaded until a doc is used.
     pub fn new(o: ManagerOptions) -> Manager {
+        let window = o.room.change_signal_window;
         Manager(Arc::new(Shared {
             store: o.store,
             endpoint: o.endpoint,
@@ -237,7 +238,7 @@ impl Manager {
             options: o.room.with_defaults(),
             log: o.log,
             operations: o.operations,
-            signals: crate::signals::SignalHub::for_observer(o.activity.as_ref()),
+            signals: crate::signals::SignalHub::for_observer(o.activity.as_ref(), window),
             activity: o.activity,
             notes: o.notes,
             rooms: Mutex::new(Rooms::default()),

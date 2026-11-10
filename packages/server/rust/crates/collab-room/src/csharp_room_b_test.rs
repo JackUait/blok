@@ -3020,3 +3020,75 @@ async fn dispose_is_idempotent() {
 
     assert!(room.lifetime.is_cancelled());
 }
+
+#[derive(Default)]
+struct AuditOnly(std::sync::Mutex<Vec<AuditEvent>>);
+
+impl ActivityObserver for AuditOnly {
+    fn record<'a>(
+        &'a self,
+        _doc_id: &'a str,
+        _actor_id: &'a str,
+        _at: SystemTime,
+        _kind: ActivityKind,
+    ) -> BoxFuture<'a, Result<(), Error>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn audit(&self) -> Option<&dyn AuditObserver> {
+        Some(self)
+    }
+}
+
+impl AuditObserver for AuditOnly {
+    fn on_event<'a>(&'a self, event: &'a AuditEvent) -> BoxFuture<'a, Result<(), Error>> {
+        Box::pin(async move {
+            self.0.lock().unwrap().push(event.clone());
+            Ok(())
+        })
+    }
+}
+
+// A heartbeat that silences the next Edited must not silence the audit
+// event for a real edit.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_active_frame_then_an_edit_still_sends_content_edited() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let audit = Arc::new(AuditOnly::default());
+    let manager = Manager::new(ManagerOptions {
+        store: k.disk.clone(),
+        endpoint: k.host.clone(),
+        converter: k.knob.clone(),
+        room: Options {
+            now: Some(k.clock.clock()),
+            ..Options::default()
+        },
+        log: Some(k.logs.log()),
+        operations: Some(Arc::new(k.journal.clone()) as Arc<dyn OperationStore>),
+        activity: Some(audit.clone()),
+        notes: None,
+    });
+    let member = v2("user-1", true);
+    let (membership, lineage) = enter(&manager, &member).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+
+    heartbeat(&membership).await;
+    k.clock.advance(Duration::from_secs(20));
+    op(
+        &membership,
+        &lineage,
+        OP_ONE,
+        update_appending(&client, "a"),
+    )
+    .await;
+    manager.settle().await;
+
+    let events = audit.0.lock().unwrap().clone();
+    assert_eq!(events.len(), 1, "{events:?}");
+    assert_eq!(events[0].event_type, AUDIT_CONTENT_EDITED);
+    assert_eq!(
+        events[0].actor.as_ref().map(|a| a.id.as_str()),
+        Some("user-1")
+    );
+}

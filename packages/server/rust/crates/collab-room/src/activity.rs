@@ -68,27 +68,6 @@ impl Room {
         actor_id: &str,
         kind: ActivityKind,
     ) {
-        self.record_activity_noted_locked(st, actor_id, kind, None);
-    }
-
-    /// Edited, and the content.edited event at the same moment, with the
-    /// record's note.
-    pub(crate) fn record_edited_locked(
-        &self,
-        st: &mut State,
-        actor_id: &str,
-        note: Option<crate::RecordNote>,
-    ) {
-        self.record_activity_noted_locked(st, actor_id, ActivityKind::Edited, note);
-    }
-
-    fn record_activity_noted_locked(
-        &self,
-        st: &mut State,
-        actor_id: &str,
-        kind: ActivityKind,
-        note: Option<crate::RecordNote>,
-    ) {
         // No verified identity, no call of any kind.
         if actor_id.is_empty() || self.activity.is_none() {
             return;
@@ -108,25 +87,6 @@ impl Room {
             // Stamped only where a call is made, or a busy actor stays
             // silenced.
             st.activity_stamps.insert(actor_id.to_owned(), at);
-        }
-        if kind == ActivityKind::Edited
-            && let Some(manager) = self.manager.upgrade()
-            && let Some(hub) = &manager.signals
-        {
-            hub.event(
-                &manager,
-                crate::AuditEvent {
-                    event_type: crate::AUDIT_CONTENT_EDITED.to_owned(),
-                    doc_id: self.doc_id.clone(),
-                    at,
-                    actor: Some(crate::AuditActor {
-                        id: actor_id.to_owned(),
-                        kind: note.as_ref().map(|note| note.kind.clone()),
-                        on_behalf_of: note.and_then(|note| note.on_behalf_of),
-                    }),
-                    lineage: None,
-                },
-            );
         }
 
         let mut dropped = None;

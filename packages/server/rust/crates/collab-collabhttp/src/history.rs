@@ -526,7 +526,8 @@ impl Handlers {
             }
         }
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
-        let delete = async move { rooms.delete_lineage(&doc, &lineage).await };
+        let actor = derive_actor(&a.ticket_user, &a.user, a.has_user);
+        let delete = async move { rooms.delete_lineage_by(&doc, &lineage, &actor).await };
         let (status, outcome) = match blocking(&request, delete).await {
             Some(Ok(result)) => result,
             _ => {

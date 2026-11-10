@@ -653,6 +653,8 @@ pub struct AppOptions {
     pub no_history: bool,
     /// Where the journal lives; a fresh directory when None.
     pub journal_dir: Option<PathBuf>,
+    /// The rooms' activity observer.
+    pub activity: Option<Arc<dyn blok_collab_room::ActivityObserver>>,
 }
 
 pub struct App {
@@ -718,6 +720,7 @@ pub async fn start_app(options: AppOptions) -> App {
     o.operations = journal
         .clone()
         .map(|journal| journal as Arc<dyn OperationStore>);
+    o.activity = options.activity.clone();
     let manager = Manager::new(o);
     let rooms = manager.clone();
     let corrupt = Arc::new(Mutex::new(Vec::new()));

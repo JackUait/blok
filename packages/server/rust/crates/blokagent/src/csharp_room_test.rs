@@ -242,16 +242,11 @@ async fn a_restore_behind_the_room_is_a_retryable_stale() {
 async fn a_restore_honours_the_hosts_trash_option_for_a_later_page_pointer() {
     for trash in [false, true] {
         let (journal, dir) = new_local_journal();
-        let r = new_test_room_on_with(
-            Some(Arc::new(journal)),
-            Some(dir),
-            None,
-            None,
-            blok_collab_room::Options {
-                restore_trashes_pages: trash,
-                ..Default::default()
-            },
-        );
+        let r = new_test_room_on_with(Some(Arc::new(journal)), Some(dir), None, None, {
+            let mut o = blok_collab_room::Options::default();
+            o.restore_trashes_pages = trash;
+            o
+        });
         r.docs.hold(
             "d",
             r#"{"blocks":[{"id":"p","type":"paragraph","data":{"text":"P"}}]}"#,

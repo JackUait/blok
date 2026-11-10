@@ -1883,6 +1883,10 @@ struct SignalObserver {
     events: Mutex<Vec<AuditEvent>>,
     failure: Option<String>,
     gate: Option<tokio::sync::Semaphore>,
+    /// The first on_changes never returns; `entered` is told when it starts.
+    hang_first: bool,
+    entered: tokio::sync::Notify,
+    calls: std::sync::atomic::AtomicUsize,
 }
 
 impl ActivityObserver for SignalObserver {
@@ -1908,6 +1912,11 @@ impl ActivityObserver for SignalObserver {
 impl ChangeObserver for SignalObserver {
     fn on_changes<'a>(&'a self, signal: &'a ChangeSignal) -> BoxFuture<'a, Result<(), Error>> {
         Box::pin(async move {
+            if self.hang_first && self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst) == 0
+            {
+                self.entered.notify_one();
+                std::future::pending::<()>().await;
+            }
             if let Some(gate) = &self.gate {
                 let _permit = gate.acquire().await;
             }
@@ -2096,6 +2105,9 @@ async fn a_lineage_change_closes_the_window() {
     reset(&b.manager).await;
     edit(&b.manager, update("a", "three"), None).await;
     let second = b.bench.lineage();
+    // The first window closed early; let it go out before time passes its
+    // call timeout.
+    b.manager.settle().await;
     b.advance(Duration::from_secs(60), 2).await;
 
     let lineages: Vec<_> = observer
@@ -2167,6 +2179,13 @@ async fn a_slow_observer_never_holds_the_room() {
     }
     assert_eq!(b.bench.committed().len(), 6);
     observer.gate.as_ref().unwrap().add_permits(10);
+    // Before the next advance, which would also pass the call timeout.
+    for _ in 0..2000 {
+        if !observer.signals.lock().unwrap().is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
     b.advance(Duration::from_secs(60), 2).await;
     assert_eq!(observer.signals.lock().unwrap().len(), 2);
 }
@@ -2234,4 +2253,71 @@ async fn deleting_a_lineage_and_purging_are_events() {
     );
     assert_eq!(events[1].event_type, AUDIT_DOCUMENT_PURGED);
     assert_eq!(events[1].actor, None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_hung_observer_call_times_out_and_later_signals_still_flow() {
+    let observer = Arc::new(SignalObserver {
+        hang_first: true,
+        ..SignalObserver::default()
+    });
+    let b = SignalBench::new(observer.clone(), None).await;
+    edit(&b.manager, update("a", "two"), None).await;
+    *b.clock.lock().unwrap() += Duration::from_secs(60);
+    b.timers.advance(Duration::from_secs(60));
+    tokio::time::timeout(Duration::from_secs(30), observer.entered.notified())
+        .await
+        .expect("the first signal reached the observer");
+    *b.clock.lock().unwrap() += Duration::from_secs(30);
+    b.timers.advance(Duration::from_secs(30));
+    tokio::time::timeout(Duration::from_secs(60), b.manager.settle())
+        .await
+        .expect("the pump moved on past the hung call");
+
+    edit(&b.manager, update("a", "three"), None).await;
+    b.advance(Duration::from_secs(60), 2).await;
+
+    let signals = observer.signals.lock().unwrap().clone();
+    assert_eq!(signals.len(), 1, "{signals:?}");
+    assert_eq!((signals[0].from_sequence, signals[0].to_sequence), (2, 2));
+    assert!(
+        b.logs
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|line| line.contains("ran past"))
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_window_past_one_read_names_only_the_records_it_folded() {
+    let observer = Arc::new(SignalObserver::default());
+    let b = SignalBench::new(observer.clone(), None).await;
+    for i in 0..=MAX_CHANGE_RECORDS {
+        edit(&b.manager, update("a", &format!("edit {i}")), None).await;
+    }
+    b.advance(Duration::from_secs(60), 1).await;
+
+    let signals = observer.signals.lock().unwrap().clone();
+    assert_eq!(signals.len(), 1, "{signals:?}");
+    assert!(signals[0].truncated);
+    assert_eq!((signals[0].from_sequence, signals[0].to_sequence), (2, 201));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_window_past_the_longest_runs_one_day() {
+    let observer = Arc::new(SignalObserver::default());
+    let b = SignalBench::new(observer.clone(), Some(Duration::from_secs(60 * 86_400))).await;
+    edit(&b.manager, update("a", "two"), None).await;
+    b.advance(Duration::from_secs(86_400), 1).await;
+
+    let signals = observer.signals.lock().unwrap().clone();
+    assert_eq!(signals.len(), 1, "{signals:?}");
+    assert_eq!(
+        signals[0]
+            .window_end
+            .duration_since(signals[0].window_start)
+            .unwrap(),
+        Duration::from_secs(86_400)
+    );
 }

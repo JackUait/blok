@@ -42,6 +42,8 @@ export type {
 } from './restore-heading-anchors';
 export { diffOutputData } from './diff-output-data';
 export type { OutputDataDiff, OutputBlockChange, OutputBlockMove, DiffOutputDataOptions } from './diff-output-data';
+export { foldUpdates } from './fold-updates';
+export type { FoldedUpdate, FoldUpdatesOptions, UpdateBlock, UpdateKind, UpdateRecord, UpdateRow } from './fold-updates';
 /**
  * `blocksToViewNodes` and the `ViewNode` tree are `@experimental` — not
  * frozen until a second framework adapter consumes them.

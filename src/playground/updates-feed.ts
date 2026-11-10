@@ -67,9 +67,10 @@ export interface UpdateCard {
 /** `blocksToPlainText` from `@bloklabs/core/view`, handed in: the view-entry law keeps src/view out of this module. */
 export type PlainText = (data: { blocks: LooseOutputBlockData[] }) => string;
 
+/** `foldUpdates` from `@bloklabs/core/view`, handed in like {@link PlainText}. Its default gap folds a typed title, one record per key. */
+export type FoldUpdates = (rows: UpdateItem[]) => Array<UpdateItem & { key: string }>;
+
 const FEED_VERSIONS = 3;
-/** Neighbouring records by one person closer than this share a card: a typed title is one record per key. */
-const MERGE_GAP = 2 * 60_000;
 const SNIPPETS_SHOWN = 4;
 /** Word-diff table cells; past this the texts show as one removal and one addition. */
 const DIFF_CELL_LIMIT = 250_000;
@@ -199,84 +200,6 @@ export const loadUpdates = async (
   return { items, failed };
 };
 
-const joins = (newer: UpdateItem, older: UpdateItem): boolean =>
-  newer.lineage === older.lineage
-  && newer.sequence === older.sequence
-  && newer.record.actor !== null
-  && newer.record.actor === older.record.actor
-  && newer.record.committedAt !== null
-  && older.record.committedAt !== null
-  && Math.abs(newer.record.committedAt - older.record.committedAt) < MERGE_GAP;
-
-/** One block over a run: `before` from the oldest record, `after` from the newest; null when added then removed. */
-const combineBlock = (older: ChangeBlock, newer: ChangeBlock): ChangeBlock | null => {
-  if (older.kind === 'added') {
-    return newer.kind === 'removed' ? null : { id: newer.id, type: newer.type, kind: 'added', after: newer.after };
-  }
-
-  if (newer.kind === 'removed') {
-    return { id: newer.id, type: newer.type, kind: 'removed', before: older.before };
-  }
-
-  const kind: ChangeKind = older.kind === 'moved' && newer.kind === 'moved' ? 'moved' : 'changed';
-
-  return { id: newer.id, type: newer.type, kind, before: older.before, after: newer.after };
-};
-
-/** Records of a run, oldest first, as one record dated by the newest. */
-const combineRecords = (run: ChangeRecord[]): ChangeRecord => {
-  const blocks = new Map<string, ChangeBlock | null>();
-  const page = new Set<string>();
-
-  run.forEach((record) => {
-    record.blocks.forEach((block) => {
-      const seen = blocks.get(block.id);
-
-      blocks.set(block.id, seen === undefined || seen === null ? block : combineBlock(seen, block));
-    });
-    record.page?.forEach((key) => page.add(key));
-  });
-
-  const newest = run[run.length - 1];
-
-  return {
-    sequence: newest.sequence,
-    committedAt: newest.committedAt,
-    actor: newest.actor,
-    blocks: [...blocks.values()].filter((block): block is ChangeBlock => block !== null),
-    ...(page.size > 0 ? { page: [...page] } : {}),
-  };
-};
-
-/** A reload writes an empty record and a repaint a tool's own tidy-up: neither says anything in the feed. */
-const isVisible = ({ record }: UpdateItem): boolean => record.blocks.length > 0 || (record.page ?? []).length > 0;
-
-/**
- * Folds runs of neighbouring records by one person, in one version and less
- * than two minutes apart, into one item each.
- * @param items - newest first, from {@link loadUpdates}
- */
-export const mergeUpdates = (items: UpdateItem[]): UpdateItem[] => {
-  const runs: UpdateItem[][] = [];
-
-  items.forEach((next) => {
-    const run = runs[runs.length - 1];
-
-    if (run !== undefined && joins(run[run.length - 1], next)) {
-      run.push(next);
-    } else {
-      runs.push([next]);
-    }
-  });
-
-  return runs.map((run) => run.length === 1 ? run[0] : {
-    lineage: run[0].lineage,
-    sequence: run[0].sequence,
-    truncated: run.some((one) => one.truncated),
-    record: combineRecords(run.map((one) => one.record).reverse()),
-  });
-};
-
 const pushPart = (parts: DiffPart[], text: string, kind: DiffPart['kind']): void => {
   const last = parts[parts.length - 1];
 
@@ -362,16 +285,16 @@ export const blockSnippet = (block: ChangeBlock, plainText: PlainText): BlockSni
 /**
  * The feed's cards.
  * @param items - from {@link loadUpdates}
- * @param options - names actors, the clock, the page title and `blocksToPlainText`
+ * @param options - names actors, the clock, the page title, `blocksToPlainText` and `foldUpdates`
  */
 export const updateCards = (
   items: UpdateItem[],
-  options: { nameOf(actor: string | null): string; now: Date; pageTitle: string; plainText: PlainText }
-): UpdateCard[] => mergeUpdates(items.filter(isVisible)).map(({ lineage, sequence, truncated, record }) => {
+  options: { nameOf(actor: string | null): string; now: Date; pageTitle: string; plainText: PlainText; fold: FoldUpdates }
+): UpdateCard[] => options.fold(items).map(({ key, lineage, sequence, truncated, record }) => {
   const snippets = record.blocks.map((block) => blockSnippet(block, options.plainText));
 
   return {
-    key: `${lineage}:${record.sequence}`,
+    key,
     who: options.nameOf(record.actor),
     title: options.pageTitle.trim() || 'Untitled',
     when: record.committedAt === null ? 'Time unknown' : relativeTime(record.committedAt, options.now),
@@ -432,6 +355,7 @@ export interface UpdatesFeedOptions {
   nameOf(actor: string | null): string;
   pageTitle(): string;
   plainText: PlainText;
+  fold: FoldUpdates;
   now?: () => Date;
   /** "View version for this update": open History on that version. */
   onOpenVersion(lineage: string, sequence: number): void;
@@ -532,7 +456,7 @@ export const mountUpdatesFeed = (host: HTMLElement, options: UpdatesFeedOptions)
         return;
       }
 
-      const cards = updateCards(items, { nameOf: options.nameOf, now: now(), pageTitle: options.pageTitle(), plainText: options.plainText });
+      const cards = updateCards(items, { nameOf: options.nameOf, now: now(), pageTitle: options.pageTitle(), plainText: options.plainText, fold: options.fold });
 
       const empty = cards.length === 0 ? 'No updates yet.' : '';
 

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IconBookmark, IconCheck } from '../../../src/components/icons';
 import { Paragraph } from '../../../src/tools/paragraph';
 
-import { blocksToHtml, blocksToPlainText, diffOutputData } from '../../../src/view';
+import { blocksToHtml, blocksToPlainText, diffOutputData, foldUpdates } from '../../../src/view';
 import {
   actorName,
   bookmarkRows,
@@ -451,7 +451,7 @@ describe('mountHistoryDrawer', () => {
       editorArea: editor,
       server: SERVER,
       ticketUrl: MINT,
-      view: { blocksToHtml, blocksToPlainText, diffOutputData },
+      view: { blocksToHtml, blocksToPlainText, diffOutputData, foldUpdates },
       doc,
       self: () => SELF,
       notify,

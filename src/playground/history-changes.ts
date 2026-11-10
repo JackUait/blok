@@ -13,7 +13,7 @@ export type ChangeKind = 'added' | 'removed' | 'changed' | 'moved';
 
 export interface ChangeBlock {
   id: string;
-  type: string;
+  type: string | null;
   kind: ChangeKind;
   before?: LooseOutputBlockData;
   after?: LooseOutputBlockData;
@@ -132,8 +132,8 @@ const BLOCK_NAMES: Record<string, string> = {
  * "a paragraph", "an image".
  * @param type - the tool name
  */
-export const blockName = (type: string): string => {
-  const name = BLOCK_NAMES[type] ?? (type.replace(/[-_]+/g, ' ').trim() || 'block');
+export const blockName = (type: string | null): string => {
+  const name = BLOCK_NAMES[type ?? ''] ?? ((type ?? '').replace(/[-_]+/g, ' ').trim() || 'block');
 
   return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
 };

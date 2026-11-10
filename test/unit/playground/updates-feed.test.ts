@@ -3,12 +3,11 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { IconRotateLeft } from '../../../src/components/icons';
-import { blocksToPlainText } from '../../../src/view';
+import { blocksToPlainText, foldUpdates } from '../../../src/view';
 import {
   blockSnippet,
   editedLabel,
   loadUpdates,
-  mergeUpdates,
   mountEditedLink,
   mountUpdatesFeed,
   relativeTime,
@@ -237,77 +236,10 @@ const loaded = (items: UpdateItem[], failed: string[] = []): UpdatesLoad => ({ i
 const changed = (id: string, before: string, after: string): ChangeBlock =>
   ({ id, type: 'paragraph', kind: 'changed', before: p(id, before), after: p(id, after) });
 
-describe('mergeUpdates', () => {
-  const SEC = 1000;
-  const typed = (sequence: number, secondsAgo: number, extra: Partial<UpdateItem> = {}, record: Partial<ChangeRecord> = {}): UpdateItem => ({
-    lineage: 'L',
-    sequence: 30,
-    truncated: false,
-    ...extra,
-    record: { sequence, committedAt: ago(secondsAgo * SEC), actor: 'playground-anna', blocks: [], page: ['values.title'], ...record },
-  });
-
-  it('folds a typing run by one person in one version into one item', () => {
-    const run = Array.from({ length: 20 }, (_, index) => typed(40 - index, 10 + index * 5));
-    const merged = mergeUpdates(run);
-
-    expect(merged).toHaveLength(1);
-    expect(merged[0].record.sequence).toBe(40);
-    expect(merged[0].record.committedAt).toBe(run[0].record.committedAt);
-    expect(merged[0].record.page).toEqual(['values.title']);
-    expect(merged[0].sequence).toBe(30);
-  });
-
-  it('measures the gap between neighbours, not from the newest record', () => {
-    expect(mergeUpdates([typed(3, 0), typed(2, 100), typed(1, 200)])).toHaveLength(1);
-    expect(mergeUpdates([typed(2, 0), typed(1, 120)])).toHaveLength(2);
-  });
-
-  it('keeps other people, other versions and undated or anonymous records apart', () => {
-    expect(mergeUpdates([typed(2, 0), typed(1, 10, {}, { actor: 'playground-ben' })])).toHaveLength(2);
-    expect(mergeUpdates([typed(2, 0), typed(1, 10, { sequence: 20 })])).toHaveLength(2);
-    expect(mergeUpdates([typed(2, 0), typed(1, 10, { lineage: 'K' })])).toHaveLength(2);
-    expect(mergeUpdates([typed(2, 0), typed(1, 10, {}, { committedAt: null })])).toHaveLength(2);
-    expect(mergeUpdates([typed(2, 0, {}, { actor: null }), typed(1, 10, {}, { actor: null })])).toHaveLength(2);
-  });
-
-  it('combines blocks: oldest before, newest after, and the kind of the whole run', () => {
-    const oldest = typed(1, 20, {}, { page: ['title'], blocks: [
-      changed('a', 'one', 'two'),
-      { id: 'b', type: 'paragraph', kind: 'added', after: p('b', 'new') },
-      { id: 'c', type: 'paragraph', kind: 'added', after: p('c', 'x') },
-      { id: 'd', type: 'paragraph', kind: 'moved', before: p('d', 'd'), after: p('d', 'd') },
-      changed('e', 'e', 'e2'),
-    ] });
-    const newest = typed(2, 0, {}, { page: ['values.k'], blocks: [
-      changed('a', 'two', 'three'),
-      { id: 'b', type: 'paragraph', kind: 'removed', before: p('b', 'new') },
-      changed('c', 'x', 'y'),
-      changed('d', 'd', 'd!'),
-      { id: 'e', type: 'paragraph', kind: 'removed', before: p('e', 'e2') },
-      { id: 'f', type: 'paragraph', kind: 'added', after: p('f', 'f') },
-    ] });
-    const [merged] = mergeUpdates([newest, oldest]);
-
-    expect(merged.record.blocks).toEqual([
-      { id: 'a', type: 'paragraph', kind: 'changed', before: p('a', 'one'), after: p('a', 'three') },
-      { id: 'c', type: 'paragraph', kind: 'added', after: p('c', 'y') },
-      { id: 'd', type: 'paragraph', kind: 'changed', before: p('d', 'd'), after: p('d', 'd!') },
-      { id: 'e', type: 'paragraph', kind: 'removed', before: p('e', 'e') },
-      { id: 'f', type: 'paragraph', kind: 'added', after: p('f', 'f') },
-    ]);
-    expect(merged.record.page).toEqual(['title', 'values.k']);
-  });
-
-  it('keeps the truncation note when any merged record carried it', () => {
-    expect(mergeUpdates([typed(2, 0), typed(1, 10, { truncated: true })])[0].truncated).toBe(true);
-  });
-});
-
 describe('updateCards', () => {
   it('makes one card per record with up to four snippets', () => {
     const blocks = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => changed(id, 'x', 'y'));
-    const [card] = updateCards([item(7, blocks)], { nameOf, now: NOW, pageTitle: 'Demo Page', plainText: blocksToPlainText });
+    const [card] = updateCards([item(7, blocks)], { nameOf, now: NOW, pageTitle: 'Demo Page', plainText: blocksToPlainText, fold: foldUpdates });
 
     expect(card.key).toBe('L:7');
     expect(card.who).toBe('anna');
@@ -321,7 +253,7 @@ describe('updateCards', () => {
   it('leaves records with no blocks and no page keys out of the feed', () => {
     const cards = updateCards(
       [item(9, []), item(8, [changed('a', 'x', 'y')]), item(7, [], 'playground-anna', false, { page: [] })],
-      { nameOf, now: NOW, pageTitle: 'Demo Page', plainText: blocksToPlainText }
+      { nameOf, now: NOW, pageTitle: 'Demo Page', plainText: blocksToPlainText, fold: foldUpdates }
     );
 
     expect(cards.map((card) => card.key)).toEqual(['L:8']);
@@ -330,7 +262,7 @@ describe('updateCards', () => {
   it('names the page fields a card changed', () => {
     const [title, none] = updateCards(
       [item(8, [], 'playground-anna', false, { page: ['values.title'] }), item(5, [changed('a', 'x', 'y')])],
-      { nameOf, now: NOW, pageTitle: 'Demo Page', plainText: blocksToPlainText }
+      { nameOf, now: NOW, pageTitle: 'Demo Page', plainText: blocksToPlainText, fold: foldUpdates }
     );
 
     expect(title.fields).toBe('the page title');
@@ -338,7 +270,7 @@ describe('updateCards', () => {
   });
 
   it('calls an untitled page Untitled', () => {
-    const [card] = updateCards([item(7, [changed('a', 'x', 'y')], null)], { nameOf, now: NOW, pageTitle: '  ', plainText: blocksToPlainText });
+    const [card] = updateCards([item(7, [changed('a', 'x', 'y')], null)], { nameOf, now: NOW, pageTitle: '  ', plainText: blocksToPlainText, fold: foldUpdates });
 
     expect(card.title).toBe('Untitled');
     expect(card.who).toBe('Someone');
@@ -373,6 +305,7 @@ describe('mountUpdatesFeed', () => {
       nameOf,
       pageTitle: () => 'Demo Page',
       plainText: blocksToPlainText,
+      fold: foldUpdates,
       now: () => NOW,
       onOpenVersion,
       onScrollToBlock,
@@ -502,6 +435,7 @@ describe('mountUpdatesFeed', () => {
       nameOf: (actor) => actor ?? '',
       pageTitle: () => evil,
       plainText: blocksToPlainText,
+      fold: foldUpdates,
       now: () => NOW,
       onOpenVersion: vi.fn(),
       onScrollToBlock: vi.fn(),

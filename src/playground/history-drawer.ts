@@ -13,7 +13,7 @@ import type { TicketSource } from '../components/utils/access-pass';
 import { changesUrl, fetchVersionChanges, mountVersionChanges, notVisualizableNote } from './history-changes';
 import type { RecordPaint, VersionChangesPanel } from './history-changes';
 import { loadUpdates, mountEditedLink, mountUpdatesFeed } from './updates-feed';
-import type { UpdatesFeed } from './updates-feed';
+import type { FoldUpdates, UpdatesFeed } from './updates-feed';
 import type { LooseOutputBlockData, LooseOutputData } from '../../types';
 
 export interface HistoryLineage {
@@ -101,6 +101,7 @@ export interface HistoryView {
     options: { toolAttributes: boolean; blockIds: boolean; root: boolean; classes: boolean }
   ): string;
   blocksToPlainText(data: LooseOutputData): string;
+  foldUpdates: FoldUpdates;
 }
 
 export interface ChangePreview {
@@ -1645,6 +1646,7 @@ export const mountHistoryDrawer = (options: HistoryDrawerOptions): HistoryDrawer
       nameOf,
       pageTitle: () => titleOf(null),
       plainText: options.view.blocksToPlainText,
+      fold: options.view.foldUpdates,
       now,
       onOpenVersion: (lineage, sequence) => {
         void showVersion(lineage, sequence, true, feedGroup);

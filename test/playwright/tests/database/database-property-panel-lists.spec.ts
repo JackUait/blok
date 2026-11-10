@@ -49,6 +49,8 @@ const openPanel = async (page: Page): Promise<void> => {
 
   await row.hover();
   await row.getByRole('button', { name: 'Open', exact: true }).click();
+  // The peek slides in for 200ms. A press on a label that moves away before the release opens no menu.
+  await page.locator('[data-blok-database-drawer][data-open]').evaluate((drawer) => Promise.all(drawer.getAnimations().map((animation) => animation.finished)));
   await page.getByRole('complementary', { name: 'Card details' }).getByRole('button', { name: 'Total', exact: true }).first().click();
   await page.getByRole('menuitem', { name: 'Edit property' }).click();
 };

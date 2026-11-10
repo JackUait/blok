@@ -74,7 +74,7 @@ export interface GroupOptions {
 
 export class DatabaseModel {
   private schema: PropertyDefinition[];
-  private deletedProperties: DeletedPropertyDefinition[];
+  private deletedProperties: Record<string, DeletedPropertyDefinition>;
   private rows: DatabaseRow[] = [];
   private views: DatabaseViewConfig[];
   private activeViewId: string;
@@ -106,7 +106,7 @@ export class DatabaseModel {
       this.schema = seed?.schema ?? createDefaultSchema(DatabaseModel.idMinter(options.idSeed));
     }
 
-    this.deletedProperties = structuredClone(data?.deletedProperties ?? []);
+    this.deletedProperties = structuredClone(data?.deletedProperties ?? {});
 
     if (data?.views !== undefined && data.views.length > 0) {
       this.views = structuredClone(data.views);
@@ -209,11 +209,13 @@ export class DatabaseModel {
     this.schema = this.schema.filter((p) => p.id !== propertyId);
   }
 
-  /** Deleted properties a restore can bring back. A live property wins over an entry with its id. */
+  /** Deleted properties a restore can bring back, oldest first. A live property wins over an entry with its id. */
   getDeletedProperties(): DeletedPropertyDefinition[] {
     const live = new Set(this.schema.map((p) => p.id));
 
-    return this.deletedProperties.filter((p) => !live.has(p.id));
+    return Object.values(this.deletedProperties)
+      .filter((p) => !live.has(p.id))
+      .sort((a, b) => a.deletedAt - b.deletedAt);
   }
 
   /** Moves a property to the deleted list. Row values are not the model's: they stay. The title cannot go. */
@@ -228,7 +230,7 @@ export class DatabaseModel {
     };
 
     this.schema = this.schema.filter((p) => p.id !== propertyId);
-    this.deletedProperties = [...this.deletedProperties.filter((p) => p.id !== propertyId), deleted];
+    this.deletedProperties = { ...this.deletedProperties, [propertyId]: deleted };
 
     return deleted;
   }
@@ -241,7 +243,7 @@ export class DatabaseModel {
     const { deletedAt: _deletedAt, deletedBy: _deletedBy, ...property } = structuredClone(deleted);
     const restored: PropertyDefinition = { ...property, name: freePropertyName(this.schema.map((p) => p.name), property.name) };
 
-    this.deletedProperties = this.deletedProperties.filter((p) => p.id !== propertyId);
+    this.deletedProperties = this.withoutDeleted(propertyId);
     this.schema = [...this.schema, restored].sort((a, b) => (a.position < b.position ? -1 : 1));
 
     return restored;
@@ -251,9 +253,15 @@ export class DatabaseModel {
   purgeProperty(propertyId: string): DeletedPropertyDefinition | undefined {
     const deleted = this.getDeletedProperties().find((p) => p.id === propertyId);
 
-    if (deleted !== undefined) this.deletedProperties = this.deletedProperties.filter((p) => p.id !== propertyId);
+    if (deleted !== undefined) this.deletedProperties = this.withoutDeleted(propertyId);
 
     return deleted;
+  }
+
+  private withoutDeleted(propertyId: string): Record<string, DeletedPropertyDefinition> {
+    const { [propertyId]: _gone, ...rest } = this.deletedProperties;
+
+    return rest;
   }
 
   /** The lock lives on the title property; see `PropertyDefinition.databaseLocked`. */
@@ -647,13 +655,11 @@ export class DatabaseModel {
   // ─── Snapshot ───
 
   snapshot(): DatabaseData {
-    const deletedProperties = this.getDeletedProperties();
-
     return {
       schema: structuredClone(this.schema),
       views: structuredClone(this.views),
       activeViewId: this.activeViewId,
-      ...(deletedProperties.length > 0 ? { deletedProperties: structuredClone(deletedProperties) } : {}),
+      deletedProperties: Object.fromEntries(this.getDeletedProperties().map((p) => [p.id, structuredClone(p)])),
     };
   }
 

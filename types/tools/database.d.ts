@@ -1064,10 +1064,11 @@ export interface DatabaseData extends BlockToolData {
   /** The Suggested template this database was made from. Removed by "Undo … database". */
   starter?: DatabaseStarterId;
   /**
-   * Deleted properties, newest last. Row values stay in the rows until a
-   * permanent delete, so a restore shows them again.
+   * Deleted properties by id. Row values stay in the rows until a permanent
+   * delete, so a restore shows them again. Saved even when empty, so two
+   * people's first deletes merge into one map.
    */
-  deletedProperties?: DeletedPropertyDefinition[];
+  deletedProperties?: Record<string, DeletedPropertyDefinition>;
 }
 
 /** A deleted property: its definition as it was, plus when and by whom. */

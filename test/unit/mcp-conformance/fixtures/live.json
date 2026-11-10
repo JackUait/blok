@@ -12752,7 +12752,8 @@
                       "automations": {
                         "version": 1,
                         "definitions": []
-                      }
+                      },
+                      "deletedProperties": {}
                     },
                     "meta": {
                       "lastEditedAt": "<masked>",
@@ -13018,7 +13019,8 @@
                       "automations": {
                         "version": 1,
                         "definitions": []
-                      }
+                      },
+                      "deletedProperties": {}
                     }
                   }
                 ]
@@ -13232,7 +13234,8 @@
                       "automations": {
                         "version": 1,
                         "definitions": []
-                      }
+                      },
+                      "deletedProperties": {}
                     },
                     "meta": {
                       "lastEditedAt": "<masked>",
@@ -13371,7 +13374,8 @@
                       "automations": {
                         "version": 1,
                         "definitions": []
-                      }
+                      },
+                      "deletedProperties": {}
                     },
                     "meta": {
                       "lastEditedAt": "<masked>",
@@ -13592,7 +13596,8 @@
                       "automations": {
                         "version": 1,
                         "definitions": []
-                      }
+                      },
+                      "deletedProperties": {}
                     }
                   }
                 ]
@@ -15033,7 +15038,8 @@
                       "automations": {
                         "version": 1,
                         "definitions": []
-                      }
+                      },
+                      "deletedProperties": {}
                     }
                   },
                   {
@@ -15282,7 +15288,8 @@
                       "automations": {
                         "version": 1,
                         "definitions": []
-                      }
+                      },
+                      "deletedProperties": {}
                     },
                     "meta": {
                       "lastEditedAt": "<masked>",
@@ -15598,7 +15605,8 @@
                       "automations": {
                         "version": 1,
                         "definitions": []
-                      }
+                      },
+                      "deletedProperties": {}
                     },
                     "meta": {
                       "lastEditedAt": "<masked>",

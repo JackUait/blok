@@ -5,6 +5,7 @@ import type { DocSnapshot } from './snapshot';
 
 import { deepEqual } from '../deep-equal';
 import { LOCK_PROTECTED_FIELDS } from '../tool-actions/database';
+import { normalizeDatabase } from '../tool-actions/load-defaults';
 
 import { AgentFailure, failure } from './errors';
 import { plainLine } from './plain-line';
@@ -300,10 +301,12 @@ export const restoreTouchesLocked = (now: DocSnapshot, target: OutputData, scope
   return now.ids().filter(id => now.get(id)?.type === 'database' && lockedOrHeld(now, id, locked)).filter((id) => {
     const after = restored.get(id);
     const before = now.get(id);
-    const data: Record<string, unknown> = typeof after?.data === 'object' && after.data !== null ? after.data : {};
+    // Load defaults filled on both sides: a version saved before a slot existed still matches its empty slot.
+    const data = normalizeDatabase(typeof after?.data === 'object' && after.data !== null ? after.data : {});
+    const was = normalizeDatabase(before?.data ?? {});
 
     return after === undefined || after.type !== 'database'
-      || LOCK_PROTECTED_FIELDS.some(field => !deepEqual(before?.data[field], data[field]));
+      || LOCK_PROTECTED_FIELDS.some(field => !deepEqual(was[field], data[field]));
   });
 };
 

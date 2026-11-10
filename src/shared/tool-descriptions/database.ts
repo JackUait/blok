@@ -609,9 +609,9 @@ export const DATABASE_DATA = {
       items: PROPERTY_DEFINITION,
     },
     deletedProperties: {
-      type: 'array',
-      description: 'Deleted properties, newest last. Row values stay in the rows until database.deletePropertyPermanently, so database.restoreProperty shows them again.',
-      items: {
+      type: 'object',
+      description: 'Deleted properties, keyed by property id. Row values stay in the rows until database.deletePropertyPermanently, so database.restoreProperty shows them again.',
+      additionalProperties: {
         ...PROPERTY_DEFINITION,
         required: [...PROPERTY_DEFINITION.required, 'deletedAt'],
         properties: {
@@ -897,6 +897,7 @@ const PAGE_LAYOUT_SETTINGS = Object.fromEntries(Object.entries(DATABASE_DATA.pro
   .filter(([key]) => key.startsWith('pageLayout')));
 
 const PROPERTY_ID = { type: 'string', minLength: 1, description: 'Id of a property in schema.' };
+const DELETED_PROPERTY_ID = { type: 'string', minLength: 1, description: 'Id of a deleted property: a key of deletedProperties.' };
 
 const OPTION_ID = { type: 'string', minLength: 1, description: 'Id of an option in the property\'s config.options.' };
 
@@ -1175,7 +1176,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     guidance: 'If a live property took its name, it gets the lowest free " N" suffix.',
     target: 'block',
     preconditions: ['The property must be in deletedProperties.'],
-    args: closed({ propertyId: PROPERTY_ID }, ['propertyId']),
+    args: closed({ propertyId: DELETED_PROPERTY_ID }, ['propertyId']),
     mirrors: [],
   },
   {
@@ -1183,7 +1184,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     summary: 'Remove a deleted property for good: its deletedProperties entry and its value in every row and template.',
     target: 'block',
     preconditions: ['The property must be in deletedProperties.'],
-    args: closed({ propertyId: PROPERTY_ID }, ['propertyId']),
+    args: closed({ propertyId: DELETED_PROPERTY_ID }, ['propertyId']),
     mirrors: [],
   },
   {

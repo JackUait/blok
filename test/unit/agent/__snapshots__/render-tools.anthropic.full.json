@@ -1429,7 +1429,7 @@
                       "propertyId": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "Id of a property in schema."
+                        "description": "Id of a deleted property: a key of deletedProperties."
                       },
                       "id": {
                         "type": "string",
@@ -2162,7 +2162,7 @@
                       "propertyId": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "Id of a property in schema."
+                        "description": "Id of a deleted property: a key of deletedProperties."
                       },
                       "id": {
                         "type": "string",

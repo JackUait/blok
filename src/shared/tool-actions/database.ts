@@ -1935,27 +1935,29 @@ const duplicateProperty: ToolActionImpl<{ propertyId: string }, undefined, { pro
   },
 };
 
-/** The saved deleted list, without entries a live property has the id of (DatabaseModel.getDeletedProperties). */
-const deletedPropertiesOf = (block: TargetBlock, state: DatabaseState): DeletedPropertyDefinition[] => {
+/** The saved deleted map, without entries a live property has the id of (DatabaseModel.getDeletedProperties). */
+const deletedPropertiesOf = (block: TargetBlock, state: DatabaseState): Record<string, DeletedPropertyDefinition> => {
   const saved = block.data.deletedProperties;
   const live = new Set(state.schema.map(property => property.id));
 
-  return Array.isArray(saved)
-    ? jsonCopy(saved as DeletedPropertyDefinition[]).filter(property => isRecord(property) && !live.has(property.id))
-    : [];
+  return isRecord(saved)
+    ? Object.fromEntries(Object.entries(jsonCopy(saved)).filter(([id, property]) => isRecord(property) && !live.has(id))) as Record<string, DeletedPropertyDefinition>
+    : {};
 };
 
-/** The list as data: an empty list is no key, as the editor saves it. */
-const deletedPropertiesPatch = (list: DeletedPropertyDefinition[]): { deletedProperties: DeletedPropertyDefinition[] | undefined } =>
-  ({ deletedProperties: list.length > 0 ? list : undefined });
+const without = <T>(map: Record<string, T>, key: string): Record<string, T> => {
+  const { [key]: _gone, ...rest } = map;
 
-const deletedAt = (ctx: ToolActionContext, block: TargetBlock, state: DatabaseState, propertyId: string): number => {
+  return rest;
+};
+
+/** The deleted entry for `propertyId` in a database (never a linked view), or a precondition failure. */
+const deletedEntry = (ctx: ToolActionContext, block: TargetBlock, state: DatabaseState, propertyId: string): DeletedPropertyDefinition => {
   if (isRecord(block.data.source)) {
     return ctx.fail('PRECONDITION_FAILED', 'This is a linked view: its deleted properties live on its source database.');
   }
-  const index = deletedPropertiesOf(block, state).findIndex(property => property.id === propertyId);
 
-  return index >= 0 ? index : ctx.fail('PRECONDITION_FAILED', `This database has no deleted property ${propertyId}.`);
+  return deletedPropertiesOf(block, state)[propertyId] ?? ctx.fail('PRECONDITION_FAILED', `This database has no deleted property ${propertyId}.`);
 };
 
 /** As DatabaseTool.deleteProperty: the definition moves to deletedProperties, row values stay (D9). The title cannot go. */
@@ -1973,9 +1975,11 @@ const deleteProperty: ToolActionImpl<{ propertyId: string }> = {
       deletedAt: ctx.now ?? Date.now(),
       ...(ctx.actorId !== undefined && ctx.actorId !== '' ? { deletedBy: ctx.actorId } : {}),
     };
-    const rest = deletedPropertiesOf(block, state).filter(each => each.id !== property.id);
 
-    ctx.update(block.id, { schema: state.schema.filter((_, i) => i !== index), ...deletedPropertiesPatch([...rest, deleted]) });
+    ctx.update(block.id, {
+      schema: state.schema.filter((_, i) => i !== index),
+      deletedProperties: { ...deletedPropertiesOf(block, state), [property.id]: deleted },
+    });
 
     return undefined;
   },
@@ -1985,19 +1989,30 @@ const deleteProperty: ToolActionImpl<{ propertyId: string }> = {
 const restoreProperty: ToolActionImpl<{ propertyId: string }> = {
   run: (ctx, args) => {
     const { block, state } = openDatabase(ctx);
-    const list = deletedPropertiesOf(block, state);
-    const index = deletedAt(ctx, block, state, args.propertyId);
-    const { deletedAt: _at, deletedBy: _by, ...property } = list[index];
+    const { deletedAt: _at, deletedBy: _by, ...property } = deletedEntry(ctx, block, state, args.propertyId);
     const restored: PropertyDefinition = { ...property, name: freePropertyName(state.schema.map(each => each.name), property.name) };
 
     ctx.update(block.id, {
       schema: sortedByPosition([...state.schema, restored]),
-      ...deletedPropertiesPatch(list.filter((_, i) => i !== index)),
+      deletedProperties: without(deletedPropertiesOf(block, state), args.propertyId),
     });
 
     return undefined;
   },
 };
+
+/** As DatabaseTool.pruneAutofillWatch: "Only specific properties" forgets the id; with none left the trigger is None. */
+const withoutAutofillWatch = (schema: PropertyDefinition[], propertyId: string): PropertyDefinition[] => schema.map((property) => {
+  const watched = property.autofill?.onEditProperties;
+
+  if (property.autofill === undefined || watched?.includes(propertyId) !== true) {
+    return property;
+  }
+  const rest = watched.filter(id => id !== propertyId);
+  const { onEdit: _onEdit, onEditProperties: _watched, ...kept } = property.autofill;
+
+  return { ...property, autofill: rest.length > 0 ? { ...kept, onEdit: true, onEditProperties: rest } : kept };
+});
 
 /** The value, reminder and kept original of `propertyId` gone from one row's data, or undefined when it holds none. */
 const strippedRow = (data: Record<string, unknown>, propertyId: string): Record<string, unknown> | undefined => {
@@ -2015,13 +2030,18 @@ const strippedRow = (data: Record<string, unknown>, propertyId: string): Record<
   return Object.keys(patch).length > 0 ? patch : undefined;
 };
 
-/** As DatabaseTool.deletePropertyPermanently: the entry and every row's and template's value go. */
+/** As DatabaseTool.deletePropertyPermanently: the entry, every row's and template's value, and autofill watches of it go. */
 const deletePropertyPermanently: ToolActionImpl<{ propertyId: string }> = {
   run: (ctx, args) => {
     const { block, state } = openDatabase(ctx);
-    const index = deletedAt(ctx, block, state, args.propertyId);
 
-    ctx.update(block.id, deletedPropertiesPatch(deletedPropertiesOf(block, state).filter((_, i) => i !== index)));
+    deletedEntry(ctx, block, state, args.propertyId);
+    const schema = withoutAutofillWatch(state.schema, args.propertyId);
+
+    ctx.update(block.id, {
+      deletedProperties: without(deletedPropertiesOf(block, state), args.propertyId),
+      ...(schema.some((property, i) => property !== state.schema[i]) ? { schema } : {}),
+    });
     for (const row of rowBlocksOf(ctx, block.id)) {
       const data = ctx.read(row.id)?.data;
       const patch = isRecord(data) ? strippedRow(data, args.propertyId) : undefined;

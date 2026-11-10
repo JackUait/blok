@@ -2992,9 +2992,9 @@
           }
         },
         "deletedProperties": {
-          "type": "array",
-          "description": "Deleted properties, newest last. Row values stay in the rows until database.deletePropertyPermanently, so database.restoreProperty shows them again.",
-          "items": {
+          "type": "object",
+          "description": "Deleted properties, keyed by property id. Row values stay in the rows until database.deletePropertyPermanently, so database.restoreProperty shows them again.",
+          "additionalProperties": {
             "type": "object",
             "required": [
               "id",

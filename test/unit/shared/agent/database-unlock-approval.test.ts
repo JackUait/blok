@@ -402,11 +402,11 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
       const gone = { id: 'n', name: 'Size', type: 'number', position: 'a1', deletedAt: 1 };
 
       try {
-        const result = await run(session, [{ name: 'block.update', args: { id: 'db', data: { deletedProperties: [gone] } } }]);
+        const result = await run(session, [{ name: 'block.update', args: { id: 'db', data: { deletedProperties: { n: gone } } } }]);
         const read = await session.read({ ids: ['db'], detail: 'full' });
 
         expect(result.ok).toBe(false);
-        expect(read.blocks.find(block => block.id === 'db')?.data).not.toHaveProperty('deletedProperties');
+        expect(read.blocks.find(block => block.id === 'db')?.data?.deletedProperties ?? {}).toEqual({});
       } finally {
         session.close();
       }

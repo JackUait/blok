@@ -45,7 +45,7 @@ const fillMissing = (defaults: Readonly<Record<string, unknown>>) =>
 export const normalizeCode = fillMissing(CODE_LOAD_DEFAULTS);
 export const normalizeQuote = fillMissing(QUOTE_LOAD_DEFAULTS);
 export const normalizeCallout = fillMissing(CALLOUT_LOAD_DEFAULTS);
-export const normalizeDatabase = fillMissing({ automations: DATABASE_EMPTY_AUTOMATIONS });
+export const normalizeDatabase = fillMissing({ automations: DATABASE_EMPTY_AUTOMATIONS, deletedProperties: {} });
 
 /**
  * Normalizers that only fill missing keys. A read shows a stored block through these, as the

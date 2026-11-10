@@ -622,7 +622,7 @@ export class DatabaseTool implements BlockTool {
   /** Linked database: the schema it saves, a stand-in older clients can read. */
   private stubSchema: PropertyDefinition[];
   /** Linked database: the deleted list it was saved with, kept as it came. Its own deletes go to the source. */
-  private stubDeleted: DeletedPropertyDefinition[] | undefined;
+  private stubDeleted: Record<string, DeletedPropertyDefinition> | undefined;
   /** A new "Linked view of data source" that has not picked its source yet. */
   private linkPicker: boolean;
   /** The open "New database" / "New view" panel of a linked view. */
@@ -2618,13 +2618,12 @@ export class DatabaseTool implements BlockTool {
     return {
       ...structuredClone(this.unknown),
       ...snapshot,
-      ...(deletedProperties !== undefined && this.source === undefined ? { deletedProperties } : {}),
+      // Written even when empty, like automations: two peers' first deletes then merge into one map.
+      deletedProperties: this.source === undefined ? deletedProperties ?? {} : structuredClone(this.stubDeleted ?? {}),
       // Written even when empty: two peers that each create this key keep only one (serializer.ts objectToYMap).
       automations: structuredClone(this.savedAutomations ?? DATABASE_EMPTY_AUTOMATIONS),
       // Linked: a reference, never a copy of the source's schema.
       ...(this.source !== undefined ? { schema: structuredClone(this.stubSchema), source: { ...this.source } } : {}),
-      // A linked view's deleted properties live on its source: it only passes on what it was saved with.
-      ...(this.source !== undefined && this.stubDeleted !== undefined ? { deletedProperties: structuredClone(this.stubDeleted) } : {}),
       ...(this.dataSourceTitlesHidden ? { hideDataSourceTitles: true } : {}),
       ...(this.fullPage ? { fullPage: true } : {}),
       ...(this.databaseIcon !== undefined ? { icon: { ...this.databaseIcon } } : {}),
@@ -2795,7 +2794,7 @@ export class DatabaseTool implements BlockTool {
       this.pullLinkedSchema();
     } else {
       // Undo of the first delete brings back data with no list: it must empty, not stay.
-      this.model.replaceDefinition({ ...data, deletedProperties: data.deletedProperties ?? [] });
+      this.model.replaceDefinition({ ...data, deletedProperties: data.deletedProperties ?? {} });
     }
     void this.watchRemoteSource();
 
@@ -11515,7 +11514,7 @@ export class DatabaseTool implements BlockTool {
     if (this.forwardToSource('delete', propertyId).forwarded) return;
     const property = this.model.getProperty(propertyId);
 
-    if (this.readOnly || this.destroyed || property === undefined || property.type === 'title') return;
+    if (this.readOnly || this.destroyed || this.structureLocked() || property === undefined || property.type === 'title') return;
     this.model.trashProperty(propertyId, this.config.people?.me?.() ?? undefined);
     this.autofillDrafts.delete(propertyId);
     void this.sync.syncDeleteProperty({ propertyId });
@@ -11568,9 +11567,11 @@ export class DatabaseTool implements BlockTool {
         const holds = (map: unknown): boolean => typeof map === 'object' && map !== null && Object.hasOwn(map, propertyId);
 
         if (!holds(data.properties) && !holds(data.reminders) && !holds(data.convertedValues)) continue;
-        const { [propertyId]: _gone, ...properties } = data.properties;
+        if (holds(data.properties)) {
+          const { [propertyId]: _gone, ...properties } = data.properties;
 
-        child.call('replaceProperties', { properties });
+          child.call('replaceProperties', { properties });
+        }
         if (holds(data.reminders)) child.call('updateReminders', { [propertyId]: null });
         if (holds(data.convertedValues)) child.call('updateConvertedValues', { [propertyId]: null });
         child.dispatchChange();
@@ -11594,8 +11595,8 @@ export class DatabaseTool implements BlockTool {
    */
   private forwardToSource(op: LinkedPropertyOp, propertyId: string): { forwarded: boolean; result?: LinkedPropertyResult } {
     if (this.source === undefined || this.source.documentId !== undefined) return { forwarded: false };
-    // A read-only linked view must not reach its source.
-    if (this.readOnly || this.destroyed) return { forwarded: true };
+    // A read-only or locked linked view (its own Lock views included) must not reach its source.
+    if (this.readOnly || this.destroyed || this.structureLocked()) return { forwarded: true };
     const answer: { result?: LinkedPropertyResult } = {};
 
     this.api.blocks.getById(this.source.databaseId)?.call('runLinkedPropertyOp', { op, propertyId, receive: (result: LinkedPropertyResult) => { answer.result = result; } });
@@ -11608,7 +11609,7 @@ export class DatabaseTool implements BlockTool {
 
   /** Called on a source database by one of its linked views. */
   runLinkedPropertyOp(param: { op: LinkedPropertyOp; propertyId: string; receive?: (result: LinkedPropertyResult) => void }): void {
-    if (this.linked) return;
+    if (this.linked || this.structureLocked()) return;
     if (param.op === 'delete') this.deleteProperty(param.propertyId);
     else if (param.op === 'restore') param.receive?.(this.restoreProperty(param.propertyId));
     else param.receive?.(this.deletePropertyPermanently(param.propertyId));

@@ -154,7 +154,7 @@ describe('database deleted properties (H50)', () => {
 
     handler('deleteProperty').run(stamped(doc, id), { propertyId: status.id }, undefined);
 
-    expect(data().deletedProperties).toEqual([{ ...status, deletedAt: 1700000000000, deletedBy: 'u1' }]);
+    expect(data().deletedProperties).toEqual({ [status.id]: { ...status, deletedAt: 1700000000000, deletedBy: 'u1' } });
     expect(validateAgainst(DATABASE_DATA, data())).toEqual([]);
   });
 
@@ -166,7 +166,7 @@ describe('database deleted properties (H50)', () => {
     run(doc, id, 'restoreProperty', { propertyId: status.id });
 
     expect(schema()).toEqual([schema()[0], status]);
-    expect(data()).not.toHaveProperty('deletedProperties');
+    expect(data().deletedProperties).toEqual({});
     expect(() => run(doc, id, 'restoreProperty', { propertyId: status.id })).toThrow(/no deleted property/);
   });
 
@@ -196,7 +196,7 @@ describe('database deleted properties (H50)', () => {
     run(doc, id, 'deleteProperty', { propertyId: status.id });
     run(doc, id, 'deletePropertyPermanently', { propertyId: status.id });
 
-    expect(data()).not.toHaveProperty('deletedProperties');
+    expect(data().deletedProperties).toEqual({});
     expect(rowData(doc, rowId).properties).not.toHaveProperty(status.id);
     expect(rowData(doc, rowId)).not.toHaveProperty('reminders');
     expect(rowData(doc, rowId)).not.toHaveProperty('convertedValues');
@@ -214,6 +214,19 @@ describe('database deleted properties (H50)', () => {
     ctx.update(id, { ...data, source: { databaseId: 'elsewhere' } });
     expect(() => run(doc, id, 'restoreProperty', { propertyId: status.id })).toThrow(/linked/);
     expect(() => run(doc, id, 'deletePropertyPermanently', { propertyId: status.id })).toThrow(/linked/);
+  });
+
+  it('deletePropertyPermanently prunes AI Autofill watch lists, as the editor does', () => {
+    const { doc, id, schema } = make();
+    const [title, status] = schema();
+    const watcher = (watched: string[]): Property => ({ id: 'sum', name: 'Summary', type: 'text', position: 'a9', autofill: { mode: 'summary', onCreate: true, onEdit: true, onEditProperties: watched } });
+
+    createFakeCtx(doc, id).update(id, { schema: [title, status, watcher([status.id])] });
+    run(doc, id, 'deleteProperty', { propertyId: status.id });
+    expect(schema().find(property => property.id === 'sum')?.autofill).toEqual(watcher([status.id]).autofill);
+    run(doc, id, 'deletePropertyPermanently', { propertyId: status.id });
+
+    expect(schema().find(property => property.id === 'sum')?.autofill).toEqual({ mode: 'summary', onCreate: true });
   });
 
   it('deletePropertyPermanently refuses a live property and a locked database', () => {

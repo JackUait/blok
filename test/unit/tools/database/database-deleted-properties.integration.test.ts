@@ -89,7 +89,14 @@ const dataOf = (saved: OutputData, id: string): Record<string, unknown> =>
 
 const databaseOf = (saved: OutputData, id = 'db'): DatabaseData => dataOf(saved, id) as unknown as DatabaseData;
 
-const deletedIds = (saved: OutputData, id = 'db'): string[] | undefined => databaseOf(saved, id).deletedProperties?.map((p) => p.id);
+const deletedIds = (saved: OutputData, id = 'db'): string[] | undefined => {
+  const deleted: unknown = databaseOf(saved, id).deletedProperties;
+
+  if (deleted === undefined) return undefined;
+  const ids = Array.isArray(deleted) ? deleted.map((p: { id: string }) => p.id) : Object.keys(deleted as Record<string, unknown>);
+
+  return ids.length === 0 ? undefined : ids.sort();
+};
 
 const schemaIds = (saved: OutputData, id = 'db'): string[] => databaseOf(saved, id).schema.map((p) => p.id);
 
@@ -278,6 +285,60 @@ describe('deleted database properties (H50)', { timeout: 30000 }, () => {
     expect(rowValues(saved, 'r1')).toEqual({ t: 'One', s: 'o1' });
   });
 
+  const linkedView = (locked: boolean): OutputBlockData => ({
+    id: 'link',
+    type: 'database',
+    data: {
+      source: { databaseId: 'db' },
+      schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', ...(locked ? { databaseLocked: true } : {}) }],
+      views: [{ id: 'lv', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'lv',
+    },
+  });
+
+  const lockedSource = (): OutputBlockData[] => {
+    const blocks = doc();
+    const data = blocks[0].data as DatabaseData;
+
+    data.schema = data.schema.map((p) => (p.type === 'title' ? { ...p, databaseLocked: true } : p));
+    data.deletedProperties = { s: { id: 's', name: 'Stage', type: 'select', position: 'a1', deletedAt: 1 } } as never;
+    data.schema = data.schema.filter((p) => p.id !== 's');
+
+    return blocks;
+  };
+
+  it('a locked database refuses delete, restore and permanent delete, directly and through a linked view', async () => {
+    const blok = await make([...lockedSource(), linkedView(false)]);
+
+    for (const id of ['db', 'link']) {
+      call(blok, id, 'deleteProperty', 'n');
+      call(blok, id, 'restoreProperty', 's');
+      call(blok, id, 'deletePropertyPermanently', 's');
+    }
+    await quiet();
+    const saved = await blok.save();
+
+    expect(schemaIds(saved)).toEqual(['t', 'n']);
+    expect(deletedIds(saved)).toEqual(['s']);
+    expect(rowValues(saved, 'r1').s).toBe('o1');
+  });
+
+  it('a linked view with Lock views changes nothing on its source', async () => {
+    const blok = await make([...doc(), linkedView(true)]);
+
+    call(blok, 'db', 'deleteProperty', 's');
+    await quiet();
+    call(blok, 'link', 'deleteProperty', 'n');
+    call(blok, 'link', 'restoreProperty', 's');
+    call(blok, 'link', 'deletePropertyPermanently', 's');
+    await quiet();
+    const saved = await blok.save();
+
+    expect(schemaIds(saved)).toEqual(['t', 'n']);
+    expect(deletedIds(saved)).toEqual(['s']);
+    expect(rowValues(saved, 'r1').s).toBe('o1');
+  });
+
   it('a read-only linked view changes nothing on its source', async () => {
     const linked: OutputBlockData = {
       id: 'link',
@@ -324,7 +385,7 @@ describe('deleted database properties (H50)', { timeout: 30000 }, () => {
 
     expect(deletedIds(saved)).toEqual(['n']);
     expect(schemaIds(saved)).toEqual(['t', 's']);
-    expect(databaseOf(saved, 'link')).not.toHaveProperty('deletedProperties');
+    expect(deletedIds(saved, 'link')).toBeUndefined();
 
     call(blok, 'link', 'restoreProperty', 'n');
     await quiet();
@@ -339,6 +400,6 @@ describe('deleted database properties (H50)', { timeout: 30000 }, () => {
     saved = await blok.save();
     expect(deletedIds(saved)).toBeUndefined();
     expect(rowValues(saved, 'r1')).toEqual({ t: 'One', s: 'o1' });
-    expect(databaseOf(saved, 'link')).not.toHaveProperty('deletedProperties');
+    expect(deletedIds(saved, 'link')).toBeUndefined();
   });
 });

@@ -850,7 +850,7 @@ describe('DatabaseTool', () => {
 
       expect(saved.title).toBe('Typed');
       expect(saved.futureKey).toBe(1);
-      expect(Object.keys(saved).sort()).toEqual(['activeViewId', 'automations', 'futureKey', 'schema', 'title', 'views']);
+      expect(Object.keys(saved).sort()).toEqual(['activeViewId', 'automations', 'deletedProperties', 'futureKey', 'schema', 'title', 'views']);
     });
 
     it('keeps a newer client key after the backend snapshot hydrates the model', async () => {
@@ -7089,7 +7089,7 @@ describe('DatabaseTool — property operations', () => {
       vi.mocked(options.block.dispatchChange).mockClear();
       tool.deleteProperty('prop-n');
 
-      const deleted = savedOf(tool).deletedProperties ?? [];
+      const deleted = Object.values(savedOf(tool).deletedProperties ?? {});
 
       expect(deleted.map((p) => p.id)).toEqual(['prop-n']);
       expect(deleted[0]).toMatchObject({ name: 'Amount', type: 'number', position: 'a2', deletedBy: 'u1' });
@@ -7109,7 +7109,7 @@ describe('DatabaseTool — property operations', () => {
       expect(restored).toMatchObject({ id: 'prop-n', name: 'Amount', type: 'number' });
       expect(restored).not.toHaveProperty('deletedAt');
       expect(savedOf(tool).schema.map((p) => p.id)).toEqual(['prop-title', 'prop-note', 'prop-n']);
-      expect(savedOf(tool)).not.toHaveProperty('deletedProperties');
+      expect(savedOf(tool).deletedProperties).toEqual({});
       expect((tool as unknown as { model: DatabaseModel }).model.getRow('r1')?.properties['prop-n']).toBe(5);
     });
 
@@ -7123,7 +7123,7 @@ describe('DatabaseTool — property operations', () => {
       tool.deleteProperty('prop-n');
 
       expect(tool.deletePropertyPermanently('prop-n')).toBe(true);
-      expect(savedOf(tool)).not.toHaveProperty('deletedProperties');
+      expect(savedOf(tool).deletedProperties).toEqual({});
       expect(one.tool.getProperties()).toEqual({ 'prop-title': 'A', 'prop-note': 'x' });
       expect(one.tool.save(document.createElement('div'))).not.toHaveProperty('reminders');
       expect(one.tool.save(document.createElement('div'))).not.toHaveProperty('convertedValues');
@@ -7148,7 +7148,7 @@ describe('DatabaseTool — property operations', () => {
 
       expect(tool.restoreProperty('prop-n')).toBeNull();
       expect(tool.deletePropertyPermanently('prop-n')).toBe(false);
-      expect(savedOf(tool).deletedProperties?.map((p) => p.id)).toEqual(['prop-n']);
+      expect(Object.keys(savedOf(tool).deletedProperties ?? {})).toEqual(['prop-n']);
     });
 
     it('neither restores nor deletes permanently while the database is locked', () => {
@@ -7161,7 +7161,7 @@ describe('DatabaseTool — property operations', () => {
       expect(tool.restoreProperty('prop-n')).toBeNull();
       expect(tool.deletePropertyPermanently('prop-n')).toBe(false);
       expect(one.tool.getProperties()['prop-n']).toBe(5);
-      expect(savedOf(tool).deletedProperties?.map((p) => p.id)).toEqual(['prop-n']);
+      expect(Object.keys(savedOf(tool).deletedProperties ?? {})).toEqual(['prop-n']);
     });
 
     it('drops a discarded "Add new relation" mirror without a deleted entry', () => {
@@ -7170,7 +7170,7 @@ describe('DatabaseTool — property operations', () => {
       tool.deleteMirrorProperty({ propertyId: 'prop-n' });
 
       expect(schemaOf(tool).map((p) => p.id)).not.toContain('prop-n');
-      expect(savedOf(tool)).not.toHaveProperty('deletedProperties');
+      expect(savedOf(tool).deletedProperties).toEqual({});
     });
 
     it('tells the adapter on restore: the property again, then the row values it holds', async () => {

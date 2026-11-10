@@ -241,11 +241,11 @@ describe('AI Autofill cell button', () => {
     (editor as unknown as { module: { yjsManager: { stopCapturing: () => void } } }).module.yjsManager.stopCapturing();
     editor.blocks.getById('db')?.call('deletePropertyPermanently', 'notes' as never);
     await quiet();
-    await vi.waitFor(async () => expect((await saved())?.deletedProperties).toBeUndefined());
+    await vi.waitFor(async () => expect((await saved())?.deletedProperties).toEqual({}));
     expect(await textAutofill()).toEqual({ mode: 'summary' });
 
     history.undo();
-    await vi.waitFor(async () => expect((await saved())?.deletedProperties?.map((property) => property.id)).toEqual(['notes']));
+    await vi.waitFor(async () => expect(Object.keys((await saved())?.deletedProperties ?? {})).toEqual(['notes']));
     expect(await textAutofill()).toEqual(watching);
   });
 

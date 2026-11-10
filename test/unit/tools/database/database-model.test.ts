@@ -195,7 +195,7 @@ describe('DatabaseModel', () => {
 
         expect(model.getProperty('p1')).toBeUndefined();
         expect(model.getDeletedProperties()).toEqual([{ ...notes, deletedAt: at.getTime(), deletedBy: 'u1' }]);
-        expect(model.snapshot().deletedProperties).toEqual([{ ...notes, deletedAt: at.getTime(), deletedBy: 'u1' }]);
+        expect(model.snapshot().deletedProperties).toEqual({ p1: { ...notes, deletedAt: at.getTime(), deletedBy: 'u1' } });
       });
 
       it('leaves deletedBy out when the person is not known', () => {
@@ -206,10 +206,10 @@ describe('DatabaseModel', () => {
         expect(model.getDeletedProperties()[0]).not.toHaveProperty('deletedBy');
       });
 
-      it('saves no deletedProperties key while the list is empty', () => {
+      it('saves an empty deletedProperties map while nothing is deleted, so two peers\' first deletes merge', () => {
         const model = new DatabaseModel(makeData({ schema: [titleProp, notes] }));
 
-        expect(model.snapshot()).not.toHaveProperty('deletedProperties');
+        expect(model.snapshot().deletedProperties).toEqual({});
       });
 
       it('restoreProperty puts the definition back at its place, without the stamps', () => {
@@ -221,7 +221,7 @@ describe('DatabaseModel', () => {
         expect(restored).toEqual(notes);
         expect(model.getSchema()).toEqual([titleProp, notes]);
         expect(model.getDeletedProperties()).toEqual([]);
-        expect(model.snapshot()).not.toHaveProperty('deletedProperties');
+        expect(model.snapshot().deletedProperties).toEqual({});
       });
 
       it('restoreProperty gives a free name when a live property took the old one', () => {
@@ -254,7 +254,7 @@ describe('DatabaseModel', () => {
 
       it('reads a saved list, and a live property wins over a deleted entry with its id', () => {
         const gone = { ...makeProperty({ id: 'p2', name: 'Old', position: 'a2' }), deletedAt: 5 };
-        const model = new DatabaseModel(makeData({ schema: [titleProp, notes], deletedProperties: [gone, { ...notes, deletedAt: 6 }] }));
+        const model = new DatabaseModel(makeData({ schema: [titleProp, notes], deletedProperties: { p2: gone, p1: { ...notes, deletedAt: 6 } } }));
 
         expect(model.getDeletedProperties()).toEqual([gone]);
       });
@@ -266,7 +266,7 @@ describe('DatabaseModel', () => {
         model.replaceDefinition({ schema: model.getSchema(), views: model.getViews() });
         expect(model.getDeletedProperties().map((p) => p.id)).toEqual(['p1']);
 
-        model.replaceDefinition({ schema: [titleProp, notes], views: model.getViews(), deletedProperties: [] });
+        model.replaceDefinition({ schema: [titleProp, notes], views: model.getViews(), deletedProperties: {} });
         expect(model.getDeletedProperties()).toEqual([]);
       });
     });

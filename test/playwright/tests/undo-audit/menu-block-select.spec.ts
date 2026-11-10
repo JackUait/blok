@@ -379,6 +379,33 @@ test.describe('block menu actions leave a block selection (D3)', () => {
     await expect(page.getByRole('textbox', { name: 'Late field' })).toHaveValue('a');
   });
 
+  test('keys typed in a field a duplicated block focuses after a timer never reach the selected copy', async ({ page }) => {
+    const lateRender = `class LateRender {
+      constructor({ data }) { this.data = data; }
+      render() {
+        this.root = document.createElement('div');
+        this.root.innerHTML = '<div contenteditable="true">' + this.data.text + '</div><input aria-label="Late field">';
+
+        return this.root;
+      }
+      rendered() { setTimeout(() => this.root.querySelector('input').focus(), 200); }
+      save(root) { return { text: root.querySelector('[contenteditable]').innerHTML }; }
+    }`;
+
+    await createBlok(page, [P('p-before', 'before'), { id: 'late', type: 'late', data: { text: 'Late block' } }, P('p-after', 'after')], { late: lateRender });
+    await gap(page, 300);
+    await editable(page, 'p-before').click();
+    await gap(page);
+
+    await openTunes(page, 'late');
+    await tune(page, 'duplicate').click();
+    await expect(page.getByRole('textbox', { name: 'Late field' }).nth(1)).toBeFocused();
+
+    await page.keyboard.type('ab');
+
+    expect(await saved(page)).toEqual(['paragraph:before', 'late:Late block', 'late:Late block', 'paragraph:after']);
+  });
+
   test('a markdown shortcut conversion keeps the caret (U073)', async ({ page }) => {
     await createBlok(page, [P('p1', '')]);
     await editable(page, 'p1').click();

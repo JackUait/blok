@@ -713,6 +713,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         void DragManager?.duplicateBlocksInPlace(currentBlock).then((copies) => {
           if (copies.some((copy) => copy.selected)) {
             this.releaseFocus();
+            this.letGoOnFocus(copies);
           }
         });
 

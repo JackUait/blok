@@ -254,4 +254,32 @@ describe('BlockSettings — Duplicate menu item (BUG #8)', () => {
     expect(selection.selectBlock).toHaveBeenCalledWith(block);
     expect(selection.selectBlock.mock.invocationCallOrder[0]).toBeLessThan(dragManager.duplicateBlocksInPlace.mock.invocationCallOrder[0]);
   });
+  it('lets go of the selected copy when a field takes focus after the duplicate', async () => {
+    const block = createBlock();
+    const copy = { ...createBlock(), selected: true } as unknown as Block;
+    const field = document.createElement('input');
+
+    document.body.appendChild(field);
+    (blokMock.DragManager as { duplicateBlocksInPlace: Mock }).duplicateBlocksInPlace.mockResolvedValueOnce([copy]);
+    getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+    const items = await (blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }).getTunesItems(block, [{ name: 'delete', title: 'Delete', onActivate: vi.fn() }]);
+
+    const duplicate = items.find(
+      (item): item is PopoverItemParams & { name?: string; onActivate?: () => void } =>
+        'name' in item && item.name === 'duplicate'
+    );
+
+    duplicate?.onActivate?.(duplicate as PopoverItemParams, { event: new MouseEvent('click') } as never);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // A key typed in this field would otherwise replace the selected copy.
+    field.focus();
+
+    expect((blokMock.BlockSelection as { unselectBlock: Mock }).unselectBlock).toHaveBeenCalledWith(copy);
+    field.remove();
+  });
 });

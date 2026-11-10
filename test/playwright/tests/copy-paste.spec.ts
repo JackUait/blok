@@ -920,7 +920,9 @@ test.describe('copy and paste', () => {
       expect(saved.slice(1, -1).join('\n').replace(/<br>/g, '\n').replace(/paragraph:/g, '')).toBe('a = 1;\nconst b =');
     });
 
-    test('code lines copied with real keys and pasted into another code block stay in it', async ({ page }) => {
+    test('code lines copied with real keys and pasted into another code block stay in it', async ({ page, browserName }) => {
+      // eslint-disable-next-line playwright/no-skipped-test -- needs real clipboard permissions
+      test.skip(browserName !== 'chromium', 'Firefox and WebKit reject the clipboard-read/clipboard-write permissions a real paste needs');
       await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
       await createBlokWithElements(page, [
         { id: 'c', type: 'code', data: { code: 'const a = 1;\nconst b = 2;', language: 'javascript' } },

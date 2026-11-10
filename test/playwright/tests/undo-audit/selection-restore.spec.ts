@@ -272,6 +272,23 @@ test.describe('undo audit: the selection undo and redo restore', () => {
     await expect(checkbox).toBeFocused();
   });
 
+  test('undo of typing in a to-do after a tick puts the caret back in the text, not on the checkbox', async ({ page }) => {
+    await createBlok(page, [{ id: 'b1', type: 'list', data: { text: 'Buy', style: 'checklist', checked: false } }]);
+    await clickEnd(page, editable(page, 'b1'));
+    await page.keyboard.type(' milk');
+    await wait(page, STEP_GAP_MS);
+    const checkbox = page.locator('[data-blok-id="b1"] input[type="checkbox"]');
+
+    await checkbox.click();
+    await wait(page, STEP_GAP_MS);
+
+    await press(page, UNDO);
+    await press(page, UNDO);
+    expect(await savedTexts(page)).toEqual(['b1=Buy']);
+    await expect(checkbox).not.toBeFocused();
+    expect(await caret(page)).toBe('b1:3');
+  });
+
   test('U140: undo and redo of a callout colour keep a caret in the callout, not focus on the body', async ({ page }) => {
     await createBlok(page, [
       { id: 'co', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['k1'] },

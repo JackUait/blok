@@ -362,6 +362,8 @@ export class UndoHistory {
   private controlAtPress: { control: HTMLElement; blockId: string } | null = null;
   /** The selection live when each step was last undone. Its redo restores it. */
   private readonly selectionAtUndo = new WeakMap<CaretHistoryEntry, CaretSnapshot | null>();
+  /** Steps made from a block's own control (a to-do tick). Only these keep focus on it. */
+  private readonly controlSteps = new WeakSet<CaretHistoryEntry>();
 
   private readonly selectionChangeHandler = (): void => this.dropPendingCaretIfMoved();
 
@@ -1285,6 +1287,10 @@ export class UndoHistory {
 
         if (this.pendingValueWrite && this.liveCaretSnapshot() === null) {
           entry.outsideEditor = true;
+        }
+
+        if (this.focusedBlockControl() !== null) {
+          this.controlSteps.add(entry);
         }
 
         this.entryByStackItem.set(event.stackItem, entry);
@@ -2281,7 +2287,7 @@ export class UndoHistory {
     const pressed = this.controlAtPress;
 
     // A step undone from a block's own control keeps focus there.
-    if (pressed !== null && target !== null && target.blockId === pressed.blockId && pressed.control.isConnected) {
+    if (pressed !== null && this.controlSteps.has(entry) && target !== null && target.blockId === pressed.blockId && pressed.control.isConnected) {
       pressed.control.focus({ preventScroll: true });
       this.caretJustRestored = false;
 

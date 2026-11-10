@@ -208,6 +208,23 @@ describe('UndoHistory: the selection at the undo press', () => {
     expect(caret.setToInput).not.toHaveBeenCalled();
   });
 
+  it('undo of typing puts the caret back in the text even when the block\'s checkbox has focus', () => {
+    const checkbox = document.createElement('input');
+
+    checkbox.type = 'checkbox';
+    blocks[0].holder.prepend(checkbox);
+    putCaret(blocks[0], 5);
+    history.beginGesture('typing');
+    write('Alpha one');
+    blocks[0].inputs[0].textContent = 'Alpha one';
+    putCaret(blocks[0], 9);
+    checkbox.focus();
+
+    history.undo();
+
+    expect(caret.setToInput).toHaveBeenLastCalledWith(blocks[0].inputs[0], 'default', 5);
+  });
+
   it('puts the restored caret back into a block the replay rebuilt after the restore', () => {
     putCaret(blocks[0], 5);
     history.beginGesture('typing');

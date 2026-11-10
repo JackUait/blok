@@ -3947,8 +3947,18 @@ span[data-blok-slash-search] {
 
 [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button {
   position: absolute;
-  background: var(--emoji-tone-color);
+  cursor: pointer;
+  background: var(--blok-popover-bg);
   clip-path: var(--emoji-tone-shape);
+  transition: clip-path 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-blok-emoji-picker] [data-emoji-picker-skin-tone] button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--emoji-tone-color);
+  clip-path: var(--emoji-tone-fill);
   transition: clip-path 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -3960,8 +3970,16 @@ span[data-blok-slash-search] {
   clip-path: var(--emoji-tone-shape-hover);
 }
 
+[@media (hover: hover)] [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button:hover::before {
+  clip-path: var(--emoji-tone-fill-hover);
+}
+
 [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button[aria-pressed='true'] {
   clip-path: var(--emoji-tone-shape-on);
+}
+
+[data-blok-emoji-picker] [data-emoji-picker-skin-tone] button[aria-pressed='true']::before {
+  clip-path: var(--emoji-tone-fill-on);
 }
 
 [data-blok-emoji-picker] [data-emoji-skin-focus] {
@@ -4248,7 +4266,7 @@ span[data-blok-slash-search] {
   height: 16px;
 }
 
-[@media (hover: hover)] [data-blok-emoji-picker] :is([data-emoji-picker-header] button, [data-emoji-native], [data-emoji-picker-empty] button):hover {
+[@media (hover: hover)] [data-blok-emoji-picker] :is([data-emoji-picker-header] button:not([data-emoji-picker-skin-tone] button), [data-emoji-native], [data-emoji-picker-empty] button):hover {
   background: var(--blok-item-hover-bg);
 }
 

@@ -120,7 +120,7 @@ const SKIN_TONE_COLORS: readonly string[] = ['#ffcc4d', '#f7dece', '#f3d2a2', '#
  * Must match the box in emoji-picker.css. The centre sits 16px under the box top,
  * so the ring opens just below the toggle.
  */
-const SKIN_DIAL = { cx: 70, cy: 16, inner: 30, outer: 62, chosen: 5, hover: 2.5, gap: 1, span: Math.PI * 0.176 } as const;
+const SKIN_DIAL = { cx: 70, cy: 16, inner: 30, outer: 62, chosen: 5, hover: 2.5, gap: 1, rim: 2, span: Math.PI * 0.176 } as const;
 const skinToneAngle = (index: number): number => Math.PI * (0.94 - index * 0.176);
 const toDegrees = (radians: number): number => (radians * 180) / Math.PI;
 
@@ -1038,6 +1038,9 @@ export class EmojiPicker {
       btn.style.setProperty('--emoji-tone-shape', `path('${this.skinSegmentPath(index, 0, box)}')`);
       btn.style.setProperty('--emoji-tone-shape-hover', `path('${this.skinSegmentPath(index, SKIN_DIAL.hover, box)}')`);
       btn.style.setProperty('--emoji-tone-shape-on', `path('${this.skinSegmentPath(index, SKIN_DIAL.chosen, box)}')`);
+      btn.style.setProperty('--emoji-tone-fill', `path('${this.skinSegmentPath(index, 0, box, SKIN_DIAL.rim)}')`);
+      btn.style.setProperty('--emoji-tone-fill-hover', `path('${this.skinSegmentPath(index, SKIN_DIAL.hover, box, SKIN_DIAL.rim)}')`);
+      btn.style.setProperty('--emoji-tone-fill-on', `path('${this.skinSegmentPath(index, SKIN_DIAL.chosen, box, SKIN_DIAL.rim)}')`);
       btn.addEventListener('click', () => this.chooseSkinTone(index));
       popover.appendChild(btn);
 
@@ -1076,10 +1079,13 @@ export class EmojiPicker {
    * @param index - the tone
    * @param grow - how far past the ring the outer edge reaches
    * @param origin - draw relative to this box instead of the dial box
+   * @param inset - pull every edge in by this many pixels (the tone inside its rim)
    */
-  private skinSegmentPath(index: number, grow: number, origin = { x: 0, y: 0 }): string {
-    const { cx, cy, inner, outer, gap, span } = SKIN_DIAL;
-    const r = outer + grow;
+  private skinSegmentPath(index: number, grow: number, origin = { x: 0, y: 0 }, inset = 0): string {
+    const { cx, cy, inner: ringInner, outer, gap: ringGap, span } = SKIN_DIAL;
+    const r = outer + grow - inset;
+    const inner = ringInner + inset;
+    const gap = ringGap + inset;
     const mid = skinToneAngle(index);
     // A fixed 1px gap at both radii keeps the seams even.
     const at = (radius: number, angle: number): string =>
@@ -1142,13 +1148,16 @@ export class EmojiPicker {
     return typeof this._skinTonePopover.animate === 'function' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
-  /** A tracked animation; resolves when it ends or is stopped. */
+  /**
+   * A tracked animation; resolves when it ends or is stopped. It stays tracked after it
+   * ends: a `fill: 'forwards'` fold keeps its segment hidden until stopSkinToneMotion cancels it.
+   */
   private animateSkin(element: Element, frames: Keyframe[], options: KeyframeAnimationOptions): Promise<void> {
     const animation = element.animate(frames, options);
 
     this._skinToneAnimations.add(animation);
 
-    return animation.finished.then(() => undefined, () => undefined).finally(() => this._skinToneAnimations.delete(animation));
+    return animation.finished.then(() => undefined, () => undefined);
   }
 
   private skinDelay(ms: number): Promise<void> {

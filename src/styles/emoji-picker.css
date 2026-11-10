@@ -164,11 +164,22 @@
   transform: scaleX(-1);
 }
 
-/* Each tone is a button over its segment's box (placed in script), clipped to the segment. */
+/* Each tone is a button over its segment's box (placed in script), clipped to the segment.
+   The button paints the rim; ::before paints the tone, clipped to the same segment pulled in by SKIN_DIAL.rim. */
 [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button {
   position: absolute;
-  background: var(--emoji-tone-color);
+  cursor: pointer;
+  background: var(--blok-popover-bg);
   clip-path: var(--emoji-tone-shape);
+  transition: clip-path 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-blok-emoji-picker] [data-emoji-picker-skin-tone] button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--emoji-tone-color);
+  clip-path: var(--emoji-tone-fill);
   transition: clip-path 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -180,11 +191,19 @@
   [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button:hover {
     clip-path: var(--emoji-tone-shape-hover);
   }
+
+  [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button:hover::before {
+    clip-path: var(--emoji-tone-fill-hover);
+  }
 }
 
 /* The chosen tone reaches a little further out instead of carrying a mark. */
 [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button[aria-pressed='true'] {
   clip-path: var(--emoji-tone-shape-on);
+}
+
+[data-blok-emoji-picker] [data-emoji-picker-skin-tone] button[aria-pressed='true']::before {
+  clip-path: var(--emoji-tone-fill-on);
 }
 
 [data-blok-emoji-picker] [data-emoji-skin-focus] {
@@ -484,7 +503,8 @@
 }
 
 @media (hover: hover) {
-  [data-blok-emoji-picker] :is([data-emoji-picker-header] button, [data-emoji-native], [data-emoji-picker-empty] button):hover {
+  /* Skin-tone segments sit in the header but keep their own colours on hover. */
+  [data-blok-emoji-picker] :is([data-emoji-picker-header] button:not([data-emoji-picker-skin-tone] button), [data-emoji-native], [data-emoji-picker-empty] button):hover {
     background: var(--blok-item-hover-bg);
   }
 

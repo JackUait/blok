@@ -139,6 +139,20 @@ describe('EmojiPicker skin-tone Arc', () => {
     expect(on).not.toBe(rest);
   });
 
+  it('paints each tone inset from its segment, so a border rims it in every state', () => {
+    toggle().click();
+
+    for (const button of segments()) {
+      for (const state of ['', '-hover', '-on']) {
+        const outline = button.style.getPropertyValue(`--emoji-tone-shape${state}`);
+        const fill = button.style.getPropertyValue(`--emoji-tone-fill${state}`);
+
+        expect(fill.startsWith('path(')).toBe(true);
+        expect(fill).not.toBe(outline);
+      }
+    }
+  });
+
   it('chooses a tone, repaints the dot and the grid, and closes at once with reduced motion', () => {
     toggle().click();
     segments()[3].click();
@@ -186,6 +200,47 @@ describe('EmojiPicker skin-tone Arc', () => {
     expect(dial().hidden).toBe(true);
     expect(pop).toBeDefined();
     expect(pop?.cancelled).not.toBe(true);
+  });
+
+  describe('reopening after a close', () => {
+    /** Segment animations that keep their last frame after they end. */
+    const heldSegmentFolds = (animate: ReturnType<typeof vi.fn>): FakeAnimation[] => animate.mock.calls.flatMap((call, i) => {
+      const options: unknown = call[1];
+      const result = animate.mock.results[i]?.value as FakeAnimation;
+      const holds = typeof options === 'object' && options !== null && Reflect.get(options, 'fill') === 'forwards';
+
+      return holds && segments().includes(result.target as HTMLButtonElement) ? [ result ] : [];
+    });
+
+    it('drops the folded state after a tone is chosen, so every segment shows again', async () => {
+      stubMotion(false);
+      const animate = vi.fn(fakeAnimate);
+
+      Element.prototype.animate = animate as unknown as Element['animate'];
+      toggle().click();
+      await settle();
+      segments()[4].click();
+      await settle();
+
+      expect(dial().hidden).toBe(true);
+      expect(heldSegmentFolds(animate).length).toBeGreaterThan(0);
+      expect(heldSegmentFolds(animate).every(animation => animation.cancelled === true)).toBe(true);
+    });
+
+    it('drops the folded state after the toggle closes the dial', async () => {
+      stubMotion(false);
+      const animate = vi.fn(fakeAnimate);
+
+      Element.prototype.animate = animate as unknown as Element['animate'];
+      toggle().click();
+      await settle();
+      toggle().click();
+      await settle();
+
+      expect(dial().hidden).toBe(true);
+      expect(heldSegmentFolds(animate).length).toBeGreaterThan(0);
+      expect(heldSegmentFolds(animate).every(animation => animation.cancelled === true)).toBe(true);
+    });
   });
 
   it('shifts the dial back inside the picker when its toggle sits at the edge', () => {

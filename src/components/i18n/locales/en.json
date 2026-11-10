@@ -1160,7 +1160,7 @@
   "tools.database.calcFooterCountValues": "Values",
   "tools.database.calcFooterUnique": "Unique",
   "tools.database.calcFooterEmpty": "Empty",
-  "tools.database.calcFooterNotEmpty": "Not empty",
+  "tools.database.calcFooterNotEmpty": "Not Empty",
   "tools.database.calcFooterEarliest": "Earliest",
   "tools.database.calcFooterLatest": "Latest",
   "tools.database.calcCountUnique": "Count unique values",

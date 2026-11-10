@@ -431,7 +431,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Database',
     description:
-      'A multi-view database block supporting board (Kanban) and list views. It stores a schema of typed properties (text, select, multiSelect, date, checkbox, etc.) and view configurations. Rows are stored as child `database-row` blocks.\n\nIt supports grouping, drag-and-drop reordering, inline editing, and an optional backend sync adapter. (`sorts` and `filters` are persisted in the view config but are not applied yet.)\n\nDeleting a property moves it to `deletedProperties`, a map keyed by property id. Its row values stay in the rows.\n\nCall these through `block.call(name, { propertyId })`:\n\n- `restoreProperty` brings it back with its values. If another property took its name meanwhile, it gets a " N" suffix.\n- `deletePropertyPermanently` removes the entry and strips its values from every row.\n\nEach one is a single undo step. A locked database refuses a delete, a restore and a permanent delete. So does a linked view with Lock views on.\n\nViews keep their filters, sorts and columns on a deleted property. They use them again after a restore.',
+      'A multi-view database block supporting board (Kanban) and list views. It stores a schema of typed properties (text, select, multiSelect, date, checkbox, etc.) and view configurations. Rows are stored as child `database-row` blocks.\n\nIt supports grouping, drag-and-drop reordering, inline editing, and an optional backend sync adapter. (`sorts` and `filters` are persisted in the view config but are not applied yet.)\n\nDeleting a property moves it to `deletedProperties`, a map keyed by property id. Its row values stay in the rows.\n\nA database made from the toolbox saves an empty map from the start. An older database gets the key on its first delete. Until then, two people deleting at the same moment can keep only one of the two deletes. The other property is then gone with no entry, as before this map existed.\n\nCall these through `block.call(name, { propertyId })`:\n\n- `restoreProperty` brings it back with its values. If another property took its name meanwhile, it gets a " N" suffix.\n- `deletePropertyPermanently` removes the entry and strips its values from every row.\n\nEach one is a single undo step. A locked database refuses a delete, a restore and a permanent delete. So does a linked view with Lock views on.\n\nViews keep their filters, sorts and columns on a deleted property. They use them again after a restore.',
     importExample: `import { Database } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -451,7 +451,8 @@ const editor = new Blok({
   activeViewId: string;                // Currently active view ID
   fullPage?: boolean;                  // The database is a whole page; the page title is its title
   deletedProperties?: Record<string, DeletedPropertyDefinition>; // Deleted properties by id:
-                                       // PropertyDefinition plus deletedAt (epoch ms) and deletedBy (person id)
+                                       // PropertyDefinition plus deletedAt (epoch ms) and deletedBy (person id).
+                                       // Absent until the first delete on databases made before it existed
 }
 // Rows are NOT stored here — they are child database-row blocks.`,
     saveDataExample: `{

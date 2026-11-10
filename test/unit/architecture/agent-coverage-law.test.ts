@@ -33,6 +33,7 @@ const UNCORPUSED_COMMANDS: Record<string, string> = {
   'history.read': 'No corpus runner has a versionHistory fixture yet. The version-history tests cover node, editor, MCP live and C#.',
   'history.changes': 'No corpus runner has a versionHistory fixture yet. The version-history tests cover node, editor, MCP live and C#.',
   'history.restore': 'No corpus runner has a versionHistory fixture yet. The version-history tests cover node, editor, MCP live and C#.',
+  'history.previewRestore': 'No corpus runner has a versionHistory fixture yet. The version-history tests and the agent-server scenarios cover node, editor, MCP live, Jint and the three room executors.',
   // A golden counts only once the user reviews it; until then these sessions test them on every runtime.
   'database.updateView': 'Corpus case proposed, awaiting user review. test/unit/shared/agent/database-view-settings.test.ts runs it on the json and store sessions.',
   'database.setLayout': 'Corpus case proposed, awaiting user review. test/unit/shared/agent/database-view-settings.test.ts runs it on the json and store sessions.',

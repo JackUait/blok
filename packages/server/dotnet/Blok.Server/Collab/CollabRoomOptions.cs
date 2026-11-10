@@ -8,6 +8,9 @@ internal sealed class CollabRoomOptions
   /// </summary>
   public bool RestoreTrashesPages { get; init; }
 
+  /// <summary>How long one change window runs from a document's first journalled write.</summary>
+  public TimeSpan ChangeSignalWindow { get; init; } = TimeSpan.FromSeconds(60);
+
   /// <summary>Quiet time after the last applied update before an export.</summary>
   public TimeSpan ExportDebounce { get; init; } = TimeSpan.FromSeconds(2);
 

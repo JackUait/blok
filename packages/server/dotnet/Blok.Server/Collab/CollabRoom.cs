@@ -159,6 +159,7 @@ internal sealed class CollabRoom : IDisposable
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;
   private readonly ICollabActivityObserver? activityObserver;
+  private readonly CollabChangeSignalHub? signalHub;
   private readonly ICollabRecordNotes? recordNotes;
   private readonly IDocEndpointClient endpoint;
   private readonly ICollabDocConverter converter;
@@ -284,9 +285,11 @@ internal sealed class CollabRoom : IDisposable
       Action<string>? log,
       ICollabOperationStore? operationStore = null,
       ICollabActivityObserver? activityObserver = null,
-      ICollabRecordNotes? recordNotes = null)
+      ICollabRecordNotes? recordNotes = null,
+      CollabChangeSignalHub? signalHub = null)
   {
     DocId = docId;
+    this.signalHub = signalHub;
     this.store = store;
     this.operationStore = operationStore;
     this.activityObserver = activityObserver;
@@ -1542,7 +1545,7 @@ internal sealed class CollabRoom : IDisposable
   /// disposed when it closes, and a report the room already decided to make
   /// should still be attempted after that.
   /// </summary>
-  private void RecordActivityLocked(string? actorId, CollabActivityKind kind)
+  private void RecordActivityLocked(string? actorId, CollabActivityKind kind, CollabRecordNote? note = null)
   {
     // A connection with no verified identity produces no call of any kind: an
     // unknown person stays unknown rather than getting a fabricated key.
@@ -1585,6 +1588,15 @@ internal sealed class CollabRoom : IDisposable
       // would slide the window along with the traffic and silence a busy
       // actor for as long as it kept sending.
       activityStamps[actor] = at;
+    }
+
+    if (kind == CollabActivityKind.Edited)
+    {
+      signalHub?.Event(new CollabAuditEvent(
+          CollabAuditEventTypes.ContentEdited,
+          DocId,
+          at,
+          new CollabAuditActor(actor, note?.Kind, note?.OnBehalfOf)));
     }
 
     PendingActivity? dropped = null;
@@ -2983,10 +2995,13 @@ internal sealed class CollabRoom : IDisposable
 
     committedThrough = appended.ServerSequence;
 
-    await WriteNoteLocked(appended.ServerSequence, note ?? CollabActorKinds.Classify(actorId));
+    var written = note ?? CollabActorKinds.Classify(actorId);
+
+    await WriteNoteLocked(appended.ServerSequence, written);
+    signalHub?.Committed(DocId, tag.Lineage, appended.ServerSequence, written);
 
     // After the append, never before: an edit is reported once it is durable.
-    RecordActivityLocked(actorId, CollabActivityKind.Edited);
+    RecordActivityLocked(actorId, CollabActivityKind.Edited, written);
 
     operationsSinceCheckpoint++;
     bytesSinceCheckpoint += update.Length;

@@ -1,0 +1,1641 @@
+{
+  "$comment": "CollabChangeSignals.Fold as C# answers it. Captured by CollabChangeSignalsCaptureTests; do not edit by hand. Records are in commit order. A window starts at its first record and holds each next record on the same lineage committed before windowStart plus windowMs. Each window collapses to one signal, or none when nothing is left: a block keeps the kind of the whole window (added then removed is gone, with its properties and schema entries); authors are the actors of records that changed something, first seen first, with the kind of their first note. Times are Unix milliseconds.",
+  "cases": [
+    {
+      "name": "one window: two records by one person",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": {
+            "kind": "person",
+            "onBehalfOf": null
+          },
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232280000,
+          "actor": "u1",
+          "note": {
+            "kind": "person",
+            "onBehalfOf": null
+          },
+          "blocks": [
+            {
+              "id": "b",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            },
+            {
+              "id": "b",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": "person"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a record at or past the window\u0027s end starts the next window",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232319000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "b",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 3,
+          "committedAt": 1794232320000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "c",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 4,
+          "committedAt": 1794232390000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "d",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            },
+            {
+              "id": "b",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        },
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 3,
+          "toSequence": 3,
+          "windowStart": 1794232320000,
+          "windowEnd": 1794232380000,
+          "blocks": [
+            {
+              "id": "c",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        },
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 4,
+          "toSequence": 4,
+          "windowStart": 1794232390000,
+          "windowEnd": 1794232450000,
+          "blocks": [
+            {
+              "id": "d",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "the window runs from its first record, not from the last",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232300000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 3,
+          "committedAt": 1794232340000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        },
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 3,
+          "toSequence": 3,
+          "windowStart": 1794232340000,
+          "windowEnd": 1794232400000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a block added and removed in one window yields nothing",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232270000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "removed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": []
+    },
+    {
+      "name": "a block added in one window and removed in the next is in both",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232330000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "removed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 1,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        },
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 2,
+          "toSequence": 2,
+          "windowStart": 1794232330000,
+          "windowEnd": 1794232390000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "removed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "each block keeps the kind of the whole window",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "added"
+            },
+            {
+              "id": "b",
+              "kind": "changed"
+            },
+            {
+              "id": "c",
+              "kind": "moved"
+            },
+            {
+              "id": "d",
+              "kind": "moved"
+            },
+            {
+              "id": "e",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232270000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            },
+            {
+              "id": "b",
+              "kind": "removed"
+            },
+            {
+              "id": "c",
+              "kind": "moved"
+            },
+            {
+              "id": "d",
+              "kind": "changed"
+            },
+            {
+              "id": "e",
+              "kind": "moved"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "added"
+            },
+            {
+              "id": "b",
+              "kind": "removed"
+            },
+            {
+              "id": "c",
+              "kind": "moved"
+            },
+            {
+              "id": "d",
+              "kind": "changed"
+            },
+            {
+              "id": "e",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a block removed, then added back with the same id, is changed",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "removed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232270000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "added, removed and added again is added",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232270000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "removed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 3,
+          "committedAt": 1794232280000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 3,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a lineage change closes the window",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L2",
+          "sequence": 1,
+          "committedAt": 1794232270000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "b",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L2",
+          "sequence": 2,
+          "committedAt": 1794232280000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "c",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 1,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        },
+        {
+          "doc": "doc-1",
+          "lineage": "L2",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232270000,
+          "windowEnd": 1794232330000,
+          "blocks": [
+            {
+              "id": "b",
+              "kind": "changed"
+            },
+            {
+              "id": "c",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "records that change nothing make no signal and no author",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232270000,
+          "actor": "u2",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 3,
+          "committedAt": 1794232280000,
+          "actor": "u3",
+          "note": null,
+          "blocks": [],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 4,
+          "committedAt": 1794232330000,
+          "actor": null,
+          "note": null,
+          "blocks": [],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 3,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u2",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "authors: distinct, first seen first, no null actor, kind from the first note",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u2",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232265000,
+          "actor": null,
+          "note": null,
+          "blocks": [
+            {
+              "id": "b",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 3,
+          "committedAt": 1794232270000,
+          "actor": "agent-1",
+          "note": {
+            "kind": "agent",
+            "onBehalfOf": "u1"
+          },
+          "blocks": [
+            {
+              "id": "c",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 4,
+          "committedAt": 1794232275000,
+          "actor": "u2",
+          "note": {
+            "kind": "person",
+            "onBehalfOf": null
+          },
+          "blocks": [
+            {
+              "id": "d",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 5,
+          "committedAt": 1794232280000,
+          "actor": "u2",
+          "note": {
+            "kind": "agent",
+            "onBehalfOf": "u1"
+          },
+          "blocks": [
+            {
+              "id": "e",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 5,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            },
+            {
+              "id": "b",
+              "kind": "changed"
+            },
+            {
+              "id": "c",
+              "kind": "changed"
+            },
+            {
+              "id": "d",
+              "kind": "changed"
+            },
+            {
+              "id": "e",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u2",
+              "kind": "person"
+            },
+            {
+              "id": "agent-1",
+              "kind": "agent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "page keys, first seen first",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [],
+          "page": [
+            "title"
+          ],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232270000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [],
+          "page": [
+            "values.k",
+            "title"
+          ],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [],
+          "page": [
+            "title",
+            "values.k"
+          ],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "property ids per row, first seen first",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "r1",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [
+            {
+              "rowId": "r1",
+              "ids": [
+                "st",
+                "title"
+              ]
+            }
+          ],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232270000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "r2",
+              "kind": "changed"
+            },
+            {
+              "id": "r1",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [
+            {
+              "rowId": "r2",
+              "ids": [
+                "st"
+              ]
+            },
+            {
+              "rowId": "r1",
+              "ids": [
+                "due",
+                "st"
+              ]
+            }
+          ],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "r1",
+              "kind": "changed"
+            },
+            {
+              "id": "r2",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [
+            {
+              "rowId": "r1",
+              "ids": [
+                "st",
+                "title",
+                "due"
+              ]
+            },
+            {
+              "rowId": "r2",
+              "ids": [
+                "st"
+              ]
+            }
+          ],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a row added and removed in one window drops its properties",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "r1",
+              "kind": "added"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232270000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "r1",
+              "kind": "changed"
+            },
+            {
+              "id": "r2",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [
+            {
+              "rowId": "r1",
+              "ids": [
+                "st"
+              ]
+            },
+            {
+              "rowId": "r2",
+              "ids": [
+                "st"
+              ]
+            }
+          ],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 3,
+          "committedAt": 1794232280000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "r1",
+              "kind": "removed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 3,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "r2",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [
+            {
+              "rowId": "r2",
+              "ids": [
+                "st"
+              ]
+            }
+          ],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "schema entries per database: created then deleted is gone, created then updated is created",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "db",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [
+            {
+              "databaseId": "db",
+              "id": "p1",
+              "name": "Due",
+              "action": "created"
+            },
+            {
+              "databaseId": "db",
+              "id": "p2",
+              "name": "Status",
+              "action": "updated"
+            },
+            {
+              "databaseId": "db",
+              "id": "p3",
+              "name": "Tags",
+              "action": "created"
+            },
+            {
+              "databaseId": "db",
+              "id": "p4",
+              "name": "Owner",
+              "action": "updated"
+            }
+          ]
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232270000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "db",
+              "kind": "changed"
+            },
+            {
+              "id": "db2",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [
+            {
+              "databaseId": "db",
+              "id": "p1",
+              "name": "Due date",
+              "action": "updated"
+            },
+            {
+              "databaseId": "db",
+              "id": "p2",
+              "name": null,
+              "action": "deleted"
+            },
+            {
+              "databaseId": "db",
+              "id": "p3",
+              "name": "Tags",
+              "action": "deleted"
+            },
+            {
+              "databaseId": "db",
+              "id": "p4",
+              "name": null,
+              "action": "updated"
+            },
+            {
+              "databaseId": "db2",
+              "id": "p1",
+              "name": "Due",
+              "action": "created"
+            }
+          ]
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232320000,
+          "blocks": [
+            {
+              "id": "db",
+              "kind": "changed"
+            },
+            {
+              "id": "db2",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [
+            {
+              "databaseId": "db",
+              "id": "p1",
+              "name": "Due date",
+              "action": "created"
+            },
+            {
+              "databaseId": "db",
+              "id": "p2",
+              "name": "Status",
+              "action": "deleted"
+            },
+            {
+              "databaseId": "db",
+              "id": "p4",
+              "name": "Owner",
+              "action": "updated"
+            },
+            {
+              "databaseId": "db2",
+              "id": "p1",
+              "name": "Due",
+              "action": "created"
+            }
+          ],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a longer window from the host",
+      "windowMs": 300000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232500000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "b",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 3,
+          "committedAt": 1794232559000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "c",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 4,
+          "committedAt": 1794232560000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "d",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 3,
+          "windowStart": 1794232260000,
+          "windowEnd": 1794232560000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            },
+            {
+              "id": "b",
+              "kind": "changed"
+            },
+            {
+              "id": "c",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        },
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 4,
+          "toSequence": 4,
+          "windowStart": 1794232560000,
+          "windowEnd": 1794232860000,
+          "blocks": [
+            {
+              "id": "d",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a record whose clock reads earlier stays in the window",
+      "windowMs": 60000,
+      "records": [
+        {
+          "lineage": "L1",
+          "sequence": 1,
+          "committedAt": 1794232290000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": 2,
+          "committedAt": 1794232260000,
+          "actor": "u1",
+          "note": null,
+          "blocks": [
+            {
+              "id": "b",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": []
+        }
+      ],
+      "signals": [
+        {
+          "doc": "doc-1",
+          "lineage": "L1",
+          "fromSequence": 1,
+          "toSequence": 2,
+          "windowStart": 1794232290000,
+          "windowEnd": 1794232350000,
+          "blocks": [
+            {
+              "id": "a",
+              "kind": "changed"
+            },
+            {
+              "id": "b",
+              "kind": "changed"
+            }
+          ],
+          "page": [],
+          "properties": [],
+          "schema": [],
+          "authors": [
+            {
+              "id": "u1",
+              "kind": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

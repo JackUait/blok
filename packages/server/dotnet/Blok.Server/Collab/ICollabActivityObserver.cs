@@ -81,4 +81,39 @@ public interface ICollabActivityObserver
       DateTimeOffset at,
       CollabActivityKind kind,
       CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Told what changed in a document over one window, by id only. Off unless
+  /// an implementation overrides it: only then does the room keep windows and
+  /// read the journal to build them.
+  /// </summary>
+  /// <param name="signal">The window's changes.</param>
+  /// <param name="cancellationToken">The caller's token.</param>
+  /// <returns>A task that completes when the host has taken the signal.</returns>
+  /// <remarks>
+  /// <para>
+  /// A window starts at a document's first journalled write and lasts
+  /// <c>BlokServerOptions.CollabChangeSignalWindow</c> (60 seconds by
+  /// default). A block added and removed inside one window is left out, and a
+  /// window that is left with nothing sends no signal.
+  /// </para>
+  /// <para>
+  /// Best effort, like every call here: a signal is lost when the server
+  /// stops inside its window, when the journal cannot be read, or when the
+  /// call throws. A host that must not miss a change reconciles through
+  /// <c>GET /sync/{doc}/history/changes</c> and its <c>olderEnd</c>.
+  /// </para>
+  /// </remarks>
+  ValueTask OnChangesAsync(CollabChangeSignal signal, CancellationToken cancellationToken = default) =>
+      ValueTask.CompletedTask;
+
+  /// <summary>
+  /// Told one typed audit event. Off unless an implementation overrides it.
+  /// Best effort: a call that throws is logged and dropped.
+  /// </summary>
+  /// <param name="auditEvent">What happened, when, and who did it when known.</param>
+  /// <param name="cancellationToken">The caller's token.</param>
+  /// <returns>A task that completes when the host has taken the event.</returns>
+  ValueTask OnEventAsync(CollabAuditEvent auditEvent, CancellationToken cancellationToken = default) =>
+      ValueTask.CompletedTask;
 }

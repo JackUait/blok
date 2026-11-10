@@ -228,6 +228,14 @@ public sealed class BlokServerOptions
   public bool CollabRestoreTrashesPages { get; set; }
 
   /// <summary>
+  /// How long one change window runs from a document's first journalled
+  /// write before <see cref="Blok.Server.Collab.ICollabActivityObserver.OnChangesAsync"/>
+  /// is told what changed in it. Used only when the registered observer
+  /// overrides that member. Default 60 seconds; zero or less uses the default.
+  /// </summary>
+  public TimeSpan CollabChangeSignalWindow { get; set; } = TimeSpan.FromSeconds(60);
+
+  /// <summary>
   /// Makes the server the author of block stamps on <c>POST /sync/{doc}/edit</c>.
   /// An insert's <c>createdAt</c>/<c>By</c>/<c>With</c> and <c>lastEditedAt</c>/<c>By</c>/<c>With</c>
   /// are replaced, and an update stamps its block's <c>lastEdited*</c>. By is

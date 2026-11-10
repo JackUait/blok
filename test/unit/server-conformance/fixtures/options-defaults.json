@@ -1,6 +1,7 @@
 {
   "AllowedOrigins": [],
   "Auth": "none",
+  "CollabChangeSignalWindowMs": 60000,
   "CollabDirectory": "",
   "CollabEnabled": false,
   "CollabEnforceRestoreGuards": false,

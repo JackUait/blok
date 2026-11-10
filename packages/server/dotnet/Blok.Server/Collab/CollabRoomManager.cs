@@ -241,6 +241,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;
   private readonly ICollabActivityObserver? activityObserver;
+  private readonly CollabChangeSignalHub? signalHub;
   private readonly ICollabRecordNotes? recordNotes;
   private readonly IDocEndpointClient endpoint;
   private readonly ICollabDocConverter converter;
@@ -275,6 +276,13 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     this.operationStore = operationStore;
     this.activityObserver = activityObserver;
     this.recordNotes = recordNotes;
+    signalHub = CollabChangeSignalHub.For(
+        activityObserver,
+        // A negative due time throws from CreateTimer, inside the room's lane.
+        options.ChangeSignalWindow > TimeSpan.Zero ? options.ChangeSignalWindow : TimeSpan.FromSeconds(60),
+        timeProvider,
+        (doc, lineage, sequence, since, maxRecords) => ChangesAsync(doc, lineage, sequence, since, maxRecords),
+        log);
   }
 
   internal int LiveRoomCount
@@ -851,6 +859,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   internal async ValueTask<(CollabHistoryStatus Status, CollabLineageDeleteOutcome? Outcome)> DeleteLineageAsync(
       string docId,
       string lineage,
+      string? actorId = null,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
@@ -868,9 +877,24 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
 
     var outcome = await history.DeleteLineageAsync(docId, lineage, cancellationToken);
 
-    return outcome == CollabLineageDeleteOutcome.Purged || IsPurging(docId)
-      ? (CollabHistoryStatus.Purged, CollabLineageDeleteOutcome.Purged)
-      : (CollabHistoryStatus.Ready, outcome);
+    if (outcome == CollabLineageDeleteOutcome.Purged || IsPurging(docId))
+    {
+      return (CollabHistoryStatus.Purged, CollabLineageDeleteOutcome.Purged);
+    }
+
+    if (outcome == CollabLineageDeleteOutcome.Deleted)
+    {
+      var note = CollabActorKinds.Classify(actorId);
+
+      signalHub?.Event(new CollabAuditEvent(
+          CollabAuditEventTypes.LineageDeleted,
+          docId,
+          timeProvider.GetUtcNow(),
+          note is null ? null : new CollabAuditActor(actorId!, note.Kind, note.OnBehalfOf),
+          lineage));
+    }
+
+    return (CollabHistoryStatus.Ready, outcome);
   }
 
   /// <summary>The restore key's digest: the request line, never the plan.</summary>
@@ -1422,6 +1446,13 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
 
       await store.DeleteAsync(documentId, cancellationToken);
 
+      signalHub?.Forget(documentId);
+      signalHub?.Event(new CollabAuditEvent(
+          CollabAuditEventTypes.DocumentPurged,
+          documentId,
+          timeProvider.GetUtcNow(),
+          null));
+
       return CollabDocumentPurgeOutcome.Purged;
     }
     finally
@@ -1458,6 +1489,11 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     foreach (var room in LiveRooms())
     {
       await room.SettleAsync();
+    }
+
+    if (signalHub is not null)
+    {
+      await signalHub.SettleAsync();
     }
   }
 
@@ -1549,7 +1585,8 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
             log,
             operationStore,
             activityObserver,
-            recordNotes);
+            recordNotes,
+            signalHub);
         room.Closed += OnRoomClosed;
         rooms[docId] = room;
       }

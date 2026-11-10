@@ -293,6 +293,7 @@ internal static partial class HistoryEndpoint
     var (status, outcome) = await admitted.Rooms.DeleteLineageAsync(
         admitted.Doc,
         lineage,
+        SyncHandshake.DeriveActor(admitted.TicketUser, admitted.User),
         context.RequestAborted);
 
     if (status != CollabHistoryStatus.Ready)

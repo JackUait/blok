@@ -11,7 +11,7 @@ import { ListItem } from '../../../../../src/tools/list';
 import { Table } from '../../../../../src/tools/table';
 import { Callout, Header, Toggle } from '../../../../../src/tools';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
-import { settle } from './roundtrip-harness';
+import { reflectContentEditable, settle } from './roundtrip-harness';
 import { savedAsHtml } from '../../../helpers/saved-as-html';
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
@@ -86,6 +86,8 @@ const cellOf = (saved: OutputData, row: number, col: number): OutputBlockData[] 
 const textsOf = (blocks: OutputBlockData[]): string[] => blocks.map(block => `${block.type}:${str(block.data.text)}`);
 
 describe('markdown pasted into a table cell', { timeout: 60_000 }, () => {
+  reflectContentEditable();
+
   beforeEach(() => {
     vi.clearAllMocks();
     holder = document.createElement('div');

@@ -114,6 +114,17 @@ async function startHost(journal: boolean, shared?: Host, extra: string[] = []):
   return { server, endpoint, directory };
 }
 
+/**
+ * The C# host builds its JS runtime on the first request that reaches the
+ * rooms: 4.7 to 4.9 s on a CI runner, against a 5 s test limit. A suite pays
+ * it here, from beforeAll, where the limit is a minute.
+ */
+async function warmUp(base: string): Promise<void> {
+  const answer = await send(base, 'POST', '/sync/warm-up/edit', [[KEY, 'warm-up']], insertBody('b1', 'x'));
+
+  expect(answer.status).toBe(204);
+}
+
 async function stopHost(host: Host | undefined): Promise<void> {
   if (host === undefined) {
     return;
@@ -140,6 +151,7 @@ suite('collab HTTP routes without a journal', () => {
   beforeAll(async () => {
     host = await startHost(false);
     base = host.server.baseUrl;
+    await warmUp(base);
   }, 60_000);
 
   afterAll(async () => {
@@ -270,6 +282,7 @@ suite('collab HTTP routes on a journal', () => {
   beforeAll(async () => {
     host = await startHost(true);
     base = host.server.baseUrl;
+    await warmUp(base);
   }, 60_000);
 
   afterAll(async () => {

@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Blok from '../../../../../src/blok';
 import { Table } from '../../../../../src/tools/table/index';
 import { Paragraph } from '../../../../../src/tools/paragraph';
+import { reflectContentEditable } from './roundtrip-harness';
 import {
   Bold,
   Code,
@@ -189,6 +190,8 @@ const chatgptMathTable = (): string =>
   + '</tr></tbody></table></div>';
 
 describe('app paste: AI chat tables', { timeout: 60_000 }, () => {
+  reflectContentEditable();
+
   lifecycle();
 
   describe('chatgpt real fixture (intro paragraph + table)', () => {

@@ -182,7 +182,8 @@ test.describe('undo audit: selection-driven edits', () => {
     await dragText(page, 'a', 3, 'c', 4);
     await paste(page, HTML_TWO);
     await gap(page);
-    expect(withoutId(await saved(page))).toEqual(['paragraph:Alplie three', 'paragraph:X1', 'paragraph:X2']);
+    // Pasted paragraphs split the text at the caret the deletion left.
+    expect(withoutId(await saved(page))).toEqual(['paragraph:AlpX1', 'paragraph:X2lie three']);
 
     await undo(page);
 
@@ -333,9 +334,10 @@ test.describe('undo audit: selection-driven edits', () => {
     await paste(page, HTML_TWO);
     await gap(page);
     const pasted = await saved(page);
-    const lastId = pasted[3]?.split(':')[0];
+    const lastId = pasted[2]?.split(':')[0];
 
-    expect(withoutId(pasted.slice(2))).toEqual(['paragraph:X1', 'paragraph:X2']);
+    // The first pasted paragraph joins the text before the caret.
+    expect(withoutId(pasted.slice(1))).toEqual(['paragraph:DeltaX1', 'paragraph:X2']);
     expect(await caret(page)).toBe(`${lastId}@2`);
 
     await undo(page);
@@ -504,7 +506,7 @@ test.describe('undo audit: selection-driven edits', () => {
     await gap(page);
     await paste(page, HTML_TWO);
     await gap(page);
-    expect(await saved(page)).toHaveLength(4);
+    expect(withoutId(await saved(page))).toEqual(['paragraph:Alpha one', 'paragraph:DeltaX1', 'paragraph:X2']);
 
     await undo(page);
 

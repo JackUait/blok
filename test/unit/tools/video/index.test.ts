@@ -468,6 +468,18 @@ describe('VideoTool — editor actions (block settings)', () => {
     expect(block.dispatchChange).toHaveBeenCalled();
   });
 
+  it('leaving an empty caption that was never set records no change', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    const caption = root.querySelector<HTMLElement>('[data-role="video-caption"]');
+
+    caption?.dispatchEvent(new FocusEvent('blur'));
+
+    expect(block.dispatchChange).not.toHaveBeenCalled();
+    expect(tool.save().caption).toBeUndefined();
+  });
+
   it('block-settings caption item flips captionVisible and updates data-caption', () => {
     const tool = new VideoTool(createOptions({ url: 'u' }));
     const root = tool.render();

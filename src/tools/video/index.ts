@@ -864,7 +864,8 @@ export class VideoTool implements BlockTool {
         placeholder,
         readOnly: this.readOnly,
         onChange: (next) => {
-          if (next !== this.data.caption) {
+          // A caption never set reads '' here; that is not a change.
+          if (next !== (this.data.caption ?? '')) {
             this.data.caption = next;
             this.block.dispatchChange();
           }

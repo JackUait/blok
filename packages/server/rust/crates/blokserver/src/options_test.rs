@@ -81,6 +81,9 @@ fn from_csharp(spec: &Node) -> Options {
             "CollabKeepAliveIntervalMs" => {
                 o.collab_keep_alive_interval_nanos = int(raw) * 1_000_000;
             }
+            "CollabChangeSignalWindowMs" => {
+                o.collab_change_signal_window_nanos = int(raw) * 1_000_000;
+            }
             "CollabInboundFramesPerSecond" => o.collab_inbound_frames_per_second = int(raw),
             "CollabInboundBurstFrames" => o.collab_inbound_burst_frames = int(raw),
             "CollabInboundResyncsPerMinute" => o.collab_inbound_resyncs_per_minute = int(raw),

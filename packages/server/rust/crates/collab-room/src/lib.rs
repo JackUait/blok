@@ -24,6 +24,7 @@ mod restore_guards;
 mod restore_scope;
 mod room;
 mod seams;
+mod signals;
 mod sync;
 mod timeline;
 mod window;
@@ -65,6 +66,11 @@ pub use restore_scope::{
 };
 pub use room::{Log, Membership};
 pub use seams::*;
+pub use signals::{
+    AUDIT_CONTENT_EDITED, AUDIT_DOCUMENT_PURGED, AUDIT_LINEAGE_DELETED, AuditActor, AuditEvent,
+    AuditObserver, ChangeObserver, ChangeSignal, SignalAuthor, SignalBlock, SignalProperties,
+    SignalRecord, SignalSchema, collapse_signal, fold_signals,
+};
 pub use timeline::{
     ActorKind, LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions,
     group_versions_by,
@@ -145,6 +151,8 @@ mod room_test;
 #[cfg(test)]
 #[allow(dead_code, reason = "a harness: not every test uses every fake")]
 mod test_support;
+#[cfg(test)]
+mod signals_fixture_test;
 #[cfg(test)]
 mod timers_test;
 #[cfg(test)]

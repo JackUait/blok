@@ -107,6 +107,11 @@ pub struct Options {
     /// as in Trash: the editor does not hide it.
     pub collab_restore_trashes_pages: bool,
 
+    /// CollabChangeSignalWindow: how long one change window runs from a
+    /// document's first journalled write before a ChangeObserver is told
+    /// what changed. 60 s by default; zero uses 60 s too.
+    pub collab_change_signal_window_nanos: i64,
+
     /// UseCollabRecordNotes<T>: a note of who wrote each journal record,
     /// kept beside the journal. The history routes then carry actor kinds.
     /// None keeps none.
@@ -174,6 +179,7 @@ impl Default for Options {
             collab_activity_observer: None,
             collab_enforce_restore_guards: false,
             collab_restore_trashes_pages: false,
+            collab_change_signal_window_nanos: 60_000_000_000,
             collab_record_notes: None,
             collab_stamp_authority: false,
             clock: None,
@@ -261,6 +267,10 @@ impl fmt::Debug for Options {
             .field(
                 "collab_restore_trashes_pages",
                 &self.collab_restore_trashes_pages,
+            )
+            .field(
+                "collab_change_signal_window_nanos",
+                &self.collab_change_signal_window_nanos,
             )
             .field("collab_record_notes", &self.collab_record_notes.is_some())
             .field("collab_stamp_authority", &self.collab_stamp_authority)

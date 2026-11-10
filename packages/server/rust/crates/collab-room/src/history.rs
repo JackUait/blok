@@ -525,6 +525,17 @@ impl Manager {
         doc_id: &str,
         lineage: &str,
     ) -> Result<(HistoryStatus, Option<LineageDeleteOutcome>), Error> {
+        self.delete_lineage_by(doc_id, lineage, "").await
+    }
+
+    /// delete_lineage by a known actor ("" for none), named in its
+    /// history.lineageDeleted event.
+    pub async fn delete_lineage_by(
+        &self,
+        doc_id: &str,
+        lineage: &str,
+        actor_id: &str,
+    ) -> Result<(HistoryStatus, Option<LineageDeleteOutcome>), Error> {
         let Some(history) = self.history_store() else {
             return Ok((HistoryStatus::None, None));
         };
@@ -535,6 +546,24 @@ impl Manager {
         let outcome = history.delete_lineage(&ctx, doc_id, lineage)?;
         if outcome == LineageDeleteOutcome::Purged || self.is_purging(doc_id) {
             return Ok((HistoryStatus::Purged, Some(LineageDeleteOutcome::Purged)));
+        }
+        if outcome == LineageDeleteOutcome::Deleted
+            && let Some(hub) = &self.0.signals
+        {
+            hub.event(
+                &self.0,
+                crate::AuditEvent {
+                    event_type: crate::AUDIT_LINEAGE_DELETED.to_owned(),
+                    doc_id: doc_id.to_owned(),
+                    at: self.0.options.now(),
+                    actor: crate::classify_actor(actor_id, false, "").map(|note| crate::AuditActor {
+                        id: actor_id.to_owned(),
+                        kind: Some(note.kind),
+                        on_behalf_of: note.on_behalf_of,
+                    }),
+                    lineage: Some(lineage.to_owned()),
+                },
+            );
         }
         Ok((HistoryStatus::Ready, Some(outcome)))
     }

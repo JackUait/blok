@@ -41,6 +41,9 @@ pub struct Options {
     /// The export, eviction and persist timers and every commit_timeout
     /// bound wait on it. Wall time when None.
     pub timers: Option<Arc<dyn Timers>>,
+    /// How long one change window runs from a document's first journalled
+    /// write. Used only with a ChangeObserver.
+    pub change_signal_window: Duration,
 }
 
 pub(crate) const MALFORMED_AWARENESS_LIMIT: i64 = 3;
@@ -72,6 +75,7 @@ impl Default for Options {
             restore_trashes_pages: false,
             now: None,
             timers: None,
+            change_signal_window: Duration::from_secs(60),
         }
     }
 }

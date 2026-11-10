@@ -292,6 +292,10 @@ impl Inner {
         let mut room = RoomOptions {
             announced_max_message_bytes: o.collab_max_message_bytes,
             restore_trashes_pages: o.collab_restore_trashes_pages,
+            change_signal_window: match u64::try_from(o.collab_change_signal_window_nanos) {
+                Ok(nanos) if nanos > 0 => std::time::Duration::from_nanos(nanos),
+                _ => std::time::Duration::from_secs(60),
+            },
             now: Some(Arc::new(move || clock())),
             timers: o.timers.clone(),
             ..RoomOptions::default()

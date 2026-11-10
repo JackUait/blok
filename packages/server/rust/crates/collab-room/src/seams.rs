@@ -459,4 +459,16 @@ pub trait ActivityObserver: Send + Sync {
         at: SystemTime,
         kind: ActivityKind,
     ) -> BoxFuture<'a, Result<(), Error>>;
+
+    /// OnChangesAsync: hand out a ChangeObserver to be told what changed in
+    /// each window. None, the default, keeps no windows and reads nothing.
+    fn changes(&self) -> Option<&dyn crate::ChangeObserver> {
+        None
+    }
+
+    /// OnEventAsync: hand out an AuditObserver to be told each typed audit
+    /// event. None, the default, sends none.
+    fn audit(&self) -> Option<&dyn crate::AuditObserver> {
+        None
+    }
 }

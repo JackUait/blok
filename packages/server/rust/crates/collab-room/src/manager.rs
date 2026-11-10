@@ -78,6 +78,7 @@ pub(crate) struct Shared {
     pub operations: Option<Arc<dyn OperationStore>>,
     pub activity: Option<Arc<dyn ActivityObserver>>,
     pub notes: Option<Arc<dyn crate::RecordNotesStore>>,
+    pub signals: Option<crate::signals::SignalHub>,
     rooms: Mutex<Rooms>,
     draining: AtomicBool,
     replaced: Mutex<Vec<Replaced>>,
@@ -236,6 +237,7 @@ impl Manager {
             options: o.room.with_defaults(),
             log: o.log,
             operations: o.operations,
+            signals: crate::signals::SignalHub::for_observer(o.activity.as_ref()),
             activity: o.activity,
             notes: o.notes,
             rooms: Mutex::new(Rooms::default()),
@@ -646,6 +648,19 @@ impl Manager {
             }
         }
         self.0.store.delete(doc_id).await?;
+        if let Some(hub) = &self.0.signals {
+            hub.forget(doc_id);
+            hub.event(
+                &self.0,
+                crate::AuditEvent {
+                    event_type: crate::AUDIT_DOCUMENT_PURGED.to_owned(),
+                    doc_id: doc_id.to_owned(),
+                    at: self.0.options.now(),
+                    actor: None,
+                    lineage: None,
+                },
+            );
+        }
         Ok(PurgeOutcome::Purged)
     }
 
@@ -704,6 +719,9 @@ impl Manager {
     pub async fn settle(&self) {
         for room in self.live_rooms() {
             room.settle().await;
+        }
+        if let Some(hub) = &self.0.signals {
+            hub.settle().await;
         }
     }
 }

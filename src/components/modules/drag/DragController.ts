@@ -989,6 +989,10 @@ export class DragController extends Module {
     // while that flag is true, so the parent change attaches to the move
     // entry instead of landing on Y.UndoManager as a separate stack item.
     const yjsManager = this.Blok.YjsManager;
+
+    // Undo gives the moved blocks back selected (Notion U111), not the caret from before the drag.
+    yjsManager?.markBlocksBefore?.(sourceBlocks.map(block => block.id));
+
     const inCell = (block: Block): boolean =>
       (block.holder.parentElement?.closest('[data-blok-table-cell-blocks]') ?? null) !== null;
     const sourceIds = new Set(sourceBlocks.map(block => block.id));

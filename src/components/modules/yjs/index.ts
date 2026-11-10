@@ -1229,6 +1229,11 @@ export class YjsManager extends Module {
     this.undoHistory.holdCapture();
   }
 
+  /** See {@link UndoHistory.markBlocksBefore}. */
+  public markBlocksBefore(ids: readonly string[]): void {
+    this.undoHistory.markBlocksBefore(ids);
+  }
+
   /** See {@link UndoHistory.reapplyCaretAfterRebuild}. */
   public reapplyCaretAfterRebuild(blockId: string): void {
     this.undoHistory.reapplyCaretAfterRebuild(blockId);

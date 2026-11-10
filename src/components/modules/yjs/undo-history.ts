@@ -2962,6 +2962,22 @@ export class UndoHistory {
   }
 
   /**
+   * The step about to be written starts from these blocks selected, not from
+   * the caret its gesture began with: a drag picks its blocks up.
+   * @param ids - the picked-up blocks
+   */
+  public markBlocksBefore(ids: readonly string[]): void {
+    const [first] = ids;
+
+    if (first === undefined) {
+      return;
+    }
+
+    this.pendingCaretBefore = { blockId: first, inputIndex: 0, offset: 0, blocks: [...ids] };
+    this.hasPendingCaret = true;
+  }
+
+  /**
    * Keep the open step open past the capture timeout, for a gesture the user
    * can pause in the middle of (a pointer drag, an IME composition). Every
    * hold must be released.

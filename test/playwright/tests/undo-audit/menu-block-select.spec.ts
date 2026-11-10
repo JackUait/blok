@@ -418,6 +418,28 @@ test.describe('block menu actions leave a block selection (D3)', () => {
   });
 });
 
+/** Drag block `id` by its handle to just above block `targetId`. */
+const dragAbove = async (page: Page, id: string, targetId: string): Promise<void> => {
+  const box = await page.locator(`[data-blok-id="${id}"] [data-blok-element-content]`).first().boundingBox();
+
+  if (box === null) {
+    throw new Error(`no box for ${id}`);
+  }
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const handle = await page.locator(HANDLE).boundingBox();
+  const target = await page.locator(`[data-blok-id="${targetId}"] [data-blok-element-content]`).first().boundingBox();
+
+  if (handle === null || target === null) {
+    throw new Error('missing boxes for drag');
+  }
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) {
+    await page.mouse.move(target.x + target.width / 2, handle.y + (target.y + 2 - handle.y) * i / 8);
+  }
+  await page.mouse.up();
+};
+
 const ids = async (page: Page): Promise<string[]> => page.evaluate(async () =>
   ((await window.blokInstance?.save())?.blocks ?? []).map((block) => block.id ?? ''));
 
@@ -520,6 +542,27 @@ test.describe('undo and redo after a block menu action (FR1, FR2 with D3)', () =
     await page.keyboard.press(REDO);
     await expect.poll(() => ids(page)).toEqual(['p-before', 'p1', copy, 'p2', 'p-after']);
     await expect.poll(() => selectedIds(page)).toEqual([copy]);
+    expect(await hasCaret(page)).toBe(false);
+  });
+
+  test('U111: a dragged block stays selected through undo and redo, with no caret', async ({ page }) => {
+    await createBlok(page, BASE);
+    await editable(page, 'p-before').click();
+    await gap(page);
+    await dragAbove(page, 'p2', 'p-before');
+    await expect.poll(() => ids(page)).toEqual(['p2', 'p-before', 'p1', 'p-after']);
+    await expect.poll(() => selectedIds(page)).toEqual(['p2']);
+    await gap(page);
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => ids(page)).toEqual(['p-before', 'p1', 'p2', 'p-after']);
+    await expect.poll(() => selectedIds(page)).toEqual(['p2']);
+    expect(await hasCaret(page)).toBe(false);
+    await gap(page, 300);
+
+    await page.keyboard.press(REDO);
+    await expect.poll(() => ids(page)).toEqual(['p2', 'p-before', 'p1', 'p-after']);
+    await expect.poll(() => selectedIds(page)).toEqual(['p2']);
     expect(await hasCaret(page)).toBe(false);
   });
 });

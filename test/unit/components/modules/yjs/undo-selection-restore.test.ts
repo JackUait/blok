@@ -174,6 +174,20 @@ describe('UndoHistory: the selection at the undo press', () => {
     expect(caret.setToInput).not.toHaveBeenCalled();
   });
 
+  it('undo of a step marked as made on picked-up blocks (a drag) selects them, not the caret the gesture began with', () => {
+    putCaret(blocks[0], 3);
+    history.beginGesture('discrete');
+    history.markBlocksBefore(['c']);
+    write('moved c');
+    putCaret(blocks[0], 0);
+
+    caret.setToInput.mockClear();
+    history.undo();
+
+    expect(blocks.filter((block) => block.selected).map((block) => block.id)).toEqual(['c']);
+    expect(caret.setToInput).not.toHaveBeenCalled();
+  });
+
   it('undo selects a block that has no text input instead of dropping the caret nowhere', () => {
     const bare = { ...makeBlock('x', ''), inputs: [] };
 

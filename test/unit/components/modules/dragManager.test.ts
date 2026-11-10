@@ -183,6 +183,7 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
   const yjsManager = {
     transact: vi.fn((callback: () => void) => callback()),
     transactMoves: vi.fn((callback: () => void) => callback()),
+    markBlocksBefore: vi.fn(),
   };
 
   const mergedState = {
@@ -1077,6 +1078,31 @@ describe('DragManager', () => {
       // Verify drag ended (observable behavior)
       expect(dragManager.isDragging).toBe(false);
       expect(modules.BlockManager.move).toHaveBeenCalled();
+    });
+
+    it('marks the dragged blocks as the selection the move starts from, so undo selects them', () => {
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach(block => wrapper.appendChild(block.holder));
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
+      vi.mocked(document.elementFromPoint).mockReturnValue(blocks[2].holder);
+      (blocks[2].holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 100, bottom: 150, left: 0, right: 100, width: 100, height: 50, x: 0, y: 100, toJSON: () => ({}),
+      });
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 50, clientY: 130 }));
+      document.dispatchEvent(createMouseEvent('mouseup'));
+
+      const marked = vi.mocked(modules.YjsManager.markBlocksBefore);
+      const moved = vi.mocked(modules.BlockManager.move);
+
+      expect(marked).toHaveBeenCalledWith([blocks[0].id]);
+      expect(marked.mock.invocationCallOrder[0]).toBeLessThan(moved.mock.invocationCallOrder[0]);
     });
 
     it('re-opens toolbar on dropped block', () => {

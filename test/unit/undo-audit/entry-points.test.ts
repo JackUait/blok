@@ -42,7 +42,8 @@ const mountEditor = (): Editor => {
     BlockSelection: { navigationModeEnabled: false },
     BlockSettings: { contains: vi.fn(() => false) },
     BlockEvents: { keydown: vi.fn() },
-    Toolbar: { close: vi.fn() },
+    // An undo or redo press reads the slash menu's state first.
+    Toolbar: { close: vi.fn(), toolbox: { opened: false, close: vi.fn() } },
     DragManager: { isDragging: false },
     YjsManager: { undo, redo: vi.fn(() => true), markCaretBeforeChange: vi.fn() },
     // Undo and redo key presses announce their result.

@@ -1213,8 +1213,9 @@ export class Saver extends Module {
       const hasLastEditedBy = lastEditedBy !== undefined && lastEditedBy !== null;
 
       const output: OutputData['blocks'][number] = {
-        ...block,
+        // id, type, data in this order: hosts compare saved JSON as text.
         id,
+        ...block,
         ...!isTunesEmpty && {
           tunes,
         },

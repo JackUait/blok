@@ -26,7 +26,7 @@ const view = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig =
 
 const row = (id: string, properties: DatabaseRow['properties']): DatabaseRow => ({ id, position: 'a0', properties });
 
-type Item = PopoverItemParams & { title?: string; isActive?: boolean | (() => boolean); onActivate?: () => void; children?: { items?: PopoverItemParams[] } };
+type Item = PopoverItemParams & { title?: string; isActive?: boolean | (() => boolean); onActivate?: () => void; children?: { items?: PopoverItemParams[]; width?: string } };
 
 const titled = (items: PopoverItemParams[] | undefined, title: string): Item => {
   const found = (items as Item[] | undefined)?.find((item) => item.title === title);

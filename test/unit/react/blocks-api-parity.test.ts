@@ -109,6 +109,12 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
     kind: 'internal',
     reason: 'viewport navigation; reachable via editor.blocks.scrollToBlock and useBlokHandle, not the useBlocks snapshot',
   },
+  // Only works during a `copy` event. A tool calls it from its own handler
+  // (the database's picked rows); it is not a block-tree snapshot operation.
+  copy: {
+    kind: 'internal',
+    reason: 'writes blocks to a tool\'s own copy event; reachable via editor.blocks.copy, not the useBlocks snapshot',
+  },
 };
 
 // Members the hook passes straight through: their parameters must stay core's,

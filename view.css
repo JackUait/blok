@@ -618,6 +618,7 @@
   --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: black;
   --blok-text-secondary: #646a79;
+  --blok-block-control: #8e8b86;
   --blok-popover-border: rgba(55, 53, 47, 0.09);
   --blok-popover-shadow: rgba(13, 20, 33, 0.1);
   --blok-popover-bg: #ffffff;
@@ -959,6 +960,7 @@
     --blok-icon-active-text: var(--blok-text-primary);
     --blok-text-primary: #e2e0dc;
     --blok-text-secondary: #a39e98;
+    --blok-block-control: #a39e98;
     --blok-popover-border: rgba(255, 255, 255, 0.14);
     --blok-popover-shadow: rgba(0, 0, 0, 0.6);
     --blok-popover-bg: #252525;
@@ -1128,6 +1130,7 @@
   --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: #e2e0dc;
   --blok-text-secondary: #a39e98;
+  --blok-block-control: #a39e98;
   --blok-popover-border: rgba(255, 255, 255, 0.14);
   --blok-popover-shadow: rgba(0, 0, 0, 0.6);
   --blok-popover-bg: #252525;
@@ -1370,6 +1373,11 @@
 [data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h3) {
   --_blok-callout-heading-size: var(--blok-heading-3-font-size, 1.25rem);
 }
+@property --emoji-stage-wash {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
 @property --blok-image-mend-angle {
   syntax: '<angle>';
   inherits: false;
@@ -1503,6 +1511,7 @@
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     :root, :host {
+      --emoji-stage-wash: transparent;
       --blok-embed-window-tone: transparent;
     }
     *, ::before, ::after, ::backdrop {

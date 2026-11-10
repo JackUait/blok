@@ -349,6 +349,21 @@ describe('Saver module', () => {
     expect(result?.blocks).toEqual([{ id: 'live-t', type: 'toggle', data: { text: 'Toggle' } }]);
   });
 
+  // Hosts compare saved JSON as text (the database page body does), so key order is output.
+  it('writes id, type and data first, in that order, for a block and for a stub', async () => {
+    const paragraph = createBlockMock({ id: 'p', tool: 'paragraph', data: { text: 'Text' }, tunes: { alignment: 'left' } });
+    const stub = createBlockMock({ id: 'live-t', tool: 'stub', data: { type: 'toggle', data: { text: 'Toggle' } } });
+
+    const { saver } = createSaver({ blocks: [paragraph.block, stub.block], toolSanitizeConfigs: { paragraph: {} } });
+
+    const result = await saver.save();
+
+    expect(result?.blocks.map(block => Object.keys(block))).toEqual([
+      ['id', 'type', 'data', 'tunes'],
+      ['id', 'type', 'data'],
+    ]);
+  });
+
   it('returns an empty blocks array for a single empty default block', async () => {
     const emptyBlock = createBlockMock({
       id: 'block-1',

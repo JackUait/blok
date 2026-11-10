@@ -34,6 +34,8 @@
     "public/**",
     "!public/samples/*.{docx,pptx,xlsx}",
     "packages/server/dotnet/**",
+    "!packages/server/dotnet/Blok.Mcp/.mcp/server.json",
+    "!packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs",
     ".playwright-cli/**",
     ".playwright-mcp/**",
     ".venv/**",

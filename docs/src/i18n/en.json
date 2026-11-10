@@ -1814,12 +1814,12 @@
       },
       "undoRedo": {
         "title": "Conflict-free undo & redo",
-        "description": "Yjs-backed history with ⌘Z / ⌘⇧Z. Conflict-free, grouped at word boundaries, and it restores your caret.",
+        "description": "Yjs-backed history with ⌘Z / ⌘⇧Z. Conflict-free, groups typing into short bursts, and it restores your caret.",
         "learnMore": "Learn more about undo and redo",
         "details": {
           "summary": "History is built on a CRDT (Yjs), so undo and redo are conflict-free and behave predictably even across complex block operations.",
           "benefit1": "CRDT-based, conflict-free history",
-          "benefit2": "Grouped at word boundaries",
+          "benefit2": "Typing grouped into short bursts",
           "benefit3": "Caret restored after undo",
           "benefit4": "⌘Z / ⌘⇧Z and a programmatic API"
         }

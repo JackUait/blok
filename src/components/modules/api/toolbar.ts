@@ -86,7 +86,7 @@ export class ToolbarAPI extends Module {
       this.Blok.Toolbar.moveAndOpen(triggerBlock);
       void this.Blok.BlockSettings.open(triggerBlock, trigger, options);
     } else {
-      this.Blok.BlockSettings.close();
+      this.Blok.BlockSettings.closeByTool();
     }
   }
 

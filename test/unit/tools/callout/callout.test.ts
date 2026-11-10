@@ -377,6 +377,25 @@ describe('CalloutTool', () => {
       expect(wrapper.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
     });
 
+    it('closes the block menu after a pick, as Notion does (U140)', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const options = createOptions();
+      const tool = new CalloutTool(options);
+
+      tool.render();
+
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ element: HTMLElement }> };
+      }>;
+      const swatch = settings[1].children.items[0].element.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="callout-color-swatch-background-color-blue"]'
+      );
+
+      swatch?.click();
+
+      expect(options.api.toolbar.toggleBlockSettings).toHaveBeenCalledWith(false);
+    });
+
     it('sets --blok-search-input-bg to color-mix variant when background color is applied', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const tool = new CalloutTool(createOptions());

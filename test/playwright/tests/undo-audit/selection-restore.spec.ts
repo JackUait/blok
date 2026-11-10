@@ -289,7 +289,8 @@ test.describe('undo audit: the selection undo and redo restore', () => {
     expect(await caret(page)).toBe('b1:3');
   });
 
-  test('U140: undo and redo of a callout colour keep a caret in the callout, not focus on the body', async ({ page }) => {
+  // A restored block selection leaves focus where Escape's does (the body); FR4 is about carets.
+  test('U140: a callout colour pick closes the menu, and the callout stays selected through undo and redo', async ({ page }) => {
     await createBlok(page, [
       { id: 'co', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['k1'] },
       { id: 'k1', type: 'paragraph', data: { text: 'Note' }, parent: 'co' },
@@ -300,21 +301,25 @@ test.describe('undo audit: the selection undo and redo restore', () => {
     await page.locator('[data-blok-testid="popover-item"][data-blok-item-name="callout-color"]').dispatchEvent('mouseover');
     await page.getByTestId('callout-color-swatch-background-color-blue').click();
     await wait(page, 300);
-    await press(page, 'Escape');
-    await wait(page, STEP_GAP_MS);
 
     const background = async (): Promise<unknown> => page.evaluate(async () =>
       (await window.blokInstance?.save())?.blocks.find((block) => block.id === 'co')?.data.backgroundColor ?? null);
 
     expect(await background()).toBe('blue');
+    await expect(page.getByTestId('block-tunes-popover')).toHaveCount(0);
+    expect(await selectedBlocks(page)).toEqual(['co']);
+    expect(await caret(page)).toMatch(/^none/);
+    await wait(page, STEP_GAP_MS);
 
     await press(page, UNDO);
     expect(await background()).toBeNull();
-    expect(await caret(page)).toBe('k1:4');
+    expect(await selectedBlocks(page)).toEqual(['co']);
+    expect(await caret(page)).toMatch(/^none/);
 
     await press(page, REDO);
     expect(await background()).toBe('blue');
-    expect(await caret(page)).toBe('k1:4');
+    expect(await selectedBlocks(page)).toEqual(['co']);
+    expect(await caret(page)).toMatch(/^none/);
   });
 
   test('U050: undo of Backspace over a cross-block range brings the range back, with the toolbar', async ({ page }) => {

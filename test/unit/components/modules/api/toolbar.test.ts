@@ -14,7 +14,7 @@ type ToolbarBlokMock = {
   BlockSettings: {
     opened: boolean;
     open: ReturnType<typeof vi.fn>;
-    close: ReturnType<typeof vi.fn>;
+    closeByTool: ReturnType<typeof vi.fn>;
   };
   Toolbar: {
     opened: boolean;
@@ -51,7 +51,7 @@ describe('ToolbarAPI', () => {
         open: vi.fn(() => {
           blokMock.BlockSettings.opened = true;
         }),
-        close: vi.fn(() => {
+        closeByTool: vi.fn(() => {
           blokMock.BlockSettings.opened = false;
         }),
       },
@@ -215,7 +215,7 @@ describe('ToolbarAPI', () => {
       toolbarApi.toggleBlockSettings(false, trigger);
 
       expect(blokMock.BlockManager.setCurrentBlockByChildNode).not.toHaveBeenCalled();
-      expect(blokMock.BlockSettings.close).toHaveBeenCalled();
+      expect(blokMock.BlockSettings.closeByTool).toHaveBeenCalled();
     });
 
     it('logs a warning when no block is selected', () => {

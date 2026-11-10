@@ -395,6 +395,8 @@ export class CalloutTool implements BlockTool {
 
         picker.setActiveColor(color, modeKey);
         this.applyColors();
+        // Notion closes the menu on a pick and keeps the callout selected (U140).
+        this.api.toolbar.toggleBlockSettings(false);
       },
     });
 

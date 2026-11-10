@@ -19,6 +19,7 @@ type PopoverMock = {
   off: Mock<(event: string, handler: () => void) => void>;
   destroy: Mock<() => void>;
   getElement: Mock<() => HTMLDivElement>;
+  hasNode: Mock<(node: Node) => boolean>;
   show: Mock<() => void>;
   params?: unknown;
   type?: 'desktop' | 'mobile';
@@ -37,6 +38,7 @@ vi.mock('../../../../../src/components/utils/popover', () => {
       this.off = vi.fn();
       this.destroy = vi.fn();
       this.getElement = vi.fn(() => element);
+      this.hasNode = vi.fn((node: Node) => element.contains(node));
       this.show = vi.fn();
       this.params = params;
       this.type = type;
@@ -1115,6 +1117,29 @@ describe('BlockSettings', () => {
 
       expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
       raf.mockRestore();
+    });
+
+    it('leaves the block selected when its tool closes the menu from a click inside it (a colour pick)', async () => {
+      const { block } = await openWithTune(vi.fn());
+      const menu = getLastPopover()?.getElement();
+      const swatch = document.createElement('button');
+
+      document.body.appendChild(menu ?? document.createElement('div'));
+      menu?.appendChild(swatch);
+      swatch.addEventListener('click', () => blockSettings.closeByTool());
+      swatch.click();
+
+      expect(blokMock.BlockSelection.unselectBlock).not.toHaveBeenCalled();
+      expect(blokMock.BlockSelection.selectBlock).toHaveBeenCalledWith(block);
+    });
+
+    it('still clears the selection when the menu is closed by a tool with no click inside it', async () => {
+      const { block } = await openWithTune(vi.fn());
+
+      blockSettings.closeByTool();
+
+      expect(blokMock.BlockSelection.selectBlock).not.toHaveBeenCalled();
+      expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
     });
 
     it('still clears the selection when the menu is dismissed', async () => {

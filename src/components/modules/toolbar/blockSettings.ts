@@ -160,6 +160,15 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /** Stops watching for focus that would leave a kept selection under a field. */
   private stopFocusWatch: () => void = () => undefined;
 
+  /** Blocks the open menu acts on. */
+  private menuBlocks: Block[] = [];
+
+  /** True while a click inside the open menu is being handled. */
+  private clickInMenu = false;
+
+  /** Stops watching for clicks inside the open menu. */
+  private stopClickWatch: () => void = () => undefined;
+
   /**
    * Panel with block settings with 2 sections:
    *  - Tool's Settings
@@ -181,6 +190,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     this.popover = null;
     this.detachFlipperKeydownListener();
     this.removeAllNodes();
+    this.stopClickWatch();
     this.listeners.destroy();
     this.eventsDispatcher.off(BlokMobileLayoutToggled, this.close);
   }
@@ -288,6 +298,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       const toolTunes = tunes.toolTunes === undefined ? undefined : this.noteActions(tunes.toolTunes, actedOn);
 
       this.actedBlocks = null;
+      this.menuBlocks = actedOn;
+      this.watchMenuClicks();
 
       const items = await this.getTunesItems(block, commonTunes, toolTunes, caretOffset);
 
@@ -435,6 +447,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     this.opened = false;
     this.isOpening = false; // Clear isOpening flag when closing
+    this.stopClickWatch();
 
     const kept = this.keepActedSelection();
 
@@ -473,6 +486,46 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       this.popover = null;
     }
   };
+
+  /**
+   * Close on a tool's request (`api.toolbar.toggleBlockSettings(false)`). A
+   * tool that closes its menu from a click inside it, like a callout colour
+   * pick, acted on the block, so the block stays selected (Notion U140). A
+   * close from anywhere else clears the selection as before.
+   */
+  public closeByTool(): void {
+    if (this.opened && this.clickInMenu && this.actedBlocks === null) {
+      this.actedBlocks = this.menuBlocks;
+    }
+
+    this.close();
+  }
+
+  /**
+   * Notes clicks inside the open menu, for {@link closeByTool}.
+   */
+  private watchMenuClicks(): void {
+    this.stopClickWatch();
+
+    const onClick = (event: MouseEvent): void => {
+      if (!(event.target instanceof HTMLElement) || !this.contains(event.target)) {
+        return;
+      }
+
+      this.clickInMenu = true;
+      // The click's own handlers run before this timer.
+      window.setTimeout(() => {
+        this.clickInMenu = false;
+      }, 0);
+    };
+
+    window.addEventListener('click', onClick, true);
+    this.stopClickWatch = () => {
+      window.removeEventListener('click', onClick, true);
+      this.clickInMenu = false;
+      this.stopClickWatch = () => undefined;
+    };
+  }
 
   /**
    * Returns list of items to be displayed in block tunes menu.

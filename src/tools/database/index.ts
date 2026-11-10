@@ -2616,14 +2616,13 @@ export class DatabaseTool implements BlockTool {
     const currentTitle = this.linked ? this.title : this.titleElement?.textContent ?? this.title;
 
     const { deletedProperties, ...snapshot } = this.model.snapshot();
+    // Kept as loaded: absent stays absent until the first delete (DatabaseModel.deletedSlot).
+    const savedDeleted = this.source === undefined ? deletedProperties : structuredClone(this.stubDeleted);
 
     return {
       ...structuredClone(this.unknown),
       ...snapshot,
-      // Kept as loaded: absent stays absent until the first delete (DatabaseModel.deletedSlot).
-      ...(this.source === undefined
-        ? deletedProperties === undefined ? {} : { deletedProperties }
-        : this.stubDeleted === undefined ? {} : { deletedProperties: structuredClone(this.stubDeleted) }),
+      ...(savedDeleted === undefined ? {} : { deletedProperties: savedDeleted }),
       // Written even when empty: two peers that each create this key keep only one (serializer.ts objectToYMap).
       automations: structuredClone(this.savedAutomations ?? DATABASE_EMPTY_AUTOMATIONS),
       // Linked: a reference, never a copy of the source's schema.

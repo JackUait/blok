@@ -143,7 +143,8 @@ export class DatabaseTableRowDrag {
     const gridRect = this.grid.getBoundingClientRect();
     const edge = before !== null ? before.getBoundingClientRect().top : after?.getBoundingClientRect().bottom ?? gridRect.top;
 
-    line.style.top = `${edge - gridRect.top - 2}px`;
+    // notion-motion.md Round 9: the line's top sits on the boundary, not centred on it.
+    line.style.top = `${edge - gridRect.top}px`;
     line.setAttribute('data-visible', '');
   }
 

@@ -1763,6 +1763,20 @@ describe('DatabaseTableView', () => {
       expect(document.querySelector('[data-blok-database-table-row-ghost]')).toBeNull();
     });
 
+    // notion-motion.md Round 9 "Row drag" (r9-rowdrag-mid.raw): the 4px line's top sits on the row boundary, not centred on it.
+    it('puts the drop line\'s top on the row boundary', () => {
+      const { root } = mount();
+      const rowEls = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];
+
+      rowEls.forEach((el, i) => vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(rect(i * 37)));
+      rowEls[0].querySelector<HTMLElement>('[data-blok-database-table-row-handle]')
+        ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 10, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 60 }));
+
+      expect(root.querySelector<HTMLElement>('[data-blok-database-table-drop-line]')?.style.top).toBe('74px');
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 60 }));
+    });
+
     // Notion's row ghost moves sideways with the pointer (notion-live/rowdrag-mid.png: +74px).
     it('moves the row ghost sideways with the pointer, keeping the press offset', () => {
       const { root } = mount();

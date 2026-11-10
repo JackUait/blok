@@ -361,7 +361,10 @@ pub(crate) fn signal_record_of(
         if !properties.is_empty() {
             out.properties.push(SignalProperties {
                 row_id: id.clone(),
-                ids: properties.iter().filter_map(|entry| text_of(entry, "id")).collect(),
+                ids: properties
+                    .iter()
+                    .filter_map(|entry| text_of(entry, "id"))
+                    .collect(),
             });
         }
         for entry in entries_of(&fields, "schema") {
@@ -540,7 +543,10 @@ impl SignalHub {
                 return;
             }
             state.closed = true;
-            if open.get(doc_id).is_some_and(|current| Arc::ptr_eq(current, window)) {
+            if open
+                .get(doc_id)
+                .is_some_and(|current| Arc::ptr_eq(current, window))
+            {
                 open.remove(doc_id);
             }
         }
@@ -573,7 +579,8 @@ impl SignalHub {
             (start, dropped)
         };
         if dropped {
-            manager.logf("collab: a change signal or audit event was dropped; the observer is behind");
+            manager
+                .logf("collab: a change signal or audit event was dropped; the observer is behind");
         }
         if start {
             let manager = Manager(manager.clone());

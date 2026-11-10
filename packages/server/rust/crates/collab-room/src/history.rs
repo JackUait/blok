@@ -556,10 +556,12 @@ impl Manager {
                     event_type: crate::AUDIT_LINEAGE_DELETED.to_owned(),
                     doc_id: doc_id.to_owned(),
                     at: self.0.options.now(),
-                    actor: crate::classify_actor(actor_id, false, "").map(|note| crate::AuditActor {
-                        id: actor_id.to_owned(),
-                        kind: Some(note.kind),
-                        on_behalf_of: note.on_behalf_of,
+                    actor: crate::classify_actor(actor_id, false, "").map(|note| {
+                        crate::AuditActor {
+                            id: actor_id.to_owned(),
+                            kind: Some(note.kind),
+                            on_behalf_of: note.on_behalf_of,
+                        }
                     }),
                     lineage: Some(lineage.to_owned()),
                 },

@@ -149,10 +149,10 @@ mod retry_test;
 #[cfg(test)]
 mod room_test;
 #[cfg(test)]
+mod signals_fixture_test;
+#[cfg(test)]
 #[allow(dead_code, reason = "a harness: not every test uses every fake")]
 mod test_support;
-#[cfg(test)]
-mod signals_fixture_test;
 #[cfg(test)]
 mod timers_test;
 #[cfg(test)]

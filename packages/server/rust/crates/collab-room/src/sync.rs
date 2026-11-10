@@ -311,11 +311,18 @@ impl Room {
         }
         st.committed_through = appended.sequence;
         let note = note.or_else(|| crate::classify_actor(actor_id, false, ""));
-        self.write_note_locked(st, appended.sequence, note.clone()).await;
+        self.write_note_locked(st, appended.sequence, note.clone())
+            .await;
         if let Some(manager) = self.manager.upgrade()
             && let Some(hub) = &manager.signals
         {
-            hub.committed(&self.manager, &self.doc_id, &st.tag.lineage, appended.sequence, note.clone());
+            hub.committed(
+                &self.manager,
+                &self.doc_id,
+                &st.tag.lineage,
+                appended.sequence,
+                note.clone(),
+            );
         }
         // After the append: an edit is reported once it is durable.
         self.record_edited_locked(st, actor_id, note);

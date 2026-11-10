@@ -1972,7 +1972,9 @@ impl SignalBench {
             endpoint: bench.endpoint.clone(),
             converter: Arc::new(runtime_converter()),
             room,
-            log: Some(Arc::new(move |m: &str| written.lock().unwrap().push(m.to_owned()))),
+            log: Some(Arc::new(move |m: &str| {
+                written.lock().unwrap().push(m.to_owned())
+            })),
             operations: Some(bench.journal.clone()),
             activity: Some(observer),
             notes: None,
@@ -1998,7 +2000,11 @@ impl SignalBench {
             }
             tokio::time::sleep(Duration::from_millis(1)).await;
         }
-        assert!(hub.closed_windows() >= closed, "{} windows closed", hub.closed_windows());
+        assert!(
+            hub.closed_windows() >= closed,
+            "{} windows closed",
+            hub.closed_windows()
+        );
         self.manager.settle().await;
     }
 
@@ -2024,7 +2030,12 @@ async fn one_signal_per_window_names_the_changed_blocks_and_their_authors() {
     assert_eq!(signals.len(), 1, "{signals:?}");
     let signal = &signals[0];
     assert_eq!(
-        (signal.doc_id.as_str(), signal.lineage.clone(), signal.from_sequence, signal.to_sequence),
+        (
+            signal.doc_id.as_str(),
+            signal.lineage.clone(),
+            signal.from_sequence,
+            signal.to_sequence
+        ),
         (DOC, b.bench.lineage(), 1, 2)
     );
     assert_eq!(
@@ -2035,7 +2046,10 @@ async fn one_signal_per_window_names_the_changed_blocks_and_their_authors() {
         id: id.to_owned(),
         kind: kind.to_owned(),
     };
-    assert_eq!(signal.blocks, vec![block("a", "changed"), block("b", "added")]);
+    assert_eq!(
+        signal.blocks,
+        vec![block("a", "changed"), block("b", "added")]
+    );
     let author = |id: &str| SignalAuthor {
         id: id.to_owned(),
         kind: Some("person".to_owned()),
@@ -2110,7 +2124,10 @@ async fn the_window_length_comes_from_the_options() {
     assert_eq!(signals.len(), 1, "{signals:?}");
     assert_eq!((signals[0].from_sequence, signals[0].to_sequence), (1, 2));
     assert_eq!(
-        signals[0].window_end.duration_since(signals[0].window_start).unwrap(),
+        signals[0]
+            .window_end
+            .duration_since(signals[0].window_start)
+            .unwrap(),
         Duration::from_secs(300)
     );
 }
@@ -2126,7 +2143,13 @@ async fn a_failing_observer_is_logged_and_edits_go_on() {
     b.advance(Duration::from_secs(60), 1).await;
     edit(&b.manager, update("a", "three"), None).await;
 
-    assert!(b.logs.lock().unwrap().iter().any(|line| line.contains("host down")));
+    assert!(
+        b.logs
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|line| line.contains("host down"))
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

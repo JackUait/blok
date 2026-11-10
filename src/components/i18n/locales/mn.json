@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "Аялал",
   "tools.callout.recentEmojis": "Сүүлд ашигласан",
   "tools.callout.currentIcon": "Одоогийн дүрс",
+  "tools.callout.noIconYet": "Одоогоор дүрс алга",
+  "tools.callout.pickIconYouLike": "Таалагдсанаа сонгоно уу",
   "tools.database.addCard": "Карт нэмэх",
   "tools.database.newPage": "Шинэ хуудас",
   "tools.database.addColumn": "Багана нэмэх",

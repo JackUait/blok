@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Safari",
   "tools.callout.recentEmojis": "Za hivi karibuni",
   "tools.callout.currentIcon": "Ikoni ya sasa",
+  "tools.callout.noIconYet": "Bado hakuna ikoni",
+  "tools.callout.pickIconYouLike": "Chagua unayoipenda",
   "tools.database.addCard": "Ongeza kadi",
   "tools.database.newPage": "Ukurasa mpya",
   "tools.database.addColumn": "Ongeza safu wima",

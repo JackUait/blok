@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Du lịch",
   "tools.callout.recentEmojis": "Gần đây",
   "tools.callout.currentIcon": "Biểu tượng hiện tại",
+  "tools.callout.noIconYet": "Chưa có biểu tượng",
+  "tools.callout.pickIconYouLike": "Chọn một biểu tượng bạn thích",
   "tools.database.addCard": "Thêm thẻ",
   "tools.database.newPage": "Trang mới",
   "tools.database.addColumn": "Thêm cột",

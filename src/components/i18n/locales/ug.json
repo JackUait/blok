@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "ساياھەت",
   "tools.callout.recentEmojis": "يېقىنقىلار",
   "tools.callout.currentIcon": "نۆۋەتتىكى سىنبەلگە",
+  "tools.callout.noIconYet": "تېخى سىنبەلگە يوق",
+  "tools.callout.pickIconYouLike": "ياقتۇرغىنىڭىزنى تاللاڭ",
   "tools.database.addCard": "كارتا قوشۇش",
   "tools.database.newPage": "يېڭى بەت",
   "tools.database.addColumn": "ئىستون قوشۇش",

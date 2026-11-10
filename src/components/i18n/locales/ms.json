@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "Perjalanan",
   "tools.callout.recentEmojis": "Terkini",
   "tools.callout.currentIcon": "Ikon semasa",
+  "tools.callout.noIconYet": "Belum ada ikon",
+  "tools.callout.pickIconYouLike": "Pilih yang anda suka",
   "tools.database.addCard": "Tambah kad",
   "tools.database.newPage": "Halaman baharu",
   "tools.database.addColumn": "Tambah lajur",

@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "Патување",
   "tools.callout.recentEmojis": "Неодамнешни",
   "tools.callout.currentIcon": "Тековна икона",
+  "tools.callout.noIconYet": "Сè уште нема икона",
+  "tools.callout.pickIconYouLike": "Изберете ја онаа што ви се допаѓа",
   "tools.database.addCard": "Додај картичка",
   "tools.database.newPage": "Нова страница",
   "tools.database.addColumn": "Додај колона",

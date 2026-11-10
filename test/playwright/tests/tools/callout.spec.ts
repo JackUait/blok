@@ -91,6 +91,28 @@ test('selects emoji from picker and updates button', async ({ page }) => {
   await expect(page.getByTestId('callout-emoji-btn')).toHaveText(emojiChar ?? '');
 });
 
+test('an icon-less callout opens the picker on a smiley and an invitation, and a pointed emoji takes its place', async ({ page }) => {
+  await createBlok(page, createCalloutData({ emoji: '' }));
+  // With no icon the button has no width to click, so open it from the keyboard.
+  await page.getByTestId('callout-emoji-btn').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
+  await page.locator('[data-blok-emoji-picker]')
+    .evaluate((picker) => picker.getAnimations().forEach((animation) => animation.finish()));
+
+  const glyph = page.locator('[data-emoji-picker-stage-glyph]');
+  const drawing = (): Promise<string | null> => glyph.evaluate((element) => element.firstElementChild?.tagName ?? null);
+
+  await expect.poll(drawing).toBe('svg');
+  await expect(page.locator('[data-emoji-picker-stage-kicker]')).toHaveText('No icon yet');
+  await expect(page.locator('[data-emoji-picker-stage-name]')).toHaveText('Pick one you like');
+
+  await page.locator('[data-emoji-native="👉"]').hover();
+
+  await expect(glyph).toHaveText('👉');
+  await expect.poll(drawing).toBeNull();
+});
+
 /**
  * Regression: a hover tooltip inside the picker outlived it.
  * `close()` hides the picker root, which takes the layout box away from every

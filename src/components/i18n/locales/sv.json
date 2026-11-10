@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Resor",
   "tools.callout.recentEmojis": "Senaste",
   "tools.callout.currentIcon": "Nuvarande ikon",
+  "tools.callout.noIconYet": "Ingen ikon än",
+  "tools.callout.pickIconYouLike": "Välj en du gillar",
   "tools.database.addCard": "Lägg till kort",
   "tools.database.newPage": "Ny sida",
   "tools.database.addColumn": "Lägg till kolumn",

@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Ճամփորդություն",
   "tools.callout.recentEmojis": "Վերջինները",
   "tools.callout.currentIcon": "Ընթացիկ պատկերակ",
+  "tools.callout.noIconYet": "Դեռ պատկերակ չկա",
+  "tools.callout.pickIconYouLike": "Ընտրեք ձեր հավանածը",
   "tools.database.addCard": "Ավելացնել քարտ",
   "tools.database.newPage": "Նոր էջ",
   "tools.database.addColumn": "Ավելացնել սյունակ",

@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "سفر",
   "tools.callout.recentEmojis": "وروستي",
   "tools.callout.currentIcon": "اوسنی آیکون",
+  "tools.callout.noIconYet": "تر اوسه آیکون نشته",
+  "tools.callout.pickIconYouLike": "هغه چې مو خوښ وي وټاکئ",
   "tools.database.addCard": "کارت اضافه کړئ",
   "tools.database.newPage": "نوې پاڼه",
   "tools.database.addColumn": "کالم اضافه کړئ",

@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Reise",
   "tools.callout.recentEmojis": "Nylige",
   "tools.callout.currentIcon": "Nåværende ikon",
+  "tools.callout.noIconYet": "Ingen ikon ennå",
+  "tools.callout.pickIconYouLike": "Velg et du liker",
   "tools.database.addCard": "Legg til kort",
   "tools.database.newPage": "Ny side",
   "tools.database.addColumn": "Legg til kolonne",

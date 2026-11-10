@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "ప్రయాణం",
   "tools.callout.recentEmojis": "ఇటీవలివి",
   "tools.callout.currentIcon": "ప్రస్తుత చిహ్నం",
+  "tools.callout.noIconYet": "ఇంకా చిహ్నం లేదు",
+  "tools.callout.pickIconYouLike": "మీకు నచ్చినదాన్ని ఎంచుకోండి",
   "tools.database.addColumn": "నిలువు వరుస జోడించండి",
   "tools.database.newGroup": "కొత్త సమూహం",
   "tools.database.renameColumn": "నిలువు వరుస పేరు మార్చండి",

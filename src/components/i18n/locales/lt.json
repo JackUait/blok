@@ -406,6 +406,8 @@
   "tools.callout.emojiChipTravel": "Kelionės",
   "tools.callout.recentEmojis": "Naujausi",
   "tools.callout.currentIcon": "Dabartinė piktograma",
+  "tools.callout.noIconYet": "Piktogramos dar nėra",
+  "tools.callout.pickIconYouLike": "Pasirinkite, kuri jums patinka",
   "tools.database.addCard": "Pridėti kortelę",
   "tools.database.newPage": "Naujas puslapis",
   "tools.database.addColumn": "Pridėti stulpelį",

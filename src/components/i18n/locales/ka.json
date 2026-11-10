@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "მოგზაურობა",
   "tools.callout.recentEmojis": "ბოლოდროინდელი",
   "tools.callout.currentIcon": "მიმდინარე ხატულა",
+  "tools.callout.noIconYet": "ხატულა ჯერ არ არის",
+  "tools.callout.pickIconYouLike": "აირჩიეთ, რომელიც მოგწონთ",
   "tools.database.addCard": "ბარათის დამატება",
   "tools.database.newPage": "ახალი გვერდი",
   "tools.database.addColumn": "სვეტის დამატება",

@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "සංචාර",
   "tools.callout.recentEmojis": "මෑත",
   "tools.callout.currentIcon": "වත්මන් නිරූපකය",
+  "tools.callout.noIconYet": "තවම නිරූපකයක් නැත",
+  "tools.callout.pickIconYouLike": "ඔබ කැමති එකක් තෝරන්න",
   "tools.database.addColumn": "තීරුව එක් කරන්න",
   "tools.database.newGroup": "නව සමූහය",
   "tools.database.renameColumn": "තීරුව නැවත නම් කරන්න",

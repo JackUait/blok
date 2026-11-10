@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "ခရီးသွား",
   "tools.callout.recentEmojis": "မကြာသေးမီက",
   "tools.callout.currentIcon": "လက်ရှိ အိုင်ကွန်",
+  "tools.callout.noIconYet": "အိုင်ကွန် မရှိသေးပါ",
+  "tools.callout.pickIconYouLike": "သင်ကြိုက်တာကို ရွေးပါ",
   "tools.database.addColumn": "ကော်လံထည့်ရန်",
   "tools.database.newGroup": "အုပ်စုအသစ်",
   "tools.database.renameColumn": "ကော်လံအမည်ပြောင်းရန်",

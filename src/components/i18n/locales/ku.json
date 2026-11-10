@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "گەشت",
   "tools.callout.recentEmojis": "دوایینەکان",
   "tools.callout.currentIcon": "ئایکۆنی ئێستا",
+  "tools.callout.noIconYet": "هێشتا ئایکۆن نییە",
+  "tools.callout.pickIconYouLike": "ئەوەی بەدڵتە هەڵیبژێرە",
   "tools.database.addCard": "کارت زیاد بکە",
   "tools.database.newPage": "پەڕەی نوێ",
   "tools.database.addColumn": "ستوون زیاد بکە",

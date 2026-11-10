@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Paglalakbay",
   "tools.callout.recentEmojis": "Kamakailan",
   "tools.callout.currentIcon": "Kasalukuyang icon",
+  "tools.callout.noIconYet": "Wala pang icon",
+  "tools.callout.pickIconYouLike": "Pumili ng gusto mo",
   "tools.database.addColumn": "Magdagdag ng kolum",
   "tools.database.newGroup": "Bagong grupo",
   "tools.database.renameColumn": "Palitan ang pangalan ng kolum",

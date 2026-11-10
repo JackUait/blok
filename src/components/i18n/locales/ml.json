@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "യാത്ര",
   "tools.callout.recentEmojis": "അടുത്തിടെയുള്ളവ",
   "tools.callout.currentIcon": "നിലവിലെ ഐക്കൺ",
+  "tools.callout.noIconYet": "ഇതുവരെ ഐക്കൺ ഇല്ല",
+  "tools.callout.pickIconYouLike": "ഇഷ്ടമുള്ള ഒന്ന് തിരഞ്ഞെടുക്കുക",
   "tools.database.addColumn": "കോളം ചേർക്കുക",
   "tools.database.newGroup": "പുതിയ ഗ്രൂപ്പ്",
   "tools.database.renameColumn": "കോളം പുനർനാമകരണം ചെയ്യുക",

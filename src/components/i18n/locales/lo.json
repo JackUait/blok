@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "ການເດີນທາງ",
   "tools.callout.recentEmojis": "ລ່າສຸດ",
   "tools.callout.currentIcon": "ໄອຄອນປັດຈຸບັນ",
+  "tools.callout.noIconYet": "ຍັງບໍ່ມີໄອຄອນ",
+  "tools.callout.pickIconYouLike": "ເລືອກອັນທີ່ທ່ານມັກ",
   "tools.database.addColumn": "ເພີ່ມຖັນ",
   "tools.database.newGroup": "ກຸ່ມໃໝ່",
   "tools.database.renameColumn": "ປ່ຽນຊື່ຖັນ",

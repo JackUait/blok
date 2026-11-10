@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Perjalanan",
   "tools.callout.recentEmojis": "Terbaru",
   "tools.callout.currentIcon": "Ikon saat ini",
+  "tools.callout.noIconYet": "Belum ada ikon",
+  "tools.callout.pickIconYouLike": "Pilih yang kamu suka",
   "tools.database.addCard": "Tambah kartu",
   "tools.database.newPage": "Halaman baru",
   "tools.database.addColumn": "Tambah kolom",

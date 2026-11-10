@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "प्रवास",
   "tools.callout.recentEmojis": "अलीकडील",
   "tools.callout.currentIcon": "सध्याचे चिन्ह",
+  "tools.callout.noIconYet": "अद्याप चिन्ह नाही",
+  "tools.callout.pickIconYouLike": "तुम्हाला आवडेल ते निवडा",
   "tools.database.addColumn": "स्तंभ जोडा",
   "tools.database.newGroup": "नवीन गट",
   "tools.database.renameColumn": "स्तंभाचे नाव बदला",

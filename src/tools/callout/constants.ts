@@ -31,6 +31,8 @@ export const EMOJI_CHIP_FOOD_KEY = 'tools.callout.emojiChipFood';
 export const EMOJI_CHIP_TRAVEL_KEY = 'tools.callout.emojiChipTravel';
 export const RECENT_EMOJIS_KEY = 'tools.callout.recentEmojis';
 export const CURRENT_ICON_KEY = 'tools.callout.currentIcon';
+export const NO_ICON_YET_KEY = 'tools.callout.noIconYet';
+export const PICK_ICON_KEY = 'tools.callout.pickIconYouLike';
 
 // Defaults
 export const DEFAULT_EMOJI = '💡';

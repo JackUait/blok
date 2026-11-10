@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Udhëtime",
   "tools.callout.recentEmojis": "Së fundmi",
   "tools.callout.currentIcon": "Ikona aktuale",
+  "tools.callout.noIconYet": "Ende nuk ka ikonë",
+  "tools.callout.pickIconYouLike": "Zgjidhni një që ju pëlqen",
   "tools.database.addCard": "Shto kartë",
   "tools.database.newPage": "Faqe e re",
   "tools.database.addColumn": "Shto kolonë",

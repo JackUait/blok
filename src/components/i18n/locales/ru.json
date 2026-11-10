@@ -382,6 +382,8 @@
   "tools.callout.emojiChipTravel": "Путешествия",
   "tools.callout.recentEmojis": "Недавние",
   "tools.callout.currentIcon": "Текущий значок",
+  "tools.callout.noIconYet": "Значка пока нет",
+  "tools.callout.pickIconYouLike": "Выберите тот, что вам нравится",
   "tools.database.addCard": "Добавить карточку",
   "tools.database.newPage": "Новая страница",
   "tools.database.addColumn": "Добавить столбец",

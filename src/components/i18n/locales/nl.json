@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Reizen",
   "tools.callout.recentEmojis": "Recent gebruikt",
   "tools.callout.currentIcon": "Huidig pictogram",
+  "tools.callout.noIconYet": "Nog geen pictogram",
+  "tools.callout.pickIconYouLike": "Kies er een die je leuk vindt",
   "tools.database.addCard": "Kaart toevoegen",
   "tools.database.newPage": "Nieuwe pagina",
   "tools.database.addColumn": "Kolom toevoegen",

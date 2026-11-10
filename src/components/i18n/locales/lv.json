@@ -403,6 +403,8 @@
   "tools.callout.emojiChipTravel": "Ceļojumi",
   "tools.callout.recentEmojis": "Nesenās",
   "tools.callout.currentIcon": "Pašreizējā ikona",
+  "tools.callout.noIconYet": "Ikonas vēl nav",
+  "tools.callout.pickIconYouLike": "Izvēlieties to, kas jums patīk",
   "tools.database.addCard": "Pievienot kartīti",
   "tools.database.newPage": "Jauna lapa",
   "tools.database.addColumn": "Pievienot kolonnu",

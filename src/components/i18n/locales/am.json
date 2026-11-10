@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "ጉዞ",
   "tools.callout.recentEmojis": "የቅርብ ጊዜ",
   "tools.callout.currentIcon": "የአሁኑ አዶ",
+  "tools.callout.noIconYet": "እስካሁን አዶ የለም",
+  "tools.callout.pickIconYouLike": "የወደዱትን ይምረጡ",
   "tools.database.addColumn": "አምድ ጨምር",
   "tools.database.newGroup": "አዲስ ቡድን",
   "tools.database.renameColumn": "አምድ ዳግም ሰይም",

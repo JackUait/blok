@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "பயணம்",
   "tools.callout.recentEmojis": "சமீபத்தியவை",
   "tools.callout.currentIcon": "தற்போதைய ஐகான்",
+  "tools.callout.noIconYet": "இன்னும் ஐகான் இல்லை",
+  "tools.callout.pickIconYouLike": "உங்களுக்குப் பிடித்ததைத் தேர்வுசெய்யவும்",
   "tools.database.addColumn": "நெடுவரிசை சேர்க்கவும்",
   "tools.database.newGroup": "புதிய குழு",
   "tools.database.renameColumn": "நெடுவரிசையை மறுபெயரிடு",

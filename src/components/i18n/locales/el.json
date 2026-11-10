@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Ταξίδια",
   "tools.callout.recentEmojis": "Πρόσφατα",
   "tools.callout.currentIcon": "Τρέχον εικονίδιο",
+  "tools.callout.noIconYet": "Δεν υπάρχει εικονίδιο ακόμα",
+  "tools.callout.pickIconYouLike": "Διαλέξτε όποιο σας αρέσει",
   "tools.database.addCard": "Προσθήκη κάρτας",
   "tools.database.newPage": "Νέα σελίδα",
   "tools.database.addColumn": "Προσθήκη στήλης",

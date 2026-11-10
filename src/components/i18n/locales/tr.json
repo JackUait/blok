@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Seyahat",
   "tools.callout.recentEmojis": "Son kullanılanlar",
   "tools.callout.currentIcon": "Geçerli simge",
+  "tools.callout.noIconYet": "Henüz simge yok",
+  "tools.callout.pickIconYouLike": "Beğendiğinizi seçin",
   "tools.database.addCard": "Kart ekle",
   "tools.database.newPage": "Yeni sayfa",
   "tools.database.addColumn": "Sütun ekle",

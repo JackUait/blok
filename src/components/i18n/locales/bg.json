@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Пътуване",
   "tools.callout.recentEmojis": "Скорошни",
   "tools.callout.currentIcon": "Текуща икона",
+  "tools.callout.noIconYet": "Все още няма икона",
+  "tools.callout.pickIconYouLike": "Изберете която ви харесва",
   "tools.database.addCard": "Добави карта",
   "tools.database.newPage": "Нова страница",
   "tools.database.addColumn": "Добави колона",

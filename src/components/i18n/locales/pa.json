@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "ਸਫ਼ਰ",
   "tools.callout.recentEmojis": "ਹਾਲੀਆ",
   "tools.callout.currentIcon": "ਮੌਜੂਦਾ ਆਈਕਨ",
+  "tools.callout.noIconYet": "ਹਾਲੇ ਕੋਈ ਆਈਕਨ ਨਹੀਂ",
+  "tools.callout.pickIconYouLike": "ਆਪਣੀ ਪਸੰਦ ਦਾ ਇੱਕ ਚੁਣੋ",
   "tools.database.addColumn": "ਕਾਲਮ ਜੋੜੋ",
   "tools.database.newGroup": "ਨਵਾਂ ਸਮੂਹ",
   "tools.database.renameColumn": "ਕਾਲਮ ਦਾ ਨਾਮ ਬਦਲੋ",

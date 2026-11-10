@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "यात्रा",
   "tools.callout.recentEmojis": "हाल के",
   "tools.callout.currentIcon": "वर्तमान आइकन",
+  "tools.callout.noIconYet": "अभी कोई आइकन नहीं",
+  "tools.callout.pickIconYouLike": "अपनी पसंद का एक चुनें",
   "tools.database.addCard": "कार्ड जोड़ें",
   "tools.database.newPage": "नया पृष्ठ",
   "tools.database.addColumn": "कॉलम जोड़ें",

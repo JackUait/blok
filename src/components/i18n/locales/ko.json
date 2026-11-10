@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "여행",
   "tools.callout.recentEmojis": "최근 사용",
   "tools.callout.currentIcon": "현재 아이콘",
+  "tools.callout.noIconYet": "아직 아이콘이 없습니다",
+  "tools.callout.pickIconYouLike": "마음에 드는 것을 골라 보세요",
   "tools.database.addCard": "카드 추가",
   "tools.database.newPage": "새 페이지",
   "tools.database.addColumn": "열 추가",

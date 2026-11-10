@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Reisen",
   "tools.callout.recentEmojis": "Zuletzt verwendet",
   "tools.callout.currentIcon": "Aktuelles Symbol",
+  "tools.callout.noIconYet": "Noch kein Symbol",
+  "tools.callout.pickIconYouLike": "Wählen Sie eins, das Ihnen gefällt",
   "tools.database.addCard": "Karte hinzufügen",
   "tools.database.newPage": "Neue Seite",
   "tools.database.addColumn": "Spalte hinzufügen",

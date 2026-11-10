@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "سفر",
   "tools.callout.recentEmojis": "تازا",
   "tools.callout.currentIcon": "موجوده آئڪن",
+  "tools.callout.noIconYet": "اڃا ڪو آئڪن ناهي",
+  "tools.callout.pickIconYouLike": "جيڪو پسند اچي سو چونڊيو",
   "tools.database.addCard": "ڪارڊ شامل ڪريو",
   "tools.database.newPage": "نئون صفحو",
   "tools.database.addColumn": "ڪالم شامل ڪريو",

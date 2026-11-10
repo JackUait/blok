@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "ދަތުރުފަތުރު",
   "tools.callout.recentEmojis": "ދާދިފަހުގެ",
   "tools.callout.currentIcon": "މިހާރުގެ އައިކަން",
+  "tools.callout.noIconYet": "އަދި އައިކަނެއް ނެތް",
+  "tools.callout.pickIconYouLike": "ކަމުދާ އެއްޗެއް ޚިޔާރުކުރޭ",
   "tools.database.addCard": "ކާޑެއް އިތުރުކުރޭ",
   "tools.database.newPage": "އައު ޞަފްޙާ",
   "tools.database.addColumn": "ކޮލަމެއް އިތުރުކުރޭ",

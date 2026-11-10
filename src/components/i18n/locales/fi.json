@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Matkailu",
   "tools.callout.recentEmojis": "Viimeisimmät",
   "tools.callout.currentIcon": "Nykyinen kuvake",
+  "tools.callout.noIconYet": "Ei vielä kuvaketta",
+  "tools.callout.pickIconYouLike": "Valitse mieleisesi",
   "tools.database.addCard": "Lisää kortti",
   "tools.database.newPage": "Uusi sivu",
   "tools.database.addColumn": "Lisää sarake",

@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Utazás",
   "tools.callout.recentEmojis": "Legutóbbiak",
   "tools.callout.currentIcon": "Jelenlegi ikon",
+  "tools.callout.noIconYet": "Még nincs ikon",
+  "tools.callout.pickIconYouLike": "Válasszon egyet, amelyik tetszik",
   "tools.database.addCard": "Kártya hozzáadása",
   "tools.database.newPage": "Új oldal",
   "tools.database.addColumn": "Oszlop hozzáadása",

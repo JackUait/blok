@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "ការធ្វើដំណើរ",
   "tools.callout.recentEmojis": "ថ្មីៗ",
   "tools.callout.currentIcon": "រូបតំណាងបច្ចុប្បន្ន",
+  "tools.callout.noIconYet": "មិនទាន់មានរូបតំណាងទេ",
+  "tools.callout.pickIconYouLike": "ជ្រើសរើសមួយដែលអ្នកចូលចិត្ត",
   "tools.database.addColumn": "បន្ថែមជួរឈរ",
   "tools.database.newGroup": "ក្រុមថ្មី",
   "tools.database.renameColumn": "ប្ដូរឈ្មោះជួរឈរ",

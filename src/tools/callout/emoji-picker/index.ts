@@ -14,7 +14,7 @@ import { createPositionTracker, type PositionTracker } from '../../../components
 import {
   REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, EMOJI_SEARCH_RESULTS_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY,
   EDIT_ICON_KEY, EMOJI_CHIP_PEOPLE_KEY, EMOJI_CHIP_NATURE_KEY, EMOJI_CHIP_FOOD_KEY, EMOJI_CHIP_TRAVEL_KEY,
-  RECENT_EMOJIS_KEY, CURRENT_ICON_KEY,
+  RECENT_EMOJIS_KEY, CURRENT_ICON_KEY, NO_ICON_YET_KEY, PICK_ICON_KEY,
   EMOJI_CATEGORY_PEOPLE_KEY, EMOJI_CATEGORY_NATURE_KEY, EMOJI_CATEGORY_FOOD_KEY, EMOJI_CATEGORY_ACTIVITY_KEY,
   EMOJI_CATEGORY_TRAVEL_KEY, EMOJI_CATEGORY_OBJECTS_KEY, EMOJI_CATEGORY_SYMBOLS_KEY, EMOJI_CATEGORY_FLAGS_KEY,
 } from '../constants';
@@ -213,6 +213,8 @@ export class EmojiPicker {
   private _announcer: HTMLElement;
   private _clearSearchButton: HTMLButtonElement;
   private _stage: HTMLElement | null = null;
+  /** What the stage shows now; null before its first paint. */
+  private _stageGlyph: string | null = null;
   /** The host's current emoji, shown on the stage while nothing is pointed at. */
   private _current = '';
   /** Natives the rendered Recent row holds, to know when a reopen must rebuild it. */
@@ -781,7 +783,8 @@ export class EmojiPicker {
 
   /**
    * The strip under the grid: the host's current icon at rest, or the emoji
-   * under the pointer or the focus, lit in its own colour.
+   * under the pointer or the focus, standing on a shadow of its own colour.
+   * With no icon it shows a line smiley and an invitation.
    * @param body - the grid's scroll container, whose pointer and focus it follows
    */
   private buildStage(body: HTMLElement): HTMLElement {
@@ -837,28 +840,45 @@ export class EmojiPicker {
     return stage;
   }
 
-  private setStage(glyph: string, kicker: string, name: string): void {
+  private setStage(glyph: string, kicker: string, label: string): void {
     if (this._stage === null) {
       return;
     }
 
     const [glyphEl, text] = this._stage.children;
-    // Only a swap from one emoji to another springs; the first paint rides the picker's own opening.
-    const changed = glyphEl.textContent !== glyph && glyphEl.textContent !== '';
+    const name = text.children[1];
+    // The first paint rides the picker's own opening.
+    const changed = this._stageGlyph !== null && this._stageGlyph !== glyph;
 
-    glyphEl.textContent = glyph;
+    this._stageGlyph = glyph;
+
+    if (glyph === '') {
+      glyphEl.innerHTML = IconEmojiNavSmile;
+    } else {
+      glyphEl.textContent = glyph;
+    }
+
     text.children[0].textContent = kicker;
-    text.children[1].textContent = name;
+    name.textContent = label;
     this._stage.toggleAttribute('data-emoji-picker-stage-empty', glyph === '');
     this._stage.style.setProperty('--emoji-stage-wash', emojiColor(glyph) ?? 'transparent');
 
-    const still = !this._open || glyph === '' || typeof glyphEl.animate !== 'function'
+    const still = !this._open || !changed || typeof glyphEl.animate !== 'function'
       || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // The glyph springs in; the name swaps in place and the glow crossfades in CSS.
-    if (changed && !still) {
-      glyphEl.animate([{ transform: 'scale(.6) rotate(-10deg)', opacity: 0.4 }, { transform: 'none', opacity: 1 }], { duration: 360, easing: 'cubic-bezier(.34, 1.56, .64, 1)' });
+    if (still) {
+      return;
     }
+
+    // An emoji drops onto its shadow and squashes; the smiley only fades back. The shadow's colour crossfades in CSS.
+    glyphEl.animate(glyph === ''
+      ? [{ transform: 'scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }]
+      : [
+        { transform: 'translateY(-16px) scale(.9, 1.1)', opacity: 0 },
+        { transform: 'translateY(0) scale(1.12, .86)', opacity: 1, offset: 0.55 },
+        { transform: 'none' },
+      ], { duration: glyph === '' ? 260 : 420, easing: 'ease-out' });
+    name.animate([{ transform: 'translateY(5px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 200, easing: 'ease-out' });
   }
 
   /** The stage names an emoji like a title: "Kissing face", not the label's "kissing face". */
@@ -873,8 +893,8 @@ export class EmojiPicker {
 
     this.setStage(
       this._current,
-      this._current === '' ? '' : this.i18n.t(CURRENT_ICON_KEY),
-      this.stageName(emoji)
+      this.i18n.t(this._current === '' ? NO_ICON_YET_KEY : CURRENT_ICON_KEY),
+      this._current === '' ? this.i18n.t(PICK_ICON_KEY) : this.stageName(emoji)
     );
   }
 

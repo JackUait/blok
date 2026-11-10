@@ -381,6 +381,8 @@
   "tools.callout.emojiChipTravel": "נסיעות",
   "tools.callout.recentEmojis": "אחרונים",
   "tools.callout.currentIcon": "סמל נוכחי",
+  "tools.callout.noIconYet": "עדיין אין סמל",
+  "tools.callout.pickIconYouLike": "בחר אחד שמוצא חן בעיניך",
   "tools.database.addCard": "הוסף כרטיס",
   "tools.database.newPage": "דף חדש",
   "tools.database.addColumn": "הוסף עמודה",

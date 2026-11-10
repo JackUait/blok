@@ -381,6 +381,8 @@
   "tools.callout.emojiChipTravel": "Viagens",
   "tools.callout.recentEmojis": "Recentes",
   "tools.callout.currentIcon": "Ícone atual",
+  "tools.callout.noIconYet": "Ainda sem ícone",
+  "tools.callout.pickIconYouLike": "Escolha um que lhe agrade",
   "tools.database.addCard": "Adicionar cartão",
   "tools.database.newPage": "Nova página",
   "tools.database.addColumn": "Adicionar coluna",

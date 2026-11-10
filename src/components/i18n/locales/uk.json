@@ -382,6 +382,8 @@
   "tools.callout.emojiChipTravel": "Подорожі",
   "tools.callout.recentEmojis": "Нещодавні",
   "tools.callout.currentIcon": "Поточна іконка",
+  "tools.callout.noIconYet": "Іконки поки немає",
+  "tools.callout.pickIconYouLike": "Виберіть ту, що вам подобається",
   "tools.database.addCard": "Додати картку",
   "tools.database.newPage": "Нова сторінка",
   "tools.database.addColumn": "Додати стовпець",

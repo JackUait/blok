@@ -384,6 +384,8 @@
   "tools.callout.emojiChipTravel": "السفر",
   "tools.callout.recentEmojis": "الأخيرة",
   "tools.callout.currentIcon": "الأيقونة الحالية",
+  "tools.callout.noIconYet": "لا توجد أيقونة بعد",
+  "tools.callout.pickIconYouLike": "اختر ما يعجبك",
   "tools.database.addCard": "إضافة بطاقة",
   "tools.database.newPage": "صفحة جديدة",
   "tools.database.addColumn": "إضافة عمود",

@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Reisimine",
   "tools.callout.recentEmojis": "Hiljutised",
   "tools.callout.currentIcon": "Praegune ikoon",
+  "tools.callout.noIconYet": "Ikooni veel pole",
+  "tools.callout.pickIconYouLike": "Vali endale meelepärane",
   "tools.database.addCard": "Lisa kaart",
   "tools.database.newPage": "Uus leht",
   "tools.database.addColumn": "Lisa veerg",

@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiPicker } from '../../../../../src/tools/callout/emoji-picker';
 import { onHover } from '../../../../../src/components/utils/tooltip';
 import {
-  CURRENT_ICON_KEY, EMOJI_CATEGORY_PEOPLE_KEY, EMOJI_CHIP_NATURE_KEY, EMOJI_CHIP_PEOPLE_KEY, RECENT_EMOJIS_KEY,
+  CURRENT_ICON_KEY, EMOJI_CATEGORY_PEOPLE_KEY, EMOJI_CHIP_NATURE_KEY, EMOJI_CHIP_PEOPLE_KEY, NO_ICON_YET_KEY,
+  PICK_ICON_KEY, RECENT_EMOJIS_KEY,
 } from '../../../../../src/tools/callout/constants';
 import { IconEmojiNavCat, IconEmojiNavSmile } from '../../../../../src/components/icons';
 
@@ -154,7 +155,7 @@ describe('EmojiPicker Spotlight + Showcase layout', () => {
     expect(stageText().glyph).toBe('😀');
   });
 
-  it('springs a new emoji onto the stage from small and tilted, and swaps the name in place', async () => {
+  it('drops a new emoji onto the stage with a squash, and lifts its name in', async () => {
     const animate = vi.fn(() => ({ finished: Promise.resolve(), cancel: vi.fn() }));
 
     Element.prototype.animate = animate as unknown as Element['animate'];
@@ -163,11 +164,51 @@ describe('EmojiPicker Spotlight + Showcase layout', () => {
 
     const animated = animate.mock.contexts as Element[];
 
-    expect(animated).toEqual([query('[data-emoji-picker-stage-glyph]')]);
+    expect(animated).toEqual([query('[data-emoji-picker-stage-glyph]'), query('[data-emoji-picker-stage-name]')]);
     expect(animate).toHaveBeenCalledWith(
-      [{ transform: 'scale(.6) rotate(-10deg)', opacity: 0.4 }, { transform: 'none', opacity: 1 }],
-      expect.objectContaining({ duration: 360 })
+      [
+        { transform: 'translateY(-16px) scale(.9, 1.1)', opacity: 0 },
+        { transform: 'translateY(0) scale(1.12, .86)', opacity: 1, offset: 0.55 },
+        { transform: 'none' },
+      ],
+      expect.objectContaining({ duration: 420 })
     );
+    expect(animate).toHaveBeenCalledWith(
+      [{ transform: 'translateY(5px)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+      expect.objectContaining({ duration: 200 })
+    );
+    Reflect.deleteProperty(Element.prototype, 'animate');
+  });
+
+  it('shows a line smiley and an invitation while there is no icon', async () => {
+    await picker.open(anchor);
+
+    const glyph = query('[data-emoji-picker-stage-glyph]');
+
+    expect(svgBody(glyph.innerHTML)).toBe(svgBody(IconEmojiNavSmile));
+    expect(query('[data-emoji-picker-stage]').hasAttribute('data-emoji-picker-stage-empty')).toBe(true);
+    expect(stageText().kicker).toBe(NO_ICON_YET_KEY);
+    expect(stageText().name).toBe(PICK_ICON_KEY);
+  });
+
+  it('lands the pointed emoji on an empty stage, then brings the smiley back', async () => {
+    const animate = vi.fn(() => ({ finished: Promise.resolve(), cancel: vi.fn() }));
+
+    Element.prototype.animate = animate as unknown as Element['animate'];
+    await picker.open(anchor);
+
+    const glyph = query('[data-emoji-picker-stage-glyph]');
+
+    emojiButton('👋').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+
+    expect(stageText()).toEqual({ glyph: '👋', kicker: EMOJI_CATEGORY_PEOPLE_KEY, name: 'Waving hand' });
+    expect(glyph.querySelector('svg')).toBeNull();
+    expect(animate.mock.contexts).toContain(glyph);
+
+    query('[data-emoji-picker-body]').dispatchEvent(new PointerEvent('pointerleave'));
+
+    expect(svgBody(glyph.innerHTML)).toBe(svgBody(IconEmojiNavSmile));
+    expect(stageText().name).toBe(PICK_ICON_KEY);
     Reflect.deleteProperty(Element.prototype, 'animate');
   });
 

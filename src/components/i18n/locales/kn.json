@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "ಪ್ರಯಾಣ",
   "tools.callout.recentEmojis": "ಇತ್ತೀಚಿನವು",
   "tools.callout.currentIcon": "ಪ್ರಸ್ತುತ ಐಕಾನ್",
+  "tools.callout.noIconYet": "ಇನ್ನೂ ಐಕಾನ್ ಇಲ್ಲ",
+  "tools.callout.pickIconYouLike": "ನಿಮಗೆ ಇಷ್ಟವಾದದ್ದನ್ನು ಆರಿಸಿ",
   "tools.database.addColumn": "ಕಾಲಮ್ ಸೇರಿಸಿ",
   "tools.database.newGroup": "ಹೊಸ ಗುಂಪು",
   "tools.database.renameColumn": "ಕಾಲಮ್ ಮರುಹೆಸರಿಸಿ",

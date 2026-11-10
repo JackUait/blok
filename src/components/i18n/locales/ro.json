@@ -381,6 +381,8 @@
   "tools.callout.emojiChipTravel": "Călătorii",
   "tools.callout.recentEmojis": "Recente",
   "tools.callout.currentIcon": "Pictograma actuală",
+  "tools.callout.noIconYet": "Încă nu există pictogramă",
+  "tools.callout.pickIconYouLike": "Alegeți una care vă place",
   "tools.database.addCard": "Adaugă card",
   "tools.database.newPage": "Pagină nouă",
   "tools.database.addColumn": "Adaugă coloană",

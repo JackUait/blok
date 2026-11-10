@@ -446,6 +446,8 @@ export type BlokMessageKey =
   | 'tools.callout.emojiSearchResults'
   | 'tools.callout.filterEmojis'
   | 'tools.callout.noEmojisFound'
+  | 'tools.callout.noIconYet'
+  | 'tools.callout.pickIconYouLike'
   | 'tools.callout.pickRandom'
   | 'tools.callout.placeholder'
   | 'tools.callout.recentEmojis'

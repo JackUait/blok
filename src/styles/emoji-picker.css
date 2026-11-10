@@ -1,4 +1,4 @@
-/* Registered so the stage glow can crossfade from one emoji's colour to the next. */
+/* Registered so the stage shadow can crossfade from one emoji's colour to the next. */
 @property --emoji-stage-wash {
   syntax: '<color>';
   inherits: true;
@@ -638,32 +638,46 @@
   transition: --emoji-stage-wash 380ms ease-out;
 }
 
-/* The emoji's own colour, sampled in script, glows behind it. */
-[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage]::before {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  content: '';
-  background:
-    radial-gradient(56px 56px at 30px 50%, color-mix(in srgb, var(--emoji-stage-wash) 45%, transparent), transparent 80%),
-    linear-gradient(90deg, color-mix(in srgb, var(--emoji-stage-wash) 10%, transparent), transparent 75%);
-}
-
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage-glyph] {
+  position: relative;
   flex: none;
-  filter: drop-shadow(0 3px 6px color-mix(in srgb, var(--emoji-stage-wash) 45%, transparent));
   display: grid;
   place-items: center;
   width: 36px;
   height: 36px;
+  /* Lifts the glyph off the shadow under it. */
+  padding-bottom: var(--blok-space-1);
   font-size: 30px;
   line-height: 1;
 }
 
+/* The floor: a small shadow in the emoji's own colour, sampled in script. */
+[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage-glyph]::after {
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  width: 22px;
+  height: 5px;
+  content: '';
+  background: color-mix(in srgb, var(--emoji-stage-wash) 60%, transparent);
+  border-radius: 50%;
+  filter: blur(2.5px);
+  translate: -50% 0;
+}
+
+/* No icon yet: a line smiley on a gray floor. */
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage][data-emoji-picker-stage-empty] [data-emoji-picker-stage-glyph] {
-  box-sizing: border-box;
-  border: 1px dashed var(--blok-popover-border);
-  border-radius: var(--blok-radius-pill);
+  color: color-mix(in srgb, var(--blok-text-primary) 38%, transparent);
+}
+
+[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage][data-emoji-picker-stage-empty] [data-emoji-picker-stage-glyph]::after {
+  background: color-mix(in srgb, black 24%, transparent);
+}
+
+[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage-glyph] svg {
+  display: block;
+  width: 28px;
+  height: 28px;
 }
 
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage-text] {
@@ -674,11 +688,9 @@
 
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage-kicker] {
   color: var(--blok-text-secondary);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  line-height: 14px;
-  text-transform: uppercase;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
 }
 
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage-name] {
@@ -690,6 +702,11 @@
   line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage][data-emoji-picker-stage-empty] [data-emoji-picker-stage-name] {
+  color: var(--blok-text-secondary);
+  font-weight: 400;
 }
 
 @media (max-width: 380px) {

@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "Rejser",
   "tools.callout.recentEmojis": "Seneste",
   "tools.callout.currentIcon": "Nuværende ikon",
+  "tools.callout.noIconYet": "Intet ikon endnu",
+  "tools.callout.pickIconYouLike": "Vælg et, du kan lide",
   "tools.database.addCard": "Tilføj kort",
   "tools.database.newPage": "Ny side",
   "tools.database.addColumn": "Tilføj kolonne",

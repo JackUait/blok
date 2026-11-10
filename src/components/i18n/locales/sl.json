@@ -382,6 +382,8 @@
   "tools.callout.emojiChipTravel": "Potovanja",
   "tools.callout.recentEmojis": "Nedavno",
   "tools.callout.currentIcon": "Trenutna ikona",
+  "tools.callout.noIconYet": "Ikone še ni",
+  "tools.callout.pickIconYouLike": "Izberite tisto, ki vam je všeč",
   "tools.database.addCard": "Dodaj kartico",
   "tools.database.newPage": "Nova stran",
   "tools.database.addColumn": "Dodaj stolpec",

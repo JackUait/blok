@@ -400,6 +400,8 @@
   "tools.callout.emojiChipTravel": "यात्रा",
   "tools.callout.recentEmojis": "हालैका",
   "tools.callout.currentIcon": "हालको आइकन",
+  "tools.callout.noIconYet": "अहिलेसम्म कुनै आइकन छैन",
+  "tools.callout.pickIconYouLike": "मन परेको एउटा छान्नुहोस्",
   "tools.database.addColumn": "स्तम्भ थप्नुहोस्",
   "tools.database.newGroup": "नयाँ समूह",
   "tools.database.renameColumn": "स्तम्भको नाम बदल्नुहोस्",

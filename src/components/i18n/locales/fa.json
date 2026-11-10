@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "سفر",
   "tools.callout.recentEmojis": "اخیر",
   "tools.callout.currentIcon": "نماد فعلی",
+  "tools.callout.noIconYet": "هنوز نمادی نیست",
+  "tools.callout.pickIconYouLike": "یکی را که دوست دارید انتخاب کنید",
   "tools.database.addCard": "افزودن کارت",
   "tools.database.newPage": "صفحه جدید",
   "tools.database.addColumn": "افزودن ستون",

@@ -382,6 +382,8 @@
   "tools.callout.emojiChipTravel": "Cestování",
   "tools.callout.recentEmojis": "Nedávné",
   "tools.callout.currentIcon": "Aktuální ikona",
+  "tools.callout.noIconYet": "Zatím žádná ikona",
+  "tools.callout.pickIconYouLike": "Vyberte si, která se vám líbí",
   "tools.database.addCard": "Přidat kartu",
   "tools.database.newPage": "Nová stránka",
   "tools.database.addColumn": "Přidat sloupec",

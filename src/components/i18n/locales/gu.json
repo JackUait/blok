@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "પ્રવાસ",
   "tools.callout.recentEmojis": "તાજેતરના",
   "tools.callout.currentIcon": "વર્તમાન આઇકન",
+  "tools.callout.noIconYet": "હજી કોઈ આઇકન નથી",
+  "tools.callout.pickIconYouLike": "તમને ગમે તે પસંદ કરો",
   "tools.database.addColumn": "કૉલમ ઉમેરો",
   "tools.database.newGroup": "નવું જૂથ",
   "tools.database.renameColumn": "કૉલમનું નામ બદલો",

@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "ভ্রমণ",
   "tools.callout.recentEmojis": "সাম্প্রতিক",
   "tools.callout.currentIcon": "বর্তমান আইকন",
+  "tools.callout.noIconYet": "এখনও কোনো আইকন নেই",
+  "tools.callout.pickIconYouLike": "পছন্দের একটি বেছে নিন",
   "tools.database.addColumn": "কলাম যোগ করুন",
   "tools.database.newGroup": "নতুন গোষ্ঠী",
   "tools.database.renameColumn": "কলামের নাম পরিবর্তন",

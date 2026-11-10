@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "การเดินทาง",
   "tools.callout.recentEmojis": "ล่าสุด",
   "tools.callout.currentIcon": "ไอคอนปัจจุบัน",
+  "tools.callout.noIconYet": "ยังไม่มีไอคอน",
+  "tools.callout.pickIconYouLike": "เลือกอันที่คุณชอบ",
   "tools.database.addCard": "เพิ่มการ์ด",
   "tools.database.newPage": "หน้าใหม่",
   "tools.database.addColumn": "เพิ่มคอลัมน์",

@@ -380,6 +380,8 @@
   "tools.callout.emojiChipTravel": "旅行",
   "tools.callout.recentEmojis": "最近使用",
   "tools.callout.currentIcon": "当前图标",
+  "tools.callout.noIconYet": "暂无图标",
+  "tools.callout.pickIconYouLike": "挑一个你喜欢的",
   "tools.database.addCard": "添加卡片",
   "tools.database.newPage": "新页面",
   "tools.database.addColumn": "添加列",

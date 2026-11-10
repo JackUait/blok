@@ -176,7 +176,7 @@ describe('EmojiPicker — inline mode', () => {
     picker.close();
   });
 
-  it('setQuery mirrors the value into the filter input and filters the grid', async () => {
+  it('setQuery filters the grid', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const anchor = createAnchor();
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', inline: true });
@@ -184,24 +184,21 @@ describe('EmojiPicker — inline mode', () => {
     container.appendChild(picker.getElement());
     await picker.open(anchor);
 
+    expect(picker.getElement().querySelectorAll('[data-emoji-native]')).toHaveLength(2);
+
     picker.setQuery('flashlight');
 
-    const input = picker.getElement().querySelector('input[type="text"]') as HTMLInputElement;
+    const natives = Array.from(picker.getElement().querySelectorAll('[data-emoji-native]')).map(b => b.getAttribute('data-emoji-native'));
 
-    expect(input.value).toBe('flashlight');
-
-    const buttons = picker.getElement().querySelectorAll('[data-emoji-native]');
-
-    expect(buttons.length).toBe(1);
-    expect(buttons[0]?.getAttribute('data-emoji-native')).toBe('🔦');
+    expect(natives).toEqual(['🔦']);
 
     picker.close();
   });
 
-  it('setQuery runs the same filtering code path as typing directly into the field', async () => {
+  it('setQuery gives the inline menu the same results, in the same order, as typing into the full picker\'s search field', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const anchor = createAnchor();
-    const typedPicker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', inline: true });
+    const typedPicker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
     const setQueryPicker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', inline: true });
 
     container.appendChild(typedPicker.getElement());
@@ -209,7 +206,11 @@ describe('EmojiPicker — inline mode', () => {
     await typedPicker.open(anchor);
     await setQueryPicker.open(anchor);
 
-    const typedInput = typedPicker.getElement().querySelector('input[type="text"]') as HTMLInputElement;
+    const typedInput = typedPicker.getElement().querySelector<HTMLInputElement>('input[type="text"]');
+
+    if (typedInput === null) {
+      throw new Error('Missing search field in the full picker');
+    }
 
     typedInput.value = 'light';
     simulateInput(typedInput);
@@ -219,6 +220,7 @@ describe('EmojiPicker — inline mode', () => {
     const typedNatives = Array.from(typedPicker.getElement().querySelectorAll('[data-emoji-native]')).map(b => b.getAttribute('data-emoji-native'));
     const setQueryNatives = Array.from(setQueryPicker.getElement().querySelectorAll('[data-emoji-native]')).map(b => b.getAttribute('data-emoji-native'));
 
+    expect(setQueryNatives).toEqual(['💡', '🔦']);
     expect(setQueryNatives).toEqual(typedNatives);
 
     typedPicker.close();
@@ -246,7 +248,7 @@ describe('EmojiPicker — inline mode', () => {
     picker.close();
   });
 
-  it('hides the search field, random button and remove button — the caller\'s typed query is the search surface', async () => {
+  it('renders no search field, random, remove or skin tone control — the caller\'s typed query is the search surface', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const anchor = createAnchor();
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', inline: true });
@@ -255,16 +257,15 @@ describe('EmojiPicker — inline mode', () => {
     await picker.open(anchor);
 
     const el = picker.getElement();
-    const search = el.querySelector('[data-emoji-picker-search]') as HTMLElement;
-    const random = el.querySelector('[data-emoji-picker-random]') as HTMLElement;
-    const remove = el.querySelector('[data-emoji-picker-remove]') as HTMLElement;
 
-    expect(search.hidden).toBe(true);
-    expect(random.hidden).toBe(true);
-    expect(remove.hidden).toBe(true);
+    expect(el.querySelector('[data-emoji-picker-search]')).toBeNull();
+    expect(el.querySelector('input[type="text"]')).toBeNull();
+    expect(el.querySelector('[data-emoji-picker-clear]')).toBeNull();
+    expect(el.querySelector('[data-emoji-picker-random]')).toBeNull();
+    expect(el.querySelector('[data-emoji-picker-remove]')).toBeNull();
+    expect(el.querySelector('[data-emoji-picker-skin-toggle]')).toBeNull();
+    expect(el.querySelector('[data-emoji-picker-skin-tone]')).toBeNull();
 
-    // Skin tone and category nav stay.
-    expect(el.querySelector('[data-emoji-picker-skin-toggle]')).not.toBeNull();
     expect(el.querySelectorAll('[data-emoji-nav]').length).toBeGreaterThan(0);
 
     picker.close();

@@ -85,21 +85,19 @@ describe('EmojiPicker keyboard ownership', () => {
     vi.unstubAllGlobals();
   });
 
-  it('closes the inline menu through the editor when Escape starts in its skin-tone toggle', () => {
-    // Inline mode hides the search field, random button and remove button
-    // (see EmojiPicker's `_inline` branch) — the skin-tone toggle is the
-    // only focusable control the inline menu still renders, so it stands
-    // in for "focus starts inside the menu".
-    const skinToneToggle = inlineMenu.querySelector<HTMLButtonElement>('[data-emoji-picker-skin-toggle]');
+  it('closes the inline menu through the editor when Escape starts in one of its emoji buttons', () => {
+    // ":fi" has one match, so the category nav is hidden: an emoji button
+    // is the only control a click can leave focus on.
+    const emojiButton = inlineMenu.querySelector<HTMLButtonElement>('[data-emoji-native]');
 
-    if (skinToneToggle === null) {
-      throw new Error('Missing skin tone toggle button');
+    if (emojiButton === null) {
+      throw new Error('Missing emoji button');
     }
 
-    skinToneToggle.focus();
-    expect(skinToneToggle).toHaveFocus();
+    emojiButton.focus();
+    expect(emojiButton).toHaveFocus();
     expect(inlineMenu).toBeVisible();
-    skinToneToggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    emojiButton.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
 
     expect(inlineMenu).not.toBeVisible();
     expect(blockEvents.emojiTrigger.opened).toBe(false);

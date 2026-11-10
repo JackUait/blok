@@ -202,42 +202,39 @@ describe('EmojiPicker motion', () => {
     expect(root.hidden).toBe(true);
   });
 
-  it('keeps inline tone controls in the first scrolling section after filtering and reopening', async () => {
+  it('keeps the stored skin tone on the inline grid after filtering and reopening', async () => {
+    localStorage.setItem('blok-emoji-skin-tone', '1');
     await open(true);
     // "hello" is a keyword; the ":" trigger loads keywords before it searches.
     await loadEmojiData();
-    const toggle = get<HTMLButtonElement>('[data-emoji-picker-skin-toggle]');
 
-    expect(get('[data-emoji-section-title]')).toContainElement(toggle);
+    expect(root.querySelector('[data-emoji-picker-skin-toggle]')).toBeNull();
+    expect(get('[data-emoji-native]').textContent).toBe('👋🏻');
     picker.setQuery('hello');
-    expect(get('[data-emoji-section-title]')).toContainElement(toggle);
-    toggle.click();
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    get('[data-emoji-picker-skin-tone]').querySelectorAll('button')[1]?.click();
-    await land();
+    expect(root.querySelectorAll('[data-emoji-native]')).toHaveLength(1);
     expect(get('[data-emoji-native]').textContent).toBe('👋🏻');
 
     picker.setQuery('no-such-emoji');
     picker.setQuery('');
-    expect(get('[data-emoji-section-title]')).toContainElement(toggle);
+    expect(get('[data-emoji-native]').textContent).toBe('👋🏻');
     picker.close();
     await picker.open(anchor);
-    expect(get('[data-emoji-section-title]')).toContainElement(toggle);
+    expect(get('[data-emoji-native]').textContent).toBe('👋🏻');
   });
 
-  it('keeps the document caret when opening and choosing a skin tone inline', async () => {
+  it.each(['[data-emoji-nav]', '[data-emoji-native]'])('keeps the document caret when %s is pressed with the mouse inline', async selector => {
     await open(true);
-    get<HTMLButtonElement>('[data-emoji-picker-skin-toggle]').click();
+    // jsdom has no scrollTo, and a category button scrolls the grid.
+    Object.defineProperty(get('[data-emoji-picker-body]'), 'scrollTo', { configurable: true, value: vi.fn() });
+    const button = get<HTMLButtonElement>(selector);
+    // jsdom does not move focus on mousedown; a browser does unless it is prevented.
+    const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
 
-    expect(anchor).toHaveFocus();
-    const tones = get('[data-emoji-picker-skin-tone]').querySelectorAll('button');
+    button.dispatchEvent(press);
 
-    tones[1]?.click();
+    expect(press.defaultPrevented).toBe(true);
+    button.click();
     expect(anchor).toHaveFocus();
-    await land();
-    expect(anchor).toHaveFocus();
-    expect(get('[data-emoji-native]').textContent).toBe('👋🏻');
-    expect(get('[data-emoji-picker-skin-toggle]')).toHaveAttribute('data-emoji-skin-current', '1');
   });
 
   it('does not offer a clear action that only clears the hidden field in inline mode', async () => {

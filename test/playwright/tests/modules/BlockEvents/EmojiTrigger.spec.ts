@@ -378,4 +378,84 @@ test.describe('inline ":" emoji trigger', () => {
       expect(await highlightedIndex(paragraph)).toBe(first);
     });
   }
+
+  test('30 or fewer matches show as one block as tall as its rows, with no category names, bar or skin tone control', async ({ page }) => {
+    await createParagraphBlok(page, [ '' ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+    const menu = page.getByTestId('emoji-menu');
+    const results = menu.locator('[data-emoji-native]');
+
+    await paragraph.click();
+    await page.keyboard.type(':hel');
+
+    await expect(menu).toBeVisible();
+    await expect(menu).toHaveAttribute('data-emoji-picker-flat', '');
+
+    const count = await results.count();
+
+    expect(count).toBeGreaterThan(0);
+    expect(count).toBeLessThanOrEqual(30);
+
+    await expect(menu.locator('[data-emoji-section-title]')).toHaveCount(0);
+    await expect(menu.locator('[data-emoji-nav]').first()).toBeHidden();
+    await expect(menu.locator('[data-emoji-picker-skin-toggle]')).toHaveCount(0);
+
+    const geometry = await menu.evaluate((el) => {
+      const body = el.querySelector('[data-emoji-picker-body]');
+      const cells = Array.from(el.querySelectorAll('[data-emoji-native]'));
+      const last = cells[cells.length - 1].getBoundingClientRect();
+      const first = cells[0].getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+
+      return {
+        scrolls: body !== null && body.scrollHeight > body.clientHeight + 1,
+        spareBelow: box.bottom - last.bottom,
+        spareAbove: first.top - box.top,
+      };
+    });
+
+    // The box hugs its rows: nothing to scroll, and only padding around the emoji.
+    expect(geometry.scrolls).toBe(false);
+    expect(geometry.spareBelow).toBeGreaterThanOrEqual(0);
+    expect(geometry.spareBelow).toBeLessThan(16);
+    expect(geometry.spareAbove).toBeLessThan(16);
+  });
+
+  test('more than 30 matches keep the category bar: empty categories are faded and off, the rest jump the grid without taking the caret', async ({ page }) => {
+    await createParagraphBlok(page, [ '' ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+    const menu = page.getByTestId('emoji-menu');
+    const grid = menu.locator('[data-emoji-picker-body]');
+
+    await paragraph.click();
+    // "flag" matches flags, a few objects and activities, and no smileys.
+    await page.keyboard.type(':flag');
+
+    await expect(menu).toBeVisible();
+    await expect(menu.locator('[data-emoji-nav="flags"]')).toBeVisible();
+    await expect(menu).not.toHaveAttribute('data-emoji-picker-flat', '');
+    expect(await menu.locator('[data-emoji-native]').count()).toBeGreaterThan(30);
+
+    const empty = menu.locator('[data-emoji-nav="people"]');
+
+    await expect(empty).toBeVisible();
+    await expect(empty).toBeDisabled();
+    expect(Number(await empty.evaluate((el) => getComputedStyle(el).opacity))).toBeLessThan(0.5);
+    await expect(menu.locator('[data-emoji-nav="flags"]')).toBeEnabled();
+
+    // The last section is the one a jump has to scroll to.
+    const lastCategory = await grid.evaluate((el) => el.lastElementChild?.getAttribute('data-emoji-section') ?? '');
+
+    expect(lastCategory).not.toBe('');
+    await menu.locator(`[data-emoji-nav="${lastCategory}"]`).click();
+
+    await expect.poll(() => grid.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await expect(paragraph).toBeFocused();
+    await expect(menu).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+  });
 });

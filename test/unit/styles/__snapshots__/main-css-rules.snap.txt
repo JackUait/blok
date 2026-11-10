@@ -4017,30 +4017,6 @@ span[data-blok-slash-search] {
   backface-visibility: hidden;
 }
 
-[data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-picker-header] {
-  position: absolute;
-  inset: 4px 0 auto;
-  justify-content: flex-end;
-  padding: 0;
-  gap: 0;
-  pointer-events: none;
-}
-
-[data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-picker-skin-toggle], [data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-picker-skin-tone] {
-  pointer-events: auto;
-}
-
-[data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-picker-skin-toggle] {
-  background: var(--blok-icon-bg);
-}
-
-[data-blok-emoji-picker][data-emoji-picker-inline] [data-emoji-section-title]:has([data-emoji-picker-header]) {
-  position: relative;
-  box-sizing: border-box;
-  min-height: 44px;
-  padding-inline-end: 44px;
-}
-
 [data-blok-emoji-picker] [data-emoji-picker-body] {
   position: relative;
   flex: 0 1 260px;
@@ -4163,6 +4139,12 @@ span[data-blok-slash-search] {
 
 [data-blok-emoji-picker][data-emoji-picker-navless] [data-emoji-picker-footer] {
   display: none;
+}
+
+[data-blok-emoji-picker][data-blok-popover] [data-emoji-nav]:disabled {
+  background: transparent;
+  cursor: default;
+  opacity: 0.28;
 }
 
 [data-blok-emoji-picker][data-emoji-picker-navless] [data-emoji-picker-body] {
@@ -4307,8 +4289,19 @@ span[data-blok-slash-search] {
   translate: 0 -1px;
 }
 
-[@media (hover: hover)] [data-blok-emoji-picker] [data-emoji-nav]:hover {
+[@media (hover: hover)] [data-blok-emoji-picker] [data-emoji-nav]:hover:not(:disabled) {
   color: var(--blok-text-primary);
+}
+
+[data-blok-emoji-picker][data-emoji-picker-inline][data-emoji-picker-flat] [data-emoji-picker-body] {
+  flex-basis: auto;
+  height: auto;
+  padding-block: var(--blok-space-1-5);
+}
+
+[data-blok-emoji-picker][data-emoji-picker-inline][data-emoji-picker-flat] [data-emoji-native] {
+  height: var(--emoji-cell);
+  aspect-ratio: auto;
 }
 
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-header] {

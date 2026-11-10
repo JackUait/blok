@@ -77,6 +77,9 @@ interface EmojiPickerOptions {
 }
 
 const UNCAPPED_RESULTS = Number.POSITIVE_INFINITY;
+
+/** The inline ":" menu shows up to this many matches as one block, with no category names and no bar. */
+const INLINE_FLAT_MAX = 30;
 /** Icon and short chip label for each emoji category (display order). */
 const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string, chipKey?: string]> = [
   ['callout', IconEmojiNavSparkles],
@@ -207,11 +210,10 @@ export class EmojiPicker {
 
   private _element: HTMLElement;
   private _body: HTMLElement;
-  private _header!: HTMLElement;
   private _nav: HTMLElement;
-  private _filterInput: HTMLInputElement;
+  private _filterInput!: HTMLInputElement;
   private _announcer: HTMLElement;
-  private _clearSearchButton: HTMLButtonElement;
+  private _clearSearchButton!: HTMLButtonElement;
   private _stage: HTMLElement | null = null;
   /** What the stage shows now; null before its first paint. */
   private _stageGlyph: string | null = null;
@@ -276,20 +278,15 @@ export class EmojiPicker {
 
     const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
     const nav = this._element.querySelector<HTMLElement>('[data-emoji-picker-nav]');
-    const filterInput = this._element.querySelector<HTMLInputElement>('input[type="text"]');
     const announcer = this._element.querySelector<HTMLElement>('[data-emoji-picker-announcer]');
 
-    const clearSearchButton = this._element.querySelector<HTMLButtonElement>('[data-emoji-picker-clear]');
-
-    if (body === null || nav === null || filterInput === null || announcer === null || clearSearchButton === null) {
+    if (body === null || nav === null || announcer === null) {
       throw new Error('EmojiPicker: failed to build required elements');
     }
 
     this._body = body;
     this._nav = nav;
-    this._filterInput = filterInput;
     this._announcer = announcer;
-    this._clearSearchButton = clearSearchButton;
 
     this._onDocumentKeydown = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape' || !this._open) {
@@ -563,8 +560,6 @@ export class EmojiPicker {
     // Header: search input + random button + remove button
     const header = document.createElement('div');
 
-    this._header = header;
-
     header.setAttribute('data-emoji-picker-header', '');
     header.className = 'flex items-center gap-2.5 px-3 pt-3 pb-2';
 
@@ -580,6 +575,7 @@ export class EmojiPicker {
     input.setAttribute('aria-label', this.i18n.t(FILTER_EMOJIS_KEY));
     input.placeholder = this.i18n.t(FILTER_EMOJIS_KEY);
     input.addEventListener('input', () => this.handleFilterChange(input.value));
+    this._filterInput = input;
 
     searchWrapper.appendChild(input);
 
@@ -595,6 +591,7 @@ export class EmojiPicker {
       input.focus();
     });
     searchWrapper.appendChild(clearSearch);
+    this._clearSearchButton = clearSearch;
 
     // Skin tone hand toggle (separate button next to search input)
     const skinToneWrapper = document.createElement('div');
@@ -671,16 +668,12 @@ export class EmojiPicker {
     if (!this._pickOnly) {
       header.appendChild(actionGroup);
     }
-    el.appendChild(header);
 
-    if (this._inline) {
-      // Inline mode's search surface is the typed ":query" text itself
-      // (see EmojiTrigger.setQuery) — no visible field to show. Random-pick
-      // and remove don't apply either: there is no already-chosen emoji
-      // glyph to reroll or clear.
-      searchWrapper.hidden = true;
-      randomBtn.hidden = true;
-      removeBtn.hidden = true;
+    // The inline menu has no header: the typed ":query" is its search field,
+    // there is no chosen emoji to reroll or remove, and the skin tone comes
+    // from the stored choice.
+    if (!this._inline) {
+      el.appendChild(header);
     }
 
     const body = document.createElement('div');
@@ -1588,7 +1581,11 @@ export class EmojiPicker {
 
   // ─── Category Navigation ──────────────────────────────────
 
-  private buildCategoryNav(visibleCategories: Set<string>): void {
+  /**
+   * @param visibleCategories - categories that have a section to jump to
+   * @param shownCategories - categories that get a button; one with no section is disabled
+   */
+  private buildCategoryNav(visibleCategories: Set<string>, shownCategories: Set<string> = visibleCategories): void {
     this._nav.innerHTML = '';
 
     const indicator = document.createElement('span');
@@ -1600,7 +1597,7 @@ export class EmojiPicker {
     this._activeNavId = '';
 
     for (const [catId, catIcon, chipKey] of CATEGORY_NAV) {
-      if (!visibleCategories.has(catId)) {
+      if (!shownCategories.has(catId)) {
         continue;
       }
 
@@ -1621,6 +1618,7 @@ export class EmojiPicker {
 
       btn.setAttribute('aria-label', catLabel);
       btn.setAttribute('data-emoji-nav', catId);
+      btn.disabled = !visibleCategories.has(catId);
       btn.className = [
         'flex-1 h-[36px] flex items-center justify-center',
         'cursor-pointer opacity-50',
@@ -1739,19 +1737,20 @@ export class EmojiPicker {
     if (query.trim() === '') {
       this._announcer.textContent = '';
       this.setNavHidden(false);
+      this.setFlat(false);
       this.renderEmojiGrid(this._allEmojis);
 
       return;
     }
 
-    this.setNavHidden(true);
-    // Uncapped: the grid renders every match, unlike the inline trigger's
-    // flat, length-limited menu.
     const results = searchEmojisRanked(this._allEmojis, query, this._localeData, UNCAPPED_RESULTS);
 
     this.announceResults(results.length);
 
     if (results.length === 0) {
+      this.setNavHidden(true);
+      this.setFlat(false);
+
       if (!this._showingEmptyState) {
         this.renderEmptyState();
       }
@@ -1762,17 +1761,58 @@ export class EmojiPicker {
       this._sectionEls.clear();
       this._showingEmptyState = false;
       this._hasFullGrid = false;
-
-      const byCategory = groupEmojisByCategory(results);
-
-      for (const [category, categoryEmojis] of byCategory) {
-        const section = this.buildSection(this.translateCategory(category), categoryEmojis);
-
-        section.setAttribute('data-emoji-section', category);
-        this._sectionEls.set(category, section);
-        this._body.appendChild(section);
-      }
+      this.renderResults(results);
     }
+
+    // A short list changes the menu's height, which moves a menu that sits above the caret.
+    if (this._inline && this._open && this._anchorEl !== null) {
+      this.position(this._anchorEl);
+    }
+  }
+
+  /**
+   * The full picker lists matches under category names, without its chips.
+   * The inline menu keeps its bar for a long list, and shows a short one as a
+   * single block in best-match order.
+   * @param results - the matches, best first
+   */
+  private renderResults(results: ProcessedEmoji[]): void {
+    const flat = this._inline && results.length <= INLINE_FLAT_MAX;
+
+    this.setFlat(flat);
+
+    if (flat) {
+      const section = document.createElement('div');
+
+      section.setAttribute('data-emoji-section', 'results');
+      section.appendChild(this.buildGrid(results));
+      this._body.appendChild(section);
+      this.setNavHidden(true);
+
+      return;
+    }
+
+    const byCategory = groupEmojisByCategory(results);
+
+    for (const [category, categoryEmojis] of byCategory) {
+      const section = this.buildSection(this.translateCategory(category), categoryEmojis);
+
+      section.setAttribute('data-emoji-section', category);
+      this._sectionEls.set(category, section);
+      this._body.appendChild(section);
+    }
+
+    if (this._inline) {
+      this.buildCategoryNav(new Set(byCategory.keys()), new Set(this._allEmojis.map(emoji => emoji.category)));
+      this.scheduleScrollEffects();
+    }
+
+    this.setNavHidden(!this._inline);
+  }
+
+  /** Publishes the short-list layout on the picker root, where the CSS reads it. */
+  private setFlat(flat: boolean): void {
+    this._element.toggleAttribute('data-emoji-picker-flat', flat);
   }
 
   /** Writes the current result count (or the empty message) to the live region. */
@@ -1831,6 +1871,7 @@ export class EmojiPicker {
 
     this.buildCategoryNav(visibleCategories);
     this.setNavHidden(false);
+    this.setFlat(false);
     this._hasFullGrid = true;
 
     // Set initial active nav after layout
@@ -1890,11 +1931,6 @@ export class EmojiPicker {
     }
 
     this._body.appendChild(empty);
-
-    if (this._inline) {
-      this._header.hidden = true;
-      this._body.appendChild(this._header);
-    }
   }
 
   private translateCategory(categoryId: string): string {
@@ -1917,11 +1953,6 @@ export class EmojiPicker {
 
     label.textContent = title;
     heading.appendChild(label);
-
-    if (this._inline && this._sectionEls.size === 0) {
-      this._header.hidden = false;
-      heading.appendChild(this._header);
-    }
 
     section.appendChild(heading);
     section.appendChild(this.buildGrid(emojis));

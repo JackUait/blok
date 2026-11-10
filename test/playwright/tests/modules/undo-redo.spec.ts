@@ -1871,15 +1871,17 @@ test.describe('yjs undo/redo', () => {
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Verify both pasted blocks were created
-      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+      // The first pasted block joins the text before the caret, the second follows.
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('OriginalPasted block 1');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toHaveText('Pasted block 2');
 
       // Application/x-blok paste is grouped into ONE Yjs undo entry via
       // BlockManager.transactForTool — one Cmd+Z removes every pasted block.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 200);
 
-      // Verify all pasted blocks removed in a single undo step
+      // One undo removes the pasted block and the text joined into the first
       await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
       await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Original');
     });

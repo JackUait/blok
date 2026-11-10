@@ -124,9 +124,9 @@ export class SettingsTogglerHandler {
     const settingsToggler = $.make('span', [
       twJoin(
         // Base toolbox-button styles
-        'text-text-secondary cursor-pointer w-[18px] h-6 rounded-(--blok-radius-control) inline-flex justify-center items-center select-none',
+        'text-block-control cursor-pointer w-[18px] h-6 rounded-(--blok-radius-control) inline-flex justify-center items-center select-none',
         // SVG sizing
-        '[&_svg]:h-[22px] [&_svg]:w-[22px] [&_svg]:shrink-0',
+        '[&_svg]:h-6 [&_svg]:w-6 [&_svg]:shrink-0',
         // Hover (can-hover)
         'can-hover:hover:bg-bg-light',
         // Hide when the toolbox popover is open

@@ -146,8 +146,8 @@ describe('SettingsTogglerHandler — recorded mutants', () => {
       const element = handler.make(emptyNodes());
       const tokens = classTokens(element);
 
-      expect(tokens).toContain('text-text-secondary');
-      expect(tokens).toContain('[&_svg]:h-[22px]');
+      expect(tokens).toContain('text-block-control');
+      expect(tokens).toContain('[&_svg]:h-6');
       expect(tokens).toContain('can-hover:hover:bg-bg-light');
       expect(tokens).toContain('group-data-[blok-toolbox-opened=true]:hidden');
       expect(tokens).toContain('group-data-[blok-block-settings-opened=true]:bg-bg-light');

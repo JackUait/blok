@@ -193,7 +193,7 @@ describe('PlusButtonHandler — mutation coverage', () => {
       const plusButton = handler.make(emptyNodes());
 
       expect(plusButton.className.split(' ')).toEqual([
-        'text-text-secondary',
+        'text-block-control',
         'cursor-pointer',
         'w-6',
         'h-6',
@@ -203,8 +203,8 @@ describe('PlusButtonHandler — mutation coverage', () => {
         'items-center',
         'select-none',
         'shrink-0',
-        '[&_svg]:h-[22px]',
-        '[&_svg]:w-[22px]',
+        '[&_svg]:h-6',
+        '[&_svg]:w-6',
         'can-hover:hover:bg-bg-light',
         'group-data-[blok-toolbox-opened=true]:hidden',
         'group-data-[blok-block-settings-opened=true]:hidden',

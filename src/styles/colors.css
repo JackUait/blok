@@ -18,6 +18,7 @@
   /* Menu row label. Only dark sets it (popover-animation.css), so light follows --blok-text-primary. */
   --color-popover-item-label: var(--blok-popover-item-label-text, var(--blok-text-primary));
   --color-text-secondary: var(--blok-text-secondary);
+  --color-block-control: var(--blok-block-control);
   --color-popover-border: var(--blok-popover-border);
   --color-popover-shadow: var(--blok-popover-shadow);
   --color-popover-bg: var(--blok-popover-bg);
@@ -115,6 +116,8 @@
   --blok-text-primary: black;
   /* Tracks --blok-gray-text; see the contrast note there. */
   --blok-text-secondary: #646a79;
+  /* "+" and the drag handle. */
+  --blok-block-control: #8e8b86;
   --blok-popover-border: rgba(55, 53, 47, 0.09);
   --blok-popover-shadow: rgba(13, 20, 33, 0.1);
   --blok-popover-bg: #ffffff;
@@ -604,6 +607,7 @@
     --blok-icon-active-text: var(--blok-text-primary);
     --blok-text-primary: #e2e0dc;
     --blok-text-secondary: #a39e98;
+    --blok-block-control: #a39e98;
     --blok-popover-border: rgba(255, 255, 255, 0.14);
     --blok-popover-shadow: rgba(0, 0, 0, 0.6);
     --blok-popover-bg: #252525;
@@ -809,6 +813,7 @@
   --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: #e2e0dc;
   --blok-text-secondary: #a39e98;
+  --blok-block-control: #a39e98;
   --blok-popover-border: rgba(255, 255, 255, 0.14);
   --blok-popover-shadow: rgba(0, 0, 0, 0.6);
   --blok-popover-bg: #252525;

@@ -39,14 +39,14 @@ interface BlockRef {
 interface ApiHarness {
   api: API;
   splitBlock: Mock<(id: string, before: { text: string }, tool: string, after: { text: string }, index: number) => { id: string }>;
-  convert: Mock<(id: string, tool: string, data: { text: string }) => Promise<void>>;
+  convert: Mock<(id: string, tool: string, data: { text: string }) => Promise<BlockRef>>;
   insertInsideParent: Mock<(parentId: string, index: number) => BlockRef>;
   setToBlock: Mock<(id: string, position: string) => void>;
 }
 
 const createApi = (options: { blockIndex?: number; currentBlockIndex?: number } = {}): ApiHarness => {
   const splitBlock = vi.fn<(id: string, before: { text: string }, tool: string, after: { text: string }, index: number) => { id: string }>().mockReturnValue({ id: 'split-block-id' });
-  const convert = vi.fn<(id: string, tool: string, data: { text: string }) => Promise<void>>(async () => undefined);
+  const convert = vi.fn<(id: string, tool: string, data: { text: string }) => Promise<BlockRef>>(async () => ({ id: 'converted' }));
   const insertInsideParent = vi.fn<(parentId: string, index: number) => BlockRef>(() => ({ id: 'new-block' }));
   const setToBlock = vi.fn<(id: string, position: string) => void>();
   const getBlockIndex = vi.fn<(id: string) => number | undefined>(() => options.blockIndex ?? 0);
@@ -63,6 +63,7 @@ const createApi = (options: { blockIndex?: number; currentBlockIndex?: number } 
       getChildren,
     },
     caret: { setToBlock },
+    tools: { getBlockTools: () => [] },
   } as unknown as API;
 
   return { api, splitBlock, convert, insertInsideParent, setToBlock };
@@ -278,7 +279,7 @@ describe('toggle-keyboard mutants', () => {
       expect(preventDefault).not.toHaveBeenCalled();
     });
 
-    it('does not convert when the caret is at the start but the block has text', async () => {
+    it('U137: converts a titled toggle to text in place, keeping its text, when the caret is at the start', async () => {
       const harness = createApi();
       const element = attach('hello');
 
@@ -293,9 +294,9 @@ describe('toggle-keyboard mutants', () => {
 
       await handleToggleBackspace(context, event);
 
-      expect(harness.convert).not.toHaveBeenCalled();
-      expect(preventDefault).not.toHaveBeenCalled();
-    });
+      expect(harness.convert).toHaveBeenCalledWith('block-1', 'paragraph', { text: 'hello' });
+      expect(preventDefault).toHaveBeenCalledOnce();
+  });
   });
 
   describe('splitContentAtRange', () => {

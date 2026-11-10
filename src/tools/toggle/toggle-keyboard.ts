@@ -61,14 +61,11 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
   }
 
   /**
-   * When toggle is open and caret is at the end (no content after caret),
-   * create a child paragraph inside the toggle rather than a sibling toggle.
-   * insertInsideParent() groups both block creation and parent assignment into
-   * a single Yjs undo entry, so one CMD+Z removes the new block completely.
+   * Open toggle, caret at the end: the new block becomes the FIRST child, above
+   * the others (Notion U134). insertInsideParent() is one undo entry.
    */
   if (isOpen && afterContent === '') {
-    const insertIndex = getInsertAfterLastDescendantIndex(api, blockId, currentBlockIndex);
-    const newBlock = api.blocks.insertInsideParent(blockId, insertIndex);
+    const newBlock = api.blocks.insertInsideParent(blockId, currentBlockIndex + 1);
 
     api.caret.setToBlock(newBlock.id, 'start');
 
@@ -116,11 +113,10 @@ export const insertEmptyBlockAboveOnEnterAtStart = (
 };
 
 /**
- * Handle Backspace key - convert to paragraph when content is empty and caret is at start.
- *
- * When the caret is at the very start of the content element AND the content is empty,
- * converts the toggle to a paragraph block. If the caret is NOT at start, lets the
- * browser handle it (does nothing).
+ * Handle Backspace key - at the start of the title, convert the toggle to a
+ * paragraph in place. Its text and children stay; nothing merges into the
+ * block above (Notion U137). If the caret is NOT at start, lets the browser
+ * handle it (does nothing).
  *
  * @param context - The toggle keyboard context
  * @param event - The keyboard event
@@ -149,15 +145,13 @@ export const handleToggleBackspace = async (
 
   const text = data.text;
 
-  if (text !== '') {
-    return;
-  }
-
   event.preventDefault();
 
   const newBlock = await runConvert(api, () => api.blocks.convert(blockId, 'paragraph', { text }));
 
   if (newBlock !== null) {
+    // convert() re-renders the block and drops the caret; Notion keeps it at 0.
+    api.caret.setToBlock(newBlock.id, 'start');
     announceToolConversion(api, 'paragraph', { text });
   }
 };

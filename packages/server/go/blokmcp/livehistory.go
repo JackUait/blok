@@ -134,6 +134,12 @@ func (r *liveRoom) loadVersions(ctx context.Context, batch json.RawMessage) map[
 		switch command.Name {
 		case "history.versions", "history.restore":
 			wantsList = true
+		case "history.previewRestore":
+			// A preview asks its own route and reads nothing else.
+			if failed := r.loadPreview(ctx, command.Args, loaded); failed != nil {
+				return failed
+			}
+			continue
 		}
 		for _, key := range []string{"version", "from", "to"} {
 			var name string
@@ -188,6 +194,49 @@ func (r *liveRoom) loadVersions(ctx context.Context, batch json.RawMessage) map[
 	}
 	loaded["documents"] = documents
 	return loaded
+}
+
+// loadPreview posts the preview route for a history.previewRestore and
+// keeps its answer under loaded["previews"], null for a 404. Arguments the
+// bundle refuses ask nothing. A failure comes back as the load's.
+func (r *liveRoom) loadPreview(ctx context.Context, args map[string]json.RawMessage, loaded map[string]any) map[string]any {
+	previews, _ := loaded["previews"].(map[string]json.RawMessage)
+	if previews == nil {
+		previews = map[string]json.RawMessage{}
+		loaded["previews"] = previews
+	}
+	var version string
+	if json.Unmarshal(args["version"], &version) != nil || version == "" {
+		return nil
+	}
+	query := ""
+	if raw, given := args["databases"]; given {
+		var databases string
+		if json.Unmarshal(raw, &databases) != nil || (databases != "keep" && databases != "restore") {
+			return nil
+		}
+		query = "?databases=" + databases
+	}
+	path := pointPath(version)
+	if path == "" {
+		previews[version] = json.RawMessage("null")
+		return nil
+	}
+	answer, err := r.historySend(ctx, http.MethodPost, r.historyBase()+"/"+path+"/restore/preview"+query, nil)
+	if err != nil {
+		return historyFailed(err)
+	}
+	switch {
+	case answer.status == http.StatusNotFound:
+		previews[version] = json.RawMessage("null")
+	case answer.status < 200 || answer.status > 299:
+		return refusedHistory(answer)
+	case !json.Valid(answer.body):
+		return map[string]any{"failed": "The sync server sent a restore preview it could not read."}
+	default:
+		previews[version] = json.RawMessage(decodeUTF8(answer.body))
+	}
+	return nil
 }
 
 // versionsOf is the server's version list as AgentVersions, newest first.

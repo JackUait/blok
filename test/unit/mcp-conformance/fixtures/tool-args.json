@@ -4015,6 +4015,12 @@
                       "reason": "service"
                     },
                     {
+                      "name": "history.previewRestore",
+                      "summary": "Preview a restore of a saved version. Writes nothing.",
+                      "available": false,
+                      "reason": "service"
+                    },
+                    {
                       "name": "history.read",
                       "summary": "Read one saved version, in the shape doc.read gives.",
                       "available": false,

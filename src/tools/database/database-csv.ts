@@ -1,10 +1,9 @@
-import type { BodyBlock } from './row-body';
+import { bodyText } from './row-body';
 import { formatDateDisplay, toIsoDay, toIsoTime } from './cells/date-format';
 import { filesOf, personIdsOf } from './property-values';
-import { isOutputData, placeText, verificationStatus } from './tier3-values';
+import { placeText, verificationStatus } from './tier3-values';
 
 import type { DatabaseData, DatabaseRowData, DateFormat, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
-import { htmlToPlainText } from '../../components/utils/plain-text';
 import { generateNKeysBetween } from '../../shared/database/fractional-index';
 import { freePropertyName, newView } from '../../shared/database/schema-ops';
 import { positionBetween } from '../../shared/database/positions';
@@ -58,21 +57,6 @@ const computedText = (value: PropertyValue | undefined, ctx: CsvTextContext): st
   return '';
 };
 
-/** A legacy rich text body as plain text, one line per block. */
-export const bodyText = (value: PropertyValue | undefined): string => {
-  const blocks: unknown = isOutputData(value) ? value.blocks : undefined;
-
-  if (!Array.isArray(blocks)) return '';
-
-  return blocks
-    .map((block: BodyBlock) => {
-      const text = (block.data as { text?: unknown } | undefined)?.text;
-
-      return typeof text === 'string' ? htmlToPlainText(text).trim() : '';
-    })
-    .filter((line) => line !== '')
-    .join('\n');
-};
 
 /** A cell value as text, the way the view shows it. Checkboxes write Yes or No. */
 export const csvCellText = (property: PropertyDefinition, value: PropertyValue | undefined, ctx: CsvTextContext): string => {

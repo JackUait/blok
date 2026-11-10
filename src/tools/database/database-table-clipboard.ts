@@ -7,8 +7,8 @@ import { parseDateValue } from './cells/date-value';
 import { formatNumberValue, parseNumberText } from './cells/number-format';
 import { fileNameFromUrl } from './cells/files-editor';
 import type { CellContext } from './cells/types';
-import { bodyText } from './database-csv';
 import { personIdsOf } from './property-values';
+import { bodyText } from './row-body';
 import { isOutputData, isPlaceValue, placeText, verificationStatus } from './tier3-values';
 import type { PropertyDefinition, PropertyValue } from './types';
 

@@ -10,6 +10,22 @@ export interface BodyBlock {
   data: unknown;
 }
 
+/** A legacy rich text body as plain text, one line per block. */
+export const bodyText = (value: PropertyValue | undefined): string => {
+  const blocks: unknown = isOutputData(value) ? value.blocks : undefined;
+
+  if (!Array.isArray(blocks)) return '';
+
+  return blocks
+    .map((block: BodyBlock) => {
+      const text = (block.data as { text?: unknown } | undefined)?.text;
+
+      return typeof text === 'string' ? htmlToPlainText(text).trim() : '';
+    })
+    .filter((line) => line !== '')
+    .join('\n');
+};
+
 const hasBody = (value: PropertyValue | undefined): value is OutputData =>
   isOutputData(value) && value.blocks.length > 0;
 

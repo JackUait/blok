@@ -253,7 +253,7 @@ export const generate = () => {
   scen('version-preview-restore', VER_SEED, [
     room(replace('p', 'Changed'), { ok: true }),
     room(b([c('history.previewRestore', { version: '{lineage}:0' })]), { ok: true, committed: 0, revision: '@head',
-      result: { '/results/0/version': '{lineage}:0', '/results/0/expectRevision': '@head', '/results/0/fits': true,
+      result: { '/results/0/version': '{lineage}:0', '/results/0/expectRevision': { absent: true }, '/results/0/fits': true,
         '/results/0/wouldUndo/blocks': { length: 1 }, '/results/0/wouldUndo/blocks/0/id': 'p', '/results/0/wouldUndo/blocks/0/kind': 'changed',
         '/results/0/wouldUndo/page': { length: 0 }, '/results/0/guards': { length: 0 } },
       state: { '/blocks/0/data/text/0/text': 'Changed' } }),

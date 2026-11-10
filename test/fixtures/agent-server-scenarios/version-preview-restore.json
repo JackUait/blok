@@ -63,7 +63,9 @@
         "revision": "@head",
         "result": {
           "/results/0/version": "{lineage}:0",
-          "/results/0/expectRevision": "@head",
+          "/results/0/expectRevision": {
+            "absent": true
+          },
           "/results/0/fits": true,
           "/results/0/wouldUndo/blocks": {
             "length": 1

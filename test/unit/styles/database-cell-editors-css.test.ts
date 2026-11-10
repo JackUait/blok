@@ -570,6 +570,21 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-person-remove] svg', 'width')).toEqual(['16px']);
       expect(declared('[data-blok-database-person-remove] svg', 'height')).toEqual(['16px']);
     });
+
+    // notion-motion.md Round 9 "Multi-select cell editor": the chip × and the option ⋯ round 6, not 4.
+    it('rounds the chip × and the option ⋯ 6px', () => {
+      expect(declared('[data-blok-database-select-chip-remove]', 'border-radius')).toEqual(['var(--blok-radius-control)']);
+      expect(declared('[data-blok-database-select-option-menu]', 'border-radius')).toEqual(['var(--blok-radius-control)']);
+    });
+  });
+
+  // notion-motion.md Round 9 "Multi-select cell editor" (r9-multiselect-create.raw): the row sits 4px in,
+  // "Create" starts at box x+12 and is 43 wide, the new chip starts at x+61.
+  describe('Create row', () => {
+    it('starts "Create" 8px into the row and the chip 6px after it', () => {
+      expect(declared('[data-blok-database-select-create]', 'padding')).toEqual(['0 var(--blok-space-1) 0 var(--blok-space-2)']);
+      expect(declared('[data-blok-database-select-create]', 'gap')).toEqual(['var(--blok-space-1-5)']);
+    });
   });
 
   // notion-spec-2 §25.6: option rows 292 wide at box x + 4; ⋮⋮ at row x + 6, the pill at + 36, "›" ends 8 from the right;

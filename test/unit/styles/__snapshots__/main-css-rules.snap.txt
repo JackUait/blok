@@ -10822,8 +10822,12 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
-[data-blok-database-select-chip-remove], [data-blok-database-place-clear], [data-blok-database-person-remove], [data-blok-database-file-remove], [data-blok-database-select-option-handle], [data-blok-database-select-option-menu] {
+[data-blok-database-place-clear], [data-blok-database-person-remove], [data-blok-database-file-remove], [data-blok-database-select-option-handle] {
   border-radius: var(--blok-radius-control-sm);
+}
+
+[data-blok-database-select-chip-remove], [data-blok-database-select-option-menu] {
+  border-radius: var(--blok-radius-control);
 }
 
 [data-blok-database-place-clear] svg, [data-blok-database-file-remove] svg {
@@ -11203,12 +11207,23 @@ textarea[data-blok-database-cell-input] {
   overflow-y: auto;
 }
 
-[data-blok-database-select-option], [data-blok-database-person-option], [data-blok-database-relation-option], [data-blok-database-file-row], [data-blok-database-files-upload], [data-blok-database-select-create] {
+[data-blok-database-select-option], [data-blok-database-person-option], [data-blok-database-relation-option], [data-blok-database-file-row], [data-blok-database-files-upload] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-1);
   min-height: 28px;
   padding: 0 var(--blok-space-1);
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-database-ink);
+  cursor: pointer;
+}
+
+[data-blok-database-select-create] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-height: 28px;
+  padding: 0 var(--blok-space-1) 0 var(--blok-space-2);
   border-radius: var(--blok-radius-control);
   color: var(--blok-database-ink);
   cursor: pointer;

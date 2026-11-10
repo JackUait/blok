@@ -1919,6 +1919,27 @@ describe('DatabaseTableView', () => {
       expect(document.querySelector('[data-blok-popover-opened]')).toBeNull();
     });
 
+    // notion-motion.md Round 11: a set value's menu is 200 wide, its left edge the button's, its top the button's bottom.
+    it('opens a set value\'s menu 200 wide from the value button, not the cell', () => {
+      const { root } = mount({ view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
+      const calc = root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-amount"]');
+      const box = calc?.querySelector<HTMLElement>('[data-blok-database-table-calc-box]');
+
+      box?.click();
+
+      expect(box?.hasAttribute('data-popover-open')).toBe(true);
+      expect(calc?.hasAttribute('data-popover-open')).toBe(false);
+      expect(document.querySelector<HTMLElement>('[data-blok-popover-custom-class~="blok-database-header-menu"]')?.style.getPropertyValue('--width')).toBe('200px');
+    });
+
+    // notion-motion.md Round 11 "Read-only database": no "Calculate" node exists in a locked table's footer.
+    it('read-only: an empty footer cell holds no Calculate, a set one keeps its value', () => {
+      const { root } = mount({ readOnly: true, view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
+
+      expect(root.querySelector('[data-blok-database-table-calc-placeholder]')).toBeNull();
+      expect(root.querySelector('[data-blok-database-table-calc][data-property-id="p-amount"] [data-blok-database-table-calc-value]')?.textContent).toBe('1235.5');
+    });
+
     it('offers None, Count and Percent, plus More options on a number column', () => {
       const titles = (type: PropertyDefinition['type']): Array<string | undefined> =>
         (calculationItems({ type }, undefined, { t: (key: string) => key }, vi.fn()) as Array<{ title?: string }>).map((item) => item.title);

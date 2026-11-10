@@ -8741,7 +8741,8 @@ textarea[data-blok-database-cell-input] {
   margin-inline-start: calc(-1 * max(0px, var(--blok-database-table-row-gutter) - max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))));
   padding-inline: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   padding-inline-start: max(var(--blok-database-table-row-gutter), calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-block-end: var(--blok-space-6);
+  /* notion-motion.md Round 11: the next block starts 12px under the last row. */
+  padding-block-end: var(--blok-space-3);
 }
 
 /* It clips too (overflow set inline), so it bleeds the same way. The list's
@@ -9805,12 +9806,12 @@ textarea[data-blok-database-cell-input] {
 
 /* ─── Calculation footer ─── */
 
-/* research/21 §1d: a 1px line over the row. A shadow, so the row stays 35px. */
+/* notion-motion.md Round 11 (r11-gap-withcalc.raw): 36px with a 1px border-top, so cells keep 35px. */
 [data-blok-database-table-footer] {
   position: relative;
   display: flex;
-  min-height: 35px;
-  box-shadow: inset 0 1px 0 var(--blok-database-table-border);
+  min-height: 36px;
+  border-top: 1px solid var(--blok-database-table-border);
 }
 
 [data-blok-database-table-footer] > [data-blok-database-table-gutter] {
@@ -9834,6 +9835,11 @@ textarea[data-blok-database-cell-input] {
   line-height: 21px;
   overflow: hidden;
   white-space: nowrap;
+  cursor: default;
+}
+
+/* A read-only cell is a div: normal cursor, no fill (notion-motion.md Round 11 "Read-only database"). */
+button[data-blok-database-table-calc] {
   cursor: pointer;
 }
 
@@ -9845,11 +9851,12 @@ textarea[data-blok-database-cell-input] {
   padding: 0 var(--blok-space-1-5);
   line-height: 21px;
   border-radius: var(--blok-radius-control);
+  font-variant-numeric: lining-nums tabular-nums;
   transition: background-color 200ms;
 }
 
 /* r10-calc-hover-numcell.raw, r10-calc-hover-numbtn.raw: only the pointer on the button fills it. */
-[data-blok-database-table-calc-box]:hover {
+button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 

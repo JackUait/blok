@@ -103,8 +103,38 @@ test.describe('table calculation row (research/21 §1d, research/08 shot 66)', (
     await expect(patch).toHaveCSS('border-top-left-radius', '6px');
     expect((await box(patch)).height).toBe(21);
     expect((await box(patch)).width).toBeLessThan((await box(calc)).width);
-    await expect(page.locator('[data-blok-database-table-footer]').first()).toHaveCSS('box-shadow', 'rgba(42, 28, 0, 0.07) 0px 1px 0px 0px inset');
+    await expect(page.locator('[data-blok-database-table-footer]').first()).toHaveCSS('border-top', '1px solid rgba(42, 28, 0, 0.07)');
     expect((await box(calc)).height).toBe(35);
+  });
+
+  // notion-motion.md Round 11 (r11-gap-withcalc.raw, r11-calc-footmenu.png): a 36px row with the button 8px down,
+  // the block's end 12px under it, and the value's menu 200 wide on the button's bottom-left corner.
+  test('sits the value 8px under the row top, ends the block 12px under the row, opens a 200px menu on the button', async ({ page }) => {
+    await mount(page);
+    const footer = page.locator('[data-blok-database-table-footer]').first();
+    const patch = page.locator('[data-blok-database-table-calc][data-property-id="p-amount"] [data-blok-database-table-calc-box]');
+    const holder = page.locator('[data-blok-element]:has([data-blok-database-table-footer])').first();
+
+    await expect(patch).toBeVisible();
+    const footerBox = await box(footer);
+    const patchBox = await box(patch);
+
+    expect(footerBox.height).toBe(36);
+    expect(patchBox.y - footerBox.y).toBeCloseTo(8, 0);
+    const holderBox = await box(holder);
+
+    expect(holderBox.y + holderBox.height - (footerBox.y + footerBox.height)).toBeCloseTo(12, 0);
+
+    await patch.click();
+    const container = page.locator('[data-blok-popover][data-blok-popover-opened="true"] [data-blok-popover-container]').first();
+
+    await expect(container).toBeVisible();
+    await settled(container);
+    const menuBox = await box(container);
+
+    expect(menuBox.width).toBe(200);
+    expect(menuBox.x).toBeCloseTo(patchBox.x, 0);
+    expect(menuBox.y).toBeCloseTo(patchBox.y + patchBox.height, 0);
   });
 
   test('keeps a number 10px short of the column end, as shot 66', async ({ page }) => {

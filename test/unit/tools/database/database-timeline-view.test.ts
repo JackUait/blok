@@ -390,6 +390,8 @@ describe('DatabaseTimelineView', () => {
       const readOnly = mount({ readOnly: true, view: timelineView({ showTimelineTable: true }) });
 
       expect(readOnly.root.querySelector('[data-blok-database-timeline-table-footer] button')).toBeNull();
+      // notion-motion.md Round 11 "Read-only database": no "Calculate" node at all.
+      expect(readOnly.root.querySelector('[data-blok-database-timeline-table-footer] [data-blok-database-table-calc-placeholder]')).toBeNull();
     });
 
     it('opens a row from its title in the table panel', () => {

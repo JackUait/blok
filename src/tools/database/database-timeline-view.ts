@@ -479,7 +479,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         cell.addEventListener('click', () => handlers?.openCalculationMenu?.(cell, property.id));
       }
       fillCalculationCell(cell, {
-        fn: calculations.get(property.id), property, shown: shown(property), rows, i18n: this.options.i18n, locale: this.options.locale, capCounts: caps.has(property.id),
+        fn: calculations.get(property.id), property, shown: shown(property), rows, i18n: this.options.i18n, locale: this.options.locale, capCounts: caps.has(property.id), editable: this.canEdit,
       });
       footer.appendChild(cell);
     }

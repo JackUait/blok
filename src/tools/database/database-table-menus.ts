@@ -146,13 +146,16 @@ export interface OpenMenuOptions {
   /**
    * Which database menu this is: its row size comes from the class. A row menu opens left of its ⋮⋮;
    * a card menu is the same row menu, opened over its "•••"; a handle menu is the card menu, opened beside its handle.
+   * A calc menu is the footer value's: header rows, 200 wide, no gap under its button.
    */
-  kind?: 'header' | 'row' | 'card' | 'handle';
+  kind?: 'header' | 'row' | 'card' | 'handle' | 'calc';
   /** Where the menu opens instead of the anchor's box; `positionContext` moves it with the page. */
   at?: { position: DOMRect; positionContext: HTMLElement };
 }
 
-const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS, card: DATABASE_CARD_MENU_CLASS, handle: DATABASE_HANDLE_MENU_CLASS } as const;
+const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS, card: DATABASE_CARD_MENU_CLASS, handle: DATABASE_HANDLE_MENU_CLASS, calc: DATABASE_HEADER_MENU_CLASS } as const;
+
+const MENU_MIN_WIDTH: Partial<Record<NonNullable<OpenMenuOptions['kind']>, string>> = { card: '265px', handle: '265px', calc: '200px' };
 
 /** Opens a menu under `anchor`; `data-popover-open` marks the anchor while it is up. */
 export const openMenu = (
@@ -166,11 +169,13 @@ export const openMenu = (
     ...(options.kind === 'row' ? { placeLeftOfAnchor: true, viewportMargin: 8 } : {}),
     // notion-motion.md Round 10: the right edge 5px before the handle, centred on it; pushed up to ~12px over the window bottom.
     ...(options.kind === 'handle' ? { placeLeftOfAnchor: true, offset: 5, viewportMargin: 12 } : {}),
+    // notion-motion.md Round 11: the footer value's menu, 200x123, on the button's bottom edge.
+    ...(options.kind === 'calc' ? { offset: 0 } : {}),
     animateClose: true,
     trigger: anchor,
     items,
     width: 'auto' as const,
-    minWidth: options.kind === 'card' || options.kind === 'handle' ? '265px' : '220px',
+    minWidth: (options.kind === undefined ? undefined : MENU_MIN_WIDTH[options.kind]) ?? '220px',
     // A card's menu opens over its "•••", shifted to stay in the window (feel findings B15, 09-notion-card-menu.png).
     ...(options.kind === 'card' ? { cover: true } : {}),
     autoFocusFirstItem: false,

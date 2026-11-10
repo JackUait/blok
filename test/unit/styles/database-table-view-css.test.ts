@@ -78,10 +78,11 @@ describe('database table view styles', () => {
     expect(css.lastIndexOf(`${clip} {`)).toBeGreaterThan(css.lastIndexOf(`${block} {`));
   });
 
-  it('uses the measured Notion sizes: 36px header, 37px rows, 35px footer, 5px resize handle', () => {
+  // notion-motion.md Round 11 (r11-gap-withcalc.raw): the footer row is 36 tall with its 1px top border.
+  it('uses the measured Notion sizes: 36px header, 37px rows, 36px footer, 5px resize handle', () => {
     expect(ruleBody('[data-blok-database-table-header]')).toMatch(/height:\s*36px/);
     expect(ruleBody('[data-blok-database-table-cell]')).toMatch(/min-height:\s*37px/);
-    expect(ruleBody('[data-blok-database-table-footer]')).toMatch(/min-height:\s*35px/);
+    expect(ruleBody('[data-blok-database-table-footer]')).toMatch(/min-height:\s*36px/);
     expect(ruleBody('[data-blok-database-table-resize]')).toMatch(/width:\s*5px/);
   });
 
@@ -373,8 +374,29 @@ describe('database table checkbox hover', () => {
 // research/21 §1d: a 1px top line over the calculation row; the hover fills a 70x21 box with 6px corners.
 // research/08 (shot 66): that box is padded 0 6px and fades its fill over 0.2s.
 describe('database table calculation footer', () => {
-  it('rules a 1px line over the row in the table border colour, keeping the 35px row', () => {
-    expect(ruleBody('[data-blok-database-table-footer]')).toMatch(/box-shadow:\s*inset 0 1px 0 var\(--blok-database-table-border\)/);
+  // notion-motion.md Round 11 (r11-gap-withcalc.raw): a real 1px border-top, so the cells keep 35px under it.
+  it('rules a 1px border over the row in the table border colour', () => {
+    expect(ruleBody('[data-blok-database-table-footer]')).toMatch(/border-top:\s*1px solid var\(--blok-database-table-border\)/);
+    expect(ruleBody('[data-blok-database-table-footer]')).not.toMatch(/box-shadow/);
+  });
+
+  // notion-motion.md Round 11 "Footer labels": label and value use lining tabular numbers.
+  it('sets the label and value in lining tabular numbers', () => {
+    expect(ruleBody('[data-blok-database-table-calc-box]')).toMatch(/font-variant-numeric:\s*lining-nums tabular-nums/);
+  });
+
+  // notion-motion.md Round 11 "Read-only database": a locked table's value gets no fill and a normal cursor.
+  // A read-only footer cell is a div, so the pointer and the fill belong to the button only.
+  it('gives the pointer and the hover fill to an editable footer button only', () => {
+    expect(ruleBody('[data-blok-database-table-calc]')).toMatch(/cursor:\s*default/);
+    expect(ruleBody('button[data-blok-database-table-calc]')).toMatch(/cursor:\s*pointer/);
+    expect(ruleBody('[data-blok-database-table-calc-box]:hover')).toBe('');
+    expect(ruleBody('button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hover')).toMatch(/background-color:\s*var\(--blok-database-table-header-hover-bg\)/);
+  });
+
+  // notion-motion.md Round 11 "Gap below New page": the next block starts 12px under the table's last row.
+  it('ends the table 12px under its last row', () => {
+    expect(ruleBody('[data-blok-database-table-scroller]')).toMatch(/padding-block-end:\s*var\(--blok-space-3\)/);
   });
 
   it('fills a 21px box around the value on hover, not the whole cell', () => {
@@ -390,7 +412,7 @@ describe('database table calculation footer', () => {
   // notion-motion.md Round 10 (r10-calc-hover-numcell.raw, r10-calc-hover-numbtn.raw, r10-calc-hover-textbtn.raw):
   // the pointer in the cell but off the button leaves it clear; only the pointer on the button fills it.
   it('fills the button only while the pointer is on it, not anywhere in its cell', () => {
-    expect(ruleBody('[data-blok-database-table-calc-box]:hover')).toMatch(/background-color:\s*var\(--blok-database-table-header-hover-bg\)/);
+    expect(ruleBody('button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hover')).toMatch(/background-color:\s*var\(--blok-database-table-header-hover-bg\)/);
     expect(ruleBody('[data-blok-database-table-calc]:hover > [data-blok-database-table-calc-box]')).toBe('');
   });
 

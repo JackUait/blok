@@ -215,7 +215,7 @@ const FOOTER_LABEL_KEYS: Partial<Record<CalculationFn, string>> = {
 };
 
 /** A footer cell's content: "Calculate" when no function is set, else its label and result. The timeline's table panel shares it. */
-export const fillCalculationCell = (cell: HTMLElement, { fn, property, shown, rows, i18n, locale, capCounts = false }: {
+export const fillCalculationCell = (cell: HTMLElement, { fn, property, shown, rows, i18n, locale, capCounts = false, editable = true }: {
   fn: CalculationFn | undefined;
   property: PropertyDefinition;
   /** `property` as its result type (formula, rollup). */
@@ -225,9 +225,14 @@ export const fillCalculationCell = (cell: HTMLElement, { fn, property, shown, ro
   locale: string | undefined;
   /** "Show large counts as 99+". */
   capCounts?: boolean;
+  /** notion-motion.md Round 11: a read-only footer has no "Calculate". */
+  editable?: boolean;
 }): void => {
   // research/08: a button column has no Calculate.
   if (property.type === 'button') {
+    return;
+  }
+  if (fn === undefined && !editable) {
     return;
   }
   // research/21 §1d: the hover fills this box, not the cell.
@@ -1403,7 +1408,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       this.sizeCell(cell, column);
 
       fillCalculationCell(cell, {
-        fn, property: column.property, shown: this.shown(column.property), rows, i18n: this.options.i18n, locale: this.options.locale, capCounts: caps.has(column.property.id),
+        fn, property: column.property, shown: this.shown(column.property), rows, i18n: this.options.i18n, locale: this.options.locale, capCounts: caps.has(column.property.id), editable: this.editable,
       });
       footer.appendChild(cell);
     }
@@ -1800,7 +1805,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const calc = closest('button[data-blok-database-table-calc]');
 
     if (calc !== null) {
-      this.openCalculationMenu(calc);
+      this.openCalculationMenu(calc, calc.hasAttribute('data-empty') ? calc : calc.querySelector<HTMLElement>('[data-blok-database-table-calc-box]') ?? calc);
 
       return;
     }
@@ -1905,8 +1910,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     this.menu = menu;
   }
 
-  private openCalculationMenu(anchor: HTMLElement): void {
-    const propertyId = anchor.getAttribute('data-property-id') ?? '';
+  /** notion-motion.md Round 11: a set value's menu opens from its button; the unset cell's anchor is unmeasured. */
+  private openCalculationMenu(cell: HTMLElement, anchor: HTMLElement): void {
+    const propertyId = cell.getAttribute('data-property-id') ?? '';
     const property = this.columns.find((c) => c.property.id === propertyId)?.property;
 
     if (property === undefined) {
@@ -1916,7 +1922,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     this.showMenu(anchor, calculationItems(this.shown(property), current, this.options.i18n, (fn: CalculationFn | null) => {
       this.handlers?.updateView({ calculations: withCalculation(this.options.view, propertyId, fn) });
-    }, this.countCap(propertyId)));
+    }, this.countCap(propertyId)), { kind: 'calc' });
   }
 
   private countCap(propertyId: string): CountCap {

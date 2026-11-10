@@ -1464,6 +1464,88 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('every child of a callout removed', () => {
+    const doc: OutputData['blocks'] = [
+      { id: 'pre', type: 'paragraph', data: { text: 'Before' } },
+      { id: 'cal', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['k1', 'k2'] },
+      { id: 'k1', type: 'paragraph', parent: 'cal', data: { text: 'Kid one' } },
+      { id: 'k2', type: 'header', parent: 'cal', data: { text: 'Kid two', level: 3 } },
+      { id: 'post', type: 'paragraph', data: { text: 'After' } },
+    ];
+
+    const selectChildren = async (page: Page): Promise<void> => {
+      await page.locator('[data-blok-id="k1"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="k2"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="k2"][data-blok-selected="true"]')).toBeVisible();
+    };
+
+    /** Ids of the live holders inside the callout, and whether focus is in one of them. */
+    const calloutState = async (page: Page): Promise<{ children: number; focusInChild: boolean }> =>
+      await page.locator('[data-blok-id="cal"]').evaluate((callout) => {
+        const children = Array.from(callout.querySelectorAll('[data-blok-nested-blocks] [data-blok-id]'));
+
+        return {
+          children: children.length,
+          focusInChild: children.some((child) => child.contains(document.activeElement)),
+        };
+      });
+
+    const calloutChildren = async (page: Page): Promise<unknown[]> => {
+      const { blocks } = await saveBlok(page);
+
+      return blocks.filter((b) => b.parent === 'cal').map((b) => [b.type, b.data.text]);
+    };
+
+    test('a cut leaves one empty paragraph with the caret, and a paste puts the children back', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc } });
+      await selectChildren(page);
+
+      const clipboardData = await cutFromElement(page.locator('[data-blok-id="k1"]'));
+
+      await expect.poll(() => calloutState(page)).toEqual({ children: 1, focusInChild: true });
+
+      await paste(page, page.locator(':focus'), clipboardData);
+
+      await expect.poll(() => calloutChildren(page)).toEqual([
+        ['paragraph', 'Kid one'],
+        ['header', 'Kid two'],
+      ]);
+    });
+
+    test('backspace leaves one empty paragraph that takes typing', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc } });
+      await selectChildren(page);
+
+      await page.keyboard.press('Backspace');
+
+      await expect.poll(() => calloutState(page)).toEqual({ children: 1, focusInChild: true });
+
+      await page.keyboard.type('Typed');
+
+      await expect.poll(() => calloutChildren(page)).toEqual([['paragraph', 'Typed']]);
+    });
+
+    test('a toggle keeps no children, since its title takes the caret', async ({ page }) => {
+      const toggleDoc: OutputData['blocks'] = [
+        { id: 'tg', type: 'toggle', data: { text: 'Title', isOpen: true }, content: ['t1', 't2'] },
+        { id: 't1', type: 'paragraph', parent: 'tg', data: { text: 'one' } },
+        { id: 't2', type: 'paragraph', parent: 'tg', data: { text: 'two' } },
+        { id: 'post', type: 'paragraph', data: { text: 'After' } },
+      ];
+
+      await createBlok(page, { data: { blocks: toggleDoc } });
+      await openFixtureToggles(page, { blocks: toggleDoc });
+      await page.locator('[data-blok-id="t1"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="t2"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="t2"][data-blok-selected="true"]')).toBeVisible();
+
+      await cutFromElement(page.locator('[data-blok-id="t1"]'));
+
+      await expect(page.locator('[data-blok-id="t1"]')).toHaveCount(0);
+      await expect.poll(() => page.locator('[data-blok-id="tg"] [data-blok-nested-blocks] [data-blok-id]').count()).toBe(0);
+    });
+  });
+
   test.describe('blocks pasted at a caret inside text', () => {
     const blokPayload = (blocks: Array<{ id: string; tool: string; data: Record<string, unknown>; parentId?: string | null; contentIds?: string[] }>): string =>
       JSON.stringify(blocks.map((b) => ({ parentId: null, contentIds: [], tunes: {}, ...b })));

@@ -23,7 +23,7 @@ import { DATA_ATTR } from '../../constants';
 import { BlockChanged, BlockRendered, BlockReplayed } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { sanitizeBlocks } from '../../utils/sanitizer';
-import { acceptsChildren, isChildToolAllowed } from '../../utils/child-tools';
+import { acceptsChildren, isChildToolAllowed, resolveChildTool } from '../../utils/child-tools';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { findOwn } from '../../utils/own-element';
 import { adoptsSectionOnConvert, endsSection } from '../../../shared/turn-into';
@@ -32,6 +32,8 @@ import type { TreePlacement } from '../../utils/tree-order';
 import { lastChildBefore } from '../api/block-placement';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 import { isInsideTableCell } from '../../../tools/table/table-restrictions';
+import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
+import { Dom as $ } from '../../dom';
 
 // Imported modules
 import { BlockEventBinder } from './event-binder';
@@ -1139,7 +1141,9 @@ export class BlockManager extends Module {
    * always lands in ONE clean block at the seam of the deleted span, instead of
    * merging into whichever adjacent block still holds the caret (Notion parity).
    * Backspace/Delete leaves it `false` so a partial multi-block delete does not
-   * spawn a stray empty paragraph.
+   * spawn a stray empty paragraph. A container emptied by the delete that has no
+   * text of its own (a callout) gets the replacement inside it, so the caret has
+   * somewhere to go.
    * @param forceReplacement - always insert a replacement block, even for a
    *   partial (non-whole-document) selection
    */
@@ -1173,26 +1177,42 @@ export class BlockManager extends Module {
 
       return (doomed.has(parent) && parent.tool.deletesChildren) || takenByAncestor(parent, seen);
     };
-    const allBlocksDeleted = this.blocks.every((block) => doomed.has(block) || takenByAncestor(block, new Set([block])));
-    const shouldInsertReplacement = allBlocksDeleted || forceReplacement;
+    const isGone = (block: Block): boolean => doomed.has(block) || takenByAncestor(block, new Set([block]));
+    const allBlocksDeleted = this.blocks.every(isGone);
 
     // Get insertion index (minimum index among selected blocks)
     const firstSelected = selectedBlockEntries[selectedBlockEntries.length - 1];
     const insertionIndex = firstSelected.index;
-    // The replacement goes to the root, after the root blocks before the
+    const selectionParent = firstSelected.block.parentId === null ? undefined : this.getBlockById(firstSelected.block.parentId);
+    const emptiedContainer = selectionParent !== undefined && !isGone(selectionParent) &&
+      this.blocks.every((block) => block.parentId !== selectionParent.id || isGone(block)) &&
+      this.leftWithoutCaretPlace(selectionParent, firstSelected.block)
+      ? selectionParent
+      : undefined;
+    const shouldInsertReplacement = allBlocksDeleted || forceReplacement || emptiedContainer !== undefined;
+
+    // An emptied container gets the replacement inside it. Otherwise the
+    // replacement goes to the root, after the root blocks before the
     // selection. A table/database cell keeps the index insert: the table
     // claims the new block into the cell.
-    const selectionParent = firstSelected.block.parentId === null ? undefined : this.getBlockById(firstSelected.block.parentId);
-    const placement: TreePlacement | undefined = selectionParent !== undefined && isSelfPlacedParent(selectionParent, (id) => this.getBlockById(id))
-      ? undefined
-      : { parentId: null, afterId: lastChildBefore({ blocks: this.blocks, getBlockById: (id) => this.getBlockById(id) }, null, insertionIndex) };
+    const placement: TreePlacement | undefined = (() => {
+      if (emptiedContainer !== undefined) {
+        return { parentId: emptiedContainer.id, afterId: null };
+      }
+
+      return selectionParent !== undefined && isSelfPlacedParent(selectionParent, (id) => this.getBlockById(id))
+        ? undefined
+        : { parentId: null, afterId: lastChildBefore({ blocks: this.blocks, getBlockById: (id) => this.getBlockById(id) }, null, insertionIndex) };
+    })();
     const blockIds = selectedBlockEntries.map(({ block }) => block.id);
 
-    const defaultToolName = this.config.defaultBlock;
+    const defaultBlock = this.config.defaultBlock;
 
-    if (defaultToolName === undefined) {
+    if (defaultBlock === undefined) {
       throw new Error('Could not insert default Block. Default block tool is not defined in the configuration.');
     }
+
+    const defaultToolName = emptiedContainer === undefined ? defaultBlock : resolveChildTool(emptiedContainer, defaultBlock, defaultBlock);
 
     // Generate new block ID upfront for the transaction (only if needed)
     const newBlockId = shouldInsertReplacement ? generateBlockId() : undefined;
@@ -1229,6 +1249,31 @@ export class BlockManager extends Module {
     }
 
     return undefined;
+  }
+
+  /**
+   * Whether removing all of `container`'s children leaves the caret nowhere to
+   * go inside it: the children sat in its own nested-blocks slot and it has no
+   * text of its own (a callout, not a toggle or a parent paragraph). Layout
+   * pieces and tools that manage their own children keep their empty state.
+   * @param container - the parent of the deleted blocks
+   * @param child - one of the deleted children, still mounted
+   */
+  private leftWithoutCaretPlace(container: Block, child: Block): boolean {
+    const { tool } = container;
+
+    if (tool.isLayout || tool.ownsChildren || SELF_PLACING_PARENTS.has(container.name) || !acceptsChildren(container)) {
+      return false;
+    }
+
+    const slot = child.holder.parentElement?.closest(`[${DATA_ATTR.nestedBlocks}]`);
+    const ownerOf = (element: Element): Element | null => element.closest(`[${DATA_ATTR.element}]`);
+
+    if (slot === null || slot === undefined || ownerOf(slot) !== container.holder) {
+      return false;
+    }
+
+    return $.findAllInputs(container.holder).every((input) => ownerOf(input) !== container.holder);
   }
 
   /**

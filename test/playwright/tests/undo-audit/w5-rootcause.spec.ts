@@ -619,15 +619,12 @@ test.describe('W5R root causes', () => {
       expect(spaceWrite?.origin, 'the typed space is written as a tracked local change').toBe('local');
       expect(enterUndone, 'undoing Enter leaves " deep" whole').toEqual({ doc: 'Level two deep', saved: [{ text: 'Level two deep' }] });
 
-      if (span < 680) {
-        expect(deepUndone, 'the space and "deep" are one step inside the window').toEqual({ doc: 'Level two', saved: [{ text: 'Level two' }] });
-      } else {
-        // The window cut somewhere after the space: undo leaves the space plus the keys before the cut.
-        expect(deepUndone.saved, 'the DOM and the saved text agree').toEqual([{ text: deepUndone.doc }]);
-        const left = (deepUndone.doc ?? '').replace(/\u00a0/g, ' ');
+      const left = (deepUndone.doc ?? '').replace(/\u00a0/g, ' ');
+      // Inside the window the space and "deep" are one step. Past it, undo leaves a prefix of the typing.
+      const fits = span < 680 ? left === 'Level two' : 'Level two deep'.startsWith(left) && left.length < 'Level two deep'.length;
 
-        expect('Level two deep'.startsWith(left) && left.length < 'Level two deep'.length, `"${left}" is a prefix of the typing`).toBe(true);
-      }
+      expect(deepUndone.saved, 'the DOM and the saved text agree').toEqual([{ text: deepUndone.doc }]);
+      expect(fits, `"${left}" after undoing "deep" (keys spanned ${span} ms)`).toBe(true);
     });
   }
 });

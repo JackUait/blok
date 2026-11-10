@@ -237,7 +237,7 @@ export class AgentCore extends Module {
         name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'versionHistory'
       ),
       ...(canRestore(this.services().versionHistory) && { restores: true }),
-      previews: canPreviewRestore(this.services().versionHistory),
+      ...(canPreviewRestore(this.services().versionHistory) && { previews: true }),
       overrides: this.config.agent?.overrides,
     });
 

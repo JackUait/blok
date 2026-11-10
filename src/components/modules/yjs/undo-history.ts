@@ -15,6 +15,15 @@ import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry
 type StackItem = Y.UndoManager['undoStack'][number];
 
 /**
+ * How a user gesture starts: see {@link UndoHistory.beginGesture}.
+ */
+export type GestureKind = 'typing' | 'discrete' | 'split' | 'merge';
+
+/** {@link UndoHistory} run keys; NUL keeps them apart from `blockId#index` and `value:` keys. */
+const SPLIT_RUN = '\u0000split';
+const MERGE_RUN = '\u0000merge';
+
+/**
  * Stop Yjs from freeing a deleted item, as Y.UndoManager does for the items
  * its steps delete (yjs `keepItem`, which is not exported).
  * @param item - a deleted item a step may bring back
@@ -301,7 +310,10 @@ export class UndoHistory {
    */
   private gesturesDriveSteps = false;
 
-  /** `blockId#inputIndex` of the open typing run; null when the open step is not typing. */
+  /**
+   * What the open step continues in: `blockId#inputIndex` of a typing run,
+   * {@link SPLIT_RUN} or {@link MERGE_RUN}; null when nothing continues it.
+   */
   private typingInputKey: string | null = null;
 
   /** When the open typing run's first key came (Date.now). */
@@ -2522,11 +2534,12 @@ export class UndoHistory {
    * A user gesture starts (a key, a pointer press, a paste, an API call).
    * Only here does a step close, and here the step's caret-before is taken,
    * before any handler moves the caret.
-   * @param kind - 'typing' continues a typing run in the same input; any
-   *   other gesture always closes the open step
+   * @param kind - 'typing' continues a typing run in the same input, 'split'
+   *   (Enter) a run of splits and 'merge' (Backspace at an input's start) a
+   *   typing run; all only within the window. 'discrete' always closes the step
    * @returns whether the open step was closed
    */
-  public beginGesture(kind: 'typing' | 'discrete'): boolean {
+  public beginGesture(kind: GestureKind): boolean {
     return this.startGesture(kind, false);
   }
 
@@ -2592,6 +2605,48 @@ export class UndoHistory {
     return caret.title === true ? 'value:page:title' : `${caret.blockId}#${caret.inputIndex}`;
   }
 
+  /**
+   * Whether a gesture of this kind joins the open step, as in Notion: typing
+   * joins typing in the same input or a merge; a merge joins typing in its
+   * input or a merge; an Enter joins only Enters (typing, Enter, typing stays
+   * three steps, U033).
+   * @param kind - the gesture's kind
+   * @param liveKey - the input the caret is in
+   */
+  private continuesOpenRun(kind: GestureKind, liveKey: string | null): boolean {
+    const open = this.typingInputKey;
+
+    switch (kind) {
+      case 'typing':
+        return liveKey !== null && (liveKey === open || open === MERGE_RUN);
+      case 'merge':
+        return open !== null && open !== SPLIT_RUN && (open === MERGE_RUN || open === liveKey);
+      case 'split':
+        return open === SPLIT_RUN;
+      case 'discrete':
+        return false;
+    }
+  }
+
+  /**
+   * What the step a gesture of this kind opens continues in.
+   * @param kind - the gesture's kind
+   * @param liveKey - the input the caret is in
+   */
+  private static runKeyOf(kind: GestureKind, liveKey: string | null): string | null {
+    switch (kind) {
+      case 'typing':
+        return liveKey;
+      case 'split':
+        return SPLIT_RUN;
+      case 'merge':
+        // The caret lands in the block above, not known at the keydown.
+        return MERGE_RUN;
+      case 'discrete':
+        return null;
+    }
+  }
+
   /** Marks the current task as a gesture's, until the task ends. */
   private openGestureTask(): void {
     if (this.gestureTaskOpen) {
@@ -2611,7 +2666,7 @@ export class UndoHistory {
    * @param typingKey - what a typing run continues in, when it is not a block
    *   input (a tracked value)
    */
-  private startGesture(kind: 'typing' | 'discrete', keepPending: boolean, typingKey?: string): boolean {
+  private startGesture(kind: GestureKind, keepPending: boolean, typingKey?: string): boolean {
     if (this.isPerformingUndoRedo) {
       return false;
     }
@@ -2633,16 +2688,17 @@ export class UndoHistory {
     const liveKey = typingKey ?? (live === null ? null : UndoHistory.typingKeyOf(live));
     const now = Date.now();
     const inWindow = this.captureHolds > 0 || now - this.typingRunStart <= TYPING_WINDOW_MS;
-    const continuesTyping = kind === 'typing' && liveKey !== null && liveKey === this.typingInputKey && inWindow;
+    const continuesTyping = inWindow && this.continuesOpenRun(kind, liveKey);
 
     if (!continuesTyping) {
       this.closeStepForGesture();
       this.typingRunStart = now;
     }
-    this.typingInputKey = kind === 'typing' ? liveKey : null;
+    this.typingInputKey = UndoHistory.runKeyOf(kind, liveKey);
 
     // After the split: its flush can consume (and reset) the pending snapshot.
-    if (live !== null && !(keepPending && this.hasPendingCaret)) {
+    // A continued step keeps its own: a split's write can land after the next Enter.
+    if (live !== null && !((keepPending || continuesTyping) && this.hasPendingCaret)) {
       this.pendingCaretBefore = live;
       this.hasPendingCaret = true;
     }

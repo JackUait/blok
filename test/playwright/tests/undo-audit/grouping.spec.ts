@@ -127,8 +127,8 @@ test.describe('undo audit: grouping and boundaries', () => {
     expect(await saved(page)).toEqual(['paragraph:Helloxy', 'paragraph:World']);
   });
 
-  // GRP-1b. Same root cause as GRP-1, Backspace direction.
-  test('GRP-1b: Backspace merge right after typing is a separate undo step from the typing', async ({ page }) => {
+  // GRP-1b. Unlike Delete, a Backspace merge inside the typing window joins the typing (Notion U101).
+  test('GRP-1b: Backspace merge right after typing joins the typing step', async ({ page }) => {
     await create(page, [{ type: 'paragraph', data: { text: 'Hello' } }, { type: 'paragraph', data: { text: 'World' } }]);
     await input(page, 1).click();
     await page.keyboard.press('End');
@@ -142,8 +142,8 @@ test.describe('undo audit: grouping and boundaries', () => {
 
     await undoOnce(page);
 
-    expect(await dom(page)).toEqual(['paragraph:Hello', 'paragraph:Worldxy']);
-    expect(await saved(page)).toEqual(['paragraph:Hello', 'paragraph:Worldxy']);
+    expect(await dom(page)).toEqual(['paragraph:Hello', 'paragraph:World']);
+    expect(await saved(page)).toEqual(['paragraph:Hello', 'paragraph:World']);
   });
 
   // GRP-2. Expected: a paste is its own undo step (paste/handlers/base.ts promises

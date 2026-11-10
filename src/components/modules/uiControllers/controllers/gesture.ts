@@ -1,4 +1,5 @@
 import type { Block } from '../../../block';
+import type { GestureKind } from '../../yjs/undo-history';
 import { DATA_ATTR } from '../../../constants';
 import { isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret/boundaries';
 import { isPasteContinuation } from '../../../utils/paste-continuation';
@@ -12,7 +13,7 @@ const PASSIVE_KEYS = new Set([
 ]);
 
 /** Input types that continue a typing run; `historyUndo`/`historyRedo` are left to the keyboard router. */
-const TYPING_INPUT_TYPES = new Set(['insertText', 'insertReplacementText', 'deleteContentBackward', 'deleteContentForward']);
+const TYPING_INPUT_TYPES = new Set(['insertText', 'insertReplacementText', 'insertLineBreak', 'deleteContentBackward', 'deleteContentForward']);
 const IGNORED_INPUT_TYPES = new Set(['insertCompositionText', 'historyUndo', 'historyRedo']);
 
 /**
@@ -150,7 +151,7 @@ export class GestureController extends Controller {
    * @param event - the keydown
    * @returns the gesture kind, or null for a key that starts no gesture
    */
-  private keyKind(event: KeyboardEvent): 'typing' | 'discrete' | null {
+  private keyKind(event: KeyboardEvent): GestureKind | null {
     const key = event.key ?? '';
 
     if (PASSIVE_KEYS.has(key)) {
@@ -168,20 +169,35 @@ export class GestureController extends Controller {
     // Deleting inside the text types; deleting across the edge merges blocks.
     const input = this.caretInput();
 
-    if (key === 'Backspace' && input !== null && !isCaretAtStartOfInput(input)) {
-      return 'typing';
+    if (key === 'Backspace' && input !== null) {
+      return isCaretAtStartOfInput(input) ? 'merge' : 'typing';
     }
 
     if (key === 'Delete' && input !== null && !isCaretAtEndOfInput(input)) {
       return 'typing';
     }
 
-    // A newline typed in code is text, not a block split (Notion U153).
-    if (key === 'Enter' && !event.shiftKey && input !== null && this.caretBlock()?.tool.isLineBreaksEnabled === true) {
-      return 'typing';
+    if (key === 'Enter' && input !== null && !event.altKey) {
+      return this.enterKind(event);
     }
 
     return 'discrete';
+  }
+
+  /**
+   * Enter with a collapsed caret in a block input. In code it types a newline
+   * (Notion U153); elsewhere Shift+Enter types a soft break (U032) and Enter
+   * splits the block.
+   * @param event - the keydown
+   */
+  private enterKind(event: KeyboardEvent): GestureKind {
+    const lineBreaks = this.caretBlock()?.tool.isLineBreaksEnabled === true;
+
+    if (lineBreaks) {
+      return event.shiftKey ? 'discrete' : 'typing';
+    }
+
+    return event.shiftKey ? 'typing' : 'split';
   }
 
   /**

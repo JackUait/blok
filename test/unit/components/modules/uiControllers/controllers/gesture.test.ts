@@ -121,12 +121,12 @@ describe('GestureController', () => {
     expect(yjs.beginGesture).toHaveBeenCalledWith('discrete');
   });
 
-  it('treats Backspace inside the text as typing and at its start as discrete', () => {
+  it('treats Backspace inside the text as typing and at its start as a merge', () => {
     key({ key: 'Backspace' });
     caretAt(0);
     key({ key: 'Backspace' });
 
-    expect(yjs.beginGesture.mock.calls).toEqual([['typing'], ['discrete']]);
+    expect(yjs.beginGesture.mock.calls).toEqual([['typing'], ['merge']]);
   });
 
   it('treats Delete inside the text as typing and at its end as discrete', () => {
@@ -144,12 +144,33 @@ describe('GestureController', () => {
     expect(yjs.beginGesture).toHaveBeenCalledWith('typing');
   });
 
-  it('keeps Enter in a text block and Shift+Enter in code as discrete', () => {
+  it('treats Enter in a text block as a split and Shift+Enter there as typing (Notion U032, U044)', () => {
     key({ key: 'Enter' });
+    key({ key: 'Enter', shiftKey: true });
+
+    expect(yjs.beginGesture.mock.calls).toEqual([['split'], ['typing']]);
+  });
+
+  it('keeps Shift+Enter in code as discrete', () => {
     lineBreaks = true;
     key({ key: 'Enter', shiftKey: true });
 
-    expect(yjs.beginGesture.mock.calls).toEqual([['discrete'], ['discrete']]);
+    expect(yjs.beginGesture).toHaveBeenCalledWith('discrete');
+  });
+
+  it('keeps Enter and Backspace with a selection or a modifier discrete', () => {
+    key({ key: 'Enter', altKey: true });
+    window.getSelection()?.setBaseAndExtent(input.firstChild as Node, 0, input.firstChild as Node, 2);
+    key({ key: 'Enter' });
+    key({ key: 'Backspace' });
+
+    expect(yjs.beginGesture.mock.calls).toEqual([['discrete'], ['discrete'], ['discrete']]);
+  });
+
+  it('treats a soft line break the browser inserts as typing', () => {
+    input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertLineBreak' }));
+
+    expect(yjs.beginGesture).toHaveBeenCalledWith('typing');
   });
 
   it('ignores caret moves, modifiers and composition keys', () => {

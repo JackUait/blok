@@ -267,6 +267,90 @@ describe('UndoHistory gestures', () => {
     });
   });
 
+  describe('splits, soft breaks and merges inside the window (Notion U032, U044, U098, U101)', () => {
+    const at = (ms: number, kind: 'typing' | 'split' | 'merge', id: string): void => {
+      vi.setSystemTime(ms);
+      history.beginGesture(kind);
+      write(id);
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      putCaret(blocks[0], 2);
+    });
+
+    it('makes fast Enters one step, with the first Enter\'s caret as caret-before (U044)', () => {
+      at(0, 'split', 's1');
+      putCaret(blocks[1], 0);
+      at(200, 'split', 's2');
+      putCaret(blocks[1], 3);
+      at(400, 'split', 's3');
+
+      expect(undoSteps()).toBe(1);
+      expect(caretStack().at(-1)?.before).toEqual({ blockId: 'a', inputIndex: 0, offset: 2 });
+    });
+
+    it('keeps the first Enter\'s caret-before when its write lands after the next Enter starts', () => {
+      vi.setSystemTime(0);
+      history.beginGesture('split');
+      putCaret(blocks[1], 0);
+      vi.setSystemTime(100);
+      history.beginGesture('split');
+      write('s1');
+
+      expect(caretStack().at(-1)?.before).toEqual({ blockId: 'a', inputIndex: 0, offset: 2 });
+    });
+
+    it('cuts an Enter that comes after the window', () => {
+      at(0, 'split', 's1');
+      at(712, 'split', 's2');
+
+      expect(undoSteps()).toBe(2);
+    });
+
+    it('keeps typing, Enter and typing three steps however fast (U033)', () => {
+      at(0, 'typing', 'one');
+      at(100, 'split', 's');
+      putCaret(blocks[1], 0);
+      at(150, 'typing', 'two');
+
+      expect(undoSteps()).toBe(3);
+    });
+
+    it('lets a Backspace merge join the typing before it in the same input (U101)', () => {
+      at(0, 'typing', 'X');
+      putCaret(blocks[0], 0);
+      at(150, 'merge', 'm');
+
+      expect(undoSteps()).toBe(1);
+      expect(caretStack().at(-1)?.before).toEqual({ blockId: 'a', inputIndex: 0, offset: 2 });
+    });
+
+    it('lets typing in the block a merge landed in join the merge (U098)', () => {
+      putCaret(blocks[1], 0);
+      at(0, 'merge', 'm');
+      putCaret(blocks[0], 4);
+      at(300, 'typing', 'bs');
+      at(400, 'merge', 'm2');
+
+      expect(undoSteps()).toBe(1);
+      expect(caretStack().at(-1)?.before).toEqual({ blockId: 'b', inputIndex: 0, offset: 0 });
+    });
+
+    it('cuts a merge after the window, after typing in another input, or after an Enter', () => {
+      at(0, 'typing', 'a');
+      at(712, 'merge', 'late');
+      putCaret(blocks[1], 1);
+      at(1500, 'typing', 'b');
+      putCaret(blocks[0], 0);
+      at(1550, 'merge', 'other');
+      at(2300, 'split', 's');
+      at(2350, 'merge', 'after-split');
+
+      expect(undoSteps()).toBe(6);
+    });
+  });
+
   it('startSubStep splits and keeps the caret from before its flush as caret-before', () => {
     putCaret(blocks[0], 2);
     history.beginGesture('typing');

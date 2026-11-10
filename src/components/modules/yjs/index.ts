@@ -15,7 +15,7 @@ import { cleanPageField, readPageFields, writePageField, type PageFieldKey, type
 import { YBlockSerializer, type YjsOutputBlockData } from './serializer';
 import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretHistoryEntry, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
-import type { ClosedStep } from './undo-history';
+import type { ClosedStep, GestureKind } from './undo-history';
 import { BlockWriteBuffer, type BufferedBlockWriteFlush } from './write-buffer';
 
 /**
@@ -1196,7 +1196,7 @@ export class YjsManager extends Module {
    * step again once it has landed, so the write does not join this gesture.
    * @param kind - see {@link UndoHistory.beginGesture}
    */
-  public beginGesture(kind: 'typing' | 'discrete'): void {
+  public beginGesture(kind: GestureKind): void {
     const inFlight = new Set(this.pendingBlockWrites);
 
     if (this.undoHistory.beginGesture(kind) && inFlight.size > 0) {

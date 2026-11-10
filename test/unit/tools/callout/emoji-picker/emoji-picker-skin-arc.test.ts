@@ -27,22 +27,28 @@ vi.mock('../../../../../src/components/utils/emoji/emoji-grid.json', async () =>
 vi.mock('../../../../../src/components/utils/emoji/emoji-keywords.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiKeywordsModule(EMOJI_MART_FIXTURE));
 
 /** jsdom has no Web Animations; these fakes finish when the test says so. */
-interface FakeAnimation { finished: Promise<unknown>; cancel: () => void; finish: () => void; onfinish: null }
+interface FakeAnimation { finished: Promise<unknown>; cancel: () => void; finish: () => void; onfinish: null; target?: Element; cancelled?: boolean }
 
 const animations: FakeAnimation[] = [];
+const started: FakeAnimation[] = [];
 
-function fakeAnimate(): FakeAnimation {
+function fakeAnimate(this: Element): FakeAnimation {
   let resolve: (value: unknown) => void = () => undefined;
   let reject: (reason: unknown) => void = () => undefined;
   const animation: FakeAnimation = {
     finished: new Promise((ok, fail) => { resolve = ok; reject = fail; }),
-    cancel: () => reject(new DOMException('cancelled', 'AbortError')),
+    cancel: () => {
+      animation.cancelled = true;
+      reject(new DOMException('cancelled', 'AbortError'));
+    },
     finish: () => resolve(animation),
     onfinish: null,
+    target: this,
   };
 
   animation.finished.catch(() => undefined);
   animations.push(animation);
+  started.push(animation);
 
   return animation;
 }
@@ -78,6 +84,7 @@ describe('EmojiPicker skin-tone Arc', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     animations.length = 0;
+    started.length = 0;
     stubMotion(true);
     localStorage.clear();
     anchor = document.createElement('button');
@@ -160,6 +167,33 @@ describe('EmojiPicker skin-tone Arc', () => {
     expect(element.querySelector('[data-emoji-skin-blob]')).toBeNull();
     expect(dial().hidden).toBe(true);
     expect(toggle().getAttribute('data-emoji-skin-current')).toBe('4');
+  });
+
+  it('lets the dot finish its landing pop after the dial closes', async () => {
+    stubMotion(false);
+    Element.prototype.animate = vi.fn(fakeAnimate) as unknown as Element['animate'];
+    toggle().click();
+    await settle();
+    segments()[4].click();
+
+    for (let round = 0; round < 12 && !dial().hidden; round++) {
+      animations.splice(0).forEach(animation => animation.finish());
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+
+    const pop = started.find(animation => animation.target?.hasAttribute('data-emoji-skin-dot') === true);
+
+    expect(dial().hidden).toBe(true);
+    expect(pop).toBeDefined();
+    expect(pop?.cancelled).not.toBe(true);
+  });
+
+  it('shifts the dial back inside the picker when its toggle sits at the edge', () => {
+    element.getBoundingClientRect = () => new DOMRect(0, 0, 300, 360);
+    dial().getBoundingClientRect = () => new DOMRect(250, 40, 140, 88);
+    toggle().click();
+
+    expect(dial().style.getPropertyValue('--emoji-skin-shift')).toBe('-94px');
   });
 
   it('stops a running landing when the picker closes, leaving no flying circle behind', async () => {

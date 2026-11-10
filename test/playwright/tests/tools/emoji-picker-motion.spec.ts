@@ -249,8 +249,21 @@ test('keeps the colon tone control beside the first section title at 320px in da
 
   await expect(tray).toBeVisible();
   await finishAnimations(picker);
+  // Each tone is clipped to its dial segment, and visibility checks count only the segment, so check the boxes.
+  const viewport = page.viewportSize();
+  const pickerBox = await picker.boundingBox();
+
   for (const tone of await tray.getByRole('button').all()) {
-    await expect(tone).toBeInViewport({ ratio: 1 });
+    const toneBox = await tone.boundingBox();
+
+    expect(toneBox).not.toBeNull();
+    expect(pickerBox).not.toBeNull();
+    if (toneBox === null || pickerBox === null || viewport === null) {
+      continue;
+    }
+    expect(toneBox.x).toBeGreaterThanOrEqual(Math.max(0, pickerBox.x) - 1);
+    expect(toneBox.x + toneBox.width).toBeLessThanOrEqual(Math.min(viewport.width, pickerBox.x + pickerBox.width) + 1);
+    expect(toneBox.y + toneBox.height).toBeLessThanOrEqual(viewport.height);
   }
   await tray.getByRole('button', { name: 'Skin tone 4', exact: true }).click();
   await expect(page.locator('[data-blok-tool="paragraph"][contenteditable="true"]')).toBeFocused();

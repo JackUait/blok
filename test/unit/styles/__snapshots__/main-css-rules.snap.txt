@@ -3936,7 +3936,7 @@ span[data-blok-slash-search] {
   left: 50%;
   width: var(--emoji-skin-dial);
   height: 88px;
-  margin: 0 0 0 calc(var(--emoji-skin-dial) / -2);
+  margin: 0 0 0 calc(var(--emoji-skin-dial) / -2 + var(--emoji-skin-shift, 0px));
   padding: 0;
   filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--blok-text-primary) 18%, transparent));
 }
@@ -3947,9 +3947,6 @@ span[data-blok-slash-search] {
 
 [data-blok-emoji-picker] [data-emoji-picker-skin-tone] button {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   background: var(--emoji-tone-color);
   clip-path: var(--emoji-tone-shape);
   transition: clip-path 160ms cubic-bezier(0.34, 1.56, 0.64, 1);

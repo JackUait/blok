@@ -123,6 +123,26 @@ const SKIN_TONE_COLORS: readonly string[] = ['#ffcc4d', '#f7dece', '#f3d2a2', '#
 const SKIN_DIAL = { cx: 70, cy: 16, inner: 30, outer: 62, chosen: 5, hover: 2.5, gap: 1, span: Math.PI * 0.176 } as const;
 const skinToneAngle = (index: number): number => Math.PI * (0.94 - index * 0.176);
 const toDegrees = (radians: number): number => (radians * 180) / Math.PI;
+
+/** The box around a segment at its largest (chosen) reach, in dial-box pixels. */
+const skinSegmentBox = (index: number): { x: number; y: number; width: number; height: number } => {
+  const { cx, cy, inner, outer, chosen, span } = SKIN_DIAL;
+  const mid = skinToneAngle(index);
+  const points = [inner, outer + chosen].flatMap(radius => Array.from({ length: 9 }, (_, k) => {
+    const angle = mid - span / 2 + span * (k / 8);
+
+    return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
+  }));
+  const x = Math.floor(Math.min(...points.map(point => point.x)));
+  const y = Math.floor(Math.min(...points.map(point => point.y)));
+
+  return {
+    x,
+    y,
+    width: Math.ceil(Math.max(...points.map(point => point.x))) - x,
+    height: Math.ceil(Math.max(...points.map(point => point.y))) - y,
+  };
+};
 const SKIN_SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 const SKIN_FOLD = 'cubic-bezier(0.6, 0, 0.4, 1)';
 /** The landing circle's box reaches this far above the dial box, up to the toggle. */
@@ -1004,13 +1024,20 @@ export class EmojiPicker {
 
     this._skinToneButtons = SKIN_TONE_COLORS.map((color, index) => {
       const btn = document.createElement('button');
+      const box = skinSegmentBox(index);
 
       btn.type = 'button';
       btn.setAttribute('aria-label', `${this.i18n.t(SKIN_TONE_KEY)} ${index + 1}`);
+      // Each button covers only its own segment, so its centre (where pointer tools aim) is on the tone.
+      btn.style.left = `${box.x}px`;
+      btn.style.top = `${box.y}px`;
+      btn.style.width = `${box.width}px`;
+      btn.style.height = `${box.height}px`;
+      btn.style.setProperty('transform-origin', `${SKIN_DIAL.cx - box.x}px ${SKIN_DIAL.cy - box.y}px`);
       btn.style.setProperty('--emoji-tone-color', color);
-      btn.style.setProperty('--emoji-tone-shape', `path('${this.skinSegmentPath(index, 0)}')`);
-      btn.style.setProperty('--emoji-tone-shape-hover', `path('${this.skinSegmentPath(index, SKIN_DIAL.hover)}')`);
-      btn.style.setProperty('--emoji-tone-shape-on', `path('${this.skinSegmentPath(index, SKIN_DIAL.chosen)}')`);
+      btn.style.setProperty('--emoji-tone-shape', `path('${this.skinSegmentPath(index, 0, box)}')`);
+      btn.style.setProperty('--emoji-tone-shape-hover', `path('${this.skinSegmentPath(index, SKIN_DIAL.hover, box)}')`);
+      btn.style.setProperty('--emoji-tone-shape-on', `path('${this.skinSegmentPath(index, SKIN_DIAL.chosen, box)}')`);
       btn.addEventListener('click', () => this.chooseSkinTone(index));
       popover.appendChild(btn);
 
@@ -1044,17 +1071,46 @@ export class EmojiPicker {
     return popover;
   }
 
-  /** A ring segment in dial-box pixels; `grow` reaches the outer edge further out. */
-  private skinSegmentPath(index: number, grow: number): string {
+  /**
+   * A ring segment in pixels; `grow` reaches the outer edge further out.
+   * @param index - the tone
+   * @param grow - how far past the ring the outer edge reaches
+   * @param origin - draw relative to this box instead of the dial box
+   */
+  private skinSegmentPath(index: number, grow: number, origin = { x: 0, y: 0 }): string {
     const { cx, cy, inner, outer, gap, span } = SKIN_DIAL;
     const r = outer + grow;
     const mid = skinToneAngle(index);
     // A fixed 1px gap at both radii keeps the seams even.
-    const at = (radius: number, angle: number): string => `${(cx + Math.cos(angle) * radius).toFixed(2)} ${(cy + Math.sin(angle) * radius).toFixed(2)}`;
+    const at = (radius: number, angle: number): string =>
+      `${(cx + Math.cos(angle) * radius - origin.x).toFixed(2)} ${(cy + Math.sin(angle) * radius - origin.y).toFixed(2)}`;
     const o0 = mid + span / 2 - gap / r, o1 = mid - span / 2 + gap / r;
     const i0 = mid + span / 2 - gap / inner, i1 = mid - span / 2 + gap / inner;
 
     return `M${at(r, o0)} A${r} ${r} 0 0 0 ${at(r, o1)} L${at(inner, i1)} A${inner} ${inner} 0 0 1 ${at(inner, i0)} Z`;
+  }
+
+  /**
+   * The dial hangs centred under its toggle; next to the picker's edge (the inline ":"
+   * picker puts the toggle at the far end) it shifts back inside, as the picker clips it.
+   */
+  private keepSkinDialInside(): void {
+    const margin = 4;
+
+    this._skinTonePopover.style.removeProperty('--emoji-skin-shift');
+
+    const dial = this._skinTonePopover.getBoundingClientRect();
+    const bounds = this._element.getBoundingClientRect();
+
+    if (dial.width === 0 || bounds.width === 0) {
+      return;
+    }
+
+    const shift = Math.min(0, bounds.right - margin - dial.right) + Math.max(0, bounds.left + margin - dial.left);
+
+    if (shift !== 0) {
+      this._skinTonePopover.style.setProperty('--emoji-skin-shift', `${shift}px`);
+    }
   }
 
   /** Engines without `:focus-visible` in `matches()` (jsdom) count as pointer focus. */
@@ -1142,17 +1198,15 @@ export class EmojiPicker {
     this._skinTonePopover.inert = false;
     this._skinTonePopover.removeAttribute('aria-hidden');
     this._skinTonePopover.hidden = false;
+    this.keepSkinDialInside();
     this.syncSkinToneSegments();
     this.updateSkinToneToggleActive();
 
     if (this.skinMotion()) {
       // A folding fan: every segment starts stacked on the first and unfolds into place.
-      const { cx, cy } = SKIN_DIAL;
-
       for (const [index, btn] of this._skinToneButtons.entries()) {
         const from = toDegrees(skinToneAngle(0) - skinToneAngle(index));
 
-        btn.style.setProperty('transform-origin', `${cx}px ${cy}px`);
         void this.animateSkin(btn, [
           { transform: `rotate(${from}deg) scale(0.55)`, opacity: index === 0 ? 0 : 1 },
           { transform: `rotate(${from}deg) scale(0.55)`, opacity: 1, offset: 0.08 },
@@ -1189,10 +1243,7 @@ export class EmojiPicker {
       return;
     }
 
-    const { cx, cy } = SKIN_DIAL;
     const folds = this._skinToneButtons.map((btn, index) => {
-      btn.style.setProperty('transform-origin', `${cx}px ${cy}px`);
-
       return this.animateSkin(btn, [
         { transform: 'none', opacity: 1 },
         { transform: `rotate(${toDegrees(skinToneAngle(0) - skinToneAngle(index))}deg) scale(0.5)`, opacity: 0 },
@@ -1240,13 +1291,10 @@ export class EmojiPicker {
       this._skinToneToggle.focus({ preventScroll: true });
     }
 
-    const { cx, cy } = SKIN_DIAL;
     const folds = this._skinToneButtons.map((btn, other) => {
       if (other === index) {
         return Promise.resolve();
       }
-
-      btn.style.setProperty('transform-origin', `${cx}px ${cy}px`);
 
       return this.animateSkin(btn, [
         { transform: 'none', opacity: 1 },
@@ -1267,8 +1315,9 @@ export class EmojiPicker {
         }
 
         this._skinTonePending = false;
-        this.paintSkinTone(true);
+        // Close first: closing stops every dial animation, and the dot's pop must survive it.
         this.closeSkinTonePopover();
+        this.paintSkinTone(true);
       });
   }
 

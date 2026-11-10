@@ -1292,7 +1292,7 @@ export class BlockManager extends Module {
    * Unlike `transactForTool`, this may stay open across async boundaries, so a
    * pointer gesture (table corner drag, "+" button drag) commits as a single
    * undo entry instead of one per row or column. Block operations otherwise
-   * call `stopCapturing()` per operation, and the 500ms Yjs `captureTimeout`
+   * call `stopCapturing()` per operation, and the Yjs `captureTimeout`
    * does not merge them.
    *
    * Every call MUST be paired with `endToolTransaction()`.

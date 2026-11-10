@@ -734,7 +734,7 @@ export class BlockYjsSync {
    * Close one block's settling window.
    *
    * When the last one closes, capture is stopped: that is the SEAL. Y.UndoManager
-   * merges anything that lands within its 500ms captureTimeout into the newest
+   * merges anything that lands within its captureTimeout into the newest
    * entry, and the measured gap between the last hydration write and the user's
    * first keystroke was 11ms — so without the boundary one Ctrl+Z reverted the
    * user's word AND the editor's materialisation together. The boundary makes

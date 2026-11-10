@@ -121,7 +121,7 @@ const writtenBy = (transaction: Y.Transaction): Pick<StackItem, 'insertions' | '
  * - Wraps Yjs UndoManager for standard undo/redo
  * - Manages custom move history (Yjs UndoManager doesn't handle moves correctly)
  * - Tracks caret positions before/after undoable actions
- * - Implements smart undo grouping at word boundaries
+ * - Groups typing into steps by the typing window
  */
 export class UndoHistory {
   /**

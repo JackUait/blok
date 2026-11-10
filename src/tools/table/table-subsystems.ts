@@ -709,7 +709,7 @@ export class TableSubsystems {
       onDragStart: () => {
         // One gesture, one undo entry. Without this each added row is its own
         // stack item: block operations call stopCapturing() per operation and
-        // the 500ms Yjs captureTimeout does not merge them.
+        // the Yjs captureTimeout does not merge them.
         this.openDragTransaction();
 
         /*

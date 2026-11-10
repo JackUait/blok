@@ -204,8 +204,8 @@ export class YjsManager extends Module {
       this.replayMovePlacement(blockId, placement, origin);
     });
 
-    // Barrier inside UndoHistory so the internal 100ms word-boundary timer's
-    // stopCapturing also flushes buffered typing writes before splitting.
+    // Barrier inside UndoHistory so every split it makes on its own (typing
+    // window, sub-step) flushes buffered typing writes first.
     this.undoHistory.setFlushPendingWritesHook(() => this.flushPendingBlockWrites());
     this.undoHistory.setBeforeGestureHook(() => this.beforeUserStep.forEach((listener) => listener()));
 

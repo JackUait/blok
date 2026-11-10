@@ -298,8 +298,16 @@ func fitAnswer(sizes []int64, cut bool, olderEnd func(oldest int) int64) (int, b
 
 const badDatabases = "databases must be keep or restore\n"
 
-// queryDatabases reads databases=keep|restore: absent is restore. A
-// repeated or other value is false.
+// restoreKeepsDatabases is the restore route's databases: only one exact
+// keep keeps them. Any other value is a plain restore, as v2.1.0 ignored
+// unknown keys there.
+func restoreKeepsDatabases(r *http.Request) bool {
+	values := dotnet.QueryAll(r.URL.RawQuery, "databases")
+	return len(values) == 1 && values[0] == "keep"
+}
+
+// queryDatabases reads databases=keep|restore for the preview route: absent
+// is restore. A repeated or other value is false.
 func queryDatabases(r *http.Request) (keep bool, ok bool) {
 	values := dotnet.QueryAll(r.URL.RawQuery, "databases")
 	switch {

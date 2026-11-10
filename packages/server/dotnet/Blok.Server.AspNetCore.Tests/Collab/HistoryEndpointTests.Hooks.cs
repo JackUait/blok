@@ -90,9 +90,11 @@ public sealed partial class HistoryEndpointTests
       await AssertError(response, HttpStatusCode.Forbidden, "forbidden\n");
     }
 
-    // A restore and a delete change the document: the write gate decides them.
-    using var restore = await history.RestoreAsync(lineage, "0", "allowed");
-    Assert.Equal(HttpStatusCode.NoContent, restore.StatusCode);
+    // A restore reads the version it writes, so the read hook guards it too: a writer it denies
+    // cannot bring an old point back and then read it.
+    using var restore = await history.RestoreAsync(lineage, "0", "denied");
+    await AssertError(restore, HttpStatusCode.Forbidden, "forbidden\n");
+    Assert.Contains("two", (await history.BlocksAsync()).ToJsonString());
   }
 
   [Fact]
@@ -190,5 +192,31 @@ public sealed partial class HistoryEndpointTests
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
       }
     }
+  }
+
+  /// <summary>
+  /// A group that straddles the cut shows only what the window shows: its startedAt and actors come from
+  /// visible records, and a lineage whose baseline is hidden has no createdAt.
+  /// </summary>
+  [Fact]
+  public async Task TheListShowsNothingOfAHiddenRecord()
+  {
+    var policy = new HistoryPolicy();
+    await using var history = await HistoryApp.StartAsync(authorization: policy);
+    await history.OpenAsync();
+    await history.EditTextAsync("two");
+    await history.EditTextAsync("three");
+    await history.EditTextAsync("four");
+    history.Journal.HeaderSpacing = TimeSpan.FromMinutes(1);
+    // Records 1 to 3 land a minute apart, in one 15-minute group; the cut hides 1 and 2.
+    policy.Cut = DateTimeOffset.UnixEpoch + TimeSpan.FromSeconds(150);
+
+    using var list = await history.SendAsync(HttpMethod.Get, "/history?group=15");
+
+    var body = JsonNode.Parse(await list.Content.ReadAsStringAsync())!;
+    var version = Assert.Single(body["versions"]!.AsArray())!;
+    Assert.Equal(3UL, version["sequence"]!.GetValue<ulong>());
+    Assert.Equal(180_000L, version["startedAt"]!.GetValue<long>());
+    Assert.Null(Assert.Single(body["lineages"]!.AsArray())!["createdAt"]);
   }
 }

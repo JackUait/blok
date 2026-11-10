@@ -47,6 +47,17 @@ internal static class CollabRestoreGuards
   // The agent's question names the calendar in full: a longer id is not one it can show.
   private const int MaxCalendarId = 64;
 
+  /// <summary>
+  /// The guards of a <c>databases=keep</c> restore: those of the kept target, less any on a kept block,
+  /// which stays as it is now, then one <c>orphanedDatabase</c> guard per kept root the restore would orphan.
+  /// </summary>
+  internal static IReadOnlyList<CollabRestoreGuard> Kept(JsonArray currentBlocks, CollabKeptDatabases kept)
+  {
+    ArgumentNullException.ThrowIfNull(kept);
+
+    return [.. Of(currentBlocks, kept.Target).Where(guard => !kept.Pinned.Contains(guard.BlockId)), .. kept.Orphaned];
+  }
+
   internal static IReadOnlyList<CollabRestoreGuard> Of(JsonArray currentBlocks, JsonArray targetBlocks)
   {
     // The blocks the planner writes: its normalized target, and the first copy of a repeated id.

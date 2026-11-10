@@ -17,24 +17,40 @@ fn blocks_of(text: &str) -> Value {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_databases_other_than_keep_or_restore_is_a_bad_request() {
-    let history = start_history().await;
-    let lineage = history.open().await;
+async fn only_one_exact_keep_keeps_databases_and_the_shipped_restore_ignores_any_other_value() {
     for query in [
         "?databases=",
         "?databases=Keep",
         "?databases=none",
         "?databases=keep&databases=keep",
     ] {
+        let history = start_history().await;
+        let lineage = history.open().await;
+        history
+            .edit(
+                "database",
+                &format!(
+                    r#"{{ "ops": [ {{ "op": "insert", "id": "d", "block": {{ "type": "database", "data": {TABLE_DATA} }} }} ] }}"#
+                ),
+            )
+            .await;
+        // The shipped route ignored unknown values: anything but one exact
+        // keep is a plain restore.
         let restore = history
             .send(
                 "POST",
                 &format!("/history/{lineage}/0/restore{query}"),
-                "bad",
+                "other",
                 "",
                 "",
             )
             .await;
+        assert_eq!(restore.status, 204, "restore {query} = {}", restore.text());
+        assert!(
+            !history.blocks().await.contains(r#""id":"d""#),
+            "restore {query} kept the database"
+        );
+        // The preview route is new, so it refuses what it does not know.
         let preview = history
             .send(
                 "POST",
@@ -44,16 +60,14 @@ async fn a_databases_other_than_keep_or_restore_is_a_bad_request() {
                 "",
             )
             .await;
-        for (name, a) in [("restore", restore), ("preview", preview)] {
-            assert!(
-                a.status == 400 && a.text() == "databases must be keep or restore\n",
-                "{name} {query} = {} {:?}",
-                a.status,
-                a.text()
-            );
-        }
+        assert!(
+            preview.status == 400 && preview.text() == "databases must be keep or restore\n",
+            "preview {query} = {} {:?}",
+            preview.status,
+            preview.text()
+        );
+        history.drain().await;
     }
-    history.drain().await;
 }
 
 #[tokio::test(flavor = "multi_thread")]

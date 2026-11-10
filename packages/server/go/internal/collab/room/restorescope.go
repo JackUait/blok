@@ -190,3 +190,16 @@ func isDatabase(block *jsjson.Object) bool {
 	kind := typeOf(block)
 	return kind != nil && kind.String() == "database"
 }
+
+// KeptRestoreGuards is CollabRestoreGuards.Kept: the guards of a keep
+// restore. Those of the kept target, less any on a kept block, which stays
+// as it is now, then the orphans.
+func KeptRestoreGuards(currentBlocks []any, kept KeptDatabases) []RestoreGuard {
+	var guards []RestoreGuard
+	for _, guard := range RestoreGuards(currentBlocks, kept.Target) {
+		if !kept.Pinned[unitKey(jsjson.FromString(guard.BlockID))] {
+			guards = append(guards, guard)
+		}
+	}
+	return append(guards, kept.Orphaned...)
+}

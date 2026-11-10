@@ -48,8 +48,17 @@ func TestKeepDatabasesMatchesTheRestoreScopeFixture(t *testing.T) {
 		if strings.Join(orphaned, "\n") != strings.Join(wantOrphaned, "\n") {
 			t.Errorf("%s: orphaned %v, want %v", name, orphaned, wantOrphaned)
 		}
+		var trash *RestoreTrash
+		if raw, ok := c.Get(jsjson.FromString("trash")); ok {
+			input := raw.(*jsjson.Object)
+			trash = &RestoreTrash{At: int64(member(t, input, "at").(float64))}
+			if by, ok := member(t, input, "by").(jsjson.Str); ok {
+				name := by.String()
+				trash.By = &name
+			}
+		}
 		ops := PlanRestorePinned(currentBlocks, convert.DescribeStructure(current), targetBlocks,
-			convert.ReadPageMaps(current), convert.ReadPageMaps(target), nil, pinned)
+			convert.ReadPageMaps(current), convert.ReadPageMaps(target), trash, pinned)
 		want, _ := member(t, c, "ops").([]any)
 		if len(ops) != len(want) {
 			t.Errorf("%s: %d ops, want %d", name, len(ops), len(want))

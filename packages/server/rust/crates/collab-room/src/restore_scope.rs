@@ -199,3 +199,16 @@ fn follow<'a>(
         stack.extend(after.get(id).into_iter().flatten().rev().copied());
     }
 }
+
+/// CollabRestoreGuards.Kept: the guards of a keep restore. Those of the kept
+/// target, less any on a kept block, which stays as it is now, then the
+/// orphans.
+pub fn kept_restore_guards(current_blocks: &[Value], kept: &KeptDatabases) -> Vec<RestoreGuard> {
+    let mut guards: Vec<RestoreGuard> =
+        crate::restore_guards::restore_guards(current_blocks, &kept.target)
+            .into_iter()
+            .filter(|guard| !kept.pinned.contains(&Str::from(guard.block_id.as_str())))
+            .collect();
+    guards.extend(kept.orphaned.iter().cloned());
+    guards
+}

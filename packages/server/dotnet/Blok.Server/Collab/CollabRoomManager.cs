@@ -527,10 +527,23 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
   /// <paramref name="byActor"/> also starts a version where the actor
   /// changes. With a record notes store, each version carries its actors' kinds.
   /// </summary>
+  internal ValueTask<CollabHistoryListResult> HistoryAsync(
+      string docId,
+      TimeSpan? group,
+      bool byActor,
+      CancellationToken cancellationToken) =>
+      HistoryAsync(docId, group, byActor, null, cancellationToken);
+
+  /// <summary>
+  /// <see cref="HistoryAsync(string, TimeSpan?, bool, CancellationToken)"/> over what a window with this
+  /// <paramref name="cut"/> shows: groups are built from visible records only, and a lineage whose
+  /// baseline is hidden has no created-at. A null cut shows everything.
+  /// </summary>
   internal async ValueTask<CollabHistoryListResult> HistoryAsync(
       string docId,
       TimeSpan? group,
       bool byActor,
+      DateTimeOffset? cut,
       CancellationToken cancellationToken)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
@@ -575,6 +588,12 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
     if (await IsPurgedAsync(history, docId, cancellationToken))
     {
       return new CollabHistoryListResult(CollabHistoryStatus.Purged, [], []);
+    }
+
+    if (cut is { } at)
+    {
+      withHeaders = CollabHistoryWindow.Visible(withHeaders, at);
+      lineages = [.. withHeaders.Select(entry => entry.Item1)];
     }
 
     Func<string, ulong, CollabRecordNote?>? noteOf = null;
@@ -985,7 +1004,9 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
 
                 if (confirmed is not null)
                 {
-                  var guards = CollabRestoreGuards.Of(currentBlocks, aim);
+                  var guards = pinned is null
+                    ? CollabRestoreGuards.Of(currentBlocks, aim)
+                    : CollabRestoreGuards.Kept(currentBlocks, kept: new CollabKeptDatabases(aim, pinned, []));
 
                   if (guards.Any(guard => !confirmed.Contains(guard.Kind)))
                   {
@@ -1099,7 +1120,7 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
 
               blocks = CollabVersionChanges.Blocks(current, after);
               page = CollabVersionChanges.Page(CollabVersionChanges.PageFields(doc), CollabVersionChanges.PageFields(scratch));
-              guards = [.. CollabRestoreGuards.Of(current, aim), .. kept?.Orphaned ?? []];
+              guards = kept is null ? CollabRestoreGuards.Of(current, aim) : CollabRestoreGuards.Kept(current, kept);
               frameBytes = bytes;
 
               return ops;

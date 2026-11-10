@@ -55,9 +55,10 @@ public interface IBlokAuthorization
   /// <summary>May this caller read the document's version history?</summary>
   /// <remarks>
   /// Asked on the history list, a version read, its changes, <c>history/at</c>,
-  /// <c>history/changes</c> and <c>restore/preview</c>, only after
+  /// <c>history/changes</c>, a restore and <c>restore/preview</c>, only after
   /// <see cref="CanReadDocumentAsync"/> (and <see cref="CanWriteDocumentAsync"/>
-  /// on preview) said yes. A restore or a delete is decided by the write gate.
+  /// on a restore) said yes: a restore reads the version it writes. A delete is
+  /// decided by the write gate.
   /// The default is yes, so history is readable to whoever can read the document.
   /// The in-process agent asks it too, with a principal named by the person it
   /// acts for, else by the agent.

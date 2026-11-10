@@ -3379,6 +3379,188 @@
           "blockId": "d"
         }
       ]
+    },
+    {
+      "name": "keep: a view with no id sharing a form stays as it is: no guard",
+      "databases": "keep",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "keep: a repeated view id stays as it is: no guard",
+      "databases": "keep",
+      "current": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              },
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "d",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table"
+              },
+              {
+                "id": "v1",
+                "type": "table",
+                "form": {
+                  "public": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "keep: a repeated current id whose first copy is the database keeps it: no guard",
+      "databases": "keep",
+      "current": [
+        {
+          "id": "x",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        },
+        {
+          "id": "x",
+          "type": "paragraph",
+          "data": {
+            "text": "x"
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "guards": []
+    },
+    {
+      "name": "keep: a repeated current id whose second copy is the database restores the first: no guard",
+      "databases": "keep",
+      "current": [
+        {
+          "id": "x",
+          "type": "paragraph",
+          "data": {
+            "text": "x"
+          }
+        },
+        {
+          "id": "x",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "t",
+                "type": "title",
+                "databaseLocked": true
+              }
+            ],
+            "views": []
+          }
+        }
+      ],
+      "target": [
+        {
+          "id": "a",
+          "type": "paragraph",
+          "data": {
+            "text": "a"
+          }
+        }
+      ],
+      "guards": []
     }
   ]
 }

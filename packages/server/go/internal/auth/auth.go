@@ -41,10 +41,13 @@ type Authorization interface {
 
 // HistoryReadAuthorizer is an optional Authorization hook: may this caller
 // read the document's version history? Asked on the history list, a version
-// read, its changes, history/at, history/changes and restore/preview, only
-// after CanReadDocument (and CanWriteDocument on preview) said yes. A restore
-// or a delete is decided by the write gate. Without it, history is readable
-// to whoever can read the document. The in-process agent asks it too, with a
+// read, its changes, history/at, history/changes, restore and
+// restore/preview, only after CanReadDocument (and CanWriteDocument on a
+// restore) said yes; a restore reads the version it writes. A delete is
+// decided by the write gate. Without it, history is readable to whoever can
+// read the document. A host that wraps its Authorization in another type
+// must implement it on the wrapper too, or it is not found and every
+// history read is allowed. The in-process agent asks it too, with a
 // user named by the person it acts for, else by the agent.
 type HistoryReadAuthorizer interface {
 	CanReadHistory(ctx context.Context, u User, documentID string) (bool, error)

@@ -27,7 +27,7 @@ func (e *Executor) runVersionRead(ctx context.Context, docID string, input *jsjs
 	if expect != nil && headOf(expect) != current {
 		return stale(current)
 	}
-	var floors map[string]*uint64
+	var window *historyWindow
 	// No history journal: the contract says unavailable and the bundle
 	// refuses it.
 	if e.rooms.manager.HasHistory() {
@@ -35,11 +35,11 @@ func (e *Executor) runVersionRead(ctx context.Context, docID string, input *jsjs
 		if err != nil {
 			return Execution{}, err
 		}
-		floors = hidden
+		window = hidden
 		versions := refused
-		// As the HTTP routes: a restore is decided by the write gate, not the read hook.
-		if refused == nil || name == "history.restore" {
-			if versions, err = e.loadVersions(ctx, docID, name, args, floors); err != nil {
+		// A restore reads the version it writes, so the read hook refuses it too.
+		if refused == nil {
+			if versions, err = e.loadVersions(ctx, docID, name, args, window); err != nil {
 				return Execution{}, err
 			}
 		}
@@ -75,7 +75,7 @@ func (e *Executor) runVersionRead(ctx context.Context, docID string, input *jsjs
 		if expect == nil {
 			expect = parseHeadText(current)
 		}
-		return e.restore(ctx, docID, version, result, input, expect, floors)
+		return e.restore(ctx, docID, version, result, input, expect, window)
 	}
 	written, err := write(result)
 	if err != nil {
@@ -87,7 +87,7 @@ func (e *Executor) runVersionRead(ctx context.Context, docID string, input *jsjs
 // restore is the restore the bundle checked, as one journalled edit by the
 // agent: the same restore the history route runs.
 func (e *Executor) restore(ctx context.Context, docID, version string, result, input *jsjson.Node, expect *room.Precondition,
-	floors map[string]*uint64) (Execution, error) {
+	window *historyWindow) (Execution, error) {
 	colon := lastColon(version)
 	if colon < 0 {
 		return Execution{}, &ArgumentError{Param: "length", Message: "Specified argument was out of the range of valid values."}
@@ -109,7 +109,7 @@ func (e *Executor) restore(ctx context.Context, docID, version string, result, i
 		return Execution{}, err
 	}
 	outcome, err := e.rooms.manager.RestoreWith(ctx, docID, version[:colon], sequence, newGUID(), actorID, expect, nil,
-		room.RestoreOptions{Hidden: floors != nil && room.HidesPoint(floors, version[:colon], sequence)})
+		room.RestoreOptions{Hidden: window.hides(version[:colon], sequence)})
 	if err != nil {
 		return Execution{}, err
 	}
@@ -142,18 +142,18 @@ func (e *Executor) restore(ctx context.Context, docID, version string, result, i
 
 // loadVersions is what one read needs: the version list, or the documents
 // it names (null when there is no such version).
-func (e *Executor) loadVersions(ctx context.Context, docID, name string, args *jsjson.Node, floors map[string]*uint64) (*jsjson.Node, error) {
+func (e *Executor) loadVersions(ctx context.Context, docID, name string, args *jsjson.Node, window *historyWindow) (*jsjson.Node, error) {
 	// A restore names the version that was current before, so it needs the
 	// list too.
 	if name == "history.restore" {
-		listed, err := e.loadVersions(ctx, docID, "history.versions", jsjson.NewObject(), floors)
+		listed, err := e.loadVersions(ctx, docID, "history.versions", jsjson.NewObject(), window)
 		if err != nil {
 			return nil, err
 		}
 		if failed, _ := listed.Lookup("failed"); failed != nil {
 			return listed, nil
 		}
-		named, err := e.loadVersions(ctx, docID, "history.read", args, floors)
+		named, err := e.loadVersions(ctx, docID, "history.read", args, window)
 		if err != nil {
 			return nil, err
 		}
@@ -177,7 +177,11 @@ func (e *Executor) loadVersions(ctx context.Context, docID, name string, args *j
 				group = time.Duration(minutes) * time.Minute
 			}
 		}
-		list, err := e.rooms.manager.History(ctx, docID, group)
+		var cut *time.Time
+		if window != nil {
+			cut = &window.cut
+		}
+		list, err := e.rooms.manager.HistoryWindowed(ctx, docID, group, false, cut)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +196,7 @@ func (e *Executor) loadVersions(ctx context.Context, docID, name string, args *j
 		}
 		versions := jsjson.NewArray()
 		for _, version := range list.Versions {
-			if floors != nil && room.HidesPoint(floors, version.Lineage, version.Sequence) {
+			if window.hides(version.Lineage, version.Sequence) {
 				continue
 			}
 			actors := jsjson.NewArray()
@@ -244,7 +248,7 @@ func (e *Executor) loadVersions(ctx context.Context, docID, name string, args *j
 			sequence, ok = parseSequence(version[colon+1:])
 		}
 		// A version the host's window hides reads as one that does not exist.
-		if !ok || (floors != nil && room.HidesPoint(floors, version[:colon], sequence)) {
+		if !ok || (window.hides(version[:colon], sequence)) {
 			documents.Members = append(documents.Members, member(version, jsjson.NewNull()))
 			continue
 		}
@@ -271,7 +275,7 @@ func (e *Executor) loadVersions(ctx context.Context, docID, name string, args *j
 // historyAccess asks the host's hooks for this call: a versionHistory
 // refusal when the read hook says no, and each lineage's floor when it sets
 // a window.
-func (e *Executor) historyAccess(ctx context.Context, docID string, input *jsjson.Node) (*jsjson.Node, map[string]*uint64, error) {
+func (e *Executor) historyAccess(ctx context.Context, docID string, input *jsjson.Node) (*jsjson.Node, *historyWindow, error) {
 	if e.rooms.policy == nil {
 		return nil, nil, nil
 	}
@@ -316,7 +320,17 @@ func (e *Executor) historyAccess(ctx context.Context, docID string, input *jsjso
 		}
 		return refused, nil, nil
 	}
-	return refused, floors, nil
+	return refused, &historyWindow{cut: cut, floors: floors}, nil
+}
+
+// historyWindow is the host's window for one agent call.
+type historyWindow struct {
+	cut    time.Time
+	floors map[string]*uint64
+}
+
+func (w *historyWindow) hides(lineage string, sequence uint64) bool {
+	return w != nil && room.HidesPoint(w.floors, lineage, sequence)
 }
 
 func versionFailure(message string, status room.HistoryStatus) *jsjson.Node {

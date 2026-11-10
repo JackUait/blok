@@ -14,14 +14,22 @@ import (
 // Twins of C# BlokAgentVersionHistoryTests.Hooks: the host's history read and
 // window hooks reach an agent's history commands.
 
-// spacedJournal: record N reads as committed at the Unix epoch plus N days.
-type spacedJournal struct{ room.LocalJournal }
+// spacedJournal: record N reads as committed at the Unix epoch plus N
+// spacings, a day when unset.
+type spacedJournal struct {
+	room.LocalJournal
+	spacing time.Duration
+}
 
 func (j spacedJournal) ReadHeaders(ctx context.Context, docID, lineage string) iter.Seq2[journal.RecordHeader, error] {
 	return func(yield func(journal.RecordHeader, error) bool) {
 		for header, err := range j.LocalJournal.ReadHeaders(ctx, docID, lineage) {
 			if err == nil {
-				header.CommittedAt = time.Unix(0, 0).UTC().Add(24 * time.Hour * time.Duration(header.Sequence))
+				spacing := j.spacing
+				if spacing == 0 {
+					spacing = 24 * time.Hour
+				}
+				header.CommittedAt = time.Unix(0, 0).UTC().Add(spacing * time.Duration(header.Sequence))
 			}
 			if !yield(header, err) {
 				return
@@ -33,7 +41,12 @@ func (j spacedJournal) ReadHeaders(ctx context.Context, docID, lineage string) i
 // hookedRoom answers the hooks from canRead and cut, and keeps who was asked.
 func hookedRoom(t *testing.T, canRead bool, cut *time.Time) (*testRoom, *[]string) {
 	t.Helper()
-	r := newTestRoomOn(t, spacedJournal{newLocalJournal(t)}, nil, nil)
+	return hookedRoomSpaced(t, canRead, cut, 0)
+}
+
+func hookedRoomSpaced(t *testing.T, canRead bool, cut *time.Time, spacing time.Duration) (*testRoom, *[]string) {
+	t.Helper()
+	r := newTestRoomOn(t, spacedJournal{newLocalJournal(t), spacing}, nil, nil)
 	r.docs.hold("d", historySeed)
 	var asked []string
 	r.executor.rooms.policy = func(_ context.Context, userID, docID string) (HistoryAccess, error) {
@@ -87,7 +100,7 @@ func TestAWindowHidesOlderVersionsFromAnAgent(t *testing.T) {
 	}
 }
 
-func TestAReadHookThatSaysNoRefusesAnAgentsListAndReadButNotItsRestore(t *testing.T) {
+func TestAReadHookThatSaysNoRefusesAnAgentsListReadAndRestore(t *testing.T) {
 	r, _ := hookedRoom(t, false, nil)
 	lineage := editTwice(t, r)
 
@@ -97,8 +110,12 @@ func TestAReadHookThatSaysNoRefusesAnAgentsListAndReadButNotItsRestore(t *testin
 	if _, code := runIn(t, r, "d", `{"commands":[{"name":"history.read","args":{"version":"`+lineage+`:0"}}]}`, roomAgent); code != "TOOL_ACTION_FAILED" {
 		t.Fatalf("read: %q", code)
 	}
-	if restored, code := runIn(t, r, "d", `{"commands":[{"name":"history.restore","args":{"version":"`+lineage+`:0"}}]}`, roomAgent); code != "" {
+	head := r.head(t, "d")
+	if restored, code := runIn(t, r, "d", `{"commands":[{"name":"history.restore","args":{"version":"`+lineage+`:0"}}]}`, roomAgent); code != "TOOL_ACTION_FAILED" {
 		t.Fatalf("restore: %s", restored.ResultJSON)
+	}
+	if r.head(t, "d") != head {
+		t.Fatal("the refused restore wrote")
 	}
 }
 
@@ -110,5 +127,27 @@ func TestAnAgentActingForAPersonIsAskedAboutAsThatPerson(t *testing.T) {
 
 	if len(*asked) != 1 || (*asked)[0] != "person-1 d" {
 		t.Fatalf("asked %v", *asked)
+	}
+}
+
+// A group that straddles the cut shows only its visible records to an agent.
+func TestAnAgentsListShowsNothingOfAHiddenRecord(t *testing.T) {
+	// Records 1 and 2 land a minute apart, in one 15-minute group; the cut hides 1.
+	cut := time.Unix(0, 0).UTC().Add(90 * time.Second)
+	r, _ := hookedRoomSpaced(t, true, &cut, time.Minute)
+	lineage := editTwice(t, r)
+
+	listed, code := runIn(t, r, "d", `{"commands":[{"name":"history.versions","args":{"group":15}}]}`, roomAgent)
+	if code != "" {
+		t.Fatalf("list: %s", listed.ResultJSON)
+	}
+	versions := lookup(lookup(mustParse(t, listed.ResultJSON), "results").Items[0], "versions")
+	if len(versions.Items) != 1 {
+		t.Fatalf("versions: %s", listed.ResultJSON)
+	}
+	version, _ := stringOf(lookup(versions.Items[0], "version"))
+	started := string(lookup(versions.Items[0], "startedAt").Raw())
+	if version != lineage+":2" || started != "120000" {
+		t.Fatalf("versions: %s", listed.ResultJSON)
 	}
 }

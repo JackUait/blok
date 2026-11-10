@@ -19,8 +19,8 @@ use crate::{HistoryAccess, HistoryPolicy};
 
 const SEED: &str = r#"{"blocks":[{"id":"p","type":"paragraph","data":{"text":"Hello"}},{"id":"q","type":"paragraph","data":{"text":"Other"}}]}"#;
 
-/// Record N reads as committed at the Unix epoch plus N days.
-struct SpacedJournal(LocalJournal);
+/// Record N reads as committed at the Unix epoch plus N spacings.
+struct SpacedJournal(LocalJournal, Duration);
 
 impl OperationStore for SpacedJournal {
     fn open<'a>(
@@ -64,7 +64,7 @@ impl HistoryStore for SpacedJournal {
     ) -> Headers<'a> {
         Box::new(self.0.read_headers(ctx, doc_id, lineage).map(|header| {
             header.map(|mut header| {
-                header.committed_at = UNIX_EPOCH + Duration::from_secs(86_400 * header.sequence);
+                header.committed_at = UNIX_EPOCH + self.1 * header.sequence as u32;
                 header
             })
         }))
@@ -90,9 +90,17 @@ impl HistoryStore for SpacedJournal {
 
 /// Answers the hooks from `can_read` and `cut`, and keeps who was asked.
 fn hooked_room(can_read: bool, cut: Option<SystemTime>) -> (TestRoom, Arc<Mutex<Vec<String>>>) {
+    hooked_room_spaced(can_read, cut, Duration::from_secs(86_400))
+}
+
+fn hooked_room_spaced(
+    can_read: bool,
+    cut: Option<SystemTime>,
+    spacing: Duration,
+) -> (TestRoom, Arc<Mutex<Vec<String>>>) {
     let (journal, dir) = new_local_journal();
     let r = new_test_room_on(
-        Some(Arc::new(SpacedJournal(journal))),
+        Some(Arc::new(SpacedJournal(journal, spacing))),
         Some(dir),
         None,
         None,
@@ -176,7 +184,7 @@ async fn a_window_hides_older_versions_from_an_agent() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_read_hook_that_says_no_refuses_an_agents_list_and_read_but_not_its_restore() {
+async fn a_read_hook_that_says_no_refuses_an_agents_list_read_and_restore() {
     let (r, _) = hooked_room(false, None);
     let lineage = edit_twice(&r).await;
 
@@ -197,8 +205,14 @@ async fn a_read_hook_that_says_no_refuses_an_agents_list_and_read_but_not_its_re
     let restore = format!(
         r#"{{"commands":[{{"name":"history.restore","args":{{"version":"{lineage}:0"}}}}]}}"#
     );
+    let head = r.head("d").await;
     let (restored, code) = run_in(&r, "d", &restore, &room_agent()).await;
-    assert!(code.is_empty(), "restore: {}", restored.result_json);
+    assert_eq!(
+        code, "TOOL_ACTION_FAILED",
+        "restore: {}",
+        restored.result_json
+    );
+    assert_eq!(r.head("d").await, head, "the refused restore wrote");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -218,4 +232,43 @@ async fn an_agent_acting_for_a_person_is_asked_about_as_that_person() {
     .await;
 
     assert_eq!(*asked.lock().unwrap(), vec!["person-1 d".to_owned()]);
+}
+
+// A group that straddles the cut shows only its visible records to an agent.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_agents_list_shows_nothing_of_a_hidden_record() {
+    // Records 1 and 2 land a minute apart, in one 15-minute group; the cut
+    // hides 1.
+    let (r, _) = hooked_room_spaced(
+        true,
+        Some(UNIX_EPOCH + Duration::from_secs(90)),
+        Duration::from_secs(60),
+    );
+    let lineage = edit_twice(&r).await;
+
+    let (listed, code) = run_in(
+        &r,
+        "d",
+        r#"{"commands":[{"name":"history.versions","args":{"group":15}}]}"#,
+        &room_agent(),
+    )
+    .await;
+    assert!(code.is_empty(), "list: {}", listed.result_json);
+    let parsed = must_parse(&listed.result_json);
+    let versions = lookup(
+        lookup(Some(&parsed), "results").and_then(|r| r.items.first()),
+        "versions",
+    )
+    .unwrap();
+    assert_eq!(versions.items.len(), 1, "{}", listed.result_json);
+    assert_eq!(
+        string_of(lookup(versions.items.first(), "version")),
+        Some(format!("{lineage}:2"))
+    );
+    assert_eq!(
+        std::str::from_utf8(lookup(versions.items.first(), "startedAt").unwrap().raw()).unwrap(),
+        "120000",
+        "{}",
+        listed.result_json
+    );
 }

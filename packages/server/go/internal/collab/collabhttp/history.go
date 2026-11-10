@@ -135,7 +135,11 @@ func (h *Handlers) HistoryList(w http.ResponseWriter, r *http.Request) {
 	// Shipped route: any other by is ignored, as unknown keys always were.
 	by := dotnet.QueryAll(r.URL.RawQuery, "by")
 	byActor := len(by) == 1 && by[0] == "actor"
-	result, err := a.rooms.HistoryBy(r.Context(), a.doc, group, byActor)
+	var cut *time.Time
+	if window != nil {
+		cut = &window.cut
+	}
+	result, err := a.rooms.HistoryWindowed(r.Context(), a.doc, group, byActor, cut)
 	if err != nil {
 		failed(w, r.Context())
 		return
@@ -513,7 +517,8 @@ func (h *Handlers) HistoryDelete(w http.ResponseWriter, r *http.Request) {
 // HistoryRestore is POST .../restore: the key is required, If-Match is
 // optional, and it answers like an edit.
 func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
-	a, ok := h.admitHistory(w, r, true, false)
+	// A restore reads the version it writes, so the history read hook guards it too.
+	a, ok := h.admitHistory(w, r, true, true)
 	if !ok {
 		return
 	}
@@ -539,11 +544,7 @@ func (h *Handlers) HistoryRestore(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	keep, ok := queryDatabases(r)
-	if !ok {
-		synchttp.Refuse(w, http.StatusBadRequest, badDatabases)
-		return
-	}
+	keep := restoreKeepsDatabases(r)
 	window, ok := h.window(w, r, a)
 	if !ok {
 		return

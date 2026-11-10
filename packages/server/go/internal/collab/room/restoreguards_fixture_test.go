@@ -22,8 +22,7 @@ func TestRestoreGuardsMatchTheFixture(t *testing.T) {
 		// A keep restore guards the kept target, then refuses each orphan.
 		// A case without databases is databases=restore.
 		if databases, _ := c.Get(jsjson.FromString("databases")); databases != nil && databases.(jsjson.Str).String() == "keep" {
-			kept := KeepDatabases(current, target)
-			guards = append(RestoreGuards(current, kept.Target), kept.Orphaned...)
+			guards = KeptRestoreGuards(current, KeepDatabases(current, target))
 		}
 		var got []string
 		for _, guard := range guards {

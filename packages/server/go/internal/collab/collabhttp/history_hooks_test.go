@@ -152,8 +152,9 @@ func TestTheReadHookGuardsEveryRouteThatShowsHistory(t *testing.T) {
 			t.Errorf("%s %s = %d %q", route[0], route[1], a.status, a.body)
 		}
 	}
-	// A restore changes the document: the write gate decides it.
-	if a := history.restore(t, lineage, "0", "allowed", ""); a.status != http.StatusNoContent {
+	// A restore reads the version it writes, so the read hook guards it too:
+	// a writer it denies cannot bring an old point back and then read it.
+	if a := history.restore(t, lineage, "0", "denied", ""); a.status != http.StatusForbidden || string(a.body) != "forbidden\n" {
 		t.Fatalf("restore = %d %q", a.status, a.body)
 	}
 }
@@ -265,5 +266,40 @@ func TestAHeldLineageIsNotDeleted(t *testing.T) {
 		if entry["held"].(bool) && a.header.Get("Content-Type") != "application/json" {
 			t.Errorf("%s: content type %q", name, a.header.Get("Content-Type"))
 		}
+	}
+}
+
+// A group that straddles the cut shows only what the window shows: its
+// startedAt and actors come from visible records, and a lineage whose
+// baseline is hidden has no createdAt.
+func TestTheListShowsNothingOfAHiddenRecord(t *testing.T) {
+	policy := &historyPolicy{readHistory: true}
+	history := startHooked(t, policy, time.Minute)
+	history.open(t)
+	history.editText(t, "two")
+	history.editText(t, "three")
+	history.editText(t, "four")
+	// Records 1 to 3 land a minute apart, in one 15-minute group; the cut hides 1 and 2.
+	cut := time.Unix(0, 0).UTC().Add(150 * time.Second)
+	policy.cut = &cut
+
+	var list struct {
+		Lineages []struct {
+			CreatedAt *int64 `json:"createdAt"`
+		} `json:"lineages"`
+		Versions []struct {
+			Sequence  uint64 `json:"sequence"`
+			StartedAt int64  `json:"startedAt"`
+		} `json:"versions"`
+	}
+	answer := history.send(t, "GET", "/history?group=15", "", "", "")
+	if err := json.Unmarshal(answer.body, &list); err != nil {
+		t.Fatalf("%v: %s", err, answer.body)
+	}
+	if len(list.Versions) != 1 || list.Versions[0].Sequence != 3 || list.Versions[0].StartedAt != 180_000 {
+		t.Fatalf("versions = %s", answer.body)
+	}
+	if len(list.Lineages) != 1 || list.Lineages[0].CreatedAt != nil {
+		t.Fatalf("lineages = %s", answer.body)
 	}
 }

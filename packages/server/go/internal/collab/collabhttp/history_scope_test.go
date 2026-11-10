@@ -12,16 +12,22 @@ import (
 
 const tableData = `{ "schema": [{ "id": "t", "type": "title" }], "views": [] }`
 
-func TestADatabasesOtherThanKeepOrRestoreIsABadRequest(t *testing.T) {
-	history := startHooked(t, nil, 0)
-	lineage := history.open(t)
+func TestOnlyOneExactKeepKeepsDatabasesAndTheShippedRestoreIgnoresAnyOtherValue(t *testing.T) {
 	for _, query := range []string{"?databases=", "?databases=Keep", "?databases=none", "?databases=keep&databases=keep"} {
-		restore := history.send(t, "POST", "/history/"+lineage+"/0/restore"+query, "bad", "", "")
-		preview := history.send(t, "POST", "/history/"+lineage+"/0/restore/preview"+query, "", "", "")
-		for name, a := range map[string]answer{"restore": restore, "preview": preview} {
-			if a.status != http.StatusBadRequest || string(a.body) != "databases must be keep or restore\n" {
-				t.Errorf("%s %s = %d %q", name, query, a.status, a.body)
-			}
+		history := startHooked(t, nil, 0)
+		lineage := history.open(t)
+		history.edit(t, "database", `{ "ops": [ { "op": "insert", "id": "d", "block": { "type": "database", "data": `+tableData+` } } ] }`)
+		// The shipped route ignored unknown values: anything but one exact keep is a plain restore.
+		if a := history.send(t, "POST", "/history/"+lineage+"/0/restore"+query, "other", "", ""); a.status != http.StatusNoContent {
+			t.Errorf("restore %s = %d %q", query, a.status, a.body)
+		}
+		if blocks := history.blocks(t); strings.Contains(blocks, `"id":"d"`) {
+			t.Errorf("restore %s kept the database: %s", query, blocks)
+		}
+		// The preview route is new, so it refuses what it does not know.
+		if a := history.send(t, "POST", "/history/"+lineage+"/0/restore/preview"+query, "", "", ""); a.status != http.StatusBadRequest ||
+			string(a.body) != "databases must be keep or restore\n" {
+			t.Errorf("preview %s = %d %q", query, a.status, a.body)
 		}
 	}
 }

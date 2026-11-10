@@ -16,10 +16,7 @@ fn restore_guards_match_the_fixture() {
         // A keep restore guards the kept target, then refuses each orphan.
         let guards = match c.get(&"databases".into()) {
             Some(blok_jsjson::Value::String(databases)) if databases.to_string() == "keep" => {
-                let kept = crate::keep_databases(current, target);
-                let mut guards = restore_guards(current, &kept.target);
-                guards.extend(kept.orphaned);
-                guards
+                crate::kept_restore_guards(current, &crate::keep_databases(current, target))
             }
             _ => restore_guards(current, target),
         };

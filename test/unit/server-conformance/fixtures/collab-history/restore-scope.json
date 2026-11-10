@@ -1,5 +1,5 @@
 {
-  "$comment": "CollabRestorePlanner.KeepDatabases then Plan, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. databases: keep leaves every database on either side, and everything below it on either side, as it is now; restore is today\u0027s restore. kept: the blocks no op may name, sorted. orphaned: an orphanedDatabase guard per kept root whose parent the restore removes; the restore is then refused. digests: the restore key digest; keep adds \\nkeep to the line, restore keeps the old digest. Updates are base64 Yjs v1 updates.",
+  "$comment": "CollabRestorePlanner.KeepDatabases then Plan, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. databases: keep leaves every database on either side, and everything below it on either side, as it is now; restore is today\u0027s restore. kept: the blocks no op may name, sorted. orphaned: an orphanedDatabase guard per kept root whose parent the restore removes; the restore is then refused. trash, when set, is the restorer and the time in ms the planner trashes later page pointers with. digests: the restore key digest; keep adds \\nkeep to the line, restore keeps the old digest. Updates are base64 Yjs v1 updates.",
   "cases": [
     {
       "name": "keep leaves an edited row as it is now",
@@ -248,6 +248,36 @@
         "x"
       ],
       "orphaned": []
+    },
+    {
+      "name": "keep with trash: a later page pointer is trashed and a later database stays",
+      "databases": "keep",
+      "current": "ASgHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MCcGcBKAAHCAJpZAF3AnBnKAAHCAR0eXBlAXcEcGFnZScABwgEZGF0YQEoAAcLBnBhZ2VJZAF3A3N1YicABwgFdHVuZXMBJwAHCApjb250ZW50SWRzACcBBmJsb2NrcwFkASgABw8CaWQBdwFkKAAHDwR0eXBlAXcIZGF0YWJhc2UnAAcPBGRhdGEBJwAHEgZzY2hlbWEBJwAHEwZfX3Jvd3MBJwAHFAF0ASgABxUCaWQBdwF0KAAHFQR0eXBlAXcFdGl0bGUnAAcTCV9fcm93S2V5cwAIAAcYAXcBdCgABxIFdmlld3MBdQAnAAcPBXR1bmVzAScABw8KY29udGVudElkcwAIAAccAXcBcicBBmJsb2NrcwFyASgABx4CaWQBdwFyKAAHHgR0eXBlAXcMZGF0YWJhc2Utcm93JwAHHgRkYXRhAScAByEKcHJvcGVydGllcwEoAAciAXQBdwNuZXcnAAceBXR1bmVzASgABx4IcGFyZW50SWQBdwFkJwAHHgpjb250ZW50SWRzAAgBBHJvb3QDdwFhdwJwZ3cBZAA=",
+      "target": "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAIAQRyb290AXcBYQA=",
+      "ops": [
+        {
+          "op": "update",
+          "id": "pg",
+          "data": {
+            "pageId": "sub",
+            "trashed": {
+              "at": 1700000999000,
+              "by": "u9",
+              "formerParentId": null,
+              "formerIndex": 1
+            }
+          }
+        }
+      ],
+      "kept": [
+        "d",
+        "r"
+      ],
+      "orphaned": [],
+      "trash": {
+        "by": "u9",
+        "at": 1700000999000
+      }
     }
   ],
   "digests": [

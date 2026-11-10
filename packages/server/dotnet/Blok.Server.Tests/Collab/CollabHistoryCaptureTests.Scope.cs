@@ -57,13 +57,23 @@ public sealed partial class CollabHistoryCaptureTests
           [P("a")], [P("a"), Db("d", views: publicView)], []),
       ("keep: a locked database whose parent the restore removes is refused",
           [Block("t", "toggle", content: ["d"]), Db("d", lockedSchema, parent: "t")], [P("a")], ["orphanedDatabase d"]),
+      ("keep: a view with no id sharing a form stays as it is: no guard",
+          [Db("d", views: $"""[{View("\"form\": { \"public\": true }", id: "")}]""")],
+          [Db("d", views: $"""[{View("\"form\": { \"public\": true }", id: "")}]""")], []),
+      ("keep: a repeated view id stays as it is: no guard",
+          [Db("d", views: $"""[{View()}, {View("\"form\": { \"public\": true }")}]""")],
+          [Db("d", views: $"""[{View()}, {View("\"form\": { \"public\": true }")}]""")], []),
+      ("keep: a repeated current id whose first copy is the database keeps it: no guard",
+          [Db("x", lockedSchema), P("x")], [P("a")], []),
+      ("keep: a repeated current id whose second copy is the database restores the first: no guard",
+          [P("x"), Db("x", lockedSchema)], [P("a")], []),
     ];
 
     foreach (var (name, current, target, expect) in cases)
     {
       var currentBlocks = new JsonArray([.. current.Select(ParseBlock)]);
       var kept = CollabRestorePlanner.KeepDatabases(currentBlocks, new JsonArray([.. target.Select(ParseBlock)]));
-      var guards = CollabRestoreGuards.Of(currentBlocks, kept.Target).Concat(kept.Orphaned).ToList();
+      var guards = CollabRestoreGuards.Kept(currentBlocks, kept);
 
       Assert.Equal(expect, guards.Select(guard => $"{guard.Kind} {guard.BlockId}"));
       written.Add(new JsonObject
@@ -135,11 +145,21 @@ public sealed partial class CollabHistoryCaptureTests
           Doc(P("x", text: "now")),
           Doc(Database("x", []))),
     };
+    // With the host's trash on, a later page pointer is trashed in place and a later database stays.
+    var trashed = new List<(string Name, string Databases, YDoc Current, YDoc Target)>
+    {
+      ("keep with trash: a later page pointer is trashed and a later database stays", "keep",
+          Doc(P("a"), Block("pg", "page", data: """{ "pageId": "sub" }"""), Database("d", ["r"]), Row("r", "d", "new")),
+          Doc(P("a"))),
+    };
+    var trash = new CollabRestoreTrash("u9", 1700000999000);
 
     var written = new JsonArray();
     var converter = new CollabDocConverter(TimeProvider.System, RichTextRuntime.Reader);
 
-    foreach (var (name, databases, current, target) in cases)
+    foreach (var (name, databases, current, target, caseTrash) in cases
+        .Select(c => (c.Name, c.Databases, c.Current, c.Target, (CollabRestoreTrash?)null))
+        .Concat(trashed.Select(c => (c.Name, c.Databases, c.Current, c.Target, (CollabRestoreTrash?)trash))))
     {
       var currentBlocks = await Export(converter, current);
       var targetBlocks = await Export(converter, target);
@@ -150,7 +170,7 @@ public sealed partial class CollabHistoryCaptureTests
           keep?.Target ?? targetBlocks,
           YDocConverter.ReadPageMaps(current),
           YDocConverter.ReadPageMaps(target),
-          null,
+          caseTrash,
           keep?.Pinned);
 
       // The point of keep: no op names a kept block.
@@ -163,7 +183,7 @@ public sealed partial class CollabHistoryCaptureTests
       });
       Assert.DoesNotContain(named, id => id is not null && keep is not null && keep.Orphaned.Count == 0 && keep.Pinned.Contains(id));
 
-      written.Add(new JsonObject
+      var entry = new JsonObject
       {
         ["name"] = name,
         ["databases"] = databases,
@@ -172,12 +192,19 @@ public sealed partial class CollabHistoryCaptureTests
         ["ops"] = new JsonArray([.. ops.Select(OpJson)]),
         ["kept"] = new JsonArray([.. (keep?.Pinned ?? new HashSet<string>()).Order(StringComparer.Ordinal).Select(id => (JsonNode?)id)]),
         ["orphaned"] = new JsonArray([.. (keep?.Orphaned ?? []).Select(guard => (JsonNode)guard.ToJson())]),
-      });
+      };
+
+      if (caseTrash is not null)
+      {
+        entry["trash"] = new JsonObject { ["by"] = caseTrash.By, ["at"] = caseTrash.At };
+      }
+
+      written.Add(entry);
     }
 
     return new JsonObject
     {
-      ["$comment"] = "CollabRestorePlanner.KeepDatabases then Plan, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. databases: keep leaves every database on either side, and everything below it on either side, as it is now; restore is today's restore. kept: the blocks no op may name, sorted. orphaned: an orphanedDatabase guard per kept root whose parent the restore removes; the restore is then refused. digests: the restore key digest; keep adds \\nkeep to the line, restore keeps the old digest. Updates are base64 Yjs v1 updates.",
+      ["$comment"] = "CollabRestorePlanner.KeepDatabases then Plan, as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. databases: keep leaves every database on either side, and everything below it on either side, as it is now; restore is today's restore. kept: the blocks no op may name, sorted. orphaned: an orphanedDatabase guard per kept root whose parent the restore removes; the restore is then refused. trash, when set, is the restorer and the time in ms the planner trashes later page pointers with. digests: the restore key digest; keep adds \\nkeep to the line, restore keeps the old digest. Updates are base64 Yjs v1 updates.",
       ["cases"] = written,
       ["digests"] = new JsonArray([.. DigestKinds.Select(databases => (JsonNode)new JsonObject
       {

@@ -56,7 +56,21 @@ fn keep_databases_matches_the_restore_scope_fixture() {
             &target_blocks,
             &read_page_maps(&current).unwrap_or_else(|err| panic!("{err}")),
             &read_page_maps(&target).unwrap_or_else(|err| panic!("{err}")),
-            None,
+            c.get(&"trash".into())
+                .map(|input| {
+                    let input = object(input);
+                    crate::RestoreTrash {
+                        by: match member(input, "by") {
+                            Value::String(by) => Some(by.to_string()),
+                            _ => None,
+                        },
+                        at: match member(input, "at") {
+                            Value::Number(at) => *at as i64,
+                            other => panic!("trash.at is {other:?}"),
+                        },
+                    }
+                })
+                .as_ref(),
             kept.as_ref().map(|kept| &kept.pinned),
         );
         let want = array(member(&c, "ops"));

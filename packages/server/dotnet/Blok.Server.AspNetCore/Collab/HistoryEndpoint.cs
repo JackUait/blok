@@ -68,6 +68,7 @@ internal static partial class HistoryEndpoint
         admitted.Doc,
         minutes is { } group ? TimeSpan.FromMinutes(group) : null,
         byActor,
+        window?.Cut,
         context.RequestAborted);
 
     if (result.Status != CollabHistoryStatus.Ready)
@@ -330,7 +331,7 @@ internal static partial class HistoryEndpoint
 
   public static async Task RestoreAsync(HttpContext context)
   {
-    if (await AdmitAsync(context, requireWrite: true) is not { } admitted ||
+    if (await AdmitAsync(context, requireWrite: true, readsHistory: true) is not { } admitted ||
         await PointAsync(context) is not { } point)
     {
       return;
@@ -363,12 +364,10 @@ internal static partial class HistoryEndpoint
       return;
     }
 
-    if (!TryQueryDatabases(context, out var keepDatabases))
-    {
-      await SyncEndpoint.RefuseAsync(context, StatusCodes.Status400BadRequest, BadDatabases);
-
-      return;
-    }
+    // The shipped route ignored unknown values: only one exact keep keeps databases.
+    var keepDatabases = context.Request.Query.TryGetValue("databases", out var databases) &&
+        databases.Count == 1 &&
+        databases[0] == "keep";
 
     if (await WindowAsync(context, admitted) is not (true, var window))
     {
@@ -726,13 +725,9 @@ internal static partial class HistoryEndpoint
     return (lineage, sequence);
   }
 
-  /// <summary>
-  /// An optional query number, parsed like the route's sequence. Absent is
-  /// null; a repeated, empty or signed value is false.
-  /// </summary>
   private const string BadDatabases = "databases must be keep or restore\n";
 
-  /// <summary><c>databases=keep|restore</c>; absent is restore. A repeated or other value is refused.</summary>
+  /// <summary>The preview's <c>databases=keep|restore</c>; absent is restore. A repeated or other value is refused.</summary>
   private static bool TryQueryDatabases(HttpContext context, out bool keep)
   {
     keep = false;
@@ -747,6 +742,10 @@ internal static partial class HistoryEndpoint
     return values.Count == 1 && values[0] is "keep" or "restore";
   }
 
+  /// <summary>
+  /// An optional query number, parsed like the route's sequence. Absent is
+  /// null; a repeated, empty or signed value is false.
+  /// </summary>
   private static bool TryQueryNumber(HttpContext context, string name, out ulong? value)
   {
     value = null;

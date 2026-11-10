@@ -60,7 +60,9 @@ pub use restore_guards::{
     CONFIRMABLE_GUARDS, GUARD_LOCKED_RESHAPE, GUARD_SHARE, GUARD_UNLOCK, RestoreGuard,
     restore_guards,
 };
-pub use restore_scope::{GUARD_ORPHANED_DATABASE, KeptDatabases, keep_databases};
+pub use restore_scope::{
+    GUARD_ORPHANED_DATABASE, KeptDatabases, keep_databases, kept_restore_guards,
+};
 pub use room::{Log, Membership};
 pub use seams::*;
 pub use timeline::{

@@ -202,9 +202,15 @@ async fn the_read_hook_guards_every_route_that_shows_history() {
             a.text()
         );
     }
-    // A restore changes the document: the write gate decides it.
-    let restore = history.restore(&lineage, "0", "allowed", "").await;
-    assert_eq!(restore.status, 204, "restore = {}", restore.text());
+    // A restore reads the version it writes, so the read hook guards it too:
+    // a writer it denies cannot bring an old point back and then read it.
+    let restore = history.restore(&lineage, "0", "denied", "").await;
+    assert!(
+        restore.status == 403 && restore.text() == "forbidden\n",
+        "restore = {} {:?}",
+        restore.status,
+        restore.text()
+    );
     history.drain().await;
 }
 
@@ -365,4 +371,56 @@ async fn a_held_lineage_is_not_deleted() {
         }
         history.drain().await;
     }
+}
+
+// A group that straddles the cut shows only what the window shows: its
+// startedAt and actors come from visible records, and a lineage whose
+// baseline is hidden has no createdAt.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_list_shows_nothing_of_a_hidden_record() {
+    let policy = Arc::new(HistoryPolicy::default());
+    let history = start_app(AppOptions {
+        journal: true,
+        policy: Some(policy.clone()),
+        ..AppOptions::default()
+    })
+    .await;
+    history.open().await;
+    history.edit_text("two").await;
+    history.edit_text("three").await;
+    history.edit_text("four").await;
+    *history
+        .journal
+        .as_ref()
+        .unwrap()
+        .header_spacing
+        .lock()
+        .unwrap() = Some(Duration::from_secs(60));
+    // Records 1 to 3 land a minute apart, in one 15-minute group; the cut
+    // hides 1 and 2.
+    *policy.cut.lock().unwrap() = Some(UNIX_EPOCH + Duration::from_secs(150));
+
+    let list = history.send("GET", "/history?group=15", "", "", "").await;
+    let parsed = parse(&list.body).unwrap();
+    let body = as_object(&parsed);
+    let Value::Array(versions) = get(body, "versions") else {
+        panic!("no versions: {}", list.text());
+    };
+    assert_eq!(versions.len(), 1, "{}", list.text());
+    let version = as_object(&versions[0]);
+    assert!(
+        matches!(get(version, "sequence"), Value::Number(n) if *n == 3.0)
+            && matches!(get(version, "startedAt"), Value::Number(n) if *n == 180_000.0),
+        "{}",
+        list.text()
+    );
+    let Value::Array(lineages) = get(body, "lineages") else {
+        panic!("no lineages: {}", list.text());
+    };
+    assert!(
+        matches!(get(as_object(&lineages[0]), "createdAt"), Value::Null),
+        "{}",
+        list.text()
+    );
+    history.drain().await;
 }

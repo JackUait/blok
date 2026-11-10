@@ -873,18 +873,18 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
           new JsonObject { ["revision"] = current }, current);
     }
 
-    IReadOnlyDictionary<string, ulong?>? floors = null;
+    HistoryWindow? window = null;
 
     // No history journal: the contract says unavailable and Jint refuses it.
     if (rooms!.HasHistory)
     {
       var access = await HistoryAccessAsync(docId, input, cancellationToken);
 
-      floors = access.Floors;
-      // As the HTTP routes: a restore is decided by the write gate, not the read hook.
-      input["versionHistory"] = access.Refused is { } refused && name != "history.restore"
+      window = access.Window;
+      // A restore reads the version it writes, so the read hook refuses it too.
+      input["versionHistory"] = access.Refused is { } refused
         ? refused
-        : await LoadVersionsAsync(docId, name, args, floors, cancellationToken);
+        : await LoadVersionsAsync(docId, name, args, window, cancellationToken);
     }
 
     input["document"] = document;
@@ -896,7 +896,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     if (output["restore"] is JsonValue restore && restore.TryGetValue<string>(out var version))
     {
       // Jint checked the room at `current`; the restore must land on that head or not at all.
-      return await RestoreAsync(docId, version, result, input, expect ?? ParseHead(current), floors, cancellationToken);
+      return await RestoreAsync(docId, version, result, input, expect ?? ParseHead(current), window, cancellationToken);
     }
 
     return WithHead(new BlokAgentExecution(result.ToJsonString(), null, current), current);
@@ -909,7 +909,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   /// </summary>
   private async ValueTask<BlokAgentExecution> RestoreAsync(
       string docId, string version, JsonObject result, JsonObject input, CollabEditPrecondition? expect,
-      IReadOnlyDictionary<string, ulong?>? floors, CancellationToken cancellationToken)
+      HistoryWindow? window, CancellationToken cancellationToken)
   {
     var colon = version.LastIndexOf(':');
     var actor = input["actor"]!["id"]!.GetValue<string>();
@@ -922,7 +922,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         actor,
         expect,
         null,
-        new CollabRestoreOptions(Hidden: floors is not null && CollabHistoryWindow.Hides(floors, version[..colon], sequence)),
+        new CollabRestoreOptions(Hidden: window is not null && window.Hides(version[..colon], sequence)),
         cancellationToken);
 
     switch (restored.History)
@@ -959,7 +959,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   /// The host's hooks for this call: a versionHistory refusal when the read
   /// hook says no, and each lineage's floor when it sets a window.
   /// </summary>
-  private async ValueTask<(JsonObject? Refused, IReadOnlyDictionary<string, ulong?>? Floors)> HistoryAccessAsync(
+  private async ValueTask<(JsonObject? Refused, HistoryWindow? Window)> HistoryAccessAsync(
       string docId, JsonObject input, CancellationToken cancellationToken)
   {
     if (HistoryPolicy is not { } policy)
@@ -974,33 +974,40 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       ? null
       : new JsonObject { ["failed"] = "The version history could not be read (not allowed).", ["status"] = 403 };
 
-    if (access.Window is not { } window)
+    if (access.Window is not { } span)
     {
       return (refused, null);
     }
 
-    var (status, floors) = await rooms!.HistoryFloorsAsync(docId, CollabHistoryWindow.Cut(rooms.Now, window), cancellationToken);
+    var cut = CollabHistoryWindow.Cut(rooms!.Now, span);
+    var (status, floors) = await rooms.HistoryFloorsAsync(docId, cut, cancellationToken);
 
     return status == CollabHistoryStatus.Ready
-      ? (refused, floors)
+      ? (refused, new HistoryWindow(cut, floors))
       : (refused ?? new JsonObject { ["failed"] = $"The version history could not be read ({status}).", ["status"] = HttpStatus(status) }, null);
+  }
+
+  /// <summary>The host's window for one agent call: its cut and each lineage's floor.</summary>
+  private sealed record HistoryWindow(DateTimeOffset Cut, IReadOnlyDictionary<string, ulong?> Floors)
+  {
+    internal bool Hides(string lineage, ulong sequence) => CollabHistoryWindow.Hides(Floors, lineage, sequence);
   }
 
   /// <summary>What one read needs: the version list, or the documents it names (null when there is no such version).</summary>
   private async ValueTask<JsonObject> LoadVersionsAsync(
-      string docId, string name, JsonObject args, IReadOnlyDictionary<string, ulong?>? floors, CancellationToken cancellationToken)
+      string docId, string name, JsonObject args, HistoryWindow? window, CancellationToken cancellationToken)
   {
     // A restore names the version that was current before, so it needs the list too.
     if (name == "history.restore")
     {
-      var listed = await LoadVersionsAsync(docId, "history.versions", [], floors, cancellationToken);
+      var listed = await LoadVersionsAsync(docId, "history.versions", [], window, cancellationToken);
 
       if (listed.ContainsKey("failed"))
       {
         return listed;
       }
 
-      var named = await LoadVersionsAsync(docId, "history.read", args, floors, cancellationToken);
+      var named = await LoadVersionsAsync(docId, "history.read", args, window, cancellationToken);
 
       named["versions"] = listed["versions"]!.DeepClone();
 
@@ -1012,7 +1019,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       var minutes = args["group"] is JsonValue group && group.TryGetValue<int>(out var value) && value is 1 or 15 or 60
           ? TimeSpan.FromMinutes(value)
           : (TimeSpan?)null;
-      var list = await rooms!.HistoryAsync(docId, minutes, cancellationToken);
+      var list = await rooms!.HistoryAsync(docId, minutes, byActor: false, window?.Cut, cancellationToken);
 
       if (list.Status != CollabHistoryStatus.Ready)
       {
@@ -1024,7 +1031,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       return new JsonObject
       {
         ["versions"] = new JsonArray([.. list.Versions
-          .Where(version => floors is null || !CollabHistoryWindow.Hides(floors, version.Lineage, version.Sequence))
+          .Where(version => window is null || !window.Hides(version.Lineage, version.Sequence))
           .Select(version =>
         {
           var entry = new JsonObject
@@ -1059,7 +1066,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       // A version the host's window hides reads as one that does not exist.
       if (colon <= 0 ||
           !ulong.TryParse(version.AsSpan(colon + 1), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var sequence) ||
-          (floors is not null && CollabHistoryWindow.Hides(floors, version[..colon], sequence)))
+          (window is not null && window.Hides(version[..colon], sequence)))
       {
         documents[version] = null;
         continue;

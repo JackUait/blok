@@ -53,10 +53,10 @@ impl Executor {
         if live.manager.has_history() {
             let (refused, hidden) = self.history_access(doc_id, &input).await?;
             floors = hidden;
-            // As the HTTP routes: a restore is decided by the write gate, not
-            // the read hook.
+            // A restore reads the version it writes, so the read hook
+            // refuses it too.
             let versions = match refused {
-                Some(refused) if name != "history.restore" => refused,
+                Some(refused) => refused,
                 _ => Box::pin(self.load_versions(doc_id, name, args, floors.as_ref())).await?,
             };
             input.members.push(member("versionHistory", versions));
@@ -107,7 +107,7 @@ impl Executor {
         result: &Node,
         input: &Node,
         expect: Option<Precondition>,
-        floors: Option<&HashMap<String, Option<u64>>>,
+        floors: Option<&HistoryWindow>,
     ) -> Result<Execution, Error> {
         let Some(colon) = version.rfind(':') else {
             return Err(Error::Argument {
@@ -125,7 +125,7 @@ impl Executor {
         let actor_id = string_value(field(actor, "id")?)?;
         let live = self.live().expect("rooms");
         cancel.check()?;
-        let hidden = floors.is_some_and(|floors| hides_point(floors, &version[..colon], sequence));
+        let hidden = floors.is_some_and(|window| window.hides(&version[..colon], sequence));
         let outcome = live
             .manager
             .restore_with(
@@ -200,11 +200,11 @@ impl Executor {
         doc_id: &str,
         name: &str,
         args: &Node,
-        floors: Option<&HashMap<String, Option<u64>>>,
+        floors: Option<&HistoryWindow>,
     ) -> Result<Node, Error> {
         let manager = &self.live().expect("rooms").manager;
         let hidden = |lineage: &str, sequence: u64| {
-            floors.is_some_and(|floors| hides_point(floors, lineage, sequence))
+            floors.is_some_and(|window| window.hides(lineage, sequence))
         };
         // A restore names the version that was current before, so it needs
         // the list too.
@@ -242,7 +242,9 @@ impl Executor {
             {
                 group = Duration::from_secs(60 * minutes as u64);
             }
-            let list = manager.history(doc_id, group).await?;
+            let list = manager
+                .history_windowed(doc_id, group, false, floors.map(|window| window.cut))
+                .await?;
             if list.status != HistoryStatus::Ready {
                 return Ok(version_failure(
                     &format!("The version history could not be read ({}).", list.status),
@@ -338,7 +340,7 @@ impl Executor {
         &self,
         doc_id: &str,
         input: &Node,
-    ) -> Result<(Option<Node>, Option<HashMap<String, Option<u64>>>), Error> {
+    ) -> Result<(Option<Node>, Option<HistoryWindow>), Error> {
         let live = self.live().expect("rooms");
         let Some(policy) = &live.policy else {
             return Ok((None, None));
@@ -374,7 +376,19 @@ impl Executor {
             });
             return Ok((refused, None));
         }
-        Ok((refused, Some(floors)))
+        Ok((refused, Some(HistoryWindow { cut, floors })))
+    }
+}
+
+/// The host's window for one agent call: its cut and each lineage's floor.
+struct HistoryWindow {
+    cut: SystemTime,
+    floors: HashMap<String, Option<u64>>,
+}
+
+impl HistoryWindow {
+    fn hides(&self, lineage: &str, sequence: u64) -> bool {
+        hides_point(&self.floors, lineage, sequence)
     }
 }
 

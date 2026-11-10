@@ -273,12 +273,10 @@ impl Handlers {
             query_all(raw.strip_prefix('?').unwrap_or(raw), "by").as_slice(),
             [by] if by == "actor"
         );
+        let cut = window.as_ref().map(|window| window.cut);
         let (rooms, doc) = (a.rooms.clone(), a.doc.clone());
-        let result = match blocking(&request, async move {
-            rooms.history_by(&doc, group, by_actor).await
-        })
-        .await
-        {
+        let history = async move { rooms.history_windowed(&doc, group, by_actor, cut).await };
+        let result = match blocking(&request, history).await {
             Some(Ok(result)) => result,
             _ => {
                 failed(&request, &mut response).await;
@@ -564,8 +562,10 @@ impl Handlers {
     /// POST .../restore: the key is required, If-Match is optional, and it
     /// answers like an edit.
     pub async fn history_restore(&self, mut request: Request, mut response: ResponseWriter) {
+        // A restore reads the version it writes, so the history read hook
+        // guards it too.
         let Some(a) = self
-            .admit_history(&request, &mut response, true, false)
+            .admit_history(&request, &mut response, true, true)
             .await
         else {
             return;
@@ -581,10 +581,13 @@ impl Handlers {
             refuse(&mut response, 400, BAD_IF_MATCH).await;
             return;
         };
-        let Ok(keep_databases) = query_databases(&request) else {
-            refuse(&mut response, 400, BAD_DATABASES).await;
-            return;
-        };
+        // The shipped route ignored unknown values: only one exact keep
+        // keeps databases.
+        let raw = request.query();
+        let keep_databases = matches!(
+            query_all(raw.strip_prefix('?').unwrap_or(raw), "databases").as_slice(),
+            [value] if value == "keep"
+        );
         let Ok(window) = self.window(&request, &mut response, &a).await else {
             return;
         };
@@ -937,8 +940,8 @@ fn query_block(request: &Request) -> Result<Option<String>, ()> {
 
 const BAD_DATABASES: &str = "databases must be keep or restore\n";
 
-/// databases=keep|restore: Ok(true) for keep, absent is restore. A repeated
-/// or other value is Err.
+/// The preview's databases=keep|restore: Ok(true) for keep, absent is
+/// restore. A repeated or other value is Err.
 fn query_databases(request: &Request) -> Result<bool, ()> {
     let raw = request.query();
     match query_all(raw.strip_prefix('?').unwrap_or(raw), "databases").as_slice() {

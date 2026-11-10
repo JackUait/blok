@@ -64,10 +64,11 @@ public sealed partial class BlokAgentVersionHistoryTests
   }
 
   [Fact]
-  public async Task AReadHookThatSaysNoRefusesAnAgentsListAndReadButNotItsRestore()
+  public async Task AReadHookThatSaysNoRefusesAnAgentsListReadAndRestore()
   {
     var (executor, _) = Hooked(canRead: false, null);
     var lineage = await EditTwiceAsync(executor);
+    var committed = operations.Committed(DocId).Count;
 
     var listed = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
         """{"commands":[{"name":"history.versions","args":{}}]}""", Actor)).ResultJson)!;
@@ -80,7 +81,8 @@ public sealed partial class BlokAgentVersionHistoryTests
     Assert.Equal("TOOL_ACTION_FAILED", listed["error"]!["code"]!.GetValue<string>());
     Assert.False(read["ok"]!.GetValue<bool>(), read.ToJsonString());
     Assert.Equal("TOOL_ACTION_FAILED", read["error"]!["code"]!.GetValue<string>());
-    Assert.True(restore["ok"]!.GetValue<bool>(), restore.ToJsonString());
+    Assert.Equal("TOOL_ACTION_FAILED", restore["error"]!["code"]!.GetValue<string>());
+    Assert.Equal(committed, operations.Committed(DocId).Count);
   }
 
   [Fact]
@@ -91,5 +93,22 @@ public sealed partial class BlokAgentVersionHistoryTests
     await executor.ExecuteInRoomAsync(DocId, """{"commands":[{"name":"history.versions","args":{}}]}""", new BlokAgentActor("agent-cs", "Agent", "person-1"));
 
     Assert.Equal([$"person-1 {DocId}"], asked);
+  }
+
+  /// <summary>A group that straddles the cut shows only its visible records to an agent.</summary>
+  [Fact]
+  public async Task AnAgentsListShowsNothingOfAHiddenRecord()
+  {
+    operations.RecordSpacing = TimeSpan.FromMinutes(1);
+    // Records 1 and 2 land a minute apart, in one 15-minute group; the cut hides 1.
+    var (executor, _) = Hooked(canRead: true, TimeSpan.FromSeconds(90));
+    var lineage = await EditTwiceAsync(executor);
+
+    var listed = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"history.versions","args":{"group":15}}]}""", Actor)).ResultJson)!;
+
+    var version = Assert.Single(listed["results"]![0]!["versions"]!.AsArray())!;
+    Assert.Equal($"{lineage}:2", version["version"]!.GetValue<string>());
+    Assert.Equal(120_000L, version["startedAt"]!.GetValue<long>());
   }
 }

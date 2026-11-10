@@ -19,7 +19,7 @@ use crate::ops::{
 };
 use crate::restore::{RestoreTrash, plan_restore_pinned};
 use crate::restore_guards::{RestoreGuard, restore_guards};
-use crate::restore_scope::keep_databases;
+use crate::restore_scope::{keep_databases, kept_restore_guards};
 use crate::timeline::{
     LineageHeaders, TIMELINE_IDLE_GAP, TIMELINE_MAX_SPAN, Version, group_versions_by,
 };
@@ -196,6 +196,19 @@ impl Manager {
         group: Duration,
         by_actor: bool,
     ) -> Result<HistoryList, Error> {
+        self.history_windowed(doc_id, group, by_actor, None).await
+    }
+
+    /// history_by over what a window with this cut shows: groups are built
+    /// from visible records only, and a lineage whose baseline is hidden has
+    /// no created_at. None shows everything.
+    pub async fn history_windowed(
+        &self,
+        doc_id: &str,
+        group: Duration,
+        by_actor: bool,
+        cut: Option<SystemTime>,
+    ) -> Result<HistoryList, Error> {
         let Some(history) = self.history_store() else {
             return Ok(HistoryList::status(HistoryStatus::None));
         };
@@ -217,7 +230,7 @@ impl Manager {
             }
             Ok((lineages, with_headers))
         };
-        let (lineages, with_headers) = match read() {
+        let (mut lineages, mut with_headers) = match read() {
             Ok(read) => read,
             Err(err) if is_corrupt(&err) => {
                 self.0.logf(&format!(
@@ -229,6 +242,12 @@ impl Manager {
         };
         if self.is_purged(&ctx, history, doc_id)? {
             return Ok(HistoryList::status(HistoryStatus::Purged));
+        }
+        if let Some(cut) = cut {
+            with_headers = crate::window::visible_timeline(&with_headers, cut);
+            for (lineage, visible) in lineages.iter_mut().zip(&with_headers) {
+                lineage.created_at = visible.lineage.created_at;
+            }
         }
         let (idle_gap, max_span) = if group > Duration::ZERO {
             (group, group)
@@ -654,7 +673,10 @@ impl Manager {
                     .as_ref()
                     .map_or(target.as_slice(), |kept| kept.target.as_slice());
                 if let Some(confirmed) = confirmed.as_ref() {
-                    let guards = restore_guards(&current, aim);
+                    let guards = match &kept {
+                        Some(kept) => kept_restore_guards(&current, kept),
+                        None => restore_guards(&current, aim),
+                    };
                     if guards.iter().any(|guard| !confirmed.contains(guard.kind)) {
                         *refusal
                             .lock()
@@ -909,10 +931,10 @@ impl Manager {
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
                 preview.blocks = diff_blocks(&current, &after);
                 preview.page = diff_page(&page_fields(&doc)?, &page_fields(&scratch)?);
-                preview.guards = restore_guards(&current, aim);
-                preview
-                    .guards
-                    .extend(kept.into_iter().flat_map(|kept| kept.orphaned));
+                preview.guards = match &kept {
+                    Some(kept) => kept_restore_guards(&current, kept),
+                    None => restore_guards(&current, aim),
+                };
                 preview.frame_bytes = frame_bytes;
                 Ok(ops)
             })

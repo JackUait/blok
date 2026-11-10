@@ -196,7 +196,7 @@ public abstract record BlokPageLocation
 }
 
 /// <summary>What the host's history hooks allow one agent call.</summary>
-/// <param name="CanRead">The read hook's answer. No refuses history.versions, history.read and history.changes.</param>
+/// <param name="CanRead">The read hook's answer. No refuses history.versions, history.read, history.changes and history.restore.</param>
 /// <param name="Window">How far back the call may see; null for all of it.</param>
 internal sealed record BlokAgentHistoryAccess(bool CanRead, TimeSpan? Window);
 

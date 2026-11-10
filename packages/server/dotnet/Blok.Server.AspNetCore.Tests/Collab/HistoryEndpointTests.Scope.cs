@@ -24,15 +24,19 @@ public sealed partial class HistoryEndpointTests
   [InlineData("?databases=Keep")]
   [InlineData("?databases=none")]
   [InlineData("?databases=keep&databases=keep")]
-  public async Task ADatabasesOtherThanKeepOrRestoreIsABadRequest(string query)
+  public async Task OnlyOneExactKeepKeepsDatabasesAndTheShippedRestoreIgnoresAnyOtherValue(string query)
   {
     await using var history = await HistoryApp.StartAsync();
     var lineage = await history.OpenAsync();
+    await history.EditAsync("database", $$"""{ "ops": [ { "op": "insert", "id": "d", "block": { "type": "database", "data": {{TableData}} } } ] }""");
 
-    using var restore = await Send(history.App, HttpMethod.Post, $"/history/{lineage}/0/restore{query}", key: "bad");
+    // The shipped route ignored unknown values: anything but one exact keep is a plain restore.
+    using var restore = await Send(history.App, HttpMethod.Post, $"/history/{lineage}/0/restore{query}", key: "other");
     using var preview = await history.SendAsync(HttpMethod.Post, $"/history/{lineage}/0/restore/preview{query}");
 
-    await AssertError(restore, HttpStatusCode.BadRequest, "databases must be keep or restore\n");
+    Assert.Equal(HttpStatusCode.NoContent, restore.StatusCode);
+    Assert.Equal(["a"], (await history.BlocksAsync()).AsArray().Select(block => block!["id"]!.GetValue<string>()));
+    // The preview route is new, so it refuses what it does not know.
     await AssertError(preview, HttpStatusCode.BadRequest, "databases must be keep or restore\n");
   }
 

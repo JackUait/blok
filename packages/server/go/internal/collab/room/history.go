@@ -96,6 +96,14 @@ func (m *Manager) ReadNotes(ctx context.Context, docID, lineage string) (map[uin
 // HistoryBy is History where byActor also starts a version where the actor
 // changes. With a record notes store, each version carries its actor kinds.
 func (m *Manager) HistoryBy(ctx context.Context, docID string, group time.Duration, byActor bool) (HistoryList, error) {
+	return m.HistoryWindowed(ctx, docID, group, byActor, nil)
+}
+
+// HistoryWindowed is HistoryBy over what a window with this cut shows:
+// groups are built from visible records only, and a lineage whose baseline
+// is hidden has no createdAt. A nil cut shows everything.
+func (m *Manager) HistoryWindowed(ctx context.Context, docID string, group time.Duration, byActor bool,
+	cut *time.Time) (HistoryList, error) {
 	history, ok := m.history()
 	if !ok {
 		return HistoryList{Status: HistoryNone}, nil
@@ -130,6 +138,12 @@ func (m *Manager) HistoryBy(ctx context.Context, docID string, group time.Durati
 	}
 	if purged, err := m.isPurged(ctx, history, docID); err != nil || purged {
 		return HistoryList{Status: HistoryPurged}, err
+	}
+	if cut != nil {
+		withHeaders = VisibleTimeline(withHeaders, *cut)
+		for i := range lineages {
+			lineages[i].CreatedAt = withHeaders[i].Lineage.CreatedAt
+		}
 	}
 	idleGap, maxSpan := timelineIdleGap, timelineMaxSpan
 	if group > 0 {
@@ -559,6 +573,9 @@ func (m *Manager) RestoreWith(ctx context.Context, docID, lineage string, sequen
 			}
 			if confirmed != nil {
 				guards := RestoreGuards(current, aim)
+				if pinned != nil {
+					guards = KeptRestoreGuards(current, KeptDatabases{Target: aim, Pinned: pinned})
+				}
 				for _, guard := range guards {
 					if !confirmed[guard.Kind] {
 						refused = guards
@@ -633,10 +650,10 @@ func (m *Manager) PreviewRestoreWith(ctx context.Context, docID, lineage string,
 			}
 			aim := target
 			var pinned map[string]bool
-			var orphaned []RestoreGuard
+			var kept *KeptDatabases
 			if options.KeepDatabases {
-				kept := KeepDatabases(current, target)
-				aim, pinned, orphaned = kept.Target, kept.Pinned, kept.Orphaned
+				keep := KeepDatabases(current, target)
+				kept, aim, pinned = &keep, keep.Target, keep.Pinned
 			}
 			// The restorer's id is part of the frame the real restore sends.
 			ops := PlanRestorePinned(current, convert.DescribeStructure(doc), aim, convert.ReadPageMaps(doc), targetMaps,
@@ -651,7 +668,10 @@ func (m *Manager) PreviewRestoreWith(ctx context.Context, docID, lineage string,
 			}
 			preview.Blocks = DiffBlocks(current, after)
 			preview.Page = DiffPage(PageFields(doc), PageFields(scratch))
-			preview.Guards = append(RestoreGuards(current, aim), orphaned...)
+			preview.Guards = RestoreGuards(current, aim)
+			if kept != nil {
+				preview.Guards = KeptRestoreGuards(current, *kept)
+			}
 			preview.FrameBytes = frameBytes
 			return ops, nil
 		}, expect)

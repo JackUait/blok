@@ -985,6 +985,125 @@ test.describe('copy and paste', () => {
     ]);
   });
 
+  test.describe('pasting over a block selection', () => {
+    const doc: OutputData['blocks'] = [
+      { id: 'a', type: 'paragraph', data: { text: 'First' } },
+      { id: 'b', type: 'paragraph', data: { text: 'Second' } },
+      { id: 'x', type: 'paragraph', data: { text: 'Xray' } },
+      { id: 'y', type: 'paragraph', data: { text: 'Yankee' } },
+      { id: 'z', type: 'paragraph', data: { text: 'Zulu' } },
+    ];
+    const editable = (page: Page, id: string): Locator => page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`);
+    const selectedIds = async (page: Page): Promise<string[]> => await page.evaluate(() =>
+      Array.from(document.querySelectorAll('[data-blok-selected="true"]')).map((el) => el.getAttribute('data-blok-id') ?? ''));
+    const texts = async (page: Page): Promise<unknown[]> => (await saveBlok(page)).blocks.map((b) => b.data.text);
+
+    const copyFirstTwo = async (page: Page): Promise<Record<string, string>> => {
+      await editable(page, 'a').click();
+      await editable(page, 'b').click({ modifiers: ['Shift'] });
+      expect(await selectedIds(page)).toEqual(['a', 'b']);
+      const clipboardData = await copyFromElement(page.locator('[data-blok-id="a"]'));
+
+      expect(clipboardData['application/x-blok']).toBeDefined();
+      await page.keyboard.press('Escape');
+
+      return clipboardData;
+    };
+
+    // The browser fires paste at the focused element, which is body after a rubber band or keyboard selection.
+    const pasteAtFocus = async (page: Page, data: Record<string, string>): Promise<boolean> =>
+      await page.evaluate((pasteData) => {
+        const event = Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+          clipboardData: {
+            getData: (type: string): string => pasteData[type] ?? '',
+            types: Object.keys(pasteData),
+          },
+        });
+
+        (document.activeElement ?? document.body).dispatchEvent(event);
+
+        return event.defaultPrevented;
+      }, data);
+
+    test('a shift-click selection is replaced by the paste', async ({ page }) => {
+      await createBlokWithElements(page, doc);
+      const clipboardData = await copyFirstTwo(page);
+
+      await editable(page, 'x').click();
+      await editable(page, 'y').click({ modifiers: ['Shift'] });
+      expect(await selectedIds(page)).toEqual(['x', 'y']);
+
+      const prevented = await pasteAtFocus(page, clipboardData);
+
+      await expect.poll(() => texts(page)).toEqual(['First', 'Second', 'First', 'Second', 'Zulu']);
+      expect(prevented).toBe(true);
+      expect(await selectedIds(page)).toEqual([]);
+    });
+
+    test('a select-all selection is replaced by the paste', async ({ page }) => {
+      await createBlokWithElements(page, doc.slice(0, 2));
+      const clipboardData = await copyFirstTwo(page);
+      const commandModifier = await getCommandModifierKey(page);
+
+      await editable(page, 'a').click();
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(`${commandModifier}+A`);
+      }
+      expect(await selectedIds(page)).toEqual(['a', 'b']);
+
+      const prevented = await pasteAtFocus(page, clipboardData);
+
+      await expect.poll(() => texts(page)).toEqual(['First', 'Second']);
+      expect(prevented).toBe(true);
+    });
+
+    test('a rubber-band selection is replaced by a paste fired at body', async ({ page }) => {
+      await createBlokWithElements(page, doc);
+      const clipboardData = await copyFirstTwo(page);
+      const from = await page.locator('[data-blok-id="x"]').boundingBox();
+      const to = await page.locator('[data-blok-id="y"]').boundingBox();
+
+      if (from === null || to === null) {
+        throw new Error('blocks have no box');
+      }
+      await page.mouse.move(10, from.y + from.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(10, to.y + to.height / 2, { steps: 12 });
+      await page.mouse.up();
+      expect(await selectedIds(page)).toEqual(['x', 'y']);
+      expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+
+      const prevented = await pasteAtFocus(page, clipboardData);
+
+      await expect.poll(() => texts(page)).toEqual(['First', 'Second', 'First', 'Second', 'Zulu']);
+      expect(prevented).toBe(true);
+    });
+
+    test('a block selected by keyboard is replaced by a paste fired at body', async ({ page }) => {
+      await createBlok(page, {
+        tools: { image: { className: 'defaultBlockTools.image.class' } },
+        data: {
+          blocks: [
+            ...doc.slice(0, 2),
+            { id: 'img', type: 'image', data: { url: 'http://127.0.0.1:4444/test/playwright/fixtures/image/shot.png', caption: 'Cap' } },
+            { id: 'tail', type: 'paragraph', data: { text: 'Tail' } },
+          ],
+        },
+      });
+      const clipboardData = await copyFirstTwo(page);
+
+      await editable(page, 'b').click();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('ArrowDown');
+      expect(await selectedIds(page)).toEqual(['img']);
+
+      const prevented = await pasteAtFocus(page, clipboardData);
+
+      await expect.poll(() => texts(page)).toEqual(['First', 'Second', 'First', 'Second', 'Tail']);
+      expect(prevented).toBe(true);
+    });
+  });
+
   test.describe('blocks of a tool the pasting editor lacks', () => {
     const doc: OutputData['blocks'] = [
       { id: 'p1', type: 'paragraph', data: { text: 'Before toggle' } },

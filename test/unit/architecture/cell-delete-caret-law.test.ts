@@ -45,6 +45,9 @@ const EXEMPTIONS: Record<string, string> = {
     'Type-over path passes forceReplacement=true, so a replacement block is ' +
     'ALWAYS returned and the caret is set to it (the table claims it back ' +
     'into the cell via the removed-block cell record).',
+  'components/modules/paste/index.ts':
+    'Paste over a block selection passes forceReplacement=true, so a replacement ' +
+    'block is ALWAYS returned and the caret is set to it before the paste lands.',
 };
 
 const collectSourceFiles = (dir: string, out: string[] = []): string[] => {

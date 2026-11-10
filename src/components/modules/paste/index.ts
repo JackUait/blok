@@ -378,6 +378,7 @@ export class Paste extends Module {
     const holder = this.Blok.UI.nodes.holder;
 
     this.listeners.on(holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.on(document, 'paste', this.handleDocumentPasteEvent);
     this.listeners.on(holder, 'keydown', this.handleShiftStateWrapper);
     this.listeners.on(holder, 'keyup', this.handleShiftStateWrapper);
     this.listeners.on(holder, 'drop', this.handleDropEventWrapper);
@@ -392,6 +393,7 @@ export class Paste extends Module {
     const holder = this.Blok.UI.nodes.holder;
 
     this.listeners.off(holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.off(document, 'paste', this.handleDocumentPasteEvent);
     this.listeners.off(holder, 'keydown', this.handleShiftStateWrapper);
     this.listeners.off(holder, 'keyup', this.handleShiftStateWrapper);
     this.listeners.off(holder, 'drop', this.handleDropEventWrapper);
@@ -603,7 +605,15 @@ export class Paste extends Module {
     // Read now: the awaits below can outlive the event, and the browser empties its clipboard then.
     const clipboard = event.clipboardData ? snapshotOf(event.clipboardData) : null;
     const loadedAtEvent = this.engineLoaded;
-    const { BlockManager, BlockEvents, Toolbar } = this.Blok;
+    const { BlockManager, BlockEvents, BlockSelection, CrossBlockSelection, Toolbar } = this.Blok;
+
+    // Before the first await: a native paste into the focused block must not run as well.
+    if (CrossBlockSelection.textSelection === null && BlockSelection.anyBlockSelected) {
+      event.preventDefault();
+      await this.pasteOverBlockSelection(clipboard, loadedAtEvent);
+
+      return;
+    }
 
     /**
      * A paste over a cross-block text selection replaces it. The range spans two
@@ -651,5 +661,50 @@ export class Paste extends Module {
     }
 
     Toolbar.moveAndOpen();
+  };
+
+  /**
+   * A paste over selected blocks replaces them, like typing over them: they
+   * go, and the paste lands in the empty block left in their place.
+   */
+  private async pasteOverBlockSelection(clipboard: DataTransfer | null, loadedAtEvent: boolean): Promise<void> {
+    const { BlockManager, BlockSelection, Caret, Toolbar } = this.Blok;
+    const replacement = BlockManager.deleteSelectedBlocksAndInsertReplacement(true);
+
+    BlockSelection.clearSelection();
+
+    if (replacement === undefined || clipboard === null) {
+      return;
+    }
+
+    Caret.setToBlock(replacement, Caret.positions.START);
+
+    if (this.isShiftHeld) {
+      await this.processAsText(clipboard.getData('text/plain'), loadedAtEvent);
+    } else {
+      await this.processDataTransfer(clipboard, replacement.currentInput, loadedAtEvent);
+    }
+
+    Toolbar.moveAndOpen();
+  }
+
+  /**
+   * The browser fires a paste at the focused element. After a rubber-band or
+   * keyboard block selection that is body, outside the holder listener.
+   */
+  private handleDocumentPasteEvent = (event: Event): void => {
+    const target = event.target;
+    const holder = this.Blok.UI.nodes.holder;
+
+    if (
+      event.defaultPrevented ||
+      (target instanceof Node && holder.contains(target)) ||
+      (target instanceof HTMLElement && (dom$.isNativeInput(target) || target.isContentEditable)) ||
+      !this.Blok.BlockSelection.anyBlockSelected
+    ) {
+      return;
+    }
+
+    this.handlePasteEventWrapper(event);
   };
 }

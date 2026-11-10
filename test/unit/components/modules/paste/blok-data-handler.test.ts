@@ -413,6 +413,33 @@ describe('BlokDataHandler', () => {
       expect(blockInstances[1].parentId).toBeNull();
     });
 
+    it('puts blocks whose copied parent is not in the paste into the container the caret is in', async () => {
+      const { modules, blockInstances, setBlockParentMock } = createBlokModulesMock();
+
+      Object.assign(modules.BlockManager.currentBlock ?? {}, { id: 'target', parentId: 'ctr' });
+
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      const pasteData = JSON.stringify([
+        { id: 'a', tool: 'paragraph', data: { text: 'A' }, parentId: 'gone', contentIds: [] },
+        { id: 'b', tool: 'toggle', data: { text: 'B' }, parentId: 'gone', contentIds: ['b-child'] },
+        { id: 'b-child', tool: 'paragraph', data: { text: 'B child' }, parentId: 'b', contentIds: [] },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: false });
+
+      expect(blockInstances).toHaveLength(3);
+      expect(blockInstances[0].parentId).toBe('ctr');
+      expect(blockInstances[1].parentId).toBe('ctr');
+      expect(blockInstances[2].parentId).toBe(blockInstances[1].id);
+      expect(setBlockParentMock).not.toHaveBeenCalledWith(blockInstances[2], 'ctr');
+    });
+
     it('does not replace current block when pasting hierarchical content (table+children)', async () => {
       const { modules, insertedBlocks } = createBlokModulesMock();
       const handler = new BlokDataHandler(

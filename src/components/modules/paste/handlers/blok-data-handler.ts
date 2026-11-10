@@ -375,6 +375,8 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       : (currentBlock?.parentId ?? null);
     const contextParentId = redirectTable !== undefined ? redirectTable.parentId : caretParentId;
 
+    const pastedIds = new Set(blocks.map(b => b.id));
+
     // IDs of pasted table blocks. ONLY a table's cell children must be inserted
     // before their parent: the table block's `data.content` references its cell
     // child IDs and the table tool resolves (adopts) them on insert, so the
@@ -458,13 +460,11 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
           ...(id !== undefined && { id }),
         });
 
-        /**
-         * Wire the root block into the surrounding container membership.
-         * Only applies when the clipboard payload itself did not declare
-         * a parentId for this block (explicit clipboard hierarchy wins,
-         * since it is restored by the pass below).
-         */
-        if (contextParentId !== null && (original.parentId === undefined || original.parentId === null)) {
+        // A root of the paste joins the caret's container. A copied parent that is
+        // not in the paste counts as no parent: the pass below cannot restore it.
+        const parentIsPasted = original.parentId !== undefined && original.parentId !== null && pastedIds.has(original.parentId);
+
+        if (contextParentId !== null && !parentIsPasted && block.parentId !== contextParentId) {
           BlockManager.setBlockParent(block, contextParentId);
         }
 

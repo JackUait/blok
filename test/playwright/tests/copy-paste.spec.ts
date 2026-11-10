@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, gotoTestPage, test } from './helpers/shared-page';
 import { savedAsHtml } from './helpers/saved-as-html';
+import { openFixtureToggles } from './helpers/toggle-open';
 
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -35,7 +36,7 @@ type SerializableToolConfig = {
   config?: Record<string, unknown>;
 };
 
-type CreateBlokOptions = Pick<BlokConfig, 'data' | 'inlineToolbar' | 'placeholder' | 'readOnly'> & {
+type CreateBlokOptions = Pick<BlokConfig, 'data' | 'dataModel' | 'inlineToolbar' | 'placeholder' | 'readOnly'> & {
   tools?: Record<string, SerializableToolConfig>;
 };
 
@@ -880,6 +881,64 @@ test.describe('copy and paste', () => {
           output.blocks.map(({ type, data }) => ({ type, data }));
 
         await expect.poll(async () => shape(await saveBlok(page))).toEqual(shape(source));
+      });
+    }
+  });
+
+  test.describe('blocks copied out of a container', () => {
+    const doc: OutputData['blocks'] = [
+      { id: 'src', type: 'toggle', data: { text: 'Source', isOpen: true }, content: ['s1', 's2'] },
+      { id: 's1', type: 'paragraph', parent: 'src', data: { text: 'First child' } },
+      { id: 's2', type: 'paragraph', parent: 'src', data: { text: 'Second child' } },
+      { id: 'cal', type: 'callout', data: { emoji: '💡' }, content: ['cal-in'] },
+      { id: 'cal-in', type: 'paragraph', parent: 'cal', data: { text: '' } },
+      { id: 'tbl', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [['', 'B1'], ['A2', 'B2']] } },
+      { id: 'tail', type: 'paragraph', data: { text: 'Tail' } },
+    ];
+
+    const targets = [
+      {
+        name: 'a callout child',
+        parent: 'cal',
+        locate: (page: Page): Locator => page.locator('[data-blok-id="cal-in"] [contenteditable="true"]'),
+      },
+      {
+        name: 'a table cell',
+        parent: 'tbl',
+        locate: (page: Page): Locator => page.locator('[data-blok-id="tbl"] [data-blok-table-cell]').first().locator('[contenteditable="true"]').first(),
+      },
+    ];
+
+    for (const { name, parent, locate } of targets) {
+      test(`stay inside ${name} when pasted there`, async ({ page }) => {
+        await createBlok(page, { data: { blocks: doc }, dataModel: 'hierarchical' });
+        await openFixtureToggles(page, { blocks: doc });
+
+        await page.locator('[data-blok-id="s1"] [contenteditable="true"]').click();
+        await page.locator('[data-blok-id="s2"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+        await expect(page.locator('[data-blok-id="s2"][data-blok-selected="true"]')).toBeVisible();
+
+        const clipboardData = await copyFromElement(page.locator('[data-blok-id="s1"]'));
+
+        expect(clipboardData['application/x-blok']).toBeDefined();
+
+        const target = locate(page);
+
+        await target.click();
+        await paste(page, page.locator(':focus'), clipboardData);
+
+        const placed = async (): Promise<{ inTarget: unknown[]; roots: unknown[] }> => {
+          const { blocks } = await saveBlok(page);
+
+          return {
+            inTarget: blocks.filter((b) => b.parent === parent).map((b) => b.data.text),
+            roots: blocks.filter((b) => b.parent === undefined).map((b) => b.id),
+          };
+        };
+
+        await expect.poll(async () => (await placed()).inTarget.filter((text) => text === 'First child' || text === 'Second child'))
+          .toEqual(['First child', 'Second child']);
+        expect((await placed()).roots).toEqual(['src', 'cal', 'tbl', 'tail']);
       });
     }
   });

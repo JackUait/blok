@@ -151,6 +151,63 @@ test.describe('page body as child blocks', () => {
       .not.toContain('Second line');
   });
 
+  test('body blocks copied from one row paste into another row, toggle child included', async ({ page }) => {
+    await mount(page, blocks().flatMap((b): OutputBlockData[] => {
+      if (b.id === 'r1') {
+        return [{ ...b, content: ['b1', 'b2', 'b3'] }];
+      }
+
+      return b.id !== 'b1' ? [b] : [
+        { id: 'b1', type: 'paragraph', parent: 'r1', data: { text: 'Body one' } },
+        { id: 'b2', type: 'toggle', parent: 'r1', data: { text: 'Body toggle', isOpen: true }, content: ['b2c'] },
+        { id: 'b2c', type: 'paragraph', parent: 'b2', data: { text: 'Toggle child' } },
+        { id: 'b3', type: 'paragraph', parent: 'r1', data: { text: 'Body three' } },
+      ];
+    }));
+    await openRow(page, 'r1');
+    await body(page).getByText('Body one').click();
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Shift+ArrowDown');
+    await page.keyboard.press('Shift+ArrowDown');
+
+    const formats = await page.evaluate(() => {
+      const store: Record<string, string> = {};
+      const transfer = new DataTransfer();
+      const setData = transfer.setData.bind(transfer);
+
+      transfer.setData = (format: string, value: string): void => {
+        store[format] = value;
+        setData(format, value);
+      };
+      (document.activeElement ?? document.body).dispatchEvent(new ClipboardEvent('copy', { clipboardData: transfer, bubbles: true, cancelable: true }));
+
+      return store;
+    });
+
+    expect(formats['application/x-blok']).toBeDefined();
+
+    await page.mouse.click(5, 5);
+    await page.keyboard.press('Escape');
+    await expect(peek(page)).toHaveCount(0);
+    await openRow(page, 'r2');
+    await body(page).locator('[data-blok-database-row-empty]').click();
+    await page.evaluate((data) => {
+      const transfer = new DataTransfer();
+
+      Object.entries(data).forEach(([format, value]) => transfer.setData(format, value));
+      (document.activeElement ?? document.body).dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
+    }, formats);
+
+    await expect.poll(async () => (await saved(page)).filter((b) => b.parent === 'r2').map(textOf))
+      .toEqual(['Body one', 'Body toggle', 'Body three']);
+
+    const after = await saved(page);
+    const pastedToggle = after.find((b) => b.parent === 'r2' && b.type === 'toggle');
+
+    expect(after.filter((b) => b.parent === pastedToggle?.id).map(textOf)).toEqual(['Toggle child']);
+    expect(after.filter((b) => b.parent === undefined).map((b) => b.id)).toEqual(['p-before', 'db-1', 'p-after']);
+  });
+
   test('Shift+Tab on a top-level body block keeps it in the page', async ({ page }) => {
     await mount(page, blocks());
     await openRow(page, 'r1');

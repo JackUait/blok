@@ -57,6 +57,36 @@ const selection = (page: Page): Promise<string> => page.evaluate(() => {
   return `${point(sel.anchorNode, sel.anchorOffset)} -> ${point(sel.focusNode, sel.focusOffset)}`;
 });
 
+/**
+ * The offset in `targetId` whose caret sits closest to the caret at
+ * `sourceId@sourceOffset`. Glyph widths differ per OS font, so the column
+ * cannot be a fixed number.
+ */
+const nearestColumn = (page: Page, sourceId: string, sourceOffset: number, targetId: string): Promise<number> => page.evaluate(({ from, at, to }) => {
+  const textOf = (id: string): Text => {
+    const node = document.querySelector(`[data-blok-id="${id}"] [contenteditable="true"]`)?.firstChild;
+
+    if (!(node instanceof Text)) {
+      throw new Error(`block ${id} is not plain text`);
+    }
+
+    return node;
+  };
+  const caretX = (text: Text, offset: number): number => {
+    const range = document.createRange();
+
+    range.setStart(text, offset);
+    range.collapse(true);
+
+    return range.getBoundingClientRect().left;
+  };
+  const goal = caretX(textOf(from), at);
+  const target = textOf(to);
+  const distances = Array.from({ length: target.length + 1 }, (_, offset) => Math.abs(caretX(target, offset) - goal));
+
+  return distances.indexOf(Math.min(...distances));
+}, { from: sourceId, at: sourceOffset, to: targetId });
+
 const savedText = async (page: Page): Promise<string[]> => blocksAsHtml(await page.evaluate(async () => {
   if (!window.blokInstance) {
     throw new Error('no editor');
@@ -134,6 +164,9 @@ test.describe('undo audit: keyboard cross-block text selection (U072)', () => {
     await page.keyboard.press('ArrowDown');
     await page.keyboard.up('Shift');
 
-    expect(await selection(page)).toBe('b1@3 -> b2@4');
+    const column = await nearestColumn(page, 'b1', 6, 'b2');
+
+    expect(column).toBeGreaterThan(0);
+    expect(await selection(page)).toBe(`b1@3 -> b2@${column}`);
   });
 });

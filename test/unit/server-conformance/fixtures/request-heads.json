@@ -425,19 +425,19 @@
   },
   {
     "name": "absolute target with a fragment",
-    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "absolute target with a query and a fragment",
-    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "absolute target with a fragment and no path",
-    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\n404 page not found\n\r\n0\r\n\r\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "absolute target with a control byte in the fragment",
-    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "absolute target with a control byte in the path",
@@ -490,6 +490,34 @@
   {
     "name": "asterisk and more",
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "target with a fragment",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "target with a fragment after the query",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "target with a fragment on HTTP/1.0",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "target with a fragment on CONNECT",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "target with an escaped fragment mark",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "target with a fragment and an unknown version",
+    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "target with a fragment past the line limit",
+    "response": "HTTP/1.1 414 URI Too Long\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "HTTP/1.0 request",

@@ -214,6 +214,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     PPTX_BLOB,
   'tools/file/pptx/renderer/TextRenderer.ts » style: maskGrad':
     PPTX_FILL,
+  'tools/callout/emoji-landing.ts » style: `position:absolute;${css}`':
+    'landing dots: every caller is in this file and builds css from numbers, fixed strings and run.color, which is emojiColor() output (rgb() of three rounded canvas numbers) or the FALLBACK_COLOR literal — no stored text, so no url()',
   'playground/presence-face.ts » style: color':
     'dev playground only: a peer presence colour as a background — CSS url() cannot run script',
   'tools/table/table-resize.ts » style: `linear-gradient(to right, transparent var(--blok-table-resize-line-x), #3b82f6 var(--blok-table-resize-line-x), #3b82f6 calc(var(--blok-table-resize-line-x) + ${RESIZE_LINE_WIDTH}px), transparent calc(var(--blok-table-resize-line-x) + ${RESIZE_LINE_WIDTH}px))`':

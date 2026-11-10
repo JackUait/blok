@@ -90,12 +90,20 @@ class LandingRun {
     const ghost = document.createElement('span');
 
     ghost.textContent = glyph;
-    ghost.style.cssText = `position:absolute;left:0;top:0;width:${size}px;height:${size}px;margin:${-size / 2}px 0 0 ${-size / 2}px;display:grid;place-items:center;font-size:${Math.round(size * 0.9)}px;line-height:1;will-change:transform;`;
+    ghost.style.cssText = 'position:absolute;left:0;top:0;display:grid;place-items:center;line-height:1;will-change:transform;';
+    ghost.style.width = `${size}px`;
+    ghost.style.height = `${size}px`;
+    ghost.style.margin = `${-size / 2}px 0 0 ${-size / 2}px`;
+    ghost.style.fontSize = `${Math.round(size * 0.9)}px`;
     this.overlay.append(ghost);
 
     return ghost;
   }
 
+  /**
+   * @param css - built in this file from numbers, fixed strings and `color` only.
+   *   Never pass stored or user text: it could carry `url()` (url-sink-law).
+   */
   public dot(css: string): HTMLElement {
     const dot = document.createElement('span');
 

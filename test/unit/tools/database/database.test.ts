@@ -74,6 +74,8 @@ vi.mock('../../../../src/components/utils/popover', () => {
     private readonly minWidth: unknown;
     private readonly offset: unknown;
 
+    escapeClosesSubmenuFirst = false;
+
     constructor(params: { items?: Array<{ title?: string; onActivate?: () => void; type?: string; element?: HTMLElement }>; [key: string]: unknown }) {
       this.items = params.items ?? [];
       this.className = params.class;
@@ -87,6 +89,7 @@ vi.mock('../../../../src/components/utils/popover', () => {
       if (typeof this.className === 'string') this.container.setAttribute('data-mock-popover-class', this.className);
       if (typeof this.minWidth === 'string') this.container.setAttribute('data-mock-popover-min-width', this.minWidth);
       if (typeof this.offset === 'number') this.container.setAttribute('data-mock-popover-offset', String(this.offset));
+      if (this.escapeClosesSubmenuFirst) this.container.setAttribute('data-mock-popover-escape-submenu-first', '');
 
       for (const item of this.items) {
         if (item.type === PopoverItemType.Html && item.element !== undefined) {
@@ -4280,6 +4283,17 @@ describe('DatabaseTool', () => {
 
       expect([...document.body.querySelectorAll('[data-mock-popover-action]')].map((el) => el.getAttribute('data-mock-popover-action')))
         .toEqual(['tools.database.calccount', 'tools.database.calcpercent']);
+
+      tool.destroy();
+    });
+
+    // Matches the one-layer Escape measured on Notion's other menus (research/23:33, 26:78, 27:299, 35:418).
+    it('closes the count menu one layer per Escape', () => {
+      const { tool, element } = board();
+
+      countOf(element, 'opt-todo')?.click();
+
+      expect(document.querySelector('[data-mock-popover]')?.hasAttribute('data-mock-popover-escape-submenu-first')).toBe(true);
 
       tool.destroy();
     });

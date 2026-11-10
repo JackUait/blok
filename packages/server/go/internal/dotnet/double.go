@@ -27,14 +27,6 @@ func FormatDouble(value float64) string {
 	if value == 0 {
 		return sign + "0"
 	}
-	// .NET prints these two powers of two with 16 digits that do not
-	// round-trip (measured on .NET 10.0.11 over every power of two).
-	switch value {
-	case 0x1p-958:
-		return sign + "4.104536801298376E-289"
-	case 0x1p-25:
-		return sign + "2.980232238769531E-08"
-	}
 	text := strconv.FormatFloat(value, 'e', -1, 64)
 	mark := strings.IndexByte(text, 'e')
 	digits := strings.Replace(text[:mark], ".", "", 1)

@@ -1397,8 +1397,9 @@ const REQUEST_HEADS: Record<string, Buffer> = {
     'with IPv6 in upper case': ['http://[::A]/health', '[::A]'],
     'with IPv6 and a port': ['http://[::1]:8080/health', '[::1]:8080'],
     'with an upper-case scheme': ['Http://x/health', 'x'],
-    // System.Uri drops the fragment. Kestrel routes a control byte or a bad
-    // escape in the path (no route), and a control byte in the query.
+    // Kestrel refuses any "#" in a target (since .NET 10.0.15). It routes a
+    // control byte or a bad escape in the path (no route), and a control
+    // byte in the query.
     'with a fragment': ['http://x/health#f', 'x'],
     'with a query and a fragment': ['http://x/health?a#f', 'x'],
     'with a fragment and no path': ['http://x:80#f', 'x'],
@@ -1419,6 +1420,14 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'authority target with an underscore': bytes('GET a_b HTTP/1.1\r\n'),
   'asterisk target with GET': bytes('GET * HTTP/1.1\r\n'),
   'asterisk and more': bytes('GET *x HTTP/1.1\r\n'),
+  // Kestrel 10.0.15 refuses a "#" in any target, after the line's length and version.
+  'target with a fragment': bytes('GET /health#f HTTP/1.1\r\n'),
+  'target with a fragment after the query': bytes('GET /health?a#f HTTP/1.1\r\n'),
+  'target with a fragment on HTTP/1.0': bytes('GET /health#f HTTP/1.0\r\n'),
+  'target with a fragment on CONNECT': bytes('CONNECT /health#f HTTP/1.1\r\n'),
+  'target with an escaped fragment mark': bytes(`GET /health?a=%23 HTTP/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
+  'target with a fragment and an unknown version': bytes('GET /health#f HTTP/1.2\r\n'),
+  'target with a fragment past the line limit': bytes(`GET /#${'a'.repeat(8192)} HTTP/1.1\r\n`),
   // Kestrel answers HTTP/1.0 with an HTTP/1.1 status line. It closes after
   // an answer of unknown length, and says so.
   'HTTP/1.0 request': bytes('GET /health HTTP/1.0\r\n\r\n'),

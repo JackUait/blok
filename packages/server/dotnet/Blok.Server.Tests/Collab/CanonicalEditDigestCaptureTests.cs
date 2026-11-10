@@ -261,7 +261,8 @@ public sealed class CanonicalEditDigestCaptureTests
       9007199254740991, 9007199254740993, 1e17, 1.5e16, 12345678901234567, 123456789012345678, 1e18, 1e19, 0.00012345678901234567, 4.35, 0.000123, 1730000000000, 1.7e308, 5e-324, 1e100, 999999999999999.9, 0.30000000000000004,
       // Two shortest candidates tie: .NET takes the even one.
       BitConverter.Int64BitsToDouble(4832470896528495757), BitConverter.Int64BitsToDouble(unchecked((long)14052651468801117066)),
-      // Over every power of two, only these two print 16 digits that do not round-trip.
+      // .NET before 10.0.15 printed these two with 16 digits that do not round-trip,
+      // so this capture needs runtime 10.0.15 or later.
       Math.Pow(2, -25), -Math.Pow(2, -25), Math.Pow(2, -958), -Math.Pow(2, -958), Math.Pow(2, -24), Math.Pow(2, -959),
     };
 

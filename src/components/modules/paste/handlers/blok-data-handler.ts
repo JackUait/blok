@@ -385,7 +385,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     }
 
     const [cleaned] = sanitizeBlocks(
-      [{ tool: savedData.type, data: savedData.data }],
+      [{ tool: savedData.type, data: savedData.data as BlockToolData }],
       Tools.getAllInlineToolsSanitizeConfig(),
       this.config.sanitizer
     );

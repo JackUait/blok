@@ -1044,25 +1044,31 @@ export const IconTimeline = `
 </svg>
 `;
 
-// Feed view: a newspaper, a sheet with a fold-out column (Notion "newspaper").
+// Feed view: a newspaper, a sheet with a fold-out column, two lines and a picture box (Notion "newspaper").
 export const IconViewFeed = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M6 15V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M9 6.5h5M9 10h5M9 13.5h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 6.5h5M9 9h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="9" y="11.5" width="5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Calendar view: the panel with a filled header band and a dot grid (Notion "viewCalendar").
+// Calendar view: the panel with a filled header band and ten dots in rows of 3, 4 and 3 (Notion "viewCalendar").
+// Three rows leave only 0.85 between the band and the top dots.
 export const IconViewCalendar = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M3 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2H3V6Z" fill="currentColor" stroke="none"/>
-  <circle cx="6.5" cy="10.75" r=".85" fill="currentColor" stroke="none"/>
-  <circle cx="10" cy="10.75" r=".85" fill="currentColor" stroke="none"/>
-  <circle cx="13.5" cy="10.75" r=".85" fill="currentColor" stroke="none"/>
-  <circle cx="6.5" cy="13.25" r=".85" fill="currentColor" stroke="none"/>
-  <circle cx="10" cy="13.25" r=".85" fill="currentColor" stroke="none"/>
-  <circle cx="13.5" cy="13.25" r=".85" fill="currentColor" stroke="none"/>
+  <circle cx="8.9" cy="9.5" r=".65" fill="currentColor" stroke="none"/>
+  <circle cx="11.1" cy="9.5" r=".65" fill="currentColor" stroke="none"/>
+  <circle cx="13.3" cy="9.5" r=".65" fill="currentColor" stroke="none"/>
+  <circle cx="6.7" cy="11.7" r=".65" fill="currentColor" stroke="none"/>
+  <circle cx="8.9" cy="11.7" r=".65" fill="currentColor" stroke="none"/>
+  <circle cx="11.1" cy="11.7" r=".65" fill="currentColor" stroke="none"/>
+  <circle cx="13.3" cy="11.7" r=".65" fill="currentColor" stroke="none"/>
+  <circle cx="6.7" cy="13.9" r=".65" fill="currentColor" stroke="none"/>
+  <circle cx="8.9" cy="13.9" r=".65" fill="currentColor" stroke="none"/>
+  <circle cx="11.1" cy="13.9" r=".65" fill="currentColor" stroke="none"/>
 </svg>
 `;
 

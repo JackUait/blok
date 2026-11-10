@@ -47,6 +47,46 @@ describe('database creation glyphs drawn after Notion (findings-creation N02, N0
     expect(parse(icons.IconViewCalendar).querySelector('path[fill="currentColor"]')).not.toBeNull();
   });
 
+  // r9-addview-svgs.raw (viewCalendar): ten equal dots in rows of 3, 4 and 3; the short rows hug opposite sides.
+  it('lays the calendar\'s ten dots out like Notion, centred under the band', () => {
+    const dots = [...parse(icons.IconViewCalendar).querySelectorAll('circle')].map((dot) => ({
+      x: Number(dot.getAttribute('cx')),
+      y: Number(dot.getAttribute('cy')),
+      r: Number(dot.getAttribute('r')),
+    }));
+    const rows = [...new Set(dots.map((dot) => dot.y))].sort((a, b) => a - b);
+    const columns = [...new Set(dots.map((dot) => dot.x))].sort((a, b) => a - b);
+    const inRow = (y: number): number[] => dots.filter((dot) => dot.y === y).map((dot) => dot.x).sort((a, b) => a - b);
+
+    expect(dots).toHaveLength(10);
+    expect(new Set(dots.map((dot) => dot.r)).size).toBe(1);
+    expect(rows).toHaveLength(3);
+    expect(inRow(rows[0] ?? 0)).toEqual(columns.slice(1));
+    expect(inRow(rows[1] ?? 0)).toEqual(columns);
+    expect(inRow(rows[2] ?? 0)).toEqual(columns.slice(0, 3));
+    // Centred across the panel, and in the body between the band (y 8) and the frame's inner edge (y 15.375).
+    expect(((columns[0] ?? 0) + (columns[3] ?? 0)) / 2).toBeCloseTo(10);
+    expect(((rows[0] ?? 0) + (rows[2] ?? 0)) / 2).toBeCloseTo((8 + 15.375) / 2, 1);
+    // Dots stay apart at 16px.
+    const r = dots[0]?.r ?? 0;
+
+    expect((columns[1] ?? 0) - (columns[0] ?? 0) - 2 * r).toBeGreaterThanOrEqual(0.8);
+    expect((rows[0] ?? 0) - r - 8).toBeGreaterThanOrEqual(0.8);
+  });
+
+  // r9-addview-svgs.raw (newspaper): two text lines over a small picture box, inside the sheet.
+  it('draws the feed sheet with two lines over a box that shares their left and right edges', () => {
+    const doc = parse(icons.IconViewFeed);
+    const box = doc.querySelector('rect');
+
+    expect(paths(icons.IconViewFeed)).toContain('M9 6.5h5M9 9h5');
+    expect(box?.getAttribute('x')).toBe('9');
+    expect(Number(box?.getAttribute('x')) + Number(box?.getAttribute('width'))).toBe(14);
+    // One stroke width of clear space between the second line and the box.
+    expect(Number(box?.getAttribute('y')) - 9 - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect(box?.getAttribute('rx')).toBe('1');
+  });
+
   it('draws the timeline as two staggered bars in the shared panel', () => {
     expect(hasPanel(icons.IconViewTimeline)).toBe(true);
     expect(paths(icons.IconViewTimeline)).toEqual(['M6 8.5h5M9 11.5h5']);

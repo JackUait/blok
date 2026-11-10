@@ -558,7 +558,9 @@ describe('"New database" panel for every database toolbox entry', () => {
       const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
       const { tool } = buildDatabase(doc, 'db', dataOf('tableView'), {}, 'user');
 
-      expect(Object.keys(saved(tool)).filter((key) => !['title', 'schema', 'views', 'activeViewId', 'automations'].includes(key))).toEqual([]);
+      // A toolbox-made database is born with the empty deletedProperties slot.
+      expect(Object.keys(saved(tool)).filter((key) => !['title', 'schema', 'views', 'activeViewId', 'automations', 'deletedProperties'].includes(key))).toEqual([]);
+      expect(saved(tool).deletedProperties).toEqual({});
     });
   });
 

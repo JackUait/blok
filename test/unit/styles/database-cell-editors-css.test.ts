@@ -751,4 +751,17 @@ describe('cell editor CSS', () => {
       expect(declared(grip, 'cursor')).toEqual(['grab']);
     });
   });
+
+  // notion-motion.md Round 9 "View settings sub-pages": Back at x+10, y+14, the title at x+42, the × at x+254.
+  // The header box starts at the panel's 4px padding and Back pulls 4px back into it.
+  describe('view settings sub-page header', () => {
+    const HEADER = '[data-blok-database-panel][data-docked] > [data-blok-database-panel-header]:has(> [data-blok-database-panel-back])';
+
+    it('drops 7px and puts Back 10px in, the title 8px after it, the × 16px from the edge', () => {
+      expect(declared(HEADER, 'margin-block-start')).toEqual(['7px']);
+      expect(declared(HEADER, 'padding-inline')).toEqual(['10px var(--blok-space-3)']);
+      expect(declared(HEADER, 'gap')).toEqual(['var(--blok-space-2)']);
+    });
+  });
 });
+

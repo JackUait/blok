@@ -10567,6 +10567,13 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+/* notion-motion.md Round 9 "View settings sub-pages": Back at x+10, y+14, the title at x+42, the × ends 16px from the edge. */
+[data-blok-database-panel][data-docked] > [data-blok-database-panel-header]:has(> [data-blok-database-panel-back]) {
+  margin-block-start: 7px;
+  padding-inline: 10px var(--blok-space-3);
+  gap: var(--blok-space-2);
+}
+
 /* research/26 §1b, §4a: a round × at the header's end, no hint. */
 [data-blok-database-panel-close] {
   display: inline-flex;

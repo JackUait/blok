@@ -13697,6 +13697,12 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+[data-blok-database-panel][data-docked] > [data-blok-database-panel-header]:has(> [data-blok-database-panel-back]) {
+  margin-block-start: 7px;
+  padding-inline: 10px var(--blok-space-3);
+  gap: var(--blok-space-2);
+}
+
 [data-blok-database-panel-close] {
   display: inline-flex;
   flex: none;

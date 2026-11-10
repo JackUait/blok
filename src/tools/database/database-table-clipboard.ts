@@ -1,10 +1,15 @@
+import { nanoid } from 'nanoid';
+
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
+import { safeHref } from '../../components/utils/sanitize-url';
 import { resolveLocale } from './cells/date-format';
 import { parseDateValue } from './cells/date-value';
 import { formatNumberValue, parseNumberText } from './cells/number-format';
+import { fileNameFromUrl } from './cells/files-editor';
 import type { CellContext } from './cells/types';
+import { bodyText } from './database-csv';
 import { personIdsOf } from './property-values';
-import { placeText, verificationStatus } from './tier3-values';
+import { isOutputData, isPlaceValue, placeText, verificationStatus } from './tier3-values';
 import type { PropertyDefinition, PropertyValue } from './types';
 
 /**
@@ -82,6 +87,8 @@ export const cellText = (property: PropertyDefinition, value: PropertyValue | un
 
       return listText(labels);
     }
+    case 'richText':
+      return typeof value === 'string' ? value : bodyText(value);
     case 'files':
       return Array.isArray(value)
         ? value.flatMap((file) => (typeof file === 'object' && file !== null && 'url' in file ? [String(file.url)] : [])).join(', ')
@@ -92,7 +99,6 @@ export const cellText = (property: PropertyDefinition, value: PropertyValue | un
     case 'email':
     case 'phone':
     case 'date':
-    case 'richText':
     case 'createdTime':
     case 'lastEditedTime':
     case 'createdBy':
@@ -231,9 +237,24 @@ export const valueFromText = (property: PropertyDefinition, text: string, contex
 
       return ids.every((id): id is string => id !== undefined) ? ids.map((id) => ({ id })) : undefined;
     }
+    // A rich text cell stores typed text as a string.
     case 'richText':
-    case 'person':
-    case 'files':
+      return text;
+    case 'person': {
+      const ids = parseTsv(trimmed, ',').flat().map((id) => id.trim()).filter((id) => id !== '');
+      const known = context.people === undefined ? ids : ids.filter((id) => context.people?.some((person) => person.id === id));
+
+      return known.length > 0 ? known : undefined;
+    }
+    case 'files': {
+      const files = parseTsv(trimmed, ',').flat().flatMap((raw) => {
+        const url = /^https?:\/\//i.test(raw.trim()) ? safeHref(raw.trim()) : null;
+
+        return url === null ? [] : [{ id: nanoid(), name: fileNameFromUrl(raw.trim()), url }];
+      });
+
+      return files.length > 0 ? files : undefined;
+    }
     case 'createdTime':
     case 'lastEditedTime':
     case 'createdBy':
@@ -248,5 +269,116 @@ export const valueFromText = (property: PropertyDefinition, text: string, contex
     // Blok never geocodes: the host fills the coordinates.
     case 'place':
       return trimmed === '' ? null : { address: trimmed };
+  }
+};
+
+/** Blok's own grid copy: each cell's stored value, for a paste that keeps what text cannot. */
+export const CELLS_MIME = 'application/x-blok-database-cells';
+
+/**
+ * Proves a typed copy came from this page. Any page can write a custom
+ * clipboard type, so a payload without this token is read as text instead.
+ */
+const SESSION = nanoid();
+
+interface TypedCell {
+  type: string;
+  value: PropertyValue;
+  /** A relation's target database: its row ids mean nothing in another one. */
+  target?: string;
+}
+
+/** The typed copy of a grid of cells. */
+export const typedCells = (grid: Array<Array<{ property: PropertyDefinition; value: PropertyValue | undefined }>>): string =>
+  JSON.stringify({
+    session: SESSION,
+    cells: grid.map((row) => row.map(({ property, value }): TypedCell => ({
+      type: property.type,
+      value: value ?? null,
+      ...(property.relation?.targetDatabaseId !== undefined ? { target: property.relation.targetDatabaseId } : {}),
+    }))),
+  });
+
+const isTypedCell = (cell: unknown): cell is TypedCell =>
+  typeof cell === 'object' && cell !== null && 'type' in cell && typeof cell.type === 'string' && 'value' in cell;
+
+/** The typed copy, when this page wrote it and it has the same shape as the text grid; else null. */
+export const parseTypedCells = (data: string, grid: string[][]): TypedCell[][] | null => {
+  const parsed = ((): unknown => {
+    try {
+      return data === '' ? null : JSON.parse(data) as unknown;
+    } catch {
+      return null;
+    }
+  })();
+
+  if (typeof parsed !== 'object' || parsed === null || !('session' in parsed) || parsed.session !== SESSION || !('cells' in parsed)) {
+    return null;
+  }
+  const cells: unknown = parsed.cells;
+  const fits = Array.isArray(cells) && cells.length === grid.length
+    && cells.every((row: unknown, i) => Array.isArray(row) && row.length === grid[i].length && row.every(isTypedCell));
+
+  return fits ? cells as TypedCell[][] : null;
+};
+
+/**
+ * A copied cell's stored value for a column of the same type, or undefined
+ * when only its text can go across. A relation keeps its ids only when both
+ * columns point at the same database and the rows are there; an option or a
+ * person keeps its ids only when the column or the host lists them.
+ */
+export const typedValue = (property: PropertyDefinition, cell: TypedCell, context: Partial<CellContext> = {}): PropertyValue | undefined => {
+  const { value } = cell;
+
+  // An empty cell goes by its text, so a checkbox reads "No" as false.
+  if (cell.type !== property.type || value === null) {
+    return undefined;
+  }
+
+  switch (property.type) {
+    case 'relation': {
+      const candidates = context.relationCandidates?.(property);
+      const known = candidates === undefined || personIdsOf(value).every((id) => candidates.some((candidate) => candidate.id === id));
+
+      return known && cell.target !== undefined && cell.target === property.relation?.targetDatabaseId ? value : undefined;
+    }
+    case 'person': {
+      const ids = personIdsOf(value);
+
+      return context.people === undefined || ids.every((id) => context.people?.some((person) => person.id === id)) ? value : undefined;
+    }
+    case 'place':
+      return isPlaceValue(value) ? value : undefined;
+    case 'richText':
+      return typeof value === 'string' || isOutputData(value) ? value : undefined;
+    case 'select':
+    case 'multiSelect':
+    case 'status': {
+      const ids = Array.isArray(value) ? value : [value];
+      const known = ids.every((id) => property.config?.options?.some((option) => option.id === id) === true);
+
+      return known ? value : undefined;
+    }
+    case 'title':
+    case 'text':
+    case 'number':
+    case 'date':
+    case 'checkbox':
+    case 'url':
+    case 'email':
+    case 'phone':
+    case 'files':
+    case 'createdTime':
+    case 'lastEditedTime':
+    case 'createdBy':
+    case 'lastEditedBy':
+    case 'uniqueId':
+    case 'formula':
+    case 'rollup':
+    case 'button':
+    case 'verification':
+    default:
+      return value;
   }
 };

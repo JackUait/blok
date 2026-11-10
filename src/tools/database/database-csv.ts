@@ -58,7 +58,8 @@ const computedText = (value: PropertyValue | undefined, ctx: CsvTextContext): st
   return '';
 };
 
-const bodyText = (value: PropertyValue | undefined): string => {
+/** A legacy rich text body as plain text, one line per block. */
+export const bodyText = (value: PropertyValue | undefined): string => {
   const blocks: unknown = isOutputData(value) ? value.blocks : undefined;
 
   if (!Array.isArray(blocks)) return '';

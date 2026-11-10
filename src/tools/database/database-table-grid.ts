@@ -3,7 +3,7 @@ import { openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
 import type { DatabaseRow, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DateDisplayChange } from './cells/date-format';
-import { cellText, gridToClipboard, parseClipboard, valueFromText } from './database-table-clipboard';
+import { CELLS_MIME, cellText, gridToClipboard, parseClipboard, parseTypedCells, typedCells, typedValue, valueFromText } from './database-table-clipboard';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { isPlaceValue, placeText } from './tier3-values';
 
@@ -602,12 +602,14 @@ export class DatabaseTableGrid {
     const bounds = this.bounds();
     const rows = selection.kind === 'rows' ? rowIds.filter((id) => selection.rowIds.includes(id)) : rowIds.slice(bounds?.r0 ?? 0, (bounds?.r1 ?? -1) + 1);
     const columns = selection.kind === 'rows' ? this.columns : this.columns.slice(bounds?.c0 ?? 0, (bounds?.c1 ?? -1) + 1);
-    const { text, html } = gridToClipboard(rows.map((rowId) => columns.map((property) => cellText(property, this.valueAt(rowId, property), this.cellContext))));
+    const cells = rows.map((rowId) => columns.map((property) => ({ property, value: this.valueAt(rowId, property) })));
+    const { text, html } = gridToClipboard(cells.map((line) => line.map(({ property, value }) => cellText(property, value, this.cellContext))));
 
     event.preventDefault();
     event.stopPropagation();
     event.clipboardData.setData('text/plain', text);
     event.clipboardData.setData('text/html', html);
+    event.clipboardData.setData(CELLS_MIME, typedCells(cells));
   };
 
   /**
@@ -638,6 +640,7 @@ export class DatabaseTableGrid {
     const changes: CellChange[] = [];
     const newRows: Array<Record<string, PropertyValue>> = [];
     const single = grid.length === 1 && grid[0].length === 1;
+    const typed = parseTypedCells(event.clipboardData.getData(CELLS_MIME), grid);
     const height = single ? bounds.r1 - bounds.r0 + 1 : grid.length;
     const width = single ? bounds.c1 - bounds.c0 + 1 : Math.max(...grid.map((line) => line.length));
 
@@ -647,6 +650,12 @@ export class DatabaseTableGrid {
 
       if (property === undefined || text === undefined || isReadOnlyType(property.type)) {
         return null;
+      }
+      const cell = single ? typed?.[0][0] : typed?.[i][j];
+      const kept = cell === undefined ? undefined : typedValue(property, cell, this.cellContext);
+
+      if (kept !== undefined) {
+        return [property.id, kept];
       }
       const current = rowId === undefined ? undefined : this.valueAt(rowId, property);
 

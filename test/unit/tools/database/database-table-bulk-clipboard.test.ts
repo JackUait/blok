@@ -578,6 +578,129 @@ describe('table bulk actions and clipboard', () => {
       view.destroy();
     });
 
+    describe('values text cannot carry', () => {
+      const typed: PropertyDefinition[] = [
+        { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'p-owner', name: 'Owner', type: 'person', position: 'a1' },
+        { id: 'p-files', name: 'Files', type: 'files', position: 'a2' },
+        { id: 'p-rel', name: 'Related', type: 'relation', position: 'a3', relation: { targetDatabaseId: 'db-1' } },
+        { id: 'p-place', name: 'Place', type: 'place', position: 'a4' },
+        { id: 'p-rich', name: 'Details', type: 'richText', position: 'a5' },
+      ];
+      const full: DatabaseRow['properties'] = {
+        'p-owner': ['u1'],
+        'p-files': [{ id: 'f1', name: 'Report', url: 'https://files.test/r.pdf' }],
+        'p-rel': [{ id: 'r3' }],
+        'p-place': { name: 'Office', address: '1 Main St' },
+        'p-rich': { blocks: [{ type: 'paragraph', data: { text: '<b>Rich</b>' } }] },
+      };
+      const typedRows = (): DatabaseRow[] => [row('r1', 'Alpha', full), row('r2', 'Bravo'), row('r3', 'Charlie')];
+      const candidates = (): Array<{ id: string; title: string }> => [{ id: 'r1', title: 'Alpha' }, { id: 'r2', title: 'Bravo' }, { id: 'r3', title: 'Charlie' }];
+
+      const copyRow = (root: HTMLElement): FakeClipboard => {
+        const anchor = { rowId: 'r1', propertyId: 'p-owner' };
+        const focus = { rowId: 'r1', propertyId: 'p-rich' };
+        const { state } = mounted;
+
+        state.selection = { kind: 'cell', anchor, focus };
+        const copy = clipboardEvent('copy');
+
+        grid(root).dispatchEvent(copy.event);
+
+        return copy;
+      };
+      const pasteAt = (root: HTMLElement, data: Record<string, string>): void => {
+        const target = { rowId: 'r2', propertyId: 'p-owner' };
+
+        mounted.state.selection = { kind: 'cell', anchor: target, focus: target };
+        grid(root).dispatchEvent(clipboardEvent('paste', data).event);
+      };
+      const committed = (handlers: TableHandlers): Record<string, unknown> =>
+        Object.fromEntries((commitsOf(handlers)[0] as [Array<{ propertyId: string; value: unknown }>])[0].map((change) => [change.propertyId, change.value]));
+      let mounted: Mounted;
+
+      beforeEach(() => {
+        mounted = mount({ schema: typed, rows: typedRows(), cellContext: { relationCandidates: candidates } });
+      });
+
+      it('a copied range pastes back every value whole, inside Blok', () => {
+        const copy = copyRow(mounted.root);
+
+        pasteAt(mounted.root, Object.fromEntries(copy.data));
+
+        expect(committed(mounted.handlers)).toEqual(full);
+      });
+
+      it('a copied range keeps people, files and plain rich text through text/plain alone', () => {
+        const copy = copyRow(mounted.root);
+
+        pasteAt(mounted.root, { 'text/plain': copy.data.get('text/plain') ?? '' });
+
+        const values = committed(mounted.handlers);
+
+        expect(values['p-owner']).toEqual(['u1']);
+        expect(values['p-files']).toEqual([{ id: expect.any(String), name: 'r.pdf', url: 'https://files.test/r.pdf' }]);
+        expect(values['p-rel']).toEqual([{ id: 'r3' }]);
+        expect(values['p-rich']).toBe('Rich');
+      });
+
+      it('typed cells a page wrote itself are not trusted: the text is read instead', () => {
+        const copy = copyRow(mounted.root);
+        const forged = [...copy.data.keys()].find((format) => !format.startsWith('text/'));
+
+        expect(forged).toBeDefined();
+        pasteAt(mounted.root, {
+          ...Object.fromEntries(copy.data),
+          [forged ?? '']: JSON.stringify({ cells: [[
+            { type: 'person', value: ['evil'] }, { type: 'files', value: [{ id: 'x', name: 'x', url: 'javascript:alert(1)' }] },
+            { type: 'relation', value: [{ id: 'r2' }] }, { type: 'place', value: { name: 'Evil' } }, { type: 'richText', value: { blocks: [] } },
+          ]] }),
+        });
+
+        const values = committed(mounted.handlers);
+
+        expect(values['p-owner']).toEqual(['u1']);
+        expect(values['p-rel']).toEqual([{ id: 'r3' }]);
+        expect(values['p-rich']).toBe('Rich');
+      });
+
+      it('copied options into a column with its own options go by label', () => {
+        const options = [{ id: 'o-idea', label: 'Idea', position: 'a0' }];
+        const source = mount({ schema: [...schema, { id: 'p-tags', name: 'Tags', type: 'multiSelect', position: 'a5', config: { options } }], rows: [row('r1', 'Alpha', { 'p-stage': 'o-idea', 'p-tags': ['o-idea'] })] });
+        const anchor = { rowId: 'r1', propertyId: 'p-stage' };
+
+        source.state.selection = { kind: 'cell', anchor, focus: { rowId: 'r1', propertyId: 'p-tags' } };
+        const copy = clipboardEvent('copy');
+
+        grid(source.root).dispatchEvent(copy.event);
+        const ownOptions = [{ id: 'x-idea', label: 'Idea', position: 'a0' }];
+        const target = mount({
+          schema: [...schema.map((property) => property.id === 'p-stage' ? { ...property, config: { options: ownOptions } } : property), { id: 'p-tags', name: 'Tags', type: 'multiSelect', position: 'a5', config: { options: ownOptions } }],
+          rows: [row('r1', 'Alpha')],
+        });
+
+        target.state.selection = { kind: 'cell', anchor, focus: anchor };
+        grid(target.root).dispatchEvent(clipboardEvent('paste', Object.fromEntries(copy.data)).event);
+
+        expect(commitsOf(target.handlers)).toEqual([[[
+          { rowId: 'r1', propertyId: 'p-stage', value: 'x-idea' },
+          { rowId: 'r1', propertyId: 'p-done', value: false },
+          { rowId: 'r1', propertyId: 'p-tags', value: ['x-idea'] },
+        ], []]]);
+      });
+
+      it('copied relations into a column that points at another database go by title', () => {
+        const copy = copyRow(mounted.root);
+        const other: PropertyDefinition[] = typed.map((property) => property.id === 'p-rel' ? { ...property, relation: { targetDatabaseId: 'db-2' } } : property);
+        const target = mount({ schema: other, rows: typedRows(), cellContext: { relationCandidates: () => [{ id: 'x9', title: 'Charlie' }] } });
+
+        mounted = target;
+        pasteAt(target.root, Object.fromEntries(copy.data));
+
+        expect(committed(target.handlers)['p-rel']).toEqual([{ id: 'x9' }]);
+      });
+    });
+
     it('never writes from a read-only table', () => {
       const { root, handlers } = mount({ readOnly: true });
 

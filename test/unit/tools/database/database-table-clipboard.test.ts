@@ -98,6 +98,45 @@ describe('table clipboard', () => {
     expect(valueFromText(text, '')).toBeNull();
   });
 
+  describe('types with no option list', () => {
+    const person: PropertyDefinition = { id: 'p', name: 'Owner', type: 'person', position: 'a5' };
+    const files: PropertyDefinition = { id: 'f', name: 'Files', type: 'files', position: 'a6' };
+    const rich: PropertyDefinition = { id: 'r', name: 'Details', type: 'richText', position: 'a7' };
+
+    it('a copied person list pastes back as the same ids', () => {
+      expect(valueFromText(person, cellText(person, ['u1', 'u2']))).toEqual(['u1', 'u2']);
+    });
+
+    it('a pasted person keeps only ids the host knows, when it lists people', () => {
+      const people = [{ id: 'u1', name: 'Ann' }];
+
+      expect(valueFromText(person, 'u1, ghost', { people })).toEqual(['u1']);
+      expect(valueFromText(person, 'ghost', { people })).toBeUndefined();
+    });
+
+    it('a copied file list pastes back as files named after their URL', () => {
+      const pasted = valueFromText(files, cellText(files, [{ id: 'x', name: 'Plan.pdf', url: 'https://files.test/a/plan%20v2.pdf' }]));
+
+      expect(pasted).toEqual([{ id: expect.any(String), name: 'plan v2.pdf', url: 'https://files.test/a/plan%20v2.pdf' }]);
+    });
+
+    it('a pasted file list drops a URL that is not safe to open', () => {
+      expect(valueFromText(files, 'javascript:alert(1), https://files.test/b.pdf')).toEqual([{ id: expect.any(String), name: 'b.pdf', url: 'https://files.test/b.pdf' }]);
+      expect(valueFromText(files, 'javascript:alert(1)')).toBeUndefined();
+    });
+
+    it('a rich text body copies as its plain text, one line per block', () => {
+      const body = { blocks: [{ type: 'paragraph', data: { text: 'One &amp; <b>two</b>' } }, { type: 'paragraph', data: { text: 'Three' } }] };
+
+      expect(cellText(rich, body)).toBe('One & two\nThree');
+      expect(cellText(rich, 'plain')).toBe('plain');
+    });
+
+    it('pasted rich text is stored as typing it would store it', () => {
+      expect(valueFromText(rich, 'Rich')).toBe('Rich');
+    });
+  });
+
   // notion-spec-2 §19.7: in Percent a typed number is read as percent points; a paste reads the same way.
   describe('percent cells', () => {
     const percent: PropertyDefinition = { ...number, number: { format: 'percent' } };

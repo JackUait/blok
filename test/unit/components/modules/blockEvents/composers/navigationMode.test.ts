@@ -536,6 +536,49 @@ describe('NavigationMode', () => {
         expect(disableNavigationMode).not.toHaveBeenCalled();
       });
 
+      it.each([
+        ['Cmd+C', { key: 'c', metaKey: true }],
+        ['Cmd+Shift+C', { key: 'C', metaKey: true, shiftKey: true }],
+        ['Ctrl+C', { key: 'c', ctrlKey: true }],
+        ['Cmd+X', { key: 'x', metaKey: true }],
+        ['Ctrl+X', { key: 'x', ctrlKey: true }],
+      ])('keeps the selection for %s so copy and cut see it', (_name, options) => {
+        const disableNavigationMode = vi.fn();
+        const blok = createBlokModules({
+          BlockSelection: {
+            navigationModeEnabled: true,
+            disableNavigationMode,
+          } as unknown as BlokModules['BlockSelection'],
+        });
+        const navigationMode = new NavigationMode(blok);
+        const event = createKeyboardEvent(options);
+
+        const result = navigationMode.handleKey(event);
+
+        expect(disableNavigationMode).not.toHaveBeenCalled();
+        expect(result).toBe(false);
+        expect(event.preventDefault).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['Option+a', { key: 'å', altKey: true }],
+        ['AltGr+q', { key: '@', altKey: true, ctrlKey: true }],
+      ])('still exits for a %s character', (_name, options) => {
+        const disableNavigationMode = vi.fn();
+        const blok = createBlokModules({
+          BlockSelection: {
+            navigationModeEnabled: true,
+            disableNavigationMode,
+          } as unknown as BlokModules['BlockSelection'],
+        });
+        const navigationMode = new NavigationMode(blok);
+        const event = createKeyboardEvent(options);
+
+        navigationMode.handleKey(event);
+
+        expect(disableNavigationMode).toHaveBeenCalledWith(true);
+      });
+
       it('does not disable navigation mode when key is missing', () => {
         const disableNavigationMode = vi.fn();
         const blok = createBlokModules({

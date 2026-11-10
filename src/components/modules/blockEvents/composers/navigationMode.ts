@@ -131,9 +131,14 @@ export class NavigationMode extends BlockEventComposer {
 
       default:
         /**
-         * Any other key exits navigation mode and allows normal input
+         * Any other key exits navigation mode and allows normal input.
+         * Cmd/Ctrl shortcuts stay: Cmd+C and Cmd+X need the selection when the
+         * copy/cut event fires. Alt is not a shortcut: Option+key on macOS and
+         * AltGr (Ctrl+Alt) on Windows type a character.
          */
-        if (isPrintableKeyEvent(event)) {
+        const isShortcut = event.metaKey || (event.ctrlKey && !event.altKey);
+
+        if (isPrintableKeyEvent(event) && !isShortcut) {
           BlockSelection.disableNavigationMode(true);
         }
 

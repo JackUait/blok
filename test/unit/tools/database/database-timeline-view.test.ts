@@ -375,7 +375,7 @@ describe('DatabaseTimelineView', () => {
       const footer = root.querySelector('[data-blok-database-timeline-table] [data-blok-database-timeline-table-footer]');
       const title = footer?.querySelector('[data-blok-database-table-calc][data-property-id="p-title"]');
 
-      expect(title?.querySelector('[data-blok-database-table-calc-label]')?.textContent).toBe('tools.database.calcCountAll');
+      expect(title?.querySelector('[data-blok-database-table-calc-label]')?.textContent).toBe('tools.database.calcCount');
       expect(title?.querySelector('[data-blok-database-table-calc-value]')?.textContent).toBe('3');
     });
 

@@ -198,9 +198,20 @@ interface Column {
   frozenAt?: number;
 }
 
-/** research/21 §1d: footer labels that differ from the menu item name. Unrecorded ones keep the menu name. */
+/** notion-motion.md Round 11 "Footer labels": footer labels that differ from the menu item name. A percent takes its count's label. */
 const FOOTER_LABEL_KEYS: Partial<Record<CalculationFn, string>> = {
+  count: 'tools.database.calcCount',
   count_values: 'tools.database.calcFooterCountValues',
+  unique: 'tools.database.calcFooterUnique',
+  empty: 'tools.database.calcFooterEmpty',
+  not_empty: 'tools.database.calcFooterNotEmpty',
+  percent_empty: 'tools.database.calcFooterEmpty',
+  percent_not_empty: 'tools.database.calcFooterNotEmpty',
+  percent_checked: 'tools.database.calcChecked',
+  percent_unchecked: 'tools.database.calcUnchecked',
+  earliest_date: 'tools.database.calcFooterEarliest',
+  latest_date: 'tools.database.calcFooterLatest',
+  date_range: 'tools.database.calcRange',
 };
 
 /** A footer cell's content: "Calculate" when no function is set, else its label and result. The timeline's table panel shares it. */
@@ -286,6 +297,8 @@ const tableIds = { next: 0 };
 const idPart = (value: string): string => value.replace(/[^A-Za-z0-9_-]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}`);
 
 const CALC_NUMBER = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2, useGrouping: false });
+/** notion-motion.md Round 11: "33.333%". */
+const CALC_PERCENT = new Intl.NumberFormat(undefined, { maximumFractionDigits: 3, useGrouping: false });
 
 export const formatCalculation = (
   result: CalculationResult,
@@ -300,7 +313,7 @@ export const formatCalculation = (
 
       return options.number === undefined ? CALC_NUMBER.format(result.value) : formatNumberValue(result.value, options.number, resolveLocale(locale));
     case 'percent':
-      return `${CALC_NUMBER.format(result.value)}%`;
+      return `${CALC_PERCENT.format(result.value)}%`;
     case 'date':
       return formatDateText(result.value, resolveLocale(locale)) ?? result.value;
     case 'dateRange': {

@@ -603,12 +603,43 @@ describe('DatabaseTableView', () => {
       expect(footerCell('p-notes')?.hasAttribute('data-empty')).toBe(true);
     });
 
-    // research/21 §1d: Notion's footer labels Count values "VALUES", while its menu item keeps "Count values".
-    it('labels a Count values footer "Values", not with the menu item name', () => {
-      const { root } = mount({ view: tableView({ calculations: [{ id: 'p-notes', fn: 'count_values' }] }) });
-      const label = root.querySelector('[data-blok-database-table-calc][data-property-id="p-notes"] [data-blok-database-table-calc-label]');
+    // notion-motion.md Round 11 "Footer labels, every function": the footer names a function shorter than its menu item,
+    // and a percent takes its count's label.
+    it.each([
+      ['p-amount', 'count', 'tools.database.calcCount'],
+      ['p-amount', 'count_values', 'tools.database.calcFooterCountValues'],
+      ['p-amount', 'unique', 'tools.database.calcFooterUnique'],
+      ['p-amount', 'empty', 'tools.database.calcFooterEmpty'],
+      ['p-amount', 'not_empty', 'tools.database.calcFooterNotEmpty'],
+      ['p-amount', 'percent_empty', 'tools.database.calcFooterEmpty'],
+      ['p-amount', 'percent_not_empty', 'tools.database.calcFooterNotEmpty'],
+      ['p-amount', 'sum', 'tools.database.calcSum'],
+      ['p-amount', 'average', 'tools.database.calcAverage'],
+      ['p-amount', 'median', 'tools.database.calcMedian'],
+      ['p-amount', 'min', 'tools.database.calcMin'],
+      ['p-amount', 'max', 'tools.database.calcMax'],
+      ['p-amount', 'range', 'tools.database.calcRange'],
+      ['p-done', 'checked', 'tools.database.calcChecked'],
+      ['p-done', 'unchecked', 'tools.database.calcUnchecked'],
+      ['p-done', 'percent_checked', 'tools.database.calcChecked'],
+      ['p-done', 'percent_unchecked', 'tools.database.calcUnchecked'],
+      ['p-when', 'earliest_date', 'tools.database.calcFooterEarliest'],
+      ['p-when', 'latest_date', 'tools.database.calcFooterLatest'],
+      ['p-when', 'date_range', 'tools.database.calcRange'],
+    ] as const)('labels a %s %s footer %s', (id, fn, key) => {
+      const withDate = [...schema, { id: 'p-when', name: 'When', type: 'date' as const, position: 'a5' }];
+      const { root } = mount({ schema: withDate, view: tableView({ calculations: [{ id, fn }] }) });
+      const label = root.querySelector(`[data-blok-database-table-calc][data-property-id="${id}"] [data-blok-database-table-calc-label]`);
 
-      expect(label?.textContent).toBe('tools.database.calcFooterCountValues');
+      expect(label?.textContent).toBe(key);
+    });
+
+    // notion-motion.md Round 11: "Percents show 3 decimals (33.333%)".
+    it('shows a percent with up to 3 decimals', () => {
+      const { root } = mount({ view: tableView({ calculations: [{ id: 'p-done', fn: 'percent_checked' }] }) });
+      const value = root.querySelector('[data-blok-database-table-calc][data-property-id="p-done"] [data-blok-database-table-calc-value]');
+
+      expect(value?.textContent).toBe('33.333%');
     });
 
     // research/21 §1d: the hover fills a 70x21 box around the label and value, not the cell.

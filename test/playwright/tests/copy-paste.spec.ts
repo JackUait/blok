@@ -1059,6 +1059,60 @@ test.describe('copy and paste', () => {
     ]);
   });
 
+  test('a copied table block, pasted into another table cell, lands after that table whole', async ({ page }) => {
+    const doc: OutputData['blocks'] = [
+      { id: 'src', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [['One', 'Two'], ['Three', 'Four']] } },
+      { id: 'dest', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [['z00', 'z01'], ['z10', 'z11']] } },
+    ];
+
+    await createBlok(page, { data: { blocks: doc } });
+
+    const editor = await page.locator(`#${HOLDER_ID}`).boundingBox();
+    const source = await page.locator('[data-blok-id="src"]').boundingBox();
+
+    if (editor === null || source === null) {
+      throw new Error('editor or table has no box');
+    }
+    const gutter = editor.x + editor.width - 40;
+
+    await page.mouse.move(gutter, source.y + 4);
+    await page.mouse.down();
+    await page.mouse.move(gutter, source.y + source.height - 4, { steps: 15 });
+    await page.mouse.up();
+    await expect(page.locator('[data-blok-id="src"][data-blok-selected="true"]')).toBeVisible();
+
+    const clipboardData = await copyFromElement(page.locator('[data-blok-id="src"]'));
+
+    expect(clipboardData['application/x-blok']).toBeDefined();
+    expect(clipboardData['text/html']).toContain('<table');
+
+    await page.keyboard.press('Escape');
+    await page.locator('[data-blok-id="dest"] [data-blok-table-cell]').first().locator('[contenteditable="true"]').first().click();
+    await paste(page, page.locator(':focus'), clipboardData);
+
+    /** Each root table as [id or 'new', its cells' texts]; a cell block that is not the table's child shows as 'STRAY'. */
+    const tables = async (): Promise<unknown[]> => {
+      const { blocks } = await saveBlok(page);
+      const byId = new Map(blocks.map((b) => [b.id, b]));
+
+      return blocks.filter((b) => b.parent === undefined).map((b) => {
+        const rows = (b.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+        return [
+          b.id === 'src' || b.id === 'dest' ? b.id : `new ${b.type}`,
+          rows.map((row) => row.map((cell) => cell.blocks.map((cellId) => byId.get(cellId)?.parent === b.id ? byId.get(cellId)?.data.text : 'STRAY'))),
+        ];
+      });
+    };
+    const sourceCells = [[['One'], ['Two']], [['Three'], ['Four']]];
+
+    await expect.poll(tables).toEqual([
+      ['src', sourceCells],
+      ['dest', [[['z00'], ['z01']], [['z10'], ['z11']]]],
+      ['new table', sourceCells],
+    ]);
+  });
+
   test.describe('a table pasted into a container child', () => {
     const table = { id: 'xt', tool: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['xta'] }, { blocks: ['xtb'] }]] }, parentId: null, contentIds: ['xta', 'xtb'], tunes: {} };
     const cells = [

@@ -1069,6 +1069,30 @@ describe('BlockSettings', () => {
       expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
     });
 
+    it('leaves the block selected when the editor itself sits in a host modal', async () => {
+      const frames: FrameRequestCallback[] = [];
+      const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+        frames.push(callback);
+
+        return frames.length;
+      });
+      const hostModal = document.createElement('div');
+
+      hostModal.setAttribute('aria-modal', 'true');
+      document.body.appendChild(hostModal);
+
+      const { block, activate } = await openWithTune(vi.fn());
+
+      hostModal.appendChild(block.holder);
+      activate();
+      Object.assign(block, { selected: true });
+      frames.forEach((callback) => callback(0));
+
+      expect(blokMock.BlockSelection.selectBlock).toHaveBeenCalledWith(block);
+      expect(blokMock.BlockSelection.unselectBlock).not.toHaveBeenCalled();
+      raf.mockRestore();
+    });
+
     it('lets go of the block when the action takes focus a frame later', async () => {
       const frames: FrameRequestCallback[] = [];
       const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {

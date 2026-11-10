@@ -39,8 +39,13 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
  */
 export const SETTINGS_POPOVER_ID = 'blok-block-settings-popover';
 
-/** A modal dialog is open: keys belong to it, not to a block selection. */
-const isModalOpen = (): boolean => document.querySelector('[aria-modal="true"], dialog[open]') !== null;
+/**
+ * A modal dialog is open: keys belong to it, not to a block selection. A host
+ * modal the editor itself sits in does not count.
+ * @param blocks - the blocks the menu acted on
+ */
+const isModalOpen = (blocks: Block[]): boolean => Array.from(document.querySelectorAll('[aria-modal="true"], dialog[open]'))
+  .some((modal) => !blocks.some((block) => modal.contains(block.holder)));
 
 /**
  * HTML Elements that used for BlockSettings
@@ -1018,7 +1023,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     this.actedBlocks = null;
 
-    if (blocks.length === 0 || !focusFree || isModalOpen()) {
+    if (blocks.length === 0 || !focusFree || isModalOpen(blocks)) {
       return false;
     }
 
@@ -1028,7 +1033,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     // Some UIs open a modal a frame after the tune ran.
     requestAnimationFrame(() => {
-      if (document.activeElement === document.body && !isModalOpen()) {
+      if (document.activeElement === document.body && !isModalOpen(blocks)) {
         return;
       }
 

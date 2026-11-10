@@ -2965,7 +2965,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-html] + [data-blok-popover-item] {
-  margin-block-start: 9px;
+  margin-block-start: var(--blok-space-2-25);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-testid='popover-item-trailing-icon'] {
@@ -11907,12 +11907,12 @@ input[data-blok-database-picker-search]:focus {
 }
 
 [data-blok-database-panel-page="group"] > [data-blok-database-panel-separator]:has(+ [data-blok-database-property-visibility-header]) {
-  margin-block-start: 9px;
+  margin-block-start: var(--blok-space-2-25);
 }
 
 [data-blok-database-panel-page="group"] > [data-blok-database-property-visibility-header] {
   min-block-size: 24px;
-  margin-block: var(--blok-space-2) 9px;
+  margin-block: var(--blok-space-2) var(--blok-space-2-25);
 }
 
 [data-blok-database-panel-page="group"] > [data-blok-database-property-visibility-header] > [data-blok-database-panel-section] {

@@ -808,9 +808,9 @@ describe('cell editor CSS', () => {
       const HEADER = `${PAGE} > [data-blok-database-property-visibility-header]`;
 
       expect(declared(SEP, 'margin-inline')).toEqual(['var(--blok-space-2)']);
-      expect(declared(`${SEP}:has(+ [data-blok-database-property-visibility-header])`, 'margin-block-start')).toEqual(['9px']);
+      expect(declared(`${SEP}:has(+ [data-blok-database-property-visibility-header])`, 'margin-block-start')).toEqual(['var(--blok-space-2-25)']);
       expect(declared(HEADER, 'min-block-size')).toEqual(['24px']);
-      expect(declared(HEADER, 'margin-block')).toEqual(['var(--blok-space-2) 9px']);
+      expect(declared(HEADER, 'margin-block')).toEqual(['var(--blok-space-2) var(--blok-space-2-25)']);
       expect(declared(`${HEADER} > [data-blok-database-panel-section]`, 'padding-block')).toEqual(['0']);
     });
   });
@@ -826,7 +826,7 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-group-menu-heading]', 'padding')).toEqual(['var(--blok-space-3) var(--blok-space-2) 0']);
       expect(declared('[data-blok-database-group-menu-heading]', 'font-size')).toEqual(['12px']);
       expect(declared('[data-blok-database-group-menu-heading]', 'font-weight')).toEqual(['500']);
-      expect(declared(`${MENU} [data-blok-popover-item-html] + [data-blok-popover-item]`, 'margin-block-start')).toEqual(['9px']);
+      expect(declared(`${MENU} [data-blok-popover-item-html] + [data-blok-popover-item]`, 'margin-block-start')).toEqual(['var(--blok-space-2-25)']);
     });
 
     it('draws the current colour\'s check at 16px', () => {

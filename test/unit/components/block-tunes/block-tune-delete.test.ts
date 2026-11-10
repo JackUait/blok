@@ -65,7 +65,7 @@ describe('DeleteTune', () => {
   it('renders block tune config with translated label and direct handler', () => {
     const { api, i18n } = createApiMocks();
     const tune = new DeleteTune({ api });
-    const handleClickSpy = vi.spyOn(tune, 'handleClick').mockImplementation(() => {});
+    const handleClickSpy = vi.spyOn(tune, 'handleClick').mockResolvedValue();
 
     type MenuConfigWithActivate = Extract<MenuConfig, { onActivate: unknown }>;
 

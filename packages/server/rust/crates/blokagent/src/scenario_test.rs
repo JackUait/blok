@@ -655,5 +655,5 @@ async fn matches_the_agent_server_scenarios() {
         .collect();
     failures.sort();
     assert!(failures.is_empty(), "{}", failures.join("\n"));
-    assert_eq!(rooms, 88, "room scenarios");
+    assert_eq!(rooms, 91, "room scenarios");
 }

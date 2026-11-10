@@ -177,6 +177,18 @@ async fn a_window_hides_older_versions_from_an_agent() {
         "VERSION_NOT_FOUND"
     );
     assert_eq!(r.head("d").await, head, "the hidden restore wrote");
+    let hidden = format!(
+        r#"{{"commands":[{{"name":"history.previewRestore","args":{{"version":"{lineage}:1"}}}}]}}"#
+    );
+    assert_eq!(
+        run_in(&r, "d", &hidden, &room_agent()).await.1,
+        "VERSION_NOT_FOUND"
+    );
+    let shown = format!(
+        r#"{{"commands":[{{"name":"history.previewRestore","args":{{"version":"{lineage}:2"}}}}]}}"#
+    );
+    let (previewed, code) = run_in(&r, "d", &shown, &room_agent()).await;
+    assert_eq!(code, "", "visible preview: {}", previewed.result_json);
     assert_eq!(
         asked.lock().unwrap().first().map(String::as_str),
         Some("agent-cs d")
@@ -213,6 +225,13 @@ async fn a_read_hook_that_says_no_refuses_an_agents_list_read_and_restore() {
         restored.result_json
     );
     assert_eq!(r.head("d").await, head, "the refused restore wrote");
+    let preview = format!(
+        r#"{{"commands":[{{"name":"history.previewRestore","args":{{"version":"{lineage}:0"}}}}]}}"#
+    );
+    assert_eq!(
+        run_in(&r, "d", &preview, &room_agent()).await.1,
+        "TOOL_ACTION_FAILED"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]

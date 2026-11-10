@@ -57,6 +57,10 @@ impl Executor {
             // refuses it too.
             let versions = match refused {
                 Some(refused) => refused,
+                None if name == "history.previewRestore" => {
+                    self.load_preview(doc_id, args, &input, floors.as_ref())
+                        .await?
+                }
                 _ => Box::pin(self.load_versions(doc_id, name, args, floors.as_ref())).await?,
             };
             input.members.push(member("versionHistory", versions));
@@ -191,6 +195,83 @@ impl Executor {
                 &head,
             ),
         }
+    }
+
+    /// What history.previewRestore needs: the preview route's body for its
+    /// version, or null when there is none or the window hides it. The
+    /// batch's expectRevision was checked already, so it plans at the head.
+    async fn load_preview(
+        &self,
+        doc_id: &str,
+        args: &Node,
+        input: &Node,
+        floors: Option<&HistoryWindow>,
+    ) -> Result<Node, Error> {
+        let mut previews = new_object(Vec::new());
+        // The bundle refuses these arguments before it reads the preview.
+        let Some(version) = text(field(Some(args), "version")?)? else {
+            return Ok(new_object(vec![member("previews", previews)]));
+        };
+        let keep = match field(Some(args), "databases")? {
+            None => false,
+            Some(databases) => match text(Some(databases))?.as_deref() {
+                Some("keep") => true,
+                Some("restore") => false,
+                _ => return Ok(new_object(vec![member("previews", previews)])),
+            },
+        };
+        let parsed = version.rfind(':').filter(|at| *at > 0).and_then(|colon| {
+            blok_dotnet::parse_uint64_none(&version[colon + 1..])
+                .map(|sequence| (&version[..colon], sequence))
+        });
+        let Some((lineage, sequence)) = parsed.filter(|(lineage, sequence)| {
+            !floors.is_some_and(|window| window.hides(lineage, *sequence))
+        }) else {
+            previews.members.push(member(&version, new_null()));
+            return Ok(new_object(vec![member("previews", previews)]));
+        };
+        let actor_id = string_value(field(field(Some(input), "actor")?, "id")?)?;
+        let manager = &self.live().expect("rooms").manager;
+        let (status, preview, edit) = manager
+            .preview_restore_with(
+                doc_id,
+                lineage,
+                sequence,
+                None,
+                &actor_id,
+                RestoreOptions {
+                    keep_databases: keep,
+                    ..RestoreOptions::default()
+                },
+            )
+            .await?;
+        match (status, preview) {
+            (HistoryStatus::NotFound, _) => previews.members.push(member(&version, new_null())),
+            (HistoryStatus::Ready, Some(preview)) => {
+                let body = blok_jsjson::stringify(&preview.json()).map_err(from_json)?;
+                previews.members.push(member(&version, parse(&body)?));
+            }
+            (HistoryStatus::Ready, None) => {
+                let status = edit.map(|edit| edit.status);
+                return Ok(new_object(vec![
+                    member(
+                        "failed",
+                        str_node(&format!(
+                            "The restore could not be previewed ({}).",
+                            status.map(|s| s.to_string()).unwrap_or_default()
+                        )),
+                    ),
+                    member("retryable", new_bool(status.is_some_and(retryable_edit))),
+                ]));
+            }
+            (status, _) => {
+                return Ok(version_failure(
+                    &format!("The restore could not be previewed ({status})."),
+                    status,
+                ));
+            }
+        }
+        Ok(new_object(vec![member("previews", previews)]))
     }
 
     /// What one read needs: the version list, or the documents it names

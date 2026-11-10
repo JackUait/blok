@@ -53,7 +53,8 @@ impl Rooms {
 }
 
 /// What the host's history hooks allow one agent call. `can_read` false
-/// refuses history.versions, history.read and history.changes; `window`
+/// refuses history.versions, history.read, history.changes, history.restore
+/// and history.previewRestore; `window`
 /// None shows the whole history.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HistoryAccess {
@@ -719,7 +720,11 @@ pub(crate) fn version_command(batch: &Node) -> Result<Option<(String, Node)>, Er
     };
     if !matches!(
         value.as_str(),
-        "history.versions" | "history.read" | "history.changes" | "history.restore"
+        "history.versions"
+            | "history.read"
+            | "history.changes"
+            | "history.restore"
+            | "history.previewRestore"
     ) {
         return Ok(None);
     }

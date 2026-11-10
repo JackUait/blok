@@ -10,7 +10,8 @@ use blok_jsjson::{Object, Str, Value};
 use blok_yjs::Doc;
 
 use crate::changes::{
-    BlockChange, RecordChanges, diff_blocks, diff_page, page_fields, replay_changes,
+    BlockChange, BlockChangeKind, RecordChanges, diff_blocks, diff_page, page_fields,
+    replay_changes,
 };
 use crate::error::{is_cancellation, is_corrupt, is_transient};
 use crate::manager::Manager;
@@ -862,6 +863,60 @@ pub struct RestorePreview {
     pub limit_bytes: i64,
     /// The revision it planned against, for the real call's If-Match.
     pub head: Option<Receipt>,
+}
+
+impl RestorePreview {
+    /// The preview route's body. The agent's history.previewRestore answers
+    /// the same body.
+    pub fn json(&self) -> Value {
+        let key = |name: &str| Str::from_utf8(name.as_bytes());
+        let text = |value: &str| Value::String(key(value));
+        let blocks = self
+            .blocks
+            .iter()
+            .map(|change| {
+                let mut row = Object::new();
+                row.set(key("id"), Value::String(change.id.clone()));
+                row.set(
+                    key("type"),
+                    change.kind_type.clone().map_or(Value::Null, Value::String),
+                );
+                row.set(
+                    key("kind"),
+                    text(match change.kind {
+                        BlockChangeKind::Added => "added",
+                        BlockChangeKind::Removed => "removed",
+                        BlockChangeKind::Changed => "changed",
+                        BlockChangeKind::Moved => "moved",
+                    }),
+                );
+                Value::Object(row)
+            })
+            .collect();
+        let mut undo = Object::new();
+        undo.set(key("blocks"), Value::Array(blocks));
+        undo.set(
+            key("page"),
+            Value::Array(self.page.iter().map(|page| text(page)).collect()),
+        );
+        let head = self.head.as_ref().map_or(String::new(), |head| {
+            format!("{}:{}", head.tag.lineage, head.server_sequence)
+        });
+        let mut body = Object::new();
+        body.set(key("wouldUndo"), Value::Object(undo));
+        body.set(
+            key("guards"),
+            Value::Array(self.guards.iter().map(RestoreGuard::json).collect()),
+        );
+        body.set(
+            key("fits"),
+            Value::Bool(self.frame_bytes <= self.limit_bytes),
+        );
+        body.set(key("frameBytes"), Value::Number(self.frame_bytes as f64));
+        body.set(key("limitBytes"), Value::Number(self.limit_bytes as f64));
+        body.set(key("expectRevision"), text(&head));
+        Value::Object(body)
+    }
 }
 
 impl Manager {

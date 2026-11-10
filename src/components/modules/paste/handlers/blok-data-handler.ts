@@ -8,6 +8,7 @@ import { convertBlockDataToString, convertStringToBlockData } from '../../../uti
 import { generateBlockId } from '../../../utils/id-generator';
 import { log } from '../../../utils/logger';
 import { composeStubData, resolveBlockTool } from '../../../utils/stub-tool';
+import type { StubData } from '../../../../tools/stub';
 import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link';
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import { safeHref } from '../../../utils/sanitize-url';
@@ -311,6 +312,29 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * A stub's payload, cleaned with the inline tools' rules. The clipboard JSON
+   * can be forged, and the stub saves this payload as a block of its real tool,
+   * whose own rules this editor does not know.
+   * @param data - the stub data built by withResolvedTool
+   */
+  private sanitizeStubPayload(data: BlockToolData): BlockToolData {
+    const { Tools } = this.Blok;
+    const savedData = (data as Partial<StubData> | undefined)?.savedData;
+
+    if (savedData === undefined || typeof savedData.type !== 'string' || typeof savedData.data !== 'object' || savedData.data === null) {
+      return data;
+    }
+
+    const [cleaned] = sanitizeBlocks(
+      [{ tool: savedData.type, data: savedData.data }],
+      Tools.getAllInlineToolsSanitizeConfig(),
+      this.config.sanitizer
+    );
+
+    return { ...data, savedData: { ...savedData, data: cleaned.data } };
+  }
+
+  /**
    * The table enclosing the caret cell, when the batch holds a tool barred from cells.
    * @param blocks - the clipboard entries, nested ones included
    */
@@ -358,12 +382,11 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     // those children get adopted by the table during the two-pass insert
     // instead of becoming detached top-level paragraphs.
     const blocks = backfillTableChildParents(this.linksForSingletons(rawBlocks.map(entry => this.withResolvedTool(entry))));
-    // A stub only keeps its payload and never renders it; the tool sanitizes it once registered.
     const sanitizedBlocks = sanitizeBlocks(
       blocks,
       (name) => Tools.blockTools.get(name)?.sanitizeConfig ?? {},
       this.config.sanitizer
-    ).map((sanitized, i) => (sanitized.tool === Tools.stubTool ? { ...sanitized, data: blocks[i].data } : sanitized));
+    ).map((sanitized, i) => (sanitized.tool === Tools.stubTool ? { ...sanitized, data: this.sanitizeStubPayload(blocks[i].data) } : sanitized));
 
     // A tool barred from cells sends the whole batch out of the table, right
     // after its subtree, as BasePasteHandler.redirectToTableParentIfNeeded does.

@@ -335,6 +335,20 @@ describe('Saver module', () => {
     ]);
   });
 
+  it('saves only the type and data from a stub, never other fields stored with them', async () => {
+    const stub = createBlockMock({
+      id: 'live-t',
+      tool: 'stub',
+      data: { id: 'copied-t', type: 'toggle', data: { text: 'Toggle' }, parent: 'forged', createdBy: 'forged', tunes: { forged: true } },
+    });
+
+    const { saver } = createSaver({ blocks: [stub.block] });
+
+    const result = await saver.save();
+
+    expect(result?.blocks).toEqual([{ id: 'live-t', type: 'toggle', data: { text: 'Toggle' } }]);
+  });
+
   it('returns an empty blocks array for a single empty default block', async () => {
     const emptyBlock = createBlockMock({
       id: 'block-1',

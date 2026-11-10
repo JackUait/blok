@@ -937,6 +937,7 @@ describe('BlokDataHandler — tools the pasting editor does not have', () => {
       Tools: {
         stubTool: 'stub',
         unavailable: new Map(),
+        getAllInlineToolsSanitizeConfig: vi.fn(() => ({ b: {}, a: { href: true } })),
         blockTools: {
           get: vi.fn((name: string) => (tools.has(name) ? { sanitizeConfig: {} } : undefined)),
         },
@@ -966,6 +967,31 @@ describe('BlokDataHandler — tools the pasting editor does not have', () => {
     });
     expect(blocks[2].parentId).toBe(blocks[1].id);
     expect(inserted[3].data).toEqual({ text: 'After' });
+  });
+
+  it('sanitizes the data of a block whose tool is missing before keeping it in a stub', async () => {
+    const { handler, inserted } = setup(['paragraph']);
+
+    await handler.handle(JSON.stringify([
+      { id: 't', tool: 'toggle', data: { text: '<img src="x" onerror="alert(1)"><b>Hi</b> <a href="javascript:alert(1)">x</a>' } },
+    ]), { canReplaceCurrentBlock: false });
+
+    const text = (inserted[0].data as { savedData: { data: { text: string } } }).savedData.data.text;
+
+    expect(text).not.toMatch(/onerror|javascript:|<img/i);
+    expect(text).toContain('<b>Hi</b>');
+  });
+
+  it('sanitizes the data of a copied stub whose tool is still missing', async () => {
+    const { handler, inserted } = setup(['paragraph']);
+
+    await handler.handle(JSON.stringify([
+      { id: 't', tool: 'stub', data: { type: 'toggle', data: { text: '<img src="x" onerror="alert(1)">Hi' } } },
+    ]), { canReplaceCurrentBlock: false });
+
+    const text = (inserted[0].data as { savedData: { data: { text: string } } }).savedData.data.text;
+
+    expect(text).not.toMatch(/onerror|<img/i);
   });
 
   it('unwraps a copied stub whose tool this editor has', async () => {

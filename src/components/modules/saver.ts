@@ -1206,7 +1206,7 @@ export class Saver extends Module {
       }
 
       // A stub saves the block it stands for, placed where the stub lives now.
-      const block = isStub && this.isStubSavedData(data) ? data : { type: tool, data };
+      const block = isStub && this.isStubSavedData(data) ? { type: data.type, data: data.data } : { type: tool, data };
 
       const isTunesEmpty = tunes === undefined || isEmpty(tunes);
       const hasLastEdited = lastEditedAt !== undefined;

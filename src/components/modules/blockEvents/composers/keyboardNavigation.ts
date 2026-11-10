@@ -966,13 +966,16 @@ export class KeyboardNavigation extends BlockEventComposer {
     const resetsToTextOnBackspace = currentBlock.name === HEADER_TOOL_NAME || currentBlock.name === QUOTE_TOOL_NAME;
 
     /**
-     * A heading with text merges straight into a non-empty text block above
-     * (Notion U098). With no block above, an empty one, or one that cannot take
-     * the text, it still resets to text first: Notion has no entry for those.
+     * A heading with text merges straight into a non-empty text block above at
+     * the same level (Notion U098). Any other block above (none, empty, code,
+     * list, heading, a child of another parent) still resets it to text first:
+     * Notion has no entry for those.
      */
     const headingMergesUp = currentBlock.name === HEADER_TOOL_NAME &&
       !currentBlock.isEmpty &&
       previousBlock !== null &&
+      previousBlock.tool.isDefault &&
+      previousBlock.parentId === currentBlock.parentId &&
       !previousBlock.isEmpty &&
       !this.isReadOnly(previousBlock) &&
       areBlocksMergeable(previousBlock, currentBlock);

@@ -1979,6 +1979,7 @@ describe('KeyboardNavigation', () => {
       const previous = createBlock({
         id: 'prev-block',
         isEmpty: false,
+        parentId: null,
         tool: { isDefault: true, isLineBreaksEnabled: false, name: 'paragraph', conversionConfig: { export: 'text', import: 'text' } } as unknown as Block['tool'],
       });
       const { replace, mergeBlocks, headingBlock } = headingBackspace(previous);
@@ -1997,6 +1998,32 @@ describe('KeyboardNavigation', () => {
 
     it('resets a heading to a paragraph when the block above cannot take its text (no Notion entry)', () => {
       const { replace, mergeBlocks } = headingBackspace(createBlock({ id: 'image-block', name: 'image', isEmpty: false, mergeable: false }));
+
+      expect(replace).toHaveBeenCalled();
+      expect(mergeBlocks).not.toHaveBeenCalled();
+    });
+
+    it('resets a heading to a paragraph when the block above is not text, e.g. code (no Notion entry)', () => {
+      const code = createBlock({
+        id: 'code-block',
+        name: 'code',
+        isEmpty: false,
+        tool: { isDefault: false, isLineBreaksEnabled: true, name: 'code', conversionConfig: { export: 'code', import: 'code' } } as unknown as Block['tool'],
+      });
+      const { replace, mergeBlocks } = headingBackspace(code);
+
+      expect(replace).toHaveBeenCalled();
+      expect(mergeBlocks).not.toHaveBeenCalled();
+    });
+
+    it('resets a heading to a paragraph when the text above sits in another parent (no Notion entry)', () => {
+      const toggleChild = createBlock({
+        id: 'toggle-child',
+        isEmpty: false,
+        parentId: 'toggle',
+        tool: { isDefault: true, isLineBreaksEnabled: false, name: 'paragraph', conversionConfig: { export: 'text', import: 'text' } } as unknown as Block['tool'],
+      });
+      const { replace, mergeBlocks } = headingBackspace(toggleChild);
 
       expect(replace).toHaveBeenCalled();
       expect(mergeBlocks).not.toHaveBeenCalled();

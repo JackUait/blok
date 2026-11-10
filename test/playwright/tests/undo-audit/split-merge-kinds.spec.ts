@@ -220,6 +220,38 @@ test.describe('undo audit: the kind of block a split or merge leaves', () => {
     await expectSaveMatchesDom(page);
   });
 
+  test('U098 edge: a heading below code or a closed toggle still turns into text (no Notion entry)', async ({ page }) => {
+    await create(page, [
+      { id: 'c1', type: 'code', data: { code: 'x=1', language: 'plain' } },
+      { id: 'h1', type: 'header', data: { text: 'Beta', level: 2 } },
+      { id: 't1', type: 'toggle', data: { text: 'Tog' }, content: ['k1'] },
+      { id: 'k1', type: 'paragraph', data: { text: 'kid' }, parent: 't1' },
+      { id: 'h2', type: 'header', data: { text: 'Gamma', level: 2 } },
+    ]);
+
+    await placeCaret(page, 'h1', 0);
+    await press(page, 'Backspace');
+    await placeCaret(page, 'h2', 0);
+    await press(page, 'Backspace');
+
+    expect((await saved(page)).slice(1)).toEqual(['h1 paragraph:Beta', 't1 toggle:Tog', 'k1 paragraph:kid ^t1', 'h2 paragraph:Gamma']);
+    expect(await page.evaluate(async () => (await window.blokInstance?.save())?.blocks[0].data)).toMatchObject({ code: 'x=1' });
+    await expectSaveMatchesDom(page);
+  });
+
+  test('U137 edge: a selection that ends at the toggle title start is deleted, not converted', async ({ page }) => {
+    await create(page, [
+      { id: 'b1', type: 'paragraph', data: { text: 'Above' } },
+      { id: 'b2', type: 'toggle', data: { text: 'Tog' } },
+    ]);
+    await placeCaret(page, 'b2', 2);
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowLeft');
+
+    await press(page, 'Backspace');
+    expect(await saved(page)).toEqual(['b1 paragraph:Above', 'b2 toggle:g']);
+  });
+
   test('U137: Backspace at a toggle title start turns it into text in place and keeps the child nested', async ({ page }) => {
     await create(page, [
       { id: 'b1', type: 'paragraph', data: { text: 'Above' } },

@@ -139,7 +139,8 @@ export const handleToggleBackspace = async (
     return;
   }
 
-  if (!isCaretAtStartOfInput(contentEl)) {
+  // A backward selection ends at 0 too; the browser must delete it, not convert.
+  if (!isCaretAtStartOfInput(contentEl) || window.getSelection()?.isCollapsed === false) {
     return;
   }
 

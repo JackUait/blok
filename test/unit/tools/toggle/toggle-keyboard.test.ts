@@ -416,6 +416,39 @@ describe('Toggle Keyboard Handlers', () => {
       expect(context.api.caret.setToBlock).toHaveBeenCalledWith('converted-id', 'start');
     });
 
+    it('U137: leaves a selection that ends at the start to the browser, so the selected text is deleted', async () => {
+      const { handleToggleBackspace } = await import('../../../../src/tools/toggle/toggle-keyboard');
+      const contentElement = document.createElement('div');
+
+      contentElement.textContent = 'Tog';
+      document.body.appendChild(contentElement);
+
+      const text = contentElement.firstChild;
+
+      if (text === null) {
+        throw new Error('no text node');
+      }
+      // Shift+ArrowLeft twice from offset 2: anchor 2, focus 0.
+      window.getSelection()?.setBaseAndExtent(text, 2, text, 0);
+
+      const context = createMockContext({
+        data: { text: 'Tog' },
+        getContentElement: () => contentElement,
+      });
+
+      mockIsCaretAtStartOfInput.mockReturnValue(true);
+
+      const event = new KeyboardEvent('keydown', { key: 'Backspace' });
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+      await handleToggleBackspace(context, event);
+
+      expect(context.api.blocks.convert).not.toHaveBeenCalled();
+      expect(preventDefaultSpy).not.toHaveBeenCalled();
+
+      contentElement.remove();
+    });
+
     it('does NOT convert when caret is not at start (text exists)', async () => {
       const { handleToggleBackspace } = await import('../../../../src/tools/toggle/toggle-keyboard');
       const contentElement = document.createElement('div');

@@ -75,8 +75,8 @@ const LEADING_TAGS = [
 ] as const;
 
 /**
- * `presses`: Backspaces needed to merge. List and quote first turn into a
- * paragraph, then merge. A heading merges at once (Notion U098).
+ * `presses`: Backspaces needed to merge. Header, list and quote first turn
+ * into a paragraph, then merge — the same as with plain text.
  */
 const CONTAINERS: Array<{ name: string; blocks: (a: string, b: string) => Blocks; a: string; b: string; presses: number }> = [
   {
@@ -91,7 +91,7 @@ const CONTAINERS: Array<{ name: string; blocks: (a: string, b: string) => Blocks
   },
   {
     name: 'header',
-    presses: 1,
+    presses: 2,
     a: 'a',
     b: 'b',
     blocks: (a, b) => [

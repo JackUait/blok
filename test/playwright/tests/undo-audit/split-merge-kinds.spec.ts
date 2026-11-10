@@ -214,6 +214,10 @@ test.describe('undo audit: the kind of block a split or merge leaves', () => {
     await press(page, UNDO);
     expect(await saved(page)).toEqual(['b1 paragraph:Alpha', 'b2 header:Beta', 'b3 paragraph:kid ^b2']);
     await expectSaveMatchesDom(page);
+
+    await press(page, REDO);
+    expect(await saved(page)).toEqual(after);
+    await expectSaveMatchesDom(page);
   });
 
   test('U137: Backspace at a toggle title start turns it into text in place and keeps the child nested', async ({ page }) => {
@@ -260,6 +264,11 @@ test.describe('undo audit: the kind of block a split or merge leaves', () => {
     await press(page, UNDO);
     expect(await saved(page)).toEqual(['b1 paragraph:Above', 'b2 toggle:Tog', 'b3 paragraph:kid ^b2']);
     await expectSaveMatchesDom(page);
+
+    await press(page, REDO);
+    expect(await saved(page)).toEqual(['b1 paragraph:Above', 'b2 paragraph:Tog', 'b3 paragraph:kid ^b2']);
+    await expectSaveMatchesDom(page);
+    await expect(page.getByText('kid', { exact: true })).toBeVisible();
   });
 
   test('U093: Enter in the middle of a heading puts the second half in a text block', async ({ page }) => {
@@ -276,6 +285,7 @@ test.describe('undo audit: the kind of block a split or merge leaves', () => {
     await press(page, UNDO);
     expect(await saved(page)).toEqual(['b1 header:Big title']);
     expect(await caret(page)).toEqual({ blockId: 'b1', offset: 3 });
+    await expectSaveMatchesDom(page);
 
     await press(page, REDO);
     expect(await saved(page)).toEqual(['b1 header:Big', `${fresh} paragraph: title`]);
@@ -297,10 +307,12 @@ test.describe('undo audit: the kind of block a split or merge leaves', () => {
     await press(page, UNDO);
     expect(await saved(page)).toEqual(['b1 quote:Quoted line']);
     expect(await caret(page)).toEqual({ blockId: 'b1', offset: 6 });
+    await expectSaveMatchesDom(page);
 
     await press(page, REDO);
     expect(await saved(page)).toEqual(['b1 quote:Quoted', `${fresh} paragraph: line`]);
     expect(await caret(page)).toEqual({ blockId: fresh, offset: 0 });
+    await expectSaveMatchesDom(page);
   });
 
   test('Enter at the end of a heading or a quote opens a text block', async ({ page }) => {

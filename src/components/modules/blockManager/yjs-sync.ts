@@ -20,7 +20,8 @@ import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent, BlockReplayCapture, TransactionOrigin } from '../yjs/types';
 
 import type { BlockFactory } from './factory';
-import { isSelfPlacedParent } from './new-block-placement';
+import { findOwn } from '../../utils/own-element';
+import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
 import { adjustCaretOffset, captureCaretAcrossRewrite } from './remote-edit-caret';
 import type { BlockOperations } from './operations';
 import type { BlockRepository } from './repository';
@@ -1558,9 +1559,15 @@ export class BlockYjsSync {
     });
 
     const oldHolder = target.holder;
+    // A closed toggle hid its children with a class the new tool knows nothing about.
+    const hidByClosedToggle = record.tool !== target.name && findOwn(oldHolder, '[data-blok-toggle-open="false"]') !== null;
 
     this.handlers.replaceBlock(blockIndex, newBlock);
     this.remountDescendantsLeftIn(oldHolder, target.id);
+
+    if (hidByClosedToggle) {
+      this.reshowChildren(newBlock);
+    }
     this.announceReplay(
       newBlock,
       record.data,
@@ -1574,6 +1581,19 @@ export class BlockYjsSync {
     if (this.reconcileOrphanedChildren(target.id)) {
       newBlock.call(BlockToolAPI.RENDERED);
     }
+  }
+
+  /**
+   * Show a rebuilt block's children again, then hide them only if the new
+   * block is collapsed too.
+   * @param parent - the rebuilt block
+   */
+  private reshowChildren(parent: Block): void {
+    const getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);
+    const children = parent.contentIds.map(getBlock).filter((child): child is Block => child !== undefined);
+
+    children.forEach((child) => child.holder.classList.remove('hidden'));
+    children.forEach((child) => hideUnderCollapsedParent(child, getBlock));
   }
 
   /**

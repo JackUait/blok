@@ -35,13 +35,14 @@ impl RestoreGuard {
 }
 
 /// LOCK_PROTECTED_FIELDS in src/shared/tool-actions/database.ts.
-const LOCK_PROTECTED_FIELDS: [&str; 6] = [
+const LOCK_PROTECTED_FIELDS: [&str; 7] = [
     "schema",
     "views",
     "automations",
     "source",
     "hideDataSourceTitles",
     "starter",
+    "deletedProperties",
 ];
 
 const SUBMISSION_ACCESS: [&str; 5] = ["none", "view", "comment", "edit", "full"];
@@ -113,7 +114,7 @@ pub fn restore_guards(current_blocks: &[Value], target_blocks: &[Value]) -> Vec<
             && text(after, "type").as_deref() == Some("database")
             && LOCK_PROTECTED_FIELDS
                 .iter()
-                .all(|field| same_member(object_at(block, "data"), object_at(after, "data"), field))
+                .all(|field| same_slot(object_at(block, "data"), object_at(after, "data"), field))
         {
             continue;
         }
@@ -262,6 +263,29 @@ fn locked_or_held<'a>(
 }
 
 /// Missing and null differ, as undefined and null do.
+/// same_member, but a missing slot reads as its empty default (withEmptySlots in approval.ts).
+fn same_slot(left: Option<&Object>, right: Option<&Object>, name: &str) -> bool {
+    match (member(left, name), member(right, name)) {
+        (Some(value), None) | (None, Some(value)) => is_empty_slot(name, value),
+        _ => same_member(left, right, name),
+    }
+}
+
+fn is_empty_slot(name: &str, value: &Value) -> bool {
+    let Value::Object(object) = value else {
+        return false;
+    };
+    match name {
+        "deletedProperties" => object.is_empty(),
+        "automations" => {
+            object.len() == 2
+                && matches!(member(Some(object), "version"), Some(Value::Number(n)) if *n == 1.0)
+                && matches!(member(Some(object), "definitions"), Some(Value::Array(list)) if list.is_empty())
+        }
+        _ => false,
+    }
+}
+
 fn same_member(left: Option<&Object>, right: Option<&Object>, name: &str) -> bool {
     match (member(left, name), member(right, name)) {
         (None, None) => true,

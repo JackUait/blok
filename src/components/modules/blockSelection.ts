@@ -13,7 +13,6 @@ import { Dom as $ } from '../dom';
 import { blocksToMarkdown } from '../../markdown/blocks-to-markdown';
 import type { CrossBlockSubRange, CrossBlockTextSelection } from '../selection/cross-block-range';
 import { SelectionUtils } from '../selection/index';
-import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
 import { prefersReducedMotion } from '../utils/reduced-motion';
 import { announce } from '../utils/announcer';
@@ -2104,16 +2103,8 @@ export class BlockSelection extends Module {
       Caret.setToBlock(insertedBlock);
     }
 
-    delay(() => {
-      const eventKey = event.key;
-
-      /**
-       * If event.key length >1 that means key is special (e.g. Enter or Dead or Unidentified).
-       * So we use empty string
-       * @see https://developer.mozilla.org/ru/docs/Web/API/KeyboardEvent/key
-       */
-      Caret.insertContentAtCaretPosition(eventKey.length > 1 ? '' : eventKey);
-
-    }, 20)();
+    // At once: a deferred insert lands after keys typed right after it.
+    // A key longer than one character (Enter, Dead, Unidentified) inserts nothing.
+    Caret.insertContentAtCaretPosition(event.key.length > 1 ? '' : event.key);
   }
 }

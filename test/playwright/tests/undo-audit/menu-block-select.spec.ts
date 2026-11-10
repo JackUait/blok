@@ -565,4 +565,25 @@ test.describe('undo and redo after a block menu action (FR1, FR2 with D3)', () =
     await expect.poll(() => selectedIds(page)).toEqual(['p2']);
     expect(await hasCaret(page)).toBe(false);
   });
+
+  test('keys typed fast over a menu-made selection land in order, and undo restores the block', async ({ page }) => {
+    await createBlok(page, BASE);
+    await editable(page, 'p1').click();
+    await gap(page);
+    await convert(page, 'p1', 'Heading 1');
+    await expect.poll(() => selectedIds(page)).toEqual(['p1']);
+    await gap(page);
+
+    await page.keyboard.type('xyz');
+    await expect.poll(() => saved(page)).toEqual(['paragraph:before', 'paragraph:xyz', 'paragraph:Beta', 'paragraph:after']);
+    await gap(page);
+
+    // "x" replaces the selection; "yz" is typing after it, a step of its own.
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => saved(page)).toEqual(['paragraph:before', 'paragraph:x', 'paragraph:Beta', 'paragraph:after']);
+    await gap(page, 300);
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => saved(page)).toEqual(['paragraph:before', 'header:Alpha', 'paragraph:Beta', 'paragraph:after']);
+  });
 });

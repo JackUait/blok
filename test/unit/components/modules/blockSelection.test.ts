@@ -1597,9 +1597,6 @@ describe('BlockSelection', () => {
         insertContentAtCaretPosition: ReturnType<typeof vi.fn>;
       };
       const insertedBlock = createBlockStub();
-      const delaySpy = vi.spyOn(utils, 'delay').mockImplementation((fn) => {
-        return () => fn();
-      });
 
       blockManager.deleteSelectedBlocksAndInsertReplacement = vi.fn().mockReturnValue(insertedBlock);
 
@@ -1616,8 +1613,8 @@ describe('BlockSelection', () => {
       // A replacement block is forced so the char always lands in a clean block.
       expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledWith(true);
       expect(caret.setToBlock).toHaveBeenCalledWith(insertedBlock);
+      // At once: a key typed fast after it would land first ("yzx" for "xyz").
       expect(caret.insertContentAtCaretPosition).toHaveBeenCalledWith('x');
-      expect(delaySpy).toHaveBeenCalledTimes(1);
     });
 
     it('inserts empty string for non-printable keys', () => {

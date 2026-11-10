@@ -8,7 +8,7 @@ import { ColumnList } from '../../../../src/tools/column-list';
 import { Column } from '../../../../src/tools/column';
 import { TabsTool } from '../../../../src/tools/tabs';
 import { TabTool } from '../../../../src/tools/tab';
-import type { OutputBlockData } from '../../../../types';
+import type { OutputBlockData, OutputData } from '../../../../types';
 
 /**
  * A range selection never selects a layout block (column_list, column, tab):
@@ -19,7 +19,10 @@ import type { OutputBlockData } from '../../../../types';
 interface TestEditor {
   isReady: Promise<unknown>;
   destroy: () => void;
+  save: () => Promise<OutputData>;
+  history: { undo: () => void };
   module: {
+    yjsManager: { stopCapturing: () => void };
     blockManager: {
       blocks: Block[];
       deleteSelectedBlocksAndInsertReplacement: () => Block | undefined;
@@ -54,10 +57,16 @@ const columnsDoc = (): OutputBlockData[] => [
   P('post', 'After'),
 ];
 
+class LockedParagraph extends Paragraph {
+  public isReadOnly(): boolean {
+    return true;
+  }
+}
+
 const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, column_list: ColumnList, column: Column, tabs: TabsTool, tab: TabTool },
+    tools: { paragraph: Paragraph, locked: LockedParagraph, column_list: ColumnList, column: Column, tabs: TabsTool, tab: TabTool },
     data: { blocks },
   }) as unknown as TestEditor;
 
@@ -195,6 +204,48 @@ describe('delete of a range across a column layout', () => {
 
     await vi.waitFor(() => {
       expect(blockManager.blocks.map((live) => live.name)).toEqual(['paragraph']);
+    });
+  });
+
+  it('keeps a read-only block and its layout, and deletes the rest', async () => {
+    const instance = await boot(columnsDoc().map((saved) => saved.id === 'c2p' ? { ...saved, type: 'locked' } : saved));
+    const { blockManager } = instance.module;
+
+    for (const selected of blockManager.getSelectionSiblingRange(block(instance, 'pre'), block(instance, 'post'))) {
+      selected.selected = true;
+    }
+    blockManager.deleteSelectedBlocksAndInsertReplacement();
+
+    await vi.waitFor(() => {
+      expect(blockManager.blocks.map((live) => live.id)).toEqual(['cl', 'c2', 'c2p']);
+    });
+  });
+
+  it('comes back whole on undo', async () => {
+    const instance = await boot(columnsDoc());
+    const { blockManager } = instance.module;
+
+    instance.module.yjsManager.stopCapturing();
+    for (const selected of blockManager.getSelectionSiblingRange(block(instance, 'pre'), block(instance, 'post'))) {
+      selected.selected = true;
+    }
+    blockManager.deleteSelectedBlocksAndInsertReplacement();
+    await vi.waitFor(() => {
+      expect(blockManager.blocks).toHaveLength(1);
+    });
+    instance.module.yjsManager.stopCapturing();
+    instance.history.undo();
+
+    await vi.waitFor(async () => {
+      expect((await instance.save()).blocks.map((saved) => [saved.id, saved.parent ?? null, saved.data.widthRatio])).toEqual([
+        ['pre', null, undefined],
+        ['cl', null, undefined],
+        ['c1', 'cl', 2],
+        ['c1p', 'c1', undefined],
+        ['c2', 'cl', undefined],
+        ['c2p', 'c2', undefined],
+        ['post', null, undefined],
+      ]);
     });
   });
 });

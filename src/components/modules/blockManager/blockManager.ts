@@ -1148,8 +1148,11 @@ export class BlockManager extends Module {
     // followers (Notion deletes a Tab-nested parent together with its children)
     // and to the layouts they fill, so no empty column_list is left behind.
     // Then attach indices sorted descending for safe removal.
-    const expandedBlocks = this.withFlatIndentFollowers(this.withCoveredLayouts(this.blocks.filter((block) => block.selected)))
-      .filter((block) => !carriesReadOnly(block, (id) => this.getBlockById(id)));
+    // Read-only blocks drop out before the layout lift, so a layout holding one
+    // is never covered and never deleted with it.
+    const isWritable = (block: Block): boolean => !carriesReadOnly(block, (id) => this.getBlockById(id));
+    const expandedBlocks = this.withFlatIndentFollowers(this.withCoveredLayouts(this.blocks.filter((block) => block.selected && isWritable(block))))
+      .filter(isWritable);
     const selectedBlockEntries = expandedBlocks
       .map((block) => ({ block, index: this.blocks.indexOf(block) }))
       .sort((a, b) => b.index - a.index);

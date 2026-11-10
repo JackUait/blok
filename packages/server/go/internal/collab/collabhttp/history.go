@@ -119,18 +119,14 @@ func (h *Handlers) HistoryList(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	minutes, ok := queryNumber(r, "group")
-	if !ok || (minutes != nil && *minutes != 1 && *minutes != 15 && *minutes != 60) {
+	group, ok := queryGroup(r)
+	if !ok {
 		synchttp.Refuse(w, http.StatusBadRequest, "group must be 1, 15 or 60\n")
 		return
 	}
 	window, ok := h.window(w, r, a)
 	if !ok {
 		return
-	}
-	var group time.Duration
-	if minutes != nil {
-		group = time.Duration(*minutes) * time.Minute
 	}
 	// Shipped route: any other by is ignored, as unknown keys always were.
 	by := dotnet.QueryAll(r.URL.RawQuery, "by")
@@ -766,6 +762,26 @@ func historyLineage(w http.ResponseWriter, r *http.Request) (string, bool) {
 // parseUnsigned is ulong.TryParse with NumberStyles.None: digits only, but
 // .NET also skips any NULs after the last digit ("1\x00" is 1).
 func parseUnsigned(digits string) (uint64, bool) { return dotnet.ParseUInt64None(digits) }
+
+// queryGroup: absent is 0; anything but 1, 15 or 60 minutes is false.
+func queryGroup(r *http.Request) (time.Duration, bool) {
+	minutes, ok := queryNumber(r, "group")
+	if !ok {
+		return 0, false
+	}
+	if minutes == nil {
+		return 0, true
+	}
+	switch *minutes {
+	case 1:
+		return time.Minute, true
+	case 15:
+		return 15 * time.Minute, true
+	case 60:
+		return time.Hour, true
+	}
+	return 0, false
+}
 
 // queryNumber: absent is nil; a repeated, empty or signed value is false.
 // The query is read the ASP.NET way, not with net/url.

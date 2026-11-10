@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { afterAll, beforeAll, vi } from 'vitest';
 import Blok from '../../../../../src/blok';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { ListItem } from '../../../../../src/tools/list';
@@ -15,6 +15,35 @@ export interface TestEditor {
   blocks: API['blocks'];
   readOnly: { set: (state: boolean) => Promise<unknown>; toggle: (state?: boolean) => Promise<boolean> };
 }
+
+/**
+ * jsdom keeps contentEditable as a plain property; a browser reflects it to
+ * the attribute core finds inputs by. Without it no block has an input, so
+ * caret.setToBlock selects the block and a paste replaces it.
+ */
+export const reflectContentEditable = (): void => {
+  const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'contentEditable');
+
+  beforeAll(() => {
+    Object.defineProperty(HTMLElement.prototype, 'contentEditable', {
+      configurable: true,
+      get(this: HTMLElement): string {
+        return this.getAttribute('contenteditable') ?? 'inherit';
+      },
+      set(this: HTMLElement, value: string) {
+        this.setAttribute('contenteditable', String(value));
+      },
+    });
+  });
+
+  afterAll(() => {
+    if (original === undefined) {
+      Reflect.deleteProperty(HTMLElement.prototype, 'contentEditable');
+    } else {
+      Object.defineProperty(HTMLElement.prototype, 'contentEditable', original);
+    }
+  });
+};
 
 export const nextFrame = (): Promise<void> => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 

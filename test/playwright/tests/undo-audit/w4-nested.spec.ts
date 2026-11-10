@@ -308,7 +308,9 @@ test.describe('hidden and nested targets', () => {
     await editable(page, 'top').click();
     await redo(page);
     expect(await save(page)).toEqual(collapsed);
-    await expect(holder(page, 'c')).toBeVisible();
+    // Redo lands where the caret was at the undo press (in "top"), so it opens nothing.
+    await expect(editable(page, 'top')).toBeFocused();
+    await expect(holder(page, 'c')).toBeHidden();
   });
 
   test('works: toggle > callout > list > nested list, edit and Enter undo/redo exactly', async ({ page }) => {

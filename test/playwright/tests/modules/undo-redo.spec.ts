@@ -4274,9 +4274,10 @@ test.describe('yjs undo/redo', () => {
       }
       await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
 
-      // Redo each split: caret must land at the start (offset 0) of the new
-      // lower block (index 3, then 4, then 5) — never the document-top block.
+      // Redo each split: the caret lands where it was at the matching undo
+      // press (index 3, then 4, then 5) — never the document-top block.
       const expectedNewBlock = [3, 4, 5];
+      const expectedOffset = [3, 3, 0];
 
       for (let i = 0; i < 3; i++) {
         await page.keyboard.press(REDO_SHORTCUT);
@@ -4288,7 +4289,7 @@ test.describe('yjs undo/redo', () => {
 
         const offset = await getCaretOffset(getParagraphByIndex(page, expectedNewBlock[i]).locator('[contenteditable="true"]'));
 
-        expect(offset).toBe(0);
+        expect(offset).toBe(expectedOffset[i]);
       }
     });
 

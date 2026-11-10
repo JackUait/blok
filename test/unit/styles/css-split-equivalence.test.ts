@@ -1567,7 +1567,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: a hidden group's eye is gray on the Group page.
     const DATABASE_BOARD5_BYTES = 92;
     // Round 9 lane mselect: multi-select editor radii and Create row, group header, row drag, view settings.
-    const DATABASE_MSELECT_BYTES = 447;
+    const DATABASE_MSELECT_BYTES = 792;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid, bottom stage and skin-tone dial.

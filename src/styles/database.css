@@ -7926,6 +7926,11 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-database-picker-head-padding-block) var(--blok-space-3);
 }
 
+/* notion-motion.md Round 9: the multi-select input row rounds 6 like its box. */
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="multiSelect"] [data-blok-database-select-chips] {
+  border-radius: var(--blok-radius-control);
+}
+
 /* research/08: the select hint is 12/14.4 weight 500. */
 /* notion-live/selectcell.png: the hint ink 52px under the popover's top and 14px in; the first pill 77px down. */
 [data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor] [data-blok-database-select-hint] {

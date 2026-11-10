@@ -11337,6 +11337,10 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-database-picker-head-padding-block) var(--blok-space-3);
 }
 
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="multiSelect"] [data-blok-database-select-chips] {
+  border-radius: var(--blok-radius-control);
+}
+
 [data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor] [data-blok-database-select-hint] {
   padding: var(--blok-space-2-75) var(--blok-space-3) var(--blok-space-2);
   font-weight: 500;

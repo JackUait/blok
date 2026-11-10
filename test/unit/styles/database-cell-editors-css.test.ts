@@ -468,6 +468,11 @@ describe('cell editor CSS', () => {
       expect(declared(`${TABLE} [data-blok-database-select-editor] [data-blok-database-select-chips]`, 'padding')).toEqual(['var(--blok-database-picker-head-padding-block) var(--blok-space-3)']);
     });
 
+    // notion-motion.md Round 9 "Multi-select cell editor": the input row is rounded 6 like the box.
+    it('round the multi-select head 6px', () => {
+      expect(declared(`${TABLE} [data-blok-database-select-editor="multiSelect"] [data-blok-database-select-chips]`, 'border-radius')).toEqual(['var(--blok-radius-control)']);
+    });
+
     it('draw the hint at 12/14.4 weight 500', () => {
       expect(declared(`${TABLE} [data-blok-database-select-editor] [data-blok-database-select-hint]`, 'font-weight')).toEqual(['500']);
       expect(declared(`${TABLE} [data-blok-database-select-editor] [data-blok-database-select-hint]`, 'line-height')).toEqual(['14.4px']);

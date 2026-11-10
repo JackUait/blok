@@ -10715,10 +10715,11 @@ export class DatabaseTool implements BlockTool {
    */
   private readonly handleSelectionCopy = (event: ClipboardEvent): void => {
     const target = event.target instanceof HTMLElement ? event.target : null;
-    // A Shift-click leaves the caret where it was, so only selected text or a field keeps the copy.
-    const copiesText = window.getSelection()?.isCollapsed === false || target?.matches('input, textarea, select') === true;
+    // A Shift-click leaves the caret where it was, so only selected text, a field or selected blocks keep the copy.
+    const copiesOther = window.getSelection()?.isCollapsed === false || target?.matches('input, textarea, select') === true
+      || document.querySelector(`[${DATA_ATTR.selected}="true"]`) !== null;
 
-    if (this.rowSelection.size === 0 || this.api.blocks.copy === undefined || copiesText) {
+    if (this.rowSelection.size === 0 || this.api.blocks.copy === undefined || copiesOther) {
       return;
     }
     // A linked view's rows may live in another document.

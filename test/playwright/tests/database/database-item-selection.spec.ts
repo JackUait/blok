@@ -415,6 +415,24 @@ test.describe('Cmd/Ctrl+C on picked items', () => {
     { id: 'target', type: 'paragraph', data: { text: '' } },
   ];
 
+  test('a block selection made after a pick copies the selected blocks, not the picked row', async ({ page }) => {
+    await mount(page, docWithBody({ type: 'board', groupBy: 'p-stage' }));
+    await recordCopies(page);
+    await caretAbove(page);
+    await item(page, '[data-blok-database-card]', 'r1').click({ modifiers: ['Shift'] });
+    expect(await picked(page)).toEqual(['r1']);
+
+    await caretAbove(page);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-id="p-1"]')).toHaveAttribute('data-blok-selected', 'true');
+    await page.keyboard.press('ControlOrMeta+c');
+
+    const copies = await page.evaluate(() => (window as unknown as { copies: Array<Record<string, string>> }).copies);
+    const payload = JSON.parse(copies.at(-1)?.['application/x-blok'] ?? '[]') as Array<{ id: string }>;
+
+    expect(payload.map((entry) => entry.id)).toEqual(['p-1']);
+  });
+
   for (const { name, view, selector } of VIEWS.slice(0, 2)) {
     test(`${name}: copies the picked row, and a paste outside the database brings back its title and body`, async ({ page }) => {
       await mount(page, docWithBody(view));

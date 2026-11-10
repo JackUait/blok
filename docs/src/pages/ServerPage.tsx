@@ -104,6 +104,14 @@ export const ServerContent: React.FC = () => {
               <div className="mt-2">
                 <Prose text={limit.body} className="text-sm leading-relaxed text-muted-foreground" />
               </div>
+              {limit.samples?.map((sample) => (
+                <div key={sample.label} className="mt-4">
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    <Typo>{sample.label}</Typo>
+                  </p>
+                  <CodeBlock code={sample.code} language={sample.language} />
+                </div>
+              ))}
             </div>
           ))}
         </div>

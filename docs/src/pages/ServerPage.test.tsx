@@ -83,6 +83,26 @@ describe('ServerPage', () => {
     }
   });
 
+  it("shows a limit's code samples under its body, with localized labels", () => {
+    const withSamples = serverLimits.filter((limit) => (limit.samples ?? []).length > 0);
+    expect(withSamples.map((limit) => limit.id)).toContain('collab-version-history');
+
+    renderPage();
+    for (const limit of withSamples) {
+      const card = screen.getByTestId(`server-limit-${limit.id}`);
+      for (const sample of limit.samples ?? []) {
+        expect(within(card).getByText(sample.label)).toBeInTheDocument();
+        expect(card.textContent).toContain('hmac.New(sha256.New');
+      }
+    }
+  });
+
+  it('labels the version-history webhook sample in Russian on a ru page', () => {
+    renderPage('ru', '/ru/server');
+    const card = screen.getByTestId('server-limit-collab-version-history');
+    expect(card.textContent?.replace(/\s+/g, ' ')).toContain('Отправка каждого сигнала изменений на подписанный вебхук (Go, пример)');
+  });
+
   it('heads a ru page with the localized H1, not the hardcoded English one', () => {
     const metadata = getRouteMetadata('/ru/server');
 

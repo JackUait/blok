@@ -46,6 +46,7 @@ describe("view renderer section", () => {
       "outlineFromOutputData(data)",
       "restoreHeadingAnchors(data)",
       "diffOutputData(before, after, options?)",
+      "foldUpdates(rows, options?)",
       "defineBlokSchema(config)",
       "composeBaseSanitizeConfig(configs)",
       "blocksToViewNodes(data, options?)",

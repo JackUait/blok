@@ -1843,8 +1843,11 @@ async fn a_restore_is_noted_as_its_restorer() {
 // Twins of C# CollabHistoryManagerTests.Signals: change signals and audit
 // events through the manager.
 
+/// The clock, and each waiting timer with its due time.
+type SignalClocked = (Duration, Vec<(Duration, tokio::sync::oneshot::Sender<()>)>);
+
 #[derive(Default)]
-struct SignalTimers(Mutex<(Duration, Vec<(Duration, tokio::sync::oneshot::Sender<()>)>)>);
+struct SignalTimers(Mutex<SignalClocked>);
 
 impl SignalTimers {
     fn advance(&self, by: Duration) {

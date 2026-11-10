@@ -59,6 +59,7 @@ export const useServerTranslations = () => {
       ...limit,
       title: translateOr(`server.limits.${limit.id}.title`, limit.title),
       body: translateOr(`server.limits.${limit.id}.body`, limit.body),
+      samples: limit.samples?.map((item, i) => sample(`server.limits.${limit.id}.samples.${i}`, item)),
     }));
 
     const mcpBuilds: ServerMcpBuild[] = serverMcpBuilds.map((build) => {

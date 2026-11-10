@@ -316,8 +316,8 @@
     "date": "2026-09-28"
   },
   "/docs/view-api": {
-    "hash": "e5dd0393c98d4c3a",
-    "date": "2026-11-03"
+    "hash": "0ff4e3ee3aeb9130",
+    "date": "2026-11-10"
   },
   "/docs/view-state-api": {
     "hash": "1981c1ecf65077dc",
@@ -652,8 +652,8 @@
     "date": "2026-09-28"
   },
   "/ru/docs/view-api": {
-    "hash": "bf1a90ce2737f945",
-    "date": "2026-11-03"
+    "hash": "064b0ed364a45754",
+    "date": "2026-11-10"
   },
   "/ru/docs/view-state-api": {
     "hash": "b0418f22b56273c5",
@@ -676,7 +676,7 @@
     "date": "2026-11-03"
   },
   "/ru/server": {
-    "hash": "920b644e715646da",
+    "hash": "bd083c3909f84373",
     "date": "2026-11-10"
   },
   "/ru/tools": {
@@ -684,7 +684,7 @@
     "date": null
   },
   "/server": {
-    "hash": "8112c139f92a6679",
+    "hash": "811ecf58879f5641",
     "date": "2026-11-10"
   },
   "/tools": {

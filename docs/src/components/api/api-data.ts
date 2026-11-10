@@ -5310,6 +5310,18 @@ const diff = diffOutputData(await readVersion(lineage, 12), await readVersion(li
 // diff.moved   → [{ id: 'img2', before, after }]`,
       },
       {
+        name: "foldUpdates(rows, options?)",
+        returnType: "FoldedUpdate[]",
+        description:
+          "Fold history change rows into feed entries, like the Updates panel of a page. It is synchronous and DOM-free. Pass rows newest first, each as {lineage, sequence, truncated?, record}, where record is one row of GET /sync/{doc}/history/{lineage}/{sequence}/changes and sequence is the version you read it from.\n\n- Rows that change no block and no page field are dropped first.\n- Neighbours fold when they share the lineage, the version and an actor, and are less than options.gapMs apart. The default is 2 minutes.\n- A row with no actor or no time never folds.\n- A folded block keeps before from the oldest row and after from the newest. A block added and removed in the run is gone.\n\nEach entry carries key, the lineage and the sequence of its newest row as <lineage>:<sequence>. Open that point to show the version after the update. blockIds lists the blocks the entry still touches, so you can jump to each one that still exists.\n\nThe server's by=actor grouping is a different rule. It also starts a group after 10 minutes, groups rows with no actor together, and counts empty rows.",
+        example: `import { foldUpdates } from '@bloklabs/core/view';
+
+const rows = changes.map((record) => ({ lineage, sequence, record })).reverse();
+const entries = foldUpdates(rows, { gapMs: 10 * 60_000 });
+// entries[0].key      → 'L7:41'
+// entries[0].blockIds → ['p3', 'h1']`,
+      },
+      {
         name: "defineBlokSchema(config)",
         returnType: "{ editorConfig, viewSchema }",
         description:

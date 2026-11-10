@@ -136,6 +136,8 @@ export interface CaretSnapshot {
    * apart from `end` because a peer rewrite rebases `end` by this block's text.
    */
   endIn?: { blockId: string; inputIndex: number; offset: number };
+  /** The caret was in the page title. `blockId` is then empty. */
+  title?: true;
 }
 
 /**

@@ -160,6 +160,26 @@ export class PageTitle extends Module {
     }
   }
 
+  /**
+   * Puts the caret at a character offset, clamped, or selects up to `end`.
+   * @returns false when there is no title to focus
+   */
+  public focusAt(offset: number, end?: number): boolean {
+    const title = this.dom?.title;
+
+    if (title === undefined || !title.isConnected) {
+      return false;
+    }
+    title.focus();
+    const text = title.firstChild;
+    const length = text?.textContent?.length ?? 0;
+    const at = (value: number): number => Math.min(Math.max(value, 0), length);
+
+    window.getSelection()?.setBaseAndExtent(text ?? title, at(offset), text ?? title, at(end ?? offset));
+
+    return true;
+  }
+
   public focusAtX(x: number | null): void {
     const title = this.dom?.title;
 
@@ -363,6 +383,7 @@ export class PageTitle extends Module {
       this.iconControl?.redraw();
       this.resolved?.onIconChange?.(this.getIcon(), { source });
     }
+    // The fallback: the history restore that runs next moves the caret to the step's snapshot.
     if (source !== 'remote') {
       this.focus('end');
     }

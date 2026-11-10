@@ -2584,6 +2584,14 @@ export class UndoHistory {
     this.pendingValueWrite = true;
   }
 
+  /**
+   * What a typing run at this caret continues in. The title's key must equal
+   * the one its write passes to {@link beginValueEdit} (`YjsManager.setPageField`).
+   */
+  private static typingKeyOf(caret: CaretSnapshot): string {
+    return caret.title === true ? 'value:page:title' : `${caret.blockId}#${caret.inputIndex}`;
+  }
+
   /** Marks the current task as a gesture's, until the task ends. */
   private openGestureTask(): void {
     if (this.gestureTaskOpen) {
@@ -2622,7 +2630,7 @@ export class UndoHistory {
     }
     this.openEntry = null;
 
-    const liveKey = typingKey ?? (live === null ? null : `${live.blockId}#${live.inputIndex}`);
+    const liveKey = typingKey ?? (live === null ? null : UndoHistory.typingKeyOf(live));
     const now = Date.now();
     const inWindow = this.captureHolds > 0 || now - this.typingRunStart <= TYPING_WINDOW_MS;
     const continuesTyping = kind === 'typing' && liveKey !== null && liveKey === this.typingInputKey && inWindow;
@@ -2843,8 +2851,11 @@ export class UndoHistory {
   private liveCaretSnapshot(): CaretSnapshot | null {
     const anchorNode = window.getSelection()?.anchorNode ?? null;
 
-    if (anchorNode === null || this.blok?.BlockManager?.getBlockByChildNode(anchorNode) === undefined) {
+    if (anchorNode === null) {
       return null;
+    }
+    if (this.blok?.BlockManager?.getBlockByChildNode(anchorNode) === undefined) {
+      return this.blok === undefined ? null : this.titleCaretSnapshot();
     }
 
     return this.captureCaretSnapshot();
@@ -3169,6 +3180,12 @@ export class UndoHistory {
       return null;
     }
 
+    const titleCaret = this.titleCaretSnapshot();
+
+    if (titleCaret !== null) {
+      return titleCaret;
+    }
+
     const { BlockManager } = this.blok;
 
     // Prefer the block the caret is *actually* in (the live DOM selection) over
@@ -3229,6 +3246,19 @@ export class UndoHistory {
       ...(end === null ? {} : { end }),
       ...(endIn === null ? {} : { endIn }),
     };
+  }
+
+  /** The caret in the page title, or null when it is elsewhere. */
+  private titleCaretSnapshot(): CaretSnapshot | null {
+    const title = this.blok.PageTitle?.titleElement ?? null;
+    const anchorNode = window.getSelection()?.anchorNode ?? null;
+
+    if (title === null || anchorNode === null || !title.contains(anchorNode)) {
+      return null;
+    }
+    const end = UndoHistory.selectionEndIn(title);
+
+    return { blockId: '', inputIndex: 0, offset: getCaretOffset(title), title: true, ...(end === null ? {} : { end }) };
   }
 
   /**
@@ -3374,6 +3404,10 @@ export class UndoHistory {
       // No snapshot available — preserve whatever focus state exists after the
       // DOM update rather than actively destroying the selection.
       return false;
+    }
+
+    if (snapshot.title === true) {
+      return this.blok.PageTitle.focusAt(snapshot.offset, snapshot.end);
     }
 
     const { BlockManager, Caret } = this.blok;

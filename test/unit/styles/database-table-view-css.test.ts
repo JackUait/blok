@@ -422,5 +422,24 @@ describe('database table calculation footer', () => {
       expect(ruleBody('[data-blok-database-table-group]')).toMatch(/margin-block-end:\s*var\(--blok-space-4\)/);
       expect(ruleBody('[data-blok-database-table-group]:not([data-collapsed]) > [data-blok-database-table-group-content]')).toMatch(/padding-block:\s*var\(--blok-space-2\) var\(--blok-space-1\)/);
     });
+
+    // notion-motion.md Round 10 "Group header ⋯ menu" (r10-group-header-hover.raw): only the hovered header shows
+    // its ⋯ and +, 24×24 radius 6, 6px after the pill; Round 9: opacity 0.1s ease-in-out.
+    it('shows the ⋯ and + only on its own header, 24px, right after the pill', () => {
+      const actions = ruleBody('[data-blok-database-table-group-actions]');
+
+      expect(actions).toMatch(/opacity:\s*0;/);
+      expect(actions).toMatch(/pointer-events:\s*none/);
+      expect(actions).toMatch(/transition:\s*opacity 100ms ease-in-out/);
+      expect(actions).toMatch(/margin-inline-start:\s*var\(--blok-space-0-75\)/);
+      expect(ruleBody('[data-blok-database-table-group-header]:hover > [data-blok-database-table-group-actions]')).toMatch(/opacity:\s*1/);
+      expect(ruleBody('[data-blok-database-table-group-header][data-popover-open] > [data-blok-database-table-group-actions]')).toMatch(/opacity:\s*1/);
+      expect(ruleBody('[data-blok-database-table-group]:hover [data-blok-database-table-group-actions]')).toBe('');
+      const button = ruleBody('[data-blok-database-table-group-actions] button');
+
+      expect(button).toMatch(/width:\s*24px/);
+      expect(button).toMatch(/height:\s*24px/);
+      expect(button).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
+    });
   });
 });

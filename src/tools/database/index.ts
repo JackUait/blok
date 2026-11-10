@@ -7509,6 +7509,11 @@ export class DatabaseTool implements BlockTool {
       dateDisplayChanger: (propertyId) => this.dateDisplayChanger(propertyId, context),
       editEnded: () => context === undefined ? this.redrawWhenIdle() : context.redraw(),
       addRow: (groupKey, afterRowId) => this.addTableRow(groupKey, afterRowId, context),
+      // The group menu and its writes act on the shown view, so a widget's table gets neither.
+      ...(context === undefined ? {
+        groupMenu: (groupKey: string, anchor: HTMLElement, header: HTMLElement) => { if (writable()) this.openGroupMenu(anchor, groupKey, { header }); },
+        addGroupPage: (groupKey: string) => { if (writable()) this.addGroupPage(groupKey); },
+      } : {}),
       deleteRows: (rowIds, byKey) => {
         if (!writable()) return;
         if (byKey === true) this.trashWithToast(() => this.deleteTableRows(rowIds), rowIds.length);
@@ -7731,6 +7736,13 @@ export class DatabaseTool implements BlockTool {
 
     // The page opens instead of the inline title edit.
     return this.openIfFiltered(rowData.id, context) ? null : rowData.id;
+  }
+
+  /** notion-motion.md Round 10 "Group header +": a page at the end of the group, opened in the peek with its title focused. */
+  private addGroupPage(groupKey: string): void {
+    const rowId = this.addTableRow(groupKey);
+
+    if (rowId !== null) this.handleRowClick(rowId);
   }
 
   /**
@@ -9129,7 +9141,8 @@ export class DatabaseTool implements BlockTool {
     popover.show();
   }
 
-  private openGroupMenu(anchor: HTMLElement, groupId: string): void {
+  /** `table`: the table group header, which keeps its buttons shown and has no count to toggle. */
+  private openGroupMenu(anchor: HTMLElement, groupId: string, table?: { header: HTMLElement }): void {
     const view = this.shownView();
     const groups = this.boardGroups();
     const group = groups.find((g) => g.id === groupId);
@@ -9145,6 +9158,7 @@ export class DatabaseTool implements BlockTool {
       isNoValue: groupId === NO_VALUE_GROUP_KEY,
       color: group.color,
       aggregationHidden: view.hideGroupAggregation === true,
+      hasAggregation: table === undefined,
       isStatus: property?.type === 'status',
       onEditGroups: () => this.controls.openSettingsPage('group', anchor),
       // Notion brings the numbers back as Count all, not the last calculation.
@@ -9154,7 +9168,7 @@ export class DatabaseTool implements BlockTool {
       onHide: () => this.toggleGroupHidden(groupId),
       onTrash: () => this.trashGroup(groupId),
       onRecolor: (color) => this.recolorGroup(groupId, color),
-    }), anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined, {
+    }), table?.header ?? anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined, {
       // notion-motion.md, Round 8b "Board group ⋯ menu": 180 wide, flush under the button.
       minWidth: '180px',
       offset: 0,

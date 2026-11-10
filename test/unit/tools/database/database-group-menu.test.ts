@@ -5,6 +5,7 @@ import type { PopoverItemParams } from '../../../../types/utils/popover/popover-
 import { groupMenuItems, type GroupMenuParams } from '../../../../src/tools/database/database-group-menu';
 import { OPTION_COLORS } from '../../../../src/tools/database/cells/option-colors';
 import { IconCheck, IconEyeSlash } from '../../../../src/components/icons';
+import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 
 const i18n = { t: (key: string) => key, has: () => true } as unknown as I18n;
 
@@ -47,8 +48,27 @@ describe('groupMenuItems', () => {
     const names = items.map((item) => item.name ?? item.type);
 
     expect(names.slice(0, 4)).toEqual(['edit-groups', 'toggle-aggregation', 'hide-group', 'move-to-trash']);
-    expect(names.slice(5)).toEqual(OPTION_COLORS.map((color) => `color-${color}`));
+    expect(names.slice(6)).toEqual(OPTION_COLORS.map((color) => `color-${color}`));
     expect(named(items, 'move-to-trash').isDestructive).toBe(true);
+  });
+
+  // notion-motion.md Round 10 "Group header ⋯ menu": a "Colors" label under the line, over the swatches.
+  it('heads the colors with a Colors label', () => {
+    const items = groupMenuItems(params()) as Item[];
+    const heading = items[5] as Item & { element?: HTMLElement };
+
+    expect(items[4].type).toBe(PopoverItemType.Separator);
+    expect(heading.name).toBe('colors-heading');
+    expect(heading.type).toBe(PopoverItemType.Html);
+    expect(heading.element?.textContent).toBe('tools.database.optionColors');
+    expect(heading.element?.hasAttribute('data-blok-database-group-menu-heading')).toBe(true);
+  });
+
+  // The table's group header has no count to show or hide, so its menu leaves the toggle out.
+  it('leaves the count toggle out where the group shows no count', () => {
+    const names = (groupMenuItems(params({ hasAggregation: false })) as Item[]).map((item) => item.name ?? item.type);
+
+    expect(names.slice(0, 3)).toEqual(['edit-groups', 'hide-group', 'move-to-trash']);
   });
 
   it('marks the current color with a check mark, and no other', () => {

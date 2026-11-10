@@ -814,5 +814,25 @@ describe('cell editor CSS', () => {
       expect(declared(`${HEADER} > [data-blok-database-panel-section]`, 'padding-block')).toEqual(['0']);
     });
   });
+
+  // notion-motion.md Round 10 "Group header ⋯ menu" (r10-group-menu.raw): line 156 wide at x+12 y+128,
+  // "Colors" 12px/500 at y+141, the first colour row at y+165, the current colour's check 16px at x+152.
+  describe('group ⋯ menu colours', () => {
+    const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu']";
+
+    it('insets the line and heads the colours with a small gray label', () => {
+      expect(declared(`${MENU} [data-blok-popover-item-separator]`, 'padding-block')).toEqual(['var(--blok-space-2) 0']);
+      expect(declared(`${MENU} [data-blok-popover-item-separator]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
+      expect(declared('[data-blok-database-group-menu-heading]', 'padding')).toEqual(['var(--blok-space-3) var(--blok-space-2) 0']);
+      expect(declared('[data-blok-database-group-menu-heading]', 'font-size')).toEqual(['12px']);
+      expect(declared('[data-blok-database-group-menu-heading]', 'font-weight')).toEqual(['500']);
+      expect(declared(`${MENU} [data-blok-popover-item-html] + [data-blok-popover-item]`, 'margin-block-start')).toEqual(['9px']);
+    });
+
+    it('draws the current colour\'s check at 16px', () => {
+      expect(declared(`${MENU} [data-blok-testid='popover-item-trailing-icon'] svg`, 'width')).toEqual(['16px']);
+      expect(declared(`${MENU} [data-blok-testid='popover-item-trailing-icon']`, 'margin-inline-end')).toEqual(['calc(-1 * var(--blok-space-1))']);
+    });
+  });
 });
 

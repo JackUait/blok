@@ -1615,6 +1615,36 @@ describe('DatabaseTableView', () => {
       expect(handlers.addRow).toHaveBeenCalledWith('o-idea');
     });
 
+    // notion-motion.md Round 10 "Group header ⋯ menu": each group header holds its own ⋯ and +.
+    it('the group header ⋯ opens that group\'s menu from its own header', () => {
+      const handlers = { ...makeHandlers(), groupMenu: vi.fn(), addGroupPage: vi.fn() };
+      const { root } = mount({ groups: groups(), handlers });
+      const header = root.querySelector<HTMLElement>('[data-group-key="__none__"] [data-blok-database-table-group-header]');
+      const more = header?.querySelector<HTMLElement>('[data-blok-database-table-group-menu]');
+
+      more?.click();
+
+      expect(handlers.groupMenu).toHaveBeenCalledWith('__none__', more, header);
+      expect(more?.getAttribute('aria-haspopup')).toBe('menu');
+    });
+
+    // Round 10 "Group header +": a page at the end of that group, opened in the peek.
+    it('the group header + adds a page to that group', () => {
+      const handlers = { ...makeHandlers(), groupMenu: vi.fn(), addGroupPage: vi.fn() };
+      const { root } = mount({ groups: groups(), handlers });
+
+      root.querySelector<HTMLElement>('[data-group-key="o-idea"] [data-blok-database-table-group-header] [data-blok-database-table-group-add]')?.click();
+
+      expect(handlers.addGroupPage).toHaveBeenCalledWith('o-idea');
+      expect(handlers.addRow).not.toHaveBeenCalled();
+    });
+
+    it('draws no ⋯ or + where the host offers no group actions, or read-only', () => {
+      expect(mount({ groups: groups() }).root.querySelector('[data-blok-database-table-group-actions]')).toBeNull();
+      expect(mount({ groups: groups(), readOnly: true, handlers: { ...makeHandlers(), groupMenu: vi.fn(), addGroupPage: vi.fn() } })
+        .root.querySelector('[data-blok-database-table-group-actions]')).toBeNull();
+    });
+
     it('repeats the column header row at the top of each group, like Notion', () => {
       const { root } = mount({ groups: groups() });
       const sections = [...root.querySelectorAll('[data-blok-database-table-group]')];

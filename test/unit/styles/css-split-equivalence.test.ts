@@ -1575,8 +1575,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TABCALC_BYTES = 371 + 124 + 233 + 294;
     // Round 9 lane vsub: empty Filter/Sort pages, Group page rows, Select "Options" heading and option text.
     const DATABASE_VSUB_BYTES = 1705;
-    // Round 10 lane grpmenu: the Group page's Groups line and header.
-    const DATABASE_GRPMENU_BYTES = 790;
+    // Round 10 lane grpmenu: the Group page's Groups line and header (790), the table group header ⋯ and +
+    // and the group menu's Colors label, line and check (2331).
+    const DATABASE_GRPMENU_BYTES = 790 + 2331;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid, bottom stage and skin-tone dial.

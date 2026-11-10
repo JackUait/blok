@@ -6885,6 +6885,32 @@ button[data-blok-database-column-count]:hover {
   font-weight: 400;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-separator] {
+  padding-block: var(--blok-space-2) 0;
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-database-group-menu-heading] {
+  padding: var(--blok-space-3) var(--blok-space-2) 0;
+  color: var(--blok-database-ink-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 14.4px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item-html] + [data-blok-popover-item] {
+  margin-block-start: 9px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-testid='popover-item-trailing-icon'] {
+  margin-inline-end: calc(-1 * var(--blok-space-1));
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-testid='popover-item-trailing-icon'] svg {
+  width: 16px;
+  height: 16px;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-group-menu'] [data-blok-popover-item]:last-child {
   margin-bottom: 0;
 }
@@ -13106,6 +13132,42 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-group-label] {
   padding-inline: var(--blok-space-0-75);
   font-weight: 500;
+}
+
+[data-blok-database-table-group-actions] {
+  display: flex;
+  margin-inline-start: var(--blok-space-0-75);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease-in-out;
+}
+
+[data-blok-database-table-group-header]:hover > [data-blok-database-table-group-actions], [data-blok-database-table-group-header][data-popover-open] > [data-blok-database-table-group-actions], [data-blok-database-table-group-actions]:has(:focus-visible) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+[data-blok-database-table-group-actions] button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-add-text);
+  cursor: pointer;
+}
+
+[data-blok-database-table-group-actions] button:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-table-group-actions] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-table-row-ghost], [data-blok-database-table-column-ghost] {

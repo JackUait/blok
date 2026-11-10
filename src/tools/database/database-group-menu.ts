@@ -19,6 +19,8 @@ export interface GroupMenuParams {
   isNoValue: boolean;
   color: OptionColor | undefined;
   aggregationHidden: boolean;
+  /** False where the group header shows no count (the table), so the toggle would do nothing. */
+  hasAggregation?: boolean;
   /** A status option's group: Notion lists no colours for it (findings-board B13). */
   isStatus: boolean;
   /** Opens the view settings Group page (findings-board B14). */
@@ -30,8 +32,8 @@ export interface GroupMenuParams {
 }
 
 /**
- * The board column's "More group options" menu (research/08): Edit groups,
- * Hide aggregation, Hide group, Move to Trash, then the ten colors. The current
+ * The board column and table group "More group options" menu (research/08): Edit groups,
+ * Hide aggregation, Hide group, Move to Trash, then "Colors" and the ten colors. The current
  * color carries a check mark, never a blue fill.
  */
 export const groupMenuItems = (params: GroupMenuParams): PopoverItemParams[] => {
@@ -44,13 +46,13 @@ export const groupMenuItems = (params: GroupMenuParams): PopoverItemParams[] => 
       closeOnActivate: true,
       onActivate: params.onEditGroups,
     },
-    {
+    ...(params.hasAggregation === false ? [] : [{
       name: 'toggle-aggregation',
       title: t(params.aggregationHidden ? 'tools.database.groupShowAggregation' : 'tools.database.groupHideAggregation'),
       icon: params.aggregationHidden ? IconPreview : IconEyeSlash,
       closeOnActivate: true,
       onActivate: params.onToggleAggregation,
-    },
+    }]),
     {
       name: 'hide-group',
       title: t('tools.database.groupHide'),
@@ -72,9 +74,15 @@ export const groupMenuItems = (params: GroupMenuParams): PopoverItemParams[] => 
     return items;
   }
 
+  const heading = document.createElement('div');
+
+  heading.setAttribute('data-blok-database-group-menu-heading', '');
+  heading.textContent = t('tools.database.optionColors');
+
   return [
     ...items,
     { type: PopoverItemType.Separator },
+    { type: PopoverItemType.Html, element: heading, name: 'colors-heading' },
     ...OPTION_COLORS.map((color): PopoverItemParams => ({
       name: `color-${color}`,
       title: t(optionColorLabelKey(color)),

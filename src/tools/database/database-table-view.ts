@@ -119,6 +119,10 @@ export interface TableHandlers {
   clearSearch?: () => void;
   /** A group was folded or opened. The tool saves it in the view. */
   groupToggled?: (key: string, collapsed: boolean) => void;
+  /** A group header's ⋯. `header` keeps its buttons shown while the menu is open. Without it no ⋯ is drawn. */
+  groupMenu?: (groupKey: string, anchor: HTMLElement, header: HTMLElement) => void;
+  /** A group header's +: a page at the end of that group. Without it no + is drawn. */
+  addGroupPage?: (groupKey: string) => void;
   /** Redraw from the model, keeping the table state. */
   rerender: () => void;
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
@@ -1280,6 +1284,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       label.textContent = group.label;
     }
     header.append(caret, label);
+    if (!this.options.readOnly && this.handlers?.groupMenu !== undefined && this.handlers.addGroupPage !== undefined) {
+      header.appendChild(this.createGroupActions());
+    }
     section.appendChild(header);
 
     const content = document.createElement('div');
@@ -1292,6 +1299,27 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     section.appendChild(content);
 
     return section;
+  }
+
+  /** notion-motion.md Round 10: ⋯ then +, 24px each, shown while the header is hovered (database.css). */
+  private createGroupActions(): HTMLElement {
+    const actions = document.createElement('span');
+    const more = document.createElement('button');
+    const add = document.createElement('button');
+
+    actions.setAttribute('data-blok-database-table-group-actions', '');
+    more.type = 'button';
+    more.setAttribute('data-blok-database-table-group-menu', '');
+    more.setAttribute('aria-label', this.t('tools.database.groupMenuLabel'));
+    more.setAttribute('aria-haspopup', 'menu');
+    more.innerHTML = IconDotsHorizontal;
+    add.type = 'button';
+    add.setAttribute('data-blok-database-table-group-add', '');
+    add.setAttribute('aria-label', this.t('tools.database.newPage'));
+    add.innerHTML = IconPlus;
+    actions.append(more, add);
+
+    return actions;
   }
 
   private createGroupContent(group: TableGroup): DocumentFragment {
@@ -1728,6 +1756,19 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
     if (closest('[data-blok-database-table-add-row]') !== null) {
       this.addRow(groupKey);
+
+      return;
+    }
+    const groupMenu = closest('[data-blok-database-table-group-menu]');
+    const groupHeader = closest('[data-blok-database-table-group-header]');
+
+    if (groupMenu !== null && groupHeader !== null) {
+      handlers.groupMenu?.(groupKey, groupMenu, groupHeader);
+
+      return;
+    }
+    if (closest('[data-blok-database-table-group-add]') !== null) {
+      handlers.addGroupPage?.(groupKey);
 
       return;
     }

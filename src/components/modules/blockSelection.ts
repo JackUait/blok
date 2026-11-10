@@ -29,6 +29,7 @@ import { resolvePresetColors } from '../shared/resolve-preset-colors';
 import { parseUntrustedHtml } from '../utils/inert-html';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../shared/page-reference';
 import { isPagePointer } from '../../shared/page-pointer';
+import { databaseRowTitle, titlePropertyIdOf } from '../../shared/database-rows';
 import type { ListItemStyle } from '../../tools/list/types';
 import { isInAnnotation } from './blockManager/new-block-placement';
 
@@ -53,6 +54,8 @@ interface ClipboardEntry {
   /** A cut token lets the first paste recreate a singleton block. */
   cut?: string;
   link?: CopyLink;
+  /** A row copied without its database: its title, which only the database's schema names. */
+  title?: string;
 }
 
 /**
@@ -548,6 +551,8 @@ export class BlockSelection extends Module {
      * a single nested list per depth. Non-list blocks keep the sanitize path.
      */
     const segments = this.groupBlocksForClipboard(this.withoutTableCellBlocks(copiedBlocks));
+    // A row's holder renders nothing; its title stands for it.
+    const rowTitles = new Map(linkedData.flatMap((entry) => (entry.title === undefined ? [] : [[entry.id, entry.title] as const])));
 
     segments.forEach((segment) => {
       const link = segment.type === 'other' ? links.get(segment.block) : undefined;
@@ -564,6 +569,13 @@ export class BlockSelection extends Module {
         fakeClipboard.appendChild(paragraph);
       } else if (segment.type === 'list') {
         this.appendSemanticList(segment.items, fakeClipboard);
+      } else if (rowTitles.has(segment.block.id)) {
+        const paragraph = $.make('p');
+
+        paragraph.textContent = rowTitles.get(segment.block.id) ?? '';
+        if (paragraph.textContent !== '') {
+          fakeClipboard.appendChild(paragraph);
+        }
       } else {
         this.appendNonListBlock(segment.block, fakeClipboard);
       }
@@ -578,7 +590,7 @@ export class BlockSelection extends Module {
      * ({@link copySelectedBlocksAsMarkdown}, bound to Cmd/Ctrl+Shift+C) emits the
      * same Markdown but writes it via navigator.clipboard.writeText.
      */
-    const textPlain = blocksToMarkdown(linkedData);
+    const textPlain = blocksToMarkdown(linkedData.map((entry) => (entry.title === undefined ? entry : { ...entry, data: { ...entry.data, title: entry.title } })));
 
     resolvePresetColors(fakeClipboard);
 
@@ -901,6 +913,8 @@ export class BlockSelection extends Module {
    * @returns serialized block data in document order
    */
   private serializeBlocksForClipboard(blocks: Block[], links: Map<Block, CopyLink>, cut?: string | null): ClipboardEntry[] {
+    const copiedIds = new Set(blocks.map((block) => block.id));
+
     return blocks.map((block): ClipboardEntry | null => {
       const link = links.get(block);
       const isPage = isPagePointer(block.name, block.preservedData);
@@ -950,8 +964,25 @@ export class BlockSelection extends Module {
         contentIds: block.contentIds,
         ...(cut !== undefined && cut !== null && (link !== undefined || isPage) && { cut }),
         ...(link !== undefined && { link }),
+        ...this.loneRowTitle(block, copiedIds),
       };
     }).filter((entry): entry is ClipboardEntry => entry !== null);
+  }
+
+  /**
+   * The title of a database row copied without its database. Paste needs it
+   * where no database takes the row, and so do the text formats.
+   * @param block - a copied block
+   * @param copiedIds - ids of every copied block
+   */
+  private loneRowTitle(block: Block, copiedIds: Set<string>): { title?: string } {
+    if (block.name !== 'database-row' || (block.parentId !== null && copiedIds.has(block.parentId))) {
+      return {};
+    }
+    const database = block.parentId === null ? undefined : this.Blok.BlockManager.getBlockById(block.parentId);
+    const titleId = database === undefined ? undefined : titlePropertyIdOf(database.preservedData);
+
+    return { title: databaseRowTitle({ data: block.preservedData }, titleId) };
   }
 
   /**

@@ -375,3 +375,80 @@ test.describe('gallery: closing a peek (research/23 §8)', () => {
     expect(await picked(page)).toEqual([]);
   });
 });
+
+test.describe('Cmd/Ctrl+C on picked items', () => {
+  /** Records what each copy event writes; the real clipboard is not readable here. */
+  const recordCopies = async (page: Page): Promise<void> => {
+    await page.evaluate(() => {
+      const log: Array<Record<string, string>> = [];
+
+      (window as unknown as { copies: typeof log }).copies = log;
+      document.addEventListener('copy', (event) => {
+        const formats: Record<string, string> = {};
+        const data = event.clipboardData;
+
+        log.push(formats);
+        if (data !== null) {
+          const setData = data.setData.bind(data);
+
+          data.setData = (format: string, value: string): void => {
+            formats[format] = value;
+            setData(format, value);
+          };
+        }
+      }, true);
+    });
+  };
+
+  const pasteInto = async (target: Locator, data: Record<string, string>): Promise<void> => {
+    await target.evaluate((element: HTMLElement, pasteData: Record<string, string>) => {
+      element.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+        clipboardData: { getData: (type: string): string => pasteData[type] ?? '', types: Object.keys(pasteData) },
+      }));
+    }, data);
+  };
+
+  /** r1 gets a page body; the paragraph after the database is the paste target. */
+  const docWithBody = (view: Record<string, unknown>): OutputBlockData[] => [
+    ...blocks(view).map((block) => (block.id === 'r1' ? { ...block, content: ['b1'] } : block)),
+    { id: 'b1', type: 'paragraph', parent: 'r1', data: { text: 'Alpha body' } },
+    { id: 'target', type: 'paragraph', data: { text: '' } },
+  ];
+
+  for (const { name, view, selector } of VIEWS.slice(0, 2)) {
+    test(`${name}: copies the picked row, and a paste outside the database brings back its title and body`, async ({ page }) => {
+      await mount(page, docWithBody(view));
+      await recordCopies(page);
+      await caretAbove(page);
+      await item(page, selector, 'r1').click({ modifiers: ['Shift'] });
+      expect(await picked(page)).toEqual(['r1']);
+
+      await page.keyboard.press('ControlOrMeta+c');
+
+      const copies = await page.evaluate(() => (window as unknown as { copies: Array<Record<string, string>> }).copies);
+      const formats = copies.at(-1) ?? {};
+      const payload = JSON.parse(formats['application/x-blok'] ?? '[]') as Array<{ id: string; tool: string; title?: string }>;
+
+      expect(payload.map((entry) => [entry.id, entry.tool, entry.title])).toEqual([['r1', 'database-row', 'Alpha'], ['b1', 'paragraph', undefined]]);
+      expect(formats['text/plain']).toBe('**Alpha**\n\nAlpha body');
+      expect(formats['text/html']).toContain('<p>Alpha</p>');
+
+      const target = page.locator('[data-blok-id="target"] [contenteditable="true"]');
+
+      await target.click();
+      await pasteInto(target, formats);
+
+      await expect(page.getByText('Alpha body', { exact: true }).filter({ visible: true })).toHaveCount(1);
+      const saved = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []);
+      const roots = saved.filter((block) => (block.parent ?? null) === null);
+
+      expect(roots.slice(2).map((block) => [block.type, block.data.text])).toEqual([
+        ['paragraph', [{ text: 'Alpha' }]],
+        ['paragraph', [{ text: 'Alpha body' }]],
+      ]);
+
+      expect(saved.filter((block) => block.type === 'database-row' && (block.parent ?? null) === null)).toEqual([]);
+      expect(saved.filter((block) => block.type === 'database-row').map((block) => block.id)).toEqual(['r1', 'r2', 'r3']);
+    });
+  }
+});

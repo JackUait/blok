@@ -536,6 +536,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'api:blocks.clear': cmds(['block.delete'], 'Delete every root block.'),
   'api:blocks.composeBlockData': exempt('read-only-info', 'Returns a tool\'s default data; it writes nothing. Agents read defaults from blok_describe.'),
   'api:blocks.convert': cmd('block.convert'),
+  'api:blocks.copy': exempt('view-only', 'Writes blocks to the OS clipboard; the document does not change.'),
   'api:blocks.create': cmd('block.insert'),
   'api:blocks.delete': cmd('block.delete'),
   'api:blocks.exportMarkdown': cmd('markdown.export'),

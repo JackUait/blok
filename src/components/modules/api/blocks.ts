@@ -89,7 +89,23 @@ export class BlocksAPI extends Module {
       endTransaction: (): void => this.endTransaction(),
       setPointerDragActive: (active: boolean): void => this.setPointerDragActive(active),
       scrollToBlock: (id: string, options?: { select?: boolean }): void => this.scrollToBlock(id, options),
+      copy: (event: ClipboardEvent, ids: string[]): void => this.copy(event, ids),
     };
+  }
+
+  /**
+   * Writes the blocks with these ids to a copy event, as a block selection's copy does.
+   * @param event - the copy event
+   * @param ids - block ids, in clipboard order
+   */
+  public copy(event: ClipboardEvent, ids: string[]): void {
+    const blocks = ids.map((id) => this.Blok.BlockManager.getBlockById(id)).filter((block) => block !== undefined);
+
+    if (blocks.length === 0) {
+      return;
+    }
+    // setData only works during the event, and the copy writes before its first await.
+    void this.Blok.BlockSelection.copySelectedBlocks(event, { blocks });
   }
 
   /**

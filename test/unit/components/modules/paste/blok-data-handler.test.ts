@@ -1119,3 +1119,52 @@ describe('BlokDataHandler — tools the pasting editor does not have', () => {
     expect(inserted[0].data).toEqual(expect.objectContaining({ savedData: { type: 'callout', data: { emoji: 'x' } } }));
   });
 });
+
+describe('BlokDataHandler — a database row pasted without its database', () => {
+  type Fake = Block & { parentId: string | null; contentIds: string[] };
+
+  const setup = (caretParentId: string | null): ReturnType<typeof createBlokModulesMock> => {
+    const mock = createBlokModulesMock();
+    const paragraph = { name: 'paragraph', sanitizeConfig: {}, conversionConfig: { import: 'text', export: 'text' }, settings: {}, isDefault: true };
+    const container = (id: string, name: string, parentId: string | null, childTools: { allow?: string[]; deny?: string[] }): Fake =>
+      ({ id, name, parentId, contentIds: [], tool: { childTools } }) as unknown as Fake;
+
+    mock.blockLookup.set('db', container('db', 'database', null, { allow: ['database-row', 'database', 'tabs', 'database-comment'] }));
+    mock.blockLookup.set('r2', container('r2', 'database-row', 'db', { deny: ['database-row'] }));
+    Object.assign(mock.modules.Tools, {
+      defaultTool: paragraph,
+      blockTools: { get: vi.fn((name: string) => (name === 'paragraph' ? paragraph : { name, sanitizeConfig: {} })) },
+    });
+    Object.assign(mock.modules.BlockManager.currentBlock ?? {}, { id: 'target', parentId: caretParentId });
+
+    return mock;
+  };
+
+  const rowCopy = (title: string): string => JSON.stringify([
+    { id: 'r1', tool: 'database-row', title, data: { properties: { 'p-title': 'Alpha' }, position: 'a0' }, parentId: 'db-old', contentIds: ['b1'] },
+    { id: 'b1', tool: 'paragraph', data: { text: 'Body' }, parentId: 'r1', contentIds: [] },
+  ]);
+
+  it('lands as a paragraph with its title, and its page body follows it, where no database takes it', async () => {
+    const { modules, insertedBlocks, blockInstances } = setup(null);
+    const handler = new BlokDataHandler(modules, createToolRegistryMock(), createSanitizerBuilderMock(), { sanitizer: {} });
+
+    await handler.handle(rowCopy('Alpha & <b>co</b>'), { canReplaceCurrentBlock: true });
+
+    expect(insertedBlocks.map((block) => [block.tool, block.data])).toEqual([
+      ['paragraph', { text: 'Alpha &amp; &lt;b&gt;co&lt;/b&gt;' }],
+      ['paragraph', { text: 'Body' }],
+    ]);
+    expect(blockInstances.map((block) => (block as Fake).parentId)).toEqual([null, null]);
+  });
+
+  it('stays a row when it lands in a database, from a row page body', async () => {
+    const { modules, insertedBlocks, blockInstances } = setup('r2');
+    const handler = new BlokDataHandler(modules, createToolRegistryMock(), createSanitizerBuilderMock(), { sanitizer: {} });
+
+    await handler.handle(rowCopy('Alpha'), { canReplaceCurrentBlock: false });
+
+    expect(insertedBlocks.map((block) => block.tool)).toEqual(['database-row', 'paragraph']);
+    expect(blockInstances[1].parentId).toBe(blockInstances[0].id);
+  });
+});

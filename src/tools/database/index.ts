@@ -2659,6 +2659,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.emit(DATABASE_GONE_EVENT, { databaseId: this.block.id });
     this.hostLevers.destroy();
     document.removeEventListener('keydown', this.handleSelectionKeys, true);
+    document.removeEventListener('copy', this.handleSelectionCopy, true);
     this.bulkEditor?.close();
     this.openCellEditors.clear();
     this.api.events.off('block changed', this.handleBlockChanged);
@@ -10499,10 +10500,12 @@ export class DatabaseTool implements BlockTool {
     this.rowSelectionBar = null;
     slot.toggleAttribute('data-blok-database-selecting', slot.querySelector(':scope > [data-blok-database-table-selection-bar]') !== null);
     document.removeEventListener('keydown', this.handleSelectionKeys, true);
+    document.removeEventListener('copy', this.handleSelectionCopy, true);
     if (this.rowSelection.size === 0) {
       return;
     }
     document.addEventListener('keydown', this.handleSelectionKeys, true);
+    document.addEventListener('copy', this.handleSelectionCopy, true);
     const view = this.shownView();
 
     // research/22 §1: Notion shows no bulk bar for picked calendar events.
@@ -10704,6 +10707,29 @@ export class DatabaseTool implements BlockTool {
         })), { searchable: true });
       });
     }
+  };
+
+  /**
+   * Cmd/Ctrl+C on picked cards, list rows or events copies their row blocks,
+   * page bodies included, in view order. Core sees no block selection here.
+   */
+  private readonly handleSelectionCopy = (event: ClipboardEvent): void => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    // A Shift-click leaves the caret where it was, so only selected text or a field keeps the copy.
+    const copiesText = window.getSelection()?.isCollapsed === false || target?.matches('input, textarea, select') === true;
+
+    if (this.rowSelection.size === 0 || this.api.blocks.copy === undefined || copiesText) {
+      return;
+    }
+    // A linked view's rows may live in another document.
+    const rowIds = this.inViewOrder([...this.rowSelection]).filter((id) => this.api.blocks.getById(id) !== null);
+
+    if (rowIds.length === 0) {
+      return;
+    }
+    // Capture phase: core's own document listener must not run after this.
+    event.stopPropagation();
+    this.api.blocks.copy(event, rowIds);
   };
 
   /** The active view's rows in the order it shows them, groups in board order. */

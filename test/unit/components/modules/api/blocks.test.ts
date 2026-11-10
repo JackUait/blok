@@ -278,6 +278,7 @@ type BlokStub = {
   BlockSelection: {
     selectBlock: ReturnType<typeof vi.fn>;
     clearSelection: ReturnType<typeof vi.fn>;
+    copySelectedBlocks: ReturnType<typeof vi.fn>;
   };
   Paste: {
     load: ReturnType<typeof vi.fn>;
@@ -353,6 +354,7 @@ const createBlokStub = (
     BlockSelection: {
       selectBlock: vi.fn(),
       clearSelection: vi.fn(),
+      copySelectedBlocks: vi.fn(async () => {}),
     },
     Tools: {
       blockTools: new Map(),
@@ -1134,6 +1136,27 @@ describe('BlocksAPI', () => {
       // But no selection (BlockManager doesn't know this block)
       expect(blok.BlockSelection.selectBlock).not.toHaveBeenCalled();
       expect(blok.Renderer.pendingHashScroll).toBeNull();
+    });
+  });
+
+  describe('copy (public API)', () => {
+    it('writes the blocks with these ids to the clipboard event, in the given order, skipping unknown ids', () => {
+      const first = createBlockStub({ id: 'first' });
+      const second = createBlockStub({ id: 'second' });
+      const { blocksApi, blok } = createBlocksApi({ blocks: [first, second] });
+      const event = new Event('copy') as ClipboardEvent;
+
+      blocksApi.methods.copy?.(event, ['second', 'missing', 'first']);
+
+      expect(blok.BlockSelection.copySelectedBlocks).toHaveBeenCalledWith(event, { blocks: [second, first] });
+    });
+
+    it('writes nothing when no id names a block', () => {
+      const { blocksApi, blok } = createBlocksApi();
+
+      blocksApi.methods.copy?.(new Event('copy') as ClipboardEvent, ['missing']);
+
+      expect(blok.BlockSelection.copySelectedBlocks).not.toHaveBeenCalled();
     });
   });
 

@@ -14,6 +14,7 @@ import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import { safeHref } from '../../../utils/sanitize-url';
 import { isPagePointer } from '../../../../shared/page-pointer';
+import { databaseRowTitle } from '../../../../shared/database-rows';
 import { mintDatabaseRefIds, mintDatabaseViewIds, remapDatabaseRefs, remapDatabaseViewIds } from '../../../../shared/database/linked-source';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
@@ -40,6 +41,8 @@ interface BlokClipboardBlock extends Pick<SavedData, 'id' | 'data' | 'tool'> {
   cut?: string;
   /** The link a `copyAsLink` block stood for when it was cut. */
   link?: CopyLink;
+  /** A database row's title, for a paste where no database takes the row. */
+  title?: string;
 }
 
 
@@ -270,6 +273,58 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * A row copied without its database lives only in a database. Pasted
+   * anywhere else, it becomes its title, and its page body follows at its level.
+   * @param entries - the parsed clipboard entries, parents first
+   */
+  private rowsOutsideDatabases(entries: BlokClipboardBlock[]): BlokClipboardBlock[] {
+    const { BlockManager, Tools } = this.Blok;
+    const pastedIds = new Set(entries.map(entry => entry.id));
+    const isLoneRow = (entry: BlokClipboardBlock): boolean =>
+      entry.tool === 'database-row' && !(typeof entry.parentId === 'string' && pastedIds.has(entry.parentId));
+
+    if (!entries.some(isLoneRow)) {
+      return entries;
+    }
+    const caretParentId = this.caretParentId();
+    // A row page body denies rows, so a paste there lands in the database around it.
+    const landingId = this.placementOutsideDenyingParents(caretParentId, ['database-row'])?.parentId ?? caretParentId;
+
+    if (landingId !== null && BlockManager.getBlockById(landingId)?.name === 'database') {
+      return entries;
+    }
+    const { defaultTool } = Tools;
+    // Row id to the parent its body moves to.
+    const unwrapped = new Map<string, string | null | undefined>();
+
+    return entries.flatMap((original): BlokClipboardBlock[] => {
+      const entry = typeof original.parentId === 'string' && unwrapped.has(original.parentId)
+        ? { ...original, parentId: unwrapped.get(original.parentId) }
+        : original;
+
+      if (!isLoneRow(entry)) {
+        return [entry];
+      }
+      unwrapped.set(entry.id, entry.parentId);
+      const title = typeof entry.title === 'string' ? entry.title : databaseRowTitle({ data: entry.data }, undefined);
+
+      if (title.trim() === '') {
+        return [];
+      }
+      const text = document.createElement('div');
+
+      text.textContent = title;
+
+      return [{
+        id: entry.id,
+        parentId: entry.parentId,
+        tool: defaultTool.name,
+        data: convertStringToBlockData(text.innerHTML, defaultTool.conversionConfig, defaultTool.settings),
+      }];
+    });
+  }
+
+  /**
    * A non-owning page reference in a paragraph, when Paragraph can import it.
    * @param pageId - the page the reference names
    */
@@ -458,7 +513,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     // on the children themselves. Backfill parentId before classification so
     // those children get adopted by the table during the two-pass insert
     // instead of becoming detached top-level paragraphs.
-    const blocks = backfillTableChildParents(this.linksForSingletons(rawBlocks.map(entry => this.withResolvedTool(entry))));
+    const blocks = backfillTableChildParents(this.rowsOutsideDatabases(this.linksForSingletons(rawBlocks.map(entry => this.withResolvedTool(entry)))));
     const sanitizedBlocks = sanitizeBlocks(
       blocks,
       (name) => Tools.blockTools.get(name)?.sanitizeConfig ?? {},

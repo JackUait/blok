@@ -80,8 +80,8 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "a99a71061787ace4",
-    "date": "2026-11-05"
+    "hash": "3c7dae0b668ad863",
+    "date": "2026-11-10"
   },
   "/docs/core": {
     "hash": "bbf26a19fdeecc03",
@@ -416,8 +416,8 @@
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "ac3736912643bd3d",
-    "date": "2026-11-05"
+    "hash": "d7e682be27dba2b7",
+    "date": "2026-11-10"
   },
   "/ru/docs/core": {
     "hash": "b1c6e1c381d91d77",
@@ -676,7 +676,7 @@
     "date": "2026-11-03"
   },
   "/ru/server": {
-    "hash": "76f9d063ca038c5a",
+    "hash": "4428cfeb5abc3e90",
     "date": "2026-11-10"
   },
   "/ru/tools": {
@@ -684,7 +684,7 @@
     "date": null
   },
   "/server": {
-    "hash": "20f51e765ada335d",
+    "hash": "b050f89388063df6",
     "date": "2026-11-10"
   },
   "/tools": {

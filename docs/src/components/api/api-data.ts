@@ -1792,7 +1792,7 @@ editor.emit('custom-event', { message: 'Hello', data: 123 });`,
       {
         name: "history.undo()",
         returnType: "void",
-        description: "Undo the last operation. It does nothing while the editor is read-only, the same as Cmd+Z. Cmd+Z also tells screen readers \"Undone\". This call says nothing, so an undo button of your own can say what it wants.",
+        description: "Undo the last operation. It does nothing while the editor is read-only, the same as Cmd+Z. Cmd+Z also tells screen readers \"Undone\". This call says nothing, so an undo button of your own can say what it wants. If a database cell editor is open with typed text, that text is saved first as its own step, and this call undoes it. Redo brings it back. The undo runs once that save lands, a moment after the call returns.",
         example: `// Undo last change
 editor.history.undo();
 
@@ -1804,7 +1804,7 @@ for (let i = 0; i < 3; i++) {
       {
         name: "history.redo()",
         returnType: "void",
-        description: "Redo the last undone operation. It does nothing while the editor is read-only, the same as Cmd+Shift+Z. Cmd+Shift+Z also tells screen readers \"Redone\", or \"Nothing to redo\" when there is nothing left. This call says nothing.",
+        description: "Redo the last undone operation. It does nothing while the editor is read-only, the same as Cmd+Shift+Z. Cmd+Shift+Z also tells screen readers \"Redone\", or \"Nothing to redo\" when there is nothing left. This call says nothing. If a database cell editor is open with typed text, that text is saved first. That is a new edit, so there is then nothing left to redo.",
         example: `// Redo last undone change
 editor.history.redo();
 

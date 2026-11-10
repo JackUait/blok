@@ -6,6 +6,7 @@
  */
 import type { History, HistoryStep, HistoryValue, HistoryValueChange, HistoryValueData } from '../../../../types/api';
 import { Module } from '../../__module';
+import { HistoryDraftsCommit } from '../../events/HistoryDraftsCommit';
 import { announceHistoryPress } from '../../utils/history-announcement';
 import type { CaretHistoryEntry } from '../yjs/types';
 
@@ -16,6 +17,8 @@ export class HistoryAPI extends Module {
   /** One handle per entry, so a step taken twice compares equal. */
   private readonly handles = new WeakMap<CaretHistoryEntry, HistoryStep>();
   private readonly entries = new WeakMap<HistoryStep, CaretHistoryEntry>();
+  /** Walks waiting for a committed draft's save to land, oldest first. */
+  private readonly waitingWalks: Array<'undo' | 'redo'> = [];
 
   /**
    * Available methods
@@ -73,20 +76,65 @@ export class HistoryAPI extends Module {
    * Undo the last operation. Does nothing while read-only, like Cmd+Z.
    */
   public undo(): void {
-    if (this.Blok.ReadOnly.isEnabled) {
-      return;
-    }
-    this.Blok.YjsManager.undo();
+    this.walk('undo');
   }
 
   /**
    * Redo the last undone operation. Does nothing while read-only, like Cmd+Shift+Z.
    */
   public redo(): void {
+    this.walk('redo');
+  }
+
+  /**
+   * Open drafts are written first, as their own step. Their saves land
+   * later, so the walk waits for them; a call made meanwhile queues behind
+   * it, or it would walk past the draft before the draft is a step.
+   * @param direction - which history to walk
+   */
+  private walk(direction: 'undo' | 'redo'): void {
     if (this.Blok.ReadOnly.isEnabled) {
       return;
     }
-    this.Blok.YjsManager.redo();
+    if (this.waitingWalks.length > 0) {
+      this.waitingWalks.push(direction);
+
+      return;
+    }
+    const { YjsManager } = this.Blok;
+    const drafts = { written: false };
+
+    this.eventsDispatcher.emit(HistoryDraftsCommit, {
+      direction,
+      commit: (write) => {
+        if (!drafts.written) {
+          YjsManager.beginGesture('discrete');
+          drafts.written = true;
+        }
+        write();
+      },
+    });
+    if (!drafts.written) {
+      this.step(direction);
+
+      return;
+    }
+    this.waitingWalks.push(direction);
+    YjsManager.onPendingBlockWritesSettled(() => {
+      this.waitingWalks.splice(0).forEach((waiting) => {
+        if (!this.Blok.ReadOnly.isEnabled && !YjsManager.isDestroying) {
+          this.step(waiting);
+        }
+      });
+    });
+  }
+
+  private step(direction: 'undo' | 'redo'): void {
+    if (direction === 'undo') {
+      this.Blok.YjsManager.undo();
+    } else {
+      this.Blok.YjsManager.redo();
+    }
   }
 
   /**

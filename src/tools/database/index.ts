@@ -8,6 +8,7 @@ import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
 import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
+import { HistoryDraftsCommit, type HistoryDraftsCommitPayload } from '../../components/events/HistoryDraftsCommit';
 import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
@@ -854,6 +855,7 @@ export class DatabaseTool implements BlockTool {
     this.activateView(this.activeViewId);
     this.api.events.on('block changed', this.handleBlockChanged);
     this.api.events.on('block replayed', this.handleBlockReplayed);
+    this.api.events.on(HistoryDraftsCommit, this.commitDraftsBeforeHistory);
     this.api.events.on(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.on(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.on('block changed', this.handleBodyEdit);
@@ -2661,6 +2663,7 @@ export class DatabaseTool implements BlockTool {
     this.openCellEditors.clear();
     this.api.events.off('block changed', this.handleBlockChanged);
     this.api.events.off('block replayed', this.handleBlockReplayed);
+    this.api.events.off(HistoryDraftsCommit, this.commitDraftsBeforeHistory);
     this.api.events.off('block changed', this.handleBodyEdit);
     this.api.events.off('block changed', this.handleAgentRowWrite);
     this.api.events.off('block changed', this.scheduleBacklinks);
@@ -3010,6 +3013,14 @@ export class DatabaseTool implements BlockTool {
       child.dispatchChange({ derived: true });
     });
   }
+
+  /** A host undo or redo: an open editor's draft is written as its own step first, so the walk cannot drop it. */
+  private readonly commitDraftsBeforeHistory = ({ commit }: HistoryDraftsCommitPayload): void => {
+    const open = [...this.openCellEditors].filter((editor) => editor.isOpen);
+
+    if (this.destroyed || open.length === 0) return;
+    commit(() => open.forEach((editor) => editor.close()));
+  };
 
   /**
    * An undo or redo of this database closes every cell editor open over it,

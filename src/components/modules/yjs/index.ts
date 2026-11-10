@@ -1358,6 +1358,11 @@ export class YjsManager extends Module {
     this.documentStore.transact(fn, 'local');
   }
 
+  /** True from `destroy()` on, also while it waits for a last save to land. */
+  public get isDestroying(): boolean {
+    return this.isTearingDown;
+  }
+
   /** True inside a {@link transactWithoutCapture} scope. */
   public get isTransactingWithoutCapture(): boolean {
     return this.documentStore.isTransactingWithoutCapture;

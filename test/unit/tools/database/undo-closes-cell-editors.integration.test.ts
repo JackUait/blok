@@ -7,17 +7,16 @@ import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { OutputBlockData, OutputData } from '../../../../types';
 
 /**
- * An undo or redo of a database closes every cell editor open over it, on
- * every surface, without writing the editor's draft. Undo moves no focus, so
- * nothing else closes them, and an open editor would show and write back a
- * value the undo just changed.
+ * An undo or redo from code (a host Undo button, `blok.history.undo()`)
+ * commits every open cell editor's draft as its own step first, then walks.
+ * So the walk undoes the draft, and redo brings it back: nothing typed is lost.
  */
 
 interface TestEditor {
   isReady: Promise<unknown>;
   save: () => Promise<OutputData>;
   destroy: () => void;
-  history: { undo: () => void; redo: () => void };
+  history: { undo: () => void; redo: () => void; canUndo: () => boolean; canRedo: () => boolean };
 }
 
 const quiet = async (): Promise<void> => {
@@ -166,20 +165,95 @@ describe('undo and redo close every open cell editor', () => {
     ['a list row', single({ type: 'list' }), listRow('')],
     ['a dashboard table widget of another database', dashboard, tableCell(widget('w-table'))],
     ['a dashboard list widget of another database', dashboard, listRow(widget('w-list'))],
-  ])('%s: undo closes the editor, drops its draft and shows the undone value', async (_name, blocks, target) => {
+  ])('%s: undo commits the draft as its own step and undoes it; redo brings it back', async (_name, blocks, target) => {
     await make(blocks);
     await editThenOpenDraft(target);
 
     editor?.history.undo();
     await quiet();
 
-    expect(openEditors()).toBe(0);
-    expect(await notesOf('r2')).toBe('second');
     expect(await notesOf('r1')).toBe('first');
-    expect(target('r2')?.textContent).toContain('second');
+    expect(await notesOf('r2')).toBe('changed');
+    expect(openEditors()).toBe(0);
+
+    editor?.history.redo();
+    await quiet();
+
+    expect(await notesOf('r1')).toBe('draft');
+    expect(await notesOf('r2')).toBe('changed');
   });
 
-  it('the bulk editor of selected table rows: undo closes it without its draft', async () => {
+  it('a draft over the cell the last step changed: undo takes back only the draft', async () => {
+    await make(single({}));
+    await click(tableCell('')('r2'));
+    type('changed');
+    await enter();
+    await click(tableCell('')('r2'));
+    type('changed draft');
+
+    editor?.history.undo();
+    await quiet();
+
+    expect(await notesOf('r2')).toBe('changed');
+    expect(openEditors()).toBe(0);
+
+    editor?.history.undo();
+    await quiet();
+
+    expect(await notesOf('r2')).toBe('second');
+
+    editor?.history.redo();
+    await quiet();
+    editor?.history.redo();
+    await quiet();
+
+    expect(await notesOf('r2')).toBe('changed draft');
+  });
+
+  it('two undo calls in one task walk in order: the draft first, then the step before it', async () => {
+    await make(single({}));
+    await editThenOpenDraft(tableCell(''));
+
+    editor?.history.undo();
+    editor?.history.undo();
+    await quiet();
+
+    expect(await notesOf('r1')).toBe('first');
+    expect(await notesOf('r2')).toBe('second');
+
+    editor?.history.redo();
+    editor?.history.redo();
+    await quiet();
+
+    expect(await notesOf('r1')).toBe('draft');
+    expect(await notesOf('r2')).toBe('changed');
+  });
+
+  it('redo with a draft open keeps the draft: it is a new edit, so there is nothing left to redo', async () => {
+    await make(single({}));
+    await editThenOpenDraft(tableCell(''));
+    editor?.history.undo();
+    await quiet();
+    editor?.history.undo();
+    await quiet();
+    expect(await notesOf('r2')).toBe('second');
+
+    await click(tableCell('')('r1'));
+    type('draft again');
+    editor?.history.redo();
+    await quiet();
+
+    expect(await notesOf('r1')).toBe('draft again');
+    expect(openEditors()).toBe(0);
+    expect(editor?.history.canRedo()).toBe(false);
+
+    editor?.history.undo();
+    await quiet();
+
+    expect(await notesOf('r1')).toBe('first');
+  });
+
+  it('the bulk editor of selected table rows: undo commits its draft to every row as one step and undoes it', async () => {
     await make(single({}));
     await click(tableCell('')('r2'));
     type('changed');
@@ -195,15 +269,21 @@ describe('undo and redo close every open cell editor', () => {
     editor?.history.undo();
     await quiet();
 
-    expect(openEditors()).toBe(0);
     expect(await notesOf('r1')).toBe('first');
-    expect(await notesOf('r2')).toBe('second');
+    expect(await notesOf('r2')).toBe('changed');
+    expect(openEditors()).toBe(0);
+
+    editor?.history.redo();
+    await quiet();
+
+    expect(await notesOf('r1')).toBe('draft');
+    expect(await notesOf('r2')).toBe('draft');
   });
 
   it.each([
     ['full page', 'full'],
     ['side peek', 'side'],
-  ])('the row page (%s): undo and redo close its property editor', async (_name, mode) => {
+  ])('the row page (%s): undo commits its property draft first, then undoes it', async (_name, mode) => {
     await make(single({ openPagesIn: mode }));
     await click(q('[data-row-id="r1"] [data-blok-database-table-open]'));
     const value = (): HTMLElement | null => q('[data-blok-database-drawer] [data-blok-database-drawer-prop-value][data-property-id="n"]');
@@ -218,17 +298,28 @@ describe('undo and redo close every open cell editor', () => {
     editor?.history.undo();
     await quiet();
 
+    expect(await notesOf('r1')).toBe('changed');
     expect(openEditors()).toBe(0);
-    expect(await notesOf('r1')).toBe('first');
-    expect(value()?.textContent).toContain('first');
+    expect(value()?.textContent).toContain('changed');
 
-    await click(value());
-    type('draft');
     editor?.history.redo();
     await quiet();
 
-    expect(openEditors()).toBe(0);
-    expect(await notesOf('r1')).toBe('changed');
+    expect(await notesOf('r1')).toBe('draft');
   });
 
+  it('an open editor with nothing typed adds no step: undo walks the step before it', async () => {
+    await make(single({}));
+    await click(tableCell('')('r2'));
+    type('changed');
+    await enter();
+    await click(tableCell('')('r1'));
+
+    editor?.history.undo();
+    await quiet();
+
+    expect(await notesOf('r2')).toBe('second');
+    expect(await notesOf('r1')).toBe('first');
+    expect(openEditors()).toBe(0);
+  });
 });

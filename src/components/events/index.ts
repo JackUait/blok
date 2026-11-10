@@ -22,6 +22,8 @@ import type { FakeCursorAboutToBeToggledPayload } from './FakeCursorAboutToBeTog
 import { FakeCursorAboutToBeToggled } from './FakeCursorAboutToBeToggled';
 import type { FakeCursorHaveBeenSetPayload } from './FakeCursorHaveBeenSet';
 import { FakeCursorHaveBeenSet } from './FakeCursorHaveBeenSet';
+import type { HistoryDraftsCommitPayload } from './HistoryDraftsCommit';
+import { HistoryDraftsCommit } from './HistoryDraftsCommit';
 import type { I18nChangedPayload } from './I18nChanged';
 import { I18nChanged } from './I18nChanged';
 import { RedactorDomChanged } from './RedactorDomChanged';
@@ -50,6 +52,7 @@ export {
   SaveFailed,
   SettingChanged,
   CollaborationStatusChanged,
+  HistoryDraftsCommit,
 };
 
 /**
@@ -72,4 +75,5 @@ export interface BlokEventMap {
   [SaveFailed]: SaveFailedPayload;
   [SettingChanged]: SettingChangedPayload;
   [CollaborationStatusChanged]: CollaborationStatusChangedPayload;
+  [HistoryDraftsCommit]: HistoryDraftsCommitPayload;
 }

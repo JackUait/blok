@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../../../types/data-formats';
 import type { BlockToolData } from '../../../../../types';
+import type { BlockTuneData } from '../../../../../types/block-tunes/block-tune-data';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
 import { convertBlockDataToString, convertStringToBlockData } from '../../../utils/blocks';
@@ -30,6 +31,7 @@ import { PatternHandler } from './pattern-handler';
  * Extends the basic SavedData fields with optional hierarchy information.
  */
 interface BlokClipboardBlock extends Pick<SavedData, 'id' | 'data' | 'tool'> {
+  tunes?: { [name: string]: BlockTuneData };
   parentId?: string | null;
   contentIds?: string[];
   /** Set by a cut of a `copyAsLink` block: its first paste may recreate it. */
@@ -494,7 +496,8 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       tableCells.forEach(({ sanitized, original }) => {
         const block = insertOrStub({ tool: sanitized.tool,
           data: remapDatabaseViewIds(sanitized.tool, original.id, sanitized.data, copiedViewIds),
-          origin: 'paste' });
+          origin: 'paste',
+          ...tunesOf(original) });
 
         oldIdToEntry.set(original.id, { newBlock: block, original });
         Caret.setToBlock(block, Caret.positions.END);
@@ -524,6 +527,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
           replace: idx === 0 && shouldReplaceFirst && tableCells.length === 0,
           origin: 'paste',
           ...(id !== undefined && { id }),
+          ...tunesOf(original),
         });
 
         // A root of the paste joins the caret's container. A copied parent that is
@@ -572,6 +576,17 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     }
   }
 }
+
+/**
+ * The entry's tunes as insert options. Like a load, tunes this editor lacks are
+ * kept as they are; anything but a plain object is dropped, since the block
+ * reads tunes with Object.entries.
+ */
+const tunesOf = (entry: BlokClipboardBlock): { tunes?: { [name: string]: BlockTuneData } } => {
+  const { tunes } = entry;
+
+  return typeof tunes === 'object' && tunes !== null && !Array.isArray(tunes) ? { tunes } : {};
+};
 
 /** Any page can write this payload, so a carried url must be a safe href. */
 const isCopyLink = (value: unknown): value is CopyLink =>

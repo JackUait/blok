@@ -36,7 +36,7 @@ type SerializableToolConfig = {
   config?: Record<string, unknown>;
 };
 
-type CreateBlokOptions = Pick<BlokConfig, 'data' | 'dataModel' | 'inlineToolbar' | 'placeholder' | 'readOnly'> & {
+type CreateBlokOptions = Pick<BlokConfig, 'data' | 'dataModel' | 'inlineToolbar' | 'placeholder' | 'readOnly' | 'tunes'> & {
   tools?: Record<string, SerializableToolConfig>;
 };
 
@@ -941,6 +941,48 @@ test.describe('copy and paste', () => {
         expect((await placed()).roots).toEqual(['src', 'cal', 'tbl', 'tail']);
       });
     }
+  });
+
+  test('block tune data survives a block copy and paste', async ({ page }) => {
+    const noteTuneSource = `class NoteTune {
+      static get isTune() { return true; }
+      constructor({ data }) { this.data = data ?? { note: '' }; }
+      render() { const el = document.createElement('div'); el.textContent = 'Note'; return el; }
+      save() { return this.data; }
+    }`;
+
+    await createBlok(page, {
+      tools: { noteTune: { classCode: noteTuneSource } },
+      tunes: ['noteTune'],
+      data: {
+        blocks: [
+          { id: 'a', type: 'paragraph', data: { text: 'Tuned' }, tunes: { noteTune: { note: 'keep me' } } },
+          { id: 'b', type: 'header', data: { text: 'Tuned head', level: 2 }, tunes: { noteTune: { note: 'head note' } } },
+          { id: 'tgt', type: 'paragraph', data: { text: '' } },
+        ],
+      },
+    });
+
+    await page.locator('[data-blok-id="a"] [contenteditable="true"]').click();
+    await page.locator('[data-blok-id="b"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+    await expect(page.locator('[data-blok-id="b"][data-blok-selected="true"]')).toBeVisible();
+
+    const clipboardData = await copyFromElement(page.locator('[data-blok-id="a"]'));
+
+    expect(clipboardData['application/x-blok']).toBeDefined();
+
+    await page.keyboard.press('Escape');
+    await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+    await paste(page, page.locator(':focus'), clipboardData);
+
+    await expect.poll(async () => {
+      const { blocks } = await saveBlok(page);
+
+      return blocks.filter((b) => b.id !== 'a' && b.id !== 'b').map((b) => [b.type, b.tunes]);
+    }).toEqual([
+      ['paragraph', { noteTune: { note: 'keep me' } }],
+      ['header', { noteTune: { note: 'head note' } }],
+    ]);
   });
 
   test.describe('blocks of a tool the pasting editor lacks', () => {

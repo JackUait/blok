@@ -175,6 +175,31 @@ describe('date cell editor', () => {
     expect(ctx.onCommit).not.toHaveBeenCalled();
   });
 
+  describe('close() from code, as a host undo does', () => {
+    it('saves a typed date that was not applied yet', () => {
+      const ctx = makeEditorContext();
+      const handle = openCellEditor(makeProperty('date'), '2026-10-09', makeAnchor(), ctx);
+
+      typeInto(q<HTMLInputElement>('[data-blok-database-date-input="start"]'), 'Oct 25, 2026');
+      handle.close();
+
+      expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-25');
+      expect(ctx.onClose).toHaveBeenCalledTimes(1);
+      expect(editorRoot()).toBeNull();
+    });
+
+    it('cancel() still drops it', () => {
+      const ctx = makeEditorContext();
+      const handle = openCellEditor(makeProperty('date'), '2026-10-09', makeAnchor(), ctx);
+
+      typeInto(q<HTMLInputElement>('[data-blok-database-date-input="start"]'), 'Oct 25, 2026');
+      handle.cancel();
+
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+      expect(ctx.onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('single cell Escape (research/35 §3)', () => {
     it('a typed date is saved on Escape, and one Escape closes', () => {
       const ctx = openDate('2026-10-09');

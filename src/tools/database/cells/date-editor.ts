@@ -259,8 +259,7 @@ class DateEditor {
           this.closeMenu(true);
         } else {
           // research/31 §4b, research/35 §3: Escape saves the typed date.
-          Object.values(this.pendingTyped).forEach((apply) => apply());
-          this.finish(true);
+          this.saveTypedAndClose();
         }
       },
       onDismiss: () => this.finish(false),
@@ -275,6 +274,12 @@ class DateEditor {
 
   get isOpen(): boolean {
     return this.open;
+  }
+
+  /** Escape, and a close from code (a host undo): a date typed but not applied is saved. */
+  saveTypedAndClose(): void {
+    Object.values(this.pendingTyped).forEach((apply) => apply());
+    this.finish(true);
   }
 
   finish(closePopover: boolean): void {
@@ -1105,7 +1110,7 @@ export const openDateEditor = (
     get isOpen() {
       return editor.isOpen;
     },
-    close: () => editor.finish(true),
+    close: () => editor.saveTypedAndClose(),
     cancel: () => editor.finish(true),
   };
 };

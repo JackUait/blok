@@ -678,7 +678,6 @@ export class Table implements BlockTool {
       overlay.style.position = 'absolute';
       overlay.style.inset = '0';
       overlay.style.pointerEvents = 'none';
-      overlay.style.zIndex = '3';
       wrapper.appendChild(overlay);
       this.gripOverlay = overlay;
     }
@@ -1010,7 +1009,6 @@ export class Table implements BlockTool {
       overlay.style.position = 'absolute';
       overlay.style.inset = '0';
       overlay.style.pointerEvents = 'none';
-      overlay.style.zIndex = '3';
       wrapper.appendChild(overlay);
       this.gripOverlay = overlay;
 

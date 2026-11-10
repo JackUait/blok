@@ -28,15 +28,25 @@ interface GripFrame {
   visibleWidth: number;
   rowGripX: number;
   colGripY: number;
-  /** Set when the grip hangs from a modal edge instead of centring on the table border. */
-  rowTransform?: string;
-  colTransform?: string;
   /**
    * Viewport top and overlay left for a column grip held under the full-screen
    * header. Held fixed: Chrome scrolls the modal before the scroll event re-places
    * grips, so an absolute grip rode up under the header on a fast scroll.
    */
   colFixed?: { top: number; originLeft: number };
+  /**
+   * Viewport numbers for a row grip held on the modal's start edge. Held fixed:
+   * the modal clips at that edge and half the grip lies outside it.
+   * `top` is the overlay's top with the modal scrolled to 0.
+   */
+  rowFixed?: { modal: HTMLElement; left: number; top: number; scrollTop: number; range: number; bandTop: number; bandBottom: number };
+}
+
+/** A held row grip's scroll-driven motion, and the scroll range it was built for. */
+interface Ride {
+  animation: Animation;
+  modal: HTMLElement;
+  range: number;
 }
 
 const CENTRED = 'translate(-50%, -50%)';
@@ -164,6 +174,7 @@ export class TableRowColControls {
   private pinnedColSpan = 1;
   private isInsideTable = false;
   private rowResizeObserver: ResizeObserver | null = null;
+  private rides = new Map<HTMLElement, Ride>();
 
   private drag: TableRowColDrag;
   private canDrag: ((type: 'row' | 'col', index: number) => boolean) | undefined;
@@ -500,7 +511,10 @@ export class TableRowColControls {
     this.rowResizeObserver = null;
     this.detachScrollListener();
     this.colGrips.forEach(g => g.remove());
-    this.rowGrips.forEach(g => g.remove());
+    this.rowGrips.forEach((g) => {
+      this.stopRide(g);
+      g.remove();
+    });
     this.colGrips = [];
     this.rowGrips = [];
     this.activeColGripIndex = -1;
@@ -663,8 +677,10 @@ export class TableRowColControls {
     const fixed = frame.colFixed;
 
     style.position = fixed === undefined ? '' : 'fixed';
+    // Half of a held grip lies over the header (z-index 5 in tables.css).
+    style.zIndex = fixed === undefined ? '' : '6';
     style.top = `${fixed?.top ?? frame.colGripY}px`;
-    style.transform = frame.colTransform ?? CENTRED;
+    style.transform = CENTRED;
 
     if (!this.overlay) {
       style.left = `${adjustedX}px`;
@@ -696,9 +712,67 @@ export class TableRowColControls {
     const centerY = (first.offsetTop + last.offsetTop + last.offsetHeight) / 2;
     const style = grip.style;
 
-    style.left = `${frame.rowGripX}px`;
-    style.top = `${centerY}px`;
-    style.transform = frame.rowTransform ?? CENTRED;
+    const fixed = frame.rowFixed;
+
+    style.transform = CENTRED;
+
+    if (fixed === undefined) {
+      this.stopRide(grip);
+      style.position = '';
+      style.visibility = '';
+      style.left = `${frame.rowGripX}px`;
+      style.top = `${centerY}px`;
+
+      return;
+    }
+
+    const y = fixed.top + centerY - fixed.scrollTop;
+    const half = ROW_PILL_HEIGHT / 2;
+    // Fixed, so the modal no longer clips it: a row out of view would show over the backdrop.
+    const isOutOfView = y - half < fixed.bandTop || y + half > fixed.bandBottom;
+    const rides = !isOutOfView && this.rideScroll(grip, fixed);
+
+    if (!rides) {
+      this.stopRide(grip);
+    }
+    style.position = 'fixed';
+    style.left = `${fixed.left}px`;
+    // A riding grip is placed for scroll 0 and the ride moves it from there.
+    style.top = `${rides ? fixed.top + centerY : y}px`;
+    style.visibility = isOutOfView ? 'hidden' : '';
+  }
+
+  /**
+   * Moves a fixed row grip with the modal's scroll, in step with it. Placed
+   * from the scroll event alone it trails its row on a fast scroll.
+   * False where there is no ScrollTimeline: the scroll listener re-places it.
+   */
+  private rideScroll(grip: HTMLElement, fixed: NonNullable<GripFrame['rowFixed']>): boolean {
+    if (typeof ScrollTimeline !== 'function') {
+      return false;
+    }
+    const ride = this.rides.get(grip);
+
+    // Closing the modal cancels every animation in it, so a kept ride may be dead.
+    if (ride?.modal === fixed.modal && ride.range === fixed.range && ride.animation.playState !== 'idle') {
+      return true;
+    }
+    ride?.animation.cancel();
+    this.rides.set(grip, {
+      modal: fixed.modal,
+      range: fixed.range,
+      animation: grip.animate(
+        [{ translate: '0 0' }, { translate: `0 ${-fixed.range}px` }],
+        { timeline: new ScrollTimeline({ source: fixed.modal, axis: 'block' }), fill: 'both' }
+      ),
+    });
+
+    return true;
+  }
+
+  private stopRide(grip: HTMLElement): void {
+    this.rides.get(grip)?.animation.cancel();
+    this.rides.delete(grip);
   }
 
   /**
@@ -738,20 +812,23 @@ export class TableRowColControls {
    * In full screen the modal clips the table, and its scroller runs past the
    * grid to the modal edges. A grip whose table border scrolled away hangs from
    * the modal's visible edge instead: the start side, or the header's bottom line.
-   * It grows inward from that line: centred on it, the modal edge would clip
-   * half of it and the header (above the grip overlay) would cover half.
+   * Both sit centred on that line. They are fixed for it: the modal clips at its
+   * start edge, and the header covers anything in the table's own layer.
    */
   private pinToModalEdges(frame: GripFrame, direction: 'ltr' | 'rtl'): GripFrame {
     const modal = this.grid.closest<HTMLElement>(`[${FULLSCREEN_ATTR}]`);
-    const header = modal?.querySelector(FULLSCREEN_HEADER_SELECTOR) ?? null;
+    const header = modal?.querySelector<HTMLElement>(FULLSCREEN_HEADER_SELECTOR) ?? null;
 
     if (this.overlay === undefined || modal === null || header === null) {
       return frame;
     }
     const origin = this.overlay.getBoundingClientRect();
-    const start = modal.getBoundingClientRect().left + modal.clientLeft - origin.left;
+    const box = modal.getBoundingClientRect();
+    const start = box.left + modal.clientLeft - origin.left;
     const end = start + modal.clientWidth;
-    const headerBottom = header.getBoundingClientRect().bottom;
+    // Not the header's own rect: it is fixed inside the table root, and the
+    // opening transform on that root moves it off the modal's top (tables.css).
+    const headerBottom = box.top + modal.clientTop + header.offsetHeight;
     const top = headerBottom - origin.top;
     const rowLine = direction === 'ltr' ? frame.gridOffset : frame.gridOffset + this.grid.offsetWidth;
     const rowStuck = direction === 'ltr' ? rowLine < start : rowLine > end;
@@ -760,12 +837,20 @@ export class TableRowColControls {
 
     if (rowStuck) {
       pinned.rowGripX = direction === 'ltr' ? start : end;
-      pinned.rowTransform = direction === 'ltr' ? 'translate(0, -50%)' : 'translate(-100%, -50%)';
+      pinned.rowFixed = {
+        modal,
+        left: pinned.rowGripX + origin.left,
+        top: origin.top + modal.scrollTop,
+        scrollTop: modal.scrollTop,
+        range: modal.scrollHeight - modal.clientHeight,
+        bandTop: headerBottom,
+        bandBottom: box.top + modal.clientTop + modal.clientHeight,
+      };
     }
     if (colStuck) {
       pinned.colGripY = top;
-      pinned.colTransform = 'translate(-50%, 0)';
-      pinned.colFixed = { top: headerBottom, originLeft: origin.left };
+      // Centred on the header's border-bottom, the last pixel of its box.
+      pinned.colFixed = { top: headerBottom - BORDER_WIDTH / 2, originLeft: origin.left };
     }
 
     return pinned;

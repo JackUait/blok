@@ -593,7 +593,12 @@ export class TableFullscreen {
     const timing = { duration: OPEN_MS, easing: SPRING };
 
     host.animate([{ clipPath: insetOf(host.getBoundingClientRect(), shape) }, { clipPath: SHEET_CLIP }], timing);
-    source.parentElement?.animate([shift(anchor, landed), { transform: 'none' }], timing);
+    // A grip shown mid-motion was placed against the moving root. Closing cancels this, which rejects.
+    void source.parentElement?.animate([shift(anchor, landed), { transform: 'none' }], timing).finished.then(() => {
+      if (this.host === host) {
+        this.options.onRelayout();
+      }
+    }, () => undefined);
     backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS * 0.8, easing: 'linear' });
     // The header and button are position: fixed inside the moving root, which
     // holds them while it has a transform. They show once it stops.

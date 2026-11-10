@@ -566,6 +566,115 @@ test.describe('Table full screen', () => {
     expect(gap?.below).toBeLessThanOrEqual(Math.ceil(gap?.bar ?? 0) + 1);
   });
 
+  test('a column grip shown while the modal is still opening sits on the table top', async ({ page }) => {
+    await createBlok(page);
+    await page.locator(TABLE_SELECTOR).hover();
+    await page.getByRole('button', { name: OPEN_LABEL }).click();
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    // Held mid-motion: the table root still has its opening transform.
+    await modal.evaluate((el) => {
+      for (const a of el.getAnimations({ subtree: true })) {
+        a.pause();
+        a.currentTime = 100;
+      }
+    });
+    // By coordinates: the opening clip can still cover the cell, and hover() would wait for it.
+    const cell = await page.getByText('Grid rendering', { exact: true }).boundingBox();
+
+    expect(cell).not.toBeNull();
+    await page.mouse.move((cell?.x ?? 0) + 4, (cell?.y ?? 0) + 4);
+    await page.mouse.move((cell?.x ?? 0) + 8, (cell?.y ?? 0) + 6);
+    await expect(page.locator('[data-blok-table-grip-col="0"]')).toHaveCSS('opacity', '1');
+    await modal.evaluate(el => el.getAnimations({ subtree: true }).forEach(a => a.finish()));
+
+    const gap = await modal.evaluate((el) => {
+      const grip = el.querySelector('[data-blok-table-grip-col="0"]')?.getBoundingClientRect();
+      const grid = el.querySelector('[data-blok-table-scroll]')?.firstElementChild?.getBoundingClientRect();
+
+      return grip === undefined || grid === undefined ? null : grip.top + grip.height / 2 - grid.top;
+    });
+
+    expect(gap).not.toBeNull();
+    expect(Math.abs(gap ?? Infinity)).toBeLessThanOrEqual(1);
+  });
+
+  test('a column grip shown while a table scrolled above the page top opens lands on the table top', async ({ page }) => {
+    await createBlok(page, false, {
+      blocks: [{
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: true, content: Array.from({ length: 60 }, (_, r) => [`R${r}C0`, `R${r}C1`]) },
+      }],
+    });
+    await page.locator(TABLE_SELECTOR).evaluate(el => window.scrollBy(0, el.getBoundingClientRect().top + 300));
+    // Its corner is off screen, so no pointer can reach the button.
+    await page.getByRole('button', { name: OPEN_LABEL }).evaluate(el => el instanceof HTMLElement && el.click());
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    // Held mid-motion: the table top is still above the header's bottom line.
+    await modal.evaluate((el) => {
+      for (const a of el.getAnimations({ subtree: true })) {
+        a.pause();
+        a.currentTime = 100;
+      }
+    });
+    await page.mouse.move(300, 300);
+    await page.mouse.move(304, 302);
+    await expect(modal.locator('[data-blok-table-grip-col="0"]')).toHaveCSS('opacity', '1');
+    await modal.evaluate(el => el.getAnimations({ subtree: true }).forEach(a => a.finish()));
+
+    await expect.poll(() => modal.evaluate((el) => {
+      const grid = el.querySelector('[data-blok-table-scroll]')?.firstElementChild?.getBoundingClientRect();
+      const box = el.querySelector('[data-blok-table-grip-col="0"]')?.getBoundingClientRect();
+
+      return box === undefined || grid === undefined ? null : Math.round(Math.abs(box.top + box.height / 2 - grid.top));
+    })).toBeLessThanOrEqual(1);
+  });
+
+  test('the open size card covers a column grip held on the header line', async ({ page }) => {
+    await createBlok(page, false, {
+      blocks: [{
+        id: 'tbl',
+        type: 'table',
+        data: {
+          withHeadings: true,
+          colWidths: Array.from({ length: 8 }, () => 300),
+          content: Array.from({ length: 40 }, (_, r) => Array.from({ length: 8 }, (__, c) => `R${r}C${c}`)),
+        },
+      }],
+    });
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+    await modal.evaluate(el => el.scrollTo(0, 400));
+    await page.getByRole('button', { name: 'Change table size' }).click();
+    const card = page.getByRole('group', { name: 'Change table size' });
+
+    await expect(card).toBeVisible();
+    await page.getByText('R20C0', { exact: true }).hover();
+    const grip = page.locator('[data-blok-table-grip-col="0"]');
+
+    await expect(grip).toHaveCSS('opacity', '1');
+    const box = await grip.boundingBox();
+    const cardBox = await card.boundingBox();
+
+    expect(box).not.toBeNull();
+    expect(cardBox).not.toBeNull();
+    const x = (box?.x ?? 0) + (box?.width ?? 0) / 2;
+    const y = (box?.y ?? 0) + (box?.height ?? 0) / 2;
+
+    // The grip does sit under the card, or the check below proves nothing.
+    expect(x).toBeGreaterThan(cardBox?.x ?? Infinity);
+    expect(x).toBeLessThan((cardBox?.x ?? 0) + (cardBox?.width ?? 0));
+    expect(y).toBeGreaterThan(cardBox?.y ?? Infinity);
+    expect(await page.evaluate(
+      ([px, py]) => document.elementFromPoint(px, py)?.closest('[data-blok-table-grip]') === null,
+      [x, y]
+    )).toBe(true);
+  });
+
   test('with the table border scrolled away, the row and column grips hang from the modal edges', async ({ page }) => {
     const bigData: OutputData = {
       blocks: [{
@@ -611,18 +720,21 @@ test.describe('Table full screen', () => {
         document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('[data-blok-table-grip]') !== null;
 
       return {
-        rowGap: row.left - left,
-        colGap: col.top - header.bottom,
+        rowGap: row.left + row.width / 2 - left,
+        rowOuterHalf: document.elementFromPoint(left - 1, row.top + row.height / 2)?.closest('[data-blok-table-grip]') !== null,
+        colGap: col.top + col.height / 2 - header.bottom,
         rowOnTop: hits(row),
         colOnTop: hits(col),
       };
     });
 
     expect(placed).not.toBeNull();
-    // Each hangs from its edge line: the modal's start edge, the header's bottom line.
+    // Each sits centred on its edge line: the modal's start edge, the header's bottom line.
     expect(Math.abs(placed?.rowGap ?? Infinity)).toBeLessThanOrEqual(1);
     expect(Math.abs(placed?.colGap ?? Infinity)).toBeLessThanOrEqual(1);
     expect(placed?.rowOnTop).toBe(true);
+    // The half outside the sheet is painted too: the modal does not clip it.
+    expect(placed?.rowOuterHalf).toBe(true);
     expect(placed?.colOnTop).toBe(true);
 
     // A fast scroll paints before the scroll event re-places grips. Read in the
@@ -637,6 +749,18 @@ test.describe('Table full screen', () => {
     });
 
     expect(drift).toBe(0);
+
+    // The row grip stays on its row through the scroll, and hides once the row is under the header.
+    const rowOffset = (): Promise<number | null> => modal.evaluate((el) => {
+      const grip = el.querySelector('[data-blok-table-grip-row="20"]')?.getBoundingClientRect();
+      const row = el.querySelectorAll('[data-blok-table-row]')[20]?.getBoundingClientRect();
+
+      return grip === undefined || row === undefined ? null : Math.round(Math.abs(grip.top + grip.height / 2 - (row.top + row.height / 2)));
+    });
+
+    await expect.poll(rowOffset).toBeLessThanOrEqual(1);
+    await modal.evaluate(el => el.scrollBy(0, 2000));
+    await expect(rowGrip).toBeHidden();
   });
 
   test('a wide table runs to the modal edges, its start gap scrolls away, and it shows the add-column bar at its scroll end', async ({ page }) => {

@@ -1589,6 +1589,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALCMENU_BYTES = 800;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
+    // tables.css: the open size card covers a column grip held on the full-screen header line.
+    const TABLE_HELD_GRIP_UNDER_SIZE_CARD_BYTES = 441;
     // Round 11 lane aggr: the table group header's "Show aggregation" count.
     const DATABASE_AGGR_BYTES = 941;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
@@ -2037,6 +2039,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CALCFOOT_BYTES
       + DATABASE_FOOTLBL_BYTES
       + BLOCK_CONTROL_GREY_BYTES
+      + TABLE_HELD_GRIP_UNDER_SIZE_CARD_BYTES
       + DATABASE_AGGR_BYTES
       + DATABASE_CALCMENU_BYTES;
     const counted = new Set<string>();

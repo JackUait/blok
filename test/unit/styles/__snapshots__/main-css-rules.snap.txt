@@ -3470,6 +3470,10 @@
   user-select: none;
 }
 
+[data-blok-table-fullscreen] [data-blok-table-fullscreen-header]:has([data-blok-table-fullscreen-size-editor]:not([hidden])) {
+  z-index: 7;
+}
+
 [data-blok-table-fullscreen-header] svg {
   flex: none;
   width: 18px;
@@ -3718,7 +3722,7 @@
   position: fixed;
   top: calc(var(--blok-space-5) + var(--blok-space-3-5));
   inset-inline-end: calc(var(--blok-space-5) + var(--blok-space-3-5));
-  z-index: 6;
+  z-index: 8;
   width: auto;
   height: 28px;
   padding-block: 0;

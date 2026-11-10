@@ -404,6 +404,15 @@
   user-select: none;
 }
 
+/*
+  A column grip held on the header's bottom line is z-index 6, over the header
+  (table-row-col-controls.ts). The open size card must cover it, and the card
+  cannot leave the header's layer, so the whole header rises instead.
+*/
+[data-blok-table-fullscreen] [data-blok-table-fullscreen-header]:has([data-blok-table-fullscreen-size-editor]:not([hidden])) {
+  z-index: 7;
+}
+
 [data-blok-table-fullscreen-header] svg {
   flex: none;
   width: 18px;
@@ -678,7 +687,8 @@
   position: fixed;
   top: calc(var(--blok-space-5) + var(--blok-space-3-5));
   inset-inline-end: calc(var(--blok-space-5) + var(--blok-space-3-5));
-  z-index: 6;
+  /* Over the header even while the size card lifts it to 7. */
+  z-index: 8;
   width: auto;
   height: 28px;
   padding-block: 0;

@@ -21,7 +21,7 @@ const data = (): DatabaseData => ({
       { id: 'red', label: 'Red', color: 'yellow', position: 'a0' },
     ] } },
   ],
-  views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], groupBy: 'sel' }],
+  views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['title', 'sel'], groupBy: 'sel' }],
   activeViewId: 'v',
 });
 

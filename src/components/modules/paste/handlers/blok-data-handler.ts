@@ -18,6 +18,8 @@ import { mintDatabaseRefIds, mintDatabaseViewIds, remapDatabaseRefs, remapDataba
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import { enclosingCellTable } from '../../../utils/enclosing-cell-table';
+import { isChildToolAllowed } from '../../../utils/child-tools';
+import type { TreePlacement } from '../../../utils/tree-order';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PatternMatch } from '../types';
@@ -382,6 +384,50 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * The parent pasted roots join: the container whose title holds the caret,
+   * else the caret block's parent. Without it a paste into a container child
+   * would land as a root sibling of the container.
+   * Mirrors `contextParentId` in `BasePasteHandler.insertPasteData`.
+   */
+  private caretParentId(): string | null {
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+    const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
+    const isInContainerTitle = childContainer !== null &&
+      !childContainer.contains(currentBlock?.currentInput ?? null);
+
+    return isInContainerTitle
+      ? (currentBlock?.id ?? null)
+      : (currentBlock?.parentId ?? null);
+  }
+
+  /**
+   * Where the batch goes when the caret's container denies one of its roots:
+   * after the nearest enclosing block whose own parent allows every root.
+   * @param parentId - the parent the roots would join
+   * @param rootTools - the tools of the batch roots
+   */
+  private placementOutsideDenyingParents(parentId: string | null, rootTools: string[]): TreePlacement | undefined {
+    const { BlockManager } = this.Blok;
+    const walk = (candidateId: string | null, anchor: Block | undefined, seen: Set<string>): TreePlacement | undefined => {
+      const candidate = candidateId === null ? null : BlockManager.getBlockById(candidateId);
+
+      if (candidate === undefined || (candidateId !== null && seen.has(candidateId))) {
+        return undefined;
+      }
+      if (rootTools.every(tool => isChildToolAllowed(candidate, tool))) {
+        return anchor === undefined ? undefined : { parentId: candidateId, afterId: anchor.id };
+      }
+      if (candidate === null) {
+        return undefined;
+      }
+
+      return walk(candidate.parentId, candidate, seen.add(candidate.id));
+    };
+
+    return walk(parentId, undefined, new Set());
+  }
+
+  /**
    * Insert Blok JSON blocks using a two-pass approach:
    *
    * Pass 1 — TABLE cell children (blocks whose parentId is a pasted table) are
@@ -428,37 +474,27 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       BlockManager.currentBlock = redirectTable;
     }
 
+    const caretParentId = this.caretParentId();
+    const pastedIds = new Set(blocks.map(b => b.id));
+    const rootTools = sanitizedBlocks
+      .filter((_, i) => !(typeof blocks[i]?.parentId === 'string' && pastedIds.has(blocks[i].parentId)))
+      .map(block => block.tool);
+    // A root the caret's container denies (a tabs block inside a tab) would be
+    // demoted, and its children nested under the demoted block and never shown.
+    const leavePlacement = redirectTable === undefined
+      ? this.placementOutsideDenyingParents(caretParentId, rootTools)
+      : undefined;
+
     // Capture replace intent before any insertions move the current block pointer.
     const shouldReplaceFirst =
       redirectTable === undefined &&
+      leavePlacement === undefined &&
       canReplace &&
       Boolean(BlockManager.currentBlock?.tool.isDefault) &&
       Boolean(BlockManager.currentBlock?.isEmpty);
 
-    /**
-     * Capture the container membership of the current block BEFORE any
-     * inserts so pasted "root" blocks inherit it. Without this, pasting
-     * into a child of a callout / toggle / table cell would drop the
-     * parent link on the first pasted block and the Saver's
-     * derive-from-live-parentId fallback would emit it as a root sibling
-     * of the container — the "callout paste ejection" regression family.
-     *
-     * Mirrors the `contextParentId` logic in `BasePasteHandler.insertPasteData`
-     * for multi-item HTML/plain paste. `canReplaceCurrentBlock` is
-     * explicitly gated off inside table cells by paste/index.ts, so this
-     * capture is the only place where a table-cell paste picks up its
-     * parent id.
-     */
-    const currentBlock = BlockManager.currentBlock;
-    const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
-    const isInContainerTitle = childContainer !== null &&
-      !childContainer.contains(currentBlock?.currentInput ?? null);
-    const caretParentId = isInContainerTitle
-      ? (currentBlock?.id ?? null)
-      : (currentBlock?.parentId ?? null);
-    const contextParentId = redirectTable !== undefined ? redirectTable.parentId : caretParentId;
-
-    const pastedIds = new Set(blocks.map(b => b.id));
+    const leftParentId = leavePlacement !== undefined ? leavePlacement.parentId : caretParentId;
+    const contextParentId = redirectTable !== undefined ? redirectTable.parentId : leftParentId;
 
     // IDs of pasted table blocks. ONLY a table's cell children must be inserted
     // before their parent: the table block's `data.content` references its cell
@@ -506,16 +542,31 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     // each BlockManager.insert and setBlockParent lands on its own undo
     // stack item, and the user has to press undo N times to clear a paste.
     // A tool that throws while building its block becomes a stub, so the rest of the paste still lands.
-    const insertOrStub = (options: Parameters<typeof BlockManager.insert>[0] & { tool: string; data: BlockToolData }): Block => {
+    // Blocks created with another tool than asked for: their copied children must not nest under them.
+    const demotedIds = new Set<string>();
+    // Only the first insert of the batch takes the placement; the rest follow it.
+    const pending = { placement: leavePlacement };
+    const insertOrStub = (requested: Parameters<typeof BlockManager.insert>[0] & { tool: string; data: BlockToolData }): Block => {
+      const options = pending.placement === undefined ? requested : { ...requested, replace: false, placement: pending.placement };
+      const created = (tool: string, block: Block): Block => {
+        if (block.name !== tool) {
+          demotedIds.add(block.id);
+        }
+
+        return block;
+      };
+
+      pending.placement = undefined;
+
       try {
-        return BlockManager.insert(options);
+        return created(options.tool, BlockManager.insert(options));
       } catch (error) {
         if (options.tool === Tools.stubTool) {
           throw error;
         }
         log(`Pasted block «${options.tool}» replaced with a stub because of a plugin error`, 'error', { error });
 
-        return BlockManager.insert({ ...options, tool: Tools.stubTool, data: composeStubData(Tools, options.tool, options.data) });
+        return created(Tools.stubTool, BlockManager.insert({ ...options, tool: Tools.stubTool, data: composeStubData(Tools, options.tool, options.data) }));
       }
     };
 
@@ -582,7 +633,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
 
         const parentEntry = oldIdToEntry.get(original.parentId);
 
-        if (parentEntry === undefined) {
+        if (parentEntry === undefined || demotedIds.has(parentEntry.newBlock.id)) {
           continue;
         }
 

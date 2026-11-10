@@ -17,6 +17,7 @@ const createBlokModulesMock = (): {
   setBlockParentMock: ReturnType<typeof vi.fn>;
   transactForToolMock: ReturnType<typeof vi.fn>;
   stopCapturingMock: ReturnType<typeof vi.fn>;
+  blockLookup: Map<string, Block & { parentId: string | null; contentIds: string[] }>;
 } => {
   const insertedBlocks: Array<{ tool: string; data: Record<string, unknown>; replace: boolean }> = [];
   const blockInstances: Block[] = [];
@@ -70,6 +71,7 @@ const createBlokModulesMock = (): {
         return newBlock;
       }),
       setBlockParent: setBlockParentMock,
+      getBlockById: vi.fn((id: string) => blockLookup.get(id)),
       transactForTool: transactForToolMock,
     },
     Caret: {
@@ -95,6 +97,7 @@ const createBlokModulesMock = (): {
     setBlockParentMock,
     transactForToolMock,
     stopCapturingMock,
+    blockLookup,
   };
 };
 
@@ -438,6 +441,93 @@ describe('BlokDataHandler', () => {
       expect(blockInstances[1].parentId).toBe('ctr');
       expect(blockInstances[2].parentId).toBe(blockInstances[1].id);
       expect(setBlockParentMock).not.toHaveBeenCalledWith(blockInstances[2], 'ctr');
+    });
+
+    describe('a pasted root the caret container denies', () => {
+      type Fake = Block & { parentId: string | null; contentIds: string[] };
+
+      /** The caret sits in an empty paragraph of a tab: root > tabs-host > tab1 > target. */
+      const caretInTab = (): ReturnType<typeof createBlokModulesMock> => {
+        const mock = createBlokModulesMock();
+        const container = (id: string, name: string, parentId: string | null, childTools: { allow?: string[]; deny?: string[] }): Fake =>
+          ({ id, name, parentId, contentIds: [], tool: { childTools } }) as unknown as Fake;
+
+        mock.blockLookup.set('tabs-host', container('tabs-host', 'tabs', null, { allow: ['tab'] }));
+        mock.blockLookup.set('tab1', container('tab1', 'tab', 'tabs-host', { deny: ['tabs'] }));
+        Object.assign(mock.modules.BlockManager.currentBlock ?? {}, { id: 'target', parentId: 'tab1' });
+
+        return mock;
+      };
+
+      const tabsPaste = JSON.stringify([
+        { id: 'pre', tool: 'paragraph', data: { text: 'Before' } },
+        { id: 'tb', tool: 'tabs', data: {}, contentIds: ['t1', 't2'] },
+        { id: 't1', tool: 'tab', data: { title: 'Alpha' }, parentId: 'tb', contentIds: ['t1p'] },
+        { id: 't1p', tool: 'paragraph', data: { text: 'Alpha body' }, parentId: 't1' },
+        { id: 't2', tool: 'tab', data: { title: 'Beta' }, parentId: 'tb', contentIds: ['t2p'] },
+        { id: 't2p', tool: 'paragraph', data: { text: 'Beta body' }, parentId: 't2' },
+        { id: 'post', tool: 'paragraph', data: { text: 'After' } },
+      ]);
+
+      it('puts the whole batch after the nearest container that allows every root', async () => {
+        const { modules, insertedBlocks, blockInstances } = caretInTab();
+        const handler = new BlokDataHandler(modules, createToolRegistryMock(), createSanitizerBuilderMock(), { sanitizer: {} });
+
+        await handler.handle(tabsPaste, { canReplaceCurrentBlock: true });
+
+        expect(insertedBlocks[0]).toEqual(expect.objectContaining({
+          tool: 'paragraph',
+          replace: false,
+          placement: { parentId: null, afterId: 'tabs-host' },
+        }));
+        expect(insertedBlocks.slice(1).some(options => 'placement' in options)).toBe(false);
+        expect(blockInstances.map(block => [block.name, block.parentId])).toEqual([
+          ['paragraph', null],
+          ['tabs', null],
+          ['tab', blockInstances[1].id],
+          ['paragraph', blockInstances[2].id],
+          ['tab', blockInstances[1].id],
+          ['paragraph', blockInstances[4].id],
+          ['paragraph', null],
+        ]);
+      });
+
+      it('keeps the batch in the container when it allows every root', async () => {
+        const { modules, insertedBlocks, blockInstances } = caretInTab();
+        const handler = new BlokDataHandler(modules, createToolRegistryMock(), createSanitizerBuilderMock(), { sanitizer: {} });
+
+        await handler.handle(JSON.stringify([
+          { id: 'a', tool: 'paragraph', data: { text: 'A' } },
+          { id: 'b', tool: 'paragraph', data: { text: 'B' } },
+        ]), { canReplaceCurrentBlock: false });
+
+        expect(insertedBlocks.some(options => 'placement' in options)).toBe(false);
+        expect(blockInstances.map(block => block.parentId)).toEqual(['tab1', 'tab1']);
+      });
+
+      it('never nests children under a parent that was created with another tool', async () => {
+        const { modules, blockInstances } = createBlokModulesMock();
+        const insert = vi.mocked(modules.BlockManager.insert);
+        const realInsert = insert.getMockImplementation();
+
+        insert.mockImplementation((options) => {
+          const block = realInsert?.(options) as Block;
+
+          if (options?.tool === 'tabs') {
+            Object.assign(block, { name: 'paragraph' });
+          }
+
+          return block;
+        });
+        const handler = new BlokDataHandler(modules, createToolRegistryMock(), createSanitizerBuilderMock(), { sanitizer: {} });
+
+        await handler.handle(JSON.stringify([
+          { id: 'tb', tool: 'tabs', data: {}, contentIds: ['t1'] },
+          { id: 't1', tool: 'tab', data: { title: 'Alpha' }, parentId: 'tb', contentIds: [] },
+        ]), { canReplaceCurrentBlock: false });
+
+        expect(blockInstances[1].parentId).not.toBe(blockInstances[0].id);
+      });
     });
 
     it('does not replace current block when pasting hierarchical content (table+children)', async () => {

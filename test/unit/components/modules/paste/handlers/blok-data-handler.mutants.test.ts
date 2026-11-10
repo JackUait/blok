@@ -164,6 +164,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
         return Promise.resolve(createBlock(tool));
       },
       setBlockParent,
+      getBlockById: (id: string): FakeBlock | undefined => lookup.get(id),
       ...transact,
     },
     Caret: {

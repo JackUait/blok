@@ -943,6 +943,69 @@ test.describe('copy and paste', () => {
     }
   });
 
+  test.describe('a tabs block pasted into a tab', () => {
+    const doc: OutputData['blocks'] = [
+      { id: 'pre', type: 'paragraph', data: { text: 'Before' } },
+      { id: 'tb', type: 'tabs', data: {}, content: ['t1', 't2'] },
+      { id: 't1', type: 'tab', data: { title: 'Alpha' }, parent: 'tb', content: ['t1p'] },
+      { id: 't1p', type: 'paragraph', parent: 't1', data: { text: 'Alpha body' } },
+      { id: 't2', type: 'tab', data: { title: 'Beta' }, parent: 'tb', content: ['t2p'] },
+      { id: 't2p', type: 'paragraph', parent: 't2', data: { text: 'Beta body' } },
+      { id: 'post', type: 'paragraph', data: { text: 'After' } },
+      { id: 'dest', type: 'tabs', data: {}, content: ['dest-tab'] },
+      { id: 'dest-tab', type: 'tab', data: { title: 'Dest' }, parent: 'dest', content: ['dest-in'] },
+      { id: 'dest-in', type: 'paragraph', parent: 'dest-tab', data: { text: '' } },
+      { id: 'tail', type: 'paragraph', data: { text: 'Tail' } },
+    ];
+
+    test('lands after the tabs block that holds the caret, as real tabs', async ({ page }) => {
+      await createBlok(page, { data: { blocks: doc }, dataModel: 'hierarchical' });
+
+      await page.locator('[data-blok-id="pre"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="post"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="post"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboardData = await copyFromElement(page.locator('[data-blok-id="pre"]'));
+
+      expect(clipboardData['application/x-blok']).toBeDefined();
+
+      await page.keyboard.press('Escape');
+      await page.locator('[data-blok-id="dest-in"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), clipboardData);
+
+      /** The saved tree as nested [type, text or title, children]. */
+      const tree = async (): Promise<unknown[]> => {
+        const { blocks } = await saveBlok(page);
+        const byId = new Map(blocks.map((b) => [b.id, b]));
+        const shape = (id: string): unknown[] => {
+          const block = byId.get(id);
+          const label: unknown = block?.data.text ?? block?.data.title ?? null;
+
+          return [block?.type, label, (block?.content ?? []).map(shape)];
+        };
+
+        return blocks.filter((b) => b.parent === undefined).map((b) => shape(b.id ?? ''));
+      };
+      const tabs = ['tabs', null, [
+        ['tab', 'Alpha', [['paragraph', 'Alpha body', []]]],
+        ['tab', 'Beta', [['paragraph', 'Beta body', []]]],
+      ]];
+
+      await expect.poll(tree).toEqual([
+        ['paragraph', 'Before', []],
+        tabs,
+        ['paragraph', 'After', []],
+        ['tabs', null, [['tab', 'Dest', [['paragraph', '', []]]]]],
+        ['paragraph', 'Before', []],
+        tabs,
+        ['paragraph', 'After', []],
+        ['paragraph', 'Tail', []],
+      ]);
+      await expect(page.getByRole('tab', { name: 'Alpha' })).toHaveCount(2);
+      await expect(page.getByRole('tab', { name: 'Beta' })).toHaveCount(2);
+    });
+  });
+
   test.describe('a range across a column layout', () => {
     const doc: OutputData['blocks'] = [
       { id: 'pre', type: 'paragraph', data: { text: 'Before' } },

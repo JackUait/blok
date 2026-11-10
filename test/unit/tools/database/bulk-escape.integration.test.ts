@@ -99,13 +99,30 @@ const selectRows = async (rowSelector: string, ...rowIds: string[]): Promise<voi
   }
 };
 
-const openBulk = async (propertyId: string): Promise<void> => {
-  await click(q(`[data-blok-database-table-selection-property][data-property-id="${propertyId}"]`));
+const isBoard = (rowSelector: string): boolean => rowSelector === '[data-blok-database-card]';
+
+/** Table and list: the bar's property button. Board: ⌘/, then Edit property › (notion-motion.md Round 12). */
+const openBulk = async (rowSelector: string, propertyId: string): Promise<void> => {
+  if (!isBoard(rowSelector)) {
+    await click(q(`[data-blok-database-table-selection-property][data-property-id="${propertyId}"]`));
+
+    return;
+  }
+  document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true, cancelable: true }));
+  await quiet();
+  const editProperty = [...document.querySelectorAll('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
+    .find((node) => node.textContent === 'Edit property')?.closest('[data-blok-popover-item]') ?? null;
+
+  await click(editProperty);
+  await click(document.querySelector(`[data-blok-item-name="database-bulk-edit-${propertyId}"]`));
 };
 
 const dateInput = (): HTMLInputElement | null => document.querySelector<HTMLInputElement>('[data-blok-database-date-input="start"]');
 
-const bar = (): Element | null => q('[data-blok-database-table-selection-bar]');
+/** Rows still picked: the bar on table and list, the gray cards on a board, which has no bar. */
+const picked = (rowSelector: string): boolean => (isBoard(rowSelector)
+  ? q('[data-blok-database-row-selected]') !== null
+  : q('[data-blok-database-table-selection-bar]') !== null);
 
 describe('Escape in bulk editors (research/31 §4b)', () => {
   beforeEach(() => {
@@ -126,7 +143,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
   it.each(VIEWS)('%s: a typed date is saved on Escape, on every row, and the selection stays', async (_name, view, rowSelector) => {
     await make(doc(view));
     await selectRows(rowSelector, 'r1', 'r2', 'r3');
-    await openBulk('due');
+    await openBulk(rowSelector, 'due');
     const input = dateInput();
 
     if (input === null) throw new Error('no date input');
@@ -136,13 +153,13 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
 
     expect([(await saved('r1'))?.properties?.due, (await saved('r2'))?.properties?.due, (await saved('r3'))?.properties?.due])
       .toEqual(['2026-10-05', '2026-10-05', '2026-10-05']);
-    expect(bar()).not.toBeNull();
+    expect(picked(rowSelector)).toBe(true);
   });
 
   it.each(VIEWS)('%s: on empty rows the date opens on today, writes nothing, and Escape writes nothing', async (_name, view, rowSelector) => {
     await make(doc(view));
     await selectRows(rowSelector, 'r1', 'r2');
-    await openBulk('due');
+    await openBulk(rowSelector, 'due');
 
     expect(dateInput()?.value).not.toBe('');
     expect((await saved('r1'))?.properties?.due).toBeUndefined();
@@ -156,7 +173,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
   it('a typed date saved on Escape, with a default reminder, is one undo step', async () => {
     await make(doc({}, { defaultReminder: '2_days_before' }));
     await selectRows('', 'r1', 'r2');
-    await openBulk('due');
+    await openBulk('', 'due');
     const input = dateInput();
 
     if (input === null) throw new Error('no date input');
@@ -177,7 +194,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
   it.each(VIEWS)('%s: a Text bulk edit opens on the shared value; Escape keeps the typed text and clears the selection', async (_name, view, rowSelector) => {
     await make(doc(view));
     await selectRows(rowSelector, 'r1', 'r2');
-    await openBulk('notes');
+    await openBulk(rowSelector, 'notes');
     const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]');
 
     if (field === null) throw new Error('no text field');
@@ -187,13 +204,13 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     await escape(field);
 
     expect([(await saved('r1'))?.properties?.notes, (await saved('r2'))?.properties?.notes]).toEqual(['sameB', 'sameB']);
-    expect(bar()).toBeNull();
+    expect(picked(rowSelector)).toBe(false);
   });
 
   it.each(VIEWS)('%s: Select drops a typed option on Escape and keeps the selection; Enter on Create sets every row and clears it', async (_name, view, rowSelector) => {
     await make(doc(view));
     await selectRows(rowSelector, 'r1', 'r2');
-    await openBulk('s');
+    await openBulk(rowSelector, 's');
     const typeQuery = (): HTMLInputElement => {
       const search = document.querySelector<HTMLInputElement>('[data-blok-database-cell-editor] input');
 
@@ -207,9 +224,9 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     await escape(typeQuery());
 
     expect([(await saved('r1'))?.properties?.s, (await saved('r2'))?.properties?.s]).toEqual(['o1', 'o1']);
-    expect(bar()).not.toBeNull();
+    expect(picked(rowSelector)).toBe(true);
 
-    await openBulk('s');
+    await openBulk(rowSelector, 's');
     const search = typeQuery();
 
     search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
@@ -219,7 +236,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
 
     expect(first).not.toBe('o1');
     expect(second).toBe(first);
-    expect(bar()).toBeNull();
+    expect(picked(rowSelector)).toBe(false);
   });
 
   // research/35 §3: mixed alpha / beta / empty opened on "alpha"; one key gave every row "alphaX".
@@ -229,7 +246,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     (blocks[2].data as { properties: Record<string, unknown> }).properties.notes = 'beta';
     await make(blocks);
     await selectRows(rowSelector, 'r1', 'r2', 'r3');
-    await openBulk('notes');
+    await openBulk(rowSelector, 'notes');
     const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]');
 
     if (field === null) throw new Error('no text field');
@@ -250,7 +267,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     (blocks[3].data as { properties: Record<string, unknown> }).properties.notes = 'gamma';
     await make(blocks);
     await selectRows(rowSelector, 'r3', 'r2', 'r1');
-    await openBulk('notes');
+    await openBulk(rowSelector, 'notes');
 
     expect(document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]')?.value).toBe('same');
   });
@@ -264,7 +281,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
       (blocks[3].data as { properties: Record<string, unknown> }).properties.notes = 'gamma';
       await make(blocks);
       await selectRows(rowSelector, ...ticked);
-      await openBulk('notes');
+      await openBulk(rowSelector, 'notes');
 
       expect(document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]')?.value).toBe('gamma');
     },
@@ -277,7 +294,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     (blocks[2].data as { properties: Record<string, unknown> }).properties.notes = 'beta';
     await make(blocks);
     await selectRows(rowSelector, 'r1', 'r2', 'r3');
-    await openBulk('notes');
+    await openBulk(rowSelector, 'notes');
     const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]');
 
     if (field === null) throw new Error('no text field');
@@ -291,7 +308,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
   it.each(VIEWS)('%s: Enter in a Text bulk edit clears the selection', async (_name, view, rowSelector) => {
     await make(doc(view));
     await selectRows(rowSelector, 'r1', 'r2');
-    await openBulk('notes');
+    await openBulk(rowSelector, 'notes');
     const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]');
 
     if (field === null) throw new Error('no text field');
@@ -301,13 +318,13 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     await quiet();
 
     expect((await saved('r2'))?.properties?.notes).toBe('other');
-    expect(bar()).toBeNull();
+    expect(picked(rowSelector)).toBe(false);
   });
 
   it.each(VIEWS)('%s: one undo takes a bulk Text edit, and a bulk Select Create, back on every row', async (_name, view, rowSelector) => {
     await make(doc(view));
     await selectRows(rowSelector, 'r1', 'r2');
-    await openBulk('notes');
+    await openBulk(rowSelector, 'notes');
     const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]');
 
     if (field === null) throw new Error('no text field');
@@ -320,7 +337,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     expect([(await saved('r1'))?.properties?.notes, (await saved('r2'))?.properties?.notes]).toEqual(['same', 'same']);
 
     await selectRows(rowSelector, 'r1', 'r2');
-    await openBulk('s');
+    await openBulk(rowSelector, 's');
     const search = document.querySelector<HTMLInputElement>('[data-blok-database-cell-editor] input');
 
     if (search === null) throw new Error('no select search');

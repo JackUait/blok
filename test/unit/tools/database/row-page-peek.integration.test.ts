@@ -646,26 +646,30 @@ describe('row page peek modes', () => {
         .filter((block) => block.type === 'database-row')
         .map((block) => ({ id: block.id, data: { properties: (block.data.properties ?? {}) as Record<string, unknown> } }));
 
-    it.each(['board', 'list'] as const)('in a %s, Cmd/Ctrl-click and Shift-click select rows gray, with the bar, and never open them', async (type) => {
+    // notion-motion.md Round 12: a board pick shows no bar; a list pick keeps "N selected".
+    it.each(['board', 'list'] as const)('in a %s, Cmd/Ctrl-click and Shift-click select rows gray, and never open them', async (type) => {
       await make(boardDoc(type));
       await modClick('r1', { metaKey: true });
       await modClick('r3', { shiftKey: true });
 
       expect(drawer()).toBeNull();
       expect(['r1', 'r2', 'r3'].map((id) => rowEl(id)?.getAttribute('aria-selected'))).toEqual(['true', 'true', 'true']);
-      expect(q('[data-blok-database-table-selection-count]')?.textContent).toBe('3 selected');
+      expect(q('[data-blok-database-table-selection-count]')?.textContent ?? null).toBe(type === 'list' ? '3 selected' : null);
 
       await key({ key: 'Escape' });
 
-      expect(rowEl('r1')?.getAttribute('aria-selected')).not.toBe('true');
+      expect(['r1', 'r2', 'r3'].map((id) => rowEl(id)?.getAttribute('aria-selected') ?? null)).toEqual([null, null, null]);
       expect(q('[data-blok-database-table-selection-bar]')).toBeNull();
     });
 
-    it('a bar property button edits every selected card', async () => {
+    it('⌘/ › Edit property edits every selected card', async () => {
       await make(boardDoc('board'));
       await modClick('r1', { metaKey: true });
       await modClick('r2', { ctrlKey: true });
-      await click(q('[data-blok-database-table-selection-property][data-property-id="d"]'));
+      await key({ key: '/', metaKey: true });
+      await click([...document.querySelectorAll('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
+        .find((node) => node.textContent === 'Edit property')?.closest('[data-blok-popover-item]') ?? null);
+      await click(document.querySelector('[data-blok-item-name="database-bulk-edit-d"]'));
 
       expect((await savedRows()).map((row) => row.data.properties.d)).toEqual([true, true, undefined]);
     });

@@ -402,7 +402,8 @@ describe('New data source: every layout on a second source', () => {
     expect(api.blocks.getChildren('db').filter((b) => b.name === 'database').map((b) => b.id)).toEqual(['src-b']);
   });
 
-  it('Cmd-click on a second source\'s gallery card selects it and shows the selection bar', async () => {
+  // notion-motion.md Round 12: a gallery pick shows no bar; ⌘/ opens its action menu.
+  it('Cmd-click on a second source\'s gallery card selects it, and ⌘/ opens its action menu', async () => {
     await make(doc('vb', {}, { type: 'gallery' }));
     const card = layoutRoot('[data-blok-database-gallery]').querySelector<HTMLElement>('[data-blok-database-gallery-card][data-row-id="b1"]');
 
@@ -411,7 +412,10 @@ describe('New data source: every layout on a second source', () => {
     await quiet();
 
     expect(layoutRoot('[data-blok-database-gallery]').querySelector('[data-row-id="b1"]')?.hasAttribute('data-blok-database-row-selected')).toBe(true);
-    expect(own('[data-blok-database-table-selection-bar]')).not.toBeNull();
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect([...document.querySelectorAll('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')].map((node) => node.textContent)).toContain('Duplicate');
   });
 
   it('the Today button of a second source\'s timeline keeps its centre on the holder\'s view', async () => {

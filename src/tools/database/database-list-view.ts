@@ -809,7 +809,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
  * tokens (findings-listgallery L16). It corrects for a transformed ancestor,
  * where a fixed box at 0,0 is not the viewport corner. The caller removes it.
  */
-export const pointerAnchor = (rowEl: HTMLElement, event: MouseEvent): HTMLElement => {
+export const pointerAnchor = (rowEl: HTMLElement, event: Pick<MouseEvent, 'clientX' | 'clientY'>): HTMLElement => {
   const point = document.createElement('span');
 
   point.setAttribute('data-blok-database-menu-point', '');

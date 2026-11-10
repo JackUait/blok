@@ -154,15 +154,23 @@ export interface OpenMenuOptions {
    * Which database menu this is: its row size comes from the class. A row menu opens left of its ⋮⋮;
    * a card menu is the same row menu, opened over its "•••"; a handle menu is the card menu, opened beside its handle.
    * A calc menu is the footer value's: header rows, 200 wide, no gap under its button.
+   * A selection menu is the card menu of picked cards, opened under its anchor with no gap.
    */
-  kind?: 'header' | 'row' | 'card' | 'handle' | 'calc';
+  kind?: 'header' | 'row' | 'card' | 'handle' | 'calc' | 'selection';
   /** Where the menu opens instead of the anchor's box; `positionContext` moves it with the page. */
   at?: { position: DOMRect; positionContext: HTMLElement };
 }
 
-const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS, card: DATABASE_CARD_MENU_CLASS, handle: DATABASE_HANDLE_MENU_CLASS, calc: `${DATABASE_HEADER_MENU_CLASS} ${DATABASE_CALC_MENU_CLASS}` } as const;
+const MENU_CLASS = {
+  header: DATABASE_HEADER_MENU_CLASS,
+  row: DATABASE_ROW_MENU_CLASS,
+  card: DATABASE_CARD_MENU_CLASS,
+  handle: DATABASE_HANDLE_MENU_CLASS,
+  calc: `${DATABASE_HEADER_MENU_CLASS} ${DATABASE_CALC_MENU_CLASS}`,
+  selection: DATABASE_CARD_MENU_CLASS,
+} as const;
 
-const MENU_MIN_WIDTH: Partial<Record<NonNullable<OpenMenuOptions['kind']>, string>> = { card: '265px', handle: '265px', calc: CALC_MENU_MIN_WIDTH };
+const MENU_MIN_WIDTH: Partial<Record<NonNullable<OpenMenuOptions['kind']>, string>> = { card: '265px', handle: '265px', calc: CALC_MENU_MIN_WIDTH, selection: '265px' };
 
 /** Opens a menu under `anchor`; `data-popover-open` marks the anchor while it is up. */
 export const openMenu = (
@@ -177,7 +185,8 @@ export const openMenu = (
     // notion-motion.md Round 10: the right edge 5px before the handle, centred on it; pushed up to ~12px over the window bottom.
     ...(options.kind === 'handle' ? { placeLeftOfAnchor: true, offset: 5, viewportMargin: 12 } : {}),
     // notion-motion.md Round 11: the footer value's menu, 200x123, on the button's bottom edge.
-    ...(options.kind === 'calc' ? { offset: 0 } : {}),
+    // Round 12 "Board selection": the ⌘/ menu's top is the first picked card's bottom.
+    ...(options.kind === 'calc' || options.kind === 'selection' ? { offset: 0 } : {}),
     animateClose: true,
     trigger: anchor,
     items,
@@ -566,5 +575,51 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
     line,
     ...rowActionItems(ctx, { trashShortcut: true }),
     ...(ctx.lastEdited !== undefined || ctx.counts !== undefined ? [line, rowFooter(i18n, ctx.lastEdited, ctx.counts)] : []),
+  ];
+};
+
+/** Duplicate and Move to Trash for picked rows: the list bar's "…" and the board ⌘/ menu. */
+export const selectionActionItems = (ctx: Pick<SelectionMenuContext, 'i18n' | 'onDuplicate' | 'onDelete'>): [PopoverItemDefaultBaseParams, PopoverItemDefaultBaseParams] => [
+  { type: PopoverItemType.Default, name: 'database-selection-duplicate', title: ctx.i18n.t('tools.database.tableDuplicate'), icon: IconCopy, closeOnActivate: true, onActivate: ctx.onDuplicate },
+  { type: PopoverItemType.Default, name: 'database-selection-delete', title: ctx.i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, closeOnActivate: true, onActivate: ctx.onDelete },
+];
+
+export interface SelectionMenuContext {
+  i18n: T;
+  /** What Edit property › lists: the bar's bulk-editable properties. */
+  properties: PropertyDefinition[];
+  onEditProperty: (propertyId: string) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}
+
+/**
+ * The ⌘/ menu of picked board or gallery cards (notion-motion.md Round 12 "Board selection").
+ * Notion's Edit icon, Copy links to all, Move to and Ask AI are left out: Blok does them for one row only, or not at all.
+ * Notion shows no shortcut on Move to Trash here.
+ */
+export const selectionMenuItems = (ctx: SelectionMenuContext): PopoverItemParams[] => {
+  const { i18n } = ctx;
+  const [duplicate, trash] = selectionActionItems(ctx);
+
+  return [
+    rowMenuHeading(i18n),
+    {
+      type: PopoverItemType.Default,
+      title: i18n.t('tools.database.tableEditProperty'),
+      icon: IconListBulleted,
+      children: {
+        items: ctx.properties.map((property) => ({
+          type: PopoverItemType.Default as const,
+          name: `database-bulk-edit-${property.id}`,
+          title: property.name,
+          closeOnActivate: true,
+          onActivate: () => ctx.onEditProperty(property.id),
+        })),
+      },
+    },
+    { type: PopoverItemType.Separator },
+    { ...duplicate, secondaryLabel: beautifyShortcut('CMD+D') },
+    trash,
   ];
 };

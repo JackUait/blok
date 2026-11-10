@@ -122,7 +122,18 @@ const selectTableRows = async (...rowIds: string[]): Promise<void> => {
 };
 
 const openBulkDue = async (): Promise<void> => {
-  await click(q('[data-blok-database-table-selection-property][data-property-id="due"]'));
+  const button = q('[data-blok-database-table-selection-property][data-property-id="due"]');
+
+  if (button !== null) {
+    await click(button);
+  } else {
+    // A board has no bar: ⌘/, then Edit property › (notion-motion.md Round 12).
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+    await click([...document.querySelectorAll('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
+      .find((node) => node.textContent === 'Edit property')?.closest('[data-blok-popover-item]') ?? null);
+    await click(document.querySelector('[data-blok-item-name="database-bulk-edit-due"]'));
+  }
 };
 
 const zone = new Intl.DateTimeFormat().resolvedOptions().timeZone;

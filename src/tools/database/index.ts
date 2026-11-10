@@ -40,7 +40,8 @@ import type { TemplateRepeatHost } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
-import { CALC_MENU_MIN_WIDTH, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
+import { isEscapeConsumed } from '../../components/utils/consumed-escape';
+import { CALC_MENU_MIN_WIDTH, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
@@ -135,7 +136,7 @@ import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
 import { foldTitleRow } from './database-view-bar-fold';
-import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -711,6 +712,8 @@ export class DatabaseTool implements BlockTool {
   private readonly pendingDescriptions = new Map<string, OutputData>();
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
+  /** The ⌘/ menu of picked board or gallery cards. */
+  private selectionMenu: PopoverDesktop | null = null;
   private reactionPicker: EmojiPicker | null = null;
   private stopComments: (() => void) | undefined;
   /** Comments in the document, used only when the host gives no `comments` hook. */
@@ -2692,6 +2695,7 @@ export class DatabaseTool implements BlockTool {
     this.addPropertyPopover = null;
     this.stopWaitingForIdle();
     this.cardMenuPopover?.destroy();
+    this.selectionMenu?.destroy();
     this.reactionPicker?.close();
     this.reactionPicker?.getElement().remove();
     this.reactionPicker = null;
@@ -10532,7 +10536,8 @@ export class DatabaseTool implements BlockTool {
 
     // research/22 §1: Notion shows no bulk bar for picked calendar events.
     // notion-motion.md, Round 9: nor for a new board card left unnamed by Escape.
-    if (view?.type === 'calendar' || this.barlessRowId !== null) {
+    // Round 12 "Board selection": nor for picked board cards; ⌘/ opens their menu (openSelectionMenu).
+    if (view?.type === 'calendar' || view?.type === 'board' || view?.type === 'gallery' || this.barlessRowId !== null) {
       return;
     }
     const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
@@ -10546,10 +10551,7 @@ export class DatabaseTool implements BlockTool {
       onEdit: (propertyId, anchor) => this.openBulkEditor(propertyId, anchor),
       onDelete: () => this.trashSelection(),
       onMore: (anchor) => {
-        openMenu(anchor, [
-          { name: 'database-selection-duplicate', title: this.api.i18n.t('tools.database.tableDuplicate'), icon: IconCopy, closeOnActivate: true, onActivate: () => this.duplicateSelection() },
-          { name: 'database-selection-delete', title: this.api.i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, closeOnActivate: true, onActivate: () => this.trashSelection() },
-        ]);
+        openMenu(anchor, selectionActionItems({ i18n: this.api.i18n, onDuplicate: () => this.duplicateSelection(), onDelete: () => this.trashSelection() }));
       },
     });
     slot.prepend(this.rowSelectionBar);
@@ -10627,6 +10629,42 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
+  /**
+   * notion-motion.md Round 12 "Board selection": the menu opens on the first picked card's
+   * left edge and bottom. A point marks the spot, so the card does not show its ⋯ as with its own menu.
+   */
+  private openSelectionMenu(): void {
+    const first = this.inViewOrder([...this.rowSelection])[0];
+    const card = first === undefined
+      ? null
+      : this.viewRoot()?.querySelector<HTMLElement>(`:is([data-blok-database-card], [data-blok-database-gallery-card])[data-row-id="${CSS.escape(first)}"]`) ?? null;
+
+    if (card === null || this.readOnly) return;
+    const box = card.getBoundingClientRect();
+    const point = pointerAnchor(card, { clientX: box.left, clientY: box.bottom });
+    const view = this.shownView();
+    const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
+
+    this.selectionMenu?.destroy();
+    const menu = openMenu(point, selectionMenuItems({
+      i18n: this.api.i18n,
+      properties: bulkEditableProperties(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => visible.includes(p.id))),
+      onEditProperty: (propertyId) => this.openBulkEditor(propertyId, card),
+      onDuplicate: () => this.duplicateSelection(),
+      onDelete: () => this.trashSelection(),
+    }), {
+      searchable: true,
+      kind: 'selection',
+      searchPlaceholder: this.api.i18n.t('tools.database.searchActions'),
+      onClose: () => {
+        point.remove();
+        if (this.selectionMenu === menu) this.selectionMenu = null;
+      },
+    });
+
+    this.selectionMenu = menu;
+  }
+
   private duplicateSelection(): void {
     [...this.rowSelection].forEach((rowId) => this.duplicateTableRow(rowId));
     this.paintRowSelection();
@@ -10698,6 +10736,9 @@ export class DatabaseTool implements BlockTool {
     };
 
     if (key === 'escape') {
+      // notion-motion.md Round 12: the first Escape closes the ⌘/ menu and keeps the pick.
+      // The popover registry may close it first, in its own capture listener.
+      if (this.selectionMenu !== null || isEscapeConsumed(event)) return;
       act(() => this.clearRowSelection());
     } else if (mod && event.shiftKey && (key === 'm' || key === 'p') && this.rowSelection.size === 1) {
       this.rowShortcut([...this.rowSelection][0], key === 'm' ? 'comment' : 'moveTo', act);
@@ -10705,6 +10746,8 @@ export class DatabaseTool implements BlockTool {
       act(() => this.duplicateSelection());
     } else if (!mod && (key === 'backspace' || key === 'delete')) {
       act(() => this.trashSelectionFromKeys());
+    } else if (mod && key === '/' && (this.shownView()?.type === 'board' || this.shownView()?.type === 'gallery')) {
+      act(() => this.openSelectionMenu());
     } else if (mod && key === '/') {
       // A calendar pick has no bar; the key keeps its own meaning then.
       const bar = (this.selectionBarSlot() ?? this.viewRoot())?.querySelector<HTMLElement>(':scope > [data-blok-database-table-selection-bar]');

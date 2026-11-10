@@ -96,7 +96,18 @@ const openNotesOn = async (rowSelector: string): Promise<void> => {
   for (const rowId of ['r1', 'r2', 'r3']) {
     await click(q(`${rowSelector}[data-row-id="${rowId}"]`), { metaKey: true });
   }
-  await click(q('[data-blok-database-table-selection-property][data-property-id="notes"]'));
+  const button = q('[data-blok-database-table-selection-property][data-property-id="notes"]');
+
+  if (button !== null) {
+    await click(button);
+  } else {
+    // A board has no bar: ⌘/, then Edit property › (notion-motion.md Round 12).
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+    await click([...document.querySelectorAll('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')]
+      .find((node) => node.textContent === 'Edit property')?.closest('[data-blok-popover-item]') ?? null);
+    await click(document.querySelector('[data-blok-item-name="database-bulk-edit-notes"]'));
+  }
   textField();
 };
 

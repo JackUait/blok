@@ -332,11 +332,11 @@ test.describe('gallery', () => {
 
       await page.keyboard.press('Shift+ArrowUp');
       expect(await selectedIds(page)).toEqual(['r2', 'r3']);
-      await expect(page.locator('[data-blok-database-table-selection-bar]')).toBeVisible();
+      // notion-motion.md Round 12: a gallery pick shows no bar.
+      await expect(page.locator('[data-blok-database-table-selection-bar]')).toHaveCount(0);
 
       await page.keyboard.press('Escape');
       expect(await selectedIds(page)).toEqual([]);
-      await expect(page.locator('[data-blok-database-table-selection-bar]')).toHaveCount(0);
       await expect(drawer(page)).toHaveCount(0);
     });
 
@@ -455,15 +455,30 @@ test.describe('gallery', () => {
       await expect(page.locator('[data-blok-database-gallery]')).toHaveCSS('outline-style', 'none');
     });
 
-    test('Cmd/Ctrl-click and Shift-click pick cards for the selection bar instead of opening them', async ({ page }) => {
+    test('Cmd/Ctrl-click and Shift-click pick cards instead of opening them, and ⌘/ opens their action menu', async ({ page }) => {
       await mount(page, blocks({ type: 'gallery' }));
 
       await card(page, 'r1').click({ modifiers: ['ControlOrMeta'] });
       await card(page, 'r3').click({ modifiers: ['Shift'] });
 
       expect(await selectedIds(page)).toEqual(['r1', 'r2', 'r3']);
-      await expect(page.locator('[data-blok-database-table-selection-bar]')).toBeVisible();
       await expect(drawer(page)).toHaveCount(0);
+      // notion-motion.md Round 12: no bar; ⌘/ opens the menu with its search focused, and Escape closes only the menu.
+      await expect(page.locator('[data-blok-database-table-selection-bar]')).toHaveCount(0);
+      await page.keyboard.press('ControlOrMeta+/');
+      await expect(page.getByPlaceholder('Search actions…')).toBeFocused();
+      // On the first picked card's left edge and bottom, 265 wide, once the scale-in ends.
+      const cardBox = await card(page, 'r1').boundingBox();
+
+      if (cardBox === null) throw new Error('no layout');
+      await expect.poll(async () => {
+        const box = await page.locator('[data-blok-popover-opened]').locator('[data-blok-popover-container]').first().boundingBox();
+
+        return box === null ? null : [Math.round(box.x - cardBox.x), Math.round(box.y - (cardBox.y + cardBox.height)), Math.round(box.width)];
+      }).toEqual([0, 0, 265]);
+      await page.keyboard.press('Escape');
+      await expect(page.getByPlaceholder('Search actions…')).toHaveCount(0);
+      expect(await selectedIds(page)).toEqual(['r1', 'r2', 'r3']);
     });
 
     for (const modifier of ['Shift', 'ControlOrMeta'] as const) {

@@ -101,7 +101,8 @@ describe('board: Escape on an empty new card', () => {
     expect(await rowIds()).toEqual(['r1']);
   });
 
-  it('a later pick of another card shows the bar as before', async () => {
+  // notion-motion.md Round 12: a board pick has no bar either; ⌘/ opens its action menu.
+  it('a later pick of another card is a normal pick, which ⌘/ acts on', async () => {
     q('[data-blok-database-add-card][data-option-id="o1"]')?.click();
     await quiet();
     const input = q<HTMLInputElement>('[data-blok-database-card-title-input]');
@@ -111,6 +112,10 @@ describe('board: Escape on an empty new card', () => {
     q('[data-blok-database-card][data-row-id="r1"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
     await quiet();
 
-    expect(q('[data-blok-database-table-selection-bar]')).not.toBeNull();
+    expect(q('[data-blok-database-card][data-row-id="r1"]')?.hasAttribute('data-blok-database-row-selected')).toBe(true);
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect([...document.querySelectorAll('[data-blok-popover-opened] [data-blok-testid="popover-item-title"]')].map((node) => node.textContent)).toContain('Duplicate');
   });
 });

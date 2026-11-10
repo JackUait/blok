@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import { readOnlyPreview } from '../../shared/agent/version-history';
+
 import type { AgentRestorePreview, AgentVersion, AgentVersionHistory } from '../../../types/agent';
 import type { OutputData } from '../../../types/data-formats/output-data';
 import type { CollabTicketSource } from '../../components/modules/collaboration/types';
@@ -9,6 +11,8 @@ export interface HttpVersionHistoryInput {
   roomUrl: string;
   origin?: string;
   tickets?: CollabTicketSource;
+  /** False: the handle's ticket cannot write, and the preview route needs write access. */
+  write?: boolean;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -141,6 +145,9 @@ export const createHttpVersionHistory = (input: HttpVersionHistoryInput): AgentV
     },
     // No If-Match: the agent pins the restore with its batch revision instead.
     previewRestore: async (version, options) => {
+      if (input.write === false) {
+        throw readOnlyPreview();
+      }
       const path = pointPath(version);
 
       if (path === null) {

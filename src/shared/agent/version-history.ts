@@ -280,7 +280,13 @@ export const runRestore = async (
 const isPreview = (value: unknown): value is AgentRestorePreview => isRecord(value)
   && isRecord(value.wouldUndo) && Array.isArray(value.wouldUndo.blocks) && Array.isArray(value.wouldUndo.page)
   && Array.isArray(value.guards) && typeof value.fits === 'boolean'
-  && typeof value.frameBytes === 'number' && typeof value.limitBytes === 'number' && typeof value.expectRevision === 'string';
+  && typeof value.frameBytes === 'number' && typeof value.limitBytes === 'number';
+
+/** A live MCP handle opened without write: its ticket cannot reach the preview route. */
+export const readOnlyPreview = (): AgentFailure => failure('COMMAND_UNAVAILABLE',
+  'history.previewRestore needs a handle that can write: the sync server previews a restore only for writers. Open the document again with write: true.', {
+    commandIndex: 0, details: { reason: 'host', requires: ['versionHistory'] },
+  });
 
 /** Plans a restore through the host and writes nothing. */
 const previewRestore = async (history: AgentVersionHistory, args: Record<string, unknown>, checkCancel: () => void): Promise<unknown> => {
@@ -301,9 +307,10 @@ const previewRestore = async (history: AgentVersionHistory, args: Record<string,
   if (!isPreview(planned)) {
     throw failure('TOOL_ACTION_FAILED', 'The version history sent a restore preview it could not read.');
   }
-  const { wouldUndo, guards, fits, frameBytes, limitBytes, expectRevision } = planned;
+  // The server's version tag is left out: outside a server room it never equals the batch revision.
+  const { wouldUndo, guards, fits, frameBytes, limitBytes } = planned;
 
-  return { version, wouldUndo, guards, fits, frameBytes, limitBytes, expectRevision };
+  return { version, wouldUndo, guards, fits, frameBytes, limitBytes };
 };
 
 /** Runs one version-history read against the host's service. */

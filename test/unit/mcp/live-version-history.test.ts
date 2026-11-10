@@ -220,7 +220,10 @@ describe('blok-mcp live handles read the sync server version history', () => {
       const handle = await open(true);
       const previewed = await execute(handle, 'history.previewRestore', { version: `${LINEAGE}:4` });
 
-      expect(previewed).toMatchObject({ ok: true, results: [{ version: `${LINEAGE}:4`, ...PREVIEW }] });
+      const { expectRevision: _tag, ...planned } = PREVIEW;
+
+      expect(previewed).toMatchObject({ ok: true, results: [{ version: `${LINEAGE}:4`, ...planned }] });
+      expect(previewed).not.toHaveProperty(['results', 0, 'expectRevision']);
       expect(seen.map((request) => [request.method, request.url, request.origin, request.key, request.ifMatch])).toEqual([
         ['POST', `/sync/doc-1/history/${LINEAGE}/4/restore/preview`, ORIGIN, undefined, undefined],
       ]);
@@ -244,6 +247,15 @@ describe('blok-mcp live handles read the sync server version history', () => {
 
       expect(missing).toMatchObject({ ok: false, error: { code: 'VERSION_NOT_FOUND' } });
       expect(busy).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable: true } });
+    });
+
+    it('is unavailable on a read-only handle, whose ticket the route refuses, and asks nothing', async () => {
+      const handle = await open();
+      const result = await execute(handle, 'history.previewRestore', { version: `${LINEAGE}:4` });
+
+      expect(result).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'host' } } });
+      expect(JSON.stringify(result)).toContain('write: true');
+      expect(seen).toEqual([]);
     });
 
     it('a version that is no route path asks nothing', async () => {

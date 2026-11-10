@@ -162,9 +162,20 @@ describe('server runtime version history', () => {
         batch: { commands: [{ name: 'history.previewRestore', args: { version: 'L:9' } }] },
       });
 
-      expect(response.result).toMatchObject({ ok: true, results: [{ version: 'L:2', ...preview }] });
+      const { expectRevision: _tag, ...planned } = preview;
+
+      expect(response.result).toStrictEqual(expect.objectContaining({ ok: true, results: [{ version: 'L:2', ...planned }] }));
       expect(response.restore).toBeUndefined();
       expect(missing).toMatchObject({ ok: false, error: { code: 'VERSION_NOT_FOUND', path: '/commands/0/args/version' } });
+    });
+
+    it.each([['a string', 'oops'], ['a list', []], ['a number', 3]])('fails a 200 body that is %s as TOOL_ACTION_FAILED, as Node does', async (_name, body) => {
+      const result = await run({
+        services, restores: true, versionHistory: { previews: { 'L:2': body } },
+        batch: { commands: [{ name: 'history.previewRestore', args: { version: 'L:2' } }] },
+      });
+
+      expect(result).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED' } });
     });
 
     it('passes on why the host could not load the preview', async () => {

@@ -161,7 +161,7 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
       checkDraft: (draft) => tooDeepToSave(draft.toOutput())?.agentError ?? null,
       ...(deps.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
       services: {
-        versionHistory: createHttpVersionHistory({ roomUrl: url, origin: deps.sync.origin, tickets: ticketSource }),
+        versionHistory: createHttpVersionHistory({ roomUrl: url, origin: deps.sync.origin, tickets: ticketSource, write: request.write }),
         ...(deps.uploader !== undefined && { uploader: deps.uploader }),
       },
     });

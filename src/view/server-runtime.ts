@@ -11,6 +11,7 @@ import { COMMANDS } from '../shared/agent/commands';
 import { createDocumentAgentSession } from '../shared/agent/document-session';
 import { carriedHistory } from '../shared/agent/carried-history';
 import { AgentFailure, failure } from '../shared/agent/errors';
+import { readOnlyPreview } from '../shared/agent/version-history';
 import type { AgentPorts } from '../shared/agent/types';
 import { buildBuiltInSnapshot } from '../shared/built-in-snapshot';
 import { readCustomToolsFile, snapshotWithCustomTools } from '../shared/custom-tools-file';
@@ -474,7 +475,7 @@ const isBatchEnvelope = (value: unknown): boolean =>
  * A preview needs its version in `previews`: the route's answer, or null for a 404.
  * The host asked the route with the command's own `databases`.
  */
-const loadedVersionHistory = (value: unknown, onRestore?: (version: string) => void): AgentVersionHistory | undefined => {
+const loadedVersionHistory = (value: unknown, onRestore?: (version: string) => void, readOnly = false): AgentVersionHistory | undefined => {
   if (!isRecord(value)) {
     return undefined;
   }
@@ -491,9 +492,16 @@ const loadedVersionHistory = (value: unknown, onRestore?: (version: string) => v
     read: version => isRecord(documents) && loaded(version)
       ? Promise.resolve(isStoredDocument(documents[version]) ? documents[version] : null)
       : refuse(`version "${version}"`),
-    previewRestore: version => isRecord(previews) && Object.hasOwn(previews, version)
-      ? Promise.resolve(isRecord(previews[version]) ? previews[version] as unknown as AgentRestorePreview : null)
-      : refuse(`the restore preview of version "${version}"`),
+    previewRestore: version => {
+      if (readOnly) {
+        return Promise.reject(readOnlyPreview());
+      }
+
+      // Only null is no such version; any other body goes on, so the agent refuses it as Node's does.
+      return isRecord(previews) && Object.hasOwn(previews, version)
+        ? Promise.resolve(previews[version] === null ? null : previews[version] as AgentRestorePreview)
+        : refuse(`the restore preview of version "${version}"`);
+    },
     // Jint only checks the restore; the host restores the version named in the output.
     ...(onRestore !== undefined && {
       restore: (version: string) => {
@@ -803,7 +811,9 @@ const createServerAgentSession = (
   openPage?: OpenPage
 ): ReturnType<typeof createDocumentAgentSession> => {
   const setup = isRecord(input.mcp) ? mcpSetup(input.mcp) : serverSetup(input);
-  const versionHistory = loadedVersionHistory(input.versionHistory, setup.restores ? onRestore : undefined);
+  // The ticket of a read-only live handle cannot reach the preview route, so the host never asks it.
+  const readOnlyLive = isRecord(input.mcp) && input.mcp.mode === 'live' && input.mcp.write !== true;
+  const versionHistory = loadedVersionHistory(input.versionHistory, setup.restores ? onRestore : undefined, readOnlyLive);
   const load = (raw: OutputData): OutputData => loadStoredDocument(raw, setup.richTextFieldsFor);
   const loaded = load(document);
   const history = carriedHistory(input.history, loaded, load, isStoredDocument);

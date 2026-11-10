@@ -339,8 +339,11 @@ export interface AgentRestorePreview {
   fits: boolean;
   frameBytes: number;
   limitBytes: number;
-  /** The server's version tag the plan was made at ("lineage:sequence"), for the route's If-Match. */
-  expectRevision: string;
+  /**
+   * The server's version tag the plan was made at ("lineage:sequence"), for the route's If-Match.
+   * Agents never get it: they pin the restore to the preview batch's revision.
+   */
+  expectRevision?: string;
 }
 
 /**

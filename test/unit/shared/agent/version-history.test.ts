@@ -791,7 +791,10 @@ describe('history.previewRestore', () => {
     const result = await agent.execute({ commands: [{ name: 'history.previewRestore', args: { version: 'L:1' } }] });
     const after = await agent.execute({ commands: [{ name: 'doc.read', args: {} }] });
 
-    expect(result.ok && result.results).toEqual([{ version: 'L:1', ...PREVIEW }]);
+    const { expectRevision: _tag, ...planned } = PREVIEW;
+
+    // The server's tag is never a batch revision here, so the agent never gets it to send back.
+    expect(result.ok && result.results).toEqual([{ version: 'L:1', ...planned }]);
     expect(result.ok && result.changed).toEqual({ created: [], updated: [], moved: [], removed: [] });
     expect(history.previewRestore.mock.calls).toEqual([['L:1', {}]]);
     expect(history.restore).not.toHaveBeenCalled();

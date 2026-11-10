@@ -2243,6 +2243,11 @@ impl Room {
         };
         let mut out = json!({});
         if name == "history.previewRestore" {
+            // A read-only handle's ticket cannot reach the preview route, so
+            // nothing is asked and the bundle refuses the preview.
+            if !self.spec.write {
+                return json!({ "previews": {} });
+            }
             // A preview asks its own route and reads nothing else.
             return match self.history_preview(&args).await {
                 Ok(previews) => json!({ "previews": previews }),

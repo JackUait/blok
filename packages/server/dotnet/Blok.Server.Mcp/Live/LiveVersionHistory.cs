@@ -16,7 +16,8 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
   private readonly string historyBase = $"{WsScheme().Replace(roomUrl, "http$1:")}/history";
 
   /// <summary>The versionHistory input for a batch's history commands, or null when it has none.</summary>
-  internal async Task<JsonObject?> LoadAsync(JsonNode? batch, CancellationToken cancellationToken)
+  /// <remarks>A read-only handle's ticket cannot reach the preview route, so its preview asks nothing and the bundle refuses it.</remarks>
+  internal async Task<JsonObject?> LoadAsync(JsonNode? batch, CancellationToken cancellationToken, bool write = true)
   {
     var commands = (batch as JsonObject)?["commands"] as JsonArray ?? [];
     JsonObject? loaded = null;
@@ -60,7 +61,7 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
         case "history.previewRestore":
           loaded ??= [];
           // A preview asks its own route and reads nothing else.
-          if (await LoadPreviewAsync(args, loaded, cancellationToken) is { } failed)
+          if (write && await LoadPreviewAsync(args, loaded, cancellationToken) is { } failed)
           {
             return failed;
           }
@@ -122,7 +123,7 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
       previews[version] = null;
       return null;
     }
-    var preview = await GetAsync($"{historyBase}/{path}/restore/preview{query}", cancellationToken, notFoundIsNull: true, method: "POST");
+    var preview = await GetAsync($"{historyBase}/{path}/restore/preview{query}", cancellationToken, notFoundIsNull: true, method: "POST", unreadable: "a restore preview");
 
     if (preview.Failed is not null)
     {
@@ -221,7 +222,8 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
   private const string NodeFetchError = "fetch failed";
 
   private async Task<(JsonNode? Body, JsonObject? Failed)> GetAsync(
-      string url, CancellationToken cancellationToken, bool notFoundIsNull = false, string method = "GET")
+      string url, CancellationToken cancellationToken, bool notFoundIsNull = false, string method = "GET",
+      string unreadable = "a version list")
   {
     McpHttpResponse response;
 
@@ -260,7 +262,7 @@ internal sealed partial class LiveVersionHistory(McpHttpCaller http, string room
     }
     catch (JsonException)
     {
-      return (null, new JsonObject { ["failed"] = "The sync server sent a version list it could not read." });
+      return (null, new JsonObject { ["failed"] = $"The sync server sent {unreadable} it could not read." });
     }
   }
 

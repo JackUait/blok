@@ -174,7 +174,9 @@ describe('editor agent restore preview', () => {
 
     expect(isCommandEntry(command) && command.available).toBe(true);
     expect(history.previewRestore).toHaveBeenCalledWith('L:1', { databases: 'keep' });
-    expect(result.ok && result.results).toEqual([{ version: 'L:1', ...PREVIEW }]);
+    const { expectRevision: _tag, ...planned } = PREVIEW;
+
+    expect(result.ok && result.results).toEqual([{ version: 'L:1', ...planned }]);
     expect(history.restore).not.toHaveBeenCalled();
   });
 

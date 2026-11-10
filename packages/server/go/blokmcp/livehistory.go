@@ -122,6 +122,13 @@ func historyCommands(batch json.RawMessage) []struct {
 // loadVersions reads what a batch's history commands need: the version
 // list and the documents they name. Call without mu.
 func (r *liveRoom) loadVersions(ctx context.Context, batch json.RawMessage) map[string]any {
+	return r.loadVersionsFor(ctx, batch, true)
+}
+
+// loadVersionsFor is loadVersions for a handle that can write or not. A
+// read-only handle's ticket cannot reach the preview route, so the bundle
+// refuses its preview and nothing is asked.
+func (r *liveRoom) loadVersionsFor(ctx context.Context, batch json.RawMessage, write bool) map[string]any {
 	commands := historyCommands(batch)
 	if len(commands) == 0 {
 		return nil
@@ -136,6 +143,9 @@ func (r *liveRoom) loadVersions(ctx context.Context, batch json.RawMessage) map[
 			wantsList = true
 		case "history.previewRestore":
 			// A preview asks its own route and reads nothing else.
+			if !write {
+				continue
+			}
 			if failed := r.loadPreview(ctx, command.Args, loaded); failed != nil {
 				return failed
 			}

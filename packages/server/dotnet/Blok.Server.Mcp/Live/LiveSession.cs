@@ -193,7 +193,7 @@ internal sealed class LiveSession : IHandleSession
       {
         input["approval"] = ApprovalInput(approval);
       }
-      if (gate is null && await history.LoadAsync(batch, cancellationToken) is { } versions)
+      if (gate is null && await history.LoadAsync(batch, cancellationToken, write) is { } versions)
       {
         input["versionHistory"] = versions;
       }

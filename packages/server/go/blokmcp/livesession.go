@@ -387,7 +387,7 @@ func (l *liveSession) execute(ctx context.Context, call *callContext, batch json
 	room.mu.Unlock()
 	// Node checks the end before the batch runs: a room that ends while
 	// history loads (a refused ticket) still answers the history command.
-	versions := room.loadVersions(ctx, batch)
+	versions := room.loadVersionsFor(ctx, batch, l.write)
 	room.mu.Lock()
 	defer room.mu.Unlock()
 	if versions == nil && room.end != nil {

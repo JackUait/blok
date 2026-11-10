@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { AgentVersion, AgentVersionHistory } from '../../../types/agent';
+import type { AgentRestorePreview, AgentVersion, AgentVersionHistory } from '../../../types/agent';
 import type { OutputData } from '../../../types/data-formats/output-data';
 import type { CollabTicketSource } from '../../components/modules/collaboration/types';
 
@@ -138,6 +138,26 @@ export const createHttpVersionHistory = (input: HttpVersionHistoryInput): AgentV
       }
 
       return true;
+    },
+    // No If-Match: the agent pins the restore with its batch revision instead.
+    previewRestore: async (version, options) => {
+      const path = pointPath(version);
+
+      if (path === null) {
+        return null;
+      }
+      const databases = options?.databases === undefined ? '' : `?databases=${options.databases}`;
+      const response = await send(`${base}/${path}/restore/preview${databases}`, { method: 'POST' });
+
+      // A version the host's window hides answers 404 too.
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        throw await refused(response);
+      }
+
+      return await response.json() as AgentRestorePreview;
     },
   };
 };

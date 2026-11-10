@@ -195,6 +195,8 @@ export const createHeadlessAgentSetup = (options: {
   carriesHistory?: boolean;
   /** The versionHistory service passed to the session can restore. */
   restores?: boolean;
+  /** The versionHistory service can preview a restore. Absent: as `restores`. */
+  previews?: boolean;
   /** The uploader service passed to the session has uploadByFile. */
   uploadsFiles?: boolean;
   /** False: the host keeps comments in its own system (ContractWhere.comments). */
@@ -215,6 +217,7 @@ export const createHeadlessAgentSetup = (options: {
     runtime: options.runtime ?? 'node', services, ...(options.prepares !== undefined && { prepares: options.prepares }),
     ...(options.carriesHistory === true && { carriesHistory: true }),
     ...(options.restores === true && { restores: true }),
+    ...(options.previews !== undefined && { previews: options.previews }),
     ...(options.uploadsFiles === true && { uploadsFiles: true }),
     ...(options.comments === false && { comments: false }),
   });

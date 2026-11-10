@@ -28,7 +28,7 @@ describe('published agent types', () => {
       | 'text.insert' | 'text.delete' | 'text.replace' | 'text.format'
       | 'markdown.insert' | 'markdown.export' | 'html.insert'
       | 'history.undo' | 'history.redo'
-      | 'history.versions' | 'history.read' | 'history.changes' | 'history.restore'
+      | 'history.versions' | 'history.read' | 'history.changes' | 'history.restore' | 'history.previewRestore'
     >();
     expectTypeOf<'caret.set'>().not.toMatchTypeOf<CoreCommandName>();
   });

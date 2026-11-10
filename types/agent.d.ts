@@ -12,7 +12,7 @@ export type CoreCommandName =
   | 'text.insert' | 'text.delete' | 'text.replace' | 'text.format'
   | 'markdown.insert' | 'markdown.export' | 'html.insert'
   | 'history.undo' | 'history.redo'
-  | 'history.versions' | 'history.read' | 'history.changes' | 'history.restore';
+  | 'history.versions' | 'history.read' | 'history.changes' | 'history.restore' | 'history.previewRestore';
 
 export type ToolCommandName = `${string}.${string}`;
 export type CommandName = CoreCommandName | ToolCommandName;
@@ -320,6 +320,27 @@ export interface AgentVersionHistory {
    * A host that ignores it still restores.
    */
   restore?(version: string, options?: { expectRevision?: string }): Promise<boolean | 'stale'>;
+  /**
+   * Plans a restore of this version and writes nothing: what the sync server's
+   * `POST …/restore/preview` answers. Resolves null when there is no such version.
+   * `databases: 'keep'` plans it with the databases kept as they are now.
+   * Without it, agents cannot preview a restore (`history.previewRestore`).
+   */
+  previewRestore?(version: string, options?: { databases?: 'keep' | 'restore' }): Promise<AgentRestorePreview | null>;
+}
+
+/** A restore planned and measured, nothing written. */
+export interface AgentRestorePreview {
+  /** What the restore would change: blocks by id, and page fields by key. */
+  wouldUndo: { blocks: Array<{ id: string; type: string | null; kind: string }>; page: string[] };
+  /** What the restore would ask the person to confirm: `share`, `unlock`, `lockedReshape` or `orphanedDatabase`. */
+  guards: Array<{ kind: string; blockId: string; viewId?: string }>;
+  /** Whether the restore is small enough to send: frameBytes is at most limitBytes. */
+  fits: boolean;
+  frameBytes: number;
+  limitBytes: number;
+  /** The server's version tag the plan was made at ("lineage:sequence"), for the route's If-Match. */
+  expectRevision: string;
 }
 
 /**

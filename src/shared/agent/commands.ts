@@ -164,4 +164,12 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
       + 'Read the document again before your next write.'),
     requires: ['versionHistory'],
   },
+  'history.previewRestore': versionRead('Preview a restore of a saved version. Writes nothing.', obj({
+    version,
+    databases: { enum: ['keep', 'restore'], description: 'keep: the preview keeps the databases as they are now. Omit it, or restore, to preview them restored too.' },
+  }, ['version']), 'Preview before every history.restore. wouldUndo lists the blocks (id, type, kind) and page fields the restore would change, '
+    + 'guards what it would ask the person about, and fits whether it is small enough to send. Then restore in a batch whose expectRevision is the '
+    + 'revision this batch answered: a restore onto a document that changed since is STALE, never a surprise. The result\'s own expectRevision '
+    + 'is the server\'s version tag; never pass it as a batch expectRevision. history.restore always restores databases, so a "keep" preview is '
+    + 'not what it writes.'),
 };

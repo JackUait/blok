@@ -346,6 +346,8 @@ export interface ContractWhere {
   carriesHistory?: boolean;
   /** The host's versionHistory can restore a version. */
   restores?: boolean;
+  /** The host's versionHistory can preview a restore. Absent: as `restores`, since the sync server does both. */
+  previews?: boolean;
   /** The host gives the agent a file uploader (uploadByFile), so `uploadFile` actions run. */
   uploadsFiles?: boolean;
   /**
@@ -535,7 +537,11 @@ export const buildAgentContract = (
       || (UNDO_COMMANDS.has(name) && !UNDO_RUNNERS.has(where.runtime) && where.carriesHistory !== true);
     const serviceMissing = !runtimeBlocked
       && (command.requires ?? []).some(service => !where.services.includes(service));
-    const hostMissing = !runtimeBlocked && !serviceMissing && name === 'history.restore' && where.restores !== true;
+    const hostMissing = !runtimeBlocked && !serviceMissing && (
+      (name === 'history.restore' && where.restores !== true)
+      // A host that restores through the sync server previews there too.
+      || (name === 'history.previewRestore' && (where.previews ?? where.restores) !== true)
+    );
 
     return {
       name,

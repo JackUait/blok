@@ -136,4 +136,44 @@ describe('server runtime version history', () => {
     expect(output.restore).toBeUndefined();
     expect(output.result).toMatchObject({ ok: false, error: { code: 'APPROVAL_REQUIRED', details: { reason: 'no-channel' } } });
   });
+
+  describe('history.previewRestore', () => {
+    const preview = {
+      wouldUndo: { blocks: [{ id: 'p', type: 'paragraph', kind: 'changed' }], page: [] },
+      guards: [], fits: true, frameBytes: 80, limitBytes: 1000, expectRevision: 'L:3',
+    };
+    const services = ['versionHistory'];
+
+    it('is in the contract of a host that restores, and only there', async () => {
+      const commandOf = (contract: unknown): unknown => isObject(contract) && Array.isArray(contract.commands)
+        ? contract.commands.find(entry => isObject(entry) && entry.name === 'history.previewRestore') : undefined;
+
+      expect(commandOf(await contractOf(services, true))).toMatchObject({ available: true, readOnly: true });
+      expect(commandOf(await contractOf(services))).toMatchObject({ available: false, unavailableReason: 'host' });
+    });
+
+    it('answers from the preview the host loaded, and names no restore', async () => {
+      const response = await execute({
+        services, restores: true, versionHistory: { previews: { 'L:2': preview, 'L:9': null } },
+        batch: { commands: [{ name: 'history.previewRestore', args: { version: 'L:2', databases: 'keep' } }] },
+      });
+      const missing = await run({
+        services, restores: true, versionHistory: { previews: { 'L:9': null } },
+        batch: { commands: [{ name: 'history.previewRestore', args: { version: 'L:9' } }] },
+      });
+
+      expect(response.result).toMatchObject({ ok: true, results: [{ version: 'L:2', ...preview }] });
+      expect(response.restore).toBeUndefined();
+      expect(missing).toMatchObject({ ok: false, error: { code: 'VERSION_NOT_FOUND', path: '/commands/0/args/version' } });
+    });
+
+    it('passes on why the host could not load the preview', async () => {
+      const result = await run({
+        services, restores: true, versionHistory: { failed: 'The sync server answered 503: busy', status: 503 },
+        batch: { commands: [{ name: 'history.previewRestore', args: { version: 'L:2' } }] },
+      });
+
+      expect(result).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable: true } });
+    });
+  });
 });

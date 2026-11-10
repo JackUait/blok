@@ -9,11 +9,11 @@ export const CORE_COMMAND_NAMES: readonly CoreCommandName[] = [
   'text.insert', 'text.delete', 'text.replace', 'text.format',
   'markdown.insert', 'markdown.export', 'html.insert',
   'history.undo', 'history.redo',
-  'history.versions', 'history.read', 'history.changes', 'history.restore',
+  'history.versions', 'history.read', 'history.changes', 'history.restore', 'history.previewRestore',
 ];
 
 /** Calls on the host's version history; the executor runs them, not the planner. */
-export const VERSION_COMMANDS = ['history.versions', 'history.read', 'history.changes', 'history.restore'] as const;
+export const VERSION_COMMANDS = ['history.versions', 'history.read', 'history.changes', 'history.restore', 'history.previewRestore'] as const;
 
 export type VersionCommandName = typeof VERSION_COMMANDS[number];
 

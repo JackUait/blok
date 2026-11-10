@@ -30,7 +30,7 @@ import { createPageDocuments, type PageDocuments } from '../agent/page-documents
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import type { Block } from '../../block';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
-import { canRestore } from '../../../shared/agent/version-history';
+import { canPreviewRestore, canRestore } from '../../../shared/agent/version-history';
 import { createAgentRun, type PageRestore } from './agent-run';
 import { createAgentTurn } from './agent-turn';
 import { askAiSessionOptions } from './agent-session-options';
@@ -223,6 +223,7 @@ export class AgentCore extends Module {
 
           return restored;
         },
+        ...(history.previewRestore !== undefined && { previewRestore: history.previewRestore.bind(history) }),
       } satisfies AgentVersionHistory;
     }
 
@@ -236,6 +237,7 @@ export class AgentCore extends Module {
         name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'versionHistory'
       ),
       ...(canRestore(this.services().versionHistory) && { restores: true }),
+      previews: canPreviewRestore(this.services().versionHistory),
       overrides: this.config.agent?.overrides,
     });
 

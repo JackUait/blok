@@ -9,7 +9,7 @@ import { buildDocumentView } from '../../../shared/agent/document-view';
 import { FORMS_HOST_SERVICE } from '../../../shared/agent/approval';
 import { checkEnvelope } from '../../../shared/agent/envelope';
 import { runBatch } from '../../../shared/agent/executor';
-import { canRestore } from '../../../shared/agent/version-history';
+import { canPreviewRestore, canRestore } from '../../../shared/agent/version-history';
 import { validateAgainst } from '../../../shared/schema/validate';
 import type { ToolRuntimeRegistry } from '../../../shared/tool-actions/runtime';
 import { buildAgentContract, buildToolManifest } from '../../../shared/tool-manifest';
@@ -37,7 +37,7 @@ const withFormsHost = (editor: BlokModules, services: Partial<Record<HostService
 
 export const liveContractSource = (
   Blok: BlokModules,
-  options: { services?: HostService[]; overrides?: ManifestOverrides; restores?: boolean } = {}
+  options: { services?: HostService[]; overrides?: ManifestOverrides; restores?: boolean; previews?: boolean } = {}
 ): ContractSource => {
   const services = options.services ?? [];
   const snapshot = () => snapshotFromTools(Blok.Tools, {
@@ -51,6 +51,8 @@ export const liveContractSource = (
   return {
     contract: () => buildAgentContract(buildToolManifest(snapshot(), options.overrides), COMMANDS, {
       runtime: 'editor', services, ...(options.restores === true && { restores: true }),
+      // The host's own history, not the sync server: it previews only with its own previewRestore.
+      previews: options.previews === true,
     }),
     runtimes: () => runtimesFromTools(Blok.Tools),
   };
@@ -77,7 +79,9 @@ export const createEditorAgentSession = (
     (name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'host' || name === 'versionHistory')
     && services[name] !== undefined
   );
-  const source = options.contractSource ?? liveContractSource(editor, { services: serviceNames, restores: canRestore(services.versionHistory) });
+  const source = options.contractSource ?? liveContractSource(editor, {
+    services: serviceNames, restores: canRestore(services.versionHistory), previews: canPreviewRestore(services.versionHistory),
+  });
   const ports = createEditorPorts(editor);
   const applier = new EditorApplier(editor, {
     actor, sessionId: id, turnId: options.turnId ?? id, attributeLastEditedBy: options.attributeLastEditedBy,

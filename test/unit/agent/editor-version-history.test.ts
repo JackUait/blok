@@ -156,6 +156,40 @@ const restoreCall = call([{ name: 'history.restore', args: { version: 'L:1' } }]
 const insertCall = (text: string): AgentModelResponse =>
   call([{ name: 'block.insert', args: { type: 'paragraph', data: { text }, position: 'end' } }]);
 
+describe('editor agent restore preview', () => {
+  const PREVIEW = {
+    wouldUndo: { blocks: [{ id: 'p', type: 'paragraph', kind: 'changed' }], page: [] },
+    guards: [], fits: true, frameBytes: 60, limitBytes: 1000, expectRevision: 'L:2',
+  };
+
+  it('previews through agent.versionHistory.previewRestore beside a restore, and writes nothing', async () => {
+    const history = { ...restoringHistory(), previewRestore: vi.fn(async () => PREVIEW) };
+    const editor = await boot(history);
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const described = turn.describe({ command: 'history.previewRestore' });
+    const result = await turn.execute({ commands: [{ name: 'history.previewRestore', args: { version: 'L:1', databases: 'keep' } }] });
+
+    turn.end();
+    const command = 'command' in described ? described.command : undefined;
+
+    expect(isCommandEntry(command) && command.available).toBe(true);
+    expect(history.previewRestore).toHaveBeenCalledWith('L:1', { databases: 'keep' });
+    expect(result.ok && result.results).toEqual([{ version: 'L:1', ...PREVIEW }]);
+    expect(history.restore).not.toHaveBeenCalled();
+  });
+
+  it('is unavailable with reason host when the version history cannot preview', async () => {
+    const editor = await boot(restoringHistory());
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const described = turn.describe({ command: 'history.previewRestore' });
+
+    turn.end();
+    const command = 'command' in described ? described.command : undefined;
+
+    expect(isCommandEntry(command) && [command.available, command.unavailableReason]).toEqual([false, 'host']);
+  });
+});
+
 describe('editor agent version restore', () => {
   it('restores through agent.versionHistory.restore and lists the command as available', async () => {
     const history = restoringHistory();

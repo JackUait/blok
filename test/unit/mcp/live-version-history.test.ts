@@ -64,6 +64,16 @@ interface Seen { url: string; authorization?: string; origin?: string; method?: 
 
 /** Statuses the next restore requests answer, in order; 204 once they run out. */
 const restoreAnswers: number[] = [];
+/** Statuses the next preview requests answer, in order; 200 with PREVIEW once they run out. */
+const previewAnswers: number[] = [];
+const PREVIEW = {
+  wouldUndo: { blocks: [{ id: 'q', type: 'paragraph', kind: 'added' }], page: [] },
+  guards: [],
+  fits: true,
+  frameBytes: 97,
+  limitBytes: 1048576,
+  expectRevision: `${LINEAGE}:5`,
+};
 
 /** The sync server's history routes for "doc-1", with one version on each of two lineages. */
 const historyServer = (seen: Seen[]): Server => createServer((request: IncomingMessage, response) => {
@@ -75,6 +85,14 @@ const historyServer = (seen: Seen[]): Server => createServer((request: IncomingM
     ...(typeof key === 'string' && { key }),
     ...(typeof ifMatch === 'string' && { ifMatch }),
   });
+  if (request.method === 'POST' && (request.url ?? '').startsWith(`/sync/doc-1/history/${LINEAGE}/4/restore/preview`)) {
+    const status = previewAnswers.shift() ?? 200;
+
+    response.writeHead(status, { 'content-type': 'application/json' });
+    response.end(status === 200 ? JSON.stringify(PREVIEW) : 'refused\n');
+
+    return;
+  }
   if (request.method === 'POST' && request.url === `/sync/doc-1/history/${LINEAGE}/4/restore`) {
     response.writeHead(restoreAnswers.shift() ?? 204);
     response.end();
@@ -126,6 +144,7 @@ describe('blok-mcp live handles read the sync server version history', () => {
     vi.clearAllMocks();
     seen = [];
     restoreAnswers.length = 0;
+    previewAnswers.length = 0;
     server = historyServer(seen);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
@@ -194,6 +213,46 @@ describe('blok-mcp live handles read the sync server version history', () => {
       removed: [{ id: 'q', text: 'Gone' }],
       changed: [{ id: 'p', before: { text: 'Then' }, after: { text: 'Now' } }],
     }] });
+  });
+
+  describe('history.previewRestore', () => {
+    it('posts the preview route with the room ticket, with no key or If-Match, and returns its answer', async () => {
+      const handle = await open(true);
+      const previewed = await execute(handle, 'history.previewRestore', { version: `${LINEAGE}:4` });
+
+      expect(previewed).toMatchObject({ ok: true, results: [{ version: `${LINEAGE}:4`, ...PREVIEW }] });
+      expect(seen.map((request) => [request.method, request.url, request.origin, request.key, request.ifMatch])).toEqual([
+        ['POST', `/sync/doc-1/history/${LINEAGE}/4/restore/preview`, ORIGIN, undefined, undefined],
+      ]);
+      expect(readTicketClaims(seen[0]?.authorization?.replace(/^Bearer /, '') ?? '')).toMatchObject({ doc: 'doc-1' });
+    });
+
+    it('passes databases as the route query', async () => {
+      const handle = await open(true);
+
+      await execute(handle, 'history.previewRestore', { version: `${LINEAGE}:4`, databases: 'keep' });
+
+      expect(seen.map((request) => request.url)).toEqual([`/sync/doc-1/history/${LINEAGE}/4/restore/preview?databases=keep`]);
+    });
+
+    it('a 404 is VERSION_NOT_FOUND, a 503 a retryable failure', async () => {
+      const handle = await open(true);
+
+      previewAnswers.push(404, 503);
+      const missing = await execute(handle, 'history.previewRestore', { version: `${LINEAGE}:4` });
+      const busy = await execute(handle, 'history.previewRestore', { version: `${LINEAGE}:4` });
+
+      expect(missing).toMatchObject({ ok: false, error: { code: 'VERSION_NOT_FOUND' } });
+      expect(busy).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable: true } });
+    });
+
+    it('a version that is no route path asks nothing', async () => {
+      const handle = await open(true);
+      const result = await execute(handle, 'history.previewRestore', { version: '..:1' });
+
+      expect(result).toMatchObject({ ok: false, error: { code: 'VERSION_NOT_FOUND' } });
+      expect(seen).toEqual([]);
+    });
   });
 
   it('says an unknown version is not there, and never sends a write', async () => {

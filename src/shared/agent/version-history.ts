@@ -5,7 +5,7 @@ import { approvalKey, approveRequests, approveStep, checkShareReachable, restore
 import { AgentFailure, failure } from './errors';
 import { DocSnapshot } from './snapshot';
 
-import type { AgentApprover, AgentVersionHistory, ChangedSet, DocumentView, ViewArgs, ViewBlock } from '../../../types/agent';
+import type { AgentApprover, AgentRestorePreview, AgentVersionHistory, ChangedSet, DocumentView, ViewArgs, ViewBlock } from '../../../types/agent';
 import type { OutputData } from '../../../types/data-formats/output-data';
 import type { VersionCommandName, VersionReadName } from './names';
 import type { PlannerContext } from './types';
@@ -23,6 +23,9 @@ const isVersionHistory = (value: unknown): value is AgentVersionHistory =>
 
 /** Whether a host's versionHistory service can restore a version. */
 export const canRestore = (value: unknown): boolean => isVersionHistory(value) && typeof value.restore === 'function';
+
+/** Whether a host's versionHistory service can preview a restore. */
+export const canPreviewRestore = (value: unknown): boolean => isVersionHistory(value) && typeof value.previewRestore === 'function';
 
 const isOutputData = (value: unknown): value is OutputData =>
   isRecord(value) && Array.isArray(value.blocks)
@@ -274,6 +277,35 @@ export const runRestore = async (
   };
 };
 
+const isPreview = (value: unknown): value is AgentRestorePreview => isRecord(value)
+  && isRecord(value.wouldUndo) && Array.isArray(value.wouldUndo.blocks) && Array.isArray(value.wouldUndo.page)
+  && Array.isArray(value.guards) && typeof value.fits === 'boolean'
+  && typeof value.frameBytes === 'number' && typeof value.limitBytes === 'number' && typeof value.expectRevision === 'string';
+
+/** Plans a restore through the host and writes nothing. */
+const previewRestore = async (history: AgentVersionHistory, args: Record<string, unknown>, checkCancel: () => void): Promise<unknown> => {
+  const preview = history.previewRestore;
+
+  if (typeof preview !== 'function') {
+    throw failure('COMMAND_UNAVAILABLE', 'history.previewRestore needs a version history that can preview a restore, and this host\'s cannot.', {
+      commandIndex: 0, details: { reason: 'host', requires: ['versionHistory'] },
+    });
+  }
+  const version = String(args.version);
+  const databases = args.databases === 'keep' || args.databases === 'restore' ? args.databases : undefined;
+  const planned: unknown = await ask(() => preview.call(history, version, databases === undefined ? {} : { databases }), checkCancel);
+
+  if (planned === null) {
+    throw notFound(version);
+  }
+  if (!isPreview(planned)) {
+    throw failure('TOOL_ACTION_FAILED', 'The version history sent a restore preview it could not read.');
+  }
+  const { wouldUndo, guards, fits, frameBytes, limitBytes, expectRevision } = planned;
+
+  return { version, wouldUndo, guards, fits, frameBytes, limitBytes, expectRevision };
+};
+
 /** Runs one version-history read against the host's service. */
 export const runVersionCommand = async (
   name: VersionReadName,
@@ -283,6 +315,10 @@ export const runVersionCommand = async (
   checkCancel: () => void
 ): Promise<unknown> => {
   const history = historyOf(name, ctx);
+
+  if (name === 'history.previewRestore') {
+    return previewRestore(history, args, checkCancel);
+  }
 
   if (name === 'history.versions') {
     const group = args.group === 1 || args.group === 15 || args.group === 60 ? args.group : undefined;

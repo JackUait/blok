@@ -1,6 +1,6 @@
 import type { HostService, ManifestOverrides } from '../../types';
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from '../../types/data-formats/output-data';
-import type { AgentActor, AgentApprovalRequest, AgentApprover, AgentBatch, AgentError, AgentResult, AgentVersion, AgentVersionHistory } from '../../types/agent';
+import type { AgentActor, AgentApprovalRequest, AgentApprover, AgentBatch, AgentError, AgentRestorePreview, AgentResult, AgentVersion, AgentVersionHistory } from '../../types/agent';
 // Imported by file rather than through `src/components/utils`: the barrel
 // reaches the DOM, this module does not.
 import { getBlokVersion } from '../components/utils/version';
@@ -471,12 +471,14 @@ const isBatchEnvelope = (value: unknown): boolean =>
  * fetch error says so), which decide whether a retry can help.
  * A restore needs both `versions` and its version in `documents`; with
  * `restores: true` Jint checks it and names it as `restore` in the output.
+ * A preview needs its version in `previews`: the route's answer, or null for a 404.
+ * The host asked the route with the command's own `databases`.
  */
 const loadedVersionHistory = (value: unknown, onRestore?: (version: string) => void): AgentVersionHistory | undefined => {
   if (!isRecord(value)) {
     return undefined;
   }
-  const { versions, documents, failed, status, retryable } = value;
+  const { versions, documents, previews, failed, status, retryable } = value;
   const loaded = (version: string): boolean => isRecord(documents) && Object.hasOwn(documents, version);
   const refuse = (what: string): Promise<never> => Promise.reject(Object.assign(
     new Error(typeof failed === 'string' ? failed : `The host did not load ${what}.`),
@@ -489,6 +491,9 @@ const loadedVersionHistory = (value: unknown, onRestore?: (version: string) => v
     read: version => isRecord(documents) && loaded(version)
       ? Promise.resolve(isStoredDocument(documents[version]) ? documents[version] : null)
       : refuse(`version "${version}"`),
+    previewRestore: version => isRecord(previews) && Object.hasOwn(previews, version)
+      ? Promise.resolve(isRecord(previews[version]) ? previews[version] as unknown as AgentRestorePreview : null)
+      : refuse(`the restore preview of version "${version}"`),
     // Jint only checks the restore; the host restores the version named in the output.
     ...(onRestore !== undefined && {
       restore: (version: string) => {

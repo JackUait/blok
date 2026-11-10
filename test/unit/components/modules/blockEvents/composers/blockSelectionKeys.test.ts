@@ -3,6 +3,9 @@ import { BlockSelectionKeys } from '../../../../../../src/components/modules/blo
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 import type { Block } from '../../../../../../src/components/block';
 import * as SelectionUtilsModule from '../../../../../../src/components/selection';
+import { announce } from '../../../../../../src/components/utils/announcer';
+
+vi.mock('../../../../../../src/components/utils/announcer', () => ({ announce: vi.fn() }));
 
 const createKeyboardEvent = (options: Partial<KeyboardEvent> = {}): KeyboardEvent => {
   return {
@@ -222,6 +225,38 @@ describe('BlockSelectionKeys', () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
       expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    });
+
+    it('says how many selected blocks it deleted, not counting their children', () => {
+      const toggle = createBlock({ id: 'tg', selected: true, parentId: null });
+      const child = createBlock({ id: 'kid', selected: true, parentId: 'tg' });
+      const other = createBlock({ id: 'b', selected: true, parentId: null });
+      const kept = createBlock({ id: 'c', parentId: null });
+      const state = { blocks: [toggle, child, other, kept] };
+      const blok = createBlokModules({
+        BlockSelection: {
+          anyBlockSelected: true,
+        } as unknown as BlokModules['BlockSelection'],
+        BlockManager: {
+          get blocks() {
+            return state.blocks;
+          },
+          getBlockById: vi.fn((id: string) => state.blocks.find((block) => block.id === id)),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(() => {
+            state.blocks = state.blocks.filter((block) => !block.selected);
+
+            return undefined;
+          }),
+        } as unknown as BlokModules['BlockManager'],
+        I18n: {
+          t: (key: string, vars?: { count?: number }) => `${key}:${vars?.count ?? ''}`,
+        } as unknown as BlokModules['I18n'],
+      });
+
+      new BlockSelectionKeys(blok).handleDeletion(createKeyboardEvent({ key: 'Backspace' }));
+
+      expect(vi.mocked(announce)).toHaveBeenCalledWith('a11y.blocksDeleted:2');
+      expect(vi.mocked(announce)).toHaveBeenCalledTimes(1);
     });
   });
 

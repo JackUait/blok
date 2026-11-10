@@ -39,6 +39,9 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
  */
 export const SETTINGS_POPOVER_ID = 'blok-block-settings-popover';
 
+/** A modal dialog is open: keys belong to it, not to a block selection. */
+const isModalOpen = (): boolean => document.querySelector('[aria-modal="true"], dialog[open]') !== null;
+
 /**
  * HTML Elements that used for BlockSettings
  */
@@ -942,7 +945,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * After a tune closes the menu, Notion leaves its block selected. Not when
-   * the tune removed the block or put focus somewhere else.
+   * the tune removed the block or opened another UI: a key typed there would
+   * otherwise delete the selected block.
    * @returns true when the blocks were left selected
    */
   private keepActedSelection(): boolean {
@@ -955,12 +959,21 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     this.actedBlocks = null;
 
-    if (blocks.length === 0 || !focusFree) {
+    if (blocks.length === 0 || !focusFree || isModalOpen()) {
       return false;
     }
 
     blocks.forEach((block) => this.Blok.BlockSelection.selectBlock(block));
     this.releaseFocus();
+
+    // Some UIs take focus or open a modal a frame after the tune ran.
+    requestAnimationFrame(() => {
+      if (document.activeElement === document.body && !isModalOpen()) {
+        return;
+      }
+
+      blocks.filter((block) => block.selected).forEach((block) => this.Blok.BlockSelection.unselectBlock(block));
+    });
 
     return true;
   }

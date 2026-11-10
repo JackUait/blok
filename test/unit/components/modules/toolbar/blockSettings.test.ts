@@ -1054,6 +1054,44 @@ describe('BlockSettings', () => {
       expect(field).toHaveFocus();
     });
 
+    it('lets go of the block when the action opened a modal without moving focus', async () => {
+      const modal = document.createElement('div');
+
+      modal.setAttribute('aria-modal', 'true');
+
+      const { block, activate } = await openWithTune(() => document.body.appendChild(modal));
+
+      activate();
+
+      expect(blokMock.BlockSelection.selectBlock).not.toHaveBeenCalled();
+      expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
+    });
+
+    it('lets go of the block when the action takes focus a frame later', async () => {
+      const frames: FrameRequestCallback[] = [];
+      const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+        frames.push(callback);
+
+        return frames.length;
+      });
+      const field = document.createElement('input');
+
+      document.body.appendChild(field);
+
+      const { block, activate } = await openWithTune(vi.fn());
+
+      activate();
+      expect(blokMock.BlockSelection.selectBlock).toHaveBeenCalledWith(block);
+      // The mock selectBlock does not flip the flag the real one does.
+      Object.assign(block, { selected: true });
+
+      field.focus();
+      frames.forEach((callback) => callback(0));
+
+      expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
+      raf.mockRestore();
+    });
+
     it('still clears the selection when the menu is dismissed', async () => {
       const { block } = await openWithTune(vi.fn());
 

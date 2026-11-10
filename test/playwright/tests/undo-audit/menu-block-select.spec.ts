@@ -132,7 +132,28 @@ const P = (id: string, text: string): SavedBlock => ({ id, type: 'paragraph', da
 
 const BASE = [P('p-before', 'before'), P('p1', 'Alpha'), P('p2', 'Beta'), P('p-after', 'after')];
 
+const tableBlocks = (): SavedBlock[] => {
+  const cols = ['colA', 'colB'];
+  const kids: SavedBlock[] = [];
+  const content = ['row1', 'row2'].map((rowId, r) => cols.map((colId, c) => {
+    const id = `c${r}${c}`;
+
+    kids.push({ id, type: 'paragraph', data: { text: `${'AB'[c]}${r + 1}` }, parent: 'tbl' });
+
+    return { blocks: [id], id: colId, rowId };
+  }));
+
+  return [
+    P('p-before', 'before'),
+    { id: 'tbl', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content }, content: kids.map(k => k.id ?? '') },
+    ...kids,
+    P('p-after', 'after'),
+  ];
+};
+
 test.describe('block menu actions leave a block selection (D3)', () => {
+  // Several capture gaps per test; the default 15s is tight on a loaded CI runner.
+  test.describe.configure({ timeout: 30_000 });
   test.beforeAll(ensureBlokBundleBuilt);
 
   test.beforeEach(async ({ page }) => {
@@ -246,22 +267,7 @@ test.describe('block menu actions leave a block selection (D3)', () => {
   });
 
   test('a table menu action leaves the table selected', async ({ page }) => {
-    const cols = ['colA', 'colB'];
-    const kids: SavedBlock[] = [];
-    const content = ['row1', 'row2'].map((rowId, r) => cols.map((colId, c) => {
-      const id = `c${r}${c}`;
-
-      kids.push({ id, type: 'paragraph', data: { text: `${'AB'[c]}${r + 1}` }, parent: 'tbl' });
-
-      return { blocks: [id], id: colId, rowId };
-    }));
-
-    await createBlok(page, [
-      P('p-before', 'before'),
-      { id: 'tbl', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content }, content: kids.map(k => k.id ?? '') },
-      ...kids,
-      P('p-after', 'after'),
-    ]);
+    await createBlok(page, tableBlocks());
     await editable(page, 'p-before').click();
     await gap(page);
 
@@ -271,6 +277,62 @@ test.describe('block menu actions leave a block selection (D3)', () => {
     await expect.poll(async () => (await saved(page)).includes('table:true')).toBe(true);
     await expect.poll(() => selectedIds(page)).toEqual(['tbl']);
     expect(await hasCaret(page)).toBe(false);
+  });
+
+  for (const name of ['table-fit-to-page-width', 'table-full-width'] as const) {
+    test(`${name} leaves the table selected`, async ({ page }) => {
+      await createBlok(page, tableBlocks());
+      await editable(page, 'p-before').click();
+      await gap(page);
+
+      await openTunes(page, 'tbl');
+      await tune(page, name).click();
+
+      await expect.poll(() => selectedIds(page)).toEqual(['tbl']);
+      expect(await hasCaret(page)).toBe(false);
+    });
+  }
+
+  test('keys typed in full screen never reach a kept table selection', async ({ page }) => {
+    await createBlok(page, tableBlocks());
+    await editable(page, 'p-before').click();
+    await gap(page);
+
+    await openTunes(page, 'tbl');
+    await tune(page, 'table-open-fullscreen').click();
+    await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
+    await gap(page, 300);
+
+    await page.keyboard.press('x');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Delete');
+    await gap(page, 300);
+
+    expect(await page.locator('[data-blok-id="tbl"]').count()).toBe(1);
+    expect(await saved(page)).toContain('table:false');
+  });
+
+  test('keys typed in the emoji picker opened by Edit icon never reach a kept selection', async ({ page }) => {
+    await createBlok(page, [
+      P('p-before', 'before'),
+      { id: 'co', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['k1'] },
+      { id: 'k1', type: 'paragraph', data: { text: 'Note' }, parent: 'co' },
+      P('p-after', 'after'),
+    ]);
+    await editable(page, 'p-before').click();
+    await gap(page);
+
+    await openTunes(page, 'co');
+    await tune(page, 'callout-edit-icon').click();
+    await gap(page, 300);
+
+    await page.keyboard.press('x');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Delete');
+    await gap(page, 300);
+
+    expect(await page.locator('[data-blok-id="co"]').count()).toBe(1);
+    expect(await page.locator('[data-blok-id="k1"]').textContent()).toContain('Note');
   });
 
   test('a markdown shortcut conversion keeps the caret (U073)', async ({ page }) => {

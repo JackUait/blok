@@ -418,6 +418,7 @@
   "tools.database.groupShowAggregation": "गणना देखाउनुहोस्",
   "tools.database.groupCalculationHint": "{property} मा {calculation}",
   "tools.database.groupHide": "समूह लुकाउनुहोस्",
+  "tools.database.groupShow": "समूह देखाउनुहोस्",
   "tools.database.groupMoveToTrash": "रद्दीटोकरीमा सार्नुहोस्",
   "tools.database.groupTrashConfirm": "के तपाईं निश्चित हुनुहुन्छ? यस समूहभित्रका सबै पृष्ठहरू रद्दीटोकरीमा सारिनेछन्।",
   "tools.database.hiddenGroups": "लुकाइएका समूहहरू",

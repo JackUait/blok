@@ -1213,6 +1213,7 @@ export type BlokMessageKey =
   | 'tools.database.groupRangeExample'
   | 'tools.database.groupRangeStart'
   | 'tools.database.groupRemove'
+  | 'tools.database.groupShow'
   | 'tools.database.groupShowAggregation'
   | 'tools.database.groupShowAll'
   | 'tools.database.groupSort'

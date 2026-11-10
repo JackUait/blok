@@ -270,3 +270,11 @@ describe('board in dark (research/21 §1f)', () => {
     ]);
   });
 });
+
+// notion-motion.md, Round 8c "Hidden groups": a hidden group's eye is gray, a shown one keeps the ink.
+describe('group eye on the Group page', () => {
+  it('grays the eye of a hidden group', () => {
+    expect(ruleBody(database, '[data-blok-database-group-visibility-row][data-hidden] > [data-blok-database-property-eye]'))
+      .toContain('color: var(--blok-database-table-gutter-icon)');
+  });
+});

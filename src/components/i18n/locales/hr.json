@@ -399,6 +399,7 @@
   "tools.database.groupShowAggregation": "Prikaži izračun",
   "tools.database.groupCalculationHint": "{calculation} u {property}",
   "tools.database.groupHide": "Sakrij grupu",
+  "tools.database.groupShow": "Prikaži grupu",
   "tools.database.groupMoveToTrash": "Premjesti u smeće",
   "tools.database.groupTrashConfirm": "Jeste li sigurni? Sve stranice unutar ove grupe bit će premještene u smeće.",
   "tools.database.hiddenGroups": "Skrivene grupe",

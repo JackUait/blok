@@ -418,6 +418,7 @@
   "tools.database.groupShowAggregation": "गणना दाखवा",
   "tools.database.groupCalculationHint": "{property} मध्ये {calculation}",
   "tools.database.groupHide": "गट लपवा",
+  "tools.database.groupShow": "गट दाखवा",
   "tools.database.groupMoveToTrash": "कचरापेटीत हलवा",
   "tools.database.groupTrashConfirm": "तुम्हाला खात्री आहे? या गटातील सर्व पृष्ठे कचरापेटीत हलवली जातील.",
   "tools.database.hiddenGroups": "लपवलेले गट",

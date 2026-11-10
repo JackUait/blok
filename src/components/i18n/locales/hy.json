@@ -398,6 +398,7 @@
   "tools.database.groupShowAggregation": "Ցույց տալ հաշվարկը",
   "tools.database.groupCalculationHint": "{calculation} {property}-ում",
   "tools.database.groupHide": "Թաքցնել խումբը",
+  "tools.database.groupShow": "Ցուցադրել խումբը",
   "tools.database.groupMoveToTrash": "Տեղափոխել աղբարկղ",
   "tools.database.groupTrashConfirm": "Վստա՞հ եք։ Այս խմբի բոլոր էջերը կտեղափոխվեն աղբարկղ։",
   "tools.database.hiddenGroups": "Թաքցված խմբեր",

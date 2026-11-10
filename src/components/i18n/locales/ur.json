@@ -398,6 +398,7 @@
   "tools.database.groupShowAggregation": "مجموعی قدر دکھائیں",
   "tools.database.groupCalculationHint": "{property} میں {calculation}",
   "tools.database.groupHide": "گروپ چھپائیں",
+  "tools.database.groupShow": "گروپ دکھائیں",
   "tools.database.groupMoveToTrash": "ردی کی ٹوکری میں منتقل کریں",
   "tools.database.groupTrashConfirm": "کیا آپ کو یقین ہے؟ اس گروپ کے تمام صفحات ردی کی ٹوکری میں منتقل کر دیے جائیں گے۔",
   "tools.database.hiddenGroups": "چھپے ہوئے گروپس",

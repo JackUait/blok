@@ -398,6 +398,7 @@
   "tools.database.groupShowAggregation": "Εμφάνιση υπολογισμού",
   "tools.database.groupCalculationHint": "{calculation} σε {property}",
   "tools.database.groupHide": "Απόκρυψη ομάδας",
+  "tools.database.groupShow": "Εμφάνιση ομάδας",
   "tools.database.groupMoveToTrash": "Μετακίνηση στον κάδο",
   "tools.database.groupTrashConfirm": "Είστε βέβαιοι; Όλες οι σελίδες αυτής της ομάδας θα μετακινηθούν στον κάδο.",
   "tools.database.hiddenGroups": "Κρυφές ομάδες",

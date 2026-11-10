@@ -398,6 +398,7 @@
   "tools.database.groupShowAggregation": "გამოთვლის ჩვენება",
   "tools.database.groupCalculationHint": "{property}-ში {calculation}",
   "tools.database.groupHide": "ჯგუფის დამალვა",
+  "tools.database.groupShow": "ჯგუფის ჩვენება",
   "tools.database.groupMoveToTrash": "ნაგავში გადატანა",
   "tools.database.groupTrashConfirm": "დარწმუნებული ხართ? ამ ჯგუფის ყველა გვერდი ნაგავში გადავა.",
   "tools.database.hiddenGroups": "დამალული ჯგუფები",

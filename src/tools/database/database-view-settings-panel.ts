@@ -1378,7 +1378,7 @@ export class ViewSettingsPages {
     return row;
   }
 
-  /** The group's pill (or name) and an eye. A hidden group's pill is faded (database.css). */
+  /** The group's pill (or name) and an eye. A hidden group's pill is faded and its eye gray (database.css). */
   private groupVisibilityRow(group: ViewGroupEntry, isHidden: boolean, disabled: boolean, onToggle: () => void): HTMLElement {
     const row = document.createElement('div');
     const name = document.createElement('span');
@@ -1390,9 +1390,8 @@ export class ViewSettingsPages {
     name.setAttribute('data-blok-database-panel-label', '');
     name.append(group.pill?.() ?? group.label);
     eye.type = 'button';
-    eye.setAttribute('role', 'switch');
-    eye.setAttribute('aria-checked', String(!isHidden));
-    eye.setAttribute('aria-label', group.label);
+    // notion-motion.md, Round 8c: a plain button named for what a click does.
+    eye.setAttribute('aria-label', this.t(isHidden ? 'groupShow' : 'groupHide'));
     eye.setAttribute('data-blok-database-property-eye', '');
     eye.setAttribute('data-blok-testid', `database-group-visible-${group.key}`);
     eye.innerHTML = isHidden ? IconEyeSlash : IconPreview;

@@ -398,6 +398,7 @@
   "tools.database.groupShowAggregation": "Vis beregning",
   "tools.database.groupCalculationHint": "{calculation} i {property}",
   "tools.database.groupHide": "Skjul gruppen",
+  "tools.database.groupShow": "Vis gruppen",
   "tools.database.groupMoveToTrash": "Flyt til papirkurven",
   "tools.database.groupTrashConfirm": "Er du sikker? Alle sider i denne gruppe bliver flyttet til papirkurven.",
   "tools.database.hiddenGroups": "Skjulte grupper",

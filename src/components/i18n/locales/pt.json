@@ -399,6 +399,7 @@
   "tools.database.groupShowAggregation": "Mostrar cálculo",
   "tools.database.groupCalculationHint": "{calculation} em {property}",
   "tools.database.groupHide": "Ocultar grupo",
+  "tools.database.groupShow": "Mostrar grupo",
   "tools.database.groupMoveToTrash": "Mover para a lixeira",
   "tools.database.groupTrashConfirm": "Tem certeza? Todas as páginas deste grupo serão movidas para a lixeira.",
   "tools.database.hiddenGroups": "Grupos ocultos",

@@ -403,6 +403,7 @@
   "tools.database.groupShowAggregation": "Hesablamanı göstər",
   "tools.database.groupCalculationHint": "{property} üzrə {calculation}",
   "tools.database.groupHide": "Qrupu gizlət",
+  "tools.database.groupShow": "Qrupu göstər",
   "tools.database.groupMoveToTrash": "Zibil qutusuna köçür",
   "tools.database.groupTrashConfirm": "Əminsiniz? Bu qrupdakı bütün səhifələr zibil qutusuna köçürüləcək.",
   "tools.database.hiddenGroups": "Gizli qruplar",

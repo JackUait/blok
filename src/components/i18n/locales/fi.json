@@ -398,6 +398,7 @@
   "tools.database.groupShowAggregation": "Näytä laskenta",
   "tools.database.groupCalculationHint": "{calculation} kentässä {property}",
   "tools.database.groupHide": "Piilota ryhmä",
+  "tools.database.groupShow": "Näytä ryhmä",
   "tools.database.groupMoveToTrash": "Siirrä roskakoriin",
   "tools.database.groupTrashConfirm": "Oletko varma? Kaikki tämän ryhmän sivut siirretään roskakoriin.",
   "tools.database.hiddenGroups": "Piilotetut ryhmät",

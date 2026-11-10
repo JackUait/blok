@@ -14981,7 +14981,7 @@ input[data-blok-database-picker-search]:focus {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-property-eye][aria-checked="false"], [data-blok-database-property-eye]:disabled {
+[data-blok-database-property-eye][aria-checked="false"], [data-blok-database-group-visibility-row][data-hidden] > [data-blok-database-property-eye], [data-blok-database-property-eye]:disabled {
   color: var(--blok-database-table-gutter-icon);
 }
 

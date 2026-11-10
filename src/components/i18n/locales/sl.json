@@ -400,6 +400,7 @@
   "tools.database.groupShowAggregation": "Prikaži agregacijo",
   "tools.database.groupCalculationHint": "{calculation} v {property}",
   "tools.database.groupHide": "Skrij skupino",
+  "tools.database.groupShow": "Prikaži skupino",
   "tools.database.groupMoveToTrash": "Premakni v koš",
   "tools.database.groupTrashConfirm": "Ali ste prepričani? Vse strani v tej skupini bodo premaknjene v koš.",
   "tools.database.hiddenGroups": "Skrite skupine",

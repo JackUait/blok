@@ -403,6 +403,7 @@
   "tools.database.groupShowAggregation": "એકત્રીકરણ બતાવો",
   "tools.database.groupCalculationHint": "{property} માં {calculation}",
   "tools.database.groupHide": "જૂથ છુપાવો",
+  "tools.database.groupShow": "જૂથ બતાવો",
   "tools.database.groupMoveToTrash": "કચરાપેટીમાં ખસેડો",
   "tools.database.groupTrashConfirm": "શું તમને ખાતરી છે? આ જૂથની અંદરના બધા પૃષ્ઠો કચરાપેટીમાં ખસેડવામાં આવશે.",
   "tools.database.hiddenGroups": "છુપાયેલા જૂથો",

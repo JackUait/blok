@@ -428,6 +428,7 @@
   "tools.database.groupShowAggregation": "Show aggregation",
   "tools.database.groupCalculationHint": "{calculation} in {property}",
   "tools.database.groupHide": "Hide group",
+  "tools.database.groupShow": "Show group",
   "tools.database.groupMoveToTrash": "Move to Trash",
   "tools.database.groupTrashConfirm": "Are you sure? All pages inside this group will be moved to Trash.",
   "tools.database.hiddenGroups": "Hidden groups",

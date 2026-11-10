@@ -400,6 +400,7 @@
   "tools.database.groupShowAggregation": "Zobraziť agregáciu",
   "tools.database.groupCalculationHint": "{calculation} v {property}",
   "tools.database.groupHide": "Skryť skupinu",
+  "tools.database.groupShow": "Zobraziť skupinu",
   "tools.database.groupMoveToTrash": "Presunúť do koša",
   "tools.database.groupTrashConfirm": "Naozaj? Všetky stránky v tejto skupine sa presunú do koša.",
   "tools.database.hiddenGroups": "Skryté skupiny",

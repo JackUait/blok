@@ -398,6 +398,7 @@
   "tools.database.groupShowAggregation": "Visa aggregering",
   "tools.database.groupCalculationHint": "{calculation} i {property}",
   "tools.database.groupHide": "Dölj grupp",
+  "tools.database.groupShow": "Visa grupp",
   "tools.database.groupMoveToTrash": "Flytta till papperskorgen",
   "tools.database.groupTrashConfirm": "Är du säker? Alla sidor i den här gruppen flyttas till papperskorgen.",
   "tools.database.hiddenGroups": "Dolda grupper",

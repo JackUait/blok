@@ -398,6 +398,7 @@
   "tools.database.groupShowAggregation": "يىغىندىنى كۆرسىتىش",
   "tools.database.groupCalculationHint": "{property} دىكى {calculation}",
   "tools.database.groupHide": "گۇرۇپپىنى يوشۇرۇش",
+  "tools.database.groupShow": "گۇرۇپپىنى كۆرسىتىش",
   "tools.database.groupMoveToTrash": "ئەخلەت چېلىكىگە يۆتكەش",
   "tools.database.groupTrashConfirm": "راستتىنلا جەزىملەشتۈرەمسىز؟ بۇ گۇرۇپپىدىكى بارلىق بەتلەر ئەخلەت چېلىكىگە يۆتكىلىدۇ.",
   "tools.database.hiddenGroups": "يوشۇرۇلغان گۇرۇپپىلار",

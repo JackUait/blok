@@ -398,6 +398,7 @@
   "tools.database.groupShowAggregation": "แสดงการรวมค่า",
   "tools.database.groupCalculationHint": "{calculation} ใน {property}",
   "tools.database.groupHide": "ซ่อนกลุ่ม",
+  "tools.database.groupShow": "แสดงกลุ่ม",
   "tools.database.groupMoveToTrash": "ย้ายไปถังขยะ",
   "tools.database.groupTrashConfirm": "คุณแน่ใจหรือไม่? หน้าทั้งหมดในกลุ่มนี้จะถูกย้ายไปถังขยะ",
   "tools.database.hiddenGroups": "กลุ่มที่ซ่อน",

@@ -403,6 +403,7 @@
   "tools.database.groupShowAggregation": "ስሌቱን አሳይ",
   "tools.database.groupCalculationHint": "{calculation} በ{property}",
   "tools.database.groupHide": "ቡድኑን ደብቅ",
+  "tools.database.groupShow": "ቡድኑን አሳይ",
   "tools.database.groupMoveToTrash": "ወደ መጣያ ውሰድ",
   "tools.database.groupTrashConfirm": "እርግጠኛ ነዎት? በዚህ ቡድን ውስጥ ያሉ ሁሉም ገጾች ወደ መጣያ ይወሰዳሉ።",
   "tools.database.hiddenGroups": "የተደበቁ ቡድኖች",

@@ -1117,13 +1117,16 @@ describe('view settings panel', () => {
     const eye = (key: string): Element | null => document.querySelector(`[data-blok-testid="database-group-visible-${key}"]`);
 
     expect(rows()).toEqual([['Idea', false], ['No Stage', true]]);
-    expect([eye('o1')?.getAttribute('role'), eye('o1')?.getAttribute('aria-label'), eye('o1')?.getAttribute('aria-checked')]).toEqual(['switch', 'Idea', 'true']);
-    expect(eye('none')?.getAttribute('aria-checked')).toBe('false');
+    // notion-motion.md, Round 8c: the eye is a plain button labelled by what a click does.
+    expect([eye('o1')?.getAttribute('role'), eye('o1')?.getAttribute('aria-label'), eye('o1')?.hasAttribute('aria-checked')])
+      .toEqual([null, 'tools.database.groupHide', false]);
+    expect(eye('none')?.getAttribute('aria-label')).toBe('tools.database.groupShow');
 
     click('database-group-visible-none');
 
     expect(h.state.view.hiddenGroups ?? []).toEqual([]);
     expect(rows()).toEqual([['Idea', false], ['No Stage', false]]);
+    expect(eye('none')?.getAttribute('aria-label')).toBe('tools.database.groupHide');
   });
 
   it('puts Hide all on the Groups label row', () => {

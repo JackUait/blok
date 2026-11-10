@@ -5,6 +5,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { OutputBlockData, OutputData } from '../../../../types';
+import type { HistoryStep } from '../../../../types/api';
 
 /**
  * An undo or redo from code (a host Undo button, `blok.history.undo()`)
@@ -16,7 +17,14 @@ interface TestEditor {
   isReady: Promise<unknown>;
   save: () => Promise<OutputData>;
   destroy: () => void;
-  history: { undo: () => void; redo: () => void; canUndo: () => boolean; canRedo: () => boolean };
+  history: {
+    undo: () => void;
+    redo: () => void;
+    canUndo: () => boolean;
+    canRedo: () => boolean;
+    latestStep: () => HistoryStep | undefined;
+    undoStep: (step: HistoryStep) => boolean;
+  };
 }
 
 const quiet = async (): Promise<void> => {
@@ -321,5 +329,51 @@ describe('undo and redo close every open cell editor', () => {
     expect(await notesOf('r2')).toBe('second');
     expect(await notesOf('r1')).toBe('first');
     expect(openEditors()).toBe(0);
+  });
+
+  it('undoStep with a draft open undoes the step and keeps the draft as the newest step', async () => {
+    await make(single({}));
+    await click(tableCell('')('r2'));
+    type('changed');
+    await enter();
+    const step = editor?.history.latestStep();
+
+    if (step === undefined) throw new Error('no step');
+    await click(tableCell('')('r1'));
+    type('draft');
+
+    const undone = editor?.history.undoStep(step);
+
+    await quiet();
+
+    expect(await notesOf('r1')).toBe('draft');
+    expect(await notesOf('r2')).toBe('second');
+    expect(undone).toBe(true);
+    expect(openEditors()).toBe(0);
+
+    editor?.history.undo();
+    await quiet();
+
+    expect(await notesOf('r1')).toBe('first');
+    expect(await notesOf('r2')).toBe('second');
+  });
+
+  it('undoStep with an open editor and nothing typed still undoes the step', async () => {
+    await make(single({}));
+    await click(tableCell('')('r2'));
+    type('changed');
+    await enter();
+    const step = editor?.history.latestStep();
+
+    if (step === undefined) throw new Error('no step');
+    await click(tableCell('')('r1'));
+
+    const undone = editor?.history.undoStep(step);
+
+    await quiet();
+
+    expect(await notesOf('r2')).toBe('second');
+    expect(await notesOf('r1')).toBe('first');
+    expect(undone).toBe(true);
   });
 });

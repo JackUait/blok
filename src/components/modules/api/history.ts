@@ -102,19 +102,8 @@ export class HistoryAPI extends Module {
       return;
     }
     const { YjsManager } = this.Blok;
-    const drafts = { written: false };
 
-    this.eventsDispatcher.emit(HistoryDraftsCommit, {
-      direction,
-      commit: (write) => {
-        if (!drafts.written) {
-          YjsManager.beginGesture('discrete');
-          drafts.written = true;
-        }
-        write();
-      },
-    });
-    if (!drafts.written) {
+    if (!this.commitDrafts(direction)) {
       this.step(direction);
 
       return;
@@ -127,6 +116,29 @@ export class HistoryAPI extends Module {
         }
       });
     });
+  }
+
+  /**
+   * Asks open drafts to write themselves as one new step.
+   * @param direction - the walk that asks
+   * @returns true when a tool wrote, so a new step may now sit on top
+   */
+  private commitDrafts(direction: 'undo' | 'redo'): boolean {
+    const { YjsManager } = this.Blok;
+    const drafts = { written: false };
+
+    this.eventsDispatcher.emit(HistoryDraftsCommit, {
+      direction,
+      commit: (write) => {
+        if (!drafts.written) {
+          YjsManager.beginGesture('discrete');
+          drafts.written = true;
+        }
+        write();
+      },
+    });
+
+    return drafts.written;
   }
 
   private step(direction: 'undo' | 'redo'): void {
@@ -198,6 +210,8 @@ export class HistoryAPI extends Module {
     if (entry === undefined || this.Blok.ReadOnly.isEnabled) {
       return false;
     }
+    // A draft's save lands after this undo, as the newest step: the undo cannot drop it.
+    this.commitDrafts('undo');
     this.Blok.YjsManager.flushPendingBlockWrites();
 
     return this.Blok.YjsManager.undoStep(entry);

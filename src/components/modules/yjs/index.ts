@@ -12,7 +12,7 @@ import { logLabeled } from '../../utils';
 import { BlockObserver } from './block-observer';
 import { DocumentStore, type DataKeySnapshot } from './document-store';
 import { cleanPageField, readPageFields, writePageField, type PageFieldKey, type PageFields } from './page-fields';
-import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
+import { YBlockSerializer, type YjsOutputBlockData } from './serializer';
 import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretHistoryEntry, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
 import type { ClosedStep } from './undo-history';
@@ -1395,46 +1395,6 @@ export class YjsManager extends Module {
     this.undoHistory.withoutCaretMark(() => {
       this.undoHistory.addToStepThatWrote(data, () => this.documentStore.transactWithoutCapture(fn), from);
     });
-  }
-
-  // ========== Public API: Smart Grouping ==========
-
-  /**
-   * Check if there is a pending boundary waiting for timeout.
-   * @returns true if a boundary character was typed and hasn't timed out yet
-   */
-  public hasPendingBoundary(): boolean {
-    return this.undoHistory.hasPendingBoundary();
-  }
-
-  /**
-   * Mark that a boundary character (space, punctuation) was just typed.
-   */
-  public markBoundary(): void {
-    this.undoHistory.markBoundary();
-  }
-
-  /**
-   * Clear the pending boundary state without creating a checkpoint.
-   */
-  public clearBoundary(): void {
-    this.undoHistory.clearBoundary();
-  }
-
-  /**
-   * Check if a pending boundary has timed out and create a checkpoint if so.
-   */
-  public checkAndHandleBoundary(): void {
-    this.undoHistory.checkAndHandleBoundary();
-  }
-
-  /**
-   * Check if a character is a boundary character.
-   * @param char - Single character to check
-   * @returns true if the character is a boundary character
-   */
-  public static isBoundaryCharacter(char: string): boolean {
-    return isBoundaryCharacter(char);
   }
 
   // ========== Public API: Events ==========

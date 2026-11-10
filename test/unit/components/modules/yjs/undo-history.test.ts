@@ -578,85 +578,6 @@ describe('UndoHistory', () => {
     });
   });
 
-  describe('smart grouping', () => {
-    it('hasPendingBoundary returns false initially', () => {
-      expect(history.hasPendingBoundary()).toBe(false);
-    });
-
-    it('hasPendingBoundary returns true after markBoundary', () => {
-      vi.useFakeTimers();
-
-      history.markBoundary();
-
-      expect(history.hasPendingBoundary()).toBe(true);
-
-      vi.useRealTimers();
-    });
-
-    it('clears pending boundary after timeout', () => {
-      vi.useFakeTimers();
-
-      history.markBoundary();
-      expect(history.hasPendingBoundary()).toBe(true);
-
-      vi.advanceTimersByTime(150);
-
-      expect(history.hasPendingBoundary()).toBe(false);
-
-      vi.useRealTimers();
-    });
-
-    it('clearBoundary clears pending boundary immediately', () => {
-      vi.useFakeTimers();
-
-      history.markBoundary();
-      expect(history.hasPendingBoundary()).toBe(true);
-
-      history.clearBoundary();
-
-      expect(history.hasPendingBoundary()).toBe(false);
-
-      // Timeout should not cause issues
-      vi.advanceTimersByTime(150);
-
-      vi.useRealTimers();
-    });
-
-    it('checkAndHandleBoundary creates checkpoint after timeout', () => {
-      vi.useFakeTimers();
-      const stopSpy = vi.spyOn(history.undoManager, 'stopCapturing');
-
-      history.markBoundary();
-      vi.advanceTimersByTime(50); // Only 50ms elapsed
-
-      history.checkAndHandleBoundary();
-      expect(stopSpy).not.toHaveBeenCalled(); // Not enough time
-
-      vi.advanceTimersByTime(60); // Now 110ms total
-
-      history.checkAndHandleBoundary();
-      expect(stopSpy).toHaveBeenCalledTimes(1);
-      expect(history.hasPendingBoundary()).toBe(false);
-
-      vi.useRealTimers();
-    });
-
-    it('boundary timer fires stopCapturing to checkpoint a finished word', () => {
-      vi.useFakeTimers();
-      const stopSpy = vi.spyOn(history.undoManager, 'stopCapturing');
-
-      history.markBoundary();
-      // Let the boundary timer fire on its own after the idle window.
-      vi.advanceTimersByTime(150);
-
-      // A per-word checkpoint is created and the pending boundary clears.
-      expect(stopSpy).toHaveBeenCalledTimes(1);
-      expect(history.hasPendingBoundary()).toBe(false);
-
-      vi.useRealTimers();
-    });
-  });
-
   describe('setBlok', () => {
     it('updates the Blok modules reference', () => {
       const newBlok: BlokModules = {} as unknown as BlokModules;
@@ -678,7 +599,6 @@ describe('UndoHistory', () => {
 
       expect(history.canUndo()).toBe(false);
       expect(history.canRedo()).toBe(false);
-      expect(history.hasPendingBoundary()).toBe(false);
     });
 
     it('clears the UndoManager and resets history state', () => {

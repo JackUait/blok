@@ -102,8 +102,8 @@ const saveBlok = async (page: Page): Promise<OutputData> => {
 };
 
 test.describe('yjs undo/redo', () => {
-  // Wait for Yjs captureTimeout (500ms) plus small buffer
-  const YJS_CAPTURE_TIMEOUT = 600;
+  // Wait for Yjs captureTimeout (~709 ms) plus small buffer
+  const YJS_CAPTURE_TIMEOUT = 800;
 
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -4978,11 +4978,12 @@ test.describe('yjs undo/redo', () => {
   });
 
   test.describe('smart grouping', () => {
-    // Boundary timeout: 100ms in implementation + buffer for test reliability
-    const BOUNDARY_TIMEOUT = 150;
+    // A short pause after a space or punctuation. Notion keeps it in the
+    // typing step (replica-undo U008, U029); only the ~708 ms window cuts.
+    const SHORT_PAUSE_MS = 150;
     const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+a' : 'Control+a';
 
-    test('word boundary + pause creates checkpoint', async ({ page }) => {
+    test('a pause after a space does not cut the typing step', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -4997,7 +4998,7 @@ test.describe('yjs undo/redo', () => {
 
       // Type "Hello " then pause long enough for boundary timeout
       await page.keyboard.type('Hello ');
-      await waitForDelay(page, BOUNDARY_TIMEOUT);
+      await waitForDelay(page, SHORT_PAUSE_MS);
 
       // Type "world" and wait for Yjs to capture
       await page.keyboard.type('world');
@@ -5006,14 +5007,14 @@ test.describe('yjs undo/redo', () => {
       // Verify full text
       await expect(paragraphInput).toHaveText('Hello world');
 
-      // Undo should remove only "world" (boundary + pause created checkpoint after "Hello ")
+      // One undo removes all of it: the pause stays inside the window.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
-      await expect(paragraphInput).toHaveText('Hello ');
+      await expect(paragraphInput).toHaveText('');
     });
 
-    test('punctuation + pause creates checkpoint', async ({ page }) => {
+    test('a pause after a comma does not cut the typing step', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -5028,7 +5029,7 @@ test.describe('yjs undo/redo', () => {
 
       // Type "Hello," then pause long enough for boundary timeout
       await page.keyboard.type('Hello,');
-      await waitForDelay(page, BOUNDARY_TIMEOUT);
+      await waitForDelay(page, SHORT_PAUSE_MS);
 
       // Type " world" and wait for Yjs to capture
       await page.keyboard.type(' world');
@@ -5037,14 +5038,14 @@ test.describe('yjs undo/redo', () => {
       // Verify full text
       await expect(paragraphInput).toHaveText('Hello, world');
 
-      // Undo should remove only " world" (boundary + pause created checkpoint after "Hello,")
+      // One undo removes all of it: the pause stays inside the window.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
-      await expect(paragraphInput).toHaveText('Hello,');
+      await expect(paragraphInput).toHaveText('');
     });
 
-    test('sentence boundary creates checkpoint', async ({ page }) => {
+    test('a pause after a period does not cut the typing step', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -5059,7 +5060,7 @@ test.describe('yjs undo/redo', () => {
 
       // Type "Hello." then pause long enough for boundary timeout
       await page.keyboard.type('Hello.');
-      await waitForDelay(page, BOUNDARY_TIMEOUT);
+      await waitForDelay(page, SHORT_PAUSE_MS);
 
       // Type " World" and wait for Yjs to capture
       await page.keyboard.type(' World');
@@ -5068,14 +5069,14 @@ test.describe('yjs undo/redo', () => {
       // Verify full text
       await expect(paragraphInput).toHaveText('Hello. World');
 
-      // Undo should remove only " World" (boundary + pause created checkpoint after "Hello.")
+      // One undo removes all of it: the pause stays inside the window.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
-      await expect(paragraphInput).toHaveText('Hello.');
+      await expect(paragraphInput).toHaveText('');
     });
 
-    test('question mark creates checkpoint', async ({ page }) => {
+    test('a pause after a question mark does not cut the typing step', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -5090,7 +5091,7 @@ test.describe('yjs undo/redo', () => {
 
       // Type "What?" then pause long enough for boundary timeout
       await page.keyboard.type('What?');
-      await waitForDelay(page, BOUNDARY_TIMEOUT);
+      await waitForDelay(page, SHORT_PAUSE_MS);
 
       // Type " Yes" and wait for Yjs to capture
       await page.keyboard.type(' Yes');
@@ -5099,11 +5100,11 @@ test.describe('yjs undo/redo', () => {
       // Verify full text
       await expect(paragraphInput).toHaveText('What? Yes');
 
-      // Undo should remove only " Yes" (boundary + pause created checkpoint after "What?")
+      // One undo removes all of it: the pause stays inside the window.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
-      await expect(paragraphInput).toHaveText('What?');
+      await expect(paragraphInput).toHaveText('');
     });
 
     test('fast typing batches into single undo group', async ({ page }) => {
@@ -5174,18 +5175,7 @@ test.describe('yjs undo/redo', () => {
 
       await paragraphInput.click();
 
-      // Type a boundary character (space) and immediately resume typing. The
-      // boundary arms a BOUNDARY_TIMEOUT_MS (100ms) checkpoint timer; resuming
-      // before it elapses must clear the pending boundary (the clearBoundary
-      // path in handleSmartGrouping) so both words stay in ONE undo group.
-      //
-      // NOTE: the resume is driven continuously (no artificial mid-typing
-      // waitForDelay). A real wall-clock pause here races the 100ms product timer
-      // against Playwright's variable CDP keystroke delivery (observed 11-139ms),
-      // which makes the test flaky under load. The exact timed-pause boundary
-      // semantics are covered deterministically by the unit tests in
-      // undo-history.test.ts (markBoundary / checkAndHandleBoundary with fake
-      // timers); this E2E asserts the end-to-end grouping outcome.
+      // A space with typing right after it keeps both words in ONE undo group.
       await page.keyboard.type('Hello world');
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);

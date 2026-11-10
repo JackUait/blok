@@ -70,10 +70,6 @@ const createBlockEvents = (currentBlock: Block | undefined, overrides: {
     YjsManager: {
       stopCapturing: vi.fn(),
       startSubStep: vi.fn(),
-      markBoundary: vi.fn(),
-      clearBoundary: vi.fn(),
-      checkAndHandleBoundary: vi.fn(),
-      hasPendingBoundary: vi.fn().mockReturnValue(false),
     } as unknown as BlokModules['YjsManager'],
   };
 

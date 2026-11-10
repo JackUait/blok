@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as Y from 'yjs';
-import { YBlockSerializer, isBoundaryCharacter, BOUNDARY_CHARACTERS } from '../../../../../src/components/modules/yjs/serializer';
+import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 
 describe('YBlockSerializer', () => {
   let ydoc: Y.Doc;
@@ -547,41 +547,6 @@ describe('YBlockSerializer', () => {
 
       expect(JSON.parse(JSON.stringify(serializer.yMapToObject(ymap))))
         .toEqual({ constructor: 1, hasOwnProperty: 2, toString: 3 });
-    });
-  });
-
-  describe('isBoundaryCharacter', () => {
-    it('returns true for boundary characters', () => {
-      expect(isBoundaryCharacter(' ')).toBe(true);
-      expect(isBoundaryCharacter('\t')).toBe(true);
-      expect(isBoundaryCharacter('.')).toBe(true);
-      expect(isBoundaryCharacter('?')).toBe(true);
-      expect(isBoundaryCharacter('!')).toBe(true);
-      expect(isBoundaryCharacter(',')).toBe(true);
-      expect(isBoundaryCharacter(';')).toBe(true);
-      expect(isBoundaryCharacter(':')).toBe(true);
-    });
-
-    it('returns false for non-boundary characters', () => {
-      expect(isBoundaryCharacter('a')).toBe(false);
-      expect(isBoundaryCharacter('Z')).toBe(false);
-      expect(isBoundaryCharacter('1')).toBe(false);
-      expect(isBoundaryCharacter('-')).toBe(false);
-      expect(isBoundaryCharacter('@')).toBe(false);
-    });
-  });
-
-  describe('BOUNDARY_CHARACTERS constant', () => {
-    it('contains all expected boundary characters', () => {
-      expect(BOUNDARY_CHARACTERS.size).toBe(8);
-      expect(BOUNDARY_CHARACTERS.has(' ')).toBe(true);
-      expect(BOUNDARY_CHARACTERS.has('\t')).toBe(true);
-      expect(BOUNDARY_CHARACTERS.has('.')).toBe(true);
-      expect(BOUNDARY_CHARACTERS.has('?')).toBe(true);
-      expect(BOUNDARY_CHARACTERS.has('!')).toBe(true);
-      expect(BOUNDARY_CHARACTERS.has(',')).toBe(true);
-      expect(BOUNDARY_CHARACTERS.has(';')).toBe(true);
-      expect(BOUNDARY_CHARACTERS.has(':')).toBe(true);
     });
   });
 });

@@ -9,6 +9,7 @@ describe('GestureController', () => {
   let controller: GestureController;
   let yjs: { beginGesture: ReturnType<typeof vi.fn>; holdCapture: ReturnType<typeof vi.fn>; releaseCapture: ReturnType<typeof vi.fn> };
   let selectedBlocks: boolean;
+  let lineBreaks: boolean;
 
   const key = (init: KeyboardEventInit): void => {
     input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ...init }));
@@ -26,6 +27,7 @@ describe('GestureController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     selectedBlocks = false;
+    lineBreaks = false;
     wrapper = document.createElement('div');
     wrapper.setAttribute('data-blok-editor', '');
     input = document.createElement('div');
@@ -41,7 +43,7 @@ describe('GestureController', () => {
       BlockSelection: { get anyBlockSelected() {
         return selectedBlocks;
       } },
-      BlockManager: { getBlockByChildNode: () => ({ inputs: [input] }) },
+      BlockManager: { getBlockByChildNode: () => ({ inputs: [input], tool: { isLineBreaksEnabled: lineBreaks } }) },
     } as unknown as BlokModules;
     controller.setWrapperElement(wrapper);
     controller.enable();
@@ -87,6 +89,21 @@ describe('GestureController', () => {
     key({ key: 'Delete' });
 
     expect(yjs.beginGesture.mock.calls).toEqual([['typing'], ['discrete']]);
+  });
+
+  it('treats Enter in a block that takes line breaks (code) as typing', () => {
+    lineBreaks = true;
+    key({ key: 'Enter' });
+
+    expect(yjs.beginGesture).toHaveBeenCalledWith('typing');
+  });
+
+  it('keeps Enter in a text block and Shift+Enter in code as discrete', () => {
+    key({ key: 'Enter' });
+    lineBreaks = true;
+    key({ key: 'Enter', shiftKey: true });
+
+    expect(yjs.beginGesture.mock.calls).toEqual([['discrete'], ['discrete']]);
   });
 
   it('ignores caret moves, modifiers and composition keys', () => {

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock, MockInstance } from 'vitest';
 import * as Y from 'yjs';
 
-import { BOUNDARY_TIMEOUT_MS } from '../../../../../src/components/modules/yjs/serializer';
 import { UndoHistory } from '../../../../../src/components/modules/yjs/undo-history';
 import type { BlockPlacement, MoveReplayCallback, SingleMoveEntry, UndoScopeType } from '../../../../../src/components/modules/yjs/types';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
@@ -1015,84 +1014,6 @@ describe('UndoHistory — mutation coverage', () => {
     });
   });
 
-  describe('word-boundary checkpoints', () => {
-    /** Counts checkpoints: the flush barrier runs at the start of each one. */
-    const countCheckpoints = (): ReturnType<typeof vi.fn> => {
-      const flush = vi.fn();
-
-      h.history.setFlushPendingWritesHook(flush);
-
-      return flush;
-    };
-
-    beforeEach(() => {
-      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
-    });
-
-    it('typing again before the idle window restarts the timer', () => {
-      const checkpoints = countCheckpoints();
-
-      h.history.markBoundary();
-      vi.advanceTimersByTime(60);
-      h.history.markBoundary();
-      vi.advanceTimersByTime(60);
-
-      // 120ms after the first boundary but only 60ms after the second: the
-      // first timer must have been cancelled, or the word splits mid-typing.
-      expect(checkpoints).not.toHaveBeenCalled();
-      expect(h.history.hasPendingBoundary()).toBe(true);
-
-      vi.advanceTimersByTime(45);
-
-      expect(checkpoints).toHaveBeenCalledTimes(1);
-      expect(h.history.hasPendingBoundary()).toBe(false);
-    });
-
-    it('clearBoundary cancels the pending checkpoint outright', () => {
-      const checkpoints = countCheckpoints();
-
-      expect(() => h.history.clearBoundary()).not.toThrow();
-
-      h.history.markBoundary();
-      h.history.clearBoundary();
-
-      expect(vi.getTimerCount()).toBe(0);
-
-      vi.advanceTimersByTime(50);
-      h.history.markBoundary();
-      vi.advanceTimersByTime(70);
-
-      // A timer left running from the cancelled boundary would fire here.
-      expect(checkpoints).not.toHaveBeenCalled();
-
-      vi.advanceTimersByTime(45);
-
-      expect(checkpoints).toHaveBeenCalledTimes(1);
-    });
-
-    it('checkAndHandleBoundary checkpoints once the idle window has passed', () => {
-      const checkpoints = countCheckpoints();
-      const started = Date.now();
-
-      h.history.markBoundary();
-
-      // The clock moves without the timer firing, which is what happens when
-      // the tab was busy: the keystroke handler has to notice by itself.
-      vi.setSystemTime(started + 99);
-      h.history.checkAndHandleBoundary();
-
-      expect(checkpoints).not.toHaveBeenCalled();
-      expect(h.history.hasPendingBoundary()).toBe(true);
-
-      vi.setSystemTime(started + 100);
-      h.history.checkAndHandleBoundary();
-
-      expect(checkpoints).toHaveBeenCalledTimes(1);
-      expect(h.history.hasPendingBoundary()).toBe(false);
-      expect(vi.getTimerCount()).toBe(0);
-    });
-  });
-
   describe('clear and destroy', () => {
     it('leaves undo and redo nothing to reach for', () => {
       const focused = addBlock(h, 'focused-block');
@@ -1138,15 +1059,6 @@ describe('UndoHistory — mutation coverage', () => {
       h.history.undo();
 
       expect(lastCaretInput(h)).toBe(before.inputs[0]);
-    });
-
-    it('cancels a pending word boundary', () => {
-      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
-
-      h.history.markBoundary();
-      h.history.clear();
-
-      expect(h.history.hasPendingBoundary()).toBe(false);
     });
 
     it('destroy detaches the manager from the document', () => {
@@ -1246,62 +1158,6 @@ describe('UndoHistory — mutation coverage', () => {
 
       expect(lastCaretInput(h)).toBe(settled.inputs[0]);
     });
-  });
-});
-
-/**
- * PROVEN EQUIVALENT (no test can distinguish this mutant):
- *
- * - markBoundary L952 `if (this.pendingBoundary)` forced true: pendingBoundary
- *   is set false only by clearBoundary — which cancels the very timer that
- *   reads the flag — so the callback never runs with the flag false.
- */
-describe('UndoHistory — boundary checkpoints', () => {
-  let h: Harness;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    document.body.replaceChildren();
-    clearCaret();
-    h = createHarness();
-    vi.useFakeTimers();
-  });
-
-  // The file-level afterEach restores real timers.
-
-  it('checkpoints once the boundary timeout elapses', () => {
-    const stop = vi.spyOn(h.history.undoManager, 'stopCapturing');
-
-    h.history.markBoundary();
-    vi.advanceTimersByTime(BOUNDARY_TIMEOUT_MS);
-
-    expect(stop).toHaveBeenCalledOnce();
-  });
-
-  it('does not checkpoint a boundary that was cleared', () => {
-    const stop = vi.spyOn(h.history.undoManager, 'stopCapturing');
-
-    h.history.markBoundary();
-    h.history.clearBoundary();
-    vi.advanceTimersByTime(BOUNDARY_TIMEOUT_MS);
-
-    expect(stop).not.toHaveBeenCalled();
-  });
-
-  it('does not touch any timer when the first boundary is marked', () => {
-    const clear = vi.spyOn(window, 'clearTimeout');
-
-    h.history.markBoundary();
-
-    expect(clear).not.toHaveBeenCalled();
-  });
-
-  it('does not touch any timer when a boundary is cleared with none pending', () => {
-    const clear = vi.spyOn(window, 'clearTimeout');
-
-    h.history.clearBoundary();
-
-    expect(clear).not.toHaveBeenCalled();
   });
 });
 

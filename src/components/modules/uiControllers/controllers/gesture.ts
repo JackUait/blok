@@ -1,3 +1,4 @@
+import type { Block } from '../../../block';
 import { DATA_ATTR } from '../../../constants';
 import { isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret/boundaries';
 import { isPasteContinuation } from '../../../utils/paste-continuation';
@@ -175,22 +176,34 @@ export class GestureController extends Controller {
       return 'typing';
     }
 
+    // A newline typed in code is text, not a block split (Notion U153).
+    if (key === 'Enter' && !event.shiftKey && input !== null && this.caretBlock()?.tool.isLineBreaksEnabled === true) {
+      return 'typing';
+    }
+
     return 'discrete';
+  }
+
+  /**
+   * The block holding a collapsed caret, or undefined
+   */
+  private caretBlock(): Block | undefined {
+    const selection = window.getSelection();
+
+    if (selection === null || !selection.isCollapsed || selection.anchorNode === null) {
+      return undefined;
+    }
+
+    return this.Blok.BlockManager.getBlockByChildNode(selection.anchorNode);
   }
 
   /**
    * The input holding a collapsed caret, or null
    */
   private caretInput(): HTMLElement | null {
-    const selection = window.getSelection();
+    const anchor = window.getSelection()?.anchorNode ?? null;
 
-    if (selection === null || !selection.isCollapsed || selection.anchorNode === null) {
-      return null;
-    }
-
-    const block = this.Blok.BlockManager.getBlockByChildNode(selection.anchorNode);
-
-    return block?.inputs.find((input) => input.contains(selection.anchorNode)) ?? null;
+    return this.caretBlock()?.inputs.find((input) => input.contains(anchor)) ?? null;
   }
 
   /**

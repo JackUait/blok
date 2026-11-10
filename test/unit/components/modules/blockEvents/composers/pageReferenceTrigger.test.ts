@@ -390,8 +390,6 @@ describe('PageReferenceTrigger', () => {
       Caret: { resetGoalColumn: vi.fn() },
       YjsManager: {
         ...modules.YjsManager,
-        checkAndHandleBoundary: vi.fn(),
-        hasPendingBoundary: vi.fn(() => false),
       },
     } as unknown as BlokModules;
     blockEvents.input(inputEvent(block.currentInput as HTMLElement));
@@ -433,8 +431,6 @@ describe('PageReferenceTrigger', () => {
       Caret: { resetGoalColumn: vi.fn() },
       YjsManager: {
         ...modules.YjsManager,
-        checkAndHandleBoundary: vi.fn(),
-        hasPendingBoundary: vi.fn(() => false),
       },
     } as unknown as BlokModules;
 

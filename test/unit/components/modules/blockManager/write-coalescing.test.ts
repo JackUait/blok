@@ -531,8 +531,8 @@ describe('typing write coalescing', () => {
     });
   });
 
-  describe('word-boundary undo grouping (parity with per-keystroke writes)', () => {
-    it('boundary checkpoint at 100ms splits undo groups exactly as before coalescing', async () => {
+  describe('internal step splits (parity with per-keystroke writes)', () => {
+    it('an internal split mid-typing splits undo groups exactly as before coalescing', async () => {
       const harness = createHarness();
       const { mutate, readText, yjsManager } = harness;
 
@@ -542,12 +542,10 @@ describe('typing write coalescing', () => {
       }
 
       await mutate('hello ');
-      yjsManager.markBoundary();
 
-      // 100ms idle at the boundary → checkpoint (internal stopCapturing).
       // The buffered tail must flush BEFORE the capture group closes, so
       // "hello " belongs to the first group.
-      await advance(100);
+      yjsManager.startSubStep();
 
       for (const text of ['hello w', 'hello wo', 'hello wor', 'hello worl', 'hello world']) {
         await advance(20);
@@ -595,11 +593,11 @@ describe('typing write coalescing', () => {
       await mutate('first');
       await mutate('first!');
 
-      // Past the trailing flush (+400), ~650ms after the last keystroke:
-      // more than captureTimeout (500ms) since the typing, but LESS than
-      // 500ms since the trailing flush — the regression merged both groups
+      // Past the trailing flush (+400), ~850ms after the last keystroke:
+      // more than captureTimeout (709ms) since the typing, but LESS than
+      // 709ms since the trailing flush — the regression merged both groups
       // into ONE undo entry, so a single undo jumped past group 2 AND 1.
-      await sleep(650);
+      await sleep(850);
       expect(readText()).toBe('first!');
 
       await mutate('first! second');
@@ -622,10 +620,10 @@ describe('typing write coalescing', () => {
       await mutate('Original Modified');
       await mutate('Original Modified!');
 
-      // ~650ms after the last keystroke (past the ~400ms trailing flush), a
-      // tune changes (blocks.update with tunes) — its own action, its own
-      // undo entry.
-      await sleep(650);
+      // ~850ms after the last keystroke (past the ~400ms trailing flush and
+      // the 709ms captureTimeout), a tune changes (blocks.update with tunes)
+      // — its own action, its own undo entry.
+      await sleep(850);
       yjsManager.updateBlockTune('b1', 'exampleTune', 'center');
 
       // One undo removes ONLY the tune change.

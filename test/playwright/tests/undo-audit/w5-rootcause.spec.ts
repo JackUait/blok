@@ -18,7 +18,7 @@ import { blocksAsHtml } from '../helpers/saved-as-html';
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 const UNDO = `${MOD}+z`;
 const REDO = `${MOD}+Shift+z`;
-const GAP = 700;
+const GAP = 800;
 const SAVE_SETTLE = 1500;
 const OUT = process.env.W5R_OUT ?? '';
 
@@ -36,6 +36,7 @@ declare global {
     defaultBlockTools: Record<string, { class: unknown }>;
     __log?: LogEntry[];
     __w4n?: { renders: number; saves: number; ready: boolean; last?: OutputData };
+    __keyTimes?: number[];
   }
 }
 
@@ -164,7 +165,6 @@ const INSTRUMENT = String.raw`function (watchId) {
   wrap(ym, 'stopCapturing', 'ym.stopCapturing');
   wrap(uh, 'stopCapturing', 'uh.stopCapturing');
   wrap(uh, 'splitStep', 'uh.splitStep');
-  wrap(uh, 'markBoundary', 'uh.markBoundary');
   wrap(uh, 'markCaretBeforeChange', 'uh.markBefore', (a) => ({ force: a[0], hadPending: uh.hasPendingCaret, pending: S(uh.pendingCaretBefore) }));
   wrap(uh, 'pushCaretAndRestore', 'uh.pushCaretAndRestore');
   wrap(uh, 'restoreCaretSnapshot', 'uh.restoreCaret');
@@ -540,16 +540,11 @@ test.describe('W5R root causes', () => {
     });
   }
 
-  // One-off w4-nested failure ("Level two&nbsp;" after 3 undos) is DESIGNED step splitting, not a write outside
-  // history. The typed space is written by its own leading-edge flush as a TRACKED step (origin 'local',
-  // stack-item-added) and arms the word-boundary checkpoint (UndoHistory.markBoundary, undo-history.ts:1611-1629,
-  // BOUNDARY_TIMEOUT_MS = 100, serializer.ts:311). Any stall >= 100 ms after the space (not the 500 ms capture
-  // window) closes the group, so "deep" becomes the next step. Unloaded, CPU throttling 4x/6x and a 50 ms stall
-  // do not split it; 150 ms and 450 ms stalls always do. Under parallel load (--repeat-each=3) even the plain
-  // run pauses >= 100 ms after the space now and then; the test asserts split <=> checkpoint fired.
-  // "Level two d" was a defect: when the timer had not run yet, the next key's late check split the group on
-  // `input`, after "d" was already buffered, so "d" joined the space's step. longtask150 forces that path.
-  // "new item" holds a space too, so a pause there splits it: undo until Enter is undone, not a fixed count.
+  // One-off w4-nested failure ("Level two&nbsp;" after 3 undos): the space and "deep" are one typing step
+  // unless a key of "deep" lands more than the typing window (~708 ms, replica-undo RM1/RM5) after the space.
+  // Stalls and CPU throttling below that window do not split it (U008: Notion keeps a pause after a space).
+  // "Level two d" was a defect: "d" joined the space's step after a split. A split must fall between keys.
+  // "new item" may be cut by the window too: undo until Enter is undone, not a fixed count.
   for (const variant of ['plain', 'cpu4', 'cpu6', 'stall50', 'stall150', 'stall450', 'longtask150'] as const) {
     test(`W5R-5 ${variant}: toggle > callout > list > nested list, first undo past Enter after " deep", Enter, "new item"`, async ({ page }) => {
       await mount(page, [
@@ -572,6 +567,10 @@ test.describe('W5R root causes', () => {
       await editable(page, 'l2').click();
       await page.keyboard.press('End');
       await mark(page, 'TYPE');
+      await page.evaluate(() => {
+        window.__keyTimes = [];
+        window.addEventListener('keydown', (event) => window.__keyTimes?.push(event.timeStamp), { capture: true });
+      });
       await page.keyboard.type(' ');
       await gap(page, stall);
       await page.evaluate((ms) => {
@@ -584,6 +583,7 @@ test.describe('W5R root causes', () => {
         }
       }, longTask);
       await page.keyboard.type('deep');
+      const keyTimes = await page.evaluate(() => window.__keyTimes?.slice(0, 5) ?? []);
       await gap(page);
       const s1 = await l2();
       const blocksBeforeEnter = (await savedText(page)).length;
@@ -611,22 +611,23 @@ test.describe('W5R root causes', () => {
       const log = await readLog(page);
 
       const typed = log.slice(log.findIndex((e) => e.k === '=== TYPE'));
-      const isL2Text = (e: LogEntry): boolean => e.k === 'Y' && e.path === 'l2/data/text';
-      const spaceWrite = typed.find(isL2Text);
-      const boundaryAt = typed.findIndex((e) => e.k === 'uh.markBoundary');
-      const nextWriteAt = typed.findIndex((e, i) => i > boundaryAt && isL2Text(e));
-      // The word-boundary checkpoint fired before "d" was written. It splits through `splitStep`, not the
-      // implicit `stopCapturing`, which only flushes once a gesture has started.
-      const checkpoint = boundaryAt >= 0 && typed.slice(boundaryAt, nextWriteAt).some((e) => e.k === 'uh.splitStep');
+      const spaceWrite = typed.find((e) => e.k === 'Y' && e.path === 'l2/data/text');
+      // Keydown clock: how long after the space the last key of "deep" came.
+      const span = (keyTimes.at(-1) ?? 0) - (keyTimes[0] ?? 0);
 
-      dump(`5-${variant}`, { s1, steps, deepUndone, checkpoint, log });
+      dump(`5-${variant}`, { s1, steps, deepUndone, keyTimes, log });
       expect(spaceWrite?.origin, 'the typed space is written as a tracked local change').toBe('local');
       expect(enterUndone, 'undoing Enter leaves " deep" whole').toEqual({ doc: 'Level two deep', saved: [{ text: 'Level two deep' }] });
-      expect(checkpoint || stall + longTask < 100, 'a stall of 100 ms or more after the space always closes the group').toBe(true);
-      // The space survives the undo of "deep" exactly when the checkpoint fired, whatever caused the pause.
-      expect(deepUndone).toEqual(checkpoint
-        ? { doc: 'Level two\u00a0', saved: [{ text: 'Level two\u00a0' }] }
-        : { doc: 'Level two', saved: [{ text: 'Level two' }] });
+
+      if (span < 680) {
+        expect(deepUndone, 'the space and "deep" are one step inside the window').toEqual({ doc: 'Level two', saved: [{ text: 'Level two' }] });
+      } else {
+        // The window cut somewhere after the space: undo leaves the space plus the keys before the cut.
+        expect(deepUndone.saved, 'the DOM and the saved text agree').toEqual([{ text: deepUndone.doc }]);
+        const left = (deepUndone.doc ?? '').replace(/\u00a0/g, ' ');
+
+        expect('Level two deep'.startsWith(left) && left.length < 'Level two deep'.length, `"${left}" is a prefix of the typing`).toBe(true);
+      }
     });
   }
 });

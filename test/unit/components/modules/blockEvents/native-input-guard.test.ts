@@ -223,10 +223,6 @@ const createHarness = (input: HTMLElement): Harness => {
       stopCapturing: vi.fn(),
       markCaretBeforeChange: vi.fn(),
       updateLastCaretAfterPosition: vi.fn(),
-      markBoundary: vi.fn(),
-      clearBoundary: vi.fn(),
-      checkAndHandleBoundary: vi.fn(),
-      hasPendingBoundary: vi.fn(() => false),
     } as unknown as BlokModules['YjsManager'],
   };
 

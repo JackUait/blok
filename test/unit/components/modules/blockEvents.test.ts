@@ -105,10 +105,6 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     YjsManager: {
       stopCapturing: vi.fn(),
       startSubStep: vi.fn(),
-      markBoundary: vi.fn(),
-      clearBoundary: vi.fn(),
-      checkAndHandleBoundary: vi.fn(),
-      hasPendingBoundary: vi.fn().mockReturnValue(false),
     } as unknown as BlokModules['YjsManager'],
   };
 
@@ -911,91 +907,6 @@ describe('BlockEvents', () => {
       blockEvents.input(event);
 
       expect(setCurrentBlockByChildNode).toHaveBeenCalledWith(target);
-    });
-
-    describe('smart grouping', () => {
-      it('marks boundary when space is typed', () => {
-        let pendingBoundary = false;
-        let boundaryTimestamp = 0;
-
-        const markBoundarySpy = vi.fn(() => {
-          pendingBoundary = true;
-          boundaryTimestamp = Date.now();
-        });
-        const hasPendingBoundarySpy = vi.fn(() => pendingBoundary);
-
-        const blockEvents = createBlockEvents({
-          YjsManager: {
-            markBoundary: markBoundarySpy,
-            checkAndHandleBoundary: vi.fn(),
-            hasPendingBoundary: hasPendingBoundarySpy,
-            clearBoundary: vi.fn(),
-          } as unknown as BlokModules['YjsManager'],
-        });
-
-        const event = {
-          inputType: 'insertText',
-          data: ' ',
-        } as InputEvent;
-
-        blockEvents.input(event);
-
-        expect(markBoundarySpy).toHaveBeenCalled();
-        expect(pendingBoundary).toBe(true);
-        expect(boundaryTimestamp).toBeGreaterThan(0);
-      });
-
-      it('does not close a timed-out boundary once the character is already in the DOM', () => {
-        const checkAndHandleBoundarySpy = vi.fn();
-
-        const blockEvents = createBlockEvents({
-          YjsManager: {
-            markBoundary: vi.fn(),
-            checkAndHandleBoundary: checkAndHandleBoundarySpy,
-            hasPendingBoundary: vi.fn().mockReturnValue(false),
-            clearBoundary: vi.fn(),
-          } as unknown as BlokModules['YjsManager'],
-        });
-
-        const event = {
-          inputType: 'insertText',
-          data: 'a',
-        } as InputEvent;
-
-        blockEvents.input(event);
-
-        // The keyboard controller closes it on beforeinput. Here the character's own write is
-        // already buffered, so a split would put it on the wrong side of the boundary.
-        expect(checkAndHandleBoundarySpy).not.toHaveBeenCalled();
-      });
-
-      it('clears boundary when non-boundary follows boundary quickly', () => {
-        let boundaryCleared = false;
-        const hasPendingBoundarySpy = vi.fn().mockReturnValue(true);
-
-        const clearBoundarySpy = vi.fn(() => {
-          boundaryCleared = true;
-        });
-
-        const blockEvents = createBlockEvents({
-          YjsManager: {
-            markBoundary: vi.fn(),
-            checkAndHandleBoundary: vi.fn(),
-            hasPendingBoundary: hasPendingBoundarySpy,
-            clearBoundary: clearBoundarySpy,
-          } as unknown as BlokModules['YjsManager'],
-        });
-
-        const event = {
-          inputType: 'insertText',
-          data: 'a',
-        } as InputEvent;
-
-        blockEvents.input(event);
-
-        expect(clearBoundarySpy).toHaveBeenCalled();
-        expect(boundaryCleared).toBe(true);
-      });
     });
   });
 });

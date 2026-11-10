@@ -101,10 +101,6 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     } as unknown as BlokModules['Tools'],
     YjsManager: {
       stopCapturing: vi.fn(),
-      markBoundary: vi.fn(),
-      clearBoundary: vi.fn(),
-      checkAndHandleBoundary: vi.fn(),
-      hasPendingBoundary: vi.fn().mockReturnValue(false),
     } as unknown as BlokModules['YjsManager'],
   };
 

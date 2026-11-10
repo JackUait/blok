@@ -83,7 +83,7 @@ const flushThroughFrame = async (): Promise<void> => {
 };
 
 /**
- * Y.UndoManager merges writes made within CAPTURE_TIMEOUT_MS (500ms) into one
+ * Y.UndoManager merges writes made within CAPTURE_TIMEOUT_MS into one
  * undo entry. A real toolbox gesture (hover, click +, wait for the popover,
  * click a tool) takes longer than that, so the tests that model it must too —
  * the split into two entries is exactly what the merge rule has to handle.

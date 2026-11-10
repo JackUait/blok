@@ -69,7 +69,7 @@ const flushThroughFrame = async (): Promise<void> => {
 };
 
 /**
- * Y.UndoManager merges writes made within CAPTURE_TIMEOUT_MS (500ms) into one
+ * Y.UndoManager merges writes made within CAPTURE_TIMEOUT_MS into one
  * entry, so an earlier edit only counts as a SEPARATE entry past that window.
  */
 const sleepPastCaptureWindow = (): Promise<void> =>

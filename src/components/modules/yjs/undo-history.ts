@@ -9,7 +9,7 @@ import { carriesReadOnly, isBlockReadOnly } from '../../utils/read-only-blocks';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
 import { dropPeerPaddingOfRemovedColumn, isPaddingCell, namesOnlyPaddingCells } from './grid-padding';
-import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS } from './serializer';
+import { CAPTURE_TIMEOUT_MS, TYPING_WINDOW_MS } from './serializer';
 import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, MoveReplayCallback, SingleMoveEntry, UndoScopeType } from './types';
 
 type StackItem = Y.UndoManager['undoStack'][number];
@@ -294,24 +294,6 @@ export class UndoHistory {
   private isPerformingUndoRedo = false;
 
   /**
-   * Whether the last typed character was a boundary (space, punctuation).
-   * Used for smart undo grouping.
-   */
-  private pendingBoundary = false;
-
-  /**
-   * Timestamp when the boundary character was typed.
-   * Used to check if 100ms has elapsed.
-   */
-  private boundaryTimestamp = 0;
-
-  /**
-   * Timer ID for the boundary timeout.
-   * Fires stopCapturing() after 100ms idle at a boundary.
-   */
-  private boundaryTimeoutId: ReturnType<typeof setTimeout> | null = null;
-
-  /**
    * Set by the first {@link beginGesture}. From then on only a gesture start
    * (or the capture clock) closes a step, and {@link stopCapturing} only
    * flushes. Before it, stopCapturing still splits: code that drives the
@@ -321,6 +303,9 @@ export class UndoHistory {
 
   /** `blockId#inputIndex` of the open typing run; null when the open step is not typing. */
   private typingInputKey: string | null = null;
+
+  /** When the open typing run's first key came (Date.now). */
+  private typingRunStart = 0;
 
   /** A tracked value write is about to open a step; see {@link CaretHistoryEntry.outsideEditor}. */
   private pendingValueWrite = false;
@@ -373,9 +358,9 @@ export class UndoHistory {
    * Flush barrier for coalesced typing writes (see BlockWriteBuffer). Runs at
    * the START of stopCapturing/undo/redo so buffered writes join the capture
    * group being closed or unwound. Living here (not only on YjsManager) is
-   * load-bearing: the 100ms word-boundary timer calls stopCapturing internally,
-   * and without the flush-first ordering a 400ms trailing write could land
-   * AFTER the boundary split it belongs before.
+   * load-bearing: the typing window splits internally, and without the
+   * flush-first ordering a 400ms trailing write could land AFTER the split
+   * it belongs before.
    */
   private flushPendingWritesHook: () => void = () => {
     // No-op until YjsManager wires the write buffer.
@@ -2526,8 +2511,8 @@ export class UndoHistory {
    * Close the open step for real.
    */
   public splitStep(): void {
-    // Flush BEFORE closing the group: a word-boundary checkpoint must carry
-    // the buffered tail of the word it ends (100ms boundary vs 400ms trailing).
+    // Flush BEFORE closing the group: the closed step must carry the
+    // buffered tail of the typing it ends (the trailing flush waits 400ms).
     this.flushPendingWritesHook();
 
     this.undoManager.stopCapturing();
@@ -2638,10 +2623,13 @@ export class UndoHistory {
     this.openEntry = null;
 
     const liveKey = typingKey ?? (live === null ? null : `${live.blockId}#${live.inputIndex}`);
-    const continuesTyping = kind === 'typing' && liveKey !== null && liveKey === this.typingInputKey;
+    const now = Date.now();
+    const inWindow = this.captureHolds > 0 || now - this.typingRunStart <= TYPING_WINDOW_MS;
+    const continuesTyping = kind === 'typing' && liveKey !== null && liveKey === this.typingInputKey && inWindow;
 
     if (!continuesTyping) {
       this.closeStepForGesture();
+      this.typingRunStart = now;
     }
     this.typingInputKey = kind === 'typing' ? liveKey : null;
 
@@ -3533,69 +3521,6 @@ export class UndoHistory {
 
 
   /**
-   * Check if there is a pending boundary waiting for timeout.
-   * @returns true if a boundary character was typed and hasn't timed out yet
-   */
-  public hasPendingBoundary(): boolean {
-    return this.pendingBoundary;
-  }
-
-  /**
-   * Mark that a boundary character (space, punctuation) was just typed.
-   * Starts a timer that will call stopCapturing() after BOUNDARY_TIMEOUT_MS
-   * if no new input arrives.
-   */
-  public markBoundary(): void {
-    this.pendingBoundary = true;
-    this.boundaryTimestamp = Date.now();
-
-    // Clear any existing timeout
-    if (this.boundaryTimeoutId !== null) {
-      clearTimeout(this.boundaryTimeoutId);
-    }
-
-    // Set new timeout to create checkpoint if no more input
-    this.boundaryTimeoutId = setTimeout(() => {
-      if (this.pendingBoundary) {
-        this.splitStep();
-        this.pendingBoundary = false;
-      }
-      this.boundaryTimeoutId = null;
-    }, BOUNDARY_TIMEOUT_MS);
-  }
-
-  /**
-   * Clear the pending boundary state without creating a checkpoint.
-   * Called when the user continues typing before the timeout.
-   */
-  public clearBoundary(): void {
-    this.pendingBoundary = false;
-
-    if (this.boundaryTimeoutId !== null) {
-      clearTimeout(this.boundaryTimeoutId);
-      this.boundaryTimeoutId = null;
-    }
-  }
-
-  /**
-   * Check if a pending boundary has timed out and create a checkpoint if so.
-   * Called on each keystroke to handle the case where the user resumes typing
-   * after a pause longer than BOUNDARY_TIMEOUT_MS.
-   */
-  public checkAndHandleBoundary(): void {
-    if (!this.pendingBoundary) {
-      return;
-    }
-
-    const elapsed = Date.now() - this.boundaryTimestamp;
-
-    if (elapsed >= BOUNDARY_TIMEOUT_MS) {
-      this.splitStep();
-      this.clearBoundary();
-    }
-  }
-
-  /**
    * Clear all history stacks (move, caret, and Yjs UndoManager) and pending state.
    * Used when loading new data or destroying the manager.
    */
@@ -3614,8 +3539,6 @@ export class UndoHistory {
     this.typingInputKey = null;
     this.nothingUndoable = false;
     // Holds are left alone: each holder still owns its release.
-    // Clear smart grouping state
-    this.clearBoundary();
     this.undoManager.clear();
   }
 

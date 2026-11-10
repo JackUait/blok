@@ -5,7 +5,6 @@ import { Module } from '../../__module';
 import { Dom as $ } from '../../dom';
 import { keyCodes } from '../../utils';
 import { isInlineEmojiEnabled } from '../../utils/emoji/inline-emoji-config';
-import { YjsManager } from '../yjs';
 
 import { BlockSelectionKeys } from './composers/blockSelectionKeys';
 import { EmojiTrigger } from './composers/emojiTrigger';
@@ -354,9 +353,6 @@ export class BlockEvents extends Module {
      */
     this.Blok.Caret.resetGoalColumn();
 
-    // Handle smart grouping for undo
-    this.handleSmartGrouping(event);
-
     /**
      * Markdown shortcuts first: a markdown conversion rewrites the block, and
      * an emoji span resolved against the pre-conversion text would be stale.
@@ -435,37 +431,6 @@ export class BlockEvents extends Module {
     }
 
     this.Blok.BlockSelection.clearSelection(event);
-  }
-
-  /**
-   * Handle smart grouping logic for undo based on boundary characters.
-   * Boundary characters (space, punctuation) followed by a pause create undo checkpoints.
-   * @param event - input event
-   */
-  private handleSmartGrouping(event: InputEvent): void {
-    const { YjsManager: yjsManager } = this.Blok;
-
-    // Only handle text input
-    if (event.inputType !== 'insertText' || event.data === null) {
-      return;
-    }
-
-    const char = event.data;
-
-    // A boundary that timed out was closed on beforeinput (keyboard controller).
-
-    // Access static method via constructor
-    if (YjsManager.isBoundaryCharacter(char)) {
-      // Mark boundary - will create checkpoint if followed by pause
-      yjsManager.markBoundary();
-
-      return;
-    }
-
-    if (yjsManager.hasPendingBoundary()) {
-      // Non-boundary character typed quickly after boundary - clear pending state
-      yjsManager.clearBoundary();
-    }
   }
 
   /**

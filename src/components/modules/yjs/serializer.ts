@@ -324,39 +324,17 @@ export const MAX_VALUE_DEPTH = 256;
 export type YjsOutputBlockData = OutputBlockData;
 
 /**
- * Characters that mark potential undo checkpoint positions.
+ * A typing step takes every key within this many ms of the step's first key.
+ * Notion kept a key at 704 ms and cut one at 712 ms (replica-undo RM1, RM2, RM5).
  */
-export const BOUNDARY_CHARACTERS = new Set([
-  ' ',   // space
-  '\t',  // tab
-  '.',   // period
-  '?',   // question mark
-  '!',   // exclamation
-  ',',   // comma
-  ';',   // semicolon
-  ':',   // colon
-]);
+export const TYPING_WINDOW_MS = 708;
 
 /**
- * Time in milliseconds to batch consecutive changes into a single undo entry.
- * This should be long enough to cover normal human typing speed (50-200ms between keystrokes).
- * Smart grouping logic calls stopCapturing() to force checkpoints at word boundaries.
+ * Y.UndoManager merges a write into the open step while it comes less than
+ * this long after the last change. It must exceed {@link TYPING_WINDOW_MS},
+ * or yjs would cut a pause the typing window keeps.
  */
-export const CAPTURE_TIMEOUT_MS = 500;
-
-/**
- * Time in milliseconds to wait after a boundary character before creating a checkpoint.
- */
-export const BOUNDARY_TIMEOUT_MS = 100;
-
-/**
- * Check if a character is a boundary character that can trigger an undo checkpoint.
- * @param char - Single character to check
- * @returns true if the character is a boundary character
- */
-export const isBoundaryCharacter = (char: string): boolean => {
-  return BOUNDARY_CHARACTERS.has(char);
-};
+export const CAPTURE_TIMEOUT_MS = TYPING_WINDOW_MS + 1;
 
 export interface YBlockSerializerOptions {
   /** A tool's own `static richTextFields`, added to the built-in table. */

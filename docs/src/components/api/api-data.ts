@@ -918,6 +918,17 @@ if (index !== undefined) {
         example: `editor.blocks.scrollToBlock(nodeId);`,
       },
       {
+        name: "blocks.copy(event, ids)",
+        returnType: "void",
+        description:
+          "Writes blocks to a `copy` event's clipboard, the way a copy of selected blocks does. Call it from your own `copy` handler, for example when your tool keeps its own selection.\n\n- It writes Blok's own format with each block's children, plus HTML and Markdown text.\n- Blocks go in the order of `ids`. An id that names no block is skipped.\n- It calls `preventDefault` on the event. Stop the event yourself if Blok's own copy must not run after yours.",
+        example: `document.addEventListener('copy', (event) => {
+  if (pickedIds.length === 0) return;
+  event.stopPropagation();
+  editor.blocks.copy(event, pickedIds);
+}, true);`,
+      },
+      {
         name: "blocks.getChildren(parentId)",
         returnType: "BlockAPI[]",
         description: "Get all child blocks of a parent container block.",

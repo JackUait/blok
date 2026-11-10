@@ -36,8 +36,8 @@
     "date": "2026-10-26"
   },
   "/docs/blocks-api": {
-    "hash": "94a1870c4bcd3352",
-    "date": "2026-10-30"
+    "hash": "73879430e4105047",
+    "date": "2026-11-10"
   },
   "/docs/blok-editor": {
     "hash": "6f75015eb476bc78",
@@ -136,7 +136,7 @@
     "date": "2026-10-07"
   },
   "/docs/history-api": {
-    "hash": "2246a4b5dfd7cc4b",
+    "hash": "d8551b622e899df3",
     "date": "2026-11-10"
   },
   "/docs/i18n-api": {
@@ -372,8 +372,8 @@
     "date": "2026-10-26"
   },
   "/ru/docs/blocks-api": {
-    "hash": "16085e47e5254b9e",
-    "date": "2026-10-30"
+    "hash": "27c40bf3ccf8942b",
+    "date": "2026-11-10"
   },
   "/ru/docs/blok-editor": {
     "hash": "5536bd3bdc5a817e",
@@ -472,7 +472,7 @@
     "date": "2026-10-07"
   },
   "/ru/docs/history-api": {
-    "hash": "3a00209292fc4dae",
+    "hash": "2f3af3c36078e485",
     "date": "2026-11-10"
   },
   "/ru/docs/i18n-api": {

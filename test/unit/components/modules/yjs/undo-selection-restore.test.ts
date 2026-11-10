@@ -100,6 +100,7 @@ describe('UndoHistory: the selection at the undo press', () => {
         clearSelection: vi.fn(() => blocks.forEach((block) => Object.assign(block, { selected: false }))),
         selectBlock,
         adoptSelectionIntoNavigationMode: vi.fn(() => false),
+        disableNavigationMode: vi.fn(),
       },
       InlineToolbar: toolbar,
       Caret: caret,

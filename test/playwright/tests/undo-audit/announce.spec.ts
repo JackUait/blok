@@ -326,6 +326,39 @@ test.describe('undo audit — undo and redo announcements', () => {
     });
   }
 
+  // The block stays selected through undo and redo, so the user never left navigation mode.
+  test('undo and redo of Turn into never say Exited navigation mode', async ({ page }) => {
+    await createWith(page, [P('a', 'Above'), P('b', 'Text body')]);
+    await turnInto(page, 'b', 'Heading 1');
+    await expect.poll(() => savedBlocks(page)).toEqual(['paragraph:Above', 'header:Text body']);
+    // Every message, since the region clears 1 s after each one.
+    await page.evaluate(() => {
+      const heard: string[] = [];
+      const region = document.querySelector('[data-blok-announcer][role="status"]');
+
+      new MutationObserver(() => {
+        const text = region?.textContent ?? '';
+
+        if (text !== '') {
+          heard.push(text);
+        }
+      }).observe(document.body, { subtree: true, childList: true, characterData: true });
+      Object.assign(window, { heard });
+    });
+    const heard = async (): Promise<string[]> => page.evaluate(() => (window as unknown as { heard: string[] }).heard);
+
+    for (const [key, message] of [[UNDO, 'Undone'], [REDO, 'Redone'], [UNDO, 'Undone']] as const) {
+      await page.keyboard.press(key);
+      await expect.poll(heard).toContain(message);
+      await page.evaluate(() => new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 300);
+      }));
+    }
+
+    expect(await heard()).not.toContain('Exited navigation mode');
+    await expect(page.locator('[data-blok-id="b"]')).toHaveAttribute('data-blok-selected', 'true');
+  });
+
   test('an undo after a shortcut says only Undone and keeps the steps', async ({ page }) => {
     const status = page.locator('[data-blok-announcer][role="status"]');
     const editable = page.locator(`#${HOLDER_ID} [contenteditable="true"]`).first();

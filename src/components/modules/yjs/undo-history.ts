@@ -3691,6 +3691,9 @@ export class UndoHistory {
       return false;
     }
 
+    // One focusable block takes navigation mode back below, so leaving it is
+    // not announced. Same condition as adoptSelectionIntoNavigationMode.
+    BlockSelection.disableNavigationMode(false, !(found.length === 1 && found[0].focusable));
     BlockSelection.clearSelection();
     // The next edit and the toolbar follow the current block.
     BlockManager.currentBlock = found[0];

@@ -1414,8 +1414,9 @@ export class BlockSelection extends Module {
   /**
    * Disables navigation mode and optionally focuses the block for editing
    * @param {boolean} focusForEditing - if true, set caret to the focused block
+   * @param announceExit - false when the caller enters navigation mode again at once
    */
-  public disableNavigationMode(focusForEditing = false): void {
+  public disableNavigationMode(focusForEditing = false, announceExit = true): void {
     if (!this._navigationModeEnabled) {
       return;
     }
@@ -1425,7 +1426,9 @@ export class BlockSelection extends Module {
      * a future navigation session starts fresh, then announce the mode exit.
      */
     this.resetNavigationAnnounce();
-    announce(this.Blok.I18n.t('a11y.navigationModeExited'), { politeness: 'polite' });
+    if (announceExit) {
+      announce(this.Blok.I18n.t('a11y.navigationModeExited'), { politeness: 'polite' });
+    }
 
     const focusedBlock = this.navigationFocusedBlock;
 

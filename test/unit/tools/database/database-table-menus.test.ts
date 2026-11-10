@@ -71,6 +71,19 @@ describe('table view menus', () => {
     expect(constructed[0]?.cover).toBe(true);
     expect(constructed[1]?.cover).toBeUndefined();
   });
+
+  // notion-motion.md Round 10 "List view row menu anchor": the row menu opens left of the list row's handle,
+  // its right edge 5px before it, centred on it, 265 wide; the timeline menu ends about 12px over the window bottom.
+  it('opens a handle menu as the card menu, left of its handle with a 5px gap and 12px from the window edge', () => {
+    openMenu(document.createElement('button'), [], { kind: 'handle' });
+
+    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-row-menu', 'blok-database-card-menu', 'blok-database-handle-menu']);
+    expect(constructed[0]?.minWidth).toBe('265px');
+    expect(constructed[0]?.placeLeftOfAnchor).toBe(true);
+    expect(constructed[0]?.offset).toBe(5);
+    expect(constructed[0]?.viewportMargin).toBe(12);
+    expect(constructed[0]?.cover).toBeUndefined();
+  });
 });
 
 // research/30 B6 measured the date cell only; the row menu's last-edited time keeps "N days ago".

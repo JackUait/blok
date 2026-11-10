@@ -2900,6 +2900,11 @@ button[data-blok-database-column-count]:hover {
   padding-block: 0;
 }
 
+/* notion-motion.md Round 10 "List view row menu anchor": the row handle menu scales in from its centre. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-handle-menu'] > [data-blok-popover-container] {
+  transform-origin: center;
+}
+
 /* Panels and pickers in a CellPopover (Filter, Sort…) move like the menus (notion-motion.md "Popovers").
    Editors that open at once opt out further down, after these rules. */
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'],
@@ -7923,13 +7928,37 @@ textarea[data-blok-database-cell-input] {
   padding-inline: var(--blok-space-2) var(--blok-space-1-5);
 }
 
-/* notion-motion.md Round 9 (r9-editprop-flyout.raw), Select: "Options" and its "+" 5px higher in the same 30px,
-   and the option text at box x+40. Status and Multi-select are unmeasured. */
-[data-blok-database-options-editor="select"] [data-blok-database-options-heading] {
+/* notion-motion.md Round 9 (r9-editprop-flyout.raw), Select, and Round 10, Multi-select: "Options" and its "+"
+   5px higher in the same 30px, and the option text at box x+40. */
+[data-blok-database-options-editor="select"] [data-blok-database-options-heading],
+[data-blok-database-options-editor="multiSelect"] [data-blok-database-options-heading] {
   padding-block: var(--blok-space-0-25) var(--blok-space-2-25);
 }
 
-[data-blok-database-options-editor="select"] [data-blok-database-select-option-label] {
+[data-blok-database-options-editor="select"] [data-blok-database-select-option-label],
+[data-blok-database-options-editor="multiSelect"] [data-blok-database-select-option-label] {
+  margin-inline-start: var(--blok-space-0-5);
+}
+
+/* notion-motion.md Round 10 (r10-editprop-status.raw): 300x207. Labels at x 16, each "+" at x 264 level with it,
+   rows at y 43 / 109 / 175, the handle at x 14, the chip at x 38. Notion's first group sits 1px lower. */
+[data-blok-database-options-editor="status"] {
+  padding-block-end: 0;
+}
+
+[data-blok-database-options-editor="status"] [data-blok-database-options-heading] {
+  padding: var(--blok-space-2-5) var(--blok-space-3) var(--blok-space-2);
+}
+
+[data-blok-database-options-editor="status"] [data-blok-database-options-heading]:first-child {
+  padding-block-end: var(--blok-space-2-25);
+}
+
+[data-blok-database-options-editor="status"] [data-blok-database-select-option] {
+  padding-inline-start: var(--blok-space-2);
+}
+
+[data-blok-database-options-editor="status"] [data-blok-database-select-option-label] {
   margin-inline-start: var(--blok-space-0-5);
 }
 
@@ -8163,10 +8192,15 @@ textarea[data-blok-database-cell-input] {
 }
 
 /* research/30 §10f: "Not started DEFAULT". Size and ink unmeasured: the template menu's "Default" mark. */
+/* Round 10: "DEFAULT" right before the chevron, 12/16.8 weight 500. Notion's gray fails AA, so it keeps the secondary ink. */
 [data-blok-database-option-default] {
-  margin-inline-start: var(--blok-space-1);
+  margin-inline-start: auto;
   color: var(--blok-database-ink-secondary);
   font-size: 12px;
+  line-height: 16.8px;
+  font-weight: 500;
+  text-transform: uppercase;
+  align-self: center;
 }
 
 [data-blok-database-option-color] [data-blok-database-select-option-check] {
@@ -11883,12 +11917,27 @@ input[data-blok-database-picker-search]:focus {
   margin-block-start: var(--blok-space-2);
 }
 
-[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] + [data-blok-database-panel-row],
+[data-blok-database-panel-page="picker"] [data-blok-database-picker-list] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
   margin-block-start: var(--blok-space-0-25);
 }
 
-[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] {
+/* Round 10 "Group by list": "None" has no icon and keeps its text at x+12. */
+[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-icon]),
+[data-blok-database-panel-page="picker"] [data-blok-database-picker-list] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-icon]) {
   padding-inline-start: var(--blok-space-3);
+}
+
+/* notion-motion.md Round 10 (r10-picker-addsort.raw, r10-picker-addfilter.raw): the Sort and Filter pickers put
+   the search box at (12,12) and the first row at y 52. Notion's 19.2px glyph at x 16.4 shares a 20px glyph's centre. */
+[data-blok-database-panel-page="picker"] > [data-blok-database-panel-input],
+[data-blok-database-panel-page="picker"] > [data-blok-database-picker-list] {
+  margin-block-start: var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="picker"] [data-blok-database-panel-icon] svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* notion-motion.md Round 9 (r9-vs-group.raw): grouped, Group by sits at y+46 and the rows are 29px apart. */

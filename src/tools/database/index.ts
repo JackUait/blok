@@ -8875,7 +8875,7 @@ export class DatabaseTool implements BlockTool {
 
       if (listHandle !== null && listRowEl !== null && listRowEl !== undefined && listRowId !== null && listRowId !== undefined) {
         event.stopPropagation();
-        this.openCardMenu(listHandle, listRowEl, listRowId);
+        this.openCardMenu(listHandle, listRowEl, listRowId, undefined, 'handle');
 
         return;
       }
@@ -9002,12 +9002,13 @@ export class DatabaseTool implements BlockTool {
    * Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3).
    * A timeline bar has no Comment; its table panel row does (research/22 §11).
    */
-  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at']): void {
+  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, at?: OpenMenuOptions['at'], kind: 'card' | 'handle' = 'card'): void {
     const type = this.shownView()?.type;
 
     this.openRowMenu(rowId, anchor, cardEl, {
       viewSettings: type === 'board' || type === 'gallery',
       comment: !cardEl.hasAttribute('data-blok-database-timeline-bar'),
+      kind,
       ...(at !== undefined ? { at } : {}),
     });
   }
@@ -9027,7 +9028,7 @@ export class DatabaseTool implements BlockTool {
    * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
    * hover buttons while the menu is up.
    */
-  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at'] }): void {
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean; at?: OpenMenuOptions['at']; kind?: 'card' | 'handle' }): void {
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
     const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
@@ -9071,7 +9072,7 @@ export class DatabaseTool implements BlockTool {
       }),
     }), {
       searchable: true,
-      kind: 'card',
+      kind: options.kind ?? 'card',
       ...(options.at !== undefined ? { at: options.at } : {}),
       searchPlaceholder: this.api.i18n.t('tools.database.searchActions'),
       onClose: () => {

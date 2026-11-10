@@ -136,6 +136,8 @@ export const DATABASE_HEADER_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-
 const DATABASE_ROW_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-row-menu`;
 /** The same row menu from a card's "•••" or a right-click: 265 wide and no 400px cap (database.css, feel findings B15). */
 const DATABASE_CARD_MENU_CLASS = `${DATABASE_ROW_MENU_CLASS} blok-database-card-menu`;
+/** The card menu opened from a list row's handle: beside the handle, scaling from its centre (database.css). */
+const DATABASE_HANDLE_MENU_CLASS = `${DATABASE_CARD_MENU_CLASS} blok-database-handle-menu`;
 
 export interface OpenMenuOptions {
   searchable?: boolean;
@@ -143,14 +145,14 @@ export interface OpenMenuOptions {
   onClose?: () => void;
   /**
    * Which database menu this is: its row size comes from the class. A row menu opens left of its ⋮⋮;
-   * a card menu is the same row menu, opened over its "•••".
+   * a card menu is the same row menu, opened over its "•••"; a handle menu is the card menu, opened beside its handle.
    */
-  kind?: 'header' | 'row' | 'card';
+  kind?: 'header' | 'row' | 'card' | 'handle';
   /** Where the menu opens instead of the anchor's box; `positionContext` moves it with the page. */
   at?: { position: DOMRect; positionContext: HTMLElement };
 }
 
-const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS, card: DATABASE_CARD_MENU_CLASS } as const;
+const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS, card: DATABASE_CARD_MENU_CLASS, handle: DATABASE_HANDLE_MENU_CLASS } as const;
 
 /** Opens a menu under `anchor`; `data-popover-open` marks the anchor while it is up. */
 export const openMenu = (
@@ -162,11 +164,13 @@ export const openMenu = (
   const params = {
     class: menuClass,
     ...(options.kind === 'row' ? { placeLeftOfAnchor: true, viewportMargin: 8 } : {}),
+    // notion-motion.md Round 10: the right edge 5px before the handle, centred on it; pushed up to ~12px over the window bottom.
+    ...(options.kind === 'handle' ? { placeLeftOfAnchor: true, offset: 5, viewportMargin: 12 } : {}),
     animateClose: true,
     trigger: anchor,
     items,
     width: 'auto' as const,
-    minWidth: options.kind === 'card' ? '265px' : '220px',
+    minWidth: options.kind === 'card' || options.kind === 'handle' ? '265px' : '220px',
     // A card's menu opens over its "•••", shifted to stay in the window (feel findings B15, 09-notion-card-menu.png).
     ...(options.kind === 'card' ? { cover: true } : {}),
     autoFocusFirstItem: false,

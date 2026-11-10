@@ -616,6 +616,8 @@ export class DatabaseViewControls {
   private openFilterPicker(anchor: HTMLElement): void {
     this.openPropertyPicker(anchor, 'database-filter-picker', FILTERABLE_TYPES, (property) => this.filterBy(property.id, anchor), {
       placeholder: this.t('filterByPlaceholder'),
+      // notion-motion.md Round 10 "Add filter picker": a property already filtered is left out.
+      used: this.view()?.filters.map((filter) => filter.propertyId) ?? [],
       footer: (close) => panelRow({
         label: this.t('filterAddAdvanced'),
         testId: 'database-filter-picker-advanced',
@@ -652,7 +654,7 @@ export class DatabaseViewControls {
     testId: string,
     types: readonly PropertyType[],
     onPick: (property: PropertyDefinition) => void,
-    options: { placeholder: string; footer?: (close: () => void) => HTMLElement }
+    options: { placeholder: string; footer?: (close: () => void) => HTMLElement; used?: string[] }
   ): void {
     const state = { query: '', active: 0 };
     const list = document.createElement('div');
@@ -661,7 +663,7 @@ export class DatabaseViewControls {
     const matches = (): PropertyDefinition[] => {
       const needle = state.query.trim().toLowerCase();
       const shown = this.host.schema()
-        .filter((p) => types.includes(p.type))
+        .filter((p) => types.includes(p.type) && options.used?.includes(p.id) !== true)
         .filter((p) => needle === '' || p.name.toLowerCase().includes(needle));
 
       return [
@@ -690,6 +692,8 @@ export class DatabaseViewControls {
     const panel = new DatabasePanel({
       anchor,
       root: {
+        // database.css: the measured picker layout (notion-motion.md Round 10).
+        name: 'picker',
         build: () => {
           const search = panelInput({
             value: state.query,
@@ -766,10 +770,10 @@ export class DatabaseViewControls {
 
       return row;
     };
-    const propertyPage = (title: string, onPick: (property: PropertyDefinition) => void): PanelPage => ({
+    const propertyPage = (title: string, onPick: (property: PropertyDefinition) => void, used: string[] = []): PanelPage => ({
       title,
       build: () => {
-        const shown = this.host.schema().filter((p) => SORTABLE_TYPES.includes(p.type));
+        const shown = this.host.schema().filter((p) => SORTABLE_TYPES.includes(p.type) && !used.includes(p.id));
 
         return [...shown.filter((p) => p.type === 'title'), ...shown.filter((p) => p.type !== 'title').sort((a, b) => a.name.localeCompare(b.name))]
           .map((property) => panelRow({
@@ -849,6 +853,7 @@ export class DatabaseViewControls {
                 if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
               },
             }),
+            // notion-motion.md Round 10 "Add sort picker": a property already sorted is left out.
             panelRow({
               label: this.t('sortAdd'),
               testId: 'database-sort-add',
@@ -857,7 +862,7 @@ export class DatabaseViewControls {
               onClick: () => current.push(propertyPage(this.t('sortAdd'), (property) => {
                 write([...sorts(), { id: nanoid(), propertyId: property.id, direction: 'asc' }]);
                 current.back();
-              })),
+              }, sorts().map((sort) => sort.propertyId))),
             }),
             panelRow({
               label: this.t('sortDeleteAll'),

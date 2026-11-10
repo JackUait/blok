@@ -209,7 +209,11 @@ class OptionsEditor {
       if (this.isStatus || this.opts.property.optionSort === undefined) this.drag.start(event, option.id);
     });
     label.setAttribute('data-blok-database-select-option-label', '');
-    label.appendChild(createOptionPill(this.isStatus ? shownStatusOption(option) : option));
+    const pill = createOptionPill(this.isStatus ? shownStatusOption(option) : option);
+
+    // The status pill rules in database.css draw its dot.
+    if (this.isStatus) pill.setAttribute('data-status-group', statusGroupOf(this.withOptions(this.options), option.id)?.kind ?? 'todo');
+    label.appendChild(pill);
     // research/30 §10f: the Edit property list reads "Not started DEFAULT". Its look was not measured.
     if (this.isStatus && option.id === this.defaultId) {
       const badge = document.createElement('span');

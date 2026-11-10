@@ -196,6 +196,21 @@ describe('options editor (Edit property for select, multi-select and status)', (
       expect(order).toEqual(['todo', 'n', 'inProgress', 'i', 'complete', 'd']);
     });
 
+    // notion-motion.md Round 10 "Edit property flyout, Status": each chip is the status pill, its dot included.
+    it('draws each option as the status pill of its group', () => {
+      const { root } = mount(statusProp());
+      const groups = ['n', 'i', 'd'].map((id) =>
+        root.querySelector(`[data-blok-database-select-option="${id}"] [data-blok-database-option-pill]`)?.getAttribute('data-status-group'));
+
+      expect(groups).toEqual(['todo', 'inProgress', 'complete']);
+    });
+
+    it('a select option keeps the plain pill', () => {
+      const { root } = mount(selectProp());
+
+      expect(root.querySelector('[data-blok-database-option-pill]')?.hasAttribute('data-status-group')).toBe(false);
+    });
+
     it('adds an option to the group whose "+" was pressed', () => {
       const { root, onChange } = mount(statusProp());
 

@@ -357,10 +357,36 @@ describe('view settings panel', () => {
       expect(page()).not.toBe('pick');
     });
 
-    it('the Group page carries its page name for its measured offsets', () => {
+    // notion-motion.md Round 10 "Group by list": ungrouped, the Group page is the property list titled "Group by".
+    it('the ungrouped Group page is the "Group by" picker; grouped, it carries the Group page name', () => {
       harness().open();
       click('database-settings-group');
+      expect(page()).toBe('pick');
+      expect(title()).toContain('tools.database.groupBy');
+      click('database-pick-property-stage');
       expect(page()).toBe('group');
+    });
+
+    // Round 10 '"Group by ›" list with a grouping set': the same picker layout, and no "None" row.
+    it('opens "Group by ›" as the picker page, with no None row', () => {
+      harness().open();
+      click('database-settings-group');
+      click('database-pick-property-stage');
+      click('database-group-by');
+      expect(page()).toBe('pick');
+      expect(exists('database-group-none')).toBe(false);
+      expect(exists('database-pick-property-num')).toBe(true);
+    });
+
+    // Round 10 "Add sort picker": the already-sorted property is left out, in the picker layout.
+    it('"Add sort" leaves out the sorted property', () => {
+      harness().open();
+      click('database-settings-sort');
+      click('database-pick-property-due');
+      click('database-sort-add');
+      expect(page()).toBe('pick');
+      expect(exists('database-pick-property-due')).toBe(false);
+      expect(exists('database-pick-property-num')).toBe(true);
     });
 
     it('Group lists None (checked), then Name, then A→Z; a pick groups', () => {

@@ -326,6 +326,8 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     handle.click();
 
     expect(menuOutline()).toEqual(WITHOUT_VIEW_SETTINGS);
+    // notion-motion.md Round 10: it opens beside the handle, not over it.
+    expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-handle-menu"]')).not.toBeNull();
     expect(rowEl(el, 'list').hasAttribute('data-popover-open')).toBe(true);
     expect(openPage).not.toHaveBeenCalled();
     // A click on the row itself does open the page, so the check above can fail.

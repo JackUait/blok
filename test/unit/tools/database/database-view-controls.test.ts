@@ -236,6 +236,17 @@ describe('DatabaseViewControls', () => {
     expect(q('database-filter-picker-search')?.getAttribute('aria-label')).toBe('tools.database.filterByPlaceholder');
   });
 
+  // notion-motion.md Round 10: the Sort and Filter pickers share one measured layout (database.css "picker" page).
+  it('marks the Sort and Filter pickers as the picker page', () => {
+    setup();
+    click('database-toolbar-filter');
+    expect(q('database-filter-picker')?.getAttribute('data-blok-database-panel-page')).toBe('picker');
+    document.body.innerHTML = '';
+    setup();
+    click('database-toolbar-sort');
+    expect(q('database-sort-picker')?.getAttribute('data-blok-database-panel-page')).toBe('picker');
+  });
+
   it('names the Sort picker search "Sort by…"', () => {
     setup();
     click('database-toolbar-sort');
@@ -678,6 +689,24 @@ describe('DatabaseViewControls', () => {
       expect(controls.effective(saved.view).sorts[0]).toMatchObject({ propertyId: 'num', direction: 'desc' });
     });
 
+    // notion-motion.md Round 10 "Add sort picker": the already-sorted property is left out.
+    it('leaves the sorted property out of "Add sort"', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-add');
+
+      expect(q('database-pick-property-num')).toBeNull();
+      expect(q('database-pick-property-title')).not.toBeNull();
+    });
+
+    it('still lists every property when an existing sort changes its property', () => {
+      withSort();
+      click('database-sort-pill');
+      click('database-sort-property-s1');
+
+      expect(q('database-pick-property-num')).not.toBeNull();
+    });
+
     it('opens the sort panel from the Sort button while a sort exists', () => {
       withSort();
       click('database-toolbar-sort');
@@ -1095,6 +1124,16 @@ describe('DatabaseViewControls', () => {
 
       expect(controls.filterBar.hidden).toBe(false);
       expect(q('database-sort-pill')).not.toBeNull();
+    });
+
+    // notion-motion.md Round 10 "Add filter picker": the already-filtered property is left out.
+    it('leaves the filtered property out of "+ Filter"', () => {
+      withFilter();
+      click('database-filter-bar-add');
+
+      expect(q('database-filter-picker')).not.toBeNull();
+      expect(q('database-pick-property-num')).toBeNull();
+      expect(q('database-pick-property-title')).not.toBeNull();
     });
 
     it('keeps the bar, with only "+ Filter", after the last rule is deleted', () => {

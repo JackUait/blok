@@ -1435,12 +1435,22 @@ export class ViewSettingsPages {
 
   // ─── Property picker ───
 
-  private pickProperty(title: string, types: readonly PropertyType[], onPick: (property: PropertyDefinition) => void): PanelPage {
+  /**
+   * `measured`: the picker layout measured in notion-motion.md Round 10 (database.css "pick" page).
+   * `used`: properties left out, as Notion's Add sort and Add filter leave out the ones already set.
+   */
+  private pickProperty(
+    title: string,
+    types: readonly PropertyType[],
+    onPick: (property: PropertyDefinition) => void,
+    options: { measured?: boolean; used?: () => string[] } = {}
+  ): PanelPage {
     const query = queryState();
 
     return {
       title,
-      build: () => this.propertyPicker(query, types, onPick),
+      ...(options.measured === true ? { name: 'pick' } : {}),
+      build: () => this.propertyPicker(query, types, onPick, { used: options.used?.() ?? [] }),
     };
   }
 
@@ -1452,7 +1462,7 @@ export class ViewSettingsPages {
     query: QueryState,
     types: readonly PropertyType[],
     onPick: (property: PropertyDefinition) => void,
-    options: { leading?: () => HTMLElement[]; disabled?: boolean; placeholder?: string } = {}
+    options: { leading?: () => HTMLElement[]; disabled?: boolean; placeholder?: string; used?: string[] } = {}
   ): HTMLElement[] {
     const list = document.createElement('div');
 
@@ -1460,7 +1470,7 @@ export class ViewSettingsPages {
     const fill = (): void => {
       const needle = query.get().trim().toLowerCase();
       const choices = this.ctx.schema()
-        .filter((p) => types.includes(p.type) && p.name.toLowerCase().includes(needle))
+        .filter((p) => types.includes(p.type) && p.name.toLowerCase().includes(needle) && options.used?.includes(p.id) !== true)
         .sort((a, b) => Number(b.type === 'title') - Number(a.type === 'title') || a.name.localeCompare(b.name));
 
       list.replaceChildren(...(options.leading?.() ?? []), ...choices.map((property) => panelRow({
@@ -1573,7 +1583,7 @@ export class ViewSettingsPages {
               this.ctx.updatePersonal({ filters: [...withEntryIds(this.ctx.view().filters), filter] });
               panel.back();
               panel.push(this.simpleFilter(filter.id));
-            })),
+            }, { measured: true, used: () => this.ctx.view().filters.map((f) => f.propertyId) })),
           }),
           panelSeparator(),
           panelRow({
@@ -2098,7 +2108,7 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.pickProperty(this.t('sortAdd'), GROUPABLE_TYPES, (property) => {
               this.ctx.updatePersonal({ sorts: [...sorts, { id: nanoid(), propertyId: property.id, direction: 'asc' }] });
               panel.back();
-            })),
+            }, { measured: true, used: () => sorts.map((sort) => sort.propertyId) })),
           }),
           panelRow({
             label: this.t('sortDeleteAll'),
@@ -2125,9 +2135,21 @@ export class ViewSettingsPages {
     const stateKey = (key: string): string => (sub ? `sub:${key}` : key);
     const pickState = queryState();
 
+    const ungrouped = (): boolean => !sub && this.property(this.ctx.view().groupBy) === undefined;
+    const t = (key: string): string => this.t(key);
+
+    // notion-motion.md Round 10 "Group by list": ungrouped, the page is the property list titled "Group by".
     return {
-      title: this.t(sub ? 'settingsSubGroup' : 'settingsGroup'),
-      ...(sub ? {} : { name: 'group' }),
+      get title() {
+        if (sub) return t('settingsSubGroup');
+
+        return t(ungrouped() ? 'groupBy' : 'settingsGroup');
+      },
+      get name() {
+        if (sub) return undefined;
+
+        return ungrouped() ? 'pick' : 'group';
+      },
       build: (panel) => {
         const view = this.ctx.view();
         const property = this.property(sub ? view.subGroupBy : view.groupBy);
@@ -2157,7 +2179,7 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.pickProperty(this.t('groupBy'), GROUPABLE_TYPES, (picked) => {
               this.ctx.updateView(sub ? subGroupByChange(this.ctx.view(), picked) : groupByChange(this.ctx.view(), picked));
               panel.back();
-            })),
+            }, { measured: true })),
           }),
         ];
 

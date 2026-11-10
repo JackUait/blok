@@ -6849,6 +6849,10 @@ button[data-blok-database-column-count]:hover {
   padding-block: 0;
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-handle-menu'] > [data-blok-popover-container] {
+  transform-origin: center;
+}
+
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'], [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-cell-editor'] {
   transition: display 200ms allow-discrete, overlay 200ms allow-discrete;
 }
@@ -11356,11 +11360,31 @@ textarea[data-blok-database-cell-input] {
   padding-inline: var(--blok-space-2) var(--blok-space-1-5);
 }
 
-[data-blok-database-options-editor="select"] [data-blok-database-options-heading] {
+[data-blok-database-options-editor="select"] [data-blok-database-options-heading], [data-blok-database-options-editor="multiSelect"] [data-blok-database-options-heading] {
   padding-block: var(--blok-space-0-25) var(--blok-space-2-25);
 }
 
-[data-blok-database-options-editor="select"] [data-blok-database-select-option-label] {
+[data-blok-database-options-editor="select"] [data-blok-database-select-option-label], [data-blok-database-options-editor="multiSelect"] [data-blok-database-select-option-label] {
+  margin-inline-start: var(--blok-space-0-5);
+}
+
+[data-blok-database-options-editor="status"] {
+  padding-block-end: 0;
+}
+
+[data-blok-database-options-editor="status"] [data-blok-database-options-heading] {
+  padding: var(--blok-space-2-5) var(--blok-space-3) var(--blok-space-2);
+}
+
+[data-blok-database-options-editor="status"] [data-blok-database-options-heading]:first-child {
+  padding-block-end: var(--blok-space-2-25);
+}
+
+[data-blok-database-options-editor="status"] [data-blok-database-select-option] {
+  padding-inline-start: var(--blok-space-2);
+}
+
+[data-blok-database-options-editor="status"] [data-blok-database-select-option-label] {
   margin-inline-start: var(--blok-space-0-5);
 }
 
@@ -11556,9 +11580,13 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-option-default] {
-  margin-inline-start: var(--blok-space-1);
+  margin-inline-start: auto;
   color: var(--blok-database-ink-secondary);
   font-size: 12px;
+  line-height: 16.8px;
+  font-weight: 500;
+  text-transform: uppercase;
+  align-self: center;
 }
 
 [data-blok-database-option-color] [data-blok-database-select-option-check] {
@@ -14939,12 +14967,21 @@ input[data-blok-database-picker-search]:focus {
   margin-block-start: var(--blok-space-2);
 }
 
-[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
+[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] + [data-blok-database-panel-row], [data-blok-database-panel-page="picker"] [data-blok-database-picker-list] > [data-blok-database-panel-row] + [data-blok-database-panel-row] {
   margin-block-start: var(--blok-space-0-25);
 }
 
-[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row] {
+[data-blok-database-panel-page="pick"] [data-blok-database-property-picker-list] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-icon]), [data-blok-database-panel-page="picker"] [data-blok-database-picker-list] > [data-blok-database-panel-row]:has(> [data-blok-database-panel-icon]) {
   padding-inline-start: var(--blok-space-3);
+}
+
+[data-blok-database-panel-page="picker"] > [data-blok-database-panel-input], [data-blok-database-panel-page="picker"] > [data-blok-database-picker-list] {
+  margin-block-start: var(--blok-space-2);
+}
+
+[data-blok-database-panel-page="picker"] [data-blok-database-panel-icon] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-panel-page="group"] > [data-blok-database-panel-header] + [data-blok-database-panel-row] {

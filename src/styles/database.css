@@ -2997,6 +2997,11 @@ button[data-blok-database-column-count]:hover {
   margin-bottom: 0;
 }
 
+/* notion-motion.md Round 11: the same for every calculation menu and its lists (200x123). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-calc-menu'] [data-blok-popover-item]:last-child {
+  margin-block-end: 0;
+}
+
 /* notion-live-8/80-menu-number.png, 83-menu-name.png: dividers 12px in from the box sides and 8px
    tall in all, and the first row 44 under the box top. The ">" steps keep the submenus (the line
    under Sort) out. */
@@ -9709,13 +9714,13 @@ textarea[data-blok-database-cell-input] {
 
 /* ─── "+ New page", Load more, empty state ─── */
 
-/* research/22 §12: the hover fills only the 28px button; the 4px margins keep the 36px row. */
+/* research/22 §12: the hover fills only the 28px button. r11-gap-nocalc.raw: the row is 37, the button 4.5 from its top. */
 [data-blok-database-table-add-row] {
   display: flex;
   align-items: center;
   width: fit-content;
   height: 28px;
-  margin-block: var(--blok-space-1);
+  margin-block: calc(var(--blok-space-2-25) / 2);
   padding: 0;
   padding-inline: var(--blok-space-2);
   border: none;

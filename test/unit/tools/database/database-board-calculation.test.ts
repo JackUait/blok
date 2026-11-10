@@ -102,6 +102,13 @@ describe('board column calculation', () => {
       ]);
     });
 
+    // notion-motion.md Round 11, r11-group-agg-menu.raw: the Count list is 250 wide.
+    it('opens the Count list 250 wide', () => {
+      const count = titled(groupCalculationItems(menu()), 'tools.database.calcCount');
+
+      expect(count.children?.width).toBe('250px');
+    });
+
     it('starts Count with the 99+ switch, then Count all and the per-property counts', () => {
       const count = titled(groupCalculationItems(menu()), 'tools.database.calcCount');
 

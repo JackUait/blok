@@ -71,16 +71,22 @@ vi.mock('../../../../src/components/utils/popover', () => {
     private readonly eventHandlers: Map<string, Array<() => void>> = new Map();
 
     private readonly className: unknown;
+    private readonly minWidth: unknown;
+    private readonly offset: unknown;
 
     constructor(params: { items?: Array<{ title?: string; onActivate?: () => void; type?: string; element?: HTMLElement }>; [key: string]: unknown }) {
       this.items = params.items ?? [];
       this.className = params.class;
+      this.minWidth = params.minWidth;
+      this.offset = params.offset;
     }
 
     show(): void {
       this.container = document.createElement('div');
       this.container.setAttribute('data-mock-popover', '');
       if (typeof this.className === 'string') this.container.setAttribute('data-mock-popover-class', this.className);
+      if (typeof this.minWidth === 'string') this.container.setAttribute('data-mock-popover-min-width', this.minWidth);
+      if (typeof this.offset === 'number') this.container.setAttribute('data-mock-popover-offset', String(this.offset));
 
       for (const item of this.items) {
         if (item.type === PopoverItemType.Html && item.element !== undefined) {
@@ -4274,6 +4280,20 @@ describe('DatabaseTool', () => {
 
       expect([...document.body.querySelectorAll('[data-mock-popover-action]')].map((el) => el.getAttribute('data-mock-popover-action')))
         .toEqual(['tools.database.calccount', 'tools.database.calcpercent']);
+
+      tool.destroy();
+    });
+
+    // notion-motion.md Round 11: the count's menu is the footer's, 200 wide, its top on the count's bottom.
+    it('opens the count menu as the 200-wide calculation menu, flush under the count', () => {
+      const { tool, element } = board();
+
+      countOf(element, 'opt-todo')?.click();
+      const menu = document.querySelector('[data-mock-popover]');
+
+      expect(menu?.getAttribute('data-mock-popover-class')?.split(' ')).toContain('blok-database-calc-menu');
+      expect(menu?.getAttribute('data-mock-popover-min-width')).toBe('200px');
+      expect(menu?.getAttribute('data-mock-popover-offset')).toBe('0');
 
       tool.destroy();
     });

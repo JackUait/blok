@@ -1932,6 +1932,22 @@ describe('DatabaseTableView', () => {
       expect(document.querySelector<HTMLElement>('[data-blok-popover-custom-class~="blok-database-header-menu"]')?.style.getPropertyValue('--width')).toBe('200px');
     });
 
+    // notion-motion.md Round 11: 200x123. The calc class drops the last row's 1px gap (database.css).
+    it('marks the footer menu as a calculation menu', () => {
+      const { root } = mount({ view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });
+
+      root.querySelector<HTMLElement>('[data-blok-database-table-calc][data-property-id="p-amount"] [data-blok-database-table-calc-box]')?.click();
+
+      expect(document.querySelector('[data-blok-popover-custom-class~="blok-database-calc-menu"]')).not.toBeNull();
+    });
+
+    // r11-calc-count-sub.png and r11-group-agg-menu.raw: the Count list is 250 wide.
+    it('opens the Count list 250 wide', () => {
+      const items = calculationItems({ type: 'number' }, undefined, { t: (key: string) => key }, vi.fn()) as Array<{ title?: string; children?: { width?: string } }>;
+
+      expect(items.find((item) => item.title === 'tools.database.calcCount')?.children?.width).toBe('250px');
+    });
+
     // notion-motion.md Round 11 "Read-only database": no "Calculate" node exists in a locked table's footer.
     it('read-only: an empty footer cell holds no Calculate, a set one keeps its value', () => {
       const { root } = mount({ readOnly: true, view: tableView({ calculations: [{ id: 'p-amount', fn: 'sum' }] }) });

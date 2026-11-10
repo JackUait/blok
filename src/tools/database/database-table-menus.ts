@@ -66,6 +66,13 @@ export const DATE_FNS: readonly CalculationFn[] = ['earliest_date', 'latest_date
 const CHECKBOX_COUNT_FNS: readonly CalculationFn[] = ['count', 'checked', 'unchecked'];
 const CHECKBOX_PERCENT_FNS: readonly CalculationFn[] = ['percent_checked', 'percent_unchecked'];
 
+/** Every calculation menu: rows drop the last 1px gap (database.css), so four make Notion's 200x123. */
+export const DATABASE_CALC_MENU_CLASS = 'blok-database-calc-menu';
+/** notion-motion.md Round 11: the calculation menu is 200 wide. */
+export const CALC_MENU_MIN_WIDTH = '200px';
+/** r11-calc-count-sub.png, r11-group-agg-menu.raw: the Count list is 250 wide. */
+export const CALC_COUNT_LIST_WIDTH = '250px';
+
 /** The column's "Show large counts as 99+" state and its toggle. */
 export interface CountCap {
   capCounts: boolean;
@@ -95,7 +102,7 @@ export const calculationItems = (
     type: PopoverItemType.Default,
     title: i18n.t(titleKey),
     isActive: current !== undefined && fns.includes(current),
-    children: { items: [...lead, ...fns.map(leaf)] },
+    children: { items: [...lead, ...fns.map(leaf)], ...(fns === COUNT_FNS ? { width: CALC_COUNT_LIST_WIDTH } : {}) },
   });
   const checkbox = property.type === 'checkbox';
   const offered = CALCULATIONS_FOR_TYPE[property.type] ?? [];
@@ -153,9 +160,9 @@ export interface OpenMenuOptions {
   at?: { position: DOMRect; positionContext: HTMLElement };
 }
 
-const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS, card: DATABASE_CARD_MENU_CLASS, handle: DATABASE_HANDLE_MENU_CLASS, calc: DATABASE_HEADER_MENU_CLASS } as const;
+const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS, card: DATABASE_CARD_MENU_CLASS, handle: DATABASE_HANDLE_MENU_CLASS, calc: `${DATABASE_HEADER_MENU_CLASS} ${DATABASE_CALC_MENU_CLASS}` } as const;
 
-const MENU_MIN_WIDTH: Partial<Record<NonNullable<OpenMenuOptions['kind']>, string>> = { card: '265px', handle: '265px', calc: '200px' };
+const MENU_MIN_WIDTH: Partial<Record<NonNullable<OpenMenuOptions['kind']>, string>> = { card: '265px', handle: '265px', calc: CALC_MENU_MIN_WIDTH };
 
 /** Opens a menu under `anchor`; `data-popover-open` marks the anchor while it is up. */
 export const openMenu = (
@@ -252,7 +259,7 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
     type: PopoverItemType.Default,
     title: i18n.t('tools.database.tableCalculate'),
     icon: IconSigma,
-    children: { items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate, ctx.countCap) },
+    children: { items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate, ctx.countCap), minWidth: CALC_MENU_MIN_WIDTH, class: DATABASE_CALC_MENU_CLASS },
   };
   // research/08: Files and ID offer no Group; research/20 §1d: nor does Place. None can group a view.
   const groupable = property.type !== 'files' && property.type !== 'uniqueId' && property.type !== 'place';

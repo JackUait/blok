@@ -1585,6 +1585,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALCFOOT_BYTES = 373;
     // Round 11 lane footlbl: the footer's real 36px border-top row, tabular numbers, pointer and fill on the editable button only, 12px under the table.
     const DATABASE_FOOTLBL_BYTES = 358;
+    // Calculation menus: the last row's gap dropped; the New page row 37 tall.
+    const DATABASE_CALCMENU_BYTES = 279;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // Round 11 lane aggr: the table group header's "Show aggregation" count.
@@ -2035,7 +2037,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CALCFOOT_BYTES
       + DATABASE_FOOTLBL_BYTES
       + BLOCK_CONTROL_GREY_BYTES
-      + DATABASE_AGGR_BYTES;
+      + DATABASE_AGGR_BYTES
+      + DATABASE_CALCMENU_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

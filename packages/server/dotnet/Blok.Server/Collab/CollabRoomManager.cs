@@ -194,7 +194,34 @@ internal sealed record CollabRestorePreview(
     IReadOnlyList<CollabRestoreGuard> Guards,
     long FrameBytes,
     long LimitBytes,
-    CollabEditReceipt Head);
+    CollabEditReceipt Head)
+{
+  /// <summary>The preview route's body. The agent's history.previewRestore answers the same body.</summary>
+  internal JsonObject ToJson() => new()
+  {
+    ["wouldUndo"] = new JsonObject
+    {
+      ["blocks"] = new JsonArray([.. Blocks.Select(change => (JsonNode)new JsonObject
+      {
+        ["id"] = change.Id,
+        ["type"] = change.Type,
+        ["kind"] = change.Kind switch
+        {
+          CollabBlockChangeKind.Added => "added",
+          CollabBlockChangeKind.Removed => "removed",
+          CollabBlockChangeKind.Changed => "changed",
+          _ => "moved",
+        },
+      })]),
+      ["page"] = new JsonArray([.. Page.Select(key => (JsonNode)key)]),
+    },
+    ["guards"] = new JsonArray([.. Guards.Select(guard => (JsonNode)guard.ToJson())]),
+    ["fits"] = FrameBytes <= LimitBytes,
+    ["frameBytes"] = FrameBytes,
+    ["limitBytes"] = LimitBytes,
+    ["expectRevision"] = string.Create(CultureInfo.InvariantCulture, $"{Head.Tag.Lineage}:{Head.ServerSequence}"),
+  };
+}
 
 /// <summary>A dry run's answer: the preview, or the edit result that refused before the plan.</summary>
 internal sealed record CollabRestorePreviewResult(

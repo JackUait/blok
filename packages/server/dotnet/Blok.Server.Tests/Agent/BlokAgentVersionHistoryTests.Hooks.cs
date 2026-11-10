@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Blok.Server.Tests.Agent;
 
-/// <summary>The host's history read and window hooks reach an agent's history.versions, history.read and history.restore.</summary>
+/// <summary>The host's history read and window hooks reach an agent's history.versions, history.read, history.restore and history.previewRestore.</summary>
 public sealed partial class BlokAgentVersionHistoryTests
 {
   private (BlokAgentExecutor Executor, List<string> Asked) Hooked(bool canRead, TimeSpan? cutAfterEpoch)
@@ -52,6 +52,10 @@ public sealed partial class BlokAgentVersionHistoryTests
         $$$"""{"commands":[{"name":"history.read","args":{"version":"{{{lineage}}}:1"}}]}""", Actor)).ResultJson)!;
     var restore = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
         $$$"""{"commands":[{"name":"history.restore","args":{"version":"{{{lineage}}}:1"}}]}""", Actor)).ResultJson)!;
+    var hiddenPreview = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"commands":[{"name":"history.previewRestore","args":{"version":"{{{lineage}}}:1"}}]}""", Actor)).ResultJson)!;
+    var shownPreview = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"commands":[{"name":"history.previewRestore","args":{"version":"{{{lineage}}}:2"}}]}""", Actor)).ResultJson)!;
 
     Assert.True(listed["ok"]!.GetValue<bool>(), listed.ToJsonString());
     Assert.Equal(
@@ -59,6 +63,8 @@ public sealed partial class BlokAgentVersionHistoryTests
         listed["results"]![0]!["versions"]!.AsArray().Select(version => version!["version"]!.GetValue<string>()));
     Assert.Equal("INVALID_ARGS", read["error"]!["code"]!.GetValue<string>());
     Assert.Equal("VERSION_NOT_FOUND", restore["error"]!["code"]!.GetValue<string>());
+    Assert.Equal("VERSION_NOT_FOUND", hiddenPreview["error"]!["code"]!.GetValue<string>());
+    Assert.True(shownPreview["ok"]!.GetValue<bool>(), shownPreview.ToJsonString());
     Assert.Equal(committed, operations.Committed(DocId).Count);
     Assert.Contains($"agent-cs {DocId}", asked);
   }
@@ -76,12 +82,15 @@ public sealed partial class BlokAgentVersionHistoryTests
         $$$"""{"commands":[{"name":"history.read","args":{"version":"{{{lineage}}}:0"}}]}""", Actor)).ResultJson)!;
     var restore = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
         $$$"""{"commands":[{"name":"history.restore","args":{"version":"{{{lineage}}}:0"}}]}""", Actor)).ResultJson)!;
+    var preview = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"commands":[{"name":"history.previewRestore","args":{"version":"{{{lineage}}}:0"}}]}""", Actor)).ResultJson)!;
 
     Assert.False(listed["ok"]!.GetValue<bool>(), listed.ToJsonString());
     Assert.Equal("TOOL_ACTION_FAILED", listed["error"]!["code"]!.GetValue<string>());
     Assert.False(read["ok"]!.GetValue<bool>(), read.ToJsonString());
     Assert.Equal("TOOL_ACTION_FAILED", read["error"]!["code"]!.GetValue<string>());
     Assert.Equal("TOOL_ACTION_FAILED", restore["error"]!["code"]!.GetValue<string>());
+    Assert.Equal("TOOL_ACTION_FAILED", preview["error"]!["code"]!.GetValue<string>());
     Assert.Equal(committed, operations.Committed(DocId).Count);
   }
 

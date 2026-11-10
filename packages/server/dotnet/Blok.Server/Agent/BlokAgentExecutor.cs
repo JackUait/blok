@@ -20,8 +20,8 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
   /// <summary>
   /// The host's history hooks, asked for the person the agent acts for (else
-  /// the agent) on history.versions, history.read, history.changes and
-  /// history.restore. Null asks nothing, as with no hooks.
+  /// the agent) on history.versions, history.read, history.changes,
+  /// history.restore and history.previewRestore. Null asks nothing, as with no hooks.
   /// </summary>
   internal BlokAgentHistoryPolicy? HistoryPolicy { get; init; }
 
@@ -841,7 +841,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       batch is JsonObject source && source["commands"] is JsonArray { Count: > 0 } commands
       && commands[0] is JsonObject first
       && first["name"] is JsonValue name && name.TryGetValue<string>(out var value)
-      && value is "history.versions" or "history.read" or "history.changes" or "history.restore"
+      && value is "history.versions" or "history.read" or "history.changes" or "history.restore" or "history.previewRestore"
           ? (value, first["args"] as JsonObject ?? [])
           : null;
 
@@ -884,7 +884,9 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       // A restore reads the version it writes, so the read hook refuses it too.
       input["versionHistory"] = access.Refused is { } refused
         ? refused
-        : await LoadVersionsAsync(docId, name, args, window, cancellationToken);
+        : name == "history.previewRestore"
+          ? await LoadPreviewAsync(docId, args, input, window, cancellationToken)
+          : await LoadVersionsAsync(docId, name, args, window, cancellationToken);
     }
 
     input["document"] = document;
@@ -991,6 +993,77 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   private sealed record HistoryWindow(DateTimeOffset Cut, IReadOnlyDictionary<string, ulong?> Floors)
   {
     internal bool Hides(string lineage, ulong sequence) => CollabHistoryWindow.Hides(Floors, lineage, sequence);
+  }
+
+  /// <summary>
+  /// What history.previewRestore needs: the preview route's body for its version, or null when there
+  /// is none or the window hides it. The batch's expectRevision was checked already, so it plans at the head.
+  /// </summary>
+  private async ValueTask<JsonObject> LoadPreviewAsync(
+      string docId, JsonObject args, JsonObject input, HistoryWindow? window, CancellationToken cancellationToken)
+  {
+    var previews = new JsonObject();
+    var loaded = new JsonObject { ["previews"] = previews };
+    var keep = false;
+
+    // Jint refuses these arguments before it reads the preview.
+    if (args["version"] is not JsonValue named || !named.TryGetValue<string>(out var version))
+    {
+      return loaded;
+    }
+
+    if (args["databases"] is { } databases)
+    {
+      if (databases is not JsonValue value || !value.TryGetValue<string>(out var scope) || scope is not ("keep" or "restore"))
+      {
+        return loaded;
+      }
+
+      keep = scope == "keep";
+    }
+
+    var colon = version.LastIndexOf(':');
+
+    if (colon <= 0 ||
+        !ulong.TryParse(version.AsSpan(colon + 1), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var sequence) ||
+        (window is not null && window.Hides(version[..colon], sequence)))
+    {
+      previews[version] = null;
+
+      return loaded;
+    }
+
+    var result = await rooms!.PreviewRestoreAsync(
+        docId, version[..colon], sequence, null, input["actor"]!["id"]!.GetValue<string>(),
+        new CollabRestoreOptions(KeepDatabases: keep), cancellationToken);
+
+    switch (result.History)
+    {
+      case CollabHistoryStatus.Ready:
+        break;
+      case CollabHistoryStatus.NotFound:
+        previews[version] = null;
+
+        return loaded;
+      default:
+        return new JsonObject { ["failed"] = $"The restore could not be previewed ({result.History}).", ["status"] = HttpStatus(result.History) };
+    }
+
+    if (result.Preview is not { } preview)
+    {
+      var status = result.Edit?.Status;
+
+      return new JsonObject
+      {
+        ["failed"] = $"The restore could not be previewed ({status}).",
+        ["retryable"] = status is CollabEditStatus.Overloaded or CollabEditStatus.Unavailable
+            or CollabEditStatus.Draining or CollabEditStatus.SeedFailed,
+      };
+    }
+
+    previews[version] = preview.ToJson();
+
+    return loaded;
   }
 
   /// <summary>What one read needs: the version list, or the documents it names (null when there is no such version).</summary>

@@ -488,26 +488,7 @@ internal static partial class HistoryEndpoint
       return;
     }
 
-    var body = new JsonObject
-    {
-      ["wouldUndo"] = new JsonObject
-      {
-        ["blocks"] = new JsonArray([.. preview.Blocks.Select(change => (JsonNode)new JsonObject
-        {
-          ["id"] = change.Id,
-          ["type"] = change.Type,
-          ["kind"] = KindName(change.Kind),
-        })]),
-        ["page"] = new JsonArray([.. preview.Page.Select(key => (JsonNode)key)]),
-      },
-      ["guards"] = new JsonArray([.. preview.Guards.Select(guard => (JsonNode)guard.ToJson())]),
-      ["fits"] = preview.FrameBytes <= preview.LimitBytes,
-      ["frameBytes"] = preview.FrameBytes,
-      ["limitBytes"] = preview.LimitBytes,
-      ["expectRevision"] = string.Create(
-          CultureInfo.InvariantCulture,
-          $"{preview.Head.Tag.Lineage}:{preview.Head.ServerSequence}"),
-    };
+    var body = preview.ToJson();
 
     context.Response.StatusCode = StatusCodes.Status200OK;
     context.Response.ContentType = "application/json";

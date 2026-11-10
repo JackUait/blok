@@ -375,8 +375,8 @@ test.describe('undo audit — caret, scroll, selection', () => {
     expect(await texts(page)).toEqual(['AlphaQ', 'Beta']);
   });
 
-  // Expected source: undo puts the caret where the change was made — here, the restored block.
-  test('CAR-4: undo of a block delete from the settings menu puts the caret in the restored block', async ({ page }) => {
+  // Expected source: Notion U104 — the restored block comes back block-selected, with no caret.
+  test('CAR-4: undo of a block delete from the settings menu gives the restored block back selected', async ({ page }) => {
     await createBlok(page, [
       { id: 'a', type: 'paragraph', data: { text: 'First' } },
       { id: 'b', type: 'paragraph', data: { text: 'Second' } },
@@ -388,9 +388,8 @@ test.describe('undo audit — caret, scroll, selection', () => {
     await page.locator('[data-blok-testid="popover-item"][data-blok-item-name="delete"]').click();
     await wait(page, YJS_CAPTURE_TIMEOUT);
     await undo(page);
-    const afterUndo = await caretInfo(page);
-
-    expect(afterUndo.blockId).toBe('b');
+    expect(await selectedIds(page)).toEqual(['b']);
+    expect((await caretInfo(page)).blockId).toBeNull();
     expect((await save(page)).blocks.map(b => b.id)).toEqual(['a', 'b', 'c']);
   });
 

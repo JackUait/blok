@@ -185,8 +185,8 @@ test('names emoji buttons and supports search-to-grid arrow navigation and keybo
   const search = picker.getByRole('searchbox', { name: 'Search emojis…' });
   const first = picker.locator('[data-emoji-native="💡"]');
   const second = picker.locator('[data-emoji-native="👉"]');
-  // Nine columns: the tenth Callout emoji opens the second row.
-  const nextRow = picker.locator('[data-emoji-native="❓"]');
+  // Ten columns: the eleventh Callout emoji opens the second row.
+  const nextRow = picker.locator('[data-emoji-native="🚫"]');
 
   await expect(first).toHaveAccessibleName(/light bulb/i);
   await expect(second).toHaveAccessibleName(/right/i);

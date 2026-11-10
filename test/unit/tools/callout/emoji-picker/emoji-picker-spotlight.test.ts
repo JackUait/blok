@@ -1,6 +1,6 @@
 /**
  * The Spotlight + Showcase picker: named category chips under the search, a
- * nine-column grid with a Recent row first, and a stage at the bottom that
+ * ten-column grid with a Recent row first, and a stage at the bottom that
  * shows the current icon or the emoji under the pointer or the focus.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -131,10 +131,10 @@ describe('EmojiPicker Spotlight + Showcase layout', () => {
     expect(vi.mocked(onHover).mock.calls.some(([target]) => target === chip)).toBe(false);
   });
 
-  it('estimates skipped sections with nine emoji per row', async () => {
+  it('estimates skipped sections with ten emoji per row', async () => {
     await picker.open(anchor);
 
-    expect(query('[data-emoji-section="nature"]').style.getPropertyValue('--emoji-rows')).toBe('3');
+    expect(query('[data-emoji-section="nature"]').style.getPropertyValue('--emoji-rows')).toBe('2');
   });
 
   it('shows the current icon on the stage while nothing is pointed at', async () => {
@@ -248,7 +248,7 @@ describe('EmojiPicker Spotlight + Showcase layout', () => {
     expect([...recent.querySelectorAll('[data-emoji-native]')].map(node => node.getAttribute('data-emoji-native'))).toEqual(['👋', '😀']);
   });
 
-  it('keeps the Recent row to one row of nine', async () => {
+  it('keeps the Recent row to one row of ten', async () => {
     for (const id of NATURE_IDS.slice(0, 11)) {
       await picker.open(anchor);
       query(`[data-emoji-section="nature"] [aria-label="${id.replace('plant', 'plant ')}"]`).click();
@@ -256,7 +256,7 @@ describe('EmojiPicker Spotlight + Showcase layout', () => {
 
     await picker.open(anchor);
 
-    expect(query('[data-emoji-section="recent"]').querySelectorAll('[data-emoji-native]')).toHaveLength(9);
+    expect(query('[data-emoji-section="recent"]').querySelectorAll('[data-emoji-native]')).toHaveLength(10);
   });
 
   it('leaves the Recent row out of search results', async () => {

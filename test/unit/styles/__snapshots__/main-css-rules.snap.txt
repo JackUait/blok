@@ -4373,11 +4373,26 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-grid] {
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 0;
 }
 
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-native] {
+  height: 34px;
+  aspect-ratio: auto;
   font-size: 24px;
+}
+
+[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-section-title] {
+  padding: var(--blok-space-2) var(--blok-space-1-5) var(--blok-space-0-75);
+}
+
+[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-section]:first-child [data-emoji-section-title] {
+  padding-top: var(--blok-space-2-5);
+}
+
+[data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-section][data-emoji-section-deferred] {
+  contain-intrinsic-size: auto calc(var(--blok-space-2) + 18px + var(--blok-space-0-75) + var(--blok-space-1) + var(--emoji-rows, 1) * var(--emoji-cell));
 }
 
 [data-blok-emoji-picker]:not([data-emoji-picker-inline]) [data-emoji-picker-stage] {

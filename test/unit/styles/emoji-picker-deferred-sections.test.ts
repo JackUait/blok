@@ -40,3 +40,34 @@ describe('emoji picker deferred sections', () => {
     expect(declarations('[data-blok-emoji-picker] [data-emoji-picker-body]')).toMatch(/--emoji-cell:\s*[\d.]+px;/);
   });
 });
+
+describe('emoji picker compact grid', () => {
+  const picker = '[data-blok-emoji-picker]:not([data-emoji-picker-inline])';
+
+  it('lays ten emoji across with no gaps', () => {
+    const grid = declarations(`${picker} [data-emoji-grid]`);
+
+    expect(grid).toMatch(/grid-template-columns:\s*repeat\(10,/);
+    expect(grid).toMatch(/gap:\s*0;/);
+  });
+
+  it('makes rows 34px tall instead of square', () => {
+    const cell = declarations(`${picker} [data-emoji-native]`);
+
+    expect(cell).toMatch(/height:\s*34px;/);
+    expect(cell).toMatch(/aspect-ratio:\s*auto;/);
+  });
+
+  it('pulls the section names closer to the rows around them', () => {
+    expect(declarations(`${picker} [data-emoji-section-title]`))
+      .toMatch(/padding:\s*var\(--blok-space-2\) var\(--blok-space-1-5\) var\(--blok-space-0-75\);/);
+  });
+
+  it('sizes a skipped section from the compact heading, the grid padding and gapless rows', () => {
+    const size = /contain-intrinsic-size:\s*([^;]+);/.exec(declarations(`${picker} [data-emoji-section][data-emoji-section-deferred]`))?.[1] ?? '';
+
+    expect(size.replace(/\s+/g, ' ')).toBe(
+      'auto calc(var(--blok-space-2) + 18px + var(--blok-space-0-75) + var(--blok-space-1) + var(--emoji-rows, 1) * var(--emoji-cell))'
+    );
+  });
+});

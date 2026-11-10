@@ -92,7 +92,7 @@ const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string, chipKey?: 
 
 const RECENT_STORAGE_KEY = 'blok-emoji-recent';
 /** One grid row. */
-const RECENT_LIMIT = 9;
+const RECENT_LIMIT = 10;
 
 function loadRecent(): string[] {
   try {
@@ -1928,8 +1928,7 @@ export class EmojiPicker {
 
     if (this._sectionEls.size > 0) {
       // Must match the grid columns and the 8-column media query in emoji-picker.css.
-      const wideColumns = this._inline ? 10 : 9;
-      const columns = window.matchMedia('(max-width: 380px)').matches ? 8 : wideColumns;
+      const columns = window.matchMedia('(max-width: 380px)').matches ? 8 : 10;
 
       section.setAttribute('data-emoji-section-deferred', '');
       section.style.setProperty('--emoji-rows', String(Math.ceil(emojis.length / columns)));

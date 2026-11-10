@@ -7318,6 +7318,7 @@ export class DatabaseTool implements BlockTool {
       schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
       rows: nesting === undefined ? rows : nesting.nest(rows),
       ...(groups !== undefined ? { groups: nesting === undefined ? groups : groups.map((group) => ({ ...group, rows: nesting.nest(group.rows) })) } : {}),
+      ...(groups !== undefined && viewConfig.hideGroupAggregation === false ? { groupAggregate: this.tableGroupAggregate(viewConfig, groups) } : {}),
       ...(nesting !== undefined ? { nesting: nesting.table } : {}),
       titlePropertyId: titlePropId,
       state,
@@ -7510,6 +7511,16 @@ export class DatabaseTool implements BlockTool {
     }));
   }
 
+  /** Each group's number over all its rows (not the loaded slice), with the view's group calculation. */
+  private tableGroupAggregate(viewConfig: DatabaseViewConfig, groups: TableGroup[]): (groupKey: string) => string {
+    const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
+    const shownOf = (property: PropertyDefinition): PropertyDefinition => this.computedValues.valueProperty(property);
+    const calculation = resolveGroupCalculation(viewConfig, schema.map(shownOf));
+    const locale = editorLocale(this.api.i18n);
+
+    return (groupKey) => groupCalculationText(calculation, groups.find((group) => group.key === groupKey)?.rows ?? [], schema, locale, shownOf);
+  }
+
   /** What the table view asks of the tool. Each write goes through the row block or the view, then the backend. */
   private tableHandlers(context?: NativeWidgetContext, table?: () => DatabaseTableView): TableHandlers {
     const writable = (): boolean => context === undefined ? !this.readOnly && !this.destroyed : context.writable();
@@ -7525,6 +7536,7 @@ export class DatabaseTool implements BlockTool {
       ...(context === undefined ? {
         groupMenu: (groupKey: string, anchor: HTMLElement, header: HTMLElement) => { if (writable()) this.openGroupMenu(anchor, groupKey, { header }); },
         addGroupPage: (groupKey: string) => { if (writable()) this.addGroupPage(groupKey); },
+        groupCalculationMenu: (anchor: HTMLElement, header: HTMLElement) => { if (writable()) this.openGroupCalculationMenu(anchor, header); },
       } : {}),
       deleteRows: (rowIds, byKey) => {
         if (!writable()) return;
@@ -9154,7 +9166,7 @@ export class DatabaseTool implements BlockTool {
     popover.show();
   }
 
-  /** `table`: the table group header, which keeps its buttons shown and has no count to toggle. */
+  /** `table`: the table group header, which keeps its buttons shown. Its count is off until "Show aggregation". */
   private openGroupMenu(anchor: HTMLElement, groupId: string, table?: { header: HTMLElement }): void {
     const view = this.shownView();
     const groups = this.boardGroups();
@@ -9165,17 +9177,18 @@ export class DatabaseTool implements BlockTool {
     }
 
     const property = view.groupBy === undefined ? undefined : this.model.getProperty(view.groupBy);
+    // notion-motion.md Round 11: a table's group headers show no count until it is turned on; a board's show one.
+    const aggregationHidden = table === undefined ? view.hideGroupAggregation === true : view.hideGroupAggregation !== false;
 
     this.showGroupPopover(anchor, groupMenuItems({
       i18n: this.api.i18n,
       isNoValue: groupId === NO_VALUE_GROUP_KEY,
       color: group.color,
-      aggregationHidden: view.hideGroupAggregation === true,
-      hasAggregation: table === undefined,
+      aggregationHidden,
       isStatus: property?.type === 'status',
       onEditGroups: () => this.controls.openSettingsPage('group', anchor),
       // Notion brings the numbers back as Count all, not the last calculation.
-      onToggleAggregation: () => this.updateActiveView(view.hideGroupAggregation === true
+      onToggleAggregation: () => this.updateActiveView(aggregationHidden
         ? { hideGroupAggregation: false, groupCalculation: undefined }
         : { hideGroupAggregation: true }),
       onHide: () => this.toggleGroupHidden(groupId),
@@ -9189,8 +9202,11 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
-  /** The count's calculation menu. The pick is the view's, so every column shows it. */
-  private openGroupCalculationMenu(anchor: HTMLElement): void {
+  /**
+   * The count's calculation menu. The pick is the view's, so every column shows it.
+   * `tableHeader`: a table group header's count (notion-motion.md Round 11: 200 wide, flush under the count).
+   */
+  private openGroupCalculationMenu(anchor: HTMLElement, tableHeader?: HTMLElement): void {
     const view = this.shownView();
 
     if (view === undefined) {
@@ -9215,7 +9231,10 @@ export class DatabaseTool implements BlockTool {
         this.groupMenuPopover?.hide();
         this.updateActiveView({ groupCalculation: groupCalculationCapped(current, cap, titleId) });
       },
-    }), anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined);
+    }), tableHeader ?? anchor.closest<HTMLElement>('[data-blok-database-column-header]') ?? undefined, tableHeader === undefined ? {} : {
+      minWidth: '200px',
+      offset: 0,
+    });
   }
 
   /** Lists every group with a check mark on the shown ones; a pick shows or hides it. */

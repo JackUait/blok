@@ -945,10 +945,13 @@ export interface DatabaseViewConfig {
   hiddenGroups?: GroupRef[];
   /** Groups this view shows collapsed, by option id. */
   collapsedGroups?: GroupRef[];
-  /** Hides the row count beside each group's name. */
+  /**
+   * Hides the row count beside each group's name. A board shows it unless this is true;
+   * a table shows it only when this is false ("Show aggregation").
+   */
   hideGroupAggregation?: boolean;
   /**
-   * Board: the calculation beside each group's name, the same on every column.
+   * Board, and a table with "Show aggregation": the calculation beside each group's name, the same on every group.
    * Absent means Count all with large counts shown as "99+". Count all is
    * saved only to keep the cap off; its `id` is then the title property.
    */

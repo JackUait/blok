@@ -123,6 +123,8 @@ export interface TableHandlers {
   groupMenu?: (groupKey: string, anchor: HTMLElement, header: HTMLElement) => void;
   /** A group header's +: a page at the end of that group. Without it no + is drawn. */
   addGroupPage?: (groupKey: string) => void;
+  /** A group header's count: the view's group calculation menu. Without it the count is not a button. */
+  groupCalculationMenu?: (anchor: HTMLElement, header: HTMLElement) => void;
   /** Redraw from the model, keeping the table state. */
   rerender: () => void;
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
@@ -160,6 +162,8 @@ export interface DatabaseTableViewOptions {
   rows: DatabaseRow[];
   /** Groups of a grouped table, in order. Overrides `rows`. */
   groups?: TableGroup[];
+  /** "Show aggregation": the number after each group's name, by group key. Without it no count is drawn. */
+  groupAggregate?: (groupKey: string) => string;
   titlePropertyId: string;
   state?: TableState;
   handlers?: TableHandlers;
@@ -1304,6 +1308,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       label.textContent = group.label;
     }
     header.append(caret, label);
+    if (this.options.groupAggregate !== undefined) {
+      header.appendChild(this.createGroupCount(this.options.groupAggregate(group.key)));
+    }
     if (!this.options.readOnly && this.handlers?.groupMenu !== undefined && this.handlers.addGroupPage !== undefined) {
       header.appendChild(this.createGroupActions());
     }
@@ -1319,6 +1326,21 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     section.appendChild(content);
 
     return section;
+  }
+
+  /** Read-only cannot change the calculation, so there the number is not a button, as on the board. */
+  private createGroupCount(text: string): HTMLElement {
+    const clickable = !this.options.readOnly && this.handlers?.groupCalculationMenu !== undefined;
+    const count = document.createElement(clickable ? 'button' : 'span');
+
+    if (count instanceof HTMLButtonElement) {
+      count.type = 'button';
+      count.setAttribute('aria-haspopup', 'menu');
+    }
+    count.setAttribute('data-blok-database-table-group-count', '');
+    count.textContent = text;
+
+    return count;
   }
 
   /** notion-motion.md Round 10: ⋯ then +, 24px each, shown while the header is hovered (database.css). */
@@ -1784,6 +1806,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     if (groupMenu !== null && groupHeader !== null) {
       handlers.groupMenu?.(groupKey, groupMenu, groupHeader);
+
+      return;
+    }
+    const groupCount = closest('button[data-blok-database-table-group-count]');
+
+    if (groupCount !== null && groupHeader !== null) {
+      handlers.groupCalculationMenu?.(groupCount, groupHeader);
 
       return;
     }

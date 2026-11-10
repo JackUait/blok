@@ -1587,6 +1587,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FOOTLBL_BYTES = 358;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
+    // Round 11 lane aggr: the table group header's "Show aggregation" count.
+    const DATABASE_AGGR_BYTES = 941;
     // database.css: a peek shows Add icon / Add cover / Customize layout while hovered.
     const DATABASE_PEEK_PAGE_HEAD_HOVER_BYTES = 433;
     // emoji-picker.css: the Spotlight + Showcase picker's named chips, 9-column grid, bottom stage and skin-tone dial.
@@ -2032,7 +2034,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PICKERS_BYTES
       + DATABASE_CALCFOOT_BYTES
       + DATABASE_FOOTLBL_BYTES
-      + BLOCK_CONTROL_GREY_BYTES;
+      + BLOCK_CONTROL_GREY_BYTES
+      + DATABASE_AGGR_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

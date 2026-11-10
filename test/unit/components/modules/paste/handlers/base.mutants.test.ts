@@ -1073,6 +1073,20 @@ describe('BasePasteHandler — caret split of pasted text blocks', () => {
     expect(pasteCalls.map((call) => call.tool)).toEqual(['header']);
   });
 
+  it('a leading empty block adds no empty block and no text at the caret', async () => {
+    const { handler, pasteCalls, insertContentAtCaretPosition, extractFragmentFromCaretPosition } =
+      createHarness({ currentBlock: blockWithCaret(), blockTools });
+
+    extractFragmentFromCaretPosition.mockReturnValue(tailFragment());
+    const data = [blockItem('paragraph', ''), blockItem('paragraph', 'Two')];
+
+    await handler.callInsertPasteData(data, false);
+
+    expect(pasteCalls).toHaveLength(1);
+    expect(data[1].content.textContent).toBe('TwoTail');
+    expect(insertContentAtCaretPosition.mock.calls.every(([html]) => html === '')).toBe(true);
+  });
+
   it('does NOT caret-split when the caret is outside the current block', async () => {
     const elsewhere = document.createElement('p');
 

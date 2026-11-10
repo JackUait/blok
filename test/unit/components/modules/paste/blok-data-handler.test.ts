@@ -531,6 +531,28 @@ describe('BlokDataHandler', () => {
       });
     });
 
+    it('pastes a list item whose copied parent list is not in the paste at depth 0', async () => {
+      const { modules, insertedBlocks } = createBlokModulesMock();
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      const pasteData = JSON.stringify([
+        { id: 'u2', tool: 'list', data: { text: 'Two', style: 'unordered', depth: 1 }, parentId: 'u1', contentIds: ['u3'] },
+        { id: 'u3', tool: 'list', data: { text: 'Three', style: 'unordered', depth: 2 }, parentId: 'u2', contentIds: [] },
+        { id: 'f1', tool: 'list', data: { text: 'Flat', style: 'unordered', depth: 1 } },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: false });
+
+      expect(insertedBlocks[0].data.depth).toBe(0);
+      expect(insertedBlocks[1].data.depth).toBe(2);
+      expect(insertedBlocks[2].data.depth).toBe(1);
+    });
+
     it('does not replace current block when pasting hierarchical content (table+children)', async () => {
       const { modules, insertedBlocks } = createBlokModulesMock();
       const handler = new BlokDataHandler(

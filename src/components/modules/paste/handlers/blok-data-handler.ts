@@ -18,6 +18,7 @@ import { databaseRowTitle } from '../../../../shared/database-rows';
 import { mintDatabaseRefIds, mintDatabaseViewIds, remapDatabaseRefs, remapDatabaseViewIds } from '../../../../shared/database/linked-source';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
+import { TOOL_NAME as LIST_TOOL_NAME } from '../../../../tools/list/constants';
 import { enclosingCellTable } from '../../../utils/enclosing-cell-table';
 import { isChildToolAllowed } from '../../../utils/child-tools';
 import type { TreePlacement } from '../../../utils/tree-order';
@@ -423,6 +424,26 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * A list item copied without its parent list item still carries that nesting in
+   * `data.depth`. The list tool reads `data.depth` only when no list is above it,
+   * so the stale value would indent the pasted root. Its children take their depth
+   * from the tree. A flat list (no parent at all) keeps its depth.
+   * @param tool - the tool the block is inserted with
+   * @param data - the block data
+   * @param original - the clipboard entry
+   * @param parentIsPasted - whether the entry's parent is in the paste
+   */
+  private withoutStaleListDepth(tool: string, data: BlockToolData, original: BlokClipboardBlock, parentIsPasted: boolean): BlockToolData {
+    const hasCopiedParent = typeof original.parentId === 'string';
+
+    if (tool !== LIST_TOOL_NAME || !hasCopiedParent || parentIsPasted || typeof data.depth !== 'number' || data.depth === 0) {
+      return data;
+    }
+
+    return { ...data, depth: 0 };
+  }
+
+  /**
    * The table enclosing the caret cell, when the batch holds a tool barred from cells.
    * @param blocks - the clipboard entries, nested ones included
    */
@@ -701,19 +722,20 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
           ? remapIds(ownViews, oldIdToNewId) as typeof sanitized.data
           : ownViews;
         const id = copiedRefIds.get(original.id);
+        // A copied parent that is not in the paste counts as no parent: the pass below cannot restore it.
+        const parentIsPasted = original.parentId !== undefined && original.parentId !== null && pastedIds.has(original.parentId);
+        const data = remapDatabaseRefs(sanitized.tool, remappedData, copiedRefIds);
 
         const block = insertOrStub({
           tool: sanitized.tool,
-          data: remapDatabaseRefs(sanitized.tool, remappedData, copiedRefIds),
+          data: this.withoutStaleListDepth(sanitized.tool, data, original, parentIsPasted),
           replace: idx === 0 && shouldReplaceFirst && tableCells.length === 0,
           origin: 'paste',
           ...(id !== undefined && { id }),
           ...this.tunesOf(sanitized.tool, original),
         });
 
-        // A root of the paste joins the caret's container. A copied parent that is
-        // not in the paste counts as no parent: the pass below cannot restore it.
-        const parentIsPasted = original.parentId !== undefined && original.parentId !== null && pastedIds.has(original.parentId);
+        // A root of the paste joins the caret's container.
 
         if (contextParentId !== null && !parentIsPasted && block.parentId !== contextParentId) {
           BlockManager.setBlockParent(block, contextParentId);

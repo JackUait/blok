@@ -1104,6 +1104,70 @@ test.describe('copy and paste', () => {
     }
   });
 
+  test.describe('list items copied without their parent list item', () => {
+    const LI = (id: string, text: string, depth: number, extra: Partial<OutputData['blocks'][number]> = {}): OutputData['blocks'][number] =>
+      ({ id, type: 'list', data: { text, style: 'unordered', depth }, ...extra });
+    const doc: OutputData['blocks'] = [
+      LI('u1', 'Bullet one', 0, { content: ['u2'] }),
+      LI('u2', 'Bullet two', 1, { parent: 'u1', content: ['u3'] }),
+      LI('u3', 'Bullet three', 2, { parent: 'u2', content: ['u4'] }),
+      LI('u4', 'Bullet four', 3, { parent: 'u3' }),
+      { id: 'cal', type: 'callout', data: { emoji: '💡' }, content: ['cal-in'] },
+      { id: 'cal-in', type: 'paragraph', parent: 'cal', data: { text: '' } },
+      { id: 'tail', type: 'paragraph', data: { text: '' } },
+    ];
+
+    const targets = [
+      { name: 'at the top level', target: 'tail', parent: undefined },
+      { name: 'in a callout', target: 'cal-in', parent: 'cal' },
+    ];
+
+    for (const { name, target, parent } of targets) {
+      test(`paste with the first item at depth 0 ${name}`, async ({ page }) => {
+        await createBlok(page, { data: { blocks: doc }, dataModel: 'hierarchical' });
+
+        await page.locator('[data-blok-id="u2"] [contenteditable="true"]').first().click();
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.press('ControlOrMeta+a');
+        await expect(page.locator('[data-blok-id="u2"][data-blok-selected="true"]')).toBeVisible();
+
+        const clipboardData = await copyFromElement(page.locator('[data-blok-id="u2"]'));
+
+        expect(clipboardData['application/x-blok']).toBeDefined();
+
+        await page.locator(`[data-blok-id="${target}"] [contenteditable="true"]`).click();
+        await paste(page, page.locator(':focus'), clipboardData);
+
+        const pasted = async (): Promise<Array<{ text: unknown; depth: unknown; inPlace: boolean }>> => {
+          const { blocks } = await saveBlok(page);
+          const ids = new Set(['u1', 'u2', 'u3', 'u4']);
+
+          return blocks
+            .filter((b) => b.type === 'list' && b.id !== undefined && !ids.has(b.id))
+            .map((b) => ({
+              text: b.data.text,
+              depth: (b.data as { depth?: number }).depth ?? 0,
+              inPlace: b.data.text !== 'Bullet two' || b.parent === parent,
+            }));
+        };
+
+        await expect.poll(pasted).toEqual([
+          { text: 'Bullet two', depth: 0, inPlace: true },
+          { text: 'Bullet three', depth: 1, inPlace: true },
+          { text: 'Bullet four', depth: 2, inPlace: true },
+        ]);
+
+        const { blocks } = await saveBlok(page);
+        const rootId = blocks.find((b) => b.data.text === 'Bullet two' && b.id !== 'u2')?.id ?? '';
+        const indent = await page.locator(`[data-blok-id="${rootId}"]`).getByRole('listitem')
+          .first()
+          .evaluate((el) => (el instanceof HTMLElement ? el.style.marginInlineStart : ''));
+
+        expect(indent).toBe('');
+      });
+    }
+  });
+
   test.describe('a tabs block pasted into a tab', () => {
     const doc: OutputData['blocks'] = [
       { id: 'pre', type: 'paragraph', data: { text: 'Before' } },

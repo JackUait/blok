@@ -191,6 +191,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     this.detachFlipperKeydownListener();
     this.removeAllNodes();
     this.stopClickWatch();
+    this.stopFocusWatch();
     this.listeners.destroy();
     this.eventsDispatcher.off(BlokMobileLayoutToggled, this.close);
   }

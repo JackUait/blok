@@ -1119,6 +1119,21 @@ describe('BlockSettings', () => {
       raf.mockRestore();
     });
 
+    it('stops watching focus once the editor is destroyed', async () => {
+      const field = document.createElement('input');
+
+      document.body.appendChild(field);
+
+      const { block, activate } = await openWithTune(vi.fn());
+
+      activate();
+      Object.assign(block, { selected: true });
+      blockSettings.destroy();
+      field.focus();
+
+      expect(blokMock.BlockSelection.unselectBlock).not.toHaveBeenCalled();
+    });
+
     it('leaves the block selected when its tool closes the menu from a click inside it (a colour pick)', async () => {
       const { block } = await openWithTune(vi.fn());
       const menu = getLastPopover()?.getElement();

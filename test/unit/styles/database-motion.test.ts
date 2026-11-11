@@ -318,3 +318,25 @@ describe('minimized database toolbar', () => {
     expect(body(startStyle, `${TOOLBAR}[data-expanding] > *`)).toContain('opacity: 0');
   });
 });
+
+// notion-motion.md Round 9 "Collapsed group header": the toggle's hover fill comes in over 20ms ease-in.
+describe('grouped table: the group caret', () => {
+  const TOGGLE = '[data-blok-database-table-group-toggle]';
+
+  it('fades its hover fill in over 20ms ease-in', () => {
+    expect(body(outsideReducedMotion, TOGGLE)).toContain('transition: background-color 20ms ease-in');
+  });
+
+  it('does not fade under reduced motion', () => {
+    expect(body(reducedMotion, TOGGLE)).toContain('transition: none');
+  });
+});
+
+// replica-db-properties/notion-spec.md §1: the label cell has `transition: background 0.02s ease-in`.
+describe('side peek properties: the label cell', () => {
+  it('fades its hover fill in over 20ms ease-in', () => {
+    const HEAD = '[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]';
+
+    expect(body(outsideReducedMotion, HEAD)).toContain('transition: background-color 20ms ease-in');
+  });
+});

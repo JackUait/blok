@@ -2350,6 +2350,7 @@
   min-height: 34px;
   padding-inline: var(--blok-space-1-5);
   border-radius: var(--blok-radius-control);
+  transition: background-color 20ms ease-in;
 }
 
 [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-icon] {
@@ -9961,6 +9962,11 @@ button[data-blok-database-table-calc] > [data-blok-database-table-calc-box]:hove
   rotate: 90deg;
 }
 
+/* notion-motion.md Round 9: the caret's hover fill. The board lane toggle is unmeasured. */
+[data-blok-database-table-group-toggle] {
+  transition: background-color 20ms ease-in;
+}
+
 [data-blok-database-table-group-toggle]:hover,
 [data-blok-database-board-lane-toggle]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
@@ -10235,6 +10241,7 @@ button[data-blok-database-table-group-count]:hover {
   [data-blok-database-table-select-all],
   [data-blok-database-table-row-add],
   [data-blok-database-table-row-handle],
+  [data-blok-database-table-group-toggle],
   [data-blok-database-table-group-toggle] svg,
   [data-blok-database-board-lane-toggle] svg,
   [data-blok-database-table-drop-line],

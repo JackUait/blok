@@ -1589,6 +1589,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALCMENU_BYTES = 800;
     // Round 12 lane calcsub: the table's 99+ row 72.4 tall like the board's, and an 8px divider under it.
     const DATABASE_CALCSUB_BYTES = 644;
+    // Round V1 lane fills: the group caret and peek label hover fills fade in over 20ms ease-in.
+    const DATABASE_FILLS_BYTES = 271;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2044,7 +2046,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + TABLE_HELD_GRIP_UNDER_SIZE_CARD_BYTES
       + DATABASE_AGGR_BYTES
       + DATABASE_CALCMENU_BYTES
-      + DATABASE_CALCSUB_BYTES;
+      + DATABASE_CALCSUB_BYTES
+      + DATABASE_FILLS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

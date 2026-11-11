@@ -754,6 +754,16 @@ describe('DatabaseViewControls', () => {
       expect(q('database-sort-add')).toHaveFocus();
     });
 
+    it('closes the picker when the sort panel closes another way', () => {
+      const { controls } = withSort();
+
+      click('database-sort-pill');
+      click('database-sort-add');
+      controls.destroy();
+
+      expect(q('database-sort-add-picker')).toBeNull();
+    });
+
     it('names the panel page "sort" for its measured rule spacing', () => {
       withSort();
       click('database-sort-pill');

@@ -203,6 +203,8 @@ export class DatabaseViewControls {
   private readonly shareFormButton: HTMLButtonElement;
   private readonly previewFormButton: HTMLButtonElement;
   private panel: DatabasePanel | null = null;
+  /** The "Add sort" picker over the sort panel, closed with it. */
+  private addSortPicker: DatabasePanel | null = null;
   private query = '';
   /** Repaints the match tint when the rows redraw after a search (lazy rows, remote edits). */
   private matchObserver: MutationObserver | null = null;
@@ -668,7 +670,7 @@ export class DatabaseViewControls {
       /** Opens over the open panel, which stays; gets the close instead of panelClosed. */
       over?: { width: number; maxHeight: number; onClose: (escape: boolean) => void };
     }
-  ): void {
+  ): DatabasePanel {
     const state = { query: '', active: 0 };
     const list = document.createElement('div');
 
@@ -753,10 +755,12 @@ export class DatabaseViewControls {
       panel.root.style.maxHeight = `${options.over.maxHeight}px`;
       panel.open();
 
-      return;
+      return panel;
     }
     anchor.setAttribute('data-popover-open', '');
     this.showPanel(panel);
+
+    return panel;
   }
 
   /** Sort: with no rule, the property picker; otherwise the sort panel under the chip. */
@@ -898,7 +902,10 @@ export class DatabaseViewControls {
       testId: 'database-sort-panel',
       width: 290,
       backLabel: this.t('settingsBack'),
-      onClose: (escape) => this.panelClosed(anchor, escape, opener),
+      onClose: (escape) => {
+        this.addSortPicker?.close();
+        this.panelClosed(anchor, escape, opener);
+      },
     });
 
     // Notion's panel sizes to its words, so no label is cut.
@@ -918,18 +925,22 @@ export class DatabaseViewControls {
     if (row === null) return;
     const release = sortPanel.hold();
     const sorts = withEntryIds(this.view()?.sorts ?? []);
+    const focusAdd = (): void => sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-add"]')?.focus();
 
-    this.openPropertyPicker(row, 'database-sort-add-picker', SORTABLE_TYPES, (property) => {
+    this.addSortPicker = this.openPropertyPicker(row, 'database-sort-add-picker', SORTABLE_TYPES, (property) => {
       this.updatePersonal({ sorts: [...withEntryIds(this.view()?.sorts ?? []), { id: nanoid(), propertyId: property.id, direction: 'asc' }] });
+      focusAdd();
     }, {
       placeholder: this.t('settingsSearchProperty'),
       used: sorts.map((sort) => sort.propertyId),
       over: {
         width: ADD_SORT_PICKER_WIDTH,
         maxHeight: ADD_SORT_PICKER_HEIGHT,
-        onClose: () => {
+        // An outside press keeps the focus it made.
+        onClose: (escape) => {
+          this.addSortPicker = null;
           release();
-          sortPanel.root.querySelector<HTMLElement>('[data-blok-testid="database-sort-add"]')?.focus();
+          if (escape) focusAdd();
         },
       },
     });

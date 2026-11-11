@@ -69,9 +69,9 @@ span[data-blok-slash-search] {
  * thumb (`[data-blok-popover-scrollbar]`, sized and positioned in JS from the
  * scroll metrics — see popover-abstract `updateScrollbar`). The 4px content
  * indent comes entirely from the container padding (--blok-space-1); the 4px
- * thumb is an overlay 1px from the popover edge, so it overlaps the content's
- * right edge by 1px. Because it is an overlay, nothing reflows
- * when it appears — the geometry and the auto-hide behavior are byte-identical
+ * thumb is an overlay 1px from the popover edge. While it shows, the list
+ * gains a right gutter so rows and sticky labels end before the thumb instead
+ * of running under it. The geometry and the auto-hide behavior are identical
  * on Chromium, WebKit, Firefox, desktop and mobile.
  */
 [data-blok-popover-items] {
@@ -79,6 +79,10 @@ span[data-blok-slash-search] {
 }
 [data-blok-popover-items]::-webkit-scrollbar {
   display: none; /* Chromium / WebKit: hide the native scrollbar */
+}
+/* Physical right, like the thumb's own `right`. */
+[data-blok-popover-items]:has(~ [data-blok-popover-scrollbar]:not([hidden])) {
+  padding-right: var(--blok-space-1);
 }
 
 /* The custom thumb. Transparent at rest — revealed while the popover is

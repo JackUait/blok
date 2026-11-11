@@ -205,6 +205,23 @@ test.describe('popover scrollbar — identical across platforms', () => {
     expect(geometry.transform).not.toBe('none');
   });
 
+  test('keeps the rows clear of the thumb while the list scrolls', async ({ page }) => {
+    await openToolbox(page);
+
+    const thumb = page.locator(THUMB_SELECTOR).first();
+
+    await expect(thumb).toBeVisible();
+
+    const gap = await page.locator(ITEMS_SELECTOR).first().evaluate((el, thumbSelector) => {
+      const thumbLeft = document.querySelector(thumbSelector)?.getBoundingClientRect().left ?? 0;
+      const rowsRight = Math.max(...Array.from(el.children, (row) => row.getBoundingClientRect().right));
+
+      return thumbLeft - rowsRight;
+    }, THUMB_SELECTOR);
+
+    expect(gap).toBeGreaterThanOrEqual(2);
+  });
+
   test('moves the thumb as the list scrolls', async ({ page }) => {
     await openToolbox(page);
 

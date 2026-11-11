@@ -311,25 +311,20 @@ export function languageBadge(id: string, options: BadgeOptions): HTMLElement {
 }
 
 /**
- * A section label with its row count. Sticky, so it stays in view while its
- * rows scroll under it; its own background covers them. role="presentation"
- * because the popover's listbox may only own options; search hides Html rows
- * on its own.
+ * A section label. Sticky, so it stays in view while its rows scroll under it;
+ * its own background covers them. role="presentation" because the popover's
+ * listbox may only own options; search hides Html rows on its own.
  */
-function sectionHeader(label: string, count: number): PopoverItemParams {
+function sectionHeader(label: string): PopoverItemParams {
   const element = document.createElement('div');
   const name = document.createElement('span');
-  const total = document.createElement('span');
 
-  element.className = 'flex items-baseline justify-between gap-2 ps-2 pe-3 pt-1.5 pb-1.5 bg-popover-bg text-xs font-medium text-menu-section-label cursor-default';
+  element.className = 'ps-2 pe-3 pt-1.5 pb-1.5 bg-popover-bg text-xs font-medium text-menu-section-label cursor-default';
   element.setAttribute('role', 'presentation');
   element.setAttribute('data-blok-testid', 'code-language-section');
   name.setAttribute('data-label', '');
   name.textContent = label;
-  total.className = 'font-normal tabular-nums';
-  total.setAttribute('data-count', '');
-  total.textContent = String(count);
-  element.append(name, total);
+  element.append(name);
 
   return { type: PopoverItemType.Html, element, isSticky: true };
 }
@@ -365,7 +360,7 @@ export function buildLanguagePickerItems(options: LanguagePickerOptions): Popove
   });
 
   return LANGUAGE_FAMILIES.flatMap((family) => [
-    sectionHeader(t(family.key), family.languages.length),
+    sectionHeader(t(family.key)),
     ...family.languages.map(row),
   ]);
 }

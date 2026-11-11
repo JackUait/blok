@@ -1571,6 +1571,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // block-preview/structure.css: the code preview draws the block's folder tab on the card, not a header bar.
     // Its 1px overlap onto the card reads the hairline token (css-vars R2).
     const CODE_PREVIEW_TAB_BYTES = 375;
+    // slash-search.css: a scrolling popover list gains a right gutter so rows end before the custom thumb.
+    const POPOVER_THUMB_GUTTER_BYTES = 180;
     // database.css: the tab bar "+" is round, header-icon ink, a 200ms fade, and shows on keyboard focus,
     // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink,
     // plus 233 for the right-aligned calculations and the 26px "Calculate" box that fades in on its own cell.
@@ -2072,7 +2074,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FULLPAGE_BYTES
       + DATABASE_R14ROWS_BYTES
       + DATABASE_R14TABS_BYTES
-      + CODE_PREVIEW_TAB_BYTES;
+      + CODE_PREVIEW_TAB_BYTES
+      + POPOVER_THUMB_GUTTER_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

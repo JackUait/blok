@@ -39,9 +39,9 @@ const namesIn = (items: PopoverItemParams[]): string[] => items.filter(isDefault
 const headers = (items: PopoverItemParams[]): string[] =>
   items.flatMap((item) => (item.type === PopoverItemType.Html ? [item.element.querySelector('[data-label]')?.textContent ?? '—'] : []));
 
-/** Each section's count, in order. */
-const counts = (items: PopoverItemParams[]): string[] =>
-  items.flatMap((item) => (item.type === PopoverItemType.Html ? [item.element.querySelector('[data-count]')?.textContent ?? ''] : []));
+/** Each section label's full text, in order. */
+const headerTexts = (items: PopoverItemParams[]): string[] =>
+  items.flatMap((item) => (item.type === PopoverItemType.Html ? [item.element.textContent ?? ''] : []));
 
 const FAMILY_LABELS = ['Docs & diagrams', 'Web', 'Systems & apps', 'Scripting', 'Data & config'];
 
@@ -165,7 +165,7 @@ describe('buildLanguagePickerItems', () => {
 
     expect(headers(items)).toStrictEqual(FAMILY_LABELS);
     expect(namesIn(items)).toStrictEqual(LANGUAGE_FAMILIES.flatMap((family) => family.languages));
-    expect(counts(items)).toStrictEqual(LANGUAGE_FAMILIES.map((family) => String(family.languages.length)));
+    expect(headerTexts(items)).toStrictEqual(FAMILY_LABELS);
   });
 
   it('has no Suggested section, and opens on Docs & diagrams', () => {

@@ -7,6 +7,7 @@ import { createAddCoverButton, createPageCover, isCoverId, trackPageHeaderHover,
 import { mountAgentAssistant, type AgentAssistantHandle } from '../../src/shell/agent-assistant';
 import { bindAssistantButton, createAssistantButton, inspectNativeProvider, nativeAgentModel, selectedProvider } from './assistant';
 import { createPageToolbar, type PageBreadcrumbChoice, type PageBreadcrumbItem, type PageToolbar } from './page-toolbar';
+import { bindTitleDateMention, titleDateLabel } from './title-date-mention';
 
 const desktopTools = {
   ...defaultTools,
@@ -48,8 +49,10 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   let pageCanvas: HTMLElement;
   let footer: HTMLElement;
   let pageToolbar: PageToolbar | null = null;
+  let unbindTitleDateMention: (() => void) | null = null;
   let currentId = '';
   let generation = 0;
+  let dateTimer: number | null = null;
   let saveOrder = Promise.resolve();
   const pageListeners = new Map<string, Set<() => void>>();
   const status = document.createElement('div');
@@ -69,6 +72,37 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (!index) return;
     const snapshot = JSON.stringify(index);
     saveOrder = saveOrder.then(() => writeFile('index', snapshot)).catch(showError);
+  };
+  const refreshDateTitles = (): void => {
+    if (!index) return;
+    let changed = false;
+    for (const page of index.pages) {
+      if (!page.titleDate) continue;
+      const label = titleDateLabel(page.titleDate);
+      if (label === null || label === page.title) continue;
+      page.title = label;
+      changed = true;
+      notifyPage(page.id);
+    }
+    if (!changed) return;
+    frame.setPages(index.pages, index.activeId);
+    pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
+    const active = index.pages.find((page) => page.id === currentId);
+    if (active?.titleDate && editor) {
+      editor.title.set(active.title, { record: false });
+      document.title = active.title;
+    }
+    saveManifest();
+  };
+  const scheduleDateRefresh = (): void => {
+    if (dateTimer !== null) window.clearTimeout(dateTimer);
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    dateTimer = window.setTimeout(() => {
+      dateTimer = null;
+      refreshDateTitles();
+      scheduleDateRefresh();
+    }, midnight.getTime() - now.getTime() + 50);
   };
   const notifyPage = (id: string): void => { pageListeners.get(id)?.forEach((listener) => listener()); };
   const breadcrumbs = (pageId: string): PageBreadcrumbItem[] => {
@@ -160,6 +194,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
   };
   const select = (id: string): void => {
     if (!index) return;
+    refreshDateTitles();
     const page = index.pages.find((item) => item.id === id);
     if (!page) return;
     const selectedPage = page;
@@ -176,6 +211,8 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     coverRowObserver?.disconnect();
     coverRowObserver = null;
     pageToolbar?.destroy();
+    unbindTitleDateMention?.();
+    unbindTitleDateMention = null;
     editor?.destroy();
     editor = null;
     status.textContent = 'Ouverture de la page…';
@@ -248,7 +285,9 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
         onChange(title) {
           if (generation !== turn || !index) return;
           const next = title.trim() || 'Nouvelle page';
+          if (page.titleDate && next !== titleDateLabel(page.titleDate)) page.titleDate = undefined;
           page.title = next;
+          holder.querySelector<HTMLElement>('[data-blok-page-title]')?.toggleAttribute('data-desktop-title-date', !!page.titleDate);
           toolbar.setBreadcrumbs(breadcrumbs(id));
           notifyPage(id);
           document.title = next;
@@ -277,7 +316,19 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     void instance.isReady.then(() => {
       if (generation !== turn) return;
       attachCoverAction();
-      if (!instance.title.get()) instance.title.set(page.title, { record: false });
+      if (!instance.title.get() || page.titleDate) instance.title.set(page.title, { record: false });
+      const title = holder.querySelector<HTMLElement>('[data-blok-page-title]');
+      if (title) unbindTitleDateMention = bindTitleDateMention(title, {
+        getDate: () => page.titleDate,
+        chooseDate: (iso, label) => {
+          page.titleDate = iso;
+          page.title = label;
+          instance.title.set(label);
+          title.setAttribute('data-desktop-title-date', iso);
+          saveManifest();
+          instance.title.focus('end');
+        },
+      });
       syncPageIcon(page, instance.title.icon.get());
       toolbar.setBreadcrumbs(breadcrumbs(id));
       document.title = page.title;
@@ -291,11 +342,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     if (!page) return;
     if (command.type === 'rename') {
       page.title = command.title;
+      page.titleDate = undefined;
       notifyPage(page.id);
       if (currentId === page.id) editor?.title.set(command.title);
       else pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
     } else if (command.type === 'duplicate') {
-      const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)` };
+      const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)`, titleDate: undefined };
       index.pages.push(copy);
       saveManifest();
       void readFile(page.id).then(async (raw) => {
@@ -384,8 +436,11 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     async start() {
       try {
         index = await loadIndex();
+        refreshDateTitles();
         frame.setPages(index.pages, index.activeId);
         onRoute();
+        scheduleDateRefresh();
+        window.addEventListener('focus', refreshDateTitles);
       } catch (error) { showError(error); }
     },
     onRoute,

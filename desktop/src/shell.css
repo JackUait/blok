@@ -178,6 +178,23 @@ body[data-blok-theme="light"] [data-desktop-settings-overlay] {
 }
 [data-desktop-document][data-full-width] { width: 100%; padding-inline: clamp(24px, 5vw, 96px); }
 [data-desktop-document][data-has-cover] { padding-top: 38px; }
+[data-desktop-document] [data-blok-page-title][data-desktop-title-date] { color: var(--desktop-muted); }
+[data-desktop-document] [data-blok-page-title][data-desktop-title-date]::before {
+  content: '@';
+  color: var(--desktop-ink);
+}
+[data-desktop-title-date-menu] {
+  position: fixed; z-index: 100; padding: 8px;
+  border: 1px solid var(--desktop-border); border-radius: 12px;
+  background: var(--desktop-strip); color: var(--desktop-ink);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .28);
+}
+[data-desktop-title-date-heading] { padding: 5px 10px 8px; color: var(--desktop-muted); font-size: 12px; font-weight: 600; }
+[data-desktop-title-date-today] {
+  display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 7px;
+  background: var(--desktop-hover); color: var(--desktop-ink);
+  font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
 [data-desktop-document][data-has-cover]:has([data-blok-page-icon-row][data-has-icon]) { padding-top: 0; }
 [data-desktop-document][data-has-cover] [data-blok-page-icon-row][data-has-icon] {
   position: relative;

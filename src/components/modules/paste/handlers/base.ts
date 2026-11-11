@@ -153,7 +153,7 @@ export abstract class BasePasteHandler implements PasteHandler {
   /**
    * Whether pasted blocks may split the current block at the caret: the first
    * merges into the text before the caret and the last takes the text after it.
-   * Text blocks only, in a contenteditable outside a table cell. The range must
+   * Text blocks only, in a contenteditable. The range must
    * sit in that input: the first block's text goes in at the caret, and with no
    * caret there it would be lost.
    * @param firstTool - the first pasted block's tool
@@ -171,7 +171,6 @@ export abstract class BasePasteHandler implements PasteHandler {
       range !== null &&
       input.contains(range.startContainer) &&
       input.contains(range.endContainer) &&
-      currentBlock.holder?.closest('[data-blok-table-cell-blocks]') == null &&
       this.textFieldOf(currentBlock.name) !== undefined &&
       this.textFieldOf(firstTool) !== undefined &&
       this.textFieldOf(lastTool) !== undefined;

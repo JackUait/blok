@@ -1,6 +1,7 @@
 /* eslint-disable playwright/expect-expect -- some tests assert inside shared helpers */
 import type { Page } from '@playwright/test';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { blocksAsHtml } from '../helpers/saved-as-html';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import type { Clip, SavedBlock } from './table-helpers';
 import {
@@ -300,5 +301,101 @@ test.describe('table round trips: colspan, nested cell blocks, discriminators', 
     const pastedCell = canonRegion(after, after.find(b => b.id === 't2') as SavedBlock, 0, 0, 0, 0)[0][0].blocks;
 
     expect.soft(pastedCell).toEqual([...(target[0][0].blocks ?? []), ...(source[0][0].blocks ?? [])]);
+  });
+});
+
+test.describe('blocks pasted at a caret inside a cell paragraph', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await gotoTestPage(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+  });
+
+  const doc = (): SavedBlock[] => [
+    {
+      id: 't1', type: 'table',
+      data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['c'] }, { blocks: ['b'] }]] },
+      content: ['c', 'b'],
+    },
+    para('c', 'HelloWorld', 't1'),
+    para('b', 'B', 't1'),
+    para('z', 'Zulu'),
+  ];
+  const payload = (blocks: Array<{ id: string; tool: string; data: Record<string, unknown> }>): string =>
+    JSON.stringify(blocks.map(b => ({ parentId: null, contentIds: [], tunes: {}, ...b })));
+  const flavors: Record<string, Clip> = {
+    'a Blok block copy': {
+      'application/x-blok': payload([{ id: 'pa', tool: 'paragraph', data: { text: 'First' } }, { id: 'pb', tool: 'paragraph', data: { text: 'Second' } }]),
+      'text/html': '<p>First</p><p>Second</p>',
+      'text/plain': 'First\n\nSecond',
+    },
+    'html only': { 'text/html': '<p>First</p><p>Second</p>', 'text/plain': 'First\n\nSecond' },
+  };
+
+  const caretInCell = async (page: Page, offset: number): Promise<void> => {
+    const editable = page.locator('[data-blok-id="c"] [contenteditable="true"]');
+
+    await editable.click();
+    await editable.evaluate((el, at) => {
+      const text = el.firstChild;
+      const selection = window.getSelection();
+
+      if (!text || !selection) {
+        throw new Error('no text node to place the caret in');
+      }
+      selection.collapse(text, at);
+    }, offset);
+  };
+
+  /** The first cell's blocks as `id:text`, with new ids shown as `new`. */
+  const firstCell = async (page: Page): Promise<string[]> => {
+    const saved = blocksAsHtml(await saveRaw(page));
+    const table = saved.find(b => b.id === 't1');
+    const ids = (table?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks;
+
+    return ids.map((id) => {
+      const block = saved.find(b => b.id === id);
+
+      return `${id === 'c' ? 'c' : 'new'}:${String((block?.data as { text?: unknown } | undefined)?.text)}`;
+    });
+  };
+  const roots = async (page: Page): Promise<string[]> => (await saveRaw(page)).filter(b => b.parent === undefined).map(b => b.id ?? '');
+
+  for (const [flavor, clip] of Object.entries(flavors)) {
+    test(`${flavor} splits the cell paragraph at the caret`, async ({ page }) => {
+      await createEditor(page, doc());
+      await caretInCell(page, 5);
+      await firePaste(page, clip);
+
+      await expect.poll(() => firstCell(page)).toEqual(['c:HelloFirst', 'new:SecondWorld']);
+      expect(await roots(page)).toEqual(['t1', 'z']);
+    });
+
+    test(`${flavor} split in a cell undoes in one step`, async ({ page }) => {
+      await createEditor(page, doc());
+      await caretInCell(page, 5);
+      await firePaste(page, clip);
+      await expect.poll(() => firstCell(page)).toEqual(['c:HelloFirst', 'new:SecondWorld']);
+
+      await page.keyboard.press('ControlOrMeta+z');
+
+      await expect.poll(() => firstCell(page)).toEqual(['c:HelloWorld']);
+    });
+  }
+
+  test('a Blok block copy holding a header leaves the cell whole and lands after the table', async ({ page }) => {
+    await createEditor(page, doc());
+    await caretInCell(page, 5);
+    await firePaste(page, {
+      'application/x-blok': payload([{ id: 'pa', tool: 'paragraph', data: { text: 'First' } }, { id: 'ph', tool: 'header', data: { text: 'Second', level: 2 } }]),
+      'text/plain': 'First\n\n## Second',
+    });
+
+    await expect.poll(async () => blocksAsHtml(await saveRaw(page)).filter(b => b.parent === undefined).map(b => `${b.type}:${String((b.data as { text?: unknown }).text)}`))
+      .toEqual(['table:undefined', 'paragraph:First', 'header:Second', 'paragraph:Zulu']);
+    expect(await firstCell(page)).toEqual(['c:HelloWorld']);
   });
 });

@@ -1122,17 +1122,24 @@ describe('BasePasteHandler — caret split of pasted text blocks', () => {
     expect(pasteCalls).toHaveLength(2);
   });
 
-  it('does NOT caret-split a block in a table cell', async () => {
-    const currentBlock = createMockBlock();
+  it('splits a paragraph in a table cell at the caret, like one outside a table', async () => {
+    const currentBlock = blockWithCaret();
     const cell = document.createElement('div');
 
     cell.setAttribute('data-blok-table-cell-blocks', '');
+    document.body.append(cell);
     cell.append(currentBlock.holder);
-    const { handler, extractFragmentFromCaretPosition } = createHarness({ currentBlock, blockTools });
+    window.getSelection()?.collapse(currentBlock.currentInput?.firstChild ?? null, 5);
+    const { handler, pasteCalls, insertContentAtCaretPosition, extractFragmentFromCaretPosition } = createHarness({ currentBlock, blockTools });
 
-    await handler.callInsertPasteData([blockItem('paragraph', 'First'), blockItem('paragraph', 'Second')], false);
+    extractFragmentFromCaretPosition.mockReturnValue(tailFragment());
+    const data = [blockItem('paragraph', 'First'), blockItem('paragraph', 'Second')];
 
-    expect(extractFragmentFromCaretPosition).not.toHaveBeenCalled();
+    await handler.callInsertPasteData(data, false);
+
+    expect(data[1].content.textContent).toBe('SecondTail');
+    expect(insertContentAtCaretPosition).toHaveBeenCalledWith('First');
+    expect(pasteCalls.map((call) => call.tool)).toEqual(['paragraph']);
   });
 });
 

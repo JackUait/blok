@@ -1225,7 +1225,7 @@ export class LinkInlineTool implements InlineTool {
     this.selection.restore();
     this.insertLink(preparedValue);
     this.rememberLink(preparedValue);
-    this.selection.collapseToEnd();
+    // The linked text stays selected, as in Notion (U070).
     this.inlineToolbar.close();
   }
 
@@ -1535,7 +1535,7 @@ export class LinkInlineTool implements InlineTool {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    this.selection.collapseToEnd();
+    // The linked text stays selected, as in Notion (U070).
     this.inlineToolbar.close();
   }
 

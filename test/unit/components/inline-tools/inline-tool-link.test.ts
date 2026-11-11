@@ -490,7 +490,7 @@ describe('LinkInlineTool', () => {
     expect(insertLinkSpy).not.toHaveBeenCalled();
   });
 
-  it('inserts prepared link and collapses selection when URL is valid', () => {
+  it('inserts prepared link and keeps the linked text selected when URL is valid', () => {
     const { tool, selection, inlineToolbar } = createTool();
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
     const input = getInputFromWrapper(renderResult.children.items[0].element);
@@ -504,7 +504,7 @@ describe('LinkInlineTool', () => {
     expect(selection.restore).toHaveBeenCalled();
     expect(removeFakeBackgroundSpy).toHaveBeenCalled();
     expect(insertLinkSpy).toHaveBeenCalledWith('http://example.com');
-    expect(selection.collapseToEnd).toHaveBeenCalled();
+    expect(selection.collapseToEnd).not.toHaveBeenCalled();
     expect(inlineToolbar.close).toHaveBeenCalled();
   });
 
@@ -915,7 +915,7 @@ describe('LinkInlineTool', () => {
       expect(chip?.classList.contains('hidden')).toBe(true);
     });
 
-    it('confirmLink inserts link and closes toolbar', () => {
+    it('confirmLink inserts link, keeps the linked text selected and closes toolbar', () => {
       const { tool, selection, inlineToolbar } = createTool();
       const renderResult = tool.render() as unknown as LinkToolRenderResult;
       const input = getInputFromWrapper(renderResult.children.items[0].element);
@@ -926,7 +926,7 @@ describe('LinkInlineTool', () => {
       (tool as unknown as { confirmLink(): void }).confirmLink();
 
       expect(insertLinkSpy).toHaveBeenCalledWith('http://example.com');
-      expect(selection.collapseToEnd).toHaveBeenCalled();
+      expect(selection.collapseToEnd).not.toHaveBeenCalled();
       expect(inlineToolbar.close).toHaveBeenCalled();
     });
 

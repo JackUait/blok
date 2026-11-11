@@ -72,8 +72,9 @@ describe('property types — query', () => {
       expect(FILTER_OPERATORS.files).toEqual(['is_empty', 'is_not_empty']);
       expect(FILTER_OPERATORS.createdTime).toEqual(FILTER_OPERATORS.date);
       expect(FILTER_OPERATORS.lastEditedTime).toEqual(FILTER_OPERATORS.date);
+      // notion-motion.md Round 13: ID lists =, ≠, >, <, ≥, ≤, Is empty, Is not empty.
       expect(FILTER_OPERATORS.uniqueId).toEqual([
-        'equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to',
+        'equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to', 'is_empty', 'is_not_empty',
       ]);
     });
 
@@ -223,6 +224,13 @@ describe('property types — query', () => {
       expect(matches(rows[0], { propertyId: 'uid', operator: 'greater_than', value: 2 })).toBe(true);
       expect(matches(rows[1], { propertyId: 'uid', operator: 'greater_than_or_equal_to', value: '2' })).toBe(false);
       expect(ids(sortRows(rows, [{ propertyId: 'uid', direction: 'desc' }], schema))).toEqual(['r3', 'r2', 'r1']);
+    });
+
+    it('filters an ID by is empty and is not empty', () => {
+      expect(matches(row('none', 'a0'), { propertyId: 'uid', operator: 'is_empty', value: null })).toBe(true);
+      expect(matches(row('one', 'a0', { uid: 1 }), { propertyId: 'uid', operator: 'is_empty', value: null })).toBe(false);
+      expect(matches(row('one', 'a0', { uid: 1 }), { propertyId: 'uid', operator: 'is_not_empty', value: null })).toBe(true);
+      expect(matches(row('none', 'a0'), { propertyId: 'uid', operator: 'is_not_empty', value: null })).toBe(false);
     });
   });
 

@@ -76,6 +76,15 @@ export const filesOf = (value: PropertyValue | undefined): FileValue[] =>
  */
 export const MIXED_FORMULA = Symbol('mixed-type formula');
 
+/**
+ * Marks the shown property of a Show original / Show unique rollup of the Name
+ * (computed-properties.ts). A rollup of a relation shows the same type, so the
+ * filter UI cannot tell them apart without it. A symbol, so saved data never carries it.
+ */
+export const PAGE_LIST_ROLLUP = Symbol('page-list rollup');
+
+export const isPageListRollup = (property: PropertyDefinition): boolean => PAGE_LIST_ROLLUP in property;
+
 // ─── Status ───
 
 const byPosition = <T extends { position: string }>(a: T, b: T): number => {

@@ -15,10 +15,10 @@ import { RELATIVE_DATE_OPERATORS, relativeWindow, resolveDay } from './relative-
 import { scopeSubItems } from './sub-items';
 import { isEmptyObjectValue, isOutputData, placeText } from './tier3-values';
 import { comparePositions } from './positions';
-import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './new-row-values';
+import { END_DATE_SIDE, ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './new-row-values';
 import { rowOrderKey } from './row-order';
 
-export { ME_FILTER_VALUE, newRowValues, prefillFilters, THIS_PAGE_FILTER_VALUE } from './new-row-values';
+export { END_DATE_SIDE, ME_FILTER_VALUE, newRowValues, prefillFilters, THIS_PAGE_FILTER_VALUE } from './new-row-values';
 
 export { MIXED_FORMULA };
 
@@ -51,7 +51,7 @@ export const FILTER_OPERATORS: Readonly<Record<PropertyType, readonly string[]>>
   date: DATE_OPERATORS,
   createdTime: DATE_OPERATORS,
   lastEditedTime: DATE_OPERATORS,
-  uniqueId: COMPARE_OPERATORS,
+  uniqueId: NUMBER_OPERATORS,
   relation: LIST_OPERATORS,
   // Formula and rollup filter as their result type; the model queries with
   // that property (ComputedProperties.valueProperty), never with these.
@@ -379,6 +379,34 @@ const matchQuantified = (value: PropertyValue | undefined, operator: string, tar
 };
 
 
+/** `any:contains`: a quantifier over a Name rollup's titles, then a text operator (notion-motion.md Round 13). */
+const QUANTIFIED_TEXT = /^(any|none|every):(.+)$/;
+
+/**
+ * Each title is matched as text. Every on an empty list is false, as for the
+ * id quantifiers; Notion's answer there is unmeasured.
+ */
+const matchQuantifiedText = (value: PropertyValue | undefined, quantifier: string, operator: string, target: PropertyValue): boolean | undefined => {
+  if (!(TEXT_OPERATORS as readonly string[]).includes(operator)) return undefined;
+  if (operator !== 'is_empty' && operator !== 'is_not_empty' && (typeof target !== 'string' || target === '')) return undefined;
+  const titles = value === undefined || value === null || (Array.isArray(value) && value.length === 0) ? [] : pageTitles(value);
+
+  if (titles === undefined) return undefined;
+  const hits = titles.map((title) => matchText(title, operator, target) === true);
+
+  if (quantifier === 'any') return hits.some(Boolean);
+  if (quantifier === 'none') return !hits.some(Boolean);
+
+  return hits.length > 0 && hits.every(Boolean);
+};
+
+/** A range's last day; a single day is its own end. What Notion's End date reads on a single day is unmeasured. */
+const endDayOf = (value: PropertyValue | undefined): string | null => {
+  const parsed = parseDateValue(value);
+
+  return parsed === null ? null : parsed.end ?? parsed.start;
+};
+
 const PERSON_TYPES: readonly PropertyType[] = ['person', 'createdBy', 'lastEditedBy'];
 
 /** Stands in for "Me" when nobody is signed in: no person has this id. */
@@ -429,6 +457,11 @@ export const matchCondition = (
 
   if (property !== undefined && isRollupList(property)) {
     const value = readPropertyValue(row, property);
+    const quantified = QUANTIFIED_TEXT.exec(condition.operator);
+
+    if (quantified !== null) {
+      return property.type === 'relation' ? matchQuantifiedText(value, quantified[1], quantified[2], condition.value) : undefined;
+    }
 
     // A text filter from when a Name rollup read as text matches that text.
     if (property.type === 'relation' && TEXT_ONLY.includes(condition.operator)) {
@@ -442,6 +475,11 @@ export const matchCondition = (
   // "This page" is a relation tab's only filter: with its property gone or no longer a relation it
   // must show no row, not every row.
   if (property?.type !== 'relation' && toIdList(condition.value).includes(THIS_PAGE_FILTER_VALUE)) return false;
+  if (property?.type === 'date' && condition.operator.startsWith(END_DATE_SIDE)) {
+    const operator = condition.operator.slice(END_DATE_SIDE.length);
+
+    return FILTER_OPERATORS.date.includes(operator) ? matchDate(endDayOf(readPropertyValue(row, property)), operator, condition.value, now) : undefined;
+  }
   // A type from a newer client has no entry here: let the row through.
   if (property === undefined || !(FILTER_OPERATORS[property.type]?.includes(condition.operator) ?? false)) return undefined;
   const target = property.type === 'relation' ? resolveThisPage(condition.value, page) : condition.value;

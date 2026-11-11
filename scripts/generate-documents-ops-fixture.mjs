@@ -357,6 +357,30 @@ const buildCases = async (invoke) => {
     ] },
     batch: { commands: [{ name: 'database.deleteComment', args: { id: 'db', commentId: 'c1' } }] },
   }));
+  // notion-motion.md Round 13 filter operators: an ID emptiness check, an End date side and a rollup quantifier.
+  // The server reads them back as saved. A write would stamp the clock, so this case only reads.
+  add('agent.read.filterOperators', 'agentExecute', J({
+    services: [], actor: { id: 'agent-x', name: 'Agent', kind: 'agent' },
+    document: { blocks: [{ id: 'db', type: 'database', content: [], data: {
+      title: 'Tasks', activeViewId: 'v',
+      schema: [
+        { id: 't', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'uid', name: 'ID', type: 'uniqueId', position: 'a1' },
+        { id: 'due', name: 'Due', type: 'date', position: 'a2' },
+        { id: 'rel', name: 'Related', type: 'relation', position: 'a3', relation: { targetDatabaseId: 'db' } },
+        { id: 'names', name: 'Names', type: 'rollup', position: 'a4', rollup: { relationPropertyId: 'rel', targetPropertyId: 't', function: 'show_original' } },
+      ],
+      views: [{
+        id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], visibleProperties: [],
+        filters: [
+          { id: 'f1', propertyId: 'uid', operator: 'is_empty', value: null },
+          { id: 'f2', propertyId: 'due', operator: 'end:before', value: '2026-10-07' },
+        ],
+        filterTree: { id: 'g', conjunction: 'and', filterRules: [{ id: 'f3', propertyId: 'names', operator: 'none:starts_with', value: 'x' }] },
+      }],
+    } }] },
+    batch: { commands: [{ name: 'doc.read', args: { ids: ['db'], detail: 'full' } }] },
+  }));
   // The host could not make the second page: the batch fails at that insert with the host's error, the first page orphaned.
   add('mcp.execute.pageFailure', 'agentExecute', J({
     mcp: { ...mcpStored, pageTitles: 'page-map' }, document: mcpDoc, actor: mcpActor, createdPages: ['host-a'],

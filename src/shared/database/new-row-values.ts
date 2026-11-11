@@ -7,6 +7,9 @@ import { personIdsOf } from './value-helpers';
 
 import type { DatabaseViewConfig, FilterConfig, FilterRule, PropertyDefinition, PropertyType, PropertyValue } from './types';
 
+/** A date filter operator that reads a range's end day: `end:before` (notion-motion.md Round 13, Start date / End date). */
+export const END_DATE_SIDE = 'end:';
+
 /** A person filter's value for the current user (Notion API `"me"`). */
 export const ME_FILTER_VALUE = 'me';
 
@@ -66,7 +69,8 @@ const dateTargetValue = (operator: string, target: PropertyValue, now: Date): st
 /** The value an `equals` filter asks for, or `undefined` when a new row cannot take it. */
 const filterTargetValue = (type: PropertyType | undefined, operator: string, target: PropertyValue, me: string | null, page: string | null, now: Date): PropertyValue | undefined => {
   if (type === 'date') {
-    return dateTargetValue(operator, target, now);
+    // A single day is its own end date, so an End date filter takes the same day.
+    return dateTargetValue(operator.startsWith(END_DATE_SIDE) ? operator.slice(END_DATE_SIDE.length) : operator, target, now);
   }
   // A relation tab's new row links to its page, or its own filter would hide it.
   if (operator === 'contains' && type === 'relation' && page !== null && page !== '' && personIdsOf(target).includes(THIS_PAGE_FILTER_VALUE)) {

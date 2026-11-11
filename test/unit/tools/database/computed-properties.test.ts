@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
 import type { DatabaseSource } from '../../../../src/tools/database/computed-properties';
 import { readPropertyValue } from '../../../../src/tools/database/property-values';
+import { isPageListRollup } from '../../../../src/shared/database/value-helpers';
 import { FILTER_OPERATORS, rowMatchesFilters, rowMatchesSearch, sortRows } from '../../../../src/tools/database/database-query';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
@@ -376,6 +377,49 @@ describe('ComputedProperties', () => {
       expect(filtered('starts_with', 'design')).toEqual(['p1']);
       expect(filtered('is_empty', null)).toEqual(['p3']);
       expect(searched('build')).toEqual(['p1', 'p2']);
+    });
+
+    // notion-motion.md Round 13: a Name rollup filters with Any / None / Every, then the text operators.
+    it('filters a Name rollup with any, none and every over the related titles', () => {
+      const names = rollup('names', 'tasks', 'title', 'show_original');
+      const schema = [title, tasks, names];
+      const engine = new ComputedProperties('db');
+      const tasksSource: DatabaseSource = {
+        schema: otherSchema,
+        rows: [row('t1', { title: 'Design', hours: 2 }), row('t2', { title: 'Build', hours: 5 })],
+      };
+      const rows = engine.apply(schema, [
+        row('p1', { title: 'One', tasks: [{ id: 't1' }, { id: 't2' }] }),
+        row('p2', { title: 'Two', tasks: [{ id: 't2' }] }),
+        row('p3', { title: 'Three' }),
+      ], { databaseId: 'db', now: NOW, resolveDatabase: (id) => (id === 'db-tasks' ? tasksSource : undefined) });
+      const shown = schema.map((p) => engine.valueProperty(p));
+      const filtered = (operator: string, value: PropertyValue): string[] =>
+        rows.filter((r) => rowMatchesFilters(r, [{ propertyId: 'names', operator, value }], shown)).map((r) => r.id);
+
+      expect(filtered('any:contains', 'design')).toEqual(['p1']);
+      expect(filtered('none:contains', 'design')).toEqual(['p2', 'p3']);
+      expect(filtered('every:starts_with', 'b')).toEqual(['p2']);
+      expect(filtered('every:contains', 'i')).toEqual(['p1', 'p2']);
+      expect(filtered('any:equals', 'build')).toEqual(['p1', 'p2']);
+      expect(filtered('any:does_not_equal', 'build')).toEqual(['p1']);
+      expect(filtered('any:is_not_empty', null)).toEqual(['p1', 'p2']);
+      expect(filtered('any:is_empty', null)).toEqual([]);
+      // No text yet: the filter hides nothing.
+      expect(filtered('any:contains', '')).toEqual(['p1', 'p2', 'p3']);
+      expect(filtered('most:contains', 'design')).toEqual(['p1', 'p2', 'p3']);
+    });
+
+    it('marks only a rollup of the Name as a page list', () => {
+      const names = rollup('names', 'tasks', 'title', 'show_original');
+      const hours = rollup('hours', 'tasks', 'hours', 'sum');
+      const engine = new ComputedProperties('db');
+
+      engine.apply([title, tasks, names, hours], [], ctx);
+
+      expect(isPageListRollup(engine.valueProperty(names))).toBe(true);
+      expect(isPageListRollup(engine.valueProperty(hours))).toBe(false);
+      expect(isPageListRollup(tasks)).toBe(false);
     });
 
     // Ids "t1" < "t2" run the other way from the titles, so an id sort would put One first.

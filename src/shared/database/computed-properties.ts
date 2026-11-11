@@ -3,7 +3,7 @@ import type { CompileResult, EvaluationBudget, FormulaErrorCode, FormulaErrorPar
 import { propertyFormulaValue } from './formula/properties';
 import type { TextContext } from './formula/values';
 import { isDate, isRef } from './formula/types';
-import { MIXED_FORMULA, readPropertyValue } from './value-helpers';
+import { MIXED_FORMULA, PAGE_LIST_ROLLUP, readPropertyValue } from './value-helpers';
 import { relationIdsOf } from './relation-values';
 import { computeRollup, isNumberList, isPageList, rollupHasFormat, rollupResultType } from './rollup';
 import type { DatabaseRow, NumberDisplay, PropertyDefinition, PropertyValue } from './types';
@@ -208,7 +208,9 @@ export class ComputedProperties {
         const { number: _stale, ...rest } = property;
         const via = isPageList(settings.function, target) ? this.schema.find((p) => p.id === settings.relationPropertyId)?.relation : undefined;
 
-        return { ...rest, ...shape, config: shape.config ?? property.config, ...(via !== undefined ? { relation: via } : {}) };
+        const shown = { ...rest, ...shape, config: shape.config ?? property.config, ...(via !== undefined ? { relation: via } : {}) };
+
+        return isPageList(settings.function, target) ? Object.assign(shown, { [PAGE_LIST_ROLLUP]: true }) : shown;
       }
       const number = rollupHasFormat(settings.function) ? property.number ?? shape.number : withoutFormat(property.number, shape.number);
       const { number: _own, ...rest } = property;

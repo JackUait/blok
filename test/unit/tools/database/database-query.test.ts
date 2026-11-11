@@ -524,6 +524,38 @@ describe('database-query — date ranges', () => {
     expect(matches(ranged, { propertyId: 'due', operator, value })).toBe(expected);
   });
 
+  // notion-motion.md Round 13: a Date filter has a Start date / End date chooser. "end:" reads the end day only.
+  it.each([
+    ['end:equals', '2026-10-10', true],
+    ['end:equals', '2026-10-07', false],
+    ['end:before', '2026-10-10', false],
+    ['end:on_or_before', '2026-10-10', true],
+    ['end:after', '2026-10-09', true],
+    ['end:is_between', '2026-10-08/2026-10-12', true],
+    ['end:is_between', '2026-10-01/2026-10-06', false],
+  ])('a range %s %s → %s (End date reads the last day)', (operator, value, expected) => {
+    expect(matches(ranged, { propertyId: 'due', operator, value })).toBe(expected);
+  });
+
+  it('reads a single day as its own end date', () => {
+    const day = row('d', 'a0', { due: '2026-10-05' });
+
+    expect(matches(day, { propertyId: 'due', operator: 'end:equals', value: '2026-10-05' })).toBe(true);
+    expect(matches(row('e', 'a0'), { propertyId: 'due', operator: 'end:is_empty', value: null })).toBe(true);
+    expect(matches(day, { propertyId: 'due', operator: 'end:is_empty', value: null })).toBe(false);
+  });
+
+  it('lets a row through an end side it cannot read', () => {
+    expect(matches(ranged, { propertyId: 'due', operator: 'end:nope', value: '2026-10-01' })).toBe(true);
+    expect(matches(row('t', 'a0', { title: 'x' }), { propertyId: 'title', operator: 'end:equals', value: 'y' })).toBe(true);
+  });
+
+  it('fills a new row so an End date filter keeps it', () => {
+    const values = newRowValues([{ propertyId: 'due', operator: 'end:equals', value: '2026-10-05' }], schema);
+
+    expect(values.due).toBe('2026-10-05');
+  });
+
   it('treats a range as not empty', () => {
     expect(matches(ranged, { propertyId: 'due', operator: 'is_not_empty', value: null })).toBe(true);
     expect(matches(ranged, { propertyId: 'due', operator: 'is_empty', value: null })).toBe(false);

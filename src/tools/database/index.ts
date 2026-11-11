@@ -9701,6 +9701,9 @@ export class DatabaseTool implements BlockTool {
         },
         onShown: () => this.view?.rowPageOpened?.(),
         onClose: () => {
+          // Notion hides the page's block handle as the peek starts to close (Round 14): the page moves under a still pointer.
+          // Mocked APIs in tests may have no toolbar.
+          this.api.toolbar?.close();
           rowLink.closed = this.openedRowLink ?? rowLink.closed;
           this.openedRowLink = null;
           // The next open asks the host again.

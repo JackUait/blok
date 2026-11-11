@@ -470,6 +470,30 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    // notion-motion.md Round 14: the page's block handle goes at the start of the peek's close; the next pointer move brings it back.
+    it('closing a row page hides the editor\'s block handle at once', () => {
+      const row = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task' }, position: 'a0' });
+      const options = createDatabaseOptions({}, {}, { childBlocks: [row] });
+      const close = vi.fn();
+
+      Object.assign(options.api, { toolbar: { close } });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+      tool.openRow({ rowId: 'row-1', mode: 'side', explicit: true });
+      expect(close).not.toHaveBeenCalled();
+
+      element.querySelector<HTMLElement>('[data-blok-database-drawer-close]')?.click();
+
+      expect(close).toHaveBeenCalledTimes(1);
+      expect(close).toHaveBeenCalledWith();
+
+      tool.destroy();
+      element.remove();
+    });
+
     it('a value edited in the drawer goes through the row block and its change', () => {
       const row = createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task', 'prop-done': false }, position: 'a0' });
       const options = createDatabaseOptions({

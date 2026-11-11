@@ -356,6 +356,8 @@ export class UndoHistory {
   private caretJustRestored = false;
   /** The selection live at the undo press in progress. */
   private selectionAtUndoPress: CaretSnapshot | null = null;
+  /** The undo in progress came from a key press, not an API call. */
+  private undoIsKeyPress = false;
   /** The caret the last undo or redo restored, until the next gesture. */
   private restoredCaret: CaretSnapshot | null = null;
   /** A block's own control (a to-do checkbox) focused at the press in progress. */
@@ -364,6 +366,12 @@ export class UndoHistory {
   private readonly selectionAtUndo = new WeakMap<CaretHistoryEntry, CaretSnapshot | null>();
   /** Steps made from a block's own control (a to-do tick). Only these keep focus on it. */
   private readonly controlSteps = new WeakSet<CaretHistoryEntry>();
+  /**
+   * Steps last undone by a key press. Their redo restores nothing when that
+   * press had nothing live (Notion U047). An API undo also reads null, and
+   * its redo keeps the step's own caret.
+   */
+  private readonly undoneByKeyPress = new WeakSet<CaretHistoryEntry>();
 
   private readonly selectionChangeHandler = (): void => this.dropPendingCaretIfMoved();
 
@@ -1769,9 +1777,11 @@ export class UndoHistory {
    * - a spent item leaves the history.
    *
    * When nothing applies, `canUndo()` says so until the doc changes.
+   * @param expectedToken - undo only this step, when it is on top
+   * @param keyPress - the user pressed the undo key
    * @returns whether a step applied
    */
-  public undo(expectedToken?: CaretHistoryEntry): boolean {
+  public undo(expectedToken?: CaretHistoryEntry, keyPress = false): boolean {
     // Land buffered typing writes first so they are part of the group we pop.
     this.flushPendingWritesHook();
     this.applyHeldAfter();
@@ -1781,6 +1791,7 @@ export class UndoHistory {
 
     // Before the replay moves it.
     this.selectionAtUndoPress = this.liveCaretSnapshot();
+    this.undoIsKeyPress = keyPress;
     this.controlAtPress = this.focusedBlockControl();
 
     // Save scroll position before DOM manipulation. Removing focused elements
@@ -1810,6 +1821,7 @@ export class UndoHistory {
       this.nothingUndoable = true;
     }
     this.selectionAtUndoPress = null;
+    this.undoIsKeyPress = false;
     this.restoreScrollIfJumped(savedScrollY);
 
     return applied;
@@ -2272,6 +2284,11 @@ export class UndoHistory {
 
     if (position === 'before') {
       this.selectionAtUndo.set(entry, this.selectionAtUndoPress);
+      if (this.undoIsKeyPress) {
+        this.undoneByKeyPress.add(entry);
+      } else {
+        this.undoneByKeyPress.delete(entry);
+      }
     }
 
     if (entry.outsideEditor === true) {
@@ -2297,6 +2314,14 @@ export class UndoHistory {
     if (atUndo !== null && this.restoreCaretSnapshot(atUndo)) {
       this.caretJustRestored = true;
       this.restoredCaret = atUndo;
+
+      return;
+    }
+
+    // The undo key was pressed with nothing live, or with blocks the redo removed: leave nothing live (Notion U047, U048).
+    if (position === 'after' && this.undoneByKeyPress.has(entry) && (atUndo === null || atUndo.blocks !== undefined)) {
+      this.caretJustRestored = false;
+      this.restoredCaret = null;
 
       return;
     }

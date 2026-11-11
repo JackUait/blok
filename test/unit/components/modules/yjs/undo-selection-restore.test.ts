@@ -160,6 +160,43 @@ describe('UndoHistory: the selection at the undo press', () => {
     expect(caret.setToInput).toHaveBeenLastCalledWith(blocks[0].inputs[0], 'default', 5);
   });
 
+  // Notion U047, U048: a redo pressed after an undo pressed with nothing live leaves nothing live.
+  it('a redo restores nothing when the undo key press had no selection in the editor', () => {
+    putCaret(blocks[0], 5);
+    history.beginGesture('typing');
+    write('Alpha one');
+    window.getSelection()?.removeAllRanges();
+
+    history.undo(undefined, true);
+    window.getSelection()?.removeAllRanges();
+    caret.setToInput.mockClear();
+    selectBlock.mockClear();
+    history.redo();
+
+    expect(caret.setToInput).not.toHaveBeenCalled();
+    expect(selectBlock).not.toHaveBeenCalled();
+  });
+
+  // Notion U047: the undo press selected the block the redo deletes again.
+  it('a redo restores nothing when the blocks selected at the undo key press are gone', () => {
+    putCaret(blocks[0], 5);
+    history.beginGesture('discrete');
+    write('deleted b');
+    window.getSelection()?.removeAllRanges();
+    blocks[1].selected = true;
+
+    history.undo(undefined, true);
+    const [gone] = blocks.splice(1, 1);
+
+    gone.holder.remove();
+    caret.setToInput.mockClear();
+    selectBlock.mockClear();
+    history.redo();
+
+    expect(caret.setToInput).not.toHaveBeenCalled();
+    expect(selectBlock).not.toHaveBeenCalled();
+  });
+
   it('undo of a step made on a block selection gives that block selection back, with no caret', () => {
     window.getSelection()?.removeAllRanges();
     blocks[1].selected = true;

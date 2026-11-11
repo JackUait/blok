@@ -76,6 +76,24 @@ describe('HistoryAPI', () => {
       expect(historyApi.methods).toHaveProperty('undo');
     });
 
+    // Notion U047: an API undo is no key press, so its redo keeps the step's own caret.
+    it('an API undo does not count as a key press', () => {
+      const { historyApi, blok } = createHistoryApi();
+
+      historyApi.methods.undo();
+
+      expect(blok.YjsManager.undo).not.toHaveBeenCalledWith(true);
+    });
+
+    it('a title key press counts as a key press', () => {
+      const { historyApi, blok } = createHistoryApi();
+
+      historyApi.state = { ...blok, I18n: { t: (key: string) => key } } as unknown as BlokModules;
+      historyApi.press('undo');
+
+      expect(blok.YjsManager.undo).toHaveBeenCalledWith(true);
+    });
+
     it('exposes a redo method that proxies to the class method', () => {
       const { historyApi, blok } = createHistoryApi();
 

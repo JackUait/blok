@@ -1243,7 +1243,7 @@ export class KeyboardController extends Controller {
       Toolbar.toolbox.close();
     }
 
-    const applied = direction === 'undo' ? YjsManager.undo() : YjsManager.redo();
+    const applied = direction === 'undo' ? YjsManager.undo(true) : YjsManager.redo();
 
     // Notion says "Nothing to undo" only with the caret in the page (RM8), not with blocks block-selected (U121).
     const caretInEditor = this.wrapperElement?.contains(window.getSelection()?.anchorNode ?? null) === true;

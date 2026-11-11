@@ -1699,6 +1699,15 @@ describe('KeyboardController — mutation coverage', () => {
       expect(reachedTarget).toBe(false);
     });
 
+    // Notion U047: the history tells a key press from an API call.
+    it('tells the history the undo came from a key press', () => {
+      const harness = enabledHarness();
+
+      harness.press(harness.outside, { key: 'z', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).toHaveBeenCalledWith(true);
+    });
+
     // Notion U178: one undo takes back "/tod" and the menu closes; redo leaves it closed.
     it.each([
       ['undo', { key: 'z', ctrlKey: true }],

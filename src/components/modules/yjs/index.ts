@@ -1027,12 +1027,13 @@ export class YjsManager extends Module {
 
   /**
    * Undo the last operation.
+   * @param keyPress - the user pressed the undo key, not an API call
    * @returns whether a step applied
    */
-  public undo(): boolean {
+  public undo(keyPress = false): boolean {
     this.beforeUserStep.forEach((listener) => listener());
 
-    return this.undoHistory.undo();
+    return this.undoHistory.undo(undefined, keyPress);
   }
 
   /**

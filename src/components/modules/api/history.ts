@@ -67,7 +67,7 @@ export class HistoryAPI extends Module {
     }
 
     const { YjsManager, I18n } = this.Blok;
-    const applied = direction === 'undo' ? YjsManager.undo() : YjsManager.redo();
+    const applied = direction === 'undo' ? YjsManager.undo(true) : YjsManager.redo();
 
     announceHistoryPress((key) => I18n.t(key), direction, applied);
   }

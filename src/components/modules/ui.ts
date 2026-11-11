@@ -1485,6 +1485,14 @@ export class UI extends Module<UINodes> {
 
     // A link inside a hint keeps its click; anywhere else on the hint pins the card.
     if (hint !== null && event.button === 0 && Selection.isCollapsed && !(anchor instanceof HTMLAnchorElement && hint.contains(anchor))) {
+      // A writer with the tool edits the hint; everyone else reads it.
+      if (!this.Blok.ReadOnly.isEnabled && this.Blok.Tools.inlineTools.has('annotation')) {
+        this.annotationCard?.hide();
+        void this.Blok.InlineToolbar.editAnnotation(hint);
+
+        return;
+      }
+
       this.ensureAnnotationCard().toggle(hint);
 
       return;

@@ -1578,7 +1578,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // slash-search.css: a scrolling popover list gains a right gutter so rows end before the custom thumb.
     const POPOVER_THUMB_GUTTER_BYTES = 180;
     // preflight.css: an annotated phrase ("Hint") gets a dotted underline, a hover wash and a help cursor in read-only mode.
-    const ANNOTATION_UNDERLINE_BYTES = 842;
+    const ANNOTATION_UNDERLINE_BYTES = 752;
     // database.css: the tab bar "+" is round, header-icon ink, a 200ms fade, and shows on keyboard focus,
     // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink,
     // plus 233 for the right-aligned calculations and the 26px "Calculate" box that fades in on its own cell.

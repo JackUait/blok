@@ -76,6 +76,8 @@ export { CodeInlineTool as InlineCode } from '../components/inline-tools/inline-
 export { EquationInlineTool as Equation } from '../components/inline-tools/inline-tool-equation';
 export { ClearFormatInlineTool as ClearFormat } from '../components/inline-tools/inline-tool-clear-format';
 export { SupSubInlineTool as SupSub } from '../components/inline-tools/inline-tool-sup-sub';
+// Opt-in: a host registers it as `annotation`. Not in defaultInlineTools.
+export { AnnotationInlineTool as Annotation } from '../components/inline-tools/inline-tool-annotation';
 
 // Default tools configuration for convenience
 // Note: inlineToolbar defaults to true, so it doesn't need to be specified

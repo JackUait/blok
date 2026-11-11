@@ -370,6 +370,22 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
+   * Open the Annotation tool's card for a hint: select the phrase so the tool
+   * edits it, then open its menu directly.
+   * @param hint - the annotated phrase that was clicked
+   */
+  public async editAnnotation(hint: HTMLElement): Promise<void> {
+    // Without the tool this would fall through to the plain inline toolbar.
+    if (!this.Blok.Tools.inlineTools.has('annotation')) {
+      return;
+    }
+
+    new SelectionUtils().expandToTag(hint);
+
+    await this.activateToolByShortcut('annotation');
+  }
+
+  /**
    * Closes the toolbar and remembers the selection it was closed for, so a
    * selectionchange still queued from the drag cannot bring it straight back.
    * The debounce is 180ms and the engines re-clamp a cross-host range on

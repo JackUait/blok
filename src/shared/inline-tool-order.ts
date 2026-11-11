@@ -28,4 +28,6 @@ export const INLINE_TOOL_ORDER: readonly string[] = [
   'inlineCode',
   'equation',
   'supSub',
+  // Opt-in. Last, so it starts a row of its own and leaves the two default rows as they are.
+  'annotation',
 ];

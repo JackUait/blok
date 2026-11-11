@@ -76,6 +76,7 @@ export {
   Strikethrough,
   InlineCode,
   Equation,
+  Annotation,
   ClearFormat,
   SupSub,
   defaultBlockTools,

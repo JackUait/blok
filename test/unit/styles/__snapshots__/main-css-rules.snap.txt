@@ -1918,7 +1918,7 @@
   transition: background-color 120ms ease-out;
 }
 
-[@layer base] :where([data-blok-interface]) span[data-blok-annotation]:hover, :where([data-blok-interface]) span[data-blok-annotation][data-blok-annotation-editing] {
+[@layer base] :where([data-blok-interface]) span[data-blok-annotation]:hover {
   background-color: var(--blok-item-hover-bg);
 }
 

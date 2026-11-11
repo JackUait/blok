@@ -143,8 +143,7 @@
     transition: background-color 120ms ease-out;
   }
 
-  :where([data-blok-interface]) span[data-blok-annotation]:hover,
-  :where([data-blok-interface]) span[data-blok-annotation][data-blok-annotation-editing] {
+  :where([data-blok-interface]) span[data-blok-annotation]:hover {
     background-color: var(--blok-item-hover-bg);
   }
 

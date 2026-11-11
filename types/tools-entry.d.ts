@@ -279,6 +279,18 @@ export const Strikethrough: InlineToolConstructable;
 export const Underline: InlineToolConstructable;
 export const InlineCode: InlineToolConstructable;
 export const Equation: InlineToolConstructable;
+/**
+ * The "Hint" inline tool: attaches a plain-text note and an optional subtitle
+ * to a phrase. Opt-in — register it as `annotation`; it is not in
+ * `defaultInlineTools`.
+ */
+export const Annotation: InlineToolConstructable;
+
+/** Config of the {@link Annotation} tool. */
+export interface AnnotationConfig {
+  /** Pre-fills the subtitle line when the writer turns it on. */
+  defaultSubtitle?: string;
+}
 export const ClearFormat: InlineToolConstructable;
 export const SupSub: InlineToolConstructable;
 

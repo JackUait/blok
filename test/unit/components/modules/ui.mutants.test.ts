@@ -91,6 +91,10 @@ const createBlokStub = () => {
       hasNestedPopoverOpen: false,
       hasDirectMenuOpen: false,
       editLink: vi.fn(() => Promise.resolve()),
+      editAnnotation: vi.fn(() => Promise.resolve()),
+    },
+    Tools: {
+      inlineTools: new Map<string, unknown>(),
     },
     BlockSettings: {
       opened: false,
@@ -2321,6 +2325,43 @@ describe('UI module — mutants', () => {
       click(outside);
 
       expect(cardOf(ui)?.anchor ?? null).toBeNull();
+    });
+
+    it('opens the writing card instead when the annotation tool is registered and the editor is editable', () => {
+      const { ui, redactor, blok } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+
+      blok.Tools.inlineTools.set('annotation', {});
+      click(hint);
+
+      expect(blok.InlineToolbar.editAnnotation).toHaveBeenCalledWith(hint);
+      expect(cardOf(ui)?.anchor ?? null).toBeNull();
+    });
+
+    it('still pins the reader card in read-only mode when the tool is registered', () => {
+      const { ui, redactor, blok } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+
+      blok.Tools.inlineTools.set('annotation', {});
+      blok.ReadOnly.isEnabled = true;
+      click(hint);
+
+      expect(blok.InlineToolbar.editAnnotation).not.toHaveBeenCalled();
+      expect(cardOf(ui)?.anchor).toBe(hint);
+    });
+
+    it('hides a hovered reader card when the writing card opens', () => {
+      vi.useFakeTimers();
+
+      const { ui, redactor, blok } = createHintUI();
+      const hint = addHint(redactor, 'A quote');
+
+      blok.Tools.inlineTools.set('annotation', {});
+      hint.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      vi.advanceTimersByTime(500);
+      click(hint);
+
+      expect(cardOf(ui)?.anchor).toBeNull();
     });
 
     it.each([ 'Enter', ' ' ])('toggles the card with %j on a focused hint in read-only mode', (key) => {

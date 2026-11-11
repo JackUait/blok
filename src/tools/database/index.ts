@@ -39,6 +39,7 @@ import { templateMenuItems, templateRepeatItems, templateRepeatSummary } from '.
 import type { TemplateRepeatHost } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
+import { announce } from '../../components/utils/announcer';
 import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
 import { CALC_MENU_MIN_WIDTH, calcMenuAt, calculationItems, DATABASE_CALC_MENU_CLASS, DATABASE_HEADER_MENU_CLASS, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems, selectionActionItems, selectionMenuItems } from './database-table-menus';
 import type { OpenMenuOptions, RowFavorite } from './database-table-menus';
@@ -769,6 +770,8 @@ export class DatabaseTool implements BlockTool {
   private bulkEditor: CellEditorHandle | null = null;
   /** The board/list selection bar, when shown. */
   private rowSelectionBar: HTMLElement | null = null;
+  /** The pick count last announced for barless board and gallery picks; paint also runs on redraws. */
+  private announcedPickCount = 0;
   /** A new board card left unnamed by Escape: selected alone, it shows no bar. Any other selection drops it. */
   private barlessRowId: string | null = null;
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
@@ -10529,17 +10532,24 @@ export class DatabaseTool implements BlockTool {
     slot.toggleAttribute('data-blok-database-selecting', slot.querySelector(':scope > [data-blok-database-table-selection-bar]') !== null);
     document.removeEventListener('keydown', this.handleSelectionKeys, true);
     document.removeEventListener('copy', this.handleSelectionCopy, true);
+    const view = this.shownView();
+    const barless = view?.type === 'board' || view?.type === 'gallery';
+
+    // The bar's count was a polite live region; board and gallery picks have no bar, so say the count.
+    if (barless && this.rowSelection.size > 0 && this.rowSelection.size !== this.announcedPickCount) {
+      announce(this.api.i18n.t('tools.database.tableSelectedCount', { count: this.rowSelection.size }));
+    }
+    this.announcedPickCount = barless ? this.rowSelection.size : 0;
     if (this.rowSelection.size === 0) {
       return;
     }
     document.addEventListener('keydown', this.handleSelectionKeys, true);
     document.addEventListener('copy', this.handleSelectionCopy, true);
-    const view = this.shownView();
 
     // research/22 §1: Notion shows no bulk bar for picked calendar events.
     // notion-motion.md, Round 9: nor for a new board card left unnamed by Escape.
     // Round 12 "Board selection": nor for picked board cards; ⌘/ opens their menu (openSelectionMenu).
-    if (view?.type === 'calendar' || view?.type === 'board' || view?.type === 'gallery' || this.barlessRowId !== null) {
+    if (view?.type === 'calendar' || barless || this.barlessRowId !== null) {
       return;
     }
     const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());

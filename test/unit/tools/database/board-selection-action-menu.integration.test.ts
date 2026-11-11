@@ -136,7 +136,19 @@ describe('board and gallery selection: ⌘/ action menu (notion-motion.md Round 
 
     expect(selectedIds()).toEqual(['r1', 'r2']);
     expect(q('[data-blok-database-table-selection-bar]')).toBeNull();
-    expect(document.body.textContent).not.toContain('2 selected');
+    expect(holder?.textContent).not.toContain('2 selected');
+  });
+
+  // The bar's count was a polite live region; without the bar the count is announced.
+  it.each(VIEWS)('%s: picking cards announces the count to screen readers', async (_name, view, rowSelector) => {
+    await make(doc(view));
+    await pick(rowSelector, 'r1', 'r2');
+
+    const region = document.getElementById('blok-announcer');
+
+    expect(region?.getAttribute('aria-live')).toBe('polite');
+    await vi.waitFor(() => expect(region?.textContent).toBe('2 selected'), { timeout: 2000 });
+    expect(holder?.querySelectorAll(`${rowSelector}[aria-selected="true"]`)).toHaveLength(2);
   });
 
   it.each(VIEWS.flatMap(([name, view, sel]) => (['metaKey', 'ctrlKey'] as const).map((mod) => [`${name}, ${mod}`, view, sel, mod] as const)))(

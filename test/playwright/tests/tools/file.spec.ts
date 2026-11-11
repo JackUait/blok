@@ -564,6 +564,8 @@ test('closing a pptx preview frees the pictures it decoded', async ({ page }) =>
 
   await dialog.getByRole('button', { name: /close/i }).click();
   await expect(dialog).toBeHidden();
+  // The dialog leaves the accessibility tree as its close starts; the pictures go once the fade has played.
+  await expect(page.locator('[data-role="file-preview-pptx"]')).toHaveCount(0);
 
   const stillReadable = await page.evaluate(async (url) => fetch(url).then(() => true, () => false), pictureUrl);
 

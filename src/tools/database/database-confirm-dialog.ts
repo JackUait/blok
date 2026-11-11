@@ -209,19 +209,18 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
     directionSource: options.directionSource ?? null,
     ...(options.container === undefined ? {} : { container: options.container, topLayer: options.topLayer ?? false }),
     onDismiss: () => finish(options.dismissAs ?? false),
-    // After focus goes back, so what the caller focuses next keeps it.
-    onClose: () => resolve(settled.answer),
   });
 
-  const settled = { done: false, answer: false };
+  const settled = { done: false };
 
   function finish(answer: boolean): void {
     if (settled.done) {
       return;
     }
     settled.done = true;
-    settled.answer = answer;
+    // The close gives focus back as it starts, so what the caller focuses next keeps it.
     handle.closeAnimated();
+    resolve(answer);
   }
 
   options.signal?.addEventListener('abort', () => finish(options.dismissAs ?? false), { once: true });

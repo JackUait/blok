@@ -467,28 +467,40 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
     });
   }
 
-  const finalize = (): void => {
-    if (state.closed) {
+  const released = { done: false };
+
+  // Gives the page back: the trap, the layer, inert and focus. A closing dialog only fades.
+  const release = (): void => {
+    if (released.done) {
       return;
     }
-    state.closed = true;
+    released.done = true;
 
     surface.removeEventListener('keydown', onKeyDownTrap);
     document.removeEventListener('focusin', onFocusIn, true);
     unregister();
     removeInert();
 
-    if (topLayer) {
-      removeFromTopLayer(content);
-    }
-
-    content.remove();
-
     const restoreTarget = isRestorableFocusTarget(previouslyFocused) ? previouslyFocused : pointerOpener;
 
     if (isRestorableFocusTarget(restoreTarget)) {
       restoreTarget.focus();
     }
+  };
+
+  const finalize = (): void => {
+    if (state.closed) {
+      return;
+    }
+    state.closed = true;
+
+    if (topLayer) {
+      removeFromTopLayer(content);
+    }
+
+    content.remove();
+    // After the remove: focus left inside a removed node would fall to body.
+    release();
 
     options.onClose?.();
   };
@@ -513,6 +525,10 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
 
       return;
     }
+
+    content.setAttribute('inert', '');
+    content.setAttribute('aria-hidden', 'true');
+    release();
 
     const settle = { done: false, fallback: 0 };
 

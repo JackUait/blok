@@ -779,6 +779,40 @@ describe('openModalDialog — settle guard', () => {
 });
 
 describe('openModalDialog — exit animation', () => {
+  // A fading dialog must not hold the page: a click or a second dialog in its 200ms would be lost or doubled.
+  it('lets go of the page, focus and the accessibility tree as the close starts', () => {
+    pretendAnimationsRun();
+    stubAnimationName('blok-fade');
+
+    const opener = makeButton('opener');
+    const outside = makeButton('outside');
+
+    document.body.append(opener, outside);
+    opener.focus();
+
+    const onDismiss = vi.fn();
+    const { content, surface } = buildDialog(makeButton('only'));
+    const handle = openModalDialog({ content, surface, onDismiss });
+
+    expect(opener.hasAttribute('inert')).toBe(true);
+    handle.closeAnimated();
+
+    expect(opener).toHaveFocus();
+    expect(opener.hasAttribute('inert')).toBe(false);
+    expect(content.hasAttribute('inert')).toBe(true);
+    expect(content.getAttribute('aria-hidden')).toBe('true');
+    outside.focus();
+    expect(outside).toHaveFocus();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(content.isConnected).toBe(true);
+
+    surface.dispatchEvent(animationEnd());
+
+    expect(content.isConnected).toBe(false);
+    expect(outside).toHaveFocus();
+  });
+
   it('waits for the animation on the surface before tearing down', () => {
     pretendAnimationsRun();
     stubAnimationName('blok-fade');

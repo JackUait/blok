@@ -1,3 +1,4 @@
+import { within } from '@testing-library/dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { openDatabaseChoice, openDatabaseConfirm } from '../../../../src/tools/database/database-confirm-dialog';
@@ -24,11 +25,16 @@ describe('openDatabaseConfirm', () => {
   });
 
   // notion-motion.md Round 14: the close is the open in reverse, 200ms; nothing stays in the DOM after it.
-  // The answer waits for the close: focus goes back first, so what the caller focuses next stays focused.
-  it('plays its close before it leaves, then answers', async () => {
+  // The answer comes as the close starts, with focus already back, so what the caller does next is not undone
+  // when the fade ends (a redraw would close a menu opened in those 200ms).
+  it('answers as its close starts, and leaves once the close has played', async () => {
     vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Macintosh) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    const opener = document.createElement('button');
+
+    document.body.appendChild(opener);
+    opener.focus();
     const answered = vi.fn();
-    const answer = open().then(answered);
+    void open().then(answered);
     const panel = dialog();
     const backdrop = document.querySelector('[data-blok-database-confirm]');
     const probe = document.createElement('div');
@@ -37,14 +43,15 @@ describe('openDatabaseConfirm', () => {
     vi.spyOn(window, 'getComputedStyle').mockReturnValue(probe.style);
     action('cancel')?.click();
     await Promise.resolve();
+    await Promise.resolve();
 
+    expect(answered).toHaveBeenCalledWith(false);
+    expect(opener).toHaveFocus();
     expect(backdrop?.isConnected).toBe(true);
     expect(backdrop?.getAttribute('data-blok-closing')).toBe('true');
-    expect(answered).not.toHaveBeenCalled();
+    expect(within(document.body).queryByRole('alertdialog')).toBeNull();
     panel?.dispatchEvent(new Event('animationend', { bubbles: true }));
-    await answer;
     expect(backdrop?.isConnected).toBe(false);
-    expect(answered).toHaveBeenCalledWith(false);
   });
 
   it('shows the question with the confirm button above the cancel button', () => {

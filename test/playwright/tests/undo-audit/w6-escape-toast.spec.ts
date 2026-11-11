@@ -280,6 +280,30 @@ test.describe('deleting a sub-page block shows a Trash toast (V14)', () => {
     await expect.poll(() => ids(page)).toEqual(['p1', 'p3']);
   });
 
+  test('U108: Meta+z brings the page back and the toast leaves', async ({ page }) => {
+    await createBlok(page, PAGE_BLOCKS);
+    await editable(page, 'p1').click();
+    await gap(page);
+    await openTunes(page, 'sub');
+    await page.keyboard.press('Escape');
+    await gap(page, 300);
+    await page.keyboard.press('Backspace');
+    await expect.poll(() => ids(page)).toEqual(['p1', 'p3']);
+    const toast = trashToast(page);
+
+    await expect(toast).toBeVisible();
+    await page.keyboard.press(UNDO);
+
+    await expect.poll(() => ids(page)).toEqual(['p1', 'sub', 'p3']);
+    await expect(toast).toBeHidden();
+
+    // The redo trashes it again with no new toast, like Notion.
+    await page.keyboard.press(REDO);
+    await expect.poll(() => ids(page)).toEqual(['p1', 'p3']);
+    await gap(page, 300);
+    await expect(toast).toBeHidden();
+  });
+
   test('Move to Trash in the page block menu shows the toast too', async ({ page }) => {
     await createBlok(page, PAGE_BLOCKS);
     await editable(page, 'p1').click();

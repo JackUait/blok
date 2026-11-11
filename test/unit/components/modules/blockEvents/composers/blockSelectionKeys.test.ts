@@ -282,7 +282,8 @@ describe('BlockSelectionKeys', () => {
           }),
         } as unknown as BlokModules['BlockManager'],
         HistoryAPI: { latestStep: vi.fn(() => state.steps.shift()), undoStep: vi.fn() } as unknown as BlokModules['HistoryAPI'],
-        NotifierAPI: { show, dismiss: vi.fn() } as unknown as BlokModules['NotifierAPI'],
+        NotifierAPI: { show, dismiss: vi.fn(), isClosed: vi.fn(() => false) } as unknown as BlokModules['NotifierAPI'],
+        YjsManager: { onBeforeUserStep: vi.fn(() => () => undefined) } as unknown as BlokModules['YjsManager'],
         I18n: { t: (key: string) => key } as unknown as BlokModules['I18n'],
       });
 

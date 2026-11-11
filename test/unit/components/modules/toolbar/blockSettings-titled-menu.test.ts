@@ -237,7 +237,8 @@ describe('BlockSettings — a tool that declares a titled block menu', () => {
 
     Object.assign(blok, {
       HistoryAPI: { latestStep: vi.fn(() => steps.shift()), undoStep: vi.fn() },
-      NotifierAPI: { show, dismiss: vi.fn() },
+      NotifierAPI: { show, dismiss: vi.fn(), isClosed: vi.fn(() => false) },
+      YjsManager: { onBeforeUserStep: vi.fn(() => () => undefined) },
     });
     Object.assign(blok.BlockManager as Record<string, unknown>, { getBlockById: vi.fn(() => undefined) });
     blockSettings.state = blok as unknown as BlokModules;

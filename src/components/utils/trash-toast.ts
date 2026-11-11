@@ -3,7 +3,7 @@ import type { NotifierOptions } from '../../../types/configs/notifier';
 import type { BlokModules } from '../../types-internal/blok-modules';
 import type { Block } from '../block';
 
-type Modules = Pick<BlokModules, 'HistoryAPI' | 'NotifierAPI' | 'I18n'>;
+type Modules = Pick<BlokModules, 'HistoryAPI' | 'NotifierAPI' | 'I18n' | 'YjsManager'>;
 type DeleteModules = Modules & Pick<BlokModules, 'BlockManager'>;
 
 // Notion's toast was still up at 6 s; its real length was not measured.
@@ -36,11 +36,28 @@ export const showTrashToast = (Blok: Modules, before: HistoryStep | undefined): 
     actions: [{
       label: Blok.I18n.t('tools.database.restore'),
       onClick: () => {
+        stopWatching();
         Blok.HistoryAPI.undoStep(step);
         Blok.NotifierAPI.dismiss(options);
       },
     }],
   };
+
+  // Meta+z also brings the page back, so the toast leaves (Notion U108).
+  // The listener runs before the step, so the check waits a microtask.
+  const stopWatching = Blok.YjsManager.onBeforeUserStep(() => {
+    if (Blok.NotifierAPI.isClosed(options)) {
+      stopWatching();
+
+      return;
+    }
+    queueMicrotask(() => {
+      if (Blok.HistoryAPI.isStepUndone(step)) {
+        stopWatching();
+        Blok.NotifierAPI.dismiss(options);
+      }
+    });
+  });
 
   Blok.NotifierAPI.show(options);
 };

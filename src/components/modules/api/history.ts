@@ -200,6 +200,16 @@ export class HistoryAPI extends Module {
   }
 
   /**
+   * @param step - a handle from {@link latestStep}
+   * @returns true when the step is the next redo: it was just undone
+   */
+  public isStepUndone(step: HistoryStep): boolean {
+    const entry = this.entries.get(step);
+
+    return entry !== undefined && this.Blok.YjsManager.topRedoToken() === entry;
+  }
+
+  /**
    * Undo this step only while it is still the newest. Does nothing while read-only.
    * @param step - a handle from {@link latestStep}
    * @returns true when the step was undone

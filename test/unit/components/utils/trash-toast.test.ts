@@ -2,18 +2,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Block } from '../../../../src/components/block';
 import { deleteWithTrashToast, showTrashToast, trashesBlock } from '../../../../src/components/utils/trash-toast';
+import type { HistoryStep } from '../../../../types/api/history';
 import type { NotifierOptions } from '../../../../types/configs/notifier';
 
 type Modules = Parameters<typeof showTrashToast>[0];
 
-const makeModules = (steps: Array<Record<string, unknown> | undefined>): { modules: Modules; shown: NotifierOptions[]; undoStep: ReturnType<typeof vi.fn>; dismiss: ReturnType<typeof vi.fn> } => {
+interface Harness {
+  modules: Modules;
+  shown: NotifierOptions[];
+  undoStep: ReturnType<typeof vi.fn>;
+  dismiss: ReturnType<typeof vi.fn>;
+  undone: Set<unknown>;
+  closed: Set<NotifierOptions>;
+  beforeStep: Set<() => void>;
+}
+
+const makeModules = (steps: Array<HistoryStep | Record<string, unknown> | undefined>): Harness => {
   const shown: NotifierOptions[] = [];
+  const undone = new Set<unknown>();
+  const closed = new Set<NotifierOptions>();
+  const beforeStep = new Set<() => void>();
   const undoStep = vi.fn(() => true);
   const dismiss = vi.fn();
   const latestStep = vi.fn(() => steps.shift());
   const modules = {
-    HistoryAPI: { latestStep, undoStep },
-    NotifierAPI: { show: (options: NotifierOptions) => shown.push(options), dismiss },
+    HistoryAPI: { latestStep, undoStep, isStepUndone: (step: unknown) => undone.has(step) },
+    NotifierAPI: { show: (options: NotifierOptions) => shown.push(options), dismiss, isClosed: (options: NotifierOptions) => closed.has(options) },
+    YjsManager: {
+      onBeforeUserStep: (listener: () => void) => {
+        beforeStep.add(listener);
+
+        return () => beforeStep.delete(listener);
+      },
+    },
     // A method that reads `this`, like the real I18n: an unbound call throws.
     I18n: {
       words: { 'tools.database.movedToTrash': 'Moved to Trash', 'tools.database.restore': 'Restore' } as Record<string, string>,
@@ -23,7 +44,7 @@ const makeModules = (steps: Array<Record<string, unknown> | undefined>): { modul
     },
   } as unknown as Modules;
 
-  return { modules, shown, undoStep, dismiss };
+  return { modules, shown, undoStep, dismiss, undone, closed, beforeStep };
 };
 
 const block = (trash: boolean): Block => ({ tool: { blockMenu: { titled: false, trash, lead: [] } } }) as unknown as Block;
@@ -43,7 +64,7 @@ describe('trash toast', () => {
   });
 
   it('shows "Moved to Trash" with a Restore that undoes the delete step and closes the toast', () => {
-    const before = {};
+    const before = {} as HistoryStep;
     const after = {};
     const { modules, shown, undoStep, dismiss } = makeModules([after]);
 
@@ -59,8 +80,47 @@ describe('trash toast', () => {
     expect(dismiss).toHaveBeenCalledWith(shown[0]);
   });
 
+  it('closes the toast once its step is undone another way (Meta+z, U108)', async () => {
+    const after = {};
+    const { modules, shown, dismiss, undone, beforeStep } = makeModules([after]);
+
+    showTrashToast(modules, undefined);
+
+    // A later edit leaves the toast up.
+    beforeStep.forEach((listener) => listener());
+    await Promise.resolve();
+    expect(dismiss).not.toHaveBeenCalled();
+
+    // The undo runs after the listener, so the check waits a tick.
+    beforeStep.forEach((listener) => listener());
+    undone.add(after);
+    await Promise.resolve();
+
+    expect(dismiss).toHaveBeenCalledWith(shown[0]);
+    expect(beforeStep.size).toBe(0);
+  });
+
+  it('stops watching the history once the toast has closed', () => {
+    const { modules, shown, closed, beforeStep } = makeModules([{}]);
+
+    showTrashToast(modules, undefined);
+    closed.add(shown[0]);
+    beforeStep.forEach((listener) => listener());
+
+    expect(beforeStep.size).toBe(0);
+  });
+
+  it('stops watching the history after Restore', () => {
+    const { modules, shown, beforeStep } = makeModules([{}]);
+
+    showTrashToast(modules, undefined);
+    shown[0].actions?.[0].onClick();
+
+    expect(beforeStep.size).toBe(0);
+  });
+
   it('shows nothing when the delete left no undo step of its own', () => {
-    const step = {};
+    const step = {} as HistoryStep;
     const { modules, shown } = makeModules([step]);
 
     showTrashToast(modules, step);

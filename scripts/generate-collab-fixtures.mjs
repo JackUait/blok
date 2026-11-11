@@ -567,6 +567,42 @@ const CASES = [
     input: [paragraph('pt7', 'body')],
     page: { title: 'Extra', icon: { type: 'image', url: 'https://example.com/i.png', alt: 'logo' } },
   },
+  {
+    name: 'page-cover-image',
+    description: 'an image cover is kept with its url and whole-percent position',
+    input: [paragraph('pc1', 'body')],
+    page: { title: 'Trip', cover: { type: 'image', url: 'https://example.com/cover.png', position: 30 } },
+  },
+  {
+    name: 'page-cover-gallery',
+    description: 'a gallery cover is kept with its id and no title',
+    input: [paragraph('pc2', 'body')],
+    page: { cover: { type: 'gallery', id: 'dusk' } },
+  },
+  {
+    name: 'page-cover-fraction',
+    description: 'a cover whose position is not a whole percent reads as absent; the icon is kept',
+    input: [paragraph('pc3', 'body')],
+    page: { icon: { type: 'emoji', value: '📄' }, cover: { type: 'image', url: 'https://example.com/c.png', position: 12.5 } },
+  },
+  {
+    name: 'page-cover-out-of-range',
+    description: 'a cover position past 100 reads as absent',
+    input: [paragraph('pc4', 'body')],
+    page: { title: 'Range', cover: { type: 'gallery', id: 'dusk', position: 101 } },
+  },
+  {
+    name: 'page-cover-empty-id',
+    description: 'a gallery cover with an empty id reads as absent',
+    input: [paragraph('pc5', 'body')],
+    page: { title: 'Empty id', cover: { type: 'gallery', id: '' } },
+  },
+  {
+    name: 'page-cover-extra-key',
+    description: 'a cover with an extra key is kept with that key',
+    input: [paragraph('pc6', 'body')],
+    page: { title: 'Extra cover', cover: { type: 'gallery', id: 'dusk', position: 0, note: 'kept' } },
+  },
 ];
 
 const deepEqual = (left, right) => JSON.stringify(left) === JSON.stringify(right);

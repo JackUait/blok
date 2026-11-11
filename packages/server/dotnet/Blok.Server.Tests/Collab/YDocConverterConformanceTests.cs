@@ -79,7 +79,7 @@ public sealed class YDocConverterConformanceTests
   [Fact]
   public void EveryPageCaseHasItsCanonicalPage()
   {
-    Assert.Equal(7, YDocConverterFixtures.PageCaseNames().Count);
+    Assert.Equal(13, YDocConverterFixtures.PageCaseNames().Count);
 
     foreach (var name in YDocConverterFixtures.PageCaseNames())
     {

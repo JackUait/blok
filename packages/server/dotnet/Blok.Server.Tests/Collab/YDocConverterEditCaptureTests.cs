@@ -792,7 +792,14 @@ public sealed class YDocConverterEditCaptureTests
     yield return new("refuse-a-bad-page-icon", [Root],
         Agent: """[{"op":"setPageField","key":"icon","value":{"type":"emoji"}}]""");
     yield return new("refuse-an-unknown-page-field", [Root],
-        Agent: """[{"op":"setPageField","key":"cover","value":"x"}]""");
+        Agent: """[{"op":"setPageField","key":"banner","value":"x"}]""");
+    yield return new("set-a-page-cover", [Root],
+        Agent: """[{"op":"setPageField","key":"cover","value":{"type":"image","url":"https://example.com/c.png","position":30}}]""");
+    yield return new("clear-a-page-cover", [Root],
+        Agent: """[{"op":"setPageField","key":"cover","value":null}]""",
+        Page: """{ "cover": { "type": "gallery", "id": "dusk" } }""");
+    yield return new("refuse-a-page-cover-with-a-fractional-position", [Root],
+        Agent: """[{"op":"setPageField","key":"cover","value":{"type":"gallery","id":"dusk","position":12.5}}]""");
     yield return new("refuse-a-page-title-that-is-not-a-string", [Root],
         Agent: """[{"op":"setPageField","key":"title","value":5}]""");
     yield return new("patch-maps", [Root],

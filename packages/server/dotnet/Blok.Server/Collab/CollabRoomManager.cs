@@ -710,12 +710,12 @@ internal sealed partial class CollabRoomManager : ICollabRoomManager, ICollabDoc
       output.Remove("time");
     }
 
-    // A host reads its own page fields from here after a restore. The title
-    // and icon are already top-level (the export writes them), so the page
+    // A host reads its own page fields from here after a restore. The title,
+    // icon and cover are already top-level (the export writes them), so the page
     // object leaves them out, and is left out when nothing else remains.
     if (point.Doc is { } doc)
     {
-      foreach (var (name, map) in YDocConverter.PlainPageMaps(doc, ["title", "icon"]))
+      foreach (var (name, map) in YDocConverter.PlainPageMaps(doc, ["title", "icon", "cover"]))
       {
         output[name] = map;
       }

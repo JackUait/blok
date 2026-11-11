@@ -758,8 +758,8 @@ func Export(doc *yjs.Doc, fields *RichTextFields, warn func(string)) ([]any, []R
 	return blocks, reader.slots, nil
 }
 
-// ExportPage is the page map's title and icon, by the client's readPageFields;
-// a title or icon holding U+0000 is left out too.
+// ExportPage is the page map's title, icon and cover, by the client's
+// readPageFields; a field holding U+0000 is left out too.
 func ExportPage(doc *yjs.Doc) *jsjson.Object {
 	m := doc.GetMap(str(pageRoot))
 	page := &jsjson.Object{}
@@ -771,6 +771,11 @@ func ExportPage(doc *yjs.Doc) *jsjson.Object {
 		// A value JSON cannot hold is left out: throwing would fail every PUT.
 		if node, err := toJSONNode(icon); err == nil && !hasNul(node) {
 			put(page, "icon", node)
+		}
+	}
+	if cover := value(m, "cover"); isPageCover(cover) {
+		if node, err := toJSONNode(cover); err == nil && !hasNul(node) {
+			put(page, "cover", node)
 		}
 	}
 	return page
@@ -806,6 +811,38 @@ func isPageIcon(v any) bool {
 		return isStr(lookupValue(icon, "value"))
 	case kind.String() == "image":
 		return isStr(lookupValue(icon, "url"))
+	}
+	return false
+}
+
+// isPageCover is the client's isPageCover: {type:'image', url} or
+// {type:'gallery', id} with a non-empty string, and a position that is absent
+// or a whole number from 0 to 100.
+func isPageCover(v any) bool {
+	cover, ok := v.(*jsjson.Object)
+	if !ok || cover == nil {
+		return false
+	}
+	if position, present := lookup(cover, "position"); present {
+		if _, undefined := position.(jsjson.Undefined); !undefined {
+			number, isNumber := position.(float64)
+			if !isNumber || number != math.Trunc(number) || number < 0 || number > 100 {
+				return false
+			}
+		}
+	}
+	kind, _ := lookupValue(cover, "type").(jsjson.Str)
+	nonEmpty := func(v any) bool {
+		text, ok := v.(jsjson.Str)
+		return ok && len(text) > 0
+	}
+	switch {
+	case kind == nil:
+		return false
+	case kind.String() == "gallery":
+		return nonEmpty(lookupValue(cover, "id"))
+	case kind.String() == "image":
+		return nonEmpty(lookupValue(cover, "url"))
 	}
 	return false
 }

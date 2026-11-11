@@ -171,5 +171,5 @@ fn exporting_the_client_update_gives_the_canonical_page() {
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
-    assert_eq!(pages, 7, "{pages} page cases, want 7");
+    assert_eq!(pages, 13, "{pages} page cases, want 13");
 }

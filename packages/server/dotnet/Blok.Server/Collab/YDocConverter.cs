@@ -247,8 +247,67 @@ internal static class YDocConverter
     // Shape first: a malformed icon is dropped before Atomic, whose NUL and
     // depth guards would otherwise refuse the whole seed.
     var icon = page["icon"] is JsonObject raw && IsPageIconJson(raw) ? InputWriter.Atomic(raw, 1) : null;
+    var cover = page["cover"] is JsonObject rawCover && IsPageCoverJson(rawCover) ? InputWriter.Atomic(rawCover, 1) : null;
 
-    return [("title", title), ("icon", IsPageIcon(icon) ? icon : null)];
+    return [("title", title), ("icon", IsPageIcon(icon) ? icon : null), ("cover", IsPageCover(cover) ? cover : null)];
+  }
+
+  /// <summary><see cref="IsPageCover"/> on the JSON a host record or an op holds.</summary>
+  private static bool IsPageCoverJson(JsonObject cover)
+  {
+    static bool IsText(JsonNode? node) =>
+        node is JsonValue value && value.GetValueKind() == JsonValueKind.String && value.GetValue<string>().Length > 0;
+
+    // Parsed from the JSON text: a cloned or created number need not hold a double.
+    if (cover.TryGetPropertyValue("position", out var position)
+        && !(position is JsonValue number
+            && number.GetValueKind() == JsonValueKind.Number
+            && double.TryParse(number.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var percent)
+            && IsCoverPosition(percent)))
+    {
+      return false;
+    }
+
+    if (cover["type"] is not JsonValue type || type.GetValueKind() != JsonValueKind.String)
+    {
+      return false;
+    }
+
+    return type.GetValue<string>() switch
+    {
+      "gallery" => IsText(cover["id"]),
+      "image" => IsText(cover["url"]),
+      _ => false,
+    };
+  }
+
+  /// <summary>A whole percent: fractions are where the three servers' number output can differ.</summary>
+  private static bool IsCoverPosition(double percent) => double.IsInteger(percent) && percent is >= 0 and <= 100;
+
+  /// <summary>
+  /// <c>isPageCover</c> in page-fields.ts: <c>{type:'image', url}</c> or
+  /// <c>{type:'gallery', id}</c> with a non-empty string, and a position that
+  /// is absent or a whole number from 0 to 100.
+  /// </summary>
+  private static bool IsPageCover(object? value)
+  {
+    if (value is not AnyObject cover || !cover.TryGet("type", out var type))
+    {
+      return false;
+    }
+
+    if (cover.TryGet("position", out var position) && position is not YUndefined
+        && !(position is double percent && IsCoverPosition(percent)))
+    {
+      return false;
+    }
+
+    return type switch
+    {
+      "gallery" => cover.TryGet("id", out var id) && id is string { Length: > 0 },
+      "image" => cover.TryGet("url", out var url) && url is string { Length: > 0 },
+      _ => false,
+    };
   }
 
   /// <summary><see cref="IsPageIcon"/> on the JSON a host record holds.</summary>
@@ -271,7 +330,7 @@ internal static class YDocConverter
   }
 
   /// <summary>
-  /// The page map's title and icon, by the client's <c>readPageFields</c>:
+  /// The page map's title, icon and cover, by the client's <c>readPageFields</c>:
   /// only a non-empty string title and a well-formed icon, extra icon keys
   /// included. Anything else reads as absent. Unlike the client read, a title
   /// or icon holding U+0000 is left out too: a host store may refuse it.
@@ -304,6 +363,25 @@ internal static class YDocConverter
       catch (InvalidDataException)
       {
         // A value JSON cannot hold (bytes, a bigint). Throwing would fail every PUT.
+      }
+    }
+
+    var cover = Value(map, "cover");
+
+    if (IsPageCover(cover))
+    {
+      try
+      {
+        var json = RichText.ToJsonNode(cover);
+
+        if (!HasNul(json))
+        {
+          page["cover"] = json;
+        }
+      }
+      catch (InvalidDataException)
+      {
+        // Same as the icon: left out, not thrown.
       }
     }
 
@@ -1577,7 +1655,7 @@ internal static class YDocConverter
     /// </summary>
     private List<EditStep> PlanSetPageField(CollabEditOp.SetPageField op, int index)
     {
-      if (op.Key is not ("title" or "icon"))
+      if (op.Key is not ("title" or "icon" or "cover"))
       {
         throw new CollabEditException(Where(index, $"\"{op.Key}\" is not a page field."));
       }
@@ -1590,15 +1668,21 @@ internal static class YDocConverter
         return [EditStep.PatchMap(doc.GetMap(PageRoot), op.Key, null)];
       }
 
-      var valid = op.Key == "title"
-        ? value is JsonValue title && title.GetValueKind() == JsonValueKind.String
-        : value is JsonObject icon && IsPageIconJson(icon);
+      var valid = op.Key switch
+      {
+        "title" => value is JsonValue title && title.GetValueKind() == JsonValueKind.String,
+        "icon" => value is JsonObject icon && IsPageIconJson(icon),
+        _ => value is JsonObject cover && IsPageCoverJson(cover),
+      };
 
       if (!valid)
       {
-        throw new CollabEditException(Where(index, op.Key == "title"
-          ? "a page title is a string."
-          : "a page icon is { type: \"emoji\", value } or { type: \"image\", url }."));
+        throw new CollabEditException(Where(index, op.Key switch
+        {
+          "title" => "a page title is a string.",
+          "icon" => "a page icon is { type: \"emoji\", value } or { type: \"image\", url }.",
+          _ => "a page cover is { type: \"image\", url } or { type: \"gallery\", id }, with an optional whole-number position from 0 to 100.",
+        }));
       }
 
       return [EditStep.PatchMap(doc.GetMap(PageRoot), op.Key, EncodeAny(InputWriter.Atomic(value, 1)))];

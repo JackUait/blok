@@ -59,6 +59,7 @@ internal sealed class CollabDocConverter(
     {
       ["title"] = document["title"]?.DeepClone(),
       ["icon"] = document["icon"]?.DeepClone(),
+      ["cover"] = document["cover"]?.DeepClone(),
     });
   }
 

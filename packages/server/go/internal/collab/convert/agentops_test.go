@@ -138,8 +138,8 @@ func TestSetPageFieldMatchesPageFieldsTs(t *testing.T) {
 		After []json.RawMessage `json:"after"`
 	}
 	collabtest.Read(t, "agent-page-fields.json", &fixture)
-	if len(fixture.Steps) != 4 {
-		t.Fatalf("%d steps, want 4", len(fixture.Steps))
+	if len(fixture.Steps) != 7 {
+		t.Fatalf("%d steps, want 7", len(fixture.Steps))
 	}
 	doc := agSeeded(t, `[]`)
 	for i, step := range fixture.Steps {
@@ -164,10 +164,29 @@ func agRefused(t *testing.T, err error) {
 	}
 }
 
+func TestSetPageFieldRefusesABadCover(t *testing.T) {
+	doc := yjs.NewDoc(yjs.Options{})
+	for _, bad := range []string{
+		`"https://example.com/c.png"`,
+		`{"type":"image"}`,
+		`{"type":"gallery","id":""}`,
+		`{"type":"video","url":"https://example.com/c.mp4"}`,
+		`{"type":"image","url":"https://example.com/c.png","position":12.5}`,
+		`{"type":"image","url":"https://example.com/c.png","position":101}`,
+		`{"type":"image","url":"https://example.com/c.png","position":-1}`,
+		`{"type":"image","url":"https://example.com/c.png","position":null}`,
+	} {
+		agRefused(t, agApply(doc, SetPageField{Key: "cover", Value: node(t, []byte(bad))}))
+	}
+	if got := canonical(t, ExportPage(doc)); got != "{}" {
+		t.Fatalf("page %s", got)
+	}
+}
+
 func TestSetPageFieldRefusesABadIconAndAnUnknownKey(t *testing.T) {
 	doc := yjs.NewDoc(yjs.Options{})
 	agRefused(t, agApply(doc, SetPageField{Key: "icon", Value: node(t, []byte(`{"type":"emoji"}`))}))
-	agRefused(t, agApply(doc, SetPageField{Key: "cover", Value: node(t, []byte(`"x"`))}))
+	agRefused(t, agApply(doc, SetPageField{Key: "banner", Value: node(t, []byte(`"x"`))}))
 	if got := canonical(t, ExportPage(doc)); got != "{}" {
 		t.Fatalf("page %s", got)
 	}
@@ -351,14 +370,15 @@ func TestAMoveOrRetypeKeepsAPeersConcurrentTyping(t *testing.T) {
 func TestSeedCarriesTitleAndIconIntoThePageRoot(t *testing.T) {
 	converter := &DocConverter{Now: time.Now}
 	doc := yjs.NewDoc(yjs.Options{})
-	if err := converter.Seed(context.Background(), doc, node(t, []byte(`{"title":"T","icon":{"type":"emoji","value":"x"},"blocks":[]}`))); err != nil {
+	if err := converter.Seed(context.Background(), doc, node(t, []byte(`{"title":"T","icon":{"type":"emoji","value":"x"},"cover":{"type":"gallery","id":"dusk","position":40},"blocks":[]}`))); err != nil {
 		t.Fatal(err)
 	}
 	exported, err := converter.Export(context.Background(), doc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if canonical(t, agField(exported, "title")) != `"T"` || canonical(t, agField(agField(exported, "icon"), "value")) != `"x"` {
+	if canonical(t, agField(exported, "title")) != `"T"` || canonical(t, agField(agField(exported, "icon"), "value")) != `"x"` ||
+		canonical(t, agField(exported, "cover")) != `{"id":"dusk","position":40,"type":"gallery"}` {
 		t.Fatalf("export %s", canonical(t, exported))
 	}
 }

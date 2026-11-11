@@ -14,6 +14,9 @@ const STEPS = [
   { key: 'icon', value: { type: 'emoji', value: '🚀' } },
   { key: 'title', value: '' },
   { key: 'icon', value: null },
+  { key: 'cover', value: { type: 'image', url: 'https://example.com/cover.png', position: 30 } },
+  { key: 'cover', value: { type: 'gallery', id: 'dusk' } },
+  { key: 'cover', value: null },
 ] as const;
 
 /** C# SetPageField must leave the page map as page-fields.ts does after each step. */

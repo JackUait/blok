@@ -18,8 +18,8 @@ use crate::richtextedit::{apply_rich_text_ops, plan_rich_text_edit};
 use crate::richtextinput::RichTextInput;
 use crate::seed::{
     Entry, EntryValue, SourceValue, atomic_value, block_data_entries, block_map, edit_value,
-    is_source_page_icon, new_rich_text, no_nul, normalize_block_data, plain_to_y_value, screen,
-    strict_value, to_data_map,
+    is_source_page_cover, is_source_page_icon, new_rich_text, no_nul, normalize_block_data,
+    plain_to_y_value, screen, strict_value, to_data_map,
 };
 use crate::structure::{encode_any, is_plain_map_value};
 use crate::textdiff::diff;
@@ -755,7 +755,8 @@ impl<'p, 'f> Planner<'p, 'f> {
         index: usize,
     ) -> Result<Vec<Step>, Error> {
         let title = is(key, "title");
-        if !title && !is(key, "icon") {
+        let cover = is(key, "cover");
+        if !title && !cover && !is(key, "icon") {
             return Err(where_(index, &format!("\"{key}\" is not a page field.")));
         }
         let v = value.map(strict_value).transpose()?.map(clean_page_field);
@@ -771,6 +772,13 @@ impl<'p, 'f> Planner<'p, 'f> {
         if title {
             if !matches!(v, SourceValue::String(_)) {
                 return Err(where_(index, "a page title is a string."));
+            }
+        } else if cover {
+            if !is_source_page_cover(&v) {
+                return Err(where_(
+                    index,
+                    r#"a page cover is { type: "image", url } or { type: "gallery", id }, with an optional whole-number position from 0 to 100."#,
+                ));
             }
         } else if !is_source_page_icon(&v) {
             return Err(where_(

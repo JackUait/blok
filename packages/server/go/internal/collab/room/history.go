@@ -272,7 +272,7 @@ func (m *Manager) ReadVersion(ctx context.Context, docID, lineage string, sequen
 	if p.time != nil {
 		output = withKeyAt(p.output, "time", p.time.UnixMilli())
 	}
-	for _, plain := range convert.PlainPageMaps(p.doc, map[string]bool{"title": true, "icon": true}) {
+	for _, plain := range convert.PlainPageMaps(p.doc, map[string]bool{"title": true, "icon": true, "cover": true}) {
 		output.Set(jsjson.FromString(plain.Name), plain.Map)
 	}
 	json, err := docendpoint.Serialize(output)

@@ -811,7 +811,7 @@ func cleanPageField(v any) any {
 
 // planSetPageField is writePageField: NULs stripped, null or "" deletes.
 func (p *planner) planSetPageField(op SetPageField, index int) ([]step, error) {
-	if op.Key != "title" && op.Key != "icon" {
+	if op.Key != "title" && op.Key != "icon" && op.Key != "cover" {
 		return nil, where(index, fmt.Sprintf("\"%s\" is not a page field.", op.Key))
 	}
 	var raw any
@@ -831,8 +831,10 @@ func (p *planner) planSetPageField(op SetPageField, index int) ([]step, error) {
 		if _, ok := v.(jsjson.Str); !ok {
 			return nil, where(index, "a page title is a string.")
 		}
-	} else if !isPageIcon(v) {
+	} else if op.Key == "icon" && !isPageIcon(v) {
 		return nil, where(index, `a page icon is { type: "emoji", value } or { type: "image", url }.`)
+	} else if op.Key == "cover" && !isPageCover(v) {
+		return nil, where(index, `a page cover is { type: "image", url } or { type: "gallery", id }, with an optional whole-number position from 0 to 100.`)
 	}
 	atomic, err := atomicValue(v, 1)
 	if err != nil {

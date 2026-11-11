@@ -161,7 +161,7 @@ func TestExportingTheClientUpdateGivesTheCanonicalPage(t *testing.T) {
 			t.Errorf("%s:\n got %s\nwant %s", c.name, got, want)
 		}
 	}
-	if pages != 7 {
-		t.Fatalf("%d page cases, want 7", pages)
+	if pages != 13 {
+		t.Fatalf("%d page cases, want 13", pages)
 	}
 }

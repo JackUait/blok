@@ -799,8 +799,8 @@ pub fn export(
     Ok(DocReader::new(&block_map, root_order, fields, warn).export()?)
 }
 
-/// The page map's title and icon, by the client's readPageFields; a title
-/// or icon holding U+0000 is left out too.
+/// The page map's title, icon and cover, by the client's readPageFields; a
+/// field holding U+0000 is left out too.
 pub fn export_page(doc: &Doc) -> Result<Object, EngineError> {
     let m = doc.get_map(PAGE_ROOT)?;
     let mut page = Object::new();
@@ -817,6 +817,13 @@ pub fn export_page(doc: &Doc) -> Result<Object, EngineError> {
         && !has_nul(&node)
     {
         put(&mut page, "icon", node);
+    }
+    if let Some(Out::Any(cover)) = value(&m, "cover")
+        && is_page_cover(&cover)
+        && let Ok(node) = to_json_node(&cover)
+        && !has_nul(&node)
+    {
+        put(&mut page, "cover", node);
     }
     Ok(page)
 }
@@ -842,6 +849,32 @@ pub(crate) fn is_page_icon(v: &Value) -> bool {
     match lookup(icon, "type") {
         Some(Value::String(kind)) if is(kind, "emoji") => is_str("value"),
         Some(Value::String(kind)) if is(kind, "image") => is_str("url"),
+        _ => false,
+    }
+}
+
+/// A whole percent: fractions are where the three servers' number output can differ.
+pub(crate) fn is_cover_position(percent: f64) -> bool {
+    percent.fract() == 0.0 && (0.0..=100.0).contains(&percent)
+}
+
+/// The client's isPageCover: {type:'image', url} or {type:'gallery', id} with
+/// a non-empty string, and a position that is absent or a whole number from
+/// 0 to 100.
+pub(crate) fn is_page_cover(v: &Value) -> bool {
+    let Value::Object(cover) = v else {
+        return false;
+    };
+    match lookup(cover, "position") {
+        None | Some(Value::Undefined) => {}
+        Some(Value::Number(percent)) if is_cover_position(*percent) => {}
+        Some(_) => return false,
+    }
+    let non_empty =
+        |key| matches!(lookup(cover, key), Some(Value::String(text)) if !text.is_empty());
+    match lookup(cover, "type") {
+        Some(Value::String(kind)) if is(kind, "gallery") => non_empty("id"),
+        Some(Value::String(kind)) if is(kind, "image") => non_empty("url"),
         _ => false,
     }
 }

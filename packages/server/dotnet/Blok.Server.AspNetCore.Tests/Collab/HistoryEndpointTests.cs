@@ -149,12 +149,17 @@ public sealed partial class HistoryEndpointTests
 
     icon.Add("type", "emoji");
     icon.Add("value", "🚀");
+    var cover = new AnyObject();
+
+    cover.Add("type", "gallery");
+    cover.Add("id", "dusk");
 
     await SendAsync(history, member, mirror, transaction =>
     {
       mirror.GetMap("page").Set(transaction, "title", "Plan");
       mirror.GetMap("page").Set(transaction, "icon", icon);
-      mirror.GetMap("page").Set(transaction, "cover", "blue");
+      mirror.GetMap("page").Set(transaction, "cover", cover);
+      mirror.GetMap("page").Set(transaction, "banner", "blue");
       mirror.GetMap("values").Set(transaction, "title", "Old title");
       mirror.GetMap("values").Set(transaction, "nested", new YMap());
       mirror.GetMap("values").Set(transaction, "gone", YUndefined.Instance);
@@ -168,7 +173,8 @@ public sealed partial class HistoryEndpointTests
     Assert.True(
         JsonNode.DeepEquals(JsonNode.Parse("""{"type":"emoji","value":"🚀"}"""), body["icon"]),
         $"{body["icon"]}");
-    Assert.Equal("""{"cover":"blue"}""", body["page"]!.ToJsonString());
+    Assert.Equal("""{"type":"gallery","id":"dusk"}""", body["cover"]!.ToJsonString());
+    Assert.Equal("""{"banner":"blue"}""", body["page"]!.ToJsonString());
     Assert.Equal("""{"title":"Old title"}""", body["values"]!.ToJsonString());
   }
 

@@ -124,6 +124,30 @@
     {
       "name": "page-icon-extra-key",
       "description": "an icon with an extra key is kept with that key"
+    },
+    {
+      "name": "page-cover-image",
+      "description": "an image cover is kept with its url and whole-percent position"
+    },
+    {
+      "name": "page-cover-gallery",
+      "description": "a gallery cover is kept with its id and no title"
+    },
+    {
+      "name": "page-cover-fraction",
+      "description": "a cover whose position is not a whole percent reads as absent; the icon is kept"
+    },
+    {
+      "name": "page-cover-out-of-range",
+      "description": "a cover position past 100 reads as absent"
+    },
+    {
+      "name": "page-cover-empty-id",
+      "description": "a gallery cover with an empty id reads as absent"
+    },
+    {
+      "name": "page-cover-extra-key",
+      "description": "a cover with an extra key is kept with that key"
     }
   ]
 }

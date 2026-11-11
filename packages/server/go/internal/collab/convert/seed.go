@@ -654,7 +654,7 @@ func newGridRowKey(row any, taken map[string]bool) jsjson.Str {
 }
 
 // composePage is the page fields to write: a valid value, or nil for
-// "delete the key". A malformed icon is dropped before the guards run.
+// "delete the key". A malformed icon or cover is dropped before the guards run.
 func composePage(page *jsjson.Object) ([]entry, error) {
 	var title any
 	if text, ok := getString(page, "title"); ok && len(text) > 0 {
@@ -674,7 +674,17 @@ func composePage(page *jsjson.Object) ([]entry, error) {
 			icon = atomic
 		}
 	}
-	return []entry{{str("title"), title}, {str("icon"), icon}}, nil
+	var cover any
+	if raw, ok := lookupObject(page, "cover"); ok && isPageCover(raw) {
+		atomic, err := atomicValue(raw, 1)
+		if err != nil {
+			return nil, err
+		}
+		if isPageCover(atomic) {
+			cover = atomic
+		}
+	}
+	return []entry{{str("title"), title}, {str("icon"), icon}, {str("cover"), cover}}, nil
 }
 
 type preparedBlock struct {

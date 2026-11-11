@@ -92,7 +92,7 @@ impl<R: HtmlReader + Sync> DocConverter<R> {
         let found = collect_seed_html(&blocks.items, self.fields())?;
         let read = self.read(&found, Some(MIGRATION_READ_TIMEOUT)).await?;
         let mut page = Object::new();
-        for key in ["title", "icon"] {
+        for key in ["title", "icon", "cover"] {
             let value = match member(output_data, key).map_err(Error::NotUnicode)? {
                 Some(node) => strict_value(node)?,
                 None => SourceValue::Null,

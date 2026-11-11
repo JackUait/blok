@@ -7,7 +7,7 @@ use crate::editops::member;
 use crate::error::Error;
 use crate::export::{
     BLOCK_FIELD_DEPTH, BLOCKS_ROOT, DataError, GRID_ORDER_KEY, GRID_ROWS_KEY, MAX_VALUE_DEPTH,
-    ORDER_ROOT, PAGE_ROOT, RichTextHtml, is_page_icon,
+    ORDER_ROOT, PAGE_ROOT, RichTextHtml, is_cover_position, is_page_cover, is_page_icon,
 };
 use crate::fields::RichTextFields;
 use crate::keys::{DIFFABLE_TEXT_KEYS, ORDERED_ID_ARRAY_KEYS};
@@ -726,8 +726,27 @@ pub(crate) fn is_source_page_icon(v: &SourceValue) -> bool {
     }
 }
 
+/// is_page_cover on the JSON a host record or an op holds.
+pub(crate) fn is_source_page_cover(v: &SourceValue) -> bool {
+    let SourceValue::Object(cover) = v else {
+        return false;
+    };
+    match source_lookup(cover, "position") {
+        None => {}
+        Some(SourceValue::Number(percent)) if is_cover_position(*percent) => {}
+        Some(SourceValue::Source(number)) if is_cover_position(number.value) => {}
+        Some(_) => return false,
+    }
+    let non_empty = |key| matches!(source_lookup(cover, key), Some(SourceValue::String(text)) if !text.is_empty());
+    match get_string(cover, "type") {
+        Some(kind) if is(kind, "gallery") => non_empty("id"),
+        Some(kind) if is(kind, "image") => non_empty("url"),
+        _ => false,
+    }
+}
+
 /// The page fields to write: a valid value, or None for "delete the key". A
-/// malformed icon is dropped before the guards run.
+/// malformed icon or cover is dropped before the guards run.
 fn compose_page(
     page: &Object<SourceValue>,
 ) -> Result<Vec<(&'static str, Option<Value>)>, DataError> {
@@ -747,7 +766,16 @@ fn compose_page(
             icon = Some(atomic);
         }
     }
-    Ok(vec![("title", title), ("icon", icon)])
+    let mut cover = None;
+    if let Some(raw @ SourceValue::Object(_)) = source_lookup(page, "cover")
+        && is_source_page_cover(raw)
+    {
+        let atomic = atomic_value(raw, 1)?;
+        if is_page_cover(&atomic) {
+            cover = Some(atomic);
+        }
+    }
+    Ok(vec![("title", title), ("icon", icon), ("cover", cover)])
 }
 
 type Prepared = (Vec<(Str, Map)>, Vec<In>);

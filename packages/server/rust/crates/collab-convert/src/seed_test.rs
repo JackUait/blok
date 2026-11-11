@@ -122,7 +122,7 @@ fn seeding_the_page_exports_the_canonical_page() {
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
-    assert_eq!(pages, 7, "{pages} page cases");
+    assert_eq!(pages, 13, "{pages} page cases");
 }
 
 pub(crate) fn seed_json(text: &str) -> Doc {

@@ -61,7 +61,7 @@ func (c *DocConverter) Seed(ctx context.Context, doc *yjs.Doc, outputData *jsjso
 		return err
 	}
 	page := &jsjson.Object{}
-	for _, key := range []string{"title", "icon"} {
+	for _, key := range []string{"title", "icon", "cover"} {
 		node, err := member(outputData, key)
 		if err != nil {
 			return errors.Join(ErrNotUnicode, err)
@@ -120,7 +120,7 @@ func (c *DocConverter) MigrateRichText(ctx context.Context, doc *yjs.Doc) (int, 
 	return MigrateRichText(doc, Converting(c.fields(), read))
 }
 
-// Export is {time, blocks, title?, icon?}, the legacy HTML slots read to segments.
+// Export is {time, blocks, title?, icon?, cover?}, the legacy HTML slots read to segments.
 func (c *DocConverter) Export(ctx context.Context, doc *yjs.Doc) (*jsjson.Object, error) {
 	now := c.Now().UnixMilli()
 	blocks, slots, err := Export(doc, c.fields(), c.Log)

@@ -117,7 +117,7 @@ func TestSeedingThePageExportsTheCanonicalPage(t *testing.T) {
 			t.Errorf("%s:\n got %s\nwant %s", c.name, got, want)
 		}
 	}
-	if pages != 7 {
+	if pages != 13 {
 		t.Fatalf("%d page cases", pages)
 	}
 }

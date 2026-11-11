@@ -484,9 +484,16 @@ async fn a_read_carries_the_plain_keys_of_the_page_and_values_maps() {
         ]
         .into_iter()
         .collect();
+        let cover: blok_jsjson::Object = [
+            (Str::from("type"), Value::String(Str::from("gallery"))),
+            (Str::from("id"), Value::String(Str::from("dusk"))),
+        ]
+        .into_iter()
+        .collect();
         page.set(txn, "title", Value::String(Str::from("Plan")))?;
         page.set(txn, "icon", Value::Object(icon))?;
-        page.set(txn, "cover", Value::String(Str::from("blue")))?;
+        page.set(txn, "cover", Value::Object(cover))?;
+        page.set(txn, "banner", Value::String(Str::from("blue")))?;
         values.set(txn, "title", Value::String(Str::from("Old title")))?;
         values.set(txn, "nested", blok_yjs::Map::new(Vec::new()))?;
         values.set(txn, "gone", Value::Undefined)
@@ -505,8 +512,12 @@ async fn a_read_carries_the_plain_keys_of_the_page_and_values_maps() {
         &parse(r#"{"type":"emoji","value":"🚀"}"#.as_bytes()).unwrap()
     );
     assert_eq!(
+        blok_jsjson::stringify(at(&body, &["cover"])).unwrap(),
+        r#"{"type":"gallery","id":"dusk"}"#
+    );
+    assert_eq!(
         blok_jsjson::stringify(at(&body, &["page"])).unwrap(),
-        r#"{"cover":"blue"}"#
+        r#"{"banner":"blue"}"#
     );
     assert_eq!(
         blok_jsjson::stringify(at(&body, &["values"])).unwrap(),

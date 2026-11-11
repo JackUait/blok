@@ -367,7 +367,7 @@ impl Manager {
             }
             None => {}
         }
-        for plain in plain_page_maps(&doc, &["title", "icon"])? {
+        for plain in plain_page_maps(&doc, &["title", "icon", "cover"])? {
             output.set(Str::from(plain.name), Value::Object(plain.map));
         }
         let json = blok_collab_docendpoint::serialize(&Value::Object(output))?;

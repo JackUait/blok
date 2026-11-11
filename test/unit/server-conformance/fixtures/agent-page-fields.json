@@ -18,6 +18,25 @@
     {
       "key": "icon",
       "value": null
+    },
+    {
+      "key": "cover",
+      "value": {
+        "type": "image",
+        "url": "https://example.com/cover.png",
+        "position": 30
+      }
+    },
+    {
+      "key": "cover",
+      "value": {
+        "type": "gallery",
+        "id": "dusk"
+      }
+    },
+    {
+      "key": "cover",
+      "value": null
     }
   ],
   "after": [
@@ -35,6 +54,20 @@
       "icon": {
         "type": "emoji",
         "value": "🚀"
+      }
+    },
+    {},
+    {
+      "cover": {
+        "type": "image",
+        "url": "https://example.com/cover.png",
+        "position": 30
+      }
+    },
+    {
+      "cover": {
+        "type": "gallery",
+        "id": "dusk"
       }
     },
     {}

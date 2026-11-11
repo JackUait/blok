@@ -6198,13 +6198,161 @@
       "agent": [
         {
           "op": "setPageField",
-          "key": "cover",
+          "key": "banner",
           "value": "x"
         }
       ],
       "refused": {
         "kind": "edit",
-        "message": "collab: op 0: \u0022cover\u0022 is not a page field."
+        "message": "collab: op 0: \u0022banner\u0022 is not a page field."
+      }
+    },
+    {
+      "name": "set-a-page-cover",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "seedHtml": [
+        {
+          "html": "r",
+          "segments": [
+            {
+              "text": "r"
+            }
+          ]
+        }
+      ],
+      "agent": [
+        {
+          "op": "setPageField",
+          "key": "cover",
+          "value": {
+            "type": "image",
+            "url": "https://example.com/c.png",
+            "position": 30
+          }
+        }
+      ],
+      "updates": [
+        "AQECACgBBHBhZ2UFY292ZXIBdgMEdHlwZXcFaW1hZ2UDdXJsdxlodHRwczovL2V4YW1wbGUuY29tL2MucG5nCHBvc2l0aW9ufR4A"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {
+        "cover": {
+          "type": "image",
+          "url": "https://example.com/c.png",
+          "position": 30
+        }
+      }
+    },
+    {
+      "name": "clear-a-page-cover",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "page": {
+        "cover": {
+          "type": "gallery",
+          "id": "dusk"
+        }
+      },
+      "seedUpdate": "AQoBACgBBHBhZ2UFY292ZXIBdgIEdHlwZXcHZ2FsbGVyeQJpZHcEZHVzaycBBmJsb2NrcwRyb290ASgAAQECaWQBdwRyb290KAABAQR0eXBlAXcJcGFyYWdyYXBoJwABAQRkYXRhAScAAQQEdGV4dAYEAAEFAXInAAEBBXR1bmVzAScAAQEKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "seedHtml": [
+        {
+          "html": "r",
+          "segments": [
+            {
+              "text": "r"
+            }
+          ]
+        }
+      ],
+      "agent": [
+        {
+          "op": "setPageField",
+          "key": "cover",
+          "value": null
+        }
+      ],
+      "updates": [
+        "AAEBAQAB"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "refuse-a-page-cover-with-a-fractional-position",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "seedHtml": [
+        {
+          "html": "r",
+          "segments": [
+            {
+              "text": "r"
+            }
+          ]
+        }
+      ],
+      "agent": [
+        {
+          "op": "setPageField",
+          "key": "cover",
+          "value": {
+            "type": "gallery",
+            "id": "dusk",
+            "position": 12.5
+          }
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: a page cover is { type: \u0022image\u0022, url } or { type: \u0022gallery\u0022, id }, with an optional whole-number position from 0 to 100."
       }
     },
     {

@@ -165,7 +165,7 @@ fn set_page_field_matches_page_fields_ts() {
         .unwrap_or_else(|err| panic!("{err}"))
         .unwrap_or_else(|| panic!("no steps"))
         .items;
-    assert_eq!(steps.len(), 4, "steps");
+    assert_eq!(steps.len(), 7, "steps");
     let after = items(field(&fixture, "after"));
     let doc = ag_seeded("[]");
     for (i, step) in steps.iter().enumerate() {
@@ -202,10 +202,35 @@ fn set_page_field_refuses_a_bad_icon_and_an_unknown_key() {
     ag_refused(ag_apply(
         &doc,
         &[EditOp::SetPageField {
-            key: s("cover"),
+            key: s("banner"),
             value: Some(node(r#""x""#)),
         }],
     ));
+    let page = export_page(&doc).unwrap_or_else(|err| panic!("{err}"));
+    assert_eq!(canonical(&Value::Object(page)), "{}");
+}
+
+#[test]
+fn set_page_field_refuses_a_bad_cover() {
+    let doc = Doc::new(Options::default());
+    for bad in [
+        r#""https://example.com/c.png""#,
+        r#"{"type":"image"}"#,
+        r#"{"type":"gallery","id":""}"#,
+        r#"{"type":"video","url":"https://example.com/c.mp4"}"#,
+        r#"{"type":"image","url":"https://example.com/c.png","position":12.5}"#,
+        r#"{"type":"image","url":"https://example.com/c.png","position":101}"#,
+        r#"{"type":"image","url":"https://example.com/c.png","position":-1}"#,
+        r#"{"type":"image","url":"https://example.com/c.png","position":null}"#,
+    ] {
+        ag_refused(ag_apply(
+            &doc,
+            &[EditOp::SetPageField {
+                key: s("cover"),
+                value: Some(node(bad)),
+            }],
+        ));
+    }
     let page = export_page(&doc).unwrap_or_else(|err| panic!("{err}"));
     assert_eq!(canonical(&Value::Object(page)), "{}");
 }
@@ -514,14 +539,16 @@ fn seed_carries_title_and_icon_into_the_page_root() {
     let doc = Doc::new(Options::default());
     block_on(converter.seed(
         &doc,
-        &node(r#"{"title":"T","icon":{"type":"emoji","value":"x"},"blocks":[]}"#),
+        &node(r#"{"title":"T","icon":{"type":"emoji","value":"x"},"cover":{"type":"gallery","id":"dusk","position":40},"blocks":[]}"#),
     ))
     .unwrap_or_else(|err| panic!("{err}"));
     let exported =
         Value::Object(block_on(converter.export(&doc)).unwrap_or_else(|err| panic!("{err}")));
     assert!(
         canonical(&ag_field(&exported, "title")) == r#""T""#
-            && canonical(&ag_field(&ag_field(&exported, "icon"), "value")) == r#""x""#,
+            && canonical(&ag_field(&ag_field(&exported, "icon"), "value")) == r#""x""#
+            && canonical(&ag_field(&exported, "cover"))
+                == r#"{"id":"dusk","position":40,"type":"gallery"}"#,
         "export {}",
         canonical(&exported)
     );

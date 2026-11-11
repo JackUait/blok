@@ -1,0 +1,8 @@
+{
+  "title": "Trip",
+  "cover": {
+    "type": "image",
+    "url": "https://example.com/cover.png",
+    "position": 30
+  }
+}

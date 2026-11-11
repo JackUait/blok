@@ -1,0 +1,11 @@
+{
+  "icon": {
+    "type": "emoji",
+    "value": "📄"
+  },
+  "cover": {
+    "type": "image",
+    "url": "https://example.com/c.png",
+    "position": 12.5
+  }
+}

@@ -33,7 +33,24 @@ public sealed class AgentRoomOpsTests
     var doc = new YDoc();
 
     Assert.Throws<CollabEditException>(() => RichTextRuntime.ApplyOps(doc, [new CollabEditOp.SetPageField("icon", new JsonObject { ["type"] = "emoji" })]));
-    Assert.Throws<CollabEditException>(() => RichTextRuntime.ApplyOps(doc, [new CollabEditOp.SetPageField("cover", "x")]));
+    Assert.Throws<CollabEditException>(() => RichTextRuntime.ApplyOps(doc, [new CollabEditOp.SetPageField("banner", "x")]));
+    Assert.Empty(YDocConverter.ExportPage(doc));
+  }
+
+  [Theory]
+  [InlineData("\"https://example.com/c.png\"")]
+  [InlineData("{\"type\":\"image\"}")]
+  [InlineData("{\"type\":\"gallery\",\"id\":\"\"}")]
+  [InlineData("{\"type\":\"video\",\"url\":\"https://example.com/c.mp4\"}")]
+  [InlineData("{\"type\":\"image\",\"url\":\"https://example.com/c.png\",\"position\":12.5}")]
+  [InlineData("{\"type\":\"image\",\"url\":\"https://example.com/c.png\",\"position\":101}")]
+  [InlineData("{\"type\":\"image\",\"url\":\"https://example.com/c.png\",\"position\":-1}")]
+  [InlineData("{\"type\":\"image\",\"url\":\"https://example.com/c.png\",\"position\":null}")]
+  public void SetPageFieldRefusesABadCover(string json)
+  {
+    var doc = new YDoc();
+
+    Assert.Throws<CollabEditException>(() => RichTextRuntime.ApplyOps(doc, [new CollabEditOp.SetPageField("cover", JsonNode.Parse(json))]));
     Assert.Empty(YDocConverter.ExportPage(doc));
   }
 
@@ -43,11 +60,12 @@ public sealed class AgentRoomOpsTests
     var converter = new CollabDocConverter(TimeProvider.System, RichTextRuntime.Reader);
     var doc = new YDoc();
 
-    await converter.SeedAsync(doc, JsonNode.Parse("""{"title":"T","icon":{"type":"emoji","value":"x"},"blocks":[]}""")!);
+    await converter.SeedAsync(doc, JsonNode.Parse("""{"title":"T","icon":{"type":"emoji","value":"x"},"cover":{"type":"gallery","id":"dusk","position":40},"blocks":[]}""")!);
     var exported = await converter.ExportAsync(doc);
 
     Assert.Equal("T", exported["title"]!.GetValue<string>());
     Assert.Equal("x", exported["icon"]!["value"]!.GetValue<string>());
+    Assert.Equal("""{"type":"gallery","id":"dusk","position":40}""", exported["cover"]!.ToJsonString());
   }
 
   public static TheoryData<string> MoveCases()

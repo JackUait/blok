@@ -990,6 +990,327 @@
       "equalPairs": []
     },
     {
+      "name": "page-cover-empty-id",
+      "room": "page-cover-empty-id",
+      "structure": {
+        "keys": [
+          {
+            "id": "pc5",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pc5"
+        ],
+        "reached": [
+          "pc5"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "cover": "object",
+          "title": "string"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "title": "Empty id",
+            "cover": {
+              "type": "gallery",
+              "id": ""
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "cover": {
+              "type": "gallery",
+              "id": ""
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-cover-extra-key",
+      "room": "page-cover-extra-key",
+      "structure": {
+        "keys": [
+          {
+            "id": "pc6",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pc6"
+        ],
+        "reached": [
+          "pc6"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "cover": "object",
+          "title": "string"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "title": "Extra cover",
+            "cover": {
+              "type": "gallery",
+              "id": "dusk",
+              "position": 0,
+              "note": "kept"
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "cover": {
+              "type": "gallery",
+              "id": "dusk",
+              "position": 0,
+              "note": "kept"
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-cover-fraction",
+      "room": "page-cover-fraction",
+      "structure": {
+        "keys": [
+          {
+            "id": "pc3",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pc3"
+        ],
+        "reached": [
+          "pc3"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "cover": "object",
+          "icon": "object"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "type": "emoji",
+              "value": "\uD83D\uDCC4"
+            },
+            "cover": {
+              "type": "image",
+              "url": "https://example.com/c.png",
+              "position": 12.5
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "type": "emoji",
+              "value": "\uD83D\uDCC4"
+            },
+            "cover": {
+              "type": "image",
+              "url": "https://example.com/c.png",
+              "position": 12.5
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-cover-gallery",
+      "room": "page-cover-gallery",
+      "structure": {
+        "keys": [
+          {
+            "id": "pc2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pc2"
+        ],
+        "reached": [
+          "pc2"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "cover": "object"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "cover": {
+              "type": "gallery",
+              "id": "dusk"
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "cover": {
+              "type": "gallery",
+              "id": "dusk"
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-cover-image",
+      "room": "page-cover-image",
+      "structure": {
+        "keys": [
+          {
+            "id": "pc1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pc1"
+        ],
+        "reached": [
+          "pc1"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "cover": "object",
+          "title": "string"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "title": "Trip",
+            "cover": {
+              "type": "image",
+              "url": "https://example.com/cover.png",
+              "position": 30
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "cover": {
+              "type": "image",
+              "url": "https://example.com/cover.png",
+              "position": 30
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-cover-out-of-range",
+      "room": "page-cover-out-of-range",
+      "structure": {
+        "keys": [
+          {
+            "id": "pc4",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pc4"
+        ],
+        "reached": [
+          "pc4"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "cover": "object",
+          "title": "string"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "title": "Range",
+            "cover": {
+              "type": "gallery",
+              "id": "dusk",
+              "position": 101
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "cover": {
+              "type": "gallery",
+              "id": "dusk",
+              "position": 101
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
       "name": "page-icon-extra-key",
       "room": "page-icon-extra-key",
       "structure": {

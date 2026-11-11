@@ -1,0 +1,9 @@
+{
+  "title": "Extra cover",
+  "cover": {
+    "type": "gallery",
+    "id": "dusk",
+    "position": 0,
+    "note": "kept"
+  }
+}

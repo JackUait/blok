@@ -1593,6 +1593,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FILLS_BYTES = 271 + 541 + 265 + 489 + 16;
     // Lane sortfilt: sort rules 40 apart, Layout rows 274 at x+8, Card layout tiles 109x82 r10 with a 2px picked outline.
     const DATABASE_SORTFILT_BYTES = 849;
+    // Round V1 lane menus2: Add view's 92px tiles at Notion's 94 x 63 pitch and its 279px height.
+    const DATABASE_MENUS2_BYTES = 486;
     // colors.css: --blok-block-control, the neutral grey of "+" and the drag handle, in three themes.
     const BLOCK_CONTROL_GREY_BYTES = 186;
     // tables.css: the open size card covers a column grip held on the full-screen header line.
@@ -2050,7 +2052,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CALCMENU_BYTES
       + DATABASE_CALCSUB_BYTES
       + DATABASE_FILLS_BYTES
-      + DATABASE_SORTFILT_BYTES;
+      + DATABASE_SORTFILT_BYTES
+      + DATABASE_MENUS2_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

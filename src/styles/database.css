@@ -3277,11 +3277,18 @@ button[data-blok-database-column-count]:hover {
 /* Add view (feel/findings-toolbar V04): Notion's 390px menu, a 4-column grid of
    92x62 tiles, a 22px glyph above a 14/20 label, radius 8. The heading,
    divider and "New data source" span the row. */
+/* r9-addview-tiles.raw: 92x62 tiles at a 94 x 63 pitch, 8px in from the edge. */
 [data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items] {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  column-gap: var(--blok-space-1);
-  row-gap: 0;
+  grid-template-columns: repeat(4, 92px);
+  column-gap: var(--blok-space-0-5);
+  row-gap: var(--blok-space-0-25);
+  padding: var(--blok-space-1) var(--blok-space-1) var(--blok-space-2);
+}
+
+/* r9-addview-menu.png: with the 1px row gap, the rule sits 8px under the last tile. */
+[data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-item-separator] {
+  padding: var(--blok-space-1-75) 0;
 }
 
 [data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items] > * {
@@ -3293,8 +3300,9 @@ button[data-blok-database-column-count]:hover {
   min-width: 0;
 }
 
+/* With the grid's 4px and 1px row gap: the first tile 37.9 under the menu top (r9-addview-tiles.raw). */
 [data-blok-database-view-popover-heading] {
-  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
+  padding: var(--blok-space-3) var(--blok-space-2) 6.5px;
   font-size: 12px;
   line-height: 14.4px;
   font-weight: 500;

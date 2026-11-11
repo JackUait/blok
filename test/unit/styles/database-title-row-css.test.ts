@@ -79,8 +79,22 @@ describe('a long title stays one line', () => {
 });
 
 describe("Add view is Notion's tile grid (V04)", () => {
-  it('lays the tiles out in 4 columns', () => {
-    expect(rule("[data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items]")).toMatch(/grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  // notion-motion Round 9 (r9-addview-tiles.raw): 92x62 tiles at a 94 x 63 pitch, 8px from the menu's edge.
+  it('lays 92px tiles out in 4 columns at a 94 x 63 pitch', () => {
+    const grid = rule("[data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items]");
+
+    expect(grid).toMatch(/grid-template-columns: repeat\(4, 92px\)/);
+    expect(grid).toMatch(/column-gap: var\(--blok-space-0-5\)/);
+    expect(grid).toMatch(/row-gap: var\(--blok-space-0-25\)/);
+    // 4px container + 4px here = Notion's 8px inset; 8px under "New data source".
+    expect(grid).toMatch(/padding: var\(--blok-space-1\) var\(--blok-space-1\) var\(--blok-space-2\)/);
+  });
+
+  // r19:23 + r9-addview-menu.png: 390x279; first tile 37.9 under the menu top,
+  // the rule 7.9 under the last tile, "New data source" 28 tall, 8 to the bottom.
+  it('spaces the heading and the rule as Notion does, for a 279px menu', () => {
+    expect(rule('[data-blok-database-view-popover-heading]')).toMatch(/padding: var\(--blok-space-3\) var\(--blok-space-2\) 6\.5px/);
+    expect(rule("[data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-item-separator]")).toMatch(/padding: var\(--blok-space-1-75\) 0/);
   });
 
   it('a tile is 62px tall, radius 8, a 22px glyph above a 14/20 label', () => {

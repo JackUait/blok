@@ -7197,9 +7197,14 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items] {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  column-gap: var(--blok-space-1);
-  row-gap: 0;
+  grid-template-columns: repeat(4, 92px);
+  column-gap: var(--blok-space-0-5);
+  row-gap: var(--blok-space-0-25);
+  padding: var(--blok-space-1) var(--blok-space-1) var(--blok-space-2);
+}
+
+[data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-item-separator] {
+  padding: var(--blok-space-1-75) 0;
 }
 
 [data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items] > * {
@@ -7212,7 +7217,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-view-popover-heading] {
-  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
+  padding: var(--blok-space-3) var(--blok-space-2) 6.5px;
   font-size: 12px;
   line-height: 14.4px;
   font-weight: 500;

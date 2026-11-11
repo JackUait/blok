@@ -162,7 +162,7 @@ test.describe('undo audit — UI around undo and redo', () => {
 
     await editableOf(page, 'b1').click();
     await page.evaluate(() => {
-      const heard: string[] = [];
+      const heard: Array<{ text: string; at: number }> = [];
       const region = document.querySelector('[data-blok-announcer][role="status"]');
 
       if (region === null) {
@@ -172,12 +172,13 @@ test.describe('undo audit — UI around undo and redo', () => {
         const text = region.textContent ?? '';
 
         if (text !== '') {
-          heard.push(text);
+          heard.push({ text, at: performance.now() });
         }
       }).observe(region, { subtree: true, childList: true, characterData: true });
       Object.assign(window, { heard });
     });
-    const heard = async (): Promise<string[]> => page.evaluate(() => (window as unknown as { heard: string[] }).heard);
+    const heard = async (): Promise<Array<{ text: string; at: number }>> =>
+      page.evaluate(() => (window as unknown as { heard: Array<{ text: string; at: number }> }).heard);
 
     for (let index = 0; index < steps; index++) {
       await page.keyboard.press(UNDO);
@@ -185,18 +186,20 @@ test.describe('undo audit — UI around undo and redo', () => {
     for (let index = 0; index < steps; index++) {
       await page.keyboard.press(REDO);
     }
+    const burstEnd = await page.evaluate(() => performance.now());
 
     await expect.poll(() => page.evaluate(async () => (await window.blokInstance?.save())?.blocks.length)).toBe(steps + 1);
-    await expect.poll(async () => (await heard()).at(-1)).toBe('Redone');
+    await expect.poll(async () => (await heard()).at(-1)?.text).toBe('Redone');
     // Let any texts still queued come out.
     await page.evaluate(() => new Promise<void>((resolve) => {
       window.setTimeout(resolve, 2500);
     }));
 
     const texts = await heard();
+    const afterBurst = texts.filter((entry) => entry.at > burstEnd).map((entry) => entry.text);
 
-    expect(texts.at(-1)).toBe('Redone');
-    // Twelve presses, but the older queued texts are dropped.
-    expect(texts.length).toBeLessThanOrEqual(4);
+    expect(texts.at(-1)?.text).toBe('Redone');
+    // At most the text in flight and the newest one; a queue of older texts would add more.
+    expect(afterBurst.length).toBeLessThanOrEqual(2);
   });
 });

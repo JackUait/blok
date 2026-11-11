@@ -160,4 +160,21 @@ describe('PopoverItemHtml', () => {
 
     expect(item.getControls()).toEqual([button, textInput, numberInput, textarea]);
   });
+
+  it('pins a sticky item to the top of the scrolling list, and keeps it pinned after a hide cycle', () => {
+    const { item, root } = createItem({ isSticky: true });
+
+    expect(root.className.split(' ')).toEqual(expect.arrayContaining(['sticky', '-top-(--blok-space-1)', 'z-1']));
+
+    item.toggleHidden(true);
+    item.toggleHidden(false);
+
+    expect(root.className.split(' ')).toEqual(expect.arrayContaining(['sticky', '-top-(--blok-space-1)', 'z-1']));
+  });
+
+  it('leaves an ordinary item in the flow', () => {
+    const { root } = createItem();
+
+    expect(root.className).not.toContain('sticky');
+  });
 });

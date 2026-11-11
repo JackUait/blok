@@ -1221,6 +1221,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   protected updateScrollReel(): void {
     const { items } = this.nodes;
 
+    const isReelOn = this.params.scrollReel !== false;
+    // A sticky row sits at the edge on purpose; its offsetTop is its place in the flow, not on screen.
+    const pinned = new Set(this.items.flatMap((item) => (item instanceof PopoverItemHtml && item.sticky ? [item.getElement()] : [])));
     const hasOverflow = items.scrollHeight > items.clientHeight;
     const viewTop = items.scrollTop;
     const viewBottom = viewTop + items.clientHeight;
@@ -1234,7 +1237,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
       // An item that cannot fit in view is a whole list (the page picker's
       // listbox), not a row; curling it bends and jumps the entire menu.
-      if (!hasOverflow || height === 0 || height >= items.clientHeight) {
+      if (!isReelOn || pinned.has(child) || !hasOverflow || height === 0 || height >= items.clientHeight) {
         this.clearReelDistortion(child);
         continue;
       }

@@ -127,6 +127,12 @@ export interface PopoverParamsBase {
   width?: string;
 
   /**
+   * Squash and tilt rows as they scroll past the list's top and bottom edges,
+   * like a picker wheel. Defaults to true. Pass false for a plain scroll.
+   */
+  scrollReel?: boolean;
+
+  /**
    * Minimum width of the popover in pixels (e.g. '250px').
    * When width is 'auto', the measured content width is clamped
    * to at least this value.

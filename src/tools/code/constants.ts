@@ -11,7 +11,18 @@ export const SEARCH_LANGUAGE_KEY = 'tools.code.searchLanguage';
 export const AUTO_DETECTED_KEY = 'tools.code.autoDetected';
 export const PLAIN_TEXT_KEY = 'tools.code.plainText';
 export const FILENAME_KEY = 'tools.code.filename';
-export const SUGGESTED_KEY = 'tools.code.suggested';
+
+/**
+ * The picker's sections, in order: Docs & diagrams first, so plain text is near the top. Every language in LANGUAGES must be in
+ * exactly one family, or it never shows (pinned by language-picker.test.ts).
+ */
+export const LANGUAGE_FAMILIES: ReadonlyArray<{ key: string; languages: readonly string[] }> = [
+  { key: 'tools.code.familyDocs', languages: ['markdown', 'latex', 'mermaid', 'plain text'] },
+  { key: 'tools.code.familyWeb', languages: ['javascript', 'typescript', 'html', 'css', 'json', 'graphql', 'php'] },
+  { key: 'tools.code.familySystems', languages: ['c', 'cpp', 'csharp', 'go', 'rust', 'java', 'kotlin', 'swift', 'dart', 'scala'] },
+  { key: 'tools.code.familyScripting', languages: ['python', 'ruby', 'lua', 'r', 'bash', 'shell'] },
+  { key: 'tools.code.familyData', languages: ['sql', 'yaml', 'xml', 'dockerfile'] },
+];
 
 // Default values
 export const DEFAULT_LANGUAGE = 'plain text';

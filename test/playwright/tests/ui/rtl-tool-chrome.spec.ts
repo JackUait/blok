@@ -355,16 +355,13 @@ for (const direction of DIRECTIONS) {
     });
 
     test('the code language picker section label keeps its start padding', async ({ page }) => {
-      await page.evaluate(() => {
-        localStorage.setItem('blok:code:recent-languages', JSON.stringify(['python', 'rust']));
-      });
       await createBlok(page, direction, [
         { type: 'code', data: { code: 'print(1)', language: 'python' } },
       ]);
 
       await page.getByTestId('code-language-btn').click();
 
-      const label = page.getByTestId('code-language-section');
+      const label = page.getByTestId('code-language-section').first();
 
       await expect(label).toBeVisible();
 

@@ -1,20 +1,22 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { PopoverItemDefaultParams, PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import {
   buildLanguagePickerItems,
   languageBadge,
-  languageForFilename,
-  readRecentLanguages,
-  rememberLanguage,
-  RECENT_LANGUAGES_STORAGE_KEY,
 } from '../../../../src/tools/code/language-picker';
-import { LANGUAGES } from '../../../../src/tools/code/constants';
+import { LANGUAGE_FAMILIES, LANGUAGES } from '../../../../src/tools/code/constants';
 import { LANGUAGE_LOGOS } from '../../../../src/tools/code/language-logos';
 
 const NAMES: Record<string, string> = { 'plain text': 'Plain text' };
 const nameOf = (id: string): string => NAMES[id] ?? LANGUAGES.find((l) => l.id === id)?.name ?? id;
-const t = (key: string): string => ({ 'tools.code.suggested': 'Suggested' }[key] ?? key);
+const t = (key: string): string => ({
+  'tools.code.familyWeb': 'Web',
+  'tools.code.familySystems': 'Systems & apps',
+  'tools.code.familyScripting': 'Scripting',
+  'tools.code.familyData': 'Data & config',
+  'tools.code.familyDocs': 'Docs & diagrams',
+}[key] ?? key);
 
 const build = (overrides: Partial<Parameters<typeof buildLanguagePickerItems>[0]> = {}): PopoverItemParams[] =>
   buildLanguagePickerItems({
@@ -22,8 +24,6 @@ const build = (overrides: Partial<Parameters<typeof buildLanguagePickerItems>[0]
     logos: LANGUAGE_LOGOS,
     selectedId: 'plain text',
     detectedId: null,
-    filename: '',
-    recent: [],
     nameOf,
     t,
     onPick: vi.fn(),
@@ -35,9 +35,15 @@ const isDefault = (item: PopoverItemParams): item is PopoverItemDefaultParams =>
 
 const namesIn = (items: PopoverItemParams[]): string[] => items.filter(isDefault).map((item) => item.name ?? '');
 
-/** Each non-option row, in order: a header's text, or '—' for a divider. */
+/** Each section label, in order. */
 const headers = (items: PopoverItemParams[]): string[] =>
-  items.flatMap((item) => (item.type === PopoverItemType.Html ? [item.element.textContent || '—'] : []));
+  items.flatMap((item) => (item.type === PopoverItemType.Html ? [item.element.querySelector('[data-label]')?.textContent ?? '—'] : []));
+
+/** Each section's count, in order. */
+const counts = (items: PopoverItemParams[]): string[] =>
+  items.flatMap((item) => (item.type === PopoverItemType.Html ? [item.element.querySelector('[data-count]')?.textContent ?? ''] : []));
+
+const FAMILY_LABELS = ['Docs & diagrams', 'Web', 'Systems & apps', 'Scripting', 'Data & config'];
 
 const channel = (hex: string, at: number): number => {
   const c = parseInt(hex.slice(at, at + 2), 16) / 255;
@@ -147,95 +153,57 @@ describe('language badge', () => {
   });
 });
 
-describe('languageForFilename', () => {
-  it.each([
-    ['src/block.ts', 'typescript'],
-    ['main.go', 'go'],
-    ['README.md', 'markdown'],
-    ['flow.mmd', 'mermaid'],
-    ['paper.tex', 'latex'],
-    ['Dockerfile', 'dockerfile'],
-    ['notes', null],
-    ['', null],
-  ])('%s -> %s', (filename, expected) => {
-    expect(languageForFilename(filename)).toBe(expected);
-  });
-});
-
-describe('recent languages', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    localStorage.clear();
-  });
-
-  it('keeps the last three picks, newest first, without repeats', () => {
-    ['go', 'rust', 'python', 'go', 'java'].forEach(rememberLanguage);
-
-    expect(readRecentLanguages()).toStrictEqual(['java', 'go', 'python']);
-  });
-
-  it('never remembers plain text', () => {
-    rememberLanguage('plain text');
-
-    expect(readRecentLanguages()).toStrictEqual([]);
-  });
-
-  it('ignores unknown ids and junk in storage', () => {
-    localStorage.setItem(RECENT_LANGUAGES_STORAGE_KEY, JSON.stringify(['go', 'klingon', 7]));
-
-    expect(readRecentLanguages()).toStrictEqual(['go']);
-
-    localStorage.setItem(RECENT_LANGUAGES_STORAGE_KEY, '{not json');
-
-    expect(readRecentLanguages()).toStrictEqual([]);
-  });
-
-  it('survives storage that throws', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new Error('blocked');
-    });
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('blocked');
-    });
-
-    expect(() => rememberLanguage('go')).not.toThrow();
-    expect(readRecentLanguages()).toStrictEqual([]);
-  });
-});
-
 describe('buildLanguagePickerItems', () => {
-  it('lists every language once, with no header, when there is nothing to suggest', () => {
+  it('puts every language in exactly one family', () => {
+    const grouped = LANGUAGE_FAMILIES.flatMap((family) => family.languages);
+
+    expect([...grouped].sort()).toStrictEqual(LANGUAGES.map((lang) => lang.id).sort());
+  });
+
+  it('lists every language once, grouped by family', () => {
     const items = build();
 
-    expect(headers(items)).toStrictEqual([]);
-    expect(namesIn(items)).toStrictEqual(LANGUAGES.map((lang) => lang.id));
+    expect(headers(items)).toStrictEqual(FAMILY_LABELS);
+    expect(namesIn(items)).toStrictEqual(LANGUAGE_FAMILIES.flatMap((family) => family.languages));
+    expect(counts(items)).toStrictEqual(LANGUAGE_FAMILIES.map((family) => String(family.languages.length)));
   });
 
-  it('suggests the filename language, the detected one and recent picks, each once, and drops them from the full list', () => {
-    const items = build({ filename: 'app.py', detectedId: 'rust', recent: ['go', 'python'] });
-    const names = namesIn(items);
+  it('has no Suggested section, and opens on Docs & diagrams', () => {
+    const items = build({ detectedId: 'rust' });
 
-    // A divider, not an "All languages" label, ends the suggestions.
-    expect(headers(items)).toStrictEqual(['Suggested', '—']);
-    expect(names.slice(0, 3)).toStrictEqual(['python', 'rust', 'go']);
-    expect(names.filter((name) => name === 'python')).toHaveLength(1);
-    expect(names).toHaveLength(LANGUAGES.length);
+    expect(headers(items)[0]).toBe('Docs & diagrams');
+    expect(headers(items)).toStrictEqual(FAMILY_LABELS);
+    expect(namesIn(items)).toHaveLength(LANGUAGES.length);
   });
 
-  it('marks the detected suggestion as auto', () => {
+  it('keeps each section label in view while its rows scroll, on the menu surface', () => {
+    const [first] = build();
+    const element = first.type === PopoverItemType.Html ? first.element : null;
+
+    expect(first.type === PopoverItemType.Html && first.isSticky).toBe(true);
+    expect(element?.className).toMatch(/\bbg-popover-bg\b/);
+    expect(element?.getAttribute('role')).toBe('presentation');
+    expect(element?.getAttribute('data-blok-testid')).toBe('code-language-section');
+  });
+
+  it('builds the label text from strings, never markup', () => {
+    const items = build({ t: (key: string) => (key === 'tools.code.familyWeb' ? '<img src=x onerror=alert(1)>' : key) });
+    const first = items[0];
+
+    expect(first.type === PopoverItemType.Html && first.element.querySelector('img')).toBeFalsy();
+  });
+
+  it('marks the detected language as auto, in its own family', () => {
     const items = build({ detectedId: 'rust' }).filter(isDefault);
 
     expect(items.find((item) => item.name === 'rust')?.secondaryLabel).toBe('tools.code.autoDetected');
+    expect(items.filter((item) => item.secondaryLabel !== undefined)).toHaveLength(1);
   });
 
-  it('does not suggest the language that is already selected', () => {
-    const items = build({ selectedId: 'go', recent: ['go'] });
+  it('does not mark the selected language as auto', () => {
+    const items = build({ selectedId: 'rust', detectedId: 'rust' }).filter(isDefault);
 
-    expect(headers(items)).toStrictEqual([]);
+    expect(items.find((item) => item.name === 'rust')?.secondaryLabel).toBeUndefined();
   });
 
   it('marks the selected language with a check and as the chosen radio', () => {

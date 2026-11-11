@@ -27,6 +27,9 @@ export class PopoverItemHtml extends PopoverItem {
    */
   private readonly isInline: boolean;
 
+  /** Pinned to the top of the scrolling list, like a section label. */
+  private readonly isSticky: boolean;
+
   /**
    * Constructs the instance
    * @param params – instance parameters
@@ -37,8 +40,14 @@ export class PopoverItemHtml extends PopoverItem {
     super(params);
 
     this.isInline = renderParams?.isInline ?? false;
+    this.isSticky = params.isSticky === true;
 
     this.nodes.root = this.createRootElement(params, renderParams);
+  }
+
+  /** True when the item is pinned to the top of the scrolling list. */
+  public get sticky(): boolean {
+    return this.isSticky;
   }
 
   /**
@@ -93,6 +102,7 @@ export class PopoverItemHtml extends PopoverItem {
     this.nodes.root.className = twMerge(
       css.root,
       this.isInline && cssInline.root,
+      this.isSticky && css.rootSticky,
       this.isHidden && css.rootHidden
     );
   }
@@ -111,7 +121,8 @@ export class PopoverItemHtml extends PopoverItem {
     // Set initial classes
     root.className = twMerge(
       css.root,
-      this.isInline && cssInline.root
+      this.isInline && cssInline.root,
+      this.isSticky && css.rootSticky
     );
 
     // The wrapper is a layout container, not a menu item. Marking it

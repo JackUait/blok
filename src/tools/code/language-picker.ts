@@ -1,7 +1,6 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { IconCheck } from '../../components/icons';
-import { extToPrismLang } from '../file/code-languages';
 import type { LanguageLogo } from './language-logos';
 import type { DrawnLogo } from './language-logos-own';
 
@@ -9,10 +8,8 @@ export type AnyLogo = LanguageLogo | DrawnLogo;
 type LogoMap = Readonly<Record<string, AnyLogo>>;
 import {
   AUTO_DETECTED_KEY,
-  DEFAULT_LANGUAGE,
   LANGUAGE_COLORS,
-  LANGUAGES,
-  SUGGESTED_KEY,
+  LANGUAGE_FAMILIES,
 } from './constants';
 
 /** Short marks drawn in each badge. At most three characters, so they fit the tile. */
@@ -84,19 +81,6 @@ const LANGUAGE_ALIASES: Readonly<Record<string, readonly string[]>> = {
   dart: ['.dart', 'flutter'],
   lua: ['.lua'],
 };
-
-/** Extensions the file tool's map does not cover, because it has no code preview for them. */
-const EXTRA_EXTENSIONS: Readonly<Record<string, string>> = {
-  md: 'markdown',
-  mmd: 'mermaid',
-  tex: 'latex',
-  xml: 'xml',
-  svg: 'xml',
-};
-
-export const RECENT_LANGUAGES_STORAGE_KEY = 'blok:code:recent-languages';
-const RECENT_LIMIT = 3;
-const KNOWN_IDS = new Set(LANGUAGES.map((lang) => lang.id));
 
 export type PickerTheme = 'light' | 'dark';
 
@@ -326,109 +310,51 @@ export function languageBadge(id: string, options: BadgeOptions): HTMLElement {
   return badge;
 }
 
-/** The language a filename implies, from its extension or its whole name. */
-export function languageForFilename(filename: string): string | null {
-  const base = filename.trim().split(/[\\/]/).pop() ?? '';
-
-  if (base.toLowerCase() === 'dockerfile') {
-    return 'dockerfile';
-  }
-
-  const dot = base.lastIndexOf('.');
-
-  if (dot <= 0) {
-    return null;
-  }
-
-  const ext = base.slice(dot + 1).toLowerCase();
-  const id = EXTRA_EXTENSIONS[ext] ?? extToPrismLang(ext);
-
-  return id !== null && KNOWN_IDS.has(id) ? id : null;
-}
-
-/** Recent picks, newest first. Storage is a per-viewer convenience: any failure reads as empty. */
-export function readRecentLanguages(): string[] {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(RECENT_LANGUAGES_STORAGE_KEY) ?? '[]');
-
-    return Array.isArray(parsed)
-      ? parsed.filter((id): id is string => typeof id === 'string' && KNOWN_IDS.has(id)).slice(0, RECENT_LIMIT)
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-export function rememberLanguage(id: string): void {
-  if (id === DEFAULT_LANGUAGE || !KNOWN_IDS.has(id)) {
-    return;
-  }
-
-  const next = [id, ...readRecentLanguages().filter((other) => other !== id)].slice(0, RECENT_LIMIT);
-
-  try {
-    localStorage.setItem(RECENT_LANGUAGES_STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    /* storage blocked: recents just stay empty */
-  }
-}
-
 /**
- * A section label row. role="presentation" because the popover's listbox may
- * only own options; search hides Html rows on its own.
+ * A section label with its row count. Sticky, so it stays in view while its
+ * rows scroll under it; its own background covers them. role="presentation"
+ * because the popover's listbox may only own options; search hides Html rows
+ * on its own.
  */
-function sectionHeader(label: string): PopoverItemParams {
+function sectionHeader(label: string, count: number): PopoverItemParams {
   const element = document.createElement('div');
+  const name = document.createElement('span');
+  const total = document.createElement('span');
 
-  element.className = 'ps-2 pe-3 pt-0.5 pb-1.5 text-xs font-medium text-menu-section-label cursor-default';
+  element.className = 'flex items-baseline justify-between gap-2 ps-2 pe-3 pt-1.5 pb-1.5 bg-popover-bg text-xs font-medium text-menu-section-label cursor-default';
   element.setAttribute('role', 'presentation');
   element.setAttribute('data-blok-testid', 'code-language-section');
-  element.textContent = label;
+  name.setAttribute('data-label', '');
+  name.textContent = label;
+  total.className = 'font-normal tabular-nums';
+  total.setAttribute('data-count', '');
+  total.textContent = String(count);
+  element.append(name, total);
 
-  return { type: PopoverItemType.Html, element };
-}
-
-/** The line between the suggestions and the full list. role="presentation" for the same listbox reason. */
-function sectionDivider(): PopoverItemParams {
-  const element = document.createElement('div');
-  const line = document.createElement('div');
-
-  element.className = 'py-1.5';
-  element.setAttribute('role', 'presentation');
-  element.setAttribute('data-blok-testid', 'code-language-divider');
-  line.className = 'h-px -mx-1 bg-popover-border/60';
-  line.setAttribute('aria-hidden', 'true');
-  element.appendChild(line);
-
-  return { type: PopoverItemType.Html, element };
+  return { type: PopoverItemType.Html, element, isSticky: true };
 }
 
 export interface LanguagePickerOptions extends BadgeOptions {
   selectedId: string;
   detectedId: string | null;
-  filename: string;
-  recent: readonly string[];
   nameOf: (id: string) => string;
   t: (key: string) => string;
   onPick: (id: string) => void;
 }
 
 /**
- * Picker rows: a "Suggested" section (filename language, detected language,
- * recent picks), a divider, and then every other language, unlabelled. A suggested language is not
- * repeated below, so search never shows it twice.
+ * Picker rows: every language under its family label, Docs & diagrams first.
+ * The detected language is marked "auto" where it sits, unless it is already
+ * the chosen one.
  */
 export function buildLanguagePickerItems(options: LanguagePickerOptions): PopoverItemParams[] {
-  const { selectedId, detectedId, filename, recent, nameOf, t, onPick, theme, logos } = options;
-  const suggested = [languageForFilename(filename), detectedId, ...recent]
-    .filter((id): id is string => id !== null && id !== selectedId && KNOWN_IDS.has(id))
-    .filter((id, index, all) => all.indexOf(id) === index);
+  const { selectedId, detectedId, nameOf, t, onPick, theme, logos } = options;
 
   const row = (id: string): PopoverItemParams => ({
     title: nameOf(id),
     name: id,
     icon: languageBadge(id, { theme, logos }),
-    secondaryLabel: id === detectedId && suggested.includes(id) ? t(AUTO_DETECTED_KEY) : undefined,
+    secondaryLabel: id === detectedId && id !== selectedId ? t(AUTO_DETECTED_KEY) : undefined,
     trailingIcon: id === selectedId ? IconCheck : undefined,
     // One shared toggle group makes the rows a radio group, so assistive tech hears which is chosen.
     toggle: 'language',
@@ -438,10 +364,8 @@ export function buildLanguagePickerItems(options: LanguagePickerOptions): Popove
     onActivate: (): void => onPick(id),
   });
 
-  const rest = LANGUAGES.map((lang) => lang.id).filter((id) => !suggested.includes(id));
-
-  return [
-    ...(suggested.length > 0 ? [sectionHeader(t(SUGGESTED_KEY)), ...suggested.map(row), sectionDivider()] : []),
-    ...rest.map(row),
-  ];
+  return LANGUAGE_FAMILIES.flatMap((family) => [
+    sectionHeader(t(family.key), family.languages.length),
+    ...family.languages.map(row),
+  ]);
 }

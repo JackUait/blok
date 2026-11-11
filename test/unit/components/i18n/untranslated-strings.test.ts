@@ -128,6 +128,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   bg: new Set(['notifier.ok']),
   // "Text" is a direct cognate of the English word in Czech.
   cs: new Set([
+    // "Web" is a dictionary-listed noun; see the ledger's retention row.
+    'tools.code.familyWeb',
     'tools.database.propertyTypeText',
     'tools.link.linkText',
     'notifier.ok',
@@ -148,6 +150,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.colorPicker.colorSwatchLabel',
   ]),
   de: new Set([
+    // "Web" is a dictionary-listed noun; see the ledger's retention row.
+    'tools.code.familyWeb',
     // "Option" is the German UI word (groupStatusOption).
     'tools.database.seedOption',
     'tools.colorPicker.color.orange',
@@ -251,6 +255,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   fr: new Set([
+    // "Web" is a dictionary-listed noun; see the ledger's retention row.
+    'tools.code.familyWeb',
     // "Suggestions" is the native French plural noun.
     'assistant.actions',
     // "Question" and "Option" are native French words.
@@ -276,7 +282,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.settingsSource',
   ]),
   // "Oval" is the standard Croatian geometric noun, identical to English.
-  hr: new Set(['tools.image.cropRatioOval']),
+  hr: new Set(['tools.image.cropRatioOval', 'tools.code.familyWeb']),
   // Placeholder-only swatch templates contain no English lexical material;
   // Hungarian independently requires the same modifier-before-noun order.
   hu: new Set([
@@ -297,6 +303,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolbox.sectionMedia',
   ]),
   it: new Set([
+    // "Web" is a dictionary-listed noun; see the ledger's retention row.
+    'tools.code.familyWeb',
     'tools.database.filesLimitOne',
     // Established Italian product and computing loanwords.
     'searchTerms.layout',
@@ -391,6 +399,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   pt: new Set([
+    // "Web" is a dictionary-listed noun; see the ledger's retention row.
+    'tools.code.familyWeb',
     'toolNames.link',
     'tools.image.cropRatioOval',
     'tools.database.defaultStatusProperty',
@@ -401,6 +411,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   ro: new Set([
+    // "Web" is a dictionary-listed noun; see the ledger's retention row.
+    'tools.code.familyWeb',
     'toolNames.text',
     'toolNames.link',
     // "Media" is the standard Romanian term for media content.

@@ -162,6 +162,12 @@ export interface PopoverItemHtmlParams {
   element: HTMLElement;
 
   /**
+   * Pins the item to the top of the scrolling list while the items after it
+   * scroll under it, like a section label. Give the element a background.
+   */
+  isSticky?: boolean;
+
+  /**
    * Hint data to be displayed on item hover
    */
   hint?: HintParams;

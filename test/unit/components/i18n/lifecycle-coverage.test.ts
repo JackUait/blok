@@ -26,6 +26,9 @@ const CATALOG_ONLY_KEYS = new Set([
   // in the catalog rather than deleted from all locales — same rationale as
   // tools.bookmark.error above.
   'emoji.nothingFound',
+  // The code language picker lost its Suggested section to family groups.
+  // Kept for public BlokMessageKey compatibility: it shipped in 2.1.0.
+  'tools.code.suggested',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -280,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2078 + 142 + 531 + 4 closure for all 2755 keys', () => {
+  it('rebuilds a disjoint 2082 + 142 + 531 + 5 closure for all 2760 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -294,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2755);
+    expect(lifecycle.size).toBe(2760);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -510,7 +513,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +5: the table footer's Unique, Empty, Not empty, Earliest and Latest labels (tools.database.calcFooter*), by literal.
       // -1: tools.database.columnTitlePlaceholder left the literal calls when "+ New group" began asking for the name.
       // +1: tools.database.openPagesNewTab labels the peek mode menu's new-tab row by literal.
-      'executable-literal': 2078,
+      // +5: the code language picker's family labels (tools.code.family*), by literal.
+      // -1: tools.code.suggested left the literal calls when the picker dropped Suggested (now catalog-only).
+      'executable-literal': 2082,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -598,7 +603,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: the row-page "Updating layout for all pages" dialog's saveForAll* keys, via the controls' t().
       // +1: the date filter's "Custom date" row, tools.database.filterDateCustom (chip t() prefixes the namespace).
       'registered-namespace-compatible': 531,
-      'catalog-only': 4,
+      'catalog-only': 5,
     });
     expect(
       [...lifecycle.entries()]

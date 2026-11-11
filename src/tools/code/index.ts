@@ -59,8 +59,6 @@ import {
   buildLanguagePickerItems as buildPickerItems,
   loadLanguageLogos,
   loadedLanguageLogos,
-  readRecentLanguages,
-  rememberLanguage,
   repaintBadges,
   resolvePickerTheme,
 } from './language-picker';
@@ -858,12 +856,9 @@ export class CodeTool implements BlockTool {
       logos: loadedLanguageLogos(),
       selectedId: this._data.language,
       detectedId: this._detectedLanguage,
-      filename: this._data.filename ?? '',
-      recent: readRecentLanguages(),
       nameOf: (id) => this.getLanguageName(id),
       t: (key) => this.api.i18n.t(key),
       onPick: (id) => {
-        rememberLanguage(id);
         this.setLanguage(id);
         // Here, not in setLanguage: the block menu and paste also set the language.
         this.restoreCaretAfterPick();
@@ -881,6 +876,8 @@ export class CodeTool implements BlockTool {
       leftAlignElement,
       searchable: true,
       width: '240px',
+      // Sticky family labels sit at the top edge; a reel would squash the rows under them.
+      scrollReel: false,
       messages: {
         search: this.api.i18n.t(SEARCH_LANGUAGE_KEY),
         nothingFound: this.api.i18n.t('popover.nothingFound'),

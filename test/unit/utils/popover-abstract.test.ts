@@ -1245,6 +1245,37 @@ describe('PopoverAbstract', () => {
       }
     });
 
+    it('applies no distortion to any item when the popover turns the reel off', () => {
+      const popover = createPopover({ scrollReel: false });
+      const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
+
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      setItemMetrics(first, 80, 40);
+
+      popover.show();
+
+      expect(first.style.transform).toBe('');
+      expect(first.style.opacity).toBe('');
+    });
+
+    it('never distorts a sticky item, which stays pinned at the edge on purpose', () => {
+      const label = document.createElement('div');
+      const popover = createPopover({
+        items: [{ type: PopoverItemType.Html, element: label, isSticky: true }, ...createDefaultItems()],
+      });
+      const nodes = popover.getNodesForTests();
+      const sticky = nodes.items.children[0] as HTMLElement;
+
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      setItemMetrics(sticky, 80, 40);
+
+      popover.show();
+
+      expect(sticky.style.transform).toBe('');
+      expect(sticky.style.opacity).toBe('');
+    });
+
     it('applies no distortion when items do not overflow', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();

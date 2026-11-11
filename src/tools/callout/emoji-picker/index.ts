@@ -876,8 +876,8 @@ export class EmojiPicker {
     name.animate([{ transform: 'translateY(5px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 200, easing: 'ease-out' });
   }
 
-  /** The stage names an emoji like a title: "Kissing face", not the label's "kissing face". */
-  private stageName(emoji: ProcessedEmoji | undefined): string {
+  /** The stage and the ":" menu hint name an emoji like a title: "Kissing face", not the label's "kissing face". */
+  private titleName(emoji: ProcessedEmoji | undefined): string {
     const name = emoji === undefined ? '' : this.getDisplayName(emoji);
 
     return name.charAt(0).toLocaleUpperCase(this._locale) + name.slice(1);
@@ -889,7 +889,7 @@ export class EmojiPicker {
     this.setStage(
       this._current,
       this.i18n.t(this._current === '' ? NO_ICON_YET_KEY : CURRENT_ICON_KEY),
-      this._current === '' ? this.i18n.t(PICK_ICON_KEY) : this.stageName(emoji)
+      this._current === '' ? this.i18n.t(PICK_ICON_KEY) : this.titleName(emoji)
     );
   }
 
@@ -900,7 +900,7 @@ export class EmojiPicker {
     this.setStage(
       button.firstElementChild?.textContent ?? '',
       section?.textContent ?? '',
-      this.stageName(emoji)
+      this.titleName(emoji)
     );
   }
 
@@ -2026,7 +2026,7 @@ export class EmojiPicker {
       button.setAttribute('aria-label', name);
 
       if (this._inline) {
-        onHover(button, name, { placement: 'bottom' });
+        onHover(button, this.titleName(emoji), { placement: 'bottom' });
       }
     }
   }
@@ -2073,7 +2073,7 @@ export class EmojiPicker {
 
       // The stage names the emoji under the pointer; inline mode has no stage.
       if (this._inline) {
-        onHover(btn, this.getDisplayName(emoji), { placement: 'bottom' });
+        onHover(btn, this.titleName(emoji), { placement: 'bottom' });
       }
       grid.appendChild(btn);
     }

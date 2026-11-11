@@ -289,4 +289,35 @@ describe('EmojiPicker progressive locale', () => {
     expect(button(root, '💡')).toBe(highlighted);
     expect(highlighted.getAttribute('aria-label')).toBe('лампочка');
   });
+
+  it('inline mode names an emoji in its hint like a title, and keeps the lowercase label', async () => {
+    const picker = await createPicker('en', true);
+
+    await picker.open(anchor);
+    await flush();
+
+    const bulb = button(picker.getElement(), '💡');
+
+    expect(mockOnHover).toHaveBeenCalledWith(bulb, 'Light bulb', { placement: 'bottom' });
+    expect(mockOnHover).not.toHaveBeenCalledWith(bulb, 'light bulb', { placement: 'bottom' });
+    expect(bulb.getAttribute('aria-label')).toBe('light bulb');
+  });
+
+  it('inline mode renames the hint like a title once the locale lands', async () => {
+    const locale = deferred<EmojiLocaleData | null>();
+
+    mockLoadEmojiLocale.mockReturnValue(locale.promise);
+
+    const picker = await createPicker('ru', true);
+
+    void picker.open(anchor);
+    await flush();
+
+    const bulb = button(picker.getElement(), '💡');
+
+    locale.resolve(RU);
+    await flush();
+
+    expect(mockOnHover).toHaveBeenCalledWith(bulb, 'Лампочка', { placement: 'bottom' });
+  });
 });

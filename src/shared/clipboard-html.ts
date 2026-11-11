@@ -60,6 +60,13 @@ export const linkClipboardHtml = (
 };
 
 /**
+ * Marks an img Blok copied from an image block. Its url is already hosted, so
+ * the image tool keeps it on paste instead of uploading it again. Copy and
+ * paste sanitizers must both whitelist it.
+ */
+export const BLOK_HOSTED_IMAGE_ATTR = 'data-blok-hosted';
+
+/**
  * An image, then the caption.
  * @param url - the image source
  * @param data - the block data holding the caption
@@ -74,6 +81,7 @@ export const imageClipboardHtml = (url: unknown, data: { caption?: unknown; capt
   const image = document.createElement('img');
 
   image.setAttribute('src', src);
+  image.setAttribute(BLOK_HOSTED_IMAGE_ATTR, '');
 
   return html([paragraph(image), ...captionParagraph(data)]);
 };

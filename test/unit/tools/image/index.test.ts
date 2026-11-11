@@ -177,6 +177,21 @@ describe('ImageTool — onPaste', () => {
     expect(tool.save().url).toBe('https://cdn/https%3A%2F%2Flh3.googleusercontent.com%2Fxyz');
   });
 
+  it('onPaste(tag) keeps the url of an img Blok copied, without uploading it again', async () => {
+    const uploadByUrl = vi.fn(async (src: string) => ({ url: `https://cdn/${encodeURIComponent(src)}` }));
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl } }));
+    tool.render();
+    const img = document.createElement('img');
+    img.setAttribute('src', 'https://cdn/already-hosted.png');
+    img.setAttribute('data-blok-hosted', '');
+    const event = new CustomEvent('paste', { detail: { data: img } }) as HTMLPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'tag' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(uploadByUrl).not.toHaveBeenCalled();
+    expect(tool.save().url).toBe('https://cdn/already-hosted.png');
+  });
+
   it('onPaste(file) updates the upload bar fill width when uploader reports progress', async () => {
     /**
      * Bug: when pasting an image (e.g. from Google Docs) through a real

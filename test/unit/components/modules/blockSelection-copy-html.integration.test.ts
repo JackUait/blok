@@ -294,6 +294,13 @@ describe('copy of an image block as text/html', () => {
 
     expect(imageSrcs(await copyAllAsHtml(instance))).toEqual(['https://x/a.jpg']);
   });
+
+  it('marks the img as a Blok image, so a paste keeps its url instead of uploading it again', async () => {
+    const instance = await createEditor([{ id: 'i', type: 'image', data: { url: 'https://x/a.jpg' } }]);
+    const images = Array.from(parse(await copyAllAsHtml(instance)).querySelectorAll('img'));
+
+    expect(images.map((img) => img.hasAttribute('data-blok-hosted'))).toEqual([true]);
+  });
 });
 
 
@@ -399,7 +406,7 @@ describe('copy of media and layout blocks as text/html', () => {
     ]);
 
     expect(shape(await copyAllAsHtml(instance))).toEqual([
-      '<p><img src="https://x/a.png"></p>',
+      '<p><img src="https://x/a.png" data-blok-hosted=""></p>',
       '<p>Sunset</p>',
     ]);
   });
@@ -409,7 +416,7 @@ describe('copy of media and layout blocks as text/html', () => {
       { id: 'i', type: 'image', data: { url: 'https://x/a.png', caption: 'hidden one', captionVisible: false } },
     ]);
 
-    expect(shape(await copyAllAsHtml(instance))).toEqual(['<p><img src="https://x/a.png"></p>']);
+    expect(shape(await copyAllAsHtml(instance))).toEqual(['<p><img src="https://x/a.png" data-blok-hosted=""></p>']);
   });
 
   it('writes a video as a link to its url, without the player controls', async () => {

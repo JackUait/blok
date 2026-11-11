@@ -1558,6 +1558,56 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('an image pasted from html only', () => {
+    const IMAGE = 'http://127.0.0.1:4444/test/playwright/fixtures/image/shot.png';
+
+    // An image tool whose uploader records each url it is asked to upload.
+    const createUploadingBlok = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+      await resetBlok(page);
+      await page.evaluate(async ({ holder, initial }) => {
+        const uploads: string[] = [];
+        const defaults = (window as unknown as { defaultBlockTools: Record<string, { class: unknown }> }).defaultBlockTools;
+        const blok = new window.Blok({
+          holder,
+          data: { blocks: initial },
+          tools: { image: { class: defaults.image.class, config: { uploader: {
+            uploadByUrl: (url: string) => {
+              uploads.push(url);
+
+              return Promise.resolve({ url });
+            },
+          } } } },
+        });
+
+        (window as unknown as { __imageUploads: string[] }).__imageUploads = uploads;
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID, initial: blocks });
+    };
+
+    test('keeps its url and is not uploaded again', async ({ page }) => {
+      await createUploadingBlok(page, [
+        { id: 'bef', type: 'paragraph', data: { text: 'Before' } },
+        { id: 'img', type: 'image', data: { url: IMAGE, caption: 'Cap' } },
+        { id: 'aft', type: 'paragraph', data: { text: 'After' } },
+      ]);
+      await page.locator('[data-blok-id="bef"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="aft"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="aft"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboard = await withClipboardEvent(page.locator('[data-blok-id="bef"]'), 'copy');
+
+      await createUploadingBlok(page, [{ id: 'tgt', type: 'paragraph', data: { text: '' } }]);
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/html': clipboard['text/html'] ?? '', 'text/plain': clipboard['text/plain'] ?? '' });
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.map((block) =>
+        block.type === 'image' ? `image ${String(block.data.url)}` : `${block.type} ${String(block.data.text)}`
+      )).toEqual(['paragraph Before', `image ${IMAGE}`, 'paragraph Cap', 'paragraph After']);
+      expect(await page.evaluate(() => (window as unknown as { __imageUploads: string[] }).__imageUploads)).toEqual([]);
+    });
+  });
+
   test.describe('a code block pasted from html only', () => {
     test('keeps its language and filename', async ({ page }) => {
       await createBlok(page, { data: { blocks: [

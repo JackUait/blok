@@ -1,5 +1,5 @@
 import { describeImage } from '../../shared/tool-descriptions/image';
-import { imageClipboardHtml } from '../../shared/clipboard-html';
+import { BLOK_HOSTED_IMAGE_ATTR, imageClipboardHtml } from '../../shared/clipboard-html';
 import { IMAGE_ACTION_HANDLERS } from '../../shared/tool-actions/image';
 import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { imageSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
@@ -285,7 +285,7 @@ export class ImageTool implements BlockTool {
   public static get pasteConfig(): PasteConfig {
     return {
       patterns: { image: URL_PATTERN },
-      tags: [{ img: { src: true, alt: true } }],
+      tags: [{ img: { src: true, alt: true, [BLOK_HOSTED_IMAGE_ATTR]: true } }],
       files: { mimeTypes: ['image/*'] },
     };
   }
@@ -307,7 +307,12 @@ export class ImageTool implements BlockTool {
       const node = (event as HTMLPasteEvent).detail.data;
       const src = node?.getAttribute?.('src') ?? '';
       if (!src) return;
-      this.startUrl(src);
+      // Like a paste of Blok's own clipboard: the url is kept as it is.
+      if (node?.hasAttribute?.(BLOK_HOSTED_IMAGE_ATTR)) {
+        this.applyResult({ url: src });
+      } else {
+        this.startUrl(src);
+      }
       return;
     }
     if (event.type === 'file') {

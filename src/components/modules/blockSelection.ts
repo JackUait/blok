@@ -34,6 +34,7 @@ import { resolvePresetColors } from '../shared/resolve-preset-colors';
 import { parseUntrustedHtml } from '../utils/inert-html';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../shared/page-reference';
 import { isPagePointer } from '../../shared/page-pointer';
+import { BLOK_HOSTED_IMAGE_ATTR } from '../../shared/clipboard-html';
 import { databaseRowTitle, titlePropertyIdOf } from '../../shared/database-rows';
 import type { ListItemStyle } from '../../tools/list/types';
 import { tableClipboardHtml } from '../../tools/table/table-cell-clipboard';
@@ -181,6 +182,7 @@ export class BlockSelection extends Module {
         src: true,
         width: true,
         height: true,
+        [BLOK_HOSTED_IMAGE_ATTR]: true,
       },
       blockquote: {},
       pre: {},

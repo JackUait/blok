@@ -302,7 +302,8 @@ describe('ImageTool — static tool registration', () => {
     /**
      * Paste law: the sanitizer strips any attribute the tool does not declare
      * here, silently. onPaste reads `src` off the pasted <img>, so `src` (and
-     * `alt`, which renderImage restores) must stay whitelisted.
+     * `alt`, which renderImage restores) must stay whitelisted, and so must
+     * the mark Blok's copy writes to skip a second upload.
      */
     const { pasteConfig } = ImageTool;
 
@@ -310,7 +311,7 @@ describe('ImageTool — static tool registration', () => {
 
     expect(pasteConfig).toStrictEqual({
       patterns: { image: URL_PATTERN },
-      tags: [{ img: { src: true, alt: true } }],
+      tags: [{ img: { src: true, alt: true, 'data-blok-hosted': true } }],
       files: { mimeTypes: ['image/*'] },
     });
   });

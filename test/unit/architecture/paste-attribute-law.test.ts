@@ -48,6 +48,7 @@ import { describe, expect, it } from 'vitest';
 
 import { SanitizerConfigBuilder } from '../../../src/components/modules/paste/sanitizer-config';
 import { CODE_FILENAME_ATTR, CODE_LANGUAGE_ATTR, STRUCTURAL_TAG_ATTRIBUTES } from '../../../src/components/modules/paste/constants';
+import { BLOK_HOSTED_IMAGE_ATTR } from '../../../src/shared/clipboard-html';
 import type { BlockToolAdapter } from '../../../src/components/tools/block';
 import type { ToolsCollection } from '../../../src/components/tools/collection';
 import { AudioTool } from '../../../src/tools/audio';
@@ -204,6 +205,15 @@ interface ExpectedDynamicReads {
 }
 
 const EXPECTED_DYNAMIC_READS: ExpectedDynamicReads[] = [
+  {
+    file: 'src/tools/image/index.ts',
+    count: 1,
+    pastedAttrs: [BLOK_HOSTED_IMAGE_ATTR],
+    reason:
+      'onPaste checks a pasted <img> for the mark Blok\'s own HTML copy writes, ' +
+      'so it keeps the url instead of uploading it again. Whitelisted on IMG ' +
+      'by the tool pasteConfig.',
+  },
   {
     file: 'src/tools/code/index.ts',
     count: 2,

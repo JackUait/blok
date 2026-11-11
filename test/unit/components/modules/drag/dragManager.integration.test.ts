@@ -3823,4 +3823,75 @@ describe("DragManager - Component Integration", () => {
       expect(pill).not.toHaveAttribute(DATA_ATTR.dropIntoActive);
     });
   });
+
+  // Notion U117: the dragged block stays block-selected after a column drop, and undo selects it again.
+  describe("column side-drop leaves the dragged blocks selected", () => {
+    it("marks the dragged blocks before the writes and selects them after the drop", () => {
+      const order: string[] = [];
+      const apiBlocks = {
+        insertAt: vi.fn((type: string) => {
+          order.push(`insert:${type}`);
+
+          return { id: `${type}-new`, holder: document.createElement("div") };
+        }),
+        setBlockParent: vi.fn(() => order.push("parent")),
+        getById: vi.fn((id: string) => ({ id, parentId: null })),
+        getBlockIndex: vi.fn(() => 0),
+        getChildren: vi.fn(() => []),
+        transact: vi.fn((fn: () => void) => fn()),
+      };
+      const markBlocksBefore = vi.fn((ids: readonly string[]) => order.push(`mark:${ids.join(",")}`));
+      const { dragManager, modules, blocks } = createDragManager({
+        API: { methods: { blocks: apiBlocks } } as unknown as BlokModules["API"],
+        YjsManager: {
+          transact: vi.fn((callback: () => void) => callback()),
+          transactMoves: vi.fn((callback: () => void) => callback()),
+          markBlocksBefore,
+        } as unknown as BlokModules["YjsManager"],
+      });
+      const [target, source] = blocks;
+
+      (dragManager as unknown as {
+        handleColumnDrop: (sourceBlock: Block, sourceBlocks: Block[], targetBlock: Block, edge: "left" | "right", targetParentId: string | null) => void;
+      }).handleColumnDrop(source, [source], target, "right", null);
+
+      expect(order[0]).toBe(`mark:${source.id}`);
+      expect(modules.BlockSelection.selectBlock).toHaveBeenCalledWith(source);
+      expect(modules.BlockSelection.selectBlock).not.toHaveBeenCalledWith(target);
+    });
+
+    it("lets the dropped selection go once focus lands anywhere", () => {
+      const apiBlocks = {
+        insertAt: vi.fn((type: string) => ({ id: `${type}-new`, holder: document.createElement("div") })),
+        setBlockParent: vi.fn(),
+        getById: vi.fn((id: string) => ({ id, parentId: null })),
+        getBlockIndex: vi.fn(() => 0),
+        getChildren: vi.fn(() => []),
+        transact: vi.fn((fn: () => void) => fn()),
+      };
+      const clearSelection = vi.fn();
+      const { dragManager, blocks } = createDragManager({
+        API: { methods: { blocks: apiBlocks } } as unknown as BlokModules["API"],
+        BlockSelection: {
+          selectedBlocks: [],
+          clearSelection,
+          selectBlock: vi.fn((block: Block) => Object.assign(block, { selected: true })),
+        } as unknown as BlokModules["BlockSelection"],
+      });
+      const [target, source] = blocks;
+      const field = document.createElement("input");
+
+      document.body.appendChild(field);
+      (dragManager as unknown as {
+        handleColumnDrop: (sourceBlock: Block, sourceBlocks: Block[], targetBlock: Block, edge: "left" | "right", targetParentId: string | null) => void;
+      }).handleColumnDrop(source, [source], target, "right", null);
+      clearSelection.mockClear();
+
+      field.focus();
+
+      // A full clear also drops the Cmd+A escalation selectBlock primed.
+      expect(clearSelection).toHaveBeenCalledTimes(1);
+      field.remove();
+    });
+  });
 });

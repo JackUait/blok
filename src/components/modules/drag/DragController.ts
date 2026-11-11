@@ -905,6 +905,9 @@ export class DragController extends Module {
     // targetParentId is the enclosing column when the target already lives in a
     // column_list (→ add a sibling column), or null for a top-level target
     // (→ wrap target + sources into a brand new column_list).
+    // Undo gives the dragged blocks back selected (Notion U117), as the vertical drop does.
+    this.Blok.YjsManager?.markBlocksBefore?.(sourceIds);
+
     const createdId = targetParentId !== null
       ? addColumnToList(api, targetParentId, sourceIds, edge)
       : wrapInNewColumnList(api, targetBlock.id, sourceIds, edge);
@@ -912,8 +915,44 @@ export class DragController extends Module {
     this.reseedEmptiedColumns(sourceParentIds);
 
     if (createdId !== null) {
+      this.selectDropped(sourceIds);
       this.settleDroppedPreview(sourceIds[0]);
     }
+  }
+
+  /**
+   * Leave the dropped blocks block-selected with no caret, as Notion does
+   * after a column drop (U117).
+   * @param ids - the top-level dropped blocks
+   */
+  private selectDropped(ids: string[]): void {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    BlockSelection.clearSelection();
+    ids.forEach((id) => {
+      const block = BlockManager.getBlockById(id);
+
+      if (block !== undefined) {
+        BlockSelection.selectBlock(block);
+      }
+    });
+
+    const active = document.activeElement;
+
+    if (active instanceof HTMLElement && this.Blok.UI.nodes.wrapper.contains(active)) {
+      active.blur();
+    }
+
+    // Focus landing anywhere means the user moved on. clearSelection, not
+    // unselectBlock: selectBlock primed Cmd+A to select every block.
+    const letGo = (): void => {
+      document.removeEventListener('focusin', letGo, true);
+      if (ids.some((id) => BlockManager.getBlockById(id)?.selected === true)) {
+        BlockSelection.clearSelection();
+      }
+    };
+
+    document.addEventListener('focusin', letGo, true);
   }
 
   /**

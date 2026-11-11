@@ -28,7 +28,14 @@ import { twMerge } from '../../components/utils/tw';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import type { ConvertedBlock, InitCellContent } from './table-cell-blocks';
-import { pastedGridDirection, readPastedCell } from './table-cell-clipboard';
+import {
+  TABLE_COL_WIDTHS_ATTR,
+  TABLE_HEADINGS_ATTR,
+  TABLE_INITIAL_COL_WIDTH_ATTR,
+  pastedGridDirection,
+  readCopiedTableLayout,
+  readPastedCell,
+} from './table-cell-clipboard';
 import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR, ownCells } from './table-core';
 import {
   applyCellColors,
@@ -576,7 +583,14 @@ export class Table implements BlockTool {
       // the HTML handler can expand the table into column blocks.
       tags: [
         // dir tells which side a pasted text-align: left/right means.
-        { TABLE: { 'data-blok-columns-candidate': true, dir: true } },
+        // The layout marks a whole-table copy writes (see tableClipboardHtml).
+        { TABLE: {
+          'data-blok-columns-candidate': true,
+          dir: true,
+          [TABLE_HEADINGS_ATTR]: true,
+          [TABLE_COL_WIDTHS_ATTR]: true,
+          [TABLE_INITIAL_COL_WIDTH_ATTR]: true,
+        } },
         'TR',
         { TH: { style: true, colspan: true, rowspan: true, align: true, valign: true, bgcolor: true } },
         { TD: { style: true, colspan: true, rowspan: true, align: true, valign: true, bgcolor: true } },
@@ -1521,11 +1535,17 @@ export class Table implements BlockTool {
     // paste heads its first row. A single-row paste has no body to head, so it
     // stays plain (matches the "paste over a fully configured table" contract).
     const withHeadings = hasTheadHeadings || hasThHeadings || rows.length >= 2;
+    // A table Blok copied says its own layout, so nothing is guessed for it.
+    const copied = readCopiedTableLayout(content, tableContent[0]?.length ?? 0);
 
     this.initialContent = tableContent;
-    this.model.setWithHeadings(withHeadings);
-    this.model.setWithHeadingColumn(withHeadingColumn);
-    this.model.setColWidths(undefined);
+    this.model.setWithHeadings(copied?.withHeadings ?? withHeadings);
+    this.model.setWithHeadingColumn(copied?.withHeadingColumn ?? withHeadingColumn);
+    this.model.setColWidths(copied?.colWidths);
+
+    if (copied?.initialColWidth !== undefined) {
+      this.model.setInitialColWidth(copied.initialColWidth);
+    }
     // Push the parsed grid into the model BEFORE render() so the merge-aware
     // path (createGridFromModel) builds the DOM with colspan/rowspan.
     this.model.replaceAll({

@@ -596,4 +596,29 @@ describe('copy of a whole table as text/html', () => {
 
     expect(root.querySelector('td')?.getAttribute('style')).toContain('background-color');
   });
+
+  it('marks its heading state and widths, so a paste back does not guess them', async () => {
+    const instance = await createEditor([
+      { id: 't', type: 'table', data: {
+        withHeadings: false,
+        withHeadingColumn: true,
+        colWidths: [120, 300],
+        initialColWidth: 210,
+        content: [['A', 'B'], ['C', 'D']],
+      } },
+    ]);
+    const element = parse(await copyAllAsHtml(instance)).querySelector('table');
+
+    expect(element?.getAttribute('data-blok-table-headings')).toBe('column');
+    expect(element?.getAttribute('data-blok-table-col-widths')).toBe('120,300');
+    expect(element?.getAttribute('data-blok-table-initial-col-width')).toBe('210');
+  });
+
+  it('marks a table with no heading row or column as none', async () => {
+    const instance = await createEditor(table());
+    const element = parse(await copyAllAsHtml(instance)).querySelector('table');
+
+    expect(element?.getAttribute('data-blok-table-headings')).toBe('none');
+    expect(element?.hasAttribute('data-blok-table-col-widths')).toBe(false);
+  });
 });

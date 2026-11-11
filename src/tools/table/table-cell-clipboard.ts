@@ -29,6 +29,15 @@ import { isCellWithBlocks, type TableData } from '../../shared/table/types';
 const DATA_ATTR = 'data-blok-table-cells';
 
 /**
+ * Marks on a whole-table copy, so a paste of the html alone keeps the layout.
+ * Each must be whitelisted on TABLE in the table's pasteConfig, or the paste
+ * sanitizer strips it before onPaste reads it.
+ */
+export const TABLE_HEADINGS_ATTR = 'data-blok-table-headings';
+export const TABLE_COL_WIDTHS_ATTR = 'data-blok-table-col-widths';
+export const TABLE_INITIAL_COL_WIDTH_ATTR = 'data-blok-table-initial-col-width';
+
+/**
  * Entry describing one cell to be serialized for the clipboard.
  */
 interface CellEntry {
@@ -445,10 +454,54 @@ export function tableClipboardHtml(
   }
 
   const wrapper = parseUntrustedHtml(buildClipboardHtml(payload, direction));
+  const table = wrapper.querySelector('table');
+  const headings = `${data.withHeadings ? 'row ' : ''}${data.withHeadingColumn ? 'column' : ''}`.trim();
 
-  wrapper.querySelector('table')?.removeAttribute(DATA_ATTR);
+  table?.removeAttribute(DATA_ATTR);
+  table?.setAttribute(TABLE_HEADINGS_ATTR, headings === '' ? 'none' : headings);
+
+  if (payload.colWidths !== undefined) {
+    table?.setAttribute(TABLE_COL_WIDTHS_ATTR, payload.colWidths.join(','));
+  }
+
+  if (typeof data.initialColWidth === 'number' && data.initialColWidth > 0) {
+    table?.setAttribute(TABLE_INITIAL_COL_WIDTH_ATTR, String(data.initialColWidth));
+  }
 
   return wrapper.innerHTML;
+}
+
+/** The layout a whole-table copy marked on its html. */
+export interface CopiedTableLayout {
+  withHeadings: boolean;
+  withHeadingColumn: boolean;
+  colWidths?: number[];
+  initialColWidth?: number;
+}
+
+/**
+ * Read the marks {@link tableClipboardHtml} writes. Null when the table has
+ * none, so html from outside Blok keeps its own heading rules.
+ * @param table - the pasted table element
+ * @param cols - the column count of the pasted grid
+ */
+export function readCopiedTableLayout(table: Element, cols: number): CopiedTableLayout | null {
+  const headings = table.getAttribute(TABLE_HEADINGS_ATTR);
+
+  if (headings === null) {
+    return null;
+  }
+
+  const tokens = headings.split(/\s+/);
+  const colWidths = table.getAttribute(TABLE_COL_WIDTHS_ATTR)?.split(',').map(Number);
+  const initialColWidth = Number(table.getAttribute(TABLE_INITIAL_COL_WIDTH_ATTR));
+
+  return {
+    withHeadings: tokens.includes('row'),
+    withHeadingColumn: tokens.includes('column'),
+    ...(isValidColWidths(colWidths, cols) ? { colWidths } : {}),
+    ...(Number.isFinite(initialColWidth) && initialColWidth > 0 ? { initialColWidth } : {}),
+  };
 }
 
 /**

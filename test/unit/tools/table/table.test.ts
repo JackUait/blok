@@ -168,8 +168,15 @@ describe('Table Tool', () => {
 
       if (config !== false) {
         // TABLE is declared as a config object so the columns-candidate stamp
-        // (data-blok-columns-candidate) and the grid's dir survive paste sanitization.
-        expect(config.tags).toContainEqual({ TABLE: { 'data-blok-columns-candidate': true, dir: true } });
+        // (data-blok-columns-candidate), the grid's dir and a Blok copy's
+        // layout marks survive paste sanitization.
+        expect(config.tags).toContainEqual({ TABLE: {
+          'data-blok-columns-candidate': true,
+          dir: true,
+          'data-blok-table-headings': true,
+          'data-blok-table-col-widths': true,
+          'data-blok-table-initial-col-width': true,
+        } });
       }
     });
   });

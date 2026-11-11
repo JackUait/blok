@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Table } from '../../../../src/tools/table';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
+import { SanitizerConfigBuilder } from '../../../../src/components/modules/paste/sanitizer-config';
+import type { BlockToolAdapter } from '../../../../src/components/tools/block';
+import type { ToolsCollection } from '../../../../src/components/tools/collection';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 const createMockAPI = (): API => {
@@ -581,5 +584,103 @@ describe('Table onPaste metadata reset', () => {
 
     element.parentNode?.removeChild(element);
     pastedElement.parentNode?.removeChild(pastedElement);
+  });
+});
+
+describe('Table onPaste of a table Blok copied', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // The real paste sanitizer, as the html handler runs it on a pasted table.
+  const sanitizedPasteTable = (attributes: string, rowsHtml: string): HTMLElement => {
+    const builder = new SanitizerConfigBuilder({} as unknown as ToolsCollection<BlockToolAdapter>, {});
+    const config = builder.buildToolConfig({ pasteConfig: Table.pasteConfig } as unknown as BlockToolAdapter);
+    const source = document.createElement('div');
+
+    source.innerHTML = `<table ${attributes}>${rowsHtml}</table>`;
+
+    const firstTable = source.querySelector('table');
+
+    if (firstTable === null) {
+      throw new Error('no table');
+    }
+
+    const sanitized = builder.sanitizeTable(firstTable, config);
+
+    if (sanitized === null) {
+      throw new Error('sanitizer dropped the table');
+    }
+
+    return sanitized;
+  };
+
+  const pasteAndSave = (element: HTMLElement): TableData => {
+    const table = new Table(createTableOptions({ content: [['', '', ''], ['', '', '']] }));
+    const before = table.render();
+
+    document.body.appendChild(before);
+    table.rendered();
+    firePasteEvent(table, element);
+
+    const after = table.render();
+
+    table.rendered();
+
+    const saved = table.save(after);
+
+    before.remove();
+    after.remove();
+
+    return saved;
+  };
+
+  const TWO_ROWS = '<tbody><tr><td>A</td><td>B</td></tr><tr><td>C</td><td>D</td></tr></tbody>';
+
+  it('keeps a two-row table without a heading row headerless', () => {
+    const saved = pasteAndSave(sanitizedPasteTable('data-blok-table-headings="none"', TWO_ROWS));
+
+    expect(saved.withHeadings).toBe(false);
+    expect(saved.withHeadingColumn).toBe(false);
+  });
+
+  it('keeps the heading row of a one-row table', () => {
+    const saved = pasteAndSave(sanitizedPasteTable('data-blok-table-headings="row"', '<tbody><tr><td>A</td><td>B</td></tr></tbody>'));
+
+    expect(saved.withHeadings).toBe(true);
+  });
+
+  it('keeps a heading column with no heading row', () => {
+    const saved = pasteAndSave(sanitizedPasteTable('data-blok-table-headings="column"', TWO_ROWS));
+
+    expect(saved.withHeadings).toBe(false);
+    expect(saved.withHeadingColumn).toBe(true);
+  });
+
+  it('keeps the column widths and the initial column width', () => {
+    const saved = pasteAndSave(sanitizedPasteTable(
+      'data-blok-table-headings="none" data-blok-table-col-widths="120,300" data-blok-table-initial-col-width="210"',
+      TWO_ROWS
+    ));
+
+    expect(saved.colWidths).toEqual([120, 300]);
+    expect(saved.initialColWidth).toBe(210);
+  });
+
+  it('drops widths that do not give one positive number per column', () => {
+    for (const widths of ['120', '120,300,40', '120,-3', '120,abc', '120,Infinity']) {
+      const saved = pasteAndSave(sanitizedPasteTable(
+        `data-blok-table-headings="none" data-blok-table-col-widths="${widths}"`,
+        TWO_ROWS
+      ));
+
+      expect(saved.colWidths, widths).toBeUndefined();
+    }
+  });
+
+  it('still heads the first row of a multi-row table with no marker', () => {
+    const saved = pasteAndSave(sanitizedPasteTable('', TWO_ROWS));
+
+    expect(saved.withHeadings).toBe(true);
   });
 });

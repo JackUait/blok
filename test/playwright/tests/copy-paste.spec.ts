@@ -1665,6 +1665,37 @@ test.describe('copy and paste', () => {
           .map((block) => `${block.type} ${String(block.data.text)}`);
       }).toEqual(['list one', 'list two', 'paragraph plain']);
     });
+
+    test('keeps its heading state and column widths', async ({ page }) => {
+      const source = { withHeadings: false, withHeadingColumn: false, colWidths: [120, 300], initialColWidth: 210, content: [['A', 'B'], ['C', 'D']] };
+
+      await createBlok(page, { data: { blocks: [
+        { id: 'bef', type: 'paragraph', data: { text: 'Before' } },
+        { id: 'tbl', type: 'table', data: source },
+        { id: 'aft', type: 'paragraph', data: { text: 'After' } },
+      ] } });
+      await page.locator('[data-blok-id="bef"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="aft"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="aft"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboard = await withClipboardEvent(page.locator('[data-blok-id="bef"]'), 'copy');
+
+      await createBlok(page, { data: { blocks: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }] } });
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/html': clipboard['text/html'] ?? '', 'text/plain': clipboard['text/plain'] ?? '' });
+
+      await expect.poll(async () => {
+        const { blocks } = await saveBlok(page);
+        const data = blocks.find((block) => block.type === 'table')?.data;
+
+        return data && {
+          withHeadings: data.withHeadings,
+          withHeadingColumn: data.withHeadingColumn,
+          colWidths: data.colWidths,
+          initialColWidth: data.initialColWidth,
+        };
+      }).toEqual({ withHeadings: false, withHeadingColumn: false, colWidths: [120, 300], initialColWidth: 210 });
+    });
   });
 
   test.describe('list items copied without their parent list item', () => {

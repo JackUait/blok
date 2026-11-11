@@ -754,7 +754,8 @@ describe('BlockSelection', () => {
       const htmlCall = clipboardData.setData.mock.calls.find(([format]) => format === 'text/html');
       const html = htmlCall?.[1] as string;
 
-      expect(html).toContain('<table>');
+      // The table tag carries layout marks (data-blok-table-headings), so match its name only.
+      expect(html).toMatch(/<table[\s>]/);
       expect(html).toContain('<tr>');
       expect(html).toContain('<td');
       expect(html).toContain('colspan="2"');

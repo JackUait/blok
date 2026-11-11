@@ -850,10 +850,9 @@ test.describe('Table cell copy/paste', () => {
 
     const { html, plain } = await performCopyAndCapture(page);
 
-    // The payload carries the merge footprint (1x2), but a merge-covered
-    // position is NOT a cell: emitting a tab for it gave external apps a
-    // phantom column. The plain-text projection now skips covered positions.
-    expect(plain).toBe('Merged');
+    // The copy covers the merge footprint (1x2). TSV has no spans, so the
+    // covered slot writes an empty field to keep one field per grid column.
+    expect(plain).toBe('Merged\t');
 
     // Target cell: model col 2 (DOM col 1, because merge consumes col 0-1)
     // Use attribute-based locator to find it by model coordinates

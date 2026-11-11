@@ -77,6 +77,17 @@ runs:
           sudo cp "${debs[@]}" /var/cache/apt/archives/
         fi
 
+    # install-deps always runs apt-get update. A mirror that never answers costs
+    # 20s per index at apt's default, about 200s per shard, and apt then falls
+    # back to the image's lists anyway. Retries stay on for .deb downloads.
+    - name: Cap apt mirror waits
+      id: apt-timeouts
+      if: inputs.os-deps != 'false'
+      shell: bash
+      run: |
+        printf '%s\n' 'Acquire::http::Timeout "10";' 'Acquire::https::Timeout "10";' \
+          | sudo tee /etc/apt/apt.conf.d/99-playwright-timeouts
+
     - name: Cache Playwright Browsers
       if: inputs.download == 'true'
       id: cache

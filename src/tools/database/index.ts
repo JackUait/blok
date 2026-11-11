@@ -7616,7 +7616,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    this.askToRemoveSorting(rowId, beforeRowId, afterRowId, {}, context);
+    this.askToRemoveSorting(rowId, beforeRowId, afterRowId, context);
   }
 
   /**
@@ -10016,21 +10016,20 @@ export class DatabaseTool implements BlockTool {
       ? { [subGroupBy]: this.droppedSubGroupValue(subGroupBy, rowId, result.toSubGroup) }
       : {};
 
-    // Neighbours arrive in sort order, not key order, so a key between them
-    // would mean nothing. A reorder inside the group asks first (D7). A move to another
-    // group changes the value only: Notion's answer there is unmeasured.
+    // notion-motion.md Round 13: a sorted board never asks and never writes a place.
+    // The card takes the new group's value and lands where the sort puts it, so a
+    // drop inside its own group snaps back. Either way it is left picked.
     if (viewConfig !== undefined && this.controls.effective(viewConfig).sorts.length > 0) {
       const row = this.model.getRow(rowId);
       const sortedChanges = { ...this.changedValues(rowId, subChange) };
+      const sameGroup = row !== undefined
+        && this.model.groupKeysOf(groupByPropId, { statusBy: viewConfig.groupByStatus, settings: viewConfig.groupSettings })(row).includes(toOptionId);
 
-      if (row !== undefined && this.model.groupKeysOf(groupByPropId, { statusBy: viewConfig.groupByStatus, settings: viewConfig.groupSettings })(row).includes(toOptionId)) {
-        this.askToRemoveSorting(rowId, beforeRowId, afterRowId, sortedChanges);
-
-        return;
+      if (!sameGroup) {
+        Object.assign(sortedChanges, this.changedValues(rowId, { [groupByPropId]: this.droppedGroupValue(groupByPropId, rowId, toOptionId) }));
       }
-
-      Object.assign(sortedChanges, this.changedValues(rowId, { [groupByPropId]: this.droppedGroupValue(groupByPropId, rowId, toOptionId) }));
       this.writeRowValues(rowId, sortedChanges);
+      this.selectRows([rowId]);
 
       return;
     }
@@ -10072,8 +10071,7 @@ export class DatabaseTool implements BlockTool {
    * order as the manual order and lands the row where it was dropped.
    * "Don't remove" discards the drop.
    */
-  /** `changes` is a cross-lane drop's sub-group value: it is kept whatever the answer. */
-  private askToRemoveSorting(rowId: string, beforeRowId: string | null, afterRowId: string | null, changes: Record<string, PropertyValue> = {}, context?: NativeWidgetContext): void {
+  private askToRemoveSorting(rowId: string, beforeRowId: string | null, afterRowId: string | null, context?: NativeWidgetContext): void {
     const owner = context?.owner ?? this;
     const controls = context?.controls ?? this.controls;
     const viewId = context?.view.id ?? this.activeViewId;
@@ -10092,16 +10090,14 @@ export class DatabaseTool implements BlockTool {
       }
       // A peer may have dropped the sort or the row while the dialog was open.
       if (!remove || view === undefined || this.sortsShown(view, controls).length === 0 || this.model.getRow(rowId) === undefined) {
-        this.writeRowValues(rowId, changes, context);
-
         return;
       }
-      this.removeSortingAndPlace(view, rowId, beforeRowId, afterRowId, changes, context);
+      this.removeSortingAndPlace(view, rowId, beforeRowId, afterRowId, context);
     });
   }
 
   private removeSortingAndPlace(
-    view: DatabaseViewConfig, rowId: string, beforeRowId: string | null, afterRowId: string | null, changes: Record<string, PropertyValue> = {}, context?: NativeWidgetContext
+    view: DatabaseViewConfig, rowId: string, beforeRowId: string | null, afterRowId: string | null, context?: NativeWidgetContext
   ): void {
     if (context !== undefined && !context.writable()) return;
     const owner = context?.owner ?? this;
@@ -10145,14 +10141,10 @@ export class DatabaseTool implements BlockTool {
     const moves = ownOrder ? [] : keys.filter((key) => this.model.getRow(key.rowId)?.position !== key.position);
     const viewChanges: ViewChanges = { ...(personal ? {} : { sorts: [] }), ...(rowOrder === undefined ? {} : { rowOrder }) };
     const frozen: string[] = [];
-    const hasChanges = Object.keys(changes).length > 0;
     const write = (): void => {
       if (!ownOrder && writesView) frozen.push(...this.pinInOtherViews(owner, view.id, moves.map((move) => move.rowId)));
       if (Object.keys(viewChanges).length > 0) owner.model.updateView(view.id, viewChanges);
       if (Object.keys(viewChanges).length > 0 || frozen.length > 0) owner.block.dispatchChange();
-      if (hasChanges) {
-        this.updateRowBlock(rowId, changes);
-      }
       moves.forEach((move) => this.moveRowBlock(move.rowId, move.position));
     };
 
@@ -10173,9 +10165,6 @@ export class DatabaseTool implements BlockTool {
     frozen.forEach((viewId) => {
       void owner.sync.syncUpdateView({ viewId, changes: { rowOrder: structuredClone(owner.model.getView(viewId)?.rowOrder) } });
     });
-    if (hasChanges) {
-      this.sync.syncUpdateRow({ rowId, properties: changes });
-    }
     moves.forEach((move) => {
       void this.sync.syncMoveRow(move);
     });

@@ -4724,11 +4724,11 @@ describe('DatabaseTool', () => {
       document.body.innerHTML = '';
     });
 
-    it('asks "Would you like to remove sorting?" on a reorder inside a column, and writes nothing yet', () => {
-      const { tool, childBlocks } = sortedTool('board');
+    it('asks "Would you like to remove sorting?" on a reorder in a sorted list, and writes nothing yet', () => {
+      const { tool, childBlocks } = sortedTool('list');
 
       // Neighbours arrive in sort order: X dropped between A and B.
-      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      dropListRow(tool, { rowId: 'row-x', beforeRowId: 'row-b', afterRowId: 'row-a' });
 
       expect(confirmTitle()).toBe('tools.database.removeSortingTitle');
       expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
@@ -4737,9 +4737,9 @@ describe('DatabaseTool', () => {
     });
 
     it('"Don\'t remove" discards the drop: order and sort stay', () => {
-      const { tool, element, childBlocks } = sortedTool('board');
+      const { tool, element, childBlocks } = sortedTool('list');
 
-      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      dropListRow(tool, { rowId: 'row-x', beforeRowId: 'row-b', afterRowId: 'row-a' });
       answer('cancel');
 
       expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
@@ -4750,9 +4750,9 @@ describe('DatabaseTool', () => {
     });
 
     it('"Remove" deletes the sort, keeps the sorted order as the manual order, and lands the row where it was dropped', async () => {
-      const { tool, element, childBlocks, transact } = sortedTool('board');
+      const { tool, element, childBlocks, transact } = sortedTool('list');
 
-      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      dropListRow(tool, { rowId: 'row-x', beforeRowId: 'row-b', afterRowId: 'row-a' });
       answer('confirm');
       await Promise.resolve();
 
@@ -4786,9 +4786,9 @@ describe('DatabaseTool', () => {
       const other: DatabaseViewConfig = {
         id: 'view-2', name: 'Other', type: 'list', position: 'a1', filters: [], visibleProperties: [], sorts: [{ propertyId: 'prop-status', direction: 'desc' }],
       };
-      const { tool, element, childBlocks } = sortedTool('board', [other, { ...gallery, id: 'view-3', position: 'a2' }]);
+      const { tool, element, childBlocks } = sortedTool('list', [other, { ...gallery, id: 'view-3', position: 'a2' }]);
 
-      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      dropListRow(tool, { rowId: 'row-x', beforeRowId: 'row-b', afterRowId: 'row-a' });
       answer('confirm');
       await Promise.resolve();
 
@@ -5007,7 +5007,7 @@ describe('DatabaseTool', () => {
     });
 
     it('writes every position inside one transaction, so one undo restores the sort and the order', async () => {
-      const { tool, childBlocks, transact } = sortedTool('board');
+      const { tool, childBlocks, transact } = sortedTool('list');
       const inside: string[] = [];
 
       transact.mockImplementation((fn: () => void) => {
@@ -5024,7 +5024,7 @@ describe('DatabaseTool', () => {
         });
       });
 
-      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      dropListRow(tool, { rowId: 'row-x', beforeRowId: 'row-b', afterRowId: 'row-a' });
       answer('confirm');
       await Promise.resolve();
 
@@ -5051,28 +5051,49 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
-    it('moves a card to another column by its group value only, without asking', () => {
-      const { tool, childBlocks } = sortedTool('board');
+    const pickedIds = (element: HTMLElement): Array<string | null> =>
+      Array.from(element.querySelectorAll('[data-blok-database-row-selected]')).map((el) => el.getAttribute('data-row-id'));
+
+    // notion-motion.md Round 13: the card changes group, lands at its sorted place, and is left picked.
+    it('moves a card to another column by its group value only, without asking, and leaves it picked', () => {
+      const { tool, element, childBlocks } = sortedTool('board');
       const rowX = childBlocks[3];
 
       dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-doing', beforeRowId: null, afterRowId: null });
 
       expect(confirmTitle()).toBeUndefined();
       expect(callsNamed(rowX, 'updateProperties')).toEqual([['updateProperties', { 'prop-status': 'opt-doing' }]]);
-      expect(callsNamed(rowX, 'updatePosition')).toHaveLength(0);
+      expect(childBlocks.flatMap((block) => callsNamed(block, 'updatePosition'))).toHaveLength(0);
+      expect(tool.save(element).views[0].rowOrder).toBeUndefined();
+      expect(pickedIds(element)).toEqual(['row-x']);
+
+      tool.destroy();
+    });
+
+    // notion-motion.md Round 13: a drop against the sort inside the same column snaps back, with no message.
+    it('snaps a card dropped against the sort inside its column back: no question, no write, the card left picked', () => {
+      const { tool, element, childBlocks } = sortedTool('board');
+
+      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+
+      expect(confirmTitle()).toBeUndefined();
+      expect(childBlocks.flatMap((block) => [...callsNamed(block, 'updatePosition'), ...callsNamed(block, 'updateProperties')])).toHaveLength(0);
+      expect(tool.save(element).views[0].rowOrder).toBeUndefined();
+      expect(tool.save(element).views[0].sorts).toEqual([{ propertyId: 'prop-title', direction: 'asc' }]);
+      expect(pickedIds(element)).toEqual(['row-x']);
 
       tool.destroy();
     });
 
     it('closes only the dialog on Escape, leaving an open card page open', async () => {
-      const { tool, element } = sortedTool('board');
+      const { tool, element } = sortedTool('list');
       const drawer = (tool as unknown as { cardDrawer: DatabaseCardDrawer }).cardDrawer;
       const model = (tool as unknown as { model: DatabaseModel }).model;
       const row = model.getRow('row-a');
 
       if (row === undefined) throw new Error('row-a is missing');
       drawer.open(row);
-      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      dropListRow(tool, { rowId: 'row-x', beforeRowId: 'row-b', afterRowId: 'row-a' });
 
       document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await Promise.resolve();
@@ -5085,10 +5106,10 @@ describe('DatabaseTool', () => {
     });
 
     it('drops the answer when the sort is already gone by the time the user confirms', async () => {
-      const { tool, element, childBlocks } = sortedTool('board');
+      const { tool, element, childBlocks } = sortedTool('list');
       const model = (tool as unknown as { model: DatabaseModel }).model;
 
-      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      dropListRow(tool, { rowId: 'row-x', beforeRowId: 'row-b', afterRowId: 'row-a' });
       model.updateView('view-1', { sorts: [] });
       answer('confirm');
       await Promise.resolve();
@@ -5162,11 +5183,11 @@ describe('DatabaseTool', () => {
     });
 
     it('"Remove" in a locked database drops the sort for this person only and keeps the saved sort', async () => {
-      const { tool, element, childBlocks } = sortedTool('board');
+      const { tool, element, childBlocks } = sortedTool('list');
       const model = (tool as unknown as { model: DatabaseModel }).model;
 
       model.setDatabaseLocked(true);
-      dropCard(tool, { rowId: 'row-x', toOptionId: 'opt-todo', beforeRowId: 'row-b', afterRowId: 'row-a' });
+      dropListRow(tool, { rowId: 'row-x', beforeRowId: 'row-b', afterRowId: 'row-a' });
       answer('confirm');
       await Promise.resolve();
 
@@ -6630,10 +6651,6 @@ describe('DatabaseTool — board sub-group lanes', () => {
   };
   const updates = (block: BlockAPI): unknown[] =>
     vi.mocked(block.call).mock.calls.filter(([method]) => method === 'updateProperties').map(([, params]) => params);
-  const answer = (name: 'confirm' | 'cancel'): void => {
-    document.querySelector<HTMLButtonElement>(`[data-blok-database-confirm-action="${name}"]`)?.click();
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -6820,31 +6837,14 @@ describe('DatabaseTool — board sub-group lanes', () => {
     tool.destroy();
   });
 
-  it('a sorted drop into another lane of the same column asks, and "Remove" keeps the sub-group change', async () => {
+  // Unmeasured in Notion: the sub-group value is a change of value, not of place, so it is kept.
+  it('a sorted drop into another lane of the same column writes the sub-group value only, without asking', () => {
     const children = rows();
     const { tool, element } = mount(sorted, children);
 
     drop(tool, { rowId: 'row-1', toOptionId: 'opt-todo', toSubGroup: 'team-b', beforeRowId: null, afterRowId: 'row-2' });
-    expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.removeSortingTitle');
-    expect(updates(children[0])).toEqual([]);
 
-    answer('confirm');
-    await Promise.resolve();
-
-    expect(updates(children[0])).toContainEqual({ 'prop-team': 'team-b' });
-    expect(tool.save(element).views[0].sorts).toEqual([]);
-
-    tool.destroy();
-  });
-
-  it('a sorted drop into another lane keeps the sub-group change on "Don\'t remove", and the sort stays', async () => {
-    const children = rows();
-    const { tool, element } = mount(sorted, children);
-
-    drop(tool, { rowId: 'row-1', toOptionId: 'opt-todo', toSubGroup: 'team-b', beforeRowId: null, afterRowId: 'row-2' });
-    answer('cancel');
-    await Promise.resolve();
-
+    expect(document.querySelector('[data-blok-database-confirm-title]')).toBeNull();
     expect(updates(children[0])).toEqual([{ 'prop-team': 'team-b' }]);
     expect(children.flatMap((block) => vi.mocked(block.call).mock.calls.filter(([method]) => method === 'updatePosition'))).toEqual([]);
     expect(tool.save(element).views[0].sorts).toEqual(sorted.sorts);

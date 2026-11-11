@@ -438,6 +438,14 @@ test.describe('W4D board actions that write many rows', () => {
     return b.id === 'row-2' ? { ...b, data: { ...b.data, properties: { 'prop-title': 'Card two', 'prop-status': 'opt-todo' } } } : b;
   });
 
+  /** SORTED_DOC with view-1 as a table: research/08 D7 asks there. */
+  const SORTED_TABLE_DOC: OutputData['blocks'] = SORTED_DOC.map(b => {
+    if (b.id !== 'db-1') return b;
+    const views = (b.data.views as Array<Record<string, unknown>>).map(v => (v.id === 'view-1' ? { ...v, type: 'table', groupBy: undefined } : v));
+
+    return { ...b, data: { ...b.data, views } };
+  });
+
   const viewSorts = async (page: Page): Promise<unknown> =>
     ((await save(page)).find(b => b.id === 'db-1')?.data.views as Array<{ id: string; sorts: unknown }>).find(v => v.id === 'view-1')?.sorts;
 
@@ -448,21 +456,30 @@ test.describe('W4D board actions that write many rows', () => {
   const listOrder = async (page: Page): Promise<unknown> =>
     ((await save(page)).find(b => b.id === 'db-1')?.data.views as Array<{ id: string; rowOrder?: unknown }>).find(v => v.id === 'view-2')?.rowOrder;
 
-  test('W4D-D7: "Remove" drops the sort, keeps the order and lands the card; one undo restores the sort and every position', async ({ page }) => {
-    await mount(page, SORTED_DOC);
+  /** Drags Card one's row handle onto the top of Card two in the sorted table. */
+  const dragTableRowOneAboveTwo = async (page: Page): Promise<void> => {
+    const row = (id: string): Locator => page.locator(`[data-blok-database-table-row][data-row-id="${id}"]`);
+    const top = await row('row-2').boundingBox();
+
+    await row('row-1').hover();
+    const from = await row('row-1').locator('[data-blok-database-table-row-handle]').boundingBox();
+
+    if (from === null || top === null) {
+      throw new Error('no box');
+    }
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + from.width / 2, top.y + 4, { steps: 10 });
+    await page.mouse.up();
+  };
+
+  test('W4D-D7: "Remove" drops the sort, keeps the order and lands the row; one undo restores the sort and every position', async ({ page }) => {
+    await mount(page, SORTED_TABLE_DOC);
     await gap(page);
 
     const before = { sorts: await viewSorts(page), one: await position(page, 'row-1'), two: await position(page, 'row-2') };
-    const dragged = await page.locator('[data-blok-database-card][data-row-id="row-1"]').boundingBox();
-    const target = await page.locator('[data-blok-database-card][data-row-id="row-2"]').boundingBox();
 
-    if (dragged === null || target === null) {
-      throw new Error('no box');
-    }
-    await page.mouse.move(dragged.x + dragged.width / 2, dragged.y + dragged.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(target.x + target.width / 2, target.y + 4, { steps: 20 });
-    await page.mouse.up();
+    await dragTableRowOneAboveTwo(page);
 
     const dialog = page.getByRole('alertdialog', { name: 'Would you like to remove sorting?' });
 
@@ -473,8 +490,8 @@ test.describe('W4D board actions that write many rows', () => {
     expect(await viewSorts(page)).toEqual([]);
     // Card one was dropped above Card two, so it now comes first.
     expect(await position(page, 'row-1') < await position(page, 'row-2')).toBe(true);
-    // Manual order is per view: the list pins every card the drop re-keyed at its old key.
-    // Every new key has a random tail, so no new key equals a stored one and both cards are re-keyed.
+    // Manual order is per view: the list pins every row the drop re-keyed at its old key.
+    // Every new key has a random tail, so no new key equals a stored one and both rows are re-keyed.
     expect(await listOrder(page)).toEqual({ 'row-1': before.one, 'row-2': before.two });
 
     await park(page);
@@ -487,12 +504,27 @@ test.describe('W4D board actions that write many rows', () => {
   });
 
   test('W4D-D7b: "Don\'t remove" discards the drop', async ({ page }) => {
+    await mount(page, SORTED_TABLE_DOC);
+    await gap(page);
+
+    const before = await save(page);
+
+    await dragTableRowOneAboveTwo(page);
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Don\'t remove' }).click();
+    await gap(page);
+
+    expect(same(await save(page), before)).toBe(true);
+  });
+
+  // notion-motion.md Round 13: a sorted board asks nothing, snaps the card back and leaves it picked.
+  test('W4D-D7c: a card dropped against the sort of a board snaps back, writes nothing and stays picked', async ({ page }) => {
     await mount(page, SORTED_DOC);
     await gap(page);
 
     const before = await save(page);
-    const dragged = await page.locator('[data-blok-database-card][data-row-id="row-1"]').boundingBox();
-    const target = await page.locator('[data-blok-database-card][data-row-id="row-2"]').boundingBox();
+    const card = (id: string): Locator => page.locator(`[data-blok-database-card][data-row-id="${id}"]`);
+    const dragged = await card('row-1').boundingBox();
+    const target = await card('row-2').boundingBox();
 
     if (dragged === null || target === null) {
       throw new Error('no box');
@@ -501,10 +533,12 @@ test.describe('W4D board actions that write many rows', () => {
     await page.mouse.down();
     await page.mouse.move(target.x + target.width / 2, target.y + 4, { steps: 20 });
     await page.mouse.up();
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Don\'t remove' }).click();
     await gap(page);
 
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
     expect(same(await save(page), before)).toBe(true);
+    await expect(card('row-1')).toHaveAttribute('aria-selected', 'true');
+    await expect(card('row-2')).not.toHaveAttribute('aria-selected', 'true');
   });
 
   /** Two cards in Todo, so a stale block index after the first delete would hit the wrong block. */

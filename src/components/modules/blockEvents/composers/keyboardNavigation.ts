@@ -1564,8 +1564,10 @@ export class KeyboardNavigation extends BlockEventComposer {
   /**
    * Shift+ArrowUp on the first line of a block: keep the anchor and move the
    * focus to the same column in the previous block. Mirrors
-   * {@link extendTextSelectionDown}.
-   * @returns true when the focus moved into another block
+   * {@link extendTextSelectionDown}. A range that already spans two blocks
+   * also moves its focus up a line inside its own block here, since the
+   * browser would clamp that extend to the anchor's block.
+   * @returns true when this handled the key
    */
   private extendTextSelectionUp(): boolean {
     const { BlockManager, Caret } = this.Blok;
@@ -1580,28 +1582,44 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     BlockManager.setCurrentBlockByChildNode(focus.node);
 
-    if (BlockManager.previousVisibleBlock === null) {
+    const focusHost = getEditingHost(focus.node);
+    const spansBlocks = focusHost !== getEditingHost(anchor.node);
+
+    /** The browser clamps an extend across blocks, so move the focus one line up by hand. */
+    const moveFocusUpOneLine = (): boolean => {
+      selection.collapse(focus.node, focus.offset);
+      selection.modify('move', 'backward', 'line');
+
+      const lineUp = selection.focusNode === null ? focus : { node: selection.focusNode, offset: selection.focusOffset };
+
+      applyDirectedSpanningSelection(anchor, lineUp);
+
+      return true;
+    };
+
+    const restore = (): boolean => {
+      if (spansBlocks) {
+        return moveFocusUpOneLine();
+      }
+      applyDirectedSpanningSelection(anchor, focus);
+
       return false;
+    };
+
+    if (BlockManager.previousVisibleBlock === null) {
+      return spansBlocks && moveFocusUpOneLine();
     }
 
     /** Caret helpers read a collapsed caret, so navigate from the focus alone. */
     selection.collapse(focus.node, focus.offset);
-
-    const focusHost = getEditingHost(focus.node);
 
     /** An open inline toolbar can cover the previous block and break the column lookup. */
     if (this.Blok.InlineToolbar.opened && focusHost !== null && isCaretAtFirstLine(focusHost)) {
       this.Blok.InlineToolbar.close(false);
     }
 
-    const restore = (): void => {
-      applyDirectedSpanningSelection(anchor, focus);
-    };
-
     if (!Caret.navigateVerticalPrevious()) {
-      restore();
-
-      return false;
+      return restore();
     }
 
     const moved = SelectionUtils.get();
@@ -1615,9 +1633,7 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     /** The move can land in the page title, which a text range must not reach. */
     if (targetBlock === undefined) {
-      restore();
-
-      return false;
+      return restore();
     }
 
     /** Same rule as a mouse drag: no text range out of a container. The caret just moves. */

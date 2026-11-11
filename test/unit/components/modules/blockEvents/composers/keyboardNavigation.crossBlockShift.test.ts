@@ -345,6 +345,71 @@ describe('Shift+ArrowUp from inside a block\'s text', () => {
   });
 });
 
+describe('Shift+ArrowUp when the range already spans two blocks', () => {
+  /** jsdom has no Selection.modify; this one moves a caret up a line to `offset` of its text node. */
+  const stubLineUpMove = (offset: number): void => {
+    const selection = document.getSelection();
+
+    if (selection === null) {
+      throw new Error('no selection');
+    }
+    Object.defineProperty(selection, 'modify', {
+      configurable: true,
+      value: (alter: string, direction: string, granularity: string): void => {
+        if (alter === 'move' && direction === 'backward' && granularity === 'line' && selection.focusNode !== null) {
+          selection.collapse(selection.focusNode, offset);
+        }
+      },
+    });
+  };
+
+  afterEach(() => {
+    const selection = document.getSelection();
+
+    if (selection !== null) {
+      Reflect.deleteProperty(selection, 'modify');
+    }
+  });
+
+  it('moves the focus up a line inside its block and keeps the anchor in the other block', () => {
+    const { nav, first, second, navigateVerticalPrevious } = setup();
+
+    stubLineUpMove(2);
+    document.getSelection()?.setBaseAndExtent(second.text, 3, first.text, 6);
+    navigateVerticalPrevious.mockReturnValue(false);
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+
+    const event = shiftUp();
+
+    nav.handleArrowLeftAndUp(event);
+
+    expect(selectionPoints()).toEqual({
+      anchor: [second.text, 3],
+      focus: [first.text, 2],
+    });
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('moves the focus to the start of the first block and keeps the anchor in the other block', () => {
+    const { nav, first, second, navigateVerticalPrevious } = setup({ previous: false });
+
+    stubLineUpMove(0);
+    document.getSelection()?.setBaseAndExtent(second.text, 3, first.text, 6);
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+
+    const event = shiftUp();
+
+    nav.handleArrowLeftAndUp(event);
+
+    expect(navigateVerticalPrevious).not.toHaveBeenCalled();
+    expect(selectionPoints()).toEqual({
+      anchor: [second.text, 3],
+      focus: [first.text, 0],
+    });
+    expect(event.defaultPrevented).toBe(true);
+  });
+});
+
 describe('Shift+End over a selection that spans two blocks', () => {
   const shiftEnd = (): KeyboardEvent => new KeyboardEvent('keydown', { key: 'End', shiftKey: true, cancelable: true });
 

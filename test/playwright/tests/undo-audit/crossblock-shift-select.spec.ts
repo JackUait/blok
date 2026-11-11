@@ -111,6 +111,17 @@ const SETUP_UP: OutputData['blocks'] = [
   { id: 'b3', type: 'paragraph', data: { text: 'Gamma three' } },
 ];
 
+const LONG = 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua';
+
+/** b2 and b3 wrap onto several lines. */
+const SETUP_WRAPPED: OutputData['blocks'] = [
+  { id: 'b1', type: 'paragraph', data: { text: 'Alpha one' } },
+  { id: 'b2', type: 'paragraph', data: { text: LONG } },
+  { id: 'b3', type: 'paragraph', data: { text: LONG } },
+];
+
+const offsetOf = (point: string): number => Number(point.split('@')[1]);
+
 test.beforeAll(() => {
   ensureBlokBundleBuilt();
 });
@@ -240,5 +251,68 @@ test.describe('undo audit: keyboard cross-block text selection (U072)', () => {
 
     expect(column).toBeGreaterThan(0);
     expect(await selection(page)).toBe(`b3@6 -> b2@${column}`);
+  });
+  test('Shift+ArrowUp inside a wrapped previous block keeps the range and moves the focus up one line', async ({ page }) => {
+    await mount(page, SETUP_WRAPPED);
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) {
+        holder.style.width = '420px';
+      }
+    });
+    const lines = await page.evaluate(() => {
+      const host = document.querySelector('[data-blok-id="b2"] [contenteditable="true"]');
+      const lineHeight = host === null ? 0 : parseFloat(getComputedStyle(host).lineHeight);
+
+      return host === null ? 0 : Math.round(host.getBoundingClientRect().height / lineHeight);
+    });
+
+    expect(lines).toBeGreaterThan(1);
+    await editable(page, 'b3').click();
+    /** Home goes to the start of the clicked line, which may not be the first. */
+    await editable(page, 'b3').evaluate((host) => {
+      const text = host.firstChild;
+
+      if (text !== null) {
+        document.getSelection()?.collapse(text, 3);
+      }
+    });
+    expect(await selection(page)).toBe('b3@3 -> b3@3');
+
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('ArrowUp');
+
+    const [anchor, intoB2] = (await selection(page)).split(' -> ');
+
+    expect(anchor).toBe('b3@3');
+    expect(intoB2).toMatch(/^b2@/);
+    expect(offsetOf(intoB2)).toBeGreaterThan(LONG.length / 2);
+
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.up('Shift');
+
+    const [kept, upOneLine] = (await selection(page)).split(' -> ');
+
+    expect(kept).toBe('b3@3');
+    expect(upOneLine).toMatch(/^b2@/);
+    expect(offsetOf(upOneLine)).toBeLessThan(offsetOf(intoB2));
+  });
+
+  test('Shift+ArrowUp in the first block keeps the range and moves the focus to the block start', async ({ page }) => {
+    await mount(page, SETUP_UP);
+    await editable(page, 'b2').click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('ArrowUp');
+    expect(await selection(page)).toMatch(/^b2@3 -> b1@/);
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.up('Shift');
+
+    expect(await selection(page)).toBe('b2@3 -> b1@0');
   });
 });

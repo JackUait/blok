@@ -61,7 +61,8 @@ test.describe('callout: turn into keeps line breaks and bold', () => {
 
   test('typing /callout after formatted text keeps its line break and bold', async ({ page }) => {
     await createBlok(page, [
-      { id: 'p', type: 'paragraph', data: { text: 'Line one<br>Line <b>bold</b> two' } },
+      // Ends with ".": a "/" right after a letter stays plain text.
+      { id: 'p', type: 'paragraph', data: { text: 'Line one<br>Line <b>bold</b> two.' } },
     ]);
 
     const editable = page.locator('[data-blok-id="p"] [contenteditable="true"]').first();
@@ -72,6 +73,6 @@ test.describe('callout: turn into keeps line breaks and bold', () => {
     await page.keyboard.press('Enter');
 
     // Blok stores bold as <strong> once the text has been through the editable.
-    await expect.poll(() => savedCalloutBody(page)).toEqual(['paragraph:Line one<br>Line <strong>bold</strong> two']);
+    await expect.poll(() => savedCalloutBody(page)).toEqual(['paragraph:Line one<br>Line <strong>bold</strong> two.']);
   });
 });

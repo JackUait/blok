@@ -94,11 +94,13 @@ test.describe('ui.toolbar-inner-geometry-shift', () => {
      * popover is open — closing it must re-arm the watching, otherwise the
      * block never reports geometry changes again and the toolbar goes stale.
      */
-    await page.keyboard.type('/');
+    // A space first: "/" right after a letter stays plain text.
+    await page.keyboard.type(' /');
     // The block has text, so the pill is a span around the "/".
     await expect(middleParagraph.locator('[data-blok-slash-search]')).toHaveCount(1);
     await page.keyboard.press('Escape');
     await expect(middleParagraph.locator('[data-blok-slash-search]')).toHaveCount(0);
+    await page.keyboard.press('Backspace');
     await page.keyboard.press('Backspace');
 
     const baselineTop = await toolbar.evaluate((el) => parseFloat(el.style.top));

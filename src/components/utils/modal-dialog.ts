@@ -334,6 +334,8 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
   }
 
   const state = { closed: false };
+  // Set as the close starts, while the fade still plays.
+  const released = { done: false };
 
   // Only elements we set `inert` on get it cleared, so pre-existing inert
   // subtrees survive teardown untouched.
@@ -459,15 +461,13 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
   // element later (the notifier) fall back to a microtask retry.
   if (!focusInitial()) {
     queueMicrotask(() => {
-      if (state.closed) {
+      if (state.closed || released.done) {
         return;
       }
       applyInert();
       focusInitial();
     });
   }
-
-  const released = { done: false };
 
   // Gives the page back: the trap, the layer, inert and focus. A closing dialog only fades.
   const release = (): void => {
@@ -480,6 +480,8 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
     document.removeEventListener('focusin', onFocusIn, true);
     unregister();
     removeInert();
+    // blockSettings reads aria-modal to ask whether a modal is open.
+    surface.removeAttribute('aria-modal');
 
     const restoreTarget = isRestorableFocusTarget(previouslyFocused) ? previouslyFocused : pointerOpener;
 

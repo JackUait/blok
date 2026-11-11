@@ -801,6 +801,8 @@ describe('openModalDialog — exit animation', () => {
     expect(opener.hasAttribute('inert')).toBe(false);
     expect(content.hasAttribute('inert')).toBe(true);
     expect(content.getAttribute('aria-hidden')).toBe('true');
+    // Code that asks "is a modal open?" reads aria-modal, not the accessibility tree.
+    expect(surface.hasAttribute('aria-modal')).toBe(false);
     outside.focus();
     expect(outside).toHaveFocus();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -811,6 +813,25 @@ describe('openModalDialog — exit animation', () => {
 
     expect(content.isConnected).toBe(false);
     expect(outside).toHaveFocus();
+  });
+
+  it('keeps the page usable when the close starts before the deferred focus retry', async () => {
+    pretendAnimationsRun();
+    stubAnimationName('blok-fade');
+
+    const sibling = makeDiv('sibling');
+
+    document.body.appendChild(sibling);
+
+    const { content, surface } = buildDialog(makeButton('only'));
+    // The caller mounts the content itself, after open returns (as the notifier does).
+    const handle = openModalDialog({ content, surface, container: null, onDismiss: vi.fn() });
+
+    document.body.appendChild(content);
+    handle.closeAnimated();
+    await Promise.resolve();
+
+    expect(sibling.hasAttribute('inert')).toBe(false);
   });
 
   it('waits for the animation on the surface before tearing down', () => {

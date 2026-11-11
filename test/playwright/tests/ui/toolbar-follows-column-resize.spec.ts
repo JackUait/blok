@@ -82,7 +82,7 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => typeof window.Blok === 'function');
 });
 
-test('the block handle follows the content column as the side peek narrows and widens the page', async ({ page }) => {
+test('the block handle follows the content column as the side peek narrows the page, and hides as it closes', async ({ page }) => {
   await mount(page);
   const database = page.locator('[data-blok-database-wrapper]');
   const row = page.locator('[data-blok-database-table-row][data-row-id="r1"]');
@@ -100,9 +100,14 @@ test('the block handle follows the content column as the side peek narrows and w
 
   await expect.poll(() => handleGap(page)).toBe(wideGap);
 
+  // notion-motion.md Round 14: the handle hides as the peek starts to close and stays hidden with the pointer still.
   await openButton().click();
   await expect(page.locator('[data-blok-database-drawer]')).toHaveCount(0);
   await expect.poll(() => databaseEnd(database)).toBeGreaterThan(WINDOW_WIDTH - 50);
+  await expect(page.getByTestId('toolbar-actions')).toBeHidden();
 
+  // The next pointer move brings it back beside the widened column.
+  await row.hover({ position: { x: 20, y: 10 } });
+  await expect(page.getByTestId('toolbar-actions')).toBeVisible();
   await expect.poll(() => handleGap(page)).toBe(wideGap);
 });

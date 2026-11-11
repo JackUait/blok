@@ -238,6 +238,62 @@ describe('CodeTool', () => {
       tool.removed();
     });
 
+    it('a language pick puts the caret back in the code where it was', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'print(1)', language: 'javascript' }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+      const codeEl = el.querySelector<HTMLElement>('[data-blok-testid="code-content"]');
+      const langBtn = el.querySelector<HTMLButtonElement>('[data-blok-testid="code-language-btn"]');
+      const text = codeEl?.firstChild;
+
+      if (!codeEl || !langBtn || !text) {
+        throw new Error('expected code element, language button and text');
+      }
+
+      codeEl.focus();
+      const range = document.createRange();
+
+      range.setStart(text, 5);
+      range.collapse(true);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      langBtn.click();
+      document.querySelector<HTMLElement>('[data-blok-item-name="python"]')?.click();
+
+      const selection = window.getSelection();
+
+      expect(tool.save(el).language).toBe('python');
+      expect(codeEl).toHaveFocus();
+      expect(selection?.anchorNode).toBe(text);
+      expect(selection?.anchorOffset).toBe(5);
+
+      tool.removed();
+      el.remove();
+    });
+
+    it('a language pick leaves focus alone when the caret was not in the code', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'print(1)', language: 'javascript' }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+      const codeEl = el.querySelector<HTMLElement>('[data-blok-testid="code-content"]');
+      const langBtn = el.querySelector<HTMLButtonElement>('[data-blok-testid="code-language-btn"]');
+
+      window.getSelection()?.removeAllRanges();
+      langBtn?.click();
+      document.querySelector<HTMLElement>('[data-blok-item-name="python"]')?.click();
+
+      expect(tool.save(el).language).toBe('python');
+      expect(codeEl).not.toHaveFocus();
+
+      tool.removed();
+      el.remove();
+    });
+
     it('removed() cleans up popover from document.body', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());

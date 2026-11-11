@@ -119,6 +119,8 @@ export class CodeTool implements BlockTool {
   private _builtReadOnly = false;
   private _lineNumbers: boolean = CODE_LOAD_DEFAULTS.lineNumbers;
   private _picker: PopoverDesktop | null = null;
+  /** Caret offset in the code when the picker opened, or -1 when the caret was elsewhere. */
+  private _caretBeforePicker = -1;
   private _viewMode: CodeViewMode = 'preview';
   private _previewContainer: HTMLElement | null = null;
   private _highlightRafId: number | null = null;
@@ -310,6 +312,8 @@ export class CodeTool implements BlockTool {
         return;
       }
 
+      // Read before show(): the picker's search field takes focus.
+      this._caretBeforePicker = this.codeCaretOffset();
       // Suggestions depend on recent picks in other blocks and on the filename,
       // so the rows are rebuilt on every open.
       this.rebuildLanguagePicker()?.show();
@@ -857,6 +861,8 @@ export class CodeTool implements BlockTool {
       onPick: (id) => {
         rememberLanguage(id);
         this.setLanguage(id);
+        // Here, not in setLanguage: the block menu and paste also set the language.
+        this.restoreCaretAfterPick();
       },
     });
   }
@@ -1273,6 +1279,48 @@ export class CodeTool implements BlockTool {
     // newline collapses and the caret has no line box on the new line.
     this.syncTrailingBr();
     this.scheduleLineGeometry();
+  }
+
+  /**
+   * Caret offset in the code text, or -1 when the caret is not in the code.
+   */
+  private codeCaretOffset(): number {
+    const codeEl = this._dom?.codeElement;
+    const selection = codeEl?.ownerDocument.getSelection();
+
+    if (!codeEl || !selection || selection.rangeCount === 0 || !codeEl.contains(selection.focusNode)) {
+      return -1;
+    }
+
+    const range = codeEl.ownerDocument.createRange();
+
+    range.selectNodeContents(codeEl);
+    range.setEnd(selection.getRangeAt(0).endContainer, selection.getRangeAt(0).endOffset);
+
+    return range.toString().length;
+  }
+
+  /**
+   * After a picked language, put the caret back where it was in the code (Notion U156).
+   */
+  private restoreCaretAfterPick(): void {
+    const offset = this._caretBeforePicker;
+    const codeEl = this._dom?.codeElement;
+
+    this._caretBeforePicker = -1;
+
+    if (offset < 0 || !codeEl) {
+      return;
+    }
+
+    const position = findTextPosition(codeEl, offset);
+    const range = codeEl.ownerDocument.createRange();
+
+    range.setStart(position.node, position.offset);
+    range.collapse(true);
+    codeEl.focus({ preventScroll: true });
+    codeEl.ownerDocument.getSelection()?.removeAllRanges();
+    codeEl.ownerDocument.getSelection()?.addRange(range);
   }
 
   /**

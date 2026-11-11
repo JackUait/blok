@@ -5,6 +5,7 @@ import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { savedAsHtml } from '../../helpers/saved-as-html';
+import { historyKeys } from '../../helpers/history-keys';
 import type { HtmlReadOptions } from '../../helpers/saved-as-html';
 
 /**
@@ -1207,6 +1208,62 @@ test.describe('backspace keydown', () => {
       // The merged block stays nested under Alpha and keeps both texts.
       expect(merged.blocks[1].parent).toBe(alphaId);
       expect(merged.blocks[1].data.text).toBe('BravoCharlie');
+    });
+  });
+
+  test.describe('deleting a range across inline marks', () => {
+    const selectBetween = async (input: Locator, from: string, to: string): Promise<void> => {
+      await input.click();
+      await input.evaluate((host, bounds) => {
+        const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+        const nodes: Text[] = [];
+
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+          nodes.push(node as Text);
+        }
+        const full = nodes.map((n) => n.data).join('');
+        const locate = (index: number): [Text, number] => {
+          let offset = 0;
+
+          for (const n of nodes) {
+            if (index <= offset + n.data.length) {
+              return [n, index - offset];
+            }
+            offset += n.data.length;
+          }
+          throw new Error('offset out of range');
+        };
+        const start = full.indexOf(bounds.from);
+        const [startNode, startOffset] = locate(start);
+        const [endNode, endOffset] = locate(full.indexOf(bounds.to, start) + bounds.to.length);
+
+        window.getSelection()?.setBaseAndExtent(startNode, startOffset, endNode, endOffset);
+      }, { from, to });
+    };
+
+    test('saves the space after the deleted range as a plain space', async ({ page }) => {
+      await createParagraphBlok(page, ['Alpha <b>bold</b> <i>ital</i> omega']);
+      const input = await getParagraphLocator(page, 'first');
+
+      await selectBetween(input, 'old', 'tal');
+      await page.keyboard.press('Backspace');
+
+      await expect.poll(async () => (await saveBlok(page)).blocks[0].data.text).toBe('Alpha <strong>b</strong> omega');
+
+      const { undo } = await historyKeys(page);
+
+      await page.keyboard.press(undo);
+      await expect.poll(async () => (await saveBlok(page)).blocks[0].data.text).toBe('Alpha <strong>bold</strong> <i>ital</i> omega');
+    });
+
+    test('keeps a non-breaking space the text already had', async ({ page }) => {
+      await createParagraphBlok(page, ['<b>10</b>&nbsp;akm']);
+      const input = await getParagraphLocator(page, 'first');
+
+      await selectBetween(input, 'a', 'a');
+      await page.keyboard.press('Backspace');
+
+      await expect.poll(async () => (await saveBlok(page)).blocks[0].data.text).toBe('<strong>10</strong>\u00a0km');
     });
   });
 });

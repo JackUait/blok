@@ -1046,6 +1046,46 @@ test.describe('copy and paste', () => {
       await page.keyboard.press(undo);
       await expect.poll(() => outline(page)).toEqual(['header:Head <strong>B</strong> text', 'paragraph:Target text here']);
     });
+
+    const cutAndPasteBack: Array<[string, OutputData['blocks'][number], string, string, string]> = [
+      ['paragraph', { id: 's', type: 'paragraph', data: { text: 'Alpha <b>bold</b> <i>ital</i> <code>cod</code> <a href="https://example.com/">lnk</a> omega' } }, 'old', 'lnk', ' omega'],
+      ['heading', { id: 's', type: 'header', data: { text: 'Head <b>Bold</b> <a href="https://example.com/">L</a> end', level: 2 } }, 'ad', 'L', ' end'],
+    ];
+
+    for (const [label, block, from, to, before] of cutAndPasteBack) {
+      test(`a range cut with real keys from a ${label} and pasted back saves the original text`, async ({ page, browserName }) => {
+        // eslint-disable-next-line playwright/no-skipped-test -- needs real clipboard permissions
+        test.skip(browserName !== 'chromium', 'Firefox and WebKit reject the clipboard-read/clipboard-write permissions a real paste needs');
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        await createBlokWithElements(page, [block]);
+        const original = await outline(page);
+        const editable = '[data-blok-id="s"] [contenteditable="true"]';
+        const modifier = await getCommandModifierKey(page);
+
+        await selectIn(page, editable, from, to);
+        await page.keyboard.press(`${modifier}+x`);
+        await expect.poll(() => outline(page)).not.toEqual(original);
+
+        // Into the text node that holds `before`, not the end of the bold run before it.
+        await page.locator(editable).evaluate((host, needle) => {
+          const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+
+          for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+            const index = (node as Text).data.indexOf(needle);
+
+            if (index >= 0) {
+              window.getSelection()?.collapse(node, index);
+
+              return;
+            }
+          }
+          throw new Error(`no "${needle}" to put the caret before`);
+        }, before);
+        await page.keyboard.press(`${modifier}+v`);
+
+        await expect.poll(() => outline(page)).toEqual(original);
+      });
+    }
   });
 
   test.describe('blok clipboard wins over tool patterns', () => {

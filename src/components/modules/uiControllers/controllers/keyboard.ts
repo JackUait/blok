@@ -14,6 +14,7 @@ import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
 import { isInsideKeyboardOwner } from '../../blockEvents/utils/keyboard';
+import { noteDeleteForNbsp } from '../../../utils/delete-boundary-nbsp';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
 
 import { Controller } from './_base';
@@ -229,6 +230,10 @@ export class KeyboardController extends Controller {
     // never fires it. See `BlockYjsSync.noteUserInput`.
     if (event.target instanceof Node) {
       this.Blok.BlockManager.noteUserInput(event.target);
+    }
+
+    if (event instanceof InputEvent && event.target instanceof HTMLElement) {
+      noteDeleteForNbsp(event, event.target);
     }
   };
 

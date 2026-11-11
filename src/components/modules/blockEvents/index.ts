@@ -14,6 +14,7 @@ import { NavigationMode } from './composers/navigationMode';
 import { PageReferenceTrigger } from './composers/pageReferenceTrigger';
 import { horizontalArrowIntent, isPrintableKeyEvent, isInsideKeyboardOwner, keyCodeFromEvent } from './utils/keyboard';
 import { isTextLikeBlock } from './utils/text-like-block';
+import { restoreDeletedBoundarySpace } from '../../utils/delete-boundary-nbsp';
 
 /**
  * All keydowns on Block
@@ -345,6 +346,11 @@ export class BlockEvents extends Module {
      */
     if (event.target instanceof Node) {
       this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
+    }
+
+    // Before the triggers below read the text.
+    if (event.target instanceof HTMLElement) {
+      restoreDeletedBoundarySpace(event, event.target);
     }
 
     /**

@@ -23,6 +23,7 @@ import { SanitizerConfigBuilder } from './sanitizer-config';
 import type { ToolRegistry } from './tool-registry';
 import type { HandlerContext } from './types';
 import { pasteHtmlAsBlocks } from './html-import';
+import { parseUntrustedHtml } from '../../utils/inert-html';
 
 /**
  * The paste pipeline: handlers, preprocessors and importers. The Paste module
@@ -240,9 +241,17 @@ export class PasteEngine {
       fromBlokClipboard,
     };
 
+    const memo: { cleaned?: string } = {};
+    const cleanHtml = (): string => {
+      memo.cleaned ??= this.cleanPastedHtml(rawHtmlData);
+
+      return memo.cleaned;
+    };
+    const flavours: ClipboardFlavours = { dataTransfer, plainData, rawHtmlData, blokData, cleanHtml };
+
     // Try handlers in priority order
     for (const handler of this.handlers) {
-      const dataToCheck = this.getDataForHandler(handler, dataTransfer, plainData, rawHtmlData, blokData);
+      const dataToCheck = this.getDataForHandler(handler, flavours);
 
       if (dataToCheck === undefined) {
         continue;
@@ -267,13 +276,9 @@ export class PasteEngine {
   /**
    * Get the appropriate data for each handler type.
    */
-  private getDataForHandler(
-    handler: PasteHandler,
-    dataTransfer: DataTransfer,
-    plainData: string,
-    rawHtmlData: string,
-    blokData: string
-  ): unknown {
+  private getDataForHandler(handler: PasteHandler, flavours: ClipboardFlavours): unknown {
+    const { dataTransfer, plainData, rawHtmlData, blokData, cleanHtml } = flavours;
+
     if (handler instanceof BlokDataHandler) {
       return blokData;
     }
@@ -291,17 +296,53 @@ export class PasteEngine {
     }
 
     if (handler instanceof MarkdownHandler) {
-      return plainData;
+      return this.htmlAsLiteralText(flavours) === null ? plainData : undefined;
     }
 
     if (handler instanceof TextHandler) {
-      return plainData;
+      return this.htmlAsLiteralText(flavours) ?? plainData;
     }
 
     if (!(handler instanceof HtmlHandler)) {
       return undefined;
     }
 
+    const cleanData = cleanHtml();
+    const cleanDataIsHtml = dom$.isHTMLString(cleanData);
+    const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);
+
+    return shouldProcessAsPlain ? undefined : cleanData;
+  }
+
+  /**
+   * The text of an html flavour that has no markup left after cleaning and
+   * says the same as text/plain. Such html states the text is literal, so
+   * `#` or `**` in it is not markdown. Its text also keeps the U+00A0 that
+   * Chrome turns into spaces in text/plain.
+   * @returns the text, or null when the html is absent, has markup, or differs
+   */
+  private htmlAsLiteralText({ plainData, rawHtmlData, cleanHtml }: ClipboardFlavours): string | null {
+    if (!rawHtmlData) {
+      return null;
+    }
+
+    const cleanData = cleanHtml();
+
+    if (!cleanData.trim() || dom$.isHTMLString(cleanData)) {
+      return null;
+    }
+
+    const text = parseUntrustedHtml(cleanData).textContent ?? '';
+    const spaced = (value: string): string => value.replace(/\u00A0/g, ' ');
+
+    return spaced(text) === spaced(plainData) ? text : null;
+  }
+
+  /**
+   * The clipboard html after the first, whole-document sanitize pass.
+   * @param rawHtmlData - the text/html flavour
+   */
+  private cleanPastedHtml(rawHtmlData: string): string {
     // Build sanitize config first
     const toolsTags = this.sanitizerBuilder.buildToolsTagsConfig(this.toolRegistry.toolsTags);
     const inlineSanitizeConfig = this.Blok.Tools.getAllInlineToolsSanitizeConfig();
@@ -336,10 +377,16 @@ export class PasteEngine {
      * `clean()` allowlists the href/src ATTRIBUTE but never inspects its scheme,
      * so a pasted `javascript:` link would otherwise arrive as a live anchor.
      */
-    const cleanData = normalizeInlineMarkupHtml(clean(preprocessed, customConfig));
-    const cleanDataIsHtml = dom$.isHTMLString(cleanData);
-    const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);
-
-    return shouldProcessAsPlain ? undefined : cleanData;
+    return normalizeInlineMarkupHtml(clean(preprocessed, customConfig));
   }
+}
+
+/** Every clipboard flavour of one paste. */
+interface ClipboardFlavours {
+  dataTransfer: DataTransfer;
+  plainData: string;
+  rawHtmlData: string;
+  blokData: string;
+  /** The cleaned text/html, computed once on first use. */
+  cleanHtml: () => string;
 }

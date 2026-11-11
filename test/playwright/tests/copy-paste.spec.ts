@@ -979,6 +979,39 @@ test.describe('copy and paste', () => {
       await expect.poll(() => outline(page)).toEqual(['paragraph:Target My page nametext here']);
     });
 
+    test('markdown-looking text pastes back literally, mid-paragraph and into an empty paragraph', async ({ page }) => {
+      const literal = '# not a heading **not bold** - not list';
+
+      await createBlokWithElements(page, [
+        { id: 's', type: 'paragraph', data: { text: literal } },
+        { id: 't', type: 'paragraph', data: { text: 'Target text here' } },
+        { id: 'e', type: 'paragraph', data: { text: '' } },
+      ]);
+      await selectIn(page, '[data-blok-id="s"] [contenteditable="true"]');
+
+      const clipboard = await copyFromElement(page.locator('[data-blok-id="s"] [contenteditable="true"]'));
+
+      await caretBefore(page, 't', 'text here');
+      await paste(page, page.locator(':focus'), clipboard);
+      await expect.poll(() => outline(page)).toEqual([`paragraph:${literal}`, `paragraph:Target ${literal}text here`, 'paragraph:']);
+
+      await page.locator('[data-blok-id="e"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), clipboard);
+      await expect.poll(() => outline(page)).toEqual([`paragraph:${literal}`, `paragraph:Target ${literal}text here`, `paragraph:${literal}`]);
+    });
+
+    test('a span-only html copy keeps its non-breaking spaces when text/plain lost them', async ({ page }) => {
+      await createBlokWithElements(page, [{ id: 't', type: 'paragraph', data: { text: 'Target text here' } }]);
+      await caretBefore(page, 't', 'text here');
+      await paste(page, page.locator(':focus'), {
+        'text/html': '<meta charset="utf-8"><span style="color: rgb(0, 0, 0);">a&nbsp;b&nbsp;&nbsp;c d</span>',
+        'text/plain': 'a b  c d',
+      });
+
+      // Saved text holds U+00A0 itself, or as &nbsp;.
+      await expect.poll(async () => (await outline(page)).map((line) => line.replace(/&nbsp;/g, '\u00A0'))).toEqual(['paragraph:Target a\u00A0b\u00A0\u00A0c dtext here']);
+    });
+
     test('cutting part of a heading removes it, pastes it inline, and undo brings it back', async ({ page }) => {
       await createBlokWithElements(page, [
         { id: 'h', type: 'header', data: { text: 'Head <b>B</b> text', level: 2 } },

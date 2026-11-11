@@ -2400,6 +2400,55 @@ describe('Paste module', () => {
       expect(insertMany).not.toHaveBeenCalled();
     });
 
+    describe('html that cleans down to its plain text', () => {
+      const pasteWith = async (data: Record<string, string>): Promise<{ markdown: ReturnType<typeof vi.fn>; text: ReturnType<typeof vi.fn> }> => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const markdown = vi.spyOn(MarkdownHandler.prototype, 'handle').mockResolvedValue(true);
+        const text = vi.spyOn(TextHandler.prototype, 'handle').mockResolvedValue(true);
+
+        await paste.processDataTransfer(new MockDataTransfer(data, {} as FileList, Object.keys(data)));
+
+        return { markdown, text };
+      };
+
+      it('pastes markdown-looking text literally when the html flavour is the same text', async () => {
+        const literal = '# not a heading **not bold** - not list';
+        const { markdown, text } = await pasteWith({ 'text/html': literal, 'text/plain': literal });
+
+        expect(markdown).not.toHaveBeenCalled();
+        expect(text).toHaveBeenCalledWith(literal, expect.anything());
+      });
+
+      it('pastes markdown-looking text literally when the html is one span the sanitizer unwraps', async () => {
+        const { markdown, text } = await pasteWith({
+          'text/html': '<meta charset="utf-8"><span style="color: rgb(0, 0, 0);"># not a heading **not bold**</span>',
+          'text/plain': '# not a heading **not bold**',
+        });
+
+        expect(markdown).not.toHaveBeenCalled();
+        expect(text).toHaveBeenCalledWith('# not a heading **not bold**', expect.anything());
+      });
+
+      it('keeps the non-breaking spaces the html carries and text/plain lost', async () => {
+        const { text } = await pasteWith({
+          'text/html': '<meta charset="utf-8"><span style="color: rgb(0, 0, 0);">a&nbsp;b&nbsp;&nbsp;c d</span>',
+          'text/plain': 'a b  c d',
+        });
+
+        expect(text).toHaveBeenCalledWith('a b  c d', expect.anything());
+      });
+
+      it('still converts markdown from a plain-only clipboard', async () => {
+        const { markdown } = await pasteWith({ 'text/plain': '# Heading' });
+
+        expect(markdown).toHaveBeenCalledWith('# Heading', expect.anything());
+      });
+    });
+
     it('BlokDataHandler returns priority 100 for valid JSON', () => {
       const { paste } = createPaste();
 

@@ -44,6 +44,8 @@ interface BlokClipboardBlock extends Pick<SavedData, 'id' | 'data' | 'tool'> {
   link?: CopyLink;
   /** A database row's title, for a paste where no database takes the row. */
   title?: string;
+  /** Whether the copied block was open in the copying browser. Absent in older payloads. */
+  open?: boolean;
 }
 
 
@@ -105,6 +107,45 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     this.insertBlokBlocks(parsedBlokData, context.canReplaceCurrentBlock);
 
     return true;
+  }
+
+  /**
+   * A pasted block counts as created here, so a toggle opens itself on insert.
+   * A copy that was closed when copied closes again. Only blocks the tool opened
+   * get a view state entry, so plain blocks add nothing to storage.
+   * The caret was left in the last pasted block, which may now be hidden, so it
+   * moves to the last pasted block still shown.
+   * @param pasted - each inserted block with its clipboard entry, by copied id, in insert order
+   */
+  private closeBlocksCopiedClosed(pasted: Map<string, { newBlock: Block; original: BlokClipboardBlock }>): void {
+    const closed = new Set<string>();
+
+    for (const [copiedId, { newBlock, original }] of pasted) {
+      const viewState = original.open === false ? this.Blok.ViewStateAPI.methods : undefined;
+
+      if (viewState?.get(newBlock.id, 'open') === true) {
+        viewState.set(newBlock.id, 'open', false);
+        closed.add(copiedId);
+      }
+    }
+
+    if (closed.size === 0) {
+      return;
+    }
+
+    // `seen` stops a forged parentId cycle.
+    const isHidden = (parentId: string | null | undefined, seen: Set<string>): boolean => {
+      if (typeof parentId !== 'string' || seen.has(parentId)) {
+        return false;
+      }
+
+      return closed.has(parentId) || isHidden(pasted.get(parentId)?.original.parentId, seen.add(parentId));
+    };
+    const lastShown = [...pasted.values()].reverse().find(({ original }) => !isHidden(original.parentId, new Set()));
+
+    if (lastShown !== undefined) {
+      this.Blok.Caret.setToBlock(lastShown.newBlock, this.Blok.Caret.positions.END);
+    }
   }
 
   /**
@@ -768,6 +809,8 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         // ejection bug family.
         BlockManager.setBlockParent(newBlock, parentEntry.newBlock.id);
       }
+
+      this.closeBlocksCopiedClosed(oldIdToEntry);
 
       if (blockToRemove !== undefined) {
         void BlockManager.removeBlock(blockToRemove, false);

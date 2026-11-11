@@ -143,6 +143,9 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     Paste: {
       MIME_TYPE: 'application/x-blok',
     } as unknown as BlokModules['Paste'],
+    ViewStateAPI: {
+      methods: { get: vi.fn(() => undefined) },
+    } as unknown as BlokModules['ViewStateAPI'],
     I18n: {
       t: vi.fn((key: string) => key === 'toolNames.text' ? 'Текст' : key),
       has: vi.fn((key: string) => key === 'toolNames.text'),
@@ -1052,6 +1055,44 @@ describe('BlockSelection', () => {
       const child2Data = serializedData.find(b => b.id === 'child-2');
       expect(child1Data?.parentId).toBe('toggle-id');
       expect(child2Data?.parentId).toBe('toggle-id');
+    });
+  });
+
+  describe('open state in the Blok clipboard', () => {
+    it('records whether each copied block is open in this browser, outside its data', async () => {
+      const outer = createBlockStub({ id: 'outer', contentIds: ['inner', 'plain'] });
+      const inner = createBlockStub({ id: 'inner', parentId: 'outer' });
+      const plain = createBlockStub({ id: 'plain', parentId: 'outer' });
+      const allBlocks = [outer, inner, plain];
+      const openIds = new Set(['outer']);
+
+      const { blockSelection, modules } = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: outer,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          withCoveredLayouts: (selected: Block[]): Block[] => selected,
+          getBlock: vi.fn(),
+          getBlockById: vi.fn((id: string) => allBlocks.find(b => b.id === id) ?? undefined),
+          getBlockDepth: vi.fn(() => 0),
+        } as unknown as BlokModules['BlockManager'],
+        ViewStateAPI: {
+          methods: { get: vi.fn((id: string, key: string) => (key === 'open' && openIds.has(id) ? true : undefined)) },
+        } as unknown as BlokModules['ViewStateAPI'],
+      });
+
+      outer.selected = true;
+
+      const clipboardData = { setData: vi.fn() };
+
+      await blockSelection.copySelectedBlocks({ preventDefault: vi.fn(), clipboardData } as unknown as ClipboardEvent);
+
+      const mimeType = (modules.Paste as unknown as { MIME_TYPE: string }).MIME_TYPE;
+      const payload = (clipboardData.setData.mock.calls as Array<[string, string]>).find((call) => call[0] === mimeType)?.[1] ?? '[]';
+      const entries = JSON.parse(payload) as Array<{ id: string; open?: unknown; data: Record<string, unknown> }>;
+
+      expect(entries.map((entry) => [entry.id, entry.open])).toEqual([['outer', true], ['inner', false], ['plain', false]]);
+      expect(entries.every((entry) => !('open' in entry.data))).toBe(true);
     });
   });
 

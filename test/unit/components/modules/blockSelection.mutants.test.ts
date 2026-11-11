@@ -169,6 +169,9 @@ const createSetup = (options: { blocks?: Block[]; currentBlock?: Block | null } 
     Paste: {
       MIME_TYPE: 'application/x-blok',
     } as unknown as BlokModules['Paste'],
+    ViewStateAPI: {
+      methods: { get: vi.fn(() => undefined) },
+    } as unknown as BlokModules['ViewStateAPI'],
     I18n: {
       // Encodes the interpolation vars into the returned string so a test can
       // assert the announced position/total without reading i18n internals.

@@ -1250,6 +1250,104 @@ test.describe('copy and paste', () => {
     }
   });
 
+  test.describe('pasted toggles keep the open state they were copied with', () => {
+    const toggleDoc: OutputData['blocks'] = [
+      { id: 'tog', type: 'toggle', data: { text: 'Outer toggle' }, content: ['tc1', 'tin'] },
+      { id: 'tc1', type: 'paragraph', data: { text: 'Outer child' }, parent: 'tog' },
+      { id: 'tin', type: 'toggle', data: { text: 'Inner toggle' }, parent: 'tog', content: ['tg1'] },
+      { id: 'tg1', type: 'paragraph', data: { text: 'Inner child' }, parent: 'tin' },
+      { id: 'tgt', type: 'paragraph', data: { text: '' } },
+    ];
+    const headingDoc: OutputData['blocks'] = [
+      { id: 'th', type: 'header', data: { text: 'Toggle heading', level: 2, isToggleable: true }, content: ['thc'] },
+      { id: 'thc', type: 'paragraph', data: { text: 'Heading child' }, parent: 'th' },
+      { id: 'tgt', type: 'paragraph', data: { text: '' } },
+    ];
+
+    /** Copy or cut the block `id` with its subtree, then paste it into the empty `tgt`. */
+    const copyAndPaste = async (page: Page, id: string, kind: 'copy' | 'cut'): Promise<Set<string>> => {
+      const sourceIds = new Set((await saveBlok(page)).blocks.map((block) => block.id ?? ''));
+
+      await page.locator(`[data-blok-id="${id}"] [contenteditable="true"]`).first().click();
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('ControlOrMeta+a');
+      await expect(page.locator(`[data-blok-id="${id}"][data-blok-selected="true"]`)).toBeVisible();
+
+      const clipboardData = await withClipboardEvent(page.locator(`[data-blok-id="${id}"]`), kind);
+
+      expect(clipboardData['application/x-blok']).toBeDefined();
+      if (kind === 'cut') {
+        await expect(page.locator(`[data-blok-id="${id}"]`)).toHaveCount(0);
+      }
+
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), clipboardData);
+
+      return sourceIds;
+    };
+
+    /** Each pasted toggle-like block, in document order, with whether it shows open. */
+    const pastedOpen = async (page: Page, sourceIds: Set<string>): Promise<Array<[unknown, string | null]>> => {
+      const { blocks } = await saveBlok(page);
+      const pasted = blocks.filter((block) => block.id !== undefined && !sourceIds.has(block.id) && (block.type === 'toggle' || block.type === 'header'));
+
+      return Promise.all(pasted.map(async (block): Promise<[unknown, string | null]> => [
+        block.data.text,
+        await page.locator(`[data-blok-id="${block.id}"] [data-blok-toggle-open]`).first().getAttribute('data-blok-toggle-open'),
+      ]));
+    };
+
+    /** Whether any block with this text is shown. */
+    const shown = async (page: Page, text: string): Promise<boolean> =>
+      page.evaluate((needle) => Array.from(document.querySelectorAll('[data-blok-id] [contenteditable="true"]'))
+        .some((element) => element.textContent === needle && element.checkVisibility()), text);
+
+    for (const kind of ['copy', 'cut'] as const) {
+      test(`a collapsed toggle pasted after a ${kind} stays collapsed`, async ({ page }) => {
+        await createBlok(page, { data: { blocks: toggleDoc } });
+
+        const sourceIds = await copyAndPaste(page, 'tog', kind);
+
+        await expect.poll(async () => pastedOpen(page, sourceIds)).toEqual([['Outer toggle', 'false'], ['Inner toggle', 'false']]);
+        expect(await shown(page, 'Outer child')).toBe(false);
+        expect(await shown(page, 'Inner child')).toBe(false);
+      });
+
+      test(`typing after a collapsed toggle is pasted after a ${kind} goes to the end of its title`, async ({ page }) => {
+        await createBlok(page, { data: { blocks: toggleDoc } });
+
+        const sourceIds = await copyAndPaste(page, 'tog', kind);
+
+        await expect.poll(async () => pastedOpen(page, sourceIds)).toEqual([['Outer toggle', 'false'], ['Inner toggle', 'false']]);
+        await page.keyboard.type('Z');
+
+        await expect.poll(async () => pastedOpen(page, sourceIds)).toEqual([['Outer toggleZ', 'false'], ['Inner toggle', 'false']]);
+      });
+    }
+
+    test('an open toggle pasted after a copy stays open, and its collapsed child toggle stays collapsed', async ({ page }) => {
+      await createBlok(page, { data: { blocks: toggleDoc } });
+      await openFixtureToggles(page, { blocks: [{ ...toggleDoc[0], data: { ...toggleDoc[0].data, isOpen: true } }] });
+      await expect(page.locator('[data-blok-id="tc1"] [contenteditable="true"]')).toBeVisible();
+
+      const sourceIds = await copyAndPaste(page, 'tog', 'copy');
+
+      await expect.poll(async () => pastedOpen(page, sourceIds)).toEqual([['Outer toggle', 'true'], ['Inner toggle', 'false']]);
+      await expect(page.getByText('Outer child')).toHaveCount(2);
+      await expect(page.getByText('Outer child').nth(1)).toBeVisible();
+      expect(await shown(page, 'Inner child')).toBe(false);
+    });
+
+    test('a collapsed toggle heading pasted after a copy stays collapsed', async ({ page }) => {
+      await createBlok(page, { data: { blocks: headingDoc } });
+
+      const sourceIds = await copyAndPaste(page, 'th', 'copy');
+
+      await expect.poll(async () => pastedOpen(page, sourceIds)).toEqual([['Toggle heading', 'false']]);
+      expect(await shown(page, 'Heading child')).toBe(false);
+    });
+  });
+
   test.describe('list items copied without their parent list item', () => {
     const LI = (id: string, text: string, depth: number, extra: Partial<OutputData['blocks'][number]> = {}): OutputData['blocks'][number] =>
       ({ id, type: 'list', data: { text, style: 'unordered', depth }, ...extra });

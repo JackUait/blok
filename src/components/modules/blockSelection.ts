@@ -57,6 +57,8 @@ interface ClipboardEntry {
   link?: CopyLink;
   /** A row copied without its database: its title, which only the database's schema names. */
   title?: string;
+  /** Whether this browser shows the block open. Personal state, so it is kept out of `data`. */
+  open?: boolean;
 }
 
 /**
@@ -1000,6 +1002,7 @@ export class BlockSelection extends Module {
         data: this.clipboardDataForBlock(block),
         tunes: block.preservedTunes,
         contentIds: block.contentIds,
+        open: this.Blok.ViewStateAPI.methods.get(block.id, 'open') === true,
         ...(cut !== undefined && cut !== null && (link !== undefined || isPage) && { cut }),
         ...(link !== undefined && { link }),
         ...this.loneRowTitle(block, copiedIds),

@@ -26,7 +26,7 @@ import { releasePersistenceQueue } from './components/utils/persistence';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import './components/polyfills';
 import type { BlokModules } from './types-internal/blok-modules';
-import type { PageIcon } from '../types/tools/page';
+import type { PageCover, PageIcon } from '../types/tools/page';
 import type { TitleSetOptions } from '../types/api/title';
 
 /**
@@ -440,6 +440,8 @@ class Blok {
       textOptions: {} as TitleSetOptions,
       icon: undefined as PageIcon | null | undefined,
       iconOptions: {} as TitleSetOptions,
+      cover: undefined as PageCover | null | undefined,
+      coverOptions: {} as TitleSetOptions,
       // undefined: nothing buffered. null is a real call: back above the first block.
       holder: undefined as HTMLElement | string | null | undefined,
     };
@@ -499,6 +501,20 @@ class Blok {
             return;
           }
           pageTitle.setIcon(icon, 'api', options);
+        },
+      },
+      cover: {
+        get: (): PageCover | null => getPageTitle()?.getCover() ?? titleBuffer.cover ?? null,
+        set: (cover: PageCover | null, options: TitleSetOptions = {}): void => {
+          const pageTitle = getPageTitle();
+
+          if (pageTitle === undefined) {
+            titleBuffer.cover = cover;
+            titleBuffer.coverOptions = options;
+
+            return;
+          }
+          pageTitle.setCover(cover, 'api', options);
         },
       },
     };
@@ -643,12 +659,17 @@ class Blok {
         if (titleBuffer.icon !== undefined) {
           pageTitle.setIcon(titleBuffer.icon, 'api', titleBuffer.iconOptions);
         }
+        if (titleBuffer.cover !== undefined) {
+          pageTitle.setCover(titleBuffer.cover, 'api', titleBuffer.coverOptions);
+        }
       }
       titleBuffer.holder = undefined;
       titleBuffer.text = null;
       titleBuffer.textOptions = {};
       titleBuffer.icon = undefined;
       titleBuffer.iconOptions = {};
+      titleBuffer.cover = undefined;
+      titleBuffer.coverOptions = {};
 
       // Scroll to the block referenced by the URL hash, if present.
       // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),

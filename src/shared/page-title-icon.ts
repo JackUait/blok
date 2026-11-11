@@ -4,7 +4,7 @@
  *
  * PURITY: no runtime imports — the server runtime bundles the importers.
  */
-import type { PageIcon } from '../../types/tools/page';
+import type { PageCover, PageIcon } from '../../types/tools/page';
 
 /**
  * Code-point ranges, not `\p{Extended_Pictographic}`: an engine without that
@@ -41,9 +41,10 @@ const withoutNul = (text: string): string => text.replaceAll('\u0000', '');
 /** The server drops page metadata that still contains U+0000. */
 export function cleanPageField(value: string): string;
 export function cleanPageField(value: PageIcon): PageIcon;
+export function cleanPageField(value: PageCover): PageCover;
 export function cleanPageField(value: null): null;
 export function cleanPageField(value: undefined): undefined;
-export function cleanPageField(value: string | PageIcon | null | undefined): string | PageIcon | null | undefined;
+export function cleanPageField(value: string | PageIcon | PageCover | null | undefined): string | PageIcon | PageCover | null | undefined;
 export function cleanPageField(value: unknown): unknown {
   if (typeof value === 'string') {
     return withoutNul(value);

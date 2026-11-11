@@ -5,8 +5,10 @@ export interface ResolvedTitleConfig {
   /** Null: use the `title.placeholder` message. */
   placeholder: string | null;
   icon: boolean;
+  cover: boolean;
   onChange: NonNullable<TitleConfig['onChange']> | null;
   onIconChange: NonNullable<TitleConfig['onIconChange']> | null;
+  onCoverChange: NonNullable<TitleConfig['onCoverChange']> | null;
 }
 
 export const normalizeTitleConfig = (value: BlokConfig['pageTitle']): ResolvedTitleConfig | null => {
@@ -19,7 +21,9 @@ export const normalizeTitleConfig = (value: BlokConfig['pageTitle']): ResolvedTi
     holder: config.holder ?? null,
     placeholder: config.placeholder === undefined || config.placeholder === '' ? null : config.placeholder,
     icon: config.icon !== false,
+    cover: config.cover === true,
     onChange: config.onChange ?? null,
     onIconChange: config.onIconChange ?? null,
+    onCoverChange: config.onCoverChange ?? null,
   };
 };

@@ -1,7 +1,6 @@
 import type * as Y from 'yjs';
 
 import type { RichText } from '../../../../types/rich-text';
-import type { PageIcon } from '../../../../types/tools/page';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import type { Attribution } from '../../../shared/agent/attribution';
@@ -11,7 +10,7 @@ import { logLabeled } from '../../utils';
 
 import { BlockObserver } from './block-observer';
 import { DocumentStore, type DataKeySnapshot } from './document-store';
-import { cleanPageField, readPageFields, writePageField, type PageFieldKey, type PageFields } from './page-fields';
+import { cleanPageField, readPageFields, writePageField, type PageFieldKey, type PageFieldValue, type PageFields } from './page-fields';
 import { YBlockSerializer, type YjsOutputBlockData } from './serializer';
 import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretHistoryEntry, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
@@ -272,7 +271,7 @@ export class YjsManager extends Module {
     const source = transaction.local ? replay : 'remote';
 
     event.keysChanged.forEach((key: string) => {
-      if (key === 'title' || key === 'icon') {
+      if (key === 'title' || key === 'icon' || key === 'cover') {
         this.pageListeners.forEach((listener) => listener(key, source));
       }
     });
@@ -1129,7 +1128,7 @@ export class YjsManager extends Module {
     this.documentStore.pageFromJSON(fields);
   }
 
-  public setPageField(key: PageFieldKey, value: string | PageIcon | null, options: { typing?: boolean; record?: boolean } = {}): void {
+  public setPageField(key: PageFieldKey, value: Exclude<PageFieldValue, undefined>, options: { typing?: boolean; record?: boolean } = {}): void {
     const current = this.documentStore.page.get(key);
     // Cleaned before the compare: a write that only adds a NUL must not make an empty undo step.
     const clean = cleanPageField(value);

@@ -12,6 +12,16 @@ export type PageCreateResult = void | { pageId: string };
  */
 export type PageIcon = { type: 'emoji'; value: string } | { type: 'image'; url: string };
 
+/**
+ * A page's cover, drawn above the title: an image at a URL, or one of Blok's
+ * built-in gallery covers by id. `position` is the image's vertical position
+ * in percent, a whole number from 0 (top) to 100 (bottom). Absent: 50.
+ * An unknown gallery id draws a plain fill.
+ */
+export type PageCover =
+  | { type: 'image'; url: string; position?: number }
+  | { type: 'gallery'; id: string; position?: number };
+
 /** Legacy input metadata, ignored by the page tool. */
 export interface PageCache {
   title?: string;

@@ -87,6 +87,21 @@ describe('Vue BlokEditor pageTitle prop', () => {
     expect(b).toHaveBeenCalledTimes(1);
   });
 
+  it('calls the onCoverChange of the latest props', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const wrapper = mountEditor({ pageTitle: { onCoverChange: a } });
+    const editor = await readyEditor(wrapper);
+
+    await wrapper.setProps({ pageTitle: { onCoverChange: b } });
+
+    expect(wrapper.emitted('ready')).toHaveLength(1);
+    editor.title.cover.set({ type: 'gallery', id: 'dusk' });
+
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+
   it('does not throw on a title change after pageTitle becomes null', async () => {
     const a = vi.fn();
     const wrapper = mountEditor({ pageTitle: { onChange: a } });

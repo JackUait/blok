@@ -98,6 +98,22 @@ describe('BlokEditor pageTitle prop', () => {
     expect(b).toHaveBeenCalledTimes(1);
   });
 
+  it('calls the onCoverChange of the latest render', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const onReady = vi.fn();
+    const { rerender } = render(<BlokEditor tools={TOOLS} pageTitle={{ onCoverChange: a }} onReady={onReady} />);
+    const before = await readyEditor(onReady);
+
+    rerender(<BlokEditor tools={TOOLS} pageTitle={{ onCoverChange: b }} onReady={onReady} />);
+
+    expect(onReady).toHaveBeenCalledTimes(1);
+    act(() => before.title.cover.set({ type: 'gallery', id: 'dusk' }));
+
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+
   it('does not throw on a title change after pageTitle becomes null', async () => {
     const a = vi.fn();
     const onReady = vi.fn();

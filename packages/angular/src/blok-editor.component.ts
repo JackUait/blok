@@ -560,7 +560,7 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, OnDestroy, C
 
     this.appliedHandlers = handlers;
 
-    // Always both wrappers: core captures them once, and no channel pushes a later presence flip.
+    // Always every wrapper: core captures them once, and no channel pushes a later presence flip.
     // A falsy pageTitle stays as-is, since any object switches the title on.
     if (cfg.pageTitle) {
       cfg.pageTitle = {
@@ -577,6 +577,13 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, OnDestroy, C
 
           if (latest !== null && typeof latest === 'object' && latest.onIconChange !== undefined) {
             this.ngZone.run(() => latest.onIconChange?.(...args));
+          }
+        },
+        onCoverChange: (...args: Parameters<NonNullable<TitleConfig['onCoverChange']>>): void => {
+          const latest = this.escapeHatchConfig().pageTitle;
+
+          if (latest !== null && typeof latest === 'object' && latest.onCoverChange !== undefined) {
+            this.ngZone.run(() => latest.onCoverChange?.(...args));
           }
         },
       };

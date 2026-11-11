@@ -1,9 +1,9 @@
-import type { PageIcon } from '../tools/page';
+import type { PageCover, PageIcon } from '../tools/page';
 
 /** What changed the title or icon. `user`: typing, paste, the icon picker. `api`: `blok.title.set`. */
 export interface TitleChange {
   source: 'user' | 'undo' | 'redo' | 'remote' | 'api';
-  /** Present only for `blok.title.set(..., { record: false })` and `icon.set(..., { record: false })`. */
+  /** Present only for `blok.title.set(..., { record: false })`, `icon.set(..., { record: false })` and `cover.set(..., { record: false })`. */
   record?: false;
 }
 
@@ -29,9 +29,16 @@ export interface TitleConfig {
   onChange?(title: string, change: TitleChange): void;
   /** Every icon change, from any source. `null`: removed. */
   onIconChange?(icon: PageIcon | null, change: TitleChange): void;
+  /**
+   * True draws the page cover above the title, and "Add cover" in the row over it.
+   * Default false. The cover is saved and loaded either way.
+   */
+  cover?: boolean;
+  /** Every cover change, from any source. `null`: removed. */
+  onCoverChange?(cover: PageCover | null, change: TitleChange): void;
 }
 
-/** The page title and icon. The value lives in the document and is saved with it. */
+/** The page title, icon and cover. The value lives in the document and is saved with it. */
 export interface Title {
   get(): string;
   /** One undo step, unless `record` is false. Fires `onChange` with source `api`. */
@@ -43,5 +50,11 @@ export interface Title {
     get(): PageIcon | null;
     /** One undo step, unless `record` is false. Fires `onIconChange` with source `api`. */
     set(icon: PageIcon | null, options?: TitleSetOptions): void;
+  };
+  /** The page cover. Works with `TitleConfig.cover` off too; the flag only draws it. */
+  readonly cover: {
+    get(): PageCover | null;
+    /** One undo step, unless `record` is false. Fires `onCoverChange` with source `api`. */
+    set(cover: PageCover | null, options?: TitleSetOptions): void;
   };
 }

@@ -1,7 +1,7 @@
 import {BlockToolData} from '../tools';
 import {BlockTuneData} from '../block-tunes/block-tune-data';
 import { BlockId } from './block-id';
-import type { PageIcon } from '../tools/page';
+import type { PageCover, PageIcon } from '../tools/page';
 
 /**
  * Adapts a block-data shape declared as a plain `interface` so it drops into
@@ -161,6 +161,9 @@ export interface OutputData {
   /** The page icon. Absent when none. */
   icon?: PageIcon;
 
+  /** The page cover, drawn above the title when `TitleConfig.cover` is on. Absent when none. */
+  cover?: PageCover;
+
   /**
    * Saved Blocks
    */
@@ -228,6 +231,9 @@ export interface LooseOutputData {
 
   /** See {@link OutputData.icon}. `null` means absent. */
   icon?: PageIcon | null;
+
+  /** See {@link OutputData.cover}. `null` means absent. */
+  cover?: PageCover | null;
 
   /**
    * Blocks to render

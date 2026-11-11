@@ -118,6 +118,26 @@ describe('BlokEditorComponent [config].pageTitle', () => {
     expect(b).toHaveBeenCalledTimes(1);
   });
 
+  it('calls the onCoverChange of the latest [config]', async () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    const fixture = await mountReady((host) => {
+      host.config = { pageTitle: { onCoverChange: a } };
+    });
+    const host = fixture.componentInstance;
+    const before = host.editor;
+
+    host.config = { pageTitle: { onCoverChange: b } };
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.editor).toBe(before);
+    before?.title.cover.set({ type: 'gallery', id: 'dusk' });
+
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+
   it('does not throw on a title change after pageTitle becomes null', async () => {
     const a = vi.fn();
     const fixture = await mountReady((host) => {

@@ -297,7 +297,7 @@ export function useBlok(
 
     state.appliedHandlerPresence = presence;
 
-    // Always both wrappers: core captures them once, and no channel pushes a later presence flip.
+    // Always every wrapper: core captures them once, and no channel pushes a later presence flip.
     // A falsy pageTitle stays as-is, since any object switches the title on.
     const pageTitle = snapshot.pageTitle as UseBlokConfig['pageTitle'];
 
@@ -316,6 +316,13 @@ export function useBlok(
 
           if (latest !== null && typeof latest === 'object') {
             latest.onIconChange?.(...args);
+          }
+        },
+        onCoverChange: (...args: Parameters<NonNullable<TitleConfig['onCoverChange']>>): void => {
+          const latest = mergedConfig().pageTitle;
+
+          if (latest !== null && typeof latest === 'object') {
+            latest.onCoverChange?.(...args);
           }
         },
       };

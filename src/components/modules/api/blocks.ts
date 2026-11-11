@@ -371,10 +371,11 @@ export class BlocksAPI extends Module {
     const page = {
       title: Object.hasOwn(data, 'title') ? data.title ?? undefined : kept.title,
       icon: Object.hasOwn(data, 'icon') ? data.icon ?? undefined : kept.icon,
+      cover: Object.hasOwn(data, 'cover') ? data.cover ?? undefined : kept.cover,
     };
 
     // loadPage flushes the typing buffer, and an echo render can land mid-typing.
-    if (page.title !== current.title || JSON.stringify(page.icon) !== JSON.stringify(current.icon)) {
+    if (page.title !== current.title || JSON.stringify(page.icon) !== JSON.stringify(current.icon) || JSON.stringify(page.cover) !== JSON.stringify(current.cover)) {
       this.Blok.YjsManager.loadPage(page);
       this.Blok.PageTitle?.refresh();
     }

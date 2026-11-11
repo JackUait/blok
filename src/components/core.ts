@@ -525,7 +525,7 @@ export class Core {
       return collaboration.load(normalizeOutputBlocks(data.blocks));
     }
 
-    this.moduleInstances.YjsManager.loadPage({ title: data.title ?? undefined, icon: data.icon ?? undefined });
+    this.moduleInstances.YjsManager.loadPage({ title: data.title ?? undefined, icon: data.icon ?? undefined, cover: data.cover ?? undefined });
     this.moduleInstances.PageTitle?.refresh();
 
     // Idempotent re-normalization: `config.data` is declared with the loose
@@ -545,7 +545,7 @@ export class Core {
 
       // Before the blocks check: a title-only page saves with no blocks.
       if (loaded !== null) {
-        this.moduleInstances.YjsManager.loadPage({ title: loaded.title ?? undefined, icon: loaded.icon ?? undefined });
+        this.moduleInstances.YjsManager.loadPage({ title: loaded.title ?? undefined, icon: loaded.icon ?? undefined, cover: loaded.cover ?? undefined });
         this.moduleInstances.PageTitle?.refresh();
       }
 

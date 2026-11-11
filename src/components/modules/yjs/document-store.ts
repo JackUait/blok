@@ -228,6 +228,7 @@ export class DocumentStore {
     this.ydoc.transact(() => {
       writePageField(this.yPage, 'title', fields.title);
       writePageField(this.yPage, 'icon', fields.icon);
+      writePageField(this.yPage, 'cover', fields.cover);
     }, 'load');
   }
 

@@ -4,12 +4,13 @@ import { I18nChanged } from '../../events';
 import { logLabeled } from '../../utils';
 import type { EditorWidth } from '../../../../types/api/width';
 import type { TitleChange, TitleSetOptions } from '../../../../types/api/title';
-import type { PageIcon } from '../../../../types/tools/page';
+import type { PageCover, PageIcon } from '../../../../types/tools/page';
 import { normalizeTitleConfig, type ResolvedTitleConfig } from '../../utils/title-config';
 import { setCaretAtXPosition } from '../../utils/caret';
 import { buildHeader, findHolder, holderProblem, type HeaderNodes } from './header-dom';
 import { bindTitleKeyboard } from './title-keyboard';
 import { createIconControl } from './icon-control';
+import type { PageFieldKey } from '../yjs/page-fields';
 
 // main.css keys the gutter and the content-align margins on these. A header in
 // an outside holder has no wrapper ancestor, so it carries its own copy.
@@ -135,6 +136,17 @@ export class PageTitle extends Module {
     }
     this.iconControl?.redraw();
     this.resolved?.onIconChange?.(this.getIcon(), changeOf(source, options));
+  }
+
+  public getCover(): PageCover | null {
+    return this.Blok.YjsManager.getPageFields().cover ?? null;
+  }
+
+  public setCover(cover: PageCover | null, source: 'user' | 'api', options: TitleSetOptions = {}): void {
+    if (!this.writeField('cover', cover, { record: options.record })) {
+      return;
+    }
+    this.resolved?.onCoverChange?.(this.getCover(), changeOf(source, options));
   }
 
   /** Redraw from the document after a load. Fires no callbacks. */
@@ -330,7 +342,7 @@ export class PageTitle extends Module {
    * Writes one page field and marks the document unsaved.
    * @returns false when the value was already there: setPageField then writes nothing
    */
-  private writeField(key: 'title' | 'icon', value: string | PageIcon | null, options?: { typing?: boolean; record?: boolean }): boolean {
+  private writeField(key: PageFieldKey, value: string | PageIcon | PageCover | null, options?: { typing?: boolean; record?: boolean }): boolean {
     const { YjsManager, ModificationsObserver } = this.Blok;
     const before = JSON.stringify(YjsManager.getPageFields()[key] ?? null);
 
@@ -370,7 +382,7 @@ export class PageTitle extends Module {
     this.Blok.BlockManager.unsetCurrentBlock();
   };
 
-  private onPageChange(key: 'title' | 'icon', source: 'undo' | 'redo' | 'remote'): void {
+  private onPageChange(key: PageFieldKey, source: 'undo' | 'redo' | 'remote'): void {
     // A peer saved its own write; another tab's write is marked by TabSync.
     if (source !== 'remote') {
       this.Blok.ModificationsObserver.markPageEdited();
@@ -382,6 +394,9 @@ export class PageTitle extends Module {
     if (key === 'icon') {
       this.iconControl?.redraw();
       this.resolved?.onIconChange?.(this.getIcon(), { source });
+    }
+    if (key === 'cover') {
+      this.resolved?.onCoverChange?.(this.getCover(), { source });
     }
     // The fallback: the history restore that runs next moves the caret to the step's snapshot.
     if (source !== 'remote') {

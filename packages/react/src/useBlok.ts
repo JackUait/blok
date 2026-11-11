@@ -356,7 +356,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
 
     appliedHandlerPresenceRef.current = handlerPresence;
 
-    // Always both wrappers: core captures them once, and no channel pushes a later presence flip.
+    // Always every wrapper: core captures them once, and no channel pushes a later presence flip.
     // A falsy pageTitle stays as-is, since any object switches the title on.
     const livePageTitle = currentConfig.pageTitle
       ? {
@@ -373,6 +373,13 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
 
             if (latest !== null && typeof latest === 'object') {
               latest.onIconChange?.(...args);
+            }
+          },
+          onCoverChange: (...args: Parameters<NonNullable<TitleConfig['onCoverChange']>>): void => {
+            const latest = configRef.current.pageTitle;
+
+            if (latest !== null && typeof latest === 'object') {
+              latest.onCoverChange?.(...args);
             }
           },
         }

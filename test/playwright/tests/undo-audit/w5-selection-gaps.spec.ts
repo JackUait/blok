@@ -73,7 +73,7 @@ const caret = async (page: Page): Promise<string> => page.evaluate((holder) => {
 const selectedBlocks = async (page: Page): Promise<string[]> => page.evaluate(() =>
   [...document.querySelectorAll('[data-blok-selected="true"]')].map((holder) => holder.getAttribute('data-blok-id') ?? '?'));
 
-/** Top-level saved blocks as "id" or "id(child ids)" for containers. */
+/** Every saved block as "type:id", plus "<parent" when it has one. */
 const tree = async (page: Page): Promise<string[]> => page.evaluate(async () => {
   const blocks = (await window.blokInstance?.save())?.blocks ?? [];
 
@@ -267,6 +267,30 @@ test.describe('selection after delete, move and column drop (V1 V2 V4 V6)', () =
     await wait(page, STEP_GAP_MS);
     await deleteFromMenu(page, 't1');
 
+    expect(await ids(page)).toEqual(['b1']);
+    expect(await caret(page)).toBe('none');
+  });
+
+  test('U163 route 2: Backspace on a block-selected table leaves no caret; undo selects it; redo leaves nothing', async ({ page }) => {
+    const content = [['ca1', 'cb1'], ['ca2', 'cb2']].map((row, r) => row.map((id, c) => ({ blocks: [id], id: `col${c}`, rowId: `row${r}` })));
+
+    await createBlok(page, [
+      P('b1', 'Above'),
+      { id: 't1', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content }, content: ['ca1', 'cb1', 'ca2', 'cb2'] },
+      P('ca1', 'a1', 't1'), P('cb1', 'b1', 't1'), P('ca2', 'a2', 't1'), P('cb2', 'b2', 't1'),
+    ]);
+    await clickEnd(page, 'b1');
+    await press(page, 'Escape');
+    await press(page, 'ArrowDown');
+    expect(await selectedBlocks(page)).toEqual(['t1']);
+    await press(page, 'Backspace');
+    expect(await ids(page)).toEqual(['b1']);
+    expect(await caret(page)).toBe('none');
+    await wait(page, STEP_GAP_MS);
+
+    await press(page, UNDO);
+    expect(await selectedBlocks(page)).toEqual(['t1']);
+    await press(page, REDO);
     expect(await ids(page)).toEqual(['b1']);
     expect(await caret(page)).toBe('none');
   });

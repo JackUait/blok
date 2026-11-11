@@ -747,3 +747,48 @@ test.describe('select all from a cell', () => {
     await expect(page.locator('[data-blok-database-table-row][aria-selected="true"]')).toHaveCount(0);
   });
 });
+
+test.describe('range drag', () => {
+  test('a drag across 2×2 cells selects them, a TSV paste fills them, and one undo takes it back (notion-motion.md Round 13)', async ({ page }) => {
+    await mount(page, blocks());
+    const from = await cell(page, 'r1', 'p-notes').boundingBox();
+    const to = await cell(page, 'r2', 'p-amount').boundingBox();
+
+    if (from === null || to === null) {
+      throw new Error('no cell box');
+    }
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    await expect(page.locator('[data-blok-database-table-cell][aria-selected="true"]')).toHaveCount(4);
+    for (const [rowId, propertyId] of [['r1', 'p-notes'], ['r1', 'p-amount'], ['r2', 'p-notes'], ['r2', 'p-amount']]) {
+      await expect(cell(page, rowId, propertyId)).toHaveAttribute('aria-selected', 'true');
+    }
+    await expect(anchor(page)).toHaveCount(1);
+    await expect(cell(page, 'r1', 'p-notes')).toHaveAttribute('data-blok-database-table-cell-anchor', '');
+    await expect(editor(page)).toHaveCount(0);
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
+    expect(await page.evaluate(() => String(window.getSelection()))).toBe('');
+
+    await page.evaluate(() => {
+      const transfer = new DataTransfer();
+
+      transfer.setData('text/plain', 'Short note\t1234.5\nLong note\t-40');
+      document.querySelector('[role="grid"]')?.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
+    });
+
+    await expect.poll(async () => (await savedRow(page, 'r2'))['p-amount']).toBe(-40);
+    expect(await savedRow(page, 'r1')).toMatchObject({ 'p-notes': 'Short note', 'p-amount': 1234.5 });
+    expect((await savedRow(page, 'r2'))['p-notes']).toBe('Long note');
+    await expect(page.locator('[data-blok-database-table-cell][aria-selected="true"]')).toHaveCount(4);
+    await expect(cell(page, 'r1', 'p-notes')).toHaveAttribute('data-blok-database-table-cell-anchor', '');
+
+    await page.keyboard.press('ControlOrMeta+z');
+
+    await expect.poll(async () => (await savedRow(page, 'r2'))['p-amount']).toBe(35.5);
+    expect(await savedRow(page, 'r1')).toMatchObject({ 'p-notes': 'short', 'p-amount': 1200 });
+    expect((await savedRow(page, 'r2'))['p-notes'] ?? '').toBe('');
+  });
+});

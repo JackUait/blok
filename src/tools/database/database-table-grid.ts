@@ -141,6 +141,21 @@ const CELL_BUTTON = '[data-blok-database-table-open], [data-blok-database-table-
 /** Mod+Enter, the way the checklist uses it. Grid keys treat Meta and Control alike. */
 const CELL_BUTTON_KEYS = 'Meta+Enter Control+Enter';
 
+/** A press here belongs to a control, a handle or a text field, not to a range drag. */
+const RANGE_START_BLOCKERS = 'button, a, input, textarea, select, [contenteditable]:not([contenteditable="false"]), [data-blok-database-table-fill-handle]';
+
+/** Eats the click a drag's release sends, so it does not open the cell under the pointer. */
+const swallow = (event: Event): void => {
+  event.stopPropagation();
+  event.preventDefault();
+};
+
+const sameRef = (a: CellRef, b: CellRef): boolean => a.rowId === b.rowId && a.propertyId === b.propertyId;
+
+const preventDefault = (event: Event): void => {
+  event.preventDefault();
+};
+
 const isPrintableKey = (event: KeyboardEvent): boolean =>
   event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey && !event.isComposing;
 
@@ -182,6 +197,7 @@ export class DatabaseTableGrid {
     this.root.addEventListener('copy', this.handleCopy);
     this.root.addEventListener('paste', this.handlePaste);
     this.root.addEventListener('pointerdown', this.handleFillStart);
+    this.root.addEventListener('pointerdown', this.handleRangeStart);
     this.root.addEventListener('focusin', this.handleFocus);
     this.root.addEventListener('focusout', this.handleFocus);
   }
@@ -193,6 +209,8 @@ export class DatabaseTableGrid {
     this.root.removeEventListener('paste', this.handlePaste);
     this.root.removeEventListener('pointerdown', this.handleFillStart);
     this.stopFill();
+    this.root.removeEventListener('pointerdown', this.handleRangeStart);
+    this.stopRangeDrag();
     this.root.removeEventListener('focusin', this.handleFocus);
     this.root.removeEventListener('focusout', this.handleFocus);
     window.removeEventListener('keydown', this.recordKey, true);
@@ -882,6 +900,84 @@ export class DatabaseTableGrid {
     document.removeEventListener('pointercancel', this.handleFillCancel);
   }
 
+  /** A press on a cell. It becomes a range drag once the pointer reaches another cell. */
+  private rangeDrag: { anchor: CellRef; focus: CellRef; dragging: boolean } | null = null;
+
+  private readonly handleRangeStart = (event: PointerEvent): void => {
+    const target = event.target instanceof Element ? event.target : null;
+    const ref = this.cellRefOf(target);
+
+    if (target === null || ref === null || event.button !== 0 || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey
+      || this.state.busy || target.closest(RANGE_START_BLOCKERS) !== null) {
+      return;
+    }
+    this.stopRangeDrag();
+    this.rangeDrag = { anchor: ref, focus: ref, dragging: false };
+    document.addEventListener('pointermove', this.handleRangeMove);
+    document.addEventListener('pointerup', this.handleRangeEnd);
+    document.addEventListener('pointercancel', this.handleRangeCancel);
+  };
+
+  private readonly handleRangeMove = (event: PointerEvent): void => {
+    const drag = this.rangeDrag;
+
+    // The button came up where no pointerup reached the document.
+    if (drag !== null && (event.buttons & 1) === 0) {
+      this.handleRangeEnd();
+
+      return;
+    }
+    const ref = this.cellRefOf(document.elementFromPoint(event.clientX, event.clientY));
+
+    if (drag === null || ref === null || sameRef(ref, drag.focus)) {
+      return;
+    }
+    if (!drag.dragging) {
+      drag.dragging = true;
+      document.addEventListener('selectstart', preventDefault);
+      window.getSelection()?.removeAllRanges();
+    }
+    drag.focus = ref;
+    this.state.selection = { kind: 'cell', anchor: drag.anchor, focus: ref };
+    this.paint();
+    this.root.focus({ preventScroll: true });
+  };
+
+  private readonly handleRangeEnd = (): void => {
+    const dragged = this.rangeDrag?.dragging === true;
+
+    this.stopRangeDrag();
+    if (dragged) {
+      document.addEventListener('click', swallow, { capture: true, once: true });
+      setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 0);
+    }
+  };
+
+  private readonly handleRangeCancel = (): void => {
+    this.stopRangeDrag();
+  };
+
+  private stopRangeDrag(): void {
+    this.rangeDrag = null;
+    document.removeEventListener('pointermove', this.handleRangeMove);
+    document.removeEventListener('pointerup', this.handleRangeEnd);
+    document.removeEventListener('pointercancel', this.handleRangeCancel);
+    document.removeEventListener('selectstart', preventDefault);
+  }
+
+  /** The cell of this grid that holds `el`. */
+  private cellRefOf(el: Element | null): CellRef | null {
+    const cellEl = el?.closest<HTMLElement>('[role="gridcell"]');
+    const rowId = cellEl?.closest('[data-blok-database-table-row]')?.getAttribute('data-row-id');
+    const propertyId = cellEl?.getAttribute('data-property-id');
+
+    if (cellEl === null || cellEl === undefined || !this.root.contains(cellEl) || typeof rowId !== 'string' || typeof propertyId !== 'string') {
+      return null;
+    }
+
+    return { rowId, propertyId };
+  }
+
   // ─── Keys ───
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
@@ -889,6 +985,12 @@ export class DatabaseTableGrid {
       return;
     }
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    if (event.key === 'Escape' && this.rangeDrag?.dragging === true) {
+      event.preventDefault();
+      this.stopRangeDrag();
+
       return;
     }
     if (event.key === 'Escape' && this.fillDrag !== null) {

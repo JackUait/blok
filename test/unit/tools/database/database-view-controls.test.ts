@@ -691,7 +691,7 @@ describe('DatabaseViewControls', () => {
 
       click('database-filter-date-custom');
 
-      expect(document.activeElement).toBe(q('database-filter-value'));
+      expect(q('database-filter-value')).toHaveFocus();
     });
 
     it('leaves Custom date unchecked on a preset', () => {

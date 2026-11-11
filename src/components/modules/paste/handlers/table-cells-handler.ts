@@ -125,6 +125,7 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
       withHeadings: payload.withHeadings === true,
       withHeadingColumn: payload.withHeadingColumn === true,
       content,
+      ...(payload.colWidths === undefined ? {} : { colWidths: payload.colWidths }),
     };
 
     const canReplace = context.canReplaceCurrentBlock;

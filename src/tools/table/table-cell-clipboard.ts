@@ -872,7 +872,20 @@ function sanitizeClipboardPayload(
     cell.blocks = cell.blocks.map(block => sanitizeClipboardBlock(block, toolSanitizeConfig));
   }
 
-  return payload;
+  if (payload.colWidths === undefined || isValidColWidths(payload.colWidths, payload.cols)) {
+    return payload;
+  }
+
+  const { colWidths: _invalid, ...rest } = payload;
+
+  return rest;
+}
+
+/** Pasted widths become the new table's pixel widths, so take only one positive number per column. */
+function isValidColWidths(colWidths: unknown, cols: number): colWidths is number[] {
+  return Array.isArray(colWidths)
+    && colWidths.length === cols
+    && colWidths.every(width => typeof width === 'number' && Number.isFinite(width) && width > 0);
 }
 
 /**

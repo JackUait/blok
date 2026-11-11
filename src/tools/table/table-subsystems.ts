@@ -1323,6 +1323,13 @@ export class TableSubsystems {
       payload.withHeadingColumn = true;
     }
 
+    const minCol = Math.min(...entries.map(entry => entry.col));
+    const colWidths = this.host.model.colWidths?.slice(minCol, minCol + payload.cols);
+
+    if (colWidths?.length === payload.cols) {
+      payload.colWidths = colWidths;
+    }
+
     return payload;
   }
 

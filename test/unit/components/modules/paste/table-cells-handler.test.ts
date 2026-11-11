@@ -148,6 +148,31 @@ describe('TableCellsHandler', () => {
       expect(callArgs.replace).toBe(true);
     });
 
+    it('gives the new table the copied column widths', async () => {
+      const html = buildClipboardHtml({
+        rows: 1,
+        cols: 2,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'A' } }] }, { blocks: [] }]],
+        colWidths: [140, 220],
+      });
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as { data: { colWidths?: number[] } };
+
+      expect(callArgs.data.colWidths).toEqual([140, 220]);
+    });
+
+    it('leaves the widths unset for a payload without them', async () => {
+      await handler.handle(buildTableHtml([['A', 'B']]), context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as { data: Record<string, unknown> };
+
+      expect(callArgs.data).not.toHaveProperty('colWidths');
+    });
+
     it('should return true on successful insert', async () => {
       const html = buildTableHtml([['A']]);
       const result = await handler.handle(html, context);

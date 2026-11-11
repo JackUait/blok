@@ -144,4 +144,6 @@ export interface TableCellsClipboard {
   withHeadings?: boolean;
   /** Set only when the copied range includes the heading column of a headed table. */
   withHeadingColumn?: boolean;
+  /** Pixel widths of the copied columns, one per column. Set only when the table has pixel widths. */
+  colWidths?: number[];
 }

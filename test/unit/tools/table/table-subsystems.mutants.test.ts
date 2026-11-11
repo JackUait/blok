@@ -3134,6 +3134,22 @@ describe('copy and cut', () => {
     expect(html).toContain('"colspan":2');
   });
 
+  it('carries the widths of the copied columns', () => {
+    const harness = createHarness({ rows: 2, cols: 3, colWidths: [140, 220, 180] });
+
+    cellSelectionOptions().onCopy([harness.cellOf(0, 1), harness.cellOf(1, 2)], clipboard());
+
+    expect(String(setData.mock.calls[0][1])).toContain('"colWidths":[220,180]');
+  });
+
+  it('carries no widths when the table has none', () => {
+    const harness = createHarness({ cols: 3 });
+
+    cellSelectionOptions().onCopy([harness.cellOf(0, 0)], clipboard());
+
+    expect(String(setData.mock.calls[0][1])).not.toContain('colWidths');
+  });
+
   it('omits the metadata a plain cell does not have', () => {
     const harness = createHarness();
 

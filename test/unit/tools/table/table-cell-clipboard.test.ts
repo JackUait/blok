@@ -349,6 +349,37 @@ describe('table-cell-clipboard', () => {
       expect(result).toEqual(payload);
     });
 
+    it('keeps column widths that match the copied columns', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 2,
+        cells: [[{ blocks: [] }, { blocks: [] }]],
+        colWidths: [140, 220.5],
+      };
+
+      expect(parseClipboardHtml(buildClipboardHtml(payload))?.colWidths).toEqual([140, 220.5]);
+    });
+
+    it.each([
+      ['a wrong count', [140]],
+      ['a zero width', [140, 0]],
+      ['a negative width', [140, -5]],
+      ['a non-number', [140, '220']],
+      ['a non-array', 'wide'],
+    ])('drops column widths with %s', (_label, colWidths) => {
+      const html = buildClipboardHtml({
+        rows: 1,
+        cols: 2,
+        cells: [[{ blocks: [] }, { blocks: [] }]],
+        colWidths,
+      } as unknown as TableCellsClipboard);
+
+      const result = parseClipboardHtml(html);
+
+      expect(result).not.toBeNull();
+      expect(result).not.toHaveProperty('colWidths');
+    });
+
     it('should roundtrip: buildClipboardHtml -> parseClipboardHtml returns same data', () => {
       const payload: TableCellsClipboard = {
         rows: 2,

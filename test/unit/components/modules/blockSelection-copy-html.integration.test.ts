@@ -13,6 +13,13 @@ import { CalloutTool } from '../../../../src/tools/callout';
 import { TabsTool } from '../../../../src/tools/tabs';
 import { TabTool } from '../../../../src/tools/tab';
 import { ListItem } from '../../../../src/tools/list';
+import { VideoTool } from '../../../../src/tools/video';
+import { AudioTool } from '../../../../src/tools/audio';
+import { FileTool } from '../../../../src/tools/file';
+import { SpacerTool } from '../../../../src/tools/spacer';
+import { TableOfContentsTool } from '../../../../src/tools/table-of-contents';
+import { Embed } from '../../../../src/tools/link/embed';
+import { Bookmark } from '../../../../src/tools/link/bookmark';
 import type { OutputBlockData } from '../../../../types';
 import type { Block } from '../../../../src/components/block';
 import type { CrossBlockSubRange } from '../../../../src/components/selection/cross-block-range';
@@ -32,7 +39,7 @@ interface TestEditor {
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
-const createEditor = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+const createEditor = async (blocks: OutputBlockData[], extraTools: Record<string, unknown> = {}): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
     tools: {
@@ -47,6 +54,14 @@ const createEditor = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
       tabs: TabsTool,
       tab: TabTool,
       list: ListItem,
+      video: VideoTool,
+      audio: AudioTool,
+      file: FileTool,
+      spacer: SpacerTool,
+      table_of_contents: TableOfContentsTool,
+      embed: Embed,
+      bookmark: Bookmark,
+      ...extraTools,
     },
     data: { blocks },
   }) as unknown as TestEditor;
@@ -290,5 +305,164 @@ describe('copy of dividers and containers as text/html', () => {
       '<p><strong>🍎 Beta</strong></p>',
       '<p>Beta body</p>',
     ]);
+  });
+});
+
+describe('copy of media and layout blocks as text/html', () => {
+  const shape = (html: string): string[] =>
+    Array.from(parse(html).children).map((node) => node.outerHTML);
+
+  it('writes an image as its img and its caption, without the alt button text', async () => {
+    const instance = await createEditor([
+      { id: 'i', type: 'image', data: { url: 'https://x/a.png', caption: 'Sunset', alt: 'Alt words' } },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual([
+      '<p><img src="https://x/a.png"></p>',
+      '<p>Sunset</p>',
+    ]);
+  });
+
+  it('leaves a hidden image caption out', async () => {
+    const instance = await createEditor([
+      { id: 'i', type: 'image', data: { url: 'https://x/a.png', caption: 'hidden one', captionVisible: false } },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual(['<p><img src="https://x/a.png"></p>']);
+  });
+
+  it('writes a video as a link to its url, without the player controls', async () => {
+    const instance = await createEditor([
+      { id: 'v', type: 'video', data: { url: 'https://x/bunny.mp4', fileName: 'bunny.mp4', caption: 'Video cap' } },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual([
+      '<p><a href="https://x/bunny.mp4">bunny.mp4</a></p>',
+      '<p>Video cap</p>',
+    ]);
+  });
+
+  it('writes an audio as a link named by its title, without its cover image', async () => {
+    const instance = await createEditor([
+      { id: 'a', type: 'audio', data: {
+        url: 'https://x/song.mp3', title: 'Song', artist: 'Artist', coverUrl: 'https://x/cover.png', caption: 'Audio cap',
+      } },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual([
+      '<p><a href="https://x/song.mp3">Song</a></p>',
+      '<p>Audio cap</p>',
+    ]);
+  });
+
+  it('writes a file as a link named by its file name, without its size label', async () => {
+    const instance = await createEditor([
+      { id: 'f', type: 'file', data: { url: 'https://x/notes.txt', fileName: 'notes.txt', size: 1234, caption: 'File cap' } },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual([
+      '<p><a href="https://x/notes.txt">notes.txt</a></p>',
+      '<p>File cap</p>',
+    ]);
+  });
+
+  it('writes a bookmark as one link named by its title, without its cover or favicon', async () => {
+    const instance = await createEditor([
+      { id: 'b', type: 'bookmark', data: {
+        url: 'https://example.com/article', title: 'Article title', description: 'Article description',
+        image: 'https://x/cover.png', favicon: 'https://x/fav.png', domain: 'example.com',
+      } },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual([
+      '<p><a href="https://example.com/article">Article title</a></p>',
+    ]);
+  });
+
+  it('writes an embed as a link to its source, even with no caption', async () => {
+    const instance = await createEditor([
+      { id: 'e', type: 'embed', data: {
+        service: 'youtube', source: 'https://www.youtube.com/watch?v=abc', embed: 'https://www.youtube.com/embed/abc',
+      } },
+    ]);
+
+    expect(shape(await copyAllAsHtml(instance))).toEqual([
+      '<p><a href="https://www.youtube.com/watch?v=abc">https://www.youtube.com/watch?v=abc</a></p>',
+    ]);
+  });
+
+  it('writes nothing for a spacer or a table of contents', async () => {
+    const instance = await createEditor([
+      { id: 'a', type: 'paragraph', data: { text: 'Before' } },
+      { id: 's', type: 'spacer', data: { height: 96 } },
+      { id: 't', type: 'table_of_contents', data: {} },
+      { id: 'b', type: 'paragraph', data: { text: 'After' } },
+    ]);
+
+    expect(await copyAllAsHtml(instance)).toBe('<p>Before</p><p>After</p>');
+  });
+});
+
+describe('a tool\'s clipboardHtml hook', () => {
+  const makeTool = (hooks: { clipboardHtml?: () => string | null; copyAsLink?: () => { url: string; text: string } | null }): unknown => {
+    class Custom {
+      public static clipboardHtml = hooks.clipboardHtml;
+      public static copyAsLink = hooks.copyAsLink;
+
+      public render(): HTMLElement {
+        const element = document.createElement('div');
+
+        element.textContent = 'Rendered UI';
+
+        return element;
+      }
+
+      public save(): Record<string, unknown> {
+        return {};
+      }
+    }
+
+    return Custom;
+  };
+
+  it('writes the markup the hook returns instead of the rendered block', async () => {
+    const instance = await createEditor([{ id: 'c', type: 'custom', data: {} }], {
+      custom: makeTool({ clipboardHtml: () => '<p>From hook</p>' }),
+    });
+
+    expect(await copyAllAsHtml(instance)).toBe('<p>From hook</p>');
+  });
+
+  it('cleans the markup the hook returns', async () => {
+    const instance = await createEditor([{ id: 'c', type: 'custom', data: {} }], {
+      custom: makeTool({ clipboardHtml: () => '<p><a href="javascript:alert(1)">x</a><script>bad()</script></p>' }),
+    });
+
+    const html = await copyAllAsHtml(instance);
+
+    expect(html).not.toContain('javascript:');
+    expect(html).not.toContain('script');
+  });
+
+  it('falls back to the rendered block when the hook returns null or throws', async () => {
+    const instance = await createEditor([
+      { id: 'n', type: 'nullish', data: {} },
+      { id: 't', type: 'throwing', data: {} },
+    ], {
+      nullish: makeTool({ clipboardHtml: () => null }),
+      throwing: makeTool({ clipboardHtml: () => {
+        throw new Error('boom');
+      } }),
+    });
+
+    expect(await copyAllAsHtml(instance)).toBe('<p>Rendered UI</p><p>Rendered UI</p>');
+  });
+
+  it('lets copyAsLink win over the hook', async () => {
+    const instance = await createEditor([{ id: 'c', type: 'custom', data: {} }], {
+      custom: makeTool({ clipboardHtml: () => '<p>From hook</p>', copyAsLink: () => ({ url: 'https://x/page', text: 'Page' }) }),
+    });
+
+    expect(await copyAllAsHtml(instance)).toBe('<p><a href="https://x/page">Page</a></p>');
   });
 });

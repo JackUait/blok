@@ -81,6 +81,15 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
   copyAsLink(data: BlockToolData): { url: string; text: string } | null | undefined;
 
   /**
+   * The html a copy of this block writes, from the Tool's
+   * `static clipboardHtml` — see {@link BlockToolConstructable.clipboardHtml}.
+   * Undefined when the Tool declares none or the hook throws; null when it
+   * gives none.
+   * @param data - the block's saved data
+   */
+  clipboardHtml(data: BlockToolData): string | null | undefined;
+
+  /**
    * Returns true if Tool supports linebreaks
    */
   isLineBreaksEnabled: boolean;

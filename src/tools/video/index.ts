@@ -1,4 +1,5 @@
 import { describeVideo } from '../../shared/tool-descriptions/video';
+import { linkClipboardHtml } from '../../shared/clipboard-html';
 import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { videoSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
@@ -154,6 +155,11 @@ export class VideoTool implements BlockTool {
 
   public validate(data: VideoData): boolean {
     return typeof data.url === 'string' && data.url.length > 0;
+  }
+
+  /** A link to the video, since the clipboard keeps no video tag. */
+  public static clipboardHtml(data: VideoData): string | null {
+    return linkClipboardHtml(data.url, [data.fileName], data);
   }
 
   public static get toolbox(): ToolboxConfig {

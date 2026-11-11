@@ -109,6 +109,11 @@ export enum InternalBlockToolSettings {
    */
   CopyAsLink = 'copyAsLink',
   /**
+   * The html a copy of the block writes for other apps, instead of the
+   * rendered block with its buttons and labels.
+   */
+  ClipboardHtml = 'clipboardHtml',
+  /**
    * The data a duplicate gets instead of a copy or a link (a page copied by
    * its host). Duplicate and Alt-drag only; copy and paste still use the link.
    */

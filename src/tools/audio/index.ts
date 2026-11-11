@@ -1,4 +1,5 @@
 import { describeAudio } from '../../shared/tool-descriptions/audio';
+import { linkClipboardHtml } from '../../shared/clipboard-html';
 import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { audioSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
@@ -143,6 +144,11 @@ export class AudioTool implements BlockTool {
 
   public validate(data: AudioData): boolean {
     return typeof data.url === 'string' && data.url.length > 0;
+  }
+
+  /** A link to the audio. The cover is left out, or a paste makes it an image. */
+  public static clipboardHtml(data: AudioData): string | null {
+    return linkClipboardHtml(data.url, [data.title, data.fileName], data);
   }
 
   public static get toolbox(): ToolboxConfig {

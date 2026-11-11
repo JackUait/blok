@@ -1,4 +1,5 @@
 import { describeBookmark } from '../../../shared/tool-descriptions/bookmark';
+import { linkClipboardHtml } from '../../../shared/clipboard-html';
 import { LINK_ACTION_HANDLERS } from '../../../shared/tool-actions/link';
 import { bookmarkSanitize } from '../../../shared/tool-descriptions/sanitize/blocks';
 import type {
@@ -90,6 +91,11 @@ export class Bookmark implements BlockTool {
     // preview, and a peer's change must not make every client fetch.
     this.refetchOnRender = options.origin === 'replay' && options.replaySource !== 'remote' && !options.readOnly
       && this.data.url !== '' && Object.keys(this.data).length === 1;
+  }
+
+  /** One link. The cover and favicon are left out, or a paste makes them images. */
+  public static clipboardHtml(data: BookmarkData): string | null {
+    return linkClipboardHtml(data.url, [data.title]);
   }
 
   public static get toolbox(): ToolboxConfig {

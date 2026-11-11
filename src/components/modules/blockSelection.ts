@@ -865,8 +865,9 @@ export class BlockSelection extends Module {
     }
 
     const wrapper = $.make('div');
+    const own = (block.tool as Block['tool'] | undefined)?.clipboardHtml(block.preservedData);
 
-    wrapper.innerHTML = clean(ownClone(block.holder).innerHTML, this.sanitizerConfig);
+    wrapper.innerHTML = clean(typeof own === 'string' ? own : ownClone(block.holder).innerHTML, this.sanitizerConfig);
 
     const flushRun = (run: Node[]): void => {
       if (run.every((node) => (node.textContent ?? '').trim().length === 0 && !(node instanceof HTMLImageElement))) {

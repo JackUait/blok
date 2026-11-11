@@ -1,4 +1,5 @@
 import { describeImage } from '../../shared/tool-descriptions/image';
+import { imageClipboardHtml } from '../../shared/clipboard-html';
 import { IMAGE_ACTION_HANDLERS } from '../../shared/tool-actions/image';
 import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { imageSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
@@ -245,6 +246,11 @@ export class ImageTool implements BlockTool {
 
   public validate(data: ImageData): boolean {
     return typeof data.url === 'string' && data.url.length > 0;
+  }
+
+  /** The image and its caption, without the buttons drawn over it. */
+  public static clipboardHtml(data: ImageData): string | null {
+    return imageClipboardHtml(data.url, data);
   }
 
   public static get toolbox(): ToolboxConfig {

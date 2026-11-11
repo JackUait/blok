@@ -369,6 +369,20 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   copyAsLink?(data: BlockToolData, config: ToolConfig): { url: string; text: string } | null;
 
   /**
+   * The html a copy of this Tool's block writes to the clipboard for other
+   * apps, and for a paste where only text/html survives. Without it, core
+   * copies the rendered block, with every button and label in it.
+   *
+   * Return '' to write nothing, or null to copy the rendered block. Core
+   * cleans the html with the copy sanitizer, so only text tags, links,
+   * images, lists and tables survive. A `copyAsLink` link wins over it.
+   *
+   * @param data - the block's saved data
+   * @param config - the Tool's config
+   */
+  clipboardHtml?(data: BlockToolData, config: ToolConfig): string | null;
+
+  /**
    * The data Duplicate and Alt-drag insert for this Tool's block, instead of
    * a copy or the `copyAsLink` link. Return null to fall back. Copy and
    * paste never call it.

@@ -283,6 +283,29 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * The html a copy writes for this block. Undefined means no hook or a
+   * throwing hook; null means the hook gave none.
+   * @param data - the block's saved data
+   */
+  public clipboardHtml(data: BlockToolData): string | null | undefined {
+    const clipboardHtml = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.ClipboardHtml];
+
+    if (typeof clipboardHtml !== 'function') {
+      return undefined;
+    }
+
+    try {
+      const html: unknown = clipboardHtml.call(this.constructable, data, this.settings);
+
+      return typeof html === 'string' ? html : null;
+    } catch (error) {
+      log(`Tool «${this.name}» clipboardHtml() threw; copying the rendered block.`, 'warn', error);
+
+      return undefined;
+    }
+  }
+
+  /**
    * Returns true when Enter on this container's empty LAST child must create
    * the new line INSIDE the container rather than escaping it.
    *

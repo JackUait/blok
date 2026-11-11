@@ -1488,6 +1488,46 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('media blocks pasted from html only', () => {
+    const VIDEO = 'http://localhost:4444/public/samples/big-buck-bunny.mp4';
+    const FILE = 'http://localhost:4444/public/samples/release-notes.txt';
+    const ARTICLE = 'https://example.com/article';
+    const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+    test('come back as links, with no player, size or placeholder text', async ({ page }) => {
+      await page.route(/youtube\.com|ytimg|example\.com/, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }));
+      await createBlok(page, { data: { blocks: [
+        { id: 'bef', type: 'paragraph', data: { text: 'Before' } },
+        { id: 'vid', type: 'video', data: { url: VIDEO, fileName: 'bunny.mp4', caption: 'Video cap' } },
+        { id: 'fil', type: 'file', data: { url: FILE, fileName: 'release-notes.txt', size: 1234, mimeType: 'text/plain' } },
+        { id: 'bm', type: 'bookmark', data: { url: ARTICLE, title: 'Article title', image: 'http://127.0.0.1:4444/test/playwright/fixtures/image/shot.png', domain: 'example.com' } },
+        { id: 'emb', type: 'embed', data: { service: 'youtube', source: YOUTUBE, embed: 'https://www.youtube.com/embed/dQw4w9WgXcQ' } },
+        { id: 'sp', type: 'spacer', data: { height: 96 } },
+        { id: 'toc', type: 'table_of_contents', data: {} },
+        { id: 'aft', type: 'paragraph', data: { text: 'After' } },
+      ] } });
+      await page.locator('[data-blok-id="bef"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="aft"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="aft"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboard = await withClipboardEvent(page.locator('[data-blok-id="bef"]'), 'copy');
+
+      await createBlok(page, { data: { blocks: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }] } });
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/html': clipboard['text/html'] ?? '', 'text/plain': clipboard['text/plain'] ?? '' });
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.map((block) => `${block.type} ${String(block.data.text)}`)).toEqual([
+        'paragraph Before',
+        `paragraph <a href="${VIDEO}">bunny.mp4</a>`,
+        'paragraph Video cap',
+        `paragraph <a href="${FILE}">release-notes.txt</a>`,
+        `paragraph <a href="${ARTICLE}">Article title</a>`,
+        `paragraph <a href="${YOUTUBE}">${YOUTUBE}</a>`,
+        'paragraph After',
+      ]);
+    });
+  });
+
   test.describe('list items copied without their parent list item', () => {
     const LI = (id: string, text: string, depth: number, extra: Partial<OutputData['blocks'][number]> = {}): OutputData['blocks'][number] =>
       ({ id, type: 'list', data: { text, style: 'unordered', depth }, ...extra });

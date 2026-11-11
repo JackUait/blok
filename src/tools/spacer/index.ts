@@ -201,6 +201,11 @@ export class SpacerTool implements BlockTool {
   /**
    * Toolbox appearance
    */
+  /** Nothing: other apps have no gap or outline, and the labels are not content. */
+  public static clipboardHtml(): string {
+    return '';
+  }
+
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconSpacer,

@@ -1,4 +1,5 @@
 import { describeFile } from '../../shared/tool-descriptions/file';
+import { linkClipboardHtml } from '../../shared/clipboard-html';
 import { MEDIA_ACTION_HANDLERS } from '../../shared/tool-actions/media';
 import { fileSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
@@ -189,6 +190,11 @@ export class FileTool implements BlockTool {
         onActivate: (): void => void navigator.clipboard?.writeText(this.data.url),
       },
     ];
+  }
+
+  /** A link to the file, without its size label. */
+  public static clipboardHtml(data: FileData): string | null {
+    return linkClipboardHtml(data.url, [data.fileName], data);
   }
 
   public static get toolbox(): ToolboxConfig {

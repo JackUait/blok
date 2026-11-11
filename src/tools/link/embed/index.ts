@@ -1,4 +1,5 @@
 import { describeEmbed } from '../../../shared/tool-descriptions/embed';
+import { linkClipboardHtml } from '../../../shared/clipboard-html';
 import { LINK_ACTION_HANDLERS } from '../../../shared/tool-actions/link';
 import { embedSanitize } from '../../../shared/tool-descriptions/sanitize/blocks';
 import type {
@@ -241,6 +242,11 @@ export class Embed implements BlockTool {
       embed: stringField(saved.embed),
       service: stringField(saved.service),
     };
+  }
+
+  /** A link to the source, since the clipboard keeps no iframe. */
+  public static clipboardHtml(data: Partial<EmbedData>): string | null {
+    return linkClipboardHtml(data.source ?? data.embed, [], data);
   }
 
   public static get toolbox(): ToolboxConfig {

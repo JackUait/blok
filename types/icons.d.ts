@@ -131,6 +131,7 @@ export declare const IconEmojiDice: string;
 export declare const IconDatabase: string;
 export declare const IconBoard: string;
 export declare const IconGallery: string;
+export declare const IconViewDashboard: string;
 export declare const IconList: string;
 export declare const IconTimeline: string;
 export declare const IconViewFeed: string;

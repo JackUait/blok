@@ -209,6 +209,7 @@ export class DatabaseViewControls {
   private readonly lockBadge: HTMLElement;
   private readonly shareFormButton: HTMLButtonElement;
   private readonly previewFormButton: HTMLButtonElement;
+  private newSplit: HTMLElement | null = null;
   private panel: DatabasePanel | null = null;
   /** The "Add sort" picker over the sort panel, closed with it. */
   private addSortPicker: DatabasePanel | null = null;
@@ -333,7 +334,8 @@ export class DatabaseViewControls {
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
     this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.expandButton, this.fullPageLink, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
-      this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
+      this.newSplit = this.newSplitButton(host.newRow, host.openNewMenu);
+      this.toolbar.append(this.newSplit);
     }
 
     this.filterBar = document.createElement('div');
@@ -461,8 +463,28 @@ export class DatabaseViewControls {
     this.minimized = this.host.savedView()?.toolbarMinimized === true;
     this.toolbar.toggleAttribute('data-minimized', this.minimized);
     this.expandButton.hidden = !this.minimized;
+    if (this.newSplit !== null) this.newSplit.hidden = false;
+    if (saved.type === 'dashboard') {
+      this.trimForDashboard();
+      this.panel?.refresh();
+
+      return;
+    }
     this.renderFilterBar(view);
     this.panel?.refresh();
+  }
+
+  /** notion-motion Round 15 A: a dashboard's toolbar is only ⤢ and ⚙. Its widgets filter themselves. */
+  private trimForDashboard(): void {
+    const rowControls = [this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton,
+      this.noDateButton, this.minimizeButton, this.expandButton, this.newSplit];
+
+    for (const control of rowControls) {
+      if (control !== null) control.hidden = true;
+    }
+    this.toolbar.removeAttribute('data-minimized');
+    this.filterBar.hidden = true;
+    this.filterBar.replaceChildren();
   }
 
   destroy(): void {

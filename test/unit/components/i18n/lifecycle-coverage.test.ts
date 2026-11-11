@@ -283,7 +283,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2088 + 143 + 531 + 5 closure for all 2767 keys', () => {
+  it('rebuilds a disjoint 2094 + 143 + 528 + 5 closure for all 2770 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -297,7 +297,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2767);
+    expect(lifecycle.size).toBe(2770);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -517,7 +517,9 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.code.suggested left the literal calls when the picker dropped Suggested (now catalog-only).
       // +1: the audio block's Compact setting calls tools.audio.compact by literal.
       // +5: the annotation ("Hint") tool's four tools.annotation.* strings and toolNames.annotation, the hint card's name, by literal.
-      'executable-literal': 2088,
+      // +3: the Dashboard view's name, its Add widget button and its empty line (tools.database.viewTypeDashboard, dashboardAddWidget, dashboardEmpty), by literal.
+      // +3: the dashboard menus call tools.database.chartTypeNumber, duplicateView and deleteView by literal (moved from registered-namespace-compatible).
+      'executable-literal': 2094,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -605,7 +607,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.database.columnTitlePlaceholder, no longer called by literal; still shipped.
       // +3: the row-page "Updating layout for all pages" dialog's saveForAll* keys, via the controls' t().
       // +1: the date filter's "Custom date" row, tools.database.filterDateCustom (chip t() prefixes the namespace).
-      'registered-namespace-compatible': 531,
+      // -3: chartTypeNumber, duplicateView and deleteView moved to executable-literal (dashboard menus).
+      'registered-namespace-compatible': 528,
       'catalog-only': 5,
     });
     expect(

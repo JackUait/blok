@@ -9,7 +9,7 @@ import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolDa
 import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import { HistoryDraftsCommit, type HistoryDraftsCommitPayload } from '../../components/events/HistoryDraftsCommit';
-import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
+import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, DeletedPropertyDefinition, PropertyValue, DatabasePermissionAction, DashboardWidget, DashboardRow, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -18,7 +18,11 @@ import { DatabaseFormView, isAutoQuestion } from './database-form-view';
 import { DatabaseMapView, resolveMapBy } from './database-map-view';
 import { drawMapLibrePlace } from './database-maplibre';
 import { DatabaseDashboardView } from './database-dashboard-view';
-import type { DashboardMount } from './database-dashboard-view';
+import type { DashboardChrome, DashboardMount } from './database-dashboard-view';
+import { wireDashboardEditor } from './database-dashboard-editor';
+import type { DashboardWidgetKind } from './database-dashboard-editor';
+import { copyDashboardWidgets, MAX_WIDGETS_PER_ROW, moveWidget as moveDashboardWidget, ownedWidgetViews, placeWidget, removeWidget as removeDashboardWidget, tabViews } from '../../shared/database/dashboard';
+import type { WidgetPlacement } from '../../shared/database/dashboard';
 import { planTypeChange } from './property-conversion';
 import { createGroupPill, openCellEditor } from './cells';
 import type { CellContext, CellEditorHandle, RelatedPeek } from './cells';
@@ -218,6 +222,8 @@ interface DashboardWidgetState {
   controls?: DatabaseViewControls;
   cellEditor: CellEditorHandle | null;
   pendingTitle: string | null;
+  /** A chart widget's legend: the series it hides. */
+  chartHidden: Set<string>;
 }
 
 interface NativeWidgetContext {
@@ -235,6 +241,8 @@ interface NativeWidgetContext {
   redraw(allowed?: () => boolean): void;
   onDispose(cancel: () => void): void;
   openRow(rowId: string, mode?: OpenPagesIn): void;
+  /** A dashboard widget's own Duplicate and Delete, for its view settings. */
+  readonly widget?: { duplicate(): void; remove(): void };
 }
 
 interface ChangedBlock {
@@ -348,7 +356,9 @@ const BOARD_GROUP_PAGE = 10;
 const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'calendar', 'form', 'map'];
 
 /** Layouts a dashboard widget draws natively, with its own toolbar. */
-const WIDGET_LAYOUTS: readonly ViewType[] = ['table', 'list'];
+const WIDGET_LAYOUTS: readonly ViewType[] = ['table', 'list', 'chart'];
+/** Layouts a view bound to a second source draws natively. Others, chart too, draw as that source's own view. */
+const BOUND_NATIVE_LAYOUTS: readonly ViewType[] = ['table', 'list'];
 
 /** Select-like groups: their columns are options (or status groups) the user can rename and move. */
 
@@ -726,6 +736,8 @@ export class DatabaseTool implements BlockTool {
   private readonly tableStates = new Map<string, TableState>();
   private readonly dashboardStates = new Map<string, DashboardWidgetState>();
   private readonly dashboardSources = new Set<string>();
+  /** Each drawn widget's own toolbar controls, by widget id: "Edit view" opens its settings. */
+  private readonly widgetControls = new Map<string, DatabaseViewControls>();
   /**
    * Set while this block is a second data source drawn by the database that
    * holds it: the view, its toolbar and its redraws are that database's.
@@ -831,9 +843,10 @@ export class DatabaseTool implements BlockTool {
     this.computedValues = new ComputedProperties(this.dataId);
     this.pullLinkedSchema();
     this.model.setValueProperty((property) => this.computedValues.valueProperty(property));
-    const views = this.model.getViews();
-    this.activeViewId = consumeViewLink((viewId) => this.model.getView(viewId) !== undefined)
-      ?? (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
+    const views = this.model.getTabViews();
+    const savedActive = (data as DatabaseData | undefined)?.activeViewId;
+    this.activeViewId = consumeViewLink((viewId) => views.some((view) => view.id === viewId))
+      ?? (views.some((view) => view.id === savedActive) ? savedActive : undefined) ?? (views.length > 0 ? views[0].id : '');
 
     this.builtInComments = new BuiltInCommentsUi({
       api: this.api,
@@ -1812,7 +1825,9 @@ export class DatabaseTool implements BlockTool {
 
     this.api.blocks.getById(databaseId)?.call('readViews', { receive: (views: DatabaseViewConfig[]) => live.push(views) });
 
-    return live[0] ?? (this.api.blocks.getById(databaseId)?.preservedData)?.views ?? [];
+    const preserved = (this.api.blocks.getById(databaseId)?.preservedData as Partial<DatabaseData> | undefined)?.views ?? [];
+
+    return live[0] ?? tabViews(preserved);
   }
 
   private linkedFirstView(databaseId: string): DatabaseViewConfig {
@@ -1831,7 +1846,7 @@ export class DatabaseTool implements BlockTool {
 
   /** Read by a linked view being made: this database's views, to copy the first table view. */
   readViews(param: { receive: (views: DatabaseViewConfig[]) => void }): void {
-    param.receive(structuredClone(this.model.getViews()));
+    param.receive(structuredClone(this.model.getTabViews()));
   }
 
   readDashboardOwner(param: { receive: (owner: DatabaseTool) => void }): void {
@@ -2637,7 +2652,7 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.model.hydrate(data);
-    const views = this.model.getViews();
+    const views = this.model.getTabViews();
 
     if (views.length > 0 && !views.some((v) => v.id === this.activeViewId)) {
       this.activeViewId = views[0].id;
@@ -2843,7 +2858,7 @@ export class DatabaseTool implements BlockTool {
     }
     void this.watchRemoteSource();
 
-    const views = this.model.getViews();
+    const views = this.model.getTabViews();
     const activeViewId = [data.activeViewId, this.activeViewId].find((id) => views.some((view) => view.id === id)) ?? views[0].id;
 
     if (activeViewId !== this.activeViewId) {
@@ -4492,6 +4507,7 @@ export class DatabaseTool implements BlockTool {
       feed: DATABASE_DEFAULT_TEXT.viewTypeFeed,
       form: DATABASE_DEFAULT_TEXT.viewTypeForm,
       map: DATABASE_DEFAULT_TEXT.viewTypeMap,
+      dashboard: DATABASE_DEFAULT_TEXT.viewTypeDashboard,
     };
     if (type === 'map') this.ensurePlaceProperty();
     const newView = this.model.addView(defaultNames[type] ?? DATABASE_DEFAULT_TEXT.viewTypeBoard, type, {
@@ -4511,7 +4527,8 @@ export class DatabaseTool implements BlockTool {
     const before = this.activeViewId;
 
     this.addView(type);
-    if (this.activeViewId === before || type === 'form' || this.linked) return;
+    // Notion opens no panel for a new dashboard (notion-motion Round 15 A).
+    if (this.activeViewId === before || type === 'form' || type === 'dashboard' || this.linked) return;
     const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(this.activeViewId)}"]`);
     const anchor = tab?.isConnected === true && tab.offsetParent !== null ? tab : this.titleRowElement ?? this.element;
 
@@ -4696,7 +4713,7 @@ export class DatabaseTool implements BlockTool {
       newViewLabel: this.api.i18n.t(LINKED_NEW_VIEW_KEYS[type]),
       views: () => [
         ...this.sourceViews(source.databaseId).filter(copyable),
-        ...this.model.getViews().filter((view) => view.id !== viewId && copyable(view)),
+        ...this.model.getTabViews().filter((view) => view.id !== viewId && copyable(view)),
       ],
       copyView: (view) => this.copyIntoView(viewId, view),
       onClose: () => {
@@ -4784,6 +4801,23 @@ export class DatabaseTool implements BlockTool {
     const newView = this.model.addView(name, type, settings);
 
     void this.sync.syncCreateView(structuredClone(newView));
+    // A copied dashboard gets copies of its widgets, so the two never share one.
+    if (type === 'dashboard') {
+      const copied = copyDashboardWidgets(this.model.getViews(), sourceView, newView.id, nanoid);
+
+      for (const widget of copied.widgets) {
+        const { id: _widgetId, name: widgetName, type: widgetType, position: _widgetPosition, ...widgetSettings } = widget;
+        const made = this.model.addView(widgetName, widgetType, widgetSettings);
+
+        copied.rows = copied.rows.map((row) => ({
+          ...row,
+          widgets: row.widgets.map((entry) => (entry.viewId === widget.id && entry.databaseId === undefined ? { ...entry, viewId: made.id } : entry)),
+        }));
+        void this.sync.syncCreateView(structuredClone(made));
+      }
+      this.model.updateView(newView.id, { dashboard: { rows: copied.rows } });
+      void this.sync.syncUpdateView({ viewId: newView.id, changes: { dashboard: { rows: structuredClone(copied.rows) } } });
+    }
     this.switchView(newView.id);
   }
 
@@ -4799,7 +4833,7 @@ export class DatabaseTool implements BlockTool {
     const ownSource = sourceId !== undefined && this.api.blocks.getChildren(this.dataId).some((child) => child.id === sourceId && child.name === 'database');
     const last = ownSource && !this.model.getViews().some((other) => other.id !== viewId && other.dataSourceId === sourceId);
 
-    if (this.model.getViews().length <= 1 || this.structureLocked()) return undefined;
+    if (this.model.getTabViews().length <= 1 || this.structureLocked()) return undefined;
     const t = (key: string): string => this.api.i18n.t(key);
 
     // feel/findings-toolbar V24: Notion asks before every delete.
@@ -4857,7 +4891,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   deleteView(viewId: string): void {
-    const views = this.model.getViews();
+    const views = this.model.getTabViews();
 
     if (views.length <= 1 || this.structureLocked()) {
       return;
@@ -4870,12 +4904,16 @@ export class DatabaseTool implements BlockTool {
     }
 
     const wasActive = viewId === this.activeViewId;
+    // Only the widget views this dashboard owns go with it; a legacy widget is a tab of its own.
+    const widgets = views[index].type === 'dashboard' ? ownedWidgetViews(this.model.getViews(), viewId) : [];
 
-    this.model.deleteView(viewId);
-    void this.sync.syncDeleteView({ viewId });
+    for (const id of [viewId, ...widgets.map((widget) => widget.id)]) {
+      this.model.deleteView(id);
+      void this.sync.syncDeleteView({ viewId: id });
+    }
 
     if (wasActive) {
-      const remaining = this.model.getViews();
+      const remaining = this.model.getTabViews();
       const neighborIndex = Math.min(index, remaining.length - 1);
       this.switchView(remaining[neighborIndex].id);
     } else {
@@ -4924,7 +4962,7 @@ export class DatabaseTool implements BlockTool {
     }
 
     const tabBarEl = this.ownTabBarElement();
-    const views = this.model.getViews();
+    const views = this.model.getTabViews();
     const addBtn = this.tabBar.getAddBtnEl();
     const single = views.length === 1;
     // Not `controls`: while bound that is the holder's toolbar, and moving it here
@@ -5010,7 +5048,7 @@ export class DatabaseTool implements BlockTool {
 
   private createTabBar(): DatabaseTabBar {
     return new DatabaseTabBar({
-      views: localizeDatabaseViews(this.model.getViews(), this.api.i18n),
+      views: localizeDatabaseViews(this.model.getTabViews(), this.api.i18n),
       activeViewId: this.activeViewId,
       onTabClick: (viewId) => this.switchView(viewId),
       onAddView: (type) => this.addViewWithSettings(type),
@@ -5038,7 +5076,7 @@ export class DatabaseTool implements BlockTool {
       // A locked database keeps its views: no add, rename, delete or reorder.
       readOnly: this.readOnly || this.structureLocked(),
       // A linked view has no form (research 20 §2b).
-      ...(this.linked ? { hiddenViewTypes: ['form'] as ViewType[] } : {}),
+      ...(this.linked ? { hiddenViewTypes: ['form', 'dashboard'] as ViewType[] } : {}),
     });
   }
 
@@ -5339,8 +5377,10 @@ export class DatabaseTool implements BlockTool {
       });
     } else if (viewConfig.type === 'dashboard') {
       this.dashboardSources.clear();
+      this.widgetControls.clear();
       this.view = new DatabaseDashboardView({
         rows: viewConfig.dashboard?.rows ?? [],
+        chrome: this.dashboardChrome(viewConfig.id),
         mount: (widget) => this.mountDashboardWidget(viewConfig.id, widget),
       });
     } else {
@@ -5675,12 +5715,12 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Each group's rows from the view query. X groups drop the view's hidden groups; series keep all. */
-  private chartGroups(view: DatabaseViewConfig, propertyId: string, series: boolean): ChartGroupInput[] {
+  private chartGroups(view: DatabaseViewConfig, propertyId: string, series: boolean, search = this.controls.search): ChartGroupInput[] {
     const grouped: DatabaseViewConfig = series
       ? { ...view, groupBy: propertyId, groupSettings: view.subGroupSettings }
       : { ...view, groupBy: propertyId };
     const optionGroup = this.isOptionGroup(propertyId);
-    const options = series ? this.groupOptions(propertyId, grouped) : this.shownGroupOptions(propertyId, grouped);
+    const options = series ? this.groupOptions(propertyId, grouped, search) : this.shownGroupOptions(propertyId, grouped, search);
     // Date and number keys do not collate in value order ("range:out", "rel:today"): rank them the way the model sorts them.
     const rank = optionGroup
       ? undefined
@@ -5692,31 +5732,45 @@ export class DatabaseTool implements BlockTool {
       label: option.label,
       sortKey: rank === undefined ? option.label : rank.get(option.id) ?? option.id,
       ...(option.color !== undefined ? { color: option.color } : {}),
-      rows: this.model.queryRows({ view: grouped, group: option.id, search: this.controls.search }).rows,
+      rows: this.model.queryRows({ view: grouped, group: option.id, search }).rows,
     }));
   }
 
   private renderChartView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
+    const native = this.createNativeChartView(titlePropId, viewConfig);
+
+    this.view = native.renderer;
+
+    return native.root;
+  }
+
+  /**
+   * A chart with no tool-level side effects: a dashboard draws one per widget,
+   * so the legend's hidden series, the search and the redraw come from the
+   * widget's context when there is one.
+   */
+  private createNativeChartView(titlePropId: string, viewConfig: DatabaseViewConfig, context?: NativeWidgetContext): { renderer: DatabaseChartView; root: HTMLDivElement } {
+    const search = (context?.controls ?? this.controls).search;
     const schema = this.chartSchema();
     const localized = localizeDatabaseSchema(schema, this.api.i18n);
     const settings = resolveChartSettings(viewConfig, schema);
     const axis = this.chartAxis(viewConfig, schema);
-    const hidden = this.chartHidden.get(viewConfig.id) ?? new Set<string>();
+    const hidden = new Set(context === undefined ? this.chartHidden.get(viewConfig.id) : context.state.chartHidden);
     const groups: ChartGroupInput[] = axis === undefined || settings.type === 'number'
-      ? [{ key: '', label: viewConfig.name, sortKey: '', rows: this.model.queryRows({ view: viewConfig, search: this.controls.search }).rows }]
-      : this.chartGroups(viewConfig, axis.id, false);
+      ? [{ key: '', label: viewConfig.name, sortKey: '', rows: this.model.queryRows({ view: viewConfig, search }).rows }]
+      : this.chartGroups(viewConfig, axis.id, false, search);
     const subId = viewConfig.subGroupBy;
     const hasSeries = subId !== undefined && subId !== axis?.id && schema.some((p) => p.id === subId && GROUPABLE_TYPES.includes(p.type))
       && (settings.type === 'column' || settings.type === 'bar' || settings.type === 'line');
     const series: ChartSeriesInput[] = hasSeries
-      ? this.chartGroups(viewConfig, subId, true).map((group) => ({ key: group.key, label: group.label, rowIds: new Set(group.rows.map((row) => row.id)) }))
+      ? this.chartGroups(viewConfig, subId, true, search).map((group) => ({ key: group.key, label: group.label, rowIds: new Set(group.rows.map((row) => row.id)) }))
       : [];
     const data = foldChartData(
       buildChartData({ groups, series, measure: settings.measure, schema, sort: settings.sort, omitZero: settings.omitZero, cumulative: settings.cumulative, hidden }),
       { max: 8, otherLabel: this.api.i18n.t('tools.database.chartOther'), slices: settings.type === 'donut' }
     );
 
-    this.view = new DatabaseChartView({
+    const renderer = new DatabaseChartView({
       settings,
       data,
       xName: localized.find((p) => p.id === axis?.id)?.name ?? '',
@@ -5724,18 +5778,24 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       formatValue: (value) => this.formatChartValue(settings.measure, value, schema),
       handlers: {
-        drilldown: (point) => this.openChartDrilldown(viewConfig, point, titlePropId),
+        drilldown: (point) => this.openChartDrilldown(viewConfig, point, titlePropId, context),
         toggle: (key) => {
           const next = new Set(hidden);
 
           if (!next.delete(key)) next.add(key);
-          this.chartHidden.set(viewConfig.id, next);
-          this.rerenderView({ keepDrawer: true });
+          if (context === undefined) {
+            this.chartHidden.set(viewConfig.id, next);
+            this.rerenderView({ keepDrawer: true });
+          } else {
+            context.state.chartHidden.clear();
+            next.forEach((key) => context.state.chartHidden.add(key));
+            context.redraw();
+          }
         },
       },
     });
 
-    return this.view.createView();
+    return { renderer, root: renderer.createView() };
   }
 
   private formatChartValue(measure: ReturnType<typeof resolveChartSettings>['measure'], value: number, schema: PropertyDefinition[]): string {
@@ -5773,7 +5833,7 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
-  private openChartDrilldown(view: DatabaseViewConfig, point: ChartPoint, titlePropId: string): void {
+  private openChartDrilldown(view: DatabaseViewConfig, point: ChartPoint, titlePropId: string, context?: NativeWidgetContext): void {
     openChartDrilldown({
       title: point.label,
       rows: point.rowIds.map((id) => this.model.getRow(id)).filter((row): row is DatabaseRow => row !== undefined),
@@ -5781,7 +5841,7 @@ export class DatabaseTool implements BlockTool {
       titlePropertyId: titlePropId,
       cellText: (property, row) => this.csvText(property, row),
       i18n: this.api.i18n,
-      openRow: (rowId) => this.handleRowClick(rowId),
+      openRow: (rowId) => (context === undefined ? this.handleRowClick(rowId) : context.openRow(rowId)),
       directionSource: this.element,
     });
   }
@@ -6658,8 +6718,9 @@ export class DatabaseTool implements BlockTool {
       rowCount: () => data().model.getOrderedRows().length,
       locked: () => owner.structureLocked(),
       readOnly: () => context === undefined ? this.readOnly : !context.authority.writable(),
-      viewCount: () => owner.model.getViews().length,
-      layouts: RENDERED_LAYOUTS,
+      viewCount: () => owner.model.getTabViews().length,
+      // A widget can only become a layout a dashboard draws.
+      layouts: context?.widget === undefined ? RENDERED_LAYOUTS : WIDGET_LAYOUTS,
       me: () => this.config.people?.me?.() ?? null,
       people: () => this.people ?? [],
       relatedRows: (property) => data().relationCandidates(property),
@@ -6673,13 +6734,14 @@ export class DatabaseTool implements BlockTool {
         return title === '' ? this.api.i18n.t('tools.database.relationUntitledDatabase') : title;
       },
       updateView: (changes) => this.updateActiveView(changes, context),
-      setLayout: (type) => this.setActiveLayout(type),
+      setLayout: (type) => (context?.widget === undefined ? this.setActiveLayout(type) : this.setWidgetLayout(context, type)),
       setLocked: (locked) => this.setDatabaseLocked(locked),
       linked: () => owner.linked,
       noDate: () => (context === undefined && (this.view instanceof DatabaseCalendarView || this.view instanceof DatabaseTimelineView) ? this.view.noDateControl() : undefined),
-      duplicateView: () => this.duplicateView(this.activeViewId),
+      duplicateView: () => (context?.widget === undefined ? this.duplicateView(this.activeViewId) : context.widget.duplicate()),
       deleteView: () => {
-        void this.requestDeleteView(this.activeViewId);
+        if (context?.widget !== undefined) context.widget.remove();
+        else void this.requestDeleteView(this.activeViewId);
       },
       copyViewLink: () => this.copyViewLink(),
       // A dashboard widget's toolbar has no ⤢: it is part of its database's page.
@@ -6835,6 +6897,16 @@ export class DatabaseTool implements BlockTool {
     if (change.needsPlace) data.ensurePlaceProperty();
     this.updateActiveView(change.changes);
     this.rebuildTabBar();
+  }
+
+  /** A widget's Layout: a table widget can become a list or a chart, in place. */
+  private setWidgetLayout(context: NativeWidgetContext, type: ViewType): void {
+    const view = context.owner.model.getView(context.viewId);
+
+    if (view === undefined || view.type === type || !WIDGET_LAYOUTS.includes(type)) return;
+    const change = layoutChange(view, type, this.model.getSchema());
+
+    if (change !== undefined) this.updateActiveView(change.changes, context);
   }
 
   /** "Edit view" or "Rename" on a tab: show that view, then its settings. */
@@ -7087,6 +7159,125 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
+  /** The widget titles, the empty state and, when the layout may change, its edit controls. */
+  private dashboardChrome(dashboardId: string): DashboardChrome {
+    const t = (key: string): string => this.api.i18n.t(key);
+    const editable = !this.readOnly && !this.structureLocked() && !this.linked;
+
+    return {
+      title: (widget) => {
+        const owner = this.dashboardOwner(widget.databaseId ?? this.block.id);
+        const saved = owner?.model.getView(widget.viewId);
+
+        return saved === undefined ? '' : localizeDatabaseViews([saved], this.api.i18n)[0]?.name ?? saved.name;
+      },
+      emptyText: t('tools.database.dashboardEmpty'),
+      ...(editable ? {
+        edit: { addWidget: t('tools.database.dashboardAddWidget'), menu: t('tools.database.tableMoreActions'), drag: t('blockSettings.dragToMove') },
+        wire: (root: HTMLElement) => wireDashboardEditor(root, {
+          t,
+          addWidget: (kind) => this.addDashboardWidget(dashboardId, kind),
+          editWidget: (widgetId, anchor) => this.editDashboardWidget(widgetId, anchor),
+          duplicateWidget: (widgetId) => this.duplicateDashboardWidget(dashboardId, widgetId),
+          removeWidget: (widgetId) => this.removeDashboardWidget(dashboardId, widgetId),
+          moveWidget: (widgetId, placement) => this.writeDashboardRows(dashboardId, (rows) => moveDashboardWidget(rows, widgetId, placement, nanoid)),
+        }),
+      } : {}),
+    };
+  }
+
+  private dashboardWritable(dashboardId: string): DatabaseViewConfig | undefined {
+    const dashboard = this.model.getView(dashboardId);
+
+    return this.readOnly || this.structureLocked() || dashboard?.type !== 'dashboard' ? undefined : dashboard;
+  }
+
+  /** Writes a dashboard's layout and redraws it. */
+  private writeDashboardRows(dashboardId: string, next: (rows: DashboardRow[]) => DashboardRow[]): void {
+    const dashboard = this.dashboardWritable(dashboardId);
+
+    if (dashboard === undefined) return;
+    const rows = next(structuredClone(dashboard.dashboard?.rows ?? []));
+
+    this.model.updateView(dashboardId, { dashboard: { rows } });
+    void this.sync.syncUpdateView({ viewId: dashboardId, changes: { dashboard: { rows: structuredClone(rows) } } });
+    this.block.dispatchChange();
+    this.rerenderView({ keepDrawer: true });
+  }
+
+  /**
+   * "Add widget": a widget view of this database, owned by the dashboard, and
+   * its place in the layout. A chart groups by the first select, as a new
+   * Chart view does; Number counts the rows until Edit view picks a property.
+   */
+  private addDashboardWidget(dashboardId: string, kind: DashboardWidgetKind, placement?: WidgetPlacement): string | undefined {
+    if (this.dashboardWritable(dashboardId) === undefined) return undefined;
+    const select = this.model.getSchema().find((p) => p.type === 'select');
+    const type: ViewType = kind === 'number' ? 'chart' : kind;
+    const names: Record<DashboardWidgetKind, string> = {
+      chart: DATABASE_DEFAULT_TEXT.viewTypeChart,
+      number: DATABASE_DEFAULT_TEXT.viewTypeNumber,
+      table: DATABASE_DEFAULT_TEXT.viewTypeTable,
+      list: DATABASE_DEFAULT_TEXT.viewTypeList,
+    };
+    const name = names[kind];
+    const view = this.model.addView(name, type, {
+      dashboardViewId: dashboardId,
+      ...(kind === 'chart' && select !== undefined ? { groupBy: select.id } : {}),
+      ...(kind === 'number' ? { chartType: 'number' as const } : {}),
+    });
+
+    void this.sync.syncCreateView(structuredClone(view));
+    this.writeDashboardRows(dashboardId, (rows) => placeWidget(rows, { id: nanoid(), viewId: view.id, width: 12 }, placement, nanoid));
+
+    return view.id;
+  }
+
+  /** "Duplicate": a copy of the widget's view, owned by this dashboard, placed after it. */
+  private duplicateDashboardWidget(dashboardId: string, widgetId: string): void {
+    const dashboard = this.dashboardWritable(dashboardId);
+    const rows = dashboard?.dashboard?.rows ?? [];
+    const rowIndex = rows.findIndex((row) => row.widgets.some((widget) => widget.id === widgetId));
+    const row = rows[rowIndex];
+    const index = row?.widgets.findIndex((widget) => widget.id === widgetId) ?? -1;
+    const widget = row?.widgets[index];
+    const source = widget === undefined || widget.databaseId !== undefined ? undefined : this.model.getView(widget.viewId);
+
+    if (row === undefined || widget === undefined || source === undefined) return;
+    const { id: _id, name, type, position: _position, ...settings } = source;
+    const view = this.model.addView(name, type, { ...settings, dashboardViewId: dashboardId });
+    const placement: WidgetPlacement = row.widgets.length < MAX_WIDGETS_PER_ROW ? { rowId: row.id, index: index + 1 } : { newRowAt: rowIndex + 1 };
+
+    void this.sync.syncCreateView(structuredClone(view));
+    this.writeDashboardRows(dashboardId, (current) => placeWidget(current, { id: nanoid(), viewId: view.id, width: 12 }, placement, nanoid));
+  }
+
+  /**
+   * "Delete": the widget leaves the layout. Its view goes too when this
+   * dashboard owns it and no other widget shows it. A legacy widget's view
+   * is a tab of its own, so it stays.
+   */
+  private removeDashboardWidget(dashboardId: string, widgetId: string): void {
+    const dashboard = this.dashboardWritable(dashboardId);
+    const rows = dashboard?.dashboard?.rows ?? [];
+    const widget = rows.flatMap((row) => row.widgets).find((entry) => entry.id === widgetId);
+
+    if (widget === undefined) return;
+    const view = widget.databaseId === undefined ? this.model.getView(widget.viewId) : undefined;
+    const shared = rows.some((row) => row.widgets.some((entry) => entry.id !== widgetId && entry.viewId === widget.viewId && entry.databaseId === undefined));
+
+    if (view !== undefined && view.dashboardViewId === dashboardId && !shared) {
+      this.model.deleteView(view.id);
+      void this.sync.syncDeleteView({ viewId: view.id });
+    }
+    this.writeDashboardRows(dashboardId, (current) => removeDashboardWidget(current, widgetId));
+  }
+
+  /** "Edit view": the widget's own view settings, under its "⋯". */
+  private editDashboardWidget(widgetId: string, anchor: HTMLElement): void {
+    this.widgetControls.get(widgetId)?.openSettings(anchor, 'root');
+  }
+
   /**
    * `bound`: a view bound to a second source. It is placed by its own
    * `dataSourceId`, not a dashboard row, and uses this block's toolbar.
@@ -7132,6 +7323,7 @@ export class DatabaseTool implements BlockTool {
       authority: { writable: () => eligible() && !this.readOnly && !owner.readOnly && !source.readOnly },
       cellEditor: null,
       pendingTitle: null,
+      chartHidden: new Set(),
     };
 
     if (storedState === undefined) this.dashboardStates.set(key, state);
@@ -7168,6 +7360,10 @@ export class DatabaseTool implements BlockTool {
         if (!current()) return;
         source.handleRowClick(rowId, mode, resolveOpenPagesIn(context.view), state.authority);
       },
+      ...(bound === undefined ? { widget: {
+        duplicate: () => this.duplicateDashboardWidget(dashboardId, widget.id),
+        remove: () => this.removeDashboardWidget(dashboardId, widget.id),
+      } } : {}),
     };
     const controls = bound?.controls ?? state.controls ?? new DatabaseViewControls(source.controlsHost(context));
 
@@ -7175,10 +7371,11 @@ export class DatabaseTool implements BlockTool {
       state.controls = controls;
       controls.load([saved.id]);
     }
+    if (bound === undefined) this.widgetControls.set(widget.id, controls);
     controls.refresh();
     // A bound source reads the holder's view for its own new rows, exports and menus.
     if (bound !== undefined) source.binding = context;
-    if (bound !== undefined && !WIDGET_LAYOUTS.includes(saved.type)) {
+    if (bound !== undefined && !BOUND_NATIVE_LAYOUTS.includes(saved.type)) {
       return source.mountBound(context, {
         revoke: () => { lifetime.disposed = true; },
         dispose: () => {
@@ -7188,9 +7385,7 @@ export class DatabaseTool implements BlockTool {
         },
       });
     }
-    const native = saved.type === 'table'
-      ? source.createNativeTableView(source.titlePropertyId(), context.view, context)
-      : source.createNativeListView(source.titlePropertyId(), context.view.groupBy, context.view, context);
+    const native = source.createNativeWidgetView(saved.type, context);
     const renderer: DatabaseViewRenderer = native.renderer;
     const keyboard = source.createKeyboard(native.root);
     const click = (event: MouseEvent): void => {
@@ -7320,6 +7515,16 @@ export class DatabaseTool implements BlockTool {
         if (this.boundRoot === root) this.boundRoot = null;
       },
     };
+  }
+
+  /** A table, chart or list widget's own renderer. */
+  private createNativeWidgetView(type: ViewType, context: NativeWidgetContext): { renderer: DatabaseTableView | DatabaseChartView | DatabaseListView; root: HTMLDivElement } {
+    const titlePropId = this.titlePropertyId();
+
+    if (type === 'table') return this.createNativeTableView(titlePropId, context.view, context);
+    if (type === 'chart') return this.createNativeChartView(titlePropId, context.view, context);
+
+    return this.createNativeListView(titlePropId, context.view.groupBy, context.view, context);
   }
 
   /** Drops what {@link wireView} attached. */

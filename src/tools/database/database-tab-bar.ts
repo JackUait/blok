@@ -1,4 +1,4 @@
-import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal } from '../../components/icons';
+import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconForm, IconViewTimeline, IconViewDashboard, IconLink, IconDotsHorizontal, IconPageLayout, IconEyeSlash, IconExpandDiagonal } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS, DATABASE_SUBMENU_OPEN_DELAY_MS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -48,7 +48,7 @@ export const VIEW_ICONS: Record<string, string> = {
   feed: IconViewFeed,
   form: IconForm,
   map: IconMap,
-  dashboard: IconColumns,
+  dashboard: IconViewDashboard,
 };
 
 export interface TabBarOptions {

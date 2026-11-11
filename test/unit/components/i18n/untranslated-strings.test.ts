@@ -957,6 +957,20 @@ for (const [locale, keys] of Object.entries(DATABASE_STARTER_COGNATE_RETENTIONS)
   for (const key of keys) set.add(key);
 }
 
+/** The Dashboard view name where the locale uses the loanword. Each has a ledger retention row. */
+const DASHBOARD_COGNATE_RETENTIONS: Record<string, string[]> = {
+  da: ['tools.database.viewTypeDashboard'],
+  de: ['tools.database.viewTypeDashboard'],
+  fil: ['tools.database.viewTypeDashboard'],
+  it: ['tools.database.viewTypeDashboard'],
+  nl: ['tools.database.viewTypeDashboard'],
+};
+
+for (const [locale, keys] of Object.entries(DASHBOARD_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 describe('locale values are translated (identical-to-en only when cognate)', () => {
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');

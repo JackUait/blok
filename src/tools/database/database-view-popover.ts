@@ -22,9 +22,10 @@ const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'gallery', labelKey: 'tools.database.viewTypeGallery' },
   { type: 'list', labelKey: 'tools.database.viewTypeList' },
   { type: 'chart', labelKey: 'tools.database.viewTypeChart' },
+  { type: 'dashboard', labelKey: 'tools.database.viewTypeDashboard' },
   { type: 'timeline', labelKey: 'tools.database.viewTypeTimeline' },
   { type: 'feed', labelKey: 'tools.database.viewTypeFeed' },
-  // Form and map are Tier 3 (D6). Dashboard, after Chart in Notion, is a data slot only, so it is not offered.
+  // Form and map are Tier 3 (D6).
   { type: 'map', labelKey: 'tools.database.viewTypeMap' },
   { type: 'calendar', labelKey: 'tools.database.viewTypeCalendar' },
   { type: 'form', labelKey: 'tools.database.viewTypeForm' },

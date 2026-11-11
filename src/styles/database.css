@@ -17261,6 +17261,129 @@ button[data-blok-database-feed-reaction]:hover,
   color: var(--blok-database-ink-secondary);
 }
 
+/* Dashboard widgets. Notion's widget editor is unmeasured (paid plan): the card is Blok's own database card. */
+[data-blok-database-dashboard] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-3);
+  padding-block: var(--blok-space-3);
+}
+
+[data-blok-database-dashboard-row] {
+  gap: var(--blok-space-3);
+}
+
+[data-blok-database-dashboard-editable] [data-blok-database-dashboard-widget] {
+  box-sizing: border-box;
+  padding: var(--blok-space-2) var(--blok-space-3) var(--blok-space-3);
+  background-color: var(--blok-database-card-bg);
+  box-shadow: var(--blok-database-card-lift), var(--blok-database-card-ring) 0 0 0 1px;
+  border-radius: var(--blok-radius-block);
+}
+
+[data-blok-database-dashboard-widget][data-dragging] {
+  opacity: 0.5;
+}
+
+[data-blok-database-dashboard-widget-header] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  min-height: 28px;
+  color: var(--blok-database-ink-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-blok-database-dashboard-editable] [data-blok-database-dashboard-widget-header] {
+  cursor: grab;
+}
+
+[data-blok-database-dashboard][data-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+
+[data-blok-database-dashboard-widget-title] {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-dashboard-widget-menu],
+[data-blok-database-dashboard-add-widget] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  height: 28px;
+  padding: 0 var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-database-ink-secondary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 100ms ease-in-out;
+}
+
+[data-blok-database-dashboard-widget-menu] {
+  width: 28px;
+  padding: 0;
+  justify-content: center;
+}
+
+[data-blok-database-dashboard-widget-menu]:hover,
+[data-blok-database-dashboard-add-widget]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-dashboard-add-widget] {
+  align-self: flex-start;
+}
+
+[data-blok-database-dashboard-empty] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding-block: var(--blok-space-6);
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-dashboard-empty] p {
+  margin: 0;
+}
+
+[data-blok-database-dashboard-empty] [data-blok-database-dashboard-add-widget] {
+  align-self: center;
+}
+
+[data-blok-database-dashboard-drop] {
+  position: absolute;
+  pointer-events: none;
+  background-color: var(--blok-database-drop-line);
+}
+
+[data-blok-database-dashboard-drop="row"] {
+  inset-inline: 0;
+  height: 3px;
+  margin-block-start: calc(-1 * var(--blok-space-0-5));
+}
+
+[data-blok-database-dashboard-drop="column"] {
+  width: 3px;
+  margin-inline-start: calc(-1 * var(--blok-space-0-5));
+}
+
+/* A dashboard's toolbar hides the New split button. */
+[data-blok-database-new][hidden] {
+  display: none;
+}
+
 /* Conditional color on items whose own fill is declared after the color rules above. */
 :is([data-blok-database-calendar-event], [data-blok-database-timeline-bar], [data-blok-database-feed-card])[data-blok-database-color] {
   background-color: var(--_blok-database-rule-bg);

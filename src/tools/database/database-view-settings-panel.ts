@@ -346,8 +346,10 @@ export class ViewSettingsPages {
           opensPage: true,
           onClick: () => panel.push(this.filters()),
         });
+        const isDashboard = view.type === 'dashboard';
         // A map has no Sort, Group or Property visibility (research/20 §1f).
-        const rows: HTMLElement[] = isMap ? [
+        // A dashboard has none of the row settings (notion-motion Round 15 A): its widgets carry them.
+        const mapRows = (): HTMLElement[] => [
           nameRow,
           layoutRow,
           panelLabel(this.t('settingsStyle')),
@@ -360,7 +362,8 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.mapHeight()),
           }),
           filterRow,
-        ] : [
+        ];
+        const listRows = (): HTMLElement[] => [
           nameRow,
           layoutRow,
           panelRow({
@@ -389,6 +392,8 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.group(false)),
           }),
         ];
+        const layoutRows = isMap ? mapRows() : listRows();
+        const rows: HTMLElement[] = isDashboard ? [nameRow, layoutRow] : layoutRows;
 
         if (view.type === 'board') {
           rows.push(panelRow({
@@ -400,7 +405,7 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.group(true)),
           }));
         }
-        if (COLOR_RULE_LAYOUTS.includes(view.type)) {
+        if (COLOR_RULE_LAYOUTS.includes(view.type) && !isDashboard) {
           rows.push(panelRow({
             label: this.t('settingsConditionalColor'),
             testId: 'database-settings-color',
@@ -438,7 +443,7 @@ export class ViewSettingsPages {
         const editProperties = this.ctx.editProperties;
 
         // research/28 L131: a map's settings have no Edit properties row.
-        if (editProperties !== undefined && !isMap) {
+        if (editProperties !== undefined && !isMap && !isDashboard) {
           rows.push(panelRow({
             label: this.t('settingsEditProperties'),
             testId: 'database-settings-edit-properties',

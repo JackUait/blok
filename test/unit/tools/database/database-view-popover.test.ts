@@ -130,14 +130,14 @@ describe('DatabaseViewPopover', () => {
       expect(boardEl!.style.cursor).not.toBe('not-allowed');
     });
 
-    it('lists the layouts in Notion order without the Dashboard slot (research/08:113)', () => {
+    it('lists the layouts in Notion order, Dashboard after Chart (research/08:113, notion-motion Round 15 A)', () => {
       popover.open(anchor);
       const items = getLastItems();
       const types = items
         .map((item) => item.element?.getAttribute('data-blok-database-view-option'))
         .filter(Boolean);
 
-      expect(types).toEqual(['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'map', 'calendar', 'form']);
+      expect(types).toEqual(['table', 'board', 'gallery', 'list', 'chart', 'dashboard', 'timeline', 'feed', 'map', 'calendar', 'form']);
     });
 
     it('calls onSelect with "table" when Table option is clicked', () => {
@@ -277,7 +277,7 @@ describe('DatabaseViewPopover', () => {
 
     // notion-motion Round 9 (r9-addview-svgs.raw), research/07:50, 81-scratch-form.png:
     // Notion draws one glyph per layout in the tile and in the tab.
-    it.each(['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'map', 'calendar', 'form'])('draws the %s tile with its tab\'s icon', (type) => {
+    it.each(['table', 'board', 'gallery', 'list', 'chart', 'dashboard', 'timeline', 'feed', 'map', 'calendar', 'form'])('draws the %s tile with its tab\'s icon', (type) => {
       popover.open(anchor);
 
       const tab = document.createElement('span');

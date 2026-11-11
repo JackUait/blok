@@ -1253,7 +1253,7 @@ export interface DatabaseViewConfig {
 
 export type MapHeight = 'small' | 'medium' | 'large' | 'extraLarge';
 
-export type Tier3ViewSettingKey = 'form' | 'mapBy' | 'mapHeight' | 'dashboard' | 'calendarSync' | 'dataSourceId';
+export type Tier3ViewSettingKey = 'form' | 'mapBy' | 'mapHeight' | 'dashboard' | 'dashboardViewId' | 'calendarSync' | 'dataSourceId';
 
 export type DatabaseSavedAutomationTrigger =
   | { id: string; type: 'pageAdded' }

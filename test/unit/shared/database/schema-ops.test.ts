@@ -29,6 +29,8 @@ const KEYS: Record<keyof typeof DATABASE_DEFAULT_TEXT, string> = {
   viewTypeFeed: 'tools.database.viewTypeFeed',
   viewTypeForm: 'tools.database.viewTypeForm',
   viewTypeMap: 'tools.database.viewTypeMap',
+  viewTypeDashboard: 'tools.database.viewTypeDashboard',
+  viewTypeNumber: 'tools.database.chartTypeNumber',
   viewMapSeed: 'toolNames.mapView',
   placeProperty: 'tools.database.propertyTypePlace',
   viewBoardSeed: 'toolNames.board',

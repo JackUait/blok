@@ -25,6 +25,8 @@ const DEFAULT_KEYS = {
   viewTypeFeed: 'tools.database.viewTypeFeed',
   viewTypeForm: 'tools.database.viewTypeForm',
   viewTypeMap: 'tools.database.viewTypeMap',
+  viewTypeDashboard: 'tools.database.viewTypeDashboard',
+  viewTypeNumber: 'tools.database.chartTypeNumber',
   viewMapSeed: 'toolNames.mapView',
   placeProperty: 'tools.database.propertyTypePlace',
   viewBoardSeed: 'toolNames.board',
@@ -229,6 +231,10 @@ const localizeViewName = (view: DatabaseViewConfig, i18n: I18n): string => {
     return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeTimeline, DEFAULT_KEYS.viewTypeTimeline, i18n);
   }
 
+  if (view.type === 'chart' && view.chartType === 'number' && view.name === DATABASE_DEFAULT_TEXT.viewTypeNumber) {
+    return i18n.t(DEFAULT_KEYS.viewTypeNumber);
+  }
+
   if (view.type === 'chart') {
     return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeChart, DEFAULT_KEYS.viewTypeChart, i18n);
   }
@@ -247,6 +253,10 @@ const localizeViewName = (view: DatabaseViewConfig, i18n: I18n): string => {
 
   if (view.type === 'map') {
     return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeMap, DEFAULT_KEYS.viewTypeMap, i18n);
+  }
+
+  if (view.type === 'dashboard') {
+    return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeDashboard, DEFAULT_KEYS.viewTypeDashboard, i18n);
   }
 
   return view.name;

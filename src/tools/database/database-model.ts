@@ -1,3 +1,4 @@
+import { tabViews } from '../../shared/database/dashboard';
 import { nanoid } from 'nanoid';
 import type {
   DatabaseData,
@@ -587,6 +588,11 @@ export class DatabaseModel {
 
   getViews(): DatabaseViewConfig[] {
     return [...this.views];
+  }
+
+  /** The views that get a tab: all but the dashboard widgets. */
+  getTabViews(): DatabaseViewConfig[] {
+    return tabViews(this.views);
   }
 
   getView(viewId: string): DatabaseViewConfig | undefined {

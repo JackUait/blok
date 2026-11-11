@@ -52,6 +52,7 @@ import { preprocessPastedHtml } from '../../components/modules/paste/preprocess-
 import { findOwn } from '../../components/utils/own-element';
 import { markPasteContinuation, pasteContinuationSettled } from '../../components/utils/paste-continuation';
 import { logLabeled } from '../../components/utils/logger';
+import { sanitizeBlocks } from '../../components/utils/sanitizer';
 
 /**
  * Tags each bulk-formattable mark produces. The first entry is what we WRITE;
@@ -2075,9 +2076,10 @@ export class TableSubsystems {
 
     tail.append(tailRange.extractContents());
 
-    // Any page can write this payload. parseClipboardHtml already cleaned the
-    // text with the paragraph rules, and the target is a paragraph too.
-    const head = parseUntrustedHtml(String(first.data.text));
+    // Any page can write this payload, and an external table was cleaned with
+    // the generic table rules: clean it with the target paragraph's own rules.
+    const [cleaned] = sanitizeBlocks([{ tool: 'paragraph', data: { text: first.data.text } }], this.toolSanitizeConfig('paragraph') ?? {});
+    const head = parseUntrustedHtml(String(cleaned.data.text));
     const fragment = document.createDocumentFragment();
 
     fragment.append(...Array.from(head.childNodes));

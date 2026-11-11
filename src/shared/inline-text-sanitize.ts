@@ -9,6 +9,7 @@
  * tool spreads {@link INLINE_TEXT_SANITIZE} into its `text` sanitize config.
  */
 import type { SanitizerConfig } from '../../types';
+import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from './annotation-mark';
 import { EQUATION_SOURCE_ATTR } from './equation-mark';
 import { preservePageReferenceAnchor } from './page-reference';
 
@@ -80,6 +81,27 @@ export const preserveEquationSpan = (node: Element): { [attr: string]: boolean |
 };
 
 /**
+ * The one `span` rule for text fields: an annotation span keeps its two
+ * attributes, an equation span follows {@link preserveEquationSpan}, and any
+ * other span is unwrapped.
+ * @param node - the cleaner's copy of the node, in its sandbox document
+ * @returns attribute config for a kept span, else `false` to drop the tag
+ */
+export const preserveInlineSpan = (node: Element): { [attr: string]: boolean | string } | false => {
+  const text = node.getAttribute(ANNOTATION_ATTR);
+
+  if (text === null || text.trim() === '') {
+    return preserveEquationSpan(node);
+  }
+
+  const subtitle = node.getAttribute(ANNOTATION_SUBTITLE_ATTR);
+
+  return subtitle !== null && subtitle.trim() !== ''
+    ? { [ANNOTATION_ATTR]: true, [ANNOTATION_SUBTITLE_ATTR]: true }
+    : { [ANNOTATION_ATTR]: true };
+};
+
+/**
  * Tag → rule map for inline formatting that text-bearing block tools allow in
  * their `text` field. Spread this into a tool's `text` sanitize config so the
  * marks produced by the inline tools (bold, italic, underline, strikethrough,
@@ -100,5 +122,5 @@ export const INLINE_TEXT_SANITIZE = {
   sup: {},
   sub: {},
   mark: preserveColorStyles,
-  span: preserveEquationSpan,
+  span: preserveInlineSpan,
 } as unknown as SanitizerConfig;

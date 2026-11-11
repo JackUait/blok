@@ -16,7 +16,7 @@
       "sup": {},
       "sub": {},
       "mark": "[fn preserveColorStyles]",
-      "span": "[fn preserveEquationSpan]",
+      "span": "[fn preserveInlineSpan]",
       "img": {
         "src": true,
         "alt": true,
@@ -43,7 +43,7 @@
       "sup": {},
       "sub": {},
       "mark": "[fn preserveColorStyles]",
-      "span": "[fn preserveEquationSpan]"
+      "span": "[fn preserveInlineSpan]"
     },
     "isToggleable": false,
     "anchor": false,
@@ -65,7 +65,7 @@
       "sup": {},
       "sub": {},
       "mark": "[fn preserveColorStyles]",
-      "span": "[fn preserveEquationSpan]"
+      "span": "[fn preserveInlineSpan]"
     }
   },
   "toggle": {
@@ -85,7 +85,7 @@
       "sup": {},
       "sub": {},
       "mark": "[fn preserveColorStyles]",
-      "span": "[fn preserveEquationSpan]"
+      "span": "[fn preserveInlineSpan]"
     }
   },
   "callout": {
@@ -108,7 +108,7 @@
       "sup": {},
       "sub": {},
       "mark": "[fn preserveColorStyles]",
-      "span": "[fn preserveEquationSpan]"
+      "span": "[fn preserveInlineSpan]"
     }
   },
   "code": {
@@ -214,7 +214,7 @@
       "sup": {},
       "sub": {},
       "mark": "[fn mark]",
-      "span": "[fn preserveEquationSpan]",
+      "span": "[fn preserveInlineSpan]",
       "ul": true,
       "ol": true,
       "li": {

@@ -1,5 +1,5 @@
 import { Blok, defaultTools, type OutputData } from '@bloklabs/core/full';
-import { Database, DatabaseComment, DatabaseRow, Page, Table, type PageConfig } from '@bloklabs/core/tools';
+import { Callout, Code, Database, DatabaseComment, DatabaseRow, Divider, Page, Quote, Table, Toggle, type PageConfig } from '@bloklabs/core/tools';
 import { createPageFrame, type PageFrame, type ShellPage, type SidebarAction } from '@blok/sidebar';
 import { loadIndex, readFile, writeFile, type DesktopPage, type WorkspaceIndex } from './storage';
 import { createDesktopFooter, readAppearance } from './settings';
@@ -14,6 +14,14 @@ const desktopTools = {
   database: { class: Database },
   'database-row': { class: DatabaseRow },
   'database-comment': { class: DatabaseComment },
+  // Writing about a codebase needs these: code carries Prism highlighting, line
+  // numbers, language detection and mermaid; the rest are what an explanation is
+  // built from — callouts for the "why", toggles for detail a reader can fold away.
+  code: { class: Code },
+  callout: { class: Callout },
+  toggle: { class: Toggle },
+  quote: { class: Quote },
+  divider: { class: Divider },
 };
 
 export interface Workspace {

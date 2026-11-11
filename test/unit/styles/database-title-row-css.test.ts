@@ -239,3 +239,19 @@ describe('the table selection bar hides Filter, Sort and Automations', () => {
       .toMatch(/visibility: hidden/);
   });
 });
+
+// replica-db-pages/research-live-notion.md:31: on a full-page database the toolbar shows only Settings and New
+// until the pointer is over the view. Keyboard focus and an open menu keep an icon shown.
+describe('full-page database: the toolbar icons show on hover', () => {
+  const hover = database.slice(database.indexOf('@media (hover: hover) { [data-blok-database-page]'));
+  const HIDE = '[data-blok-database-page]:not(:hover) > :is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:focus-within) > [data-blok-database-toolbar-foldable]:not([data-popover-open])';
+
+  it('hides Filter, Sort, Automations, AI Autofill and search while the pointer is away, on pointer devices only', () => {
+    expect(hover.startsWith('@media (hover: hover)')).toBe(true);
+    expect(hover).toContain(`${HIDE} { opacity: 0; }`);
+  });
+
+  it('leaves inline databases alone', () => {
+    expect(database.match(/\[data-blok-database-toolbar-foldable\]:not\(\[data-popover-open\]\) \{ opacity: 0; \}/g)).toHaveLength(1);
+  });
+});

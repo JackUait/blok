@@ -10333,6 +10333,14 @@ button[data-blok-database-table-group-count]:hover {
   height: 20px;
 }
 
+/* replica-db-pages/research-live-notion.md:31: a full-page database shows only Settings and New until the
+   pointer is over the view. Focus and an open menu keep the icons. The reveal timing is unmeasured. */
+@media (hover: hover) {
+  [data-blok-database-page]:not(:hover) > :is([data-blok-database-view-bar], [data-blok-database-title-row]) > [data-blok-database-view-toolbar]:not(:focus-within) > [data-blok-database-toolbar-foldable]:not([data-popover-open]) {
+    opacity: 0;
+  }
+}
+
 [data-blok-database-view-toolbar] > button:hover,
 [data-blok-database-view-toolbar] > button[data-popover-open] {
   background-color: var(--blok-database-table-header-hover-bg);

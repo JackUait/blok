@@ -96,6 +96,12 @@ const moveNode = (parent: StatefulMoveParent, node: Node, reference: Node | null
  * @param node - the node about to move
  */
 const selectionInside = (node: Node): { anchorNode: Node; anchorOffset: number; focusNode: Node; focusOffset: number } | null => {
+  // A detached node cannot hold the selection. Checked first because Chrome
+  // forces a whole-page layout on each selection read while nothing is selected.
+  if (!node.isConnected) {
+    return null;
+  }
+
   const selection = typeof window === 'undefined' ? null : window.getSelection();
   const anchorNode = selection?.anchorNode ?? null;
   const focusNode = selection?.focusNode ?? null;

@@ -203,6 +203,19 @@ describe('html', () => {
       expect([selection?.anchorNode, selection?.anchorOffset, selection?.focusOffset]).toEqual([text, 1, 3]);
     });
 
+    // Chrome forces a whole-page style and layout on every selection read while
+    // nothing is selected; a table mount moves 1200 detached cell holders.
+    it('does not read the selection when the moved node is detached', () => {
+      const parent = document.createElement('div');
+      const node = document.createElement('div');
+      const getSelection = vi.spyOn(window, 'getSelection');
+
+      moveElementToEnd(parent, node);
+
+      expect(getSelection).not.toHaveBeenCalled();
+      expect(node.parentNode).toBe(parent);
+    });
+
     it('is a no-op when the reference is the node itself', () => {
       const moveBefore = vi.fn();
 

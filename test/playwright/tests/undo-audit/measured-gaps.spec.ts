@@ -89,6 +89,18 @@ test.describe('undo audit — measured Notion gaps', () => {
     await expect(page.locator(`#${HOLDER_ID} [data-blok-toolbox-opened="true"]`)).toHaveCount(1);
   });
 
+  // A Shift+Enter line break starts a line, so "/" there is not after a letter.
+  test('"/" right after a Shift+Enter line break opens the menu', async ({ page }) => {
+    await create(page, [{ id: 'b1', type: 'paragraph', data: { text: 'Beta' } }]);
+    await editableOf(page, 'b1').click();
+    await page.keyboard.press('End');
+
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('/');
+
+    await expect(page.locator(`#${HOLDER_ID} [data-blok-toolbox-opened="true"]`)).toHaveCount(1);
+  });
+
   // Notion U154: Tab inserts one tab character, one undo step.
   test('Tab in code inserts a tab character as one undo step', async ({ page }) => {
     await create(page, [{ id: 'b1', type: 'code', data: { code: 'x', language: 'plain text' } }]);

@@ -17,6 +17,27 @@ import { isTextLikeBlock } from './utils/text-like-block';
 import { restoreDeletedBoundarySpace } from '../../utils/delete-boundary-nbsp';
 
 /**
+ * The text of `fragment`'s last line. A <br> is a line break, which
+ * Range.toString() drops.
+ * @param fragment - the content before the caret
+ */
+const textOnCaretLine = (fragment: DocumentFragment): string => {
+  const breaks = fragment.querySelectorAll('br');
+  const lastBreak = breaks.item(breaks.length - 1);
+
+  if (lastBreak === null) {
+    return fragment.textContent ?? '';
+  }
+
+  const line = document.createRange();
+
+  line.setStartAfter(lastBreak);
+  line.setEnd(fragment, fragment.childNodes.length);
+
+  return line.toString();
+};
+
+/**
  * All keydowns on Block
  * @param {KeyboardEvent} event - keydown
  */
@@ -594,7 +615,7 @@ export class BlockEvents extends Module {
     before.selectNodeContents(input);
     before.setEnd(node, range.startOffset);
 
-    return /\p{L}$/u.test(before.toString());
+    return /\p{L}$/u.test(textOnCaretLine(before.cloneContents()));
   }
 
   /**

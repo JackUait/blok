@@ -230,6 +230,42 @@ describe('BlockEvents slash gate (Notion parity)', () => {
       expect(toolboxOpen).toHaveBeenCalledTimes(1);
     });
 
+    // A Shift+Enter line break starts a new line; range text hides the <br>.
+    it('opens the toolbox right after a line break, caret in the container after the <br>', () => {
+      const { blockEvents, event, toolboxOpen } = setupWithText('Beta<br>');
+
+      blockEvents.keydown(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(toolboxOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens the toolbox right after a line break, caret at the start of the text after the <br>', () => {
+      const { blockEvents, event, input, toolboxOpen } = setupWithText('Beta<br>x');
+      const range = document.createRange();
+      const after = input.lastChild;
+
+      if (after === null) {
+        throw new Error('no text after the break');
+      }
+      range.setStart(after, 0);
+      range.collapse(true);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      blockEvents.keydown(event);
+
+      expect(toolboxOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('still sees a letter typed after a line break', () => {
+      const { blockEvents, event, toolboxOpen } = setupWithText('Beta<br>Gam<b>ma</b>');
+
+      blockEvents.keydown(event);
+
+      expect(toolboxOpen).not.toHaveBeenCalled();
+    });
+
     it('still opens the toolbox at the start of the text', () => {
       const { blockEvents, event, input, toolboxOpen } = setupWithText('Beta');
       const range = document.createRange();

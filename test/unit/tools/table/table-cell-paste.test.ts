@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseCellContentToBlocks, serializeCellBlocksToHtml } from '../../../../src/tools/table/table-cell-paste';
+import { cellBlockFallbackText, parseCellContentToBlocks, serializeCellBlocksToHtml } from '../../../../src/tools/table/table-cell-paste';
 
 describe('parseCellContentToBlocks', () => {
   it('splits plain text on <br> into paragraphs (legacy behavior parity)', () => {
@@ -103,6 +103,50 @@ describe('parseCellContentToBlocks', () => {
     expect(parseCellContentToBlocks('<ul><li>alpha<br></li></ul>')).toEqual([
       { tool: 'list', data: { text: 'alpha', style: 'unordered', checked: false, depth: 0 } },
     ]);
+  });
+});
+
+describe('parseCellContentToBlocks — images', () => {
+  it('turns a cell holding only an image into one image block, with no empty paragraph', () => {
+    expect(parseCellContentToBlocks('<img src="https://example.com/a.png" alt="cap">')).toEqual([
+      { tool: 'image', data: { url: 'https://example.com/a.png', alt: 'cap' } },
+    ]);
+  });
+
+  it('splits the text around an image into paragraphs before and after it', () => {
+    expect(parseCellContentToBlocks('before<img src="https://example.com/a.png">after')).toEqual([
+      { tool: 'paragraph', data: { text: 'before' } },
+      { tool: 'image', data: { url: 'https://example.com/a.png' } },
+      { tool: 'paragraph', data: { text: 'after' } },
+    ]);
+  });
+
+  it('finds an image inside a paragraph and inside a mark', () => {
+    expect(parseCellContentToBlocks('<p><b>x<img src="https://example.com/a.png"></b></p>')).toEqual([
+      { tool: 'paragraph', data: { text: '<b>x</b>' } },
+      { tool: 'image', data: { url: 'https://example.com/a.png' } },
+    ]);
+  });
+
+  it('leaves an image with no src in the text', () => {
+    expect(parseCellContentToBlocks('a<img alt="x">')).toEqual([
+      { tool: 'paragraph', data: { text: 'a<img alt="x">' } },
+    ]);
+  });
+
+  it('falls back to an inline image when the editor has no image tool', () => {
+    expect(cellBlockFallbackText({ url: 'https://example.com/a.png?a=1&b="2"', alt: '<cap>' }))
+      .toBe('<img src="https://example.com/a.png?a=1&amp;b=&quot;2&quot;" alt="&lt;cap&gt;">');
+  });
+
+  it('round-trips an image block through the cell HTML channel', () => {
+    const blocks = [
+      { tool: 'paragraph', data: { text: 'a' } },
+      { tool: 'image', data: { url: 'https://example.com/a.png', alt: 'cap' } },
+      { tool: 'paragraph', data: { text: 'b' } },
+    ];
+
+    expect(parseCellContentToBlocks(serializeCellBlocksToHtml(blocks))).toEqual(blocks);
   });
 });
 

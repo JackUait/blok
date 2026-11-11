@@ -23,7 +23,7 @@ interface TableCell {
 /**
  * One run of a paragraph's text, cut at each extracted image.
  */
-type Piece =
+export type Piece =
   | { kind: 'text'; html: string; empty: boolean }
   | { kind: 'image'; url: string; alt: string | null };
 
@@ -54,7 +54,7 @@ const serialize = (fragment: DocumentFragment): Pick<Extract<Piece, { kind: 'tex
  * @param text - paragraph HTML
  * @returns pieces in order, or null when there is no image to extract
  */
-const splitAroundImages = (text: string): Piece[] | null => {
+export const splitAroundImages = (text: string): Piece[] | null => {
   if (!/<img\b/i.test(text)) {
     return null;
   }

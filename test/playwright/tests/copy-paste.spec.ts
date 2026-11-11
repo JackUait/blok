@@ -2078,6 +2078,55 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('an image in a pasted table cell', () => {
+    const url = 'https://example.com/a.png';
+    const html = `<table><tr><td><img src="${url}" alt="cap"></td><td>B</td></tr></table>`;
+    const cases: Record<string, { doc: OutputData['blocks']; data: Record<string, string> }> = {
+      'HTML pasted into a table cell': {
+        doc: [
+          { id: 't', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['c0'] }, { blocks: ['c1'] }]] }, content: ['c0', 'c1'] },
+          { id: 'c0', type: 'paragraph', parent: 't', data: { text: '' } },
+          { id: 'c1', type: 'paragraph', parent: 't', data: { text: '' } },
+        ],
+        data: { 'text/html': html, 'text/plain': 'cap\tB' },
+      },
+      'HTML pasted at the top level': {
+        doc: [{ id: 'c0', type: 'paragraph', data: { text: '' } }],
+        data: { 'text/html': html, 'text/plain': 'cap\tB' },
+      },
+      'Markdown pasted at the top level': {
+        doc: [{ id: 'c0', type: 'paragraph', data: { text: '' } }],
+        data: { 'text/plain': `| H | B |\n| --- | --- |\n| ![](${url}) | B |` },
+      },
+    };
+
+    for (const [name, { doc, data }] of Object.entries(cases)) {
+      test(`${name} becomes a live image block alone in its cell`, async ({ page }) => {
+        await createBlokWithElements(page, doc);
+        await page.locator('[data-blok-id="c0"] [contenteditable="true"]').click();
+        await paste(page, page.locator(':focus'), data);
+
+        const shape = async (): Promise<{ holderless: string[]; imageCell: Array<string | undefined> }> => {
+          const { blocks } = await saveBlok(page);
+          const byId = new Map(blocks.map((b) => [b.id, b]));
+          const ids = blocks.map((b) => b.id ?? '');
+          const live = await page.evaluate((all) => all.filter((id) => document.querySelector(`[data-blok-id="${id}"]`) !== null), ids);
+          const cells = blocks
+            .filter((b) => b.type === 'table')
+            .flatMap((b) => (b.data as { content: Array<Array<{ blocks?: string[] }>> }).content.flat());
+          const imageCell = cells.find((cell) => (cell.blocks ?? []).some((id) => byId.get(id)?.type === 'image'));
+
+          return {
+            holderless: ids.filter((id) => !live.includes(id)),
+            imageCell: (imageCell?.blocks ?? []).map((id) => byId.get(id)?.type),
+          };
+        };
+
+        await expect.poll(shape).toEqual({ holderless: [], imageCell: ['image'] });
+      });
+    }
+  });
+
   test.describe('blocks of a tool the pasting editor lacks', () => {
     const doc: OutputData['blocks'] = [
       { id: 'p1', type: 'paragraph', data: { text: 'Before toggle' } },

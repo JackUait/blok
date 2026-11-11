@@ -17,11 +17,13 @@ import type { ListItemStyle } from '../list/types';
 import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
 import { CELL_CODE_TAG } from '../../components/modules/paste/constants';
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
+import { splitAroundImages } from '../../components/modules/normalizeInlineImages';
 
 export type CellBlockInsert =
   | { tool: 'paragraph'; data: { text: string } }
   | { tool: 'list'; data: { text: string; style: ListItemStyle; checked: boolean; depth: number } }
-  | { tool: 'code'; data: { code: string } };
+  | { tool: 'code'; data: { code: string } }
+  | { tool: 'image'; data: { url: string; alt?: string } };
 
 export { CELL_BLOCK_TAGS_SANITIZE } from '../../shared/table/cell-sanitize';
 
@@ -29,6 +31,29 @@ const BR_SPLIT_RE = /<br\s*\/?>/i;
 
 const splitInlineSegments = (html: string): string[] =>
   html.split(BR_SPLIT_RE).map(segment => segment.trim()).filter(Boolean);
+
+const imageData = (url: string, alt: string | null): { url: string; alt?: string } =>
+  alt !== null && alt !== '' ? { url, alt } : { url };
+
+/**
+ * A cell holds an image as its own block. Left inline, the saver splits it out
+ * with an id no live block has.
+ */
+const inlineSegmentToInserts = (html: string): CellBlockInsert[] => {
+  const pieces = splitAroundImages(html);
+
+  if (pieces === null) {
+    return [{ tool: 'paragraph', data: { text: html } }];
+  }
+
+  return pieces.flatMap((piece): CellBlockInsert[] => {
+    if (piece.kind === 'image') {
+      return [{ tool: 'image', data: imageData(piece.url, piece.alt) }];
+    }
+
+    return piece.empty ? [] : [{ tool: 'paragraph', data: { text: piece.html } }];
+  });
+};
 
 const isListElement = (node: Node): node is HTMLElement =>
   node instanceof HTMLElement && (node.tagName === 'UL' || node.tagName === 'OL');
@@ -137,7 +162,7 @@ const nodesToInserts = (nodes: Node[]): CellBlockInsert[] => {
   const inlineParts: string[] = [];
 
   const flushInline = (): void => {
-    splitInlineSegments(inlineParts.join('')).forEach(text => inserts.push({ tool: 'paragraph', data: { text } }));
+    splitInlineSegments(inlineParts.join('')).forEach(text => inserts.push(...inlineSegmentToInserts(text)));
     inlineParts.length = 0;
   };
 
@@ -167,6 +192,24 @@ const nodesToInserts = (nodes: Node[]): CellBlockInsert[] => {
   return inserts;
 };
 
+const escapeAttribute = (value: string): string =>
+  value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const cellBlockText = (data: Record<string, unknown>): string =>
+  typeof data.text === 'string' ? data.text : '';
+
+/** An image block as the inline `<img>` that {@link parseCellContentToBlocks} reads back. */
+const imageHtml = (data: Record<string, unknown>): string => {
+  if (typeof data.url !== 'string' || data.url === '') {
+    return '';
+  }
+
+  const src = data.url;
+  const alt = typeof data.alt === 'string' && data.alt !== '' ? ` alt="${escapeAttribute(data.alt)}"` : '';
+
+  return `<img src="${escapeAttribute(src)}"${alt}>`;
+};
+
 /**
  * Paragraph text for a cell block whose tool is not registered, so a missing
  * tool degrades to text instead of losing the content.
@@ -174,6 +217,10 @@ const nodesToInserts = (nodes: Node[]): CellBlockInsert[] => {
 export const cellBlockFallbackText = (data: Record<string, unknown>): string => {
   if (typeof data.text === 'string') {
     return data.text;
+  }
+
+  if (typeof data.url === 'string') {
+    return imageHtml(data);
   }
 
   if (typeof data.code !== 'string') {
@@ -253,7 +300,7 @@ export const serializeCellBlocksToHtml = (blocks: SerializableCellBlock[]): stri
   for (const block of blocks) {
     if (!isSerializableListBlock(block)) {
       flushList();
-      paragraphRun.push(typeof block.data.text === 'string' ? block.data.text : '');
+      paragraphRun.push(block.tool === 'image' ? imageHtml(block.data) : cellBlockText(block.data));
       continue;
     }
 

@@ -257,6 +257,56 @@ describe('mdastToBlocks', () => {
     });
   });
 
+  describe('table cell image', () => {
+    const tableOf = (cell: unknown[]): Root => ({
+      type: 'root',
+      children: [{
+        type: 'table',
+        align: [null],
+        children: [
+          { type: 'tableRow', children: [{ type: 'tableCell', children: [{ type: 'text', value: 'H' }] }] },
+          { type: 'tableRow', children: [{ type: 'tableCell', children: cell }] },
+        ],
+      }],
+    } as Root);
+
+    const cellBlocks = (tree: Root): Array<{ type: string; data: unknown; parent: unknown }> => {
+      const blocks = mdastToBlocks(tree);
+      const table = blocks.find(b => b.type === 'table');
+      const ids = (table?.data as { content: { blocks: string[] }[][] }).content[1][0].blocks;
+
+      return ids.map((id) => {
+        const block = blocks.find(b => b.id === id);
+
+        return { type: block?.type ?? '', data: block?.data, parent: block?.parent === table?.id };
+      });
+    };
+
+    it('turns a cell holding only an image into an image block', () => {
+      expect(cellBlocks(tableOf([{ type: 'image', url: 'https://example.com/a.png', title: null, alt: '' }]))).toEqual([
+        { type: 'image', data: { url: 'https://example.com/a.png' }, parent: true },
+      ]);
+    });
+
+    it('splits a cell with text and an image into paragraph, image, paragraph', () => {
+      expect(cellBlocks(tableOf([
+        { type: 'text', value: 'a ' },
+        { type: 'image', url: 'https://example.com/a.png', title: null, alt: 'cap' },
+        { type: 'text', value: ' b' },
+      ]))).toEqual([
+        { type: 'paragraph', data: { text: 'a ' }, parent: true },
+        { type: 'image', data: { url: 'https://example.com/a.png', caption: 'cap', alt: 'cap' }, parent: true },
+        { type: 'paragraph', data: { text: ' b' }, parent: true },
+      ]);
+    });
+
+    it('keeps an image with an unsafe URL out of an image block', () => {
+      const blocks = cellBlocks(tableOf([{ type: 'image', url: 'javascript:alert(1)', title: null, alt: '' }]));
+
+      expect(blocks.map(b => b.type)).toEqual(['paragraph']);
+    });
+  });
+
   describe('code block', () => {
     it('converts fenced code blocks to code tool blocks', () => {
       const tree: Root = {

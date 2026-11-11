@@ -302,8 +302,11 @@ function soleImage(children: PhrasingContent[], definitions: DefinitionMap): Sta
     return null;
   }
 
-  const [node] = meaningful;
+  return imageOf(meaningful[0], definitions);
+}
 
+/** The safe image a phrasing node shows, or null when it is not one. */
+function imageOf(node: PhrasingContent, definitions: DefinitionMap): StandaloneImage | null {
   if (node.type === 'image') {
     return safeStandaloneImage(node.url, node.alt);
   }
@@ -648,24 +651,61 @@ function processTableRow(
   const rowContent: TableCell[] = [];
 
   for (const [index, cell] of cells.entries()) {
-    const text = phrasing(cell.children, ctx.definitions);
-    /** The exporter marks a blank heading row with a lone `<br>` (see `tableToMarkdown`). */
-    const cellText = ctx.write(text.html === '<br>' ? EMPTY : text);
-    const cellBlockId = ctx.generateId();
+    const cellBlocks = imageCellBlocks(cell.children, ctx) ?? [textCellBlock(cell.children, ctx)];
 
-    blocks.push({
-      id: cellBlockId,
-      type: 'paragraph',
-      data: { text: cellText },
-      parent: tableId,
-    });
+    cellBlocks.forEach(block => blocks.push({ ...block, parent: tableId }));
 
+    const cellBlockIds = cellBlocks.map(block => block.id ?? '');
     const placement = ALIGN_PLACEMENT[align?.[index] ?? ''];
 
-    rowContent.push(placement === undefined ? { blocks: [cellBlockId] } : { blocks: [cellBlockId], placement });
+    rowContent.push(placement === undefined ? { blocks: cellBlockIds } : { blocks: cellBlockIds, placement });
   }
 
   return rowContent;
+}
+
+function textCellBlock(children: PhrasingContent[], ctx: ConvertContext): OutputBlockData {
+  const text = phrasing(children, ctx.definitions);
+
+  /** The exporter marks a blank heading row with a lone `<br>` (see `tableToMarkdown`). */
+  return makeParagraph(text.html === '<br>' ? EMPTY : text, ctx);
+}
+
+/**
+ * A cell's blocks when it shows an image: the image as its own block, with the
+ * text around it as paragraphs. Null when the cell has no image. Kept inline,
+ * the image is split out at save time under an id no live block has.
+ */
+function imageCellBlocks(children: PhrasingContent[], ctx: ConvertContext): OutputBlockData[] | null {
+  if (!children.some(child => imageOf(child, ctx.definitions) !== null)) {
+    return null;
+  }
+
+  const result: OutputBlockData[] = [];
+  const run: PhrasingContent[] = [];
+
+  const flush = (): void => {
+    if (run.some(child => child.type !== 'text' || child.value.trim() !== '')) {
+      result.push(textCellBlock([...run], ctx));
+    }
+    run.length = 0;
+  };
+
+  for (const child of children) {
+    const image = imageOf(child, ctx.definitions);
+
+    if (image === null) {
+      run.push(child);
+      continue;
+    }
+
+    flush();
+    result.push(makeImage(image, ctx.generateId));
+  }
+
+  flush();
+
+  return result;
 }
 
 function handleFallback(

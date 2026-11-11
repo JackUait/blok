@@ -552,7 +552,7 @@ test.describe('cross-context round trips', () => {
       const blocks = fixture.blocks(null, 'one');
 
       await createEditor(page, 'cc-a', { data: { blocks: [...blocks, TAIL] } });
-      await page.evaluate(() => (window as unknown as CcWindow).__cc['cc-a'].blocks.scrollToBlock('one', { select: true }));
+      await page.evaluate(() => (window as unknown as CcWindow).__cc['cc-a'].blocks.scrollToBlock?.('one', { select: true }));
       const selected = await page.getByTestId('cc-a').locator('[data-blok-selected="true"]').count();
       const clip = await clipboardEvent(page, 'cc-a', 'copy');
       const before = (await save(page, 'cc-a')).blocks.filter((b) => b.id !== 'tail');
@@ -571,7 +571,7 @@ test.describe('cross-context round trips', () => {
     const blocks = [{ id: 'url', type: 'paragraph', data: { text: '<a href="https://example.com/page">https://example.com/page</a>' } }];
 
     await createEditor(page, 'cc-a', { data: { blocks: [...blocks, TAIL] } });
-    await page.evaluate(() => (window as unknown as CcWindow).__cc['cc-a'].blocks.scrollToBlock('url', { select: true }));
+    await page.evaluate(() => (window as unknown as CcWindow).__cc['cc-a'].blocks.scrollToBlock?.('url', { select: true }));
     const clip = await clipboardEvent(page, 'cc-a', 'copy');
     const before = (await save(page, 'cc-a')).blocks.filter((b) => b.id !== 'tail');
 
@@ -837,15 +837,17 @@ test.describe('cross-context round trips', () => {
     await page.evaluate(() => {
       const w = window as unknown as CcWindow;
 
-      w.__written = [];
+      const written: string[] = [];
+
+      w.__written = written;
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
         value: { writeText: async (t: string) => {
-          w.__written.push(t);
+          written.push(t);
         } },
       });
     });
-    await page.evaluate(() => (window as unknown as CcWindow).__cc['cc-a'].blocks.scrollToBlock('target', { select: true }));
+    await page.evaluate(() => (window as unknown as CcWindow).__cc['cc-a'].blocks.scrollToBlock?.('target', { select: true }));
     await page.keyboard.press('Control+Meta+L');
     // eslint-disable-next-line playwright/no-wait-for-timeout -- paste and save settle with no event to wait on
     await page.waitForTimeout(200);
@@ -882,11 +884,13 @@ test.describe('cross-context round trips', () => {
     await page.evaluate(() => {
       const w = window as unknown as CcWindow;
 
-      w.__written = [];
+      const written: string[] = [];
+
+      w.__written = written;
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
         value: { writeText: async (t: string) => {
-          w.__written.push(t);
+          written.push(t);
         } },
       });
     });
@@ -1010,7 +1014,7 @@ test.describe('cross-context round trips', () => {
   ]) {
     test(`single: a paragraph holding bare ${bare.name} stays a paragraph on a full paste`, async ({ page }) => {
       await createEditor(page, 'cc-a', { data: { blocks: [{ id: 'one', type: 'paragraph', data: { text: bare.text } }, TAIL] } });
-      await page.evaluate(() => (window as unknown as CcWindow).__cc['cc-a'].blocks.scrollToBlock('one', { select: true }));
+      await page.evaluate(() => (window as unknown as CcWindow).__cc['cc-a'].blocks.scrollToBlock?.('one', { select: true }));
       const clip = await clipboardEvent(page, 'cc-a', 'copy');
       const before = (await save(page, 'cc-a')).blocks.filter((b) => b.id !== 'tail');
 

@@ -91,6 +91,7 @@ const make = async (page: Page, c: Case): Promise<void> => {
 
     if (extraTools) {
       if (window.__cpEquation === undefined) {
+        // @ts-expect-error built bundle has no TS types — runtime-only dynamic import
         const mod = await import('/dist/tools.mjs?_v=1') as { Equation: unknown };
 
         window.__cpEquation = mod.Equation;

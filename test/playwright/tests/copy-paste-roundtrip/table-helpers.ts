@@ -327,9 +327,9 @@ export const selectCellRange = async (page: Page, tableId: string, r0: number, c
 
   await page.mouse.move(a.x, a.y);
   await page.mouse.down();
-  if (r0 === r1 && c0 === c1) {
-    await page.mouse.move(a.x + 2, a.y + 2, { steps: 3 });
-  } else {
+  // One cell is selected by a plain click. A tiny drag over the cell text
+  // selects letters instead, and the copy then carries only those letters.
+  if (r0 !== r1 || c0 !== c1) {
     await page.mouse.move(b.x, b.y, { steps: 12 });
   }
   await page.mouse.up();

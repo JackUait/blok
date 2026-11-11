@@ -1077,7 +1077,9 @@ describe('Playwright OS-deps apt cache law', () => {
     const firstAptInstall = stepIndex(
       (step) =>
         step.run !== undefined &&
-        (step.run.includes('install-deps') || step.run.includes('--with-deps')),
+        (step.run.includes('install-deps') ||
+          step.run.includes('--with-deps') ||
+          step.run.includes('install-os-deps.sh')),
     );
 
     expect(restore).toBeGreaterThanOrEqual(0);
@@ -1102,21 +1104,23 @@ describe('Playwright OS-deps apt cache law', () => {
     );
   });
 
-  it('caps how long apt waits on a silent mirror before any step installs OS deps', () => {
-    const timeouts = actionStep('apt-timeouts');
-    const firstAptInstall = stepIndex(
-      (step) =>
-        step.run !== undefined &&
-        (step.run.includes('install-deps') || step.run.includes('--with-deps')),
+  // install-deps always runs apt-get update, which waits about 20s per index
+  // when the mirror's DNS fails. The script skips update when it can.
+  it('installs OS deps through the no-update fast path, never install-deps or --with-deps', () => {
+    const osDeps = browserAction.runs.steps.find(
+      (step) => step.name === 'Install Browser OS Dependencies',
+    );
+    const browsers = browserAction.runs.steps.find(
+      (step) => step.name === 'Install Playwright Browsers',
     );
 
-    expect(timeouts.if).toBe("inputs.os-deps != 'false'");
-    expect(timeouts.run).toContain('/etc/apt/apt.conf.d/');
-    expect(timeouts.run).toMatch(/Acquire::http::Timeout "10"/);
-    expect(timeouts.run).toMatch(/Acquire::https::Timeout "10"/);
-    // Retries still cover a brief drop while the install downloads a missing .deb.
-    expect(timeouts.run).not.toContain('Retries');
-    expect(stepIndex((step) => step.id === 'apt-timeouts')).toBeLessThan(firstAptInstall);
+    expect(osDeps?.run).toBe(
+      'bash "${{ github.action_path }}/install-os-deps.sh" ${{ inputs.browsers }}',
+    );
+    expect(osDeps?.if).toBe("inputs.os-deps == 'true'");
+    expect(browsers?.run).toBe('npx playwright install ${{ inputs.browsers }}');
+    // An HTTP timeout does not bound a DNS failure.
+    expect(browserAction.runs.steps.some((step) => step.id === 'apt-timeouts')).toBe(false);
   });
 
   it('saves the cache only from the warming job, only after the warm step proved it', () => {

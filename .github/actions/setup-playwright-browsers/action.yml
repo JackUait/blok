@@ -77,17 +77,6 @@ runs:
           sudo cp "${debs[@]}" /var/cache/apt/archives/
         fi
 
-    # install-deps always runs apt-get update. A mirror that never answers costs
-    # 20s per index at apt's default, about 200s per shard, and apt then falls
-    # back to the image's lists anyway. Retries stay on for .deb downloads.
-    - name: Cap apt mirror waits
-      id: apt-timeouts
-      if: inputs.os-deps != 'false'
-      shell: bash
-      run: |
-        printf '%s\n' 'Acquire::http::Timeout "10";' 'Acquire::https::Timeout "10";' \
-          | sudo tee /etc/apt/apt.conf.d/99-playwright-timeouts
-
     - name: Cache Playwright Browsers
       if: inputs.download == 'true'
       id: cache
@@ -105,18 +94,19 @@ runs:
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ steps.pw.outputs.version }}
         fail-on-cache-miss: true
 
-    # Cache miss: download the browser binaries (+ OS deps) for exactly the requested set.
+    # Cache miss: download the browser binaries for exactly the requested set.
+    # No --with-deps: it always runs apt-get update. The next step installs the OS deps.
     - name: Install Playwright Browsers
       if: inputs.download == 'true' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
-      run: npx playwright install ${{ inputs.os-deps == 'true' && '--with-deps' || '' }} ${{ inputs.browsers }}
+      run: npx playwright install ${{ inputs.browsers }}
 
-    # Browser binaries are cached in ~/.cache/ms-playwright, but apt OS deps are
-    # installed per runner, so on a cache hit (and on every restore-only test job) we still install them.
+    # apt OS deps are installed per runner, so every job that runs browsers installs them.
+    # The script skips apt-get update when the image's lists and the seeded .debs are enough.
     - name: Install Browser OS Dependencies
-      if: inputs.os-deps == 'true' && ((inputs.download == 'true' && steps.cache.outputs.cache-hit == 'true') || inputs.download != 'true')
+      if: inputs.os-deps == 'true'
       shell: bash
-      run: npx playwright install-deps ${{ inputs.browsers }}
+      run: bash "${{ github.action_path }}/install-os-deps.sh" ${{ inputs.browsers }}
 
     # The timeout keeps a slow mirror here from holding back every E2E shard:
     # on failure nothing is saved and shards download from the mirror as before.

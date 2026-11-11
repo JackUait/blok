@@ -281,6 +281,26 @@ describe('DatabaseBoardView', () => {
       expect(board.querySelector('[data-blok-database-column-count]')?.textContent).toBe('8');
     });
 
+    // notion-motion.md Round 13: an empty group shows no percent at all.
+    it('hides a count with no text, and shows it again once it has some', () => {
+      const totals = { value: '' };
+      const view = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
+        aggregate: () => totals.value,
+      });
+      const board = view.createView();
+      const count = (): Element | null => board.querySelector('[data-blok-database-column-count]');
+
+      expect(count()?.hasAttribute('hidden')).toBe(true);
+
+      totals.value = '100%';
+      const cards = board.querySelector<HTMLElement>('[data-blok-database-cards]');
+
+      if (cards !== null) view.appendRow(cards, makeRow({ id: 'row-2' }));
+
+      expect(count()?.hasAttribute('hidden')).toBe(false);
+    });
+
     it('offers the hidden groups after the last column so they can be shown again', () => {
       const view = new DatabaseBoardView({
         readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title', hiddenGroupCount: 2,

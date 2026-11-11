@@ -731,7 +731,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       onHover(countEl, this.aggregateHint, { placement: 'top' });
     }
 
-    countEl.hidden = this.hideCounts;
+    countEl.hidden = this.hideCounts || countEl.textContent === '';
     header.appendChild(countEl);
 
     if (!this.readOnly) {
@@ -1124,13 +1124,14 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       return;
     }
 
-    const countEl = columnEl.querySelector('[data-blok-database-column-count]');
+    const countEl = columnEl.querySelector<HTMLElement>('[data-blok-database-column-count]');
 
     if (countEl !== null) {
       const optionId = columnEl.getAttribute('data-option-id');
       const cardCount = cardsContainer.querySelectorAll('[data-blok-database-card]').length;
 
       countEl.textContent = this.aggregate !== undefined && optionId !== null ? this.aggregate(optionId) : String(cardCount);
+      countEl.hidden = this.hideCounts || countEl.textContent === '';
     }
   }
 }

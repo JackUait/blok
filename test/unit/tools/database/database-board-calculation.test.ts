@@ -232,6 +232,21 @@ describe('board column calculation', () => {
       expect(groupCalculationText({ fn: 'date_range', propertyId: 'p-when', capCounts: false }, due, SCHEMA, 'en-US')).toBe('8 days');
       expect(groupCalculationText({ fn: 'date_range', propertyId: 'p-when', capCounts: false }, due.slice(0, 1), SCHEMA, 'en-US')).toBe('0 minutes');
     });
+
+    // notion-motion.md Round 13: "66.667%", "100%", and no percent on an empty group.
+    it('shows a percent with up to 3 decimals and no trailing zeros', () => {
+      const names = [row('a', { 'p-name': 'A' }), row('b', { 'p-name': 'B' }), row('c', {})];
+
+      expect(groupCalculationText({ fn: 'percent_not_empty', propertyId: 'p-name', capCounts: false }, names, SCHEMA, 'en-US')).toBe('66.667%');
+      expect(groupCalculationText({ fn: 'percent_not_empty', propertyId: 'p-name', capCounts: false }, names.slice(1), SCHEMA, 'en-US')).toBe('50%');
+      expect(groupCalculationText({ fn: 'percent_not_empty', propertyId: 'p-name', capCounts: false }, names.slice(0, 1), SCHEMA, 'en-US')).toBe('100%');
+    });
+
+    it('shows no percent for an empty group, while Count shows 0', () => {
+      expect(groupCalculationText({ fn: 'percent_not_empty', propertyId: 'p-name', capCounts: false }, [], SCHEMA, 'en-US')).toBe('');
+      expect(groupCalculationText({ fn: 'percent_empty', propertyId: 'p-name', capCounts: false }, [], SCHEMA, 'en-US')).toBe('');
+      expect(groupCalculationText({ fn: 'count', capCounts: true }, [], SCHEMA, 'en-US')).toBe('0');
+    });
   });
 
   describe('groupCalculationHint', () => {

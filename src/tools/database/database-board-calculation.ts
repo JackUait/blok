@@ -24,6 +24,8 @@ export interface GroupCalculationMenuParams {
 /** Count all has no property. */
 const ROW_COUNT: PropertyDefinition = { id: '', name: '', type: 'title', position: '' };
 
+const PERCENT_RESULT_FNS: ReadonlySet<CalculationFn> = new Set<CalculationFn>(['percent_empty', 'percent_not_empty', 'percent_checked', 'percent_unchecked']);
+
 const isItem = (item: PopoverItemParams | null): item is PopoverItemParams => item !== null;
 
 /**
@@ -100,7 +102,8 @@ export const groupCalculationItems = (params: GroupCalculationMenuParams): Popov
 
 /**
  * The number beside a group's name. A number function with nothing to read
- * shows 0, as Notion's Sum does on an empty column.
+ * shows 0, as Notion's Sum does on an empty column. A percent of an empty
+ * group shows nothing (notion-motion.md Round 13).
  */
 export const groupCalculationText = (
   current: ResolvedGroupCalculation,
@@ -109,6 +112,7 @@ export const groupCalculationText = (
   locale: string | undefined,
   shownOf: (property: PropertyDefinition) => PropertyDefinition = (property) => property
 ): string => {
+  if (rows.length === 0 && PERCENT_RESULT_FNS.has(current.fn)) return '';
   const property = schema.find((p) => p.id === current.propertyId) ?? ROW_COUNT;
   const text = calculationText(current.fn, rows, property, shownOf(property), locale, current.capCounts);
 

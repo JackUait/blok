@@ -47,7 +47,7 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { SanitizerConfigBuilder } from '../../../src/components/modules/paste/sanitizer-config';
-import { CODE_LANGUAGE_ATTR } from '../../../src/components/modules/paste/constants';
+import { CODE_FILENAME_ATTR, CODE_LANGUAGE_ATTR } from '../../../src/components/modules/paste/constants';
 import type { BlockToolAdapter } from '../../../src/components/tools/block';
 import type { ToolsCollection } from '../../../src/components/tools/collection';
 import { AudioTool } from '../../../src/tools/audio';
@@ -206,12 +206,13 @@ interface ExpectedDynamicReads {
 const EXPECTED_DYNAMIC_READS: ExpectedDynamicReads[] = [
   {
     file: 'src/tools/code/index.ts',
-    count: 1,
-    pastedAttrs: [CODE_LANGUAGE_ATTR],
+    count: 2,
+    pastedAttrs: [CODE_LANGUAGE_ATTR, CODE_FILENAME_ATTR],
     reason:
-      'onPaste reads the language the AI-chat preprocessor stamps on a pasted ' +
-      '<pre> when the source prints it outside the element (Gemini renders it ' +
-      'in the code block header). Whitelisted on PRE by the tool pasteConfig.',
+      'onPaste reads the language and filename from a pasted <pre>. Blok\'s own ' +
+      'HTML copy writes both; the AI-chat preprocessor stamps the language when ' +
+      'the source prints it outside the element (Gemini renders it in the code ' +
+      'block header). Both are whitelisted on PRE by the tool pasteConfig.',
   },
   {
     file: 'src/tools/table/table-operations.ts',

@@ -66,7 +66,7 @@ import {
 import { detectLanguage } from './language-detector';
 import { renderCodePreview } from './preview';
 import { normalizeFenceLang } from '../../markdown/fence-language';
-import { CODE_LANGUAGE_ATTR } from '../../components/modules/paste/constants';
+import { CODE_FILENAME_ATTR, CODE_LANGUAGE_ATTR } from '../../components/modules/paste/constants';
 import { overrideStatic } from '../../components/utils/override-static';
 
 const COPIED_FEEDBACK_DURATION = 1500;
@@ -759,6 +759,7 @@ export class CodeTool implements BlockTool {
 
   public onPaste(event: PasteEvent): void {
     const detail = event.detail;
+    const oldLanguage = this._data.language;
 
     if ('data' in detail) {
       const content = detail.data;
@@ -767,6 +768,10 @@ export class CodeTool implements BlockTool {
         this._data.code = CodeTool.textWithLineBreaks(content);
         this._data.language =
           normalizeFenceLang(content.getAttribute(CODE_LANGUAGE_ATTR) ?? '') ?? this._data.language;
+
+        const filename = content.getAttribute(CODE_FILENAME_ATTR);
+
+        Object.assign(this._data, filename ? { filename } : {});
       } else if (typeof content === 'string') {
         // Pattern match — strip triple backtick fences
         const stripped = content.replace(/^```[^\n]*\n?/, '').replace(/\n?```$/, '');
@@ -777,8 +782,13 @@ export class CodeTool implements BlockTool {
 
     if (this._dom) {
       this._dom.codeElement.textContent = this._data.code;
+      this.renderFilename();
       this.syncTrailingBr();
       this.updateGutter();
+
+      if (this._data.language !== oldLanguage) {
+        this.applyLanguageChange(this._data.language);
+      }
     }
 
     void this.highlightCode();
@@ -1401,10 +1411,10 @@ export class CodeTool implements BlockTool {
   public static get pasteConfig(): PasteConfig {
     return {
       /**
-       * The language attribute must be listed here or the paste sanitizer drops
-       * it, since it keeps only the attributes a tool names for its own tags.
+       * The language and filename attributes must be listed here or the paste sanitizer drops
+       * them, since it keeps only the attributes a tool names for its own tags.
        */
-      tags: [{ PRE: { [CODE_LANGUAGE_ATTR]: true } }],
+      tags: [{ PRE: { [CODE_LANGUAGE_ATTR]: true, [CODE_FILENAME_ATTR]: true } }],
       patterns: {
         code: /^```/,
       },

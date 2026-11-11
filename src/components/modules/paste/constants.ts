@@ -83,6 +83,12 @@ export const collectTagNames = (tagOrSanitizeConfig: string | SanitizerConfig): 
  */
 export const CODE_LANGUAGE_ATTR = 'data-blok-code-language';
 
+/**
+ * Filename of a code block, written by Blok's own HTML copy. Whitelisted on
+ * `pre` by the Code tool's pasteConfig and read back in its `onPaste`.
+ */
+export const CODE_FILENAME_ATTR = 'data-blok-code-filename';
+
 /** Blok's own clipboard flavour: the copied blocks as JSON. */
 export const BLOK_MIME_TYPE = 'application/x-blok';
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
 import { clean } from '../../../../src/components/utils/sanitizer';
-import { CODE_LANGUAGE_ATTR } from '../../../../src/components/modules/paste/constants';
+import { CODE_FILENAME_ATTR, CODE_LANGUAGE_ATTR } from '../../../../src/components/modules/paste/constants';
 
 vi.mock('../../../../src/shared/katex', () => ({
   renderLatex: vi.fn().mockResolvedValue('<span class="katex">rendered</span>'),
@@ -80,6 +80,20 @@ describe('Code tool — language carried in from a pasted code block', () => {
     el.remove();
   });
 
+  it('shows the pasted language on the language button', async () => {
+    const { CodeTool } = await import('../../../../src/tools/code');
+    const tool = new CodeTool(createOptions());
+    const el = tool.render();
+
+    document.body.appendChild(el);
+    tool.onPaste(
+      pasteEventFor(`<pre ${CODE_LANGUAGE_ATTR}="javascript"><code>let a = 1;</code></pre>`) as never
+    );
+
+    expect(el.querySelector('[data-blok-testid="code-language-name"]')?.textContent).toBe('JavaScript');
+    el.remove();
+  });
+
   it('normalizes an alias to the highlightable language id', async () => {
     /** Models label fences `js`/`py`/`sh`; Prism only knows the canonical ids. */
     const { CodeTool } = await import('../../../../src/tools/code');
@@ -118,6 +132,38 @@ describe('Code tool — language carried in from a pasted code block', () => {
     );
 
     expect(tool.save(el).language).toBe('plain text');
+    el.remove();
+  });
+
+  it('keeps the filename Blok\'s copy writes on the PRE through the paste sanitizer', async () => {
+    const { CodeTool } = await import('../../../../src/tools/code');
+    const html = `<pre ${CODE_FILENAME_ATTR}="x.js"><code>a</code></pre>`;
+    const tags = (CodeTool.pasteConfig as { tags: Array<Record<string, Record<string, boolean>>> }).tags;
+
+    expect(clean(html, { pre: tags[0].PRE, code: {} })).toBe(html);
+  });
+
+  it('adopts the pasted filename', async () => {
+    const { CodeTool } = await import('../../../../src/tools/code');
+    const tool = new CodeTool(createOptions());
+    const el = tool.render();
+
+    document.body.appendChild(el);
+    tool.onPaste(pasteEventFor(`<pre ${CODE_FILENAME_ATTR}="x.js"><code>a</code></pre>`) as never);
+
+    expect(tool.save(el).filename).toBe('x.js');
+    el.remove();
+  });
+
+  it('sets no filename when the paste carries none', async () => {
+    const { CodeTool } = await import('../../../../src/tools/code');
+    const tool = new CodeTool(createOptions());
+    const el = tool.render();
+
+    document.body.appendChild(el);
+    tool.onPaste(pasteEventFor('<pre><code>a</code></pre>') as never);
+
+    expect(tool.save(el)).not.toHaveProperty('filename');
     el.remove();
   });
 });

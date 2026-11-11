@@ -23,7 +23,8 @@ import { linkToBlock, linkToHtml, rememberCut, type CopyLink } from '../utils/co
 import { convertStringToBlockData } from '../utils/blocks';
 import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
 import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
-import { TOOL_NAME as CODE_TOOL_NAME } from '../../tools/code/constants';
+import { TOOL_NAME as CODE_TOOL_NAME, HIGHLIGHTABLE_LANGUAGES } from '../../tools/code/constants';
+import { CODE_FILENAME_ATTR, CODE_LANGUAGE_ATTR } from './paste/constants';
 import { TOOL_NAME as TOGGLE_TOOL_NAME } from '../../tools/toggle/constants';
 import { TOOL_NAME as CALLOUT_TOOL_NAME } from '../../tools/callout/constants';
 import { INLINE_TEXT_SANITIZE } from '../shared/inline-content-sanitize';
@@ -1025,10 +1026,18 @@ export class BlockSelection extends Module {
    * @param fakeClipboard - the container receiving the code
    */
   private appendCodeBlock(block: Block, fakeClipboard: HTMLElement): void {
-    const code = block.preservedData.code;
+    const { code, language, filename } = block.preservedData;
     const pre = $.make('pre');
     const codeElement = $.make('code');
 
+    // Blok's paste reads the language and filename from these attributes.
+    if (typeof language === 'string' && HIGHLIGHTABLE_LANGUAGES.has(language)) {
+      pre.setAttribute(CODE_LANGUAGE_ATTR, language);
+      codeElement.className = `language-${language}`;
+    }
+    if (typeof filename === 'string' && filename !== '') {
+      pre.setAttribute(CODE_FILENAME_ATTR, filename);
+    }
     codeElement.textContent = typeof code === 'string' ? code : '';
     pre.appendChild(codeElement);
     fakeClipboard.appendChild(pre);

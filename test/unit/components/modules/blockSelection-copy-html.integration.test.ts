@@ -152,6 +152,24 @@ describe('copy of whole blocks as text/html', () => {
     expect(html).toBe('<pre><code>line1\nline2\n  &lt;b&gt;&amp;</code></pre>');
   });
 
+  it('writes a code block\'s language and filename on the <pre>, and the language class on the <code>', async () => {
+    const instance = await createEditor([
+      { id: 'c', type: 'code', data: { code: 'const a = 1;', language: 'javascript', filename: 'x.js' } },
+    ]);
+
+    const html = await copyAllAsHtml(instance);
+
+    expect(html).toBe('<pre data-blok-code-language="javascript" data-blok-code-filename="x.js"><code class="language-javascript">const a = 1;</code></pre>');
+  });
+
+  it('writes no language for a plain text code block', async () => {
+    const instance = await createEditor([
+      { id: 'c', type: 'code', data: { code: 'x', language: 'plain text' } },
+    ]);
+
+    expect(await copyAllAsHtml(instance)).toBe('<pre><code>x</code></pre>');
+  });
+
   it('writes marker colors as literal values other apps can read', async () => {
     const instance = await createEditor([
       {

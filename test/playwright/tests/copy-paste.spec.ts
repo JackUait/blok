@@ -1533,6 +1533,32 @@ test.describe('copy and paste', () => {
     });
   });
 
+  test.describe('a code block pasted from html only', () => {
+    test('keeps its language and filename', async ({ page }) => {
+      await createBlok(page, { data: { blocks: [
+        { id: 'bef', type: 'paragraph', data: { text: 'Before' } },
+        { id: 'cod', type: 'code', data: { code: 'const a = 1;', language: 'javascript', filename: 'x.js' } },
+        { id: 'aft', type: 'paragraph', data: { text: 'After' } },
+      ] } });
+      await page.locator('[data-blok-id="bef"] [contenteditable="true"]').click();
+      await page.locator('[data-blok-id="aft"] [contenteditable="true"]').click({ modifiers: ['Shift'] });
+      await expect(page.locator('[data-blok-id="aft"][data-blok-selected="true"]')).toBeVisible();
+
+      const clipboard = await withClipboardEvent(page.locator('[data-blok-id="bef"]'), 'copy');
+
+      await createBlok(page, { data: { blocks: [{ id: 'tgt', type: 'paragraph', data: { text: '' } }] } });
+      await page.locator('[data-blok-id="tgt"] [contenteditable="true"]').click();
+      await paste(page, page.locator(':focus'), { 'text/html': clipboard['text/html'] ?? '', 'text/plain': clipboard['text/plain'] ?? '' });
+
+      await expect.poll(async () => (await saveBlok(page)).blocks.find((block) => block.type === 'code')?.data).toEqual({
+        code: 'const a = 1;',
+        language: 'javascript',
+        filename: 'x.js',
+        lineNumbers: true,
+      });
+    });
+  });
+
   test.describe('a whole table pasted from html only', () => {
     test('keeps a list in a cell as list blocks', async ({ page }) => {
       await createBlok(page, { data: { blocks: [

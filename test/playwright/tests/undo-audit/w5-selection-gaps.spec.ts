@@ -223,6 +223,23 @@ test.describe('selection after delete, move and column drop (V1 V2 V4 V6)', () =
     expect(await caret(page)).toBe('b1:9');
   });
 
+  test('V1 limit: a text redo whose undo was pressed with nothing live puts the caret at the end of the step', async ({ page }) => {
+    await createBlok(page, ABC);
+    await clickEnd(page, 'b1');
+    await page.keyboard.type(' one');
+    await wait(page, STEP_GAP_MS);
+    await page.evaluate(() => {
+      window.getSelection()?.removeAllRanges();
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+
+    await press(page, UNDO);
+    expect(await caret(page)).toBe('b1:5');
+    await press(page, REDO);
+
+    expect(await caret(page)).toBe('b1:9');
+  });
+
   test('U104: Delete from the block menu leaves no caret; undo selects the block; redo leaves nothing', async ({ page }) => {
     await createBlok(page, ABC);
     await clickEnd(page, 'b2');

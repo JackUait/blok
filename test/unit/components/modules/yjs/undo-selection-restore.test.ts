@@ -177,6 +177,21 @@ describe('UndoHistory: the selection at the undo press', () => {
     expect(selectBlock).not.toHaveBeenCalled();
   });
 
+  it('a redo puts the caret at the step end when the undo key press had nothing live but a caret is live at the redo press', () => {
+    putCaret(blocks[0], 5);
+    history.beginGesture('typing');
+    write('Alpha one');
+    window.getSelection()?.removeAllRanges();
+
+    history.undo(undefined, true);
+    // The replay moved the caret the undo gave; the step ended at 5.
+    putCaret(blocks[0], 0);
+    caret.setToInput.mockClear();
+    history.redo();
+
+    expect(caret.setToInput).toHaveBeenLastCalledWith(blocks[0].inputs[0], 'default', 5);
+  });
+
   // Notion U047: the undo press selected the block the redo deletes again.
   it('a redo restores nothing when the blocks selected at the undo key press are gone', () => {
     putCaret(blocks[0], 5);
@@ -186,6 +201,8 @@ describe('UndoHistory: the selection at the undo press', () => {
     blocks[1].selected = true;
 
     history.undo(undefined, true);
+    // In the page the undo gives a block selection back, not a caret.
+    window.getSelection()?.removeAllRanges();
     const [gone] = blocks.splice(1, 1);
 
     gone.holder.remove();

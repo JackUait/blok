@@ -358,6 +358,8 @@ export class UndoHistory {
   private selectionAtUndoPress: CaretSnapshot | null = null;
   /** The undo in progress came from a key press, not an API call. */
   private undoIsKeyPress = false;
+  /** A text caret was live at the redo press in progress. */
+  private caretAtRedoPress = false;
   /** The caret the last undo or redo restored, until the next gesture. */
   private restoredCaret: CaretSnapshot | null = null;
   /** A block's own control (a to-do checkbox) focused at the press in progress. */
@@ -2154,6 +2156,11 @@ export class UndoHistory {
       return false;
     }
 
+    // Before the replay: a text rewrite moves the caret.
+    const live = this.liveCaretSnapshot();
+
+    this.caretAtRedoPress = live !== null && live.blocks === undefined;
+
     // Save scroll position before DOM manipulation (same rationale as undo).
     const savedScrollY = window.scrollY;
 
@@ -2319,7 +2326,8 @@ export class UndoHistory {
     }
 
     // The undo key was pressed with nothing live, or with blocks the redo removed: leave nothing live (Notion U047, U048).
-    if (position === 'after' && this.undoneByKeyPress.has(entry) && (atUndo === null || atUndo.blocks !== undefined)) {
+    // A caret the undo itself gave stays live, and a replay moves it, so it goes to the step end.
+    if (position === 'after' && !this.caretAtRedoPress && this.undoneByKeyPress.has(entry) && (atUndo === null || atUndo.blocks !== undefined)) {
       this.caretJustRestored = false;
       this.restoredCaret = null;
 

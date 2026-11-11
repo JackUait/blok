@@ -9,11 +9,13 @@
  */
 import type { ChildNode as HtmlChildNode, TextNode as HtmlTextNode } from '../html';
 
+import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../shared/annotation-mark';
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
 import {
   HARD_BREAK,
   RAW_TEXT,
   codeSpan,
+  annotationFootnote,
   inlineEquation,
   inlineLosses,
   markdownDestination,
@@ -21,7 +23,7 @@ import {
   serializeBlocksToMarkdown,
   withMarkdownTitle
 } from '../markdown/blocks-to-markdown-core';
-import type { InlineBackend, MarkdownDegradation, SerializableBlock, TextEscaper } from '../markdown/blocks-to-markdown-core';
+import type { FootnoteSink, InlineBackend, MarkdownDegradation, SerializableBlock, TextEscaper } from '../markdown/blocks-to-markdown-core';
 import { buildDocumentModel } from './document-model';
 import type { ViewBlock } from './document-model';
 import { needsTokenizing, parseInlineFragment } from './html-text';
@@ -73,8 +75,9 @@ const serializeNodes = (
   nodes: HtmlChildNode[],
   onLoss: LossReporter,
   escape: TextEscaper,
-  pages: PageOptions
-): string => nodes.map((node) => serializeNode(node, onLoss, escape, pages)).join('');
+  pages: PageOptions,
+  onFootnote?: FootnoteSink
+): string => nodes.map((node) => serializeNode(node, onLoss, escape, pages, onFootnote)).join('');
 
 /**
  * Serialize one node to inline Markdown. Mirrors the tag handling of the
@@ -87,7 +90,8 @@ const serializeNode = (
   node: HtmlChildNode,
   onLoss: LossReporter,
   escape: TextEscaper,
-  pages: PageOptions
+  pages: PageOptions,
+  onFootnote?: FootnoteSink
 ): string => {
   if (node.nodeName === '#text') {
     return escape((node as HtmlTextNode).value);
@@ -122,7 +126,13 @@ const serializeNode = (
     return href === null ? label : `[${label}](${href})`;
   }
 
-  const inner = serializeNodes(node.childNodes, onLoss, node.nodeName === 'code' ? RAW_TEXT : escape, pages);
+  const inner = serializeNodes(node.childNodes, onLoss, node.nodeName === 'code' ? RAW_TEXT : escape, pages, onFootnote);
+  const hint = node.nodeName === 'span' ? attr(node, ANNOTATION_ATTR) : null;
+
+  // A hint becomes a footnote: the marker follows the phrase. Mirrors the DOM twin.
+  if (hint !== null && hint !== '' && onFootnote !== undefined) {
+    return `${inner}${onFootnote(annotationFootnote(hint, attr(node, ANNOTATION_SUBTITLE_ATTR)))}`;
+  }
 
   switch (node.nodeName) {
     case 'br':
@@ -168,7 +178,7 @@ const htmlInlineBackend = (pages: PageOptions): InlineBackend => ({
    * @param html - inline HTML string
    * @param onLoss - receives every unwrapped inline construct
    */
-  inlineToMarkdown(html: string, onLoss: LossReporter = (): void => {}): string {
+  inlineToMarkdown(html: string, onLoss: LossReporter = (): void => {}, onFootnote?: FootnoteSink): string {
     const source = html ?? '';
     const escape = markdownTextEscaper(source);
 
@@ -181,7 +191,7 @@ const htmlInlineBackend = (pages: PageOptions): InlineBackend => ({
       return escape(source);
     }
 
-    return serializeNodes(parseInlineFragment(source).childNodes, onLoss, escape, pages);
+    return serializeNodes(parseInlineFragment(source).childNodes, onLoss, escape, pages, onFootnote);
   },
 });
 

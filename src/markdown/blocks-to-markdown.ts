@@ -14,6 +14,7 @@
  */
 
 import { parseUntrustedHtml } from '../components/utils/inert-html';
+import { ANNOTATION_ATTR, ANNOTATION_SUBTITLE_ATTR } from '../shared/annotation-mark';
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
 import type { PageInfo } from '../../types/tools/page';
@@ -21,13 +22,14 @@ import {
   HARD_BREAK,
   RAW_TEXT,
   codeSpan,
+  annotationFootnote,
   inlineEquation,
   inlineLosses,
   markdownDestination,
   markdownTextEscaper,
   serializeBlocksToMarkdown
 } from './blocks-to-markdown-core';
-import type { InlineBackend, MarkdownDegradation, SerializableBlock, TextEscaper } from './blocks-to-markdown-core';
+import type { FootnoteSink, InlineBackend, MarkdownDegradation, SerializableBlock, TextEscaper } from './blocks-to-markdown-core';
 
 export type { SerializableBlock, MarkdownDegradation } from './blocks-to-markdown-core';
 
@@ -46,8 +48,8 @@ export interface MarkdownPageOptions {
  * @param onLoss - receives every unwrapped inline construct
  * @param escape - escapes text node values
  */
-const serializeChildren = (node: Node, onLoss: LossReporter, escape: TextEscaper, pages: MarkdownPageOptions): string =>
-  Array.from(node.childNodes).map((child) => serializeInlineNode(child, onLoss, escape, pages)).join('');
+const serializeChildren = (node: Node, onLoss: LossReporter, escape: TextEscaper, pages: MarkdownPageOptions, onFootnote?: FootnoteSink): string =>
+  Array.from(node.childNodes).map((child) => serializeInlineNode(child, onLoss, escape, pages, onFootnote)).join('');
 
 /**
  * Serialize a single inline DOM node to Markdown.
@@ -55,7 +57,7 @@ const serializeChildren = (node: Node, onLoss: LossReporter, escape: TextEscaper
  * @param onLoss - receives every unwrapped inline construct
  * @param escape - escapes text node values
  */
-const serializeInlineNode = (node: Node, onLoss: LossReporter, escape: TextEscaper, pages: MarkdownPageOptions): string => {
+const serializeInlineNode = (node: Node, onLoss: LossReporter, escape: TextEscaper, pages: MarkdownPageOptions, onFootnote?: FootnoteSink): string => {
   if (node.nodeType === Node.TEXT_NODE) {
     return escape(node.textContent ?? '');
   }
@@ -95,7 +97,13 @@ const serializeInlineNode = (node: Node, onLoss: LossReporter, escape: TextEscap
     return href === null ? label : `[${label}](${href})`;
   }
 
-  const inner = serializeChildren(element, onLoss, tag === 'code' ? RAW_TEXT : escape, pages);
+  const inner = serializeChildren(element, onLoss, tag === 'code' ? RAW_TEXT : escape, pages, onFootnote);
+  const hint = tag === 'span' ? element.getAttribute(ANNOTATION_ATTR) : null;
+
+  // A hint becomes a footnote: the marker follows the phrase. Mirrors the view twin.
+  if (hint !== null && hint !== '' && onFootnote !== undefined) {
+    return `${inner}${onFootnote(annotationFootnote(hint, element.getAttribute(ANNOTATION_SUBTITLE_ATTR)))}`;
+  }
 
   switch (tag) {
     case 'br':
@@ -141,10 +149,10 @@ const domInlineBackend = (pages: MarkdownPageOptions): InlineBackend => ({
    * @param html - inline HTML string
    * @param onLoss - receives every unwrapped inline construct
    */
-  inlineToMarkdown(html: string, onLoss: LossReporter = (): void => {}): string {
+  inlineToMarkdown(html: string, onLoss: LossReporter = (): void => {}, onFootnote?: FootnoteSink): string {
     const container = parseUntrustedHtml(html ?? '');
 
-    return serializeChildren(container, onLoss, markdownTextEscaper(html ?? ''), pages);
+    return serializeChildren(container, onLoss, markdownTextEscaper(html ?? ''), pages, onFootnote);
   },
 });
 

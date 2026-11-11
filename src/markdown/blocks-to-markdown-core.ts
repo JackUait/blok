@@ -64,9 +64,62 @@ export interface InlineBackend {
    * @param html - the block field's inline HTML
    * @param onLoss - called with the construct name of every mark the walk had
    * to unwrap because Markdown cannot express it (see {@link inlineLosses}).
+   * @param onFootnote - called with the body of every hint in the field;
+   * returns the marker to write after the hinted phrase. Without it a hint
+   * reads as its phrase alone.
    */
-  inlineToMarkdown(html: string, onLoss?: (construct: string) => void): string;
+  inlineToMarkdown(html: string, onLoss?: (construct: string) => void, onFootnote?: FootnoteSink): string;
 }
+
+/** Takes one footnote body and returns the marker to put after the phrase. */
+export type FootnoteSink = (body: string) => string;
+
+/**
+ * A hint's marker until the whole document is laid out: only then is the
+ * order of appearance, and so the footnote number, known. Private-use
+ * characters, so no escaping pass touches it.
+ */
+const FOOTNOTE_OPEN = '\uE000';
+const FOOTNOTE_CLOSE = '\uE001';
+const FOOTNOTE_MARKER = new RegExp(`${FOOTNOTE_OPEN}(\\d+)${FOOTNOTE_CLOSE}`, 'g');
+
+/**
+ * The body of a hint's footnote: its text, then ` — subtitle`. Later lines are
+ * indented four spaces, which is what keeps them inside the definition.
+ * @param text - the hint text
+ * @param subtitle - the hint's subtitle, if any
+ */
+export const annotationFootnote = (text: string, subtitle: string | null): string => {
+  const whole = subtitle === null || subtitle === '' ? text : `${text} — ${subtitle}`;
+
+  return markdownTextEscaper(whole)(whole).split('\n').join('\n    ');
+};
+
+/**
+ * Number the hint markers in order of appearance and append their definitions.
+ * @param markdown - the laid-out document, markers included
+ * @param bodies - footnote bodies, indexed as the markers name them
+ */
+const resolveFootnotes = (markdown: string, bodies: string[]): string => {
+  const order: number[] = [];
+  const text = markdown.replace(FOOTNOTE_MARKER, (marker: string, index: string): string => {
+    const body = Number(index);
+
+    if (bodies[body] === undefined) {
+      return marker;
+    }
+
+    if (!order.includes(body)) {
+      order.push(body);
+    }
+
+    return `[^${order.indexOf(body) + 1}]`;
+  });
+
+  return order.length === 0
+    ? text
+    : `${text}\n\n${order.map((body, position) => `[^${position + 1}]: ${bodies[body]}`).join('\n')}`;
+};
 
 /** Inline marks whose tag alone names the loss. */
 const NAMED_INLINE_LOSSES: Record<string, string> = {
@@ -489,6 +542,8 @@ interface SerializationContext {
   active: Set<string>;
   /** Inline losses already reported, so one kind is named once per document. */
   inlineSeen: Set<string>;
+  /** Hint footnote bodies, in the order the fields were read. */
+  footnotes: string[];
 }
 
 /**
@@ -573,7 +628,7 @@ const inlineMarkdown = (context: SerializationContext, html: string): string =>
 
     context.inlineSeen.add(construct);
     warn(context, construct, 'degraded', INLINE_LOSS_DETAILS[construct] ?? `${construct} has no Markdown equivalent`);
-  })).replace(BREAK_ONLY_LINES, '\\\n'));
+  }, (body: string): string => `${FOOTNOTE_OPEN}${context.footnotes.push(body) - 1}${FOOTNOTE_CLOSE}`)).replace(BREAK_ONLY_LINES, '\\\n'));
 
 /**
  * Join loss names into a readable list: `a`, `a and b`, `a, b and c`.
@@ -1566,7 +1621,8 @@ const buildContext = (
     pageHref,
     warnings,
     active: new Set<string>(),
-    inlineSeen: new Set<string>() };
+    inlineSeen: new Set<string>(),
+    footnotes: [] };
 };
 
 /**
@@ -1648,6 +1704,6 @@ export const serializeBlocksToMarkdown = (
   const ownedIds = collectOwnedIds(blocks, context);
   const topLevel = blocks.filter((block) => block.id === undefined || !ownedIds.has(block.id));
 
-  return { markdown: sequenceToMarkdown(topLevel, context),
+  return { markdown: resolveFootnotes(sequenceToMarkdown(topLevel, context), context.footnotes),
     warnings };
 };

@@ -6,6 +6,7 @@ import {
   buildClipboardPlainText,
   parseClipboardHtml,
   parseGenericHtmlTable,
+  parsePlainTextGrid,
 } from '../../../../src/tools/table/table-cell-clipboard';
 
 describe('table-cell-clipboard', () => {
@@ -1624,8 +1625,34 @@ describe('table-cell-clipboard', () => {
       expect(rows[1].querySelectorAll('td')).toHaveLength(1);
     });
 
-    it('skips merge-covered positions in the plain-text flavor', () => {
-      expect(buildClipboardPlainText(mergedPayload())).toBe('merged\tR0C2\nR1C2');
+    it('writes an empty field for merge-covered positions in the plain-text flavor', () => {
+      expect(buildClipboardPlainText(mergedPayload())).toBe('merged\t\tR0C2\n\t\tR1C2');
+    });
+
+    it('keeps later cells in their column when a covered slot sits mid-row', () => {
+      const payload: TableCellsClipboard = {
+        rows: 2,
+        cols: 3,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'A' } }] },
+            { blocks: [{ tool: 'paragraph', data: { text: 'tall' } }], rowspan: 2 },
+            { blocks: [{ tool: 'paragraph', data: { text: 'C' } }] },
+          ],
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'D' } }] },
+            { blocks: [], covered: true },
+            { blocks: [{ tool: 'paragraph', data: { text: 'F' } }] },
+          ],
+        ],
+      };
+
+      const text = buildClipboardPlainText(payload);
+      const grid = parsePlainTextGrid(text);
+
+      expect(text).toBe('A\ttall\tC\nD\t\tF');
+      expect(grid?.cells[1][2].blocks.map(block => block.data.text)).toEqual(['F']);
+      expect(grid?.cells[1][1].blocks.map(block => block.data.text)).not.toContain('F');
     });
   });
 

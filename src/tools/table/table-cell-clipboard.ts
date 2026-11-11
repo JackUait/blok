@@ -503,14 +503,16 @@ export function buildClipboardHtml(payload: TableCellsClipboard, direction: Text
  *
  * Cells are separated by tabs (`\t`), rows by newlines (`\n`).
  * Multiple blocks within a cell are joined with spaces.
- * Merge-covered positions are skipped — they are not cells.
+ * A merge-covered position writes an empty field: TSV has no spans, so
+ * dropping it would shift every later cell in the row one column left.
  */
 export function buildClipboardPlainText(payload: TableCellsClipboard): string {
   return payload.cells
     .map((row) =>
       row
-        .filter((cell) => cell.covered !== true)
-        .map((cell) => flattenClipboardBlocks(cell.blocks).map(extractBlockPlainText).join(' ')).join('\t')
+        .map((cell) => cell.covered === true
+          ? ''
+          : flattenClipboardBlocks(cell.blocks).map(extractBlockPlainText).join(' ')).join('\t')
     )
     .join('\n');
 }

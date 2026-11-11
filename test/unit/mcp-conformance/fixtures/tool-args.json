@@ -3840,7 +3840,7 @@
                     },
                     {
                       "name": "database.addView",
-                      "summary": "Add a view at the end and open it."
+                      "summary": "Add a view at the end and open it, or a widget to a dashboard view."
                     },
                     {
                       "name": "database.applyTemplate",
@@ -3876,7 +3876,7 @@
                     },
                     {
                       "name": "database.deleteView",
-                      "summary": "Delete a view. If it was open, its neighbour opens."
+                      "summary": "Delete a view. If it was open, its neighbour opens. A dashboard takes its widget views with it; a widget view leaves its dashboard."
                     },
                     {
                       "name": "database.duplicateProperty",
@@ -3888,7 +3888,7 @@
                     },
                     {
                       "name": "database.duplicateView",
-                      "summary": "Copy a view with all its settings to the end, and open the copy."
+                      "summary": "Copy a view with all its settings to the end, and open the copy. A dashboard is copied with its widgets; a copied widget goes next to it on its dashboard."
                     },
                     {
                       "name": "database.editComment",

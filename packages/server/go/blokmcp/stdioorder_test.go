@@ -178,12 +178,8 @@ func TestAReusedRequestIDIsAnsweredEachTime(t *testing.T) {
 	}
 	_ = json.Unmarshal([]byte(line), &opened)
 	handle, _ := opened.Result.StructuredContent["handle"].(string)
-	send(`{"jsonrpc":"2.0","id":7,"method":"ping"}`)
-	send(`{"jsonrpc":"2.0","id":7,"method":"ping"}`)
-	for _, title := range []string{"A", "B"} {
-		send(fmt.Sprintf(`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"blok_execute","arguments":{"handle":%q,"commands":[{"name":"doc.setTitle","args":{"title":%q}}]}}}`, handle, title))
-	}
-	send(`{"jsonrpc":"2.0","id":"7","method":"ping"}`)
+	// Read while sending: an unread ping answer holds the next line for
+	// atOnceWait (10s).
 	lines := make(chan string, 8)
 	go func() {
 		for {
@@ -194,6 +190,12 @@ func TestAReusedRequestIDIsAnsweredEachTime(t *testing.T) {
 			lines <- line
 		}
 	}()
+	send(`{"jsonrpc":"2.0","id":7,"method":"ping"}`)
+	send(`{"jsonrpc":"2.0","id":7,"method":"ping"}`)
+	for _, title := range []string{"A", "B"} {
+		send(fmt.Sprintf(`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"blok_execute","arguments":{"handle":%q,"commands":[{"name":"doc.setTitle","args":{"title":%q}}]}}}`, handle, title))
+	}
+	send(`{"jsonrpc":"2.0","id":"7","method":"ping"}`)
 	var ids []string
 	for range 5 {
 		var line string
@@ -311,4 +313,43 @@ func TestStdioAnswersEachPingBeforeTheNextLine(t *testing.T) {
 			}
 		}
 	}
+}
+
+// An unread ping answer holds the next line only for atOnceWait; then the
+// server reads on.
+func TestAnUnreadPingAnswerHoldsTheNextLineOnlyForTheCap(t *testing.T) {
+	saved := atOnceWait
+	atOnceWait = 300 * time.Millisecond
+	t.Cleanup(func() { atOnceWait = saved })
+	asked := make(chan time.Time, 1)
+	host := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case asked <- time.Now():
+		default:
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"data":{"blocks":[]},"version":"v1"}`)
+	}))
+	t.Cleanup(host.Close)
+	server, err := New(Options{Transport: Transport{Kind: "stdio"}, Auth: Auth{Kind: "none"},
+		Source: &Source{Kind: "endpoint", URL: host.URL + "/docs", EndpointAuth: "Token t"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(server.Close)
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	send, reader, _ := stdioClient(t, server, ctx)
+	sent := time.Now()
+	send(`{"jsonrpc":"2.0","id":1,"method":"ping"}`)
+	send(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"blok_open","arguments":{"documentId":"doc"}}}`)
+	select {
+	case at := <-asked:
+		if held := at.Sub(sent); held < atOnceWait {
+			t.Fatalf("the next line ran after %v, before the %v cap", held, atOnceWait)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the next line was never read")
+	}
+	go func() { _, _ = io.Copy(io.Discard, reader) }()
 }

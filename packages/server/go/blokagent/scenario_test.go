@@ -246,6 +246,7 @@ func TestMatchesTheAgentServerScenarios(t *testing.T) {
 	}
 	for _, name := range names {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			scenario := mustParse(t, readRepoFile(t, filepath.Join(scenarioRoot, name+".json")))
 			executor := executor

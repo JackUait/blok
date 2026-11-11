@@ -127,10 +127,11 @@ var (
 )
 
 // sharedExecutor is one pool for the package's real-bundle tests: each
-// engine parses the bundle.
+// engine parses the bundle. It has the default size, so parallel subtests
+// do not queue on one engine.
 func sharedExecutor(t *testing.T) *Executor {
 	t.Helper()
-	bundleOnce.Do(func() { bundleExecutor, bundleErr = New(FactoryOptions{PoolSize: new(1)}) })
+	bundleOnce.Do(func() { bundleExecutor, bundleErr = New(FactoryOptions{}) })
 	if bundleErr != nil {
 		t.Fatal(bundleErr)
 	}
@@ -148,6 +149,7 @@ func TestMatchesTheAgentCommandCorpus(t *testing.T) {
 	onBehalfOf := "human-1"
 	for _, c := range corpus {
 		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			document, err := write(c.seed)
 			if err != nil {
@@ -202,6 +204,7 @@ func TestMatchesTheAgentCommandCorpusInARoom(t *testing.T) {
 	actor := Actor{ID: "agent-test", Name: "Parity", OnBehalfOf: &onBehalfOf}
 	for _, c := range corpus {
 		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			rooms := newTestRoom(t, false, nil)
 			seed, err := write(c.seed)

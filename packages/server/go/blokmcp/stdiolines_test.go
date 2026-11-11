@@ -20,6 +20,19 @@ func TestStdioDropsLinesNodeDropsAndKeepsServing(t *testing.T) {
 	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
 	send, reader, done := stdioClient(t, server, ctx)
+	// Read answers while sending, as a real client does. An unread answer
+	// blocks the io.Pipe, and the server then holds the next line for
+	// atOnceWait (10s).
+	answers := make(chan string, 64)
+	go func() {
+		for {
+			line, err := reader.ReadString('\n')
+			answers <- line
+			if err != nil {
+				return
+			}
+		}
+	}()
 	lines := []string{
 		`42`,
 		`{"jsonrpc":"2.0",`,
@@ -55,13 +68,8 @@ func TestStdioDropsLinesNodeDropsAndKeepsServing(t *testing.T) {
 	send(`{"jsonrpc":"2.0","id":"sentinel","method":"ping"}`)
 	var got []string
 	for len(got) == 0 || got[len(got)-1] != `"sentinel"` {
-		readLine := make(chan string, 1)
-		go func() {
-			line, _ := reader.ReadString('\n')
-			readLine <- line
-		}()
 		select {
-		case line := <-readLine:
+		case line := <-answers:
 			if line == "" {
 				t.Fatalf("the server stopped; answered %v", got)
 			}

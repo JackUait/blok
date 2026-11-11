@@ -56,7 +56,8 @@ type callTracker struct {
 var answeredAtOnce = map[string]bool{"ping": true, "tools/list": true, "prompts/list": true, "prompts/get": true}
 
 // atOnceWait caps how long an answer that never comes holds the next line.
-const atOnceWait = 10 * time.Second
+// A var so a test can shorten it.
+var atOnceWait = 10 * time.Second
 
 // passedOn notes a request handed to the SDK.
 func (t *callTracker) passedOn(message jsonrpc.Message) {

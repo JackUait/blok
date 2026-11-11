@@ -397,7 +397,28 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
         .filter((child) => child.tagName !== 'SUMMARY')
         .map((child) => ({ node: child }));
 
-    children.forEach((child) => this.expandContainer({ ...child, parentExpandedIndex }, expandedNodes));
+    children
+      .flatMap((child) => this.splitList(child))
+      .forEach((child) => this.expandContainer({ ...child, parentExpandedIndex }, expandedNodes));
+  }
+
+  /**
+   * A list in a container goes through the same split as a list at the top,
+   * so each item becomes its own block. Otherwise the whole list lands in one
+   * paragraph as raw `<li>` markup.
+   */
+  private splitList(entry: ExpandedNodeEntry): ExpandedNodeEntry[] {
+    const { node } = entry;
+
+    if (!dom$.isElement(node) || (node.tagName !== 'UL' && node.tagName !== 'OL')) {
+      return [entry];
+    }
+
+    const holder = dom$.make('div');
+
+    holder.appendChild(node.cloneNode(true));
+
+    return this.getNodes(holder).map((item) => ({ node: item }));
   }
 
   /**

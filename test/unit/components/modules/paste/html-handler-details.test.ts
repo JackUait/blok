@@ -198,6 +198,8 @@ describe('HtmlHandler — containers copied from Blok', () => {
       makeToolStub('toggle', ['DETAILS']),
       makeToolStub('callout', ['ASIDE']),
       makeToolStub('header', ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']),
+      // The real list tool takes LI only.
+      makeToolStub('list', ['LI']),
     ];
     const setBlockParent = vi.fn();
     const blok = {
@@ -251,5 +253,26 @@ describe('HtmlHandler — containers copied from Blok', () => {
     expect(inserted[0].content.tagName).toBe('H2');
     expect(inserted[0].toolData).toEqual({ text: '', isToggleable: true });
     expect(parentOf(setBlockParent, 'block-2')).toBe('block-1');
+  });
+
+  it('splits a list inside a toggle or a callout into one block per item', async () => {
+    const { handler, setBlockParent } = setup();
+
+    await handler.handle(
+      '<details><summary>T</summary><ul><li>One<ul><li>Two</li></ul></li></ul></details><aside><ol><li>Three</li><li>Four</li></ol></aside>',
+      { canReplaceCurrentBlock: false }
+    );
+
+    expect(inserted.map((b) => `${b.tool}:${b.content.textContent ?? ''}`)).toEqual([
+      'toggle:TOneTwo',
+      'list:One',
+      'list:Two',
+      'callout:ThreeFour',
+      'list:Three',
+      'list:Four',
+    ]);
+    expect(inserted[2].content.getAttribute('aria-level')).toBe('2');
+    expect(['block-2', 'block-3'].map((id) => parentOf(setBlockParent, id))).toEqual(['block-1', 'block-1']);
+    expect(['block-5', 'block-6'].map((id) => parentOf(setBlockParent, id))).toEqual(['block-4', 'block-4']);
   });
 });

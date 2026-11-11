@@ -1440,6 +1440,35 @@ test.describe('copy and paste', () => {
       ]);
     });
 
+    test('list items in a toggle and in a callout come back inside them, with their depth', async ({ page }) => {
+      await roundTrip(page, [
+        { id: 'tog', type: 'toggle', data: { text: 'Toggle' }, content: ['l1', 'l2'] },
+        { id: 'l1', type: 'list', data: { text: 'One', style: 'unordered' }, parent: 'tog' },
+        { id: 'l2', type: 'list', data: { text: 'Two', style: 'unordered', depth: 1 }, parent: 'tog' },
+        { id: 'cal', type: 'callout', data: { emoji: '💡' }, content: ['l3', 'l4'] },
+        { id: 'l3', type: 'list', data: { text: 'Three', style: 'ordered' }, parent: 'cal' },
+        { id: 'l4', type: 'list', data: { text: 'Four', style: 'ordered' }, parent: 'cal' },
+      ]);
+      await expect.poll(async () => (await saveBlok(page)).blocks
+        .filter((block) => block.type === 'list')
+        .map((block) => `${String(block.data.text)} ${String(block.data.style)} ${typeof block.data.depth === 'number' ? block.data.depth : 0}`)).toEqual([
+        'One unordered 0',
+        'Two unordered 1',
+        'Three ordered 0',
+        'Four ordered 0',
+      ]);
+      expect(await shape(page)).toEqual([
+        'paragraph Before < -',
+        'toggle Toggle < -',
+        'list One < toggle Toggle',
+        'list Two < toggle Toggle',
+        'callout < -',
+        'list Three < callout',
+        'list Four < callout',
+        'paragraph After < -',
+      ]);
+    });
+
     test('tab titles come back as text before their bodies', async ({ page }) => {
       await roundTrip(page, [
         { id: 'tb', type: 'tabs', data: {}, content: ['t1', 't2'] },

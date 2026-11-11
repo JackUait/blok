@@ -1,4 +1,4 @@
-import type { DashboardRow, DashboardWidget, DatabaseViewConfig } from './types';
+import type { DashboardRow, DashboardWidget, DatabaseViewConfig, ViewType } from './types';
 
 // The server runtime (Jint) has no structuredClone. Saved data is plain JSON.
 const jsonCopy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -20,6 +20,9 @@ export const tabViews = <T extends DatabaseViewConfig>(views: readonly T[]): T[]
 /** The widget views a dashboard owns. A legacy widget's tab view, or a view out of its layout, is a tab and not owned. */
 export const ownedWidgetViews = <T extends DatabaseViewConfig>(views: readonly T[], dashboardId: string): T[] =>
   views.filter((view) => view.dashboardViewId === dashboardId && view.id !== dashboardId && isWidgetView(view, views));
+
+/** The layouts a dashboard widget draws. Editor and agent both keep a widget to these. */
+export const WIDGET_VIEW_TYPES: readonly ViewType[] = ['table', 'list', 'chart'];
 
 /** The documented limit of {@link DashboardRow.widgets}. */
 export const MAX_WIDGETS_PER_ROW = 4;

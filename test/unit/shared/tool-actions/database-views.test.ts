@@ -241,6 +241,16 @@ describe('database dashboard views', () => {
     expect(() => run(doc, id, 'deleteView', { viewId: board })).toThrow(/at least one view/);
   });
 
+  it('setLayout keeps a widget to the layouts a dashboard draws, as the editor does', () => {
+    const { doc, id, data, dash } = withDashboard();
+    const chart = (run(doc, id, 'addView', { type: 'chart', dashboardViewId: dash }) as { viewId: string }).viewId;
+
+    expect(() => run(doc, id, 'setLayout', { viewId: chart, type: 'board' })).toThrow(/table, list or chart/);
+    expect(data().views.find(view => view.id === chart)?.type).toBe('chart');
+    run(doc, id, 'setLayout', { viewId: chart, type: 'table' });
+    expect(data().views.find(view => view.id === chart)?.type).toBe('table');
+  });
+
   it('deleting a widget view takes it out of the dashboard layout', () => {
     const { doc, id, data, dash } = withDashboard();
     const chart = (run(doc, id, 'addView', { type: 'chart', dashboardViewId: dash }) as { viewId: string }).viewId;

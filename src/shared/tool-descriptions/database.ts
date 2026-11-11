@@ -1008,7 +1008,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     summary: 'Change a view\'s layout type, as the view settings Layout menu does.',
     guidance: 'A board without a grouping groups by the first select, multi-select or status property, else the first property it can group by. A map adds a Place property when there is none. A timeline starts with no table columns.',
     target: 'block',
-    preconditions: ['The database is not locked.', 'A board needs a property it can group by.'],
+    preconditions: ['The database is not locked.', 'A board needs a property it can group by.', 'A dashboard widget stays a table, list or chart.'],
     args: closed({ viewId: VIEW_ID, type: { enum: LAYOUT_VIEW_TYPES } }, ['viewId', 'type']),
     mirrors: [],
   },

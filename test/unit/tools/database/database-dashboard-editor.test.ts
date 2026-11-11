@@ -116,13 +116,13 @@ describe('DatabaseTool — dashboard editing', () => {
 
   describe('toolbar', () => {
     // notion-motion Round 15 A: with Dashboard selected only ⤢ and ⚙ show.
-    it('shows only View settings on a dashboard, and every control again on a table', () => {
+    it('shows only ⤢ and View settings on a dashboard, and every control again on a table', () => {
       const { tool, el } = mount(withWidgets());
       const shown = (): string[] => [...el.querySelectorAll<HTMLElement>('[data-blok-database-view-toolbar] [data-blok-testid^="database-toolbar-"]')]
         .filter((button) => !button.hidden && button.closest('[hidden]') === null)
         .map((button) => button.getAttribute('data-blok-testid') ?? '');
 
-      expect(shown()).toEqual(['database-toolbar-settings']);
+      expect(shown()).toEqual(['database-toolbar-full-page', 'database-toolbar-settings']);
       expect(el.querySelector<HTMLElement>('[data-blok-database-view-toolbar] [data-blok-database-new]')?.hidden).toBe(true);
       (tool as unknown as { switchView: (id: string) => void }).switchView('table');
       expect(shown()).toEqual(expect.arrayContaining(['database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-settings', 'database-toolbar-new']));

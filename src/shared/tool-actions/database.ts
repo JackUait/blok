@@ -6,7 +6,7 @@ import { addRelated, relationEdit, relationIdsOf, removeRelated } from '../datab
 import { copiedReminders } from '../database/reminder-fit';
 import { mapRowValues } from '../database/row-move';
 import { linkedRowHome } from '../database/linked-source';
-import { copyDashboardWidgets, isWidgetView, MAX_WIDGETS_PER_ROW, ownedWidgetViews, placeWidget, removeWidgetsShowing, tabViews } from '../database/dashboard';
+import { copyDashboardWidgets, isWidgetView, MAX_WIDGETS_PER_ROW, WIDGET_VIEW_TYPES, ownedWidgetViews, placeWidget, removeWidgetsShowing, tabViews } from '../database/dashboard';
 import type { WidgetPlacement } from '../database/dashboard';
 import { newRowValues, prefillFilters, THIS_PAGE_FILTER_VALUE } from '../database/new-row-values';
 import { lastRowKey, pinnedRowOrders, rowOrderKey, UNORDERED_VIEW_TYPES } from '../database/row-order';
@@ -175,9 +175,6 @@ const VIEW_NAMES: Partial<Record<ViewType, string>> = {
   dashboard: DATABASE_DEFAULT_TEXT.viewTypeDashboard,
 };
 
-/** The layouts a dashboard widget draws. */
-const WIDGET_TYPES = new Set<ViewType>(['table', 'list', 'chart']);
-
 interface CreateArgs {
   title?: string;
   view?: 'board' | 'list' | 'table';
@@ -241,7 +238,7 @@ const widgetTarget = (ctx: ToolActionContext, state: DatabaseState, args: AddVie
   if (dashboard?.type !== 'dashboard') {
     return ctx.fail('PRECONDITION_FAILED', `This database has no dashboard view ${args.dashboardViewId}.`);
   }
-  if (!WIDGET_TYPES.has(args.type)) {
+  if (!WIDGET_VIEW_TYPES.includes(args.type)) {
     ctx.fail('INVALID_ARGS', 'A dashboard widget is a table, list or chart view.');
   }
   const rows = dashboard.dashboard?.rows ?? [];
@@ -592,6 +589,9 @@ const setLayout: ToolActionImpl<{ viewId: string; type: ViewType }> = {
 
     if (view.type === args.type) {
       return undefined;
+    }
+    if (isWidgetView(view, state.views) && !WIDGET_VIEW_TYPES.includes(args.type)) {
+      ctx.fail('PRECONDITION_FAILED', 'A dashboard widget is a table, list or chart view.');
     }
     const sourceSchema = referenceSchema(ctx, block, state, view.dataSourceId);
     const change = layoutChange(view, args.type, sourceSchema ?? state.schema)

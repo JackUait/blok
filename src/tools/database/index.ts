@@ -21,7 +21,7 @@ import { DatabaseDashboardView } from './database-dashboard-view';
 import type { DashboardChrome, DashboardMount } from './database-dashboard-view';
 import { wireDashboardEditor } from './database-dashboard-editor';
 import type { DashboardWidgetKind } from './database-dashboard-editor';
-import { copyDashboardWidgets, MAX_WIDGETS_PER_ROW, moveWidget as moveDashboardWidget, ownedWidgetViews, placeWidget, removeWidget as removeDashboardWidget, tabViews } from '../../shared/database/dashboard';
+import { copyDashboardWidgets, MAX_WIDGETS_PER_ROW, WIDGET_VIEW_TYPES, moveWidget as moveDashboardWidget, ownedWidgetViews, placeWidget, removeWidget as removeDashboardWidget, tabViews } from '../../shared/database/dashboard';
 import type { WidgetPlacement } from '../../shared/database/dashboard';
 import { planTypeChange } from './property-conversion';
 import { createGroupPill, openCellEditor } from './cells';
@@ -356,7 +356,7 @@ const BOARD_GROUP_PAGE = 10;
 const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'calendar', 'form', 'map'];
 
 /** Layouts a dashboard widget draws natively, with its own toolbar. */
-const WIDGET_LAYOUTS: readonly ViewType[] = ['table', 'list', 'chart'];
+const WIDGET_LAYOUTS = WIDGET_VIEW_TYPES;
 /** Layouts a view bound to a second source draws natively. Others, chart too, draw as that source's own view. */
 const BOUND_NATIVE_LAYOUTS: readonly ViewType[] = ['table', 'list'];
 

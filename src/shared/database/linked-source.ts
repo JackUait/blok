@@ -214,8 +214,8 @@ export const mintDatabaseViewIds = (
     .map((view) => [view.id as string, mint()]))]));
 
 /**
- * `data` with its view ids, active view, automation scopes and dashboard
- * widgets re-pointed through `viewIds`. Must run before `remapDatabaseRefs`:
+ * `data` with its view ids, active view, automation scopes, dashboard
+ * widgets and widget views' dashboards re-pointed through `viewIds`. Must run before `remapDatabaseRefs`:
  * a widget's `databaseId` still names the original block here.
  * @param type - the block's tool name
  * @param id - the block's original id
@@ -229,7 +229,7 @@ export const remapDatabaseViewIds = <T>(type: string, id: string, data: T, viewI
   const refs: Array<BlockRef & { owner: ReadonlyMap<string, string> | undefined }> = [{ holder: next, key: 'activeViewId', owner: own }];
 
   for (const view of fieldsIn(next.views)) {
-    refs.push({ holder: view, key: 'id', owner: own });
+    refs.push({ holder: view, key: 'id', owner: own }, { holder: view, key: 'dashboardViewId', owner: own });
     const rows = isFields(view.dashboard) ? fieldsIn(view.dashboard.rows) : [];
 
     for (const widget of rows.flatMap((row) => fieldsIn(row.widgets))) {

@@ -1238,8 +1238,13 @@ export interface DatabaseViewConfig {
   mapBy?: string;
   /** Map: the map's height, 300 / 400 / 600 / 800 px. Default 'medium'. */
   mapHeight?: MapHeight;
-  /** Dashboard slot. Blok draws no dashboard yet. */
+  /** Dashboard layout: rows of widgets, each pointing at a view by id. */
   dashboard?: { rows: DashboardRow[] };
+  /**
+   * This view is a widget of the dashboard view with this id. It gets no tab.
+   * A widget view is deleted with its dashboard.
+   */
+  dashboardViewId?: string;
   /** Calendar sync slot, for the host. */
   calendarSync?: CalendarSyncSettings;
   /** Multi-source slot: the database block whose rows this view shows. Absent means this database. */

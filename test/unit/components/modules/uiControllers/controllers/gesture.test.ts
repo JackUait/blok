@@ -11,6 +11,8 @@ describe('GestureController', () => {
   let selectedBlocks: boolean;
   let lineBreaks: boolean;
   let blockMenu: HTMLElement | null;
+  let noteUserInput: ReturnType<typeof vi.fn>;
+  let landHeldUserEdits: ReturnType<typeof vi.fn>;
 
   const key = (init: KeyboardEventInit): void => {
     input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ...init }));
@@ -39,13 +41,15 @@ describe('GestureController', () => {
     document.body.appendChild(wrapper);
 
     yjs = { beginGesture: vi.fn(), holdCapture: vi.fn(), releaseCapture: vi.fn() };
+    noteUserInput = vi.fn();
+    landHeldUserEdits = vi.fn();
     controller = new GestureController({ config: {}, eventsDispatcher: {} } as unknown as ModuleConfig);
     controller.state = {
       YjsManager: yjs,
       BlockSelection: { get anyBlockSelected() {
         return selectedBlocks;
       } },
-      BlockManager: { getBlockByChildNode: () => ({ inputs: [input], tool: { isLineBreaksEnabled: lineBreaks } }) },
+      BlockManager: { getBlockByChildNode: () => ({ inputs: [input], tool: { isLineBreaksEnabled: lineBreaks } }), noteUserInput, landHeldUserEdits },
       BlockSettings: { contains: (node: HTMLElement) => blockMenu?.contains(node) === true },
     } as unknown as BlokModules;
     controller.setWrapperElement(wrapper);
@@ -116,6 +120,45 @@ describe('GestureController', () => {
 
       expect(yjs.beginGesture).not.toHaveBeenCalled();
     });
+  });
+
+  // A tool that handles a key itself (Tab in code) fires no beforeinput. The
+  // mark must come before the tool's own listener edits the DOM.
+  it('marks an editing key as the user\'s own edit before any tool handles it', () => {
+    const seen: unknown[] = [];
+
+    input.addEventListener('keydown', () => seen.push(noteUserInput.mock.calls.length), { once: true });
+    key({ key: 'Tab' });
+
+    expect(seen).toEqual([1]);
+    for (const init of [{ key: 'Tab', shiftKey: true }, { key: 'Enter' }, { key: 'Backspace' }, { key: 'Delete' }, { key: 'x' }]) {
+      key(init);
+    }
+    expect(noteUserInput).toHaveBeenCalledTimes(6);
+    expect(noteUserInput).toHaveBeenCalledWith(input);
+  });
+
+  // The last key's edit is still held in the frame after an undo. It belongs
+  // to the step this gesture closes, so it must land first.
+  it('lands edits held from the last key before a gesture starts', () => {
+    const order: string[] = [];
+
+    landHeldUserEdits.mockImplementation(() => order.push('land'));
+    yjs.beginGesture.mockImplementation(() => order.push('begin'));
+    key({ key: 'Tab' });
+    input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText' }));
+    input.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+    expect(order).toEqual(['land', 'begin', 'land', 'begin', 'land', 'begin']);
+  });
+
+  // Cmd+Z marked as an edit would make the undo's own rewrite a new step.
+  it('never marks a shortcut, Escape or a caret move as an edit', () => {
+    for (const init of [{ key: 'z', metaKey: true }, { key: 'z', ctrlKey: true }, { key: 'Tab', altKey: true }, { key: 'Escape' }, { key: 'ArrowLeft' }, { key: 'Shift' }]) {
+      key(init);
+    }
+
+    expect(noteUserInput).not.toHaveBeenCalled();
   });
 
   it('treats a shortcut as discrete', () => {
@@ -377,7 +420,7 @@ describe('GestureController', () => {
     controller.state = {
       YjsManager: yjs,
       BlockSelection: { anyBlockSelected: false },
-      BlockManager: { getBlockByChildNode: () => undefined },
+      BlockManager: { getBlockByChildNode: () => undefined, noteUserInput, landHeldUserEdits },
       PageTitle: { titleElement: title },
     } as unknown as BlokModules;
 

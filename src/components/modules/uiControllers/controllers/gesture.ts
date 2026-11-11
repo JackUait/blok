@@ -12,6 +12,9 @@ const PASSIVE_KEYS = new Set([
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
 ]);
 
+/** Named keys that edit text; see `isEditKey`. */
+const EDIT_KEYS = new Set(['Tab', 'Enter', 'Backspace', 'Delete']);
+
 /** Input types that continue a typing run; `historyUndo`/`historyRedo` are left to the keyboard router. */
 const TYPING_INPUT_TYPES = new Set(['insertText', 'insertReplacementText', 'insertLineBreak', 'deleteContentBackward', 'deleteContentForward']);
 const IGNORED_INPUT_TYPES = new Set(['insertCompositionText', 'historyUndo', 'historyRedo']);
@@ -44,7 +47,11 @@ export class GestureController extends Controller {
     const kind = this.keyKind(event);
 
     if (kind !== null) {
-      this.Blok.YjsManager.beginGesture(kind);
+      this.begin(kind);
+    }
+
+    if (this.isEditKey(event) && event.target instanceof Node) {
+      this.Blok.BlockManager.noteUserInput(event.target);
     }
   };
 
@@ -53,12 +60,12 @@ export class GestureController extends Controller {
       return;
     }
 
-    this.Blok.YjsManager.beginGesture(TYPING_INPUT_TYPES.has(event.inputType) ? 'typing' : 'discrete');
+    this.begin(TYPING_INPUT_TYPES.has(event.inputType) ? 'typing' : 'discrete');
   };
 
   private readonly discreteHandler = (event: Event): void => {
     if (this.owns(event) && !isPasteContinuation(event)) {
-      this.Blok.YjsManager.beginGesture('discrete');
+      this.begin('discrete');
     }
   };
 
@@ -69,7 +76,7 @@ export class GestureController extends Controller {
       return;
     }
 
-    this.Blok.YjsManager.beginGesture('discrete');
+    this.begin('discrete');
 
     // A drag inside the editor may pause longer than the capture timeout.
     // Only the main button drags; a right press opens a context menu, which
@@ -94,7 +101,7 @@ export class GestureController extends Controller {
       return;
     }
 
-    this.Blok.YjsManager.beginGesture('typing');
+    this.begin('typing');
     // The user may pause over the candidate list; the composition stays one step.
     this.composing = true;
     this.Blok.YjsManager.holdCapture();
@@ -106,6 +113,16 @@ export class GestureController extends Controller {
       this.Blok.YjsManager.releaseCapture();
     }
   };
+
+  /**
+   * Start a gesture. An edit still held from the last key (one made in the
+   * frame after an undo) belongs to the step this gesture closes, so it lands first.
+   * @param kind - see `UndoHistory.beginGesture`
+   */
+  private begin(kind: GestureKind): void {
+    this.Blok.BlockManager.landHeldUserEdits();
+    this.Blok.YjsManager.beginGesture(kind);
+  }
 
   /**
    * Set the editor wrapper element
@@ -182,6 +199,24 @@ export class GestureController extends Controller {
     }
 
     return 'discrete';
+  }
+
+  /**
+   * A key that edits text. A tool that handles it itself (Tab in code) fires
+   * no beforeinput, so this mark is what tells its DOM change from an undo's
+   * rewrite in the frame after the undo; without it the change lands
+   * untracked. It must run before the tool's listener. Never a shortcut:
+   * a marked Cmd+Z would make the undo's own rewrite a new step.
+   * @param event - the keydown
+   */
+  private isEditKey(event: KeyboardEvent): boolean {
+    const key = event.key ?? '';
+
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return false;
+    }
+
+    return key.length === 1 || EDIT_KEYS.has(key);
   }
 
   /**

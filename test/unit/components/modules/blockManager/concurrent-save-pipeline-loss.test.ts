@@ -189,9 +189,9 @@ describe('concurrent save pipeline — what a peer edit makes the local pipeline
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),
-      resyncBlockData: (block: Block): void => {
-        void (blockManager as unknown as { syncBlockDataToYjs: (b: Block) => Promise<void> })
-          .syncBlockDataToYjs(block);
+      resyncBlockData: (block: Block, options?: { untracked?: boolean; heldUserEdit?: boolean }): void => {
+        void (blockManager as unknown as { syncBlockDataToYjs: (b: Block, o?: typeof options) => Promise<void> })
+          .syncBlockDataToYjs(block, options);
       },
     };
 
@@ -247,6 +247,22 @@ describe('concurrent save pipeline — what a peer edit makes the local pipeline
     await settle();
 
     expect(readText('A')).toBe('peer typed + keystroke');
+  });
+
+  // Each key the user presses in the window is its own step, so the edit held
+  // from the last key must land before the next gesture closes the step.
+  it('lands a keystroke held in a reconcile window as soon as asked, before the window closes', async () => {
+    peer.updateBlockData('A', 'text', 'peer typed');
+    pushPeerUpdate();
+
+    typeInto(blockA, 'peer typed + tab');
+    await drainMicrotasks();
+    expect(readText('A')).toBe('peer typed');
+
+    blockManager.landHeldUserEdits();
+    await drainMicrotasks();
+
+    expect(readText('A')).toBe('peer typed + tab');
   });
 
   it('keeps a PASTE made while a peer edit of that block reconciles', async () => {

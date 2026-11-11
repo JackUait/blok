@@ -114,7 +114,7 @@ export interface SyncHandlers {
    * gate. Used to replay a mutation that was suppressed as a reconciler echo
    * but turned out to be the user's — see `noteSuppressedMutation`.
    */
-  resyncBlockData: (block: Block, options?: { untracked?: boolean }) => void;
+  resyncBlockData: (block: Block, options?: { untracked?: boolean; heldUserEdit?: boolean }) => void;
 }
 
 /**
@@ -527,6 +527,26 @@ export class BlockYjsSync {
     if (this.isReconciling(block)) {
       this.userTypedWhileReconciling.add(block.id);
     }
+  }
+
+  /**
+   * Write now, as user edits, the mutations held because the user typed into a
+   * block inside an open window. The drain writes them only when the window
+   * closes, so two keys in one window became one step. The record stays: the
+   * drain's replay diffs to nothing once this write has landed.
+   */
+  public landHeldUserEdits(): void {
+    if (this.destroyed || this.activeOperationDepth > 0) {
+      return;
+    }
+
+    this.suppressedMutations.forEach((blockId) => {
+      const block = this.repository.getBlockById(blockId);
+
+      if (block !== undefined) {
+        this.handlers.resyncBlockData(block, { heldUserEdit: true });
+      }
+    });
   }
 
   /**

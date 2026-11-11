@@ -75,6 +75,12 @@ interface SyncBlockDataOptions {
   normalize?: 'all' | 'missing' | 'record';
   /** Data the tool worked out itself from these keys: it joins the undo step that wrote their values. */
   derivedFrom?: readonly string[];
+  /**
+   * A user edit held in an open reconcile window, landed early (see
+   * `BlockYjsSync.landHeldUserEdits`). Dropped only if a reconcile body runs
+   * when the save resolves.
+   */
+  heldUserEdit?: boolean;
 }
 
 /**
@@ -1858,6 +1864,11 @@ export class BlockManager extends Module {
     return this.repository.getBlockByChildNode(childNode);
   }
 
+  /** See `BlockYjsSync.landHeldUserEdits`. */
+  public landHeldUserEdits(): void {
+    this.yjsSync.landHeldUserEdits();
+  }
+
   /**
    * Note that a user input event targeted `node`'s block, so a mutation that
    * follows inside an open reconcile window is a keystroke rather than the
@@ -2762,7 +2773,11 @@ export class BlockManager extends Module {
     // block's own mutation record is the fresh path back. Only a rewrite of
     // THIS block counts: a paste's structural window opening mid-save must not
     // drop the text it just split.
-    if (this.yjsSync.isSyncingFromYjs && this.yjsSync.isRewritingFromDocument(block)) {
+    const rewriting = options?.heldUserEdit === true
+      ? this.yjsSync.isRunningOperationBody
+      : this.yjsSync.isSyncingFromYjs && this.yjsSync.isRewritingFromDocument(block);
+
+    if (rewriting) {
       return;
     }
 

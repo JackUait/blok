@@ -6,6 +6,8 @@ import { addRelated, relationEdit, relationIdsOf, removeRelated } from '../datab
 import { copiedReminders } from '../database/reminder-fit';
 import { mapRowValues } from '../database/row-move';
 import { linkedRowHome } from '../database/linked-source';
+import { copyDashboardWidgets, isWidgetView, MAX_WIDGETS_PER_ROW, ownedWidgetViews, placeWidget, removeWidgetsShowing, tabViews } from '../database/dashboard';
+import type { WidgetPlacement } from '../database/dashboard';
 import { newRowValues, prefillFilters, THIS_PAGE_FILTER_VALUE } from '../database/new-row-values';
 import { lastRowKey, pinnedRowOrders, rowOrderKey, UNORDERED_VIEW_TYPES } from '../database/row-order';
 import { descendantsOf, relationPair } from '../database/sub-item-tree';
@@ -35,7 +37,7 @@ import type { BlockPosition } from '../../../types/api/blocks';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
 import type { ChildCommandRoute } from '../agent/types';
 import type { ConvertibleRow } from '../database/property-conversion';
-import type { ButtonCallbackAction, ButtonSendNotificationAction, ConvertedValue, DatabaseViewConfig, DateReminder, DeletedPropertyDefinition, PropertyDefinition, PropertyType, PropertyValue, RelationSettings, SelectOption, TemplateRepeat, ViewType } from '../database/types';
+import type { ButtonCallbackAction, ButtonSendNotificationAction, ConvertedValue, DashboardRow, DatabaseViewConfig, DateReminder, DeletedPropertyDefinition, PropertyDefinition, PropertyType, PropertyValue, RelationSettings, SelectOption, TemplateRepeat, ViewType } from '../database/types';
 
 type TargetBlock = NonNullable<ToolActionContext['block']>;
 
@@ -170,7 +172,11 @@ const VIEW_NAMES: Partial<Record<ViewType, string>> = {
   feed: DATABASE_DEFAULT_TEXT.viewTypeFeed,
   form: DATABASE_DEFAULT_TEXT.viewTypeForm,
   map: DATABASE_DEFAULT_TEXT.viewTypeMap,
+  dashboard: DATABASE_DEFAULT_TEXT.viewTypeDashboard,
 };
+
+/** The layouts a dashboard widget draws. */
+const WIDGET_TYPES = new Set<ViewType>(['table', 'list', 'chart']);
 
 interface CreateArgs {
   title?: string;
@@ -215,9 +221,52 @@ const withPlaceProperty = (ctx: ToolActionContext, state: DatabaseState): Partia
   return withNewProperty(state, property);
 };
 
-const addView: ToolActionImpl<{ type: ViewType; name?: string; groupBy?: string }, undefined, { viewId: string }> = {
+interface AddViewArgs {
+  type: ViewType;
+  name?: string;
+  groupBy?: string;
+  dashboardViewId?: string;
+  placement?: { row?: number; newRow?: boolean };
+}
+
+/** The dashboard a new widget joins, checked, and where in its rows it goes. */
+const widgetTarget = (ctx: ToolActionContext, state: DatabaseState, args: AddViewArgs): { dashboard: DatabaseViewConfig; placement: WidgetPlacement | undefined } | undefined => {
+  if (args.dashboardViewId === undefined) {
+    if (args.placement !== undefined) ctx.fail('INVALID_ARGS', 'placement goes with dashboardViewId.');
+
+    return undefined;
+  }
+  const dashboard = state.views.find(view => view.id === args.dashboardViewId);
+
+  if (dashboard?.type !== 'dashboard') {
+    return ctx.fail('PRECONDITION_FAILED', `This database has no dashboard view ${args.dashboardViewId}.`);
+  }
+  if (!WIDGET_TYPES.has(args.type)) {
+    ctx.fail('INVALID_ARGS', 'A dashboard widget is a table, list or chart view.');
+  }
+  const rows = dashboard.dashboard?.rows ?? [];
+  const { row, newRow } = args.placement ?? {};
+
+  if (row !== undefined && newRow !== undefined) ctx.fail('INVALID_ARGS', 'Pass row or newRow, not both.');
+  if (row !== undefined && rows[row] === undefined) ctx.fail('PRECONDITION_FAILED', `This dashboard has no row ${row}.`);
+  if (row !== undefined && (rows[row]?.widgets.length ?? 0) >= MAX_WIDGETS_PER_ROW) {
+    ctx.fail('PRECONDITION_FAILED', `Row ${row} already holds ${MAX_WIDGETS_PER_ROW} widgets.`);
+  }
+  if (row !== undefined) return { dashboard, placement: { rowId: rows[row]?.id ?? '' } };
+
+  return { dashboard, placement: newRow === true ? { newRowAt: rows.length } : undefined };
+};
+
+/** Right after the widget showing `viewId` in its row, or a new row under it when the row is full. */
+const besideWidget = (row: DashboardRow, rowIndex: number, viewId: string): WidgetPlacement =>
+  (row.widgets.length < MAX_WIDGETS_PER_ROW
+    ? { rowId: row.id, index: row.widgets.findIndex(widget => widget.viewId === viewId) + 1 }
+    : { newRowAt: rowIndex + 1 });
+
+const addView: ToolActionImpl<AddViewArgs, undefined, { viewId: string }> = {
   run: (ctx, args) => {
     const { block, state } = openDatabase(ctx);
+    const target = widgetTarget(ctx, state, args);
     const given = args.groupBy === undefined
       ? undefined
       : state.schema.find(property => property.id === args.groupBy) ?? ctx.fail('PRECONDITION_FAILED', `This database has no property ${args.groupBy}.`);
@@ -236,8 +285,17 @@ const addView: ToolActionImpl<{ type: ViewType; name?: string; groupBy?: string 
       type: args.type,
       position: positionAround(ctx, state.views),
       ...(groupBy === undefined ? {} : { groupBy: groupBy.id }),
+      ...(target === undefined ? {} : { dashboardViewId: target.dashboard.id }),
     }, schema));
 
+    if (target !== undefined) {
+      // As the editor's Add widget: the open view stays, the layout gains the widget.
+      const rows = placeWidget(target.dashboard.dashboard?.rows ?? [], { id: ctx.newId(), viewId: view.id, width: 12 }, target.placement, () => ctx.newId());
+
+      ctx.update(block.id, { ...place, views: [...views.map(each => (each.id === target.dashboard.id ? { ...each, dashboard: { rows } } : each)), view] });
+
+      return { viewId: view.id };
+    }
     ctx.update(block.id, { ...place, views: [...views, view], activeViewId: view.id });
 
     return { viewId: view.id };
@@ -272,14 +330,32 @@ const moveView: ToolActionImpl<{ viewId: string } & Placement> = {
 const deleteView: ToolActionImpl<{ viewId: string }> = {
   run: (ctx, args) => {
     const { block, state } = openDatabase(ctx);
-    const index = viewIndex(ctx, state, args.viewId);
+    const target = state.views[viewIndex(ctx, state, args.viewId)];
 
-    if (state.views.length === 1) {
+    if (target !== undefined && isWidgetView(target, state.views)) {
+      // A widget view leaves its dashboard's layout with it.
+      const views = state.views
+        .filter(view => view.id !== args.viewId)
+        .map(view => (view.id === target.dashboardViewId && view.dashboard !== undefined
+          ? { ...view, dashboard: { rows: removeWidgetsShowing(view.dashboard.rows, args.viewId) } }
+          : view));
+
+      ctx.update(block.id, { views });
+
+      return undefined;
+    }
+    const tabs = tabViews(state.views);
+    const index = tabs.findIndex(view => view.id === args.viewId);
+
+    if (tabs.length === 1) {
       ctx.fail('PRECONDITION_FAILED', 'A database keeps at least one view.');
     }
-    const views = state.views.filter(view => view.id !== args.viewId);
+    // As the editor: a dashboard takes the widget views it owns.
+    const gone = new Set([args.viewId, ...(target?.type === 'dashboard' ? ownedWidgetViews(state.views, args.viewId).map(view => view.id) : [])]);
+    const views = state.views.filter(view => !gone.has(view.id));
+    const left = tabViews(views);
     // As the editor: the view now at the deleted one's index, or the last one.
-    const neighbour = views[Math.min(index, views.length - 1)];
+    const neighbour = left[Math.min(index, left.length - 1)];
 
     ctx.update(block.id, state.activeViewId === args.viewId && neighbour !== undefined ? { views, activeViewId: neighbour.id } : { views });
 
@@ -299,6 +375,29 @@ const duplicateView: ToolActionImpl<{ viewId: string }, undefined, { viewId: str
     const { id: _id, position: _position, ...settings } = source;
     const copy = savedView(newView({ ...settings, id: ctx.newId(), position: positionAround(ctx, state.views) }, state.schema));
 
+    if (isWidgetView(source, state.views)) {
+      // As the widget menu's Duplicate: the copy goes next to it on its dashboard, and the open view stays.
+      const views = state.views.map((view) => {
+        if (view.id !== source.dashboardViewId || view.dashboard === undefined) return view;
+        const rows = view.dashboard.rows;
+        const rowIndex = rows.findIndex(row => row.widgets.some(widget => widget.viewId === source.id && widget.databaseId === undefined));
+        const row = rows[rowIndex];
+        const placement = row === undefined ? undefined : besideWidget(row, rowIndex, source.id);
+
+        return { ...view, dashboard: { rows: placeWidget(rows, { id: ctx.newId(), viewId: copy.id, width: 12 }, placement, () => ctx.newId()) } };
+      });
+
+      ctx.update(block.id, { views: [...views, copy] });
+
+      return { viewId: copy.id };
+    }
+    if (source.type === 'dashboard') {
+      const copied = copyDashboardWidgets(state.views, source, copy.id, () => ctx.newId());
+
+      ctx.update(block.id, { views: [...state.views, { ...copy, dashboard: { rows: copied.rows } }, ...copied.widgets], activeViewId: copy.id });
+
+      return { viewId: copy.id };
+    }
     ctx.update(block.id, { views: [...state.views, copy], activeViewId: copy.id });
 
     return { viewId: copy.id };

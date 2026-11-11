@@ -1094,7 +1094,8 @@
                           "chart",
                           "feed",
                           "form",
-                          "map"
+                          "map",
+                          "dashboard"
                         ]
                       },
                       "name": {
@@ -1103,6 +1104,27 @@
                       "groupBy": {
                         "type": "string",
                         "description": "Property id to group by."
+                      },
+                      "dashboardViewId": {
+                        "type": "string",
+                        "description": "A dashboard view of this database: the new view becomes one of its widgets."
+                      },
+                      "placement": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "description": "Where the widget goes. Only with dashboardViewId.",
+                        "properties": {
+                          "row": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "newRow": {
+                            "type": "boolean",
+                            "enum": [
+                              true
+                            ]
+                          }
+                        }
                       },
                       "id": {
                         "type": "string",
@@ -4715,7 +4737,7 @@
                             "anyOf": [
                               {
                                 "type": "object",
-                                "description": "Dashboard slot, same shape as the saved view field. Blok draws no dashboard yet."
+                                "description": "Dashboard layout, same shape as the saved view field. To add a widget use database.addView with dashboardViewId."
                               },
                               {
                                 "type": "null"

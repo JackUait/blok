@@ -377,9 +377,10 @@ const TIER3_VIEW_FIELDS = {
   },
   mapBy: { type: 'string', description: 'Map: the place property id. Default the first place property.' },
   mapHeight: { type: 'string', enum: ['small', 'medium', 'large', 'extraLarge'], description: 'Map height: 300, 400, 600 or 800 px. Default medium.' },
+  dashboardViewId: { type: 'string', description: 'This view is a widget of the dashboard view with this id, and has no tab.' },
   dashboard: {
     type: 'object',
-    description: 'Dashboard slot. Blok draws no dashboard yet.',
+    description: 'Dashboard layout: rows of up to four widgets, each showing a view by id.',
     required: ['rows'],
     additionalProperties: false,
     properties: {
@@ -838,11 +839,14 @@ const withOptionalId = (items: Record<string, unknown>): Record<string, unknown>
   required: (items.required as string[]).filter(key => key !== 'id'),
 });
 
+// A widget is made with addView dashboardViewId, so its layout entry comes with it.
+const { dashboardViewId: _widgetOf, ...SETTABLE_VIEW_PROPERTIES } = VIEW_PROPERTIES;
+
 const VIEW_SETTING_ARGS: Record<string, unknown> = {
-  ...VIEW_PROPERTIES,
+  ...SETTABLE_VIEW_PROPERTIES,
   // Spelled out, these take the agent tool schema past the OpenAI depth limit (src/agent/render-tools.ts); the saved view is still checked whole.
   filterTree: { type: 'object', description: 'Advanced filter: { conjunction: "and" | "or", filterRules: [rule or group] }, a rule being { propertyId, operator, value } and a group nesting the same shape, three layers deep. Ids are filled in when missing. Rows must match it and every simple filter.' },
-  dashboard: { type: 'object', description: 'Dashboard slot, same shape as the saved view field. Blok draws no dashboard yet.' },
+  dashboard: { type: 'object', description: 'Dashboard layout, same shape as the saved view field. To add a widget use database.addView with dashboardViewId.' },
   colorRules: { ...VIEW_PROPERTIES.colorRules, items: withOptionalId(VIEW_PROPERTIES.colorRules.items as Record<string, unknown>) },
   form: {
     type: 'object',
@@ -914,7 +918,8 @@ const NEW_OPTION = {
   properties: { label: { type: 'string', minLength: 1 }, color: COLOR },
 };
 
-const ADDABLE_VIEW_TYPES = ['board', 'table', 'list', 'gallery', 'calendar', 'timeline', 'chart', 'feed', 'form', 'map'];
+const LAYOUT_VIEW_TYPES = ['board', 'table', 'list', 'gallery', 'calendar', 'timeline', 'chart', 'feed', 'form', 'map'];
+const ADDABLE_VIEW_TYPES = [...LAYOUT_VIEW_TYPES, 'dashboard'];
 
 const closed = (properties: Record<string, unknown>, required: string[] = []): BlokSchema => ({
   type: 'object', required, additionalProperties: false, properties,
@@ -931,10 +936,23 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'addView',
-    summary: 'Add a view at the end and open it.',
-    guidance: 'A board or chart groups by groupBy, else by the first select property. A board needs a select property. A map adds a Place property when there is none. Change its settings with database.updateView.',
+    summary: 'Add a view at the end and open it, or a widget to a dashboard view.',
+    guidance: 'A board or chart groups by groupBy, else by the first select property. A board needs a select property. A map adds a Place property when there is none. Change its settings with database.updateView. '
+      + 'With dashboardViewId the view is a widget of that dashboard: a table, list or chart (for one big number, then set chartType number), with no tab of its own; the open view stays. '
+      + 'It joins the last row while that row has one widget, else starts a row; placement { row } puts it at the end of that row (0-based, at most four a row) and { newRow: true } starts a row at the end.',
     target: 'block',
-    args: closed({ type: { enum: ADDABLE_VIEW_TYPES }, name: { type: 'string' }, groupBy: { type: 'string', description: 'Property id to group by.' } }, ['type']),
+    args: closed({
+      type: { enum: ADDABLE_VIEW_TYPES },
+      name: { type: 'string' },
+      groupBy: { type: 'string', description: 'Property id to group by.' },
+      dashboardViewId: { type: 'string', description: 'A dashboard view of this database: the new view becomes one of its widgets.' },
+      placement: {
+        type: 'object',
+        additionalProperties: false,
+        description: 'Where the widget goes. Only with dashboardViewId.',
+        properties: { row: { type: 'integer', minimum: 0 }, newRow: { type: 'boolean', enum: [true] } },
+      },
+    }, ['type']),
     result: closed({ viewId: { type: 'string' } }, ['viewId']),
     mirrors: [],
   },
@@ -947,7 +965,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'duplicateView',
-    summary: 'Copy a view with all its settings to the end, and open the copy.',
+    summary: 'Copy a view with all its settings to the end, and open the copy. A dashboard is copied with its widgets; a copied widget goes next to it on its dashboard.',
     target: 'block',
     args: closed({ viewId: VIEW_ID }, ['viewId']),
     result: closed({ viewId: { type: 'string' } }, ['viewId']),
@@ -955,7 +973,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'deleteView',
-    summary: 'Delete a view. If it was open, its neighbour opens.',
+    summary: 'Delete a view. If it was open, its neighbour opens. A dashboard takes its widget views with it; a widget view leaves its dashboard.',
     target: 'block',
     preconditions: ['At least one view must remain.'],
     args: closed({ viewId: VIEW_ID }, ['viewId']),
@@ -991,7 +1009,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     guidance: 'A board without a grouping groups by the first select, multi-select or status property, else the first property it can group by. A map adds a Place property when there is none. A timeline starts with no table columns.',
     target: 'block',
     preconditions: ['The database is not locked.', 'A board needs a property it can group by.'],
-    args: closed({ viewId: VIEW_ID, type: { enum: ADDABLE_VIEW_TYPES } }, ['viewId', 'type']),
+    args: closed({ viewId: VIEW_ID, type: { enum: LAYOUT_VIEW_TYPES } }, ['viewId', 'type']),
     mirrors: [],
   },
   {

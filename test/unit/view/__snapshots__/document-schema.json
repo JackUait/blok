@@ -5001,9 +5001,13 @@
                 ],
                 "description": "Map height: 300, 400, 600 or 800 px. Default medium."
               },
+              "dashboardViewId": {
+                "type": "string",
+                "description": "This view is a widget of the dashboard view with this id, and has no tab."
+              },
               "dashboard": {
                 "type": "object",
-                "description": "Dashboard slot. Blok draws no dashboard yet.",
+                "description": "Dashboard layout: rows of up to four widgets, each showing a view by id.",
                 "required": [
                   "rows"
                 ],

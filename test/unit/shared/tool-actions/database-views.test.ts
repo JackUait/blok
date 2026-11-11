@@ -168,12 +168,102 @@ describe('database view declarations', () => {
     expect(validateAgainst(argsOf('create'), { title: 'T', view: 'table' })).toEqual([]);
     expect(validateAgainst(argsOf('create'), { view: 'chart' }).length).toBeGreaterThan(0);
     expect(validateAgainst(argsOf('addView'), { type: 'calendar', name: 'C' })).toEqual([]);
-    expect(validateAgainst(argsOf('addView'), { type: 'dashboard' }).length).toBeGreaterThan(0);
+    expect(validateAgainst(argsOf('addView'), { type: 'dashboard' })).toEqual([]);
+    expect(validateAgainst(argsOf('addView'), { type: 'chart', dashboardViewId: 'd', placement: { newRow: true } })).toEqual([]);
+    expect(validateAgainst(argsOf('addView'), { type: 'chart', placement: { row: -1 } }).length).toBeGreaterThan(0);
+    expect(validateAgainst(argsOf('setLayout'), { viewId: 'v', type: 'dashboard' }).length).toBeGreaterThan(0);
     expect(validateAgainst(argsOf('moveView'), { viewId: 'v', before: 'w' })).toEqual([]);
     expect(validateAgainst(argsOf('moveView'), { viewId: 'v' }).length).toBeGreaterThan(0);
     expect(validateAgainst(argsOf('moveView'), { viewId: 'v', before: 'w', after: 'x' }).length).toBeGreaterThan(0);
     for (const name of ['create', 'addView', 'renameView', 'duplicateView', 'deleteView', 'moveView']) {
       expect(BUILT_IN_TOOL_RUNTIMES.get('database')?.actions[name], name).toBe(handler(name));
     }
+  });
+});
+
+describe('database dashboard views', () => {
+  const withDashboard = (): { doc: FakeDoc; id: string; data: () => Data; dash: string; board: string } => {
+    const made = make();
+    const board = made.data().views[0].id;
+    const { viewId } = run(made.doc, made.id, 'addView', { type: 'dashboard' }) as { viewId: string };
+
+    return { ...made, dash: viewId, board };
+  };
+  const layout = (data: Data, dash: string): string[][] =>
+    ((data.views.find(view => view.id === dash)?.dashboard as { rows: Array<{ widgets: Array<{ viewId: string }> }> } | undefined)?.rows ?? [])
+      .map(row => row.widgets.map(widget => widget.viewId));
+
+  it('adds a dashboard named Dashboard and opens it', () => {
+    const { data, dash } = withDashboard();
+
+    expect(data().views.find(view => view.id === dash)).toMatchObject({ type: 'dashboard', name: 'Dashboard' });
+    expect(data().activeViewId).toBe(dash);
+    expect(validateAgainst(DATABASE_DATA, data())).toEqual([]);
+  });
+
+  it('adds widgets to a dashboard without opening them, two to a row, or where placement says', () => {
+    const { doc, id, data, dash } = withDashboard();
+    const chart = (run(doc, id, 'addView', { type: 'chart', dashboardViewId: dash }) as { viewId: string }).viewId;
+    const table = (run(doc, id, 'addView', { type: 'table', dashboardViewId: dash }) as { viewId: string }).viewId;
+    const list = (run(doc, id, 'addView', { type: 'list', dashboardViewId: dash, placement: { newRow: true } }) as { viewId: string }).viewId;
+    const second = (run(doc, id, 'addView', { type: 'chart', dashboardViewId: dash, placement: { row: 0 } }) as { viewId: string }).viewId;
+
+    expect(data().activeViewId).toBe(dash);
+    expect(layout(data(), dash)).toEqual([[chart, table, second], [list]]);
+    expect(data().views.find(view => view.id === chart)).toMatchObject({ dashboardViewId: dash, type: 'chart' });
+    expect(validateAgainst(DATABASE_DATA, data())).toEqual([]);
+  });
+
+  it('refuses a widget for a view that is not a dashboard, or of a layout a dashboard cannot draw', () => {
+    const { doc, id, dash, board } = withDashboard();
+
+    expect(() => run(doc, id, 'addView', { type: 'table', dashboardViewId: board })).toThrow(/no dashboard view/);
+    expect(() => run(doc, id, 'addView', { type: 'board', dashboardViewId: dash })).toThrow(/table, list or chart/);
+    expect(() => run(doc, id, 'addView', { type: 'table', dashboardViewId: dash, placement: { row: 3 } })).toThrow(/no row 3/);
+  });
+
+  it('deleting the dashboard takes its widget views; the last tab still cannot go', () => {
+    const { doc, id, data, dash, board } = withDashboard();
+    const chart = (run(doc, id, 'addView', { type: 'chart', dashboardViewId: dash }) as { viewId: string }).viewId;
+
+    run(doc, id, 'deleteView', { viewId: dash });
+    expect(data().views.map(view => view.id)).toEqual([board]);
+    expect(data().views.some(view => view.id === chart)).toBe(false);
+    expect(data().activeViewId).toBe(board);
+    expect(() => run(doc, id, 'deleteView', { viewId: board })).toThrow(/at least one view/);
+  });
+
+  it('a board and a dashboard full of widgets still keep the board: widgets are not tabs', () => {
+    const { doc, id, dash, board } = withDashboard();
+
+    run(doc, id, 'addView', { type: 'chart', dashboardViewId: dash });
+    run(doc, id, 'deleteView', { viewId: dash });
+    expect(() => run(doc, id, 'deleteView', { viewId: board })).toThrow(/at least one view/);
+  });
+
+  it('deleting a widget view takes it out of the dashboard layout', () => {
+    const { doc, id, data, dash } = withDashboard();
+    const chart = (run(doc, id, 'addView', { type: 'chart', dashboardViewId: dash }) as { viewId: string }).viewId;
+    const table = (run(doc, id, 'addView', { type: 'table', dashboardViewId: dash }) as { viewId: string }).viewId;
+
+    run(doc, id, 'deleteView', { viewId: chart });
+    expect(layout(data(), dash)).toEqual([[table]]);
+  });
+
+  it('duplicating a dashboard copies its widgets; duplicating a widget puts the copy next to it', () => {
+    const { doc, id, data, dash } = withDashboard();
+    const chart = (run(doc, id, 'addView', { type: 'chart', dashboardViewId: dash }) as { viewId: string }).viewId;
+    const { viewId: copy } = run(doc, id, 'duplicateView', { viewId: dash }) as { viewId: string };
+    const copied = layout(data(), copy);
+
+    expect(copied).toHaveLength(1);
+    expect(copied[0][0]).not.toBe(chart);
+    expect(data().views.find(view => view.id === copied[0][0])?.dashboardViewId).toBe(copy);
+
+    const { viewId: twin } = run(doc, id, 'duplicateView', { viewId: chart }) as { viewId: string };
+
+    expect(layout(data(), dash)).toEqual([[chart, twin]]);
+    expect(data().activeViewId).toBe(copy);
+    expect(validateAgainst(DATABASE_DATA, data())).toEqual([]);
   });
 });

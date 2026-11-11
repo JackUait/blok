@@ -81,6 +81,7 @@ const createMockYjsManager = (): YjsManager => {
     updateBlockTune: vi.fn(),
     stopCapturing: vi.fn(),
     rebaseCaretSnapshots: vi.fn(),
+    reapplyCaretAfterRebuild: vi.fn(),
     transact: vi.fn((fn: () => void) => fn()),
     transactWithoutCapture: vi.fn((fn: () => void) => fn()),
     toJSON,
@@ -710,6 +711,59 @@ describe('BlockYjsSync', () => {
         expect(composeBlockSpy).toHaveBeenCalledWith(
           expect.objectContaining({ origin: 'replay', replaySource })
         );
+      });
+
+      it.each([
+        ['undo', 1],
+        ['redo', 1],
+        ['remote', 0],
+      ] as const)('puts the history caret back into a block rebuilt for %s', async (origin, calls) => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { content: [] },
+          tunes: {},
+        });
+
+        (block as unknown as Record<string, unknown>).name = 'table';
+        (block.setData as ReturnType<typeof vi.fn>).mockReturnValue(Promise.resolve(false));
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+          type: 'table',
+          data: createMockYMap({ content: [['a']] }),
+          tunes: createMockYMap({}),
+        }));
+
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(createMockBlock({ id: 'test-block' }));
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'test-block', type: 'update', origin });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        const reapply = (mockYjsManager as unknown as { reapplyCaretAfterRebuild: ReturnType<typeof vi.fn> })
+          .reapplyCaretAfterRebuild;
+
+        expect(reapply).toHaveBeenCalledTimes(calls);
       });
 
       it('does not recreate block when setData returns true', async () => {

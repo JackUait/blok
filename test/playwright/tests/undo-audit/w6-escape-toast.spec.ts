@@ -185,6 +185,34 @@ test.describe('Escape from the block menu keeps the block selected (V3)', () => 
     expect(await hasCaret(page)).toBe(false);
   });
 
+  test('U142: Escape keeps the only block of a column selected; Backspace unwraps the layout as one undo step', async ({ page }) => {
+    await createBlok(page, [
+      { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+      { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['l1'] },
+      { id: 'l1', type: 'paragraph', data: { text: 'left' }, parent: 'c1' },
+      { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['r1'] },
+      { id: 'r1', type: 'paragraph', data: { text: 'right' }, parent: 'c2' },
+    ]);
+    await editable(page, 'r1').click();
+    await gap(page);
+    await openTunes(page, 'r1');
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator(TUNES_POPOVER)).toBeHidden();
+    await gap(page, 300);
+    expect(await selectedIds(page)).toEqual(['r1']);
+
+    await page.keyboard.press('Backspace');
+    await expect.poll(() => ids(page)).toEqual(['l1']);
+    await gap(page);
+
+    await page.keyboard.press(UNDO);
+    await expect.poll(() => ids(page)).toEqual(['cl']);
+    expect(await savedBlock(page, 'r1')).toMatchObject({ parent: 'c2' });
+    await expect(editable(page, 'r1')).toHaveText('right');
+    expect(await savedBlock(page, 'l1')).toMatchObject({ parent: 'c1' });
+  });
+
   test('Escape from a submenu closes only the submenu, and the block stays selected', async ({ page }) => {
     await createBlok(page, BASE);
     await editable(page, 'p2').click();

@@ -9806,11 +9806,21 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+/* Only here: inline-size containment zeroes the scroller's min-content, which would shrink a table in a column. */
+[data-blok-database-table-scroller]:has(> [data-blok-database-table-grid] > [data-blok-database-table-empty]) {
+  container-type: inline-size;
+}
+
+/* shots-08/69-filter-pills.png: Notion centres the pair in the visible column, not across a wide grid.
+   100cqi is the scroller's content width; sticky stops at its padding, so the pair stays in the text column. */
 [data-blok-database-table-empty] {
+  position: sticky;
+  inset-inline-start: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--blok-space-2);
+  width: 100cqi;
   padding-block: var(--blok-space-4);
 }
 

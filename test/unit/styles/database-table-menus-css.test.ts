@@ -464,3 +464,22 @@ describe('"+ New page" in the empty grid', () => {
     expect(declared('[data-blok-database-table-blank-cell] > [data-blok-database-table-add-row]', 'margin-block')).toEqual(['var(--blok-space-1)']);
   });
 });
+
+// research/08 "New row in a filtered view", shots-08/69-filter-pills.png: on a wide table Notion centres
+// "Edit filters" and "New page" in the visible column, not across the whole grid.
+describe('filtered-empty table', () => {
+  const SCROLLER = '[data-blok-database-table-scroller]:has(> [data-blok-database-table-grid] > [data-blok-database-table-empty])';
+  const EMPTY = '[data-blok-database-table-empty]';
+
+  it('makes the scroller a container only while the empty state shows', () => {
+    expect(declared(SCROLLER, 'container-type')).toEqual(['inline-size']);
+    expect(declared('[data-blok-database-table-scroller]', 'container-type')).toEqual([]);
+  });
+
+  it('keeps the pair in the visible column: as wide as the scroller content, stuck to its start', () => {
+    expect(declared(EMPTY, 'position')).toEqual(['sticky']);
+    expect(declared(EMPTY, 'inset-inline-start')).toEqual(['0']);
+    expect(declared(EMPTY, 'width')).toEqual(['100cqi']);
+    expect(declared(EMPTY, 'justify-content')).toEqual(['center']);
+  });
+});

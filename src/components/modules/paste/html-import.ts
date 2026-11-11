@@ -69,6 +69,8 @@ const pasteConfigOf = (config: BlokConfig): BlokConfig => ({
   placeholder: false,
   find: false,
   loader: false,
+  // The page-wide toasts would show the hidden editor's failures, e.g. an image it has no uploader for.
+  notifier: () => undefined,
 });
 
 /** Only text/html: a text/plain flavour would let the URL, Markdown and text handlers claim it. */

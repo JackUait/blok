@@ -464,3 +464,29 @@ describe('html.insert starts no upload and no fetch', () => {
     expect(imported.blocks.filter(block => block.type === 'image').map(block => block.data.url)).toEqual(['http://example.com/a.gif', 'http://example.com/b.png']);
   });
 });
+
+describe('html.insert keeps its hidden paste editor quiet', () => {
+  it('shows no toast on the page for an image the hidden editor could not load', async () => {
+    const editor = await boot();
+    const shown: string[] = [];
+    const observer = new MutationObserver(records => records.forEach(record => record.addedNodes.forEach((node) => {
+      if (node instanceof HTMLElement && node.matches('[data-blok-testid^="notification"]')) {
+        shown.push(node.textContent ?? '');
+      }
+    })));
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = await turn.execute({ commands: [{ name: 'html.insert', args: { html: '<img src="x"><p>t</p>' } }] });
+
+    turn.end();
+    // The notifier loads lazily, so a toast lands a few tasks later.
+    for (let i = 0; i < 10; i++) {
+      await settle();
+    }
+    observer.disconnect();
+
+    expect(shown).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+});

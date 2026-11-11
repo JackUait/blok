@@ -82,7 +82,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
     for (const page of index.pages) {
       if (!page.titleDate) continue;
       const display = titleDateLabel(page.titleDate, new Date(), page.titleDateDisplay);
-      const label = display === null ? null : `@${display}`;
+      const label = display === null ? null : `@${display}${page.titleDateSuffix ?? ''}`;
       if (label === null || label === page.title) continue;
       page.title = label;
       changed = true;
@@ -289,12 +289,19 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       theme: readAppearance(),
       pageTitle: {
         placeholder: 'Nouvelle page',
-        onChange(title) {
+        onChange(title, change) {
           if (generation !== turn || !index) return;
           const next = title.trim() || 'Nouvelle page';
-          if (page.titleDate && next !== `@${titleDateLabel(page.titleDate, new Date(), page.titleDateDisplay)}`) {
-            page.titleDate = undefined;
-            page.titleDateDisplay = undefined;
+          if (page.titleDate && change.source === 'user') {
+            const label = titleDateLabel(page.titleDate, new Date(), page.titleDateDisplay);
+            const prefix = label === null ? '' : `@${label}`;
+            const token = holder.querySelector('[data-desktop-title-date-token]');
+            if (token && next.startsWith(prefix)) page.titleDateSuffix = next.slice(prefix.length);
+            else {
+              page.titleDate = undefined;
+              page.titleDateDisplay = undefined;
+              page.titleDateSuffix = undefined;
+            }
           }
           page.title = next;
           holder.querySelector<HTMLElement>('[data-blok-page-title]')?.toggleAttribute('data-desktop-title-date', !!page.titleDate);
@@ -333,7 +340,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       if (title) {
         const updateDateTitle = (): void => {
           const label = page.titleDate ? titleDateLabel(page.titleDate, new Date(), page.titleDateDisplay) : null;
-          const next = label === null ? 'Nouvelle page' : `@${label}`;
+          const next = label === null ? 'Nouvelle page' : `@${label}${page.titleDateSuffix ?? ''}`;
           page.title = next;
           instance.title.set(next);
           if (page.titleDate) title.setAttribute('data-desktop-title-date', page.titleDate);
@@ -344,6 +351,7 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
           getDate: () => page.titleDate,
           getDisplay: () => page.titleDateDisplay ?? {},
           setDate: (value) => {
+            if (!page.titleDate || value === null) page.titleDateSuffix = undefined;
             page.titleDate = value ?? undefined;
             if (value === null) page.titleDateDisplay = undefined;
             updateDateTitle();
@@ -377,11 +385,12 @@ export function createWorkspace(onLayout: (width: number) => void, onPageIcon: (
       page.title = command.title;
       page.titleDate = undefined;
       page.titleDateDisplay = undefined;
+      page.titleDateSuffix = undefined;
       notifyPage(page.id);
       if (currentId === page.id) editor?.title.set(command.title);
       else pageToolbar?.setBreadcrumbs(breadcrumbs(currentId));
     } else if (command.type === 'duplicate') {
-      const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)`, titleDate: undefined, titleDateDisplay: undefined };
+      const copy: DesktopPage = { ...page, id: crypto.randomUUID(), title: `${page.title} (copie)`, titleDate: undefined, titleDateDisplay: undefined, titleDateSuffix: undefined };
       index.pages.push(copy);
       saveManifest();
       void readFile(page.id).then(async (raw) => {

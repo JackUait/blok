@@ -39,12 +39,14 @@ export function bindTitleDateMention(
     if (date !== undefined && parseDateValue(date) !== null) {
       title.setAttribute('data-desktop-title-date', date);
       const label = titleDateLabel(date, new Date(), options.getDisplay());
-      if (label !== null && title.textContent === `@${label}` &&
+      if (label !== null && (title.textContent ?? '').startsWith(`@${label}`) &&
         title.querySelector('[data-desktop-title-date-token]') === null) {
+        const suffix = (title.textContent ?? '').slice(label.length + 1);
         const token = document.createElement('span');
         const at = document.createElement('span');
         const text = document.createElement('span');
         token.setAttribute('data-desktop-title-date-token', '');
+        token.setAttribute('data-blok-title-mention-token', '');
         token.setAttribute('contenteditable', 'false');
         token.setAttribute('role', 'button');
         token.setAttribute('aria-label', `Modifier la date : ${label}`);
@@ -53,7 +55,7 @@ export function bindTitleDateMention(
         at.textContent = '@';
         text.textContent = label;
         token.append(at, text);
-        title.replaceChildren(token);
+        title.replaceChildren(token, ...(suffix ? [document.createTextNode(suffix)] : []));
       }
     } else {
       title.removeAttribute('data-desktop-title-date');
@@ -73,6 +75,8 @@ export function bindTitleDateMention(
     const iso = localDateIso(now);
     options.setDate(iso);
     refresh();
+    title.focus();
+    window.getSelection()?.setPosition(title, title.childNodes.length);
   };
   const open = (): void => {
     if (menu) return;
@@ -113,7 +117,13 @@ export function bindTitleDateMention(
     }
   };
   const onKeydown = (event: KeyboardEvent): void => {
-    if (!menu && options.getDate() && event.key === 'Enter') {
+    if (options.getDate() && event.key === 'End' && title.querySelector('[data-desktop-title-date-token]')) {
+      event.preventDefault();
+      window.getSelection()?.setPosition(title, title.childNodes.length);
+      return;
+    }
+    if (!menu && options.getDate() && event.key === 'Enter' &&
+      event.target instanceof Element && event.target.closest('[data-desktop-title-date-token]')) {
       event.preventDefault();
       event.stopImmediatePropagation();
       void openDatePicker();

@@ -62,6 +62,22 @@ describe('date mentions in page titles', () => {
     unbind.destroy();
   });
 
+  it('keeps editable text after the atomic date token', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 11, 17));
+    const title = document.createElement('h1');
+    title.textContent = '@Aujourd’hui notes';
+    document.body.append(title);
+    const binding = bindTitleDateMention(title, {
+      getDate: () => '2026-11-11', getDisplay: () => ({}), setDate: vi.fn(), setDisplay: vi.fn(), i18n: { t: (key) => key },
+    });
+    expect(title.firstChild).toHaveProperty('nodeName', 'SPAN');
+    expect(title.firstChild?.textContent).toBe('@Aujourd’hui');
+    expect(title.lastChild).toBeInstanceOf(Text);
+    expect(title.lastChild?.textContent).toBe(' notes');
+    binding.destroy();
+  });
+
   it('restores the date token when the relative label changes overnight', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 10, 11, 17));

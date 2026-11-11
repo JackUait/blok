@@ -348,11 +348,14 @@ export class PageTitle extends Module {
       return;
     }
     const text = (title.textContent ?? '').replace(/\n/g, ' ');
+    const hasAtomicMention = title.firstChild instanceof HTMLElement &&
+      title.firstChild.hasAttribute('data-blok-title-mention-token') &&
+      Array.from(title.childNodes).slice(1).every((node) => node instanceof Text);
 
     // A stray <br> hides the :empty placeholder.
     if (text === '') {
       title.replaceChildren();
-    } else if (title.childNodes.length !== 1 || !(title.firstChild instanceof Text)) {
+    } else if (!hasAtomicMention && (title.childNodes.length !== 1 || !(title.firstChild instanceof Text))) {
       this.flattenToText(title, text);
     }
     if (!this.writeField('title', text, { typing: event instanceof InputEvent })) {

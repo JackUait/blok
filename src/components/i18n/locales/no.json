@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Dra",
   "tools.database.openPagesCenter": "Sentrert panel",
   "tools.database.openPagesFull": "Hel side",
+  "tools.database.openPagesNewTab": "Ny fane",
   "tools.database.openPagesSideDescription": "Åpne sider på siden. Visningen bak forblir interaktiv.",
   "tools.database.openPagesCenterDescription": "Åpne sider i et fokusert, sentrert vindu.",
   "tools.database.openPagesFullDescription": "Åpne sider som hel side.",

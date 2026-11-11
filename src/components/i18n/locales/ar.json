@@ -1266,6 +1266,7 @@
   "tools.database.peekResizeHintAction": "اسحب",
   "tools.database.openPagesCenter": "نافذة في المنتصف",
   "tools.database.openPagesFull": "صفحة كاملة",
+  "tools.database.openPagesNewTab": "علامة تبويب جديدة",
   "tools.database.openPagesSideDescription": "افتح الصفحات على الجانب، مع بقاء العرض خلفها قابلًا للتفاعل.",
   "tools.database.openPagesCenterDescription": "افتح الصفحات في نافذة مركّزة في المنتصف.",
   "tools.database.openPagesFullDescription": "افتح الصفحات بملء الصفحة.",

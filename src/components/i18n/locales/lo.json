@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "ລາກ",
   "tools.database.openPagesCenter": "ມຸມມອງກາງ",
   "tools.database.openPagesFull": "ເຕັມໜ້າ",
+  "tools.database.openPagesNewTab": "ແທັບໃໝ່",
   "tools.database.openPagesSideDescription": "ເປີດໜ້າຢູ່ດ້ານຂ້າງ. ມຸມມອງດ້ານຫຼັງຍັງໃຊ້ງານໄດ້.",
   "tools.database.openPagesCenterDescription": "ເປີດໜ້າໃນໜ້າຕ່າງກາງເພື່ອໂຟກັສ.",
   "tools.database.openPagesFullDescription": "ເປີດໜ້າແບບເຕັມໜ້າ.",

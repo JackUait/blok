@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "तान्नुहोस्",
   "tools.database.openPagesCenter": "बीचको प्यानल",
   "tools.database.openPagesFull": "पूरा पृष्ठ",
+  "tools.database.openPagesNewTab": "नयाँ ट्याब",
   "tools.database.openPagesSideDescription": "पृष्ठहरू छेउमा खोल्नुहोस्। पछाडिको दृश्य चलाउन मिल्ने रहन्छ।",
   "tools.database.openPagesCenterDescription": "पृष्ठहरू बीचमा केन्द्रित मोडलमा खोल्नुहोस्।",
   "tools.database.openPagesFullDescription": "पृष्ठहरू पूरा पृष्ठमा खोल्नुहोस्।",

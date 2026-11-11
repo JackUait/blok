@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "లాగండి",
   "tools.database.openPagesCenter": "మధ్య విండో",
   "tools.database.openPagesFull": "పూర్తి పేజీ",
+  "tools.database.openPagesNewTab": "కొత్త ట్యాబ్",
   "tools.database.openPagesSideDescription": "పేజీలను పక్కన తెరుస్తుంది. వెనుక ఉన్న వీక్షణ పనిచేస్తూనే ఉంటుంది.",
   "tools.database.openPagesCenterDescription": "పేజీలను మధ్యలో ఉండే ప్రత్యేక విండోలో తెరుస్తుంది.",
   "tools.database.openPagesFullDescription": "పేజీలను పూర్తి పేజీగా తెరుస్తుంది.",

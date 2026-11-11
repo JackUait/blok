@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "खींचें",
   "tools.database.openPagesCenter": "केंद्रीय पैनल",
   "tools.database.openPagesFull": "पूरा पृष्ठ",
+  "tools.database.openPagesNewTab": "नया टैब",
   "tools.database.openPagesSideDescription": "पृष्ठों को किनारे पर खोलें। पीछे का दृश्य इंटरैक्टिव रहता है।",
   "tools.database.openPagesCenterDescription": "पृष्ठों को बीच में एक केंद्रित मोडल में खोलें।",
   "tools.database.openPagesFullDescription": "पृष्ठों को पूरे पृष्ठ में खोलें।",

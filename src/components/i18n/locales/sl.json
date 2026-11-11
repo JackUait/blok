@@ -1256,6 +1256,7 @@
   "tools.database.peekResizeHintAction": "Povlecite",
   "tools.database.openPagesCenter": "Osrednjem oknu",
   "tools.database.openPagesFull": "Celotni strani",
+  "tools.database.openPagesNewTab": "Nov zavihek",
   "tools.database.openPagesSideDescription": "Odpiraj strani ob strani. Pogled zadaj ostane interaktiven.",
   "tools.database.openPagesCenterDescription": "Odpiraj strani v ločenem oknu na sredini.",
   "tools.database.openPagesFullDescription": "Odpiraj strani čez ves zaslon.",

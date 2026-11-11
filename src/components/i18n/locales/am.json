@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "ይጎትቱ",
   "tools.database.openPagesCenter": "የመሃል መስኮት",
   "tools.database.openPagesFull": "ሙሉ ገጽ",
+  "tools.database.openPagesNewTab": "አዲስ ትር",
   "tools.database.openPagesSideDescription": "ገጾችን በጎን ይክፈቱ። ከበስተጀርባ ያለው ዕይታ ንቁ ሆኖ ይቆያል።",
   "tools.database.openPagesCenterDescription": "ገጾችን በመሃል ላይ ባለ ትኩረት የሚሰጥ መስኮት ይክፈቱ።",
   "tools.database.openPagesFullDescription": "ገጾችን በሙሉ ገጽ ይክፈቱ።",

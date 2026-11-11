@@ -1256,6 +1256,7 @@
   "tools.database.peekResizeHintAction": "Перетащите",
   "tools.database.openPagesCenter": "Окне по центру",
   "tools.database.openPagesFull": "Полной странице",
+  "tools.database.openPagesNewTab": "Новая вкладка",
   "tools.database.openPagesSideDescription": "Открывать страницы сбоку. Представление позади остаётся активным.",
   "tools.database.openPagesCenterDescription": "Открывать страницы в отдельном окне по центру.",
   "tools.database.openPagesFullDescription": "Открывать страницы во весь экран.",

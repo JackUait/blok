@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "இழுக்கவும்",
   "tools.database.openPagesCenter": "மையச் சாளரம்",
   "tools.database.openPagesFull": "முழுப் பக்கம்",
+  "tools.database.openPagesNewTab": "புதிய தாவல்",
   "tools.database.openPagesSideDescription": "பக்கங்களைப் பக்கவாட்டில் திறக்கும். பின்னால் உள்ள காட்சி செயலில் இருக்கும்.",
   "tools.database.openPagesCenterDescription": "பக்கங்களை மையத்தில் உள்ள தனிச் சாளரத்தில் திறக்கும்.",
   "tools.database.openPagesFullDescription": "பக்கங்களை முழுப் பக்கமாகத் திறக்கும்.",

@@ -1251,6 +1251,7 @@
   "tools.database.peekResizeHintAction": "Trascina",
   "tools.database.openPagesCenter": "Pannello centrale",
   "tools.database.openPagesFull": "Pagina intera",
+  "tools.database.openPagesNewTab": "Nuova scheda",
   "tools.database.openPagesSideDescription": "Apri le pagine di lato. La vista dietro resta interattiva.",
   "tools.database.openPagesCenterDescription": "Apri le pagine in una finestra modale centrata.",
   "tools.database.openPagesFullDescription": "Apri le pagine a pagina intera.",

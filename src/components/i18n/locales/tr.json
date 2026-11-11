@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Sürükle",
   "tools.database.openPagesCenter": "Orta panel",
   "tools.database.openPagesFull": "Tam sayfa",
+  "tools.database.openPagesNewTab": "Yeni sekme",
   "tools.database.openPagesSideDescription": "Sayfaları yanda açar. Arkadaki görünüm etkileşimli kalır.",
   "tools.database.openPagesCenterDescription": "Sayfaları ortalanmış, odaklı bir pencerede açar.",
   "tools.database.openPagesFullDescription": "Sayfaları tam sayfa olarak açar.",

@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "拖曳",
   "tools.database.openPagesCenter": "置中預覽",
   "tools.database.openPagesFull": "整頁",
+  "tools.database.openPagesNewTab": "新分頁",
   "tools.database.openPagesSideDescription": "在側邊開啟頁面，後方的檢視仍可互動。",
   "tools.database.openPagesCenterDescription": "在置中的專注視窗中開啟頁面。",
   "tools.database.openPagesFullDescription": "以整頁開啟頁面。",

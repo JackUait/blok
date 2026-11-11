@@ -710,14 +710,14 @@ describe('row page peek modes', () => {
   });
 
   // notion-spec-2 §12: Side peek, Center peek, Full page, New tab, Edit view default.
-  it('lists the three modes and "Open in new tab" by title only, then "Edit view default", which opens the view\'s Layout settings', async () => {
+  it('lists the three modes and "New tab" by title only, then "Edit view default", which opens the view\'s Layout settings', async () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-peek-mode]'));
     const menu = document.querySelector<HTMLElement>('[data-blok-popover-opened]');
     const items = [...(menu?.querySelectorAll<HTMLElement>('[data-blok-popover-item]') ?? [])];
 
-    expect(items.map((item) => item.textContent?.trim())).toStrictEqual(['Side peek', 'Center peek', 'Full page', 'Open in new tab', 'Edit view default']);
+    expect(items.map((item) => item.textContent?.trim())).toStrictEqual(['Side peek', 'Center peek', 'Full page', 'New tab', 'Edit view default']);
     expect(menu?.querySelector('[data-blok-database-peek-mode-description]')).toBeNull();
 
     await click(items[4] ?? null);

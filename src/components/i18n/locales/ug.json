@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "سۆرەڭ",
   "tools.database.openPagesCenter": "ئوتتۇرا تاختا",
   "tools.database.openPagesFull": "تولۇق بەت",
+  "tools.database.openPagesNewTab": "يېڭى بەتكۈچ",
   "tools.database.openPagesSideDescription": "بەتلەرنى يان تەرەپتە ئېچىش. ئارقىدىكى كۆرۈنۈش ئىشلەتكىلى بولىدىغان پېتى قالىدۇ.",
   "tools.database.openPagesCenterDescription": "بەتلەرنى ئوتتۇرىدىكى مەركەزلەشكەن كۆزنەكتە ئېچىش.",
   "tools.database.openPagesFullDescription": "بەتلەرنى تولۇق بەتتە ئېچىش.",

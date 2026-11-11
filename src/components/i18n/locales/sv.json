@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Dra",
   "tools.database.openPagesCenter": "Centrerad vy",
   "tools.database.openPagesFull": "Helsida",
+  "tools.database.openPagesNewTab": "Ny flik",
   "tools.database.openPagesSideDescription": "Öppna sidor vid sidan. Vyn bakom förblir interaktiv.",
   "tools.database.openPagesCenterDescription": "Öppna sidor i ett fokuserat, centrerat fönster.",
   "tools.database.openPagesFullDescription": "Öppna sidor som helsida.",

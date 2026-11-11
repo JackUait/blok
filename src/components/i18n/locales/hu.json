@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Húzza",
   "tools.database.openPagesCenter": "Középső ablakban",
   "tools.database.openPagesFull": "Teljes oldalon",
+  "tools.database.openPagesNewTab": "Új lap",
   "tools.database.openPagesSideDescription": "Az oldalak oldalt nyílnak meg. A háttérben lévő nézet használható marad.",
   "tools.database.openPagesCenterDescription": "Az oldalak középre igazított, fókuszált ablakban nyílnak meg.",
   "tools.database.openPagesFullDescription": "Az oldalak teljes oldalon nyílnak meg.",

@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Buruta",
   "tools.database.openPagesCenter": "Paneli ya katikati",
   "tools.database.openPagesFull": "Ukurasa mzima",
+  "tools.database.openPagesNewTab": "Kichupo kipya",
   "tools.database.openPagesSideDescription": "Fungua kurasa pembeni. Mwonekano ulio nyuma unaendelea kufanya kazi.",
   "tools.database.openPagesCenterDescription": "Fungua kurasa kwenye dirisha ibukizi la katikati.",
   "tools.database.openPagesFullDescription": "Fungua kurasa kwenye ukurasa mzima.",

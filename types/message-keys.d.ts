@@ -1444,6 +1444,7 @@ export type BlokMessageKey =
   | 'tools.database.openPagesDefaultFor'
   | 'tools.database.openPagesFull'
   | 'tools.database.openPagesFullDescription'
+  | 'tools.database.openPagesNewTab'
   | 'tools.database.openPagesSide'
   | 'tools.database.openPagesSideDescription'
   | 'tools.database.openRow'

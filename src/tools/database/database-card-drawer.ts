@@ -1869,11 +1869,11 @@ export class DatabaseCardDrawer {
       // A full page goes to the host's page when it has one, as the expand button does.
       onActivate: () => (mode === 'full' ? this.expand() : this.switchMode(mode)),
     }));
-    // notion-spec-2 §12: Notion's fifth row is "New tab". The label reuses "Open in new tab".
+    // notion-spec-2 §12: Notion's fifth row is "New tab".
     const items: PopoverItemParams[] = link === undefined ? modes : [...modes, {
       type: PopoverItemType.Default,
       name: 'row-page-mode-new-tab',
-      title: this.label('tools.file.previewOpenInNewTab'),
+      title: this.label('tools.database.openPagesNewTab'),
       icon: IconArrowDiagonal,
       closeOnActivate: true,
       onActivate: () => {

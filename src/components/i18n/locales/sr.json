@@ -1251,6 +1251,7 @@
   "tools.database.peekResizeHintAction": "Превуците",
   "tools.database.openPagesCenter": "Централном прозору",
   "tools.database.openPagesFull": "Целој страници",
+  "tools.database.openPagesNewTab": "Нова картица",
   "tools.database.openPagesSideDescription": "Отварај странице са стране. Приказ иза остаје активан.",
   "tools.database.openPagesCenterDescription": "Отварај странице у засебном прозору на средини.",
   "tools.database.openPagesFullDescription": "Отварај странице преко целог екрана.",

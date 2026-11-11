@@ -1251,6 +1251,7 @@
   "tools.database.peekResizeHintAction": "Velciet",
   "tools.database.openPagesCenter": "Centra panelī",
   "tools.database.openPagesFull": "Pilnā lapā",
+  "tools.database.openPagesNewTab": "Jauna cilne",
   "tools.database.openPagesSideDescription": "Atver lapas sānos. Skats aizmugurē paliek interaktīvs.",
   "tools.database.openPagesCenterDescription": "Atver lapas fokusētā, centrētā logā.",
   "tools.database.openPagesFullDescription": "Atver lapas pilnā lapā.",

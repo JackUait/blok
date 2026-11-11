@@ -1256,6 +1256,7 @@
   "tools.database.peekResizeHintAction": "Перетягніть",
   "tools.database.openPagesCenter": "Вікні по центру",
   "tools.database.openPagesFull": "Повній сторінці",
+  "tools.database.openPagesNewTab": "Нова вкладка",
   "tools.database.openPagesSideDescription": "Відкривати сторінки збоку. Подання позаду залишається активним.",
   "tools.database.openPagesCenterDescription": "Відкривати сторінки в окремому вікні по центру.",
   "tools.database.openPagesFullDescription": "Відкривати сторінки на весь екран.",

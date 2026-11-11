@@ -1251,6 +1251,7 @@
   "tools.database.peekResizeHintAction": "Povuci",
   "tools.database.openPagesCenter": "Središnjem prozoru",
   "tools.database.openPagesFull": "Cijeloj stranici",
+  "tools.database.openPagesNewTab": "Nova kartica",
   "tools.database.openPagesSideDescription": "Otvaraj stranice sa strane. Prikaz iza ostaje aktivan.",
   "tools.database.openPagesCenterDescription": "Otvaraj stranice u zasebnom prozoru na sredini.",
   "tools.database.openPagesFullDescription": "Otvaraj stranice preko cijelog zaslona.",

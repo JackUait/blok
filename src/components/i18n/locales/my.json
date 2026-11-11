@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "ဆွဲယူပါ",
   "tools.database.openPagesCenter": "အလယ်ဘောင်",
   "tools.database.openPagesFull": "စာမျက်နှာအပြည့်",
+  "tools.database.openPagesNewTab": "တက်ဘ်အသစ်",
   "tools.database.openPagesSideDescription": "စာမျက်နှာများကို ဘေးတွင် ဖွင့်သည်။ နောက်ကွယ်ရှိ မြင်ကွင်းကို ဆက်သုံးနိုင်သည်။",
   "tools.database.openPagesCenterDescription": "စာမျက်နှာများကို အလယ်ရှိ အာရုံစိုက် ဝင်းဒိုးတွင် ဖွင့်သည်။",
   "tools.database.openPagesFullDescription": "စာမျက်နှာများကို စာမျက်နှာအပြည့် ဖွင့်သည်။",

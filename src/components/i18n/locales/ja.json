@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "ドラッグ",
   "tools.database.openPagesCenter": "センターピーク",
   "tools.database.openPagesFull": "フルページ",
+  "tools.database.openPagesNewTab": "新しいタブ",
   "tools.database.openPagesSideDescription": "ページを横に開きます。背後のビューも操作できます。",
   "tools.database.openPagesCenterDescription": "中央のモーダルでページに集中して開きます。",
   "tools.database.openPagesFullDescription": "ページを全画面で開きます。",

@@ -1256,6 +1256,7 @@
   "tools.database.peekResizeHintAction": "Przeciągnij",
   "tools.database.openPagesCenter": "Oknie na środku",
   "tools.database.openPagesFull": "Pełnej stronie",
+  "tools.database.openPagesNewTab": "Nowa karta",
   "tools.database.openPagesSideDescription": "Otwieraj strony z boku. Widok w tle pozostaje aktywny.",
   "tools.database.openPagesCenterDescription": "Otwieraj strony w wyśrodkowanym oknie modalnym.",
   "tools.database.openPagesFullDescription": "Otwieraj strony na pełnej stronie.",

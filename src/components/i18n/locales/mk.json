@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Повлечете",
   "tools.database.openPagesCenter": "Централен прозорец",
   "tools.database.openPagesFull": "Цела страница",
+  "tools.database.openPagesNewTab": "Нова картичка",
   "tools.database.openPagesSideDescription": "Отворај страници од страна. Приказот позади останува активен.",
   "tools.database.openPagesCenterDescription": "Отворај страници во посебен прозорец во центарот.",
   "tools.database.openPagesFullDescription": "Отворај страници на цел екран.",

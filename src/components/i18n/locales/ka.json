@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "ჩაავლეთ",
   "tools.database.openPagesCenter": "ცენტრალური ფანჯარა",
   "tools.database.openPagesFull": "სრული გვერდი",
+  "tools.database.openPagesNewTab": "ახალი ჩანართი",
   "tools.database.openPagesSideDescription": "გვერდები გაიხსნება გვერდით. უკანა ხედი აქტიური რჩება.",
   "tools.database.openPagesCenterDescription": "გვერდები გაიხსნება ცენტრში, ფოკუსირებულ მოდალურ ფანჯარაში.",
   "tools.database.openPagesFullDescription": "გვერდები გაიხსნება სრულ გვერდზე.",

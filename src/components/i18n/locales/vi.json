@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Kéo",
   "tools.database.openPagesCenter": "Xem ở giữa",
   "tools.database.openPagesFull": "Toàn trang",
+  "tools.database.openPagesNewTab": "Tab mới",
   "tools.database.openPagesSideDescription": "Mở trang ở bên cạnh. Chế độ xem phía sau vẫn tương tác được.",
   "tools.database.openPagesCenterDescription": "Mở trang trong hộp thoại tập trung ở giữa.",
   "tools.database.openPagesFullDescription": "Mở trang ở chế độ toàn trang.",

@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Чирнэ үү",
   "tools.database.openPagesCenter": "Төвийн цонх",
   "tools.database.openPagesFull": "Бүтэн хуудас",
+  "tools.database.openPagesNewTab": "Шинэ таб",
   "tools.database.openPagesSideDescription": "Хуудсыг хажуу талд нээнэ. Ард байгаа харагдацыг ашиглах боломжтой хэвээр.",
   "tools.database.openPagesCenterDescription": "Хуудсыг төвд байрлах төвлөрсөн цонхонд нээнэ.",
   "tools.database.openPagesFullDescription": "Хуудсыг бүтэн хуудсаар нээнэ.",

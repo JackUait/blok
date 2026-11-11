@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "拖动",
   "tools.database.openPagesCenter": "居中预览",
   "tools.database.openPagesFull": "整页",
+  "tools.database.openPagesNewTab": "新标签页",
   "tools.database.openPagesSideDescription": "在侧边打开页面，后方视图仍可交互。",
   "tools.database.openPagesCenterDescription": "在居中的专注弹窗中打开页面。",
   "tools.database.openPagesFullDescription": "以整页打开页面。",

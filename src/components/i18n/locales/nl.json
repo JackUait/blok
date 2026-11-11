@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Slepen",
   "tools.database.openPagesCenter": "Middenweergave",
   "tools.database.openPagesFull": "Volledige pagina",
+  "tools.database.openPagesNewTab": "Nieuw tabblad",
   "tools.database.openPagesSideDescription": "Open pagina's aan de zijkant. De weergave erachter blijft bruikbaar.",
   "tools.database.openPagesCenterDescription": "Open pagina's in een gefocust, gecentreerd venster.",
   "tools.database.openPagesFullDescription": "Open pagina's als volledige pagina.",

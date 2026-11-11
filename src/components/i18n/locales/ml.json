@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "വലിച്ചിടുക",
   "tools.database.openPagesCenter": "മധ്യ പാനൽ",
   "tools.database.openPagesFull": "പൂർണ്ണ പേജ്",
+  "tools.database.openPagesNewTab": "പുതിയ ടാബ്",
   "tools.database.openPagesSideDescription": "പേജുകൾ വശത്ത് തുറക്കുക. പിന്നിലെ കാഴ്ച ഉപയോഗിക്കാനാകും.",
   "tools.database.openPagesCenterDescription": "പേജുകൾ മധ്യത്തിൽ ഒരു കേന്ദ്രീകൃത മോഡലിൽ തുറക്കുക.",
   "tools.database.openPagesFullDescription": "പേജുകൾ പൂർണ്ണ പേജിൽ തുറക്കുക.",

@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "کش کړئ",
   "tools.database.openPagesCenter": "منځنی پینل",
   "tools.database.openPagesFull": "بشپړه پاڼه",
+  "tools.database.openPagesNewTab": "نوی ټب",
   "tools.database.openPagesSideDescription": "پاڼې په څنګ کې پرانیزئ. شاته لید د کار وړ پاتې کېږي.",
   "tools.database.openPagesCenterDescription": "پاڼې په منځ کې په یوه متمرکزه کړکۍ کې پرانیزئ.",
   "tools.database.openPagesFullDescription": "پاڼې په بشپړه پاڼه کې پرانیزئ.",

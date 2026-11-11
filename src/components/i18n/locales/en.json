@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Drag",
   "tools.database.openPagesCenter": "Center peek",
   "tools.database.openPagesFull": "Full page",
+  "tools.database.openPagesNewTab": "New tab",
   "tools.database.openPagesSideDescription": "Open pages on the side. Keeps the view behind interactive.",
   "tools.database.openPagesCenterDescription": "Open pages in a focused, centered modal.",
   "tools.database.openPagesFullDescription": "Open pages in full page.",

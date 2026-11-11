@@ -1251,6 +1251,7 @@
   "tools.database.peekResizeHintAction": "Arrastra",
   "tools.database.openPagesCenter": "Vista centrada",
   "tools.database.openPagesFull": "Página completa",
+  "tools.database.openPagesNewTab": "Nueva pestaña",
   "tools.database.openPagesSideDescription": "Abre las páginas a un lado. La vista de detrás sigue siendo interactiva.",
   "tools.database.openPagesCenterDescription": "Abre las páginas en una ventana modal centrada.",
   "tools.database.openPagesFullDescription": "Abre las páginas a página completa.",

@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "ลาก",
   "tools.database.openPagesCenter": "มุมมองตรงกลาง",
   "tools.database.openPagesFull": "เต็มหน้า",
+  "tools.database.openPagesNewTab": "แท็บใหม่",
   "tools.database.openPagesSideDescription": "เปิดหน้าด้านข้าง มุมมองด้านหลังยังใช้งานได้",
   "tools.database.openPagesCenterDescription": "เปิดหน้าในหน้าต่างตรงกลางเพื่อโฟกัส",
   "tools.database.openPagesFullDescription": "เปิดหน้าแบบเต็มหน้า",

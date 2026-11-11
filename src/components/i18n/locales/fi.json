@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Vedä",
   "tools.database.openPagesCenter": "Keskipaneelissa",
   "tools.database.openPagesFull": "Koko sivuna",
+  "tools.database.openPagesNewTab": "Uusi välilehti",
   "tools.database.openPagesSideDescription": "Avaa sivut sivupaneeliin. Taustalla oleva näkymä pysyy käytettävissä.",
   "tools.database.openPagesCenterDescription": "Avaa sivut kohdistettuun, keskitettyyn ikkunaan.",
   "tools.database.openPagesFullDescription": "Avaa sivut koko sivuna.",

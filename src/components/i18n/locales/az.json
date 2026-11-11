@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Dartın",
   "tools.database.openPagesCenter": "Mərkəzi panel",
   "tools.database.openPagesFull": "Tam səhifə",
+  "tools.database.openPagesNewTab": "Yeni tab",
   "tools.database.openPagesSideDescription": "Səhifələri yanda açır. Arxadakı görünüş interaktiv qalır.",
   "tools.database.openPagesCenterDescription": "Səhifələri mərkəzdə fokuslanmış modal pəncərədə açır.",
   "tools.database.openPagesFullDescription": "Səhifələri tam səhifədə açır.",

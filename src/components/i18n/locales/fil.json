@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "I-drag",
   "tools.database.openPagesCenter": "Gitnang panel",
   "tools.database.openPagesFull": "Buong pahina",
+  "tools.database.openPagesNewTab": "Bagong tab",
   "tools.database.openPagesSideDescription": "Buksan ang mga pahina sa gilid. Magagamit pa rin ang view sa likod.",
   "tools.database.openPagesCenterDescription": "Buksan ang mga pahina sa isang nakasentrong modal.",
   "tools.database.openPagesFullDescription": "Buksan ang mga pahina nang buong pahina.",

@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "ओढा",
   "tools.database.openPagesCenter": "मध्य पॅनेल",
   "tools.database.openPagesFull": "पूर्ण पृष्ठ",
+  "tools.database.openPagesNewTab": "नवीन टॅब",
   "tools.database.openPagesSideDescription": "पृष्ठे बाजूला उघडा. मागील दृश्य वापरता येत राहते.",
   "tools.database.openPagesCenterDescription": "पृष्ठे मध्यभागी एका केंद्रित मोडलमध्ये उघडा.",
   "tools.database.openPagesFullDescription": "पृष्ठे पूर्ण पृष्ठात उघडा.",

@@ -1251,6 +1251,7 @@
   "tools.database.peekResizeHintAction": "Trageți",
   "tools.database.openPagesCenter": "Panoul central",
   "tools.database.openPagesFull": "Pagina întreagă",
+  "tools.database.openPagesNewTab": "Filă nouă",
   "tools.database.openPagesSideDescription": "Deschideți paginile în lateral. Vizualizarea din spate rămâne interactivă.",
   "tools.database.openPagesCenterDescription": "Deschideți paginile într-o fereastră modală centrată.",
   "tools.database.openPagesFullDescription": "Deschideți paginile pe toată pagina.",

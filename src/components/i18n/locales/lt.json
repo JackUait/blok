@@ -1256,6 +1256,7 @@
   "tools.database.peekResizeHintAction": "Vilkite",
   "tools.database.openPagesCenter": "Centriniame skydelyje",
   "tools.database.openPagesFull": "Visame puslapyje",
+  "tools.database.openPagesNewTab": "Naujas skirtukas",
   "tools.database.openPagesSideDescription": "Atidaryti puslapius šone. Užpakalinis rodinys lieka aktyvus.",
   "tools.database.openPagesCenterDescription": "Atidaryti puslapius sufokusuotame, centruotame lange.",
   "tools.database.openPagesFullDescription": "Atidaryti puslapius visame puslapyje.",

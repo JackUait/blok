@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Seret",
   "tools.database.openPagesCenter": "Panel tengah",
   "tools.database.openPagesFull": "Halaman penuh",
+  "tools.database.openPagesNewTab": "Tab baru",
   "tools.database.openPagesSideDescription": "Buka halaman di samping. Tampilan di belakangnya tetap interaktif.",
   "tools.database.openPagesCenterDescription": "Buka halaman di jendela modal yang terpusat.",
   "tools.database.openPagesFullDescription": "Buka halaman dalam halaman penuh.",

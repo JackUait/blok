@@ -1251,6 +1251,7 @@
   "tools.database.peekResizeHintAction": "Glisser",
   "tools.database.openPagesCenter": "Aperçu centré",
   "tools.database.openPagesFull": "Pleine page",
+  "tools.database.openPagesNewTab": "Nouvel onglet",
   "tools.database.openPagesSideDescription": "Ouvrez les pages sur le côté. La vue derrière reste interactive.",
   "tools.database.openPagesCenterDescription": "Ouvrez les pages dans une fenêtre modale centrée.",
   "tools.database.openPagesFullDescription": "Ouvrez les pages en pleine page.",

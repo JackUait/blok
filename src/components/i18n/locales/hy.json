@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Քաշեք",
   "tools.database.openPagesCenter": "Կենտրոնական պատուհան",
   "tools.database.openPagesFull": "Ամբողջ էջ",
+  "tools.database.openPagesNewTab": "Նոր ներդիր",
   "tools.database.openPagesSideDescription": "Բացել էջերը կողքից։ Հետևի տեսքը մնում է ակտիվ։",
   "tools.database.openPagesCenterDescription": "Բացել էջերը կենտրոնում՝ առանձին մոդալ պատուհանում։",
   "tools.database.openPagesFullDescription": "Բացել էջերը ամբողջ էջով։",

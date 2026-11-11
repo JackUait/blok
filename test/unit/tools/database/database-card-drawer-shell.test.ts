@@ -474,6 +474,21 @@ describe('DatabaseCardDrawer shell', () => {
       bare.destroy();
     });
 
+    // S2:160: Notion reads "New tab", not the file preview's "Open in new tab".
+    it('reads "New tab" on the mode menu\'s new-tab row', () => {
+      const en = JSON.parse(readFileSync(resolve(__dirname, '../../../../src/components/i18n/locales/en.json'), 'utf8')) as Record<string, string>;
+      const drawer = new DatabaseCardDrawer(createOptions({
+        i18n: { ...i18n(), t: (key: string) => en[key] ?? key },
+        rowLink: (rowId) => `https://x.io/#${rowId}?full`,
+      }));
+
+      drawer.open(ROW, 'side');
+      q('[data-blok-database-peek-mode]')?.click();
+
+      expect(q('[data-blok-item-name="row-page-mode-new-tab"]')?.textContent?.trim()).toBe('New tab');
+      drawer.destroy();
+    });
+
     it('copies the row link from the bar, and has no Copy link without row actions', () => {
       const drawer = new DatabaseCardDrawer(createOptions({ rowActions: () => actions }));
 

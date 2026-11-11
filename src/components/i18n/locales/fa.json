@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "بکشید",
   "tools.database.openPagesCenter": "پنجره مرکزی",
   "tools.database.openPagesFull": "تمام‌صفحه",
+  "tools.database.openPagesNewTab": "زبانه جدید",
   "tools.database.openPagesSideDescription": "صفحه‌ها را در کنار باز کنید. نمای پشت آن فعال می‌ماند.",
   "tools.database.openPagesCenterDescription": "صفحه‌ها را در یک پنجره متمرکز در وسط باز کنید.",
   "tools.database.openPagesFullDescription": "صفحه‌ها را به‌صورت تمام‌صفحه باز کنید.",

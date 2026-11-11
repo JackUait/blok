@@ -1251,6 +1251,7 @@
   "tools.database.peekResizeHintAction": "גרור",
   "tools.database.openPagesCenter": "חלונית מרכזית",
   "tools.database.openPagesFull": "דף מלא",
+  "tools.database.openPagesNewTab": "כרטיסייה חדשה",
   "tools.database.openPagesSideDescription": "פתח דפים בצד. התצוגה שמאחור נשארת פעילה.",
   "tools.database.openPagesCenterDescription": "פתח דפים בחלון ממוקד במרכז.",
   "tools.database.openPagesFullDescription": "פתח דפים בדף מלא.",

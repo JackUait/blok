@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "টেনে আনুন",
   "tools.database.openPagesCenter": "কেন্দ্রীয় প্যানেল",
   "tools.database.openPagesFull": "পূর্ণ পৃষ্ঠা",
+  "tools.database.openPagesNewTab": "নতুন ট্যাব",
   "tools.database.openPagesSideDescription": "পৃষ্ঠাগুলি পাশে খুলুন। পেছনের ভিউ ব্যবহারযোগ্য থাকে।",
   "tools.database.openPagesCenterDescription": "পৃষ্ঠাগুলি মাঝখানে একটি কেন্দ্রীভূত মোডালে খুলুন।",
   "tools.database.openPagesFullDescription": "পৃষ্ঠাগুলি পূর্ণ পৃষ্ঠায় খুলুন।",

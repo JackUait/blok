@@ -1256,6 +1256,7 @@
   "tools.database.peekResizeHintAction": "Potiahnite",
   "tools.database.openPagesCenter": "Strednom okne",
   "tools.database.openPagesFull": "Celej stránke",
+  "tools.database.openPagesNewTab": "Nová karta",
   "tools.database.openPagesSideDescription": "Otvára stránky na boku. Zobrazenie v pozadí zostane interaktívne.",
   "tools.database.openPagesCenterDescription": "Otvára stránky v sústredenom modálnom okne v strede.",
   "tools.database.openPagesFullDescription": "Otvára stránky na celú stránku.",

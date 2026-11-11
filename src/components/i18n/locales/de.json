@@ -1246,6 +1246,7 @@
   "tools.database.peekResizeHintAction": "Ziehen",
   "tools.database.openPagesCenter": "Zentrierte Vorschau",
   "tools.database.openPagesFull": "Ganze Seite",
+  "tools.database.openPagesNewTab": "Neuer Tab",
   "tools.database.openPagesSideDescription": "Seiten seitlich öffnen. Die Ansicht dahinter bleibt bedienbar.",
   "tools.database.openPagesCenterDescription": "Seiten in einem fokussierten, zentrierten Fenster öffnen.",
   "tools.database.openPagesFullDescription": "Seiten als ganze Seite öffnen.",

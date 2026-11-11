@@ -6,7 +6,8 @@ import { adoptChild } from '../server-conformance/server-process';
 // A port that never answers must fail the case, not hang the suite.
 export const READ_TIMEOUT_MS = 20_000;
 const EXIT_TIMEOUT_MS = 15_000;
-const LISTENING = /listening on (\S+)/;
+// Waits for the line end: Rust writes the URL and its "/mcp" in separate writes.
+const LISTENING = /listening on (\S+)\r?\n/;
 
 /**
  * The binary under test: argv[0] plus any leading args, from the runner.

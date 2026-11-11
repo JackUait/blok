@@ -15,7 +15,8 @@ import type {
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { CodeData } from '../../../types/tools/code';
 import { IconCodeBlock, IconCheck, IconCopy, IconWand } from '../../components/icons';
-import { buildCodeDOM, setActiveViewMode, setFilenameDisplay } from './dom-builder';
+import { buildCodeDOM, setActiveViewMode, setBreadcrumb, setFilenameDisplay } from './dom-builder';
+import { codeBreadcrumb } from './breadcrumb';
 import { caretLineIndex, measureLineRows, rowHeight } from './line-geometry';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
@@ -130,6 +131,8 @@ export class CodeTool implements BlockTool {
   private _highlightedLang: string | null = null;
   private _lineRows: number[] = [];
   private _activeLineIndex: number | null = null;
+  /** Set by edits: the caret line may not move while the blocks around it change. */
+  private _breadcrumbStale = false;
   private _rowHeight = 0;
   private _paddingTop = 0;
   private _geometryRafId: number | null = null;
@@ -262,6 +265,7 @@ export class CodeTool implements BlockTool {
       });
 
       dom.codeElement.addEventListener('input', () => {
+        this._breadcrumbStale = true;
         this.syncTrailingBr();
         this.updateGutter();
         this.scheduleHighlight();
@@ -1115,6 +1119,11 @@ export class CodeTool implements BlockTool {
 
     const isFocused = dom.codeElement.ownerDocument.activeElement === dom.codeElement;
     const index = isFocused && !this.readOnly ? caretLineIndex(dom.codeElement) : null;
+
+    if (dom.breadcrumb && (index !== this._activeLineIndex || this._breadcrumbStale)) {
+      this._breadcrumbStale = false;
+      setBreadcrumb(dom.breadcrumb, index === null ? [] : codeBreadcrumb(dom.codeElement.textContent ?? '', index));
+    }
 
     if (index !== this._activeLineIndex) {
       const rows = dom.gutterElement.children;

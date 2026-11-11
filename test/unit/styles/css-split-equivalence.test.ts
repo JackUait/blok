@@ -1568,6 +1568,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_BOARD5_BYTES = 92;
     // Round 9 lane mselect: multi-select editor radii and Create row, group header, row drag, view settings.
     const DATABASE_MSELECT_BYTES = 1658;
+    // block-preview/structure.css: the code preview draws the block's folder tab on the card, not a header bar.
+    const CODE_PREVIEW_TAB_BYTES = 335;
     // database.css: the tab bar "+" is round, header-icon ink, a 200ms fade, and shows on keyboard focus,
     // plus 124 for the 19.2px header glyphs in an 18px slot and the dark timeline panel shadow and header ink,
     // plus 233 for the right-aligned calculations and the 26px "Calculate" box that fades in on its own cell.
@@ -2068,7 +2070,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TMPLTOAST_BYTES
       + DATABASE_FULLPAGE_BYTES
       + DATABASE_R14ROWS_BYTES
-      + DATABASE_R14TABS_BYTES;
+      + DATABASE_R14TABS_BYTES
+      + CODE_PREVIEW_TAB_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

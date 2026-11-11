@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { blocksToHtml, blocksToViewNodes, defineBlokSchema, htmlToBlocks } from '../../../src/view';
 import { TableModel } from '../../../src/tools/table/table-model';
-import { CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
+import { CODE_CARD_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
 import {
   PAGE_ICON_CLASSES,
   PAGE_LOCK_ICON,
@@ -273,8 +273,15 @@ describe('blocksToHtml', () => {
       const name = CODE_FILENAME_CLASSES.join(' ');
       const html = blocksToHtml(doc([{ type: 'code', data: { code: 'x', filename: '<b>a</b>.ts' } }]), { classes: true });
 
-      expect(html).toContain(`<div class="${CODE_WRAPPER_CLASSES.join(' ')}"><div class="${header}"><span class="${name}">&lt;b&gt;a&lt;/b&gt;.ts</span></div><pre class="`);
+      expect(html).toContain(`<div class="${CODE_WRAPPER_CLASSES.join(' ')}"><div class="${CODE_CARD_CLASSES.join(' ')}"><div class="${header}"><span class="${name}">&lt;b&gt;a&lt;/b&gt;.ts</span></div><pre class="`);
       expect(html).toMatch(/<pre class="[^"]*\bborder-t border-border-secondary"/);
+    });
+
+    it('under classes, boxes the code in a card inside a plain block root, as the editor does', () => {
+      const html = blocksToHtml(doc([{ type: 'code', data: { code: 'x' } }]), { classes: true });
+
+      expect(html).toContain(`<div class="${CODE_WRAPPER_CLASSES.join(' ')}"><div class="${CODE_CARD_CLASSES.join(' ')}"><pre class="`);
+      expect(html).toContain('</code></pre></div></div>');
     });
 
     it('under classes, adds no header row without a filename', () => {

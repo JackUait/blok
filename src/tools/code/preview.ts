@@ -35,15 +35,12 @@ export const renderCodePreview = (): HTMLElement => {
     'code',
     h(
       'div',
-      { 'data-card': '' },
-      h(
-        'div',
-        { 'data-header': '' },
-        h('span', { 'data-dot': '' }),
-        h('span', { 'data-lang': '' }, 'TypeScript'),
-        h('span', { 'data-file': '' }, 'cup.ts')
-      ),
-      h('div', { 'data-body': '' }, ...lines)
-    )
+      { 'data-tab': '' },
+      h('span', { 'data-dot': '' }),
+      h('span', { 'data-lang': '' }, 'TypeScript'),
+      h('span', { 'data-sep': '' }),
+      h('span', { 'data-file': '' }, 'cup.ts')
+    ),
+    h('div', { 'data-card': '' }, h('div', { 'data-body': '' }, ...lines))
   );
 };

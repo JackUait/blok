@@ -22,7 +22,7 @@ describe('buildCodeDOM', () => {
     expect(result.codeElement).toBeInstanceOf(HTMLElement);
   });
 
-  it('wrapper contains header and code body as direct children', async () => {
+  it('wrapper holds the tab row above the card, and the card holds the code', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { wrapper, preElement, codeElement, gutterElement } = buildCodeDOM({
       code: '',
@@ -32,11 +32,70 @@ describe('buildCodeDOM', () => {
     });
 
     expect(wrapper.children).toHaveLength(2);
-    // First child is the header, second is the code body (gutter + pre)
-    const codeBody = wrapper.children[1];
-    expect(codeBody.contains(gutterElement)).toBe(true);
-    expect(codeBody.contains(preElement)).toBe(true);
+    expect(wrapper.children[0].getAttribute('data-blok-testid')).toBe('code-tab-row');
+    const card = wrapper.children[1];
+
+    expect(card.getAttribute('data-blok-testid')).toBe('code-card');
+    expect(card.contains(gutterElement)).toBe(true);
+    expect(card.contains(preElement)).toBe(true);
     expect(preElement.contains(codeElement)).toBe(true);
+  });
+
+  it('puts the language and filename in the tab, and the controls beside it', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { wrapper, languageButton, filenameElement, copyButton } = buildCodeDOM({
+      code: '',
+      languageName: 'Python',
+      filename: 'main.py',
+      readOnly: false,
+      copyLabel: 'Copy code',
+    });
+
+    const tabRow = wrapper.children[0];
+    const tab = tabRow.querySelector('[data-blok-testid="code-tab"]');
+    const controls = tabRow.querySelector('[data-blok-testid="code-controls"]');
+
+    expect(tab?.contains(languageButton)).toBe(true);
+    expect(tab?.contains(filenameElement)).toBe(true);
+    expect(tab?.contains(copyButton)).toBe(false);
+    expect(controls?.contains(copyButton)).toBe(true);
+    expect(controls?.parentElement).toBe(tabRow);
+  });
+
+  it('marks the filename slot empty so the tab can drop it at rest', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const empty = buildCodeDOM({ code: '', languageName: 'Python', readOnly: false, copyLabel: 'Copy code' });
+    const named = buildCodeDOM({ code: '', languageName: 'Python', filename: 'a.py', readOnly: false, copyLabel: 'Copy code' });
+
+    expect(empty.filenameSlot.getAttribute('data-empty')).toBe('true');
+    expect(empty.filenameSlot.hidden).toBe(false);
+    expect(named.filenameSlot.getAttribute('data-empty')).toBe('false');
+  });
+
+  it('hides an empty filename slot in read-only mode', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { filenameSlot } = buildCodeDOM({ code: '', languageName: 'Python', readOnly: true, copyLabel: 'Copy code' });
+
+    expect(filenameSlot.hidden).toBe(true);
+  });
+
+  it('builds a hidden breadcrumb in the tab row that never counts as content or an edit', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { DATA_ATTR } = await import('../../../../src/components/constants/data-attributes');
+    const { wrapper, breadcrumb } = buildCodeDOM({ code: 'a', languageName: 'Go', readOnly: false, copyLabel: 'Copy code' });
+
+    expect(breadcrumb?.parentElement).toBe(wrapper.children[0]);
+    expect(breadcrumb?.hidden).toBe(true);
+    expect(breadcrumb?.getAttribute('aria-hidden')).toBe('true');
+    expect(breadcrumb?.hasAttribute(DATA_ATTR.chrome)).toBe(true);
+    expect(breadcrumb?.getAttribute(DATA_ATTR.mutationFree)).toBe('true');
+  });
+
+  it('builds no breadcrumb in read-only mode', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { breadcrumb } = buildCodeDOM({ code: 'a', languageName: 'Go', readOnly: true, copyLabel: 'Copy code' });
+
+    expect(breadcrumb).toBeNull();
   });
 
   it('pins the code body to LTR so source code and its gutter do not mirror in an RTL editor', async () => {
@@ -54,7 +113,7 @@ describe('buildCodeDOM', () => {
     expect(codeBody?.contains(preElement)).toBe(true);
   });
 
-  it('header contains languageButton, filename, and controls container', async () => {
+  it('the tab starts with the language button', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { wrapper, languageButton } = buildCodeDOM({
       code: '',
@@ -63,10 +122,9 @@ describe('buildCodeDOM', () => {
       copyLabel: 'Copy code',
     });
 
-    const header = wrapper.children[0];
-    // [language] [filename] [controls]
-    expect(header.children).toHaveLength(3);
-    expect(header.children[0]).toBe(languageButton);
+    const tab = wrapper.querySelector('[data-blok-testid="code-tab"]');
+
+    expect(tab?.children[0]).toBe(languageButton);
   });
 
   it('language button displays the language name in a text span', async () => {
@@ -417,9 +475,7 @@ describe('buildCodeDOM', () => {
         viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
       });
 
-      const header = wrapper.children[0];
-      // Controls container is the last child of header
-      const controls = header.children[2];
+      const controls = wrapper.querySelector('[data-blok-testid="code-controls"]')!;
       const children = Array.from(controls.children);
       const viewModeIndex = children.indexOf(viewModeContainer!);
       const copyIndex = children.indexOf(copyButton);
@@ -429,25 +485,23 @@ describe('buildCodeDOM', () => {
     });
   });
 
-  describe('wrapper container styling', () => {
-    it('wrapper has a visible border class for the rounded container', async () => {
-      const { WRAPPER_STYLES } = await import('../../../../src/tools/code/constants');
+  describe('card styling', () => {
+    it('the card carries the shared card classes, the wrapper only lays out', async () => {
+      const { WRAPPER_STYLES, CARD_STYLES } = await import('../../../../src/tools/code/constants');
 
-      expect(WRAPPER_STYLES).toContain('border');
-      expect(WRAPPER_STYLES).toContain('border-border-secondary');
+      expect(CARD_STYLES).toContain('border');
+      expect(CARD_STYLES).toContain('border-border-secondary');
+      expect(CARD_STYLES).toContain('bg-code-bg');
+      expect(CARD_STYLES).toContain('rounded-(--blok-radius-block)');
+      expect(CARD_STYLES).toContain('overflow-hidden');
+      expect(WRAPPER_STYLES).not.toContain('border');
+      expect(WRAPPER_STYLES).not.toContain('bg-code-bg');
     });
 
-    it('wrapper has a background color class', async () => {
-      const { WRAPPER_STYLES } = await import('../../../../src/tools/code/constants');
+    it('squares the card corner under the tab', async () => {
+      const { CARD_STYLES } = await import('../../../../src/tools/code/constants');
 
-      expect(WRAPPER_STYLES).toContain('bg-code-bg');
-    });
-
-    it('wrapper has rounded corners and overflow hidden', async () => {
-      const { WRAPPER_STYLES } = await import('../../../../src/tools/code/constants');
-
-      expect(WRAPPER_STYLES).toContain('rounded-(--blok-radius-block)');
-      expect(WRAPPER_STYLES).toContain('overflow-hidden');
+      expect(CARD_STYLES).toContain('rounded-ss-none');
     });
   });
 
@@ -571,19 +625,16 @@ describe('buildCodeDOM', () => {
       expect(gutterElement.children[6].textContent).toBe('7');
     });
 
-    it('wrapper has header and code body as direct children', async () => {
+    it('the card holds the code body directly', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const { wrapper, gutterElement } = buildCodeDOM({
         code: 'hello',
         languageName: 'JavaScript',
-        readOnly: false,
+        readOnly: true,
         copyLabel: 'Copy code',
       });
 
-      // wrapper has: header, codeBody (which contains gutter + pre)
-      expect(wrapper.children).toHaveLength(2);
-      // Second child should be the code body container, not directly the pre
-      expect(wrapper.children[1]).toBe(gutterElement.parentElement);
+      expect(wrapper.children[1].children[0]).toBe(gutterElement.parentElement);
     });
   });
 });

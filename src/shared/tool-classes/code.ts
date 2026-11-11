@@ -25,7 +25,15 @@ export const CODE_AREA_CLASSES: readonly string[] = [
   'min-h-[1.5em]',
 ];
 
+/** The block root only stacks the editor's tab row over the card. */
 export const CODE_WRAPPER_CLASSES: readonly string[] = [
+  'flex',
+  'flex-col',
+  'my-2',
+];
+
+/** The box around the code: border, radius, background and corner clipping. */
+export const CODE_CARD_CLASSES: readonly string[] = [
   'flex',
   'flex-col',
   'rounded-(--blok-radius-block)',
@@ -33,14 +41,13 @@ export const CODE_WRAPPER_CLASSES: readonly string[] = [
   'border-border-secondary',
   'bg-code-bg',
   'overflow-hidden',
-  'my-2',
 ];
 
 /**
  * The view's caption row above the code, emitted only when the block has a
  * filename. Built from rules view.css already carries, so it costs the
  * budgeted sheet almost nothing. The editor's header is chrome with its own
- * classes (`HEADER_STYLES` in src/tools/code/constants.ts).
+ * classes (`TAB_STYLES` in src/tools/code/constants.ts).
  */
 export const CODE_HEADER_CLASSES: readonly string[] = [
   'flex',

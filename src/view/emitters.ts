@@ -19,7 +19,7 @@ import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { readVariants } from '../shared/read-variants';
 import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
-import { CODE_AREA_CLASSES, CODE_CAPTIONED_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES } from '../shared/tool-classes/code';
+import { CODE_AREA_CLASSES, CODE_CAPTIONED_AREA_CLASSES, CODE_CARD_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES } from '../shared/tool-classes/code';
 import { DIVIDER_RULE_CLASSES } from '../shared/tool-classes/divider';
 import {
   LIST_CHECKBOX_CLASSES,
@@ -613,10 +613,10 @@ export const builtinEmitters: Record<string, Emitter> = {
     const inner = `<code${languageAttr}>${env.escape(block.data.code)}</code>`;
 
     /**
-     * Under parity the block needs its own wrapper: the editor's box (border,
-     * radius, background, overflow clipping) lives on a container AROUND the
-     * code area, so collapsing both onto the `<pre>` would mix the box with the
-     * text padding.
+     * Under parity the block root holds a card, as in the editor: the box
+     * (border, radius, background, overflow clipping) is one level down because
+     * the editor's tab sits on the card from outside it. Collapsing the box onto
+     * the `<pre>` would mix it with the text padding.
      */
     const filename = str(block.data, 'filename');
     const hasFilename = filename.trim() !== '';
@@ -627,7 +627,7 @@ export const builtinEmitters: Record<string, Emitter> = {
         : '';
 
       return trail(
-        `<div${env.rootAttrs(block)}>${header}<pre${env.classList(hasFilename ? [...CODE_AREA_CLASSES, ...CODE_CAPTIONED_AREA_CLASSES] : CODE_AREA_CLASSES)}${env.ltrAttr}>${inner}</pre></div>`,
+        `<div${env.rootAttrs(block)}><div${env.classList(CODE_CARD_CLASSES)}>${header}<pre${env.classList(hasFilename ? [...CODE_AREA_CLASSES, ...CODE_CAPTIONED_AREA_CLASSES] : CODE_AREA_CLASSES)}${env.ltrAttr}>${inner}</pre></div></div>`,
         block,
         env
       );

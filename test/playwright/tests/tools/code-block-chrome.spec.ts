@@ -234,4 +234,67 @@ test.describe('code block chrome', () => {
     await page.getByTestId('code-content').hover();
     await expect(page.getByTestId('code-copy-label')).toBeVisible();
   });
+  test('sits the tab on the card: its open bottom covers the card border at the start corner', async ({ page }) => {
+    await createBlok(page, [{ type: 'code', data: { code: 'x', language: 'javascript', filename: 'a.js' } }], 600);
+
+    const tab = await page.getByTestId('code-tab').boundingBox();
+    const card = await page.getByTestId('code-card').boundingBox();
+
+    if (!tab || !card) {
+      throw new Error('tab or card not rendered');
+    }
+
+    expect(Math.round((tab.y + tab.height - card.y) * 10) / 10).toBe(1);
+    expect(Math.abs(tab.x - card.x)).toBeLessThan(0.5);
+
+    const onBorder = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-blok-testid="code-tab"]') !== null, { x: tab.x + tab.width / 2, y: card.y + 0.5 });
+
+    expect(onBorder).toBe(true);
+    await expect(page.getByTestId('code-card')).toHaveCSS('border-top-left-radius', '0px');
+  });
+
+  test('an empty filename takes no room in the tab until the block is hovered', async ({ page }) => {
+    await createBlok(page, [{ type: 'code', data: { code: 'x', language: 'javascript' } }], 600);
+    await page.mouse.move(0, 0);
+
+    const slot = page.getByTestId('code-filename-slot');
+    const restWidth = (await page.getByTestId('code-tab').boundingBox())?.width ?? 0;
+
+    await expect(slot).toBeHidden();
+
+    await page.getByTestId('code-card').hover();
+    await expect(slot).toBeVisible();
+
+    const hoverWidth = (await page.getByTestId('code-tab').boundingBox())?.width ?? 0;
+
+    expect(hoverWidth).toBeGreaterThan(restWidth);
+  });
+
+  test('the breadcrumb names the block around the caret and hides at the top level', async ({ page }) => {
+    await createBlok(page, [{ type: 'code', data: { code: 'function fib(n) {\n  return n;\n}\nfib(1);', language: 'javascript' } }], 600);
+
+    const crumb = page.getByTestId('code-breadcrumb');
+
+    await page.getByTestId('code-content').click({ position: { x: 4, y: 4 } });
+    await expect(crumb).toHaveText('fib()');
+
+    await page.keyboard.press('ArrowDown');
+    await expect(crumb).toHaveText('fib()');
+
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(crumb).toBeHidden();
+  });
+
+  test('editing the filename in the tab keeps the field wide enough to read', async ({ page }) => {
+    await createBlok(page, [{ type: 'code', data: { code: 'x', language: 'javascript' } }], 600);
+
+    await page.getByTestId('code-card').hover();
+    await page.getByRole('button', { name: 'File name' }).click();
+
+    const input = page.getByTestId('code-filename-input');
+
+    await expect(input).toBeFocused();
+    expect((await input.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(90);
+  });
 });

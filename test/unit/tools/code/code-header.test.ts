@@ -351,6 +351,74 @@ describe('code block header', () => {
     });
   });
 
+  describe('breadcrumb', () => {
+    const CODE = 'function fib(n) {\n  if (n < 2) {\n    return n;\n  }\n}';
+
+    const placeCaret = (code: HTMLElement, offset: number): void => {
+      const range = document.createRange();
+      const text = code.firstChild ?? code;
+
+      range.setStart(text, offset);
+      range.collapse(true);
+      document.getSelection()?.removeAllRanges();
+      document.getSelection()?.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+    };
+
+    it('shows the blocks around the caret while the code is focused', async () => {
+      const CodeTool = await loadTool();
+      const el = new CodeTool(createOptions({ code: CODE })).render();
+
+      document.body.appendChild(el);
+      const code = query(el, 'code-content')!;
+
+      code.focus();
+      placeCaret(code, CODE.indexOf('return'));
+
+      const crumb = query(el, 'code-breadcrumb');
+
+      expect(crumb?.hidden).toBe(false);
+      expect(crumb?.textContent).toBe('fib()›if (n < 2)');
+    });
+
+    it('hides on a top-level line and after the code loses focus', async () => {
+      const CodeTool = await loadTool();
+      const el = new CodeTool(createOptions({ code: `${CODE}\nrun();` })).render();
+
+      document.body.appendChild(el);
+      const code = query(el, 'code-content')!;
+      const crumb = query(el, 'code-breadcrumb');
+
+      code.focus();
+      placeCaret(code, CODE.indexOf('return'));
+      expect(crumb?.hidden).toBe(false);
+
+      placeCaret(code, CODE.length + 2);
+      expect(crumb?.hidden).toBe(true);
+
+      placeCaret(code, CODE.indexOf('return'));
+      code.blur();
+      expect(crumb?.hidden).toBe(true);
+    });
+
+    it('treats code text as text, never markup', async () => {
+      const CodeTool = await loadTool();
+      const tricky = 'if (a <img src=x onerror=alert(1)>) {\n  b();\n}';
+      const el = new CodeTool(createOptions({ code: tricky })).render();
+
+      document.body.appendChild(el);
+      const code = query(el, 'code-content')!;
+
+      code.focus();
+      placeCaret(code, tricky.indexOf('b()'));
+
+      const crumb = query(el, 'code-breadcrumb');
+
+      expect(crumb?.querySelector('img')).toBeNull();
+      expect(crumb?.textContent).toContain('<img');
+    });
+  });
+
   describe('active line', () => {
     it('renders a hidden, layout-inert overlay that core never scores as an edit', async () => {
       const CodeTool = await loadTool();

@@ -58,16 +58,6 @@ const modeButton = (container: HTMLElement, mode: string): HTMLButtonElement => 
   return found;
 };
 
-const headerOf = (refs: CodeDOMRefs): Element => {
-  const header = refs.wrapper.children[0];
-
-  if (header === undefined) {
-    throw new Error('expected a header element');
-  }
-
-  return header;
-};
-
 describe('buildCodeDOM — attributes the code tool reads back', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -95,13 +85,12 @@ describe('buildCodeDOM — attributes the code tool reads back', () => {
     expect(languageChevron.getAttribute('data-blok-testid')).toBe('code-language-chevron');
   });
 
-  it('pushes the controls to the right with a growing filename slot', () => {
+  it('pushes the controls to the end of the tab row', () => {
     const dom = build();
+    const controls = dom.copyButton.parentElement;
 
-    const slot = headerOf(dom).children[1];
-
-    expect(slot.contains(dom.filenameElement)).toBe(true);
-    expect(slot.className.split(' ')).toContain('flex-1');
+    expect(dom.filenameSlot.contains(dom.filenameElement)).toBe(true);
+    expect(controls?.className.split(' ')).toContain('ms-auto');
   });
 
   it('lets the pre element fill the code body width above the active-line band', () => {
@@ -140,11 +129,12 @@ describe('buildCodeDOM — view mode segmented control', () => {
     expect(shown.hidden).toBe(false);
   });
 
-  it('hangs the split container off the wrapper in place of the bare code body', () => {
+  it('hangs the split container off the card in place of the bare code body', () => {
     const refs = build({ previewable: true, viewModeLabels: LABELS });
+    const card = refs.wrapper.children[1];
 
-    expect(refs.wrapper.children).toHaveLength(2);
-    expect(refs.wrapper.children[1]).toBe(refs.splitContainer);
+    expect(card.children).toHaveLength(1);
+    expect(card.children[0]).toBe(refs.splitContainer);
   });
 });
 

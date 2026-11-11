@@ -343,6 +343,17 @@ for (const direction of DIRECTIONS) {
       expect(tilt).toBe(direction === 'rtl' ? -1 : 1);
     });
 
+    test('the code tab sits on the inline-start corner of the card', async ({ page }) => {
+      await createBlok(page, direction, [
+        { type: 'code', data: { code: 'print(1)', language: 'python', filename: 'a.py' } },
+      ]);
+
+      const [tabBox, cardBox] = await Promise.all([rect(page.getByTestId('code-tab')), rect(page.getByTestId('code-card'))]);
+      const startGap = direction === 'rtl' ? cardBox.right - tabBox.right : tabBox.left - cardBox.left;
+
+      expect(Math.abs(startGap)).toBeLessThanOrEqual(TOLERANCE);
+    });
+
     test('the code language picker section label keeps its start padding', async ({ page }) => {
       await page.evaluate(() => {
         localStorage.setItem('blok:code:recent-languages', JSON.stringify(['python', 'rust']));

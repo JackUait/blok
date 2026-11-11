@@ -57,20 +57,32 @@
 [data-blok-interface='block-preview'] [data-blok-preview='code'] [data-card] {
   border: 1px solid var(--blok-border-secondary);
   border-radius: var(--blok-radius-block);
+  border-start-start-radius: 0;
   background: var(--blok-code-bg);
   overflow: hidden;
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='code'] [data-header] {
+[data-blok-interface='block-preview'] [data-blok-preview='code'] [data-tab] {
+  position: relative;
+  align-self: flex-start;
   display: flex;
   align-items: center;
   gap: var(--blok-preview-space-6);
+  margin-bottom: -1px;
   padding: var(--blok-preview-space-6) var(--blok-preview-space-12);
-  border-bottom: 1px solid var(--blok-border-secondary);
-  background: var(--blok-bg-secondary);
+  border: 1px solid var(--blok-border-secondary);
+  border-bottom: 0;
+  border-radius: var(--blok-radius-block) var(--blok-radius-block) 0 0;
+  background: var(--blok-code-bg);
   color: var(--blok-text-secondary);
   font-size: 11px;
   font-weight: 500;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='code'] [data-sep] {
+  width: 1px;
+  height: 10px;
+  background: var(--blok-border-secondary);
 }
 
 /* Stands in for TypeScript's language dot. */

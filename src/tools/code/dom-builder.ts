@@ -1,6 +1,12 @@
 import {
   WRAPPER_STYLES,
-  HEADER_STYLES,
+  CARD_STYLES,
+  TAB_ROW_STYLES,
+  TAB_STYLES,
+  FILENAME_SLOT_STYLES,
+  BREADCRUMB_STYLES,
+  BREADCRUMB_PART_STYLES,
+  BREADCRUMB_SEPARATOR_STYLES,
   LANGUAGE_BUTTON_STYLES,
   LANGUAGE_LABEL_STYLES,
   HEADER_CONTROLS_STYLES,
@@ -33,6 +39,8 @@ export interface CodeDOMRefs {
   languageChevron: HTMLElement;
   languageDot: HTMLElement;
   filenameElement: HTMLElement;
+  filenameSlot: HTMLElement;
+  breadcrumb: HTMLElement | null;
   copyButton: HTMLButtonElement;
   copyLabel: HTMLElement;
   activeLine: HTMLElement | null;
@@ -164,6 +172,13 @@ export function setFilenameDisplay(element: HTMLElement, filename: string, place
     element.removeAttribute('aria-hidden');
   }
 
+  const slot = element.parentElement;
+
+  if (slot) {
+    slot.setAttribute('data-empty', String(isEmpty));
+    slot.hidden = readOnly && isEmpty;
+  }
+
   if (element instanceof HTMLButtonElement) {
     element.setAttribute('type', 'button');
     element.setAttribute('aria-label', isEmpty ? placeholder : `${placeholder}: ${filename}`);
@@ -178,10 +193,15 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   wrapper.className = WRAPPER_STYLES;
   wrapper.setAttribute(DATA_ATTR.tool, 'code');
 
-  // Header
-  const header = document.createElement('div');
-  header.className = HEADER_STYLES;
-  header.setAttribute(DATA_ATTR.chrome, '');
+  // Tab row: [tab: language | filename] [breadcrumb] [controls]
+  const tabRow = document.createElement('div');
+  tabRow.className = TAB_ROW_STYLES;
+  tabRow.setAttribute(DATA_ATTR.chrome, '');
+  tabRow.setAttribute('data-blok-testid', 'code-tab-row');
+
+  const tab = document.createElement('div');
+  tab.className = TAB_STYLES;
+  tab.setAttribute('data-blok-testid', 'code-tab');
 
   // Language button (opens language picker) — includes text + chevron icon
   const languageButton = document.createElement('button');
@@ -217,20 +237,21 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   chevronSpan.hidden = readOnly;
   languageButton.appendChild(chevronSpan);
 
-  // Filename fills the space between language and controls. In edit mode it is
+  // Filename follows the language inside the tab. In edit mode it is
   // a button that swaps to an <input> only while editing: a resident input would
   // become the block's first input and take the caret from the code. The swap
   // happens in a mutation-free slot so opening the field is not an edit; the
   // tool reports a real rename itself. A div, not a span, so the header never
   // reads as inline text.
   const filenameSlot = document.createElement('div');
-  filenameSlot.className = 'flex flex-1 min-w-0 overflow-hidden';
+  filenameSlot.className = FILENAME_SLOT_STYLES;
   filenameSlot.setAttribute(DATA_ATTR.mutationFree, 'true');
+  filenameSlot.setAttribute('data-blok-testid', 'code-filename-slot');
 
   const filenameElement = document.createElement(readOnly ? 'span' : 'button');
   filenameElement.setAttribute('data-blok-testid', 'code-filename');
-  setFilenameDisplay(filenameElement, filename, filenamePlaceholder, readOnly);
   filenameSlot.appendChild(filenameElement);
+  setFilenameDisplay(filenameElement, filename, filenamePlaceholder, readOnly);
 
   // View mode segmented control — always built in edit mode, hidden for non-previewable languages
   const viewModeResult = !readOnly && viewModeLabels
@@ -294,9 +315,23 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     gutterElement.appendChild(lineEl);
   });
 
-  // Assemble header: [language] [filename] [controls: view mode? | copy]
-  header.appendChild(languageButton);
-  header.appendChild(filenameSlot);
+  tab.appendChild(languageButton);
+  tab.appendChild(filenameSlot);
+  tabRow.appendChild(tab);
+
+  // Read-only has no caret, so no breadcrumb.
+  const breadcrumb = readOnly ? null : document.createElement('div');
+
+  if (breadcrumb) {
+    breadcrumb.className = BREADCRUMB_STYLES;
+    breadcrumb.hidden = true;
+    breadcrumb.setAttribute('aria-hidden', 'true');
+    breadcrumb.setAttribute(DATA_ATTR.chrome, '');
+    // Rewritten on every caret move; must never count as an edit.
+    breadcrumb.setAttribute(DATA_ATTR.mutationFree, 'true');
+    breadcrumb.setAttribute('data-blok-testid', 'code-breadcrumb');
+    tabRow.appendChild(breadcrumb);
+  }
 
   // Controls container — hidden by default, visible on wrapper hover
   const controls = document.createElement('div');
@@ -309,7 +344,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
   controls.appendChild(copyButton);
 
-  header.appendChild(controls);
+  tabRow.appendChild(controls);
 
   // Pre wrapper for semantic HTML — flex-1 so it fills code body width,
   // so clicks on the right empty strip of a short line still land on the
@@ -348,8 +383,12 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   codeBody.appendChild(gutterElement);
   codeBody.appendChild(preElement);
 
-  // Assemble wrapper
-  wrapper.appendChild(header);
+  const card = document.createElement('div');
+  card.className = CARD_STYLES;
+  card.setAttribute('data-blok-testid', 'code-card');
+
+  wrapper.appendChild(tabRow);
+  wrapper.appendChild(card);
 
   if (splitContainer && previewElement) {
     // Edit mode: always wrap code body + preview in split container.
@@ -364,10 +403,42 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
     splitContainer.appendChild(codeHalf);
     splitContainer.appendChild(previewHalf);
-    wrapper.appendChild(splitContainer);
+    card.appendChild(splitContainer);
   } else {
-    wrapper.appendChild(codeBody);
+    card.appendChild(codeBody);
   }
 
-  return { wrapper, languageButton, languageChevron: chevronSpan, languageDot, filenameElement, copyButton, copyLabel: copyLabelElement, activeLine, previewLayer, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
+  return { wrapper, languageButton, languageChevron: chevronSpan, languageDot, filenameElement, filenameSlot, breadcrumb, copyButton, copyLabel: copyLabelElement, activeLine, previewLayer, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
+}
+
+/**
+ * Show the caret's enclosing blocks, outer first. An empty chain hides the
+ * row. Built with `textContent`: the parts come from user code.
+ */
+export function setBreadcrumb(element: HTMLElement, parts: string[]): void {
+  const key = parts.join('\u0000');
+
+  if (element.getAttribute('data-parts') === key) {
+    return;
+  }
+
+  element.setAttribute('data-parts', key);
+  Object.assign(element, { hidden: parts.length === 0 });
+  element.replaceChildren(...parts.flatMap((part, index) => {
+    const label = document.createElement('span');
+
+    label.className = BREADCRUMB_PART_STYLES;
+    label.textContent = part;
+
+    if (index === 0) {
+      return [label];
+    }
+
+    const separator = document.createElement('span');
+
+    separator.className = BREADCRUMB_SEPARATOR_STYLES;
+    separator.textContent = '›';
+
+    return [separator, label];
+  }));
 }

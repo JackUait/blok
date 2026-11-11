@@ -181,6 +181,11 @@ const isSkippedSubtree = (el: Element): boolean => {
     return true;
   }
 
+  /** Marked editor chrome (the code block's tab row, its gutter): never content, so a view has no counterpart. */
+  if (el.hasAttribute('data-blok-chrome')) {
+    return true;
+  }
+
   /** The table's full-screen header: chrome in the tool root, shown only in the modal. */
   if (el.hasAttribute('data-blok-table-fullscreen-header')) {
     return true;
@@ -448,33 +453,14 @@ const isPlaceholderClass = (cls: string): boolean => cls.includes(':before:') &&
  * counterpart for at all, so their classes cannot be compared.
  *
  * `isSkippedSubtree` already drops `button`/`svg`/`input`, but chrome mounted on
- * plain `<div>`s (the code block's header bar holding the language picker and
- * copy button, a toggle's disclosure-arrow row) needs listing. Each entry is a
- * claim that the element exists only for editing.
+ * plain `<div>`s without the chrome marker (a toggle's disclosure-arrow row)
+ * needs listing. Each entry is a claim that the element exists only for editing.
  */
 const EDIT_CHROME_CLASSES = new Set<string>([
-  /**
-   * The code block's header bar — language picker + copy button. A static view
-   * renders no header at all, so none of its layout classes have a counterpart.
-   */
-  'gap-1',
-  'items-center',
-  'px-3',
-  'py-1.5',
-  'text-xs',
-  'text-gray-text',
-  'opacity-0',
-  'transition-opacity',
-  /** Header surface and size; a view draws its header only for a filename. */
-  'bg-bg-secondary',
-  'border-b',
-  'min-h-10',
-  'px-2',
-  'shrink-0',
   /** Lifts the gutter and code above the editor-only active-line band. */
   'relative',
-  /** The header bar's corner radius for its buttons (it sits in the card's corner). */
-  '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]',
+  /** The code card's square start corner sits under the editor's tab; a view draws no tab. */
+  'rounded-ss-none',
   /** The code block's line-number gutter, also editor-only. */
   'flex-1',
   'min-w-0',

@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   HEADER_BUTTON_MATCHED_STYLES,
   HEADER_BUTTON_STYLES,
-  HEADER_STYLES,
+  TAB_STYLES,
   LANGUAGE_BUTTON_STYLES,
   VIEW_MODE_BUTTON_ACTIVE_STYLES,
   VIEW_MODE_BUTTON_STYLES,
@@ -104,10 +104,14 @@ describe('marks and handles inside blocks', () => {
 });
 
 describe('code block header', () => {
-  it('publishes the inner radius for controls at the card corner', () => {
-    expect(tokens(HEADER_STYLES)).toContain(
-      '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]'
+  it('the tab publishes the inner radius for the controls at its corner', () => {
+    expect(tokens(TAB_STYLES)).toContain(
+      '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1)))]'
     );
+  });
+
+  it('the tab rounds its top corners with the block radius', () => {
+    expect(roundedTokens(TAB_STYLES)).toEqual(['rounded-t-(--blok-radius-block)']);
   });
 
   it.each([

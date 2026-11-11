@@ -1,4 +1,4 @@
-import { CODE_AREA_CLASSES, CODE_WRAPPER_CLASSES } from '../../shared/tool-classes/code';
+import { CODE_AREA_CLASSES, CODE_CARD_CLASSES, CODE_WRAPPER_CLASSES } from '../../shared/tool-classes/code';
 
 export const TOOL_NAME = 'code';
 
@@ -94,36 +94,51 @@ export const LANGUAGE_DOT_FALLBACK = 'var(--blok-gray-text)';
 
 // CSS — Tailwind classes
 /**
- * Static presentational classes live in `src/shared/tool-classes/code.ts` so the
- * view emitter stamps the exact same set. `group/code` stays here: it paints
- * nothing, existing only to enable the `group-hover/code:` rules on the header
- * controls below, which a static view never renders.
+ * `group/code` paints nothing; it enables the `group-hover/code:` rules on the
+ * tab row controls, which a static view never renders.
  */
 export const WRAPPER_STYLES = ['group/code', '@container/code', ...CODE_WRAPPER_CLASSES].join(' ');
-/** Below this block width the Copy button keeps only its icon, so the header never clips. */
+/** The card's start corner is square because the tab sits on it. */
+export const CARD_STYLES = [...CODE_CARD_CLASSES, 'rounded-ss-none'].join(' ');
+/** Below this block width the Copy button keeps only its icon, so the tab row never clips. */
 export const COPY_LABEL_STYLES = 'hidden @min-[26rem]/code:inline';
+export const TAB_ROW_STYLES = 'flex items-end gap-2 min-w-0';
 /**
- * Publishes the corner radius for the header controls: the card's block
- * radius minus its 1px border and this row's `py-1.5`.
+ * A folder tab on the card's top edge. `-mb-px` lays its open bottom over the
+ * card's top border, so tab and card read as one shape. Publishes the corner
+ * radius for its controls: the block radius minus its 1px border and `pt-1`.
  */
-export const HEADER_STYLES = ['flex items-center gap-1 min-h-10 px-2 py-1.5 border-b border-border-secondary bg-bg-secondary text-xs text-gray-text', '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]'].join(' ');
+export const TAB_STYLES = [
+  'relative z-1 -mb-px flex min-w-0 max-w-[75%] items-center gap-0.5 px-1 pt-1 pb-0.75',
+  'border border-b-0 border-border-secondary bg-code-bg rounded-t-(--blok-radius-block) text-xs text-gray-text',
+  '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1)))]',
+].join(' ');
+/** An empty filename takes no room at rest; it shows while the block is hovered or focused. */
+export const FILENAME_SLOT_STYLES = [
+  'flex min-w-0 items-center gap-0.5 overflow-hidden',
+  'before:content-[\'\'] before:shrink-0 before:w-px before:h-3.5 before:mx-0.5 before:bg-border-secondary',
+  'data-[empty=true]:hidden group-hover/code:data-[empty=true]:flex group-focus-within/code:data-[empty=true]:flex',
+].join(' ');
+/** Shows where the caret is, like `fibonacci() › if (n <= 1)`, while the code is focused. */
+export const BREADCRUMB_STYLES = 'flex flex-1 min-w-0 items-center justify-end gap-1 pb-1.5 font-mono text-xs text-gray-text whitespace-nowrap overflow-hidden select-none';
+export const BREADCRUMB_PART_STYLES = 'min-w-0 truncate last:text-text-primary last:shrink-0';
+export const BREADCRUMB_SEPARATOR_STYLES = 'shrink-0 opacity-50';
 export const LANGUAGE_BUTTON_STYLES = 'inline-flex min-w-0 items-center gap-1.5 px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
 /** Read-only has no picker to open — the language label is plain, unfocusable text there. */
 export const LANGUAGE_LABEL_STYLES = 'inline-flex min-w-0 items-center gap-1.5 px-1.5 py-0.5 bg-transparent border-0 text-xs text-gray-text font-medium';
 export const LANGUAGE_DOT_STYLES = 'size-2 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]';
-/** Placeholder only shows while the block is hovered or focused, so filename-less blocks stay quiet. */
 const FILENAME_TEXT_STYLES = 'min-w-0 truncate font-mono text-xs text-text-primary';
 export const FILENAME_BUTTON_STYLES = [
   FILENAME_TEXT_STYLES,
-  'flex-1 text-start px-1.5 py-0.5 select-none rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-text bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg',
-  'data-[empty=true]:text-gray-text data-[empty=true]:font-sans data-[empty=true]:opacity-0 group-hover/code:data-[empty=true]:opacity-100 group-focus-within/code:data-[empty=true]:opacity-100 focus-visible:opacity-100',
+  'text-start px-1.5 py-0.5 select-none rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-text bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg',
+  'data-[empty=true]:text-gray-text data-[empty=true]:font-sans',
 ].join(' ');
-export const FILENAME_LABEL_STYLES = [FILENAME_TEXT_STYLES, 'flex-1 px-1.5 py-0.5'].join(' ');
+export const FILENAME_LABEL_STYLES = [FILENAME_TEXT_STYLES, 'px-1.5 py-0.5'].join(' ');
 export const FILENAME_INPUT_STYLES = [
   FILENAME_TEXT_STYLES,
-  'flex-1 px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) bg-item-hover-bg border-0 outline-hidden placeholder:text-gray-text placeholder:font-sans',
+  '[field-sizing:content] min-w-24 max-w-64 px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) bg-item-hover-bg border-0 outline-hidden placeholder:text-gray-text placeholder:font-sans',
 ].join(' ');
-export const HEADER_CONTROLS_STYLES = 'flex shrink-0 items-center gap-1 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 transition-opacity';
+export const HEADER_CONTROLS_STYLES = 'ms-auto pb-0.5 flex shrink-0 items-center gap-1 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 transition-opacity';
 /**
  * `h-*`/`min-w-*` pin the box: the copy button swaps its 20px icon for a
  * text-xs "Copied!" label, which would otherwise shrink it below the height of

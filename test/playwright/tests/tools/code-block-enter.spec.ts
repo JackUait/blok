@@ -399,8 +399,8 @@ test.describe('Code block Enter — auto-indent and bracket expansion', () => {
     await focusCodeAtOffset(page, 1);
     await page.keyboard.press('Enter');
 
-    expect(await getCodeText(page)).toBe('{\n  \n}');
-    expect(await codeCaretOffset(page)).toBe(4);
+    expect(await getCodeText(page)).toBe('{\n\t\n}');
+    expect(await codeCaretOffset(page)).toBe(3);
   });
 
   test('Enter between () expands the same way', async ({ page }) => {
@@ -413,8 +413,8 @@ test.describe('Code block Enter — auto-indent and bracket expansion', () => {
     await focusCodeAtOffset(page, 1);
     await page.keyboard.press('Enter');
 
-    expect(await getCodeText(page)).toBe('(\n  \n)');
-    expect(await codeCaretOffset(page)).toBe(4);
+    expect(await getCodeText(page)).toBe('(\n\t\n)');
+    expect(await codeCaretOffset(page)).toBe(3);
   });
 
   test('Enter between [] expands the same way', async ({ page }) => {
@@ -427,8 +427,8 @@ test.describe('Code block Enter — auto-indent and bracket expansion', () => {
     await focusCodeAtOffset(page, 1);
     await page.keyboard.press('Enter');
 
-    expect(await getCodeText(page)).toBe('[\n  \n]');
-    expect(await codeCaretOffset(page)).toBe(4);
+    expect(await getCodeText(page)).toBe('[\n\t\n]');
+    expect(await codeCaretOffset(page)).toBe(3);
   });
 
   test('Enter after a line ending with { indents one level deeper', async ({ page }) => {
@@ -441,8 +441,8 @@ test.describe('Code block Enter — auto-indent and bracket expansion', () => {
     await focusCodeAtOffset(page, 8);
     await page.keyboard.press('Enter');
 
-    expect(await getCodeText(page)).toBe('if (x) {\n  ');
-    expect(await codeCaretOffset(page)).toBe(11);
+    expect(await getCodeText(page)).toBe('if (x) {\n\t');
+    expect(await codeCaretOffset(page)).toBe(10);
   });
 
   test('Enter between {} on an indented line preserves outer indent and adds one unit', async ({ page }) => {
@@ -455,7 +455,7 @@ test.describe('Code block Enter — auto-indent and bracket expansion', () => {
     await focusCodeAtOffset(page, 10);
     await page.keyboard.press('Enter');
 
-    expect(await getCodeText(page)).toBe('  if (x) {\n    \n  }');
-    expect(await codeCaretOffset(page)).toBe(15);
+    expect(await getCodeText(page)).toBe('  if (x) {\n  \t\n  }');
+    expect(await codeCaretOffset(page)).toBe(14);
   });
 });

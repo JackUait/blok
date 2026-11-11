@@ -1,4 +1,4 @@
-import { TAB_STRING } from './constants';
+import { INDENT_UNIT } from './constants';
 
 /**
  * Handle keydown events inside the code block.
@@ -90,15 +90,15 @@ function computeNewlineInsertion(opts: {
 
   if (betweenMatchedPair) {
     return {
-      inserted: `\n${indent}${TAB_STRING}\n${indent}`,
-      caretDelta: 1 + indent.length + TAB_STRING.length,
+      inserted: `\n${indent}${INDENT_UNIT}\n${indent}`,
+      caretDelta: 1 + indent.length + INDENT_UNIT.length,
     };
   }
 
   if (afterOpener) {
     return {
-      inserted: `\n${indent}${TAB_STRING}`,
-      caretDelta: 1 + indent.length + TAB_STRING.length,
+      inserted: `\n${indent}${INDENT_UNIT}`,
+      caretDelta: 1 + indent.length + INDENT_UNIT.length,
     };
   }
 
@@ -124,8 +124,7 @@ function insertTab(): void {
   const range = selection.getRangeAt(0);
   range.deleteContents();
 
-  // Notion writes a tab character; Enter's auto-indent still uses TAB_STRING.
-  const tab = document.createTextNode('\t');
+  const tab = document.createTextNode(INDENT_UNIT);
   range.insertNode(tab);
   range.setStartAfter(tab);
   range.collapse(true);
@@ -134,15 +133,17 @@ function insertTab(): void {
   selection.addRange(range);
 }
 
+const SPACE_INDENT_WIDTH = 2;
+
 /**
- * How many leading characters one outdent removes: a tab, or up to TAB_STRING's spaces.
+ * How many leading characters one outdent removes: a tab, or up to two spaces of old space-indented code.
  */
 function countLeadingSpaces(lineContent: string): number {
   if (lineContent.startsWith('\t')) {
     return 1;
   }
 
-  const limit = Math.min(TAB_STRING.length, lineContent.length);
+  const limit = Math.min(SPACE_INDENT_WIDTH, lineContent.length);
   const match = lineContent.substring(0, limit).match(/^ */);
 
   return match ? match[0].length : 0;

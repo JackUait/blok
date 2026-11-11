@@ -21,7 +21,7 @@ export const CODE_AREA_CLASSES: readonly string[] = [
   'text-[length:var(--blok-code-font-size,0.875rem)]',
   'leading-relaxed',
   'whitespace-pre-wrap',
-  /** Tab writes "\t"; this keeps it as wide as the two-space indent step. */
+  /** Indent is a tab; 2 keeps it as wide as old two-space indents. */
   '[tab-size:2]',
   'overflow-x-auto',
   'min-h-[1.5em]',

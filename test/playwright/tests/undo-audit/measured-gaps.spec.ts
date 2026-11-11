@@ -115,4 +115,19 @@ test.describe('undo audit — measured Notion gaps', () => {
     await page.keyboard.press('Shift+Tab');
     await expect.poll(() => code.textContent()).toBe('x');
   });
+
+  // Enter after an opener adds a tab too, so indents never mix tabs and spaces.
+  test('Enter after an opener in code indents with a tab', async ({ page }) => {
+    await create(page, [{ id: 'b1', type: 'code', data: { code: '\tif (a) {', language: 'plain text' } }]);
+    const code = page.getByTestId('code-content');
+
+    await code.click();
+    await page.keyboard.press('End');
+    await expect.poll(() => codeCaret(page)).toBe(9);
+
+    await page.keyboard.press('Enter');
+    await expect.poll(() => code.textContent()).toBe('\tif (a) {\n\t\t');
+    expect(await codeCaret(page)).toBe(12);
+    expect(await savedCode(page)).toBe('\tif (a) {\n\t\t');
+  });
 });

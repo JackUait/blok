@@ -26,7 +26,8 @@ export const LANGUAGE_FAMILIES: ReadonlyArray<{ key: string; languages: readonly
 
 // Default values
 export const DEFAULT_LANGUAGE = 'plain text';
-export const TAB_STRING = '  '; // 2 spaces
+// One indent level for Tab and for Enter after an opener. Old content may be indented with spaces.
+export const INDENT_UNIT = '\t';
 
 // Language list — display name + lowercase identifier
 export interface LanguageEntry {

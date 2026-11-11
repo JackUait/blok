@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   TOOL_NAME, PLACEHOLDER_KEY, LANGUAGE_KEY, COPIED_KEY, COPY_CODE_KEY,
-  DEFAULT_LANGUAGE, TAB_STRING, LANGUAGES, PREVIEWABLE_LANGUAGES,
+  DEFAULT_LANGUAGE, INDENT_UNIT, LANGUAGES, PREVIEWABLE_LANGUAGES,
   HIGHLIGHTABLE_LANGUAGES,
   CODE_AREA_STYLES, GUTTER_STYLES, GUTTER_LINE_STYLES, CODE_BODY_STYLES,
   HEADER_BUTTON_STYLES, HEADER_BUTTON_MATCHED_STYLES,
@@ -25,9 +25,8 @@ describe('Code Block Constants', () => {
     expect(DEFAULT_LANGUAGE).toBe('plain text');
   });
 
-  it('TAB_STRING is 2 spaces', () => {
-    expect(TAB_STRING).toBe('  ');
-    expect(TAB_STRING).toHaveLength(2);
+  it('INDENT_UNIT is one tab character', () => {
+    expect(INDENT_UNIT).toBe('\t');
   });
 
   describe('LANGUAGES', () => {

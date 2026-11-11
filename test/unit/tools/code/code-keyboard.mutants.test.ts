@@ -155,8 +155,8 @@ describe('code keyboard mutants', () => {
 
       press(el, 'Enter');
 
-      expect(el.textContent).toBe(`${opener}\n  \n${closer}`);
-      expect(caretIn(el)).toBe(4);
+      expect(el.textContent).toBe(`${opener}\n\t\n${closer}`);
+      expect(caretIn(el)).toBe(3);
     });
 
     // The closer only has to be the next CHARACTER, not the rest of the text.
@@ -165,7 +165,7 @@ describe('code keyboard mutants', () => {
 
       press(el, 'Enter');
 
-      expect(el.textContent).toBe('{\n  \n}x');
+      expect(el.textContent).toBe('{\n\t\n}x');
     });
 
     it('indents once after an opener with no closer ahead', () => {
@@ -173,7 +173,7 @@ describe('code keyboard mutants', () => {
 
       press(el, 'Enter');
 
-      expect(el.textContent).toBe('{\n  x');
+      expect(el.textContent).toBe('{\n\tx');
     });
 
     it('adds no indent at all when no bracket precedes the caret', () => {

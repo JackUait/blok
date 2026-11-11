@@ -21,7 +21,7 @@ declare global {
     blokInstance?: Blok;
     Blok: new (...args: unknown[]) => Blok;
     BlokImage: unknown;
-    __uploads?: Array<{ type: string; name: string }>;
+    __imageFormatUploads?: Array<{ type: string; name: string }>;
   }
 }
 
@@ -42,7 +42,7 @@ const createBlok = async (page: Page, formats: ImageFormat[], data?: OutputData)
   await page.evaluate(async ({ holder, imageFormats, initial }) => {
     await window.blokInstance?.destroy?.();
     window.blokInstance = undefined;
-    window.__uploads = [];
+    window.__imageFormatUploads = [];
     document.getElementById(holder)?.remove();
     const container = document.createElement('div');
 
@@ -59,7 +59,7 @@ const createBlok = async (page: Page, formats: ImageFormat[], data?: OutputData)
           config: {
             uploader: {
               uploadByFile: async (file: File) => {
-                window.__uploads?.push({ type: file.type, name: file.name });
+                window.__imageFormatUploads?.push({ type: file.type, name: file.name });
 
                 return { url: URL.createObjectURL(file), fileName: file.name };
               },
@@ -107,7 +107,7 @@ test('a photo is saved in every format this browser can encode, best first, with
   expect(saved.url).toBe(saved.variants?.at(-1)?.url);
   expect([...types].sort((a, b) => RANK.indexOf(a) - RANK.indexOf(b))).toEqual(types);
   // The JPEG the image needs uploads first; better formats follow, best first.
-  expect(await page.evaluate(() => window.__uploads?.map((u) => u.type))).toEqual(['image/jpeg', ...types.slice(0, -1)]);
+  expect(await page.evaluate(() => window.__imageFormatUploads?.map((u) => u.type))).toEqual(['image/jpeg', ...types.slice(0, -1)]);
 });
 
 test('the image shows the best format this browser made, through a picture element', async ({ page }) => {

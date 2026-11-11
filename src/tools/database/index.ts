@@ -2136,6 +2136,23 @@ export class DatabaseTool implements BlockTool {
     return !this.readOnly && !this.structureDenied && !this.linked;
   }
 
+  /** Its title. Its rows write their own titles after it; tabs and buttons are not content. */
+  public static clipboardHtml(data: Partial<DatabaseData>): string {
+    const title = typeof data.title === 'string' ? data.title.trim() : '';
+
+    if (title === '') {
+      return '';
+    }
+
+    const paragraph = document.createElement('p');
+    const strong = document.createElement('strong');
+
+    strong.textContent = title;
+    paragraph.appendChild(strong);
+
+    return paragraph.outerHTML;
+  }
+
   /**
    * Notion's "/" Database section, in its order (research/28 §1a). Not built:
    * Dashboard view (paid), the five charts (insert unmeasured) and

@@ -570,8 +570,8 @@ export class BlockSelection extends Module {
     const segments = this.groupBlocksForClipboard(htmlBlocks, (a, b) => containerOf(a) === containerOf(b));
     const bodies = new Map<string, HTMLElement>();
     const targetOf = (block: Block): HTMLElement => bodies.get(containerOf(block) ?? '') ?? fakeClipboard;
-    // A row's holder renders nothing; its title stands for it.
-    const rowTitles = new Map(linkedData.flatMap((entry) => (entry.title === undefined ? [] : [[entry.id, entry.title] as const])));
+    // A row's holder renders nothing; its title stands for it, with or without its database.
+    const rowTitles = new Map(copiedBlocks.flatMap((block) => (block.name === 'database-row' ? [[block.id, this.rowTitle(block)] as const] : [])));
 
     segments.forEach((segment) => {
       const target = targetOf(segment.type === 'list' ? segment.items[0] : segment.block);
@@ -1171,10 +1171,19 @@ export class BlockSelection extends Module {
     if (block.name !== 'database-row' || (block.parentId !== null && copiedIds.has(block.parentId))) {
       return {};
     }
+
+    return { title: this.rowTitle(block) };
+  }
+
+  /**
+   * A database row's title, read with its database's title property.
+   * @param block - a database row
+   */
+  private rowTitle(block: Block): string {
     const database = block.parentId === null ? undefined : this.Blok.BlockManager.getBlockById(block.parentId);
     const titleId = database === undefined ? undefined : titlePropertyIdOf(database.preservedData);
 
-    return { title: databaseRowTitle({ data: block.preservedData }, titleId) };
+    return databaseRowTitle({ data: block.preservedData }, titleId);
   }
 
   /**

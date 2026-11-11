@@ -128,3 +128,16 @@ describe('copying database rows without their database', () => {
     ]);
   });
 });
+
+describe('copying a whole database', () => {
+  it('writes its title and its row titles as html, without its tabs and buttons', async () => {
+    const instance = await make();
+
+    await instance.blocks.update('db', { title: 'Tasks' });
+    await quiet();
+
+    const html = copyRows(instance, ['db']).get('text/html') ?? '';
+
+    expect(html).toBe('<p><strong>Tasks</strong></p><p>Alpha</p><p>Body one</p><p>Bravo</p>');
+  });
+});

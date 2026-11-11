@@ -1062,6 +1062,11 @@ export interface DatabaseData extends BlockToolData {
   hideDataSourceTitles?: boolean;
   /** The database is a whole page ("Database - Full page"): it hides its own title, since the page title is it. */
   fullPage?: boolean;
+  /**
+   * The description under the title, as inline HTML (the same marks as a paragraph).
+   * Shown and edited only on a full-page database; an inline database keeps it unshown.
+   */
+  description?: string;
   /** The icon before the title. */
   icon?: DatabaseIcon;
   /** The Suggested template this database was made from. Removed by "Undo … database". */

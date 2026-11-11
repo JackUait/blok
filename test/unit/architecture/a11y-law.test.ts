@@ -137,6 +137,9 @@ const EXEMPT_STATE_WITHOUT_ROLE: Record<string, string> = {};
  * quote the source's own justification — "we forgot" is not one.
  */
 const EXEMPT_NON_MODAL_DIALOGS: Record<string, string> = {
+  'components/modules/pageTitle/cover-control.ts » dialog':
+    'DELIBERATE — "Non-modal: anchored to Change, which carries aria-expanded; the page stays ' +
+    'reachable", as the audio cover picker it follows',
   'tools/audio/cover-picker.ts » dialog':
     'DELIBERATE — "The picker is an anchored, non-modal dialog, so it advertises its open ' +
     'state on the trigger button (mirrors the alt-text popover) rather than inert-ing" the ' +

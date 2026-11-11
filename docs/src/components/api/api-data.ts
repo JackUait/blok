@@ -3035,6 +3035,22 @@ editor.title.mount(null);`,
         example: `editor.title.icon.set({ type: 'emoji', value: '🚀' });
 editor.title.icon.set(null);`,
       },
+      {
+        name: "title.cover.get()",
+        returnType: "PageCover | null",
+        description:
+          "The current cover: `{ type: 'image', url, position? }` or `{ type: 'gallery', id, position? }`. It is `null` when there is none. `position` is the image's vertical position in whole percent, from 0 (top) to 100 (bottom). Without it the image is centered.",
+        example: `const cover = editor.title.cover.get(); // { type: 'gallery', id: 'blue' }`,
+      },
+      {
+        name: "title.cover.set(cover, options?)",
+        returnType: "void",
+        description:
+          "Sets the cover, or removes it with `null`. It makes one undo step and calls `onCoverChange` with source `api`. `{ record: false }` works as it does for `title.set`. The cover is saved as `OutputData.cover`, also when `cover` is off in the config.\n\nGallery ids: `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `gray`. An unknown id draws a plain fill.",
+        example: `editor.title.cover.set({ type: 'image', url: 'https://example.com/trip.jpg', position: 30 });
+editor.title.cover.set({ type: 'gallery', id: 'blue' });
+editor.title.cover.set(null);`,
+      },
     ],
     table: [
       {
@@ -3071,6 +3087,20 @@ editor.title.icon.set(null);`,
         default: "—",
         description:
           "Called on every icon change, from any source. `null` means the icon was removed. `change` is the same as for `onChange`.",
+      },
+      {
+        option: "cover",
+        type: "boolean",
+        default: "false",
+        description:
+          "`true` draws the page cover above the title, and an Add cover button over the title.\n\n- On hover the cover shows Change and, for an image, Reposition.\n- Change opens Gallery, Upload and Link. Upload goes through your image uploader. Link takes an image URL.\n- The cover is saved and loaded with the document even when this is `false`.",
+      },
+      {
+        option: "onCoverChange",
+        type: "(cover: PageCover | null, change: TitleChange) => void",
+        default: "—",
+        description:
+          "Called on every cover change, from any source. `null` means the cover was removed. `change` is the same as for `onChange`.",
       },
     ],
   },
@@ -3912,6 +3942,17 @@ class Report {
               "The block's full data after the update. That is the existing data merged with the caller's patch, not the patch alone.",
           },
         ],
+      },
+      {
+        name: "pageHeaderActions()",
+        returnType: "PageHeaderAction[]",
+        description:
+          "An optional method on your tool that puts buttons in the page header's row over the title, after Add icon and Add cover. Blok asks it only of the page's first block, and only with `pageTitle` on, each time the pointer or focus enters the header. Return `[]` for none.\n\nEach button is `{ name, label, icon?, onActivate }`. `icon` is SVG markup from your own code. The button carries `name` as `data-blok-page-header-action`. A full-page database uses it for Add description.",
+        example: `class Report {
+  pageHeaderActions() {
+    return [{ name: 'report-summary', label: 'Add summary', onActivate: () => this.showSummary() }];
+  }
+}`,
       },
     ],
   },

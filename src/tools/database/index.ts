@@ -5,7 +5,7 @@ import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { DATABASE_COMMENT_HANDLERS } from '../../shared/tool-actions/database-comments';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
-import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
+import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, PageHeaderAction, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig, ToolSanitizerConfig } from '../../../types';
 import type { AgentRun } from '../../../types/api';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import { HistoryDraftsCommit, type HistoryDraftsCommitPayload } from '../../components/events/HistoryDraftsCommit';
@@ -140,7 +140,7 @@ import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
 import { foldTitleRow } from './database-view-bar-fold';
-import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconPageLayout, IconReturn, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconReplace, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconDownload, IconImage, IconForm, IconViewForm, IconMergeCells, IconPageLayout, IconReturn, IconTable, IconTimeline, IconUpload, IconWand, IconInfo } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -448,7 +448,7 @@ const deletedBackendRowsOf = (adapter: DatabaseAdapter | undefined, databaseId: 
 const BACKLINKS_SETTLE_MS = 300;
 
 // `icon` and `starter` stay in the passthrough: a value this client cannot draw (a newer glyph) is saved back as it came.
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'deletedProperties', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'description', 'schema', 'views', 'activeViewId', 'deletedProperties', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
   const source = data?.source as unknown;
@@ -643,6 +643,10 @@ export class DatabaseTool implements BlockTool {
   private dataSourceTitlesHidden: boolean;
   /** The database is the whole page: the page title is its title. */
   private fullPage: boolean;
+  /** Inline HTML under the title; '' when there is none. */
+  private description = '';
+  /** The description field, drawn only on a full-page database. */
+  private descriptionElement: HTMLElement | null = null;
   private databaseIcon: DatabaseIcon | undefined;
   /** The Suggested template this database was made from (research/27 §1). */
   private starter: StarterId | undefined;
@@ -805,6 +809,7 @@ export class DatabaseTool implements BlockTool {
     this.unknown = unknownKeys(data);
     this.dataSourceTitlesHidden = data?.hideDataSourceTitles === true;
     this.fullPage = data?.fullPage === true;
+    this.description = typeof data?.description === 'string' ? data.description : '';
     this.databaseIcon = iconOf(data);
     this.starter = starterOf(data);
     this.savedAutomations = structuredClone(data?.automations);
@@ -2223,8 +2228,9 @@ export class DatabaseTool implements BlockTool {
 
   /**
    * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
+   * The description alone keeps inline marks.
    */
-  static get sanitize(): SanitizerConfig {
+  static get sanitize(): ToolSanitizerConfig {
     return databaseSanitize();
   }
 
@@ -2282,6 +2288,9 @@ export class DatabaseTool implements BlockTool {
     this.titleRowElement = titleRow;
     this.paintDatabaseIcon();
     wrapper.appendChild(titleRow);
+    if (this.fullPage && this.description !== '') {
+      this.showDescription(false);
+    }
 
     this.tabBar = this.createTabBar();
     const viewBar = document.createElement('div');
@@ -2319,6 +2328,97 @@ export class DatabaseTool implements BlockTool {
     this.controls.refresh();
 
     return wrapper;
+  }
+
+  /**
+   * The page header's hover row asks the page's first block for buttons.
+   * notion-motion.md Round 15 C: "Add description", then "Hide description" once one shows.
+   */
+  pageHeaderActions(): PageHeaderAction[] {
+    if (!this.fullPage || this.readOnly || this.isHeldSource() || this.element === null) {
+      return [];
+    }
+    const shown = this.descriptionElement !== null;
+
+    return [{
+      name: 'database-description',
+      label: this.api.i18n.t(shown ? 'tools.database.hideDescription' : 'tools.database.addDescription'),
+      icon: IconInfo,
+      onActivate: () => {
+        if (this.descriptionElement === null) {
+          this.showDescription(true);
+
+          return;
+        }
+        this.removeDescription();
+      },
+    }];
+  }
+
+  private readDescription(): string {
+    const element = this.descriptionElement;
+
+    if (element === null) {
+      return this.description;
+    }
+
+    return (element.textContent ?? '').trim() === '' ? '' : element.innerHTML;
+  }
+
+  /** Draws the field after the title row. `withCaret`: a new empty line the person asked for. */
+  private showDescription(withCaret: boolean): void {
+    const titleRow = this.titleRowElement;
+
+    if (titleRow === null || this.descriptionElement !== null) {
+      this.descriptionElement?.focus();
+
+      return;
+    }
+    const element = document.createElement('div');
+
+    element.setAttribute('data-blok-database-description', '');
+    element.className = getPlaceholderClasses('always').join(' ');
+    setupPlaceholder(element, this.api.i18n.t('tools.database.descriptionPlaceholder'));
+    element.setAttribute('contenteditable', this.readOnly ? 'false' : 'true');
+    // Saved as written: the Saver runs the description sanitizer over it.
+    element.innerHTML = this.description;
+    // Clearing it removes the line (notion-motion.md Round 15 C).
+    element.addEventListener('blur', () => {
+      if (this.descriptionElement === element && (element.textContent ?? '').trim() === '') {
+        this.removeDescription();
+      }
+    });
+    titleRow.after(element);
+    this.descriptionElement = element;
+    if (withCaret) {
+      element.focus();
+    }
+  }
+
+  private removeDescription(): void {
+    const had = this.readDescription() !== '';
+
+    this.descriptionElement?.remove();
+    this.descriptionElement = null;
+    this.description = '';
+    if (had) {
+      this.block.dispatchChange();
+    }
+  }
+
+  /** After setData: show, update or drop the field to match the data. */
+  private syncDescription(): void {
+    if (!this.fullPage || this.description === '') {
+      this.descriptionElement?.remove();
+      this.descriptionElement = null;
+
+      return;
+    }
+    if (this.descriptionElement === null) {
+      this.showDescription(false);
+    } else if (this.descriptionElement.innerHTML !== this.description) {
+      this.descriptionElement.innerHTML = this.description;
+    }
   }
 
   /** research/27:42: the icon a template gave, before the title. */
@@ -2664,6 +2764,7 @@ export class DatabaseTool implements BlockTool {
   save(_blockContent: HTMLElement): DatabaseData {
     // A linked view's title element shows the source's name, not its own.
     const currentTitle = this.linked ? this.title : this.titleElement?.textContent ?? this.title;
+    const description = this.readDescription();
 
     const { deletedProperties, ...snapshot } = this.model.snapshot();
     // Kept as loaded: absent stays absent until the first delete (DatabaseModel.deletedSlot).
@@ -2679,6 +2780,7 @@ export class DatabaseTool implements BlockTool {
       ...(this.source !== undefined ? { schema: structuredClone(this.stubSchema), source: { ...this.source } } : {}),
       ...(this.dataSourceTitlesHidden ? { hideDataSourceTitles: true } : {}),
       ...(this.fullPage ? { fullPage: true } : {}),
+      ...(description !== '' ? { description } : {}),
       ...(this.databaseIcon !== undefined ? { icon: { ...this.databaseIcon } } : {}),
       ...(this.starter !== undefined ? { starter: this.starter } : {}),
       title: currentTitle,
@@ -2799,6 +2901,7 @@ export class DatabaseTool implements BlockTool {
     if (this.titleElement !== null) {
       this.titleElement.setAttribute('contenteditable', this.titleEditable() ? 'true' : 'false');
     }
+    this.descriptionElement?.setAttribute('contenteditable', this.readOnly ? 'false' : 'true');
 
     this.tabBar?.setReadOnly(this.readOnly || this.structureLocked());
     this.syncTitleRowAddBtn();
@@ -2834,6 +2937,8 @@ export class DatabaseTool implements BlockTool {
     this.dataSourceTitlesHidden = data.hideDataSourceTitles === true;
     this.fullPage = data.fullPage === true;
     this.element?.toggleAttribute('data-blok-database-page', this.fullPage);
+    this.description = typeof data.description === 'string' ? data.description : '';
+    this.syncDescription();
     this.databaseIcon = iconOf(data);
     this.starter = starterOf(data);
     this.paintDatabaseIcon();

@@ -549,6 +549,19 @@ const FILES_TAB_COGNATE_RETENTIONS: Record<string, string[]> = {
   ro: ['tools.database.filesTabLink'],
 };
 
+/** The page cover picker's Upload / Link tabs reuse the audio cover tabs' words. */
+const PAGE_COVER_TAB_COGNATE_RETENTIONS: Record<string, string[]> = {
+  da: ['title.coverUpload', 'title.coverLink'],
+  de: ['title.coverLink'],
+  et: ['title.coverLink'],
+  fil: ['title.coverLink'],
+  it: ['title.coverLink'],
+  nl: ['title.coverLink'],
+  pl: ['title.coverLink'],
+  pt: ['title.coverLink'],
+  ro: ['title.coverLink'],
+};
+
 /** The formula editor's "Type: {type}" uses the native noun spelled as in English. */
 const FORMULA_TYPE_COGNATE_RETENTIONS: Record<string, string[]> = {
   da: ['tools.database.formulaType'],
@@ -559,6 +572,7 @@ const FORMULA_TYPE_COGNATE_RETENTIONS: Record<string, string[]> = {
 for (const [locale, keys] of [
   ...Object.entries(AUDIO_COGNATE_RETENTIONS),
   ...Object.entries(FILES_TAB_COGNATE_RETENTIONS),
+  ...Object.entries(PAGE_COVER_TAB_COGNATE_RETENTIONS),
   ...Object.entries(FORMULA_TYPE_COGNATE_RETENTIONS),
 ]) {
   const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());

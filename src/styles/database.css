@@ -2698,6 +2698,17 @@ button[data-blok-database-column-count]:hover {
   padding-right: 0;
 }
 
+/* A full-page database's description (notion-motion.md Round 15 C): 14px/21px, under the title, in its column. */
+[data-blok-database-description] {
+  padding-block: var(--blok-space-0-75) var(--blok-space-1);
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  color: var(--blok-database-ink);
+  font-size: 14px;
+  line-height: 21px;
+  overflow-wrap: anywhere;
+  outline: none;
+}
+
 /* Notion's long title is one line with an ellipsis (notion-motion.md, Round 7, Round 8b).
    :not([hidden]) keeps a title that fullPage or Hide title hid hidden: these displays would show it. */
 [data-blok-database-title-row] > [data-blok-database-title]:not([hidden]) {

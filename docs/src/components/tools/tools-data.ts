@@ -456,6 +456,7 @@ const editor = new Blok({
                                        // its dashboardViewId names the dashboard, and it has no tab
   activeViewId: string;                // Currently active view ID
   fullPage?: boolean;                  // The database is a whole page; the page title is its title
+  description?: string;               // Inline HTML under the title; shown only when fullPage is true
   deletedProperties?: Record<string, DeletedPropertyDefinition>; // Deleted properties by id:
                                        // PropertyDefinition plus deletedAt (epoch ms) and deletedBy (person id).
                                        // Absent until the first delete on databases made before it existed

@@ -15,6 +15,13 @@ All notable changes to this project will be documented in this file.
   - A widget is a view with `dashboardViewId`, so it gets no tab. Deleting or duplicating a dashboard takes its widgets along. Copy and paste keep the link.
   - The toolbar shows only ⤢ and View settings on a dashboard. Agents add widgets with `database.addView` and `dashboardViewId`.
   - An editor from before this release shows widget views as extra tabs.
+- **Page cover** — A page can have a cover above its title, an image or one of Blok's gallery fills. Turn it on with `pageTitle: { cover: true }`. It is off by default.
+  - "Add cover" shows over the title on hover. The cover's Change opens Gallery, Upload (through your image uploader) and Link. Reposition drags an image up or down and saves the position.
+  - It is saved as `OutputData.cover`, `{ type: 'image', url, position? }` or `{ type: 'gallery', id, position? }`, also when the flag is off. `title.cover.get()` and `set()` read and write it, and `onCoverChange` hears every change.
+  - The agent sets it with `doc.setCover`. The Go, C# and Rust servers store it, seed it and restore it with a version.
+  - A server older than this release refuses an agent's or host's cover write and drops a cover it is sent.
+- **Database description** — A full-page database can have a description under its title: `DatabaseData.description`, inline HTML. "Add description" shows over the page title on hover, then "Hide description". Clearing the line removes it. An inline database keeps it but does not show it.
+  - A block tool can put its own buttons in that row with the new optional `pageHeaderActions()` method. Only the page's first block is asked.
 - **MCP tools on your own MCP server** — Serve Blok's `blok_*` tools and prompts on an MCP server you build, next to your own tools.
   - Node `createBlok`, C# `WithBlok`, Go `blokmcp.Embed` and Rust `BlokTools`. Your server keeps its name, instructions, transport and sign-in.
   - It needs a per-document check (`authorize`), as over HTTP. Anonymous callers are refused unless you name an anonymous principal.

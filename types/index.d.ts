@@ -70,6 +70,7 @@ export {
   InlineToolConstructorOptions,
   BlockToolConstructable,
   BlockToolConstructorOptions,
+  PageHeaderAction,
   BlockTool,
   BlockToolData,
   BlockOrigin,

@@ -37,7 +37,8 @@ const randomEmoji = async (): Promise<string> => {
   return emoji.native;
 };
 
-export const createIconControl = (row: HTMLElement, host: IconControlHost): { redraw(): void; destroy(): void } => {
+/** `trailing` stays after the icon or Add icon, in the same row. */
+export const createIconControl = (row: HTMLElement, host: IconControlHost, trailing: () => HTMLElement[] = () => []): { redraw(): void; destroy(): void } => {
   const slot: { picker: EmojiPicker | null; locale: string | null; watch: MutationObserver | null; destroyed: boolean } = {
     picker: null,
     locale: null,
@@ -171,7 +172,7 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost): { re
       } else if (kind === 'icon') {
         shown.button = buildIcon();
       }
-      row.replaceChildren(...(shown.button === null ? [] : [shown.button]));
+      row.replaceChildren(...(shown.button === null ? [] : [shown.button]), ...trailing());
       if (hadFocus) {
         shown.button?.focus();
       }

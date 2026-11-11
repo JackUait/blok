@@ -183,6 +183,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     automations: { version: 1 as const, definitions: [] },
     source: { databaseId: 'db-source' },
     hideDataSourceTitles: true,
+    description: 'Sprint <b>goals</b>',
     icon: { glyph: 'check', color: 'green' },
     starter: 'tasks',
     deletedProperties: { p2: { id: 'p2', name: 'Size', type: 'number', position: 'a1', deletedAt: 1000, deletedBy: 'u1' } },

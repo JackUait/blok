@@ -747,6 +747,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Page title header: page-title.css (gutter, content column and its align rules, icon, Add icon,
     // title, size tiers), its @import, and the main.css rule that lets an in-editor header inherit the gutter.
     const PAGE_TITLE_HEADER_BYTES = 5_347 + 28 + 524;
+    // Page cover (TitleConfig.cover) in page-title.css: the strip, the gallery fills, the
+    // Change / Reposition group, the drag hint, the picker, Add cover and a first block's
+    // header buttons beside Add icon, and the gallery, shadow and hint tokens on the strip
+    // and picker (kept out of colors.css, which view.css copies under its own budget);
+    // and a full-page database's description line in database.css.
+    const PAGE_COVER_BYTES = 8_981;
     const AGENT_MARKER_BYTES = 633;
     // find.css: the field's grid-column pin and its comment (read-only find field gap).
     const FIND_FIELD_COLUMN_BYTES = 140;
@@ -1699,6 +1705,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + TABS_FOCUS_RING_BYTES
       + TABS_EMPTY_HINT_BYTES
       + PAGE_TITLE_HEADER_BYTES
+      + PAGE_COVER_BYTES
       + AGENT_MARKER_BYTES
       + FIND_FIELD_COLUMN_BYTES
       + DATABASE_REDUCED_MOTION_BYTES

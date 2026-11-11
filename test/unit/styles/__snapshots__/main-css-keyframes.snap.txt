@@ -561,6 +561,10 @@
   30%, 70% { transform: translate(calc(var(--dir) * 30px), -6px) rotate(calc(var(--dir) * 16deg)) }
 }
 
+@keyframes blok-page-cover-picker-in {
+  from { opacity: 0 }
+}
+
 @keyframes blok-presence-caret-pulse {
   0%, 100% { opacity: 1 }
   50% { opacity: 0.3 }

@@ -21,7 +21,8 @@ import type { BlokSchema, BlockToolDescription, DescribeBlockTool } from '../../
 type MediaName = 'image' | 'video' | 'audio' | 'file';
 
 const pinPath = resolve(__dirname, '../../view/__snapshots__/document-schema.json');
-const pinHash = 'e6c6c4481fe92758cbb0fb0638a9178b2e6c9c60ffc0f5797f326cad4c7cca04';
+const pinHash = '903fabba250b261853a8218ac6a2ef55fcb415d7b7509dde681afef3156efdb2';
+>>>>>>> 78639d2c (feat(title): draw the page cover, its picker, and a full-page database's description)
 
 const media: Array<{
   name: MediaName;

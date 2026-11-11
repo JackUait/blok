@@ -516,6 +516,7 @@ export const DATABASE_DATA = {
     },
     activeViewId: { type: 'string', description: 'Id of the view shown by default.' },
     hideDataSourceTitles: { type: 'boolean', description: 'Hides the title line above the tabs for every view. Default false.' },
+    description: { type: 'string', description: 'The line under the title of a full-page database, as inline HTML (b, i, u, s, a, code). An inline database keeps it but does not show it. "" removes it.' },
     icon: {
       type: 'object',
       description: 'The icon before the title: one of Blok\'s glyphs on a tinted tile.',

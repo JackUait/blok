@@ -10,6 +10,7 @@ import { setCaretAtXPosition } from '../../utils/caret';
 import { buildHeader, findHolder, holderProblem, type HeaderNodes } from './header-dom';
 import { bindTitleKeyboard } from './title-keyboard';
 import { createIconControl } from './icon-control';
+import { createCoverControl, type CoverControl } from './cover-control';
 import type { PageFieldKey } from '../yjs/page-fields';
 
 // main.css keys the gutter and the content-align margins on these. A header in
@@ -49,6 +50,8 @@ export class PageTitle extends Module {
   private unbindKeyboard: (() => void) | null = null;
   private readOnly = false;
   private iconControl: { redraw(): void; destroy(): void } | null = null;
+  private coverControl: CoverControl | null = null;
+  private actionButtons: HTMLButtonElement[] = [];
 
   public get isEnabled(): boolean {
     return this.dom !== null && this.dom.header.isConnected;
@@ -86,6 +89,11 @@ export class PageTitle extends Module {
     this.syncWidth(UI.getWidthMode());
     this.syncDirection();
     this.toggleReadOnly(ReadOnly.isEnabled);
+    if (this.resolved.cover) {
+      this.coverControl = this.createCover(this.dom.header);
+    }
+    const trailing = (): HTMLElement[] => [...(this.coverControl === null ? [] : [this.coverControl.addButton]), ...this.actionButtons];
+
     if (this.resolved.icon) {
       this.iconControl = createIconControl(this.dom.iconRow, {
         getIcon: () => this.getIcon(),
@@ -93,8 +101,12 @@ export class PageTitle extends Module {
         isReadOnly: () => this.readOnly,
         labels: () => ({ add: I18n.t('title.addIcon'), change: I18n.t('title.changeIcon') }),
         picker: () => ({ i18n: this.Blok.API.methods.i18n, locale: I18n.getLocale() }),
-      });
+      }, trailing);
+    } else {
+      this.dom.iconRow.append(...trailing());
     }
+    this.dom.header.addEventListener('pointerenter', this.refreshActions);
+    this.dom.header.addEventListener('focusin', this.refreshActions);
     this.dom.title.addEventListener('input', this.onInput);
     this.dom.title.addEventListener('focusin', this.onFocusIn);
     this.unbindKeyboard = bindTitleKeyboard(this.dom.title, {
@@ -146,6 +158,7 @@ export class PageTitle extends Module {
     if (!this.writeField('cover', cover, { record: options.record })) {
       return;
     }
+    this.coverControl?.redraw();
     this.resolved?.onCoverChange?.(this.getCover(), changeOf(source, options));
   }
 
@@ -153,6 +166,7 @@ export class PageTitle extends Module {
   public refresh(): void {
     this.renderText();
     this.iconControl?.redraw();
+    this.coverControl?.redraw();
   }
 
   public focus(position: 'start' | 'end' = 'end'): void {
@@ -282,6 +296,7 @@ export class PageTitle extends Module {
       this.dom.title.setAttribute('contenteditable', state ? 'false' : 'true');
     }
     this.iconControl?.redraw();
+    this.coverControl?.redraw();
   }
 
   public destroy(): void {
@@ -290,6 +305,11 @@ export class PageTitle extends Module {
     this.unbindKeyboard = null;
     this.iconControl?.destroy();
     this.iconControl = null;
+    this.coverControl?.destroy();
+    this.coverControl = null;
+    this.dom?.header.removeEventListener('pointerenter', this.refreshActions);
+    this.dom?.header.removeEventListener('focusin', this.refreshActions);
+    this.actionButtons = [];
     this.dom?.title.removeEventListener('focusin', this.onFocusIn);
     if (this.resolved !== null) {
       this.eventsDispatcher.off(I18nChanged, this.relabel);
@@ -396,6 +416,7 @@ export class PageTitle extends Module {
       this.resolved?.onIconChange?.(this.getIcon(), { source });
     }
     if (key === 'cover') {
+      this.coverControl?.redraw();
       this.resolved?.onCoverChange?.(this.getCover(), { source });
     }
     // The fallback: the history restore that runs next moves the caret to the step's snapshot.
@@ -437,5 +458,79 @@ export class PageTitle extends Module {
     this.dom.title.setAttribute('data-placeholder', this.resolved.placeholder ?? I18n.t('title.placeholder'));
     this.dom.title.setAttribute('aria-label', I18n.t('title.ariaLabel'));
     this.iconControl?.redraw();
+    this.coverControl?.redraw();
   };
+
+  /** The page's first block may add buttons to the row (a full-page database's "Add description"). */
+  private readonly refreshActions = (): void => {
+    const row = this.dom?.iconRow;
+
+    if (row === undefined) {
+      return;
+    }
+    const first = this.Blok.BlockManager.getBlockByIndex(0);
+    const actions = this.readOnly || first === undefined ? [] : first.pageHeaderActions();
+
+    this.actionButtons.forEach((button) => button.remove());
+    this.actionButtons = actions.map((action) => {
+      const button = document.createElement('button');
+      const label = document.createElement('span');
+
+      button.type = 'button';
+      button.setAttribute(DATA_ATTR.pageHeaderAction, action.name);
+      // The tool's own trusted constant; the label goes in as text.
+      button.innerHTML = action.icon ?? '';
+      label.textContent = action.label;
+      button.append(label);
+      button.addEventListener('click', () => {
+        action.onActivate();
+        this.refreshActions();
+      });
+
+      return button;
+    });
+    row.append(...this.actionButtons);
+  };
+
+  private createCover(header: HTMLElement): CoverControl {
+    const { I18n, API } = this.Blok;
+
+    return createCoverControl(header, {
+      getCover: () => this.getCover(),
+      setCover: (cover) => this.setCover(cover, 'user'),
+      isReadOnly: () => this.readOnly,
+      upload: () => {
+        const uploader = API.methods.uploader;
+
+        if (this.readOnly || !uploader.isConfigured('image', 'uploadByFile')) {
+          return null;
+        }
+
+        return (file) => uploader.uploadByFile(file, { kind: 'image', tool: 'pageTitle' }).then((asset) => asset.url);
+      },
+      labels: () => ({
+        add: I18n.t('title.addCover'),
+        change: I18n.t('title.changeCover'),
+        changeAria: I18n.t('title.changeCoverAria'),
+        reposition: I18n.t('title.repositionCover'),
+        repositionAria: I18n.t('title.repositionCoverAria'),
+        savePosition: I18n.t('title.saveCoverPosition'),
+        cancel: I18n.t('title.cancelCoverPosition'),
+        dragHint: I18n.t('title.coverDragHint'),
+        gallery: I18n.t('title.coverGallery'),
+        upload: I18n.t('title.coverUpload'),
+        link: I18n.t('title.coverLink'),
+        remove: I18n.t('title.coverRemove'),
+        uploadFile: I18n.t('title.coverUploadFile'),
+        noUpload: I18n.t('title.coverNoUpload'),
+        linkPlaceholder: I18n.t('title.coverLinkPlaceholder'),
+        submit: I18n.t('title.coverSubmit'),
+        linkNote: I18n.t('title.coverLinkNote'),
+        invalid: I18n.t('title.coverInvalid'),
+        uploadFailed: I18n.t('title.coverUploadFailed'),
+        pickerAria: I18n.t('title.coverPickerAria'),
+        galleryName: (id) => I18n.t(`tools.colorPicker.color.${id}`),
+      }),
+    });
+  }
 }

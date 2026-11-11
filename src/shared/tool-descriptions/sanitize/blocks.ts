@@ -168,9 +168,10 @@ export const pageLinkSanitize = (): SanitizerConfig => {
   return { pageId: PLAINTEXT };
 };
 
-export const databaseSanitize = (): SanitizerConfig => {
+export const databaseSanitize = (): ToolSanitizerConfig => {
   return {
     title: PLAINTEXT,
+    description: { ...INLINE_TEXT_SANITIZE },
     schema: PLAINTEXT,
     deletedProperties: PLAINTEXT,
     views: PLAINTEXT,
@@ -259,7 +260,7 @@ export const BUILT_IN_BLOCK_SANITIZE: Readonly<Record<string, () => SanitizerCon
   bookmark: bookmarkSanitize,
   page: pageSanitize,
   'page-link': pageLinkSanitize,
-  database: databaseSanitize,
+  database: databaseSanitize as () => SanitizerConfig,
   'database-row': databaseRowSanitize,
   'database-comment': databaseCommentSanitize,
   tab: tabSanitize,

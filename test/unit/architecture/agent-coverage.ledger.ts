@@ -425,6 +425,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-dashboard-widget-duplicate': cmds(['database.duplicateView'], 'Duplicate a widget: duplicateView of a widget view places the copy next to it.'),
   'menu:database/database-dashboard-widget-remove': cmds(['database.deleteView'], 'Delete a widget: deleteView of a widget view takes it out of the layout.'),
   'menu:database/database-view-data-source-titles': fld('database.hideDataSourceTitles'),
+  'menu:database/database-description': fld('database.description'),
   'menu:database/database-tab-display-*': exempt('chrome', 'Display as (text, icon or both) is a per-person tab bar preference; the document does not change.'),
   'menu:database/database-view-copy-link': exempt('chrome', 'Copies a link to the view to the clipboard; the document does not change.'),
   'menu:database/database-view-full-page': exempt('view-only', 'Opens the database as a full page in the editor, or calls the host openFullPage hook; the document does not change.'),

@@ -173,6 +173,22 @@
   },
   "database": {
     "title": "plaintext",
+    "description": {
+      "br": true,
+      "strong": {},
+      "b": {},
+      "em": {},
+      "i": {},
+      "u": {},
+      "s": {},
+      "del": {},
+      "a": "[fn preservePageReferenceAnchor]",
+      "code": {},
+      "sup": {},
+      "sub": {},
+      "mark": "[fn preserveColorStyles]",
+      "span": "[fn preserveEquationSpan]"
+    },
     "schema": "plaintext",
     "deletedProperties": "plaintext",
     "views": "plaintext",

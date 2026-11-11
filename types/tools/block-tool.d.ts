@@ -45,6 +45,16 @@ export interface ChildToolRestrictions {
  * Describe Block Tool object
  * @see {@link docs/tools.md}
  */
+/** A button a block puts in the page header's row over the title, after "Add icon" and "Add cover". */
+export interface PageHeaderAction {
+  /** Stable name; the button carries it as `data-blok-page-header-action`. */
+  name: string;
+  label: string;
+  /** Trusted SVG markup from the tool's own code. */
+  icon?: string;
+  onActivate(): void;
+}
+
 export interface BlockTool extends BaseTool {
   /**
    * Sanitizer rules description
@@ -161,6 +171,13 @@ export interface BlockTool extends BaseTool {
    * fallback when read-only mode is toggled.
    */
   setReadOnly?(state: boolean): void;
+
+  /**
+   * Buttons for the page header's row over the title. Asked only of the
+   * page's first block, when `pageTitle` is on, each time the pointer or
+   * focus enters the header. Return [] for none.
+   */
+  pageHeaderActions?(): PageHeaderAction[];
 
   /**
    * True when this block and every block under it must act read-only while

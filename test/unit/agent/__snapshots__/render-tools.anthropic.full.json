@@ -4901,6 +4901,86 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "doc.setCover"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "cover": {
+                        "oneOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "const": "image"
+                              },
+                              "url": {
+                                "type": "string"
+                              },
+                              "position": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "url"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "const": "gallery"
+                              },
+                              "id": {
+                                "enum": [
+                                  "red",
+                                  "orange",
+                                  "yellow",
+                                  "green",
+                                  "blue",
+                                  "purple",
+                                  "pink",
+                                  "gray"
+                                ]
+                              },
+                              "position": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "cover"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "doc.setIcon"
                   },
                   "args": {

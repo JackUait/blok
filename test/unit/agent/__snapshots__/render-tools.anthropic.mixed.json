@@ -579,6 +579,7 @@
                       "database.updateView",
                       "doc.find",
                       "doc.read",
+                      "doc.setCover",
                       "embed.create",
                       "embed.setUrl",
                       "file.setSource",

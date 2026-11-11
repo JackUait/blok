@@ -136,6 +136,7 @@
                   "database.updateView",
                   "doc.find",
                   "doc.read",
+                  "doc.setCover",
                   "doc.setIcon",
                   "doc.setTitle",
                   "embed.create",

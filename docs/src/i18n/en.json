@@ -1004,6 +1004,14 @@
             "set": {
               "description": "Sets the icon, or removes it with `null`. It makes one undo step and calls `onIconChange` with source `api`. `{ record: false }` works as it does for `title.set`."
             }
+          },
+          "cover": {
+            "get": {
+              "description": "The current cover: `{ type: 'image', url, position? }` or `{ type: 'gallery', id, position? }`. It is `null` when there is none. `position` is the image's vertical position in whole percent, from 0 (top) to 100 (bottom). Without it the image is centered."
+            },
+            "set": {
+              "description": "Sets the cover, or removes it with `null`. It makes one undo step and calls `onCoverChange` with source `api`. `{ record: false }` works as it does for `title.set`. The cover is saved as `OutputData.cover`, also when `cover` is off in the config.\n\nGallery ids: `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `gray`. An unknown id draws a plain fill."
+            }
           }
         }
       },
@@ -1022,6 +1030,12 @@
         },
         "onIconChange": {
           "description": "Called on every icon change, from any source. `null` means the icon was removed. `change` is the same as for `onChange`."
+        },
+        "cover": {
+          "description": "`true` draws the page cover above the title, and an Add cover button over the title.\n\n- On hover the cover shows Change and, for an image, Reposition.\n- Change opens Gallery, Upload and Link. Upload goes through your image uploader. Link takes an image URL.\n- The cover is saved and loaded with the document even when this is `false`."
+        },
+        "onCoverChange": {
+          "description": "Called on every cover change, from any source. `null` means the cover was removed. `change` is the same as for `onChange`."
         }
       }
     },
@@ -1261,6 +1275,9 @@
         },
         "setData": {
           "description": "An optional method on your tool that applies new data to the LIVE instance. Declare it, and `blocks.update()`, undo/redo and remote collaborative edits all reuse the block you already rendered instead of recomposing it.\n\nThere is no new tool instance and no new holder, so ephemeral state survives: an open menu, a scroll position, a framework component's local state. The adopted child holders and the caret survive too.\n\nWithout it, core destroys the block and builds a replacement. That is why a host calling `blocks.update()` on every keystroke used to watch a component-backed block go blank.\n\n- Return `false` when you cannot apply the data in place, and core falls back to the full recompose.\n  - The list tool does that for a style change, which needs a different DOM shape.\n- Returning `true` or nothing means the data was applied.\n- Throwing has the same effect as `false`: it is logged, then the block is recomposed.\n\nThe React/Vue/Angular block factories implement it for you, so adapter blocks take the in-place path automatically."
+        },
+        "pageHeaderActions": {
+          "description": "An optional method on your tool that puts buttons in the page header's row over the title, after Add icon and Add cover. Blok asks it only of the page's first block, and only with `pageTitle` on, each time the pointer or focus enters the header. Return `[]` for none.\n\nEach button is `{ name, label, icon?, onActivate }`. `icon` is SVG markup from your own code. The button carries `name` as `data-blok-page-header-action`. A full-page database uses it for Add description."
         },
         "defineTool": {
           "description": "A registration helper exported from `@bloklabs/core/tools`. It is not a member of the `tools` namespace.\n\nThe plain `tools` map types every entry with a bare `ToolSettings` whose `Config` falls back to `Record<string, unknown>`. So a misspelled config key (`defaultLevle` for `defaultLevel`) compiles silently. `defineTool` recovers the tool's real config type from its constructor and applies it to `settings.config`, turning those typos into compile errors.\n\nThe type-checking happens on the `settings` argument. The RETURN type stays the erased `ExternalToolSettings`, so the result drops straight into the `tools` map.\n\n`ExtractToolConfig<TClass>` is the type that does the recovery. It is exported alongside `defineTool`, and falls back to `Record<string, unknown>` for tool classes whose constructor declares no concrete config."

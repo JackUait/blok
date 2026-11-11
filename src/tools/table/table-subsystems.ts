@@ -16,6 +16,7 @@ import {
   parseGenericHtmlTable,
   parsePlainTextGrid,
   pastedContentOutsideTable,
+  TABLE_HEADINGS_ATTR,
   withPlainPageReferences,
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
@@ -1777,6 +1778,12 @@ export class TableSubsystems {
     // A block copy holds whole blocks (a table in a toggle, a table block).
     // Its HTML table is only their rendering, so the editor paste places them.
     if (blokPayload === null && e.clipboardData.getData(BLOK_MIME_TYPE) !== '') {
+      return;
+    }
+
+    // The html alone of a whole table copy. Its mark is forgeable, but it only
+    // picks this placement: the editor paste still cleans the table.
+    if (blokPayload === null && html !== '' && parseUntrustedDocument(html).querySelector(`table[${TABLE_HEADINGS_ATTR}]`) !== null) {
       return;
     }
 

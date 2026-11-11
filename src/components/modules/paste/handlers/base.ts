@@ -82,15 +82,16 @@ export abstract class BasePasteHandler implements PasteHandler {
    * point to the parent table block. This prevents new block DOM elements
    * from being placed inside the existing table's grid structure, which
    * would corrupt the table's saved data.
+   * @returns true when the insertion point moved to the table
    */
-  private redirectToTableParentIfNeeded(data: PasteData[], BlockManager: BlokModules['BlockManager']): void {
+  private redirectToTableParentIfNeeded(data: PasteData[], BlockManager: BlokModules['BlockManager']): boolean {
     const currentBlock = BlockManager.currentBlock;
     const isInsideTableCell = currentBlock?.holder?.closest('[data-blok-table-cell-blocks]');
     const restricted = new Set(getRestrictedTools());
     const hasRestrictedTools = data.some(item => restricted.has(item.tool));
 
     if (!isInsideTableCell || !hasRestrictedTools || currentBlock === undefined) {
-      return;
+      return false;
     }
 
     const tableBlockHolder = currentBlock.holder
@@ -98,10 +99,12 @@ export abstract class BasePasteHandler implements PasteHandler {
       ?.closest('[data-blok-element]') as HTMLElement | null;
 
     if (!tableBlockHolder) {
-      return;
+      return false;
     }
 
     BlockManager.setCurrentBlockByChildNode(tableBlockHolder);
+
+    return true;
   }
 
   /**
@@ -365,6 +368,15 @@ export abstract class BasePasteHandler implements PasteHandler {
     // Single item: decide whether to insert as block or inline content
     const [singleItem] = data;
     const isBlock = singleItem.isBlock;
+
+    // A lone table in a cell would flatten into it; it goes after the table.
+    // Other lone restricted blocks keep their text in the cell. Same name as
+    // the outer table, so processSingleBlock would merge it in as text.
+    if (singleItem.tool === 'table' && this.redirectToTableParentIfNeeded(data, BlockManager)) {
+      await this.insertBlock(singleItem);
+
+      return;
+    }
 
     if (isBlock) {
       await this.processSingleBlock(singleItem, canReplaceCurrentBlock);

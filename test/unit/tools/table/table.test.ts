@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
 import { Table } from '../../../../src/tools/table';
-import { buildClipboardHtml } from '../../../../src/tools/table/table-cell-clipboard';
+import { buildClipboardHtml, tableClipboardHtml } from '../../../../src/tools/table/table-cell-clipboard';
 import type { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
 import { updateHeadingStyles } from '../../../../src/tools/table/table-operations';
 import { clearAdditionalRestrictedTools, isRestrictedInTableCell } from '../../../../src/tools/table/table-restrictions';
@@ -4210,6 +4210,29 @@ describe('Table Tool', () => {
       const pasteEvent = createPasteEvent('<p>Toggle with table</p><table><tr><td>Cell A</td><td>Cell B</td></tr></table>');
 
       pasteEvent.clipboardData?.setData('application/x-blok', JSON.stringify([{ id: 'tog', tool: 'toggle', data: { text: 'Toggle with table' } }]));
+      gridEl.dispatchEvent(pasteEvent);
+
+      expect(pasteEvent.defaultPrevented).toBe(false);
+      expect(mockInsert).not.toHaveBeenCalled();
+
+      document.body.removeChild(element);
+    });
+
+    it('leaves the html of a whole Blok table copy to the editor paste', () => {
+      const { element, mockInsert } = createPasteTable([['', 'B1'], ['A2', 'B2']]);
+
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+      mockInsert.mockClear();
+
+      const copied = tableClipboardHtml(
+        { withHeadings: false, withHeadingColumn: false, content: [['Cell A', 'Cell B']] },
+        () => []
+      );
+      const pasteEvent = createPasteEvent(`<p>Toggle with table</p>${copied}`);
+
       gridEl.dispatchEvent(pasteEvent);
 
       expect(pasteEvent.defaultPrevented).toBe(false);

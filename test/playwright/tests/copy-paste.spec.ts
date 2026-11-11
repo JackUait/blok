@@ -2035,6 +2035,160 @@ test.describe('copy and paste', () => {
     ]);
   });
 
+  test('the html of a copied toggle holding a table, pasted into a table cell, lands after that table whole', async ({ page }) => {
+    const doc: OutputData['blocks'] = [
+      { id: 'tog', type: 'toggle', data: { text: 'Toggle with table', isOpen: true }, content: ['ttable'] },
+      { id: 'ttable', type: 'table', parent: 'tog', data: { withHeadings: false, withHeadingColumn: false, content: [['Cell A', 'Cell B']] } },
+      { id: 'dest', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [['', 'B1'], ['A2', 'B2']] } },
+    ];
+
+    await createBlok(page, { data: { blocks: doc }, dataModel: 'hierarchical' });
+    await openFixtureToggles(page, { blocks: doc });
+
+    const modifier = await getCommandModifierKey(page);
+
+    await page.locator('[data-blok-id="tog"] [contenteditable="true"]').first().click();
+    await page.keyboard.press(`${modifier}+A`);
+    await page.keyboard.press(`${modifier}+A`);
+    await expect(page.locator('[data-blok-id="tog"][data-blok-selected="true"]')).toBeVisible();
+
+    const { 'application/x-blok': blokData, ...htmlOnly } = await copyFromElement(page.locator('[data-blok-id="tog"]'));
+
+    expect(blokData).toBeDefined();
+    expect(htmlOnly['text/html']).toContain('<table');
+
+    await page.keyboard.press('Escape');
+    await page.locator('[data-blok-id="dest"] [data-blok-table-cell]').first().locator('[contenteditable="true"]').first().click();
+    await paste(page, page.locator(':focus'), htmlOnly);
+
+    /** The saved roots as [type, text]; a table gives its cells' texts. */
+    const roots = async (): Promise<unknown[]> => {
+      const { blocks } = await saveBlok(page);
+      const byId = new Map(blocks.map((b) => [b.id, b]));
+      const shape = (id: string): unknown[] => {
+        const block = byId.get(id);
+
+        if (block?.type === 'table') {
+          const rows = (block.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+          return ['table', rows.map((row) => row.map((cell) => cell.blocks.map((cellId) => byId.get(cellId)?.parent === id ? byId.get(cellId)?.data.text : 'STRAY')))];
+        }
+
+        return [block?.type, block?.data.text ?? null, (block?.content ?? []).map(shape)];
+      };
+
+      return blocks.filter((b) => b.parent === undefined).map((b) => shape(b.id ?? ''));
+    };
+    const toggle = ['toggle', 'Toggle with table', [['table', [[['Cell A'], ['Cell B']]]]]];
+
+    await expect.poll(roots).toEqual([
+      toggle,
+      ['table', [[[''], ['B1']], [['A2'], ['B2']]]],
+      toggle,
+    ]);
+  });
+
+  test('a page html table forging the whole-table mark, pasted into a table cell, only lands after that table, cleaned', async ({ page }) => {
+    await createBlok(page, { data: { blocks: [
+      { id: 'dest', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [['z00', 'z01'], ['z10', 'z11']] } },
+    ] } });
+
+    await page.locator('[data-blok-id="dest"] [data-blok-table-cell]').first().locator('[contenteditable="true"]').first().click();
+    await paste(page, page.locator(':focus'), {
+      'text/html': '<table data-blok-table-headings="none"><tr><td onclick="window.__forged = 1">X<img src="x" onerror="window.__forged = 1"></td><td>Y</td></tr></table>',
+      'text/plain': 'X\tY',
+    });
+
+    /** Each root table as [id or 'new', its cells' texts]. */
+    const tables = async (): Promise<unknown[]> => {
+      const { blocks } = await saveBlok(page);
+      const byId = new Map(blocks.map((b) => [b.id, b]));
+
+      return blocks.filter((b) => b.parent === undefined).map((b) => {
+        const rows = (b.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+        return [
+          b.id === 'dest' ? b.id : `new ${b.type}`,
+          rows.map((row) => row.map((cell) => cell.blocks.map((cellId) => byId.get(cellId)?.data.text))),
+        ];
+      });
+    };
+
+    await expect.poll(tables).toEqual([
+      ['dest', [[['z00'], ['z01']], [['z10'], ['z11']]]],
+      ['new table', [[['X'], ['Y']]]],
+    ]);
+    await expect(page.locator('[onclick], [onerror]')).toHaveCount(0);
+    expect(await page.evaluate(() => (window as { __forged?: number }).__forged)).toBeUndefined();
+  });
+
+  test('the html of a copied table block, pasted into a table cell inside a toggle, lands after that table whole', async ({ page }) => {
+    const doc: OutputData['blocks'] = [
+      { id: 'src', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [['One', 'Two'], ['Three', 'Four']] } },
+      { id: 'tog', type: 'toggle', data: { text: 'Holder', isOpen: true }, content: ['dest'] },
+      { id: 'dest', type: 'table', parent: 'tog', data: { withHeadings: false, withHeadingColumn: false, content: [['z00', 'z01'], ['z10', 'z11']] } },
+    ];
+
+    await createBlok(page, { data: { blocks: doc }, dataModel: 'hierarchical' });
+    await openFixtureToggles(page, { blocks: doc });
+
+    const editor = await page.locator(`#${HOLDER_ID}`).boundingBox();
+    const source = await page.locator('[data-blok-id="src"]').boundingBox();
+
+    if (editor === null || source === null) {
+      throw new Error('editor or table has no box');
+    }
+    const gutter = editor.x + editor.width - 40;
+
+    await page.mouse.move(gutter, source.y + 4);
+    await page.mouse.down();
+    await page.mouse.move(gutter, source.y + source.height - 4, { steps: 15 });
+    await page.mouse.up();
+    await expect(page.locator('[data-blok-id="src"][data-blok-selected="true"]')).toBeVisible();
+
+    const { 'application/x-blok': blokData, ...htmlOnly } = await copyFromElement(page.locator('[data-blok-id="src"]'));
+
+    expect(blokData).toBeDefined();
+    expect(htmlOnly['text/html']).toContain('<table');
+
+    await page.keyboard.press('Escape');
+    await page.locator('[data-blok-id="dest"] [data-blok-table-cell]').first().locator('[contenteditable="true"]').first().click();
+    await paste(page, page.locator(':focus'), htmlOnly);
+
+    /** Each table as [id or 'new', its parent, its cells' texts]; a cell block that is not the table's child shows as 'STRAY'. */
+    const tables = async (): Promise<unknown[]> => {
+      const { blocks } = await saveBlok(page);
+      const byId = new Map(blocks.map((b) => [b.id, b]));
+
+      return blocks.filter((b) => b.type === 'table').map((b) => {
+        const rows = (b.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+        return [
+          b.id === 'src' || b.id === 'dest' ? b.id : 'new',
+          b.parent ?? null,
+          rows.map((row) => row.map((cell) => cell.blocks.map((cellId) => byId.get(cellId)?.parent === b.id ? byId.get(cellId)?.data.text : 'STRAY'))),
+        ];
+      });
+    };
+    const sourceCells = [[['One'], ['Two']], [['Three'], ['Four']]];
+
+    await expect.poll(tables).toEqual([
+      ['src', null, sourceCells],
+      ['dest', 'tog', [[['z00'], ['z01']], [['z10'], ['z11']]]],
+      ['new', 'tog', sourceCells],
+    ]);
+
+    const sameContainer = await page.evaluate(() => {
+      const holders = Array.from(document.querySelectorAll('[data-blok-tool="table"]'))
+        .map((tool) => tool.closest('[data-blok-element]'));
+      const dest = document.querySelector('[data-blok-id="dest"]');
+
+      return holders.length === 3 && holders[2] !== dest && holders[2]?.parentElement === dest?.parentElement && holders[2]?.previousElementSibling === dest;
+    });
+
+    expect(sameContainer).toBe(true);
+  });
+
   test('a copied table block, pasted into another table cell, lands after that table whole', async ({ page }) => {
     const doc: OutputData['blocks'] = [
       { id: 'src', type: 'table', data: { withHeadings: false, withHeadingColumn: false, content: [['One', 'Two'], ['Three', 'Four']] } },
